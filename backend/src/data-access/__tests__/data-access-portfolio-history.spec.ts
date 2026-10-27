@@ -184,7 +184,7 @@ async function run() {
             assert.deepEqual({ opex: limited.opex, capex: limited.capex, hidden: limited.hidden }, { opex: [s.lines.L1], capex: [], hidden: 1 }, `rita, ${owner} ${include}: L1 listed, L5 counted`);
             assert.ok(!limited.raw.includes(L5) && !limited.raw.includes(s.lines.L5), `rita, ${owner}: nothing of L5`);
             const counted = await read(m, include, false);
-            assert.deepEqual({ opex: counted.opex, capex: counted.capex, hidden: counted.hidden }, { opex: null, capex: null, hidden: 2 }, `rita without the budget right, ${owner} ${include}: count only`);
+            assert.deepEqual({ opex: counted.opex, capex: counted.capex, hidden: counted.hidden }, { opex: null, capex: null, hidden: 0 }, `rita without the budget right, ${owner} ${include}: no line, no count`);
             assert.ok(!counted.raw.includes(L1), `rita without the budget right, ${owner}: no name`);
           }
         });
@@ -192,11 +192,11 @@ async function run() {
           const all = await read(m, 'financials', true);
           assert.deepEqual({ opex: all.opex, hidden: all.hidden }, { opex: [s.lines.L1, s.lines.L5].sort(), hidden: 0 }, `ulla, ${owner}: both lines`);
           const counted = await read(m, 'financials', false);
-          assert.deepEqual({ opex: counted.opex, capex: counted.capex, hidden: counted.hidden }, { opex: null, capex: null, hidden: 2 }, `ulla without the budget right, ${owner}: count only`);
+          assert.deepEqual({ opex: counted.opex, capex: counted.capex, hidden: counted.hidden }, { opex: null, capex: null, hidden: 0 }, `ulla without the budget right, ${owner}: no line, no count`);
           assert.ok(!counted.raw.includes(L1) && !counted.raw.includes(L5), `ulla without the budget right, ${owner}: no name`);
         });
       }
-      console.log('  financials: readable lines and the hidden count with the budget right, count only without it: OK');
+      console.log('  financials: readable lines and the hidden count with the budget right, nothing without it: OK');
     } finally {
       await runner.rollbackTransaction();
     }

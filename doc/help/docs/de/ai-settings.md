@@ -37,6 +37,7 @@ Eine Bestätigung deckt ab, was diese Funktionen an den Anbieter senden: die Fra
 
 - **Bestätigen** speichert Ihre Bestätigung. Plaid wird dadurch nicht eingeschaltet.
 - **Chat aktivieren** verlangt die Bestätigung, solange sie fehlt. Schalten Sie ihn ein und speichern Sie: Ein Fenster zeigt den Anbieter und den Verarbeitungsort. **Bestätigen und aktivieren** speichert Ihre Änderungen und die Bestätigung gemeinsam. Schließen Sie das Fenster, wird nichts gespeichert. Das Fenster verweist außerdem auf die Seite [KI-Modelle](ai-models.md), falls Sie lieber ein eigenes Modell verwenden.
+- Während einer Cloud-Testphase bietet auch die Startseite an, Plaid einzuschalten, mit demselben Bestätigungsfenster. Siehe [Mein Dashboard](my-dashboard.md).
 - **Zurückziehen** entfernt die Bestätigung nach einer zweiten Rückfrage. KI-Funktionen, die das inklusive Modell verwenden, stoppen, bis ein Administrator erneut bestätigt. Plaid bleibt eingeschaltet und zeigt seinen Benutzern einen Hinweis.
 - Eine erneute Bestätigung wird verlangt, wenn sich der Anbieter, seine Verbindungsadresse, der angezeigte Name oder der Verarbeitungsort ändert. Ein neues Modell desselben Anbieters verlangt sie nicht. Ändert sich der Anbieter, während Ihr Fenster offen ist, zeigt das Fenster den neuen und bittet Sie, ihn zu prüfen.
 - Plaid und Agenten, die auf einem von Ihnen angelegten Modell laufen, brauchen keine Bestätigung. Auch über MCP verbundene externe Assistenten hängen nicht davon ab, weil MCP nichts an das inklusive Modell sendet.
@@ -51,7 +52,7 @@ Wenn Plaid auf dem Inklusiven KANAP-Modell läuft (keine ausdrückliche Wahl, ke
 - Dem Datum, an dem das Kontingent zurückgesetzt wird
 - Einem Hinweis, dass eigene API-Schlüssel die Obergrenze aufheben
 
-Wie die Karte erläutert, teilen sich der Chat und die Agenten dieses Mandanten das Kontingent. Eine Nachricht ist eine Chat-Frage oder ein von einem Agenten geprüftes Ticket. Anfragen externer Assistenten über MCP zählen nicht. Eine ausgelastete Agentenflotte verbraucht es schneller; wenn Sie also diesen Balken beobachten, behalten Sie auch die Seite [Nutzung & Kosten](ai-usage.md) im Auge.
+Wie die Karte erläutert, teilen sich der Chat und die Agenten dieses Arbeitsbereichs das Kontingent. Eine Nachricht ist eine Chat-Frage oder ein von einem Agenten geprüftes Ticket. Anfragen externer Assistenten über MCP zählen nicht. Eine ausgelastete Agentenflotte verbraucht es schneller; wenn Sie also diesen Balken beobachten, behalten Sie auch die Seite [Nutzung & Kosten](ai-usage.md) im Auge.
 
 ### Status-Chips
 
@@ -108,12 +109,12 @@ Beide Wege teilen den Rest:
 
 - **MCP aktivieren** muss eingeschaltet sein (siehe **Funktionen** oben).
 - Dieselben schreibgeschützten [Werkzeuge](#verfugbare-werkzeuge), im Rahmen der Zugriffsrechte der Person hinter dem Schlüssel oder der Verbindung.
-- Eine Grenze von 60 MCP-Anfragen pro Minute für jeden Schlüssel und jede Verbindung. Darüber hinaus werden Anfragen bis zum Ende der Minute abgelehnt.
-- Dasselbe Audit-Protokoll.
+- Eine Grenze von 60 MCP-Anfragen pro Minute für jeden Schlüssel und jede Verbindung. Darüber hinaus werden Anfragen mit einem `Retry-After`-Header abgelehnt, der die Wartezeit in Sekunden angibt.
+- Dasselbe [MCP-Protokoll](#mcp-journal).
 
-Die Karte **MCP-Schlüssel und -Verbindungen** zeigt eine Schaltfläche **Schlüssel erstellen**, die **Serveradresse**, mit der sich Clients verbinden (mit einer Kopierschaltfläche), die Obergrenze **Max. Lebensdauer des Schlüssels (Tage)** und eine Tabelle mit **Bezeichnung**, **Typ**, **Präfix**, **Erstellt**, **Läuft ab**, **Zuletzt verwendet** und **Status** (**Aktiv** oder **Widerrufen**).
+Die Karte **MCP-Schlüssel und -Verbindungen** zeigt eine Schaltfläche **Schlüssel erstellen**, die **Serveradresse**, mit der sich Clients verbinden (mit einer Kopierschaltfläche), die Obergrenze **Max. Lebensdauer des Schlüssels (Tage)** und eine Tabelle mit **Bezeichnung**, **Typ**, **Person**, **Erstellt**, **Läuft ab**, **Zuletzt verwendet** und **Status** (**Aktiv** oder **Widerrufen**).
 
-Die Spalte **Typ** zeigt **API-Schlüssel** oder **Verbindung**. Eine Verbindungszeile zeigt den Namen der Anwendung und den Host, zu dem sie zurückkehrt, zum Beispiel *Claude · claude.ai*. Verbindungen haben kein Präfix.
+Die Spalte **Typ** zeigt **API-Schlüssel** oder **Verbindung**. Eine Verbindungszeile zeigt den Namen der Anwendung und den Host, zu dem sie zurückkehrt, zum Beispiel *Claude · claude.ai*. Ein API-Schlüssel zeigt sein Präfix neben seiner Bezeichnung, zum Beispiel *Laptop · abcd1234*. **Person** nennt, wer den Schlüssel erstellt oder die Verbindung genehmigt hat.
 
 ### Einen Schlüssel erstellen
 
@@ -129,9 +130,9 @@ Das Feld **Max. Lebensdauer des Schlüssels (Tage)** begrenzt, wie lange ein neu
 
 ### Einen Schlüssel oder eine Verbindung widerrufen
 
-Klicken Sie auf das Papierkorbsymbol in einer aktiven Zeile. Ein widerrufener Schlüssel funktioniert sofort nicht mehr. Eine widerrufene Verbindung trennt die Anwendung sofort, und der Benutzer muss sie erneut verbinden. Widerrufene Zeilen bleiben zu Audit-Zwecken in der Tabelle.
+Klicken Sie auf die Schaltfläche **Widerrufen** (ein durchgestrichener Schlüssel, bei einer Verbindung ein unterbrochener Link) am Ende einer aktiven Zeile und bestätigen Sie. Der Dialog nennt den Schlüssel oder die Anwendung. Ein widerrufener Schlüssel funktioniert sofort nicht mehr. Eine widerrufene Verbindung trennt die Anwendung sofort, und der Benutzer muss sie erneut verbinden. Widerrufene Zeilen bleiben zu Audit-Zwecken in der Tabelle. Eine bereits widerrufene Zeile erneut zu widerrufen ändert nichts: Sie behält ihr erstes Widerrufsdatum.
 
-Benutzer können ihre eigenen Anwendungen auch auf ihrer Registerkarte [Verbundene Apps](connected-apps.md) trennen.
+Benutzer können auch ihre eigenen Schlüssel widerrufen und ihre eigenen Anwendungen auf ihrer Registerkarte [Verbundene Apps](connected-apps.md) trennen.
 
 ### Wer sich verbinden kann
 
@@ -224,7 +225,7 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header
 
 ### Verfügbare Werkzeuge
 
-Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und lesen, aber nichts ändern.
+Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und lesen, aber nichts ändern. Ein Schlüssel oder eine Verbindung erhält die elf Werkzeuge unten, und zwölf, wenn die Websuche für Ihre Organisation eingeschaltet ist. Eine Person sieht nur die Werkzeuge für die Daten, die ihre Rolle sie lesen lässt.
 
 | Werkzeug | Funktion |
 |---|---|
@@ -233,12 +234,34 @@ Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und
 | `query_entities` | Listet Datensätze auf, die zu Filtern passen |
 | `aggregate_entities` | Zählt oder summiert Datensätze, gruppiert nach einem Feld |
 | `get_filter_values` | Listet die möglichen Werte eines Filters auf |
+| `get_application_classification_catalog` | Liest die Klassifizierungsstufen der Anwendungen: Kritikalität, maximal tolerierbare Ausfallzeit, Wiederherstellungswellen |
 | `get_entity_detail` | Liest einen Datensatz vollständig |
 | `get_entity_context` | Liest die mit einem Datensatz verknüpften Datensätze |
 | `get_entity_comments` | Liest die Kommentare eines Projekts oder einer Aufgabe |
 | `search_knowledge` | Durchsucht die Wissensdatenbank |
 | `get_document` | Liest ein Dokument der Wissensdatenbank |
 | `web_search` | Sucht im Web, wenn die Websuche für Ihre Organisation eingeschaltet ist |
+
+Wenn sich ein Client verbindet, teilt der Server ihm mit, welchen Arbeitsbereich er liest, dass er nur liest, dass er mit den Rechten der Person hinter dem Schlüssel oder der Verbindung liest, wie er sucht und welche Daten er nicht liest (Kostenstellen, Kalender, Wechselkurse, Einstellungen des Datenzugriffs, das Audit-Protokoll und KI-Agenten).
+
+Ein Aufruf, den der Server ablehnt, kommt mit seiner Ursache zurück, damit der Assistent sie erklären kann: ein unbekanntes Werkzeug, ein Werkzeug, das Daten ändern würde, ein Werkzeug, das der Schlüssel nicht erlaubt, oder Daten, die die Person nicht lesen darf.
+
+## MCP-Protokoll { #mcp-journal }
+
+Die Karte **MCP-Protokoll** listet jeden Werkzeugaufruf der MCP-Clients Ihrer Organisation auf, die neuesten zuerst:
+
+- **Datum**
+- **Person**: der Eigentümer des Schlüssels oder der Verbindung
+- **Schlüssel oder Verbindung**: der Name des Schlüssels, bei einer Verbindung die Anwendung und ihre Domain (*Claude · claude.ai*). *Gelöschter Schlüssel*, wenn der Schlüssel nicht mehr existiert
+- **Tool**
+- **Ergebnis**: **Erfolgreich**, **Abgelehnt** oder **Fehlgeschlagen**, mit der Ursache neben einer Ablehnung oder einem Fehler (zum Beispiel *Der Server ist schreibgeschützt*, *Der Schlüssel erlaubt dieses Tool nicht*, *Widerrufener Schlüssel*)
+- **Dauer**: ein Strich, wenn sie unbekannt ist
+
+Filtern Sie die Liste nach **Person**, **Schlüssel oder Verbindung**, **Ergebnis** und **Zeitraum** (letzte 24 Stunden, letzte 7 Tage, letzte 30 Tage oder gesamter Zeitraum). Sie zeigt 25 Aufrufe pro Seite. Mit **Zurück** und **Weiter** wechseln Sie zwischen den Seiten.
+
+Klicken Sie auf eine Zeile, um die Argumente des Aufrufs zu sehen, gekürzt, und bei einer Ablehnung oder einem Fehler die vollständige Ursache. Geheime Werte erscheinen als *Ausgeblendet*.
+
+Das Protokoll erfasst auch Aufrufe mit einem widerrufenen oder abgelaufenen Schlüssel. Es speichert nie einen Schlüssel oder ein Token.
 
 ---
 

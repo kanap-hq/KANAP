@@ -10,6 +10,7 @@ import { IntegratedDocumentsService } from '../../knowledge/integrated-documents
 import { parsePagination, Sort } from '../../common/pagination';
 import { parseCreateIncident, parseListIncidentsQuery, parseUpdateIncident, UpdateIncidentDto } from '../dto';
 import { IncidentsBaseService, ServiceOpts, incidentRef, userNameSql } from './incidents-base.service';
+import { unreadableLinkChangeFamilies } from './incident-entries.service';
 import { IncidentViewer, incidentVisibilitySql, isFrozenIncidentStatus } from '../incident-visibility';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
 import { binder } from '../../common/relations/related-objects';
@@ -126,11 +127,34 @@ type IncidentWhere = {
   assetId?: string;
   applicationId?: string;
   viewer?: IncidentViewer;
+  /**
+   * False when the reader does not read the infrastructure, or applications: the search and the
+   * filters then never match the linked assets, or applications (`ServiceOpts`).
+   */
+  technologies?: boolean;
+  applications?: boolean;
+};
+
+/** The list fields that name or count another module's records, with the flag that reads it. */
+const LINKED_FIELD_READS: Record<string, 'technologies' | 'applications'> = {
+  linked_assets: 'technologies',
+  asset_count: 'technologies',
+  linked_applications: 'applications',
+  application_count: 'applications',
 };
 
 /**
  * Incident CRUD, AG-Grid list, ids/filter-values, lifecycle transitions and the closure lock.
  */
+
+/** A row's `asset_count` and `application_count`, each null for a reader without its module. */
+function withReadableCounts<T extends Record<string, unknown>>(row: T, opts?: ServiceOpts): T {
+  return {
+    ...row,
+    ...('asset_count' in row && opts?.technologies !== true ? { asset_count: null } : {}),
+    ...('application_count' in row && opts?.applications !== true ? { application_count: null } : {}),
+  };
+}
 @Injectable()
 export class IncidentsService extends IncidentsBaseService {
   constructor(
@@ -153,6 +177,7 @@ export class IncidentsService extends IncidentsBaseService {
     const { page, limit, skip, sort, q, filters } = parsePagination(query, DEFAULT_SORT);
     const { where, params } = this.buildWhere({
       filters, q, tenantId, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
+      technologies: opts?.technologies, applications: opts?.applications,
     });
 
     const countRows: Array<{ count: number }> = await mg.query(`SELECT COUNT(*)::int AS count ${BASE_FROM} WHERE ${where}`, params);
@@ -165,7 +190,8 @@ export class IncidentsService extends IncidentsBaseService {
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, skip],
     );
-    return { items, total, page, limit };
+    // The linked counts of a module the reader does not read are null, never a number.
+    return { items: items.map((row: Record<string, unknown>) => withReadableCounts(row, opts)), total, page, limit };
   }
 
   /**
@@ -178,6 +204,7 @@ export class IncidentsService extends IncidentsBaseService {
     const { sort, q, filters } = parsePagination(query, DEFAULT_SORT);
     const { where, params } = this.buildWhere({
       filters, q, tenantId, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
+      technologies: opts?.technologies, applications: opts?.applications,
     });
 
     const countRows: Array<{ count: number }> = await mg.query(`SELECT COUNT(*)::int AS count ${BASE_FROM} WHERE ${where}`, params);
@@ -206,6 +233,7 @@ export class IncidentsService extends IncidentsBaseService {
     const { sort, q, filters } = parsePagination(query, DEFAULT_SORT);
     const { where, params } = this.buildWhere({
       filters, q, tenantId, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
+      technologies: opts?.technologies, applications: opts?.applications,
     });
     return { where, params, orderBy: this.orderBy(sort, await textSortKey(mg)) };
   }
@@ -228,6 +256,7 @@ export class IncidentsService extends IncidentsBaseService {
     for (const field of fields) {
       const { where, params } = this.buildWhere({
         filters, q, tenantId, skipField: field, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
+        technologies: opts?.technologies, applications: opts?.applications,
       });
       const rows: Array<{ value: string | null }> = await mg.query(
         `SELECT DISTINCT ${FIELD_EXPRESSIONS[field]} AS value ${BASE_FROM}
@@ -255,6 +284,8 @@ export class IncidentsService extends IncidentsBaseService {
 
     for (const [field, model] of Object.entries(filters)) {
       if (field === input.skipField) continue;
+      // A filter on a module the reader does not read is ignored, as the column is empty for them.
+      if (LINKED_FIELD_READS[field] && input[LINKED_FIELD_READS[field]] === false) continue;
       const expression = FIELD_EXPRESSIONS[field];
       if (!expression || !model || typeof model !== 'object') continue;
 
@@ -312,7 +343,7 @@ export class IncidentsService extends IncidentsBaseService {
         i.title ILIKE $${idx}
         OR i.description ILIKE $${idx}
         OR ('INC-' || i.item_number::text) ILIKE $${idx}
-        OR EXISTS (
+        ${input.technologies === false ? '' : `OR EXISTS (
           SELECT 1 FROM incident_assets ia
           JOIN assets a ON a.id = ia.asset_id AND a.tenant_id = ia.tenant_id
           WHERE ia.incident_id = i.id AND ia.tenant_id = i.tenant_id
@@ -322,8 +353,8 @@ export class IncidentsService extends IncidentsBaseService {
               OR COALESCE(a.hostname, '') ILIKE $${idx}
               OR COALESCE(a.fqdn, '') ILIKE $${idx}
             )
-        )
-        OR EXISTS (
+        )`}
+        ${input.applications === false ? '' : `OR EXISTS (
           SELECT 1 FROM incident_applications iap
           JOIN applications app ON app.id = iap.application_id AND app.tenant_id = iap.tenant_id
           WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id
@@ -331,7 +362,7 @@ export class IncidentsService extends IncidentsBaseService {
               app.name ILIKE $${idx}
               OR COALESCE(app.sequential_id, '') ILIKE $${idx}
             )
-        )
+        )`}
       )`;
     }
 
@@ -433,7 +464,10 @@ export class IncidentsService extends IncidentsBaseService {
          ${OWNER_NAME} AS owner_name,
          ${REPORTER_NAME} AS reporter_name,
          ${COUNT_COLUMNS},
-         (SELECT COUNT(*) FROM incident_entries e WHERE e.incident_id = i.id AND e.tenant_id = i.tenant_id)::int AS entry_count,
+         -- The entries the journal shows: it leaves out a link change of an unread module.
+         (SELECT COUNT(*) FROM incident_entries e
+           WHERE e.incident_id = i.id AND e.tenant_id = i.tenant_id
+             AND NOT (e.kind = 'link_change' AND COALESCE(e.changed_fields ?| $3::text[], false)))::int AS entry_count,
          (SELECT COUNT(*) FROM incident_technologies it WHERE it.incident_id = i.id AND it.tenant_id = i.tenant_id)::int AS technology_count,
          -- What the Documents tab lists: the incident's own review is hidden from it.
          (SELECT COUNT(*) FROM document_incidents di
@@ -449,7 +483,7 @@ export class IncidentsService extends IncidentsBaseService {
          (SELECT COUNT(*) FROM incident_attachments att WHERE att.incident_id = i.id AND att.tenant_id = i.tenant_id AND att.deleted_at IS NULL)::int AS attachment_count
        ${BASE_FROM}
        WHERE i.id = $1 AND i.tenant_id = $2`,
-      [id, tenantId],
+      [id, tenantId, unreadableLinkChangeFamilies(opts)],
     );
     const { entry_count, technology_count, document_count, attachment_count, ...incident } = row;
     const applicationCount = !opts?.applications
@@ -458,7 +492,9 @@ export class IncidentsService extends IncidentsBaseService {
         ? await this.applicationCountInScope(mg, tenantId, id, opts.applicationScope.userId)
         : incident.application_count;
     return {
-      ...incident,
+      ...withReadableCounts(incident, opts),
+      // A Business Contributor counts the applications they may see, as `counts.applications`.
+      application_count: applicationCount,
       counts: {
         entries: entry_count,
         // The Relations tab's sections: each count is null for a caller who cannot see that section.

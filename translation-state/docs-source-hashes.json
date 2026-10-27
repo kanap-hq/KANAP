@@ -1,6 +1,6 @@
 {
   "files": {
-    "admin.md": "cdb02c15112aaf36c7641f8c3e1d3fbd",
+    "admin.md": "daf322bf5bb16e8c9efc2b9d7e1a53b6",
 
     "administration-view.md": "da451010a627e33f085ffd88174774ba",
 
@@ -8,17 +8,17 @@
 
     "agents-approvals.md": "96c9fe53715661d5ea488aef4a34e494",
 
-    "agents-overview.md": "1d0116570799192d7ba46eadbbe18382",
+    "agents-overview.md": "b509117a9f8a11e951f7f7a1f3acf21a",
 
     "agents-shared-context.md": "1ee33015c1a9ab8056ab07f0c299e29b",
 
-    "agents-workspace.md": "777070d650f086745e7dd2e7f8a9e24a",
+    "agents-workspace.md": "48f9f5d61e2d0f4cf7e4f0e051657a48",
 
-    "ai-assistant.md": "410f48ac32348be18a8e6179266e1951",
+    "ai-assistant.md": "b5a5c481abf637fd22ebe2a0f339d849",
 
     "ai-models.md": "dd41b5b504573ad8a51d75cedcdc1c92",
 
-    "ai-settings.md": "cd47eb963984592a193241c3ee42cb45",
+    "ai-settings.md": "e60918113c6189e73d08755f9ad9ec67",
 
     "ai-usage.md": "c5ef4c260ba0162a443ac7741a09d47f",
 
@@ -44,7 +44,7 @@
 
     "companies.md": "a3f3c2b0ce6ab7ae9c2dcb8edcc194fa",
 
-    "connected-apps.md": "a5ccbff16dcd15aa33c08505ca236702",
+    "connected-apps.md": "3c84fa4e338dd64f2029ed214324c2e1",
 
     "connection-map.md": "8e3ad1a508e7a1b4dac48d203c39d169",
 
@@ -60,7 +60,7 @@
 
     "currencies.md": "8de455ec65c514b76c582744f9641cc0",
 
-    "data-access.md": "ae16355753e982b1917e8f160a312a82",
+    "data-access.md": "823ec3317525c7dd0779245e4c873705",
 
     "departments.md": "33aff6bbd5aad01108ec450d1ae9d8d8",
 
@@ -68,13 +68,13 @@
 
     "fast-track/apps-and-assets.md": "364b680a93a8c5501669d37103cce7c8",
 
-    "fast-track/getting-started.md": "f68d22f1bb51bc85a1f54a995498ef5e",
+    "fast-track/getting-started.md": "930d995b928c61d4d34a151ed88d116a",
 
     "fast-track/index.md": "6563fa6dfaa869b07b0297a32845f456",
 
     "fast-track/task-types.md": "a6adae660a852575fbc2f2de3a80e825",
 
-    "incidents.md": "6eba6ccebb4cee7067372b6ab386ac97",
+    "incidents.md": "d709f184cc46898ee33909fd3c54fb92",
 
     "index.md": "8169c396632373b983f98cd611338107",
 
@@ -86,27 +86,27 @@
 
     "it-ops-settings.md": "3f8682887acd585ea7400beb461b23be",
 
-    "knowledge.md": "11f40eb8f2e601eac2c37882189d9ad7",
+    "knowledge.md": "0174572e4800ed99121c93909489bba8",
 
     "locations.md": "2e60572ee321c25b00409fb93bd1860b",
 
     "master-data-operations.md": "4216be4b64a5a516c8f0ca509a271304",
 
-    "my-dashboard.md": "36f81d77904ecf91f7212eb71ea9b0d5",
+    "my-dashboard.md": "6a3c6a395791ef1bc2c736e8a6e66794",
 
     "netbox.md": "b832db9f21cea4ffab9aa044cf714030",
 
-    "on-premise/configuration.md": "4699f0f9e1681b92fe70d83f319b47ea",
+    "on-premise/configuration.md": "7caf4c38e5e0c70996a61e0ecf47c7b8",
 
-    "on-premise/index.md": "255fe852e65613cfdad8c7909d7d4216",
+    "on-premise/index.md": "2541531aef583251d7e83808411cdd47",
 
-    "on-premise/installation-ai.md": "c1fbefb1f79a12ea7fc788ef680e7d81",
+    "on-premise/installation-ai.md": "c4f814efbb7b89db3432be36d31881d4",
 
-    "on-premise/installation-example.md": "38cacef120f8ca35e2788bfa93861549",
+    "on-premise/installation-example.md": "5df8422a50b2b4191c6b63d01599dc4c",
 
-    "on-premise/installation.md": "24e88928e1a66178b05121d4f0ff3b07",
+    "on-premise/installation.md": "07bd3e95916ba172739137d3358b018b",
 
-    "on-premise/operations.md": "7f1d310ff53fcd7f0161c49dea3d4e65",
+    "on-premise/operations.md": "f751705ac61456e3ba2dcb044ea28e9f",
 
     "on-premise/sso-entra.md": "64c4ba1183a02398aa122dd70f0fd9ba",
 
@@ -132,7 +132,7 @@
 
     "suppliers.md": "29fc60778b9db0f665382b7926d224b5",
 
-    "tasks.md": "622309c5338e9cd0b34168b41bbde3a3",
+    "tasks.md": "bee2e9f5e3511d4843817809f2956a95",
 
     "technologies.md": "a80c00e63ee403f7ddc4e41e72662a72",
 

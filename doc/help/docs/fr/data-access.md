@@ -190,7 +190,7 @@ Pour une personne limitée, le budget et les contrats ne contiennent que ce que 
 - Le contrat d'une ligne visible s'ouvre en lecture seule. Ses pièces jointes et liens documentaires restent fermés, avec un nombre comme « 2 pièces jointes, réservées aux personnes qui voient ce contrat ».
 - La recherche, Plaid, MCP et les exports ne montrent aucune trace d'un élément caché.
 
-Ces nombres apparaissent pour toute personne qui ne voit pas les lignes. Une personne sans accès au budget voit « 3 lignes budgétaires » dans les panneaux des applications, des serveurs et des projets, sans les noms.
+Ces nombres apparaissent pour les personnes qui lisent le budget mais pas ces lignes. Une personne sans le droit sur le budget ne voit aucune ligne budgétaire dans les panneaux des applications, des serveurs et des projets, ni aucun nombre.
 
 **Les chiffres d'un élément visible** portent sur toutes ses données. La couverture d'un contrat compte toutes ses lignes liées, y compris les lignes cachées, pour que son responsable voie la vraie couverture. Voir [Contrats](contracts.md#engagement-et-couverture).
 

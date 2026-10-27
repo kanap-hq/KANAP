@@ -157,3 +157,46 @@ describe('TaskPropertiesDrawer people', () => {
     expect(screen.queryByText('camille.bernard@fromage-co.com')).toBeNull();
   });
 });
+
+describe('TaskPropertiesDrawer linked records the person cannot read', () => {
+  it('leaves out the applications, the assets and the object the task belongs to', () => {
+    // The API sends no id and no name for a module the person does not read: the rows disappear.
+    renderDrawer({
+      readOnly: true,
+      task: task({
+        related_object_type: 'project',
+        related_object_id: null,
+        related_object_name: null,
+        related_object_hidden: true,
+        phase_name: 'Build',
+        applications: null,
+        application_ids: null,
+        assets: null,
+        asset_ids: null,
+      }),
+    });
+    for (const label of ['Related to', 'Phase', 'Applications', 'Assets']) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    expect(screen.queryByText('Standalone task')).toBeNull();
+  });
+
+  it('shows them to a reader of their modules', () => {
+    renderDrawer({
+      readOnly: true,
+      task: task({
+        related_object_type: 'project',
+        related_object_id: 'p-1',
+        related_object_name: 'ERP rollout',
+        phase_name: 'Build',
+        applications: [{ id: 'a-1', name: 'CheeseTrack', sequential_id: 'APP-36' }],
+        application_ids: ['a-1'],
+        assets: [],
+        asset_ids: [],
+      }),
+    });
+    expect(within(fieldRow('Related to')).getByText('ERP rollout')).toBeTruthy();
+    expect(within(fieldRow('Applications')).getByText('APP-36 CheeseTrack')).toBeTruthy();
+    expect(screen.getByText('Assets')).toBeTruthy();
+  });
+});

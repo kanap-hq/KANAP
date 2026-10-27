@@ -40,6 +40,10 @@ After save, the dashboard time-summary tile refreshes automatically.
 
 In a cloud workspace that is empty and has never held sample data, Administrators see one line above the tiles: "Discover KANAP with sample data." **Load** opens the sample data dialog and **Hide** removes the line for good. The line disappears once the workspace holds data and does not return after an erase. See [Sample data](sample-data.md).
 
+## Turn on Plaid line
+
+During a cloud trial, administrators of the Plaid settings see one line under the sample data line while Plaid is turned off and the KANAP included model is offered: "Plaid, the KANAP assistant, is turned off." **Turn on** opens the usual confirmation of the included model. Confirming turns Plaid on. The close button (**×**) hides the line in this browser. The line does not appear after the switch to a paid plan, nor on-premise. See [Plaid Settings](ai-settings.md).
+
 ## Dashboard tiles
 
 The dashboard displays a grid of tiles, each showing a different aspect of your work. Tiles are laid out in a responsive grid (three columns on large screens, two on medium, one on small). Tiles you do not have permission to view are not loaded at all.

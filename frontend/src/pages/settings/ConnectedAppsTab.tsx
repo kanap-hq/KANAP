@@ -6,6 +6,7 @@ import type { AiApiKeyRecord } from '../../ai/aiTypes';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { useKanapDialogs } from '../../components/design/KanapDialogProvider';
 import { useLocale } from '../../i18n/useLocale';
+import { formatShortDateTime } from '../../lib/dateFormat';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDocPageUrl } from '../../utils/docUrls';
 import { clientDisplayName } from '../oauth/clientName';
@@ -30,8 +31,9 @@ const metaSx = { fontSize: 12, color: 'kanap.text.tertiary' } as const;
 
 /**
  * The applications this user connected to KANAP's MCP server (claude.ai, Claude Desktop, Claude
- * Code), each with a disconnect button; then the user's own API keys, read only. The one place a
- * user without the administration rights sees and cuts these accesses.
+ * Code), each with a disconnect button; then the user's own API keys, each with a revoke button.
+ * The one place a user without the administration rights sees and cuts these accesses. The empty
+ * line shows only when there is neither a connection nor a key.
  */
 export default function ConnectedAppsTab() {
   const { t } = useTranslation(['settings', 'common']);
@@ -51,12 +53,25 @@ export default function ConnectedAppsTab() {
 
   const formatDate = (value: string | null) =>
     value ? new Date(value).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }) : t('connectedApps.never');
+  // Last use: the time matters (did my client call just now?).
+  const formatLastUsed = (value: string | null) =>
+    value ? formatShortDateTime(value, locale) : t('connectedApps.never');
 
   const onDisconnect = async (key: AiApiKeyRecord, name: string) => {
     const ok = await dialogs.confirm({
       title: t('connectedApps.confirm.title', { client: name }),
       message: t('connectedApps.confirm.body', { client: name }),
       confirmLabel: t('connectedApps.disconnect'),
+      intent: 'danger',
+    });
+    if (ok) revoke.mutate(key.id);
+  };
+
+  const onRevoke = async (key: AiApiKeyRecord) => {
+    const ok = await dialogs.confirm({
+      title: t('connectedApps.revokeConfirm.title', { key: key.label }),
+      message: t('connectedApps.revokeConfirm.body', { key: key.label }),
+      confirmLabel: t('connectedApps.revoke'),
       intent: 'danger',
     });
     if (ok) revoke.mutate(key.id);
@@ -79,7 +94,7 @@ export default function ConnectedAppsTab() {
         <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 0.5 }}>
           {t('connectedApps.title')}
         </Typography>
-        {connections.length === 0 ? (
+        {connections.length === 0 && apiKeys.length === 0 ? (
           <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
             {t('connectedApps.empty')}{' '}
             <Link href={`${getDocPageUrl('ai-settings', locale)}#connecting-an-mcp-client`} target="_blank" rel="noopener">
@@ -106,7 +121,7 @@ export default function ConnectedAppsTab() {
                     <Typography sx={metaSx}>
                       {t('connectedApps.connectedOn', { date: formatDate(key.created_at) })}
                       {' · '}
-                      {t('connectedApps.lastUsed', { date: formatDate(key.last_used_at) })}
+                      {t('connectedApps.lastUsed', { date: formatLastUsed(key.last_used_at) })}
                     </Typography>
                   </Box>
                   <Button
@@ -123,7 +138,11 @@ export default function ConnectedAppsTab() {
         )}
         {revoke.isError ? (
           <Alert severity="error" sx={{ mt: 1 }}>
-            {getApiErrorMessage(revoke.error, t, t('connectedApps.disconnectFailed'))}
+            {getApiErrorMessage(revoke.error, t, t(
+              (keysQuery.data ?? []).find((key) => key.id === revoke.variables)?.credential_kind === 'oauth'
+                ? 'connectedApps.disconnectFailed'
+                : 'connectedApps.revokeFailed',
+            ))}
           </Alert>
         ) : null}
       </Box>
@@ -132,7 +151,7 @@ export default function ConnectedAppsTab() {
         <Box>
           <Typography sx={sectionTitleSx}>{t('connectedApps.apiKeys')}</Typography>
           {apiKeys.map((key) => (
-            <Box key={key.id} sx={rowSx}>
+            <Box key={key.id} sx={rowSx} data-testid="connected-key-row">
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ fontSize: 13 }}>
                   {key.label}
@@ -143,9 +162,16 @@ export default function ConnectedAppsTab() {
                 <Typography sx={metaSx}>
                   {t('connectedApps.createdOn', { date: formatDate(key.created_at) })}
                   {' · '}
-                  {t('connectedApps.lastUsed', { date: formatDate(key.last_used_at) })}
+                  {t('connectedApps.lastUsed', { date: formatLastUsed(key.last_used_at) })}
                 </Typography>
               </Box>
+              <Button
+                variant="action"
+                disabled={revoke.isPending}
+                onClick={() => void onRevoke(key)}
+              >
+                {t('connectedApps.revoke')}
+              </Button>
             </Box>
           ))}
         </Box>

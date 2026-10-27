@@ -163,8 +163,8 @@ async function testBadgeFollowsModuleRights() {
       [0, 0, 0, 0, 0],
       'no budget, contract, project or request counted',
     );
-    // Without the budget right, the tab shows "N budget lines": the badge counts them too.
-    assert.equal(reader.budget_lines_hidden, all.opex + all.capex, 'every linked line counted, none named');
+    // Without the budget right, the tab neither lists nor counts the budget lines, and the badge follows.
+    assert.equal(reader.budget_lines_hidden, 0, 'no linked line counted');
     assert.equal(reader.total, reader.links + reader.attachments + reader.budget_lines_hidden);
 
     const withRights = await controller.relationCounts(seed.appId, {

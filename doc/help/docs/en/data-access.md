@@ -190,7 +190,7 @@ For a limited person, the budget and the contracts hold only what their access c
 - The contract of a visible line opens in read only. Its attachments and document links stay closed, with a count such as "2 attachments, for people who see this contract".
 - Search, Plaid, MCP and exports show no trace of a hidden item.
 
-These counts appear for everyone who cannot see the lines. A person with no access to the budget sees "3 budget lines" in the panels of applications, servers and projects, without the names.
+These counts appear to people who read the budget but not those lines. A person without the budget right sees no budget lines in the panels of applications, servers and projects, and no count.
 
 **Figures of a visible item** cover all its data. The coverage of a contract counts all its linked lines, hidden ones included, so its owner sees the real coverage. See [Contracts](contracts.md#commitment-and-coverage).
 

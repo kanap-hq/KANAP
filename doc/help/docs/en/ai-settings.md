@@ -37,6 +37,7 @@ A confirmation covers what these features send to the provider: the questions pe
 
 - **Confirm** records your confirmation. It does not switch Plaid on.
 - **Enable chat** asks for the confirmation when it is still missing. Switch it on and save: a window shows the provider and the processing location. **Confirm and turn on** saves your changes and the confirmation together. If you close the window, nothing is saved. The window also links to the [AI models](ai-models.md) page, in case you prefer to use your own model.
+- During a cloud trial, the home page also offers to turn Plaid on, with the same confirmation window. See [My Dashboard](my-dashboard.md).
 - **Withdraw** removes the confirmation, after a second confirmation. AI features that use the included model stop until an administrator confirms again. Plaid stays switched on and shows a notice to its users.
 - You are asked again when the provider, its connection address, the name shown or the processing location changes. A new model from the same provider does not ask again. If the provider changes while your window is open, the window shows the new one and asks you to review it.
 - Plaid and agents that run on a model you added need no confirmation. External assistants connected over MCP do not depend on it either, because MCP sends nothing to the included model.
@@ -51,7 +52,7 @@ When Plaid is running on the KANAP included model (no explicit choice, no organi
 - The date the allowance **resets**
 - A reminder that using your own API keys removes the cap
 
-As the card says, chat and the agents of this tenant share the allowance. One message is one chat question or one ticket reviewed by an agent. Requests from external assistants over MCP do not count. A busy agent fleet consumes it faster, so if you are watching this bar, watch the [Usage & costs](ai-usage.md) page too.
+As the card says, chat and the agents of this workspace share the allowance. One message is one chat question or one ticket reviewed by an agent. Requests from external assistants over MCP do not count. A busy agent fleet consumes it faster, so if you are watching this bar, watch the [Usage & costs](ai-usage.md) page too.
 
 ### Status chips
 
@@ -108,12 +109,12 @@ Both ways share the rest:
 
 - **Enable MCP** must be on (see **Features** above).
 - The same read-only [tools](#available-tools), within the access rights of the person behind the key or the connection.
-- A limit of 60 MCP requests a minute for each key and each connection. Past it, requests are refused until the minute ends.
-- The same audit trail.
+- A limit of 60 MCP requests a minute for each key and each connection. Past it, requests are refused with a `Retry-After` header that gives the number of seconds to wait.
+- The same [MCP journal](#mcp-journal).
 
-The **MCP keys and connections** card shows a **Create key** button, the **Server address** that clients connect to (with a copy button), the **Key max lifetime (days)** cap, and a table with **Label**, **Type**, **Prefix**, **Created**, **Expires**, **Last used** and **Status** (**Active** or **Revoked**).
+The **MCP keys and connections** card shows a **Create key** button, the **Server address** that clients connect to (with a copy button), the **Key max lifetime (days)** cap, and a table with **Label**, **Type**, **Person**, **Created**, **Expires**, **Last used** and **Status** (**Active** or **Revoked**).
 
-The **Type** column says **API key** or **Connection**. A connection row shows the name of the application and the host it returns to, for example *Claude · claude.ai*. Connections have no prefix.
+The **Type** column says **API key** or **Connection**. A connection row shows the name of the application and the host it returns to, for example *Claude · claude.ai*. An API key shows its prefix next to its label, for example *Laptop · abcd1234*. **Person** names who created the key or approved the connection.
 
 ### Creating a key
 
@@ -129,9 +130,9 @@ The **Key max lifetime (days)** field caps how long any newly issued key can liv
 
 ### Revoking a key or a connection
 
-Click the trash icon on any active row. A revoked key stops working at once. A revoked connection cuts the application off at once, and the user has to connect it again. Revoked rows stay in the table for audit purposes.
+Click the **Revoke** button (a crossed-out key, or a broken link for a connection) at the end of an active row, then confirm. The dialog names the key or the application. A revoked key stops working at once. A revoked connection cuts the application off at once, and the user has to connect it again. Revoked rows stay in the table for audit purposes. Revoking a row that is already revoked changes nothing: it keeps its first revocation date.
 
-Users can also disconnect their own applications on their [Connected apps](connected-apps.md) tab.
+Users can also revoke their own keys and disconnect their own applications on their [Connected apps](connected-apps.md) tab.
 
 ### Who can connect
 
@@ -226,7 +227,7 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header
 
 ### Available tools
 
-The MCP server is read only. A client can search and read your data but cannot change anything.
+The MCP server is read only. A client can search and read your data but cannot change anything. A key or a connection gets the eleven tools below, and twelve when web search is switched on for your organization. A person sees only the tools their role lets them read with.
 
 | Tool | What it does |
 |---|---|
@@ -235,12 +236,34 @@ The MCP server is read only. A client can search and read your data but cannot c
 | `query_entities` | Lists records that match filters |
 | `aggregate_entities` | Counts or totals records, grouped by a field |
 | `get_filter_values` | Lists the possible values of a filter |
+| `get_application_classification_catalog` | Reads the application classification levels: criticality, maximum tolerable downtime, recovery waves |
 | `get_entity_detail` | Reads one record in full |
 | `get_entity_context` | Reads the records linked to one record |
 | `get_entity_comments` | Reads the comments of one project or task |
 | `search_knowledge` | Searches the knowledge base |
 | `get_document` | Reads one knowledge document |
 | `web_search` | Searches the web, when web search is switched on for your organization |
+
+When a client connects, the server tells it which workspace it reads, that it only reads, that it reads with the rights of the person behind the key or the connection, how to search, and which data it does not read (cost centers, calendars, exchange rates, data access settings, the audit log and AI agents).
+
+A call the server refuses comes back with its cause, so that the assistant can explain it: an unknown tool, a tool that would change data, a tool the key does not allow, or data the person cannot read.
+
+## MCP journal { #mcp-journal }
+
+The **MCP journal** card lists every tool call made by MCP clients in your organization, newest first:
+
+- **Date**
+- **Person**: the owner of the key or the connection
+- **Key or connection**: the key's label, or the application and its domain for a connection (*Claude · claude.ai*). *Deleted key* when the key no longer exists
+- **Tool**
+- **Result**: **Completed**, **Refused** or **Failed**, with the cause next to a refusal or a failure (for example *The server only reads*, *The key does not allow this tool*, *Revoked key*)
+- **Duration**: a dash when it is unknown
+
+Filter the list by **Person**, **Key or connection**, **Result** and **Period** (last 24 hours, last 7 days, last 30 days, or all time). It shows 25 calls a page; use **Previous** and **Next** to move between pages.
+
+Click a line to see the arguments the call sent, shortened, and for a refusal or a failure its full cause. Secret values show as *Hidden*.
+
+The journal also records calls made with a key that was revoked or has expired. It never keeps a key or a token.
 
 ---
 

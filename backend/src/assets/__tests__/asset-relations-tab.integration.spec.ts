@@ -262,8 +262,8 @@ async function testPayload() {
     // Without the read of a module, its section is null and the badge does not count it.
     const bare = await http.relationsTabRead(seed.asset.id, ctx(runner, seed, NONE));
     for (const key of ['budget_lines', 'contracts', 'projects', 'tasks', 'incidents'] as const) assert.equal(bare[key], null, key);
-    // Without the budget right, the lines are counted, never named (data-scoped access, spec §5.4).
-    assert.equal(bare.budget_lines_hidden, 2);
+    // Without the budget right, the lines are neither named nor counted (2026-10-26: no counter of a hidden family).
+    assert.equal(bare.budget_lines_hidden, 0);
     assert.equal(res.budget_lines_hidden, 0);
     assert.equal(bare.assets.contains.length, 1);
     assert.deepEqual(bare.counts, { assets: 4, budget_lines: 0, contracts: 0, projects: 0, tasks: 0, incidents: 0, links: 1, attachments: 0, total: 1 });

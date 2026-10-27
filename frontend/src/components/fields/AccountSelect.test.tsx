@@ -68,16 +68,16 @@ describe('AccountSelect nature', () => {
   it('asks the lookup for the accounts of the line kind only', async () => {
     renderSelect({ nature: 'capex' });
     openList();
-    expect(await screen.findByText('[2050] Software licences')).toBeInTheDocument();
-    expect(screen.getByText('[6200] Consulting')).toBeInTheDocument();
-    expect(screen.queryByText('[6100] Software subscriptions')).not.toBeInTheDocument();
+    expect(await screen.findByText('2050 - Software licences')).toBeInTheDocument();
+    expect(screen.getByText('6200 - Consulting')).toBeInTheDocument();
+    expect(screen.queryByText('6100 - Software subscriptions')).not.toBeInTheDocument();
     const search = calls.find((call) => !call.params.ids);
     expect(search?.params).toEqual(expect.objectContaining({ companyId: 'company-1', nature: 'capex' }));
   });
 
   it('still shows a stored account of the other kind, read by id without the nature', async () => {
     renderSelect({ nature: 'capex', value: 'acc-opex' });
-    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('[6100] Software subscriptions'));
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('6100 - Software subscriptions'));
     const hydration = calls.find((call) => call.params.ids);
     expect(hydration?.params).toEqual({ ids: 'acc-opex' });
   });
@@ -85,7 +85,7 @@ describe('AccountSelect nature', () => {
   it('sends no nature when the caller gives none', async () => {
     renderSelect();
     openList();
-    expect(await screen.findByText('[6100] Software subscriptions')).toBeInTheDocument();
+    expect(await screen.findByText('6100 - Software subscriptions')).toBeInTheDocument();
     const search = calls.find((call) => !call.params.ids);
     expect(search?.params).not.toHaveProperty('nature');
   });
@@ -100,11 +100,20 @@ describe('AccountSelect options', () => {
     });
   });
 
+  it('shows the number alone when the account has no name', async () => {
+    apiGet.mockResolvedValue({
+      data: { items: [{ id: 'acc-blank', account_number: 612100, account_name: '' }], has_more: false },
+    });
+    renderSelect();
+    openList();
+    expect(await screen.findByRole('option')).toHaveTextContent(/^612100$/);
+  });
+
   it('shows each account on one line, number and name, without its description', async () => {
     renderSelect();
     openList();
     const option = await screen.findByRole('option');
-    expect(option).toHaveTextContent(/^\[6300\] Travel$/);
+    expect(option).toHaveTextContent(/^6300 - Travel$/);
     expect(screen.queryByText('Trips and hotels')).not.toBeInTheDocument();
   });
 

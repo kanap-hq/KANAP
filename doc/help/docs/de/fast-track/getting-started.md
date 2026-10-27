@@ -84,6 +84,8 @@ Aktualisieren Sie Ihre persönlichen Informationen:
 - **Berufsbezeichnung**
 - **Geschäftstelefon** / **Mobiltelefon**
 
+Hat Ihr Konto noch keinen Namen, fragt KANAP nach der Anmeldung nach Ihrem Vor- und Nachnamen. **Später** blendet die Frage in diesem Browser aus.
+
 !!! info "SSO-Benutzer"
     Wenn Ihre Organisation Microsoft Entra ID (SSO) verwendet, werden einige Felder automatisch synchronisiert und können in KANAP nicht bearbeitet werden.
 
@@ -297,6 +299,7 @@ Die wöchentliche E-Mail und Echtzeit-Benachrichtigungen halten Sie auf dem Lauf
 | Benachrichtigungen einrichten | Avatar > Mein Profil > Benachrichtigungs-Tab |
 | Wöchentliche E-Mail konfigurieren | Avatar > Mein Profil > Benachrichtigungs-Tab > Wöchentliche Zusammenfassung |
 | Design ändern (Hell/Dunkel) | Avatar > Mein Profil > Erscheinungsbild-Tab |
+| Version sehen oder Hilfe erhalten | Avatar > Über KANAP |
 | Meine Verfügbarkeit festlegen | Portfolio > Mitwirkende > Ihren Namen |
 | Meine Fähigkeiten hinzufügen | Portfolio > Mitwirkende > Ihren Namen > Fähigkeiten-Tab |
 | Einen Link teilen | Beliebigen Arbeitsbereich öffnen > Teilen |

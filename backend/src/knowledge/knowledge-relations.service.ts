@@ -59,6 +59,7 @@ export class KnowledgeRelationsService {
     opts?: RelationMutationOptions,
   ) {
     const { manager, documentId } = await this.resolveMutableDocumentId(idOrRef, opts);
+    await this.knowledge.assertRelationWriteAllowed(documentId, { [entity]: Array.isArray(ids) ? ids : [] }, manager, opts?.userId || null);
     return this.knowledge.replaceDocumentRelationsByEntity(documentId, entity, ids, manager);
   }
 
@@ -80,6 +81,12 @@ export class KnowledgeRelationsService {
         userId: opts?.userId || null,
         guardAgainstActiveLock: opts?.guardAgainstActiveLock,
       });
+      await this.knowledge.assertRelationWriteAllowed(
+        documentId,
+        Object.fromEntries(updates.map((key) => [key, Array.isArray(body?.[key]) ? body?.[key] || [] : []])),
+        tx,
+        opts?.userId || null,
+      );
 
       for (const key of updates) {
         await this.knowledge.replaceDocumentRelationsByEntity(
@@ -105,6 +112,7 @@ export class KnowledgeRelationsService {
     opts?: RelationMutationOptions,
   ) {
     const { manager, documentId } = await this.resolveMutableDocumentId(idOrRef, opts);
+    await this.knowledge.assertRelationWriteAllowed(documentId, { [entity]: [String(targetId || '').trim()] }, manager, opts?.userId || null);
     return this.knowledge.addDocumentRelationByEntity(documentId, entity, targetId, manager);
   }
 
@@ -115,6 +123,7 @@ export class KnowledgeRelationsService {
     opts?: RelationMutationOptions,
   ) {
     const { manager, documentId } = await this.resolveMutableDocumentId(idOrRef, opts);
+    await this.knowledge.assertRelationWriteAllowed(documentId, { [entity]: [] }, manager, opts?.userId || null, 'remove');
     return this.knowledge.removeDocumentRelationByEntity(documentId, entity, targetId, manager);
   }
 }

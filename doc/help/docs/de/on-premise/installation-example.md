@@ -25,7 +25,7 @@ Alle Dienste laufen auf einem Server. Die Container erreichen die Dienste des Ho
 
 Sie benötigen:
 
-- Einen frisch installierten Server mit Ubuntu 26.04 LTS, mindestens 6 GB RAM (8 GB empfohlen), 20 GB Festplatte und ausgehendem Internetzugang. Der Image-Build bei der Installation und bei jedem Upgrade braucht diesen Speicher.
+- Einen frisch installierten Server mit Ubuntu 26.04 LTS, mindestens 4 GB RAM (8 GB empfohlen, da PostgreSQL auf demselben Server läuft), 10 GB Festplatte und ausgehendem Internetzugang.
 - Einen Benutzer mit `sudo`-Rechten (nicht `root`). Alle folgenden Befehle laufen als dieser Benutzer.
 - Den Namen, den Benutzer eingeben, um KANAP zu öffnen, zum Beispiel `kanap.example.internal`. Siehe [Name und Zertifikat](installation.md#name-und-zertifikat). Dieses Beispiel verwendet einen internen Namen mit einem selbstsignierten Zertifikat. Schritt 8 zeigt die beiden anderen Fälle.
 - Die E-Mail-Adresse des ersten Administrators.
@@ -78,7 +78,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 
 sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io \
-  docker-buildx-plugin docker-compose-plugin
+  docker-compose-plugin
 ```
 
 Fügen Sie Ihren Benutzer der Gruppe `docker` hinzu:
@@ -380,27 +380,19 @@ Hinweise zur Datei:
 
 ---
 
-## 7. Bauen und starten
+## 7. Herunterladen und starten
 
-Bauen Sie die Images und starten Sie die Container. Der Build dauert etwa ein bis zwei Minuten. `--wait` kehrt zurück, wenn beide Container `healthy` melden; der erste Start führt die Datenbankmigrationen aus und dauert einige Sekunden bis eine Minute.
+Laden Sie die Images der ausgecheckten Version herunter und starten Sie die Container. `pull` lädt beim ersten Mal etwa 1,5 GB herunter. `--wait` kehrt zurück, wenn beide Container `healthy` melden; der erste Start führt die Datenbankmigrationen aus und dauert einige Sekunden bis eine Minute.
 
 ```bash
 cd /opt/kanap
-docker compose -f infra/compose.onprem.yml build --pull
+docker compose -f infra/compose.onprem.yml pull
 docker compose -f infra/compose.onprem.yml up -d --wait
 docker compose -f infra/compose.onprem.yml ps
 docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
 ```
 
-Bricht der Build mit `signal: killed` ab, hatte der Server nicht genug Arbeitsspeicher. `sudo dmesg | grep -i oom` bestätigt das. Prüfen Sie den freien Speicher mit `free -m` und beenden Sie andere Dienste, die ihn belegen. Prüfen Sie, dass PostgreSQL und der Speicher noch laufen (`pg_lsclusters`, `systemctl status --no-pager rustfs`). Starten Sie dann Docker neu, was die Reste des abgebrochenen Builds beendet, bauen Sie die beiden Images nacheinander, was weniger Speicher braucht, und starten Sie KANAP:
-
-```bash
-sudo systemctl restart docker
-cd /opt/kanap
-docker compose -f infra/compose.onprem.yml build --pull api
-docker compose -f infra/compose.onprem.yml build --pull web
-docker compose -f infra/compose.onprem.yml up -d --wait
-```
+Erreicht `pull` `ghcr.io` nicht, öffnen Sie den ausgehenden Zugang der [Firewall-Regeln](configuration.md#outbound-installation-and-upgrades), oder [bauen Sie die Images selbst](installation.md#build-the-images-yourself).
 
 `ps` zeigt `api` und `web` als `healthy`. Der letzte Befehl behält die Startzeilen des API-Protokolls und lässt die Details des Frameworks weg. Beim ersten Start zeigt er diese Zeilen in dieser Reihenfolge (die erste `[SECRETS]`-Zeile ist hier gekürzt):
 
@@ -690,11 +682,12 @@ pg_lsclusters
 sudo systemctl status --no-pager nginx rustfs
 docker compose -f infra/compose.onprem.yml ps
 
-# Welche Version läuft: zuerst der Checkout, dann die API (-k: siehe Schritt 9)
+# Welche Version läuft: der Checkout, die Images, dann die API (-k: siehe Schritt 9)
 git describe --tags
+docker compose -f infra/compose.onprem.yml images
 curl -sSk -w '\n' "$(grep '^APP_BASE_URL=' .env | cut -d= -f2-)/api/config/public"
 ```
 
 Prüfen Sie PostgreSQL mit `pg_lsclusters`. `systemctl status postgresql` bleibt `active`, auch wenn der Cluster nicht läuft. Das Feld `version` der letzten Antwort ist die Version, die die API meldet.
 
-Um KANAP zu aktualisieren, folgen Sie dem [Upgrade-Verfahren](operations.md#upgrade-verfahren): Lesen Sie das Changelog, dann `git pull origin stable`, `build --pull` und `up -d`.
+Um KANAP zu aktualisieren, folgen Sie dem [Upgrade-Verfahren](operations.md#upgrade-verfahren): Lesen Sie das Changelog, sichern Sie, dann `git pull origin stable`, `pull` und `up -d`.

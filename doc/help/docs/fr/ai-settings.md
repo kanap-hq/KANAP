@@ -37,6 +37,7 @@ Une confirmation couvre ce que ces fonctions envoient au fournisseur : les quest
 
 - **Confirmer** enregistre votre confirmation. Cela n'active pas Plaid.
 - **Activer le chat** demande la confirmation lorsqu'elle manque encore. Activez-le et enregistrez : une fenêtre affiche le fournisseur et le lieu de traitement. **Confirmer et activer** enregistre vos modifications et la confirmation ensemble. Si vous fermez la fenêtre, rien n'est enregistré. La fenêtre renvoie aussi vers la page [Modèles IA](ai-models.md), si vous préférez utiliser votre propre modèle.
+- Pendant un essai sur le cloud, la page d'accueil propose aussi d'activer Plaid, avec la même fenêtre de confirmation. Voir [Mon tableau de bord](my-dashboard.md).
 - **Retirer** supprime la confirmation, après une seconde confirmation. Les fonctions d'IA qui utilisent le modèle inclus s'arrêtent jusqu'à ce qu'un administrateur confirme à nouveau. Plaid reste activé et affiche un avis à ses utilisateurs.
 - Une nouvelle confirmation est demandée lorsque le fournisseur, son adresse de connexion, le nom affiché ou le lieu de traitement change. Un nouveau modèle du même fournisseur n'en demande pas. Si le fournisseur change pendant que votre fenêtre est ouverte, elle affiche le nouveau et vous demande de le vérifier.
 - Plaid et les agents qui s'exécutent sur un modèle que vous avez ajouté n'ont besoin d'aucune confirmation. Les assistants externes connectés via MCP n'en dépendent pas non plus, car MCP n'envoie rien au modèle inclus.
@@ -51,7 +52,7 @@ Lorsque Plaid tourne sur le modèle inclus KANAP (aucun choix explicite, aucun m
 - La date de **réinitialisation** du volume
 - Un rappel indiquant que l'utilisation de vos propres clés API supprime le plafond
 
-Comme le dit la carte, le chat et les agents de ce tenant se partagent le volume. Un message correspond à une question de chat ou à un ticket examiné par un agent. Les requêtes des assistants externes via MCP ne comptent pas. Un parc d'agents actif le consomme plus vite : si vous surveillez cette barre, surveillez aussi la page [Utilisation & coûts](ai-usage.md).
+Comme le dit la carte, le chat et les agents de cet espace de travail se partagent le volume. Un message correspond à une question de chat ou à un ticket examiné par un agent. Les requêtes des assistants externes via MCP ne comptent pas. Un parc d'agents actif le consomme plus vite : si vous surveillez cette barre, surveillez aussi la page [Utilisation & coûts](ai-usage.md).
 
 ### Indicateurs d'état
 
@@ -108,12 +109,12 @@ Les deux modes partagent le reste :
 
 - **Activer MCP** doit être actif (voir **Fonctionnalités** plus haut).
 - Les mêmes [outils](#outils-disponibles) en lecture seule, dans la limite des droits d'accès de la personne derrière la clé ou la connexion.
-- Une limite de 60 requêtes MCP par minute pour chaque clé et chaque connexion. Au-delà, les requêtes sont refusées jusqu'à la fin de la minute.
-- Le même journal d'audit.
+- Une limite de 60 requêtes MCP par minute pour chaque clé et chaque connexion. Au-delà, les requêtes sont refusées avec un en-tête `Retry-After` qui indique le nombre de secondes à attendre.
+- Le même [journal MCP](#mcp-journal).
 
-La carte **Clés et connexions MCP** présente un bouton **Créer une clé**, l'**Adresse du serveur** à laquelle les clients se connectent (avec un bouton de copie), le plafond **Durée de vie maximale de la clé (jours)** et un tableau avec **Libellé**, **Type**, **Préfixe**, **Créé**, **Expire**, **Dernière utilisation** et **Statut** (**Active** ou **Révoquée**).
+La carte **Clés et connexions MCP** présente un bouton **Créer une clé**, l'**Adresse du serveur** à laquelle les clients se connectent (avec un bouton de copie), le plafond **Durée de vie maximale de la clé (jours)** et un tableau avec **Libellé**, **Type**, **Personne**, **Créé**, **Expire**, **Dernière utilisation** et **Statut** (**Active** ou **Révoquée**).
 
-La colonne **Type** indique **Clé API** ou **Connexion**. Une ligne de connexion affiche le nom de l'application et l'hôte vers lequel elle revient, par exemple *Claude · claude.ai*. Les connexions n'ont pas de préfixe.
+La colonne **Type** indique **Clé API** ou **Connexion**. Une ligne de connexion affiche le nom de l'application et l'hôte vers lequel elle revient, par exemple *Claude · claude.ai*. Une clé API affiche son préfixe à côté de son libellé, par exemple *Portable · abcd1234*. **Personne** nomme qui a créé la clé ou approuvé la connexion.
 
 ### Créer une clé
 
@@ -129,9 +130,9 @@ Le champ **Durée de vie maximale de la clé (jours)** limite la durée de vie d
 
 ### Révoquer une clé ou une connexion
 
-Cliquez sur l'icône de corbeille d'une ligne active. Une clé révoquée cesse de fonctionner immédiatement. Une connexion révoquée coupe l'accès de l'application immédiatement, et l'utilisateur doit la connecter à nouveau. Les lignes révoquées restent dans le tableau à des fins d'audit.
+Cliquez sur le bouton **Révoquer** (une clé barrée, ou un lien rompu pour une connexion) au bout d'une ligne active, puis confirmez. La boîte de dialogue nomme la clé ou l'application. Une clé révoquée cesse de fonctionner immédiatement. Une connexion révoquée coupe l'accès de l'application immédiatement, et l'utilisateur doit la connecter à nouveau. Les lignes révoquées restent dans le tableau à des fins d'audit. Révoquer une ligne déjà révoquée ne change rien : elle garde sa première date de révocation.
 
-Les utilisateurs peuvent aussi déconnecter leurs propres applications dans leur onglet [Applications connectées](connected-apps.md).
+Les utilisateurs peuvent aussi révoquer leurs propres clés et déconnecter leurs propres applications dans leur onglet [Applications connectées](connected-apps.md).
 
 ### Qui peut se connecter
 
@@ -224,7 +225,7 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header
 
 ### Outils disponibles
 
-Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos données, sans rien pouvoir modifier.
+Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos données, sans rien pouvoir modifier. Une clé ou une connexion dispose des onze outils ci-dessous, et de douze lorsque la recherche web est activée pour votre organisation. Une personne ne voit que les outils des données que son rôle lui permet de lire.
 
 | Outil | Ce qu'il fait |
 |---|---|
@@ -233,12 +234,34 @@ Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos donn�
 | `query_entities` | Liste les enregistrements qui correspondent à des filtres |
 | `aggregate_entities` | Compte ou totalise des enregistrements, regroupés par un champ |
 | `get_filter_values` | Liste les valeurs possibles d'un filtre |
+| `get_application_classification_catalog` | Lit les niveaux de classification des applications : criticité, durée maximale d'interruption admissible, vagues de reprise |
 | `get_entity_detail` | Lit un enregistrement en entier |
 | `get_entity_context` | Lit les enregistrements liés à un enregistrement |
 | `get_entity_comments` | Lit les commentaires d'un projet ou d'une tâche |
 | `search_knowledge` | Recherche dans la base de connaissances |
 | `get_document` | Lit un document de la base de connaissances |
 | `web_search` | Recherche sur le web, lorsque la recherche web est activée pour votre organisation |
+
+Lorsqu'un client se connecte, le serveur lui indique quel espace de travail il lit, qu'il ne fait que lire, qu'il lit avec les droits de la personne derrière la clé ou la connexion, comment rechercher, et quelles données il ne lit pas (centres de coûts, calendriers, taux de change, paramètres d'accès aux données, journal d'audit et agents IA).
+
+Un appel refusé par le serveur revient avec sa cause, pour que l'assistant puisse l'expliquer : un outil inconnu, un outil qui modifierait des données, un outil que la clé n'autorise pas, ou des données que la personne ne peut pas lire.
+
+## Journal MCP { #mcp-journal }
+
+La carte **Journal MCP** liste chaque appel d'outil fait par les clients MCP de votre organisation, du plus récent au plus ancien :
+
+- **Date**
+- **Personne** : le propriétaire de la clé ou de la connexion
+- **Clé ou connexion** : le nom de la clé, ou l'application et son domaine pour une connexion (*Claude · claude.ai*). *Clé supprimée* quand la clé n'existe plus
+- **Outil**
+- **Résultat** : **Réussi**, **Refusé** ou **Échoué**, avec la cause à côté d'un refus ou d'un échec (par exemple *Le serveur est en lecture seule*, *La clé n'autorise pas cet outil*, *Clé révoquée*)
+- **Durée** : un tiret quand elle est inconnue
+
+Filtrez la liste par **Personne**, **Clé ou connexion**, **Résultat** et **Période** (dernières 24 heures, 7 derniers jours, 30 derniers jours ou toute la période). Elle affiche 25 appels par page. Utilisez **Précédent** et **Suivant** pour passer d'une page à l'autre.
+
+Cliquez sur une ligne pour voir les arguments envoyés par l'appel, raccourcis, et pour un refus ou un échec sa cause complète. Les valeurs secrètes apparaissent comme *Masqué*.
+
+Le journal enregistre aussi les appels faits avec une clé révoquée ou expirée. Il ne conserve jamais de clé ni de jeton.
 
 ---
 

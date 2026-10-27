@@ -40,10 +40,11 @@ interface TaskData {
   owner_ids: string[];
   viewer_ids: string[];
   labels: string[];
-  application_ids?: string[];
-  asset_ids?: string[];
-  applications?: Array<{ id: string; name?: string | null; sequential_id?: string | null }>;
-  assets?: Array<{ id: string; name?: string | null; asset_reference?: string | null; hostname?: string | null }>;
+  /** Null, with `applications`, when the person does not read applications: the field is hidden. */
+  application_ids?: string[] | null;
+  asset_ids?: string[] | null;
+  applications?: Array<{ id: string; name?: string | null; sequential_id?: string | null }> | null;
+  assets?: Array<{ id: string; name?: string | null; asset_reference?: string | null; hostname?: string | null }> | null;
   related_object_type: string | null;
   related_object_id: string | null;
   related_object_name: string | null;
@@ -136,6 +137,8 @@ export default function TaskPropertiesDrawer({
   const isProjectTask = task.related_object_type === 'project';
   const isStandalone = !task.related_object_type;
   const hiddenContract = task.related_object_hidden === true && task.related_object_hidden_kind === 'contract';
+  // The person does not read the module of the object the task belongs to: no name, no mention.
+  const hiddenRelated = task.related_object_hidden === true && !hiddenContract && !task.related_object_name;
   const canEditClassification = isStandalone || isProjectTask;
   const canLogTime = isProjectTask ? hasLevel('portfolio_projects', 'contributor') : hasLevel('tasks', 'member');
   const canCreateKnowledge = hasLevel('knowledge', 'member');
@@ -187,6 +190,7 @@ export default function TaskPropertiesDrawer({
       {/* ══ Group 1: Context ══ */}
       <PropertyGroup>
         {/* Related to */}
+        {!hiddenRelated && (
         <PropertyRow label={t('workspace.task.sidebar.fields.relatedTo')}>
           {onRelationChange && !readOnly && !hiddenContract ? (
             <RelatedObjectSelect
@@ -206,9 +210,10 @@ export default function TaskPropertiesDrawer({
             </Typography>
           )}
         </PropertyRow>
+        )}
 
-        {/* Phase (only for project tasks) */}
-        {isProjectTask && (
+        {/* Phase (only for project tasks the person may read) */}
+        {isProjectTask && !hiddenRelated && (
           <PropertyRow label={t('workspace.task.sidebar.fields.phase')}>
             {readOnly ? (
               <Typography sx={{ fontSize: 13 }}>{task.phase_name || t('workspace.task.sidebar.values.projectLevel')}</Typography>
@@ -357,6 +362,7 @@ export default function TaskPropertiesDrawer({
           </PropertyRow>
         )}
 
+        {task.applications !== null && (
         <PropertyRow label={t('workspace.task.sidebar.fields.applications', { defaultValue: 'Applications' })}>
           {readOnly ? (
             <Typography sx={{ fontSize: 13 }}>{formatLinkedNames(task.applications)}</Typography>
@@ -370,6 +376,8 @@ export default function TaskPropertiesDrawer({
             />
           )}
         </PropertyRow>
+        )}
+        {task.assets !== null && (
         <PropertyRow label={t('workspace.task.sidebar.fields.assets', { defaultValue: 'Assets' })}>
           {readOnly ? (
             <Typography sx={{ fontSize: 13 }}>{formatLinkedNames(task.assets)}</Typography>
@@ -383,6 +391,7 @@ export default function TaskPropertiesDrawer({
             />
           )}
         </PropertyRow>
+        )}
 
         {showKnowledge && (
           <PropertyRow label={t('workspace.task.sidebar.sections.knowledge')}>

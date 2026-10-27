@@ -27,6 +27,8 @@ import { forgetAllAllocations } from '../../components/finance/allocationsCache'
 import { useKanapDialogs } from '../../components/design';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useFreezeState } from '../../hooks/useFreezeState';
+import FormattedNumberField from '../../components/inputs/FormattedNumberField';
+import { decimalMark } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 import { AllocationRuleResolution, fetchAllocationRule } from '../../services/allocationRules';
 import { allocationMethodLabel } from '../../utils/allocationLabels';
@@ -131,6 +133,8 @@ export default function CopyBudgetPage() {
   const dialogs = useKanapDialogs();
   const theme = useTheme();
   const locale = useLocale();
+  // The application language decides the decimal mark, not the browser.
+  const separator = decimalMark(locale);
   const gridLocaleText = useAgGridLocaleText();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -154,8 +158,8 @@ export default function CopyBudgetPage() {
   const [pickedDestination, setDestinationColumn] = useState<BudgetColumn | null>(null);
   const sourceColumn = usableColumn(pickedSource);
   const destinationColumn = usableColumn(pickedDestination);
-  // The field holds its own text, cleaned on blur ("03" -> "3"): React does not
-  // rewrite a number input whose value already matches, so "03" would stay.
+  // Point-decimal text ("" when empty or zero). The field shows the language's
+  // decimal mark; blur drops a lone zero and a leading zero ("03" -> "3").
   const [percentageInput, setPercentageInput] = useState('');
   const percentageIncrease = parseFloat(percentageInput) || 0;
   const [overwrite, setOverwrite] = useState<boolean>(false);
@@ -569,18 +573,20 @@ export default function CopyBudgetPage() {
               {columnSelect(t('operations.copyBudget.destinationColumn'), destinationColumn, setDestinationColumn)}
               <ReportFilter label={t('operations.copyBudget.percentageIncrease')} width={96}>
                 <Tooltip title={t('operations.copyBudget.percentageHelp')} placement="top" describeChild>
-                  <TextField
+                  <FormattedNumberField
                     size="small"
-                    type="number"
+                    decimals={1}
+                    emit="string"
+                    decimalSeparator={separator}
                     value={percentageInput}
                     disabled={isProcessing}
                     placeholder="0"
-                    onChange={(e) => setPercentageInput(e.target.value)}
+                    onChange={(e) => setPercentageInput(String(e.target.value ?? ''))}
                     onBlur={(e) => {
-                      const parsed = parseFloat(e.target.value);
+                      const parsed = parseFloat(String(e.target.value ?? '').replace(/\s+/g, '').replace(',', '.'));
                       setPercentageInput(Number.isFinite(parsed) && parsed !== 0 ? String(parsed) : '');
                     }}
-                    inputProps={{ step: 0.1, 'aria-label': t('operations.copyBudget.percentageIncrease') }}
+                    inputProps={{ 'aria-label': t('operations.copyBudget.percentageIncrease') }}
                     InputProps={{ endAdornment: <InputAdornment position="end"><Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>%</Typography></InputAdornment> }}
                     sx={{ ...reportFilterSelectSx, width: 96 }}
                   />

@@ -3,7 +3,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { expectAnchoredRight, placeAnchor, stubPopoverPaperWidth } from '../../../test/popoverAnchor';
 import { createAppTheme } from '../../../config/ThemeContext';
 import api from '../../../api';
 import TechnologyApplicationsTab, { countApplications, type TechnologyApplicationRow } from './TechnologyApplicationsTab';
@@ -192,10 +193,24 @@ describe('TechnologyApplicationsTab', () => {
   it('exports the rows as CSV in the screen language', async () => {
     renderTab();
     await screen.findByRole('table', { name: `${A}.title` });
-    fireEvent.click(screen.getByText(`${A}.exportCsv`));
+    const region = screen.getByRole('region', { name: `${A}.title` });
+    const button = within(region).getByRole('button', { name: `${A}.exportCsv` });
+    const titleRow = region.querySelector('h2')?.parentElement as HTMLElement;
+    // Next to the title: after the count, before Add.
+    expect(titleRow.contains(button)).toBe(true);
+    expect(within(titleRow).getByText('2').compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(button.compareDocumentPosition(within(region).getByRole('button', { name: `${A}.add` })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(button);
     await waitFor(() => expect(download).toHaveBeenCalled());
     expect(mocked.get).toHaveBeenCalledWith('/technologies/tech-1/applications/export', { params: { language: 'fr' }, responseType: 'blob' });
     expect(download.mock.calls[0][1]).toBe('TEC-3_applications.csv');
+  });
+
+  it('shows no Export CSV when the section has no row', async () => {
+    renderTab([]);
+    const region = await screen.findByRole('region', { name: `${A}.title` });
+    expect(await within(region).findByText(`${A}.empty`)).toBeTruthy();
+    expect(within(region).queryByRole('button', { name: `${A}.exportCsv` })).toBeNull();
   });
 
   it('says in one line that the applications cannot be read', async () => {
@@ -212,6 +227,30 @@ describe('TechnologyApplicationsTab', () => {
     expect(screen.queryByText(`${A}.add`)).toBeNull();
     expect(screen.queryByRole('button', { name: /applications\.remove/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /changeVersion/ })).toBeNull();
-    expect(screen.getByText(`${A}.exportCsv`)).toBeTruthy();
+    expect(within(screen.getByRole('region', { name: `${A}.title` })).getByRole('button', { name: `${A}.exportCsv` })).toBeTruthy();
+  });
+
+  describe('popover anchor', () => {
+    const innerWidth = window.innerWidth;
+    let restoreWidth: () => void = () => undefined;
+
+    beforeEach(() => {
+      window.innerWidth = 1280;
+      restoreWidth = stubPopoverPaperWidth();
+    });
+
+    afterEach(() => {
+      window.innerWidth = innerWidth;
+      restoreWidth();
+    });
+
+    it('keeps the version picker right-aligned on a row', async () => {
+      renderTab();
+      const button = await screen.findByRole('button', { name: `${A}.changeVersion(name=CRM)` });
+      placeAnchor(button, { left: 900, top: 200, width: 32, height: 32 });
+      fireEvent.click(button);
+      expect(picker().getByText('2022')).toBeTruthy();
+      expectAnchoredRight(932, 300);
+    });
   });
 });

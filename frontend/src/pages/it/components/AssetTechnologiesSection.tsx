@@ -246,6 +246,7 @@ export default function AssetTechnologiesSection({ assetId, canManage, isServer 
         {versionEdit && (
           <TechnologyVersionPicker
             anchorEl={versionEdit.anchor}
+            align="right"
             versions={versions}
             current={versionEdit.row.technology_version_id}
             onPick={(choice) => { const row = versionEdit.row; setVersionEdit(null); void changeVersion(row, choice); }}

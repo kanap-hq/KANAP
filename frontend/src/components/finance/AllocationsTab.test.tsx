@@ -11,6 +11,8 @@ vi.mock('react-i18next', () => {
   const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
+const localeState = vi.hoisted(() => ({ value: 'en' }));
+vi.mock('../../i18n/useLocale', () => ({ useLocale: () => localeState.value }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn() } }));
 // May the user change budget lines (budget right at member level or above).
 const auth = vi.hoisted(() => ({ canEdit: true }));
@@ -79,6 +81,12 @@ function renderTab(id: string, client: QueryClient) {
 
 const reads = (pattern: RegExp) => mocked.get.mock.calls.filter(([url]) => pattern.test(url)).length;
 
+/** Types as if the current text were selected, one character at a time. */
+function typeOver(input: HTMLInputElement, text: string) {
+  fireEvent.change(input, { target: { value: text[0] ?? '' } });
+  for (const ch of text.slice(1)) fireEvent.change(input, { target: { value: input.value + ch } });
+}
+
 describe('AllocationsTab for a budget reader', () => {
   beforeEach(() => {
     mocked.get.mockReset();
@@ -110,7 +118,7 @@ describe('AllocationsTab for a budget reader', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     renderTab('item-1', client);
     expect(await screen.findByText('Alpha Industries')).toBeInTheDocument();
-    const pcts = screen.getAllByRole('spinbutton');
+    const pcts = screen.getAllByRole('textbox', { name: '%' });
     expect(pcts).toHaveLength(2);
     for (const pct of pcts) expect(pct).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'opex.allocations.splitEqually' })).toBeNull();
@@ -237,6 +245,7 @@ describe('AllocationsTab saves (lot 3E)', () => {
   });
   afterEach(() => {
     vi.useRealTimers();
+    localeState.value = 'en';
   });
 
   beforeEach(() => {
@@ -423,6 +432,24 @@ describe('AllocationsTab saves (lot 3E)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('errors:edit_conflict_unreadable');
     expect(screen.queryByRole('region')).toBeNull();
   });
+
+  it('types 12,5 in French and saves 12.5', async () => {
+    localeState.value = 'fr';
+    stored.method = 'manual_pct';
+    mocked.put.mockResolvedValue({ data: { items: stored.items, method: 'manual_pct', driver: 'headcount', base_signature: 'sig-2' } });
+    const ref = renderWithRef();
+    expect(await screen.findByText('Alpha Industries')).toBeInTheDocument();
+    const pct = screen.getAllByRole('textbox', { name: '%' })[0] as HTMLInputElement;
+    typeOver(pct, '12,5');
+    expect(pct).toHaveValue('12,5');
+    await flushTab(ref);
+    expect(puts()[0][1]).toMatchObject({
+      rows: [
+        { company_id: 'c-1', department_id: null, allocation_pct: 12.5 },
+        { company_id: 'c-2', department_id: null, allocation_pct: 87.5 },
+      ],
+    });
+  });
 });
 
 describe('AllocationsTab others\' changes (lot 3G)', () => {
@@ -525,17 +552,17 @@ describe('AllocationsTab others\' changes (lot 3G)', () => {
     expect(await screen.findByText('600')).toBeInTheDocument();
     fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
     fireEvent.click(await screen.findByRole('option', { name: 'opex.allocations.manualByPct' }));
-    const pct = () => screen.getAllByRole('spinbutton') as HTMLInputElement[];
+    const pct = () => screen.getAllByRole('textbox', { name: '%' }) as HTMLInputElement[];
     // Alpha pinned at 70: Beta takes the rest.
     fireEvent.change(pct()[0], { target: { value: '70' } });
-    expect(pct()[1]).toHaveValue(30);
+    expect(pct()[1]).toHaveValue('30');
     await act(async () => { await ref.current?.flush(); });
     expect(ref.current?.hasPending()).toBe(false);
     stored = { ...stored, method: 'manual_pct', base_signature: 'sig-3', budget_rev: 10, items: [{ company_id: 'c-1', department_id: null, allocation_pct: 70 }, { company_id: 'c-2', department_id: null, allocation_pct: 30 }] } as Stored;
     await reload(ref);
     // Beta changed: Alpha, still pinned, keeps its 70.
     fireEvent.change(pct()[1], { target: { value: '40' } });
-    expect(pct()[0]).toHaveValue(70);
+    expect(pct()[0]).toHaveValue('70');
   });
 
   it('a row still being picked is pending: a reload keeps the user\'s allocation and shows the year\'s amounts as stored', async () => {

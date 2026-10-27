@@ -231,7 +231,8 @@ async function seedFixture(runner: QueryRunner) {
   await setCurrentTenant(runner, tenantId);
 
   const roles = {
-    incidentsAdmin: await seedRole(runner, tenantId, `IncAdmin ${tag}`, { incidents: 'admin', knowledge: 'member' }),
+    // Reads applications too: the Knowledge branch names a document's linked applications to their readers.
+    incidentsAdmin: await seedRole(runner, tenantId, `IncAdmin ${tag}`, { incidents: 'admin', knowledge: 'member', applications: 'reader' }),
     incidentsContributor: await seedRole(runner, tenantId, `IncContrib ${tag}`, { incidents: 'contributor', knowledge: 'member' }),
     incidentsReader: await seedRole(runner, tenantId, `IncReader ${tag}`, { incidents: 'reader', knowledge: 'member' }),
     // Reporter with no Knowledge permission at all: only the source context can let them in.
@@ -578,7 +579,8 @@ async function testListPaths() {
       [f.tenantId, f.docs.plain, f.incidents.confidential],
     );
     const plainForThird = await knowledge.get(f.docs.plain, { manager: runner.manager, userId: f.users.thirdParty });
-    assert.deepEqual(plainForThird.relations.incidents, [], 'a linked confidential incident is not disclosed');
+    // A reader of incidents gets an empty list; anyone else no incidents family at all.
+    assert.deepEqual(plainForThird.relations.incidents ?? [], [], 'a linked confidential incident is not disclosed');
     const plainForOwner = await knowledge.get(f.docs.plain, { manager: runner.manager, userId: f.users.owner });
     assert.equal(plainForOwner.relations.incidents.length, 1);
 
@@ -897,7 +899,8 @@ async function testSourceContextHidesKnowledgeNeighbourhood() {
     });
     assert.equal(viaSource.id, documentId, 'the review itself is still readable');
     for (const kind of ['applications', 'assets', 'projects', 'requests', 'tasks', 'interfaces']) {
-      assert.deepEqual(viaSource.relations[kind], [], `relations.${kind} must be empty on the source path`);
+      // Empty on the source path; absent as well when the reader cannot read the module.
+      assert.deepEqual(viaSource.relations[kind] ?? [], [], `relations.${kind} must be empty on the source path`);
     }
     assert.deepEqual(
       viaSource.relations.incidents.map((row: any) => row.id),

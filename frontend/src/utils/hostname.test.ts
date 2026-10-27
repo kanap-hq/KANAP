@@ -61,9 +61,32 @@ describe('sanitizeHostname', () => {
   });
 
   it('always produces a valid host name or nothing', () => {
-    for (const input of ['DL3.ROBOT-15MS.IE2000', 'Switch #3 (spare)', 'a..b', '.srv01.', '###', 'a'.repeat(200)]) {
+    // 62 letters, a hyphen, then one more letter: the 63 cut used to keep the hyphen.
+    const labelCutOnHyphen = 'a'.repeat(62) + '-b';
+    // The hyphen of the last label sits on the 253rd character of the joined name.
+    const full = 'b'.repeat(63);
+    const overallCutOnHyphen = [full, full, full, 'c'.repeat(60) + '-' + 'd'].join('.');
+    // The same 63 cut on a label that is not the last one.
+    const earlierLabelCutOnHyphen = 'a'.repeat(62) + '-b.srv01';
+
+    for (const input of [
+      'DL3.ROBOT-15MS.IE2000',
+      'Switch #3 (spare)',
+      'a..b',
+      '.srv01.',
+      '###',
+      'a'.repeat(200),
+      labelCutOnHyphen,
+      overallCutOnHyphen,
+      earlierLabelCutOnHyphen,
+    ]) {
       const sanitized = sanitizeHostname(input);
       if (sanitized) expect(isValidHostname(sanitized)).toBe(true);
     }
+
+    expect(sanitizeHostname(labelCutOnHyphen)).toBe('a'.repeat(62));
+    expect(sanitizeHostname(overallCutOnHyphen)).toBe([full, full, full, 'c'.repeat(60)].join('.'));
+    expect(sanitizeHostname(earlierLabelCutOnHyphen)).toBe('a'.repeat(62) + '.srv01');
+    expect(sanitizeHostname('###')).toBe('');
   });
 });

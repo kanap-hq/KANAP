@@ -14,14 +14,16 @@ Each row shows:
 
 - The name of the application and the host it returns to, for example *Claude · claude.ai*
 - The date you connected it
-- The date it last read your data
+- The date and time it last read your data
 
 An application reads only what you can see in KANAP, within your own access rights. It cannot change anything.
 
 To cut an access, click **Disconnect** and confirm. The application loses access at once. To use it again, connect it again from the application. Disconnecting also forgets the **Remember this application** choice you made when you connected it.
 
-When nothing is connected, the tab shows one line and a link to the instructions. To connect an application, see [Connecting an MCP client](ai-settings.md#connecting-an-mcp-client).
+When you have no connected application and no API key, the tab shows one line and a link to the instructions. To connect an application, see [Connecting an MCP client](ai-settings.md#connecting-an-mcp-client).
 
 ## API keys
 
-Under the connections, the tab lists your own active MCP API keys, with their label, prefix, creation date and last use. This list is read only. An administrator creates and revokes keys on the [Plaid Settings](ai-settings.md#mcp-keys-and-connections) page.
+Under the connections, the tab lists your own active MCP API keys, with their label, prefix, creation date, and the date and time of their last use.
+
+To stop a key, click **Revoke** and confirm. Every client that uses the key loses access at once, and this cannot be undone. An administrator creates keys on the [Plaid Settings](ai-settings.md#mcp-keys-and-connections) page.

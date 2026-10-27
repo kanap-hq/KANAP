@@ -119,6 +119,17 @@ async function main(): Promise<void> {
     assert.equal(failure.code, 'netbox_token_missing');
     assert.equal(failure.detail, undefined);
   }
+
+  // A run that stayed marked running past an hour uses its own code. The
+  // sentence is safe to show, and the page translates the code.
+  {
+    assert.ok(NETBOX_ERROR_CODES.includes('netbox_sync_interrupted'));
+    assert.equal(
+      NETBOX_ERROR_MESSAGES.netbox_sync_interrupted,
+      'The previous synchronisation stopped without finishing. Start a new one.',
+    );
+    assertSafe(NETBOX_ERROR_MESSAGES.netbox_sync_interrupted);
+  }
 }
 
 main().then(() => console.log('netbox-errors.spec.ts OK')).catch((error) => {

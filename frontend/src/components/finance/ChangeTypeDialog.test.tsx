@@ -95,7 +95,7 @@ describe('ChangeTypeDialog', () => {
     const account = screen.getByLabelText('ops:shared.changeType.accountLabel');
     expect(account).toHaveValue('');
     expect(account).toHaveAttribute('data-nature', 'capex');
-    expect(screen.getByText(/ops:shared\.changeType\.accountUnfit .*\[6100\] Licences/)).toBeInTheDocument();
+    expect(screen.getByText(/ops:shared\.changeType\.accountUnfit .*6100 - Licences/)).toBeInTheDocument();
     expect(screen.getByLabelText('Investment kind')).toHaveAttribute('data-line-type', 'capex');
     expect(screen.getByText(/ops:shared\.changeType\.valueOtherType .*Subscriptions/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('ops:shared.changeType.reasonLabel'), { target: { value: '  Bought outright  ' } });

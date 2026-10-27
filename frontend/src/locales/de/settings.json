@@ -96,7 +96,24 @@
     "deploymentCloud": "Bereitstellung: Cloud",
     "deploymentOnPremise": "Bereitstellung: On-Premise",
     "releaseNotes": "Versionshinweise",
-    "upgradeGuide": "Upgrade-Anleitung"
+    "upgradeGuide": "Upgrade-Anleitung",
+    "docs": "Dokumentation",
+    "license": "Quellcode unter der AGPL-3.0-Lizenz",
+    "trialDaysLeft_one": "Noch {{count}} Tag in Ihrer Testphase",
+    "trialDaysLeft_other": "Noch {{count}} Tage in Ihrer Testphase",
+    "choosePlan": "Tarif wählen",
+    "support": {
+      "title": "Support",
+      "contract": "Wenn Sie einen Supportvertrag haben, schreiben Sie an {{email}}",
+      "included": "E-Mail-Support: Schreiben Sie an {{email}}",
+      "copy": "Angaben für den Support kopieren",
+      "otherwise": "Andernfalls:",
+      "copied": "Kopiert",
+      "discussions": "Stellen Sie Ihre Frage in {{link}}",
+      "issues": "Melden Sie ein Problem in {{link}}",
+      "offer": "Für einen Supportvertrag siehe {{link}}",
+      "offerLink": "das Support-Angebot"
+    }
   },
   "connectedApps": {
     "title": "Verbundene Anwendungen",
@@ -114,6 +131,12 @@
     },
     "apiKeys": "API-Schlüssel",
     "loadFailed": "Ihre verbundenen Anwendungen konnten nicht geladen werden.",
-    "disconnectFailed": "Diese Anwendung konnte nicht getrennt werden."
+    "disconnectFailed": "Diese Anwendung konnte nicht getrennt werden.",
+    "revoke": "Widerrufen",
+    "revokeConfirm": {
+      "title": "{{key}} widerrufen?",
+      "body": "Alle Clients, die {{key}} verwenden, verlieren sofort den Zugriff auf Ihre KANAP-Daten. Dies kann nicht rückgängig gemacht werden."
+    },
+    "revokeFailed": "Dieser Schlüssel konnte nicht widerrufen werden."
   }
 }

@@ -4,7 +4,7 @@ KANAP puede desplegarse on-premise en **modo de un solo espacio de trabajo** (si
 
 ## Guías
 
-- **[Instalación](installation.md):** requisitos, nombre y certificado, clonado, compilación, configuración y arranque
+- **[Instalación](installation.md):** requisitos, nombre y certificado, clonado, configuración, descarga de las imágenes y arranque
 - **[Ejemplo de instalación](installation-example.md):** recorrido paso a paso en Ubuntu 26.04 con PostgreSQL, RustFS, un cortafuegos y nginx
 - **[Instalación asistida por IA](installation-ai.md):** instalación con un solo prompt mediante un agente de programación con IA
 - **[Configuración](configuration.md):** referencia de las variables de entorno, líneas de arranque, trabajos en segundo plano y reglas de cortafuegos

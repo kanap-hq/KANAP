@@ -9,7 +9,8 @@ import { BACKEND_ROOT } from './backend-root';
  * (the CI `images` job checks that each digest is a multi-architecture index). The API image
  * takes its packages from the Alpine release of its base only. Its last stage, `runtime`, is the
  * default build: compiled code and production dependencies, no sources or development tools.
- * The server compose files build it explicitly; the development compose file builds `dev`.
+ * The server compose files pull the published image; the on-premise build overlay builds `runtime`
+ * (and `dev` for the tools image) and the development compose file builds `dev`.
  */
 
 const REPO_ROOT = path.dirname(BACKEND_ROOT);
@@ -90,20 +91,30 @@ assert.ok(
   'runtime starts the entrypoint in exec form',
 );
 
-// 5. Compose files: explicit API stage.
-function apiTarget(relative: string): string | null {
+// 5. Compose files: the server files pull the published API image; the build overlay and the
+// development compose file name the stage they build.
+function serviceBlock(relative: string, service: string): string[] {
   const lines = read(relative).split('\n');
-  const start = lines.findIndex((line) => /^ {2}api:\s*$/.test(line));
-  assert.ok(start >= 0, `${relative} has an api service`);
-  for (let i = start + 1; i < lines.length && !/^ {0,2}\S/.test(lines[i]); i += 1) {
-    const target = /^\s+target:\s*(\S+)/.exec(lines[i]);
+  const start = lines.findIndex((line) => new RegExp(`^ {2}${service}:\\s*$`).test(line));
+  assert.ok(start >= 0, `${relative} has a ${service} service`);
+  const block: string[] = [];
+  for (let i = start + 1; i < lines.length && !/^ {0,2}\S/.test(lines[i]); i += 1) block.push(lines[i]);
+  return block;
+}
+function buildTarget(relative: string, service: string): string | null {
+  for (const line of serviceBlock(relative, service)) {
+    const target = /^\s+target:\s*(\S+)/.exec(line);
     if (target) return target[1];
   }
   return null;
 }
 for (const file of ['infra/compose.onprem.yml', 'infra/compose.qa.yml', 'infra/compose.prod.yml']) {
-  assert.equal(apiTarget(file), 'runtime', `${file} builds the runtime stage`);
+  const block = serviceBlock(file, 'api');
+  assert.ok(block.some((line) => /^\s+image:\s*ghcr\.io\/kanap-hq\/kanap-api:\$\{KANAP_VERSION:-/.test(line)), `${file} pulls the published API image`);
+  assert.ok(!block.some((line) => /^\s+build:/.test(line)), `${file} builds nothing`);
 }
-assert.equal(apiTarget('infra/docker-compose.example.yml'), 'dev', 'the development compose file builds the dev stage');
+assert.equal(buildTarget('infra/compose.onprem.build.yml', 'api'), 'runtime', 'the build overlay builds the runtime stage');
+assert.equal(buildTarget('infra/compose.onprem.build.yml', 'tools'), 'dev', 'the build overlay builds the dev stage for the tools image');
+assert.equal(buildTarget('infra/docker-compose.example.yml', 'api'), 'dev', 'the development compose file builds the dev stage');
 
 console.log('container-images.spec: ok');

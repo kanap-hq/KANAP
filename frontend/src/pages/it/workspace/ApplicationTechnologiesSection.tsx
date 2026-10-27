@@ -1,8 +1,7 @@
 import React from 'react';
-import { Alert, Box, IconButton, Link, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, IconButton, Tooltip, Typography } from '@mui/material';
 import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
@@ -10,6 +9,7 @@ import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
+import ViaAssetNames from '../../../components/workspace/ViaAssetNames';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
 import { invalidateTechnologyLinks } from '../components/technologyLinkQueries';
 import { HelpTip } from '../components/HelpTip';
@@ -240,29 +240,14 @@ export default function ApplicationTechnologiesSection({
       },
     },
     {
-      key: 'via', header: t('workspace.application.relations.columns.via'), width: 140, hideOrder: 1,
-      render: (row) => {
-        const names = row.via.map(serverLabel).join(', ');
-        // Each server leads to its page, where what it carries is changed.
-        return (
-          <Box component="span" title={names || undefined} sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {row.via.map((via, index) => (
-              <React.Fragment key={via.asset_id}>
-                {index > 0 && ', '}
-                <Link
-                  component={RouterLink}
-                  to={`/it/assets/${via.asset_id}/operations`}
-                  onClick={(event: React.MouseEvent) => event.stopPropagation()}
-                  underline="hover"
-                  sx={{ color: 'inherit' }}
-                >
-                  {serverLabel(via)}
-                </Link>
-              </React.Fragment>
-            ))}
-          </Box>
-        );
-      },
+      // Wraps at 140px, like a technology's servers, so every name stays readable.
+      key: 'via', header: t('workspace.application.relations.columns.via'), width: 140, wrap: true, hideOrder: 1,
+      render: (row) => (
+        <ViaAssetNames
+          assets={row.via.map((via) => ({ id: via.asset_id, name: serverLabel(via) }))}
+          href={(asset) => `/it/assets/${asset.id}/operations`}
+        />
+      ),
     },
     {
       key: 'supportEnd', header: t('workspace.application.relations.columns.supportEnd'), width: 100,
@@ -317,6 +302,7 @@ export default function ApplicationTechnologiesSection({
         {flow?.step === 'servers' && (
           <TechnologyServersProposal
             anchorEl={flow.anchor}
+            align={flow.mode === 'record' ? 'right' : 'left'}
             technology={flow.technology.label}
             version={flow.version}
             servers={servers}
@@ -333,6 +319,7 @@ export default function ApplicationTechnologiesSection({
         {versionEdit && (
           <TechnologyVersionPicker
             anchorEl={versionEdit.anchor}
+            align="right"
             versions={versions}
             current={versionEdit.declaration.technology_version_id}
             onPick={(choice) => { const { row, declaration } = versionEdit; setVersionEdit(null); void changeVersion(row, declaration, choice); }}

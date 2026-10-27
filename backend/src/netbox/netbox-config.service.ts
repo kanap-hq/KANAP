@@ -16,7 +16,7 @@ import {
 import { NETBOX_LEGACY_VM_ROLE_SLUG, NETBOX_VIRTUAL_MACHINES_SLUG } from './netbox-mapper';
 import { NetboxNotice, netboxNoticeFromStore } from './netbox-notice';
 import { NetboxSyncCounts } from './netbox-planner';
-import { isNetboxErrorCode, netboxBadRequest, netboxFailureOf, type NetboxErrorCode } from './netbox-errors';
+import { isNetboxErrorCode, NETBOX_ERROR_MESSAGES, netboxBadRequest, netboxFailureOf, type NetboxErrorCode } from './netbox-errors';
 import { NetboxConnection } from './netbox.types';
 
 // The Netbox connection lives in ai_adapter_configs, the table that already
@@ -218,8 +218,8 @@ export function readSyncState(metadata: Record<string, unknown> | null, nowMs = 
       return {
         ...state,
         status: 'failure',
-        error: 'The previous synchronisation stopped without finishing. Start a new one.',
-        error_code: null,
+        error: NETBOX_ERROR_MESSAGES.netbox_sync_interrupted,
+        error_code: 'netbox_sync_interrupted',
       };
     }
   }

@@ -8,7 +8,7 @@ Des outils comme [Claude Code](https://docs.anthropic.com/en/docs/claude-code/ov
 
 | Exigence | Détails |
 |-------------|---------|
-| **Serveur** | Ubuntu 26.04 LTS (24.04 LTS fonctionne), fraîchement installé, avec 6 Go de RAM ou plus (8 Go recommandés ; le build des images a besoin de cette marge), un utilisateur disposant de sudo et un accès sortant à internet pendant l'installation (paquets, images Docker, GitHub, et Let's Encrypt si vous l'utilisez) |
+| **Serveur** | Ubuntu 26.04 LTS (24.04 LTS fonctionne), fraîchement installé, avec 4 Go de RAM ou plus (8 Go recommandés, puisque PostgreSQL tourne sur le même serveur), un utilisateur disposant de sudo et un accès sortant à internet pendant l'installation (paquets, images KANAP et Docker, GitHub, et Let's Encrypt si vous l'utilisez) |
 | **Nom** | Le nom que les utilisateurs saisissent pour ouvrir KANAP. Un enregistrement DNS public n'est nécessaire que pour Let's Encrypt. Sinon, utilisez un enregistrement dans le DNS de votre entreprise, ou une entrée du fichier hosts pour un test (voir [Nom et certificat](installation.md#nom-et-certificat)). |
 | **Certificat** | L'un des trois cas : un nom public avec Let's Encrypt, des fichiers de certificat de votre autorité interne déjà présents sur le serveur, ou un certificat auto-signé pour un test |
 | **Agent IA** | Un agent IA de programmation installé sur le serveur (Claude Code, Codex ou équivalent) |
@@ -104,7 +104,7 @@ L'agent lit la procédure, puis la déroule :
 3. **Fichiers KANAP** : clone le dépôt dans `/opt/kanap` et bascule sur `stable`.
 4. **PostgreSQL** : l'installe, crée la base de données, le rôle applicatif et les extensions nécessaires, et autorise les connexions des réseaux Docker.
 5. **Stockage objet** : installe RustFS, crée le bucket, un utilisateur applicatif aux droits restreints et la clé de chiffrement.
-6. **KANAP** : écrit `.env` avec les secrets générés, construit les images Docker et démarre les conteneurs.
+6. **KANAP** : écrit `.env` avec les secrets générés, télécharge les images de KANAP et démarre les conteneurs.
 7. **TLS et nginx** : obtient ou crée le certificat, configure le reverse proxy, s'assure que le serveur résout le nom.
 8. **Vérification** : contrôle la santé de l'API et du front-end, puis lance le test de recette (base de données, stockage, connexion, exports).
 

@@ -1904,6 +1904,7 @@
           "assets": "Assets suchen",
           "processes": "Geschäftsprozesse suchen"
         },
+        "memberOfCluster": "Mitglied von {{cluster}}",
         "types": {
           "budget_line": "Budgetzeile",
           "contract": "Vertrag",

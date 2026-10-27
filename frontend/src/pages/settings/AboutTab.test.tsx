@@ -38,7 +38,10 @@ vi.mock('./NotificationsTab', () => ({ default: () => <div>notifications tab</di
 vi.mock('./AppearanceTab', () => ({ default: () => <div>appearance tab</div> }));
 vi.mock('./ConnectedAppsTab', () => ({ default: () => <div>connected apps tab</div> }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: (resource: string) => resource === 'ai_mcp' && state.mcpReader }),
+  useAuth: () => ({ hasLevel: (resource: string) => resource === 'ai_mcp' && state.mcpReader, subscription: null, claims: null }),
+}));
+vi.mock('../../tenant/TenantContext', () => ({
+  useTenant: () => ({ tenantName: 'Acme', tenantSlug: 'acme' }),
 }));
 
 afterEach(() => {
@@ -48,16 +51,24 @@ afterEach(() => {
   state.mcpReader = false;
 });
 
+function renderTab() {
+  return render(
+    <MemoryRouter>
+      <AboutTab />
+    </MemoryRouter>,
+  );
+}
+
 describe('AboutTab', () => {
-  it('on-premise, shows the version, the deployment and both links', () => {
+  it('on-premise, shows the version, the deployment and the links', () => {
     state.deploymentMode = 'single-tenant';
-    render(<AboutTab />);
+    renderTab();
 
     expect(screen.getByText('About KANAP')).toBeInTheDocument();
     expect(screen.getByText('Version 26.10.1')).toBeInTheDocument();
     expect(screen.getByText('Deployment: on-premise')).toBeInTheDocument();
     const notes = screen.getByRole('link', { name: 'Release notes' });
-    expect(notes).toHaveAttribute('href', 'https://github.com/kanap-hq/KANAP/releases');
+    expect(notes).toHaveAttribute('href', 'https://github.com/kanap-hq/KANAP/releases/tag/v26.10.1');
     expect(notes).toHaveAttribute('target', '_blank');
     expect(notes).toHaveAttribute('rel', 'noopener');
     const guide = screen.getByRole('link', { name: 'Upgrade guide' });
@@ -65,8 +76,8 @@ describe('AboutTab', () => {
     expect(guide).toHaveAttribute('target', '_blank');
   });
 
-  it('in the cloud, shows the release notes link only', () => {
-    render(<AboutTab />);
+  it('in the cloud, shows the release notes link and no upgrade guide', () => {
+    renderTab();
 
     expect(screen.getByText('Version 26.10.1')).toBeInTheDocument();
     expect(screen.getByText('Deployment: cloud')).toBeInTheDocument();
@@ -76,7 +87,7 @@ describe('AboutTab', () => {
 
   it('while the version is unknown, shows no version line', () => {
     state.version = 'unknown';
-    render(<AboutTab />);
+    renderTab();
 
     expect(screen.getByText('About KANAP')).toBeInTheDocument();
     expect(screen.getByText('Deployment: cloud')).toBeInTheDocument();

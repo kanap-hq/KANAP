@@ -154,6 +154,7 @@ ai-assistant.md	frontend/src/pages/ai/AiWorkspacePage.tsx
 ai-assistant.md	frontend/src/ai/**/*.tsx
 ai-settings.md	frontend/src/pages/admin/AdminAiPage.tsx
 ai-settings.md	frontend/src/pages/admin/IncludedModelConfirmation.tsx
+ai-settings.md	frontend/src/pages/admin/McpJournalSection.tsx
 ai-settings.md	frontend/src/pages/oauth/**/*.tsx
 connected-apps.md	frontend/src/pages/settings/ConnectedAppsTab.tsx
 ai-models.md	frontend/src/pages/admin/AdminAiModelsPage.tsx
@@ -176,3 +177,9 @@ agents-activity.md	frontend/src/pages/agents/AgentsActivityPage.tsx
 agents-activity.md	frontend/src/components/agents/RunTraceDialog.tsx
 agents-shared-context.md	frontend/src/pages/agents/SharedContextProfilesPage.tsx
 agents-overview.md	frontend/src/components/agents/*.tsx
+on-premise/installation.md	infra/compose.onprem.yml
+on-premise/installation.md	infra/compose.onprem.build.yml
+on-premise/installation-example.md	infra/compose.onprem.yml
+on-premise/installation-example.md	infra/compose.onprem.build.yml
+on-premise/operations.md	infra/compose.onprem.yml
+on-premise/operations.md	infra/compose.onprem.build.yml

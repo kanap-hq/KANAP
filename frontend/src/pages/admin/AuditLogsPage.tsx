@@ -294,8 +294,8 @@ export default function AuditLogsPage() {
   }, [userLookup.items]);
   const snapshot = React.useMemo(() => auditSnapshot(detail), [detail]);
   const valueContext = React.useMemo<AuditValueContext>(
-    () => ({ locale, t, snapshot, users: userNames }),
-    [locale, t, snapshot, userNames],
+    () => ({ locale, t, snapshot, users: userNames, table: detail?.table_name || undefined }),
+    [locale, t, snapshot, userNames, detail?.table_name],
   );
 
   const getFilterValues = React.useCallback((field: 'table_name' | 'action' | 'source') => {

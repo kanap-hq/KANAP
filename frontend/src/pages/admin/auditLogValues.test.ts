@@ -17,6 +17,7 @@ import {
 } from './auditLogValues';
 
 const t = i18n.getFixedT('en', 'admin') as unknown as Translate;
+const tFr = i18n.getFixedT('fr', 'admin') as unknown as Translate;
 const uuid = '11111111-1111-4111-8111-111111111111';
 const otherUuid = '22222222-2222-4222-8222-222222222222';
 
@@ -125,8 +126,44 @@ describe('formatAuditValue', () => {
     expect(display).toEqual({ text: 'Identifier', title: otherUuid, secondary: true });
   });
 
-  it('keeps a non-id string as it is', () => {
-    expect(formatAuditValue('on_premise', 'hosting_model', context()).text).toBe('on_premise');
+  it('keeps a free-text string as it is', () => {
+    expect(formatAuditValue('on_premise', 'notes', context()).text).toBe('on_premise');
+    expect(formatAuditValue('open', 'name', context()).text).toBe('open');
+  });
+
+  it('shows the screen label of a known enumeration, in French', () => {
+    const fr = context({ locale: 'fr', t: tFr });
+    expect(formatAuditValue('open', 'status', { ...fr, table: 'incidents' }).text).toBe('Ouvert');
+    expect(formatAuditValue('production', 'environment', fr).text).toBe('Production');
+    expect(formatAuditValue('high', 'criticality', fr).text).toBe('Élevée');
+    expect(formatAuditValue('not_a_real_code', 'status', { ...fr, table: 'incidents' }).text).toBe('not_a_real_code');
+    expect(formatAuditValue('warehouse', 'environment', fr).text).toBe('warehouse');
+  });
+
+  it('uses the incident status list, and the common list everywhere else', () => {
+    const fr = context({ locale: 'fr', t: tFr });
+    expect(formatAuditValue('closed', 'status', { ...fr, table: 'incidents' }).text).toBe('Clôturé');
+    expect(formatAuditValue('resolved', 'status', { ...fr, table: 'incidents' }).text).toBe('Résolu');
+    expect(formatAuditValue('closed', 'status', { ...fr, table: 'suppliers' }).text).toBe('Fermé');
+    expect(formatAuditValue('enabled', 'status', fr).text).toBe('Activé');
+    expect(formatAuditValue('in_progress', 'status', fr).text).toBe('En cours');
+    expect(formatAuditValue('active', 'lifecycle', fr).text).toBe('Actif');
+    expect(formatAuditValue('retired', 'lifecycle', context()).text).toBe('Retired');
+  });
+
+  it('labels hosting, severity and mode from the screen lists', () => {
+    expect(formatAuditValue('on_premise', 'hosting_model', context()).text).toBe('On premise');
+    expect(formatAuditValue('public_cloud', 'hosting_model', context()).text).toBe('Public cloud');
+    expect(formatAuditValue('pre_prod', 'environment', context()).text).toBe('Pre-prod');
+    expect(formatAuditValue('business_critical', 'criticality', context()).text).toBe('Business critical');
+    expect(formatAuditValue('critical', 'severity', context()).text).toBe('Critical');
+    expect(formatAuditValue(['high', 'low'], 'criticality', context()).text).toBe('High, Low');
+    expect(formatAuditValue('limited', 'mode', context()).text).toBe('limited');
+    expect(formatAuditValue('limited', 'mode', context({ table: 'user_data_access' })).text).toBe('Limited to');
+    expect(formatAuditValue('auto', 'mode', context({ table: 'allocation_rules' })).text).toBe('All enabled companies');
+    expect(formatAuditValue('manual_company', 'mode', context({ table: 'allocation_rules' })).text).toBe('Selected companies');
+    expect(formatAuditValue('custom', 'mode', context({ table: 'allocation_rules' })).text).toBe('custom');
+    expect(formatAuditValue('on_premise', 'hosting_model', context({ locale: 'fr', t: tFr })).text).toBe('Sur site');
   });
 });
 

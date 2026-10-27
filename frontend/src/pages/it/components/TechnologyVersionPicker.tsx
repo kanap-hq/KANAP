@@ -13,6 +13,11 @@ export type VersionChoice = { technology_version_id: string | null } | { version
 
 type Props = {
   anchorEl: HTMLElement;
+  /**
+   * Which edge of the anchor the panel shares. An Add button is `'left'` (the panel grows into
+   * the content). A row button is `'right'`, so the panel stays over the table.
+   */
+  align?: 'left' | 'right';
   /** The technology's versions, newest first; undefined while they load. */
   versions: VersionOption[] | undefined;
   /** The version the link names now (`null`: unknown), marked in the list; absent when adding. */
@@ -29,7 +34,7 @@ const itemSx = { minHeight: 32, py: 0.75, fontSize: 13, color: 'kanap.text.prima
  * the server creates. Enter takes the version whose label is the text typed (without case), else
  * the first one that contains it; it creates the label typed only when no version matches.
  */
-export default function TechnologyVersionPicker({ anchorEl, versions, current, onPick, onClose }: Props) {
+export default function TechnologyVersionPicker({ anchorEl, align = 'left', versions, current, onPick, onClose }: Props) {
   const { t } = useTranslation('it');
   const [text, setText] = React.useState('');
   const listRef = React.useRef<HTMLUListElement | null>(null);
@@ -51,8 +56,8 @@ export default function TechnologyVersionPicker({ anchorEl, versions, current, o
       open
       anchorEl={anchorEl}
       onClose={onClose}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      anchorOrigin={{ vertical: 'bottom', horizontal: align }}
+      transformOrigin={{ vertical: 'top', horizontal: align }}
       slotProps={{ paper: { sx: { p: 1, width: 300, mt: 0.5 } } }}
     >
       <TextField

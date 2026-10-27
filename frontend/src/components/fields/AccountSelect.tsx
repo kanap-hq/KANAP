@@ -6,6 +6,7 @@ import { useLookupPicker } from '../../hooks/useLookupPicker';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 import type { AccountNature } from '../../constants/accountNature';
+import { accountDisplayText } from '../../utils/accountDisplay';
 
 export type AccountOption = {
   id: string;
@@ -77,7 +78,7 @@ const AccountSelect = React.forwardRef<HTMLInputElement, AccountSelectProps>(fun
     given: [selectedOption],
   });
   const selectedAccount: Account | null = value ? picker.selected[0] ?? null : null;
-  const accountLabel = (option: Account) => (option.account_name == null ? '' : `[${option.account_number}] ${option.account_name}`);
+  const accountLabel = (option: Account) => accountDisplayText(option.account_number, option.account_name);
 
   const control = (
     <Autocomplete

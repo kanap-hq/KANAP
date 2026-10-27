@@ -167,4 +167,9 @@ export function getDocPageUrl(slug: string, locale?: string): string {
   return `${DOC_BASE_URL}${getLocalePrefix(locale)}/${slug}/`;
 }
 
+/** Home of the user manual, in the user's language. */
+export function getDocHomeUrl(locale?: string): string {
+  return `${DOC_BASE_URL}${getLocalePrefix(locale)}/`;
+}
+
 

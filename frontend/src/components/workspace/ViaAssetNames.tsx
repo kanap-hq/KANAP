@@ -7,8 +7,9 @@ export type ViaAsset = { id: string; name: string; reference?: string | null };
 /**
  * The assets that carry a line (a host, the members of a cluster): their names side by side, each a
  * neutral link to its page. Its column wraps (`wrap`), so every name stays readable; the list is also on hover.
+ * `href` overrides the page a name opens (an application's technologies open the server's operations).
  */
-export default function ViaAssetNames({ assets }: { assets: ViaAsset[] }) {
+export default function ViaAssetNames({ assets, href }: { assets: ViaAsset[]; href?: (asset: ViaAsset) => string }) {
   if (assets.length === 0) return null;
   return (
     <span title={assets.map((asset) => asset.name).join(', ')}>
@@ -17,7 +18,7 @@ export default function ViaAssetNames({ assets }: { assets: ViaAsset[] }) {
           {index > 0 && ', '}
           <Link
             component={RouterLink}
-            to={`/it/assets/${asset.id}/overview`}
+            to={href ? href(asset) : `/it/assets/${asset.id}/overview`}
             underline="hover"
             onClick={(event) => event.stopPropagation()}
             sx={{ color: 'inherit', fontSize: 'inherit', '&:hover': { color: 'primary.main' } }}

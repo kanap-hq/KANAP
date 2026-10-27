@@ -419,14 +419,36 @@ Current MCP behavior is deliberately read-only:
 
 - API keys have scoped policies: `mcp:tools:list`, `mcp:tools:execute`, and
   optionally `mcp:audit:read`
-- default allowed capability group is `kanap.read.core`
+- default allowed capability group is `kanap.read.core`; a key stores the group
+  name, so a tool added to the group reaches every key at its next request
 - API key policy enforces `mcp_max_effect = read`
 - `AiMcpExposureService` only exposes capabilities whose effect is `read`,
   default approval is `none`, and MCP exposure is marked read-only
+- `initialize` returns the KANAP version and short `instructions` (read only,
+  the person's rights, how to search, the families the server does not read)
+- refusals: an unknown tool name is a JSON-RPC `-32602`; a known tool the call
+  may not run (write tool, key policy, web search off, missing read right) is a
+  tool result with `isError: true` and the cause
+  (`AiMcpExposureService.explainRefusal`)
+- the 429 `MCP_RATE_LIMITED` carries `Retry-After` and `retry_after_seconds`
 - MCP calls are dispatched through the same control-plane dispatcher and are
-  recorded in `ai_runs`, `ai_tool_executions`, and `ai_evidence`
-- `GET /ai/mcp/audit` returns MCP tool execution audit entries for authorized
-  keys/admins
+  recorded in `ai_runs`, `ai_tool_executions`, and `ai_evidence`, with the
+  argument values redacted and truncated (`mcpArgumentPreview`). A call refused
+  or failed before or during the dispatch is rolled back with the request
+  transaction: `AiMcpAuditService.recordCall` writes it afterwards, status
+  `refused` or `failed`, cause in `metadata_json.refusal_reason`. So does the
+  guard for a known key that is revoked, expired or whose owner may no longer
+  connect (at most one line per key every 10 seconds), with the time the key
+  check took as its duration. No key or token value enters these rows.
+- `GET /ai/mcp/audit` (keys with `mcp:audit:read`, their own calls) and
+  `GET /ai/admin/mcp-audit` (administrators, with `facets` for the filters)
+  return the journal, newest first: filters `user_id`, `api_key_id`,
+  `capability_name`, `result` (`completed`, `refused`, `failed`), `from`, `to`,
+  paged by `limit` (1 to 200) and `offset`, with `has_more`. Each item carries
+  the message the client read (`error_message`, keys and tokens hidden) and,
+  for a connection, the host of its redirect URI (`oauth_redirect_host`), as do
+  the keys of `facets`
+- revoking a key or a connection already revoked changes nothing
 
 Read-write MCP is roadmap. It needs an explicit approval protocol rather than
 reusing chat approval cards.

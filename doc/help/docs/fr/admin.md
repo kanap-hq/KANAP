@@ -458,6 +458,8 @@ Le haut de la page résume votre abonnement en deux lignes :
 
 Sans abonnement en cours (un essai, un essai expiré ou un abonnement terminé), seul le statut est affiché. Pendant un essai, il est accompagné de la date de fin d'essai et du nombre de jours restants.
 
+Pendant un essai, une pastille dans la barre du haut indique aussi les jours restants, par exemple « Essai : 9 j ». Pour les administrateurs de la facturation, elle ouvre cette page. Survolez-la pour voir la date de fin d'essai. Une fois l'essai expiré, un bandeau prend sa place.
+
 Lorsqu'un passage à la facturation mensuelle est prévu, une troisième ligne l'indique, par exemple « Passe en mensuel le 7 oct. 2027. » Cliquez sur **Rester en annuel** sur cette ligne pour annuler ce passage.
 
 ### Actions
@@ -620,9 +622,12 @@ Pour le contenu du jeu, ce que l'effacement supprime et conserve, et le bandeau 
 
 La page Paramètres vous permet de gérer votre profil personnel et vos préférences de notification. Accédez-y depuis le menu utilisateur (avatar en haut à droite) ou naviguez vers `/settings`.
 
-La page a deux onglets, accessibles via URL :
+La page a ces onglets, chacun avec sa propre URL :
 - `/settings/profile` (par défaut) : Onglet Profil
 - `/settings/notifications` : Onglet Notifications
+- `/settings/appearance` : Onglet Apparence
+- `/settings/connected-apps` : Onglet Applications connectées, affiché quand l'API MCP est proposée (voir [Applications connectées](connected-apps.md))
+- `/settings/about` : Onglet À propos
 
 ### Profil
 
@@ -632,6 +637,8 @@ Modifiez vos informations personnelles :
 - **Tél. professionnel** / **Tél. mobile**
 
 Si votre organisation utilise Microsoft Entra ID (SSO), certains champs peuvent être synchronisés depuis Entra et ne peuvent pas être modifiés dans KANAP.
+
+Si votre compte n'a ni prénom ni nom, une petite fenêtre vous les demande après la connexion. **Plus tard** la masque dans ce navigateur. Vous pouvez modifier les deux ici à tout moment.
 
 ### Notifications
 
@@ -660,6 +667,20 @@ Les **Notifications des technologies** envoient un e-mail aux responsables IT d'
 Utilisez le bouton **Aperçu de l'e-mail** pour vous envoyer un e-mail de test et vérifier le format.
 
 Toutes les modifications sont enregistrées automatiquement lorsque vous basculez les commutateurs ou changez les sélections.
+
+### À propos de KANAP
+
+Ouvrez **À propos de KANAP** depuis le menu utilisateur, sous **Déconnexion**. L'entrée du menu indique aussi la version. L'onglet **À propos** de cette page affiche le même contenu :
+
+- La version et le déploiement (cloud ou sur site)
+- Sur le cloud, pendant un essai, les jours restants, avec un lien **Choisir une offre** pour les administrateurs de la facturation
+- Des liens vers les notes de version de cette version, la documentation, kanap.net et le code source (licence AGPL-3.0)
+- Sur site, un lien vers le guide de mise à jour
+
+**Support** indique où obtenir de l'aide :
+
+- Sur le cloud, le support par e-mail est inclus. L'adresse du support ouvre un e-mail qui contient déjà la version, l'espace de travail, le déploiement et votre navigateur. **Copier les informations pour le support** copie les mêmes informations, à coller dans un message.
+- Sur site, si vous avez un contrat de support, écrivez à la même adresse, avec le même e-mail prérempli et le même bouton de copie. Sinon, posez votre question dans GitHub Discussions ou signalez un problème dans GitHub Issues. Un dernier lien mène à l'offre de support.
 
 ---
 

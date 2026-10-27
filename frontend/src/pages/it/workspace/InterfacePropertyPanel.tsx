@@ -161,7 +161,7 @@ export default function InterfacePropertyPanel({
     const list = byField.lifecycleStatus || [];
     const current = data?.lifecycle;
     const options = list.map((item) => ({
-      label: item.deprecated ? `${item.label} (deprecated)` : item.label,
+      label: item.deprecated ? `${item.label} (${t('common:enumEditor.retiredSuffix')})` : item.label,
       value: item.code,
       deprecated: !!item.deprecated,
     }));
@@ -169,7 +169,7 @@ export default function InterfacePropertyPanel({
       options.push({ label: current, value: current, deprecated: false });
     }
     return options.filter((item) => !item.deprecated || item.value === current);
-  }, [byField.lifecycleStatus, data?.lifecycle]);
+  }, [byField.lifecycleStatus, data?.lifecycle, t]);
 
   const criticalityOptions = [{ value: '', label: classificationText('Not set') }, ...(classificationCatalog?.businessCriticalityLevels || []).filter((item) => !item.deprecated || item.code === data?.criticality).map((item) => ({ value: item.code, label: item.label }))];
 
