@@ -109,7 +109,7 @@ describe('chargeback table export', () => {
     fireEvent.click(await screen.findByText('reports.shared.exportXlsx'));
     await waitFor(() => expect(paramsOf('/reports/chargeback/global/export')).toHaveLength(1));
     const [request] = paramsOf('/reports/chargeback/global/export');
-    expect(request).toEqual({ params: { ...screenParams, format: 'xlsx', language: 'fr' }, responseType: 'blob' });
+    expect(request).toEqual({ params: { ...screenParams, format: 'xlsx', language: 'fr', tz: expect.any(String) }, responseType: 'blob' });
     expect(screenParams).toEqual({ year: expect.any(Number), metric: 'budget', scope: 'opex' });
   });
 
@@ -124,7 +124,7 @@ describe('chargeback table export', () => {
     fireEvent.click(csvItems[1]);
     await waitFor(() => expect(paramsOf('/reports/chargeback/company/export')).toHaveLength(1));
     const [request] = paramsOf('/reports/chargeback/company/export');
-    expect(request).toEqual({ params: { ...screenParams, format: 'csv', language: 'fr', table: 'items' }, responseType: 'blob' });
+    expect(request).toEqual({ params: { ...screenParams, format: 'csv', language: 'fr', table: 'items', tz: expect.any(String) }, responseType: 'blob' });
     expect(screenParams).toEqual({ companyId: 'co-1', year: expect.any(Number), metric: 'budget', scope: 'opex' });
   });
 });
