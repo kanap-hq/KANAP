@@ -66,7 +66,7 @@ export function parseExportPagination(query: any, defaultSort: Sort = { field: '
  */
 export function exportListQuery(query: any): Record<string, unknown> | undefined {
   if (String(query?.rows ?? '') !== 'list') return undefined;
-  const { scope: _scope, language: _language, rows: _rows, page: _page, limit: _limit, ...list } = query ?? {};
+  const { scope: _scope, language: _language, format: _format, rows: _rows, page: _page, limit: _limit, ...list } = query ?? {};
   return { ...list, page: '1', limit: String(MAX_EXPORT_LIMIT) };
 }
 
