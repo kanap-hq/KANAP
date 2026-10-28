@@ -213,11 +213,10 @@ export default function PortfolioDetailWorkspaceShell({
   const historyButtonRef = React.useRef<HTMLButtonElement>(null);
   const historyTitle = t('admin:auditLogs.history.title');
   // The panel is closed from its button, its own close button or Escape: the button takes the
-  // focus back every time, so the keyboard continues where the panel opened.
-  const closeHistory = React.useCallback(() => {
-    setHistoryOpen(false);
-    historyButtonRef.current?.focus();
-  }, []);
+  // focus back once the panel has slid out (the modal would otherwise put it on the page body),
+  // so the keyboard continues where the panel opened.
+  const closeHistory = React.useCallback(() => setHistoryOpen(false), []);
+  const focusHistoryButton = React.useCallback(() => historyButtonRef.current?.focus(), []);
   // The classeur toggle only renders on desktop: on mobile the properties
   // always stack under the content, otherwise a stored "closed" state would
   // hide them with no visible way back.
@@ -611,9 +610,13 @@ export default function PortfolioDetailWorkspaceShell({
           anchor="right"
           open={historyOpen}
           onClose={closeHistory}
-          ModalProps={{ keepMounted: false }}
+          ModalProps={{ keepMounted: false, disableRestoreFocus: true }}
+          SlideProps={{ onExited: focusHistoryButton }}
           PaperProps={{
+            // Under the 48px application bar, as the other right panels of the app.
             sx: (theme) => ({
+              top: 48,
+              height: 'calc(100dvh - 48px)',
               width: { xs: '100%', sm: 480 },
               maxWidth: '100vw',
               bgcolor: theme.palette.kanap.bg.drawer,
