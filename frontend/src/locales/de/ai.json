@@ -198,6 +198,8 @@
       "business_objects": "Geschäftsobjekte",
       "business_purpose": "Geschäftszweck",
       "classification_review_state": "Review der Klassifizierung",
+      "access_warning": "Zugriff",
+      "closure_warning": "Sperre",
       "coa_id": "Kontenplan",
       "content": "Inhalt",
       "core_transformations_summary": "Zusammenfassung der Transformationen",

@@ -4,7 +4,7 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import useApplicationClassificationCatalog from '../../hooks/useApplicationClassificationCatalog';
 import useLocalizedTaskTypes from '../../hooks/useLocalizedTaskTypes';
 import { useLocale } from '../../i18n/useLocale';
-import { formatShortDate } from '../../lib/dateFormat';
+import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import { formatCurrency, formatDecimal } from '../../i18n/formatters';
 import { AMOUNT_COLUMNS } from '../../components/finance/amountColumns';
 import { AiMutationPreview, AiPreviewAmounts, AiPreviewRelationItem } from '../aiTypes';
@@ -37,6 +37,10 @@ const camel = (code: string) => code.replace(/_([a-z])/g, (_, letter: string) =>
 
 /** A date as the server sends it: a day, or a day and a time (a date field read back from a timestamp). */
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
+/** An ISO instant with a time: the card shows its day and time, not just its day. */
+const ISO_DATE_TIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+/** The incident date-time fields: they read with the time, a date field keeps its day. */
+const DATE_TIME_FIELDS = new Set(['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at']);
 
 type ValueRule = {
   fields: string[];
@@ -52,6 +56,8 @@ const VALUE_RULES: ValueRule[] = [
   { tools: TASK_TOOLS, fields: ['relation'], key: (code) => `portfolio:context.${code}` },
   { tools: TASK_TOOLS, fields: ['assignee', 'assignee_email'], key: (code) => (code === 'unassigned' ? 'ai:previewCard.values.unassigned' : '') },
   { tools: new Set(['create_document']), fields: ['status'], key: (code) => `knowledge:statuses.${code}` },
+  { entities: ['incidents'], fields: ['status'], key: (code) => `it:enums.incidentStatus.${code}` },
+  { entities: ['incidents'], fields: ['severity'], key: (code) => `it:enums.incidentSeverity.${code}` },
   { entities: ['projects'], fields: ['status'], key: (code) => `portfolio:statuses.project.${code}` },
   { entities: ['projects'], fields: ['origin'], key: (code) => `portfolio:origin.${code}` },
   { entities: ['projects'], fields: ['scheduling_mode'], key: (code) => `portfolio:planning.roadmap.schedulingModes.${code}` },
@@ -260,6 +266,25 @@ const SCREEN_FIELD_KEYS: Record<string, Record<string, string>> = {
     expected_benefits: 'portfolio:workspace.request.analysis.labels.expectedBenefits',
     feasibility_review: 'portfolio:workspace.request.analysis.sections.feasibilityReview',
   },
+  incidents: {
+    title: 'it:workspace.incident.fields.title',
+    category: 'it:workspace.incident.drawer.category',
+    severity: 'it:workspace.incident.drawer.severity',
+    status: 'it:workspace.incident.drawer.status',
+    started_at: 'it:workspace.incident.drawer.started',
+    detected_at: 'it:workspace.incident.drawer.detected',
+    resolved_at: 'it:workspace.incident.drawer.resolved',
+    closed_at: 'it:workspace.incident.drawer.closed',
+    reporter_user_id: 'it:workspace.incident.drawer.reporter',
+    owner_user_id: 'it:workspace.incident.drawer.owner',
+    description: 'it:workspace.incident.create.description',
+    source_ref: 'it:workspace.incident.drawer.sourceRef',
+    personal_data_affected: 'it:workspace.incident.drawer.personalData',
+    authority_notification_required: 'it:workspace.incident.drawer.authorityRequired',
+    confidential: 'it:workspace.incident.drawer.restrictAccess',
+    authority_notified_at: 'it:workspace.incident.drawer.notifiedOn',
+    notified_parties: 'it:workspace.incident.drawer.notifiedParties',
+  },
   tasks: TASK_FIELDS,
   documents: {
     title: 'knowledge:columns.title',
@@ -386,9 +411,15 @@ export function usePreviewChangeLabels(preview?: AiMutationPreview) {
   const valueLabel = useCallback(
     (preview: AiMutationPreview, field: string, value: string | null): string | null => {
       if (!value) return value;
-      if (ISO_DATE_RE.test(value)) return formatShortDate(value, locale, { empty: value });
+      if (ISO_DATE_RE.test(value)) {
+        return DATE_TIME_FIELDS.has(field) && ISO_DATE_TIME_RE.test(value)
+          ? formatShortDateTime(value, locale, { empty: value })
+          : formatShortDate(value, locale, { empty: value });
+      }
       if (field === 'classification_review_state') return known([CLASSIFICATION_REVIEW[value] ?? '']) ?? value;
       const entity = preview.target.entity_type;
+      // The incident category is the tenant's list: its label, in the person's language.
+      if (entity === 'incidents' && field === 'category') return labelFor('incidentCategories', value) || value;
       if (TASK_TOOLS.has(preview.tool_name) && (field === 'task_type' || field === 'type')) return taskTypeLabels[value] ?? value;
       if (field === 'lifecycle' && entity === 'applications') return labelFor('lifecycleStatus', value) || value;
       if (RECORD_TOOLS.has(preview.tool_name) && (value === 'Yes' || value === 'No')) {

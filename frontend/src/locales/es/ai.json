@@ -198,6 +198,8 @@
       "business_objects": "Objetos de negocio",
       "business_purpose": "Finalidad de negocio",
       "classification_review_state": "Revisión de la clasificación",
+      "access_warning": "Acceso",
+      "closure_warning": "Cierre",
       "coa_id": "Plan de cuentas",
       "content": "Contenido",
       "core_transformations_summary": "Resumen de las transformaciones",

@@ -15,7 +15,9 @@ vi.mock('../../hooks/useItOpsEnumOptions', () => ({
     labelFor: (field: string, code?: string | null) => (
       field === 'lifecycleStatus' && code === 'retired' ? 'Retirée'
         : field === 'serverRole' && code === 'database' ? 'Base de données'
-          : String(code ?? '')
+          : field === 'incidentCategories' && code === 'security' ? 'Sécurité'
+            : field === 'incidentCategories' && code === 'infrastructure' ? 'Infrastructure'
+              : String(code ?? '')
     ),
   }),
 }));
@@ -107,6 +109,50 @@ describe('PreviewCard in French', () => {
     }
     expect(screen.getByText('Suppression de la tâche « Migration ».')).toBeInTheDocument();
     expect(screen.queryByText('What goes with it')).not.toBeInTheDocument();
+  });
+
+  it('shows an incident closure with its status, category, date-time and warnings, in French', () => {
+    renderCard(preview({
+      tool_name: 'update_business_record',
+      target: { entity_type: 'incidents', entity_id: 'incident-1', ref: 'INC-7', title: 'INC-7 - Mail outage' },
+      summary: "Clôturé : modification de l'incident « INC-7 - Mail outage ».",
+      changes: {
+        title: { label: 'Title', from: 'Mail outage', to: 'Mail outage resolved', format: 'text' },
+        status: { label: 'Status', from: 'open', to: 'closed', format: 'text' },
+        severity: { label: 'Severity', from: 'major', to: 'minor', format: 'text' },
+        category: { label: 'Category', from: 'infrastructure', to: 'security', format: 'text' },
+        detected_at: { label: 'Detected', from: '2026-10-27T08:00:00.000Z', to: '2026-10-27T09:30:00.000Z', format: 'text' },
+        closure_warning: {
+          label: 'Closure',
+          from: null,
+          to: "Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.",
+          format: 'text',
+        },
+        access_warning: {
+          label: 'Access',
+          from: null,
+          to: "Après cette modification, seuls les administrateurs du registre, le déclarant et le responsable pourront l'ouvrir. Vous serez renvoyé vers le registre.",
+          format: 'text',
+        },
+      },
+    }));
+
+    expect(screen.getByText('Ouvert')).toBeInTheDocument();
+    expect(screen.getByText('Clôturé')).toBeInTheDocument();
+    expect(screen.getByText('Majeure')).toBeInTheDocument();
+    expect(screen.getByText('Mineure')).toBeInTheDocument();
+    expect(screen.getByText('Infrastructure')).toBeInTheDocument();
+    expect(screen.getByText('Sécurité')).toBeInTheDocument();
+    expect(screen.getByText('Titre')).toBeInTheDocument();
+    expect(screen.getByText('Statut')).toBeInTheDocument();
+    expect(screen.getByText('Gravité')).toBeInTheDocument();
+    expect(screen.getByText('Catégorie')).toBeInTheDocument();
+    expect(screen.getByText('Détecté')).toBeInTheDocument();
+    expect(screen.getAllByText(/27 oct\. 2026, \d{2}:\d{2}/)).toHaveLength(2);
+    expect(screen.getByText("Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.")).toBeInTheDocument();
+    expect(screen.getByText("Après cette modification, seuls les administrateurs du registre, le déclarant et le responsable pourront l'ouvrir. Vous serez renvoyé vers le registre.")).toBeInTheDocument();
+    expect(screen.getByText('Clôture')).toBeInTheDocument();
+    expect(screen.getByText('Accès')).toBeInTheDocument();
   });
 
   it('shows a budget line deletion with its versions, tasks and links, in French', () => {

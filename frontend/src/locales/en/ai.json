@@ -198,6 +198,8 @@
       "business_objects": "Business objects",
       "business_purpose": "Business purpose",
       "classification_review_state": "Classification review",
+      "access_warning": "Access",
+      "closure_warning": "Closure",
       "coa_id": "Chart of accounts",
       "content": "Content",
       "core_transformations_summary": "Core transformations summary",

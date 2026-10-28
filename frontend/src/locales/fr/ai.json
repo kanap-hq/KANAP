@@ -198,6 +198,8 @@
       "business_objects": "Objets métier",
       "business_purpose": "Finalité métier",
       "classification_review_state": "Revue de la classification",
+      "access_warning": "Accès",
+      "closure_warning": "Clôture",
       "coa_id": "Plan comptable",
       "content": "Contenu",
       "core_transformations_summary": "Synthèse des transformations",
