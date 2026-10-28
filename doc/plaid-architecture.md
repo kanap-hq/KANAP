@@ -125,10 +125,16 @@ payloads to the model.
 Plaid can currently read these entity families:
 
 `accounts`, `analytics_categories`, `applications`, `assets`,
-`business_processes`, `capex_items`, `chart_of_accounts`, `companies`,
+`budget_lines`, `business_processes`, `chart_of_accounts`, `companies`,
 `connections`, `contacts`, `contracts`, `departments`, `documents`,
-`incidents`, `interfaces`, `locations`, `projects`, `requests`, `spend_items`,
+`incidents`, `interfaces`, `locations`, `projects`, `requests`,
 `suppliers`, `tasks`, `technologies`, `users`, and `vulnerabilities`.
+
+`budget_lines` is one family for the OPEX and CAPEX lines of `spend_items`
+(`nature`, `opex` or `capex`). A question without a nature covers both;
+`nature` filters, sorts and groups, and every detail or row says which nature
+the line is. The references are `BL-n`; a typed `OPX-n` or `CPX-n` is accepted
+as an input reference and resolves to the same line.
 
 `search_all` searches every family but `vulnerabilities`, which has no search
 index: `AI_SEARCH_ENTITY_TYPES` (the searched families) and
@@ -158,13 +164,17 @@ incomplete.
 
 `search_all` and the chat @-mention picker read the `search_index` table. Each
 hit carries a few metadata keys from the row's `extra_json`, listed per entity
-type in `SEARCH_INDEX_METADATA_KEYS` (`ai-entity.service.ts`). OPEX and CAPEX
-lines (`spend_items`, `capex_items`) are also found by the names of their
-analytics values, accent-insensitive, on the enabled dimensions used for the
-line's type (the ones its drawer shows). Dimension names are not indexed. Their
-`analytics` key lists the values the line holds, in dimension order, for
-example `Nature de coût: Matériel; Récurrence: Récurrent` (null when the line
-holds none). Setting, changing or clearing a line's values refreshes its entry
+type in `SEARCH_INDEX_METADATA_KEYS` (`ai-entity.service.ts`). The search
+index keeps one `entity_type` per budget line nature (`spend_items`,
+`capex_items`, the values its SQL functions, triggers and RLS policy use); the
+AI family maps both to `budget_lines` with the line's `nature` in its
+metadata, and maps `budget_lines` back to the two index types on input. Budget
+lines are also found by the names of their analytics values,
+accent-insensitive, on the enabled dimensions used for the line's type (the
+ones its drawer shows). Dimension names are not indexed. Their `analytics` key
+lists the values the line holds, in dimension order, for example
+`Nature de coût: Matériel; Récurrence: Récurrent` (null when the line holds
+none). Setting, changing or clearing a line's values refreshes its entry
 at once. A value renamed, or a dimension renamed, disabled, past its end of
 validity, restricted to one line type or reordered, reaches the entry at the
 line's next write or at the daily rebuild of the index (migration
@@ -329,8 +339,9 @@ links to the vulnerabilities page searched on its CVE
 (`frontend/src/ai/utils/entityUrls.ts`).
 
 Page size: 25 items by default, at most 50, 30 for `applications`,
-`technologies` and `vulnerabilities`, 15 for
-`spend_items` and `capex_items` (`aiQueryLimit` in `ai-query.executor.ts`). A
+`technologies`, `vulnerabilities` and `budget_lines` (`aiQueryLimit` in
+`ai-query.executor.ts`; the budget cap is the 15 per nature the two former
+families had, summed). A
 larger `limit` is reduced and the result's `limit` is the one applied. The
 values keep a full page under the MCP response cap (64,000 characters,
 `ai-mcp.controller.ts`): on the demo tenant an OPEX or CAPEX line takes about
@@ -353,10 +364,10 @@ Live write-preview coverage includes:
   accounts, charts of accounts, analytics categories, business processes, and
   locations
 - business-record create/update for applications, assets, contracts, projects,
-  requests, interfaces, connections, spend items, and CAPEX items
-- relation updates for supported application, asset, supplier, contract, spend,
-  CAPEX, project, request, document, and location links
-- financial plan writes for spend and CAPEX versions, amounts, and allocations
+  requests, interfaces, connections, and budget lines
+- relation updates for supported application, asset, supplier, contract,
+  budget line, project, request, document, and location links
+- financial plan writes for budget line versions, amounts, and allocations
 - GLPI ticket import into a KANAP task
 - single-record deletes (`delete_record`) of a task, contact, location,
   document, spend or CAPEX item, connection or interface, at the level of that
@@ -374,7 +385,7 @@ definition covers it, never to an application field. The preview flags when an
 existing human review becomes stale. Plaid cannot edit classification catalogs,
 publish settings, or implicitly mark an application reviewed.
 
-Budget-line previews (spend and CAPEX) also write analytics dimensions. The model
+Budget-line previews (OPEX and CAPEX) also write analytics dimensions. The model
 addresses a dimension as `analytics:<code>` (code matched case-insensitively and
 parsed before the usual field-key normalisation); the default dimension keeps
 `analytics_category` and also answers to `analytics:<its code>`, so a double
