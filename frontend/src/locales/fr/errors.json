@@ -312,6 +312,7 @@
     "outside": "Cet élément est hors de votre accès.",
     "chargebackCompany": "La refacturation de cette société est hors de votre accès.",
     "readOnlyLine": "Cette ligne est en lecture seule dans votre accès.",
+    "readOnlyContract": "Ce contrat est en lecture seule dans votre accès.",
     "placement": "Cette société ou ce centre de coûts ne fait pas partie de votre accès.",
     "reserved": "Cette action est réservée aux personnes qui ont accès à toutes les données.",
     "readOnlyTask": "Cette tâche est en lecture seule dans votre accès.",

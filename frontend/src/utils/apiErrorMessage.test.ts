@@ -59,6 +59,58 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(bare, i18n.getFixedT('fr'), 'fallback')).toBe("Vous n'avez pas les droits pour cette action.");
   });
 
+  it('words a coded data access refusal by its reason and values', () => {
+    const fr = i18n.getFixedT('fr');
+    const refusal = (reason: string, params?: Record<string, unknown>) => ({
+      response: {
+        status: 403,
+        data: {
+          statusCode: 403,
+          error: 'Forbidden',
+          code: 'DATA_ACCESS_LIMITED',
+          message: 'The server sentence.',
+          reason,
+          ...(params ? { params } : {}),
+        },
+      },
+    });
+
+    const sentences: Array<{ reason: string; params?: Record<string, unknown>; text: string }> = [
+      { reason: 'outside', text: 'Cet élément est hors de votre accès.' },
+      { reason: 'readOnlyLine', text: 'Cette ligne est en lecture seule dans votre accès.' },
+      { reason: 'readOnlyContract', text: 'Ce contrat est en lecture seule dans votre accès.' },
+      { reason: 'placement', text: 'Cette société ou ce centre de coûts ne fait pas partie de votre accès.' },
+      { reason: 'reserved', text: 'Cette action est réservée aux personnes qui ont accès à toutes les données.' },
+      { reason: 'chargebackCompany', text: 'La refacturation de cette société est hors de votre accès.' },
+      { reason: 'readOnlyTask', text: 'Cette tâche est en lecture seule dans votre accès.' },
+      { reason: 'taskDelete', text: 'Seule une personne qui peut modifier la ligne ou le contrat de cette tâche peut la supprimer.' },
+      { reason: 'leavesAccess', text: "Ce changement sortirait la ligne de votre accès. Restez l'un de ses responsables, ou demandez à une personne qui a accès à sa société." },
+      { reason: 'readOnlyRef', params: { ref: 'BL-12' }, text: 'BL-12 est en lecture seule dans votre accès.' },
+    ];
+    for (const { reason, params, text } of sentences) {
+      expect(getApiErrorMessage(refusal(reason, params), fr, 'fallback'), reason).toBe(text);
+    }
+
+    // Hidden links: lines alone, contracts alone, both; the counts come from the body's params.
+    expect(getApiErrorMessage(refusal('hiddenLinks', { owner: 'application', lines: 3, contracts: 0 }), fr, 'fallback'))
+      .toBe('Cette application est liée à 3 lignes hors de votre accès.');
+    expect(getApiErrorMessage(refusal('hiddenLinks', { owner: 'asset', lines: 0, contracts: 1 }), fr, 'fallback'))
+      .toBe('Cet actif est lié à 1 contrat hors de votre accès.');
+    expect(getApiErrorMessage(refusal('hiddenLinks', { owner: 'application', lines: 1, contracts: 2 }), fr, 'fallback'))
+      .toBe('Cette application est liée à 1 ligne et 2 contrats hors de votre accès.');
+
+    // An older API, or a reason the screen does not know, keeps the sentence path.
+    const legacy = { response: { status: 403, data: { code: 'DATA_ACCESS_LIMITED', message: 'This application is linked to 2 contracts outside your access.' } } };
+    expect(getApiErrorMessage(legacy, fr, 'fallback')).toBe('Cette application est liée à 2 contrats hors de votre accès.');
+    const unknownReason = {
+      response: {
+        status: 403,
+        data: { code: 'DATA_ACCESS_LIMITED', reason: 'a_new_refusal', message: 'This line is read only in your access.' },
+      },
+    };
+    expect(getApiErrorMessage(unknownReason, fr, 'fallback')).toBe('Cette ligne est en lecture seule dans votre accès.');
+  });
+
   it('names the module right a coded refusal is missing', () => {
     const missing = {
       response: {

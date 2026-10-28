@@ -312,6 +312,7 @@
     "outside": "This item is outside your access.",
     "chargebackCompany": "The chargeback of this company is outside your access.",
     "readOnlyLine": "This line is read only in your access.",
+    "readOnlyContract": "This contract is read only in your access.",
     "placement": "This company or cost center is not part of your access.",
     "reserved": "This action is reserved to people with access to all data.",
     "readOnlyTask": "This task is read only in your access.",

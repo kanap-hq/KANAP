@@ -312,6 +312,7 @@
     "outside": "Dieses Element liegt außerhalb Ihres Zugriffs.",
     "chargebackCompany": "Die Leistungsverrechnung dieses Unternehmens liegt außerhalb Ihres Zugriffs.",
     "readOnlyLine": "Diese Zeile ist in Ihrem Zugriff schreibgeschützt.",
+    "readOnlyContract": "Dieser Vertrag ist in Ihrem Zugriff schreibgeschützt.",
     "placement": "Dieses Unternehmen oder diese Kostenstelle gehört nicht zu Ihrem Zugriff.",
     "reserved": "Diese Aktion ist Personen mit Zugriff auf alle Daten vorbehalten.",
     "readOnlyTask": "Diese Aufgabe ist in Ihrem Zugriff schreibgeschützt.",
