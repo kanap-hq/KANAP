@@ -118,7 +118,8 @@ export default function ProtectedRoute() {
       && !hasLevel('infrastructure', 'reader')
       && !hasLevel('locations', 'reader')
       && !hasLevel('settings', 'reader');
-    if (isPlatformHost && !path.startsWith('/admin')) {
+    // The refusal page is an answer, not a screen of the workspace: the platform host keeps it.
+    if (isPlatformHost && !path.startsWith('/admin') && path !== '/403') {
       return <Navigate to="/admin/tenants" replace />;
     }
     if (

@@ -418,9 +418,10 @@ function AppRoutes() {
           {/* Settings */}
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/:tab" element={<SettingsPage />} />
+          {/* Refusals show in the app frame: menu and bar stay visible. */}
+          <Route path="/403" element={<ForbiddenPage />} />
         </Route>
       </Route>
-      <Route path="/403" element={<ForbiddenPage />} />
       {/* Unknown paths go home, where ProtectedRoute waits for the session restore of a full
           page load before it decides between the app and /login. */}
       <Route path="*" element={<Navigate to="/" replace />} />
