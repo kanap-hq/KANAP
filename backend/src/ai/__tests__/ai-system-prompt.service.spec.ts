@@ -579,6 +579,34 @@ async function testAdminWriteBusinessPromptNamesTheIncidentAdministratorTools() 
   assert.doesNotMatch(prompt, /stay on the incident screen/i);
   assert.doesNotMatch(prompt, /(?:reopening|cancelling|lifting)[^.]*\bscreen\b/i);
   assert.doesNotMatch(prompt, /do it from the incident screen/i);
+
+  // The tool schemas carry the same rule: their field descriptions are sent to the model too.
+  for (const operation of operations) {
+    const schema = operation.inputSchema as any;
+    const texts = [
+      operation.description,
+      ...Object.values(operation.inputSummary),
+      operation.writePreview.prompt_hint,
+      ...Object.values(schema?.shape ?? {}).map((field: any) => String(field?.description ?? '')),
+    ];
+    for (const text of texts) {
+      assert.doesNotMatch(
+        text,
+        /(?:reopen|reopening|cancel|cancelling|confidentiality|confidential)[^.]{0,200}\bscreen\b/i,
+        `${operation.toolName}: ${text}`,
+      );
+    }
+  }
+  const update = operations.find((operation) => operation.toolName === 'update_business_record');
+  const fieldsDescription = String(((update!.inputSchema as any).shape.fields).description);
+  assert.match(fieldsDescription, /needs? a register administrator through `change_incident_state`/);
+  assert.match(fieldsDescription, /needs? a register administrator through `set_incident_confidentiality`/);
+  const confidentiality = operations.find((operation) => operation.toolName === 'set_incident_confidentiality');
+  assert.doesNotMatch(
+    confidentiality!.writePreview.prompt_hint,
+    /keeps access|no lose-access warning/,
+    'the administrator keeps access, so the hint says nothing about a warning the card never carries',
+  );
 }
 
 async function run() {
