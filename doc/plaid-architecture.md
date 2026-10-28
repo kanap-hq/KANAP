@@ -418,7 +418,7 @@ would write nothing is refused. The execution locks the technology
 (`FOR NO KEY UPDATE`) and reads the links again: a link changed since the
 preview answers 409 and nothing is written. The undo removes exactly the links
 added and puts back exactly the rows removed, with their version and notes; a
-version created on the way stays (decision 12).
+version created on the way stays (decision 12), and the undo card says so.
 
 ### Vulnerabilities
 
