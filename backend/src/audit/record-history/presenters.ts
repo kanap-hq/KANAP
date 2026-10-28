@@ -126,6 +126,7 @@ const CHILD_KIND_LABELS: Record<RecordHistoryChildKind, string> = {
   request: 'request',
   task: 'task',
   metrics: 'metrics',
+  value: 'value',
 };
 
 /** The children whose creation is a title only: a version, a budget input, an allocation. */
@@ -670,6 +671,25 @@ function recordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   return genericChanges(row, ctx, { label: row.table_name });
 }
 
+function valueName(row: AuditRow): string | null {
+  for (const payload of [row.after_json, row.before_json]) {
+    if (isPlainObject(payload) && typeof payload.name === 'string' && payload.name.trim()) return payload.name.trim();
+  }
+  return null;
+}
+
+/**
+ * A value of a dimension: its addition and removal read as the event, its modification as the
+ * fields that changed. A forced deletion keeps its removal title; the counts stay on the value's
+ * own record entry.
+ */
+function valueChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const name = valueName(row);
+  if (row.action === 'create') return name ? [{ field: 'value', event: 'added', after: name }] : [];
+  if (row.action === 'delete') return name ? [{ field: 'value', event: 'removed', before: name }] : [];
+  return genericChanges(row, ctx, { label: 'analytics_categories' });
+}
+
 function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: PageContext): RecordHistoryChange[] {
   if (kind === null) return recordChanges(row, ctx);
   // A technical child's birth or removal is its title: its fields are not a change the reader reads.
@@ -700,6 +720,8 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
       return taskChanges(row, ctx);
     case 'metrics':
       return genericChanges(row, ctx, { label: row.table_name });
+    case 'value':
+      return valueChanges(row, ctx);
     case 'version':
       return genericChanges(row, ctx, { label: row.table_name });
     default:
@@ -735,6 +757,8 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
     }
     case 'attachment':
       return labelOf(row, ['original_filename']);
+    case 'value':
+      return row.action === 'update' ? valueName(row) : null;
     case 'metrics': {
       for (const payload of [row.after_json, row.before_json]) {
         if (!isPlainObject(payload)) continue;

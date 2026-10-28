@@ -570,7 +570,15 @@
       "region_code": "Region",
       "is_default": "Default",
       "it_owner_user_id": "IT owner",
-      "application_id": "Application"
+      "application_id": "Application",
+      "sort_order": "Order",
+      "applies_to": "Used for",
+      "required": "Required",
+      "open_values": "Open values",
+      "values": "Values deleted",
+      "opex_lines": "OPEX lines updated",
+      "capex_lines": "CAPEX lines updated",
+      "axis_id": "Dimension"
     },
     "history": {
       "empty": "No history yet",
@@ -651,6 +659,10 @@
         "request": {
           "added": "Request added: {{label}}",
           "removed": "Request removed: {{label}}"
+        },
+        "value": {
+          "added": "Value added: {{label}}",
+          "removed": "Value removed: {{label}}"
         }
       },
       "unnamed": {
@@ -690,7 +702,8 @@
       },
       "title": "History",
       "metricsYear": "Metrics {{year}}",
-      "metricsNoYear": "Metrics"
+      "metricsNoYear": "Metrics",
+      "value": "Value {{name}}"
     },
     "messages": {
       "loadDetailsFailed": "Failed to load audit entry details."
@@ -970,6 +983,10 @@
       "costCenterKind": {
         "group": "Group",
         "cost_center": "Cost center"
+      },
+      "lineTypeUsage": {
+        "opex": "OPEX only",
+        "capex": "CAPEX only"
       }
     },
     "dataAccess": {

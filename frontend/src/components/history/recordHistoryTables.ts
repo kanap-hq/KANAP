@@ -7,6 +7,8 @@
 export const RECORD_HISTORY_TABLES = [
   'spend_items',
   'accounts',
+  'analytics_axes',
+  'analytics_categories',
   'business_processes',
   'companies',
   'cost_centers',

@@ -1,5 +1,7 @@
 import type { HistoryFields } from './field-rules';
 import { accountsFields } from './records/accounts';
+import { analyticsAxesFields } from './records/analytics_axes';
+import { analyticsCategoriesFields } from './records/analytics_categories';
 import { businessProcessesFields } from './records/business_processes';
 import { companiesFields } from './records/companies';
 import { costCentersFields } from './records/cost_centers';
@@ -14,6 +16,8 @@ import { workingDayProfilesFields } from './records/working_day_profiles';
  */
 const FIELD_SETS = [
   accountsFields,
+  analyticsAxesFields,
+  analyticsCategoriesFields,
   businessProcessesFields,
   companiesFields,
   costCentersFields,

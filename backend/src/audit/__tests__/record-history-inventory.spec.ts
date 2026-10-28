@@ -42,7 +42,10 @@ function testEntries() {
   }
   assert.deepEqual(
     recordHistoryModules(),
-    ['accounts', 'budget', 'business_processes', 'companies', 'cost_centers', 'departments', 'working_day_profiles'],
+    [
+      'accounts', 'analytics', 'budget', 'business_processes', 'companies', 'cost_centers', 'departments',
+      'working_day_profiles',
+    ],
     'the modules of the route guard',
   );
   // Every reference family has a reader module (people are the only exception, `null`), and the

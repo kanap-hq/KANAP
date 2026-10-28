@@ -8,6 +8,8 @@ describe('record history tables', () => {
     expect(RECORD_HISTORY_TABLES).toEqual([
       'spend_items',
       'accounts',
+      'analytics_axes',
+      'analytics_categories',
       'business_processes',
       'companies',
       'cost_centers',

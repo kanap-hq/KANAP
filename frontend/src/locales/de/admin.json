@@ -570,7 +570,15 @@
       "region_code": "Region",
       "is_default": "Standard",
       "it_owner_user_id": "IT-Verantwortlicher",
-      "application_id": "Anwendung"
+      "application_id": "Anwendung",
+      "sort_order": "Reihenfolge",
+      "applies_to": "Verwendet für",
+      "required": "Erforderlich",
+      "open_values": "Offene Werte",
+      "values": "Gelöschte Werte",
+      "opex_lines": "Aktualisierte OPEX-Zeilen",
+      "capex_lines": "Aktualisierte CAPEX-Zeilen",
+      "axis_id": "Dimension"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -651,6 +659,10 @@
         "request": {
           "added": "Anfrage hinzugefügt: {{label}}",
           "removed": "Anfrage entfernt: {{label}}"
+        },
+        "value": {
+          "added": "Wert hinzugefügt: {{label}}",
+          "removed": "Wert entfernt: {{label}}"
         }
       },
       "unnamed": {
@@ -690,7 +702,8 @@
       },
       "title": "Verlauf",
       "metricsYear": "Kennzahlen {{year}}",
-      "metricsNoYear": "Kennzahlen"
+      "metricsNoYear": "Kennzahlen",
+      "value": "Wert {{name}}"
     },
     "messages": {
       "loadDetailsFailed": "Details des Audit-Eintrags konnten nicht geladen werden."
@@ -970,6 +983,10 @@
       "costCenterKind": {
         "group": "Gruppe",
         "cost_center": "Kostenstelle"
+      },
+      "lineTypeUsage": {
+        "opex": "Nur OPEX",
+        "capex": "Nur CAPEX"
       }
     },
     "dataAccess": {

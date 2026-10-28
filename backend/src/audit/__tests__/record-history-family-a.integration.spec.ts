@@ -112,6 +112,7 @@ type Seeded = {
   calendarReader: Person;
   processReader: Person;
   applicationReader: Person;
+  analyticsReader: Person;
   allReader: Person;
   noModule: Person;
 };
@@ -198,6 +199,40 @@ async function seedFamilyAAudits(runner: QueryRunner, data: HistorySeed) {
   await audit(runner, {
     table: 'portfolio_request_business_processes', recordId: data.request, action: 'update', userId: data.owner,
     before: [], after: [data.businessProcess],
+  });
+
+  // The analytics dimension and its values: a creation and a modification of the dimension, the
+  // value additions, modifications and removals, and a forced deletion with its counts.
+  await runner.query(
+    `UPDATE analytics_axes SET applies_to = 'opex', required = true, open_values = true WHERE tenant_id = $1 AND id = $2`,
+    [data.tenantId, data.axis],
+  );
+  const axis = await rowJson(runner, 'analytics_axes', data.axis);
+  await audit(runner, { table: 'analytics_axes', recordId: data.axis, action: 'create', userId: data.owner, after: axis });
+  await audit(runner, {
+    table: 'analytics_axes', recordId: data.axis, action: 'update', userId: data.owner,
+    before: axis, after: { ...axis, description: 'Where the cost sits' },
+  });
+
+  const category = await rowJson(runner, 'analytics_categories', data.categoryA);
+  await audit(runner, { table: 'analytics_categories', recordId: data.categoryA, action: 'create', userId: data.owner, after: category });
+  await audit(runner, {
+    table: 'analytics_categories', recordId: data.categoryA, action: 'update', userId: data.owner,
+    before: category, after: { ...category, description: 'Cloud spend' },
+  });
+  const removedValue = await one(
+    runner,
+    `INSERT INTO analytics_categories (tenant_id, axis_id, name, sort_order) VALUES ($1, $2, 'Retired value', 2) RETURNING id`,
+    [data.tenantId, data.axis],
+  );
+  const removedRow = await rowJson(runner, 'analytics_categories', removedValue);
+  await audit(runner, { table: 'analytics_categories', recordId: removedValue, action: 'create', userId: data.owner, after: removedRow });
+  await audit(runner, { table: 'analytics_categories', recordId: removedValue, action: 'delete', userId: data.owner, before: removedRow, after: null });
+
+  await audit(runner, {
+    table: 'analytics_axes', recordId: data.axis, action: 'delete', userId: data.owner,
+    before: axis,
+    after: { forced: true, values: 2, lines: 5, opex_lines: 3, capex_lines: 2 },
   });
 }
 
@@ -319,12 +354,58 @@ async function testCalendarAndProcessEntries(seeded: Seeded) {
   console.log('  calendar and process own entries, hidden year content, named and hidden application link: OK');
 }
 
+async function testAnalyticsEntries(seeded: Seeded) {
+  const { data } = seeded;
+  const axis = await readPage(seeded.analyticsReader, data.tenantId, 'analytics_axes', data.axis, { analytics: 'reader' });
+  assertPresentable(axis);
+  const axisCreate = findItem(axis, 'create');
+  assert.equal(findChange(axisCreate, 'code').after, 'cost_pool');
+  assert.equal(findChange(axisCreate, 'name').after, 'Cost pool');
+  assert.equal(findChange(axisCreate, 'applies_to').after, 'opex');
+  assert.equal(findChange(axisCreate, 'required').after, true);
+  assert.equal(findChange(axisCreate, 'open_values').after, true);
+  const axisUpdate = findItem(axis, 'update');
+  assert.equal(findChange(axisUpdate, 'description').after, 'Where the cost sits');
+
+  // A value added, modified and removed, from the dimension's side.
+  const valueEvents = axis.items.flatMap((item) => item.changes).filter((change) => change.field === 'value');
+  assert.ok(valueEvents.some((change) => change.event === 'added' && change.after === 'Cloud'), 'Cloud was added');
+  assert.ok(valueEvents.some((change) => change.event === 'added' && change.after === 'Retired value'), 'Retired value was added');
+  assert.ok(valueEvents.some((change) => change.event === 'removed' && change.before === 'Retired value'), 'Retired value was removed');
+  const valueUpdate = axis.items.find((item) => item.subject.kind === 'value' && item.subject.label === 'Cloud' && item.action === 'update');
+  assert.ok(valueUpdate, 'the value modification is an entry');
+  assert.equal(findChange(valueUpdate, 'description').after, 'Cloud spend');
+
+  // A forced deletion: its counts are shown, its marker and the total it repeats are not.
+  const forced = axis.items.find((item) => item.action === 'delete' && item.subject.kind === 'record');
+  assert.ok(forced, 'the forced deletion is an entry');
+  assert.equal(findChange(forced, 'values').after, 2);
+  assert.equal(findChange(forced, 'opex_lines').after, 3);
+  assert.equal(findChange(forced, 'capex_lines').after, 2);
+  assertNoField(axis, 'lines');
+  assertNoField(axis, 'forced');
+
+  // The value as its own record: the dimension it belongs to is named for an analytics reader.
+  const value = await readPage(seeded.analyticsReader, data.tenantId, 'analytics_categories', data.categoryA, { analytics: 'reader' });
+  assertPresentable(value);
+  const valueCreate = findItem(value, 'create');
+  assert.equal(findChange(valueCreate, 'name').after, 'Cloud');
+  const dimension = findChange(valueCreate, 'axis_id').after as any;
+  assert.equal(dimension.kind, 'analytics_axis');
+  assert.equal(dimension.label, 'Cost pool');
+  assert.equal(findChange(findItem(value, 'update'), 'description').after, 'Cloud spend');
+  for (const field of ['id', 'tenant_id', 'created_at', 'updated_at']) assertNoField(value, field);
+  console.log('  analytics dimension and value entries, value child events, forced counts: OK');
+}
+
 async function testAccess(seeded: Seeded, foreign: HistorySeed) {
   const { data } = seeded;
   assert.ok((await readPage(seeded.companyReader, data.tenantId, 'companies', data.companyA, { companies: 'reader' })).items.length > 0);
   assert.ok((await readPage(seeded.departmentReader, data.tenantId, 'departments', data.department, { departments: 'reader' })).items.length > 0);
   assert.ok((await readPage(seeded.calendarReader, data.tenantId, 'working_day_profiles', data.calendar, { working_day_profiles: 'reader' })).items.length > 0);
   assert.ok((await readPage(seeded.processReader, data.tenantId, 'business_processes', data.businessProcess, { business_processes: 'reader' })).items.length > 0);
+  assert.ok((await readPage(seeded.analyticsReader, data.tenantId, 'analytics_axes', data.axis, { analytics: 'reader' })).items.length > 0);
+  assert.ok((await readPage(seeded.analyticsReader, data.tenantId, 'analytics_categories', data.categoryA, { analytics: 'reader' })).items.length > 0);
 
   await assert.rejects(
     () => readPage(seeded.noModule, data.tenantId, 'companies', data.companyA, { tasks: 'reader' }),
@@ -345,6 +426,16 @@ async function testAccess(seeded: Seeded, foreign: HistorySeed) {
     () => readPage(seeded.noModule, data.tenantId, 'business_processes', data.businessProcess, { tasks: 'reader' }),
     (error: any) => error?.status === 403 && error?.response?.code === 'MODULE_RIGHT_REQUIRED',
     'a person without the business_processes module gets 403',
+  );
+  await assert.rejects(
+    () => readPage(seeded.noModule, data.tenantId, 'analytics_axes', data.axis, { tasks: 'reader' }),
+    (error: any) => error?.status === 403 && error?.response?.code === 'MODULE_RIGHT_REQUIRED',
+    'a person without the analytics module gets 403',
+  );
+  await assert.rejects(
+    () => readPage(seeded.noModule, data.tenantId, 'analytics_categories', data.categoryA, { tasks: 'reader' }),
+    (error: any) => error?.status === 403 && error?.response?.code === 'MODULE_RIGHT_REQUIRED',
+    'a person without the analytics module gets 403 on a value',
   );
   await assert.rejects(
     () => readPage(seeded.companyReader, data.tenantId, 'unknown_table', data.companyA, { companies: 'reader' }),
@@ -381,6 +472,16 @@ async function testAccess(seeded: Seeded, foreign: HistorySeed) {
     (error: any) => error?.status === 404,
     'a process of another tenant gets 404',
   );
+  await assert.rejects(
+    () => readPage(seeded.allReader, data.tenantId, 'analytics_axes', foreign.axis, { analytics: 'reader' }),
+    (error: any) => error?.status === 404,
+    'a dimension of another tenant gets 404',
+  );
+  await assert.rejects(
+    () => readPage(seeded.allReader, data.tenantId, 'analytics_categories', foreign.categoryA, { analytics: 'reader' }),
+    (error: any) => error?.status === 404,
+    'a value of another tenant gets 404',
+  );
   console.log('  200 with the module, 403 without it, 404 for unknown, missing and foreign records: OK');
 }
 
@@ -397,23 +498,25 @@ async function run() {
       const calendarReader = await seedPerson(runner, tenantId, { first: 'Cal', last: 'Calendar' }, { working_day_profiles: 'reader' });
       const processReader = await seedPerson(runner, tenantId, { first: 'Pia', last: 'Process' }, { business_processes: 'reader' });
       const applicationReader = await seedPerson(runner, tenantId, { first: 'Ari', last: 'Application' }, { applications: 'reader' });
+      const analyticsReader = await seedPerson(runner, tenantId, { first: 'Ana', last: 'Analytics' }, { analytics: 'reader' });
       const allReader = await seedPerson(
         runner,
         tenantId,
         { first: 'Alba', last: 'All' },
         {
           companies: 'reader', departments: 'reader', accounts: 'reader',
-          working_day_profiles: 'reader', business_processes: 'reader', applications: 'reader',
+          working_day_profiles: 'reader', business_processes: 'reader', applications: 'reader', analytics: 'reader',
         },
       );
       const noModule = await seedPerson(runner, tenantId, { first: 'Nino', last: 'NoModule' }, { tasks: 'reader' });
-      return { data, companyReader, departmentReader, calendarReader, processReader, applicationReader, allReader, noModule };
+      return { data, companyReader, departmentReader, calendarReader, processReader, applicationReader, analyticsReader, allReader, noModule };
     });
     const foreign = await seed(foreignTenantId, (runner) => seedHistoryData(runner, foreignTenantId));
 
     await testAccess(seeded, foreign);
     await testCompanyAndDepartmentEntries(seeded);
     await testCalendarAndProcessEntries(seeded);
+    await testAnalyticsEntries(seeded);
     console.log('record-history-family-a.integration.spec: ok');
   } finally {
     await dropRaceTenant(tenantId);

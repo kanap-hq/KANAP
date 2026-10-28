@@ -1,6 +1,8 @@
 import type { PermissionLevel } from '../auth/require-level.decorator';
 import type { FamilyKey } from './record-history/families';
 import { accountsRecord } from './record-history/records/accounts';
+import { analyticsAxesRecord } from './record-history/records/analytics_axes';
+import { analyticsCategoriesRecord } from './record-history/records/analytics_categories';
 import { businessProcessesRecord } from './record-history/records/business_processes';
 import { companiesRecord } from './record-history/records/companies';
 import { costCentersRecord } from './record-history/records/cost_centers';
@@ -59,7 +61,8 @@ export type RecordHistoryChildKind =
   | 'project'
   | 'request'
   | 'task'
-  | 'metrics';
+  | 'metrics'
+  | 'value';
 
 export type RecordHistoryExclusion = {
   /** The physical table of the data-access inventory. */
@@ -113,6 +116,8 @@ export type RecordHistoryRecord = {
  */
 const RECORD_HISTORY_DEFINITION = [
   accountsRecord,
+  analyticsAxesRecord,
+  analyticsCategoriesRecord,
   businessProcessesRecord,
   companiesRecord,
   costCentersRecord,

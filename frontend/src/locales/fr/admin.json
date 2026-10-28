@@ -570,7 +570,15 @@
       "region_code": "Région",
       "is_default": "Par défaut",
       "it_owner_user_id": "Responsable IT",
-      "application_id": "Application"
+      "application_id": "Application",
+      "sort_order": "Ordre",
+      "applies_to": "Utilisé pour",
+      "required": "Obligatoire",
+      "open_values": "Valeurs ouvertes",
+      "values": "Valeurs supprimées",
+      "opex_lines": "Lignes OPEX mises à jour",
+      "capex_lines": "Lignes CAPEX mises à jour",
+      "axis_id": "Dimension"
     },
     "history": {
       "empty": "Aucun historique",
@@ -651,6 +659,10 @@
         "request": {
           "added": "Demande ajoutée : {{label}}",
           "removed": "Demande retirée : {{label}}"
+        },
+        "value": {
+          "added": "Valeur ajoutée : {{label}}",
+          "removed": "Valeur retirée : {{label}}"
         }
       },
       "unnamed": {
@@ -690,7 +702,8 @@
       },
       "title": "Historique",
       "metricsYear": "Indicateurs {{year}}",
-      "metricsNoYear": "Indicateurs"
+      "metricsNoYear": "Indicateurs",
+      "value": "Valeur {{name}}"
     },
     "messages": {
       "loadDetailsFailed": "Impossible de charger les détails de l'entrée d'audit."
@@ -970,6 +983,10 @@
       "costCenterKind": {
         "group": "Groupe",
         "cost_center": "Centre de coûts"
+      },
+      "lineTypeUsage": {
+        "opex": "OPEX uniquement",
+        "capex": "CAPEX uniquement"
       }
     },
     "dataAccess": {

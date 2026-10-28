@@ -118,6 +118,7 @@ const ENUM_GROUPS: Record<string, string> = {
   run_build: 'auditLogs.values.runBuild',
   role: 'auditLogs.values.contactRole',
   origin: 'auditLogs.values.origin',
+  applies_to: 'auditLogs.values.lineTypeUsage',
 };
 
 /** `spread_profile_name` holds `flat` and `4-4-5`; its keys cannot use the stored code as is. */

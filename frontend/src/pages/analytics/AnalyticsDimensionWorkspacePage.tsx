@@ -218,6 +218,7 @@ export default function AnalyticsDimensionWorkspacePage() {
           nextLabel: t('analytics.nextDimension'),
         } : undefined}
         actions={actions}
+        history={data ? { table: 'analytics_axes', recordId: data.id } : undefined}
         properties={data ? (
           <DimensionProperties
             key={data.id}
