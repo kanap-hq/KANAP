@@ -525,6 +525,16 @@ async function testRemoveOneDeclaration(harness: Harness) {
       [seed.tenantId, seed.apps.cheeseTrack, seed.technologies.postgres],
     );
     assert.deepEqual(left.map((row: any) => row.label), ['15'], 'only the requested declaration left');
+    const [audit] = await runner.query(
+      `SELECT action, source, source_ref FROM audit_log
+        WHERE tenant_id = $1 AND record_id = $2 AND table_name = 'application_technologies' AND source_ref = $3
+        ORDER BY created_at DESC LIMIT 1`,
+      [seed.tenantId, seed.technologies.postgres, preview.preview_id],
+    );
+    assert.deepEqual({ action: audit.action, source: audit.source, sourceRef: audit.source_ref },
+      { action: 'update', source: 'ai_chat', sourceRef: preview.preview_id });
+    assert.ok(harness.cpeEvents.some((event) => event.tenantId === seed.tenantId && event.technologyId === seed.technologies.postgres),
+      'the removal emits the match event');
   });
 }
 
