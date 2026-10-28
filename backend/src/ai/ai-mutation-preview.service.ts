@@ -22,7 +22,7 @@ import { AiMutationPreview } from './ai-mutation-preview.entity';
 import { AiPolicyService, isRightRefusalMessage } from './ai-policy.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
-import { AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
+import { AiMutationPreviewPresentation, AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
 import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/database-error.mapping';
 import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
 import { assertLinesEditable } from '../data-access/line-write-checks';
@@ -44,6 +44,9 @@ const EXECUTION_SAVEPOINT_NAME = 'ai_mutation_preview_execution';
 /** A preview whose data was held by another operation: nothing ran, it can be approved again. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PLAN_PLACEHOLDER_RE = /\{\{\s*([A-Za-z0-9_-]+)\.(id|ref|title)\s*\}\}/g;
+/** A preview executed before the budget lines became one family: its card lists, its undo is refused. */
+const LEGACY_BUDGET_LINE_TYPES = new Set(['spend_items', 'capex_items']);
+const LEGACY_BUDGET_LINE_UNDO_REFUSAL = 'This change was made before a Plaid update and can no longer be undone here: use the screen.';
 
 export type AiMutationPlanOperationInput = {
   operation_id?: string | null;
@@ -209,7 +212,11 @@ export class AiMutationPreviewService {
 
   private toPreviewDto(preview: AiMutationPreview, language: AiWriteLanguage): AiMutationPreviewDto {
     const operation = this.operations.getOperation(preview.tool_name);
-    const presentation = operation.presentPreview(preview, language);
+    // An old budget line preview keeps its card in the conversation: the one family's operation
+    // cannot present the stored `spend_items` / `capex_items` target, so the card says what it is.
+    const presentation = this.isLegacyBudgetLinePreview(preview)
+      ? this.legacyBudgetLinePresentation(preview)
+      : operation.presentPreview(preview, language);
 
     return {
       preview_id: preview.id,
@@ -252,6 +259,34 @@ export class AiMutationPreviewService {
     await assertUnscopedDataAccess({ manager: context.manager, userId: context.userId });
   }
 
+  /** A preview stored before the budget lines became one AI family (`spend_items` / `capex_items`). */
+  private isLegacyBudgetLinePreview(preview: AiMutationPreview): boolean {
+    const type = preview.target_entity_type ?? preview.mutation_input?.entity_type;
+    return LEGACY_BUDGET_LINE_TYPES.has(String(type ?? '').trim());
+  }
+
+  /**
+   * The card of an old budget line preview: no field labels, no link (the frontend has no alias
+   * for the old types), and a summary that says it predates the change. The list keeps loading.
+   */
+  private legacyBudgetLinePresentation(preview: AiMutationPreview): AiMutationPreviewPresentation {
+    const current = preview.current_values ?? {};
+    const title = String(current.target_title ?? current.target_ref ?? 'Budget line');
+    const action = String(preview.mutation_input?.action ?? 'change');
+    return {
+      target: {
+        entity_type: preview.target_entity_type,
+        entity_id: preview.target_entity_id ?? null,
+        ref: current.target_ref == null ? null : String(current.target_ref),
+        title,
+      },
+      changes: {},
+      summary: preview.status === 'executed'
+        ? `This ${action} preview was executed before a Plaid update.`
+        : `This ${action} preview was made before a Plaid update.`,
+    };
+  }
+
   /**
    * A preview of a write on a budget line (its fields, its relations, its versions and amounts)
    * that the person reads but may not modify: refused when the preview is asked, with the 403
@@ -263,7 +298,7 @@ export class AiMutationPreviewService {
     context: AiExecutionContextWithManager,
     prepared: Pick<AiPreparedMutationPreview, 'targetEntityType' | 'targetEntityId'>,
   ): Promise<void> {
-    if (prepared.targetEntityType !== 'spend_items' && prepared.targetEntityType !== 'capex_items') return;
+    if (prepared.targetEntityType !== 'budget_lines') return;
     await assertLinesEditable(context.manager, [prepared.targetEntityId]);
   }
 
@@ -1297,6 +1332,9 @@ export class AiMutationPreviewService {
     previewId: string,
   ): Promise<AiMutationPreviewDto> {
     const original = await this.getPreviewForUser(context, previewId);
+    // A change made before the one budget line family has no family to reverse under the current
+    // rules: refused with a readable 4xx, never a 500.
+    if (this.isLegacyBudgetLinePreview(original)) throw new BadRequestException(LEGACY_BUDGET_LINE_UNDO_REFUSAL);
     const operation = this.operations.getOperation(original.tool_name);
     await this.assertWriteRights(context, operation, { preview: original });
     await this.assertNotReservedForPerson(context, original.tool_name, original.target_entity_type);

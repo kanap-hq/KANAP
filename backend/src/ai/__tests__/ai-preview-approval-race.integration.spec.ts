@@ -55,7 +55,7 @@ async function seedPreview(race: Parameters<Parameters<typeof withRace>[1]>[0], 
     for (let i = 0; i < count; i++) {
       const [preview] = await runner.query(
         `INSERT INTO ai_mutation_previews (tenant_id, user_id, tool_name, target_entity_type, target_entity_id, mutation_input, current_values, status, expires_at)
-         VALUES ($1, $2, $3, 'spend_items', $4, '{}'::jsonb, '{}'::jsonb, 'pending', now() + interval '1 hour') RETURNING id`,
+         VALUES ($1, $2, $3, 'budget_lines', $4, '{}'::jsonb, '{}'::jsonb, 'pending', now() + interval '1 hour') RETURNING id`,
         [race.tenantId, userId, TOOL, itemId],
       );
       previewIds.push(preview.id as string);

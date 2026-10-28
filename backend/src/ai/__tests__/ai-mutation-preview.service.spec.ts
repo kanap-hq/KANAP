@@ -540,7 +540,7 @@ function createService(options?: {
     businessResource: 'budget',
     writePreview: { reversible: true },
     presentPreview: () => ({
-      target: { entity_type: 'spend_items', entity_id: null, ref: null, title: null },
+      target: { entity_type: 'budget_lines', entity_id: null, ref: null, title: null },
       changes: {},
       summary: 'Write financial plan.',
     }),
@@ -1293,8 +1293,9 @@ async function testCreateTaskPreviewResolvesSpendItemRelation() {
         pattern: 'FROM spend_items',
         rows: [{
           id: 'spend-1',
+          nature: 'opex',
           name: 'SQL Server License',
-          item_number: null,
+          item_number: 42,
           updated_at: '2026-03-28T10:00:00.000Z',
         }],
       },
@@ -1303,11 +1304,11 @@ async function testCreateTaskPreviewResolvesSpendItemRelation() {
 
   const result = await service.createPreview(context, 'create_task', {
     title: 'Renew SQL Server License',
-    relation_type: 'spend_item',
+    relation_type: 'budget_line',
     relation_ref: 'SQL Server License',
   });
 
-  assert.equal(result.changes.relation.to, 'OPEX - SQL Server License');
+  assert.equal(result.changes.relation.to, 'BL-42 - SQL Server License');
   assert.equal(saved[0].mutation_input.relation_id, 'spend-1');
   assert.equal(businessPermissionChecks.length, 0);
 }
@@ -1327,27 +1328,26 @@ async function testCreateTaskPreviewResolvesCapexRelation() {
           : []),
       },
       {
-        // Lot Z1: a CAPEX line is a spend line of nature 'capex'.
+        // Both natures are one family; the line's nature gives the stored task type.
         pattern: 'FROM spend_items',
-        rows: (sql: string) => (sql.includes(`target.nature = 'capex'`)
-          ? [{
-              id: 'capex-1',
-              name: 'New SAN',
-              item_number: null,
-              updated_at: '2026-03-28T10:00:00.000Z',
-            }]
-          : []),
+        rows: [{
+          id: 'capex-1',
+          nature: 'capex',
+          name: 'New SAN',
+          item_number: 43,
+          updated_at: '2026-03-28T10:00:00.000Z',
+        }],
       },
     ],
   });
 
   const result = await service.createPreview(context, 'create_task', {
     title: 'Rack the SAN',
-    relation_type: 'capex_item',
+    relation_type: 'budget_line',
     relation_ref: 'New SAN',
   });
 
-  assert.equal(result.changes.relation.to, 'CAPEX - New SAN');
+  assert.equal(result.changes.relation.to, 'BL-43 - New SAN');
   assert.equal(saved[0].mutation_input.relation_id, 'capex-1');
 }
 
