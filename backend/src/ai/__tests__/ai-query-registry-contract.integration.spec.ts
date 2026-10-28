@@ -242,7 +242,12 @@ async function testStaticConsistency(harness: Harness) {
     for (const [name, field] of Object.entries<any>(registry.fields)) {
       const listed = Object.prototype.hasOwnProperty.call(registry.sortFields, name);
       assert.equal(field.sortable === true, listed, `${entityType}.${name}: flagged sortable exactly when it is a sort field`);
-      if (listed) assert.equal(registry.sortFields[name], field.grid, `${entityType}.${name}: sorts on the column it filters`);
+      if (listed) {
+        // A task's `related` sorts on the family the assistant displays (`related_family`), not on
+        // the stored type the screen filters (`related_object_type`, lot 3 point 8).
+        const sortKey = entityType === 'tasks' && name === 'related' ? 'related_family' : field.grid;
+        assert.equal(registry.sortFields[name], sortKey, `${entityType}.${name}: sorts on the displayed column`);
+      }
     }
     for (const name of ['created_at', 'updated_at']) {
       assert.ok(registry.sortFields[name], `${entityType}: sorts on ${name}`);

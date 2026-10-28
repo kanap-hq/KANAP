@@ -217,7 +217,7 @@ export const tasksRegistry: AiEntityFilterRegistry = {
     category: 'category_name',
     stream: 'stream_name',
     company: 'company_name',
-    related: 'related_object_type',
+    related: 'related_family',
     application: 'application_name',
     asset: 'asset_name',
     source: 'source_name',
