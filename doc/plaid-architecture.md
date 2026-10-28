@@ -358,6 +358,11 @@ Live write-preview coverage includes:
   CAPEX, project, request, document, and location links
 - financial plan writes for spend and CAPEX versions, amounts, and allocations
 - GLPI ticket import into a KANAP task
+- single-record deletes (`delete_record`) of a task, contact, location,
+  document, spend or CAPEX item, connection or interface, at the level of that
+  family's delete route (`ai-write-levels.ts`); one pending delete per
+  conversation, the preview names only the dependents the user may read and
+  counts the rest, and apply refuses a record changed since the preview
 - grouped mutation plans and undo previews where a reversible operation supports
   reversal
 

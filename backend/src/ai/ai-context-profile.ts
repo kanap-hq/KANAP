@@ -89,6 +89,7 @@ const TASK_WRITE_TOOLS: AiToolName[] = [
   'update_task_assignees',
   'update_task_assignee',
   'add_task_comment',
+  'delete_record',
   'undo_preview',
 ];
 
@@ -105,6 +106,7 @@ const DOCUMENT_WRITE_TOOLS: AiToolName[] = [
   'update_document_content',
   'update_document_metadata',
   'update_document_relations',
+  'delete_record',
   'undo_preview',
 ];
 
@@ -119,6 +121,7 @@ const BUSINESS_WRITE_TOOLS: AiToolName[] = [
   'create_business_record',
   'update_business_record',
   'update_entity_relations',
+  'delete_record',
   'undo_preview',
 ];
 
@@ -132,6 +135,7 @@ const MASTER_DATA_WRITE_TOOLS: AiToolName[] = [
   'create_master_data_record',
   'update_master_data_record',
   'update_entity_relations',
+  'delete_record',
   'undo_preview',
 ];
 
@@ -144,6 +148,7 @@ const FINANCIAL_WRITE_TOOLS: AiToolName[] = [
   'get_entity_detail',
   'prepare_mutation_plan',
   'write_financial_plan',
+  'delete_record',
   'undo_preview',
 ];
 

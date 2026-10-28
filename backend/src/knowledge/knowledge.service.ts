@@ -552,7 +552,7 @@ type WorkflowParticipantView = {
   acted_at: Date | string | null;
 };
 
-type KnowledgeAuditOptions = {
+export type KnowledgeAuditOptions = {
   source?: string;
   sourceRef?: string | null;
 };
@@ -1237,7 +1237,7 @@ export class KnowledgeService {
    * The refusal of a managed document's delete (`KNOWLEDGE_DOCUMENT_MANAGED`): it belongs to a
    * record's page and goes with that record. Null for any other document.
    */
-  private async managedDocumentRefusal(
+  async managedDocumentRefusal(
     document: Pick<Document, 'id' | 'title'>,
     manager: EntityManager,
   ): Promise<RecordInUseException | null> {
@@ -4807,7 +4807,11 @@ export class KnowledgeService {
     return this.get(saved.id, { manager, userId, ...(opts ?? {}) });
   }
 
-  async remove(idOrRef: string, userId: string | null, opts?: { manager?: EntityManager }) {
+  async remove(
+    idOrRef: string,
+    userId: string | null,
+    opts?: { manager?: EntityManager; audit?: KnowledgeAuditOptions },
+  ) {
     const manager = this.getManager(opts);
     const id = await this.resolveDocumentId(idOrRef, manager);
 
@@ -4821,7 +4825,7 @@ export class KnowledgeService {
 
     await repo.delete({ id } as any);
 
-    await this.auditDocumentChange('delete', id, existing, null, userId, manager);
+    await this.auditDocumentChange('delete', id, existing, null, userId, manager, opts?.audit);
 
     return { ok: true };
   }

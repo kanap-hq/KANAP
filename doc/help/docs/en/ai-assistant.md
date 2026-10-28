@@ -136,6 +136,37 @@ When you ask for a change your role does not allow, Plaid names the right you ar
 
 Plaid makes only the changes your screens let you make, on the records you can reach there. With the right to contribute to projects, you can have Plaid change the purpose of a project and its links to applications, assets and budget lines. The right to contribute to requests covers the same links on requests. A Business Contributor makes these changes only on the projects and requests they take part in. Linking a record needs the right to read its module. Renaming a project or changing its other fields needs the right to modify projects, as on the project page.
 
+### Deleting a record { #deleting-a-record }
+
+Plaid deletes one record at a time: a task, a contact, a location, a document, a budget line (OPEX or CAPEX), a connection or an interface. Each deletion comes as a preview that you approve. A deletion cannot be undone.
+
+The preview lists what goes with the record, such as comments, time entries, attachments, versions and links. It names only what you may read and counts the rest as other links. If the record changes between the preview and your approval, KANAP refuses the deletion. Ask Plaid again to get a new preview.
+
+Only one deletion waits for approval at a time in a conversation. When you ask to delete several records, Plaid prepares them one after the other.
+
+Plaid needs the level the screen asks for:
+
+| Record | Level |
+|---|---|
+| Task | Tasks administrator |
+| Contact | Contacts administrator |
+| Location | Locations member |
+| Document | Knowledge administrator, with the right to write in its library |
+| Budget line | Budget administrator |
+| Connection | Infrastructure member |
+| Interface | Applications administrator |
+
+When your data access is limited to some companies or cost centers, Plaid deletes no contacts and no budget lines, as on the screens.
+
+Plaid refuses what the screens refuse:
+
+- A task that a request names as its origin
+- A budget line with amounts in a frozen column
+- An interface with bindings, unless you ask to delete its bindings with it
+- A document embedded in a record. It goes when its record is deleted.
+
+Other records, such as applications, assets, contracts, projects, requests, incidents and technologies, are deleted on their screens. Plaid says so and names the screen. Assistants connected over MCP read only.
+
 ### What Plaid does not read { #what-plaid-does-not-read }
 
 Plaid does not read:
@@ -175,7 +206,7 @@ For pending change previews, the panel offers two buttons:
 
 A preview, and the message Plaid writes after you approve or reject it, are in the language of your profile, with the field names and values the screens use. A budget line asked for with an amount comes as one preview: one approval creates the line, its budget version for the year and the amount.
 
-When you ask for a change Plaid cannot make, such as deleting a record or changing the state of a vulnerability, it says so and names the screen where you can make it. It prepares no other change in its place.
+When you ask for a change Plaid cannot make, such as deleting a project or changing the state of a vulnerability, it says so and names the screen where you can make it. It prepares no other change in its place.
 
 Nothing that mutates KANAP data is applied silently. The preview is the gate.
 

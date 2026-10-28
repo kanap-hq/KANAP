@@ -80,6 +80,11 @@ export type AiTaskSnapshot = {
   status: string | null;
   assignee_user_id: string | null;
   assignee_label: string | null;
+  /** The task's object, for the delete refusal of a scoped budget line or contract (`assertTaskDeletable`). */
+  related_object_type: string | null;
+  related_object_id: string | null;
+  /** The record's last change, for the drift check of a delete preview. */
+  updated_at: string | null;
 };
 
 export type AiTaskUserReference = {
@@ -272,6 +277,9 @@ export class AiTaskMutationSupportService {
       status: row.status ?? null,
       assignee_user_id: row.assignee_user_id ?? null,
       assignee_label: row.assignee_label ?? null,
+      related_object_type: row.related_object_type ?? null,
+      related_object_id: row.related_object_id ?? null,
+      updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : null,
     };
   }
 
@@ -463,6 +471,9 @@ export class AiTaskMutationSupportService {
                t.title,
                t.status,
                t.assignee_user_id,
+               t.related_object_type,
+               t.related_object_id,
+               t.updated_at,
                COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email) AS assignee_label
         FROM tasks t
         LEFT JOIN users u
@@ -491,6 +502,9 @@ export class AiTaskMutationSupportService {
                t.title,
                t.status,
                t.assignee_user_id,
+               t.related_object_type,
+               t.related_object_id,
+               t.updated_at,
                COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email) AS assignee_label
         FROM tasks t
         LEFT JOIN users u

@@ -379,6 +379,21 @@ function textOrNull(value: unknown): string | null {
   return normalized || null;
 }
 
+/**
+ * A record's name without a reference it repeats at its start ("CON-1 - DB link" for CON-1):
+ * the label prepends the reference for the screens, and prepending it to a name that already
+ * carries it would show it twice ("CON-1 - CON-1 - DB link").
+ */
+function nameWithoutLeadingReference(reference: string | null, name: string | null): string | null {
+  if (!name) return null;
+  if (!reference) return name;
+  const escaped = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const rest = name.replace(new RegExp(`^${escaped}(?:\\s*[-–—·:|]\\s*|\\s+)`, 'i'), '').trim();
+  if (rest && rest !== name) return rest;
+  // A name that is only the reference leaves the title to the reference the card already shows.
+  return name.toLowerCase() === reference.toLowerCase() ? null : name;
+}
+
 function formatPlainValue(value: unknown, field?: FieldConfig): string | null {
   if (value == null || value === '') return null;
   if (value instanceof Date) return value.toISOString();
@@ -867,7 +882,8 @@ export class AiMasterDataMutationSupportService {
     };
   }
 
-  private async resolveRecordReference(
+  /** The record a reference or an exact name names, with the row its card and drift check read. */
+  async resolveRecordReference(
     context: AiExecutionContextWithManager,
     entityType: AiMasterDataEntityType,
     ref: string,
@@ -1057,7 +1073,7 @@ export class AiMasterDataMutationSupportService {
       case 'contacts':
         return textOrNull(row.email);
       case 'locations':
-        return textOrNull(row.code);
+        return textOrNull(row.location_reference);
       default:
         return null;
     }
@@ -1078,8 +1094,10 @@ export class AiMasterDataMutationSupportService {
         const company = textOrNull(row.company_name);
         return company ? `${name} (${company})` : name;
       }
-      case 'locations':
-        return [row.code, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled location';
+      case 'locations': {
+        const reference = textOrNull(row.location_reference);
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled location';
+      }
       case 'analytics_categories': {
         const name = textOrNull(row.name) || 'Untitled analytics category';
         const dimension = row.axis_is_default === false ? textOrNull(row.axis_name) : null;

@@ -29,6 +29,10 @@ export const CONNECTION_ASSET_READERS: Readonly<Record<string, ConnectionAssetRe
   'src/connections/services/connections-crud.service.ts': { status: 'direct', reason: 'Writes the stored endpoints and servers.' },
   'src/connections/services/connections-legs.service.ts': { status: 'direct', reason: 'Writes the stored hops and their equipment.' },
   'src/connections/services/connections-base.service.ts': { status: 'direct', reason: 'Normalises the stored endpoints and the equipment of a hop before a write.' },
+  'src/ai/mutation/ai-delete-mutation-support.service.ts': {
+    status: 'direct',
+    reason: "A delete preview counts the stored server and hop rows it removes, not the effective members of a cluster.",
+  },
   'src/connections/connection-server.entity.ts': { status: 'direct', reason: 'The entity of the stored servers.' },
   'src/connections/connection-leg.entity.ts': { status: 'direct', reason: 'The entity of the stored hops.' },
   'src/assets/assets-delete.service.ts': {

@@ -14,7 +14,7 @@ import { InterfaceDataResidency } from '../interface-data-residency.entity';
 import { InterfaceBinding } from '../../interface-bindings/interface-binding.entity';
 import { InterfaceConnectionLink } from '../../interface-connection-links/interface-connection-link.entity';
 import { Application } from '../../applications/application.entity';
-import { AuditService } from '../../audit/audit.service';
+import { AuditService, AuditSourceOptions } from '../../audit/audit.service';
 import { withSavepoint } from '../../common/savepoint.util';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
@@ -435,7 +435,11 @@ export class InterfacesCrudService extends InterfacesBaseService {
   /**
    * Delete an interface.
    */
-  async delete(id: string, userId: string | null, opts?: ServiceOpts & { deleteRelatedBindings?: boolean }) {
+  async delete(
+    id: string,
+    userId: string | null,
+    opts?: ServiceOpts & { deleteRelatedBindings?: boolean; audit?: AuditSourceOptions },
+  ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = this.getRepo(mg);
     const bindingRepo = this.getBindingRepo(mg);
@@ -457,10 +461,24 @@ export class InterfacesCrudService extends InterfacesBaseService {
       await bindingRepo.delete({ interface_id: interfaceDbId } as any);
     }
 
-    await this.integratedDocuments.deleteForEntity('interfaces', interfaceDbId, userId, { manager: mg });
+    // Its managed documents name it without a foreign key: they go here, audited under the actor.
+    // The interface delete right (applications admin, as the list) covers them: the Knowledge
+    // library rights are not checked again, as the application delete does (`checkAccess: false`).
+    await this.integratedDocuments.deleteForEntity('interfaces', interfaceDbId, userId, {
+      manager: mg,
+      checkAccess: false,
+    });
     await repo.delete({ id: interfaceDbId } as any);
     await this.audit.log(
-      { table: 'interfaces', recordId: interfaceDbId, action: 'delete', before: existing, after: null, userId },
+      {
+        table: 'interfaces',
+        recordId: interfaceDbId,
+        action: 'delete',
+        before: existing,
+        after: null,
+        userId,
+        ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef ?? null } : {}),
+      },
       { manager: mg },
     );
     return { deleted: true, bindingsDeleted: bindings.length };
