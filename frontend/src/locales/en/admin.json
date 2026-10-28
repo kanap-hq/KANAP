@@ -551,7 +551,9 @@
       "consolidation_account_description": "Consolidation account description",
       "code": "Code",
       "kind": "Type",
-      "parent_id": "Parent group"
+      "parent_id": "Parent group",
+      "accountNature": "Used for",
+      "costCenterOwner": "Budget holder"
     },
     "history": {
       "empty": "No history yet",

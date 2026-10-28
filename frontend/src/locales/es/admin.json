@@ -551,7 +551,9 @@
       "consolidation_account_description": "Descripción de la cuenta de consolidación",
       "code": "Código",
       "kind": "Tipo",
-      "parent_id": "Grupo superior"
+      "parent_id": "Grupo superior",
+      "accountNature": "Usada para",
+      "costCenterOwner": "Responsable del presupuesto"
     },
     "history": {
       "empty": "Todavía no hay historial",

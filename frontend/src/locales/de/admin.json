@@ -551,7 +551,9 @@
       "consolidation_account_description": "Beschreibung des Konsolidierungskontos",
       "code": "Code",
       "kind": "Typ",
-      "parent_id": "Übergeordnete Gruppe"
+      "parent_id": "Übergeordnete Gruppe",
+      "accountNature": "Verwendet für",
+      "costCenterOwner": "Budgetverantwortlicher"
     },
     "history": {
       "empty": "Noch kein Verlauf",

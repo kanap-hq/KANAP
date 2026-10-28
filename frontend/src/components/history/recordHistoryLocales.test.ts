@@ -111,10 +111,10 @@ describe('record history locales', () => {
 
   it('has the new field labels and the tab label in the four languages', () => {
     const fields = [
-      'account_id', 'account_name', 'account_number', 'allocation_method', 'allocation_pct',
+      'account_id', 'account_name', 'account_number', 'accountNature', 'allocation_method', 'allocation_pct',
       'as_of_date', 'budget_year', 'coa_id', 'code', 'consolidation_account_description',
       'consolidation_account_name', 'consolidation_account_number', 'contract_id', 'cost_center_id',
-      'effective_start', 'input_grain', 'kind', 'lines', 'measure', 'native_name', 'nature',
+      'costCenterOwner', 'effective_start', 'input_grain', 'kind', 'lines', 'measure', 'native_name', 'nature',
       'owner_business_id', 'owner_it_id', 'parent_id', 'paying_company_id', 'product_name',
       'project_id', 'run_build', 'successor_id', 'version_name',
     ];
@@ -174,13 +174,13 @@ describe('record history locales', () => {
     const accountEn = historyLines(item({ changes: accountChanges }), enAccount);
     expect(lineText(accountEn[0], enAccount)).toBe('Account name: Software → Software and services');
     expect(lineText(accountEn[1], enAccount)).toBe('Chart of accounts: FR · Local chart');
-    expect(lineText(accountEn[2], enAccount)).toBe('Nature: — → OPEX only');
+    expect(lineText(accountEn[2], enAccount)).toBe('Used for: — → OPEX only');
 
     const frAccount = { ...context('fr'), table: 'accounts' };
     const accountFr = historyLines(item({ changes: accountChanges }), frAccount);
     expect(lineText(accountFr[0], frAccount)).toBe('Nom du compte\u00a0: Software → Software and services');
     expect(lineText(accountFr[1], frAccount)).toBe('Plan comptable\u00a0: FR · Local chart');
-    expect(lineText(accountFr[2], frAccount)).toBe('Nature\u00a0: — → OPEX uniquement');
+    expect(lineText(accountFr[2], frAccount)).toBe('Utilisé pour\u00a0: — → OPEX uniquement');
 
     const costChanges = [
       { field: 'kind', before: 'cost_center', after: 'group' },

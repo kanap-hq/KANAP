@@ -551,7 +551,9 @@
       "consolidation_account_description": "Description du compte de consolidation",
       "code": "Code",
       "kind": "Type",
-      "parent_id": "Groupe parent"
+      "parent_id": "Groupe parent",
+      "accountNature": "Utilisé pour",
+      "costCenterOwner": "Responsable budgétaire"
     },
     "history": {
       "empty": "Aucun historique",

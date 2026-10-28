@@ -147,8 +147,18 @@ function columnText(measure: string | null | undefined, t: Translate): string {
   return measureLabel(measure, t) ?? measure ?? '';
 }
 
-/** The label the audit log gives a field, or the stored key when it has none. */
-export function historyFieldLabel(field: string, t: Translate): string {
+/**
+ * The label the audit log gives a field, or the stored key when it has none. Two fields read
+ * differently on one record's own screen: an account's nature is its "Used for", and a cost
+ * center's owner is its "Budget holder" (elsewhere the stored names stay "Nature" and "Owner").
+ */
+export function historyFieldLabel(field: string, t: Translate, table?: string): string {
+  if (field === 'nature' && table === 'accounts') {
+    return t('auditLogs.fields.accountNature', { defaultValue: 'Used for' });
+  }
+  if (field === 'owner_user_id' && table === 'cost_centers') {
+    return t('auditLogs.fields.costCenterOwner', { defaultValue: 'Budget holder' });
+  }
   return t(`auditLogs.fields.${field}`, { defaultValue: field });
 }
 
@@ -324,7 +334,7 @@ function fieldLine(change: RecordHistoryChange, context: HistoryTextContext): Hi
   }
   if (!has(change, 'before') && !has(change, 'after')) return null;
   return {
-    label: historyFieldLabel(change.field, context.t),
+    label: historyFieldLabel(change.field, context.t, context.table),
     ...(has(change, 'before') ? { before: historyValueText(change.before, change.field, context) } : {}),
     ...(has(change, 'after') ? { after: historyValueText(change.after, change.field, context) } : {}),
   };
