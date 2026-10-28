@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '../../i18n';
 import de from '../../locales/de/admin.json';
+import deMasterData from '../../locales/de/master-data.json';
 import deOps from '../../locales/de/ops.json';
 import en from '../../locales/en/admin.json';
+import enMasterData from '../../locales/en/master-data.json';
 import enOps from '../../locales/en/ops.json';
 import es from '../../locales/es/admin.json';
+import esMasterData from '../../locales/es/master-data.json';
 import esOps from '../../locales/es/ops.json';
 import deKnowledge from '../../locales/de/knowledge.json';
 import enKnowledge from '../../locales/en/knowledge.json';
 import esKnowledge from '../../locales/es/knowledge.json';
 import frKnowledge from '../../locales/fr/knowledge.json';
 import fr from '../../locales/fr/admin.json';
+import frMasterData from '../../locales/fr/master-data.json';
 import frOps from '../../locales/fr/ops.json';
 import type { Translate } from '../../lib/audit/auditLogLabels';
 import {
@@ -29,9 +33,10 @@ import {
 const LOCALES = { en, fr, de, es } as Record<string, any>;
 const OPS = { en: enOps, fr: frOps, de: deOps, es: esOps } as Record<string, any>;
 const KNOWLEDGE = { en: enKnowledge, fr: frKnowledge, de: deKnowledge, es: esKnowledge } as Record<string, any>;
+const MASTER_DATA = { en: enMasterData, fr: frMasterData, de: deMasterData, es: esMasterData } as Record<string, any>;
 const LANGUAGE_NAMES = ['en', 'fr', 'de', 'es'] as const;
 const ID = '11111111-2222-4333-8444-555555555555';
-const EVENT_KINDS = ['link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line', 'value',
+const EVENT_KINDS = ['link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line', 'value', 'supplier',
   'budget_line', 'relation_contains', 'relation_depends_on', 'member', 'owner_it', 'owner_business', 'operating_system'];
 const ACTORS = ['assistant', 'assistantFor', 'unknown'];
 const ACTIONS = ['create', 'update', 'delete'];
@@ -141,6 +146,8 @@ describe('record history locales', () => {
       'build_prefixes', 'standard_support_end', 'extended_support_end', 'vulnerability_alerts_effective',
       'owner_type', 'application_id', 'technology_version_id', 'is_operating_system', 'cve_id', 'state', 'note',
       'vulnerability_state',
+      // The supplier and contact fields of lot 2 family B.
+      'erp_supplier_id', 'is_primary', 'job_title', 'supplier_role', 'active', 'phone', 'mobile', 'country',
     ];
     for (const language of LANGUAGE_NAMES) {
       for (const key of fields) {
@@ -148,6 +155,7 @@ describe('record history locales', () => {
       }
       expect(OPS[language].opex.tabs.history, `${language} tab`).toBeTruthy();
       expect(KNOWLEDGE[language].sidebar.tabs.history, `${language} knowledge tab`).toBeTruthy();
+      expect(MASTER_DATA[language].shared.labels.history, `${language} supplier tab`).toBeTruthy();
     }
   });
 
@@ -272,6 +280,24 @@ describe('record history locales', () => {
       subject: { kind: 'contact', label: 'Cora Contact' },
       changes: [{ field: 'contact', event: 'added', after: { kind: 'contact', id: ID, label: 'Cora Contact' } }],
     }), frCtx)[0].text).toBe('Contact ajouté\u00a0: Cora Contact');
+    expect(historyLines(item({
+      subject: { kind: 'supplier', label: 'Acme Supplies' },
+      changes: [{ field: 'supplier', event: 'added', after: { kind: 'supplier', id: ID, label: 'Acme Supplies' } }],
+    }), frCtx)[0].text).toBe('Fournisseur ajouté\u00a0: Acme Supplies');
+    expect(historyLines(item({
+      subject: { kind: 'budget_line', label: 'Main line' },
+      changes: [{ field: 'budget_line', event: 'added', after: { kind: 'budget_line', id: ID, label: 'Main line', reference: 'BL-1' } }],
+    }), frCtx)[0].text).toBe('Ligne budgétaire ajoutée\u00a0: Main line (BL-1)');
+    expect(historyLines(item({
+      subject: { kind: 'supplier' },
+      changes: [
+        { field: 'role', before: 'commercial', after: 'technical' },
+        { field: 'is_primary', before: false, after: true },
+      ],
+    }), frCtx)).toEqual([
+      { label: 'Rôle', before: 'Commercial', after: 'Technique' },
+      { label: 'Principal', before: 'Non', after: 'Oui' },
+    ]);
 
     const frHidden = historyLines(item({
       changes: [{ field: 'contract_id', before: null, after: { hidden: true, kind: 'contract' } }],
@@ -298,5 +324,15 @@ describe('record history locales', () => {
       changes: [{ field: 'contract_id', before: null, after: { hidden: true, kind: 'contract' } }],
     }), enCtx);
     expect(lineText(enHidden[0], enCtx)).toBe('Contract: — → a contract');
+    expect(historyLines(item({
+      subject: { kind: 'supplier' },
+      changes: [
+        { field: 'role', before: 'commercial', after: 'technical' },
+        { field: 'is_primary', before: false, after: true },
+      ],
+    }), enCtx)).toEqual([
+      { label: 'Role', before: 'Commercial', after: 'Technical' },
+      { label: 'Primary', before: 'No', after: 'Yes' },
+    ]);
   });
 });

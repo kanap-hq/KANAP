@@ -1,9 +1,9 @@
 /**
  * The record tables whose page has a history: the budget line's History tab, the account and cost
  * center History buttons of lot 2, the Knowledge document's History tab of lot 2 family E, the masters of
- * family A, and the asset and technology of family D. Each table is served by
- * `GET /records/:table/:id/history` and declared in `backend/src/audit/record-history.inventory.ts`;
- * the backend inventory spec keeps both lists equal.
+ * family A, the asset and technology of family D, and the supplier and contact of family B. Each table is
+ * served by `GET /records/:table/:id/history` and declared in
+ * `backend/src/audit/record-history.inventory.ts`; the backend inventory spec keeps both lists equal.
  */
 export const RECORD_HISTORY_TABLES = [
   'spend_items',
@@ -13,9 +13,11 @@ export const RECORD_HISTORY_TABLES = [
   'assets',
   'business_processes',
   'companies',
+  'contacts',
   'cost_centers',
   'departments',
   'documents',
+  'suppliers',
   'technologies',
   'working_day_profiles',
 ] as const;

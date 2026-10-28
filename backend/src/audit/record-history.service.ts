@@ -26,6 +26,7 @@ import { HISTORY_FIELDS, historyFields } from './record-history/fields';
 import type { HistoryFieldRule, HistoryFields } from './record-history/field-rules';
 import { auditPageQuery, type AuditCursor } from './record-history/query';
 import {
+  linkReference,
   presentItem,
   type AuditRow,
   type PageContext,
@@ -185,10 +186,13 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
         for (const [field, rule] of Object.entries(historyFields(label))) {
           if (rule.family) addFamilyId({ ids }, rule.family, payload[field]);
         }
+        // A link names its other record by a payload key of its kind (a contact's supplier,
+        // contract or budget line), not by one of the record's own fields.
+        const link = linkReference(kind, payload);
+        if (link) addFamilyId({ ids }, link.family, link.id);
       }
-      if (kind === 'contact') {
-        if (isPlainObject(payload)) addFamilyId({ ids }, 'contact', payload.contact_id);
-        else for (const contactId of contactIds(payload)) addFamilyId({ ids }, 'contact', contactId);
+      if (kind === 'contact' && !isPlainObject(payload)) {
+        for (const contactId of contactIds(payload)) addFamilyId({ ids }, 'contact', contactId);
       }
       const addList = (family: FamilyKey, list: unknown) => {
         if (Array.isArray(list)) for (const value of list) addFamilyId({ ids }, family, value);

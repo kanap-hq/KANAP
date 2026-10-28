@@ -652,7 +652,15 @@
       "vulnerability_state": "State",
       "asset_id": "Asset",
       "related_asset_id": "Related asset",
-      "relation_type": "Relation type"
+      "relation_type": "Relation type",
+      "erp_supplier_id": "ERP supplier ID",
+      "is_primary": "Primary",
+      "job_title": "Job title",
+      "supplier_role": "Contact type",
+      "active": "Active",
+      "phone": "Phone",
+      "mobile": "Mobile",
+      "country": "Country"
     },
     "history": {
       "empty": "No history yet",
@@ -742,6 +750,10 @@
         "value": {
           "added": "Value added: {{label}}",
           "removed": "Value removed: {{label}}"
+        },
+        "supplier": {
+          "added": "Supplier added: {{label}}",
+          "removed": "Supplier removed: {{label}}"
         },
         "budget_line": {
           "added": "Budget line added: {{label}}",

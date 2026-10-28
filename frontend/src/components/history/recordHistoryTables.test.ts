@@ -3,7 +3,7 @@ import { RECORD_HISTORY_TABLES } from './recordHistoryTables';
 
 // The record tables whose page has a history: the budget line in lot 1C, the account and cost
 // center in lot 2, the Knowledge document in lot 2 family E, the first masters of family A, the
-// asset and the technology of family D.
+// asset and the technology of family D, the supplier and the contact of family B.
 describe('record history tables', () => {
   it('declares the budget line and the record pages of the families, unique and readable', () => {
     expect(RECORD_HISTORY_TABLES).toEqual([
@@ -14,9 +14,11 @@ describe('record history tables', () => {
       'assets',
       'business_processes',
       'companies',
+      'contacts',
       'cost_centers',
       'departments',
       'documents',
+      'suppliers',
       'technologies',
       'working_day_profiles',
     ]);

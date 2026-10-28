@@ -136,8 +136,49 @@ const CHILD_KIND_LABELS: Record<RecordHistoryChildKind, string> = {
   technology_version: 'technology_version',
   owner: 'owner',
   vulnerability: 'vulnerability',
+  supplier: 'supplier',
   budget_line: 'budget_line',
 };
+
+/** The kinds whose row is one link to another record, named by a key of its payload. */
+type LinkChildKind = 'contact' | 'supplier' | 'contract' | 'budget_line';
+
+/**
+ * The payload key of the record a link names, by kind: a contact link carries `contact_id`, a
+ * supplier link `supplier_id`, a contract link `contract_id`, and a budget-line link the key of
+ * its nature (`spend_item_id`, or `capex_item_id` for a CAPEX line).
+ */
+const LINK_KEYS: Readonly<Record<LinkChildKind, readonly string[]>> = {
+  contact: ['contact_id'],
+  supplier: ['supplier_id'],
+  contract: ['contract_id'],
+  budget_line: ['spend_item_id', 'capex_item_id'],
+};
+
+function isLinkKind(kind: RecordHistoryChildKind | null): kind is LinkChildKind {
+  return kind !== null && Object.prototype.hasOwnProperty.call(LINK_KEYS, kind);
+}
+
+/** The uuid a link payload holds under one of its kind's keys, in `after` then `before`. */
+function linkIdOf(row: AuditRow, kind: LinkChildKind): string | null {
+  for (const payload of [row.after_json, row.before_json]) {
+    if (!isPlainObject(payload)) continue;
+    for (const key of LINK_KEYS[kind]) {
+      if (isUuid(payload[key])) return payload[key].toLowerCase();
+    }
+  }
+  return null;
+}
+
+/**
+ * The record a link payload names, by the kind its label gives: the page loader collects it with
+ * the other references before the presentation resolves it.
+ */
+export function linkReference(kind: RecordHistoryChildKind | null, payload: unknown): { family: FamilyKey; id: string } | null {
+  if (!isLinkKind(kind) || !isPlainObject(payload)) return null;
+  const id = linkIdOfPayload(payload, kind);
+  return id ? { family: kind, id } : null;
+}
 
 /** The children whose creation is a title only: a version, a budget input, an allocation. */
 const TECHNICAL_CHILD_KINDS: ReadonlySet<RecordHistoryChildKind> = new Set([
@@ -461,11 +502,57 @@ function attachmentChanges(row: AuditRow): RecordHistoryChange[] {
   return [{ field: 'attachment', event: 'added', after: childRef('attachment', row.record_id, labelOf(row, ['original_filename'])) }];
 }
 
-function contactChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+/**
+ * A link row to another record (a contact of a supplier, a supplier of a contact, a contract or a
+ * budget line of a contact): the entry names the other record, and the link's own attributes
+ * (role, primary) in words. A creation and a deletion are an added or removed event; an update
+ * keeps the same record and reads as its changed attributes. The other record is resolved under
+ * the reader's rights, so a module they do not read, or a record outside their data access, reads
+ * as `{ hidden: true, kind }`.
+ */
+function linkRowChanges(kind: LinkChildKind, row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) ? row.before_json : null;
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  const beforeId = before ? linkIdOfPayload(before, kind) : null;
+  const afterId = after ? linkIdOfPayload(after, kind) : null;
+  const creating = before === null;
+  const deleting = after === null;
   const changes: RecordHistoryChange[] = [];
+  if (creating && afterId) {
+    changes.push({ field: kind, event: 'added', after: referenceValue(ctx, kind, afterId) });
+  } else if (deleting && beforeId) {
+    changes.push({ field: kind, event: 'removed', before: referenceValue(ctx, kind, beforeId) });
+  } else if (beforeId !== afterId) {
+    if (beforeId) changes.push({ field: kind, event: 'removed', before: referenceValue(ctx, kind, beforeId) });
+    if (afterId) changes.push({ field: kind, event: 'added', after: referenceValue(ctx, kind, afterId) });
+  }
+  for (const field of ['role', 'is_primary'] as const) {
+    const b = before?.[field];
+    const a = after?.[field];
+    if (creating) {
+      if (a !== undefined && a !== null) changes.push({ field, after: a });
+    } else if (deleting) {
+      if (b !== undefined && b !== null) changes.push({ field, before: b });
+    } else if (!deepEqual(b, a)) {
+      changes.push({ field, before: b ?? null, after: a ?? null });
+    }
+  }
+  return changes;
+}
+
+/** The record id a link payload names, by its kind's key. */
+function linkIdOfPayload(payload: Record<string, unknown>, kind: LinkChildKind): string | null {
+  for (const key of LINK_KEYS[kind]) {
+    if (isUuid(payload[key])) return payload[key].toLowerCase();
+  }
+  return null;
+}
+
+function contactChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   const before = row.before_json;
   const after = row.after_json;
   if (Array.isArray(before) || Array.isArray(after)) {
+    const changes: RecordHistoryChange[] = [];
     const beforeSet = new Set(contactStates(before));
     const afterSet = new Set(contactStates(after));
     for (const state of afterSet) {
@@ -480,12 +567,7 @@ function contactChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] 
     }
     return changes;
   }
-  if (after === null || after === undefined) {
-    const id = isPlainObject(before) && isUuid(before.contact_id) ? before.contact_id : null;
-    return [{ field: 'contact', event: 'removed', before: referenceValue(ctx, 'contact', id) }];
-  }
-  const id = isPlainObject(after) && isUuid(after.contact_id) ? after.contact_id : null;
-  return [{ field: 'contact', event: 'added', after: referenceValue(ctx, 'contact', id) }];
+  return linkRowChanges('contact', row, ctx);
 }
 
 function setLinkChanges(kind: 'application' | 'technology', row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
@@ -961,6 +1043,10 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
       return attachmentChanges(row);
     case 'contact':
       return contactChanges(row, ctx);
+    case 'supplier':
+      return linkRowChanges('supplier', row, ctx);
+    case 'budget_line':
+      return linkRowChanges('budget_line', row, ctx);
     case 'application':
       return row.table_name === 'application_technologies'
         ? applicationLinkChanges(row, ctx)
@@ -986,6 +1072,12 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
     case 'technology_version':
       return genericChanges(row, ctx, { label: row.table_name });
     case 'contract':
+      // From the budget line, the contract links are sets whose payload lists the contracts or the
+      // line ids; from a contact, the link row names its one contract in `contract_id`.
+      return isPlainObject(row.after_json) && isUuid(row.after_json.contract_id)
+        || isPlainObject(row.before_json) && isUuid(row.before_json.contract_id)
+        ? linkRowChanges('contract', row, ctx)
+        : linkedRecordChanges(kind, row, ctx);
     case 'project':
     case 'request':
       return linkedRecordChanges(kind, row, ctx);
@@ -1041,6 +1133,8 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
       return null;
     }
     case 'contact':
+    case 'supplier':
+    case 'budget_line':
     case 'application':
     case 'technology':
     case 'asset':
@@ -1064,6 +1158,12 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
       if (labels.size === 1) return Array.from(labels)[0];
       if (kind === 'task' && row.record_id) {
         return ctx.references.get('task')?.get(row.record_id.toLowerCase())?.label ?? null;
+      }
+      // A link whose contact did not change (an update of its role or primary flag) still names
+      // the record it links to.
+      if (isLinkKind(kind)) {
+        const linked = linkIdOf(row, kind);
+        if (linked) return ctx.references.get(kind)?.get(linked)?.label ?? null;
       }
       return null;
     }

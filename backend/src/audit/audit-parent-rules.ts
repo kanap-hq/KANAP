@@ -6,6 +6,7 @@ import { companiesParentRules } from './record-history/records/companies';
 import { departmentsParentRules } from './record-history/records/departments';
 import { documentsParentRules } from './record-history/records/documents';
 import { spendItemsParentRules } from './record-history/records/spend_items';
+import { suppliersParentRules } from './record-history/records/suppliers';
 import { technologiesParentRules } from './record-history/records/technologies';
 
 /**
@@ -53,6 +54,7 @@ const PARENT_RULE_SETS = [
   departmentsParentRules,
   documentsParentRules,
   spendItemsParentRules,
+  suppliersParentRules,
   technologiesParentRules,
 ] as const;
 

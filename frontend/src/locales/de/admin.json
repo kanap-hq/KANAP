@@ -652,7 +652,15 @@
       "vulnerability_state": "Status",
       "asset_id": "Asset",
       "related_asset_id": "Verknüpftes Asset",
-      "relation_type": "Beziehungstyp"
+      "relation_type": "Beziehungstyp",
+      "erp_supplier_id": "ERP-Lieferanten-ID",
+      "is_primary": "Primär",
+      "job_title": "Funktion",
+      "supplier_role": "Kontakttyp",
+      "active": "Aktiv",
+      "phone": "Telefon",
+      "mobile": "Mobil",
+      "country": "Land"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -770,6 +778,10 @@
         "operating_system": {
           "added": "Betriebssystem hinzugefügt: {{label}}",
           "removed": "Betriebssystem entfernt: {{label}}"
+        },
+        "supplier": {
+          "added": "Lieferant hinzugefügt: {{label}}",
+          "removed": "Lieferant entfernt: {{label}}"
         }
       },
       "unnamed": {

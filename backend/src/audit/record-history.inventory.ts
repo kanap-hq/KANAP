@@ -6,10 +6,12 @@ import { analyticsCategoriesRecord } from './record-history/records/analytics_ca
 import { assetsRecord } from './record-history/records/assets';
 import { businessProcessesRecord } from './record-history/records/business_processes';
 import { companiesRecord } from './record-history/records/companies';
+import { contactsRecord } from './record-history/records/contacts';
 import { costCentersRecord } from './record-history/records/cost_centers';
 import { departmentsRecord } from './record-history/records/departments';
 import { documentsRecord } from './record-history/records/documents';
 import { spendItemsRecord } from './record-history/records/spend_items';
+import { suppliersRecord } from './record-history/records/suppliers';
 import { technologiesRecord } from './record-history/records/technologies';
 import { workingDayProfilesRecord } from './record-history/records/working_day_profiles';
 
@@ -23,11 +25,12 @@ import { workingDayProfilesRecord } from './record-history/records/working_day_p
  * record family only adds a file in `record-history/records/`.
  *
  * Two declarations keep the parent rules and the data-access inventory honest:
- * - every child label has a parent rule in `audit-parent-rules.ts`, except the labels read by
- *   `record_id` (`childReads: 'record'`, where `parent_*` is not needed) and the labels listed in
- *   `explicitParentLabels`: their write hands the record to `writeAuditLog` (`parent`), because the
- *   payload names several records and no rule can choose one (an asset link holds the ids of every
- *   line linked to the asset);
+ * - every child label read through its parent columns has a parent rule in `audit-parent-rules.ts`,
+ *   except the labels listed in `explicitParentLabels`: their write hands the record to
+ *   `writeAuditLog` (`parent`), because the payload names several records and no rule can choose one
+ *   (an asset link holds the ids of every line linked to the asset). A label read by `childReads`
+ *   is not read through the parent columns, so it needs no parent rule of its own (`supplier_contacts`
+ *   still has one for the supplier's page);
  * - every table of the data-access families `follows_line` and `link_to_line`
  *   (`data-access/data-access-tables.inventory.ts`) is a child here or an exclusion with its reason.
  *   `__tests__/record-history-inventory.spec.ts` checks both ways, beside the catalog spec.
@@ -74,6 +77,7 @@ export type RecordHistoryChildKind =
   | 'technology_version'
   | 'owner'
   | 'vulnerability'
+  | 'supplier'
   | 'budget_line';
 
 export type RecordHistoryExclusion = {
@@ -133,10 +137,12 @@ const RECORD_HISTORY_DEFINITION = [
   assetsRecord,
   businessProcessesRecord,
   companiesRecord,
+  contactsRecord,
   costCentersRecord,
   departmentsRecord,
   documentsRecord,
   spendItemsRecord,
+  suppliersRecord,
   technologiesRecord,
   workingDayProfilesRecord,
 ] as const satisfies readonly RecordHistoryRecord[];

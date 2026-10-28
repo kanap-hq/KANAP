@@ -160,6 +160,8 @@ function migrationLineRecordLabels(): string[] {
 }
 
 function testMigrationLabelsMatchRules() {
+  // The frozen budget migration covers the budget-line rules only; the supplier family copies its
+  // own rule in its migration (`audit-log-supplier-contact-parents` spec).
   const spendItemLabels = Object.entries(AUDIT_PARENT_RULES)
     .filter(([, rule]) => rule.parentTable === 'spend_items')
     .map(([label]) => label)
