@@ -30,9 +30,11 @@ import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { connectionDeleteMessage } from './connectionDeleteMessage';
+import RecordHistoryTab from '../../components/history/RecordHistoryTab';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
-type TabKey = 'overview' | 'path';
-const TAB_KEYS: TabKey[] = ['overview', 'path'];
+type TabKey = 'overview' | 'path' | typeof RECORD_HISTORY_TAB_KEY;
+const TAB_KEYS: TabKey[] = ['overview', 'path', RECORD_HISTORY_TAB_KEY];
 
 type LinkedInterfaceRow = {
   id: string;
@@ -632,6 +634,7 @@ export default function ConnectionWorkspacePage() {
   const workspaceTabs: PortfolioDetailWorkspaceTab[] = [
     { key: 'overview', label: t('workspace.connection.tabs.overview') },
     { key: 'path', label: t('workspace.connection.tabs.path'), badge: legs.length || undefined },
+    { key: RECORD_HISTORY_TAB_KEY, label: t('workspace.connection.tabs.history'), disabled: isCreate },
   ];
 
   const title = isCreate ? createForm.name : data?.name || '';
@@ -1038,6 +1041,8 @@ export default function ConnectionWorkspacePage() {
             })()}
             onChange={setLegs}
           />
+        ) : validTab === RECORD_HISTORY_TAB_KEY ? (
+          <RecordHistoryTab table="connections" recordId={data.id} />
         ) : (
           <ConnectionOverviewTab
             connectionId={data.id}
