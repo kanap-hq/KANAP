@@ -3307,9 +3307,9 @@ export class AiChatOrchestratorService {
         : null;
       if (
         bulkCoverageIssue
-        // A delete is never a bulk target set: its one preview closes the turn, whatever an
-        // earlier query left to cover.
-        && deletePreviewCountThisTurn === 0
+        // A delete is never a bulk target set: a turn whose only previews are deletes ends there,
+        // whatever an earlier query left to cover. Other previews in the same turn are still checked.
+        && (deletePreviewCountThisTurn === 0 || deletePreviewCountThisTurn < mutationPreviewCountThisTurn)
         && !textExplicitlyAddressesMissingRefs(accumulatedText, bulkCoverageIssue.missingRefs)
       ) {
         if (bulkCompletenessRepairRetries < MAX_UNSAFE_WRITE_RESPONSE_RETRIES) {

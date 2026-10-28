@@ -2085,6 +2085,79 @@ async function testDeletePreviewDoesNotTriggerThePlanRepair() {
     ),
   );
 
+  // A delete next to other previews leaves them checked: the update previews must still cover the
+  // queried target set.
+  const mixedTurn = createOrchestrator({
+    historyMessages: [{ role: 'user', content: 'Termine les tâches ouvertes et supprime la tâche 39.' }],
+    availableTools: [
+      ...READ_TOOLS,
+      writeTool('delete_record', 'records', ['entity_type', 'ref']),
+      writeTool('update_task_status', 'tasks', ['status']),
+    ],
+    providerEventBatches: [
+      [
+        { type: 'tool_call_start', id: 'tc-query', name: 'query_entities' },
+        { type: 'tool_call_delta', id: 'tc-query', arguments: '{"entity_type":"tasks"}' },
+        { type: 'tool_call_end', id: 'tc-query' },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 20 } },
+      ],
+      [
+        { type: 'tool_call_start', id: 'tc-update', name: 'update_task_status' },
+        { type: 'tool_call_delta', id: 'tc-update', arguments: '{"ref":"T-40","status":"done"}' },
+        { type: 'tool_call_end', id: 'tc-update' },
+        { type: 'tool_call_start', id: 'tc-delete', name: 'delete_record' },
+        { type: 'tool_call_delta', id: 'tc-delete', arguments: '{"entity_type":"tasks","ref":"T-39"}' },
+        { type: 'tool_call_end', id: 'tc-delete' },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 20 } },
+      ],
+      [
+        { type: 'text_delta', text: DELETE_TURN_TEXT },
+        { type: 'done', usage: { input_tokens: 140, output_tokens: 30 } },
+      ],
+      [
+        { type: 'text_delta', text: 'Les autres tâches restent à traiter.' },
+        { type: 'done', usage: { input_tokens: 160, output_tokens: 20 } },
+      ],
+    ],
+    toolResultsByName: {
+      query_entities: {
+        items: ['T-39', 'T-40', 'T-41', 'T-42'].map((ref) => ({ id: ref, type: 'tasks', ref, label: ref })),
+        total: 4,
+        returned: 4,
+        truncated: false,
+        complete: true,
+      },
+      update_task_status: {
+        ...pendingDeletePreview('update_task_status', 'T-40'),
+        changes: { status: { from: 'open', to: 'done' } },
+      },
+      delete_record: pendingDeletePreview('delete_record', 'T-39'),
+    },
+  });
+
+  await collectEvents(
+    mixedTurn.orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      conversationId: 'conv-1',
+      userMessage: 'Termine les tâches ouvertes et supprime la tâche 39.',
+    }),
+  );
+
+  assert.ok(
+    mixedTurn.recordedRequests.some((request: any) =>
+      request.messages.some((message: any) =>
+        message.role === 'user' && /complete resolved bulk target set/i.test(String(message.content || '')),
+      ),
+    ),
+    'an update preview next to a delete is still checked against the queried target set',
+  );
+
   // The same words after an update preview are still repaired: only a delete is exempt.
   const updateTurn = createOrchestrator({
     historyMessages: [{ role: 'user', content: 'Change le statut de la tâche 39 en terminée.' }],
