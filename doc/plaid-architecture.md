@@ -365,6 +365,8 @@ Live write-preview coverage includes:
   locations
 - business-record create/update for applications, assets, contracts, projects,
   requests, interfaces, connections, budget lines, and incidents
+- incident journal notes (`add_incident_note`) and incident links
+  (`update_incident_links`, reversible)
 - relation updates for supported application, asset, supplier, contract,
   budget line, project, request, document, and location links
 - financial plan writes for budget line versions, amounts, and allocations
@@ -391,9 +393,18 @@ converted into the person's `time_zone`; `detected_at` defaults to now.
 `confidential: true` is allowed; a preview warns when the change makes the
 restricted incident disappear for the person, as the screen's lose-access
 dialog does. `confidential: false` is refused (lot 4). A field change is
-undoable, a status or confidentiality change is not. The journal, links,
-follow-up task, reopening, cancelling and lifting the confidentiality stay on
-the incident screen for lots 3 and 4.
+undoable, a status or confidentiality change is not. The journal note goes
+through `IncidentEntriesService.createNote` (`add_incident_note`): the journal
+only takes additions, so the preview is not reversible. The links go through
+`IncidentRelationsService.setLink` once per link (`update_incident_links`), so
+the closure lock, the `link_change` journal entry, the audit row, the
+idempotence and a Business Contributor's application participation stay those
+of the Relations tab; a link already present, or already absent, writes nothing,
+and undo reverses exactly the links that changed while the record is open. A
+follow-up task on an incident uses `create_task` (`relation_type: 'incident'`)
+through `TasksUnifiedService.createForTarget`, with the tasks member right, the
+incident's visibility and the closure lock. Reopening, cancelling and lifting
+the confidentiality stay on the incident screen for lot 4.
 
 Application classification create/update previews use the normal application
 mutation service. They can set or clear business criticality, cyber,
