@@ -1000,6 +1000,7 @@
       "capex": "CAPEX"
     },
     "budgetFile": {
+      "lines": "Líneas",
       "allLines": "Todas las líneas",
       "allLinesHint": "Incluye las líneas finalizadas. Los filtros y la búsqueda de la lista no se aplican.",
       "exportAll": "Exportar todas las líneas",
