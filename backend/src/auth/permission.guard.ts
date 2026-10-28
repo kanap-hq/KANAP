@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, ForbiddenException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DataSource, EntityManager } from 'typeorm';
 import {
@@ -8,6 +8,7 @@ import {
   RequireAnyLevelMeta,
   RequireLevelMeta,
 } from './require-level.decorator';
+import { moduleRightRequired } from './module-right-required';
 import { UsersService } from '../users/users.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { UserRole } from '../users/user-role.entity';
@@ -16,17 +17,6 @@ import { Subscription } from '../billing/subscription.entity';
 import { evaluateSubscriptionAccess } from '../billing/subscription-freeze.util';
 
 const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
-
-/** 403 `MODULE_RIGHT_REQUIRED`: the person lacks the module right the route asks for. */
-function moduleRightRequired(resource: string, level: string): ForbiddenException {
-  return new ForbiddenException({
-    statusCode: HttpStatus.FORBIDDEN,
-    error: 'Forbidden',
-    code: 'MODULE_RIGHT_REQUIRED',
-    message: 'You do not have the rights for this action.',
-    params: { resource, level },
-  });
-}
 
 @Injectable()
 export class PermissionGuard implements CanActivate {

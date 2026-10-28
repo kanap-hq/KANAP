@@ -29,6 +29,7 @@ export class DataAccessReservedException extends ForbiddenException {
       statusCode: HttpStatus.FORBIDDEN,
       error: 'Forbidden',
       code: 'DATA_ACCESS_LIMITED',
+      reason: 'reserved',
       message: DATA_ACCESS_RESERVED_MESSAGE,
     });
   }

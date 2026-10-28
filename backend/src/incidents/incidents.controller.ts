@@ -1,6 +1,6 @@
 import { languageOf, timeZoneOf } from '../common/csv-sheet';
 import {
-  Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Req, Res,
+  Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -10,6 +10,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import { ExportRoute } from '../audit/security-events';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { RequireLevel } from '../auth/require-level.decorator';
 import {
   attachmentMulterOptions,
@@ -313,7 +314,7 @@ export class IncidentsController {
   @Get(':id/assets')
   async listAssets(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
     // The assets are the infrastructure's: neither listed nor replaced without the right to read it.
-    if (!canReadResource(ctx, 'infrastructure')) throw new ForbiddenException('You cannot read assets.');
+    if (!canReadResource(ctx, 'infrastructure')) throw moduleRightRequired('infrastructure', 'reader', 'You cannot read assets.');
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.listAssets(id, this.opts(ctx));
   }
@@ -327,7 +328,7 @@ export class IncidentsController {
     @Tenant() ctx: TenantRequest,
   ) {
     // A set the caller cannot read is never replaced (an empty list would remove every link).
-    if (!canReadResource(ctx, 'infrastructure')) throw new ForbiddenException('You cannot read assets.');
+    if (!canReadResource(ctx, 'infrastructure')) throw moduleRightRequired('infrastructure', 'reader', 'You cannot read assets.');
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.bulkReplaceAssets(id, body?.asset_ids ?? [], ctx.userId || null, this.opts(ctx));
   }
@@ -337,7 +338,7 @@ export class IncidentsController {
   @Get(':id/technologies')
   async listTechnologies(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
     // The technologies are the infrastructure's: neither listed nor replaced without the right to read it.
-    if (!canReadResource(ctx, 'infrastructure')) throw new ForbiddenException('You cannot read technologies.');
+    if (!canReadResource(ctx, 'infrastructure')) throw moduleRightRequired('infrastructure', 'reader', 'You cannot read technologies.');
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.listTechnologies(id, this.opts(ctx));
   }
@@ -351,7 +352,7 @@ export class IncidentsController {
     @Tenant() ctx: TenantRequest,
   ) {
     // A set the caller cannot read is never replaced (an empty list would remove every link).
-    if (!canReadResource(ctx, 'infrastructure')) throw new ForbiddenException('You cannot read technologies.');
+    if (!canReadResource(ctx, 'infrastructure')) throw moduleRightRequired('infrastructure', 'reader', 'You cannot read technologies.');
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.bulkReplaceTechnologies(id, body?.technology_ids ?? [], ctx.userId || null, this.opts(ctx));
   }
@@ -360,7 +361,7 @@ export class IncidentsController {
   @RequireLevel('incidents', 'reader')
   @Get(':id/applications')
   async listApplications(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
-    if (!canReadResource(ctx, 'applications')) throw new ForbiddenException('You cannot read applications.');
+    if (!canReadResource(ctx, 'applications')) throw moduleRightRequired('applications', 'reader', 'You cannot read applications.');
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.listApplications(id, this.opts(ctx));
   }
@@ -374,7 +375,7 @@ export class IncidentsController {
     @Tenant() ctx: TenantRequest,
   ) {
     // A set the caller cannot read is never replaced (an empty list would remove every link).
-    if (!canReadResource(ctx, 'applications')) throw new ForbiddenException('You cannot read applications.');
+    if (!canReadResource(ctx, 'applications')) throw moduleRightRequired('applications', 'reader', 'You cannot read applications.');
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.bulkReplaceApplications(id, body?.application_ids ?? [], ctx.userId || null, this.opts(ctx));
   }
@@ -421,7 +422,7 @@ export class IncidentsController {
     const kind = incidentRelationKindOrThrow(kindRaw);
     const moduleName = kind === 'applications' ? 'applications' : 'infrastructure';
     if (!canReadResource(ctx, moduleName)) {
-      throw new ForbiddenException(kind === 'technologies' ? 'You cannot read technologies.' : 'You cannot read this module.');
+      throw moduleRightRequired(moduleName, 'reader', kind === 'technologies' ? 'You cannot read technologies.' : 'You cannot read this module.');
     }
     parseTargetId(rawTarget);
     const id = await this.visibleId(idOrRef, ctx);
