@@ -42,7 +42,7 @@ import {
 import { findImgSourceValues } from '../../../common/text-scan';
 import { AiWriteLanguage, previewSummaryText, quoted, taskDetailText, taskPriorityText, ticketImportCardText, ticketImportDetailText, writeActionText } from '../../ai-write-texts';
 
-const RELATION_TYPE_VALUES = ['standalone', 'project', 'spend_item', 'capex_item'] as const;
+const RELATION_TYPE_VALUES = ['standalone', 'project', 'budget_line'] as const;
 const PRIORITY_LEVEL_VALUES = ['blocker', 'high', 'normal', 'low', 'optional'] as const;
 
 type TicketImportRelationType = typeof RELATION_TYPE_VALUES[number];
@@ -84,12 +84,6 @@ function normalizeRelationType(value: unknown): unknown {
   const normalized = String(value).trim().toLowerCase();
   if (!normalized) {
     return undefined;
-  }
-  if (normalized === 'opex' || normalized === 'budget' || normalized === 'budget_entry' || normalized === 'budget entry') {
-    return 'spend_item';
-  }
-  if (normalized === 'capex') {
-    return 'capex_item';
   }
   return normalized;
 }
@@ -493,7 +487,7 @@ const LegacyImportTicketInputSchema = z.object({
   relation_type: z.preprocess(
     normalizeRelationType,
     z.enum(RELATION_TYPE_VALUES).optional(),
-  ).describe('Optional relation type. Use `project`, `spend_item`, `capex_item`, or `standalone`. Omit this to create a standalone task.'),
+  ).describe('Optional relation type. Use `project`, `budget_line`, or `standalone`. Omit this to create a standalone task.'),
   relation_ref: z.union([z.string(), z.null()]).optional()
     .describe('Optional relation target reference. Required when relation_type is not standalone.'),
   assignee: z.union([z.string(), z.null()]).optional()
@@ -548,7 +542,7 @@ const ImportTicketInputSchema = z.object({
   relation_type: z.preprocess(
     normalizeRelationType,
     z.enum(RELATION_TYPE_VALUES).optional(),
-  ).describe('Optional relation type. Use `project`, `spend_item`, `capex_item`, or `standalone`. Omit this to create a standalone task.'),
+  ).describe('Optional relation type. Use `project`, `budget_line`, or `standalone`. Omit this to create a standalone task.'),
   relation_ref: z.union([z.string(), z.null()]).optional()
     .describe('Optional relation target reference. Required when relation_type is not standalone.'),
   assignee: z.union([z.string(), z.null()]).optional()
@@ -600,8 +594,8 @@ abstract class BaseImportTicketAiMutationOperation<TInput extends LegacyImportTi
   readonly inputSchema: z.ZodTypeAny = LegacyImportTicketInputSchema;
   readonly inputSummary: Record<string, string> = {
     ticket_id: 'GLPI ticket numeric identifier.',
-    relation_type: 'Optional relation type: project, spend_item, capex_item, or standalone.',
-    relation_ref: 'Optional relation target reference. Required when relation_type is project, spend_item, or capex_item.',
+    relation_type: 'Optional relation type: project, budget_line, or standalone.',
+    relation_ref: 'Optional relation target reference. Required when relation_type is project or budget_line.',
     assignee: 'Optional assignee email, full name, or unique user label in the current tenant.',
     priority_level: 'Optional task priority override. Defaults to the GLPI priority mapping.',
     priority: 'Alias for priority_level.',
@@ -1252,8 +1246,8 @@ export class ImportTicketAiMutationOperation extends BaseImportTicketAiMutationO
   readonly inputSummary: Record<string, string> = {
     provider_key: 'Configured ticketing provider key.',
     ticket_id: 'Ticket identifier in the selected provider.',
-    relation_type: 'Optional relation type: project, spend_item, capex_item, or standalone.',
-    relation_ref: 'Optional relation target reference. Required when relation_type is project, spend_item, or capex_item.',
+    relation_type: 'Optional relation type: project, budget_line, or standalone.',
+    relation_ref: 'Optional relation target reference. Required when relation_type is project or budget_line.',
     assignee: 'Optional assignee email, full name, or unique user label in the current tenant.',
     priority_level: 'Optional task priority override. Defaults to the provider priority mapping.',
     priority: 'Alias for priority_level.',

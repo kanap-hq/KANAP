@@ -81,6 +81,17 @@ async function rejection(fn: () => Promise<unknown>): Promise<Error> {
   throw new Error('expected a refusal');
 }
 
+function assertModuleRight(err: Error, resource: string, level: string, message: string): void {
+  assert.ok(err instanceof ForbiddenException, 'a ForbiddenException');
+  assert.deepEqual(err.getResponse(), {
+    statusCode: 403,
+    error: 'Forbidden',
+    code: 'MODULE_RIGHT_REQUIRED',
+    message,
+    params: { resource, level },
+  });
+}
+
 async function linkIds(runner: QueryRunner, table: string, column: string, ownerColumn: string, ownerId: string): Promise<string[]> {
   const rows: Array<{ id: string }> = await runner.query(
     `SELECT ${column} AS id FROM ${table} WHERE ${ownerColumn} = $1`,
@@ -608,14 +619,11 @@ async function testRefusals() {
     assert.ok(unknownFirst instanceof NotFoundException);
 
     const refusedTech = await rejection(() => http.unlinkRelation(seed.opexId, 'technologies', 'nope', noTech));
-    assert.ok(refusedTech instanceof ForbiddenException);
-    assert.equal(refusedTech.message, 'You cannot read technologies.');
+    assertModuleRight(refusedTech, 'infrastructure', 'reader', 'You cannot read technologies.');
     const refusedApps = await rejection(() => http.linkRelation(seed.opexId, 'applications', { id: 'nope' }, noApps));
-    assert.ok(refusedApps instanceof ForbiddenException);
-    assert.equal(refusedApps.message, 'You cannot read this module.');
+    assertModuleRight(refusedApps, 'applications', 'reader', 'You cannot read this module.');
     const refusedAssets = await rejection(() => http.linkRelation(seed.opexId, 'assets', { id: randomUUID() }, noTech));
-    assert.ok(refusedAssets instanceof ForbiddenException);
-    assert.equal(refusedAssets.message, 'You cannot read this module.');
+    assertModuleRight(refusedAssets, 'infrastructure', 'reader', 'You cannot read this module.');
 
     const missing = await rejection(() => http.linkRelation(randomUUID(), 'applications', { id: seed.apps.cedar.id }, writer));
     assert.ok(missing instanceof NotFoundException);

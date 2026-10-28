@@ -92,7 +92,7 @@ const GetDocumentInputSchema = z.object({
 
 const AiFilterValueSchema = z.union([
   z.array(z.union([z.string(), z.null()])),
-  // Exclude mode of a set field: every value but these (OPEX and CAPEX lines only).
+  // Exclude mode of a set field: every value but these (budget lines only).
   z.object({ not: z.array(z.union([z.string(), z.null()])) }).strict(),
   z.string(),
   z.object({
@@ -134,7 +134,7 @@ const AggregateEntitiesInputSchema = z.object({
   scope: AiQueryScopeSchema.optional().describe(SCOPE_DESCRIPTION),
   group_by: z.string().trim().min(1).describe('The field to group by, among the group-by fields describe_entity_filters lists.'),
   metric: z.string().trim().min(1).optional()
-    .describe('Optional numeric or date field to aggregate with sum, avg, min or max. On OPEX and CAPEX items (spend_items, capex_items), a key names its year and column, `<year>_<column>`: <year> is y (the current year), y_minus1, y_minus2, y_plus1 or y_plus2; <column> is budget, review, forecast, actual or landing. '
+    .describe('Optional numeric or date field to aggregate with sum, avg, min or max. On budget lines, a key names its year and column, `<year>_<column>`: <year> is y (the current year), y_minus1, y_minus2, y_plus1 or y_plus2; <column> is budget, review, forecast, actual or landing. '
       + '`y_budget` is the amount; `y_budget_fte` the full-year average FTE (each group then also returns `unknown`, the number of lines whose column has no quantity × price lines, left out of the value); '
       + '`y_budget_staff_cost`, `y_budget_staff_fte`, `y_budget_day_cost` and `y_budget_days` the cost and FTE of the people and days lines, the cost of the lines priced per day and the days they buy. '
       + 'Cost per FTE and average day rate (TJM, daily rate): metric `y_budget_cost_per_fte` or `y_budget_day_rate`, no function needed. The server divides as the "Cost per FTE" report does, and each group returns staff_fte, staff_cost, cost_per_fte, days, day_cost and day_rate in one call, so the answer needs no division and no assumed number of working days. `y_budget_cost_per_fte` keeps every group with staff (FTE and day rate per group); `y_budget_day_rate` keeps only the groups with days bought. '
@@ -335,20 +335,20 @@ export class AiToolRegistry {
         {
           name: 'describe_entity_filters',
           category: 'authoritative',
-          description: 'Describes how one entity family can be filtered and sorted: each filter field with its aliases, expected value kinds, examples and lookup hints, plus `sort_fields` (every field query_entities sorts by, created_at and updated_at included, the keys of `field_families` aside) and `default_sort`. Useful before query_entities or aggregate_entities when field names or value formats are unknown. On OPEX and CAPEX lines, `budget_columns` gives the tenant\'s names for the amount columns, `field_families` lists the staff cost, staff FTE, day cost and days of every year and column once per family, and `metric_families` the cost per FTE and the day rate aggregate_entities computes. `families_not_read` lists what KANAP holds and these tools do not read, with the screen that shows it in the person\'s language (in four languages when their profile sets none).',
+          description: 'Describes how one entity family can be filtered and sorted: each filter field with its aliases, expected value kinds, examples and lookup hints, plus `sort_fields` (every field query_entities sorts by, created_at and updated_at included, the keys of `field_families` aside) and `default_sort`. Useful before query_entities or aggregate_entities when field names or value formats are unknown. On budget lines, `budget_columns` gives the tenant\'s names for the amount columns, `field_families` lists the staff cost, staff FTE, day cost and days of every year and column once per family, and `metric_families` the cost per FTE and the day rate aggregate_entities computes. `families_not_read` lists what KANAP holds and these tools do not read, with the screen that shows it in the person\'s language (in four languages when their profile sets none).',
           inputSchema: DescribeEntityFiltersInputSchema,
           inputSummary: fieldDescriptions(DescribeEntityFiltersInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: async (context, input) => {
             await this.policy.assertEntityTypeReadAccess(context, input.entity_type, context.manager);
-            // OPEX and CAPEX list the tenant's analytics dimensions (`analytics:<code>`) among their fields.
+            // The budget lines list the tenant's analytics dimensions (`analytics:<code>`) among their fields.
             const description = {
               ...describeAiEntityFilters(input.entity_type, await resolveAiEntityRegistry(context, input.entity_type, (entityType, level) =>
                 this.policy.canReadEntityType(context, entityType, context.manager, level))),
               families_not_read: unreadFamilyLines(await readAiScreenLanguage(context.manager, context.tenantId, context.userId)),
             };
-            if (input.entity_type !== 'spend_items' && input.entity_type !== 'capex_items') return description;
+            if (input.entity_type !== 'budget_lines') return description;
             // Amount field descriptions are positional; the tenant's column names come with them (MCP clients have no system prompt).
             return { ...description, budget_columns: budgetColumnsAiContext(await readBudgetColumns(context.manager, context.tenantId)) };
           },
@@ -375,7 +375,7 @@ export class AiToolRegistry {
         {
           name: 'aggregate_entities',
           category: 'authoritative',
-          description: 'Groups the records of one entity family by a field and returns exact server-side counts, or the sum, average, minimum or maximum of a numeric or date field for each group. `filters_ignored` lists the filters the server could not apply: the figures then cover more records than requested. A set filter given a value its field does not take is refused with status `invalid_filter_value` and the accepted values in `invalid_filter_values`. `data_access` limited means the figures cover the person\'s access only: they are "within your access", not the workspace total. A sum or average of amounts names its currency in `amounts_currency` and `amounts_currency_note`: budget lines are in the reporting currency; contracts keep each contract\'s own currency, so a total across currencies needs a group or filter by currency. OPEX (spend_items) and CAPEX (capex_items) are two families: the figures of a budget question that names neither (budget, FTE, staff, cost per FTE, day rate) come from the same call on each, and one family alone covers that family only. On budget lines, `overall` is the measure over every line the filters keep, computed by the server, and the cost per FTE and the day rate are metrics the server computes (see metric), with `ratio_note` stating what they leave out. On budget lines, `amounts_fx_missing` names the line currencies and years without an exchange rate whose amounts the values leave out: say so in the answer. On companies, a sum, average, minimum or maximum of turnover_year is in millions of the reporting currency (`amounts_currency` and `amounts_currency_note`); `turnover_fx_missing` names the companies left out for lack of a rate: say so in the answer.',
+          description: 'Groups the records of one entity family by a field and returns exact server-side counts, or the sum, average, minimum or maximum of a numeric or date field for each group. `filters_ignored` lists the filters the server could not apply: the figures then cover more records than requested. A set filter given a value its field does not take is refused with status `invalid_filter_value` and the accepted values in `invalid_filter_values`. `data_access` limited means the figures cover the person\'s access only: they are "within your access", not the workspace total. A sum or average of amounts names its currency in `amounts_currency` and `amounts_currency_note`: budget lines are in the reporting currency; contracts keep each contract\'s own currency, so a total across currencies needs a group or filter by currency. Budget lines are one family (`budget_lines`) of both natures: a budget question that names no nature (budget, FTE, staff, cost per FTE, day rate) covers both, and `nature` filters or groups one. On budget lines, `overall` is the measure over every line the filters keep, computed by the server, and the cost per FTE and the day rate are metrics the server computes (see metric), with `ratio_note` stating what they leave out. On budget lines, `amounts_fx_missing` names the line currencies and years without an exchange rate whose amounts the values leave out: say so in the answer. On companies, a sum, average, minimum or maximum of turnover_year is in millions of the reporting currency (`amounts_currency` and `amounts_currency_note`); `turnover_fx_missing` names the companies left out for lack of a rate: say so in the answer.',
           inputSchema: AggregateEntitiesInputSchema,
           inputSummary: fieldDescriptions(AggregateEntitiesInputSchema),
           surfaces: ['chat', 'mcp'],
@@ -430,7 +430,7 @@ export class AiToolRegistry {
         {
           name: 'get_entity_detail',
           category: 'inspection',
-          description: 'Returns one record with all its scalar fields and its attachment metadata, by UUID or reference (APP-4, PRJ-12, BL-5...). query_entities suits lists; this tool gives the full detail of one known record. A vulnerability read by its CVE id is that CVE\'s first row (exploited, then most severe), and `rows` lists every technology version the CVE concerns in the workspace. On budget lines and contracts, `amounts_currency_note` says which amounts are in the reporting currency and which in the record\'s own currency. A contract comes with its current term (`term_state`, `next_due_date`, `cancellation_deadline`) and what it covers: `linked_applications` (a Business Contributor\'s: those they take part in), `linked_assets`, `linked_technologies`, its budget lines (`linked_spend_items`, `linked_capex_items`) and `budget_lines_outside_access`, the linked lines outside the user\'s data access; a family the user cannot read is null, which is not "none".' + ` ${AI_PAGE_URL_NOTE}`,
+          description: 'Returns one record with all its scalar fields and its attachment metadata, by UUID or reference (APP-4, PRJ-12, BL-5...). query_entities suits lists; this tool gives the full detail of one known record. A vulnerability read by its CVE id is that CVE\'s first row (exploited, then most severe), and `rows` lists every technology version the CVE concerns in the workspace. On budget lines and contracts, `amounts_currency_note` says which amounts are in the reporting currency and which in the record\'s own currency. A contract comes with its current term (`term_state`, `next_due_date`, `cancellation_deadline`) and what it covers: `linked_applications` (a Business Contributor\'s: those they take part in), `linked_assets`, `linked_technologies`, its budget lines (`linked_budget_lines`, each with its `nature`) and `budget_lines_outside_access`, the linked lines outside the user\'s data access; a family the user cannot read is null, which is not "none".' + ` ${AI_PAGE_URL_NOTE}`,
           inputSchema: GetEntityDetailInputSchema,
           inputSummary: fieldDescriptions(GetEntityDetailInputSchema),
           surfaces: ['chat', 'mcp'],

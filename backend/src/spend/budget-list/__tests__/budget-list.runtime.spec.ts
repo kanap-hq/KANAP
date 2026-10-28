@@ -25,7 +25,7 @@ function managerStub() {
       try {
         if (sql.includes('FROM spend_items i')) return [{ raw: 'EUR', cur: 'EUR' }];
         if (sql.includes('currency_rate_sets')) return [];
-        if (sql.includes('FROM analytics_axes')) return [{ id: 'axis-1', is_default: true }];
+        if (sql.includes('FROM analytics_axes')) return [{ id: 'axis-1', is_default: true, applies_to: null }];
         if (sql.includes('FROM cost_centers cc')) return [];
         if (sql.includes('FROM allocation_rules')) return [];
         throw new Error(`Unexpected statement: ${sql}`);
@@ -55,7 +55,7 @@ async function run() {
   assert.equal(peak(), 1, `one statement at a time (${seen.length} statements)`);
   assert.equal(seen.length, 5, 'the two FX reads and the three pre-reads all ran');
   assert.ok(runtime.fx, 'the FX table is there');
-  assert.deepEqual(runtime.axes, { ids: ['axis-1'], defaultAxisId: 'axis-1' });
+  assert.deepEqual(runtime.axes, { ids: ['axis-1'], defaultAxisId: 'axis-1', appliesTo: [null] });
   assert.deepEqual(runtime.costCenters, []);
   assert.ok(runtime.ruleLabels?.has(2026), 'the allocation label is there');
   assert.equal(runtime.canReadAccounts, true);

@@ -95,6 +95,17 @@ async function rejection(fn: () => Promise<unknown>): Promise<Error> {
   throw new Error('expected a refusal');
 }
 
+function assertModuleRight(err: Error, resource: string, level: string, message: string): void {
+  assert.ok(err instanceof ForbiddenException, 'a ForbiddenException');
+  assert.deepEqual(err.getResponse(), {
+    statusCode: 403,
+    error: 'Forbidden',
+    code: 'MODULE_RIGHT_REQUIRED',
+    message,
+    params: { resource, level },
+  });
+}
+
 async function ids(runner: QueryRunner, table: string, column: string, ownerColumn: string, ownerId: string): Promise<string[]> {
   const rows: Array<{ id: string }> = await runner.query(
     `SELECT ${column} AS id FROM ${table} WHERE ${ownerColumn} = $1`,
@@ -416,12 +427,11 @@ async function testRefusals() {
 
     const noTech = ctx(runner, seed, { portfolio_projects: 'contributor' });
     const refused = await rejection(() => http.linkRelation(missing, 'technologies', { id: 'nope' }, noTech));
-    assert.ok(refused instanceof ForbiddenException);
-    assert.equal(refused.message, 'You cannot read technologies.');
+    assertModuleRight(refused, 'infrastructure', 'reader', 'You cannot read technologies.');
 
     const noBudget = ctx(runner, seed, { portfolio_projects: 'contributor', infrastructure: 'reader', applications: 'reader' });
     const noBudgetRead = await rejection(() => http.linkRelation(seed.projectId, 'budget_lines', { id: 'nope' }, noBudget));
-    assert.equal(noBudgetRead.message, 'You cannot read this module.');
+    assertModuleRight(noBudgetRead, 'budget', 'reader', 'You cannot read this module.');
 
     const invalid = await rejection(() => http.linkRelation(missing, 'applications', { id: 'nope' }, writer));
     assert.ok(invalid instanceof BadRequestException);

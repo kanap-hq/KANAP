@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { singleChangedId } from '../audit/audit-parent-rules';
 import { applicationParticipantCondition, resolveBusinessContributorScope, type ParticipationAccessScope } from '../auth/business-contributor-scope';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { LINKED_MODULE_RESOURCES } from '../common/relations/linked-reads';
 import { setOwnedLink, type OwnedLinkAudit } from '../common/relations/owned-link';
 import { binder } from '../common/relations/related-objects';
@@ -423,7 +424,9 @@ export async function contractRelationsAccess(req: any): Promise<ContractRelatio
  * (it would remove links the caller does not see): 403 otherwise.
  */
 export function assertContractRelationRead(req: any, kind: ContractTabKind): void {
-  if (!canReadResource(req ?? {}, LINKED_MODULE_RESOURCES[kind])) throw new ForbiddenException(`You cannot read ${kind}.`);
+  if (!canReadResource(req ?? {}, LINKED_MODULE_RESOURCES[kind])) {
+    throw moduleRightRequired(LINKED_MODULE_RESOURCES[kind], 'reader', `You cannot read ${kind}.`);
+  }
 }
 
 const OUTSIDE_PARTICIPATION = 'You can only link applications you take part in.';

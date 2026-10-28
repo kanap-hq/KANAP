@@ -1368,55 +1368,57 @@ function createAiQueryHarness(manager: any) {
     {} as any,
     {} as any,
   );
+  const policy = createPermissivePolicyStub();
   const queryExecutor = new AiQueryExecutor(
-    tasks as any,
-    projects as any,
-    requests as any,
-    applications as any,
-    assets as any,
-    spendItems,
-    contracts,
-    companies,
-    suppliers,
-    departments,
-    knowledge as any,
-    locations as any,
-    users as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
+    tasks as any, // tasks
+    spendItems, // budgetLines
+    projects as any, // projects
+    requests as any, // requests
+    applications as any, // applications
+    assets as any, // assets
+    contracts, // contracts
+    companies, // companies
+    suppliers, // suppliers
+    departments, // departments
+    knowledge as any, // knowledge
+    locations as any, // locations
+    users as any, // users
+    {} as any, // accounts
+    {} as any, // chartOfAccounts
+    {} as any, // analyticsCategories
+    {} as any, // businessProcesses
+    {} as any, // contacts
+    {} as any, // interfaces
+    {} as any, // connections
+    {} as any, // incidents
+    {} as any, // incidentRecords
     {} as any, // allocationCalculator
+    policy, // policy
+    {} as any, // technologies
   );
   const aggregateExecutor = new AiAggregateExecutor(
-    tasks as any,
-    projects as any,
-    requests as any,
-    applications as any,
-    assets as any,
-    spendItems,
-    contracts,
-    companies,
-    suppliers,
-    departments,
-    knowledge as any,
-    locations as any,
-    users as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
+    tasks as any, // tasks
+    spendItems, // budgetLines
+    projects as any, // projects
+    requests as any, // requests
+    applications as any, // applications
+    assets as any, // assets
+    contracts, // contracts
+    companies, // companies
+    suppliers, // suppliers
+    departments, // departments
+    knowledge as any, // knowledge
+    locations as any, // locations
+    users as any, // users
+    {} as any, // accounts
+    {} as any, // chartOfAccounts
+    {} as any, // analyticsCategories
+    {} as any, // businessProcesses
+    {} as any, // contacts
+    {} as any, // interfaces
+    {} as any, // connections
+    {} as any, // incidents
+    policy, // policy
   );
 
   return { knowledge, queryExecutor, aggregateExecutor };
@@ -3919,8 +3921,8 @@ async function testAiQueryExecutorClosesRemainingMilestone1aGapFields() {
       {} as any,
       {} as any,
       {} as any,
-      {} as any,
       {} as any, // allocationCalculator
+      { canReadEntityType: async () => true } as any, // policy
     );
 
     const context = {
@@ -4052,10 +4054,10 @@ async function testAiQueryExecutorClosesRemainingMilestone1aGapFields() {
   }
 }
 
-async function testAiQueryExecutorSpendItemsExposeRelativeYearlyTotals() {
+async function testAiQueryExecutorBudgetLinesExposeRelativeYearlyTotals() {
   const anchorYear = new Date().getFullYear();
   const summaryCalls: any[] = [];
-  const spendItems = {
+  const budgetLines = {
     // The footer totals of the list (`amount_totals`), not under test here.
     summaryTotals: async () => ({ reportingCurrency: 'EUR', fxMissing: [] }),
     // The line totals (`y_budget_staff_cost`...), not under test here.
@@ -4065,6 +4067,7 @@ async function testAiQueryExecutorSpendItemsExposeRelativeYearlyTotals() {
       return {
         items: [{
           id: 'spend-1',
+          nature: 'opex',
           product_name: 'AI Budget Line',
           description: 'Testing yearly totals',
           status: 'enabled',
@@ -4092,30 +4095,30 @@ async function testAiQueryExecutorSpendItemsExposeRelativeYearlyTotals() {
   };
 
   const executor = new AiQueryExecutor(
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    spendItems as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any,
-    {} as any, // allocationCalculator
+    {} as any, // tasks
+    budgetLines as any, // budgetLines
+    {} as any, // projects
+    {} as any, // requests
+    {} as any, // applications
+    {} as any, // assets
+    {} as any, // contracts
+    {} as any, // companies
+    {} as any, // suppliers
+    {} as any, // departments
+    {} as any, // knowledge
+    {} as any, // locations
+    {} as any, // users
+    {} as any, // accounts
+    {} as any, // chartOfAccounts
+    {} as any, // analyticsCategories
+    {} as any, // businessProcesses
+    {} as any, // contacts
+    {} as any, // interfaces
+    {} as any, // connections
+    {} as any, // incidents
+    {} as any, // incidentRecords
+    {} as any, // policy
+    {} as any, // technologies
   );
 
   const result = await executor.execute(
@@ -4129,7 +4132,7 @@ async function testAiQueryExecutorSpendItemsExposeRelativeYearlyTotals() {
       manager: { query: async () => [] } as any,
     },
     {
-      entity_type: 'spend_items',
+      entity_type: 'budget_lines',
       limit: 10,
     },
   );
@@ -4141,6 +4144,7 @@ async function testAiQueryExecutorSpendItemsExposeRelativeYearlyTotals() {
   );
   assert.equal(result.total, 1);
   assert.ok(result.items[0].metadata, 'the spend item summary must carry metadata');
+  assert.equal(result.items[0].metadata.nature, 'opex');
   assert.equal(result.items[0].metadata.budget_anchor_year, anchorYear);
   assert.equal(result.items[0].metadata.project_name, 'Infrastructure Refresh');
   assert.equal(result.items[0].metadata.project_stream, 'Infrastructure');
@@ -4196,7 +4200,7 @@ function spendSummaryDateRows() {
 
 async function testSpendSummaryFiltersSupportRelativeYearMetricsAndDates() {
   // effective_end is the deprecated alias of end_of_validity: both reach the grid's disabled_at.
-  const adapted = adaptFilters(getAiEntityRegistry('spend_items'), {
+  const adapted = adaptFilters(getAiEntityRegistry('budget_lines'), {
     effective_end: { op: 'before', value: '2026-07-01' },
   });
   assert.deepEqual(adapted.applied, ['effective_end']);
@@ -4213,7 +4217,7 @@ async function testSpendSummaryFiltersSupportRelativeYearMetricsAndDates() {
 }
 
 async function testSpendAndCapexEndOfValidityQueryField() {
-  for (const entityType of ['spend_items', 'capex_items'] as const) {
+  for (const entityType of ['budget_lines'] as const) {
     const registry = getAiEntityRegistry(entityType);
     assert.equal(registry.fields.end_of_validity.grid, 'disabled_at', `${entityType}: end_of_validity reads disabled_at`);
     assert.equal(registry.fields.end_of_validity.type, 'date');
@@ -4228,7 +4232,7 @@ async function testSpendAndCapexEndOfValidityQueryField() {
 
   const filtered = applySummaryFilters(
     spendSummaryDateRows(),
-    adaptFilters(getAiEntityRegistry('spend_items'), { end_of_validity: { op: 'after', value: '2026-07-01' } }).filters,
+    adaptFilters(getAiEntityRegistry('budget_lines'), { end_of_validity: { op: 'after', value: '2026-07-01' } }).filters,
   );
   assert.deepEqual(filtered.map((row: any) => row.id), ['spend-2']);
 }
@@ -4237,12 +4241,8 @@ async function testAiAggregateExecutorSpendItemsSupportsSummaryMetricsAndProject
   const calls: Array<{ query: any; spec: any }> = [];
   const executor = new AiAggregateExecutor(
     {} as any, // tasks
-    {} as any, // projects
-    {} as any, // requests
-    {} as any, // applications
-    {} as any, // assets
     {
-      // The OPEX list engine's aggregate (lot 2B, PR D): the executor sends the list state and the spec, and maps the groups.
+      // The unified budget list aggregate: the executor sends the list state and the spec, and maps the groups.
       summaryAggregate: async (query: any, spec: any) => {
         calls.push({ query, spec });
         return {
@@ -4256,7 +4256,11 @@ async function testAiAggregateExecutorSpendItemsSupportsSummaryMetricsAndProject
           reportingCurrency: 'EUR',
         };
       },
-    } as any,
+    } as any, // budgetLines
+    {} as any, // projects
+    {} as any, // requests
+    {} as any, // applications
+    {} as any, // assets
     {} as any, // contracts
     {} as any, // companies
     {} as any, // suppliers
@@ -4268,7 +4272,6 @@ async function testAiAggregateExecutorSpendItemsSupportsSummaryMetricsAndProject
     {} as any, // chartOfAccounts
     {} as any, // analyticsCategories
     {} as any, // businessProcesses
-    {} as any, // capexItems
     {} as any, // contacts
     {} as any, // interfaces
     {} as any, // connections
@@ -4286,7 +4289,7 @@ async function testAiAggregateExecutorSpendItemsSupportsSummaryMetricsAndProject
       manager: { query: async () => [] } as any,
     },
     {
-      entity_type: 'spend_items',
+      entity_type: 'budget_lines',
       group_by: 'project_stream',
       metric: 'y_budget',
       function: 'sum',
@@ -4557,7 +4560,7 @@ async function run() {
     await testKnowledgeServiceSupportsLinkedDocumentFiltersAcrossLegacyAndIntegratedBindings();
     await testAiUsersEntitySupportsContributorReadsAndTenantIsolation();
     await testAiQueryExecutorClosesRemainingMilestone1aGapFields();
-    await testAiQueryExecutorSpendItemsExposeRelativeYearlyTotals();
+    await testAiQueryExecutorBudgetLinesExposeRelativeYearlyTotals();
     await testSpendSummaryFiltersSupportRelativeYearMetricsAndDates();
     await testSpendAndCapexEndOfValidityQueryField();
     await testAiAggregateExecutorSpendItemsSupportsSummaryMetricsAndProjectStreams();

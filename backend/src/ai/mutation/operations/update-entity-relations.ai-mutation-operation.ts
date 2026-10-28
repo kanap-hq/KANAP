@@ -22,7 +22,7 @@ const UpdateEntityRelationsInputSchema = z.object({
   ref: z.string().trim().min(1)
     .describe('Exact source record reference. Use a UUID from a previous tool result, or an exact business reference/name when unique.'),
   relation: z.string().trim().min(1)
-    .describe('The supported relation name for the selected entity type, such as companies, contacts, owners, links, projects, assets, spend_items, or capex_items.'),
+    .describe('The supported relation name for the selected entity type, such as companies, contacts, owners, links, projects, assets or budget_lines.'),
   add: z.array(z.unknown()).optional()
     .describe('Relation entries to add. Simple relations accept strings or objects with ref/id; role-bearing relations accept objects with role/owner_type and contact/user/asset refs.'),
   remove: z.array(z.unknown()).optional()

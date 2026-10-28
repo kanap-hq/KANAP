@@ -275,11 +275,8 @@ const URL_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEntityType }
   { pattern: /\/it\/technologies\//i, entityType: 'technologies' },
   { pattern: /\/it\/vulnerabilities\b/i, entityType: 'vulnerabilities' },
   { pattern: /\/ops\/contracts\//i, entityType: 'contracts' },
-  { pattern: /\/ops\/capex\//i, entityType: 'capex_items' },
-  { pattern: /\/ops\/opex\//i, entityType: 'spend_items' },
-  // The neutral path alone carries no nature. Both financial families are eligible.
-  { pattern: /\/ops\/budget\/[^/?#]+/i, entityType: 'spend_items' },
-  { pattern: /\/ops\/budget\/[^/?#]+/i, entityType: 'capex_items' },
+  // The neutral path and the two legacy paths: one family, both natures.
+  { pattern: /\/ops\/(?:budget|opex|capex)\/[^/?#]+/i, entityType: 'budget_lines' },
   { pattern: /\/master-data\/companies\//i, entityType: 'companies' },
   { pattern: /\/master-data\/contacts\//i, entityType: 'contacts' },
   { pattern: /\/master-data\/departments\//i, entityType: 'departments' },
@@ -311,7 +308,7 @@ const MASTER_DATA_ENTITY_TYPES = new Set<AiQueryEntityType>([
   'suppliers',
   'users',
 ]);
-const FINANCIAL_ENTITY_TYPES = new Set<AiQueryEntityType>(['capex_items', 'spend_items']);
+const FINANCIAL_ENTITY_TYPES = new Set<AiQueryEntityType>(['budget_lines']);
 
 function extractReferencedEntityTypes(rawText: string): Set<AiQueryEntityType> {
   const referenced = new Set<AiQueryEntityType>();

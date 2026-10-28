@@ -52,6 +52,8 @@ function createHarness() {
         return [{
           id: SPEND_ID,
           tenant_id: TENANT_ID,
+          nature: 'opex',
+          item_number: 42,
           product_name: 'Hosting',
           status: 'enabled',
           disabled_at: null,
@@ -86,7 +88,6 @@ function createHarness() {
     {} as any,
     {} as any,
     itOpsSettings,
-    {} as any,
     {} as any,
     {} as any,
     {} as any,
@@ -186,7 +187,7 @@ async function testCreateDoesNotUseObservedApplicationValuesAsAllowedValues() {
 
 async function updateHosting(fields: Record<string, unknown>) {
   const { service, context } = createHarness();
-  const prepared = await service.prepareUpdatePreview(context, { entity_type: 'spend_items', ref: 'Hosting', fields });
+  const prepared = await service.prepareUpdatePreview(context, { entity_type: 'budget_lines', ref: 'Hosting', fields });
   return {
     fields: prepared.mutationInput.fields as Record<string, unknown>,
     labels: prepared.mutationInput.field_labels as Record<string, unknown>,

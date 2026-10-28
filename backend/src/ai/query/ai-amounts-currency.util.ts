@@ -13,7 +13,7 @@ export type AiAmountsCurrency = {
 };
 
 export function isBudgetLineEntity(entityType: AiQueryEntityType): boolean {
-  return entityType === 'spend_items' || entityType === 'capex_items';
+  return entityType === 'budget_lines';
 }
 
 /** `JPY 2026 (2 lines), USD 2027 (1 line)`. */

@@ -265,8 +265,8 @@
       "applications": "Aplicaciones",
       "asset_assignments": "Asignaciones de activos",
       "assets": "Activos",
+      "budget_lines": "Líneas presupuestarias",
       "business_processes": "Procesos de negocio",
-      "capex_items": "Líneas CAPEX",
       "cluster_members": "Miembros del clúster",
       "companies": "Empresas",
       "contacts": "Contactos",
@@ -278,7 +278,6 @@
       "owners": "Responsables",
       "projects": "Proyectos",
       "relations": "Relaciones entre activos",
-      "spend_items": "Líneas OPEX",
       "sub_locations": "Sububicaciones",
       "support_contacts": "Contactos de soporte"
     },

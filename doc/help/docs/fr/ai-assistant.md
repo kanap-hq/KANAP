@@ -77,7 +77,7 @@ La saisie de `@` ouvre le **sélecteur de mentions** au-dessus du composeur. Il 
   - `@T-5` : la tâche portant la référence T-5
   - `@DOC` : les documents récents de la base de connaissances
   - `@APP backup` : les applications correspondant à « backup »
-  - `@BL-12` : la ligne budgétaire portant la référence BL-12. `@BL` seul liste les lignes budgétaires des deux types, et `@OPX` ou `@CPX` les limite aux lignes OPEX ou CAPEX. Les anciens numéros fonctionnent toujours : `@OPX-12` ou `@CPX-3` trouve sa ligne
+  - `@BL-12` : la ligne budgétaire portant la référence BL-12. `@BL` seul liste les lignes budgétaires des deux types. Les anciens numéros fonctionnent toujours : `@OPX-12` ou `@CPX-3` trouve sa ligne
   - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
 - **Texte libre** : tout le reste (`@payroll`, `@server-2`) lance une recherche multi-types classée par pertinence. Elle trouve aussi les lignes budgétaires par le nom de leurs valeurs analytiques.
 
@@ -112,7 +112,9 @@ Les images stockées dans KANAP, comme les pièces jointes, s'affichent normalem
 
 Plaid utilise un petit ensemble d'outils internes pour répondre aux questions : `Search all`, `Search knowledge`, `Get document`, `Get entity context` et quelques autres. Chaque appel d'outil apparaît sous forme de ligne compacte sous le message (« a utilisé Search all · 8 résultats »). Vous n'avez généralement pas besoin de lire les détails de l'outil, mais ils sont là si vous voulez voir exactement sur quels enregistrements la réponse s'est appuyée.
 
-`Search all` trouve les lignes budgétaires par le nom de leurs valeurs analytiques, et indique à Plaid les valeurs de chaque ligne. Plaid désigne une ligne budgétaire par sa référence `BL-12`, et ses liens ouvrent la ligne.
+`Search all` trouve les lignes budgétaires par le nom de leurs valeurs analytiques, et indique à Plaid les valeurs de chaque ligne. Plaid désigne une ligne budgétaire par sa référence `BL-12`, et ses liens ouvrent la ligne. Un nombre seul, comme 21, désigne `BL-21`. Les anciens numéros fonctionnent toujours : `OPX-12` ou `CPX-3` trouve sa ligne.
+
+Plaid lit les lignes OPEX et CAPEX ensemble. Une question qui ne nomme aucun des deux types porte sur les deux, et Plaid peut filtrer ou regrouper les lignes par type.
 
 Plaid liste et lit les technologies pour les utilisateurs qui peuvent lire l'infrastructure. Il peut les filtrer par famille, éditeur, fin de support ou nombre de serveurs, et lire les versions, les serveurs et les applications d'une technologie. Interrogé sur un serveur, une application ou une technologie par son nom, sans sa référence, il lit aussi les enregistrements liés. Il ne peut pas modifier une technologie. Les assistants connectés via MCP obtiennent les mêmes réponses.
 
@@ -126,7 +128,7 @@ Plaid ne nomme une fiche liée à celle que vous interrogez que si vous pouvez l
 
 Quand Plaid additionne des montants budgétaires, une ligne dont la devise n'a pas de taux de change pour l'année est exclue de la somme. Plaid indique alors quelles devises et quelles années il a exclues. Les assistants connectés par MCP reçoivent la même réponse.
 
-Plaid lit les chiffres de personnel du rapport [Coût par ETP](reports.md#cout-par-etp) pour chaque année et chaque colonne budgétaire : le coût et les ETP des lignes en personnes ou en jours, le coût des lignes au prix journalier et les jours qu'elles achètent. KANAP calcule le coût par ETP et le TJM par fournisseur, société, centre de coûts ou tout autre regroupement, comme le fait le rapport, et Plaid les cite. Demandez par exemple : « Quels sont les ETP externes et le TJM par fournisseur en 2026 ? » Les lignes OPEX et CAPEX sont lues séparément : quand vous ne nommez ni l'une ni l'autre, Plaid répond pour les deux, ou précise que sa réponse couvre l'OPEX uniquement. Les assistants connectés par MCP reçoivent les mêmes réponses.
+Plaid lit les chiffres de personnel du rapport [Coût par ETP](reports.md#cout-par-etp) pour chaque année et chaque colonne budgétaire : le coût et les ETP des lignes en personnes ou en jours, le coût des lignes au prix journalier et les jours qu'elles achètent. KANAP calcule le coût par ETP et le TJM par fournisseur, société, centre de coûts ou tout autre regroupement, comme le fait le rapport, et Plaid les cite. Demandez par exemple : « Quels sont les ETP externes et le TJM par fournisseur en 2026 ? » Quand vous ne nommez ni OPEX ni CAPEX, Plaid répond pour les deux types. Les assistants connectés par MCP reçoivent les mêmes réponses.
 
 Les totaux viennent de KANAP. Une liste de lignes budgétaires ou de contrats est accompagnée du total de toutes les fiches qui correspondent, toutes pages comprises, et du total des fiches listées : Plaid cite l'un des deux ou demande une somme à KANAP. Si vous demandez les dix plus grosses lignes et leur total, Plaid donne le total de ces dix lignes. Quand votre accès aux données est limité à certaines sociétés ou à certains centres de coûts, Plaid précise que ses décomptes et ses totaux couvrent votre accès, et ne les présente pas comme le total de l'espace de travail.
 
@@ -135,6 +137,8 @@ Quand Plaid essaie une valeur de filtre qu'un champ n'accepte pas, par exemple �
 Quand vous demandez une modification que votre rôle ne permet pas, Plaid nomme le droit qui vous manque, par exemple « vous avez besoin du droit de modifier les projets ». Un administrateur l'ajoute à votre rôle.
 
 Plaid ne fait que les modifications que vos écrans vous permettent, sur les fiches que vous pouvez y atteindre. Avec le droit de contribuer aux projets, vous pouvez faire changer par Plaid l'objectif d'un projet et ses liens vers des applications, des actifs et des lignes budgétaires. Le droit de contribuer aux demandes couvre les mêmes liens sur les demandes. Un Business Contributor ne fait ces modifications que sur les projets et les demandes auxquels il participe. Lier une fiche demande le droit de lire son module. Renommer un projet ou changer ses autres champs demande le droit de modifier les projets, comme sur la page du projet.
+
+Quand Plaid crée une ligne budgétaire, il demande si la ligne est OPEX ou CAPEX si vous ne l'avez pas dit. Il ne change pas le type d'une ligne existante : utilisez **Changer le type...** dans l'espace de travail de la ligne (voir [Changer le type](budget-lines.md#changer-le-type)). Plaid ne définit le contrat que des lignes OPEX. Une ligne CAPEX rejoint ses contrats par les liens de son onglet **Relations**.
 
 ### Supprimer une fiche { #deleting-a-record }
 

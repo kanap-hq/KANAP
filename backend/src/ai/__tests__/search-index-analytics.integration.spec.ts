@@ -35,8 +35,8 @@ import { linkValue, runSpecs, seedLine, seedTenant, setCurrentTenant, withRollba
 
 type Kind = 'opex' | 'capex';
 const KINDS: Kind[] = ['opex', 'capex'];
-/** The search entry's type of a line (and its refresh function): one per nature. */
-const ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
+/** The search entry's type of a line (and its refresh function): one per nature (the index keeps both). */
+const INDEX_TYPE: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
 /** Where the lines and their values live: one family for both natures since lot Z1. */
 const LINES: Record<Kind, string> = { opex: 'spend_items', capex: 'spend_items' };
 const LINKS: Record<Kind, string> = { opex: 'spend_item_analytics_values', capex: 'spend_item_analytics_values' };
@@ -82,7 +82,7 @@ async function search(runner: QueryRunner, tenantId: string, query: string): Pro
   const context = {
     tenantId, userId: randomUUID(), isPlatformHost: false, surface: 'chat' as const, authMethod: 'jwt' as const, manager: runner.manager,
   };
-  const result = await entityService().searchAll(context as any, { query, entity_types: ['spend_items', 'capex_items'], limit: 50 });
+  const result = await entityService().searchAll(context as any, { query, entity_types: ['budget_lines'], limit: 50 });
   return result.items.map((item: any) => ({ id: item.id, metadata: item.metadata }));
 }
 
@@ -116,7 +116,7 @@ async function seedValue(runner: QueryRunner, tenantId: string, axisId: string, 
 async function analytics(runner: QueryRunner, kind: Kind, itemId: string): Promise<string | undefined> {
   const [row] = await runner.query(
     `SELECT extra_json AS extra FROM search_index WHERE tenant_id = app_current_tenant() AND entity_type = $1 AND entity_id = $2`,
-    [ENTITY[kind], itemId],
+    [INDEX_TYPE[kind], itemId],
   );
   assert.ok(row, `${kind}: the line has a search entry`);
   return row.extra && 'analytics' in row.extra ? row.extra.analytics : undefined;
@@ -127,7 +127,7 @@ async function inVector(runner: QueryRunner, kind: Kind, itemId: string, text: s
   const [row] = await runner.query(
     `SELECT ts_filter(search_vector, $4::"char"[]) @@ (plainto_tsquery('kanap_fr', $3) || plainto_tsquery('kanap_en', $3)) AS found
        FROM search_index WHERE tenant_id = app_current_tenant() AND entity_type = $1 AND entity_id = $2`,
-    [ENTITY[kind], itemId, text, weights],
+    [INDEX_TYPE[kind], itemId, text, weights],
   );
   return row?.found === true;
 }
@@ -141,7 +141,7 @@ type RefreshCall = { type: string; tenant: string; ids: string[] };
  */
 async function recordRefreshes(runner: QueryRunner): Promise<() => Promise<RefreshCall[]>> {
   await runner.query(`CREATE TEMP TABLE IF NOT EXISTS refresh_calls (n serial, type text, tenant uuid, ids uuid[]) ON COMMIT DROP`);
-  for (const type of Object.values(ENTITY)) {
+  for (const type of Object.values(INDEX_TYPE)) {
     const [{ body, language }] = await runner.query(
       `SELECT p.prosrc AS body, l.lanname AS language FROM pg_proc p JOIN pg_language l ON l.oid = p.prolang
         WHERE p.proname = $1 AND p.pronamespace = 'public'::regnamespace`,
@@ -165,7 +165,7 @@ async function recordRefreshes(runner: QueryRunner): Promise<() => Promise<Refre
   };
 }
 
-const call = (kind: Kind, tenant: string, lines: string[]): RefreshCall => ({ type: ENTITY[kind], tenant, ids: [...lines].sort() });
+const call = (kind: Kind, tenant: string, lines: string[]): RefreshCall => ({ type: INDEX_TYPE[kind], tenant, ids: [...lines].sort() });
 
 /** The tenant's reindex, as the daily job and the admin rebuild run it. */
 async function reindex(runner: QueryRunner, tenantId: string) {
@@ -420,13 +420,13 @@ async function testRefreshPaths() {
       const orphan = randomUUID();
       await runner.query(
         `INSERT INTO search_index (tenant_id, entity_type, entity_id, label, search_vector) VALUES ($1, $2, $3, 'Gone', ''::tsvector)`,
-        [d.tenantId, ENTITY[kind], orphan],
+        [d.tenantId, INDEX_TYPE[kind], orphan],
       );
       await runner.query(
         `UPDATE search_index SET extra_json = '{}'::jsonb WHERE tenant_id = $1 AND entity_id = ANY($2::uuid[])`,
         [d.tenantId, [first, second]],
       );
-      const refresh = (ids: string[] | null) => runner.query(`SELECT search_index_refresh_${ENTITY[kind]}($1, $2::uuid[])`, [d.tenantId, ids]);
+      const refresh = (ids: string[] | null) => runner.query(`SELECT search_index_refresh_${INDEX_TYPE[kind]}($1, $2::uuid[])`, [d.tenantId, ids]);
       const orphanLeft = async () => (await runner.query(`SELECT count(*)::int AS n FROM search_index WHERE entity_id = $1`, [orphan]))[0].n;
 
       await refresh([first]);
@@ -438,7 +438,7 @@ async function testRefreshPaths() {
 
       await runner.query(
         `INSERT INTO search_index (tenant_id, entity_type, entity_id, label, search_vector) VALUES ($1, $2, $3, 'Gone', ''::tsvector)`,
-        [d.tenantId, ENTITY[kind], orphan],
+        [d.tenantId, INDEX_TYPE[kind], orphan],
       );
       await refresh(null);
       assert.equal(await analytics(runner, kind, second), 'Nature de coût: Matériel', `${kind}: the tenant's lines are all refreshed`);

@@ -63,11 +63,11 @@ function harness(allowed: Set<Rights>, businessContributor = false) {
       return [];
     },
   };
-  const args: any[] = Array.from({ length: 26 }, () => undefined);
-  args[21] = incidents;
-  args[22] = incidentRecords;
-  args[24] = policy;
-  const executor = new AiQueryExecutor(...(args as [any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any]));
+  const args: any[] = Array.from({ length: 25 }, () => undefined);
+  args[20] = incidents;
+  args[21] = incidentRecords;
+  args[23] = policy;
+  const executor = new AiQueryExecutor(...(args as [any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any]));
   const context = {
     tenantId: TENANT_ID,
     userId: USER_ID,

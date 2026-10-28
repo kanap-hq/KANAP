@@ -35,6 +35,17 @@ function viewer(over: Partial<DocumentIncidentViewer>): DocumentIncidentViewer {
   };
 }
 
+function assertModuleRight(error: any, resource: string, level: string, message: string): void {
+  assert.equal(error?.getStatus?.(), 403, 'status');
+  assert.deepEqual(error?.getResponse?.(), {
+    statusCode: 403,
+    error: 'Forbidden',
+    code: 'MODULE_RIGHT_REQUIRED',
+    message,
+    params: { resource, level },
+  });
+}
+
 function binding(over: Partial<DocumentIncidentBinding>): DocumentIncidentBinding {
   return {
     document_id: DOCUMENT,
@@ -115,7 +126,10 @@ function testRowMatrix() {
   // A reader who is the owner still cannot write.
   assert.throws(
     () => assertIncidentBindingWritable(open, READER_REPORTER),
-    /incidents:contributor/,
+    (error: any) => {
+      assertModuleRight(error, 'incidents', 'contributor', 'incidents:contributor permission is required');
+      return true;
+    },
   );
 }
 
@@ -282,7 +296,10 @@ async function testAsyncAsserts() {
   );
   await assert.rejects(
     assertDocumentIncidentWritable(DOCUMENT, manager, REPORTER, TENANT, { binding: open, viewer: READER_REPORTER }),
-    /incidents:contributor/,
+    (error: any) => {
+      assertModuleRight(error, 'incidents', 'contributor', 'incidents:contributor permission is required');
+      return true;
+    },
   );
   await assert.rejects(
     assertDocumentIncidentWritable(DOCUMENT, manager, OWNER, TENANT, {

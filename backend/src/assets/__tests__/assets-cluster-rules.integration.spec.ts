@@ -116,7 +116,7 @@ async function testSwitch() {
     const assets = new AssetsService(undefined as any, crud, undefined as any, undefined as any, undefined as any, undefined as any);
     const assistant = new AiBusinessRecordMutationSupportService(
       undefined as any, assets, undefined as any, undefined as any, undefined as any, undefined as any,
-      undefined as any, undefined as any, undefined as any, undefined as any, undefined as any, undefined as any,
+      undefined as any, undefined as any, undefined as any, undefined as any, undefined as any,
     );
     const context = { manager: runner.manager, tenantId, userId: null };
     assert.equal((await refusal(runner, () => (assistant as any).updateRecord(context, 'assets', node, { is_cluster: true }))).code, 'cluster_switch_member');

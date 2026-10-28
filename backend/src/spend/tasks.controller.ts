@@ -4,7 +4,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -23,6 +22,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { DataSource } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
@@ -152,7 +152,7 @@ export class TasksController {
   private async ensureProjectTargetAccess(projectId: string, req: any) {
     const canContribute = await this.hasPermission(req, 'portfolio_projects', 'contributor');
     if (!canContribute) {
-      throw new ForbiddenException('Insufficient portfolio project permissions');
+      throw moduleRightRequired('portfolio_projects', 'contributor', 'Insufficient portfolio project permissions');
     }
 
     const accessScope = await resolveBusinessContributorScope(req, 'portfolio_projects', 'contributor');

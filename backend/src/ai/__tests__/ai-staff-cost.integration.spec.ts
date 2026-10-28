@@ -25,6 +25,7 @@ import {
 } from '../../spend/reports/shared/reportAggregates';
 import { CAPEX_NUMBER_OFFSET, inRolledBackTransaction, Kind, runSpecs } from '../../spend/__tests__/round-inputs.fixtures';
 import { realAllocationCalculator, realSummaryDeps } from '../../spend/__tests__/oracle/oracle-deps';
+import { budgetReadService } from '../../spend/__tests__/budget-lines.fixtures';
 import { PgClient, roleExists, seedNodes, seedPerson, seedRole } from '../../data-access/__tests__/data-access-test-helpers';
 
 // Staff cost, cost per FTE and day rate in the AI layer (lot L2 of the Plaid and MCP pass), against
@@ -43,7 +44,7 @@ import { PgClient, roleExists, seedNodes, seedPerson, seedRole } from '../../dat
 
 const Y = new Date().getFullYear();
 const KINDS: Kind[] = ['opex', 'capex'];
-const ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
+const ENTITY: Record<Kind, 'budget_lines'> = { opex: 'budget_lines', capex: 'budget_lines' };
 
 const CALENDAR_ID = '66666666-6666-4666-8666-666666666666';
 /** A calendar of 20 working days in every month. */
@@ -181,19 +182,21 @@ function itemService(kind: Kind): any {
   return kind === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 
-// Constructor positions (both executors): spendItems 5, contracts 6, capexItems 17; the query executor's allocation calculator 23.
-function aggregateExecutor(kind: Kind): AiAggregateExecutor {
-  const args: any[] = Array.from({ length: 22 }, () => ({}));
-  args[kind === 'opex' ? 5 : 17] = itemService(kind);
-  return new (AiAggregateExecutor as any)(...args);
+// Constructor positions: budgetLines 1; the query executor's allocation calculator 22, policy 23.
+function queryExecutor(): AiQueryExecutor {
+  const args: any[] = Array.from({ length: 25 }, () => ({}));
+  args[1] = budgetReadService();
+  args[6] = { listContractsForSpendItem: async () => ({ items: [] }), listContractsForCapexItem: async () => ({ items: [] }) };
+  args[22] = realAllocationCalculator();
+  args[23] = { canReadEntityType: async () => true };
+  return new (AiQueryExecutor as any)(...args);
 }
 
-function queryExecutor(kind: Kind): AiQueryExecutor {
-  const args: any[] = Array.from({ length: 24 }, () => ({}));
-  args[kind === 'opex' ? 5 : 17] = itemService(kind);
-  args[6] = { listContractsForSpendItem: async () => ({ items: [] }), listContractsForCapexItem: async () => ({ items: [] }) };
-  args[23] = realAllocationCalculator();
-  return new (AiQueryExecutor as any)(...args);
+function aggregateExecutor(): AiAggregateExecutor {
+  const args: any[] = Array.from({ length: 23 }, () => ({}));
+  args[1] = budgetReadService();
+  args[21] = { canReadEntityType: async () => true };
+  return new (AiAggregateExecutor as any)(...args);
 }
 
 function context(runner: QueryRunner, tenantId: string, userId: string | null = null): AiExecutionContextWithManager {
@@ -244,7 +247,7 @@ function aiFigures(result: any) {
 async function compareWithReport(runner: QueryRunner, kind: Kind, tenantId: string, aiFilters: Record<string, any>, label: string) {
   const registry = getAiEntityRegistry(ENTITY[kind]);
   const report = await reportFigures(runner, kind, adaptFilters(registry, aiFilters).filters);
-  const aggregate = aggregateExecutor(kind);
+  const aggregate = aggregateExecutor();
   const ctx = context(runner, tenantId);
   const perFte: any = await aggregate.execute(ctx, { entity_type: ENTITY[kind], group_by: 'supplier', metric: 'y_budget_cost_per_fte', filters: aiFilters });
   const dayRate: any = await aggregate.execute(ctx, { entity_type: ENTITY[kind], group_by: 'supplier', metric: 'y_budget_day_rate', filters: aiFilters });
@@ -338,7 +341,7 @@ async function testAggregateAsTheReport(kind: Kind) {
     assert.deepEqual(filtered.perFte.filters_applied, ['paying_company']);
 
     // A sum of a staff field, with its overall total.
-    const aggregate = aggregateExecutor(kind);
+    const aggregate = aggregateExecutor();
     const ctx = context(runner, s.tenantId);
     const fte: any = await aggregate.execute(ctx, { entity_type: ENTITY[kind], group_by: 'supplier', metric: 'y_budget_staff_fte', function: 'sum' });
     assert.deepEqual(fte.groups.find((group: any) => group.key === alpha), { key: alpha, value: 2.17, unknown: 0 }, `${kind}: a staff FTE sums with the unknown count`);
@@ -378,7 +381,7 @@ async function testAmountNotFollowingLines(kind: Kind) {
 async function testQueryTotals(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
     const s = await seed(runner, kind);
-    const query = queryExecutor(kind);
+    const query = queryExecutor();
     const ctx = context(runner, s.tenantId);
     const sorted: any = await query.execute(ctx, { entity_type: ENTITY[kind], sort: { field: 'y_budget_staff_cost', direction: 'desc' }, limit: 2 });
     assert.deepEqual(sorted.items.map((item: any) => item.label), ['Staff alpha full time', 'Staff bravo per month'], `${kind}: sorted on the staff cost`);
@@ -438,12 +441,12 @@ async function testLimitedPerson(kind: Kind) {
 
     assert.equal((await runner.query(`SELECT data_access_apply($1) AS mode`, [person]))[0].mode, 'limited');
     const ctx = context(runner, s.tenantId, person);
-    const aggregate = aggregateExecutor(kind);
+    const aggregate = aggregateExecutor();
     const perFte: any = await aggregate.execute(ctx, { entity_type: ENTITY[kind], group_by: 'supplier', metric: 'y_budget_cost_per_fte' });
     assert.deepEqual(aiFigures(perFte).costPerFte, expected.costPerFte, `${kind}: the FR lines only`);
     assert.deepEqual([perFte.overall.staff_fte, perFte.overall.staff_cost], [expected.total.fte.fte, expected.total.fte.cost], `${kind}: overall within the access`);
     assert.equal(perFte.data_access, 'limited', `${kind}: said within your access`);
-    const listed: any = await queryExecutor(kind).execute(ctx, { entity_type: ENTITY[kind] });
+    const listed: any = await queryExecutor().execute(ctx, { entity_type: ENTITY[kind] });
     assert.equal(listed.amount_totals.values.y_budget_staff_fte, expected.total.fte.fte, `${kind}: the query totals within the access`);
   });
   console.log(`ok - ${kind}: a limited person adds up their lines only`);

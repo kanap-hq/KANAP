@@ -86,7 +86,7 @@ async function testMcpOrigin() {
 }
 
 function testRoutesHaveNoReferenceFamilies() {
-  for (const family of ['applications', 'assets', 'technologies', 'projects', 'requests', 'tasks', 'documents', 'incidents', 'spend_items', 'capex_items']) {
+  for (const family of ['applications', 'assets', 'technologies', 'projects', 'requests', 'tasks', 'documents', 'incidents', 'budget_lines']) {
     assert.equal(AI_PAGE_ROUTES[family], undefined, `${family} opens by its reference`);
   }
 }

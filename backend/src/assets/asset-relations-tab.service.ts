@@ -1,8 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { singleChangedId } from '../audit/audit-parent-rules';
 import { taskParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { setOwnedLink, type OwnedLinkAudit, type OwnedRelationLink } from '../common/relations/owned-link';
 import { readRelationsBudgetColumn } from '../common/relations/relations-budget-column';
 import {
@@ -292,8 +293,8 @@ export class AssetRelationsTabService {
       });
     }
     if (kind === 'tasks' || kind === 'incidents') {
-      if (!ctx.access[kind]) throw new ForbiddenException('You cannot read this module.');
-      if (kind === 'incidents' && !ctx.writes.incidents) throw new ForbiddenException('You cannot edit this module.');
+      if (!ctx.access[kind]) throw moduleRightRequired(ASSET_RELATION_READS[kind], 'reader', 'You cannot read this module.');
+      if (kind === 'incidents' && !ctx.writes.incidents) throw moduleRightRequired('incidents', 'contributor', 'You cannot edit this module.');
     }
     const id = parseTargetId(targetId);
     const asset = await loadAsset(mg, ctx.tenantId, ref);

@@ -216,10 +216,16 @@ async function run() {
 
     // The AI aggregate groups and the AI filter discovery read the same effective values.
     const facade = new ConnectionsService(svc, {} as any, {} as any, {} as any);
-    // Only the connections service is used on these paths; it sits 21st in both constructors.
-    const unused = Array.from({ length: 20 }, () => ({}) as any);
-    const aggregate = new (AiAggregateExecutor as any)(...unused, facade, {}) as AiAggregateExecutor;
-    const discovery = new (AiQueryExecutor as any)(...unused, facade, {}, {}) as AiQueryExecutor;
+    // Only the connections service is used on these paths: it sits at index 19 in both
+    // constructors; the aggregate's policy is 21, the query's 23.
+    const aggregateArgs: any[] = Array.from({ length: 23 }, () => ({}) as any);
+    aggregateArgs[19] = facade;
+    aggregateArgs[21] = { canReadEntityType: async () => true };
+    const aggregate = new (AiAggregateExecutor as any)(...aggregateArgs) as AiAggregateExecutor;
+    const queryArgs: any[] = Array.from({ length: 25 }, () => ({}) as any);
+    queryArgs[19] = facade;
+    queryArgs[23] = { canReadEntityType: async () => true };
+    const discovery = new (AiQueryExecutor as any)(...queryArgs) as AiQueryExecutor;
     const aiContext = { tenantId: tenantA, isPlatformHost: false, surface: 'chat', authMethod: 'jwt', manager: runner.manager } as any;
     const groups = async (groupBy: string, filters?: Record<string, unknown>) =>
       (await aggregate.execute(aiContext, { entity_type: 'connections', group_by: groupBy, filters: filters as any })).groups;

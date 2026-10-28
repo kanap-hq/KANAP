@@ -46,8 +46,8 @@ const SERVICE_FALLBACK_SORT: Record<string, string> = {
   analytics_categories: 'sort_order',
   applications: 'created_at',
   assets: 'created_at',
+  budget_lines: 'created_at',
   business_processes: 'name',
-  capex_items: 'created_at',
   companies: 'name',
   connections: 'created_at',
   contacts: 'created_at',
@@ -59,7 +59,6 @@ const SERVICE_FALLBACK_SORT: Record<string, string> = {
   locations: 'created_at',
   projects: 'created_at',
   requests: 'created_at',
-  spend_items: 'created_at',
   tasks: 'created_at',
   technologies: 'name',
   users: 'last_name',
@@ -159,12 +158,14 @@ async function seedTenant(runner: QueryRunner): Promise<Seed> {
   await pair('contracts', (n, at) => insertId(runner,
     `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, created_at, updated_at) VALUES ($1, $2, $3, $4, '2026-01-01', $5, $5)`,
     [tenantId, `Contract ${n}`, companyId, supplierId, at]));
-  for (const nature of ['opex', 'capex'] as const) {
-    await pair(nature === 'opex' ? 'spend_items' : 'capex_items', (n, at) => insertId(runner,
+  // The budget lines are one family for the AI: the older row is OPEX, the newer CAPEX.
+  await pair('budget_lines', (n, at) => {
+    const nature = n === 1 ? 'opex' : 'capex';
+    return insertId(runner,
       `INSERT INTO spend_items (tenant_id, nature, product_name, currency, effective_start, item_number, paying_company_id, created_at, updated_at)
        VALUES ($1, $2, $3, 'EUR', '2026-01-01', $4, $5, $6, $6)`,
-      [tenantId, nature, `${nature} line ${n}`, (nature === 'opex' ? 0 : 10) + n, companyId, at]));
-  }
+      [tenantId, nature, `${nature} line ${n}`, n, companyId, at]);
+  });
   await pair('projects', (n, at) => insertId(runner,
     `INSERT INTO portfolio_projects (tenant_id, name, item_number, created_at, updated_at) VALUES ($1, $2, $3, $4, $4)`,
     [tenantId, `Project ${n}`, n, at]));
@@ -241,7 +242,12 @@ async function testStaticConsistency(harness: Harness) {
     for (const [name, field] of Object.entries<any>(registry.fields)) {
       const listed = Object.prototype.hasOwnProperty.call(registry.sortFields, name);
       assert.equal(field.sortable === true, listed, `${entityType}.${name}: flagged sortable exactly when it is a sort field`);
-      if (listed) assert.equal(registry.sortFields[name], field.grid, `${entityType}.${name}: sorts on the column it filters`);
+      if (listed) {
+        // A task's `related` sorts on the family the assistant displays (`related_family`), not on
+        // the stored type the screen filters (`related_object_type`, lot 3 point 8).
+        const sortKey = entityType === 'tasks' && name === 'related' ? 'related_family' : field.grid;
+        assert.equal(registry.sortFields[name], sortKey, `${entityType}.${name}: sorts on the displayed column`);
+      }
     }
     for (const name of ['created_at', 'updated_at']) {
       assert.ok(registry.sortFields[name], `${entityType}: sorts on ${name}`);
@@ -328,9 +334,9 @@ async function testPageSizes(harness: Harness, runner: QueryRunner, seed: Seed) 
   assert.equal(await limitOf('suppliers'), AI_QUERY_DEFAULT_LIMIT, 'the default page size');
   assert.equal(await limitOf('suppliers', 7), 7, 'a smaller page size is kept');
   assert.equal(await limitOf('suppliers', 500), AI_QUERY_MAX_LIMIT, 'a larger one is reduced to the maximum');
-  const capped = await runQuery(runner, harness.executor, ctx, { entity_type: 'spend_items', limit: 16 });
-  assert.deepEqual(capped.result.limit_capped, { requested: 16, applied: 15 }, 'a reduced page size is named');
-  const kept = await runQuery(runner, harness.executor, ctx, { entity_type: 'spend_items', limit: 15 });
+  const capped = await runQuery(runner, harness.executor, ctx, { entity_type: 'budget_lines', limit: 31 });
+  assert.deepEqual(capped.result.limit_capped, { requested: 31, applied: 30 }, 'a reduced page size is named');
+  const kept = await runQuery(runner, harness.executor, ctx, { entity_type: 'budget_lines', limit: 30 });
   assert.equal(kept.result.limit_capped, undefined, 'a page size within the maximum is not');
   for (const [entityType, max] of Object.entries<number>(AI_QUERY_FAMILY_MAX_LIMIT)) {
     assert.equal(await limitOf(entityType, 500), max, `${entityType}: its own maximum`);
@@ -345,7 +351,7 @@ async function testAmountsCurrency(harness: Harness, runner: QueryRunner, seed: 
   const ctx = context(runner, seed);
   // Not the lines' currency (EUR): the amounts follow the tenant's reporting currency.
   await runner.query(`UPDATE tenants SET metadata = metadata || '{"reporting_currency":"CHF"}'::jsonb WHERE id = $1`, [seed.tenantId]);
-  for (const entityType of ['spend_items', 'capex_items']) {
+  for (const entityType of ['budget_lines']) {
     const { result, error } = await runQuery(runner, harness.executor, ctx, { entity_type: entityType });
     assert.equal(error, null, `${entityType}: runs (${error})`);
     assert.equal(result.amounts_currency, 'CHF', `${entityType}: the amounts are in the reporting currency`);
@@ -378,9 +384,9 @@ async function testAmountsCurrency(harness: Harness, runner: QueryRunner, seed: 
 
   // An EUR line with an amount this year, and no EUR rate into CHF: left out of the sum, named.
   const year = new Date().getFullYear();
-  const versionId = await seedVersion(runner, 'opex', seed.tenantId, seed.rows.spend_items.newer, year);
+  const versionId = await seedVersion(runner, 'opex', seed.tenantId, seed.rows.budget_lines.newer, year);
   await seedMonths(runner, 'opex', seed.tenantId, versionId, year, { planned: [1200, ...Array(11).fill(0)] });
-  const leftOut = await harness.aggregates.execute(ctx, { entity_type: 'spend_items', group_by: 'currency', metric: 'y_budget', function: 'sum' });
+  const leftOut = await harness.aggregates.execute(ctx, { entity_type: 'budget_lines', group_by: 'currency', metric: 'y_budget', function: 'sum' });
   assert.deepEqual(leftOut.amounts_fx_missing, [{ currency: 'EUR', year, lines: 1 }], 'the pair and its lines');
   assert.equal(Number(leftOut.groups.find((group: any) => group.key === 'EUR')?.value), 0, 'the 1,200 EUR are left out, never counted at 1');
   assert.match(leftOut.amounts_currency_note, new RegExp(`EUR ${year} \\(1 line\\)`), 'the note names the pair');

@@ -18,6 +18,7 @@ import { aggregateBudgetSummaryByIds } from './oracle/ai-aggregate.oracle';
 import { loadValuePositions, oracleTextCompare, SORT_ORDERS, ValuePositions } from './oracle/budget-summary.oracle';
 import { realSummaryDeps } from './oracle/oracle-deps';
 import { prng, seedListFixture } from './oracle/budget-list.fixture';
+import { budgetReadService } from './budget-lines.fixtures';
 import { getSummaryFieldValue, summaryFieldValues } from './oracle/summary-field-value.oracle';
 
 // Differential test of the list engine's aggregate (lot 2B, PR D), on the
@@ -61,7 +62,7 @@ const SCOPES: SummaryScopeConfig[] = (process.env.AGG_DIFF_SCOPE ?? 'opex,capex'
   return config;
 });
 
-type AiInput = { entity_type: 'spend_items' | 'capex_items'; group_by: string; function: string; metric?: string; filters?: Record<string, any>; q?: string };
+type AiInput = { entity_type: 'budget_lines'; group_by: string; function: string; metric?: string; filters?: Record<string, any>; q?: string };
 type Case =
   | { id: string; kind: 'ai'; input: AiInput }
   | { id: string; kind: 'spec'; query: Record<string, any>; spec: AggregateSpec; checkDefaultScope?: boolean };
@@ -118,10 +119,16 @@ function itemServiceWith(scope: SummaryScopeConfig, deps: ReturnType<typeof real
   return scope.scope === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 
-/** Constructor positions of the executor: spendItems 5, capexItems 17. */
-function executorFor(scope: SummaryScopeConfig, svc: unknown): AiAggregateExecutor {
-  const args: any[] = Array.from({ length: 22 }, () => ({}));
-  args[scope.scope === 'opex' ? 5 : 17] = svc;
+/**
+ * The executor's budget read engine: the all-natures list scope, so a `budget_lines`
+ * aggregate sees both natures. The AI cases add a `nature` filter to compare one scope.
+ */
+function executorFor(deps: ReturnType<typeof realSummaryDeps>): AiAggregateExecutor {
+  const args: any[] = Array.from({ length: 23 }, () => ({}));
+  args[1] = {
+    summaryAggregate: (query: any, spec: AggregateSpec, opts: { manager: any }) =>
+      engine.budgetListAggregate(SUMMARY_SCOPES.all, deps, query, spec, opts.manager),
+  };
   return new (AiAggregateExecutor as any)(...args);
 }
 
@@ -372,7 +379,7 @@ function amountKeys(full: boolean): { money: string[]; fte: string[] } {
 type Sample = Map<string, Array<string | number>>;
 
 function buildCases(r: ReturnType<typeof prng>, scope: SummaryScopeConfig, registry: AiEntityFilterRegistry, sample: Sample, axisIds: string[], sampleRows: any[]): Case[] {
-  const entity_type = scope.scope === 'opex' ? 'spend_items' : 'capex_items';
+  const entity_type = 'budget_lines';
   const cases: Case[] = [];
   // The line totals (`y_budget_staff_cost`...) have no former computation to compare with: the
   // ai-staff-cost spec compares them with the Cost per FTE report.
@@ -556,25 +563,64 @@ interface Env {
   registry: AiEntityFilterRegistry;
   context: any;
   rowsOf: (ids: string[]) => Promise<any[]>;
+  /** The per-nature presentation, for the engine specs (the CAPEX number is its CPX number). */
+  specRowsOf: (ids: string[]) => Promise<any[]>;
   reportingCurrency: string;
 }
 
 async function runAiCase(env: Env, c: Extract<Case, { kind: 'ai' }>): Promise<void> {
   const m = env.runner.manager;
-  const label = `[${env.scope.scope} seed ${SEED}] ${c.id} ${JSON.stringify(c.input)}`;
-  const e = await settle(env.runner, () => env.executor.execute(env.context, c.input as any));
+  // One family, both natures: the case reads the lines of this scope (the run compares one nature
+  // at a time, as the former per-nature executor did).
+  const input = { ...c.input, filters: { ...(c.input.filters ?? {}), nature: [env.scope.scope] } };
+  const label = `[${env.scope.scope} seed ${SEED}] ${c.id} ${JSON.stringify(input)}`;
+  const e = await settle(env.runner, () => env.executor.execute(env.context, input as any));
   const o = await settle(env.runner, async () => {
     // The former executor's budget path: adapted filters, the ids of every line of the state, their rows, grouped.
-    const adapted = adaptFilters(env.registry, c.input.filters);
+    const adapted = adaptFilters(env.registry, input.filters);
     // A refusal: an unknown field (`invalid_filter`) or a value outside a closed set (`invalid_filter_value`).
     if (adapted.ignored.length) return { status: invalidFilterResult(env.registry, adapted).status, groups: [], total: 0 };
-    const scoped = await env.svc.summaryIds({ q: c.input.q?.trim(), limit: 10_000, filters: adapted.filters, includeDisabled: true }, { manager: m });
-    const fn = c.input.function as any;
-    const metric = fn === 'count' ? null : { key: c.input.metric!, def: {} as any };
-    const groups = scoped.ids.length ? await aggregateBudgetSummaryByIds(env.rowsOf, env.registry, c.input.group_by, scoped.ids, fn, metric) : [];
+    // The oracle reads the unified engine, the same rows and field values as the AI: the input
+    // carries the scope's `nature` filter.
+    const scoped = await budgetReadService().summaryIds({ q: input.q?.trim(), limit: 10_000, filters: adapted.filters, includeDisabled: true }, { manager: m });
+    const fn = input.function as any;
+    const metric = fn === 'count' ? null : { key: input.metric!, def: {} as any };
+    const groups = scoped.ids.length ? await aggregateBudgetSummaryByIds(env.rowsOf, env.registry, input.group_by, scoped.ids, fn, metric) : [];
     return { status: undefined, groups, total: scoped.total, returned: groups.length, truncated: scoped.ids.length < scoped.total, complete: true, filters_applied: adapted.applied };
   });
   if (failed(label, e, o)) return;
+  // The unified scope plus the `nature` filter must select and total the same lines as the
+  // nature's own list scope (the per-nature engine the AI read before): same ids, same count,
+  // same common amounts, with the case's quick search and without it (`qs_items`).
+  const adapted = adaptFilters(env.registry, input.filters);
+  // The CAPEX list's grid draws the title under `description` (`fieldColumns`), while the unified
+  // grid has a title column (`product_name`) and the real description (`description`): a filter on
+  // the real description has no CAPEX list column, so that case compares no filter.
+  const capexGrid = env.scope.scope === 'capex';
+  const comparable = !(capexGrid && Object.prototype.hasOwnProperty.call(adapted.filters, 'description'));
+  if (adapted.ignored.length === 0 && comparable) {
+    const ownFilters = Object.fromEntries(Object.entries(adapted.filters).map(([key, value]) => [
+      capexGrid && key === 'product_name' ? 'description' : key,
+      value,
+    ]));
+    delete ownFilters.nature;
+    const compare = async (q: string | undefined) => {
+      const unified = await budgetReadService().summaryIds({ q, limit: 10_000, filters: adapted.filters, includeDisabled: true }, { manager: m });
+      const own = await env.svc.summaryIds({ q, limit: 10_000, filters: ownFilters, includeDisabled: true }, { manager: m });
+      same(`${label} nature scope: ids${q ? ` q=${q}` : ''}`, [...unified.ids].sort(), [...own.ids].sort());
+      same(`${label} nature scope: total${q ? ` q=${q}` : ''}`, unified.total, own.total);
+      const all = await budgetReadService().summaryTotals({ q, filters: adapted.filters }, { manager: m });
+      const scopedTotals = await env.svc.summaryTotals({ q, filters: ownFilters }, { manager: m });
+      const common = Object.keys(all).filter((key) => typeof all[key] !== 'object' && Object.prototype.hasOwnProperty.call(scopedTotals, key));
+      same(
+        `${label} nature scope: amounts${q ? ` q=${q}` : ''}`,
+        Object.fromEntries(common.map((key) => [key, all[key]])),
+        Object.fromEntries(common.map((key) => [key, scopedTotals[key]])),
+      );
+    };
+    await compare(input.q?.trim());
+    if (input.q) await compare(undefined);
+  }
   const refused = e.value.status === 'invalid_filter' || e.value.status === 'invalid_filter_value';
   const actual = refused
     ? { status: e.value.status, groups: e.value.groups, total: e.value.total }
@@ -604,7 +650,7 @@ async function runSpecCase(env: Env, c: Extract<Case, { kind: 'spec' }>): Promis
   }
   const o = await settle(env.runner, async () => {
     const { ids } = await engine.budgetListIds(env.scope, env.deps, c.query, m);
-    return referenceAggregate(await env.rowsOf(ids), c.spec);
+    return referenceAggregate(await env.specRowsOf(ids), c.spec);
   });
   if (failed(label, e, o)) return;
   const { reportingCurrency, ...rest } = e.value;
@@ -629,17 +675,25 @@ async function runScope(scope: SummaryScopeConfig, runner: QueryRunner, tenantId
   const deps = realSummaryDeps(scope);
   const svc = itemServiceWith(scope, deps);
   const context = { tenantId, userId: null, isPlatformHost: false, surface: 'chat', authMethod: 'jwt', manager: m };
-  const entityType = scope.scope === 'opex' ? 'spend_items' : 'capex_items';
+  const entityType = 'budget_lines';
   const registry = await resolveAiEntityRegistry(context as any, entityType);
 
   // Every line's row, built once (the rows do not depend on the list state), with Y+3 besides the fixed
   // years for the engine specs (the AI reads the fixed years only; an added year changes no fixed slot).
   const all = await svc.summaryIds({ includeDisabled: 'true' }, { manager: m });
   const rowsStarted = Date.now();
-  const rows: any[] = await svc.summaryRowsByIds(all.ids, { years: [Y + 3] }, { manager: m });
+  // The oracle's rows are the unified engine's rows (native title, real description, nature):
+  // the per-nature API presents the CAPEX title as `description`, which the AI no longer reads.
+  const rows: any[] = await budgetReadService().summaryRowsByIds(all.ids, { years: [Y + 3] }, { manager: m });
+  // The engine specs read the scope's own presentation (the CAPEX number is the CPX number the
+  // CAPEX list shows); the AI cases read the unified rows.
+  const scopeRows: any[] = await svc.summaryRowsByIds(all.ids, { years: [Y + 3] }, { manager: m });
+  for (const row of scopeRows) row.nature ??= scope.scope;
   const rowsSeconds = ((Date.now() - rowsStarted) / 1000).toFixed(1);
   const byId = new Map(rows.map((row) => [row.id, row]));
+  const byIdScope = new Map(scopeRows.map((row) => [row.id, row]));
   const rowsOf = async (ids: string[]) => ids.map((id) => byId.get(id)).filter(Boolean);
+  const specRowsOf = async (ids: string[]) => ids.map((id) => byIdScope.get(id)).filter(Boolean);
   const { reportingCurrency } = await svc.summaryTotals({ amounts: 'yBudget' }, { manager: m });
 
   // Values to draw filters from: the AI fields by their grid keys, and a few grid fields.
@@ -667,13 +721,42 @@ async function runScope(scope: SummaryScopeConfig, runner: QueryRunner, tenantId
   const r = prng(SEED ^ (scope.scope === 'opex' ? 0 : 0x2c1b3c6d));
   const cases = buildCases(r, scope, registry, sample, axisRows.map((a) => a.id), sampleRows);
   const digest = createHash('sha256').update(JSON.stringify(cases)).digest('hex').slice(0, 12);
-  const env: Env = { scope, runner, deps, svc, executor: executorFor(scope, svc), registry, context, rowsOf, reportingCurrency };
+  const env: Env = { scope, runner, deps, svc, executor: executorFor(deps), registry, context, rowsOf, specRowsOf, reportingCurrency };
   for (const c of cases) {
     if (c.kind === 'ai') await runAiCase(env, c);
     else await runSpecCase(env, c);
   }
   const ai = cases.filter((c) => c.kind === 'ai').length;
   console.log(`budget-aggregate-differential (${TENANT_SLUG ?? 'fixture'}, ${scope.scope}, seed ${SEED}${FULL ? ', full' : ''}): ${all.total} lines, ${cases.length} cases (${ai} AI, ${cases.length - ai} engine specs; digest ${digest}), ${checksRun - at.checks} checks, ${failures.length - at.failures} differences, ${stats.bothFailed - at.bothFailed} failed on both sides; groups compared ${stats.groups} (cases with no group ${stats.empty}, one ${stats.oneGroup}, several ${stats.several}; AI filters refused on both sides ${stats.invalidFilter}); rows built in ${rowsSeconds}s, ${((Date.now() - started) / 1000).toFixed(1)}s`);
+}
+
+/**
+ * The merged family on both natures at once: `group_by: nature` gives the OPEX and the CAPEX
+ * groups, their counts sum to the ungrouped total and their amounts to the overall amount, and a
+ * `nature` filter gives the same count as that nature's group.
+ */
+async function runBothNatures(runner: QueryRunner, tenantId: string): Promise<void> {
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+  const deps = realSummaryDeps(SUMMARY_SCOPES.all as any);
+  const executor = executorFor(deps);
+  const context = { tenantId, userId: null, isPlatformHost: false, surface: 'chat', authMethod: 'jwt', manager: runner.manager } as any;
+  const counts = (result: any) => Object.fromEntries(result.groups.map((group: any) => [group.key ?? '(none)', group.count]));
+  const cents = (value: number | null) => (value == null ? null : Math.round(value * 100));
+
+  const grouped = await executor.execute(context, { entity_type: 'budget_lines', group_by: 'nature', function: 'count' });
+  const all = await executor.execute(context, { entity_type: 'budget_lines', group_by: 'status', function: 'count' });
+  const byNature = counts(grouped);
+  same('budget_lines: group_by nature gives the two natures', Object.keys(byNature).sort(), ['capex', 'opex']);
+  same('budget_lines: the nature groups sum to the ungrouped total', byNature.opex + byNature.capex, all.total);
+  const opexOnly = await executor.execute(context, { entity_type: 'budget_lines', filters: { nature: ['opex'] }, group_by: 'status', function: 'count' });
+  const capexOnly = await executor.execute(context, { entity_type: 'budget_lines', filters: { nature: ['capex'] }, group_by: 'status', function: 'count' });
+  same('budget_lines: nature opex filter', opexOnly.total, byNature.opex);
+  same('budget_lines: nature capex filter', capexOnly.total, byNature.capex);
+
+  const amountByNature = await executor.execute(context, { entity_type: 'budget_lines', group_by: 'nature', metric: 'y_budget', function: 'sum' });
+  const amountAll = await executor.execute(context, { entity_type: 'budget_lines', group_by: 'status', metric: 'y_budget', function: 'sum' });
+  const summed = amountByNature.groups.reduce((total: number, group: any) => total + (group.value ?? 0), 0);
+  same('budget_lines: the nature amounts sum to the overall amount', cents(summed), cents(amountAll.overall?.value ?? null));
 }
 
 async function main() {
@@ -691,6 +774,7 @@ async function main() {
       tenantId = (await seedListFixture(runner, SEED)).tenantId;
     }
     for (const scope of SCOPES) await runScope(scope, runner, tenantId);
+    await runBothNatures(runner, tenantId);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

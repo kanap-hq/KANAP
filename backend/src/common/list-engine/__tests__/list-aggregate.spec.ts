@@ -24,7 +24,7 @@ function runtime(scope: 'opex' | 'capex' = 'opex', canReadAccounts = true): Budg
     tenantId: TENANT,
     currentYear: Y,
     fx: { rows: [{ setKey: 'live', year: Y, currency: 'USD', rate: 0.9 }], knownSets: [], reportingCurrency: 'EUR' },
-    axes: { ids: ['22222222-2222-4222-8222-222222222222'], defaultAxisId: '22222222-2222-4222-8222-222222222222' },
+    axes: { ids: ['22222222-2222-4222-8222-222222222222'], defaultAxisId: '22222222-2222-4222-8222-222222222222', appliesTo: [null] },
     costCenters: [{ id: '33333333-3333-4333-8333-333333333333', code: 'CC1', name: 'Root', path: 'Root', holder_id: null, holder_name: null }],
     ruleLabels: new Map([[Y, 'Headcount'], [Y + 1, 'Headcount']]),
   };

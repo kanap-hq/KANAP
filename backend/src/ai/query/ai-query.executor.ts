@@ -20,8 +20,8 @@ import {
 import { LocationsService } from '../../locations/locations.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProjectsService } from '../../portfolio/services';
-import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
-import { presentChildren } from '../../spend/budget-line-presentation';
+import { BudgetLinesService } from '../../spend/budget-lines.service';
+import { budgetLineReference } from '../../spend/budget-nature';
 import { TaskLinkedScopes, TasksService } from '../../spend/tasks.service';
 import { AllocationCalculatorService } from '../../spend/allocation-calculator.service';
 import { describeAllocationWarning } from '../../spend/allocation-distribution';
@@ -64,6 +64,7 @@ import { aiDataAccessNote } from './ai-data-access-note.util';
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
 import { hiddenContractLineCount } from '../../contracts/contract-relations';
 import { AiReadProbe, analyticsAxisFields, resolveAiEntityRegistry } from './registries';
+import { taskRelatedFamily } from './registries/tasks.registry';
 import { budgetFteFields, budgetLineTotalFieldsOf, budgetPairOfKey, isBudgetMoneyKey } from './registries/budget-amount-fields';
 import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
 import { entityNotFound, isUuid, resolveAiEntityReference } from '../ai-entity-reference.util';
@@ -100,7 +101,7 @@ function buildRef(
   if (entityType === 'documents') return `DOC-${itemNumber}`;
   if (entityType === 'incidents') return `INC-${itemNumber}`;
   if (entityType === 'technologies') return `TEC-${itemNumber}`;
-  if (entityType === 'spend_items' || entityType === 'capex_items') return `BL-${itemNumber}`;
+  if (entityType === 'budget_lines') return `BL-${itemNumber}`;
   return null;
 }
 
@@ -138,19 +139,53 @@ type AiReadableLinks = { budget: boolean; contracts: boolean; projects: boolean;
 function readableRelationCounts<T extends { opex: number; capex: number; contracts: number; projects: number; total: number }>(
   counts: T,
   reads: AiReadableLinks,
-): Omit<T, 'opex' | 'capex' | 'contracts' | 'projects'> & { opex: number | null; capex: number | null; contracts: number | null; projects: number | null } {
+): Omit<T, 'opex' | 'capex' | 'contracts' | 'projects' | 'total'> & { budget_lines: number | null; contracts: number | null; projects: number | null; total: number } {
   const unread = (shown: boolean, value: number) => (shown ? 0 : value);
+  const budgetLines = counts.opex + counts.capex;
+  // The old per-nature keys are not an alias of the merged count: they do not leave this function.
+  const { opex: _opex, capex: _capex, contracts: _contracts, projects: _projects, total: _total, ...rest } = counts;
   return {
-    ...counts,
-    opex: reads.budget ? counts.opex : null,
-    capex: reads.budget ? counts.capex : null,
+    ...rest,
+    budget_lines: reads.budget ? budgetLines : null,
     contracts: reads.contracts ? counts.contracts : null,
     projects: reads.projects ? counts.projects : null,
     total: counts.total
-      - unread(reads.budget, counts.opex + counts.capex)
+      - unread(reads.budget, budgetLines)
       - unread(reads.contracts, counts.contracts)
       - unread(reads.projects, counts.projects),
   };
+}
+
+/**
+ * The budget lines linked to another family, both natures in one list. `product_name` is the
+ * title of both (the CAPEX link read returns it as `description`); `nature` says which nature
+ * the line is. Null when the caller does not read the budget: not "none".
+ */
+function mergeLinkedBudgetLines(
+  opex: { items?: Array<{ id: string; product_name: string | null; item_number?: number | null }> } | null,
+  capex: { items?: Array<{ id: string; description: string | null; item_number?: number | null }> } | null,
+): { items: Array<{ id: string; reference: string | null; product_name: string | null; item_number: number | null; nature: 'opex' | 'capex' }> } | null {
+  if (!opex && !capex) return null;
+  return {
+    items: [
+      ...(opex?.items ?? []).map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.product_name, item_number: line.item_number ?? null, nature: 'opex' as const })),
+      ...(capex?.items ?? []).map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.description, item_number: line.item_number ?? null, nature: 'capex' as const })),
+    ],
+  };
+}
+
+/**
+ * A child row (link, attachment) under its native name: a CAPEX service presents its line as
+ * `capex_item_id`, which the AI surface does not use.
+ */
+function nativeLineChild<T extends Record<string, any>>(row: T): T {
+  if (!row || typeof row !== 'object' || !('capex_item_id' in row)) return row;
+  const { capex_item_id, ...rest } = row;
+  return { ...rest, spend_item_id: capex_item_id } as unknown as T;
+}
+
+function nativeLineChildren(rows: any[]): any[] {
+  return (rows ?? []).map(nativeLineChild);
 }
 
 function numericScalar(value: unknown): number | null {
@@ -332,7 +367,9 @@ function contractPageAmountTotals(rows: any[]): AiAmountTotals {
  * detail row already converted by `withDetailAiKeys`.
  */
 function analyticsAxisMetadata(row: any, registry: AiEntityFilterRegistry): AiEntityMetadata {
-  return Object.fromEntries(analyticsAxisFields(registry).map(({ key, grid }) => [key, scalar(row?.[grid] ?? row?.[key])]));
+  return Object.fromEntries(analyticsAxisFields(registry)
+    .filter(({ nature }) => !nature || !row?.nature || nature === row.nature)
+    .map(({ key, grid }) => [key, scalar(row?.[grid] ?? row?.[key])]));
 }
 
 /**
@@ -347,7 +384,11 @@ function withDetailAiKeys(row: Record<string, any> | undefined, registry: AiEnti
     if (key === 'analytics_value_ids' || parseAnalyticsFieldKey(key) || resolveFteField(key)) continue;
     output[key] = value;
   }
-  for (const { key, grid } of analyticsAxisFields(registry)) output[key] = row[grid] ?? null;
+  for (const { key, grid, nature } of analyticsAxisFields(registry)) {
+    // A dimension of the other nature stays out of a line's detail (blank, never a stale value).
+    if (nature && row.nature && nature !== row.nature) continue;
+    output[key] = row[grid] ?? null;
+  }
   for (const field of Object.values(budgetFteFields())) output[field.ai] = numericScalar(row[field.grid]);
   return output;
 }
@@ -360,7 +401,9 @@ function budgetItemMetadata(row: any, registry: AiEntityFilterRegistry): AiEntit
     account: scalar(row.account_display),
     owner_it: scalar(row.owner_it_name),
     owner_business: scalar(row.owner_business_name),
-    analytics_category: scalar(row.analytics_category_name),
+    analytics_category: registry.fields.analytics_category?.nature && registry.fields.analytics_category.nature !== row.nature
+      ? null
+      : scalar(row.analytics_category_name),
     ...analyticsAxisMetadata(row, registry),
     cost_center: scalar(row.cost_center_label),
     budget_holder: scalar(row.budget_holder_name),
@@ -458,8 +501,8 @@ function clipSummary(value: string | null | undefined): string | null {
 export const AI_QUERY_DEFAULT_LIMIT = 25;
 export const AI_QUERY_MAX_LIMIT = 50;
 export const AI_QUERY_FAMILY_MAX_LIMIT: Partial<Record<AiQueryEntityType, number>> = {
-  spend_items: 15,
-  capex_items: 15,
+  // Both natures in one family: the sum of the two former per-nature caps (15 each).
+  budget_lines: 30,
   applications: 30,
   // A technology lists up to 10 versions in use (`versions_in_use`): about 1,500 characters a row.
   technologies: 30,
@@ -517,11 +560,12 @@ function withoutHiddenLine<T extends { related_object_hidden?: true }>(row: T): 
 export class AiQueryExecutor {
   constructor(
     private readonly tasks: TasksService,
+    /** The unified read engine of the budget lines, both natures (`spend/budget-lines.service.ts`). */
+    private readonly budgetLines: BudgetLinesService,
     private readonly projects: PortfolioProjectsService,
     private readonly requests: PortfolioRequestsService,
     private readonly applications: ApplicationsService,
     private readonly assets: AssetsService,
-    private readonly spendItems: SpendItemsService,
     private readonly contracts: ContractsService,
     private readonly companies: CompaniesService,
     private readonly suppliers: SuppliersService,
@@ -533,7 +577,6 @@ export class AiQueryExecutor {
     private readonly chartOfAccounts: ChartOfAccountsService,
     private readonly analyticsCategories: AnalyticsCategoriesService,
     private readonly businessProcesses: BusinessProcessesService,
-    private readonly capexItems: CapexItemsService,
     private readonly contacts: ContactsService,
     private readonly interfaces: InterfacesService,
     private readonly connections: ConnectionsService,
@@ -648,11 +691,10 @@ export class AiQueryExecutor {
       query.include = 'supplier,owners,residency,hosting,counts,structure,instances,vulnerabilities';
       query.include_inactive = true;
     } else if (
-      entityType === 'spend_items'
+      entityType === 'budget_lines'
       || entityType === 'accounts'
       || entityType === 'analytics_categories'
       || entityType === 'business_processes'
-      || entityType === 'capex_items'
       || entityType === 'contracts'
       || entityType === 'chart_of_accounts'
       || entityType === 'companies'
@@ -705,7 +747,7 @@ export class AiQueryExecutor {
         due_date: scalar(row.due_date),
         phase: scalar(row.phase_name),
         labels: scalar(Array.isArray(row.labels) ? row.labels.join(', ') : null),
-        related: scalar(row.related_object_type),
+        related: scalar(taskRelatedFamily(row.related_object_type)),
         related_label: hiddenLine ? null : scalar(row.related_object_name),
         applications: scalar(Array.isArray(row.applications) ? row.applications.map((item: any) => item?.name).filter(Boolean).join(', ') : null),
         assets: scalar(Array.isArray(row.assets) ? row.assets.map((item: any) => item?.name).filter(Boolean).join(', ') : null),
@@ -840,8 +882,7 @@ export class AiQueryExecutor {
         data_residency: scalar(Array.isArray(row.data_residency)
           ? row.data_residency.map((entry: any) => typeof entry === 'string' ? entry : entry?.country_iso).filter(Boolean).join(', ')
           : null),
-        spend_count: count('spend_count'),
-        capex_count: count('capex_count'),
+        budget_lines_count: count('budget_lines_count'),
         contracts_count: count('contracts_count'),
         suites_count: numericScalar(row.suites_count),
         components_count: numericScalar(row.components_count),
@@ -850,54 +891,25 @@ export class AiQueryExecutor {
     });
   }
 
-  private mapSpendItem(row: any, registry: AiEntityFilterRegistry): AiEntitySummaryDto {
+  /**
+   * A budget line of either nature, in the native shape of the unified list: `product_name` is
+   * the title, `description` the description, and `nature` says which nature the line is.
+   */
+  private mapBudgetLine(row: any, registry: AiEntityFilterRegistry): AiEntitySummaryDto {
     const anchorYear = new Date().getFullYear();
     const summary = row.description
       ?? ([row.supplier_name, row.paying_company_name, row.account_display].filter(Boolean).join(' | ') || null);
-    return toEntitySummary('spend_items', {
+    return toEntitySummary('budget_lines', {
       id: row.id,
       reference: row.reference,
       item_number: row.item_number ?? null,
-      label: row.product_name || 'Untitled spend item',
+      label: row.product_name || (row.nature === 'capex' ? 'Untitled CAPEX line' : 'Untitled OPEX line'),
       status: row.status ?? null,
       summary,
       created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
-        ...budgetItemMetadata(row, registry),
-        budget_anchor_year: anchorYear,
-        ...budgetAmountMetadata(row, anchorYear),
-      },
-    });
-  }
-
-  /** Read descriptions in one tenant/nature-scoped batch without changing the CAPEX alias. */
-  private async withCapexDescriptions(context: AiExecutionContextWithManager, rows: any[]): Promise<void> {
-    if (!rows.length) return;
-    const descriptions: Array<{ id: string; description: string | null }> = await context.manager.query(
-      `SELECT id, description FROM spend_items
-        WHERE tenant_id = $1 AND nature = 'capex' AND id = ANY($2::uuid[])`,
-      [context.tenantId, rows.map((row) => row.id)],
-    );
-    const byId = new Map(descriptions.map((row) => [row.id, row.description]));
-    for (const row of rows) row.line_description = byId.get(row.id) ?? null;
-  }
-
-  private mapCapexItem(row: any, registry: AiEntityFilterRegistry): AiEntitySummaryDto {
-    const anchorYear = new Date().getFullYear();
-    const summary = row.line_description ?? row.notes
-      ?? ([row.company_name, row.supplier_name].filter(Boolean).join(' | ') || null);
-    return toEntitySummary('capex_items', {
-      id: row.id,
-      reference: row.reference,
-      item_number: row.item_number ?? null,
-      label: row.description || 'Untitled CAPEX item',
-      status: row.status ?? null,
-      summary,
-      created_at: row.created_at ?? null,
-      updated_at: row.updated_at ?? null,
-      metadata: {
-        line_description: scalar(row.line_description),
+        nature: scalar(row.nature),
         ...budgetItemMetadata(row, registry),
         budget_anchor_year: anchorYear,
         ...budgetAmountMetadata(row, anchorYear),
@@ -1426,14 +1438,13 @@ export class AiQueryExecutor {
   /** The totals of every line the query keeps (`amount_totals`) and of the page returned (`page_amount_totals`). */
   private async budgetTotals(
     context: AiExecutionContextWithManager,
-    entityType: 'spend_items' | 'capex_items',
     query: Record<string, any>,
     records: number,
     rows: any[],
     anchorYear: number,
     named: string[],
   ): Promise<{ amount_totals: AiAmountTotals; page_amount_totals: AiAmountTotals }> {
-    const amountTotals = await this.budgetAmountTotals(context, entityType, query, records);
+    const amountTotals = await this.budgetAmountTotals(context, query, records);
     const pageTotals = budgetPageAmountTotals(rows, anchorYear, amountTotals.currency);
     // The line totals (staff cost and FTE, day cost, days) of every line kept, and of the page's lines:
     // the five columns of the current year and the years and columns the filters or the sort name
@@ -1446,12 +1457,12 @@ export class AiQueryExecutor {
     const { page: _page, limit: _limit, sort: _sort, years: _years, ...listState } = query;
     const ids = rows.map((row) => row?.id).filter((id): id is string => typeof id === 'string');
     // One after the other: both read on the request's connection.
-    const all = await this.budgetLineTotals(context, entityType, listState, pairs);
+    const all = await this.budgetLineTotals(context, listState, pairs);
     // A page that holds every line kept sums as all of them: no second statement.
     let page = all;
     if (ids.length !== records) {
       page = ids.length
-        ? await this.budgetLineTotals(context, entityType, { ...listState, filters: { ...(listState.filters ?? {}), id: { filterType: 'set', values: ids } } }, pairs)
+        ? await this.budgetLineTotals(context, { ...listState, filters: { ...(listState.filters ?? {}), id: { filterType: 'set', values: ids } } }, pairs)
         : Object.fromEntries(budgetLineTotalFieldsOf(pairs).map((field) => [field.ai, isBudgetMoneyKey(field.ai) ? 0 : null]));
     }
     const note = ' The staff cost, staff FTE, day cost and days (`<year>_<column>_staff_cost`...) are summed for the current year\'s columns '
@@ -1471,17 +1482,15 @@ export class AiQueryExecutor {
    */
   private async budgetLineTotals(
     context: AiExecutionContextWithManager,
-    entityType: 'spend_items' | 'capex_items',
     listState: Record<string, any>,
     pairs: ReadonlySet<string>,
   ): Promise<Record<string, number | null>> {
-    const service = entityType === 'spend_items' ? this.spendItems : this.capexItems;
     const fields = budgetLineTotalFieldsOf(pairs);
     const values: Record<string, number | null> = {};
     // One statement per 50 sums: the engine takes at most 60 measures without group keys.
     for (let start = 0; start < fields.length; start += 50) {
       const chunk = fields.slice(start, start + 50);
-      const result = await service.summaryAggregate(
+      const result = await this.budgetLines.summaryAggregate(
         listState,
         { groupBy: [], measures: chunk.map((field, i) => ({ id: `m${i}`, fn: 'sum' as const, field: field.grid })) },
         { manager: context.manager },
@@ -1500,13 +1509,11 @@ export class AiQueryExecutor {
    */
   private async budgetAmountTotals(
     context: AiExecutionContextWithManager,
-    entityType: 'spend_items' | 'capex_items',
     query: Record<string, any>,
     records: number,
   ): Promise<AiAmountTotals> {
     const { page: _page, limit: _limit, sort: _sort, years: _years, ...listState } = query;
-    const service = entityType === 'spend_items' ? this.spendItems : this.capexItems;
-    const totals: any = await service.summaryTotals(listState, { manager: context.manager });
+    const totals: any = await this.budgetLines.summaryTotals(listState, { manager: context.manager });
     const values: Record<string, number> = {};
     for (const slot of FIXED_SLOTS) {
       for (const column of SUMMARY_COLUMNS) values[`${slot.ai}_${column.ai}`] = Number(totals?.[`${slot.key}${column.suffix}`] ?? 0);
@@ -1714,23 +1721,22 @@ export class AiQueryExecutor {
       };
     }
 
-    if (input.entity_type === 'capex_items') {
+    if (input.entity_type === 'budget_lines') {
       const anchorYear = new Date().getFullYear();
-      const result = await this.capexItems.summary(
+      const result = await this.budgetLines.summary(
         {
           ...scoped.query,
           years: budgetQueryYears(anchorYear).join(','),
         },
         { manager: context.manager },
       );
-      await this.withCapexDescriptions(context, result.items || []);
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
-      // The CAPEX list has no cap: the total is every matching line.
+      // The list has no cap: the total is every matching line of either nature.
       const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
-        items: (result.items || []).map((row: any) => this.mapCapexItem(row, registry)),
+        items: (result.items || []).map((row: any) => this.mapBudgetLine(row, registry)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -1739,36 +1745,7 @@ export class AiQueryExecutor {
         complete: isCompleteQueryResult(resultPage, truncated),
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
-        ...await this.budgetTotals(context, 'capex_items', scoped.query, result.total ?? 0, result.items || [], anchorYear, [...Object.keys(input.filters ?? {}), sort.applied.field]),
-        scope: null,
-      };
-    }
-
-    if (input.entity_type === 'spend_items') {
-      const anchorYear = new Date().getFullYear();
-      const result = await this.spendItems.summary(
-        {
-          ...scoped.query,
-          years: budgetQueryYears(anchorYear).join(','),
-        },
-        { manager: context.manager, includeNextYearAllocation: true },
-      );
-      const resultPage = result.page ?? page;
-      const resultLimit = result.limit ?? limit;
-      const returned = Array.isArray(result.items) ? result.items.length : 0;
-      // The OPEX list has no cap: the total is every matching line.
-      const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
-      return {
-        items: (result.items || []).map((row: any) => this.mapSpendItem(row, registry)),
-        total: result.total ?? 0,
-        page: resultPage,
-        limit: resultLimit,
-        returned,
-        truncated,
-        complete: isCompleteQueryResult(resultPage, truncated),
-        filters_applied: filtersApplied,
-        filters_ignored: filtersIgnored,
-        ...await this.budgetTotals(context, 'spend_items', scoped.query, result.total ?? 0, result.items || [], anchorYear, [...Object.keys(input.filters ?? {}), sort.applied.field]),
+        ...await this.budgetTotals(context, scoped.query, result.total ?? 0, result.items || [], anchorYear, [...Object.keys(input.filters ?? {}), sort.applied.field]),
         scope: null,
       };
     }
@@ -2167,8 +2144,8 @@ export class AiQueryExecutor {
   ): Promise<string> {
     const value = String(rawId || '').trim();
     if (!value) return value;
-    if ((entityType === 'spend_items' || entityType === 'capex_items') && /^(?:BL|OPX|CPX)-\d+$/i.test(value)) {
-      // The nature-specific item service resolves native and legacy references before loading.
+    if (entityType === 'budget_lines' && /^(?:BL|OPX|CPX)-\d+$/i.test(value)) {
+      // `BudgetLinesService.get` resolves native and legacy references (both natures) before loading.
       return value;
     }
     if (entityType === 'documents' || entityType === 'vulnerabilities') {
@@ -2199,7 +2176,7 @@ export class AiQueryExecutor {
 
   /** The person reads the budget: a project's or request's budget lines are named, else counted. */
   private async readsBudget(context: AiExecutionContextWithManager): Promise<boolean> {
-    return (await this.policy?.canReadEntityType(context, 'spend_items', context.manager)) === true;
+    return (await this.policy?.canReadEntityType(context, 'budget_lines', context.manager)) === true;
   }
 
   private toDetailResult(
@@ -2416,14 +2393,21 @@ export class AiQueryExecutor {
     );
   }
 
-  private async loadSpendItemDeepDetail(
+  /**
+   * The detail of one budget line, of either nature, read through `BudgetLinesService`: the
+   * unified list row (native fields), the versions, contacts, links and attachments under their
+   * native names (`spend_item_id`), and the linked records each on its module's read right.
+   */
+  private async loadBudgetLineDeepDetail(
     context: AiExecutionContextWithManager,
-    spendItemId: string,
+    lineId: string,
+    nature: 'opex' | 'capex',
     registry: AiEntityFilterRegistry,
   ): Promise<Record<string, unknown>> {
     const anchorYear = new Date().getFullYear();
-    const [row] = await this.spendItems.summaryRowsByIds(
-      [spendItemId],
+    const reads = await this.readableLinks(context);
+    const [row] = await this.budgetLines.summaryRowsByIds(
+      [lineId],
       {
         years: budgetQueryYears(anchorYear),
         includeRecipientDetails: true,
@@ -2433,7 +2417,6 @@ export class AiQueryExecutor {
       { manager: context.manager },
     );
     const summary = withDetailAiKeys(row, registry);
-    const reads = await this.readableLinks(context);
 
     const [
       financialVersions,
@@ -2448,18 +2431,22 @@ export class AiQueryExecutor {
         versionTable: 'spend_versions',
         amountTable: 'spend_amounts',
         itemColumn: 'spend_item_id',
-        itemId: spendItemId,
+        itemId: lineId,
       }),
       this.loadLinkedContacts(context, {
         table: 'spend_item_contacts',
         foreignKey: 'spend_item_id',
-        id: spendItemId,
+        id: lineId,
       }).catch(() => []),
-      reads.applications ? this.spendItems.listApplications(spendItemId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
-      reads.projects ? this.spendItems.listProjects(spendItemId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
-      reads.contracts ? this.contracts.listContractsForSpendItem(spendItemId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
-      this.spendItems.listLinks(spendItemId, { manager: context.manager }).catch(() => []),
-      this.spendItems.listAttachments(spendItemId, { manager: context.manager }).catch(() => []),
+      reads.applications ? this.budgetLines.listApplications(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] })) : null,
+      reads.projects ? this.budgetLines.listProjects(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] })) : null,
+      reads.contracts
+        ? (nature === 'opex'
+          ? this.contracts.listContractsForSpendItem(lineId, { manager: context.manager })
+          : this.contracts.listContractsForCapexItem(lineId, { manager: context.manager })).catch(() => ({ items: [] }))
+        : null,
+      this.budgetLines.listLinks(lineId, nature, { manager: context.manager }).catch(() => []),
+      this.budgetLines.listAttachments(lineId, nature, { manager: context.manager }).catch(() => []),
     ]);
 
     return {
@@ -2470,63 +2457,16 @@ export class AiQueryExecutor {
       linked_applications: linkedApplications,
       projects: linkedProjects,
       linked_contracts: linkedContracts,
-      links,
-      attachments,
-    };
-  }
-
-  private async loadCapexItemDeepDetail(
-    context: AiExecutionContextWithManager,
-    capexItemId: string,
-    registry: AiEntityFilterRegistry,
-  ): Promise<Record<string, unknown>> {
-    const anchorYear = new Date().getFullYear();
-    const reads = await this.readableLinks(context);
-    const [[row], financialVersions, contacts, linkedApplications, linkedProjects, linkedContracts] = await Promise.all([
-      this.capexItems.summaryRowsByIds(
-        [capexItemId],
-        {
-          years: budgetQueryYears(anchorYear),
-          includeRecipientDetails: true,
-          includeLatestTask: true,
-          includeNextYearAllocation: true,
-        },
-        { manager: context.manager },
-      ),
-      // The CAPEX line lives in the `spend_*` family (lot Z1); its id comes from `capexItems.get`,
-      // which answers 404 for a line of the other nature (`spend/budget-nature.ts`).
-      this.loadFinancialVersions(context, {
-        versionTable: 'spend_versions',
-        amountTable: 'spend_amounts',
-        itemColumn: 'spend_item_id',
-        itemId: capexItemId,
-      }),
-      this.loadLinkedContacts(context, {
-        table: 'spend_item_contacts',
-        foreignKey: 'spend_item_id',
-        id: capexItemId,
-      }).catch(() => []),
-      reads.applications ? this.capexItems.listApplications(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
-      reads.projects ? this.capexItems.listProjects(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
-      reads.contracts ? this.contracts.listContractsForCapexItem(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
-    ]);
-    const summary = withDetailAiKeys(row, registry);
-
-    return {
-      ...(summary ?? {}),
-      financial_summary: summary ?? null,
-      // The children name their line as the CAPEX contract does (`capex_item_id`).
-      financial_versions: presentChildren('capex', financialVersions),
-      contacts: presentChildren('capex', contacts),
-      linked_applications: linkedApplications,
-      projects: linkedProjects,
-      linked_contracts: linkedContracts,
+      // The native child names: both natures carry `spend_item_id`, never the CAPEX alias.
+      links: nativeLineChildren(links),
+      attachments: nativeLineChildren(attachments),
     };
   }
 
   private async loadContractDeepDetail(
     context: AiExecutionContextWithManager,
     contractId: string,
+    linkedSpendItems: Array<{ id: string; product_name: string | null; item_number?: number | null }> | null,
   ): Promise<Record<string, unknown>> {
     const rows = await context.manager.query(
       `
@@ -2566,7 +2506,19 @@ export class AiQueryExecutor {
       reads.budget ? this.contracts.listLinkedCapexItems(contractId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
       this.contracts.listTasks(contractId, { manager: context.manager }).catch(() => []),
     ]);
-    // What the contract covers, each family on its module's read right (as `linked_spend_items`):
+    // The contract's budget lines, both natures in one list: the OPEX lines come with the contract
+    // (`contracts.get`), the CAPEX lines from their own link read. Null without the budget right,
+    // which is not "none".
+    const linkedBudgetLines = reads.budget
+      ? {
+        items: [
+          ...(linkedSpendItems ?? []).map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.product_name, nature: 'opex' as const })),
+          ...((linkedCapexItems?.items ?? []) as Array<{ id: string; description: string | null; item_number?: number | null }>)
+            .map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.description, nature: 'capex' as const })),
+        ],
+      }
+      : null;
+    // What the contract covers, each family on its module's read right:
     // null when the caller does not read it, so the answer never reads it as "none".
     const covered = async (family: 'applications' | 'assets' | 'technologies', readable: boolean) => {
       if (!readable) return null;
@@ -2593,9 +2545,7 @@ export class AiQueryExecutor {
           }
         : null,
       contacts,
-      // The OPEX lines come with the contract (`contracts.get`): both natures need the budget right.
-      ...(reads.budget ? {} : { linked_spend_items: null }),
-      linked_capex_items: linkedCapexItems,
+      linked_budget_lines: linkedBudgetLines,
       budget_lines_outside_access: linesOutsideAccess,
       linked_applications: linkedApplications,
       linked_assets: linkedAssets,
@@ -2662,7 +2612,7 @@ export class AiQueryExecutor {
     const reads = this.readProbe(context);
     // One after the other: the probes share the request's connection.
     return {
-      budget: await reads('spend_items'),
+      budget: await reads('budget_lines'),
       contracts: await reads('contracts'),
       projects: await reads('projects'),
       applications: await reads('applications'),
@@ -2703,7 +2653,11 @@ export class AiQueryExecutor {
         linkedScopes: await this.taskLinkedScopes(context),
       });
       if (!row) throw new NotFoundException('Task not found.');
-      return this.toDetailResult(this.mapTask(row), withoutHiddenLine(row));
+      const task: any = withoutHiddenLine(row);
+      // The stored `spend_item` / `capex_item` never reaches the model: both natures are one
+      // `budget_line` family on the AI surface.
+      if (task.related_object_type) task.related_object_type = taskRelatedFamily(task.related_object_type);
+      return this.toDetailResult(this.mapTask(row), task);
     }
 
     if (entityType === 'projects') {
@@ -2759,28 +2713,24 @@ export class AiQueryExecutor {
         row.supplier_name = supplierRows[0]?.name ?? null;
       }
       if (row.relation_counts) {
-        row.spend_count = row.relation_counts.opex;
-        row.capex_count = row.relation_counts.capex;
+        row.budget_lines_count = row.relation_counts.budget_lines;
         row.contracts_count = row.relation_counts.contracts;
       }
-      if (!reads.budget) {
-        row.spend_count = null;
-        row.capex_count = null;
-      }
+      if (!reads.budget) row.budget_lines_count = null;
       if (!reads.contracts) row.contracts_count = null;
-      row.linked_spend_items = reads.budget
-        ? await this.applications.listLinkedSpendItems(entityId, {
-          manager: context.manager,
-          tenantId: context.tenantId,
-          accessScope,
-        }).catch(() => ({ items: [] }))
-        : null;
-      row.linked_capex_items = reads.budget
-        ? await this.applications.listLinkedCapexItems(entityId, {
-          manager: context.manager,
-          tenantId: context.tenantId,
-          accessScope,
-        }).catch(() => ({ items: [] }))
+      row.linked_budget_lines = reads.budget
+        ? mergeLinkedBudgetLines(
+          await this.applications.listLinkedSpendItems(entityId, {
+            manager: context.manager,
+            tenantId: context.tenantId,
+            accessScope,
+          }).catch(() => ({ items: [] })),
+          await this.applications.listLinkedCapexItems(entityId, {
+            manager: context.manager,
+            tenantId: context.tenantId,
+            accessScope,
+          }).catch(() => ({ items: [] })),
+        )
         : null;
       row.linked_contracts = reads.contracts
         ? await this.applications.listLinkedContracts(entityId, {
@@ -2820,11 +2770,11 @@ export class AiQueryExecutor {
       row.support_contacts = await this.assets.listSupportContacts(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
       row.relations = await this.assets.listRelations(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ outgoing: [], incoming: [] }));
       const reads = await this.readableLinks(context);
-      row.linked_spend_items = reads.budget
-        ? await this.assets.listLinkedSpendItems(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }))
-        : null;
-      row.linked_capex_items = reads.budget
-        ? await this.assets.listLinkedCapexItems(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }))
+      row.linked_budget_lines = reads.budget
+        ? mergeLinkedBudgetLines(
+          await this.assets.listLinkedSpendItems(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] })),
+          await this.assets.listLinkedCapexItems(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] })),
+        )
         : null;
       row.linked_contracts = reads.contracts
         ? await this.assets.listLinkedContracts(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }))
@@ -2840,34 +2790,30 @@ export class AiQueryExecutor {
       return this.toDetailResult(this.mapAsset(row), row);
     }
 
-    if (entityType === 'spend_items') {
-      const row: any = await this.spendItems.get(entityId, { manager: context.manager });
-      if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Spend item not found.');
-      await this.withoutHiddenAnalyticsValues(context, row, 'opex');
+    if (entityType === 'budget_lines') {
+      // The unified read engine resolves BL-n, a legacy OPX-n or CPX-n, a bare number or a UUID,
+      // and answers the line of either nature (`resolveBudgetLine`).
+      const row: any = await this.budgetLines.get(entityId, { manager: context.manager });
+      if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Budget line not found.');
+      // The workspace's own read adds its picker references, its change-of-type lineage and, for a
+      // limited person, whether the line is editable: none of them is part of the AI's detail.
+      delete row.references;
+      delete row.lineage;
+      delete row.editable;
+      await this.withoutHiddenAnalyticsValues(context, row, row.nature);
       const registry = await resolveAiEntityRegistry(context, entityType, this.readProbe(context));
       // The id, not the reference the caller may have given (`get` accepts both).
-      Object.assign(row, await this.loadSpendItemDeepDetail(context, row.id as string, registry));
-      return this.toDetailResult(this.mapSpendItem(row, registry), row);
-    }
-
-    if (entityType === 'capex_items') {
-      const row: any = await this.capexItems.get(entityId, { manager: context.manager });
-      if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('CAPEX item not found.');
-      // The id, not the reference the caller may have given (`get` accepts both).
-      const capexItemId = row.id as string;
-      await this.withoutHiddenAnalyticsValues(context, row, 'capex');
-      await this.withCapexDescriptions(context, [row]);
-      const registry = await resolveAiEntityRegistry(context, entityType, this.readProbe(context));
-      Object.assign(row, await this.loadCapexItemDeepDetail(context, capexItemId, registry));
-      row.links = await this.capexItems.listLinks(capexItemId, { manager: context.manager }).catch(() => []);
-      row.attachments = await this.capexItems.listAttachments(capexItemId, { manager: context.manager }).catch(() => []);
-      return this.toDetailResult(this.mapCapexItem(row, registry), row);
+      Object.assign(row, await this.loadBudgetLineDeepDetail(context, row.id as string, row.nature, registry));
+      return this.toDetailResult(this.mapBudgetLine(row, registry), row);
     }
 
     if (entityType === 'contracts') {
       const row: any = await this.contracts.get(entityId, { manager: context.manager });
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Contract not found.');
-      Object.assign(row, await this.loadContractDeepDetail(context, entityId));
+      // The OPEX lines come with the contract; the loader merges both natures into one list.
+      const linkedSpendItems = Array.isArray(row.linked_spend_items) ? row.linked_spend_items : null;
+      delete row.linked_spend_items;
+      Object.assign(row, await this.loadContractDeepDetail(context, entityId, linkedSpendItems));
       const coveredApplications = row.linked_applications ? coveredRecordsText(row.linked_applications.items) : null;
       return this.toDetailResult(this.mapContract(row, coveredApplications), row);
     }
@@ -3264,11 +3210,10 @@ export class AiQueryExecutor {
     } else if (input.entity_type === 'applications') {
       query.include_inactive = true;
     } else if (
-      input.entity_type === 'spend_items'
+      input.entity_type === 'budget_lines'
       || input.entity_type === 'accounts'
       || input.entity_type === 'analytics_categories'
       || input.entity_type === 'business_processes'
-      || input.entity_type === 'capex_items'
       || input.entity_type === 'chart_of_accounts'
       || input.entity_type === 'contracts'
       || input.entity_type === 'companies'
@@ -3308,12 +3253,8 @@ export class AiQueryExecutor {
         tenantId: context.tenantId,
         accessScope,
       }) as any;
-    } else if (input.entity_type === 'spend_items') {
-      raw = await this.spendItems.summaryFilterValues(query, {
-        manager: context.manager,
-      }) as any;
-    } else if (input.entity_type === 'capex_items') {
-      raw = await this.capexItems.summaryFilterValues(query, {
+    } else if (input.entity_type === 'budget_lines') {
+      raw = await this.budgetLines.summaryFilterValues(query, {
         manager: context.manager,
       }) as any;
     } else if (input.entity_type === 'contracts') {

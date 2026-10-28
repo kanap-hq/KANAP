@@ -33,7 +33,7 @@ function setup(existing: boolean) {
   return { service, context, audited, calls };
 }
 
-function preview(entityType: 'spend_items' | 'capex_items'): any {
+function preview(entityType: 'budget_lines'): any {
   return {
     id: 'preview-1',
     target_entity_type: entityType,
@@ -46,22 +46,20 @@ function preview(entityType: 'spend_items' | 'capex_items'): any {
 }
 
 async function testExistingYearIsRefused() {
-  for (const entityType of ['spend_items', 'capex_items'] as const) {
-    const { service, context, audited, calls } = setup(true);
-    await assert.rejects(
-      service.executePreview(context, preview(entityType)),
-      (error: unknown) => error instanceof ConflictException && /already has a budget version for 2027/.test((error as Error).message),
-      `${entityType}: a year created since the preview is refused`,
-    );
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0].opts?.refuseExisting, true, `${entityType}: the AI asks the service to refuse an existing year`);
-    assert.deepEqual(audited, [], `${entityType}: no AI "create" is audited`);
-  }
+  const { service, context, audited, calls } = setup(true);
+  await assert.rejects(
+    service.executePreview(context, preview('budget_lines')),
+    (error: unknown) => error instanceof ConflictException && /already has a budget version for 2027/.test((error as Error).message),
+    'a year created since the preview is refused',
+  );
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].opts?.refuseExisting, true, 'the AI asks the service to refuse an existing year');
+  assert.deepEqual(audited, [], 'no AI "create" is audited');
 }
 
 async function testNewYearIsCreatedAndAudited() {
   const { service, context, audited, calls } = setup(false);
-  const target = preview('spend_items');
+  const target = preview('budget_lines');
   // The created version is read back for the preview's reference.
   (service as any).resolveVersionById = async () => ({ id: 'version-1', ref: 'Y2027', label: 'Y2027', row: { id: 'version-1' } });
   await service.executePreview(context, target);
@@ -87,7 +85,7 @@ async function testNewLineAmountsCreateTheVersionThenTheAmounts() {
     calls.push({ itemId, opts: { refuseExisting: true } });
     return { id: 'version-1' };
   };
-  await service.writeNewLineAmounts(context, preview('spend_items'), 'spend_items', ITEM_ID, { kind: 'annual', year: 2026, totals: { planned: 12000 } });
+  await service.writeNewLineAmounts(context, preview('budget_lines'), ITEM_ID, { kind: 'annual', year: 2026, totals: { planned: 12000 } });
   assert.deepEqual(versionFields, [{ version_name: 'Y2026', budget_year: 2026, as_of_date: '2026-01-01', input_grain: 'annual' }]);
   assert.deepEqual(upserts, [{ versionId: 'version-1', amounts: { kind: 'annual', year: 2026, totals: { planned: '12000' } } }]);
   assert.deepEqual(audited.map((entry: any) => [entry.table, entry.action]), [['spend_versions', 'create'], ['spend_amounts', 'update']]);
@@ -99,16 +97,20 @@ async function testLineIsFoundByItsReference() {
   const queries: Array<{ sql: string; params: unknown[] }> = [];
   context.manager.query = async (sql: string, params: unknown[]) => {
     queries.push({ sql, params });
-    return [{ id: ITEM_ID, product_name: 'QA Test', item_number: 146 }];
+    return [{ id: ITEM_ID, nature: 'opex', product_name: 'QA Test', item_number: 146 }];
   };
-  const item = await (service as any).resolveItem(context, 'spend_items', 'BL-146');
+  const item = await (service as any).resolveItem(context, 'BL-146');
   assert.equal(item.id, ITEM_ID);
+  assert.equal(item.ref, 'BL-146');
+  assert.equal(item.nature, 'opex');
   assert.deepEqual(queries[0].params, ['tenant-1', 'BL-146', 146, null]);
-  assert.match(queries[0].sql, /nature = 'opex'/);
-  await (service as any).resolveItem(context, 'capex_items', 'CPX-7');
-  assert.deepEqual(queries[1].params, ['tenant-1', 'CPX-7', -1, 'CPX-7']);
-  await (service as any).resolveItem(context, 'spend_items', 'Monitoring');
-  assert.deepEqual(queries[2].params, ['tenant-1', 'Monitoring', -1, null]);
+  assert.match(queries[0].sql, /nature IN \('opex', 'capex'\)/);
+  await (service as any).resolveItem(context, 'CPX-7');
+  assert.deepEqual(queries[1].params, ['tenant-1', 'CPX-7', null, 'CPX-7']);
+  await (service as any).resolveItem(context, 'OPX-7');
+  assert.deepEqual(queries[2].params, ['tenant-1', 'OPX-7', null, 'OPX-7']);
+  await (service as any).resolveItem(context, 'Monitoring');
+  assert.deepEqual(queries[3].params, ['tenant-1', 'Monitoring', null, null]);
 }
 
 async function main() {

@@ -796,6 +796,8 @@ const TASK_SORT_EXPRESSIONS: Record<string, string> = {
       ELSE ''
     END)`,
   related_object_type: 't.related_object_type',
+  // The family the assistant shows and groups by: both stored budget line values read `budget_line`.
+  related_family: `CASE WHEN t.related_object_type IN ('spend_item', 'capex_item') THEN 'budget_line' ELSE t.related_object_type END`,
   task_type_name: 'tt.name',
   phase_name: 'phase.name',
   priority_level: 't.priority_level',

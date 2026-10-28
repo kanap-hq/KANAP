@@ -787,7 +787,7 @@ export class ContractsService {
     const linked = await linksRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
     const spendIds = linked.map(l => l.spend_item_id);
     const spendItems = spendIds.length
-      ? await mg.query(`SELECT id, product_name FROM spend_items WHERE tenant_id = $1 AND id = ANY($2) AND nature = 'opex'`, [tenantId, spendIds])
+      ? await mg.query(`SELECT id, product_name, item_number FROM spend_items WHERE tenant_id = $1 AND id = ANY($2) AND nature = 'opex'`, [tenantId, spendIds])
       : [];
     const links = await urlsRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
     const attachments = await attachRepo.find({ where: { tenant_id: tenantId, contract_id: id } });
@@ -1674,8 +1674,8 @@ export class ContractsService {
   // Inverse links from Contract side: the contract's CAPEX lines, their title as `description`.
   async listLinkedCapexItems(contractId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const items: Array<{ id: string; description: string }> = await mg.query(
-      `SELECT i.id, i.product_name AS description
+    const items: Array<{ id: string; description: string; item_number: number | null }> = await mg.query(
+      `SELECT i.id, i.product_name AS description, i.item_number
          FROM contract_spend_items l
          JOIN spend_items i ON i.tenant_id = l.tenant_id AND i.id = l.spend_item_id AND i.nature = 'capex'
         WHERE l.tenant_id = app_current_tenant() AND l.contract_id = $1`,

@@ -20,6 +20,7 @@ import {
   TABLES,
 } from '../../spend/__tests__/round-inputs.fixtures';
 import { itemService } from '../../spend/__tests__/cost-center.fixtures';
+import { budgetReadService } from '../../spend/__tests__/budget-lines.fixtures';
 import { realAllocationCalculator } from '../../spend/__tests__/oracle/oracle-deps';
 
 // FTE in the AI layer, on OPEX and CAPEX, against the database:
@@ -33,7 +34,7 @@ import { realAllocationCalculator } from '../../spend/__tests__/oracle/oracle-de
 
 const Y = new Date().getFullYear();
 const KINDS: Kind[] = ['opex', 'capex'];
-const ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
+const ENTITY: Record<Kind, 'budget_lines'> = { opex: 'budget_lines', capex: 'budget_lines' };
 const ENGINE_KEY = /^fte_/;
 
 function context(runner: QueryRunner, tenantId: string): AiExecutionContextWithManager {
@@ -50,17 +51,19 @@ function context(runner: QueryRunner, tenantId: string): AiExecutionContextWithM
 const noContracts = { listContractsForSpendItem: async () => ({ items: [] }), listContractsForCapexItem: async () => ({ items: [] }) };
 
 // Constructor positions (both executors): spendItems 5, contracts 6, capexItems 17; the query executor's allocation calculator 23.
-function queryExecutor(kind: Kind): AiQueryExecutor {
-  const args: any[] = Array.from({ length: 24 }, () => ({}));
-  args[kind === 'opex' ? 5 : 17] = itemService(kind);
+function queryExecutor(): AiQueryExecutor {
+  const args: any[] = Array.from({ length: 25 }, () => ({}));
+  args[1] = budgetReadService();
   args[6] = noContracts;
-  args[23] = realAllocationCalculator();
+  args[22] = realAllocationCalculator();
+  args[23] = { canReadEntityType: async () => true };
   return new (AiQueryExecutor as any)(...args);
 }
 
-function aggregateExecutor(kind: Kind): AiAggregateExecutor {
-  const args: any[] = Array.from({ length: 22 }, () => ({}));
-  args[kind === 'opex' ? 5 : 17] = itemService(kind);
+function aggregateExecutor(): AiAggregateExecutor {
+  const args: any[] = Array.from({ length: 23 }, () => ({}));
+  args[1] = budgetReadService();
+  args[21] = { canReadEntityType: async () => true };
   return new (AiAggregateExecutor as any)(...args);
 }
 
@@ -127,7 +130,7 @@ async function testRegistryListsFteFields() {
 async function testQueryFilterSortAndMetadata(kind: Kind) {
   await withFte(kind, async (runner, seed) => {
     const ctx = context(runner, seed.tenantId);
-    const query = queryExecutor(kind);
+    const query = queryExecutor();
     const labels = (result: any) => result.items.map((item: any) => item.label);
 
     const counted: any = await query.execute(ctx, { entity_type: ENTITY[kind], filters: { y_budget_fte: { op: 'gt', value: 0 } } });
@@ -150,7 +153,7 @@ async function testQueryFilterSortAndMetadata(kind: Kind) {
 async function testAggregateIsExact(kind: Kind) {
   await withFte(kind, async (runner, seed) => {
     const ctx = context(runner, seed.tenantId);
-    const aggregate = aggregateExecutor(kind);
+    const aggregate = aggregateExecutor();
     const run = (fn: string) => aggregate.execute(ctx, { entity_type: ENTITY[kind], group_by: 'currency', metric: 'y_budget_fte', function: fn as any });
 
     const summed: any = await run('sum');
@@ -175,7 +178,7 @@ async function testAggregateIsExact(kind: Kind) {
 
 async function testDetailUsesAiKeys(kind: Kind) {
   await withFte(kind, async (runner, seed) => {
-    const detail: any = await queryExecutor(kind).executeDetail(context(runner, seed.tenantId), { entity_type: ENTITY[kind], entity_id: seed.items.alpha });
+    const detail: any = await queryExecutor().executeDetail(context(runner, seed.tenantId), { entity_type: ENTITY[kind], entity_id: seed.items.alpha });
     assert.equal(detail.entity.metadata.y_budget_fte, 0.1, `${kind}: detail metadata`);
     assert.equal(detail.data.y_budget_fte, 0.1, `${kind}: detail data under the AI key`);
     assert.equal(detail.data.y_forecast_fte, null, `${kind}: a column without a round is unknown`);

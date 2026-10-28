@@ -32,8 +32,7 @@ const DELETE_RECORD_FAMILIES: Readonly<Record<string, { resource: string; level:
   tasks: { resource: 'tasks', level: 'admin' },
   contacts: { resource: 'contacts', level: 'admin' },
   locations: { resource: 'locations', level: 'member' },
-  spend_items: { resource: 'budget', level: 'admin' },
-  capex_items: { resource: 'budget', level: 'admin' },
+  budget_lines: { resource: 'budget', level: 'admin' },
   connections: { resource: 'infrastructure', level: 'member' },
   interfaces: { resource: 'applications', level: 'admin' },
   documents: { resource: 'knowledge', level: 'admin' },
@@ -73,14 +72,12 @@ const RELATION_TARGET_REQUIREMENTS: Readonly<Record<string, Readonly<Record<stri
   projects: {
     applications: { resource: 'applications', level: 'reader' },
     assets: { resource: 'infrastructure', level: 'reader' },
-    spend_items: { resource: 'budget', level: 'reader' },
-    capex_items: { resource: 'budget', level: 'reader' },
+    budget_lines: { resource: 'budget', level: 'reader' },
   },
   requests: {
     applications: { resource: 'applications', level: 'reader' },
     assets: { resource: 'infrastructure', level: 'reader' },
-    spend_items: { resource: 'budget', level: 'reader' },
-    capex_items: { resource: 'budget', level: 'reader' },
+    budget_lines: { resource: 'budget', level: 'reader' },
     business_processes: { resource: 'business_processes', level: 'member' },
   },
 };

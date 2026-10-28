@@ -53,8 +53,26 @@ runSpecs('budget-lines-union.integration.spec', [
   }],
   ['native rows, BL pagination, quick search, tasks and mixed neighbors', async () => {
     await inRolledBackTransaction(async (runner) => {
-      const { lines, dimensions } = await seedBudgetLines(runner);
+      const { tenantId, lines, dimensions } = await seedBudgetLines(runner);
       const m = runner.manager;
+      // A stale value of the CAPEX line on the OPEX-only dimension (the values stay in the
+      // database): the cell stays blank, and the filter and the quick search both read the link
+      // of the line's nature, so neither names the CAPEX line.
+      const opexAxis = dimensions.find((axis) => axis.appliesTo === 'opex')!;
+      const capexLine = lines.find((line) => line.nature === 'capex')!;
+      await runner.query(
+        `INSERT INTO spend_item_analytics_values (tenant_id, item_id, axis_id, category_id)
+         SELECT $1, $2, $3, c.id FROM analytics_categories c WHERE c.tenant_id = $1 AND c.axis_id = $3 LIMIT 1`,
+        [tenantId, capexLine.itemId, opexAxis.id],
+      );
+      const capexRow = (await engine.budgetListSummary(SUMMARY_SCOPES.all, deps, { filters: { nature: { filterType: 'set', values: ['capex'] } }, limit: 10 }, m)).items[0];
+      assert.equal(capexRow[`analytics_${opexAxis.id}`] ?? null, null, 'the cell of a dimension of the other nature stays blank');
+      const staleSearch = await engine.budgetListIds(SUMMARY_SCOPES.all, deps, { q: 'opex value' }, m);
+      assert.deepEqual(
+        [...staleSearch.ids].sort(),
+        lines.filter((line) => line.nature === 'opex').map((line) => line.itemId).sort(),
+        'the quick search reads the dimension link of the line\'s nature',
+      );
       for (const axis of dimensions) {
         const field = `analytics_${axis.id}`;
         const values = await engine.budgetListFilterValues(SUMMARY_SCOPES.all, deps, { fields: field }, m);

@@ -95,6 +95,17 @@ async function rejection(fn: () => Promise<unknown>): Promise<Error> {
   throw new Error('expected a refusal');
 }
 
+function assertModuleRight(err: Error, resource: string, level: string, message: string): void {
+  assert.ok(err instanceof ForbiddenException, 'a ForbiddenException');
+  assert.deepEqual(err.getResponse(), {
+    statusCode: 403,
+    error: 'Forbidden',
+    code: 'MODULE_RIGHT_REQUIRED',
+    message,
+    params: { resource, level },
+  });
+}
+
 async function ids(runner: QueryRunner, table: string, column: string, ownerColumn: string, ownerId: string): Promise<string[]> {
   const rows: Array<{ id: string }> = await runner.query(
     `SELECT ${column} AS id FROM ${table} WHERE ${ownerColumn} = $1`,
@@ -411,16 +422,14 @@ async function testRefusals() {
 
     const noProcess = req(runner, seed, { portfolio_requests: 'contributor' });
     const noRead = await rejection(() => http.linkRelation(missing, 'processes', { id: 'nope' }, noProcess));
-    assert.ok(noRead instanceof ForbiddenException);
-    assert.equal(noRead.message, 'You cannot read this module.');
+    assertModuleRight(noRead, 'business_processes', 'reader', 'You cannot read this module.');
     const readerOnly = req(runner, seed, { portfolio_requests: 'contributor', business_processes: 'reader' });
     const noEdit = await rejection(() => http.unlinkRelation(seed.requestId, 'processes', 'nope', readerOnly));
-    assert.ok(noEdit instanceof ForbiddenException);
-    assert.equal(noEdit.message, 'You cannot edit this module.');
+    assertModuleRight(noEdit, 'business_processes', 'member', 'You cannot edit this module.');
 
     const noBudget = req(runner, seed, { portfolio_requests: 'contributor', business_processes: 'member' });
     const noBudgetRead = await rejection(() => http.linkRelation(seed.requestId, 'budget_lines', { id: 'nope' }, noBudget));
-    assert.equal(noBudgetRead.message, 'You cannot read this module.');
+    assertModuleRight(noBudgetRead, 'budget', 'reader', 'You cannot read this module.');
 
     const invalid = await rejection(() => http.linkRelation(missing, 'applications', { id: 'nope' }, writer));
     assert.ok(invalid instanceof BadRequestException);

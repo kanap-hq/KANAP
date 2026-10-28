@@ -1,6 +1,7 @@
-import { Body, Controller, ForbiddenException, Get, Param, Post, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
@@ -19,7 +20,7 @@ export class ApplicationConversionController {
   constructor(private readonly svc: ApplicationConversionService) {}
 
   private opts(ctx: TenantRequest) {
-    if (!hasLevel(ctx, 'infrastructure', 'member')) throw new ForbiddenException('You cannot create technologies.');
+    if (!hasLevel(ctx, 'infrastructure', 'member')) throw moduleRightRequired('infrastructure', 'member', 'You cannot create technologies.');
     return { manager: requireManager(ctx.manager), tenantId: ctx.tenantId, userId: ctx.userId || null };
   }
 

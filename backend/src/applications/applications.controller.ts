@@ -6,7 +6,7 @@ import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { ApplicationsService, ApplicationsRelationsService } from './services';
 import { incidentViewerFromContext } from '../incidents/incident-visibility';
 import { buildRelationsAccess } from '../common/relations/relations-access';
-import { relationKindOrThrow, type RelationsContext } from './services/applications-relations.service';
+import { RELATION_READ_RESOURCES, relationKindOrThrow, type RelationsContext } from './services/applications-relations.service';
 import { ApplicationsDeleteService } from './applications-delete.service';
 import { ApplicationsCsvService } from './applications-csv.service';
 import { Response } from 'express';
@@ -51,18 +51,6 @@ import { ApplicationLink } from './application-link.entity';
 import { ApplicationAttachment } from './application-attachment.entity';
 import { ApplicationDataResidency } from './application-data-residency.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
-
-/** The module each Relations section needs read access to (the tab and its badge). */
-const RELATIONS_READ = {
-  budget_lines: 'budget',
-  contracts: 'contracts',
-  incidents: 'incidents',
-  processes: 'business_processes',
-  projects: 'portfolio_projects',
-  requests: 'portfolio_requests',
-  tasks: 'tasks',
-  technologies: 'infrastructure',
-} as const;
 
 @UseGuards(JwtAuthGuard)
 @Controller('applications')
@@ -113,7 +101,7 @@ export class ApplicationsController {
   }
 
   private readsBudget(ctx: TenantRequest): boolean {
-    return buildRelationsAccess(ctx, { read: RELATIONS_READ }).access.budget_lines;
+    return buildRelationsAccess(ctx, { read: RELATION_READ_RESOURCES }).access.budget_lines;
   }
 
   private async readProjectScope(ctx: TenantRequest) {
@@ -130,7 +118,7 @@ export class ApplicationsController {
    */
   private async relationsContext(ctx: TenantRequest): Promise<RelationsContext> {
     const rights = buildRelationsAccess(ctx, {
-      read: RELATIONS_READ,
+      read: RELATION_READ_RESOURCES,
       write: { technologies: 'infrastructure', processes: 'business_processes' },
       contribute: { incidents: 'incidents' },
     });
@@ -879,7 +867,7 @@ export class ApplicationsController {
     // The same rule as the Relations tab for budget lines, contracts, projects and requests: a module
     // the caller cannot read adds nothing to the badge, and a Business Contributor counts only the
     // projects and requests it takes part in.
-    const { access } = buildRelationsAccess(ctx, { read: RELATIONS_READ });
+    const { access } = buildRelationsAccess(ctx, { read: RELATION_READ_RESOURCES });
     return this.svc.relationCounts(id, {
       ...(await this.readApplicationOpts(ctx)),
       readsBudget: access.budget_lines,

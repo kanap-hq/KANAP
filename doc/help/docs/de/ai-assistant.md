@@ -77,7 +77,7 @@ Die Eingabe von `@` öffnet die **Erwähnungsauswahl** über dem Eingabefeld. Da
   - `@T-5`: Aufgabe mit der Referenz T-5
   - `@DOC`: aktuelle Wissensdokumente
   - `@APP backup`: Anwendungen, die zu „backup“ passen
-  - `@BL-12`: die Budgetzeile mit der Referenz BL-12. `@BL` allein listet Budgetzeilen beider Typen auf, `@OPX` oder `@CPX` grenzt sie auf OPEX- oder CAPEX-Zeilen ein. Die früheren Nummern funktionieren weiterhin: `@OPX-12` oder `@CPX-3` findet seine Zeile
+  - `@BL-12`: die Budgetzeile mit der Referenz BL-12. `@BL` allein listet Budgetzeilen beider Typen auf. Die früheren Nummern funktionieren weiterhin: `@OPX-12` oder `@CPX-3` findet seine Zeile
   - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
 - **Klartext**: alles andere (`@payroll`, `@server-2`) startet eine typübergreifende Suche, sortiert nach Relevanz. Sie findet auch Budgetzeilen über die Namen ihrer Analysewerte.
 
@@ -112,7 +112,9 @@ In KANAP gespeicherte Bilder, etwa Anhänge, werden wie gewohnt angezeigt. Ein B
 
 Plaid verwendet eine kleine Auswahl interner Tools, um Fragen zu beantworten: `Search all`, `Search knowledge`, `Get document`, `Get entity context` und einige weitere. Jeder Tool-Aufruf erscheint als kompakte Zeile unter der Nachricht („Alles durchsuchen verwendet · 8 Ergebnisse“). In der Regel müssen Sie die Tool-Details nicht lesen, aber sie sind vorhanden, falls Sie genau sehen möchten, auf welchen Datensätzen die Antwort beruht.
 
-`Search all` findet Budgetzeilen über die Namen ihrer Analysewerte und teilt Plaid mit, welche Werte jede Zeile hat. Plaid nennt eine Budgetzeile mit ihrer Referenz `BL-12`, und seine Links öffnen die Zeile.
+`Search all` findet Budgetzeilen über die Namen ihrer Analysewerte und teilt Plaid mit, welche Werte jede Zeile hat. Plaid nennt eine Budgetzeile mit ihrer Referenz `BL-12`, und seine Links öffnen die Zeile. Eine Zahl allein, etwa 21, bedeutet `BL-21`. Die früheren Nummern funktionieren weiterhin: `OPX-12` oder `CPX-3` findet seine Zeile.
+
+Plaid liest OPEX- und CAPEX-Zeilen zusammen. Eine Frage, die keinen der beiden Typen nennt, gilt für beide, und Plaid kann die Zeilen nach Typ filtern oder gruppieren.
 
 Plaid listet und liest Technologien für Benutzer, die die Infrastruktur lesen dürfen. Es kann sie nach Familie, Hersteller, Supportende oder Anzahl der Server filtern und die Versionen, Server und Anwendungen einer Technologie lesen. Wird es zu einem Server, einer Anwendung oder einer Technologie über den Namen ohne Referenz gefragt, liest es auch die verknüpften Datensätze. Eine Technologie kann es nicht ändern. Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
@@ -126,7 +128,7 @@ Plaid nennt einen Datensatz, der mit dem erfragten verknüpft ist, nur dann, wen
 
 Wenn Plaid Budgetbeträge addiert, bleibt eine Zeile, deren Währung für das Jahr keinen Wechselkurs hat, außerhalb der Summe. Plaid nennt dann die ausgelassenen Währungen und Jahre. Über MCP verbundene Assistenten erhalten dieselbe Antwort.
 
-Plaid liest die Personalzahlen des Berichts [Kosten pro VZÄ](reports.md#kosten-pro-vza) für jedes Jahr und jede Budgetspalte: Kosten und VZÄ der Zeilen in Personen oder Tagen, die Kosten der pro Tag bepreisten Zeilen und die Tage, die sie einkaufen. KANAP berechnet die Kosten pro VZÄ und den durchschnittlichen Tagessatz pro Lieferant, Unternehmen, Kostenstelle oder jede andere Gruppierung, wie der Bericht, und Plaid nennt sie. Fragen Sie zum Beispiel: „Wie viele externe VZÄ und welchen durchschnittlichen Tagessatz pro Lieferant gibt es 2026?“ OPEX- und CAPEX-Zeilen werden getrennt gelesen: Wenn Sie keine der beiden nennen, antwortet Plaid für beide oder sagt, dass seine Antwort nur OPEX abdeckt. Über MCP verbundene Assistenten erhalten dieselben Antworten.
+Plaid liest die Personalzahlen des Berichts [Kosten pro VZÄ](reports.md#kosten-pro-vza) für jedes Jahr und jede Budgetspalte: Kosten und VZÄ der Zeilen in Personen oder Tagen, die Kosten der pro Tag bepreisten Zeilen und die Tage, die sie einkaufen. KANAP berechnet die Kosten pro VZÄ und den durchschnittlichen Tagessatz pro Lieferant, Unternehmen, Kostenstelle oder jede andere Gruppierung, wie der Bericht, und Plaid nennt sie. Fragen Sie zum Beispiel: „Wie viele externe VZÄ und welchen durchschnittlichen Tagessatz pro Lieferant gibt es 2026?“ Wenn Sie weder OPEX noch CAPEX nennen, antwortet Plaid für beide Typen. Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
 Summen kommen von KANAP. Eine Liste von Budgetzeilen oder Verträgen enthält die Summe aller passenden Datensätze über alle Seiten hinweg, und die Summe der aufgelisteten Datensätze. Plaid nennt eine der beiden oder lässt KANAP eine Summe bilden. Fragen Sie nach den zehn größten Zeilen und ihrer Summe, nennt Plaid die Summe dieser zehn Zeilen. Wenn Ihr Datenzugriff auf bestimmte Unternehmen oder Kostenstellen beschränkt ist, sagt Plaid, dass seine Anzahlen und Summen Ihren Zugriff abdecken, und stellt sie nicht als Summe des Arbeitsbereichs dar.
 
@@ -135,6 +137,8 @@ Wenn Plaid einen Filterwert versucht, den ein Feld nicht annimmt, etwa „aktiv�
 Wenn Sie eine Änderung verlangen, die Ihre Rolle nicht erlaubt, nennt Plaid das fehlende Recht, zum Beispiel „Sie benötigen das Recht, Projekte zu ändern“. Ein Administrator fügt es Ihrer Rolle hinzu.
 
 Plaid nimmt nur die Änderungen vor, die Ihre Bildschirme Ihnen erlauben, an den Datensätzen, die Sie dort erreichen. Mit dem Recht, an Projekten mitzuwirken, können Sie Plaid den Zweck eines Projekts und seine Verknüpfungen mit Anwendungen, Assets und Budgetzeilen ändern lassen. Das Recht, an Anträgen mitzuwirken, deckt dieselben Verknüpfungen bei Anträgen ab. Ein Business Contributor nimmt diese Änderungen nur an den Projekten und Anträgen vor, an denen er beteiligt ist. Um einen Datensatz zu verknüpfen, brauchen Sie das Recht, sein Modul zu lesen. Um ein Projekt umzubenennen oder seine anderen Felder zu ändern, brauchen Sie das Recht, Projekte zu ändern, wie auf der Projektseite.
+
+Wenn Plaid eine Budgetzeile anlegt, fragt es, ob die Zeile OPEX oder CAPEX ist, falls Sie es nicht gesagt haben. Den Typ einer bestehenden Zeile ändert es nicht: Verwenden Sie **Typ ändern...** im Arbeitsbereich der Zeile (siehe [Typ ändern](budget-lines.md#typ-andern)). Plaid setzt den Vertrag nur bei OPEX-Zeilen. Eine CAPEX-Zeile erreicht ihre Verträge über die Verknüpfungen ihres Reiters **Verknüpfungen**.
 
 ### Einen Datensatz löschen { #deleting-a-record }
 

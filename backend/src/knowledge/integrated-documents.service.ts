@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { DocumentImportService } from '../common/document-import.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { ImportExecutionOptions, readUploadedFileBuffer } from '../common/import-connection';
@@ -2029,7 +2030,7 @@ export class IntegratedDocumentsService {
       throw new ForbiddenException('User not found');
     }
     if (outcome === 'denied') {
-      throw new ForbiddenException(`${config.permissionResource}:${requiredLevel} permission is required`);
+      throw moduleRightRequired(config.permissionResource, requiredLevel, `${config.permissionResource}:${requiredLevel} permission is required`);
     }
   }
 

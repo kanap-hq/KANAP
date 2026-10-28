@@ -10,7 +10,6 @@ import {
   Req,
   UseGuards,
   BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
@@ -23,6 +22,7 @@ import { EntityManager } from 'typeorm';
 import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { buildRelationsAccess } from '../common/relations/relations-access';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { LOCATION_RELATION_READS, type LocationRelationsContext } from './location-relations';
 
 @UseGuards(JwtAuthGuard)
@@ -277,7 +277,7 @@ export class LocationsController {
   /** The older relation routes answer 403 without a read of the module they list (`LOCATION_RELATION_READS`). */
   private requireRead(ctx: TenantRequest, section: keyof typeof LOCATION_RELATION_READS): void {
     const { access } = buildRelationsAccess(ctx, { read: LOCATION_RELATION_READS });
-    if (!access[section]) throw new ForbiddenException(`You cannot read ${section}.`);
+    if (!access[section]) throw moduleRightRequired(LOCATION_RELATION_READS[section], 'reader', `You cannot read ${section}.`);
   }
 
   // Relations (endpoint kept as /servers for backwards compatibility)

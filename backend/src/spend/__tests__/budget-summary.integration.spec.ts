@@ -25,6 +25,7 @@ import {
 import { seedCompany as seedCostCenterCompany, seedCostCenter, seedUser } from './cost-center.fixtures';
 import { exportBudgetFile, fileRows } from './budget-file.fixtures';
 import { realAllocationCalculator } from './oracle/oracle-deps';
+import { budgetReadService } from './budget-lines.fixtures';
 
 // The OPEX and CAPEX lists on the SQL list engine (`budget-list/`) against the
 // database, with the same assertions for both: five columns in every slot, sort and
@@ -373,23 +374,23 @@ async function testSeveralLinkedProjects(kind: Kind) {
       assert.equal(kept.items[0].project_stream_name, 'Digital, Infra');
     }
 
-    const entityType = kind === 'opex' ? 'spend_items' : 'capex_items';
+    const entityType = 'budget_lines';
     const context = aiContext(runner, tenantId) as any;
-    const query: any = await queryExecutor(svc, kind).execute(context, { entity_type: entityType, filters: { project_stream: ['Infra'] } });
+    const query: any = await queryExecutor(svc).execute(context, { entity_type: entityType, filters: { project_stream: ['Infra'] } });
     assert.deepEqual(query.items.map((item: any) => item.label), ['Charlie line'], `${kind}: the AI stream filter keeps the line too`);
-    const grouped: any = await aggregateExecutor(svc, kind).execute(context, { entity_type: entityType, group_by: 'project_stream', function: 'count' });
+    const grouped: any = await aggregateExecutor().execute(context, { entity_type: entityType, group_by: 'project_stream', function: 'count' });
     assert.ok(grouped.groups.some((group: any) => group.key === 'Digital, Infra' && group.count === 1), `${kind}: grouping keeps the combination`);
   });
 }
 
 async function testAiAggregateSumsInCents(kind: Kind) {
   await withFixture(kind, async (runner, { tenantId }, svc) => {
-    const entityType = kind === 'opex' ? 'spend_items' : 'capex_items';
+    const entityType = 'budget_lines';
     const context = aiContext(runner, tenantId) as any;
     const enabled = (result: any) => result.groups.find((group: any) => group.key === 'enabled')?.value;
-    const sum = await aggregateExecutor(svc, kind).execute(context, { entity_type: entityType, group_by: 'status', metric: 'y_review', function: 'sum' });
+    const sum = await aggregateExecutor().execute(context, { entity_type: entityType, group_by: 'status', metric: 'y_review', function: 'sum' });
     assert.strictEqual(enabled(sum), 0.3, `${kind}: three amounts of 0.10 sum to 0.30 exactly`);
-    const avg = await aggregateExecutor(svc, kind).execute(context, { entity_type: entityType, group_by: 'status', metric: 'y_review', function: 'avg' });
+    const avg = await aggregateExecutor().execute(context, { entity_type: entityType, group_by: 'status', metric: 'y_review', function: 'avg' });
     assert.strictEqual(enabled(avg), 0.1, `${kind}: their average is 0.10`);
   });
 }
@@ -495,8 +496,8 @@ async function testDimensionSortsInItsOrder(kind: Kind) {
     assert.deepEqual(grouped.groups.map((group: any) => [group.keys[0], group.count]), [['Low', 1], ['Mandatory', 1], ['High', 2], [null, 1]],
       `${kind}: the aggregate orders its keys the same way`);
 
-    const listed: any = await queryExecutor(svc, kind).execute(aiContext(runner, tenantId) as any, {
-      entity_type: kind === 'opex' ? 'spend_items' : 'capex_items',
+    const listed: any = await queryExecutor(svc).execute(aiContext(runner, tenantId) as any, {
+      entity_type: 'budget_lines',
       sort: { field: 'analytics:priority', direction: 'asc' },
     });
     assert.deepEqual(listed.items.map((item: any) => item.metadata['analytics:priority']), ['Low', 'Mandatory', 'High', 'High', null], `${kind}: AI sort`);
@@ -513,10 +514,10 @@ async function testAiMarksAPartialListTruncated() {
   const line = { id: 'capex-1', description: 'Only line', versions: {} };
   // The registry is resolved for the tenant: a tenant without analytics dimensions.
   const context = { tenantId: 'tenant-ai', userId: null, isPlatformHost: false, surface: 'chat', authMethod: 'jwt', manager: { query: async () => [] } } as any;
-  const partial: any = await queryExecutor({ summary: async () => ({ items: [line], total: 3, page: 1, limit: 1 }), summaryTotals: NO_TOTALS, summaryAggregate: NO_LINE_TOTALS }).execute(context, { entity_type: 'capex_items' });
+  const partial: any = await queryExecutor({ summary: async () => ({ items: [line], total: 3, page: 1, limit: 1 }), summaryTotals: NO_TOTALS, summaryAggregate: NO_LINE_TOTALS }).execute(context, { entity_type: 'budget_lines' });
   assert.equal(partial.truncated, true, 'AI: a page holding part of the list is truncated');
   assert.equal(partial.complete, false);
-  const whole: any = await queryExecutor({ summary: async () => ({ items: [line], total: 1, page: 1, limit: 200, capped: true }), summaryTotals: NO_TOTALS, summaryAggregate: NO_LINE_TOTALS }).execute(context, { entity_type: 'capex_items' });
+  const whole: any = await queryExecutor({ summary: async () => ({ items: [line], total: 1, page: 1, limit: 200, capped: true }), summaryTotals: NO_TOTALS, summaryAggregate: NO_LINE_TOTALS }).execute(context, { entity_type: 'budget_lines' });
   assert.equal(whole.truncated, false, 'AI: a former capped flag is not read');
   assert.equal(whole.complete, true);
 }
@@ -533,23 +534,37 @@ const aiContext = (runner: QueryRunner, tenantId: string) => ({
 });
 
 // Constructor positions of the item services: spendItems 5, capexItems 17 (both executors); the query executor's allocation calculator 23.
-function queryExecutor(items: unknown, kind: Kind = 'capex'): AiQueryExecutor {
-  const args: any[] = Array.from({ length: 24 }, () => ({}));
-  args[kind === 'opex' ? 5 : 17] = items;
-  args[23] = realAllocationCalculator();
+/** A partial list mock for the truncation test: the read methods it gives, the real engine for the rest. */
+function partialBudgetLines(items: any): any {
+  const real = budgetReadService();
+  const methods = ['summary', 'summaryTotals', 'summaryFilterValues', 'summaryAggregate', 'summaryRowsByIds', 'get', 'listApplications', 'listProjects', 'listLinks', 'listAttachments'];
+  return Object.fromEntries(methods.map((method) => [
+    method,
+    typeof items?.[method] === 'function' ? (...args: any[]) => items[method](...args) : (...args: any[]) => (real as any)[method](...args),
+  ]));
+}
+
+function queryExecutor(items?: unknown): AiQueryExecutor {
+  const args: any[] = Array.from({ length: 25 }, () => ({}));
+  // A real per-nature service presents CAPEX rows under its own API alias: the AI reads the
+  // unified all-natures engine. A partial mock (no `get`) keeps its own list methods.
+  args[1] = items && typeof (items as any).get === 'function' ? budgetReadService() : partialBudgetLines(items);
+  args[22] = realAllocationCalculator();
+  args[23] = { canReadEntityType: async () => true };
   return new (AiQueryExecutor as any)(...args);
 }
 
-function aggregateExecutor(items: unknown, kind: Kind = 'capex'): AiAggregateExecutor {
-  const args: any[] = Array.from({ length: 22 }, () => ({}));
-  args[kind === 'opex' ? 5 : 17] = items;
+function aggregateExecutor(): AiAggregateExecutor {
+  const args: any[] = Array.from({ length: 23 }, () => ({}));
+  args[1] = budgetReadService();
+  args[21] = { canReadEntityType: async () => true };
   return new (AiAggregateExecutor as any)(...args);
 }
 
 async function testAiCapexAmountFilter() {
   await withFixture('capex', async (runner, { tenantId }, svc) => {
     const result: any = await queryExecutor(svc).execute(aiContext(runner, tenantId) as any, {
-      entity_type: 'capex_items',
+      entity_type: 'budget_lines',
       filters: { y_budget: { op: 'gt', value: 700 } },
     });
     assert.deepEqual(result.items.map((item: any) => item.label), ['Alpha line'], 'AI: a CAPEX amount filter keeps the matching line');
@@ -571,15 +586,15 @@ async function testAiCapexDetail() {
       `INSERT INTO application_spend_items (tenant_id, application_id, spend_item_id) VALUES ($1, $2, $3)`,
       [tenantId, app.id, ids.alpha],
     );
-    const args: any[] = Array.from({ length: 24 }, () => ({}));
+    const args: any[] = Array.from({ length: 25 }, () => ({}));
+    args[1] = budgetReadService();
     args[6] = { listContractsForCapexItem: async () => ({ items: [] }) };
-    args[17] = svc;
-    args[23] = realAllocationCalculator();
+    args[22] = realAllocationCalculator();
     // A caller who reads every module: the linked applications need the applications right.
-    args[24] = { canReadEntityType: async () => true };
+    args[23] = { canReadEntityType: async () => true };
     // By reference: the detail reads the line under its id.
     const detail: any = await new (AiQueryExecutor as any)(...args).executeDetail(aiContext(runner, tenantId), {
-      entity_type: 'capex_items',
+      entity_type: 'budget_lines',
       entity_id: 'CPX-2',
     });
     assert.deepEqual(detail.data.linked_applications, { items: [{ id: app.id, name: 'Orion portal' }] }, 'AI: the CAPEX detail lists its applications');
@@ -596,8 +611,8 @@ async function testAiCapexAggregateIsComplete() {
        SELECT $1, 'capex', 'Bulk line ' || n, 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', n, 'CPX-' || n FROM generate_series(1, 1001) AS n`,
       [tenantId],
     );
-    const result: any = await aggregateExecutor(itemService('capex')).execute(aiContext(runner, tenantId) as any, {
-      entity_type: 'capex_items',
+    const result: any = await aggregateExecutor().execute(aiContext(runner, tenantId) as any, {
+      entity_type: 'budget_lines',
       group_by: 'status',
       function: 'count',
     });
@@ -729,14 +744,14 @@ async function testBudgetHolder(kind: Kind) {
     assert.deepEqual(after[ids.bravo], [bea, 'Bea Keeper']);
     const afterValues = await svc.summaryFilterValues({ ...ALL, fields: 'budget_holder_name' }, opts);
     assert.deepEqual(afterValues.budget_holder_name, ['Bea Keeper', null]);
-    const listed: any = await queryExecutor(svc, kind).execute(aiContext(runner, tenantId) as any, {
-      entity_type: kind === 'opex' ? 'spend_items' : 'capex_items',
+    const listed: any = await queryExecutor(svc).execute(aiContext(runner, tenantId) as any, {
+      entity_type: 'budget_lines',
     });
     const holderOf = (label: string) => listed.items.find((item: any) => item.label === label)?.metadata.budget_holder;
     assert.deepEqual([holderOf('Alpha line'), holderOf('Charlie line')], ['Bea Keeper', null], `${kind}: AI item metadata`);
 
     // The AI dynamic values read the registry's SQL group field: joined on the tenant.
-    const registry = getAiEntityRegistry(kind === 'opex' ? 'spend_items' : 'capex_items');
+    const registry = getAiEntityRegistry('budget_lines');
     const group = registry.aggregate!.groupFields.budget_holder;
     const alias = registry.aggregate!.alias;
     const grouped: Array<{ key: string | null; count: number }> = await runner.query(
@@ -991,7 +1006,7 @@ async function testRegistriesExposeEveryAmount() {
     capex: { y_budget: 'yBudget', y_actual: 'yFollowUp', y_landing: 'yLanding', y_plus1_budget: 'yPlus1Budget', y_minus1_landing: 'yMinus1Landing' },
   };
   for (const kind of KINDS) {
-    const registry = getAiEntityRegistry(kind === 'opex' ? 'spend_items' : 'capex_items');
+    const registry = getAiEntityRegistry('budget_lines');
     // The line totals (`y_budget_staff_cost`...) are a family of their own (ai-staff-cost spec).
     const numberKeys = Object.values(registry.fields).filter((field) => field.type === 'number' && !field.family).map((field) => field.ai);
     const amountKeys = numberKeys.filter((key) => !key.endsWith('_fte'));
@@ -1009,9 +1024,9 @@ async function testRegistriesExposeEveryAmount() {
       assert.equal(registry.fields[key]?.grid, grid, `${kind}: ${key} keeps its meaning`);
     }
   }
-  const capex = getAiEntityRegistry('capex_items');
+  const budgetLines = getAiEntityRegistry('budget_lines');
   for (const key of ['supplier', 'account', 'owner_it', 'owner_business', 'analytics_category', 'allocation_method', 'contract', 'project_name', 'project_stream', 'project_category']) {
-    assert.ok(capex.fields[key], `capex: ${key}`);
+    assert.ok(budgetLines.fields[key], `budget_lines: ${key}`);
   }
 }
 

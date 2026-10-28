@@ -31,7 +31,7 @@ import {
 import { LocationsService } from '../../locations/locations.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProjectsService } from '../../portfolio/services';
-import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
+import { BudgetLinesService } from '../../spend/budget-lines.service';
 import { TasksService } from '../../spend/tasks.service';
 import { loadLinkedReads } from '../../common/relations/linked-reads';
 import { SuppliersService } from '../../suppliers/suppliers.service';
@@ -101,8 +101,8 @@ type SupportedAggregateEntityType =
   | 'analytics_categories'
   | 'applications'
   | 'assets'
+  | 'budget_lines'
   | 'business_processes'
-  | 'capex_items'
   | 'chart_of_accounts'
   | 'companies'
   | 'connections'
@@ -114,7 +114,6 @@ type SupportedAggregateEntityType =
   | 'locations'
   | 'projects'
   | 'requests'
-  | 'spend_items'
   | 'suppliers'
   | 'tasks'
   | 'technologies'
@@ -513,11 +512,12 @@ function normalizeAggregateValue(value: any, metricType: AiAggregateMetricType):
 export class AiAggregateExecutor {
   constructor(
     private readonly tasks: TasksService,
+    /** The unified read engine of the budget lines, both natures. */
+    private readonly budgetLines: BudgetLinesService,
     private readonly projects: PortfolioProjectsService,
     private readonly requests: PortfolioRequestsService,
     private readonly applications: ApplicationsService,
     private readonly assets: AssetsService,
-    private readonly spendItems: SpendItemsService,
     private readonly contracts: ContractsService,
     private readonly companies: CompaniesService,
     private readonly suppliers: SuppliersService,
@@ -529,7 +529,6 @@ export class AiAggregateExecutor {
     private readonly chartOfAccounts: ChartOfAccountsService,
     private readonly analyticsCategories: AnalyticsCategoriesService,
     private readonly businessProcesses: BusinessProcessesService,
-    private readonly capexItems: CapexItemsService,
     private readonly contacts: ContactsService,
     private readonly interfaces: InterfacesService,
     private readonly connections: ConnectionsService,
@@ -1373,7 +1372,6 @@ export class AiAggregateExecutor {
    */
   private async aggregateBudgetSummary(
     context: AiExecutionContextWithManager,
-    entityType: 'spend_items' | 'capex_items',
     registry: AiEntityFilterRegistry,
     groupBy: string,
     q: string | undefined,
@@ -1404,8 +1402,7 @@ export class AiAggregateExecutor {
       };
     }
 
-    const items = entityType === 'spend_items' ? this.spendItems : this.capexItems;
-    const result = await items.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager });
+    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager });
     const groups = result.groups.map((group) => {
       const key = group.keys[0] ?? null;
       if (!spec.measures.length) return { key, count: group.count };
@@ -1428,7 +1425,6 @@ export class AiAggregateExecutor {
    */
   private async aggregateBudgetRatio(
     context: AiExecutionContextWithManager,
-    entityType: 'spend_items' | 'capex_items',
     registry: AiEntityFilterRegistry,
     groupBy: string,
     q: string | undefined,
@@ -1452,8 +1448,7 @@ export class AiAggregateExecutor {
       ],
       order: [{ by: 'measure', id: governing, dir: 'DESC', nulls: 'LAST' }],
     };
-    const items = entityType === 'spend_items' ? this.spendItems : this.capexItems;
-    const result = await items.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager });
+    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager });
     const valueOf = (figures: AiBudgetStaffFigures) => (ratio.kind === 'cost_per_fte' ? figures.cost_per_fte : figures.day_rate);
     const groups = result.groups
       .filter((group) => group.values[governing] != null)
@@ -1651,10 +1646,9 @@ export class AiAggregateExecutor {
       };
     }
 
-    if ((input.entity_type === 'spend_items' || input.entity_type === 'capex_items') && ratio) {
+    if (input.entity_type === 'budget_lines' && ratio) {
       const { groups, total, fxMissing, overall } = await this.aggregateBudgetRatio(
         context,
-        input.entity_type,
         registry,
         input.group_by,
         input.q?.trim(),
@@ -1679,10 +1673,9 @@ export class AiAggregateExecutor {
       };
     }
 
-    if (input.entity_type === 'spend_items' || input.entity_type === 'capex_items') {
+    if (input.entity_type === 'budget_lines') {
       const { groups, total, fxMissing, overall } = await this.aggregateBudgetSummary(
         context,
-        input.entity_type,
         registry,
         input.group_by,
         input.q?.trim(),

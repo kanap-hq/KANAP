@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -6,6 +6,7 @@ import {
   type ParticipationAccessScope,
 } from '../auth/business-contributor-scope';
 import { setOwnedLink, type OwnedLinkAudit, type OwnedRelationLink } from '../common/relations/owned-link';
+import { moduleRightRequired } from '../auth/module-right-required';
 import {
   binder,
   listRelatedApplications,
@@ -323,7 +324,11 @@ export async function setBudgetLineRelation(
 ): Promise<{ ok: true; changed: boolean }> {
   const kind = budgetLineRelationKindOrThrow(kindValue);
   if (!ctx.access[kind]) {
-    throw new ForbiddenException(kind === 'technologies' ? 'You cannot read technologies.' : 'You cannot read this module.');
+    throw moduleRightRequired(
+      BUDGET_LINE_RELATION_READS[kind],
+      'reader',
+      kind === 'technologies' ? 'You cannot read technologies.' : 'You cannot read this module.',
+    );
   }
   if (kind === 'assets') return setAssetLink(deps, ref, targetId, add, userId);
   const held = { nature: 'opex' as BudgetNature };

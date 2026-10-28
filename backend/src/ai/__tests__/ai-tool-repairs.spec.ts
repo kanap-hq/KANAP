@@ -24,7 +24,7 @@ function testTargets() {
   assert.deepEqual(toolCallTargets({ ref: ' APP-36 ', title: 'Runbook' }), ['app-36'], 'the reference first');
   assert.deepEqual(toolCallTargets({ title: 'Recovery runbook', applications: 'APP-36' }), ['recovery runbook'], 'the title of a creation');
   assert.deepEqual(toolCallTargets({ entity_type: 'projects', fields: { name: 'ERP rollout' } }), ['erp rollout']);
-  assert.deepEqual(toolCallTargets({ entity_type: 'spend_items', filters: {} }), ['spend_items'], 'a read: its family');
+  assert.deepEqual(toolCallTargets({ entity_type: 'budget_lines', filters: {} }), ['budget_lines'], 'a read: its family');
   assert.deepEqual(toolCallTargets({ query: 'FR-TRV-600' }), [''], 'no target: the tool itself');
 }
 

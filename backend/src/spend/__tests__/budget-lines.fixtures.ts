@@ -47,6 +47,19 @@ export async function seedBudgetLines(runner: QueryRunner) {
   return { tenantId, lines, foreignTenantId, foreign, dimensions };
 }
 
+/** The unified read engine on the request's manager: the AI reads both natures through it. */
+export function budgetReadService(): BudgetLinesService {
+  return new BudgetLinesService(
+    deps.allocationCalculator as any,
+    deps.fxRates as any,
+    undefined as any,
+    undefined as any,
+    itemService('opex') as any,
+    itemService('capex') as any,
+    undefined as any,
+  );
+}
+
 export function budgetService(runner: QueryRunner) {
   const audit = captureAudit();
   const storage = { deleteObject: async () => undefined };

@@ -96,6 +96,21 @@ async function expectHttp(run: () => Promise<unknown>, type: new (...args: never
   });
 }
 
+/** A refused read is a coded 403 naming the module and its reader level. */
+async function expectModuleRight(run: () => Promise<unknown>, resource: string, message: string) {
+  await assert.rejects(run(), (err: unknown) => {
+    assert.ok(err instanceof ForbiddenException, 'a ForbiddenException');
+    assert.deepEqual((err as ForbiddenException).getResponse(), {
+      statusCode: 403,
+      error: 'Forbidden',
+      code: 'MODULE_RIGHT_REQUIRED',
+      message,
+      params: { resource, level: 'reader' },
+    });
+    return true;
+  });
+}
+
 async function contractIds(runner: QueryRunner, world: World): Promise<string[]> {
   const rows: Array<{ contract_id: string }> = await runner.query(
     `SELECT contract_id FROM technology_contracts WHERE tenant_id = $1 AND technology_id = $2 ORDER BY contract_id`,
@@ -153,9 +168,9 @@ async function testRefusals() {
     );
     assert.equal(loaded, 0, 'a bad id is refused before the owner is read');
 
-    await expectHttp(
+    await expectModuleRight(
       () => call(runner, world, audit, { allowed: false, loadOwner: owner }),
-      ForbiddenException,
+      'contracts',
       'You cannot read this module.',
     );
     assert.equal(loaded, 0, 'a refused read does not touch the owner');

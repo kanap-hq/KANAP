@@ -293,7 +293,7 @@ async function testXmlStyleToolCallCreateErrorIsRecovered() {
   resetState([]);
   state.createErrors = [
     new Error(
-      'Failed to parse input at pos 1212: <tool_call> <function=get_entity_detail> <parameter=entity_id> 886238bf-08e2-4bba-bae5-d2085920d121 </parameter> <parameter=entity_type> capex_items </parameter> </function> </tool_call>',
+      'Failed to parse input at pos 1212: <tool_call> <function=get_entity_detail> <parameter=entity_id> 886238bf-08e2-4bba-bae5-d2085920d121 </parameter> <parameter=entity_type> budget_lines </parameter> </function> </tool_call>',
     ),
   ];
 
@@ -315,7 +315,7 @@ async function testXmlStyleToolCallCreateErrorIsRecovered() {
       id: 'xml-tool-call-1',
       arguments: JSON.stringify({
         entity_id: '886238bf-08e2-4bba-bae5-d2085920d121',
-        entity_type: 'capex_items',
+        entity_type: 'budget_lines',
       }),
     },
     { type: 'tool_call_end', id: 'xml-tool-call-1' },

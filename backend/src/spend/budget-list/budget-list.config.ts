@@ -21,7 +21,7 @@ import {
 } from '../spend-summary.builder';
 import { fxKeyCurrency, fxSetKeySql, fxTableSql } from './budget-fx-table';
 import type { BudgetListRuntime, RuntimeNeeds } from './budget-list.runtime';
-import { lineNumberSql, natureAnd } from '../budget-nature';
+import { BUDGET_NATURES, lineNumberSql, natureAnd, naturesAnd } from '../budget-nature';
 
 /**
  * The OPEX and CAPEX lists as a list-engine config, built from the scope
@@ -503,11 +503,17 @@ export class BudgetListConfig implements ListConfig {
     return { kind: 'text', sql: `${category}.name`, joins: [category], position: `${category}.sort_order` };
   }
 
-  /** The line's link on the tenant's dimension of that index (one row at most: the link's primary key). */
+  /**
+   * The line's link on the tenant's dimension of that index (one row at most: the link's primary
+   * key). In the all-natures scope, a dimension that applies to one nature only links the lines of
+   * that nature: the field stays blank for the other nature (a stale value is never read).
+   */
   private axisLink(stmt: SqlStatement, index: number): string {
     const link = `ax${index}`;
+    const appliesTo = this.rt.axes!.appliesTo[index];
+    const nature = this.scope.allNatures && appliesTo ? ` AND i.nature = ${sqlLiteral(appliesTo)}` : '';
     // The axis id is one of the tenant's dimension ids read from the database (a validated uuid), not request text.
-    return this.join(stmt, link, `LEFT JOIN ${this.scope.analyticsLink.table} ${link} ON ${link}.tenant_id = ${stmt.tenant} AND ${link}.item_id = i.id AND ${link}.axis_id = ${sqlLiteral(this.rt.axes!.ids[index])}::uuid`);
+    return this.join(stmt, link, `LEFT JOIN ${this.scope.analyticsLink.table} ${link} ON ${link}.tenant_id = ${stmt.tenant} AND ${link}.item_id = i.id AND ${link}.axis_id = ${sqlLiteral(this.rt.axes!.ids[index])}::uuid${nature}`);
   }
 
   /**
@@ -781,9 +787,22 @@ export class BudgetListConfig implements ListConfig {
     this.latestContract(stmt);
     const axes = this.rt.axes;
     if (!axes) throw new Error('Analytics dimensions were not loaded for this statement');
+    // A dimension that applies to one nature only links the lines of that nature (`axisLink`): the
+    // quick search reads the same link, so a stale value of the other nature never matches its line.
+    const natureLists = { opex: [] as string[], capex: [] as string[], both: [] as string[] };
+    axes.ids.forEach((id, index) => {
+      const applies = axes.appliesTo[index];
+      (applies === 'opex' ? natureLists.opex : applies === 'capex' ? natureLists.capex : natureLists.both).push(id);
+    });
+    const axisNatures = s.allNatures
+      ? ` JOIN spend_items li ON li.tenant_id = a.tenant_id AND li.id = a.item_id${naturesAnd('li', BUDGET_NATURES)}
+        AND (a.axis_id = ANY(${stmt.bind(natureLists.both, 'uuid[]')})
+          OR (li.nature = 'opex' AND a.axis_id = ANY(${stmt.bind(natureLists.opex, 'uuid[]')}))
+          OR (li.nature = 'capex' AND a.axis_id = ANY(${stmt.bind(natureLists.capex, 'uuid[]')})))`
+      : '';
     stmt.cte('qs_items', () => `SELECT x.item_id FROM proj x WHERE ${matchAny(['x.project_name', 'x.project_stream_name', 'x.project_category_name'])}
       UNION SELECT x.item_id FROM lc x WHERE ${match('x.contract_name')}
-      UNION SELECT a.item_id FROM ${s.analyticsLink.table} a
+      UNION SELECT a.item_id FROM ${s.analyticsLink.table} a${axisNatures}
         WHERE a.tenant_id = ${t} AND a.axis_id = ANY(${stmt.bind(axes.ids, 'uuid[]')})
           AND a.category_id IN (SELECT c.id FROM analytics_categories c WHERE c.tenant_id = ${t} AND ${match('c.name')})`);
     stmt.cte('qs_alloc', () => `SELECT v.${s.versionItemFk} AS item_id FROM ${s.versionTable} v

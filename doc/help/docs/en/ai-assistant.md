@@ -77,7 +77,7 @@ Typing `@` opens the **mention picker** above the composer. It lets you referenc
   - `@T-5`: task with the reference T-5
   - `@DOC`: recent knowledge documents
   - `@APP backup`: applications matching "backup"
-  - `@BL-12`: the budget line with the reference BL-12. `@BL` alone lists budget lines of both types, and `@OPX` or `@CPX` narrows them to OPEX or CAPEX lines. The former numbers still work: `@OPX-12` or `@CPX-3` finds its line
+  - `@BL-12`: the budget line with the reference BL-12. `@BL` alone lists budget lines of both types. The former numbers still work: `@OPX-12` or `@CPX-3` finds its line
   - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
 - **Plain text**: anything else (`@payroll`, `@server-2`) runs a cross-type search ranked by relevance. It also finds budget lines by the names of their analytics values.
 
@@ -112,7 +112,9 @@ Images stored in KANAP, such as attachments, display as usual. An image hosted o
 
 Plaid uses a small set of internal tools to answer questions: `Search all`, `Search knowledge`, `Get document`, `Get entity context`, and a handful of others. Each tool call shows up as a compact line under the message ("used Search all · 8 results"). You usually do not need to read the tool details, but they are there if you want to see exactly which records the answer was based on.
 
-`Search all` finds budget lines by the names of their analytics values, and tells Plaid which values each line holds. Plaid names a budget line by its `BL-12` reference, and its links open the line.
+`Search all` finds budget lines by the names of their analytics values, and tells Plaid which values each line holds. Plaid names a budget line by its `BL-12` reference, and its links open the line. A number alone, such as 21, means `BL-21`. The former numbers still work: `OPX-12` or `CPX-3` finds its line.
+
+Plaid reads OPEX and CAPEX lines together. A question that names neither type covers both, and Plaid can filter or group the lines by type.
 
 Plaid lists and reads technologies for users who can read the infrastructure. It can filter them by family, publisher, end of support or number of servers, and read a technology's versions, servers and applications. Asked about a server, an application or a technology by its name, without its reference, it also reads the related records. It cannot change a technology. Assistants connected over MCP get the same answers.
 
@@ -126,7 +128,7 @@ Plaid names a record linked to the one you ask about only when you can read its 
 
 When Plaid adds up budget amounts, a line whose currency has no exchange rate for the year is left out of the sum. Plaid then says which currencies and years it left out. Assistants connected over MCP get the same answer.
 
-Plaid reads the staff figures of the [Cost per FTE](reports.md#cost-per-fte) report for each year and budget column: the cost and FTE of the lines in people or days, the cost of the lines priced per day and the days they buy. KANAP computes the cost per FTE and the average daily rate per supplier, company, cost center or any other grouping, as the report does, and Plaid quotes them. Ask, for example: "What are the external FTE and the average daily rate per supplier in 2026?" OPEX and CAPEX lines are read separately: when you name neither, Plaid answers for both, or says that its answer covers OPEX only. Assistants connected over MCP get the same answers.
+Plaid reads the staff figures of the [Cost per FTE](reports.md#cost-per-fte) report for each year and budget column: the cost and FTE of the lines in people or days, the cost of the lines priced per day and the days they buy. KANAP computes the cost per FTE and the average daily rate per supplier, company, cost center or any other grouping, as the report does, and Plaid quotes them. Ask, for example: "What are the external FTE and the average daily rate per supplier in 2026?" When you name neither OPEX nor CAPEX, Plaid answers for both types. Assistants connected over MCP get the same answers.
 
 Totals come from KANAP. A list of budget lines or contracts comes with the total of every matching record, all pages included, and with the total of the records listed, so Plaid quotes one of them or asks KANAP for a sum. Asked for the ten largest lines and their total, Plaid gives the total of those ten. When your data access is limited to some companies or cost centers, Plaid says that its counts and totals cover your access, and does not present them as the total of the workspace.
 
@@ -135,6 +137,8 @@ When Plaid tries a filter value that a field does not take, for example "active"
 When you ask for a change your role does not allow, Plaid names the right you are missing, for example "you need the right to modify projects". An administrator adds it to your role.
 
 Plaid makes only the changes your screens let you make, on the records you can reach there. With the right to contribute to projects, you can have Plaid change the purpose of a project and its links to applications, assets and budget lines. The right to contribute to requests covers the same links on requests. A Business Contributor makes these changes only on the projects and requests they take part in. Linking a record needs the right to read its module. Renaming a project or changing its other fields needs the right to modify projects, as on the project page.
+
+When Plaid creates a budget line, it asks whether the line is OPEX or CAPEX if you did not say. It does not change the type of an existing line: use **Change type...** in the line's workspace (see [Changing the type](budget-lines.md#changing-the-type)). Plaid sets the contract of OPEX lines only. A CAPEX line reaches its contracts through the links of its **Relations** tab.
 
 ### Deleting a record { #deleting-a-record }
 

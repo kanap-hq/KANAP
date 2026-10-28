@@ -18,9 +18,9 @@ const LINKED_REFERENCE_FAMILIES: Record<string, { entityType: string; resource: 
   PRJ: { entityType: 'projects', resource: 'portfolio_projects' },
   REQ: { entityType: 'requests', resource: 'portfolio_requests' },
   DOC: { entityType: 'documents', resource: 'knowledge' },
-  BL: { entityType: 'spend_items', resource: 'budget' },
-  OPX: { entityType: 'spend_items', resource: 'budget' },
-  CPX: { entityType: 'capex_items', resource: 'budget' },
+  BL: { entityType: 'budget_lines', resource: 'budget' },
+  OPX: { entityType: 'budget_lines', resource: 'budget' },
+  CPX: { entityType: 'budget_lines', resource: 'budget' },
 };
 
 // A KANAP reference number never starts with 0: `APP-01` is part of a name such as `PAR-APP-01`.
