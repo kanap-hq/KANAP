@@ -1,6 +1,6 @@
 import type { RecordHistoryRecord } from '../../record-history.inventory';
 import type { HistoryFields } from '../field-rules';
-import { hidden, shown } from '../field-rules';
+import { hidden, hiddenChanged, shown } from '../field-rules';
 
 /**
  * The working day calendar: its page, its own audit label and its allow-list. It has no child.
@@ -28,7 +28,7 @@ const WORKING_DAY_PROFILE_FIELDS: HistoryFields = {
   region_code: shown(),
   status: shown(),
   disabled_at: shown(),
-  days_by_year: hidden('long calendar content, read by the calendar year editor'),
+  days_by_year: hiddenChanged('long calendar content, read by the calendar year editor', 'workingDaysChanged'),
   id: hidden('identity'),
   tenant_id: hidden('tenancy'),
   created_at: hidden('timestamp'),

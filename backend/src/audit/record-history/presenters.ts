@@ -32,7 +32,7 @@ export type RecordHistoryReference = {
 };
 
 /** A reference the person may not read, or a record deleted or outside their access. */
-export type RecordHistoryHiddenReference = { hidden: true; kind: string };
+export type RecordHistoryHiddenReference = { hidden: true; kind: string; deleted?: true };
 
 export type RecordHistoryChange = {
   field: string;
@@ -105,9 +105,13 @@ export type PageContext = {
   users: Map<string, ReferenceRow>;
   versions: Map<string, { name: string | null; year: number | null }>;
   references: Map<FamilyKey, Map<string, ReferenceRow>>;
+  /** The ids the reader may name but whose row no longer exists in the tenant (a deleted record). */
+  deleted: Map<FamilyKey, Set<string>>;
   readable: Record<FamilyKey, boolean>;
   dimensions: Map<string, string>;
   categories: Map<string, string>;
+  /** The tenant's IT entity labels, by code (a connection's endpoints and a segment's equipment). */
+  entityLabels: Map<string, string>;
 };
 
 const AMOUNT_MEASURES = ['planned', 'committed', 'forecast', 'actual', 'expected_landing'] as const;
@@ -248,6 +252,24 @@ function safeScalar(value: unknown): unknown {
 function isStructured(value: unknown): boolean {
   if (Array.isArray(value)) return value.some((item) => isPlainObject(item));
   return isPlainObject(value);
+}
+
+/** A value a change should not show: absent, blank, an empty list, or a list of blank strings. */
+function isEmptyHistoryValue(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === 'string') return value.trim() === '';
+  if (Array.isArray(value)) return value.length === 0 || value.every((entry) => isEmptyHistoryValue(entry));
+  return false;
+}
+
+/** A numeric string a metric stores (`"180.000"`) reads as a number, as the metrics tab shows it. */
+function historyNumber(value: unknown): unknown {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && /^-?\d+(?:\.\d+)?$/.test(value.trim())) {
+    const number = Number(value);
+    if (Number.isFinite(number)) return number;
+  }
+  return value;
 }
 
 function amountCents(value: unknown): bigint {
@@ -823,7 +845,7 @@ function catalogSyncChanges(row: AuditRow): RecordHistoryChange[] | null {
   for (const field of ['versions_added', 'versions_updated', 'versions_attached', 'cpe_products_added',
     'cpe_products_removed', 'cve_names_added', 'cve_names_removed']) {
     const value = sync[field];
-    if (Array.isArray(value) && value.length > 0) changes.push({ field, after: value });
+    if (!isEmptyHistoryValue(value)) changes.push({ field, after: value });
   }
   for (const field of ['description_filled', 'description_updated']) {
     if (sync[field] === true) changes.push({ field, after: true });
@@ -892,16 +914,55 @@ function subItemChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] 
   return genericChanges(row, ctx, { label: row.table_name });
 }
 
-/** The person of an internal contact link, resolved with the reader's rights (people are always readable). */
+/** The people and roles of a site's internal contacts: a stored row or the assistant's relation items. */
+function personStates(value: unknown): Map<string, string | null> {
+  const out = new Map<string, string | null>();
+  const add = (id: unknown, role: unknown) => {
+    if (!isUuid(id)) return;
+    out.set(id.toLowerCase(), typeof role === 'string' && role.trim() ? role.trim() : null);
+  };
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      if (typeof entry === 'string') {
+        const [role, id] = entry.split(':');
+        add(id, role);
+        continue;
+      }
+      if (!isPlainObject(entry)) continue;
+      const payload = isPlainObject(entry.payload) ? entry.payload : entry;
+      add(payload.user_id ?? entry.key, payload.role);
+    }
+  } else if (isPlainObject(value)) {
+    add(value.user_id, value.role);
+  }
+  return out;
+}
+
+/**
+ * The person of an internal contact link, resolved with the reader's rights (people are always
+ * readable), and the role the site gives them. The assistant writes the whole set as relation
+ * items; the screen writes one row. Both read the same way.
+ */
 function personChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
-  const before = isPlainObject(row.before_json) && isUuid(row.before_json.user_id) ? row.before_json.user_id : null;
-  const after = isPlainObject(row.after_json) && isUuid(row.after_json.user_id) ? row.after_json.user_id : null;
-  if (row.action === 'create' || (before === null && after !== null)) {
-    return [{ field: 'person', event: 'added', after: referenceValue(ctx, 'user', after) }];
+  const before = personStates(row.before_json);
+  const after = personStates(row.after_json);
+  const changes: RecordHistoryChange[] = [];
+  for (const [id, role] of after) {
+    if (before.has(id)) continue;
+    changes.push({ field: 'person', event: 'added', after: referenceValue(ctx, 'user', id) });
+    if (role) changes.push({ field: 'role', after: role });
   }
-  if (row.action === 'delete' || (after === null && before !== null)) {
-    return [{ field: 'person', event: 'removed', before: referenceValue(ctx, 'user', before) }];
+  for (const [id, role] of before) {
+    if (after.has(id)) continue;
+    changes.push({ field: 'person', event: 'removed', before: referenceValue(ctx, 'user', id) });
+    if (role) changes.push({ field: 'role', before: role });
   }
+  for (const [id, role] of after) {
+    if (!before.has(id)) continue;
+    const previous = before.get(id) ?? null;
+    if (previous !== role) changes.push({ field: 'role', before: previous, after: role });
+  }
+  if (changes.length > 0) return changes;
   return genericChanges(row, ctx, { label: row.table_name });
 }
 
@@ -1038,6 +1099,29 @@ function setChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
     }
     return changes;
   }
+  if (label === 'interface_owners') {
+    // The owner type is part of the screen's line ("IT owner added"), so the type is the field.
+    const before = ownerStates(row.before_json);
+    const after = ownerStates(row.after_json);
+    const changes: RecordHistoryChange[] = [];
+    for (const [key, owner] of after) {
+      if (before.has(key)) continue;
+      changes.push({
+        field: owner.role === 'it' ? 'owner_it' : 'owner_business',
+        event: 'added',
+        after: referenceValue(ctx, 'user', owner.userId),
+      });
+    }
+    for (const [key, owner] of before) {
+      if (after.has(key)) continue;
+      changes.push({
+        field: owner.role === 'it' ? 'owner_it' : 'owner_business',
+        event: 'removed',
+        before: referenceValue(ctx, 'user', owner.userId),
+      });
+    }
+    return changes;
+  }
   const beforeStates = stateStrings(row.before_json);
   const afterStates = stateStrings(row.after_json);
   if (beforeStates.length === 0 && afterStates.length === 0) return [];
@@ -1120,7 +1204,7 @@ function dimensionChanges(before: unknown, after: unknown, ctx: PageContext): Re
   return changes;
 }
 
-type GenericOptions = { label: string };
+type GenericOptions = { label: string; /** Fields whose numeric strings read as numbers (the company metrics). */ numeric?: readonly string[] };
 
 /**
  * The changed keys of a before/after payload, from its label's allow-list only: a field outside it
@@ -1143,7 +1227,7 @@ function genericChanges(row: AuditRow, ctx: PageContext, options: GenericOptions
     const b = before[field];
     const a = after[field];
     if (deepEqual(b, a)) continue;
-    if ((b === null || b === undefined || b === '') && (a === null || a === undefined || a === '')) continue;
+    if (isEmptyHistoryValue(b) && isEmptyHistoryValue(a)) continue;
     if (rule.hidden) {
       // A hidden value never comes out; a field that declares a word still tells that it changed,
       // on an update only (a creation or a deletion is the entry itself).
@@ -1164,9 +1248,21 @@ function genericChanges(row: AuditRow, ctx: PageContext, options: GenericOptions
     } else if (family) {
       beforeValue = referenceValue(ctx, family, b);
       afterValue = referenceValue(ctx, family, a);
+    } else if (field.endsWith('_entity_code') && ctx.entry.table === 'connections') {
+      const labelOfCode = (value: unknown) => (
+        typeof value === 'string' && value.trim() && ctx.entityLabels.has(value.trim().toLowerCase())
+          ? ctx.entityLabels.get(value.trim().toLowerCase())
+          : value
+      );
+      beforeValue = labelOfCode(b);
+      afterValue = labelOfCode(a);
     } else {
       beforeValue = safeScalar(b);
       afterValue = safeScalar(a);
+    }
+    if (options.numeric?.includes(field)) {
+      beforeValue = historyNumber(beforeValue);
+      afterValue = historyNumber(afterValue);
     }
     if (Array.isArray(beforeValue) || Array.isArray(afterValue)) {
       const scalars = (value: unknown) => Array.isArray(value) && value.every((item) => item === null || ['string', 'number', 'boolean'].includes(typeof item));
@@ -1310,7 +1406,7 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
     case 'task':
       return taskChanges(row, ctx);
     case 'metrics':
-      return genericChanges(row, ctx, { label: row.table_name });
+      return genericChanges(row, ctx, { label: row.table_name, numeric: ['headcount', 'it_users', 'turnover'] });
     case 'value':
       return valueChanges(row, ctx);
     case 'sub_item':
@@ -1494,12 +1590,19 @@ export function presentItem(row: AuditRow, entry: RecordHistoryRecord, ctx: Page
 function referenceValue(ctx: PageContext, family: FamilyKey, value: unknown): RecordHistoryReference | RecordHistoryHiddenReference | null {
   if (value === null || value === undefined) return null;
   if (!isUuid(value)) return null;
+  const id = value.toLowerCase();
   if (!ctx.readable[family]) return { hidden: true, kind: family };
-  const row = ctx.references.get(family)?.get(value.toLowerCase());
-  if (!row) return { hidden: true, kind: family };
+  const row = ctx.references.get(family)?.get(id);
+  if (!row) {
+    // The person reads the module and the row is absent from its table: the record was deleted,
+    // never merely withheld. The two never read the same.
+    return ctx.deleted.get(family)?.has(id)
+      ? { hidden: true, kind: family, deleted: true }
+      : { hidden: true, kind: family };
+  }
   return {
     kind: family,
-    id: value.toLowerCase(),
+    id,
     label: row.label ?? null,
     ...(row.reference ? { reference: row.reference } : {}),
   };
@@ -1507,8 +1610,14 @@ function referenceValue(ctx: PageContext, family: FamilyKey, value: unknown): Re
 
 function userValue(ctx: PageContext, value: unknown): unknown {
   if (!isUuid(value)) return value;
-  const row = ctx.readable.user ? ctx.users.get(value.toLowerCase()) : undefined;
-  // A person outside the tenant, or a deleted account, is not a readable record: hide it.
-  if (!row) return { hidden: true, kind: 'user' };
-  return { kind: 'user', id: value.toLowerCase(), label: row.label ?? null };
+  const id = value.toLowerCase();
+  const row = ctx.readable.user ? ctx.users.get(id) : undefined;
+  if (!row) {
+    // A person outside the tenant, or a deleted account, is not a readable record. The history
+    // tells the deleted one apart so a removal of their link does not read as a withheld name.
+    return ctx.deleted.get('user')?.has(id)
+      ? { hidden: true, kind: 'user', deleted: true }
+      : { hidden: true, kind: 'user' };
+  }
+  return { kind: 'user', id, label: row.label ?? null };
 }

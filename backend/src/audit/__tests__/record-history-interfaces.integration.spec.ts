@@ -341,10 +341,12 @@ async function testSets(seeded: Seeded) {
   assert.equal(findChange(legChange, 'data_format').before, 'csv');
   assert.equal(findChange(legChange, 'data_format').after, 'tsv');
 
-  const ownerRemoved = changesOf(page, 'owner').find((change) => change.event === 'removed');
-  const ownerAdded = changesOf(page, 'owner').find((change) => change.event === 'added');
+  // The screen names the owner type: a business owner removed, an IT owner added.
+  const ownerRemoved = changesOf(page, 'owner_business').find((change) => change.event === 'removed');
+  const ownerAdded = changesOf(page, 'owner_it').find((change) => change.event === 'added');
   assert.equal((ownerRemoved?.before as any).label, 'Ava Reader');
   assert.equal((ownerAdded?.after as any).label, 'Bao Owner');
+  assert.equal(changesOf(page, 'owner').length, 0, 'no untyped owner line');
 
   const company = changesOf(page, 'company').find((change) => change.event === 'added');
   assert.equal((company?.after as any).kind, 'company');

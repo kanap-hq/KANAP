@@ -230,6 +230,14 @@ async function testAccess(seeded: Seeded) {
     contacts: 'reader', suppliers: 'reader', contracts: 'reader', budget: 'reader',
   });
   assert.ok(page.items.length >= 5, 'a contacts reader reads the contact history');
+  // The payload-key branch compares the id as text: an upper-case URL id reads the same links.
+  const upper = await readPage(seeded.allReader, seeded.data.tenantId, 'contacts', seeded.data.contact.toUpperCase(), {
+    contacts: 'reader', suppliers: 'reader', contracts: 'reader', budget: 'reader',
+  });
+  assert.ok(
+    upper.items.some((item) => item.subject.kind === 'supplier' && item.action === 'create'),
+    'the upper-case id reads the contact\'s supplier link',
+  );
   await assert.rejects(
     () => readPage(seeded.supplierOnly, seeded.data.tenantId, 'contacts', seeded.data.contact, { suppliers: 'reader' }),
     (error: any) => error?.status === 403 && error?.response?.code === 'MODULE_RIGHT_REQUIRED',
@@ -271,15 +279,14 @@ async function testRecordEntries(seeded: Seeded) {
   assert.equal(findChange(create, 'job_title').after, 'Buyer');
   assert.equal(findChange(create, 'country').after, 'FR');
   assert.equal(findChange(create, 'active').after, true);
-  assert.equal(findChange(create, 'supplier_role').after, 'commercial');
-  const supplier = findChange(create, 'supplier_id').after as any;
-  assert.equal(supplier.kind, 'supplier');
-  assert.equal(supplier.label, 'Acme Supplies');
+  // The supplier and its role are the `supplier_contacts` link row's entry, never a second one on
+  // the contact: one add is one entry.
+  assert.equal(page.items.some((item) => item.changes.some((change) => change.field === 'supplier_id')), false);
+  assert.equal(page.items.some((item) => item.changes.some((change) => change.field === 'supplier_role')), false);
 
   const update = findItem(page, 'update', 'record');
   assert.equal(findChange(update, 'job_title').before, 'Buyer');
   assert.equal(findChange(update, 'job_title').after, 'Senior buyer');
-  assert.equal(findChange(update, 'supplier_role').after, 'technical');
   for (const field of ['phone', 'email', 'mobile', 'notes']) {
     assert.equal(update.changes.some((change) => change.field === field), false, `${field}: hidden, never a change`);
   }

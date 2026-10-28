@@ -1,4 +1,5 @@
 import type { EntityManager } from 'typeorm';
+import { withFullDataAccess } from '../../data-access/full-data-access';
 import type { TenantRequest } from '../../common/decorators/tenant.decorator';
 import { hasLevel } from '../../common/relations/relations-access';
 import {
@@ -229,8 +230,8 @@ export const REFERENCE_FAMILIES: Readonly<Record<FamilyKey, ReferenceFamily>> = 
   analytics_axis: {
     module: 'analytics',
     table: 'analytics_axes',
+    // The screen names a dimension by its name (`Purpose`), never its code beside it.
     label: `COALESCE(NULLIF(r.name, ''), r.code)`,
-    reference: 'r.code',
     visibility: {},
   },
   analytics_category: {
@@ -400,6 +401,29 @@ async function runCodeCheck(reader: ReferenceReader, check: FamilyCodeCheckKey, 
   return new Set(Array.from(readable, (id) => id.toLowerCase()));
 }
 
+/** The rows a page may name, and the ids whose row no longer exists in the tenant. */
+export type ReferenceResolution = {
+  rows: Map<FamilyKey, Map<string, ReferenceRow>>;
+  deleted: Map<FamilyKey, Set<string>>;
+};
+
+/** The ids of a family's table that still exist, read outside the person's screen scope, ids only. */
+async function existingIds(reader: ReferenceReader, table: string, ids: readonly string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const read = (manager: EntityManager) => manager.query(
+    `SELECT r.id::text AS id FROM ${table} r WHERE r.tenant_id = $1 AND r.id = ANY($2::uuid[])`,
+    [reader.tenantId, ids],
+  );
+  const runner = reader.manager.queryRunner;
+  // A limited person runs in a transaction; outside the limited role the read is the same. The
+  // window is read-only and gives the role back (`data-access/full-data-access.ts`): the answer is
+  // a set of booleans, never a name or a field.
+  const rows: Array<{ id: string }> = runner?.isTransactionActive
+    ? await withFullDataAccess(reader.manager, read)
+    : await read(reader.manager);
+  return new Set(rows.map((row) => row.id.toLowerCase()));
+}
+
 /**
  * The rows of each family the person may name, under the tenant predicate, RLS and data access,
  * plus the rule the family's own screen applies:
@@ -411,15 +435,21 @@ async function runCodeCheck(reader: ReferenceReader, check: FamilyCodeCheckKey, 
  *   is absent, as the task list applies it;
  * - documents, folders and libraries: the code check decides, as the Knowledge screen does.
  *
- * A family with no row here is `{ hidden: true, kind }` in the answer. The scopes are read once per
- * page, and only for a family the page names and the person may read.
+ * An id the person may read but whose row is absent from its table is a deleted record: `deleted`
+ * lists it so the presentation says "a deleted asset", never "an asset" (which means withheld).
+ * The existence read runs outside the person's screen scope because a row they cannot see still
+ * exists; it returns ids only, and the tenant predicate still applies. A module the person does
+ * not read resolves nothing: the record stays hidden, never deleted.
+ *
+ * The scopes are read once per page, and only for a family the page names and the person may read.
  */
-export async function loadReferences(
+export async function resolveReferences(
   reader: ReferenceReader,
   ids: Map<FamilyKey, Set<string>>,
   readable: Record<FamilyKey, boolean>,
-): Promise<Map<FamilyKey, Map<string, ReferenceRow>>> {
+): Promise<ReferenceResolution> {
   const out = new Map<FamilyKey, Map<string, ReferenceRow>>();
+  const deleted = new Map<FamilyKey, Set<string>>();
   const scopes = new Map<ParticipationResource, ParticipationAccessScope | undefined>();
   for (const family of FAMILY_KEYS) {
     const wanted = ids.get(family);
@@ -433,23 +463,36 @@ export async function loadReferences(
     if (spec.visibility.check) {
       // The code check is the screen rule: only the ids it lets through are read for their label.
       readableIds = Array.from(await runCodeCheck(reader, spec.visibility.check, readableIds));
-      if (readableIds.length === 0) {
-        out.set(family, new Map());
-        continue;
+    }
+    const rows: ReferenceRow[] = readableIds.length === 0 ? [] : await (async () => {
+      const params: unknown[] = [reader.tenantId, readableIds];
+      if (!spec.visibility.check) {
+        visibilitySql = await familyVisibilitySql(reader, family, scopes, params);
       }
+      const reference = spec.reference ? `, ${spec.reference} AS reference` : '';
+      return reader.manager.query(
+        `SELECT r.id::text AS id, ${spec.label} AS label${reference}
+           FROM ${spec.table} r
+          WHERE r.tenant_id = $1 AND r.id = ANY($2::uuid[])${visibilitySql}`,
+        params,
+      );
+    })();
+    const byId = new Map(rows.map((row) => [row.id.toLowerCase(), row]));
+    out.set(family, byId);
+    const missing = Array.from(wanted).filter((id) => !byId.has(id));
+    if (missing.length > 0) {
+      const present = await existingIds(reader, spec.table, missing);
+      deleted.set(family, new Set(missing.filter((id) => !present.has(id))));
     }
-    const params: unknown[] = [reader.tenantId, readableIds];
-    if (!spec.visibility.check) {
-      visibilitySql = await familyVisibilitySql(reader, family, scopes, params);
-    }
-    const reference = spec.reference ? `, ${spec.reference} AS reference` : '';
-    const rows: ReferenceRow[] = await reader.manager.query(
-      `SELECT r.id::text AS id, ${spec.label} AS label${reference}
-         FROM ${spec.table} r
-        WHERE r.tenant_id = $1 AND r.id = ANY($2::uuid[])${visibilitySql}`,
-      params,
-    );
-    out.set(family, new Map(rows.map((row) => [row.id.toLowerCase(), row])));
   }
-  return out;
+  return { rows: out, deleted };
+}
+
+/** The named rows of each family, without the deleted ids (the shape a reference reader expects). */
+export async function loadReferences(
+  reader: ReferenceReader,
+  ids: Map<FamilyKey, Set<string>>,
+  readable: Record<FamilyKey, boolean>,
+): Promise<Map<FamilyKey, Map<string, ReferenceRow>>> {
+  return (await resolveReferences(reader, ids, readable)).rows;
 }

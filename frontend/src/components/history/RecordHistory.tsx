@@ -66,8 +66,8 @@ function HistoryLineView({ line, separator }: { line: HistoryLine; separator: st
 
 function HistoryEntry({ item, context, separator }: { item: RecordHistoryItem; context: HistoryTextContext; separator: string }) {
   const lines = historyLines(item, context);
-  const childTitle = historyChildTitle(item, context.t);
-  const subject = childTitle ? null : historySubjectText(item.subject, context.t);
+  const childTitle = historyChildTitle(item, context.t, context.table);
+  const subject = childTitle ? null : historySubjectText(item.subject, context.t, context.table);
   return (
     <Box
       component="li"

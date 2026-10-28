@@ -51,6 +51,12 @@ async function seedConnectionAudits(runner: QueryRunner, data: HistorySeed) {
     table: 'connections', recordId: data.connection, action: 'create', userId: data.owner,
     after: { ...connection, destination_asset_id: missingAsset },
   });
+  // The entity code is stored, the screen names it from the tenant's IT settings.
+  await audit(runner, {
+    table: 'connections', recordId: data.connection, action: 'update', userId: data.owner,
+    before: { ...connection, source_entity_code: null },
+    after: { ...connection, source_entity_code: 'par_dc1' },
+  });
   await audit(runner, {
     table: 'connections', recordId: data.connection, action: 'update', userId: data.owner,
     before: connection,
@@ -129,7 +135,11 @@ async function testConnectionEntries(seeded: Seeded) {
   const source = findChange(create, 'source_asset_id').after as any;
   assert.equal(source.kind, 'asset');
   assert.equal(source.label, 'Server One');
-  assert.deepEqual(findChange(create, 'destination_asset_id').after, { hidden: true, kind: 'asset' });
+  assert.deepEqual(
+    findChange(create, 'destination_asset_id').after,
+    { hidden: true, kind: 'asset', deleted: true },
+    'an asset absent from its table is deleted, never merely withheld',
+  );
 
   const update = findItem(page, 'update');
   assert.equal(findChange(update, 'name').before, 'Core link');
@@ -137,6 +147,10 @@ async function testConnectionEntries(seeded: Seeded) {
   assert.equal(findChange(update, 'lifecycle').before, 'active');
   assert.equal(findChange(update, 'lifecycle').after, 'deprecated');
   assert.equal(findChange(update, 'risk_mode').after, 'derived');
+  const entity = page.items
+    .flatMap((item) => item.changes)
+    .find((change) => change.field === 'source_entity_code');
+  assert.equal(entity?.after, 'PAR-DC1', 'the endpoint carries the entity label of the IT settings');
   assertNoField(page, 'connection_id');
   console.log('  connection creation and modification in words, source asset named, missing asset hidden: OK');
 }
@@ -182,6 +196,14 @@ async function run() {
   const foreignTenantId = await createRaceTenant('record-history-connections-foreign');
   try {
     const seeded: Seeded = await seed(tenantId, async (runner) => {
+      await runner.query(
+        `UPDATE tenants
+            SET metadata = COALESCE(metadata, '{}'::jsonb)
+              || jsonb_build_object('it_ops', COALESCE(metadata->'it_ops', '{}'::jsonb)
+                   || jsonb_build_object('entities', $2::jsonb))
+          WHERE id = $1`,
+        [tenantId, JSON.stringify([{ code: 'par_dc1', label: 'PAR-DC1' }])],
+      );
       const data = await seedHistoryData(runner, tenantId);
       await seedConnectionAudits(runner, data);
       const reader = await seedPerson(runner, tenantId, { first: 'Nils', last: 'Network' }, { infrastructure: 'reader' });

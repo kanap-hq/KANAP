@@ -267,6 +267,13 @@ async function seedFamily(runner: QueryRunner, data: HistorySeed): Promise<Seede
     table: 'asset_technologies', recordId: data.technology, action: 'delete', userId: allReader.id,
     before: installedLink, after: null,
   });
+  // An asset the link named and that no longer exists: the technology's history must say the asset
+  // was deleted, not merely withheld.
+  await audit(runner, {
+    table: 'asset_technologies', recordId: data.technology, action: 'update', userId: allReader.id,
+    before: { id: randomUUID(), asset_id: randomUUID(), technology_id: data.technology, is_operating_system: false, notes: null },
+    after: null,
+  });
 
   await audit(runner, {
     table: 'technologies', recordId: data.technology, action: 'create', userId: allReader.id,
@@ -292,6 +299,20 @@ async function seedFamily(runner: QueryRunner, data: HistorySeed): Promise<Seede
         cpe_products_added: ['a:postgresql:postgresql'], cpe_products_removed: [],
         cve_names_added: ['CVE-2026-0001'], cve_names_removed: [],
         description_filled: true, description_updated: false,
+      },
+    },
+  });
+  // A synchronization that added no CVE name but updated the description: its empty name lists
+  // must not become "CVE names added: —".
+  await audit(runner, {
+    table: 'technologies', recordId: data.technology, action: 'update', userId: null, source: 'system',
+    before: null,
+    after: {
+      catalog_sync: {
+        versions_added: [], versions_updated: [], versions_attached: [],
+        cpe_products_added: [], cpe_products_removed: [],
+        cve_names_added: [''], cve_names_removed: [],
+        description_filled: false, description_updated: true,
       },
     },
   });
@@ -554,10 +575,10 @@ async function testTechnologyEntries(seeded: Seeded) {
   assert.equal((businessOwner.change.after as any).label, 'Alba All');
   assert.ok(findChange(page, 'owner_it', 'removed'), 'the IT owner is removed');
 
-  const contact = findChange(page, 'contact', 'added');
+  const contact = findChange(page, 'added');
   assert.ok(contact, 'the support contact is added');
   assert.equal((contact.change.after as any).label, 'Cora Contact');
-  assert.ok(findChange(page, 'contact', 'removed'), 'the support contact is removed');
+  assert.ok(findChange(page, 'removed'), 'the support contact is removed');
 
   const application = findChange(page, 'application', 'added');
   assert.ok(application, 'the application link is added');
@@ -567,6 +588,11 @@ async function testTechnologyEntries(seeded: Seeded) {
   assert.ok(asset, 'the asset link is added');
   assert.equal((asset.change.after as any).label, 'Server One');
   assert.ok(findChange(page, 'asset', 'removed'), 'the asset link is removed');
+  const deletedAsset = page.items.flatMap((item) => item.changes)
+    .find((change) => change.field === 'asset' && change.event === 'removed'
+      && (change.before as any)?.deleted === true);
+  assert.ok(deletedAsset, 'an asset absent from its table reads as deleted');
+  assert.equal((deletedAsset!.before as any).label, undefined, 'a deleted asset never reveals a name');
   const linkedContract = findChange(page, 'contract', 'added');
   assert.equal((linkedContract?.change.after as any).label, 'Support Contract');
   assert.ok(findChange(page, 'contract', 'removed'), 'the contract link is removed');
@@ -596,11 +622,19 @@ async function testTechnologyEntries(seeded: Seeded) {
   assert.equal(sync!.actor.name, null);
   assert.deepEqual(findChange({ ...page, items: [sync!] }, 'versions_added')?.change.after, ['2.2']);
   assert.equal(findChange({ ...page, items: [sync!] }, 'description_filled')?.change.after, true);
+  const emptySync = page.items.find((item) => item.actor.kind === 'system'
+    && item.changes.some((change) => change.field === 'description_updated'));
+  assert.ok(emptySync, 'the description-only synchronization is an entry');
+  assert.equal(
+    emptySync!.changes.some((change) => change.field === 'cve_names_added'),
+    false,
+    'an empty CVE list is not a "CVE names added: —" line',
+  );
 
   // An infrastructure-only reader names the assets and technologies, and hides the other modules.
   const narrow = await readPage(seeded.technologyReader, data.tenantId, 'technologies', data.technology, ASSET_MODULES);
   assert.deepEqual(findChange(narrow, 'application', 'added')?.change.after, { hidden: true, kind: 'application' }, 'an application is hidden without its module');
-  assert.deepEqual(findChange(narrow, 'contact', 'added')?.change.after, { hidden: true, kind: 'contact' }, 'a contact is hidden without its module');
+  assert.deepEqual(findChange(narrow, 'added')?.change.after, { hidden: true, kind: 'contact' }, 'a contact is hidden without its module');
   assert.equal((findChange(narrow, 'asset', 'added')?.change.after as any).label, 'Server One', 'the asset is named with infrastructure');
   assertNoRawId(page, data.tenantId);
   console.log('  technology creation, update, version, owners, contact, application, asset, contract, project, line, link, attachment and vulnerability in words: OK');

@@ -206,11 +206,14 @@ async function testChildren(seeded: Seeded) {
   const personAdded = findChange(personCreate, 'person');
   assert.equal(personAdded.event, 'added');
   assert.equal((personAdded.after as any).label, 'Ava Reader');
+  // The role the site gives the person is on the same charge and in the allow-list.
+  assert.equal(findChange(personCreate, 'role').after, 'site manager');
   const personUpdate = findChild(page, 'person', 'update');
   assert.equal(findChange(personUpdate, 'role').before, 'site manager');
   assert.equal(findChange(personUpdate, 'role').after, 'facility manager');
   const personDelete = findChild(page, 'person', 'delete');
   assert.equal(findChange(personDelete, 'person').event, 'removed');
+  assert.equal(findChange(personDelete, 'role').before, 'facility manager');
 
   const contactCreate = findChild(page, 'contact', 'create');
   const contactAdded = findChange(contactCreate, 'contact');

@@ -90,7 +90,7 @@ function assertPresentable(page: RecordHistoryPage) {
     }
   }
   const serialized = JSON.stringify(page);
-  for (const raw of ['after_json', 'before_json', 'tenant_id', 'created_at', 'updated_at', 'row_version', 'days_by_year']) {
+  for (const raw of ['after_json', 'before_json', 'tenant_id', 'created_at', 'updated_at', 'row_version']) {
     assert.ok(!serialized.includes(`"${raw}"`), `${raw}: no raw payload key`);
   }
 }
@@ -142,6 +142,12 @@ async function seedFamilyAAudits(runner: QueryRunner, data: HistorySeed) {
   await audit(runner, {
     table: 'company_metrics', recordId: companyMetric, action: 'update', userId: data.owner,
     before: metricRow, after: { ...metricRow, headcount: 120, it_users: 22 },
+  });
+  // Older writers stored the turnover as the numeric text PostgreSQL returns; the history reads
+  // both sides as numbers, as the metrics tab does.
+  await audit(runner, {
+    table: 'company_metrics', recordId: companyMetric, action: 'update', userId: data.owner,
+    before: { ...metricRow, turnover: '180.000' }, after: { ...metricRow, turnover: '1234567.000' },
   });
 
   // The department's own rows and its headcount child.
@@ -309,9 +315,16 @@ async function testCompanyAndDepartmentEntries(seeded: Seeded) {
   assert.equal(findChange(metricCreate, 'headcount').after, 100);
   assert.equal(findChange(metricCreate, 'it_users').after, 20);
   assert.equal(findChange(metricCreate, 'turnover').after, 12.5);
-  const metricUpdate = findItem(company, 'update', 'metrics');
+  const metricUpdate = company.items.find((item) => item.subject.kind === 'metrics'
+    && item.action === 'update' && item.changes.some((change) => change.field === 'headcount'));
+  assert.ok(metricUpdate, 'the headcount update is an entry');
   assert.equal(findChange(metricUpdate, 'headcount').before, 100);
   assert.equal(findChange(metricUpdate, 'headcount').after, 120);
+  const turnover = company.items
+    .flatMap((item) => item.changes)
+    .find((change) => change.field === 'turnover' && change.before === 180);
+  assert.ok(turnover, 'a numeric text on both sides reads as a number');
+  assert.equal(turnover.after, 1234567);
   assertNoField(company, 'fiscal_year');
   assertNoField(company, 'company_id');
   assertNoField(company, 'frozen_at');
@@ -354,7 +367,8 @@ async function testCalendarAndProcessEntries(seeded: Seeded) {
   const calendarUpdate = findItem(calendar, 'update');
   assert.equal(findChange(calendarUpdate, 'name').after, 'France (metropolitan)');
   assert.equal(findChange(calendarUpdate, 'region_code').after, '75');
-  assertNoField(calendar, 'days_by_year');
+  // The long year content is a word, never its days: "Working days changed".
+  assert.equal(findChange(calendarUpdate, 'days_by_year').text, 'workingDaysChanged');
   assert.ok(!JSON.stringify(calendar).includes('2026-01-02'), 'the year content never comes out');
 
   const process = await readPage(seeded.allReader, data.tenantId, 'business_processes', data.businessProcess, {
@@ -434,6 +448,7 @@ async function testAnalyticsEntries(seeded: Seeded) {
   const dimension = findChange(valueCreate, 'axis_id').after as any;
   assert.equal(dimension.kind, 'analytics_axis');
   assert.equal(dimension.label, 'Cost pool');
+  assert.equal(dimension.reference, undefined, 'the dimension is named without its technical code');
   assert.equal(findChange(findItem(value, 'update'), 'description').after, 'Cloud spend');
   for (const field of ['id', 'tenant_id', 'created_at', 'updated_at']) assertNoField(value, field);
 

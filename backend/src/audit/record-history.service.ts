@@ -16,6 +16,7 @@ import {
   loadReferences,
   readableFamilies,
   recordIsVisible,
+  resolveReferences,
   type FamilyCodeCheckKey,
   type FamilyKey,
   type ReferenceReader,
@@ -325,7 +326,7 @@ async function loadPageContext(
   const readable = readableFamilies(ctx);
 
   const users: Map<string, ReferenceRow> = new Map();
-  const references = await loadReferences(reader, collected.ids, readable);
+  const { rows: references, deleted } = await resolveReferences(reader, collected.ids, readable);
   const userRows = references.get('user');
   if (userRows) for (const [userId, row] of userRows) users.set(userId, row);
 
@@ -362,7 +363,26 @@ async function loadPageContext(
     for (const row of rows) if (row.name) categories.set(row.id.toLowerCase(), row.name);
   }
 
-  return { entry, recordId: id, users, versions, references, readable, dimensions, categories };
+  // A connection's endpoints and a segment's equipment store an entity code; the connection page
+  // names it as its IT settings do, never the raw code.
+  const entityLabels = new Map<string, string>();
+  if (entry.table === 'connections') {
+    const rows: Array<{ code: string | null; label: string | null }> = await reader.manager.query(
+      `SELECT entity->>'code' AS code, entity->>'label' AS label
+         FROM tenants t
+         CROSS JOIN LATERAL jsonb_array_elements(
+           CASE WHEN jsonb_typeof(t.metadata->'it_ops'->'entities') = 'array'
+                THEN t.metadata->'it_ops'->'entities' ELSE '[]'::jsonb END
+         ) AS entity
+        WHERE t.id = $1`,
+      [tenantId],
+    );
+    for (const row of rows) {
+      if (row.code && row.label) entityLabels.set(row.code.toLowerCase(), row.label);
+    }
+  }
+
+  return { entry, recordId: id, users, versions, references, deleted, readable, dimensions, categories, entityLabels };
 }
 
 @Injectable()

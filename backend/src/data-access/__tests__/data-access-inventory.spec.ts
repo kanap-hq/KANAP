@@ -15,8 +15,9 @@ import {
  *    only from the call points of spec §6.3: a new call site is added here on purpose.
  * 2. Role changes (`SET ROLE`, `RESET ROLE`, `set_config('role'`) appear only in the foundations
  *    migration (inside `data_access_apply`), in `withFullDataAccess` (`data-access/full-data-access.ts`)
- *    and in the data-access specs; `withFullDataAccess` is called from the chargeback report and
- *    from the contract coverage (spec §6.6, §10.3 "Divulgations"), and nowhere else.
+ *    and in the data-access specs; `withFullDataAccess` is called from the chargeback report, from
+ *    the contract coverage and from the record history's deleted-reference existence read (spec
+ *    §6.6, §10.3 "Divulgations"), and nowhere else.
  * 3. Every path outside the tenant interceptor (`@SkipTenantTransaction()`, `{ transaction: false }`,
  *    `tenantExecutor.run(`, `withTenantExecution(`, `withTenant(`) is classified in
  *    `data-access/data-access-paths.inventory.ts`, and the inventory names no site that is gone.
@@ -132,12 +133,14 @@ const ROLE_CHANGE_ALLOWED = new Set([
 
 /**
  * `withFullDataAccess(` calls per file, outside its definition (spec §6.6, §10.3 "Divulgations"):
- * the chargeback report, and the contract coverage (page and list, through
- * `readContractBudgetCoverage`).
+ * the chargeback report, the contract coverage (page and list, through
+ * `readContractBudgetCoverage`), and the record history's existence read, which returns ids only
+ * so that a deleted reference never reads as a withheld one.
  */
 const FULL_DATA_ACCESS_CALLS: Record<string, number> = {
   'spend/chargeback-report.service.ts': 1,
   'contracts/contract-budget.ts': 1,
+  'audit/record-history/families.ts': 1,
 };
 
 /** A reference to the full-data-access module, whatever the binding it makes. */

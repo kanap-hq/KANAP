@@ -1,4 +1,5 @@
 import { DASH } from '../../components/workspace/relations/helpers';
+import { countryNameFor } from '../../i18n/countries';
 import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import { formatItemRef } from '../../utils/item-ref';
 import type { Translate } from './auditLogLabels';
@@ -131,6 +132,14 @@ const ENUM_GROUPS: Record<string, string> = {
   vulnerability_state: 'auditLogs.values.vulnerabilityState',
   cyber_criticality: 'auditLogs.values.cyberCriticality',
   recovery_wave: 'auditLogs.values.recoveryWave',
+  // The IT landscape's enum values the record history reaches: the data class uses the
+  // classification catalog's own labels, the interface data categories and the endpoint entity
+  // codes the IT settings' shipped labels.
+  data_class: 'classification-catalog:dataClasses',
+  data_category: 'it:catalogDefaults.interfaceDataCategories',
+  source_entity_code: 'it:catalogDefaults.entities',
+  destination_entity_code: 'it:catalogDefaults.entities',
+  equipment_entity_code: 'it:catalogDefaults.entities',
 };
 
 /** `spread_profile_name` holds `flat` and `4-4-5`; its keys cannot use the stored code as is. */
@@ -308,14 +317,30 @@ function screenLabel(context: AuditValueContext, key: string): string | null {
   return text;
 }
 
-/** Snake case as stored, camelCase as the IT enum keys name it. Status keys stay snake case. */
+/**
+ * Snake case as stored, camelCase as the IT enum keys name it. Status keys stay snake case, and so
+ * do the catalog lists whose locale keys are the stored codes (`data_category`, entity codes) and
+ * the classification catalog's `{ label, description }` rows (`data_class`).
+ */
 function enumerationCode(field: string, code: string): string {
-  if (field === 'status' || field === 'lifecycle' || field === 'vulnerability_state') return code;
+  if (field === 'status' || field === 'lifecycle' || field === 'vulnerability_state'
+    || field === 'data_class' || field === 'data_category'
+    || field === 'source_entity_code' || field === 'destination_entity_code' || field === 'equipment_entity_code') return code;
   return code.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
 /** The screen label of a known enumeration, or null so an unknown code stays as stored. */
 function enumerationLabel(field: string, code: string, context: AuditValueContext): string | null {
+  // The classification catalog nests each code under `label`/`description`; the other groups map
+  // the code straight to the label.
+  if (field === 'data_class') {
+    return screenLabel(context, `classification-catalog:dataClasses.${code}.label`);
+  }
+  if (field === 'provider' && context.table === 'assets') {
+    // The asset's provider is a hosting type when set, a server provider otherwise.
+    return screenLabel(context, `it:catalogDefaults.hostingTypes.${code}`)
+      ?? screenLabel(context, `it:catalogDefaults.serverProviders.${code}`);
+  }
   if (field === 'spread_profile_name') {
     const key = SPREAD_PROFILE_KEYS[code];
     return key ? screenLabel(context, `auditLogs.values.spreadProfile.${key}`) : null;
@@ -351,6 +376,16 @@ function enumerationLabel(field: string, code: string, context: AuditValueContex
   return screenLabel(context, `${group}.${enumerationCode(field, code)}`);
 }
 
+/** The country fields the screens show as "France (FR)", name then code. */
+const COUNTRY_FIELDS = new Set(['country_iso', 'country']);
+
+function countryText(field: string, value: string, locale: string): string | null {
+  if (!COUNTRY_FIELDS.has(field) || !/^[A-Za-z]{2}$/.test(value.trim())) return null;
+  const code = value.trim().toUpperCase();
+  const name = countryNameFor(locale)(code);
+  return name && name !== code ? `${name} (${code})` : null;
+}
+
 function scalarText(value: unknown, field: string, context: AuditValueContext): string {
   if (value === null || value === undefined) return DASH;
   if (typeof value === 'boolean') {
@@ -362,7 +397,10 @@ function scalarText(value: unknown, field: string, context: AuditValueContext): 
   if (typeof value === 'string') {
     const text = value.trim();
     if (!text) return DASH;
-    return dateText(text, context.locale) ?? enumerationLabel(field, text, context) ?? value;
+    return countryText(field, text, context.locale)
+      ?? dateText(text, context.locale)
+      ?? enumerationLabel(field, text, context)
+      ?? value;
   }
   return String(value);
 }
@@ -452,6 +490,8 @@ export function formatAuditValue(value: unknown, field: string, context: AuditVa
       const name = context.users?.get(text);
       return name ? { text: name } : identifier(context, text);
     }
+    const country = countryText(field, text, context.locale);
+    if (country) return { text: country };
     const date = dateText(text, context.locale);
     if (date) return { text: date };
     if (UUID_PATTERN.test(text)) {

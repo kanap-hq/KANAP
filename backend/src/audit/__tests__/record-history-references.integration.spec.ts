@@ -362,7 +362,11 @@ async function testLineHistory(seedRow: HistorySeed, bc: Person, data: Participa
   assert.equal((project.change.before as any)?.label, 'Project Alpha', 'the sponsored project is named');
   const owner = findChange(page.items, 'owner_it_id');
   assert.ok(owner, 'the owner change is present');
-  assert.deepEqual(owner.change.after, { hidden: true, kind: 'user' }, 'a person of another tenant is hidden');
+  assert.deepEqual(
+    owner.change.after,
+    { hidden: true, kind: 'user', deleted: true },
+    'a person absent from this tenant\'s users is deleted here, never merely withheld',
+  );
 
   const applications = page.items
     .filter((item) => item.subject.kind === 'application')

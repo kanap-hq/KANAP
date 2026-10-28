@@ -52,8 +52,10 @@ const CONTACT_FIELDS: HistoryFields = {
   job_title: shown(),
   country: shown(),
   active: shown(),
-  supplier_id: shown('supplier'),
-  supplier_role: shown(),
+  // The supplier link row (`supplier_contacts`) already reads as "Supplier added: ..." with its
+  // role: the contact's own payload repeats both, so neither becomes a second entry.
+  supplier_id: hidden('the supplier link row carries the supplier'),
+  supplier_role: hidden('the supplier link row carries the role'),
   email: hidden('personal data: the history names people only'),
   phone: hidden('personal data: the history names people only'),
   mobile: hidden('personal data: the history names people only'),

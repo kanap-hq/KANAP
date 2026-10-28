@@ -78,7 +78,7 @@ function englishStrings(): string[] {
   for (const kind of EVENT_KINDS) {
     strings.push(history.events[kind].added, history.events[kind].removed);
   }
-  for (const kind of RECORD_HISTORY_UNNAMED_KINDS) strings.push(history.unnamed[kind]);
+  for (const kind of RECORD_HISTORY_UNNAMED_KINDS) strings.push(history.unnamed[kind], history.deleted[kind]);
   return strings;
 }
 
@@ -109,8 +109,8 @@ describe('record history locales', () => {
     for (const kind of EVENT_KINDS) {
       paths.push(`events.${kind}.added`, `events.${kind}.removed`);
     }
-    for (const kind of RECORD_HISTORY_UNNAMED_KINDS) paths.push(`unnamed.${kind}`);
-    paths.push('versionNumber', 'versionChanged', 'texts.contentChanged');
+    for (const kind of RECORD_HISTORY_UNNAMED_KINDS) paths.push(`unnamed.${kind}`, `deleted.${kind}`);
+    paths.push('versionNumber', 'versionChanged', 'texts.contentChanged', 'texts.workingDaysChanged');
 
     for (const language of LANGUAGE_NAMES) {
       const target = LOCALES[language].auditLogs.history;
@@ -215,6 +215,10 @@ describe('record history locales', () => {
     expect(legFr).toBe('Segment 2 ajouté');
     const legEn = historyChildTitle(item({ subject: { kind: 'leg', label: '2' }, action: 'delete' }), enCtx.t);
     expect(legEn).toBe('Segment 2 removed');
+    const hopFr = historyChildTitle(item({ subject: { kind: 'leg', label: '3' }, action: 'create' }), frCtx.t, 'connections');
+    expect(hopFr).toBe('Saut 3 ajouté');
+    const hopEn = historyChildTitle(item({ subject: { kind: 'leg', label: '3' }, action: 'delete' }), enCtx.t, 'connections');
+    expect(hopEn).toBe('Hop 3 removed');
 
     const bindingFr = historyChildTitle(item({ subject: { kind: 'binding', label: 'PROD' }, action: 'create' }), frCtx.t);
     expect(bindingFr).toBe('Liaison PROD ajoutée');
@@ -222,9 +226,9 @@ describe('record history locales', () => {
 
     const ownerFr = historyLines(item({
       subject: { kind: 'set' },
-      changes: [{ field: 'owner', event: 'added', after: { kind: 'user', id: ID, label: 'Ava Reader' } }],
+      changes: [{ field: 'owner_it', event: 'added', after: { kind: 'user', id: ID, label: 'Ava Reader' } }],
     }), frCtx);
-    expect(ownerFr[0].text).toBe('Propriétaire ajouté\u00a0: Ava Reader');
+    expect(ownerFr[0].text).toBe('Propriétaire IT ajouté\u00a0: Ava Reader');
 
     const legEventFr = historyLines(item({
       subject: { kind: 'set' },
@@ -352,6 +356,15 @@ describe('record history locales', () => {
       changes: [{ field: 'contract_id', before: null, after: { hidden: true, kind: 'contract' } }],
     }), frCtx);
     expect(lineText(frHidden[0], frCtx)).toBe('Contrat\u00a0: — → un contrat');
+
+    const frDeleted = historyLines(item({
+      changes: [{ field: 'asset', event: 'removed', before: { hidden: true, kind: 'asset', deleted: true } }],
+    }), frCtx);
+    expect(frDeleted[0].text).toBe('Actif retiré\u00a0: un actif supprimé');
+    const frHiddenField = historyLines(item({
+      changes: [{ field: 'contract_id', before: null, after: { hidden: true, kind: 'contract', deleted: true } }],
+    }), frCtx);
+    expect(lineText(frHiddenField[0], frCtx)).toBe('Contrat\u00a0: — → un contrat supprimé');
 
     const frValue = historyLines(item({
       subject: { kind: 'value' },
