@@ -69,7 +69,15 @@ vi.mock('../../../hooks/useAnalyticsAxes', async (importOriginal) => {
     ),
   };
 });
-vi.mock('../../../components/fields/UserSelect', () => ({ default: () => null }));
+// The person picker reads its group from the API; here it only reports the props this file checks.
+vi.mock('../../../components/fields/UserSelect', () => ({
+  default: (p: { label?: string; suggestedFirst?: { costCenterId: string | null } | null }) => (
+    <div
+      data-testid={`user-select-${p.label ?? ''}`}
+      data-suggested-center={p.suggestedFirst?.costCenterId ?? 'none'}
+    />
+  ),
+}));
 vi.mock('../../../components/fields/CostCenterSelect', () => ({
   default: (p: {
     value: string | null;
@@ -282,6 +290,27 @@ describe('BudgetPropertiesDrawer cost center and run or build', () => {
     expect(screen.getByText('opex.fields.runBuild')).toBeInTheDocument();
     expect(screen.getByTestId('cost-center-select')).toHaveAttribute('data-selectable', 'cost_centers');
     expect(screen.getByTestId('cost-center-select')).toHaveTextContent('cc-1');
+  });
+
+  it('gives both owner pickers the line cost centre, and none when the line has none', () => {
+    const first = renderDrawer({
+      mode: 'create',
+      costCenterId: 'cc-1',
+      onOwnerItChange: noop,
+      onOwnerBusinessChange: noop,
+    });
+    expect(screen.getByTestId('user-select-opex.metadata.itOwner')).toHaveAttribute('data-suggested-center', 'cc-1');
+    expect(screen.getByTestId('user-select-opex.metadata.businessOwner')).toHaveAttribute('data-suggested-center', 'cc-1');
+    first.unmount();
+
+    renderDrawer({
+      mode: 'create',
+      costCenterId: '',
+      onOwnerItChange: noop,
+      onOwnerBusinessChange: noop,
+    });
+    expect(screen.getByTestId('user-select-opex.metadata.itOwner')).toHaveAttribute('data-suggested-center', 'none');
+    expect(screen.getByTestId('user-select-opex.metadata.businessOwner')).toHaveAttribute('data-suggested-center', 'none');
   });
 
   it('narrows the cost centers to the paying company, unless that company follows the cost center', () => {

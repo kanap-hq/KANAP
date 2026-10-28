@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -26,6 +26,13 @@ const PEOPLE = [
   { id: 'u-2', first_name: 'Marc', last_name: 'Zola', email: null, status: 'enabled' },
 ];
 
+// One suggested person is also on the lookup's first page (Marc), one is not (Zoe).
+const SUGGESTED_CC1 = [
+  { id: 'u-3', first_name: 'Zoe', last_name: 'Zulu', email: null, status: 'enabled' },
+  { id: 'u-2', first_name: 'Marc', last_name: 'Zola', email: null, status: 'enabled' },
+];
+const OWNER_SUGGESTIONS_ENDPOINT = '/budget-lines/owner-suggestions';
+
 function wrap(ui: React.ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -39,6 +46,10 @@ describe('person pickers on the user lookup', () => {
   beforeEach(() => {
     apiGet.mockReset();
     apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
+      if (url === OWNER_SUGGESTIONS_ENDPOINT) {
+        const items = config?.params?.cost_center_id === 'cc-1' ? SUGGESTED_CC1 : [];
+        return { data: { items, has_more: false } };
+      }
       if (url !== '/users/lookup') throw new Error(`unexpected ${url}`);
       // The server folds accents and case (common/lookup).
       const fold = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
@@ -68,6 +79,47 @@ describe('person pickers on the user lookup', () => {
     await waitFor(() => expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Marc Zola']));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Marc Zola' }));
     expect(onChange).toHaveBeenCalledWith('u-2');
+  });
+
+  it('puts the cost centre people first, under their header, then the rest without duplicates', async () => {
+    wrap(<MetadataUserPicker value={null} placeholder="Owner missing" onChange={() => undefined} suggestedFirst={{ costCenterId: 'cc-1' }} />);
+    fireEvent.click(screen.getByRole('button', { name: /Owner missing/ }));
+    await waitFor(() => expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Zoe Zulu',
+      'Marc Zola',
+      'Hélène Dupré',
+    ]));
+    const listbox = screen.getByRole('listbox');
+    expect(within(listbox).getByText('selects.costCenterAccess')).toBeInTheDocument();
+    expect(within(listbox).getAllByRole('separator')).toHaveLength(1);
+    expect(screen.getAllByRole('menuitem').filter((item) => item.textContent === 'Marc Zola')).toHaveLength(1);
+  });
+
+  it('searches the usual lookup once a text is typed, without the group', async () => {
+    wrap(<MetadataUserPicker value={null} placeholder="Owner missing" onChange={() => undefined} suggestedFirst={{ costCenterId: 'cc-1' }} />);
+    fireEvent.click(screen.getByRole('button', { name: /Owner missing/ }));
+    await waitFor(() => expect(screen.getAllByRole('menuitem')).toHaveLength(3));
+
+    fireEvent.change(screen.getByPlaceholderText('selects.user'), { target: { value: 'hel' } });
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith(
+      '/users/lookup',
+      expect.objectContaining({ params: expect.objectContaining({ q: 'hel' }) }),
+    ));
+    await waitFor(() => expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Hélène Dupré']));
+    expect(screen.queryByText('selects.costCenterAccess')).toBeNull();
+    expect(screen.queryByRole('separator')).toBeNull();
+  });
+
+  it('keeps the plain lookup, me first, when the line has no cost centre', async () => {
+    wrap(<MetadataUserPicker value={null} placeholder="Owner missing" onChange={() => undefined} suggestedFirst={{ costCenterId: null }} />);
+    fireEvent.click(screen.getByRole('button', { name: /Owner missing/ }));
+    await waitFor(() => expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Ada Lovelace selects.meSuffix',
+      'Hélène Dupré',
+      'Marc Zola',
+    ]));
+    expect(within(screen.getByRole('listbox')).getAllByRole('separator')).toHaveLength(1);
+    expect(apiGet.mock.calls.some(([url]) => url === OWNER_SUGGESTIONS_ENDPOINT)).toBe(false);
   });
 
   it('while the next search runs, lists only the people that still match, and hints at more results', async () => {
