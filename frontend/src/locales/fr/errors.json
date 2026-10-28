@@ -241,6 +241,7 @@
   "suite_has_children_other": "Retirez d'abord les {{count}} applications rattachées.",
   "suite_cycle": "Cette application contient déjà {{name}} : elle ne peut pas en faire partie.",
   "forbidden": "Vous n'avez pas les droits pour cette action.",
+  "MODULE_RIGHT_REQUIRED": "Il vous manque le droit « {{level}} » sur « {{resource}} ». Demandez-le à un administrateur de votre espace.",
   "NO_ACCESS": "Ce compte n'a pas encore reçu d'accès. Demandez-le à un administrateur.",
   "assignment_duplicate": "Ce serveur a déjà ce rôle sur ce déploiement.",
   "assignment_inherited": "Déjà hébergée par ce serveur via {{cluster}}.",

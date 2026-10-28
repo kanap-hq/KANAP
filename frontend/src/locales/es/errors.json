@@ -241,6 +241,7 @@
   "suite_has_children_other": "Desvincule primero las {{count}} aplicaciones asociadas.",
   "suite_cycle": "Esta aplicación ya contiene {{name}}: no puede formar parte de ella.",
   "forbidden": "No tiene permisos para esta acción.",
+  "MODULE_RIGHT_REQUIRED": "Le falta el permiso «{{level}}» en «{{resource}}». Pídaselo a un administrador de su espacio de trabajo.",
   "NO_ACCESS": "Esta cuenta aún no tiene acceso. Solicítelo a un administrador.",
   "assignment_duplicate": "Este servidor ya tiene este rol en este despliegue.",
   "assignment_inherited": "Ya alojada en este servidor a través de {{cluster}}.",

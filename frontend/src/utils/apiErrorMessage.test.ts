@@ -59,6 +59,36 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(bare, i18n.getFixedT('fr'), 'fallback')).toBe("Vous n'avez pas les droits pour cette action.");
   });
 
+  it('names the module right a coded refusal is missing', () => {
+    const missing = {
+      response: {
+        status: 403,
+        data: {
+          statusCode: 403,
+          error: 'Forbidden',
+          code: 'MODULE_RIGHT_REQUIRED',
+          message: 'You do not have the rights for this action.',
+          params: { resource: 'budget', level: 'reader' },
+        },
+      },
+    };
+    expect(getApiErrorMessage(missing, i18n.getFixedT('fr'), 'fallback')).toBe(
+      'Il vous manque le droit « Lecteur » sur « Budget ». Demandez-le à un administrateur de votre espace.',
+    );
+    expect(getApiErrorMessage(missing, t, 'fallback')).toBe(
+      'You need the “Reader” right on “Budget”. Ask an administrator of your workspace.',
+    );
+    const unknown = {
+      response: {
+        status: 403,
+        data: { code: 'MODULE_RIGHT_REQUIRED', message: 'You do not have the rights for this action.', params: { resource: 'not_a_module', level: 'reader' } },
+      },
+    };
+    expect(getApiErrorMessage(unknown, t, 'fallback')).toBe(
+      'You need the “Reader” right on “not_a_module”. Ask an administrator of your workspace.',
+    );
+  });
+
   it('says why a refusal coded in its error field happened', () => {
     const trial = { response: { status: 403, data: { error: 'TRIAL_EXPIRED', message: 'Trial expired' } } };
     expect(getApiErrorMessage(trial, t, 'fallback')).toBe('Your trial has expired. Please choose a plan to continue.');

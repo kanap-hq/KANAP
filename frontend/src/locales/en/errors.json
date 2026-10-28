@@ -241,6 +241,7 @@
   "suite_has_children_other": "Detach the {{count}} child applications first.",
   "suite_cycle": "This application already contains {{name}}: it cannot belong to it.",
   "forbidden": "You do not have the rights for this action.",
+  "MODULE_RIGHT_REQUIRED": "You need the “{{level}}” right on “{{resource}}”. Ask an administrator of your workspace.",
   "NO_ACCESS": "This account has not been granted access yet. Ask an administrator.",
   "assignment_duplicate": "This server already has this role on this deployment.",
   "assignment_inherited": "Already hosted by this server through {{cluster}}.",

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { Reflector } from '@nestjs/core';
-import type { ExecutionContext } from '@nestjs/common';
+import { ForbiddenException, type ExecutionContext } from '@nestjs/common';
 import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
 import { PermissionGuard } from '../../auth/permission.guard';
 import { BusinessProcessesController } from '../business-processes.controller';
@@ -33,13 +33,29 @@ function context(route: string): ExecutionContext {
   } as unknown as ExecutionContext;
 }
 
+async function expectModuleRightRefusal(guard: PermissionGuard, route: string, label: string): Promise<void> {
+  await assert.rejects(
+    () => guard.canActivate(context(route)),
+    (error: unknown) => {
+      assert.ok(error instanceof ForbiddenException, label);
+      assert.equal(error.getStatus(), 403, `${label}: status`);
+      const response = error.getResponse() as { code?: string; message?: string; params?: unknown };
+      assert.equal(response.code, 'MODULE_RIGHT_REQUIRED', `${label}: code`);
+      assert.deepEqual(response.params, { resource: 'business_processes', level: 'admin' }, `${label}: params`);
+      assert.equal(response.message, 'You do not have the rights for this action.', `${label}: message`);
+      return true;
+    },
+    label,
+  );
+}
+
 async function run() {
   const proto = BusinessProcessesController.prototype as any;
   for (const route of ROUTES) {
     assert.equal(typeof proto[route], 'function', route);
     assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto[route]), { resource: 'business_processes', level: 'admin' }, route);
     for (const level of ['reader', 'contributor', 'member']) {
-      assert.equal(await guardFor(level).canActivate(context(route)), false, `${route} refused to ${level}`);
+      await expectModuleRightRefusal(guardFor(level), route, `${route} refused to ${level}`);
     }
     assert.equal(await guardFor('admin').canActivate(context(route)), true, `${route} allowed to admin`);
   }

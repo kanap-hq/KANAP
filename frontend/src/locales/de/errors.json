@@ -241,6 +241,7 @@
   "suite_has_children_other": "Lösen Sie zuerst die {{count}} zugeordneten Anwendungen.",
   "suite_cycle": "Diese Anwendung enthält bereits {{name}}: Sie kann nicht dazugehören.",
   "forbidden": "Sie haben keine Berechtigung für diese Aktion.",
+  "MODULE_RIGHT_REQUIRED": "Ihnen fehlt das Recht „{{level}}“ für „{{resource}}“. Wenden Sie sich an einen Administrator Ihres Arbeitsbereichs.",
   "NO_ACCESS": "Diesem Konto wurde noch kein Zugriff gewährt. Wenden Sie sich an einen Administrator.",
   "assignment_duplicate": "Dieser Server hat diese Rolle in dieser Bereitstellung bereits.",
   "assignment_inherited": "Wird bereits über {{cluster}} auf diesem Server betrieben.",
