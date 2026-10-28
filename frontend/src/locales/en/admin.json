@@ -1110,6 +1110,18 @@
         "to_review": "To review",
         "handled": "Handled",
         "not_affected": "Not affected"
+      },
+      "cyberCriticality": {
+        "critical": "Critical",
+        "high": "High",
+        "moderate": "Moderate",
+        "low": "Low"
+      },
+      "recoveryWave": {
+        "foundation": "V0 Foundation",
+        "vital": "V1 Vital activities",
+        "priority": "V2 Priority activities",
+        "normal": "V3 Normal operation"
       }
     },
     "dataAccess": {

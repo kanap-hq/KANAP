@@ -219,6 +219,8 @@ describe('history lines', () => {
     expect(historyValueText('database', 'family', context)).toBe('Database');
     expect(historyValueText('physical_server', 'kind', { ...context, table: 'assets' })).toBe('Physical server');
     expect(historyValueText('handled', 'vulnerability_state', context)).toBe('Handled');
+    expect(historyValueText('high', 'cyber_criticality', context)).toBe('High');
+    expect(historyValueText('vital', 'recovery_wave', context)).toBe('V1 Vital activities');
   });
 
   it('reads a technical child creation and deletion by its title alone', () => {

@@ -119,6 +119,8 @@ const ENUM_GROUPS: Record<string, string> = {
   role: 'auditLogs.values.contactRole',
   origin: 'auditLogs.values.origin',
   vulnerability_state: 'auditLogs.values.vulnerabilityState',
+  cyber_criticality: 'auditLogs.values.cyberCriticality',
+  recovery_wave: 'auditLogs.values.recoveryWave',
 };
 
 /** `spread_profile_name` holds `flat` and `4-4-5`; its keys cannot use the stored code as is. */
