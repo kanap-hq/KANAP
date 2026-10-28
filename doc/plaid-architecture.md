@@ -346,22 +346,33 @@ behind the report's two tabs: never a second formula, no new SQL in the report
 service. `support_gaps` is one item per record to complete, from
 `EndOfSupportService.gaps`: `gap` (the eight kinds of `GAP_KINDS`),
 `subject_type` (application, asset, technology), `subject` (the record's
-business reference, or its name when it has none), `subject_name`, `related_name`
-and `version` for the gaps that name them. `support_deadlines` is one item per
-deadline, from `deadlines`: `subject_type` (technology, operating_system,
-application, hardware), `subject`, `subject_name`, `version`, `date`, `state`,
-the recorded standard and extended ends, and the servers and applications by
-name. `horizon_months` filters the deadlines (6, 12, 24 or 36; 12 by default);
-`subject_type`, `state` and `end_of_support_year` filter and group them;
-`date` is a `MIN`/`MAX` metric as `YYYY-MM-DD`. `gap` and `subject_type` filter
-and group the gaps; the gaps take no metric but the count.
+business reference, `APP-n`, `AST-n` or `TEC-n`, or its name when it has none),
+`subject_name`, `related` (the other end's reference), `related_name`,
+`related_type` and `version` for the gaps that name them. An asset reference and
+a related record's reference are read after the service, in one query, before
+the filters and the sort; a reference-shaped `subject` or `related` value
+compares exactly (`APP-1` never keeps `APP-12`), any other value contains on
+the name. `support_deadlines` is one item per deadline, from `deadlines`:
+`subject_type` (technology, operating_system, application, hardware), `subject`,
+`subject_name`, `version`, `date`, `state`, the recorded standard and extended
+ends, `milestone`, and the servers and applications by name (ten names, then
+"and N other servers"). `horizon_months` filters the deadlines (6, 12, 24 or 36;
+12 by default) and takes one value: several are refused. `subject_type`,
+`state`, `end_of_support_year`, the counts and the dates filter the deadlines;
+`subject_type`, `state` and `end_of_support_year` group them; `date` is a
+`MIN`/`MAX` metric as `YYYY-MM-DD`. `gap` and `subject_type` filter and group the
+gaps; the gaps take no metric but the count.
 
 Both follow the report's rights: `infrastructure:reader`, and the application
 rows only within the caller's application read scope (a Business Contributor's
-own), as `resolveAiApplicationsReach` gives it. The service returns complete,
-small lists: the families filter, group, sort and page them in memory. An item
-names a subject, never an identifier (`subject_id` stays in the item's `id`).
-There is no record detail: read the subject's own family by `subject`.
+own), as `resolveAiApplicationsReach` gives it. A caller who does not read
+applications gets `applications_visible: false` and an `applications_visible_note`:
+the application rows are left out and the application counts are null, which is
+"not read", never "none". The service returns complete, small lists: the
+families filter, group, sort and page them in memory; `support_deadlines` keeps
+30 items at most. An item names a subject, never an identifier (`subject_id`
+stays in the item's `id`). There is no record detail: read the subject's own
+family by `subject`.
 
 On applications (right `applications`), `version` (text), `go_live_date`,
 `end_of_support_date` and `retired_date` (dates, blank, ranges) filter and sort;
@@ -369,6 +380,45 @@ On applications (right `applications`), `version` (text), `go_live_date`,
 metrics as `YYYY-MM-DD`. The Applications list service
 (`applications/services/applications-list.service.ts`) carries the same filters
 and sorts for the screen, so Plaid and the grid read one path.
+
+### Technology links (write)
+
+`update_technology_links` (chat only, preview and approval) writes the links of
+one technology: the applications that declare it (with a version and, when the
+person names them, its deployment servers) and the servers it is installed on.
+The input is the technology (`TEC-n`, UUID or exact name), then
+`applications.add` / `applications.remove` and `servers.add` / `servers.remove`.
+An application is an `APP-n` or an exact name, a server an `AST-n`, exact name,
+hostname or fqdn, a version its label. The request may start from the other side
+("add PostgreSQL 16 to CheeseTrack"): the technology stays in `technology` and
+the target goes in its list. A technology absent from the tenant is refused
+before the preview, with the screen to add it on; this lot never creates one.
+
+Every write goes through `TechnologyLinksService`, never the tables: an
+application with a version and servers enters `declareApplicationTechnology`
+(which creates the version when missing, installs on the deployment servers
+asked and skips those that already have the technology); a declaration without
+a version is the same method without a label (version unknown). A server alone
+enters `addAssetLink`; a removal removes the exact link row (technology, server,
+version), and an application declaration through
+`removeApplicationDeclaration`, the new public method that removes one version
+(the screen's remove keeps every version). A version created on the way writes
+its own `technology_versions` audit row (`resolveVersionLabel`).
+
+Rights are the screen's: `infrastructure:member`, plus `applications:reader`
+as soon as an application is named (`aiRelationTargetRequirement`, checked when
+the preview is asked and when it runs). A Business Contributor links only the
+applications they take part in; another answers "not found". Every link is
+written with `source = 'ai'` and `source_ref` the preview, and every audit row
+carries `source: ai_chat` and the preview reference. An operating system is
+refused, towards an application as towards a server: it is recorded from the
+server's page, in its operating system field, which `update_business_record`
+writes. A link already there, or already absent, writes nothing; a preview that
+would write nothing is refused. The execution locks the technology
+(`FOR NO KEY UPDATE`) and reads the links again: a link changed since the
+preview answers 409 and nothing is written. The undo removes exactly the links
+added and puts back exactly the rows removed, with their version and notes; a
+version created on the way stays (decision 12).
 
 ### Vulnerabilities
 
