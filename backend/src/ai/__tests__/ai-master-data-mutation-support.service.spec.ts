@@ -10,6 +10,7 @@ const COMPANY_ID = '11111111-1111-4111-8111-111111111111';
 const CREATED_COMPANY_ID = '22222222-2222-4222-8222-222222222222';
 const DEPARTMENT_ID = '66666666-6666-4666-8666-666666666666';
 const CREATED_DEPARTMENT_ID = '77777777-7777-4777-8777-777777777777';
+const LOCATION_ID = '88888888-8888-4888-8888-888888888888';
 
 function createHarness() {
   const calls: any = {
@@ -154,6 +155,9 @@ function createHarness() {
       }
       if (sql.includes('FROM departments') && String(params[1]).toLowerCase() === 'it') {
         return [{ ...department }];
+      }
+      if (sql.includes('FROM locations') && String(params[1]).toLowerCase() === 'loc-1') {
+        return [{ id: LOCATION_ID, location_reference: 'LOC-1', name: 'LOC-1 - Paris DC', hosting_type: 'cloud' }];
       }
       return [];
     },
@@ -550,7 +554,17 @@ async function testDepartmentMetricUpdateRequiresExistingMetricRow() {
   );
 }
 
+async function testLocationLabelNamesTheReferenceOnce() {
+  const { service, context } = createHarness();
+  // The location name already carries its reference: the label does not add it a second time.
+  const found = await service.resolveRecordReference(context, 'locations', 'LOC-1');
+  assert.equal(found.ref, 'LOC-1');
+  assert.equal(found.label, 'LOC-1 - Paris DC');
+  console.log('  location reference label: OK');
+}
+
 async function main() {
+  await testLocationLabelNamesTheReferenceOnce();
   await testPrepareCreatePreviewNormalizesCompanyFields();
   await testExecuteCreateRoutesThroughDomainServiceWithPreviewAudit();
   await testExecuteCreateCanSeedCompanyMetricsWithPreviewAudit();

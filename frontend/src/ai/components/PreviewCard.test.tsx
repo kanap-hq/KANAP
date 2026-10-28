@@ -86,6 +86,184 @@ describe('PreviewCard in French', () => {
     await i18n.changeLanguage('en');
   });
 
+  it('shows a deletion card with what goes with the record, in French', () => {
+    renderCard(preview({
+      tool_name: 'delete_record',
+      target: { entity_type: 'tasks', entity_id: 'task-1', ref: 'T-42', title: 'T-42 - Migration' },
+      summary: 'Suppression de la tâche « Migration ».',
+      changes: {
+        deletion: {
+          label: 'What goes with it',
+          from: null,
+          to: '- Commentaires et changements : 2\n- Temps saisis : 1\n- Pièces jointes : 1\n- Liens aux applications : 1\n\nLes fiches liées restent.',
+          format: 'markdown',
+        },
+      },
+    }));
+
+    expect(screen.getByText('Ce qui part avec la fiche')).toBeInTheDocument();
+    for (const text of ['Commentaires et changements : 2', 'Temps saisis : 1', 'Pièces jointes : 1', 'Liens aux applications : 1', 'Les fiches liées restent.']) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.getByText('Suppression de la tâche « Migration ».')).toBeInTheDocument();
+    expect(screen.queryByText('What goes with it')).not.toBeInTheDocument();
+  });
+
+  it('shows a budget line deletion with its versions, tasks and links, in French', () => {
+    renderCard(preview({
+      tool_name: 'delete_record',
+      target: { entity_type: 'spend_items', entity_id: 'line-1', ref: 'BL-12', title: 'ERP licence' },
+      summary: 'Suppression de la ligne OPEX « ERP licence ».',
+      changes: {
+        deletion: {
+          label: 'What goes with it',
+          from: null,
+          to: [
+            '- Versions avec des montants : 2',
+            '- Années avec des montants : 2',
+            '- Tâches supprimées : 1',
+            "- Demandes qui perdent leur tâche d'origine : 1",
+            '- Pièces jointes : 1',
+            '- Liens aux contrats : 1',
+            '- Liens aux projets : 1',
+            '- Liens aux demandes : 1',
+            '- Liens aux applications : 1',
+            '- Liens aux actifs : 1',
+            '- Liens aux technologies : 1',
+            '- Liens aux contacts : 1',
+            '- Liens : 1',
+            '- Valeurs de dimensions : 1',
+            '',
+            'Les fiches liées restent.',
+          ].join('\n'),
+          format: 'markdown',
+        },
+      },
+    }));
+
+    expect(screen.getByText('Ce qui part avec la fiche')).toBeInTheDocument();
+    for (const text of [
+      'Versions avec des montants : 2',
+      'Années avec des montants : 2',
+      'Tâches supprimées : 1',
+      "Demandes qui perdent leur tâche d'origine : 1",
+      'Pièces jointes : 1',
+      'Liens aux contrats : 1',
+      'Liens aux projets : 1',
+      'Liens aux demandes : 1',
+      'Liens aux applications : 1',
+      'Liens aux actifs : 1',
+      'Liens aux technologies : 1',
+      'Liens aux contacts : 1',
+      'Liens : 1',
+      'Valeurs de dimensions : 1',
+      'Les fiches liées restent.',
+    ]) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.getByText('Suppression de la ligne OPEX « ERP licence ».')).toBeInTheDocument();
+  });
+
+  it('shows an interface deletion with its bindings and documents, in French', () => {
+    renderCard(preview({
+      tool_name: 'delete_record',
+      target: { entity_type: 'interfaces', entity_id: 'iface-1', ref: 'INT-7', title: 'INT-7 - Orders' },
+      summary: "Suppression de l'interface « INT-7 - Orders ».",
+      changes: {
+        deletion: {
+          label: 'What goes with it',
+          from: null,
+          to: [
+            '- Liaisons : 2',
+            '- Liens aux connexions : 2',
+            '- Documents intégrés : 1',
+            '- Liens aux documents : 1',
+            '- Liens aux interfaces dépendantes : 1',
+            '- Pièces jointes : 1',
+            '- Liens aux applications : 2',
+            '',
+            'Les connexions sont conservées.',
+          ].join('\n'),
+          format: 'markdown',
+        },
+      },
+    }));
+
+    expect(screen.getByText('Ce qui part avec la fiche')).toBeInTheDocument();
+    for (const text of [
+      'Liaisons : 2',
+      'Liens aux connexions : 2',
+      'Documents intégrés : 1',
+      'Liens aux documents : 1',
+      'Liens aux interfaces dépendantes : 1',
+      'Pièces jointes : 1',
+      'Liens aux applications : 2',
+      'Les connexions sont conservées.',
+    ]) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.getByText("Suppression de l'interface « INT-7 - Orders ».")).toBeInTheDocument();
+  });
+
+  it('shows a document deletion with its versions, links and review notice, in French', () => {
+    renderCard(preview({
+      tool_name: 'delete_record',
+      target: { entity_type: 'documents', entity_id: 'doc-12', ref: 'DOC-12', title: 'Runbook' },
+      summary: 'Suppression du document « Runbook ».',
+      changes: {
+        deletion: {
+          label: 'What goes with it',
+          from: null,
+          to: [
+            '- Versions : 2',
+            '- Pièces jointes : 1',
+            "- Documents qui le citent : 1",
+            "- Documents qu'il cite : 1",
+            '- Liens aux applications : 1',
+            '- Documents créés depuis ce modèle : 1',
+            '- En cours de relecture. La suppression reste possible.',
+            '- Verrouillé pour édition par Camille Roux. La suppression reste possible.',
+            '',
+            'Les fiches liées restent.',
+          ].join('\n'),
+          format: 'markdown',
+        },
+      },
+    }));
+
+    expect(screen.getByText('Ce qui part avec la fiche')).toBeInTheDocument();
+    for (const text of [
+      'Versions : 2',
+      'Pièces jointes : 1',
+      'Documents qui le citent : 1',
+      "Documents qu'il cite : 1",
+      'Liens aux applications : 1',
+      'Documents créés depuis ce modèle : 1',
+      'En cours de relecture. La suppression reste possible.',
+      'Verrouillé pour édition par Camille Roux. La suppression reste possible.',
+      'Les fiches liées restent.',
+    ]) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.getByText('Suppression du document « Runbook ».')).toBeInTheDocument();
+  });
+
+  it('shows the reference of a connection once when the server label repeats it', () => {
+    renderCard(preview({
+      tool_name: 'delete_record',
+      target: { entity_type: 'connections', entity_id: 'conn-1', ref: 'CON-1', title: 'CON-1 - CON-1 - DB link' },
+      summary: 'Suppression de la connexion « DB link ».',
+      changes: {
+        deletion: { label: 'What goes with it', from: null, to: '- Sauts : 1', format: 'markdown' },
+      },
+    }));
+
+    expect(screen.getByText('CON-1')).toBeInTheDocument();
+    expect(screen.getByText('DB link')).toBeInTheDocument();
+    expect(screen.queryByText(/CON-1 - CON-1/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/CON-1 - DB link/)).not.toBeInTheDocument();
+  });
+
   it('shows a task creation with the labels and values of the task screens', async () => {
     renderCard(preview({
       summary: 'Création de la tâche autonome « Migration ». Priorité : Moyenne.',

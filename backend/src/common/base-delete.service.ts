@@ -82,7 +82,7 @@ export abstract class BaseDeleteService<T extends ObjectLiteral> {
 
     // 5. Log deletion to audit
     if (!opts?.skipAudit) {
-      await this.logDeletion(entity, opts?.userId ?? null, manager);
+      await this.logDeletion(entity, opts?.userId ?? null, manager, opts?.audit);
     }
 
     // 6. Call afterDelete hook
@@ -214,6 +214,7 @@ export abstract class BaseDeleteService<T extends ObjectLiteral> {
     entity: T,
     userId: string | null,
     manager: EntityManager,
+    audit?: { source?: string; sourceRef?: string | null },
   ): Promise<void> {
     const tableName = this.config.auditTable ?? this.repository.metadata.tableName;
     const entityId = (entity as any).id;
@@ -226,6 +227,8 @@ export abstract class BaseDeleteService<T extends ObjectLiteral> {
         before: entity,
         after: null,
         userId,
+        source: audit?.source,
+        sourceRef: audit?.sourceRef ?? null,
       },
       { manager },
     );

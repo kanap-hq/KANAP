@@ -136,6 +136,37 @@ Cuando usted pide un cambio que su rol no permite, Plaid nombra el derecho que l
 
 Plaid solo hace los cambios que sus pantallas le permiten hacer, en los registros a los que puede llegar desde ellas. Con el derecho de contribuir a los proyectos, puede pedir a Plaid que cambie el propósito de un proyecto y sus vínculos con aplicaciones, activos y líneas presupuestarias. El derecho de contribuir a las solicitudes cubre los mismos vínculos en las solicitudes. Un Business Contributor solo hace estos cambios en los proyectos y solicitudes en los que participa. Vincular un registro requiere el derecho de leer su módulo. Cambiar el nombre de un proyecto o sus demás campos requiere el derecho de modificar los proyectos, como en la página del proyecto.
 
+### Eliminar un registro { #deleting-a-record }
+
+Plaid elimina un registro cada vez: una tarea, un contacto, una ubicación, un documento, una línea presupuestaria (OPEX o CAPEX), una conexión o una interfaz. Cada eliminación llega como una vista previa que usted aprueba. Una eliminación no se puede deshacer.
+
+La vista previa lista lo que se va con el registro, como los comentarios, los registros de tiempo, los adjuntos, las versiones y los vínculos. Solo nombra lo que usted puede leer y cuenta el resto entre los demás vínculos. Si el registro cambia entre la vista previa y su aprobación, KANAP rechaza la eliminación. Pídala de nuevo a Plaid para obtener una vista previa nueva.
+
+En una conversación, solo una eliminación espera su aprobación a la vez. Cuando usted pide eliminar varios registros, Plaid los prepara uno tras otro.
+
+Plaid necesita el nivel que pide la pantalla:
+
+| Registro | Nivel |
+|---|---|
+| Tarea | Administrador de las tareas |
+| Contacto | Administrador de los contactos |
+| Ubicación | Miembro de las ubicaciones |
+| Documento | Administrador de la base de conocimiento, con el derecho de escribir en su biblioteca |
+| Línea presupuestaria | Administrador del presupuesto |
+| Conexión | Miembro de la infraestructura |
+| Interfaz | Administrador de las aplicaciones |
+
+Cuando su acceso a los datos está limitado a algunas empresas o centros de coste, Plaid no elimina contactos ni líneas presupuestarias, como las pantallas.
+
+Plaid rechaza lo que las pantallas rechazan:
+
+- Una tarea que una solicitud nombra como su origen
+- Una línea presupuestaria con importes en una columna congelada
+- Una interfaz con enlaces, salvo que usted pida eliminar sus enlaces con ella
+- Un documento integrado en un registro. Se va cuando se elimina su registro.
+
+Los demás registros, como las aplicaciones, los activos, los contratos, los proyectos, las solicitudes, los incidentes y las tecnologías, se eliminan en sus pantallas. Plaid lo dice e indica la pantalla. Los asistentes conectados por MCP solo leen.
+
 ### Lo que Plaid no lee { #what-plaid-does-not-read }
 
 Plaid no lee:
@@ -175,7 +206,7 @@ Para las vistas previas de cambios pendientes, el panel ofrece dos botones:
 
 Una vista previa, y el mensaje que Plaid escribe después de que usted la apruebe o la rechace, están en el idioma de su perfil, con los nombres de campo y los valores de las pantallas. Una línea presupuestaria pedida con un importe llega como una sola vista previa: una sola aprobación crea la línea, su versión presupuestaria del año y el importe.
 
-Cuando usted pide un cambio que Plaid no puede hacer, como eliminar un registro o cambiar el estado de una vulnerabilidad, Plaid lo dice e indica la pantalla donde puede hacerlo. No prepara ningún otro cambio en su lugar.
+Cuando usted pide un cambio que Plaid no puede hacer, como eliminar un proyecto o cambiar el estado de una vulnerabilidad, Plaid lo dice e indica la pantalla donde puede hacerlo. No prepara ningún otro cambio en su lugar.
 
 Nada que modifique los datos de KANAP se aplica de forma silenciosa. La vista previa es la barrera de control.
 

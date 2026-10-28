@@ -666,6 +666,36 @@ async function testWritePreviewToolsStayHiddenWithoutWriteAccess() {
   assert.ok(!tools.some((tool) => tool.name === 'undo_preview'));
 }
 
+async function testDeleteRecordIsOfferedOnChatOnly() {
+  const registry = createRegistry({
+    policy: { assertWriteAccess: async () => undefined },
+    mutationOperations: {
+      listOperations: () => ([{
+        toolName: 'delete_record',
+        description: 'Create a preview to delete one record.',
+        inputSchema: { safeParse: (value: any) => ({ success: true, data: value }) },
+        inputSummary: { entity_type: 'One of tasks, contacts or locations.', ref: 'The record reference.' },
+        businessResource: 'tasks',
+        businessResources: ['tasks', 'contacts', 'locations'],
+        writePreview: {
+          entity_type: 'records',
+          fields: ['entity_type', 'ref'],
+          reversible: false,
+          prompt_hint: 'One record per preview, never in bulk.',
+        },
+      }]),
+      getOperationOrNull: (toolName: string) => toolName === 'delete_record' ? { toolName: 'delete_record' } : null,
+      isSupportedToolName: (toolName: string) => toolName === 'delete_record',
+    },
+  });
+
+  const chat = await registry.listAvailableTools(createChatContext());
+  assert.ok(chat.some((tool) => tool.name === 'delete_record'));
+  // A write never reaches MCP, which stays read-only (AGENTS.md).
+  const mcp = await registry.listAvailableTools(createContext());
+  assert.ok(!mcp.some((tool) => tool.name === 'delete_record'));
+}
+
 async function testUpdateTaskAssigneesCreatesOnePreviewPerTaskAndReturnsPartialErrors() {
   const calls: Array<{ toolName: string; input: any }> = [];
   const registry = createRegistry({
@@ -1907,6 +1937,7 @@ async function run() {
   await testSearchAllAppliesTokenLeanDefaultLimit();
   await testChatSurfaceIncludesWritePreviewToolsWhenWriteAllowed();
   await testWritePreviewToolsStayHiddenWithoutWriteAccess();
+  await testDeleteRecordIsOfferedOnChatOnly();
   await testUpdateTaskAssigneesCreatesOnePreviewPerTaskAndReturnsPartialErrors();
   await testPrepareMutationPlanDelegatesToPreviewService();
   await testUndoPreviewStaysHiddenWhenOnlyNonReversibleWritesExist();

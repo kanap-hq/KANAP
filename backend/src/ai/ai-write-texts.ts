@@ -212,6 +212,15 @@ export const writeActionText = {
       case 'es': return `modificación de las relaciones de ${subject}`;
     }
   },
+  /** The deletion of one record, the only irreversible write: one record at a time, under approval. */
+  deleteRecord(language: AiTranslatedWriteLanguage, entityType: string, subject: string): string {
+    const noun = RECORD_NOUNS[entityType] ?? RECORD_NOUNS.default;
+    switch (language) {
+      case 'fr': return `suppression ${noun.fr} ${subject}`;
+      case 'de': return `${noun.de} ${subject} löschen`;
+      case 'es': return `eliminación ${noun.es} ${subject}`;
+    }
+  },
   writeFinancialPlan(
     language: AiTranslatedWriteLanguage,
     action: 'create_version' | 'update_version' | 'upsert_amounts' | 'replace_allocations',
@@ -261,11 +270,13 @@ const RECORD_NOUNS: Record<string, TranslatedTexts> = {
   departments: { fr: 'du département', de: 'Abteilung', es: 'del departamento' },
   suppliers: { fr: 'du fournisseur', de: 'Lieferant', es: 'del proveedor' },
   contacts: { fr: 'du contact', de: 'Kontakt', es: 'del contacto' },
+  tasks: { fr: 'de la tâche', de: 'Aufgabe', es: 'de la tarea' },
   accounts: { fr: 'du compte', de: 'Konto', es: 'de la cuenta' },
   chart_of_accounts: { fr: 'du plan comptable', de: 'Kontenplan', es: 'del plan de cuentas' },
   analytics_categories: { fr: 'de la valeur de dimension', de: 'Dimensionswert', es: 'del valor de dimensión' },
   business_processes: { fr: 'du processus métier', de: 'Geschäftsprozess', es: 'del proceso de negocio' },
   locations: { fr: 'du site', de: 'Standort', es: 'de la ubicación' },
+  documents: { fr: 'du document', de: 'Dokument', es: 'del documento' },
   default: { fr: "de l'élément", de: 'Element', es: 'del elemento' },
 };
 
@@ -278,6 +289,192 @@ export const taskDetailText = {
     return labelled(language, { fr: 'Priorité', de: 'Priorität', es: 'Prioridad' }[language], label);
   },
 };
+
+/**
+ * What a delete takes with the record, counted at the preview: the rows of the card's markdown
+ * block, in the person's language, with the words of the record's screen. A family with no count
+ * is left out; a contact's links stay anonymous when the person cannot read that family
+ * (`readContactUsages` leaves the group out), and the linked records stay in every case.
+ */
+export type AiDeleteImpact = {
+  counts: Record<string, number>;
+  /** Links in families the person does not read (a contact's, a location's assets and documents), counted without naming them. */
+  hidden?: number;
+  /** Lines the card adds after the counts (a document's review or edit lock), already worded in the person's language. */
+  notices?: string[];
+  /** A document in review still deletes: the preview says so, as the Knowledge screen allows it. */
+  inReview?: boolean;
+  /** The person holding the document's edit lock, when it is not the deleter. */
+  lockHolder?: string | null;
+};
+
+type DeleteImpactRow = {
+  key: string;
+  labels: Texts;
+  /** The row counts links: the records stay, only their link to the deleted record goes. */
+  link?: boolean;
+};
+
+const DELETE_IMPACT_ROWS: Record<string, ReadonlyArray<DeleteImpactRow>> = {
+  tasks: [
+    { key: 'activities', labels: { en: 'Comments and changes', fr: 'Commentaires et changements', de: 'Kommentare und Änderungen', es: 'Comentarios y cambios' } },
+    { key: 'time_entries', labels: { en: 'Time entries', fr: 'Temps saisis', de: 'Erfasste Zeiten', es: 'Tiempos registrados' } },
+    { key: 'attachments', labels: { en: 'Attachments', fr: 'Pièces jointes', de: 'Anhänge', es: 'Archivos adjuntos' } },
+    { key: 'applications', link: true, labels: { en: 'Links to applications', fr: 'Liens aux applications', de: 'Verknüpfungen mit Anwendungen', es: 'Vínculos con aplicaciones' } },
+    { key: 'assets', link: true, labels: { en: 'Links to assets', fr: 'Liens aux actifs', de: 'Verknüpfungen mit Assets', es: 'Vínculos con activos' } },
+    { key: 'documents', link: true, labels: { en: 'Links to documents', fr: 'Liens aux documents', de: 'Verknüpfungen mit Dokumenten', es: 'Vínculos con documentos' } },
+  ],
+  contacts: [
+    { key: 'suppliers', link: true, labels: { en: 'Links to suppliers', fr: 'Liens aux fournisseurs', de: 'Verknüpfungen mit Lieferanten', es: 'Vínculos con proveedores' } },
+    { key: 'budget_lines', link: true, labels: { en: 'Links to budget lines', fr: 'Liens aux lignes budgétaires', de: 'Verknüpfungen mit Budgetzeilen', es: 'Vínculos con líneas presupuestarias' } },
+    { key: 'contracts', link: true, labels: { en: 'Links to contracts', fr: 'Liens aux contrats', de: 'Verknüpfungen mit Verträgen', es: 'Vínculos con contratos' } },
+    { key: 'applications', link: true, labels: { en: 'Links to applications', fr: 'Liens aux applications', de: 'Verknüpfungen mit Anwendungen', es: 'Vínculos con aplicaciones' } },
+    { key: 'assets', link: true, labels: { en: 'Links to assets', fr: 'Liens aux actifs', de: 'Verknüpfungen mit Assets', es: 'Vínculos con activos' } },
+    { key: 'technologies', link: true, labels: { en: 'Links to technologies', fr: 'Liens aux technologies', de: 'Verknüpfungen mit Technologien', es: 'Vínculos con tecnologías' } },
+    { key: 'locations', link: true, labels: { en: 'Links to locations', fr: 'Liens aux sites', de: 'Verknüpfungen mit Standorten', es: 'Vínculos con ubicaciones' } },
+    { key: 'projects', link: true, labels: { en: 'Links to projects', fr: 'Liens aux projets', de: 'Verknüpfungen mit Projekten', es: 'Vínculos con proyectos' } },
+    { key: 'requests', link: true, labels: { en: 'Links to requests', fr: 'Liens aux demandes', de: 'Verknüpfungen mit Anfragen', es: 'Vínculos con solicitudes' } },
+  ],
+  locations: [
+    { key: 'assets', link: true, labels: { en: 'Assets that will lose their location', fr: 'Actifs qui perdront leur site', de: 'Assets, die ihren Standort verlieren', es: 'Activos que perderán su ubicación' } },
+    { key: 'contacts', link: true, labels: { en: 'Links to contacts', fr: 'Liens aux contacts', de: 'Verknüpfungen mit Kontakten', es: 'Vínculos con contactos' } },
+    { key: 'links', labels: { en: 'Links', fr: 'Liens', de: 'Verknüpfungen', es: 'Vínculos' } },
+    { key: 'sub_items', labels: { en: 'Sub-items', fr: 'Sous-éléments', de: 'Unterelemente', es: 'Subelementos' } },
+    { key: 'documents', link: true, labels: { en: 'Links to documents', fr: 'Liens aux documents', de: 'Verknüpfungen mit Dokumenten', es: 'Vínculos con documentos' } },
+  ],
+  spend_items: spendDeleteRows(),
+  capex_items: spendDeleteRows(),
+  connections: [
+    { key: 'hops', labels: { en: 'Hops', fr: 'Sauts', de: 'Hops', es: 'Saltos' } },
+    { key: 'servers', link: true, labels: { en: 'Links to servers', fr: 'Liens aux serveurs', de: 'Verknüpfungen mit Servern', es: 'Vínculos con servidores' } },
+    { key: 'protocols', labels: { en: 'Protocols', fr: 'Protocoles', de: 'Protokolle', es: 'Protocolos' } },
+    { key: 'interfaces', link: true, labels: { en: 'Interfaces that will lose this connection', fr: 'Interfaces qui perdront cette connexion', de: 'Schnittstellen, die diese Verbindung verlieren', es: 'Interfaces que perderán esta conexión' } },
+    { key: 'documents', link: true, labels: { en: 'Links to documents', fr: 'Liens aux documents', de: 'Verknüpfungen mit Dokumenten', es: 'Vínculos con documentos' } },
+  ],
+  documents: [
+    { key: 'versions', labels: { en: 'Versions', fr: 'Versions', de: 'Versionen', es: 'Versiones' } },
+    { key: 'attachments', labels: { en: 'Attachments', fr: 'Pièces jointes', de: 'Anhänge', es: 'Archivos adjuntos' } },
+    { key: 'citing_documents', link: true, labels: { en: 'Documents that cite it', fr: 'Documents qui le citent', de: 'Dokumente, die es zitieren', es: 'Documentos que lo citan' } },
+    { key: 'cited_documents', link: true, labels: { en: 'Documents it cites', fr: "Documents qu'il cite", de: 'Dokumente, die es zitiert', es: 'Documentos que cita' } },
+    { key: 'applications', link: true, labels: { en: 'Links to applications', fr: 'Liens aux applications', de: 'Verknüpfungen mit Anwendungen', es: 'Vínculos con aplicaciones' } },
+    { key: 'assets', link: true, labels: { en: 'Links to assets', fr: 'Liens aux actifs', de: 'Verknüpfungen mit Assets', es: 'Vínculos con activos' } },
+    { key: 'projects', link: true, labels: { en: 'Links to projects', fr: 'Liens aux projets', de: 'Verknüpfungen mit Projekten', es: 'Vínculos con proyectos' } },
+    { key: 'requests', link: true, labels: { en: 'Links to requests', fr: 'Liens aux demandes', de: 'Verknüpfungen mit Anfragen', es: 'Vínculos con solicitudes' } },
+    { key: 'tasks', link: true, labels: { en: 'Links to tasks', fr: 'Liens aux tâches', de: 'Verknüpfungen mit Aufgaben', es: 'Vínculos con tareas' } },
+    { key: 'locations', link: true, labels: { en: 'Links to locations', fr: 'Liens aux sites', de: 'Verknüpfungen mit Standorten', es: 'Vínculos con ubicaciones' } },
+    { key: 'connections', link: true, labels: { en: 'Links to connections', fr: 'Liens aux connexions', de: 'Verknüpfungen mit Verbindungen', es: 'Vínculos con conexiones' } },
+    { key: 'interfaces', link: true, labels: { en: 'Links to interfaces', fr: 'Liens aux interfaces', de: 'Verknüpfungen mit Schnittstellen', es: 'Vínculos con interfaces' } },
+    { key: 'incidents', link: true, labels: { en: 'Links to incidents', fr: 'Liens aux incidents', de: 'Verknüpfungen mit Vorfällen', es: 'Vínculos con incidentes' } },
+    { key: 'derived_documents', link: true, labels: { en: 'Documents created from it', fr: 'Documents créés depuis ce modèle', de: 'Aus dieser Vorlage erstellte Dokumente', es: 'Documentos creados a partir de esta plantilla' } },
+  ],
+  interfaces: [
+    { key: 'bindings', labels: { en: 'Bindings', fr: 'Liaisons', de: 'Bindungen', es: 'Enlaces' } },
+    { key: 'connection_links', link: true, labels: { en: 'Links to connections', fr: 'Liens aux connexions', de: 'Verknüpfungen mit Verbindungen', es: 'Vínculos con conexiones' } },
+    { key: 'integrated_documents', labels: { en: 'Integrated documents', fr: 'Documents intégrés', de: 'Integrierte Dokumente', es: 'Documentos integrados' } },
+    { key: 'documents', link: true, labels: { en: 'Links to documents', fr: 'Liens aux documents', de: 'Verknüpfungen mit Dokumenten', es: 'Vínculos con documentos' } },
+    { key: 'dependencies', link: true, labels: { en: 'Links to dependent interfaces', fr: 'Liens aux interfaces dépendantes', de: 'Verknüpfungen mit abhängigen Schnittstellen', es: 'Vínculos con interfaces dependientes' } },
+    { key: 'attachments', labels: { en: 'Attachments', fr: 'Pièces jointes', de: 'Anhänge', es: 'Archivos adjuntos' } },
+    { key: 'applications', link: true, labels: { en: 'Links to applications', fr: 'Liens aux applications', de: 'Verknüpfungen mit Anwendungen', es: 'Vínculos con aplicaciones' } },
+  ],
+};
+
+/** The rows of a budget line's delete, both natures: one family, the same card. */
+function spendDeleteRows(): ReadonlyArray<DeleteImpactRow> {
+  return [
+    { key: 'amount_versions', labels: { en: 'Versions with amounts', fr: 'Versions avec des montants', de: 'Versionen mit Beträgen', es: 'Versiones con importes' } },
+    { key: 'amount_years', labels: { en: 'Years with amounts', fr: 'Années avec des montants', de: 'Jahre mit Beträgen', es: 'Años con importes' } },
+    { key: 'tasks', labels: { en: 'Deleted tasks', fr: 'Tâches supprimées', de: 'Gelöschte Aufgaben', es: 'Tareas eliminadas' } },
+    { key: 'request_origins', link: true, labels: { en: 'Requests that lose their origin task', fr: "Demandes qui perdent leur tâche d'origine", de: 'Anfragen, die ihre Ursprungsaufgabe verlieren', es: 'Solicitudes que pierden su tarea de origen' } },
+    { key: 'attachments', labels: { en: 'Attachments', fr: 'Pièces jointes', de: 'Anhänge', es: 'Archivos adjuntos' } },
+    { key: 'contracts', link: true, labels: { en: 'Links to contracts', fr: 'Liens aux contrats', de: 'Verknüpfungen mit Verträgen', es: 'Vínculos con contratos' } },
+    { key: 'projects', link: true, labels: { en: 'Links to projects', fr: 'Liens aux projets', de: 'Verknüpfungen mit Projekten', es: 'Vínculos con proyectos' } },
+    { key: 'requests', link: true, labels: { en: 'Links to requests', fr: 'Liens aux demandes', de: 'Verknüpfungen mit Anfragen', es: 'Vínculos con solicitudes' } },
+    { key: 'applications', link: true, labels: { en: 'Links to applications', fr: 'Liens aux applications', de: 'Verknüpfungen mit Anwendungen', es: 'Vínculos con aplicaciones' } },
+    { key: 'assets', link: true, labels: { en: 'Links to assets', fr: 'Liens aux actifs', de: 'Verknüpfungen mit Assets', es: 'Vínculos con activos' } },
+    { key: 'technologies', link: true, labels: { en: 'Links to technologies', fr: 'Liens aux technologies', de: 'Verknüpfungen mit Technologien', es: 'Vínculos con tecnologías' } },
+    { key: 'contacts', link: true, labels: { en: 'Links to contacts', fr: 'Liens aux contacts', de: 'Verknüpfungen mit Kontakten', es: 'Vínculos con contactos' } },
+    { key: 'links', labels: { en: 'Links', fr: 'Liens', de: 'Verknüpfungen', es: 'Vínculos' } },
+    { key: 'dimension_values', labels: { en: 'Dimension values', fr: 'Valeurs de dimensions', de: 'Dimensionswerte', es: 'Valores de dimensiones' } },
+  ];
+}
+
+const DELETE_IMPACT_OTHER: Texts = {
+  en: 'Other links', fr: "D'autres rattachements", de: 'Weitere Verknüpfungen', es: 'Otros vínculos',
+};
+
+const DELETE_IMPACT_NONE: Record<string, Texts> = {
+  tasks: { en: 'Nothing else is deleted with this task.', fr: 'Aucun autre élément ne part avec cette tâche.', de: 'Sonst wird mit dieser Aufgabe nichts gelöscht.', es: 'No se elimina nada más con esta tarea.' },
+  contacts: { en: 'No links.', fr: 'Aucun rattachement.', de: 'Keine Verknüpfungen.', es: 'Sin vínculos.' },
+  locations: { en: 'Nothing else is deleted with this location.', fr: 'Aucun autre élément ne part avec ce site.', de: 'Sonst wird mit diesem Standort nichts gelöscht.', es: 'No se elimina nada más con esta ubicación.' },
+  spend_items: { en: 'Nothing else is deleted with this line.', fr: 'Aucun autre élément ne part avec cette ligne.', de: 'Sonst wird mit dieser Zeile nichts gelöscht.', es: 'No se elimina nada más con esta línea.' },
+  capex_items: { en: 'Nothing else is deleted with this line.', fr: 'Aucun autre élément ne part avec cette ligne.', de: 'Sonst wird mit dieser Zeile nichts gelöscht.', es: 'No se elimina nada más con esta línea.' },
+  connections: { en: 'Nothing else is deleted with this connection.', fr: 'Aucun autre élément ne part avec cette connexion.', de: 'Sonst wird mit dieser Verbindung nichts gelöscht.', es: 'No se elimina nada más con esta conexión.' },
+  interfaces: { en: 'Nothing else is deleted with this interface.', fr: 'Aucun autre élément ne part avec cette interface.', de: 'Sonst wird mit dieser Schnittstelle nichts gelöscht.', es: 'No se elimina nada más con esta interfaz.' },
+  documents: { en: 'Nothing else is deleted with this document.', fr: 'Aucun autre élément ne part avec ce document.', de: 'Sonst wird mit diesem Dokument nichts gelöscht.', es: 'No se elimina nada más con este documento.' },
+};
+
+const DELETE_IMPACT_CLOSING: Record<string, Texts> = {
+  contacts: { en: 'The linked records stay.', fr: 'Les fiches liées restent.', de: 'Die verknüpften Einträge bleiben.', es: 'Los registros vinculados se conservan.' },
+  connections: { en: 'The interfaces themselves are not deleted.', fr: 'Les interfaces elles-mêmes ne sont pas supprimées.', de: 'Die Schnittstellen selbst werden nicht gelöscht.', es: 'Las interfaces en sí no se eliminan.' },
+  interfaces: { en: 'The connections stay.', fr: 'Les connexions sont conservées.', de: 'Die Verbindungen bleiben erhalten.', es: 'Las conexiones se conservan.' },
+};
+
+/**
+ * The line a document's preview adds when it is in review or locked for editing: the delete stays
+ * possible, as the Knowledge screen allows it, so the card says what is true rather than refusing.
+ */
+export function documentDeleteNoticeText(
+  language: AiWriteLanguage,
+  state: { inReview?: boolean; lockHolder?: string | null },
+): string[] {
+  const notices: string[] = [];
+  if (state.inReview) {
+    notices.push({
+      en: 'In review. The delete remains possible.',
+      fr: 'En cours de relecture. La suppression reste possible.',
+      de: 'In Prüfung. Das Löschen bleibt möglich.',
+      es: 'En revisión. La eliminación sigue siendo posible.',
+    }[language]);
+  }
+  const holder = String(state.lockHolder ?? '').trim();
+  if (holder) {
+    notices.push({
+      en: `Locked for editing by ${holder}. The delete remains possible.`,
+      fr: `Verrouillé pour édition par ${holder}. La suppression reste possible.`,
+      de: `Zur Bearbeitung gesperrt von ${holder}. Das Löschen bleibt möglich.`,
+      es: `Bloqueado para edición por ${holder}. La eliminación sigue siendo posible.`,
+    }[language]);
+  }
+  return notices;
+}
+
+/** Families whose unnamed count may include records deleted with the line (a budget line's tasks). */
+const HIDDEN_INCLUDES_DELETED = new Set(['spend_items', 'capex_items']);
+
+/** The markdown list of what goes with a deleted record, in the person's language. */
+export function deletionImpactText(language: AiWriteLanguage, entityType: string, impact: AiDeleteImpact): string {
+  const colon = language === 'fr' ? ' : ' : ': ';
+  const shownRows = (DELETE_IMPACT_ROWS[entityType] ?? [])
+    .filter((row) => Number(impact.counts?.[row.key] ?? 0) > 0);
+  const lines = shownRows.map((row) => `- ${row.labels[language]}${colon}${Number(impact.counts[row.key])}`);
+  let showsLink = shownRows.some((row) => row.link === true);
+  if (Number(impact.hidden ?? 0) > 0) {
+    lines.push(`- ${DELETE_IMPACT_OTHER[language]}${colon}${Number(impact.hidden)}`);
+    // A budget line's hidden count may hold its tasks, which are deleted: the card must not say they stay.
+    if (!HIDDEN_INCLUDES_DELETED.has(entityType)) showsLink = true;
+  }
+  for (const notice of impact.notices ?? []) {
+    if (notice.trim()) lines.push(`- ${notice.trim()}`);
+  }
+  if (lines.length === 0) {
+    return DELETE_IMPACT_NONE[entityType]?.[language] ?? DELETE_IMPACT_NONE.tasks[language];
+  }
+  // A family whose card shows a link to records that stay says so, as a contact's card does;
+  // a connection and an interface keep the closing that names what stays for them.
+  const closing = DELETE_IMPACT_CLOSING[entityType]?.[language]
+    ?? (showsLink ? DELETE_IMPACT_CLOSING.contacts[language] : null);
+  return closing ? `${lines.join('\n')}\n\n${closing}` : lines.join('\n');
+}
 
 /** The counts of a ticket import, as "label: count" so no plural has to agree. */
 export const ticketImportDetailText = {

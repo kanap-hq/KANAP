@@ -204,6 +204,7 @@
       "country_iso": "Pays",
       "criteria_values": "Valeurs des critères",
       "data_class": "Confidentialité des données",
+      "deletion": "Ce qui part avec la fiche",
       "destination_asset_id": "Actif de destination",
       "destination_entity_code": "Code de l'entité de destination",
       "disabled_at": "Désactivé le",

@@ -145,6 +145,7 @@ import { GlpiService } from './glpi/glpi.service';
 import { PrtgService } from './prtg/prtg.service';
 import { AiDocumentMutationSupportService } from './mutation/ai-document-mutation-support.service';
 import { AiBusinessRecordMutationSupportService } from './mutation/ai-business-record-mutation-support.service';
+import { AiDeleteMutationSupportService } from './mutation/ai-delete-mutation-support.service';
 import { AiFinancialPlanMutationSupportService } from './mutation/ai-financial-plan-mutation-support.service';
 import { AiMasterDataMutationSupportService } from './mutation/ai-master-data-mutation-support.service';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
@@ -155,6 +156,7 @@ import { CreateBusinessRecordAiMutationOperation } from './mutation/operations/c
 import { CreateDocumentAiMutationOperation } from './mutation/operations/create-document.ai-mutation-operation';
 import { CreateMasterDataRecordAiMutationOperation } from './mutation/operations/create-master-data-record.ai-mutation-operation';
 import { CreateTaskAiMutationOperation } from './mutation/operations/create-task.ai-mutation-operation';
+import { DeleteRecordAiMutationOperation } from './mutation/operations/delete-record.ai-mutation-operation';
 import { ImportGlpiTicketAiMutationOperation, ImportTicketAiMutationOperation } from './mutation/operations/import-glpi-ticket.ai-mutation-operation';
 import { UpdateDocumentContentAiMutationOperation } from './mutation/operations/update-document-content.ai-mutation-operation';
 import { UpdateDocumentMetadataAiMutationOperation } from './mutation/operations/update-document-metadata.ai-mutation-operation';
@@ -275,6 +277,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
     PrtgService,
     AiDocumentMutationSupportService,
     AiBusinessRecordMutationSupportService,
+    AiDeleteMutationSupportService,
     AiFinancialPlanMutationSupportService,
     AiMasterDataMutationSupportService,
     AiRelationMutationSupportService,
@@ -284,6 +287,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
     CreateBusinessRecordAiMutationOperation,
     CreateDocumentAiMutationOperation,
     CreateTaskAiMutationOperation,
+    DeleteRecordAiMutationOperation,
     CreateMasterDataRecordAiMutationOperation,
     WriteFinancialPlanAiMutationOperation,
     UpdateDocumentContentAiMutationOperation,

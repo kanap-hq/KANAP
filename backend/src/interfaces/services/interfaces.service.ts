@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { AuditSourceOptions } from '../../audit/audit.service';
 import { InterfacesListService } from './interfaces-list.service';
 import { InterfacesCrudService } from './interfaces-crud.service';
 import { InterfaceBindingsManagementService } from './interface-bindings.service';
@@ -66,7 +67,7 @@ export class InterfacesService {
     return this.crudService.update(id, body, tenantId, userId, opts);
   }
 
-  delete(id: string, userId: string | null, opts?: ServiceOpts & { deleteRelatedBindings?: boolean }) {
+  delete(id: string, userId: string | null, opts?: ServiceOpts & { deleteRelatedBindings?: boolean; audit?: AuditSourceOptions }) {
     return this.crudService.delete(id, userId, opts);
   }
 

@@ -500,7 +500,12 @@ async function testPromptRefusesUnsupportedWritesWithoutSubstitutePreview() {
     readableEntityTypes: ['tasks'],
     currentUser: { displayName: 'Writer', email: null, roleNames: [], teamName: null },
   });
-  assert.match(prompt, /Writes Plaid cannot prepare, whatever the person's rights: deleting any record/);
+  assert.match(prompt, /Writes Plaid cannot prepare, whatever the person's rights: deleting an application, an asset, a contract, a project, a request, an incident, a technology, or any record other than one task, one contact, one location, one document, one budget line, one connection or one interface/);
+  assert.match(prompt, /`delete_record` does those, one record at a time/);
+  assert.doesNotMatch(prompt, /deleting a document, an application/);
+  assert.doesNotMatch(prompt, /deleting a budget line, a contract, an interface, a connection/);
+  assert.match(prompt, /deleting several records in one request, which Plaid prepares one at a time, never as one delete or one plan/);
+  assert.match(prompt, /For a request to delete several records, prepare the first one and say the others are deleted one at a time, or ask which one comes first/);
   assert.match(prompt, /creating or changing an incident; changing the state of a vulnerability; adding, changing or removing a technology/);
   assert.match(prompt, /refuse in the user's language in one or two sentences: say what Plaid cannot do and name the KANAP screen/);
   assert.match(prompt, /Prepare no preview in its place: no task recording the request, no status change, cancellation or deactivation standing in for a deletion/);

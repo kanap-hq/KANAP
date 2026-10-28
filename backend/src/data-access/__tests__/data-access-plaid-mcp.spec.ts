@@ -13,6 +13,7 @@ import { purgeTenantTables } from '../../admin/tenants/tenant-data-purge';
 import { TENANT_PURGE_TABLES } from '../../admin/tenants/tenant-purge.inventory';
 import { withTenantExecution } from '../../common/tenant-runner';
 import { DATA_ACCESS_READ_ONLY_LINE_MESSAGE } from '../line-write-checks';
+import { DATA_ACCESS_RESERVED_MESSAGE } from '../reserved-operations';
 import { APP_URL, LIMITED_ROLE, PgClient, connect, roleExists } from './data-access-test-helpers';
 import { Label, Seed, seed } from './data-access-line-seed';
 
@@ -547,6 +548,44 @@ async function testPlaidWrites(): Promise<void> {
   console.log('  Plaid line writes: read-only refused at the preview (lot 3 message), tasks written on it too, hidden as missing, approval in the approver\'s access: OK');
 }
 
+/**
+ * A line's delete route is reserved to unscoped persons (`DELETE /budget-lines/bulk`,
+ * `POST /budget-lines/delete-check`). Plaid refuses it to a limited person even with the budget
+ * administrator right, before resolving the line or writing anything.
+ */
+async function testPlaidLineDeleteReserved(): Promise<void> {
+  const { rita } = s.persons;
+  const roleId = (await inTenant(() => client.query(`SELECT role_id FROM users WHERE id = $1`, [rita]))).rows[0].role_id;
+  const previous = (await inTenant(() => client.query(
+    `SELECT level FROM role_permissions WHERE tenant_id = $1 AND role_id = $2 AND resource = 'budget'`,
+    [s.tenantId, roleId],
+  ))).rows[0]?.level ?? 'member';
+  await inTenant(() => client.query(
+    `UPDATE role_permissions SET level = 'admin' WHERE tenant_id = $1 AND role_id = $2 AND resource = 'budget'`,
+    [s.tenantId, roleId],
+  ));
+  try {
+    const refused = await rejection(() => tool(rita, 'delete_record', { entity_type: 'spend_items', ref: s.lines.L1 }));
+    assert.ok(refused instanceof HttpException, `delete_record: ${refused?.stack ?? refused}`);
+    assert.equal(refused.getStatus(), 403, 'delete_record on a line (limited person)');
+    assert.equal((refused.getResponse() as any)?.code, 'DATA_ACCESS_LIMITED', 'delete_record on a line (limited person)');
+    assert.equal(refused.message, DATA_ACCESS_RESERVED_MESSAGE, 'delete_record on a line (limited person)');
+    const previews = await inTenant(() => client.query(
+      `SELECT count(*)::int AS n FROM ai_mutation_previews WHERE tenant_id = $1 AND tool_name = 'delete_record'`,
+      [s.tenantId],
+    ));
+    assert.equal(previews.rows[0].n, 0, 'no delete preview for a limited person');
+    const kept = await inTenant(() => client.query(`SELECT count(*)::int AS n FROM spend_items WHERE id = $1`, [s.lines.L1]));
+    assert.equal(kept.rows[0].n, 1, 'the line stays');
+  } finally {
+    await inTenant(() => client.query(
+      `UPDATE role_permissions SET level = $3 WHERE tenant_id = $1 AND role_id = $2 AND resource = 'budget'`,
+      [s.tenantId, roleId, previous],
+    ));
+  }
+  console.log('  Plaid line delete: a limited budget administrator refused before any preview: OK');
+}
+
 async function testPlaidRelationWrites(): Promise<void> {
   const { rita, ulla } = s.persons;
   const relation = (extra: Record<string, unknown>) => ({ entity_type: 'applications', ref: applicationId, relation: 'spend_items', ...extra });
@@ -782,6 +821,7 @@ async function run(): Promise<void> {
     await testPlaidReads();
     await testGlobalSearch();
     await testPlaidWrites();
+    await testPlaidLineDeleteReserved();
     await testPlaidRelationWrites();
     await testMcp();
     await testTasksExport();
