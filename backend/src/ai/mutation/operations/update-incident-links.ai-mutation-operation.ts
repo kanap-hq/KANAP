@@ -175,7 +175,7 @@ export class UpdateIncidentLinksAiMutationOperation implements AiMutationOperati
     entity_type: 'incidents',
     fields: ['linked_assets', 'linked_applications', 'linked_technologies'],
     reversible: true,
-    prompt_hint: 'For the links of an incident, use `update_incident_links` with an INC reference and, per kind (`assets`, `applications`, `technologies`), the exact references or names to `add` and `remove`. Assets also answer to their hostname or fqdn. A link already present, or already absent, writes nothing. A Business Contributor links only the applications they take part in; another reads as not found. A closed or cancelled incident is refused. Undo reverses the links that changed while the incident stays open.',
+    prompt_hint: 'For the links of an incident, use `update_incident_links` with an INC reference and, per kind (`assets`, `applications`, `technologies`), the exact references or names to `add` and `remove`. When the request starts from the other side ("link APP-2 to INC-3", "add incident INC-3 to asset AST-12"), keep the incident in `ref` and put the record in that kind\'s `add` or `remove`. Assets also answer to their hostname or fqdn. A link already present, or already absent, writes nothing. A Business Contributor links only the applications they take part in; another reads as not found. A closed or cancelled incident is refused. Undo reverses the links that changed while the incident stays open.',
   };
 
   constructor(
