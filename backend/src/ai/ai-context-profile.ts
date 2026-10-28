@@ -120,6 +120,8 @@ const BUSINESS_WRITE_TOOLS: AiToolName[] = [
   'prepare_mutation_plan',
   'create_business_record',
   'update_business_record',
+  'add_incident_note',
+  'update_incident_links',
   'update_entity_relations',
   'delete_record',
   'undo_preview',
@@ -162,6 +164,7 @@ const RELATION_WRITE_TOOLS: AiToolName[] = [
   'prepare_mutation_plan',
   'update_entity_relations',
   'update_document_relations',
+  'update_incident_links',
   'undo_preview',
 ];
 
@@ -390,6 +393,21 @@ function isAdvisoryFeatureImprovementQuestion(rawText: string, text: string): bo
   ]);
 }
 
+/** A question asks for a fact: a status word in it stays a read ("INC-3 est-il clos ?"). */
+function isQuestion(rawText: string, text: string): boolean {
+  return rawText.includes('?') || containsAny(text, [
+    /\b(?:qui|quand|when|who|est-il|est-elle|is it)\b/,
+  ]);
+}
+
+/** "Ouvre / déclare / signale un incident", "open / report / log an incident": a creation. */
+function createsIncident(text: string): boolean {
+  return containsAny(text, [
+    /\b(?:ouvre|ouvrir|declare|declarer|signale|signaler)\b[\s\S]{0,40}\bincident\b/,
+    /\b(?:open|report|log)\s+(?:a|an|the)?\s*incident\b/,
+  ]);
+}
+
 function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile {
   const raw = String(userMessage || '');
   const text = normalizeText(raw);
@@ -421,33 +439,52 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   }
 
   const hasIncidentReference = referencedTypes.has('incidents');
+  const hasIncidentIntent = hasIncidentReference || /\bincidents?\b/.test(text);
+  const question = isQuestion(raw, text);
+  // "note", "journal" and "log" are a write on an incident unless the person asks a question.
+  const hasIncidentNoteIntent = hasIncidentIntent && !question
+    && containsAny(text, [/\b(note|notes|journal|log|logs)\b/]);
   const isWrite = containsAny(text, [
-    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|unlink|delier|convert|convertir|import|publish|publier|mark|set|passer|passe)\b/,
+    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|associe|associes|rattache|rattaches|convert|convertir|import|publish|publier|mark|set|passer|passe)\b/,
     wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
     // A status word with an incident reference is a status change: "clos INC-7", "ferme INC-7".
-    ...(hasIncidentReference
+    // In a question it names a fact to read: "INC-3 est-il clos ?", "Quand INC-3 a-t-il été résolu ?".
+    ...(hasIncidentReference && !question
       ? [/\b(clos|closed|ferme|fermer|resolu|resolue|resolved|rouvre|rouvrir|reopen)\b/]
       : []),
+    ...(hasIncidentNoteIntent ? [/\b(note|notes|journal|log|logs)\b/] : []),
+    ...(createsIncident(text) ? [/\bincident\b/] : []),
   ]);
-  const hasIncidentIntent = hasIncidentReference || /\bincidents?\b/.test(text);
 
   if (isWrite) {
     const isRelationWrite = containsAny(text, [
-      /\b(relation|relationship|link|linked|lier|relier|associer|rattacher|connect|connecter|unlink|delier)\b/,
+      /\b(relation|relationship|link|linked|lier|lie|lies|relier|relie|associer|associe|associes|rattacher|rattache|connect|connecter|unlink|delier)\b/,
     ]);
     const hasDocumentIntent = containsAny(text, [
       /\b(document|documents|doc|docs|knowledge|article|page|library|folder|markdown)\b/,
+    ]);
+    // The names of a task, tested before the incident intent: "une tâche pour suivre l'incident".
+    const hasTaskNameIntent = containsAny(text, [
+      /\b(task|tasks|ticket|tickets|tache|taches|todo|to-do|assignee|echeance|due date)\b/,
     ]);
     const hasTaskIntent = containsAny(text, [
       /\b(task|tasks|ticket|tickets|tache|taches|todo|to-do|assignee|echeance|due date|priority|priorite|commentaire|comment)\b/,
       /\b(en cours|in progress|open|done|termine|terminee|clos|closed|pending|a faire|to do)\b/,
     ]);
 
+    // A link verb with an incident reference is the incident links tool: "lie APP-2 à INC-3".
+    if (hasIncidentReference && isRelationWrite) {
+      return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
+    }
     if (isRelationWrite) {
       return { profile: withWebCapability(PROFILES.write_relation, needsWeb), explicitIntent: true };
     }
     if (containsAny(text, [/\b(document|doc|knowledge|article|page|library|folder|markdown)\b/])) {
       return { profile: withWebCapability(PROFILES.write_document, needsWeb), explicitIntent: true };
+    }
+    // A task on an incident uses create_task, which the task profile carries.
+    if (hasTaskNameIntent) {
+      return { profile: withWebCapability(PROFILES.write_task, needsWeb), explicitIntent: true };
     }
     if (hasReferenceInGroup(referencedTypes, TASK_ENTITY_TYPES)) {
       return { profile: withWebCapability(PROFILES.write_task, needsWeb), explicitIntent: true };

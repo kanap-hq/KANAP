@@ -212,6 +212,22 @@ export const writeActionText = {
       case 'es': return `modificación de las relaciones de ${subject}`;
     }
   },
+  /** A journal note on an incident: the journal only takes additions. */
+  addIncidentNote(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `ajout d'une note à l'incident ${subject}`;
+      case 'de': return `Notiz zum Vorfall ${subject} hinzufügen`;
+      case 'es': return `adición de una nota al incidente ${subject}`;
+    }
+  },
+  /** The links of an incident, added and removed in one preview. */
+  updateIncidentLinks(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `modification des liens de l'incident ${subject}`;
+      case 'de': return `Verknüpfungen des Vorfalls ${subject} ändern`;
+      case 'es': return `modificación de los vínculos del incidente ${subject}`;
+    }
+  },
   /** The deletion of one record, the only irreversible write: one record at a time, under approval. */
   deleteRecord(language: AiTranslatedWriteLanguage, entityType: string, subject: string): string {
     const noun = RECORD_NOUNS[entityType] ?? RECORD_NOUNS.default;
@@ -327,6 +343,61 @@ export function incidentClosureWarning(language: AiWriteLanguage): string {
 
 export function incidentAccessWarning(language: AiWriteLanguage): string {
   return INCIDENT_ACCESS_WARNING[language];
+}
+
+/** The three families of an incident's links, named as the Relations tab names them. */
+const INCIDENT_LINK_KIND_LABELS: Record<'assets' | 'applications' | 'technologies', Texts> = {
+  assets: { en: 'Linked assets', fr: 'Actifs liés', de: 'Verknüpfte Assets', es: 'Activos vinculados' },
+  applications: { en: 'Linked applications', fr: 'Applications liées', de: 'Verknüpfte Anwendungen', es: 'Aplicaciones vinculadas' },
+  technologies: { en: 'Linked technologies', fr: 'Technologies liées', de: 'Verknüpfte Technologien', es: 'Tecnologías vinculadas' },
+};
+
+export function incidentLinkKindText(
+  language: AiWriteLanguage,
+  kind: 'assets' | 'applications' | 'technologies',
+): string {
+  return INCIDENT_LINK_KIND_LABELS[kind][language];
+}
+
+/** The journal note card: its title and the optional event time. */
+export function incidentNoteLabel(language: AiWriteLanguage): string {
+  return { en: 'Note', fr: 'Note', de: 'Notiz', es: 'Nota' }[language];
+}
+
+export function incidentOccurredAtLabel(language: AiWriteLanguage): string {
+  return { en: 'Occurred at', fr: "Date de l'événement", de: 'Zeitpunkt', es: 'Fecha del evento' }[language];
+}
+
+export type IncidentLinkCardGroup = {
+  /** The links the preview adds, as "AST-12 - name". */
+  add: string[];
+  /** The links it removes. */
+  remove: string[];
+  /** Links already present: nothing is written for them. */
+  already: string[];
+  /** Links already absent: nothing is written for them. */
+  absent: string[];
+};
+
+/**
+ * The markdown block of one link family on the card: what the approval adds and removes, then
+ * the links it leaves as they are. Empty blocks are left out, so a preview with nothing to write
+ * still says what it found.
+ */
+export function incidentLinkCardText(language: AiWriteLanguage, group: IncidentLinkCardGroup): string {
+  const headings = {
+    add: { en: 'Added', fr: 'Ajoutés', de: 'Hinzugefügt', es: 'Añadidos' }[language],
+    remove: { en: 'Removed', fr: 'Retirés', de: 'Entfernt', es: 'Retirados' }[language],
+    already: { en: 'Already linked', fr: 'Déjà liés', de: 'Bereits verknüpft', es: 'Ya vinculados' }[language],
+    absent: { en: 'Not linked', fr: 'Pas liés', de: 'Nicht verknüpft', es: 'No vinculados' }[language],
+  };
+  const blocks: string[] = [];
+  for (const key of ['add', 'remove', 'already', 'absent'] as const) {
+    const items = group[key].filter((item) => item.trim().length > 0);
+    if (items.length === 0) continue;
+    blocks.push([`**${headings[key]}**`, ...items.map((item) => `- ${item}`)].join('\n'));
+  }
+  return blocks.join('\n\n');
 }
 
 /** The detail lines of a task preview: its assignee and its priority. */

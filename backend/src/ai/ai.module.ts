@@ -147,10 +147,12 @@ import { AiDocumentMutationSupportService } from './mutation/ai-document-mutatio
 import { AiBusinessRecordMutationSupportService } from './mutation/ai-business-record-mutation-support.service';
 import { AiDeleteMutationSupportService } from './mutation/ai-delete-mutation-support.service';
 import { AiFinancialPlanMutationSupportService } from './mutation/ai-financial-plan-mutation-support.service';
+import { AiIncidentMutationSupportService } from './mutation/ai-incident-mutation-support.service';
 import { AiMasterDataMutationSupportService } from './mutation/ai-master-data-mutation-support.service';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
 import { AiRelationMutationSupportService } from './mutation/ai-relation-mutation-support.service';
 import { AiTaskMutationSupportService } from './mutation/ai-task-mutation-support.service';
+import { AddIncidentNoteAiMutationOperation } from './mutation/operations/add-incident-note.ai-mutation-operation';
 import { AddTaskCommentAiMutationOperation } from './mutation/operations/add-task-comment.ai-mutation-operation';
 import { CreateBusinessRecordAiMutationOperation } from './mutation/operations/create-business-record.ai-mutation-operation';
 import { CreateDocumentAiMutationOperation } from './mutation/operations/create-document.ai-mutation-operation';
@@ -163,6 +165,7 @@ import { UpdateDocumentMetadataAiMutationOperation } from './mutation/operations
 import { UpdateDocumentRelationsAiMutationOperation } from './mutation/operations/update-document-relations.ai-mutation-operation';
 import { UpdateBusinessRecordAiMutationOperation } from './mutation/operations/update-business-record.ai-mutation-operation';
 import { UpdateEntityRelationsAiMutationOperation } from './mutation/operations/update-entity-relations.ai-mutation-operation';
+import { UpdateIncidentLinksAiMutationOperation } from './mutation/operations/update-incident-links.ai-mutation-operation';
 import { UpdateMasterDataRecordAiMutationOperation } from './mutation/operations/update-master-data-record.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from './mutation/operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskFieldsAiMutationOperation } from './mutation/operations/update-task-fields.ai-mutation-operation';
@@ -279,12 +282,14 @@ import { BraveSearchService } from './web-search/brave-search.service';
     AiBusinessRecordMutationSupportService,
     AiDeleteMutationSupportService,
     AiFinancialPlanMutationSupportService,
+    AiIncidentMutationSupportService,
     AiMasterDataMutationSupportService,
     AiRelationMutationSupportService,
     AiTaskMutationSupportService,
     ImportTicketAiMutationOperation,
     ImportGlpiTicketAiMutationOperation,
     CreateBusinessRecordAiMutationOperation,
+    AddIncidentNoteAiMutationOperation,
     CreateDocumentAiMutationOperation,
     CreateTaskAiMutationOperation,
     DeleteRecordAiMutationOperation,
@@ -295,6 +300,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
     UpdateDocumentRelationsAiMutationOperation,
     UpdateBusinessRecordAiMutationOperation,
     UpdateEntityRelationsAiMutationOperation,
+    UpdateIncidentLinksAiMutationOperation,
     UpdateMasterDataRecordAiMutationOperation,
     UpdateTaskFieldsAiMutationOperation,
     UpdateTaskStatusAiMutationOperation,

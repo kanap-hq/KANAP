@@ -17,6 +17,8 @@ import { participantConditionForAiEntity, ParticipationScopedAiEntityType } from
 const CONTRIBUTOR_WRITE_FAMILIES: Readonly<Record<string, readonly string[]>> = {
   create_business_record: ['incidents'],
   update_business_record: ['projects', 'incidents'],
+  add_incident_note: ['incidents'],
+  update_incident_links: ['incidents'],
   update_entity_relations: ['projects', 'requests'],
 };
 
@@ -114,7 +116,7 @@ export function aiRelationTargetRequirement(
 
 /** The modules a contributor may change through Plaid, in plain words, for the refusals. */
 export const CONTRIBUTOR_PLAIN_SCOPES: Readonly<Record<string, string>> = {
-  incidents: 'incidents (their fields, their status up to closure, and setting the confidentiality)',
+  incidents: 'incidents (their fields, their status up to closure, setting the confidentiality, the journal and the links)',
   portfolio_projects: 'projects (their purpose and their links to applications, assets and budget lines)',
   portfolio_requests: 'requests (their links to applications, assets, budget lines and business processes)',
 };

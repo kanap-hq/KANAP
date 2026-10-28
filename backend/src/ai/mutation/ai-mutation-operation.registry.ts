@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { AiMutationWriteToolName } from '../ai.types';
+import { AddIncidentNoteAiMutationOperation } from './operations/add-incident-note.ai-mutation-operation';
 import { AddTaskCommentAiMutationOperation } from './operations/add-task-comment.ai-mutation-operation';
 import { CreateDocumentAiMutationOperation } from './operations/create-document.ai-mutation-operation';
 import { CreateBusinessRecordAiMutationOperation } from './operations/create-business-record.ai-mutation-operation';
@@ -12,6 +13,7 @@ import { UpdateDocumentMetadataAiMutationOperation } from './operations/update-d
 import { UpdateDocumentRelationsAiMutationOperation } from './operations/update-document-relations.ai-mutation-operation';
 import { UpdateBusinessRecordAiMutationOperation } from './operations/update-business-record.ai-mutation-operation';
 import { UpdateEntityRelationsAiMutationOperation } from './operations/update-entity-relations.ai-mutation-operation';
+import { UpdateIncidentLinksAiMutationOperation } from './operations/update-incident-links.ai-mutation-operation';
 import { UpdateMasterDataRecordAiMutationOperation } from './operations/update-master-data-record.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from './operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskFieldsAiMutationOperation } from './operations/update-task-fields.ai-mutation-operation';
@@ -36,9 +38,11 @@ export class AiMutationOperationRegistry {
     updateMasterDataRecord: UpdateMasterDataRecordAiMutationOperation,
     updateBusinessRecord: UpdateBusinessRecordAiMutationOperation,
     updateEntityRelations: UpdateEntityRelationsAiMutationOperation,
+    updateIncidentLinks: UpdateIncidentLinksAiMutationOperation,
     updateTaskFields: UpdateTaskFieldsAiMutationOperation,
     updateTaskStatus: UpdateTaskStatusAiMutationOperation,
     updateTaskAssignee: UpdateTaskAssigneeAiMutationOperation,
+    addIncidentNote: AddIncidentNoteAiMutationOperation,
     addTaskComment: AddTaskCommentAiMutationOperation,
     deleteRecord: DeleteRecordAiMutationOperation,
     @Optional()
@@ -58,9 +62,11 @@ export class AiMutationOperationRegistry {
       updateMasterDataRecord,
       updateBusinessRecord,
       updateEntityRelations,
+      updateIncidentLinks,
       updateTaskFields,
       updateTaskStatus,
       updateTaskAssignee,
+      addIncidentNote,
       addTaskComment,
       deleteRecord,
     ]) {

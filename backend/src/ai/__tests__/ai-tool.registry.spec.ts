@@ -358,6 +358,45 @@ function createRegistry(overrides?: {
             prompt_hint: 'For task comments, use `add_task_comment` with a canonical task reference and the exact comment content.',
           },
         },
+        {
+          toolName: 'add_incident_note',
+          description: 'Create a preview to add one note to the journal of an incident.',
+          inputSchema: {
+            safeParse: (value: any) => ({ success: true, data: value }),
+          },
+          inputSummary: {
+            ref: 'Incident reference: INC-n, uuid or exact title.',
+            content: 'The note text, several lines allowed.',
+            occurred_at: 'Optional event time as an ISO 8601 date-time with a time zone.',
+          },
+          businessResource: 'incidents',
+          writePreview: {
+            entity_type: 'incidents',
+            fields: ['note', 'occurred_at'],
+            reversible: false,
+            prompt_hint: 'For an incident journal, use `add_incident_note`.',
+          },
+        },
+        {
+          toolName: 'update_incident_links',
+          description: 'Create a preview to link or unlink assets, applications and technologies on one incident.',
+          inputSchema: {
+            safeParse: (value: any) => ({ success: true, data: value }),
+          },
+          inputSummary: {
+            ref: 'Incident reference: INC-n, uuid or exact title.',
+            assets: 'Assets to link or unlink.',
+            applications: 'Applications to link or unlink.',
+            technologies: 'Technologies to link or unlink.',
+          },
+          businessResource: 'incidents',
+          writePreview: {
+            entity_type: 'incidents',
+            fields: ['linked_assets', 'linked_applications', 'linked_technologies'],
+            reversible: true,
+            prompt_hint: 'For the links of an incident, use `update_incident_links`.',
+          },
+        },
       ]),
       getOperationOrNull: (toolName: string) => {
         const operation = ({
@@ -371,6 +410,8 @@ function createRegistry(overrides?: {
           update_task_status: { toolName: 'update_task_status' },
           update_task_assignee: { toolName: 'update_task_assignee' },
           add_task_comment: { toolName: 'add_task_comment' },
+          add_incident_note: { toolName: 'add_incident_note' },
+          update_incident_links: { toolName: 'update_incident_links' },
         } as Record<string, any>)[toolName];
         return operation ?? null;
       },
@@ -546,6 +587,8 @@ async function testListRegisteredToolsExposesRuntimeRegistry() {
       'update_task_status',
       'update_task_assignee',
       'add_task_comment',
+      'add_incident_note',
+      'update_incident_links',
     ],
   );
 }
@@ -644,6 +687,8 @@ async function testChatSurfaceIncludesWritePreviewToolsWhenWriteAllowed() {
   assert.ok(tools.some((tool) => tool.name === 'prepare_mutation_plan'));
   assert.ok(tools.some((tool) => tool.name === 'update_task_assignees'));
   assert.ok(tools.some((tool) => tool.name === 'add_task_comment'));
+  assert.ok(tools.some((tool) => tool.name === 'add_incident_note'));
+  assert.ok(tools.some((tool) => tool.name === 'update_incident_links'));
   assert.ok(tools.some((tool) => tool.name === 'undo_preview'));
 }
 
@@ -663,6 +708,8 @@ async function testWritePreviewToolsStayHiddenWithoutWriteAccess() {
   assert.ok(!tools.some((tool) => tool.name === 'prepare_mutation_plan'));
   assert.ok(!tools.some((tool) => tool.name === 'update_task_assignees'));
   assert.ok(!tools.some((tool) => tool.name === 'add_task_comment'));
+  assert.ok(!tools.some((tool) => tool.name === 'add_incident_note'));
+  assert.ok(!tools.some((tool) => tool.name === 'update_incident_links'));
   assert.ok(!tools.some((tool) => tool.name === 'undo_preview'));
 }
 

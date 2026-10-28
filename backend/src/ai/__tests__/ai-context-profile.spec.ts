@@ -119,12 +119,64 @@ function testIncidentWritesChooseTheBusinessRecordTools() {
     'Clos INC-7',
     'Ferme INC-7',
     'Passe INC-7 en résolu',
+    'Ouvre un incident sur la messagerie',
+    'Déclare un incident de messagerie',
+    'Signale un incident de messagerie',
+    'Open an incident on the mail server',
+    'Report an incident on the mail server',
+    'Log an incident on the mail server',
   ]) {
     const profile = selectAiContextProfile(prompt);
     assert.equal(profile.name, 'write_business', prompt);
     assert.ok(profile.toolNames.includes('create_business_record'), `${prompt}: create tool`);
     assert.ok(profile.toolNames.includes('update_business_record'), `${prompt}: update tool`);
     assert.equal(profile.toolNames.includes('update_task_status'), false, `${prompt}: never a task write`);
+  }
+
+  // The journal and the links have their own tools in the business profile.
+  for (const prompt of [
+    'Ajoute une note à INC-7',
+    'Note dans le journal de l’incident de messagerie : bascule effectuée',
+    'Ajoute une note sur l’incident mail',
+    'Log a note on the mail incident',
+    'Lie APP-2 à INC-3',
+    'lie l’incident INC-3 à l’application APP-2',
+    'Rattache APP-2 à INC-3',
+    'Associe APP-2 à INC-3',
+    'Ajoute l’incident INC-3 à l’actif AST-12',
+    'Link APP-2 to INC-3',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'write_business', prompt);
+    assert.ok(profile.toolNames.includes('add_incident_note'), `${prompt}: note tool`);
+    assert.ok(profile.toolNames.includes('update_incident_links'), `${prompt}: link tool`);
+  }
+
+  // A follow-up task on an incident goes to the task profile, before the incident intent.
+  for (const prompt of [
+    'Crée une tâche pour suivre l’incident de messagerie',
+    'Create a task to follow the mail incident',
+    'Crée une tâche sur INC-7',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'write_task', prompt);
+    assert.ok(profile.toolNames.includes('create_task'), `${prompt}: create task`);
+    assert.equal(profile.toolNames.includes('update_incident_links'), false, `${prompt}: not a link write`);
+  }
+
+  // A status word in a question is a read, never a write.
+  for (const prompt of [
+    'INC-3 est-il clos ?',
+    'Quand INC-3 a-t-il été résolu ?',
+    'Qui a fermé INC-3 ?',
+    'Is INC-3 closed?',
+    'When was INC-3 resolved?',
+    'Who closed INC-3?',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'entity_inspection', prompt);
+    assert.equal(profile.toolNames.includes('update_business_record'), false, `${prompt}: no incident write`);
+    assert.equal(profile.toolNames.includes('update_incident_links'), false, `${prompt}: no link write`);
   }
 }
 

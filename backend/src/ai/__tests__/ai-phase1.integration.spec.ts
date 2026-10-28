@@ -2147,11 +2147,13 @@ function buildToolIsolationCases(
     case 'write_financial_plan':
     case 'update_master_data_record':
     case 'update_business_record':
+    case 'update_incident_links':
     case 'update_entity_relations':
     case 'update_task_fields':
     case 'update_task_status':
     case 'update_task_assignee':
     case 'update_task_assignees':
+    case 'add_incident_note':
     case 'add_task_comment':
     case 'delete_record':
     case 'create_document':

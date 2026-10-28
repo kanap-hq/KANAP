@@ -28,6 +28,7 @@ import { ContractsController } from '../../contracts/contracts.controller';
 import { DepartmentsController } from '../../departments/departments.controller';
 import { InterfacesController } from '../../interfaces/interfaces.controller';
 import { IncidentsController } from '../../incidents/incidents.controller';
+import { IncidentsTasksController } from '../../incidents/incidents-tasks.controller';
 import { KnowledgeController } from '../../knowledge/knowledge.controller';
 import { LocationsController } from '../../locations/locations.controller';
 import { PortfolioProjectsController } from '../../portfolio/portfolio-projects.controller';
@@ -113,6 +114,12 @@ const one = (resource: string, route: [Controller, string]): Record<string, Row>
 const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
   create_business_record: recordRows('create'),
   update_business_record: recordRows('update'),
+  add_incident_note: {
+    incidents: { resource: 'incidents', level: 'contributor', route: [IncidentsController, 'createEntry'] },
+  },
+  update_incident_links: {
+    incidents: { resource: 'incidents', level: 'contributor', route: [IncidentsController, 'linkRelation'] },
+  },
   create_master_data_record: masterDataRows('create'),
   update_master_data_record: masterDataRows('update'),
   update_entity_relations: Object.fromEntries(AI_RELATION_ENTITY_TYPES.map((family) => [family, {
@@ -127,7 +134,11 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
   update_document_content: one('knowledge', [KnowledgeController, 'update']),
   update_document_metadata: one('knowledge', [KnowledgeController, 'update']),
   update_document_relations: one('knowledge', [KnowledgeController, 'bulkReplaceRelationSets']),
-  create_task: one('tasks', [TasksController, 'createStandalone']),
+  create_task: {
+    ...one('tasks', [TasksController, 'createStandalone']),
+    // The screen's follow-up task on an incident (`POST /incidents/:id/tasks`, tasks:member).
+    incident: { resource: 'tasks', level: 'member', route: [IncidentsTasksController, 'create'] },
+  },
   import_ticket: one('tasks', [TasksController, 'createStandalone']),
   import_glpi_ticket: one('tasks', [TasksController, 'createStandalone']),
   update_task_fields: one('tasks', [TasksController, 'updateTask']),
@@ -175,17 +186,23 @@ function testOnlyTheContributorRowsAreBelowMember() {
   const contributorRows = Object.entries(TABLE).flatMap(([toolName, families]) =>
     Object.entries(families).filter(([, row]) => row.level === 'contributor').map(([family]) => `${toolName}:${family}`));
   assert.deepEqual(contributorRows.sort(), [
+    'add_incident_note:incidents',
     'create_business_record:incidents',
     'update_business_record:incidents',
     'update_business_record:projects',
     'update_entity_relations:projects',
     'update_entity_relations:requests',
+    'update_incident_links:incidents',
   ]);
   // Never below contributor, and an unknown family stays at member.
   assert.equal(aiWriteLevel('update_business_record', 'applications'), 'member');
   assert.equal(aiWriteLevel('create_business_record', 'projects'), 'member');
   assert.equal(aiWriteLevel('create_business_record', 'incidents'), 'contributor');
   assert.equal(aiWriteLevel('update_business_record', 'incidents'), 'contributor');
+  assert.equal(aiWriteLevel('add_incident_note', 'incidents'), 'contributor');
+  assert.equal(aiWriteLevel('update_incident_links', 'incidents'), 'contributor');
+  // A follow-up task on an incident stays at the tasks module's member level.
+  assert.equal(aiWriteLevel('create_task', 'incident'), 'member');
   assert.equal(aiWriteLevel('update_business_record', 'unknown'), 'member');
   // A delete family without its row keeps the strictest level.
   assert.equal(aiWriteLevel('delete_record', 'unknown'), 'admin');
@@ -212,6 +229,18 @@ function testToolRequirements() {
     { resource: 'incidents', level: 'member' },
     { resource: 'incidents', level: 'contributor' },
   ]);
+  // The journal note and the links need the incident contributor right; the target module read
+  // is checked by the operations themselves, as the routes do.
+  assert.deepEqual(aiWriteRequirements('add_incident_note', ['incidents']), [
+    { resource: 'incidents', level: 'member' },
+    { resource: 'incidents', level: 'contributor' },
+  ]);
+  assert.deepEqual(aiWriteRequirements('update_incident_links', ['incidents']), [
+    { resource: 'incidents', level: 'member' },
+    { resource: 'incidents', level: 'contributor' },
+  ]);
+  // A follow-up task on an incident takes the tasks module at member, as its screen route.
+  assert.deepEqual(aiWriteRequirements('create_task', ['tasks']), [{ resource: 'tasks', level: 'member' }]);
   assert.deepEqual(aiWriteRequirements('delete_record', [
     'tasks', 'contacts', 'locations', 'budget_lines', 'connections', 'interfaces', 'documents',
   ]), [
