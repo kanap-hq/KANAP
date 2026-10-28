@@ -86,7 +86,7 @@ const ASSET_FIELDS: HistoryFields = {
   go_live_date: shown(),
   end_of_life_date: shown(),
   location_id: shown('location'),
-  sub_location_id: shown('location'),
+  sub_location_id: shown('sub_location'),
   notes: shown(),
   // The marked technology link is the operating system; its own child row carries the change.
   operating_system: hidden('derived from the marked technology link'),

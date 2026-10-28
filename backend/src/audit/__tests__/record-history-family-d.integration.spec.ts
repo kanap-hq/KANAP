@@ -40,6 +40,7 @@ type Seeded = {
   cluster: string;
   related: string;
   version: string;
+  subLocation: string;
   assetReader: Person;
   technologyReader: Person;
   allReader: Person;
@@ -140,6 +141,11 @@ async function seedFamily(runner: QueryRunner, data: HistorySeed): Promise<Seede
      VALUES ($1, $2, '2.1', '2.1', ARRAY['2.1.'], '2027-06-30', '2028-06-30') RETURNING id`,
     [data.tenantId, data.technology],
   ))[0].id as string;
+  const subLocation = (await runner.query(
+    `INSERT INTO location_sub_items (tenant_id, location_id, name, description)
+     VALUES ($1, $2, 'Rack A', 'Cold aisle') RETURNING id`,
+    [data.tenantId, data.location],
+  ))[0].id as string;
 
   const assetReader = await seedPerson(runner, data.tenantId, { first: 'Aline', last: 'Asset' }, { infrastructure: 'reader' });
   const technologyReader = await seedPerson(runner, data.tenantId, { first: 'Tina', last: 'Tech' }, { infrastructure: 'reader' });
@@ -151,7 +157,7 @@ async function seedFamily(runner: QueryRunner, data: HistorySeed): Promise<Seede
     after: {
       id: data.asset, tenant_id: data.tenantId, name: 'Server One', asset_reference: 'AST-1',
       kind: 'physical_server', environment: 'prod', status: 'active', location_id: data.location,
-      notes: 'First server', is_cluster: false,
+      sub_location_id: subLocation, notes: 'First server', is_cluster: false,
     },
   });
   await audit(runner, {
@@ -409,7 +415,7 @@ async function seedFamily(runner: QueryRunner, data: HistorySeed): Promise<Seede
     after: { id: vulnerability, technology_id: data.technology, cve_id: 'CVE-2026-1234', state: 'handled', note: 'Patched' },
   });
 
-  return { data, cluster, related, version, assetReader, technologyReader, allReader, noModules };
+  return { data, cluster, related, version, subLocation, assetReader, technologyReader, allReader, noModules };
 }
 
 async function testAccess(seeded: Seeded, foreign: HistorySeed) {
@@ -472,6 +478,10 @@ async function testAssetEntries(seeded: Seeded) {
   const location = created('location_id')?.change.after as any;
   assert.equal(location.kind, 'location');
   assert.equal(location.label, 'Paris DC');
+  // `assets.sub_location_id` names a `location_sub_items` row, not a site.
+  const subLocation = created('sub_location_id')?.change.after as any;
+  assert.equal(subLocation.kind, 'sub_location');
+  assert.equal(subLocation.label, 'Rack A');
 
   const update = page.items.find((item) => item.subject.kind === 'record' && item.action === 'update');
   assert.ok(update, 'the asset update is an entry');
@@ -540,6 +550,14 @@ async function testAssetEntries(seeded: Seeded) {
   assert.deepEqual(narrowLine?.change.after, { hidden: true, kind: 'budget_line' }, 'a budget line is hidden without its module');
   const narrowTechnology = findChange(narrow, 'operating_system', 'added');
   assert.equal((narrowTechnology?.change.after as any).label, 'Postgres', 'the technology is named with infrastructure');
+  const narrowSubLocation = narrow.items
+    .flatMap((item) => item.changes)
+    .find((change) => change.field === 'sub_location_id');
+  assert.deepEqual(
+    narrowSubLocation?.after,
+    { hidden: true, kind: 'sub_location' },
+    'a sub-location is hidden without the locations module, never shown as a site',
+  );
   assertNoRawId(page, data.tenantId);
   console.log('  asset creation, update, relation, member, hardware, support, link, attachment, technology, contract, project and line links in words: OK');
 }

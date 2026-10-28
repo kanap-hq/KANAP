@@ -157,6 +157,7 @@ function familyCases(seeded: Seeded): FamilyCase[] {
     { family: 'task', home: home.task, away: away.task, label: 'task' },
     { family: 'budget_line', home: home.opexLine, away: away.opexLine, label: 'budget line' },
     { family: 'location', home: home.location, away: away.location, label: 'location' },
+    { family: 'sub_location', home: home.subLocation, away: away.subLocation, label: 'sub-location' },
     { family: 'connection', home: home.connection, away: away.connection, label: 'connection' },
     { family: 'interface', home: home.interfaceRecord, away: away.interfaceRecord, label: 'interface' },
     { family: 'incident', home: home.incident, away: away.incident, label: 'incident' },
@@ -172,7 +173,7 @@ function familyCases(seeded: Seeded): FamilyCase[] {
 
 /** The families this run declares ahead of their record pages. */
 const NEW_FAMILIES: readonly FamilyKey[] = [
-  'location', 'connection', 'interface', 'incident', 'department', 'business_process', 'calendar',
+  'location', 'sub_location', 'connection', 'interface', 'incident', 'department', 'business_process', 'calendar',
   'analytics_axis', 'analytics_category', 'contributor', 'document_type',
 ];
 

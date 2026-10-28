@@ -96,7 +96,7 @@ const UNNAMED_KINDS = [
   'record', 'version', 'amounts', 'allocations', 'round_input', 'link', 'attachment', 'contact',
   'application', 'technology', 'asset', 'task', 'user', 'company', 'supplier', 'account',
   'chart_of_accounts', 'project', 'request', 'contract', 'cost_center', 'budget_line',
-  'location', 'connection', 'interface', 'incident', 'department', 'business_process', 'calendar',
+  'location', 'sub_location', 'connection', 'interface', 'incident', 'department', 'business_process', 'calendar',
   'analytics_axis', 'analytics_category', 'contributor', 'line',
   'document', 'document_folder', 'document_library', 'document_type',
   'relation', 'member', 'hardware', 'support', 'technology_version', 'owner', 'vulnerability',

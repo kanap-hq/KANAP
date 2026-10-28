@@ -47,6 +47,7 @@ export type FamilyKey =
   | 'task'
   | 'budget_line'
   | 'location'
+  | 'sub_location'
   | 'connection'
   | 'interface'
   | 'incident'
@@ -192,6 +193,14 @@ export const REFERENCE_FAMILIES: Readonly<Record<FamilyKey, ReferenceFamily>> = 
     table: 'locations',
     label: 'r.name',
     reference: 'r.location_reference',
+    visibility: {},
+  },
+  // `assets.sub_location_id` references `location_sub_items`, not `locations`: a family of its
+  // own, read by the site module, so a sub-location is named (or withheld) for what it is.
+  sub_location: {
+    module: 'locations',
+    table: 'location_sub_items',
+    label: 'r.name',
     visibility: {},
   },
   connection: {

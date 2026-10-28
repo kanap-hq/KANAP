@@ -34,6 +34,7 @@ export type HistorySeed = {
   categoryA: string;
   categoryB: string;
   location: string;
+  subLocation: string;
   connection: string;
   interfaceRecord: string;
   incident: string;
@@ -235,6 +236,11 @@ export async function seedHistoryData(runner: QueryRunner, tenantId: string): Pr
     `INSERT INTO locations (tenant_id, name, hosting_type) VALUES ($1, 'Paris DC', 'cloud') RETURNING id`,
     [tenantId],
   );
+  const subLocation = await one(
+    runner,
+    `INSERT INTO location_sub_items (tenant_id, location_id, name) VALUES ($1, $2, 'Rack A') RETURNING id`,
+    [tenantId, location],
+  );
   const connection = await one(
     runner,
     `INSERT INTO connections (tenant_id, name, topology) VALUES ($1, 'Core link', 'server_to_server') RETURNING id`,
@@ -295,7 +301,7 @@ export async function seedHistoryData(runner: QueryRunner, tenantId: string): Pr
 
   return {
     tenantId, companyA, companyB, costCenterA, costCenterB, coa, supplier, contractA, contractB, project, request, application,
-    technology, asset, contact, account, task, axis, categoryA, categoryB, location, connection, interfaceRecord, incident,
+    technology, asset, contact, account, task, axis, categoryA, categoryB, location, subLocation, connection, interfaceRecord, incident,
     department, businessProcess, calendar, contributor, opexLine, capexLine,
     hiddenLine, typeLine, pageLine, emptyPageLine, opexVersion, capexVersion, owner: owner.id,
   };
