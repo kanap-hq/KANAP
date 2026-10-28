@@ -77,7 +77,7 @@ async function testStructuredReadGuidancePrefersQueryLayerTools() {
   assert.match(prompt, /Use get_entity_comments for the actual project\/task discussion feed/i);
   assert.match(prompt, /headcount_year/);
   assert.match(prompt, /pass `year` on query_entities or get_entity_detail/i);
-  assert.match(prompt, /Spend-item reads and spend-item aggregations are summary-backed/i);
+  assert.match(prompt, /Budget-line reads and aggregations are summary-backed/i);
   assert.match(prompt, /Prefer completeness over speed/i);
   assert.match(prompt, /`q` on query_entities and aggregate_entities is literal text quick-search only/i);
   assert.match(prompt, /Treat `filters_ignored` and `sort_ignored` from query_entities or aggregate_entities, and `fields_ignored` from get_filter_values, as blocking validation failures/i);
@@ -398,7 +398,7 @@ async function testAnalyticsDimensionsFollowOpexOrCapexRead() {
   } as any;
   const load = (AiChatOrchestratorService.prototype as any).loadAnalyticsDimensionsPromptContext;
 
-  const both = await load.call({}, ctx, ['tasks', 'spend_items', 'capex_items']);
+  const both = await load.call({}, ctx, ['tasks', 'budget_lines']);
   assert.deepEqual(both, [
     { key: 'analytics_category', name: 'Analytics dimension', default: true, used_for: ['opex', 'capex'], required: false },
     { key: 'analytics:nature-cost', name: 'Nature de coût', default: false, used_for: ['opex', 'capex'], required: false },
@@ -406,27 +406,27 @@ async function testAnalyticsDimensionsFollowOpexOrCapexRead() {
     { key: 'analytics:asset-class', name: 'Asset class', default: false, used_for: ['capex'], required: false },
   ], 'each enabled dimension once, with the line types it is used for and whether it is required; the default keeps analytics_category');
   assert.deepEqual(
-    (await load.call({}, ctx, ['capex_items'])).map((entry: any) => [entry.key, entry.used_for]),
-    [['analytics_category', ['capex']], ['analytics:nature-cost', ['capex']], ['analytics:asset-class', ['capex']]],
-    'only the readable line types',
+    (await load.call({}, ctx, ['budget_lines'])).map((entry: any) => [entry.key, entry.used_for]),
+    [['analytics_category', ['opex', 'capex']], ['analytics:nature-cost', ['opex', 'capex']], ['analytics:recurrence', ['opex']], ['analytics:asset-class', ['capex']]],
+    'one budget family: both natures are readable, each dimension says the line types it is used for',
   );
-  assert.equal(await load.call({}, ctx, ['tasks', 'projects']), undefined, 'no OPEX or CAPEX read: no block');
-  assert.equal(queries.length, 2, 'dimensions are read only for OPEX or CAPEX readers');
+  assert.equal(await load.call({}, ctx, ['tasks', 'projects']), undefined, 'no budget line read: no block');
+  assert.equal(queries.length, 2, 'dimensions are read only for budget line readers');
   assert.deepEqual(queries.map((params) => params[1]), [['tenant-1'], ['tenant-1']], 'for the context tenant');
 
   const service = new AiSystemPromptService();
   const base = {
     tenantName: 'Test Tenant',
     availableTools: [],
-    readableEntityTypes: ['spend_items'],
+    readableEntityTypes: ['budget_lines'],
     currentUser: { displayName: 'Alex', email: null, roleNames: [], teamName: null },
   };
-  const withDimensions = service.build({ ...base, analyticsDimensions: analyticsDimensionsAiContext(rows as any, ['spend_items']) });
+  const withDimensions = service.build({ ...base, analyticsDimensions: analyticsDimensionsAiContext(rows as any, ['budget_lines']) });
   assert.match(withDimensions, /"analytics_dimensions": \[/);
-  assert.match(withDimensions, /"used_for": \[\s*"opex"\s*\]/);
+  assert.match(withDimensions, /"used_for": \[\s*"opex",\s*"capex"\s*\]/);
   assert.match(withDimensions, /"key": "analytics:nature-cost"/);
   assert.match(withDimensions, /"name": "Nature de coût"/);
-  assert.doesNotMatch(withDimensions, /analytics:old|analytics:asset-class/, 'neither a disabled dimension nor one of the other line type');
+  assert.doesNotMatch(withDimensions, /analytics:old/, 'not a disabled dimension');
   assert.match(withDimensions, /To set a line's value on a dimension, put its `key`/);
   assert.match(withDimensions, /must be created first/);
   assert.match(withDimensions, /"required": true/, 'the required flag reaches the prompt');

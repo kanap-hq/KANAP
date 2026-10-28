@@ -47,8 +47,8 @@ export const AI_SEARCH_ENTITY_TYPES = [
   'analytics_categories',
   'applications',
   'assets',
+  'budget_lines',
   'business_processes',
-  'capex_items',
   'chart_of_accounts',
   'companies',
   'connections',
@@ -61,7 +61,6 @@ export const AI_SEARCH_ENTITY_TYPES = [
   'locations',
   'projects',
   'requests',
-  'spend_items',
   'suppliers',
   'tasks',
   'technologies',
@@ -84,6 +83,29 @@ export const AI_CONTEXT_ENTITY_TYPES = [
   'technologies',
   'contracts',
 ] as const;
+
+/**
+ * The `search_index.entity_type` values of the budget lines: the index keeps one type per nature
+ * (they are baked into SQL functions, triggers and a RLS policy, `search_index`), and the AI
+ * surface exposes the family `budget_lines` only. No migration.
+ */
+export const BUDGET_LINE_INDEX_ENTITY_TYPES = ['spend_items', 'capex_items'] as const;
+
+/**
+ * The index types a searched family reads on `search_index`: the budget lines read both natures,
+ * every other family its own type.
+ */
+export function searchIndexEntityTypesFor(entityType: AiSearchEntityType): readonly string[] {
+  return entityType === 'budget_lines' ? BUDGET_LINE_INDEX_ENTITY_TYPES : [entityType];
+}
+
+/** The AI family of an index row: a budget line of either nature reads `budget_lines`. */
+export function aiSearchEntityTypeOfIndexRow(indexEntityType: string): AiSearchEntityType | null {
+  if (indexEntityType === 'spend_items' || indexEntityType === 'capex_items') return 'budget_lines';
+  return (AI_SEARCH_ENTITY_TYPES as readonly string[]).includes(indexEntityType)
+    ? indexEntityType as AiSearchEntityType
+    : null;
+}
 
 export const AiSearchEntityTypeSchema = z.enum(AI_SEARCH_ENTITY_TYPES);
 

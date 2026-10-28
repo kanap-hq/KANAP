@@ -64,6 +64,14 @@ export function linkedLineOf(tenant: string, line: string, nature: BudgetNature 
 }
 
 /**
+ * ` AND EXISTS (...)`: the line a row names is a budget line of either nature, for a count or a
+ * link that covers both natures explicitly (`naturesAnd`). `tenant` and `line` are SQL expressions.
+ */
+export function linkedLineOfAnyNature(tenant: string, line: string, lineTable: string = BUDGET_LINE_TABLE): string {
+  return ` AND EXISTS (SELECT 1 FROM ${lineTable} nl WHERE nl.tenant_id = ${tenant} AND nl.id = ${line}${naturesAnd('nl', BUDGET_NATURES)})`;
+}
+
+/**
  * Checks a scope table when its module loads: an entry whose line table is `spend_items` names its
  * nature or explicitly carries `allNatures: true`, or the module refuses to load. Without either
  * the entry's statements would read both natures without a word. `lineTable` gives an entry's line table (`items`, `itemTable`,

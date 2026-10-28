@@ -11,10 +11,10 @@ import { DataSource, QueryRunner } from 'typeorm';
 // - get_entity_detail on an application or an asset: the OPEX and CAPEX lines need the budget
 //   right, the contracts the contracts right, the projects the projects right. Without it, the
 //   list and its count are null (never 0) and the relation total leaves them out.
-// - get_entity_detail on an OPEX or CAPEX line and on a contract: the same rule for the linked
+// - get_entity_detail on a budget line or a contract: the same rule for the linked
 //   applications, projects, contracts and budget lines.
-// - query_entities, aggregate_entities and describe_entity_filters on applications: spend_count,
-//   capex_count and contracts_count are null and neither filter, sort nor aggregate without the right.
+// - query_entities, aggregate_entities and describe_entity_filters on applications: budget_lines_count
+//   and contracts_count are null and neither filter, sort nor aggregate without the right.
 // - get_entity_context on an application or an asset: no section of a family the caller does not read.
 // A caller with every right gets all of it. The AI surface checks are not under test: stubbed open.
 
@@ -147,68 +147,72 @@ function assertNoLinkedName(value: unknown, label: string) {
 
 async function testApplicationDetail(h: Harness, runner: QueryRunner, s: Seed) {
   const hidden = await h.executor.executeDetail(ctx(runner, s, 'landscape'), { entity_type: 'applications', entity_id: 'APP-1' });
-  for (const key of ['linked_spend_items', 'linked_capex_items', 'linked_contracts', 'projects']) {
+  for (const key of ['linked_budget_lines', 'linked_contracts', 'projects']) {
     assert.equal(hidden.data[key], null, `landscape reader: no ${key}`);
   }
-  for (const key of ['spend_count', 'capex_count', 'contracts_count']) {
+  for (const key of ['budget_lines_count', 'contracts_count']) {
     assert.equal(hidden.data[key], null, `landscape reader: no ${key} in the data`);
     assert.equal(hidden.entity.metadata[key], null, `landscape reader: no ${key} in the summary`);
   }
   const counts = hidden.data.relation_counts;
   assert.deepEqual(
-    { opex: counts.opex, capex: counts.capex, contracts: counts.contracts, projects: counts.projects, total: counts.total },
-    { opex: null, capex: null, contracts: null, projects: null, total: 0 },
+    { budget_lines: counts.budget_lines, contracts: counts.contracts, projects: counts.projects, total: counts.total },
+    { budget_lines: null, contracts: null, projects: null, total: 0 },
     'landscape reader: the relation counts leave the unread modules out',
   );
   assertNoLinkedName(hidden, 'landscape reader, application detail');
 
   const shown = await h.executor.executeDetail(ctx(runner, s, 'full'), { entity_type: 'applications', entity_id: 'APP-1' });
-  assert.equal(items(shown.data.linked_spend_items), 1, 'full reader: the OPEX line');
-  assert.equal(items(shown.data.linked_capex_items), 1, 'full reader: the CAPEX line');
+  assert.equal(items(shown.data.linked_budget_lines), 2, 'full reader: both budget lines');
+  assert.deepEqual(shown.data.linked_budget_lines.items.map((line: any) => [line.product_name, line.nature]), [
+    ['Secret OPEX line', 'opex'], ['Secret CAPEX line', 'capex'],
+  ], 'full reader: each line with its nature');
   assert.equal(items(shown.data.linked_contracts), 1, 'full reader: the contract');
   assert.equal(items(shown.data.projects), 1, 'full reader: the project');
   assert.deepEqual(
-    [shown.entity.metadata.spend_count, shown.entity.metadata.capex_count, shown.entity.metadata.contracts_count],
-    [1, 1, 1],
+    [shown.entity.metadata.budget_lines_count, shown.entity.metadata.contracts_count],
+    [2, 1],
     'full reader: the counts',
   );
   assert.equal(shown.data.relation_counts.projects, 1);
-  assert.equal(shown.data.relation_counts.total, 4, 'one of each');
+  assert.equal('opex' in counts, false, 'no per-nature alias in the relation counts');
+  assert.equal('capex' in counts, false, 'no per-nature alias in the relation counts');
+  assert.equal(shown.data.relation_counts.budget_lines, 2, 'both budget lines');
+  assert.equal(shown.data.relation_counts.total, 4, 'two budget lines, the contract and the project');
 }
 
 async function testAssetDetail(h: Harness, runner: QueryRunner, s: Seed) {
   const hidden = await h.executor.executeDetail(ctx(runner, s, 'landscape'), { entity_type: 'assets', entity_id: s.asset });
-  for (const key of ['linked_spend_items', 'linked_capex_items', 'linked_contracts', 'projects']) {
+  for (const key of ['linked_budget_lines', 'linked_contracts', 'projects']) {
     assert.equal(hidden.data[key], null, `landscape reader: no ${key} on the asset`);
   }
   assertNoLinkedName(hidden, 'landscape reader, asset detail');
 
   const shown = await h.executor.executeDetail(ctx(runner, s, 'full'), { entity_type: 'assets', entity_id: s.asset });
-  for (const key of ['linked_spend_items', 'linked_capex_items', 'linked_contracts', 'projects']) {
-    assert.equal(items(shown.data[key]), 1, `full reader: ${key} on the asset`);
+  for (const key of ['linked_budget_lines', 'linked_contracts', 'projects']) {
+    assert.equal(items(shown.data[key]), key === 'linked_budget_lines' ? 2 : 1, `full reader: ${key} on the asset`);
   }
 }
 
 async function testBudgetAndContractDetails(h: Harness, runner: QueryRunner, s: Seed) {
-  const opex = await h.executor.executeDetail(ctx(runner, s, 'budgetOnly'), { entity_type: 'spend_items', entity_id: s.opex });
+  const opex = await h.executor.executeDetail(ctx(runner, s, 'budgetOnly'), { entity_type: 'budget_lines', entity_id: s.opex });
   assert.equal(opex.data.linked_applications, null, 'budget only: no application on the OPEX line');
   assert.equal(opex.data.linked_contracts, null, 'budget only: no contract on the OPEX line');
   assert.equal(opex.data.projects, null, 'budget only: no project on the OPEX line');
-  const capex = await h.executor.executeDetail(ctx(runner, s, 'budgetOnly'), { entity_type: 'capex_items', entity_id: s.capex });
+  const capex = await h.executor.executeDetail(ctx(runner, s, 'budgetOnly'), { entity_type: 'budget_lines', entity_id: s.capex });
   assert.equal(capex.data.linked_applications, null, 'budget only: no application on the CAPEX line');
   assert.equal(capex.data.linked_contracts, null, 'budget only: no contract on the CAPEX line');
 
   const contract = await h.executor.executeDetail(ctx(runner, s, 'contractsOnly'), { entity_type: 'contracts', entity_id: s.contract });
-  assert.equal(contract.data.linked_spend_items, null, 'contracts only: no OPEX line on the contract');
-  assert.equal(contract.data.linked_capex_items, null, 'contracts only: no CAPEX line on the contract');
+  assert.equal(contract.data.linked_budget_lines, null, 'contracts only: no budget line on the contract');
   assert.ok(!/Secret (OPEX|CAPEX) line/.test(JSON.stringify(contract)), 'contracts only: no line name');
 
-  const fullOpex = await h.executor.executeDetail(ctx(runner, s, 'full'), { entity_type: 'spend_items', entity_id: s.opex });
+  const fullOpex = await h.executor.executeDetail(ctx(runner, s, 'full'), { entity_type: 'budget_lines', entity_id: s.opex });
   assert.equal(items(fullOpex.data.linked_applications), 1, 'full reader: the application on the OPEX line');
   assert.equal(items(fullOpex.data.linked_contracts), 1, 'full reader: the contract on the OPEX line');
   const fullContract = await h.executor.executeDetail(ctx(runner, s, 'full'), { entity_type: 'contracts', entity_id: s.contract });
-  assert.equal(fullContract.data.linked_spend_items.length, 1, 'full reader: the OPEX line on the contract');
-  assert.equal(items(fullContract.data.linked_capex_items), 1, 'full reader: the CAPEX line on the contract');
+  assert.equal(items(fullContract.data.linked_budget_lines), 2, 'full reader: both budget lines on the contract');
+  assert.deepEqual(fullContract.data.linked_budget_lines.items.map((line: any) => line.nature).sort(), ['capex', 'opex'], 'each with its nature');
 }
 
 /** Refused, in a savepoint so a failed statement does not end the transaction. */
@@ -229,8 +233,8 @@ async function testApplicationList(h: Harness, runner: QueryRunner, s: Seed) {
   const landscape = ctx(runner, s, 'landscape');
   const list = await h.executor.execute(landscape, { entity_type: 'applications' });
   const [row] = list.items;
-  assert.deepEqual([row.metadata.spend_count, row.metadata.capex_count, row.metadata.contracts_count], [null, null, null], 'landscape reader: no count in the list');
-  for (const field of ['spend_count', 'capex_count', 'contracts_count']) {
+  assert.deepEqual([row.metadata.budget_lines_count, row.metadata.contracts_count], [null, null], 'landscape reader: no count in the list');
+  for (const field of ['budget_lines_count', 'contracts_count']) {
     const filtered = await h.executor.execute(landscape, { entity_type: 'applications', filters: { [field]: { op: 'gte', value: 1 } } });
     assert.equal(filtered.status, 'invalid_filter', `landscape reader: ${field} does not filter`);
     const sorted = await h.executor.execute(landscape, { entity_type: 'applications', sort: { field, direction: 'desc' } });
@@ -239,12 +243,12 @@ async function testApplicationList(h: Harness, runner: QueryRunner, s: Seed) {
       /Unsupported metric/, `landscape reader: ${field} does not aggregate`);
   }
   const description = await h.tools.execute(landscape, 'describe_entity_filters', { entity_type: 'applications' });
-  assert.ok(!/spend_count|capex_count|contracts_count/.test(JSON.stringify(description)), 'landscape reader: the counts are not described');
+  assert.ok(!/budget_lines_count|contracts_count/.test(JSON.stringify(description)), 'landscape reader: the counts are not described');
 
   const full = ctx(runner, s, 'full');
-  const shown = await h.executor.execute(full, { entity_type: 'applications', filters: { spend_count: { op: 'gte', value: 1 } } });
-  assert.equal(shown.status, undefined, 'full reader: spend_count filters');
-  assert.deepEqual([shown.items[0].metadata.spend_count, shown.items[0].metadata.capex_count, shown.items[0].metadata.contracts_count], [1, 1, 1]);
+  const shown = await h.executor.execute(full, { entity_type: 'applications', filters: { budget_lines_count: { op: 'gte', value: 2 } } });
+  assert.equal(shown.status, undefined, 'full reader: budget_lines_count filters');
+  assert.deepEqual([shown.items[0].metadata.budget_lines_count, shown.items[0].metadata.contracts_count], [2, 1]);
   const total = await h.aggregates.execute(full, { entity_type: 'applications', group_by: 'status', metric: 'contracts_count', function: 'sum' });
   assert.ok(JSON.stringify(total).includes('1'), 'full reader: contracts_count aggregates');
 }

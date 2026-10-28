@@ -23,8 +23,7 @@ const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
   interfaces: (id) => `/it/interfaces/${id}`,
   locations: (id) => `/it/locations/${id}`,
   contracts: (id) => `/ops/contracts/${id}`,
-  spend_items: (id) => `/ops/budget/${id}`,
-  capex_items: (id) => `/ops/budget/${id}`,
+  budget_lines: (id) => `/ops/budget/${id}`,
   companies: (id) => `/master-data/companies/${id}`,
   contacts: (id) => `/master-data/contacts/${id}`,
   departments: (id) => `/master-data/departments/${id}`,
@@ -67,8 +66,8 @@ const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
   REQ: 'requests',
   INC: 'incidents',
   TEC: 'technologies',
-  OPX: 'spend_items',
-  CPX: 'capex_items',
+  OPX: 'budget_lines',
+  CPX: 'budget_lines',
   // Type tokens for entities without a built-in ref
   APP: 'applications',
   AST: 'assets',
@@ -110,7 +109,7 @@ export function parseAtMentionQuery(query: string): { entityType: string | null;
   const budgetRef = ['BL', 'OPX', 'CPX'].includes(prefix) && /^\d+$/.test(suffix);
   const searchTerm = budgetRef ? `${prefix}-${suffix}` : suffix;
   if (prefix === 'BL' || budgetRef) {
-    return { entityType: null, entityTypes: ['spend_items', 'capex_items'], searchTerm };
+    return { entityType: null, entityTypes: ['budget_lines'], searchTerm };
   }
   const entityType = TYPE_PREFIX_TO_ENTITY_TYPE[prefix];
   if (entityType) return { entityType, entityTypes: [entityType], searchTerm };

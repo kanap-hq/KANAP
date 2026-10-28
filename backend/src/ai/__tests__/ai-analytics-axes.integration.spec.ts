@@ -7,6 +7,7 @@ import { AiAggregateExecutor } from '../query/ai-aggregate.executor';
 import { AiQueryExecutor } from '../query/ai-query.executor';
 import { getAiEntityRegistry, resolveAiEntityRegistry } from '../query/registries';
 import { SUMMARY_SCOPES } from '../../spend/spend-summary.builder';
+import { budgetReadService } from '../../spend/__tests__/budget-lines.fixtures';
 import { CAPEX_NUMBER_OFFSET, captureAudit, assert, inRolledBackTransaction, Kind, runSpecs, seedItem, seedTenant, setTenant, TABLES } from '../../spend/__tests__/round-inputs.fixtures';
 import { itemService } from '../../spend/__tests__/cost-center.fixtures';
 
@@ -29,7 +30,7 @@ import { itemService } from '../../spend/__tests__/cost-center.fixtures';
 //   the detail.
 
 const KINDS: Kind[] = ['opex', 'capex'];
-const ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
+const ENTITY: Record<Kind, 'budget_lines'> = { opex: 'budget_lines', capex: 'budget_lines' };
 const PER_ID_KEY = /^analytics_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 function context(runner: QueryRunner, tenantId: string): AiExecutionContextWithManager {
@@ -50,19 +51,21 @@ function categoriesService(): any {
   return new (AnalyticsCategoriesService as any)({}, captureAudit());
 }
 
-// Constructor positions (both executors): spendItems 5, contracts 6, analyticsCategories 15, capexItems 17.
+// Constructor positions (both executors): budgetLines 1, contracts 6, analyticsCategories 15.
 function queryExecutor(kind: Kind): AiQueryExecutor {
-  const args: any[] = Array.from({ length: 23 }, () => ({}));
-  args[kind === 'opex' ? 5 : 17] = itemService(kind);
+  const args: any[] = Array.from({ length: 25 }, () => ({}));
+  args[1] = budgetReadService();
   args[6] = noContracts;
   args[15] = categoriesService();
+  args[23] = { canReadEntityType: async () => true };
   return new (AiQueryExecutor as any)(...args);
 }
 
 function aggregateExecutor(kind: Kind): AiAggregateExecutor {
-  const args: any[] = Array.from({ length: 22 }, () => ({}));
-  args[kind === 'opex' ? 5 : 17] = itemService(kind);
+  const args: any[] = Array.from({ length: 23 }, () => ({}));
+  args[1] = budgetReadService();
   args[15] = categoriesService();
+  args[21] = { canReadEntityType: async () => true };
   return new (AiAggregateExecutor as any)(...args);
 }
 
@@ -232,19 +235,29 @@ async function testDimensionsFollowLineType(kind: Kind) {
       [seed.tenantId, seed.items.alpha, recurrence, monthly],
     );
 
-    const fields = async (entity: 'spend_items' | 'capex_items') =>
-      Object.keys((await resolveAiEntityRegistry(ctx, entity)).fields).filter((key) => key.startsWith('analytics'));
-    assert.deepEqual(await fields(ENTITY[kind]), ['analytics_category', 'analytics:nature', 'analytics:own'], `${kind}: the dimensions of its type and of both`);
-    assert.deepEqual(await fields(ENTITY[other]), ['analytics_category', 'analytics:nature', 'analytics:recurrence'], `${other}: the reverse`);
+    // One family: a dimension of either nature is a field, and its description says which.
+    const registry = await resolveAiEntityRegistry(ctx, ENTITY[kind]);
+    const analyticsKeys = Object.keys(registry.fields).filter((key) => key.startsWith('analytics'));
+    assert.deepEqual(
+      analyticsKeys,
+      ['analytics_category', 'analytics:nature', 'analytics:own', 'analytics:recurrence'],
+      `${kind}: the dimensions of both natures, the default first`,
+    );
+    assert.match(registry.fields['analytics:own'].description, new RegExp(`${kind.toUpperCase()} lines only`), `${kind}: own-type dimension scope`);
+    assert.match(registry.fields['analytics:recurrence'].description, new RegExp(`${other.toUpperCase()} lines only`), `${kind}: other-type dimension scope`);
+    assert.match(registry.fields['analytics:nature'].description, /both natures/, `${kind}: a shared dimension says so`);
 
-    const query = queryExecutor(kind);
-    const refused: any = await query.execute(ctx, { entity_type: ENTITY[kind], filters: { 'analytics:recurrence': ['Monthly'] } });
-    assert.equal(refused.status, 'invalid_filter', `${kind}: a dimension of the other type is not a field`);
-    const detail: any = await query.executeDetail(ctx, { entity_type: ENTITY[kind], entity_id: seed.items.alpha });
+    // The detail of a line of this nature filters out a value held on the other nature's dimension.
+    const detail: any = await queryExecutor(kind).executeDetail(ctx, { entity_type: ENTITY[kind], entity_id: seed.items.alpha });
     assert.equal('analytics:recurrence' in detail.data, false, `${kind}: no hidden dimension key in the detail`);
     assert.equal('analytics:recurrence' in detail.entity.metadata, false, `${kind}: nor in its metadata`);
     const held = (detail.data.analytics_values ?? []).map((value: any) => value.axis_code).sort();
     assert.deepEqual(held, ['archive', 'default', 'nature'], `${kind}: the hidden value stays out of the detail's values`);
+
+    // The list reads the same link as the detail: the stale value of the other nature's
+    // dimension keeps the line out of a query on that dimension.
+    const filtered: any = await queryExecutor(kind).execute(ctx, { entity_type: ENTITY[kind], filters: { 'analytics:recurrence': ['Monthly'] } });
+    assert.deepEqual(filtered.items.map((item: any) => item.label), [], `${kind}: no line answers on the other nature's dimension`);
   });
 }
 
@@ -380,7 +393,9 @@ async function testDetailByReference(kind: Kind) {
     await seedItem(runner, kind, seed.tenantId, 10, 'Delta line');
     await seedItem(runner, kind, seed.tenantId, 11, 'Echo line');
     const native = `BL-${kind === 'opex' ? 1 : CAPEX_NUMBER_OFFSET + 1}`;
-    for (const ref of [`${kind === 'opex' ? 'OPX' : 'CPX'}-1`, native]) {
+    const legacy = `${kind === 'opex' ? 'OPX' : 'CPX'}-1`;
+    await runner.query(`UPDATE spend_items SET legacy_number = $2 WHERE id = $1`, [seed.items.alpha, legacy]);
+    for (const ref of [legacy, native]) {
       const detail: any = await queryExecutor(kind).executeDetail(context(runner, seed.tenantId), { entity_type: ENTITY[kind], entity_id: ref });
       assert.equal(detail.entity.id, seed.items.alpha, `${kind}: ${ref} is the alpha line`);
       assert.equal(detail.entity.ref, native, `${kind}: legacy input yields the native reference`);

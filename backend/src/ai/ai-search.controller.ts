@@ -15,8 +15,8 @@ const CANDIDATE_POOL = 200;
 const PICKER_ENTITY_TYPES: AiSearchEntityType[] = [
   'applications',
   'assets',
+  'budget_lines',
   'business_processes',
-  'capex_items',
   'companies',
   'connections',
   'contacts',
@@ -28,7 +28,6 @@ const PICKER_ENTITY_TYPES: AiSearchEntityType[] = [
   'locations',
   'projects',
   'requests',
-  'spend_items',
   'suppliers',
   'tasks',
   'technologies',

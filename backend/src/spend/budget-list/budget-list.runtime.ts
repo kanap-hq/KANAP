@@ -19,7 +19,7 @@ export interface BudgetListRuntime {
    * The tenant's analytics dimensions that apply to the scope's lines (a value held on a
    * dimension of the other type reads as no value); the default one (at most one per tenant).
    */
-  axes?: { ids: string[]; defaultAxisId: string | null };
+  axes?: { ids: string[]; defaultAxisId: string | null; appliesTo: Array<'opex' | 'capex' | null> };
   /** Every cost centre of the tenant with the builder's code, name, path and budget holder. */
   costCenters?: Array<{ id: string; code: string; name: string; path: string; holder_id: string | null; holder_name: string | null }>;
   /** Per year, the label a version on the default method shows (the year's allocation rule). */
@@ -98,14 +98,18 @@ export async function loadBudgetRuntime(
     runtime.fx = await buildFxTable(scope, deps.fxRates, manager, tenantId, needs.fxYears);
   }
   if (needs.axes) {
-    const rows: Array<{ id: string; is_default: boolean }> = await manager.query(
-      `SELECT ax.id, ax.is_default FROM analytics_axes ax
+    const rows: Array<{ id: string; is_default: boolean; applies_to: 'opex' | 'capex' | null }> = await manager.query(
+      `SELECT ax.id, ax.is_default, ax.applies_to FROM analytics_axes ax
         WHERE ax.tenant_id = $1 AND (ax.applies_to IS NULL OR ax.applies_to = ANY($2::text[]))`,
       [tenantId, scope.allNatures ? BUDGET_NATURES : [scope.scope]],
     );
     let defaultAxisId: string | null = null;
     for (const row of rows) if (row.is_default) defaultAxisId = row.id;
-    runtime.axes = { ids: rows.map((row) => row.id), defaultAxisId };
+    runtime.axes = {
+      ids: rows.map((row) => row.id),
+      defaultAxisId,
+      appliesTo: rows.map((row) => row.applies_to ?? null),
+    };
   }
   if (needs.costCenters) {
     const nodes = await loadCostCenterTree(manager, tenantId);

@@ -35,7 +35,7 @@ async function asMigration(r: QueryRunner, reverse = false) {
 async function find(r: QueryRunner, tenant: string, query: string) {
   await setCurrentTenant(r, tenant);
   return service.searchAll({ tenantId: tenant, surface: 'chat', manager: r.manager } as any,
-    { query, entity_types: ['spend_items', 'capex_items'], limit: 20 });
+    { query, entity_types: ['budget_lines'], limit: 20 });
 }
 async function seed(r: QueryRunner, tenant: string, nature: string, number: number, legacy: string | null) {
   await setCurrentTenant(r, tenant);

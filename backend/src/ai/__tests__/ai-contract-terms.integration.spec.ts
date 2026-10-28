@@ -298,7 +298,8 @@ async function testCoverage(h: Harness, runner: QueryRunner, s: Seed) {
   assert.deepEqual(detail.data.linked_applications.items.map((item: any) => [item.reference, item.name]), [['APP-1', 'Billing']], 'detail: the covered application');
   assert.deepEqual(detail.data.linked_assets.items.map((item: any) => item.name), ['srv-billing'], 'detail: the covered asset');
   assert.deepEqual(detail.data.linked_technologies.items.map((item: any) => [item.reference, item.name]), [['TEC-1', 'Postgres']], 'detail: the covered technology');
-  assert.equal(detail.data.linked_spend_items.length, 1, 'detail: the budget line');
+  assert.equal(detail.data.linked_budget_lines.items.length, 1, 'detail: the budget line');
+  assert.deepEqual(detail.data.linked_budget_lines.items.map((line: any) => line.nature), ['opex'], 'detail: the line nature');
   assert.equal(detail.data.budget_lines_outside_access, 0, 'detail: no line outside the access');
   assert.equal(detail.entity.metadata.covered_applications, 'APP-1 Billing', 'detail summary: the covered applications');
   assert.equal(detail.entity.metadata.term_state, 'to_decide', 'detail summary: the state');
@@ -317,7 +318,7 @@ async function testCoverage(h: Harness, runner: QueryRunner, s: Seed) {
   const refused = await h.executor.execute(only, { entity_type: 'contracts', filters: { application: ['APP-1'] } });
   assert.equal(refused.status, 'invalid_filter', 'contracts only: the application filter is not offered');
   const hiddenDetail = await h.executor.executeDetail(only, { entity_type: 'contracts', entity_id: s.contracts['Renewing to decide'] });
-  for (const key of ['linked_applications', 'linked_assets', 'linked_technologies', 'linked_spend_items', 'linked_capex_items', 'budget_lines_outside_access']) {
+  for (const key of ['linked_applications', 'linked_assets', 'linked_technologies', 'linked_budget_lines', 'budget_lines_outside_access']) {
     assert.equal(hiddenDetail.data[key], null, `contracts only: ${key} is null`);
   }
   assert.equal(hiddenDetail.entity.metadata.covered_applications, null, 'contracts only: no covered applications in the summary');

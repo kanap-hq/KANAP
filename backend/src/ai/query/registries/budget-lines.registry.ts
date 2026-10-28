@@ -9,15 +9,42 @@ import {
   budgetRatioMetricFamilies,
 } from './budget-amount-fields';
 
-export const spendItemsRegistry: AiEntityFilterRegistry = {
-  entityType: 'spend_items',
+export const budgetLinesRegistry: AiEntityFilterRegistry = {
+  entityType: 'budget_lines',
   fields: {
+    nature: {
+      ai: 'nature',
+      grid: 'nature',
+      type: 'set',
+      description: 'Budget line nature: `opex` (an operating expense) or `capex` (a capital expense). A question that names no nature covers both.',
+      values: ['opex', 'capex'],
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+    },
+    product_name: {
+      ai: 'product_name',
+      grid: 'product_name',
+      type: 'text',
+      description: 'The line\'s title. Also answers to `name` as a sort field.',
+      aliases: ['name'],
+      sortable: true,
+      groupable: false,
+    },
+    description: {
+      ai: 'description',
+      grid: 'description',
+      type: 'text',
+      description: 'The line\'s description, separate from its title and notes.',
+      sortable: true,
+      groupable: false,
+    },
     status: {
       ai: 'status',
       grid: 'status',
       type: 'set',
       description:
-        'Spend item lifecycle status. As a filter, `enabled` keeps the items with no end of validity or one on or after 1 January of the current year (an item ending this year stays enabled until 31 December) and `disabled` keeps the items that ended before 1 January. The status value of each item, its sort and its grouping show the current state of the item itself: an item that ended earlier this year reads `disabled`.',
+        'Budget line lifecycle status. As a filter, `enabled` keeps the items with no end of validity or one on or after 1 January of the current year (an item ending this year stays enabled until 31 December) and `disabled` keeps the items that ended before 1 January. The status value of each item, its sort and its grouping show the current state of the item itself: an item that ended earlier this year reads `disabled`.',
       values: ['enabled', 'disabled'],
       discoverable: true,
       sortable: true,
@@ -145,7 +172,7 @@ export const spendItemsRegistry: AiEntityFilterRegistry = {
       ai: 'contract',
       grid: 'contract_name',
       type: 'set',
-      description: 'Latest linked contract name.',
+      description: 'Latest linked contract name. An OPEX line also stores a contract of its own (`contract_id`); a CAPEX line reaches its contracts through links only.',
       dynamic: true,
       discoverable: true,
       sortable: true,
@@ -208,6 +235,10 @@ export const spendItemsRegistry: AiEntityFilterRegistry = {
     ...budgetLineTotalFields(),
   },
   sortFields: {
+    nature: 'nature',
+    description: 'description',
+    product_name: 'product_name',
+    name: 'product_name',
     label: 'product_name',
     status: 'status',
     currency: 'currency',
@@ -242,65 +273,66 @@ export const spendItemsRegistry: AiEntityFilterRegistry = {
   },
   aggregate: {
     baseTable: 'spend_items',
-    alias: 'si',
-    // `spend_items` holds both natures (lot Z0): this registry reads the OPEX lines.
-    baseWhere: `si.nature = 'opex'`,
+    alias: 'i',
+    // `spend_items` holds both natures: the family reads those two, never another value.
+    baseWhere: `i.nature IN ('opex', 'capex')`,
     groupFields: {
-      status: { expression: 'si.status' },
-      currency: { expression: 'si.currency' },
+      nature: { expression: 'i.nature' },
+      status: { expression: 'i.status' },
+      currency: { expression: 'i.currency' },
       supplier: {
         expression: 'sup.name',
         joins: [
-          `LEFT JOIN suppliers sup ON sup.id = si.supplier_id AND sup.tenant_id = si.tenant_id`,
+          `LEFT JOIN suppliers sup ON sup.id = i.supplier_id AND sup.tenant_id = i.tenant_id`,
         ],
       },
       paying_company: {
         expression: 'comp.name',
         joins: [
-          `LEFT JOIN companies comp ON comp.id = si.paying_company_id AND comp.tenant_id = si.tenant_id`,
+          `LEFT JOIN companies comp ON comp.id = i.paying_company_id AND comp.tenant_id = i.tenant_id`,
         ],
       },
       account: {
         expression: `NULLIF(TRIM(CONCAT_WS(' ', acc.account_number, acc.account_name)), '')`,
         joins: [
-          `LEFT JOIN accounts acc ON acc.id = si.account_id AND acc.tenant_id = si.tenant_id`,
+          `LEFT JOIN accounts acc ON acc.id = i.account_id AND acc.tenant_id = i.tenant_id`,
         ],
       },
       owner_it: {
         expression: `COALESCE(NULLIF(TRIM(CONCAT(u_it.first_name, ' ', u_it.last_name)), ''), u_it.email)`,
         joins: [
-          `LEFT JOIN users u_it ON u_it.id = si.owner_it_id AND u_it.tenant_id = si.tenant_id`,
+          `LEFT JOIN users u_it ON u_it.id = i.owner_it_id AND u_it.tenant_id = i.tenant_id`,
         ],
       },
       owner_business: {
         expression: `COALESCE(NULLIF(TRIM(CONCAT(u_biz.first_name, ' ', u_biz.last_name)), ''), u_biz.email)`,
         joins: [
-          `LEFT JOIN users u_biz ON u_biz.id = si.owner_business_id AND u_biz.tenant_id = si.tenant_id`,
+          `LEFT JOIN users u_biz ON u_biz.id = i.owner_business_id AND u_biz.tenant_id = i.tenant_id`,
         ],
       },
       // The default dimension through its link (the legacy item column is no longer written).
       analytics_category: {
         expression: 'ac.name',
         joins: [
-          `LEFT JOIN analytics_axes ax_def ON ax_def.tenant_id = si.tenant_id AND ax_def.is_default`,
-          `LEFT JOIN spend_item_analytics_values av_def ON av_def.tenant_id = si.tenant_id AND av_def.item_id = si.id AND av_def.axis_id = ax_def.id`,
+          `LEFT JOIN analytics_axes ax_def ON ax_def.tenant_id = i.tenant_id AND ax_def.is_default`,
+          `LEFT JOIN spend_item_analytics_values av_def ON av_def.tenant_id = i.tenant_id AND av_def.item_id = i.id AND av_def.axis_id = ax_def.id`,
           `LEFT JOIN analytics_categories ac ON ac.id = av_def.category_id AND ac.tenant_id = av_def.tenant_id`,
         ],
       },
       cost_center: {
         expression: `CASE WHEN cc.id IS NULL THEN NULL ELSE CONCAT(cc.code, ' · ', cc.name) END`,
         joins: [
-          `LEFT JOIN cost_centers cc ON cc.id = si.cost_center_id AND cc.tenant_id = si.tenant_id`,
+          `LEFT JOIN cost_centers cc ON cc.id = i.cost_center_id AND cc.tenant_id = i.tenant_id`,
         ],
       },
       budget_holder: {
         expression: `CASE WHEN u_bh.id IS NULL THEN NULL ELSE COALESCE(NULLIF(TRIM(CONCAT(u_bh.first_name, ' ', u_bh.last_name)), ''), u_bh.email) END`,
         joins: [
-          `LEFT JOIN cost_centers cc_bh ON cc_bh.id = si.cost_center_id AND cc_bh.tenant_id = si.tenant_id`,
+          `LEFT JOIN cost_centers cc_bh ON cc_bh.id = i.cost_center_id AND cc_bh.tenant_id = i.tenant_id`,
           `LEFT JOIN users u_bh ON u_bh.id = cc_bh.owner_user_id AND u_bh.tenant_id = cc_bh.tenant_id`,
         ],
       },
-      run_build: { expression: 'si.run_build' },
+      run_build: { expression: 'i.run_build' },
     },
   },
 };

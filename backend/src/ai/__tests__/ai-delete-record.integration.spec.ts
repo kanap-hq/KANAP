@@ -286,7 +286,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
       return versionId;
     });
 
-  const opexLine = await line(9001, 'opex', 'ERP licence');
+  const opexLine = await line(9001, 'opex', 'ERP licence', 'OPX-9001');
   const opexVersion = await version(opexLine, 2026, 1200);
   // A second month of the same version: the card still counts one version.
   await runner.query(
@@ -757,9 +757,9 @@ async function testLocationDelete(h: Harness, runner: QueryRunner, s: Seed) {
 
 async function testOpexLineDelete(h: Harness, runner: QueryRunner, s: Seed) {
   const context = ctx(runner, s, 'budgetAdmin');
-  let preview = await h.previews.createPreview(context, 'delete_record', { entity_type: 'spend_items', ref: 'BL-9001' });
+  let preview = await h.previews.createPreview(context, 'delete_record', { entity_type: 'budget_lines', ref: 'BL-9001' });
   assert.equal(preview.status, 'pending');
-  assert.equal(preview.target.entity_type, 'spend_items');
+  assert.equal(preview.target.entity_type, 'budget_lines');
   assert.equal(preview.target.entity_id, s.opexLine);
   assert.equal(preview.target.ref, 'BL-9001');
   assert.equal(preview.target.title, 'ERP licence');
@@ -797,10 +797,10 @@ async function testOpexLineDelete(h: Harness, runner: QueryRunner, s: Seed) {
   await runner.query(`DELETE FROM tasks WHERE tenant_id = $1 AND id = $2`, [s.tenantId, extraTask]);
 
   // Its exact title names it too, as in `write_financial_plan`.
-  preview = await h.previews.createPreview(context, 'delete_record', { entity_type: 'spend_items', ref: 'erp licence' });
+  preview = await h.previews.createPreview(context, 'delete_record', { entity_type: 'budget_lines', ref: 'erp licence' });
   assert.equal(preview.target.entity_id, s.opexLine);
   await h.previews.rejectPreview(context, preview.preview_id);
-  preview = await h.previews.createPreview(context, 'delete_record', { entity_type: 'spend_items', ref: 'OPX-9001' });
+  preview = await h.previews.createPreview(context, 'delete_record', { entity_type: 'budget_lines', ref: 'OPX-9001' });
   assert.equal(preview.target.entity_id, s.opexLine);
   const executed = await h.previews.executePreview(context, preview.preview_id);
   assert.equal(executed.status, 'executed', executed.error_message ?? '');
@@ -839,9 +839,9 @@ async function testOpexLineDelete(h: Harness, runner: QueryRunner, s: Seed) {
 
 async function testCapexLineDelete(h: Harness, runner: QueryRunner, s: Seed) {
   const context = ctx(runner, s, 'budgetAdmin');
-  const preview = await h.previews.createPreview(context, 'delete_record', { entity_type: 'capex_items', ref: 'CPX-9002' });
+  const preview = await h.previews.createPreview(context, 'delete_record', { entity_type: 'budget_lines', ref: 'CPX-9002' });
   assert.equal(preview.status, 'pending');
-  assert.equal(preview.target.entity_type, 'capex_items');
+  assert.equal(preview.target.entity_type, 'budget_lines');
   assert.equal(preview.target.entity_id, s.capexLine);
   assert.equal(preview.target.ref, 'BL-9002');
   assert.equal(preview.target.title, 'Server refresh');
@@ -849,6 +849,7 @@ async function testCapexLineDelete(h: Harness, runner: QueryRunner, s: Seed) {
   for (const line of ['Versions with amounts: 1', 'Years with amounts: 1', 'Deleted tasks: 1', 'Links to projects: 1']) {
     assert.ok(impact.includes(line), `${line} in:\n${impact}`);
   }
+  assert.ok(impact.includes('The linked records stay.'), `the L3 closing in:\n${impact}`);
   const executed = await h.previews.executePreview(context, preview.preview_id);
   assert.equal(executed.status, 'executed', executed.error_message ?? '');
   assert.equal(await count(runner, 'spend_items', 'tenant_id = $1 AND id = $2', [s.tenantId, s.capexLine]), 0);
@@ -864,7 +865,7 @@ async function testFrozenLineRefused(h: Harness, runner: QueryRunner, s: Seed) {
   const context = ctx(runner, s, 'budgetAdmin');
   const before = await count(runner, 'ai_mutation_previews', 'tenant_id = $1', [s.tenantId]);
   const message = await refusal(() => h.previews.createPreview(context, 'delete_record', {
-    entity_type: 'spend_items', ref: 'BL-9003',
+    entity_type: 'budget_lines', ref: 'BL-9003',
   }));
   assert.match(message, /frozen budget column/);
   assert.match(message, /2028/);
@@ -876,7 +877,7 @@ async function testFrozenLineRefused(h: Harness, runner: QueryRunner, s: Seed) {
 async function testBudgetLineRefusals(h: Harness, runner: QueryRunner, s: Seed) {
   // A budget member cannot delete a line.
   const member = await refusal(() => h.previews.createPreview(ctx(runner, s, 'budgetMember'), 'delete_record', {
-    entity_type: 'spend_items', ref: 'BL-9001',
+    entity_type: 'budget_lines', ref: 'BL-9001',
   }));
   assert.match(member, /budget/);
   // A limited person is refused at the preview and again at the run.
@@ -884,13 +885,13 @@ async function testBudgetLineRefusals(h: Harness, runner: QueryRunner, s: Seed) 
   await runner.query(`UPDATE users SET data_access_mode = 'limited' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.users.limitedBudgetAdmin]);
   try {
     assert.equal(
-      await refusal(() => h.previews.createPreview(limited, 'delete_record', { entity_type: 'spend_items', ref: 'BL-9001' })),
+      await refusal(() => h.previews.createPreview(limited, 'delete_record', { entity_type: 'budget_lines', ref: 'BL-9001' })),
       'This action is reserved to people with access to all data.',
     );
   } finally {
     await runner.query(`UPDATE users SET data_access_mode = 'all' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.users.limitedBudgetAdmin]);
   }
-  const preview = await h.previews.createPreview(limited, 'delete_record', { entity_type: 'spend_items', ref: 'BL-9001' });
+  const preview = await h.previews.createPreview(limited, 'delete_record', { entity_type: 'budget_lines', ref: 'BL-9001' });
   await runner.query(`UPDATE users SET data_access_mode = 'limited' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.users.limitedBudgetAdmin]);
   try {
     assert.equal(

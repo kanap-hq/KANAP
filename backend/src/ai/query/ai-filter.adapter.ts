@@ -9,13 +9,12 @@ import {
 } from './ai-filter.types';
 
 /**
- * Set columns whose list understands a set filter in exclude mode: every column of the OPEX and CAPEX
- * lists (SQL list engine), and the application lifecycle (`{ not: ['retired'] }` is the scope of the
- * Applications list and of the Compliance tile).
+ * Set columns whose list understands a set filter in exclude mode: every column of the budget lines
+ * list (SQL list engine, both natures), and the application lifecycle (`{ not: ['retired'] }` is the
+ * scope of the Applications list and of the Compliance tile).
  */
 const EXCLUDE_SET_COLUMNS: Partial<Record<string, 'all' | Set<string>>> = {
-  spend_items: 'all',
-  capex_items: 'all',
+  budget_lines: 'all',
   applications: new Set(['lifecycle']),
 };
 
@@ -38,6 +37,16 @@ function isNumberFilterValue(value: AiFilterValue): value is AiNumberFilterValue
 
 function isDateFilterValue(value: AiFilterValue): value is AiDateFilterValue {
   return !!value && typeof value === 'object' && !Array.isArray(value) && typeof (value as any).op === 'string' && typeof (value as any).value === 'string';
+}
+
+/**
+ * The AI names a task's related budget line `budget_line`, one family for both natures; the
+ * stored `related_object_type` keeps `spend_item` and `capex_item`, so a filter on the family
+ * reads both.
+ */
+function expandTaskRelatedValues(entityType: string, fieldName: string, field: { grid: string }, values: Array<string | null>): Array<string | null> {
+  if (entityType !== 'tasks' || fieldName !== 'related' || field.grid !== 'related_object_type') return values;
+  return Array.from(new Set(values.flatMap((value) => (value === 'budget_line' ? ['spend_item', 'capex_item'] : [value]))));
 }
 
 function adaptNumberFilter(raw: AiNumberFilterValue) {
@@ -138,7 +147,7 @@ export function adaptFilters(
       const allowed = Array.isArray(field.values) ? new Set(field.values) : null;
       if (rejectUnknownValues(fieldName, values, allowed)) continue;
       if (acceptsExcludeMode(registry.entityType, field.grid)) {
-        adapted = { filterType: 'set', mode: 'exclude', values };
+        adapted = { filterType: 'set', mode: 'exclude', values: expandTaskRelatedValues(registry.entityType, fieldName, field, values) };
       }
     } else if (field.type === 'set') {
       const values = Array.isArray(rawValue)
@@ -149,7 +158,7 @@ export function adaptFilters(
       if (values.length > 0) {
         const allowed = Array.isArray(field.values) ? new Set(field.values) : null;
         if (rejectUnknownValues(fieldName, values, allowed)) continue;
-        adapted = { filterType: 'set', values };
+        adapted = { filterType: 'set', values: expandTaskRelatedValues(registry.entityType, fieldName, field, values) };
       }
     } else if (field.type === 'text') {
       if (typeof rawValue === 'string' && rawValue.trim()) {

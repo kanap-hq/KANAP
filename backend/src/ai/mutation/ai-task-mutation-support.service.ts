@@ -10,6 +10,8 @@ import {
   resolveAiParticipationAccessScope,
 } from '../query/ai-query-scope.util';
 import { taskIncidentVisibilitySql } from '../../incidents/incident-visibility';
+import { budgetLineReferenceNumbers } from '../../common/resolve-item-id';
+import { BUDGET_LINE_PREFIX } from '../../spend/budget-nature';
 
 const TASK_REF_RE = /^T-(\d+)$/i;
 const PROJECT_REF_RE = /^(?:PRJ-|project\s+#?|prj\s+#?|#)?(\d+)$/i;
@@ -20,25 +22,28 @@ type AiTaskUserCandidate = {
   label: string;
 };
 
-type AiTaskCreateTargetMode = 'standalone' | 'project' | 'spend_item' | 'capex_item';
+type AiTaskCreateTargetMode = 'standalone' | 'project' | 'budget_line';
 
 type AiTaskCreateTargetCandidate = {
   id: string;
   ref: string | null;
   label: string;
   name: string | null;
+  /** The line's nature for a `budget_line` target, the stored type it becomes. */
+  nature: 'opex' | 'capex' | null;
   updated_at: string | null;
 };
 
 type AiTaskTargetQueryConfig = {
   mode: Exclude<AiTaskCreateTargetMode, 'standalone'>;
-  type: Exclude<RelatedType, null>;
+  /** The stored task object type; null for `budget_line`, whose nature gives `spend_item` or `capex_item`. */
+  type: Exclude<RelatedType, null> | null;
   table: string;
   nameColumn: string;
   subject: string;
   displayPrefix: string;
   itemPrefix?: string;
-  /** A predicate on the target row: a `spend_item` names an OPEX line, a `capex_item` a CAPEX line (`spend/budget-nature.ts`). */
+  /** A predicate on the target row: a `budget_line` names both natures (`spend/budget-nature.ts`). */
   where?: string;
 };
 
@@ -52,24 +57,16 @@ const TARGET_QUERY_CONFIG: Record<Exclude<AiTaskCreateTargetMode, 'standalone'>,
     displayPrefix: 'Project',
     itemPrefix: 'PRJ',
   },
-  spend_item: {
-    mode: 'spend_item',
-    type: 'spend_item',
+  budget_line: {
+    mode: 'budget_line',
+    type: null,
     table: 'spend_items',
     nameColumn: 'product_name',
-    subject: 'OPEX item',
-    displayPrefix: 'OPEX',
-    where: `target.nature = 'opex'`,
-  },
-  capex_item: {
-    mode: 'capex_item',
-    type: 'capex_item',
-    table: 'spend_items',
-    // The CAPEX title (lot Z1).
-    nameColumn: 'product_name',
-    subject: 'CAPEX item',
-    displayPrefix: 'CAPEX',
-    where: `target.nature = 'capex'`,
+    subject: 'budget line',
+    displayPrefix: 'BL',
+    itemPrefix: 'BL',
+    // Both natures in one family (`spend/budget-nature.ts`); the line's nature gives the stored type.
+    where: `target.nature IN ('opex', 'capex')`,
   },
 };
 
@@ -158,6 +155,9 @@ export class AiTaskMutationSupportService {
     if (mode === 'project') {
       return buildProjectRef(numeric);
     }
+    if (mode === 'budget_line') {
+      return `${BUDGET_LINE_PREFIX}-${numeric}`;
+    }
 
     return null;
   }
@@ -178,11 +178,13 @@ export class AiTaskMutationSupportService {
     config: AiTaskTargetQueryConfig,
     row: Record<string, unknown>,
   ): AiTaskCreateTargetCandidate {
+    const nature = row.nature === 'opex' || row.nature === 'capex' ? row.nature : null;
     return {
       id: String(row.id),
       ref: this.buildTargetRef(config.mode, row.item_number),
       label: this.buildTargetLabel(config, row),
       name: textOrNull(row.name),
+      nature,
       updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : null,
     };
   }
@@ -283,6 +285,14 @@ export class AiTaskMutationSupportService {
     };
   }
 
+  /** The task's stored object type: a project, or the line's nature (`spend_item` / `capex_item`). */
+  private storedTargetType(
+    config: AiTaskTargetQueryConfig,
+    candidate: AiTaskCreateTargetCandidate,
+  ): Exclude<RelatedType, null> {
+    return config.type ?? (candidate.nature === 'capex' ? 'capex_item' : 'spend_item');
+  }
+
   private async getExactTarget(
     context: AiExecutionContextWithManager,
     mode: Exclude<AiTaskCreateTargetMode, 'standalone'>,
@@ -303,6 +313,7 @@ export class AiTaskMutationSupportService {
       rows = await context.manager.query(
         `SELECT id,
                 target.${config.nameColumn} AS name,
+                ${config.mode === 'budget_line' ? 'target.nature,' : 'NULL::text AS nature,'}
                 ${config.itemPrefix ? 'target.item_number,' : 'NULL::int AS item_number,'}
                 target.updated_at
          FROM ${config.table} target
@@ -330,6 +341,39 @@ export class AiTaskMutationSupportService {
           params,
         );
       }
+    } else if (mode === 'budget_line') {
+      const numbers = budgetLineReferenceNumbers(normalized);
+      const byNumber = numbers.itemNumber != null || numbers.legacyNumber != null;
+      rows = await context.manager.query(
+        `SELECT id,
+                target.${config.nameColumn} AS name,
+                target.nature,
+                target.item_number,
+                target.updated_at
+         FROM ${config.table} target
+         WHERE target.tenant_id = $1${config.where ? ` AND ${config.where}` : ''}
+           AND (${byNumber ? 'item_number = $2 OR legacy_number = $3' : 'FALSE'})
+         LIMIT 1`,
+        [context.tenantId, numbers.itemNumber, numbers.legacyNumber],
+      );
+      if (!rows[0]) {
+        // A title, as the task screen searches (the reference above names a number only).
+        rows = await context.manager.query(
+          `SELECT id,
+                  target.${config.nameColumn} AS name,
+                  target.nature,
+                  target.item_number,
+                  target.updated_at
+           FROM ${config.table} target
+           WHERE target.tenant_id = $1${config.where ? ` AND ${config.where}` : ''}
+             AND LOWER(target.${config.nameColumn}) = LOWER($2::text)
+           LIMIT 2`,
+          [context.tenantId, normalized],
+        );
+        if (rows.length > 1) {
+          throw new BadRequestException(`Multiple ${config.subject}s matched "${normalized}". Use its BL-n reference.`);
+        }
+      }
     }
 
     if (!rows[0]) {
@@ -339,7 +383,7 @@ export class AiTaskMutationSupportService {
     const candidate = this.toTargetCandidate(config, rows[0]);
     return {
       mode,
-      type: config.type,
+      type: config.type ?? (candidate.nature === 'capex' ? 'capex_item' : 'spend_item'),
       id: candidate.id,
       ref: candidate.ref,
       label: candidate.label,
@@ -368,6 +412,12 @@ export class AiTaskMutationSupportService {
         params.push(itemNumber);
         itemNumberSql = ` OR target.item_number = $${params.length}`;
       }
+    } else if (mode === 'budget_line') {
+      const numbers = budgetLineReferenceNumbers(normalized);
+      if (numbers.itemNumber != null || numbers.legacyNumber != null) {
+        params.push(numbers.itemNumber, numbers.legacyNumber);
+        itemNumberSql = ` OR target.item_number = $${params.length - 1} OR target.legacy_number = $${params.length}::text`;
+      }
     }
 
     const accessScopeSql = mode === 'project'
@@ -379,6 +429,7 @@ export class AiTaskMutationSupportService {
     const rows = await context.manager.query(
       `SELECT id,
               target.${config.nameColumn} AS name,
+              ${config.mode === 'budget_line' ? 'target.nature,' : 'NULL::text AS nature,'}
               ${config.itemPrefix ? 'target.item_number,' : 'NULL::int AS item_number,'}
               target.updated_at
        FROM ${config.table} target
@@ -671,7 +722,7 @@ export class AiTaskMutationSupportService {
     relationRef?: string | null,
   ): Promise<AiTaskCreateTarget> {
     const target = await this.findCreateTarget(context, relationType, relationRef);
-    if (target.mode === 'spend_item' || target.mode === 'capex_item') await assertLinesEditable(context.manager, [target.id]);
+    if (target.mode === 'budget_line') await assertLinesEditable(context.manager, [target.id]);
     return target;
   }
 
@@ -717,7 +768,7 @@ export class AiTaskMutationSupportService {
       const exact = exactNameMatches[0];
       return {
         mode,
-        type: config.type,
+        type: this.storedTargetType(config, exact),
         id: exact.id,
         ref: exact.ref,
         label: exact.label,
@@ -732,7 +783,7 @@ export class AiTaskMutationSupportService {
       const candidate = candidates[0];
       return {
         mode,
-        type: config.type,
+        type: this.storedTargetType(config, candidate),
         id: candidate.id,
         ref: candidate.ref,
         label: candidate.label,

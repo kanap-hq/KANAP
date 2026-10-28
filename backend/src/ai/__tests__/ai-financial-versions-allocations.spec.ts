@@ -13,7 +13,7 @@ function executor(calculator: unknown) {
   const none = {} as any;
   return new AiQueryExecutor(
     none, none, none, none, none, none, none, none, none, none, none, none,
-    none, none, none, none, none, none, none, none, none, none, none,
+    none, none, none, none, none, none, none, none, none, none,
     calculator as any,
   );
 }

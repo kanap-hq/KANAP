@@ -12,8 +12,8 @@ import { accountsRegistry } from './accounts.registry';
 import { analyticsCategoriesRegistry } from './analytics-categories.registry';
 import { applicationsRegistry } from './applications.registry';
 import { assetsRegistry } from './assets.registry';
+import { budgetLinesRegistry } from './budget-lines.registry';
 import { businessProcessesRegistry } from './business-processes.registry';
-import { capexItemsRegistry } from './capex-items.registry';
 import { chartOfAccountsRegistry } from './chart-of-accounts.registry';
 import { companiesRegistry } from './companies.registry';
 import { connectionsRegistry } from './connections.registry';
@@ -27,7 +27,6 @@ import { interfacesRegistry } from './interfaces.registry';
 import { locationsRegistry } from './locations.registry';
 import { projectsRegistry } from './projects.registry';
 import { requestsRegistry } from './requests.registry';
-import { spendItemsRegistry } from './spend-items.registry';
 import { suppliersRegistry } from './suppliers.registry';
 import { tasksRegistry } from './tasks.registry';
 import { technologiesRegistry } from './technologies.registry';
@@ -39,8 +38,8 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   analytics_categories: analyticsCategoriesRegistry,
   applications: applicationsRegistry,
   assets: assetsRegistry,
+  budget_lines: budgetLinesRegistry,
   business_processes: businessProcessesRegistry,
-  capex_items: capexItemsRegistry,
   chart_of_accounts: chartOfAccountsRegistry,
   companies: companiesRegistry,
   connections: connectionsRegistry,
@@ -53,7 +52,6 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   locations: locationsRegistry,
   projects: projectsRegistry,
   requests: requestsRegistry,
-  spend_items: spendItemsRegistry,
   suppliers: suppliersRegistry,
   tasks: tasksRegistry,
   technologies: technologiesRegistry,
@@ -68,16 +66,31 @@ export function getAiEntityRegistry(entityType: AiQueryEntityType): AiEntityFilt
 /** The field the default analytics dimension keeps on both item types; the other dimensions come right after it. */
 const DEFAULT_ANALYTICS_FIELD = 'analytics_category';
 
+/** `opex` or `capex` only: a line of the other nature is empty on the dimension. */
+function axisNatureScope(axis: AnalyticsAxisInfo): 'opex' | 'capex' | null {
+  if (axis.applies_to === 'opex' || axis.applies_to === 'capex') return axis.applies_to;
+  return null;
+}
+
+function axisScopeSentence(axis: AnalyticsAxisInfo): string {
+  const scope = axisNatureScope(axis);
+  return scope
+    ? ` It applies to ${scope.toUpperCase()} lines only: a line of the other nature is empty on it.`
+    : ' It applies to both natures.';
+}
+
 /**
- * A copy of an OPEX or CAPEX registry with one field per enabled non-default
+ * A copy of the budget lines registry with one field per enabled non-default
  * analytics dimension, `analytics:<code>`, reading the engine's
  * `analytics_<axis id>` value (set, dynamic, sortable, groupable). The default
  * dimension stays `analytics_category`, whatever its position, code or name.
+ * Every dimension that applies to either nature is kept; a dimension that
+ * applies to one nature only says so, and is empty on the other.
  */
 export function withAnalyticsAxisFields(registry: AiEntityFilterRegistry, axes: AnalyticsAxisInfo[]): AiEntityFilterRegistry {
   const defaultAxis = axes.find((axis) => axis.is_default);
   const extra = axes
-    .filter((axis) => !axis.is_default && isAxisActive(axis))
+    .filter((axis) => !axis.is_default && isAxisActive(axis) && (axisAppliesTo(axis, 'opex') || axisAppliesTo(axis, 'capex')))
     .map((axis): [string, AiFilterFieldDef] => {
       const key = `${ANALYTICS_CSV_PREFIX}${axis.code}`;
       const name = axis.name?.trim() || axis.code;
@@ -85,7 +98,8 @@ export function withAnalyticsAxisFields(registry: AiEntityFilterRegistry, axes: 
         ai: key,
         grid: analyticsFieldKey(axis.id),
         type: 'set',
-        description: `Analytics dimension "${name}": the line's value on it. null is a line without a value on this dimension.`,
+        description: `Analytics dimension "${name}": the line's value on it.${axisScopeSentence(axis)} null is a line without a value on this dimension, or a line of the other nature.`,
+        ...(axisNatureScope(axis) ? { nature: axisNatureScope(axis)! } : {}),
         dynamic: true,
         discoverable: true,
         sortable: true,
@@ -93,12 +107,17 @@ export function withAnalyticsAxisFields(registry: AiEntityFilterRegistry, axes: 
       }];
     });
   const renamedDefault = defaultAxis?.name?.trim();
-  if (!extra.length && !renamedDefault) return registry;
+  const defaultScope = defaultAxis ? axisNatureScope(defaultAxis) : null;
+  if (!extra.length && !renamedDefault && !defaultScope) return registry;
 
   const fields: Record<string, AiFilterFieldDef> = {};
   for (const [key, field] of Object.entries(registry.fields)) {
-    fields[key] = key === DEFAULT_ANALYTICS_FIELD && renamedDefault
-      ? { ...field, description: `${field.description} This tenant calls it "${renamedDefault}".` }
+    fields[key] = key === DEFAULT_ANALYTICS_FIELD && (renamedDefault || defaultScope)
+      ? {
+        ...field,
+        description: `${field.description}${renamedDefault ? ` This tenant calls it "${renamedDefault}".` : ''}${defaultScope ? ` It applies to ${defaultScope.toUpperCase()} lines only: a line of the other nature is empty on it.` : ''}`,
+        ...(defaultScope ? { nature: defaultScope } : {}),
+      }
       : field;
     if (key === DEFAULT_ANALYTICS_FIELD) for (const [extraKey, extraField] of extra) fields[extraKey] = extraField;
   }
@@ -122,7 +141,7 @@ export type AiReadProbe = (entityType: AiQueryEntityType, level?: 'reader' | 'ad
  * Relations tab, the task page).
  */
 const LINKED_COUNT_FIELDS: Partial<Record<AiQueryEntityType, Record<string, AiQueryEntityType>>> = {
-  applications: { spend_count: 'spend_items', capex_count: 'capex_items', contracts_count: 'contracts' },
+  applications: { budget_lines_count: 'budget_lines', contracts_count: 'contracts' },
   contracts: { application: 'applications' },
   tasks: { application: 'applications', asset: 'assets', project_name: 'projects' },
   incidents: { asset: 'assets', application: 'applications', asset_count: 'assets' },
@@ -175,8 +194,8 @@ export async function withoutUnreadableLinkedCounts(
 }
 
 /**
- * The registry of one entity type for the tenant of the call: OPEX and CAPEX
- * gain the fields of the analytics dimensions that apply to their lines (one
+ * The registry of one entity type for the tenant of the call: the budget lines
+ * gain the fields of the analytics dimensions that apply to either nature (one
  * tenant-predicated query), contracts read the tenant's decision window (their `term_state`
  * group), every other type is the static registry. Resolved once per tool call and passed
  * down; `getAiEntityRegistry` stays for static callers. With `canRead` (every tool call), the
@@ -197,15 +216,14 @@ async function tenantRegistry(
 ): Promise<AiEntityFilterRegistry> {
   if (entityType === 'contracts') return contractsRegistryFor(await readDecisionWindowDays(context.manager, context.tenantId));
   const registry = getAiEntityRegistry(entityType);
-  if (entityType !== 'spend_items' && entityType !== 'capex_items') return registry;
-  const scope = entityType === 'spend_items' ? 'opex' : 'capex';
+  if (entityType !== 'budget_lines') return registry;
   const axes = await loadAnalyticsAxes(context.manager, context.tenantId);
-  return withAnalyticsAxisFields(registry, axes.filter((axis) => axisAppliesTo(axis, scope)));
+  return withAnalyticsAxisFields(registry, axes);
 }
 
 /** The `analytics:<code>` fields of a resolved registry with the row key each reads. */
-export function analyticsAxisFields(registry: AiEntityFilterRegistry): Array<{ key: string; grid: string }> {
+export function analyticsAxisFields(registry: AiEntityFilterRegistry): Array<{ key: string; grid: string; nature?: 'opex' | 'capex' }> {
   return Object.entries(registry.fields)
     .filter(([key]) => key.startsWith(ANALYTICS_CSV_PREFIX))
-    .map(([key, field]) => ({ key, grid: field.grid }));
+    .map(([key, field]) => ({ key, grid: field.grid, ...(field.nature ? { nature: field.nature } : {}) }));
 }

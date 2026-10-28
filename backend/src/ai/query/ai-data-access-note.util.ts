@@ -3,7 +3,7 @@ import type { AiExecutionContextWithManager } from '../ai.types';
 import type { AiQueryEntityType } from './ai-filter.types';
 
 /** The families data-scoped access narrows: budget lines, contracts, and the tasks of both. */
-const DATA_ACCESS_SCOPED_FAMILIES = new Set<AiQueryEntityType>(['spend_items', 'capex_items', 'contracts', 'tasks']);
+const DATA_ACCESS_SCOPED_FAMILIES = new Set<AiQueryEntityType>(['budget_lines', 'contracts', 'tasks']);
 
 export const DATA_ACCESS_LIMITED_NOTE =
   'This person has limited data access: the records, counts and totals cover only what their access lets them see, '

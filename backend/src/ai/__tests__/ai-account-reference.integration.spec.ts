@@ -19,14 +19,13 @@ import { itemService, seedCompany } from '../../spend/__tests__/cost-center.fixt
 // in SQL (ILIKE on an integer), and so did a quick search such as "6000.5".
 
 const KINDS: Kind[] = ['opex', 'capex'];
-const ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
+const ENTITY: Record<Kind, 'budget_lines'> = { opex: 'budget_lines', capex: 'budget_lines' };
 const COMPANY = 'AI account company';
 const ACCOUNT_NAME = `${COMPANY} account`;
 
 function businessRecordSupport(): any {
   return new AiBusinessRecordMutationSupportService(
-    {} as any, {} as any, {} as any, itemService('capex'), {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
-    itemService('opex'), {} as any,
+    {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
   );
 }
 
@@ -50,10 +49,14 @@ function context(runner: QueryRunner, tenantId: string): AiExecutionContextWithM
 }
 
 function createFields(kind: Kind, account: string) {
-  const base = kind === 'opex'
-    ? { product_name: 'AI line', paying_company: COMPANY, currency: 'EUR', effective_start: '2026-01-01' }
-    : { description: 'AI line', paying_company: COMPANY, currency: 'EUR', effective_start: '2026-01-01' };
-  return { ...base, account };
+  return {
+    nature: kind,
+    product_name: 'AI line',
+    paying_company: COMPANY,
+    currency: 'EUR',
+    effective_start: '2026-01-01',
+    account,
+  };
 }
 
 async function testAccountReferences() {

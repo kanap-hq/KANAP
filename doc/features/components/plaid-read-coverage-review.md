@@ -9,14 +9,14 @@ This review maps what Plaid, the KANAP AI agent, can read through chat and MCP a
 
 Plaid is not a raw database reader. It reads KANAP data through AI tools in `AiToolRegistry`, and every tool is gated by AI surface access, tenant availability, RBAC, tenant-scoped query execution, and knowledge-library access where relevant.
 
-Plaid can now search, query, filter, sort, aggregate, and fetch detail for these 21 business/domain entity families:
+Plaid can now search, query, filter, sort, aggregate, and fetch detail for these 20 business/domain entity families:
 
 - `accounts`
 - `analytics_categories`
 - `applications`
 - `assets`
+- `budget_lines`
 - `business_processes`
-- `capex_items`
 - `chart_of_accounts`
 - `companies`
 - `connections`
@@ -28,7 +28,6 @@ Plaid can now search, query, filter, sort, aggregate, and fetch detail for these
 - `locations`
 - `projects`
 - `requests`
-- `spend_items`
 - `suppliers`
 - `tasks`
 - `users`
@@ -56,8 +55,8 @@ Entity-to-resource mapping:
 | `analytics_categories` | `analytics` |
 | `applications` | `applications` |
 | `assets` | `infrastructure` |
+| `budget_lines` | `budget` |
 | `business_processes` | `business_processes` |
-| `capex_items` | `capex` |
 | `chart_of_accounts` | `accounts` |
 | `companies` | `companies` |
 | `connections` | `infrastructure` |
@@ -69,7 +68,6 @@ Entity-to-resource mapping:
 | `locations` | `locations` |
 | `projects` | `portfolio_projects` |
 | `requests` | `portfolio_requests` |
-| `spend_items` | `opex` |
 | `suppliers` | `suppliers` |
 | `tasks` | `tasks` |
 | `users` | `users` |
@@ -102,8 +100,7 @@ Entity-to-resource mapping:
 | Requests | Search, query, aggregate, detail, relationship context. | Request comments and full activity/decision pagination are not first-class AI reads yet. |
 | Tasks | Search, query, aggregate, detail, relationship context, comments. | Attachments/time entries are not fully surfaced as separate AI reads yet. |
 | Knowledge documents | Search, query, aggregate, detail, markdown document read. | Binary attachments are metadata-only; version history, workflow decisions, locks, and activity are not first-class AI reads. |
-| OPEX spend items | Search, query, aggregate, detail. | Generic yearly summary metrics are available. Full budget operation/report views are out of scope. |
-| CAPEX items | Search, query, aggregate, detail. | Generic current-year/relative-year summary metrics are available. Full allocation/version/report views are out of scope. |
+| Budget lines | Search, query, aggregate, detail. | One family, both natures (`nature`: `opex` or `capex`); a question without a nature covers both. Generic current-year/relative-year summary metrics and the native title (`product_name`) and description are available. Full allocation/version/report views are out of scope. |
 | Contracts | Search, query, aggregate, detail. | Attachments are metadata-only through detail; renewal workflows and full history are not separate AI reads. |
 | Companies | Search, query, aggregate, detail. | Company metrics/rollups are not report-grade AI views yet. |
 | Departments | Search, query, aggregate, detail. | Department metrics/rollups are not report-grade AI views yet. |
@@ -127,6 +124,7 @@ These areas are still not separate AI entity families in this stage:
 ## Discoverability Fixes Completed
 
 - Prompt-visible readable entity types now use the same shared entity list as the tool schemas.
+- The budget lines are one AI family (`budget_lines`); the search index keeps its two per-nature types internally, mapped at the AI boundary.
 - `get_entity_context` is only advertised when the user can read at least one context-capable family (`applications`, `assets`, `projects`, `requests`, `tasks`).
 - `search_all`, `query_entities`, `aggregate_entities`, `get_filter_values`, and `get_entity_detail` now share the same business/domain entity type list.
 - The system prompt now tells Plaid to use `query_entities` for exhaustive lists, later pages for incomplete results, and `get_entity_detail` for full item inspection.

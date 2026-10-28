@@ -264,8 +264,7 @@ const RECORD_NOUNS: Record<string, TranslatedTexts> = {
   requests: { fr: 'de la demande', de: 'Anfrage', es: 'de la solicitud' },
   interfaces: { fr: "de l'interface", de: 'Schnittstelle', es: 'de la interfaz' },
   connections: { fr: 'de la connexion', de: 'Verbindung', es: 'de la conexión' },
-  spend_items: { fr: 'de la ligne OPEX', de: 'OPEX-Zeile', es: 'de la línea OPEX' },
-  capex_items: { fr: 'de la ligne CAPEX', de: 'CAPEX-Zeile', es: 'de la línea CAPEX' },
+  budget_lines: { fr: 'de la ligne budgétaire', de: 'Budgetzeile', es: 'de la línea presupuestaria' },
   companies: { fr: 'de la société', de: 'Unternehmen', es: 'de la empresa' },
   departments: { fr: 'du département', de: 'Abteilung', es: 'del departamento' },
   suppliers: { fr: 'du fournisseur', de: 'Lieferant', es: 'del proveedor' },
@@ -342,8 +341,7 @@ const DELETE_IMPACT_ROWS: Record<string, ReadonlyArray<DeleteImpactRow>> = {
     { key: 'sub_items', labels: { en: 'Sub-items', fr: 'Sous-éléments', de: 'Unterelemente', es: 'Subelementos' } },
     { key: 'documents', link: true, labels: { en: 'Links to documents', fr: 'Liens aux documents', de: 'Verknüpfungen mit Dokumenten', es: 'Vínculos con documentos' } },
   ],
-  spend_items: spendDeleteRows(),
-  capex_items: spendDeleteRows(),
+  budget_lines: spendDeleteRows(),
   connections: [
     { key: 'hops', labels: { en: 'Hops', fr: 'Sauts', de: 'Hops', es: 'Saltos' } },
     { key: 'servers', link: true, labels: { en: 'Links to servers', fr: 'Liens aux serveurs', de: 'Verknüpfungen mit Servern', es: 'Vínculos con servidores' } },
@@ -378,7 +376,7 @@ const DELETE_IMPACT_ROWS: Record<string, ReadonlyArray<DeleteImpactRow>> = {
   ],
 };
 
-/** The rows of a budget line's delete, both natures: one family, the same card. */
+/** The rows of a budget line's delete: one family, the same card for both natures. */
 function spendDeleteRows(): ReadonlyArray<DeleteImpactRow> {
   return [
     { key: 'amount_versions', labels: { en: 'Versions with amounts', fr: 'Versions avec des montants', de: 'Versionen mit Beträgen', es: 'Versiones con importes' } },
@@ -406,8 +404,7 @@ const DELETE_IMPACT_NONE: Record<string, Texts> = {
   tasks: { en: 'Nothing else is deleted with this task.', fr: 'Aucun autre élément ne part avec cette tâche.', de: 'Sonst wird mit dieser Aufgabe nichts gelöscht.', es: 'No se elimina nada más con esta tarea.' },
   contacts: { en: 'No links.', fr: 'Aucun rattachement.', de: 'Keine Verknüpfungen.', es: 'Sin vínculos.' },
   locations: { en: 'Nothing else is deleted with this location.', fr: 'Aucun autre élément ne part avec ce site.', de: 'Sonst wird mit diesem Standort nichts gelöscht.', es: 'No se elimina nada más con esta ubicación.' },
-  spend_items: { en: 'Nothing else is deleted with this line.', fr: 'Aucun autre élément ne part avec cette ligne.', de: 'Sonst wird mit dieser Zeile nichts gelöscht.', es: 'No se elimina nada más con esta línea.' },
-  capex_items: { en: 'Nothing else is deleted with this line.', fr: 'Aucun autre élément ne part avec cette ligne.', de: 'Sonst wird mit dieser Zeile nichts gelöscht.', es: 'No se elimina nada más con esta línea.' },
+  budget_lines: { en: 'Nothing else is deleted with this line.', fr: 'Aucun autre élément ne part avec cette ligne.', de: 'Sonst wird mit dieser Zeile nichts gelöscht.', es: 'No se elimina nada más con esta línea.' },
   connections: { en: 'Nothing else is deleted with this connection.', fr: 'Aucun autre élément ne part avec cette connexion.', de: 'Sonst wird mit dieser Verbindung nichts gelöscht.', es: 'No se elimina nada más con esta conexión.' },
   interfaces: { en: 'Nothing else is deleted with this interface.', fr: 'Aucun autre élément ne part avec cette interface.', de: 'Sonst wird mit dieser Schnittstelle nichts gelöscht.', es: 'No se elimina nada más con esta interfaz.' },
   documents: { en: 'Nothing else is deleted with this document.', fr: 'Aucun autre élément ne part avec ce document.', de: 'Sonst wird mit diesem Dokument nichts gelöscht.', es: 'No se elimina nada más con este documento.' },
@@ -449,7 +446,7 @@ export function documentDeleteNoticeText(
 }
 
 /** Families whose unnamed count may include records deleted with the line (a budget line's tasks). */
-const HIDDEN_INCLUDES_DELETED = new Set(['spend_items', 'capex_items']);
+const HIDDEN_INCLUDES_DELETED = new Set(['budget_lines']);
 
 /** The markdown list of what goes with a deleted record, in the person's language. */
 export function deletionImpactText(language: AiWriteLanguage, entityType: string, impact: AiDeleteImpact): string {

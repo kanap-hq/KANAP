@@ -8,6 +8,7 @@ import { AiExecutionContextWithManager } from '../ai.types';
 import { inRolledBackTransaction, Kind, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { disableCostCenter, itemService, seedCompany, seedCostCenter } from '../../spend/__tests__/cost-center.fixtures';
 import { ContractsService } from '../../contracts/contracts.service';
+import { budgetService } from '../../spend/__tests__/budget-lines.fixtures';
 import { Contract } from '../../contracts/contract.entity';
 import { ContractSpendItem } from '../../contracts/contract-spend-item.entity';
 import { ContractLink } from '../../contracts/contract-link.entity';
@@ -24,8 +25,8 @@ import { ContractAttachment } from '../../contracts/contract-attachment.entity';
 //   stores the cost center.
 
 const KINDS: Kind[] = ['opex', 'capex'];
-const ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
-/** Both natures are lines of `spend_items` since lot Z1. */
+const ENTITY: Record<Kind, 'budget_lines'> = { opex: 'budget_lines', capex: 'budget_lines' };
+/** Both natures are lines of `spend_items`. */
 const LINE_TABLE = 'spend_items';
 
 function testRegistries() {
@@ -56,10 +57,9 @@ function testRegistries() {
   }
 }
 
-function mutationSupport(contracts: any = {}): any {
+function mutationSupport(runner: QueryRunner, contracts: any = {}): any {
   return new AiBusinessRecordMutationSupportService(
-    {} as any, {} as any, {} as any, itemService('capex'), {} as any, contracts, {} as any, {} as any, {} as any, {} as any,
-    itemService('opex'), {} as any,
+    {} as any, {} as any, {} as any, budgetService(runner), {} as any, contracts, {} as any, {} as any, {} as any, {} as any, {} as any,
   );
 }
 
@@ -93,10 +93,14 @@ function context(runner: QueryRunner, tenantId: string): AiExecutionContextWithM
 }
 
 function createFields(kind: Kind, company: string, extra: Record<string, unknown>) {
-  const base = kind === 'opex'
-    ? { product_name: 'AI line', paying_company: company, currency: 'EUR', effective_start: '2026-01-01' }
-    : { description: 'AI line', paying_company: company, currency: 'EUR', effective_start: '2026-01-01' };
-  return { ...base, ...extra };
+  return {
+    nature: kind,
+    product_name: 'AI line',
+    paying_company: company,
+    currency: 'EUR',
+    effective_start: '2026-01-01',
+    ...extra,
+  };
 }
 
 async function rejection(runner: QueryRunner, fn: () => Promise<unknown>): Promise<string> {
@@ -125,9 +129,9 @@ async function testMutations(kind: Kind) {
     await seedCostCenter(runner, tenantId, { code: 'AI-GRP', name: 'AI group', kind: 'group' });
     const retired = await seedCostCenter(runner, tenantId, { code: 'AI-OLD', name: 'AI retired', companyId });
 
-    const support = mutationSupport();
+    const support = mutationSupport(runner);
     const ctx = context(runner, tenantId);
-    const entity_type = ENTITY[kind];
+    const entity_type = 'budget_lines';
 
     const prepared = await support.prepareCreatePreview(ctx, { entity_type, fields: createFields(kind, 'AI company', { cost_center: 'ai-1', run_build: 'Build' }) });
     const fields = prepared.mutationInput.fields as Record<string, unknown>;
@@ -187,7 +191,7 @@ async function testContractMutation() {
     const retired = await seedCostCenter(runner, tenantId, { code: 'AI-OLD', name: 'AI retired', companyId });
     await disableCostCenter(runner, retired);
 
-    const support = mutationSupport(contractService(runner));
+    const support = mutationSupport(runner, contractService(runner));
     const ctx = context(runner, tenantId);
     const fields = (costCenter: unknown) => ({
       name: `AI contract ${String(costCenter ?? 'none')}`,

@@ -408,8 +408,8 @@ function createQueryExecutor(overrides?: {
     {} as any,
     {} as any,
     {} as any,
-    {} as any,
     {} as any, // allocationCalculator
+    { canReadEntityType: async () => true } as any, // policy
   );
 }
 
@@ -441,7 +441,7 @@ function createAggregateExecutor(overrides?: {
     {} as any,
     {} as any,
     {} as any,
-    {} as any,
+    { canReadEntityType: async () => true } as any, // policy
   );
 }
 
@@ -1437,15 +1437,16 @@ async function testInvalidInputNamesTheFieldAndWhy() {
     throw new Error(`${name}: ${JSON.stringify(input)} was accepted`);
   };
 
-  const unknown = refusal('get_entity_detail', { entity_type: 'spend_items', id: 'BL-102' });
+  const unknown = refusal('get_entity_detail', { entity_type: 'budget_lines', id: 'BL-102' });
   assert.match(unknown, /^Invalid input for get_entity_detail: /);
   assert.match(unknown, /unknown field "id" \(accepted: entity_type, entity_id, year\)/, unknown);
   assert.match(unknown, /missing required field "entity_id"/, unknown);
 
-  const enumValue = refusal('get_entity_detail', { entity_type: 'budget_lines', entity_id: 'BL-102' });
-  assert.match(enumValue, /"entity_type" must be one of: "accounts", .*"spend_items".*"users"/, enumValue);
+  const enumValue = refusal('get_entity_detail', { entity_type: 'spend_items', entity_id: 'BL-102' });
+  assert.match(enumValue, /"entity_type" must be one of: "accounts", .*"budget_lines".*"users"/, enumValue);
+  assert.doesNotMatch(enumValue, /"spend_items"/, 'no alias: spend_items is not an accepted type');
 
-  const nested = refusal('query_entities', { entity_type: 'spend_items', sort: { field: 'y_budget', direction: 'down' }, page: 'two' });
+  const nested = refusal('query_entities', { entity_type: 'budget_lines', sort: { field: 'y_budget', direction: 'down' }, page: 'two' });
   assert.match(nested, /"sort.direction" must be one of: "asc", "desc"/, nested);
   assert.match(nested, /"page" must be integer/, nested);
   assert.doesNotMatch(nested, /down|two/, 'the values sent are not echoed');
@@ -1455,7 +1456,6 @@ async function testInvalidInputNamesTheFieldAndWhy() {
     (error: any) => {
       assert.ok(error instanceof BadRequestException);
       assert.match(error.message, /^Invalid input for get_entity_detail: /);
-      assert.match(error.message, /"entity_type" must be one of: "accounts"/, error.message);
       assert.match(error.message, /missing required field "entity_id"/, error.message);
       return true;
     },

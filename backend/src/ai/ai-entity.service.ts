@@ -10,6 +10,8 @@ import {
 } from '../knowledge/document-entity-visibility';
 import {
   AI_SEARCH_ENTITY_TYPES,
+  aiSearchEntityTypeOfIndexRow,
+  searchIndexEntityTypesFor,
   AiEntityCommentDto,
   AiEntityCommentsDto,
   AiContextEntityType,
@@ -221,7 +223,7 @@ function buildRef(type: AiSearchEntityType | AiContextEntityType, itemNumber?: n
   if (type === 'documents') return `DOC-${itemNumber}`;
   if (type === 'incidents') return `INC-${itemNumber}`;
   if (type === 'technologies') return `TEC-${itemNumber}`;
-  if (type === 'spend_items' || type === 'capex_items') return budgetLineReference(itemNumber);
+  if (type === 'budget_lines') return budgetLineReference(itemNumber);
   return null;
 }
 
@@ -462,7 +464,6 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
     'version', 'supplier', 'business_owner', 'it_owner',
   ],
   business_processes: ['primary_category'],
-  capex_items: ['paying_company', 'supplier', 'analytics'],
   companies: ['base_currency'],
   connections: ['source', 'destination'],
   contacts: ['supplier'],
@@ -473,7 +474,7 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
   interfaces: ['source_application', 'target_application', 'business_process'],
   projects: ['business_lead', 'it_lead', 'contributors'],
   requests: ['requestor', 'business_lead', 'it_lead', 'contributors'],
-  spend_items: ['supplier', 'paying_company', 'account', 'contract', 'analytics'],
+  budget_lines: ['supplier', 'paying_company', 'account', 'contract', 'analytics'],
   suppliers: ['erp_supplier_id'],
   tasks: ['assignee', 'creator'],
   users: [
@@ -531,8 +532,8 @@ function appendNullableParticipationScopeSql(
 /** The family of the object a task belongs to (`tasks.related_object_type`). */
 const TASK_RELATED_ENTITY_TYPES: Record<string, AiEntitySummaryDto['type']> = {
   project: 'projects',
-  spend_item: 'spend_items',
-  capex_item: 'capex_items',
+  spend_item: 'budget_lines',
+  capex_item: 'budget_lines',
   contract: 'contracts',
   incident: 'incidents',
 };
@@ -827,78 +828,6 @@ export class AiEntityService {
 
     return {
       items: rows.map((row) => ({ ...toSummary('assets', row, row.summary), _score: row.score ?? 1 })),
-      total: rows.length > 0 ? Math.max(Number(rows[0].total_count) || 0, rows.length) : 0,
-    };
-  }
-
-  private async searchSpendItems(
-    context: AiExecutionContextWithManager,
-    query: string,
-    limit: number,
-  ): Promise<RankedSearchResult> {
-    const like = `%${query}%`;
-    const rows = await context.manager.query<SearchRow[]>(
-      `SELECT si.id,
-              si.item_number,
-              si.product_name AS label,
-              COALESCE(
-                NULLIF(si.description, ''),
-                NULLIF(CONCAT_WS(' | ', sup.name, comp.name, NULLIF(TRIM(CONCAT_WS(' ', acc.account_number::text, acc.account_name)), '')), '')
-              ) AS summary,
-              si.status,
-              si.updated_at,
-              sup.name AS supplier_name,
-              comp.name AS company_name,
-              NULLIF(TRIM(CONCAT_WS(' ', acc.account_number::text, acc.account_name)), '') AS account_display,
-              lc.contract_name,
-              COUNT(*) OVER()::int AS total_count,
-              CASE
-                WHEN si.product_name ILIKE $1 THEN 3
-                WHEN COALESCE(sup.name, '') ILIKE $1 OR COALESCE(comp.name, '') ILIKE $1 THEN 2
-                ELSE 1
-              END AS score
-       FROM spend_items si
-       LEFT JOIN suppliers sup ON sup.id = si.supplier_id AND sup.tenant_id = si.tenant_id
-       LEFT JOIN companies comp ON comp.id = si.paying_company_id AND comp.tenant_id = si.tenant_id
-       LEFT JOIN accounts acc ON acc.id = si.account_id AND acc.tenant_id = si.tenant_id
-       LEFT JOIN LATERAL (
-         SELECT c.name AS contract_name
-         FROM contract_spend_items csi
-         JOIN contracts c ON c.id = csi.contract_id AND c.tenant_id = si.tenant_id
-         WHERE csi.spend_item_id = si.id
-         ORDER BY csi.created_at DESC
-         LIMIT 1
-       ) lc ON TRUE
-       WHERE si.tenant_id = $2 AND si.nature = 'opex'
-         AND (
-           si.product_name ILIKE $1
-           OR COALESCE(si.description, '') ILIKE $1
-           OR COALESCE(sup.name, '') ILIKE $1
-           OR COALESCE(comp.name, '') ILIKE $1
-           OR COALESCE(acc.account_name, '') ILIKE $1
-           OR COALESCE(acc.account_number::text, '') ILIKE $1
-           OR COALESCE(lc.contract_name, '') ILIKE $1
-           OR COALESCE(si.currency, '') ILIKE $1
-           OR COALESCE(si.notes, '') ILIKE $1
-         )
-       ORDER BY score DESC, si.updated_at DESC, si.product_name ASC
-       LIMIT $3`,
-      [like, context.tenantId, limit],
-    );
-
-    return {
-      items: rows.map((row: any) => ({
-        ...toSummary('spend_items', {
-          ...row,
-          metadata: {
-            supplier: row.supplier_name ?? null,
-            paying_company: row.company_name ?? null,
-            account: row.account_display ?? null,
-            contract: row.contract_name ?? null,
-          },
-        }, row.summary),
-        _score: row.score ?? 1,
-      })),
       total: rows.length > 0 ? Math.max(Number(rows[0].total_count) || 0, rows.length) : 0,
     };
   }
@@ -1364,9 +1293,10 @@ export class AiEntityService {
       const projectScopeSql = appendParticipationScopeSql('projects', 'rel_proj', params, await resolveAiParticipationAccessScope(context, 'projects'));
       relatedNameSql.push(`(COALESCE(rel_proj.name, '') ILIKE $3 ${projectScopeSql})`);
     }
-    if (await this.canReadType(context, 'spend_items')) relatedNameSql.push(`COALESCE(rel_si.product_name, '') ILIKE $3`);
+    if (await this.canReadType(context, 'budget_lines')) {
+      relatedNameSql.push(`(COALESCE(rel_si.product_name, '') ILIKE $3 OR COALESCE(rel_cx.product_name, '') ILIKE $3)`);
+    }
     if (await this.canReadType(context, 'contracts')) relatedNameSql.push(`COALESCE(rel_ct.name, '') ILIKE $3`);
-    if (await this.canReadType(context, 'capex_items')) relatedNameSql.push(`COALESCE(rel_cx.product_name, '') ILIKE $3`);
     if (await this.canReadType(context, 'incidents')) relatedNameSql.push(`COALESCE(${incidentRelatedTitleSql('rel_inc')}, '') ILIKE $3`);
     params.push(limit);
     const limitRef = `$${params.length}`;
@@ -1520,59 +1450,6 @@ export class AiEntityService {
             contributor_profile: row.contributor_profile ?? null,
             project_availability: toNullableNumber(row.project_availability),
             areas_of_expertise: row.areas_of_expertise || null,
-          },
-        }, row.summary),
-        _score: row.score ?? 1,
-      })),
-      total: rows.length > 0 ? Math.max(Number(rows[0].total_count) || 0, rows.length) : 0,
-    };
-  }
-
-  private async searchCapexItems(
-    context: AiExecutionContextWithManager,
-    query: string,
-    limit: number,
-  ): Promise<RankedSearchResult> {
-    const like = `%${query}%`;
-    const rows = await context.manager.query<SearchRow[]>(
-      `SELECT ci.id,
-              ci.item_number,
-              ci.product_name AS label,
-              COALESCE(NULLIF(ci.description, ''), NULLIF(ci.notes, ''), NULLIF(CONCAT_WS(' | ', comp.name, sup.name), '')) AS summary,
-              ci.status,
-              ci.updated_at,
-              comp.name AS company_name,
-              sup.name AS supplier_name,
-              COUNT(*) OVER()::int AS total_count,
-              CASE
-                WHEN ci.product_name ILIKE $1 THEN 3
-                WHEN COALESCE(comp.name, '') ILIKE $1 OR COALESCE(sup.name, '') ILIKE $1 THEN 2
-                ELSE 1
-              END AS score
-       FROM spend_items ci
-       LEFT JOIN companies comp ON comp.id = ci.paying_company_id AND comp.tenant_id = ci.tenant_id
-       LEFT JOIN suppliers sup ON sup.id = ci.supplier_id AND sup.tenant_id = ci.tenant_id
-       WHERE ci.tenant_id = $2 AND ci.nature = 'capex'
-         AND (
-           ci.product_name ILIKE $1
-           OR COALESCE(ci.description, '') ILIKE $1
-           OR COALESCE(ci.notes, '') ILIKE $1
-           OR COALESCE(ci.currency, '') ILIKE $1
-           OR COALESCE(comp.name, '') ILIKE $1
-           OR COALESCE(sup.name, '') ILIKE $1
-         )
-       ORDER BY score DESC, ci.updated_at DESC, ci.product_name ASC
-       LIMIT $3`,
-      [like, context.tenantId, limit],
-    );
-
-    return {
-      items: rows.map((row: any) => ({
-        ...toSummary('capex_items', {
-          ...row,
-          metadata: {
-            paying_company: row.company_name ?? null,
-            supplier: row.supplier_name ?? null,
           },
         }, row.summary),
         _score: row.score ?? 1,
@@ -2266,6 +2143,9 @@ export class AiEntityService {
     limit: number,
     offset: number,
   ): Promise<{ rows: any[]; total: number }> {
+    // The AI family `budget_lines` reads the two index types of the budget lines (one per
+    // nature); every other family reads its own type (`ai.types.ts`).
+    const indexEntityTypes = Array.from(new Set(entityTypes.flatMap((type) => searchIndexEntityTypesFor(type))));
     const q = String(query || '').trim();
     const prefixed = q.match(INDEXED_REF_QUERY_RE);
     const bare = q.match(/^(\d+)$/);
@@ -2298,7 +2178,7 @@ export class AiEntityService {
       : null;
 
     const tenantRef = push(context.tenantId);
-    const typesRef = push(entityTypes);
+    const typesRef = push(indexEntityTypes);
     const qRef = push(q);
     const likeRef = push(`%${q}%`);
     const refRef = push(ref);
@@ -2316,7 +2196,7 @@ export class AiEntityService {
     // against the source tables.
     const scopeClauses: string[] = [];
     for (const type of ['applications', 'projects', 'requests', 'tasks'] as ParticipationScopedAiEntityType[]) {
-      if (!entityTypes.includes(type)) continue;
+      if (!indexEntityTypes.includes(type)) continue;
       const accessScope = await resolveAiParticipationAccessScope(context, type);
       if (!accessScope) continue;
       const userRef = push(accessScope.userId);
@@ -2331,7 +2211,7 @@ export class AiEntityService {
 
     // Documents stay behind the knowledge library ACL (same check as
     // KnowledgeService.search). null = unrestricted; [] = no library access.
-    if (entityTypes.includes('documents')) {
+    if (indexEntityTypes.includes('documents')) {
       const accessibleLibraries = await this.knowledge.listReadableLibraryIdsForUser(
         context.manager,
         context.userId ?? null,
@@ -2364,7 +2244,7 @@ export class AiEntityService {
       ))`);
     }
 
-    if (entityTypes.includes('incidents')) {
+    if (indexEntityTypes.includes('incidents')) {
       const viewer = await resolveAiIncidentViewer(context);
       if (!viewer.isAdmin) {
         const userRef = viewer.userId ? push(viewer.userId) : null;
@@ -2382,7 +2262,7 @@ export class AiEntityService {
 
     // A task of an incident the viewer cannot see is not searchable (the query-time
     // twin of the task list's predicate, on the same indexed row).
-    if (entityTypes.includes('tasks')) {
+    if (indexEntityTypes.includes('tasks')) {
       const incidentVisibilitySql = taskIncidentVisibilitySql(
         't_acl',
         await resolveAiIncidentViewer(context),
@@ -2459,7 +2339,8 @@ export class AiEntityService {
   }
 
   private searchIndexRowToSummary(row: any): AiEntitySummaryDto & { _score: number } {
-    const type = row.entity_type as AiSearchEntityType;
+    const type = aiSearchEntityTypeOfIndexRow(String(row.entity_type));
+    if (!type) throw new BadRequestException('Unsupported search index entity type.');
     const extra = (row.extra_json ?? null) as Record<string, unknown> | null;
 
     let ref: string | null = null;
@@ -2471,14 +2352,16 @@ export class AiEntityService {
 
     const metadataKeys = SEARCH_INDEX_METADATA_KEYS[type];
     let metadata: Record<string, string | number | boolean | null> | null = null;
-    if (metadataKeys) {
+    if (metadataKeys || type === 'budget_lines') {
       metadata = {};
-      for (const key of metadataKeys) {
+      for (const key of metadataKeys ?? []) {
         const value = extra ? extra[key] : null;
         metadata[key] = key === 'project_availability'
           ? toNullableNumber(value)
           : ((value as string | number | boolean | null | undefined) ?? null);
       }
+      // The index keeps one type per nature; the AI family says which nature the line is.
+      if (type === 'budget_lines') metadata.nature = row.entity_type === 'capex_items' ? 'capex' : 'opex';
     }
 
     return {
@@ -2727,7 +2610,8 @@ export class AiEntityService {
     // KnowledgeService path below so per-type callers (the @-mention picker)
     // retain ts_headline snippets and item-ref prefix ordering.
     // Technologies have no legacy search: they are found through the index only.
-    if ((aiSearchIndexEnabled() || type === 'technologies') && type !== 'documents') {
+    // Budget lines exist in the index only (their legacy per-type search was removed).
+    if ((aiSearchIndexEnabled() || type === 'technologies' || type === 'budget_lines') && type !== 'documents') {
       const { rows, total } = await this.runSearchIndexQuery(
         context,
         [type as AiSearchEntityType],
@@ -2745,7 +2629,6 @@ export class AiEntityService {
     if (type === 'applications') return this.searchApplications(context, query, fetchLimit);
     if (type === 'assets') return this.searchAssets(context, query, fetchLimit);
     if (type === 'business_processes') return this.searchBusinessProcesses(context, query, fetchLimit);
-    if (type === 'capex_items') return this.searchCapexItems(context, query, fetchLimit);
     if (type === 'chart_of_accounts') return this.searchChartOfAccounts(context, query, fetchLimit);
     if (type === 'companies') return this.searchCompanies(context, query, fetchLimit);
     if (type === 'connections') return this.searchConnections(context, query, fetchLimit);
@@ -2757,7 +2640,6 @@ export class AiEntityService {
     if (type === 'locations') return this.searchLocations(context, query, fetchLimit);
     if (type === 'projects') return this.searchProjects(context, query, fetchLimit);
     if (type === 'requests') return this.searchRequests(context, query, fetchLimit);
-    if (type === 'spend_items') return this.searchSpendItems(context, query, fetchLimit);
     if (type === 'suppliers') return this.searchSuppliers(context, query, fetchLimit);
     if (type === 'tasks') return this.searchTasks(context, query, fetchLimit);
     if (type === 'users') {
@@ -3990,9 +3872,9 @@ export class AiEntityService {
         updated_at: null,
       })));
     };
-    const readsBudget = await this.canReadType(context, 'spend_items');
+    const readsBudget = await this.canReadType(context, 'budget_lines');
     const budgetLines = readsBudget ? await listContractBudgetLines(manager, { id: contract.id, tenant_id: tenantId }) : null;
-    const lineSummaries = (budgetLines?.items ?? []).map((line) => toSummary(line.nature === 'capex' ? 'capex_items' : 'spend_items', {
+    const lineSummaries = (budgetLines?.items ?? []).map((line) => toSummary('budget_lines', {
       id: line.id,
       item_number: line.item_number,
       label: line.product_name,

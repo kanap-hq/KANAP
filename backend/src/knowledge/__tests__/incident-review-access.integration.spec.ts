@@ -1124,13 +1124,15 @@ async function testShareRecipients() {
 // ---------------------------------------------------------------------------
 
 function createAiHarness(manager: any, knowledge: KnowledgeService) {
-  const stubs = new Array(23).fill({} as any);
-  const queryExecutor = new (AiQueryExecutor as any)(
-    ...stubs.slice(0, 10), knowledge, ...stubs.slice(0, 12),
-  ) as AiQueryExecutor;
-  const aggregateExecutor = new (AiAggregateExecutor as any)(
-    ...stubs.slice(0, 10), knowledge, ...stubs.slice(0, 11),
-  ) as AiAggregateExecutor;
+  // Constructor positions: knowledge 10; the query executor's policy 23, the aggregate's 21.
+  const queryStubs = new Array(25).fill({} as any);
+  queryStubs[10] = knowledge;
+  queryStubs[23] = { canReadEntityType: async () => true };
+  const queryExecutor = new (AiQueryExecutor as any)(...queryStubs) as AiQueryExecutor;
+  const aggregateStubs = new Array(23).fill({} as any);
+  aggregateStubs[10] = knowledge;
+  aggregateStubs[21] = { canReadEntityType: async () => true };
+  const aggregateExecutor = new (AiAggregateExecutor as any)(...aggregateStubs) as AiAggregateExecutor;
   const entityService: any = Object.create(AiEntityService.prototype);
   entityService.knowledge = knowledge;
   return { queryExecutor, aggregateExecutor, entityService };

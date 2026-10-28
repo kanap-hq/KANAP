@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -22,7 +23,7 @@ import { AiMutationPreview } from './ai-mutation-preview.entity';
 import { AiPolicyService, isRightRefusalMessage } from './ai-policy.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
-import { AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
+import { AiMutationPreviewPresentation, AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
 import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/database-error.mapping';
 import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
 import { assertLinesEditable } from '../data-access/line-write-checks';
@@ -44,6 +45,9 @@ const EXECUTION_SAVEPOINT_NAME = 'ai_mutation_preview_execution';
 /** A preview whose data was held by another operation: nothing ran, it can be approved again. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PLAN_PLACEHOLDER_RE = /\{\{\s*([A-Za-z0-9_-]+)\.(id|ref|title)\s*\}\}/g;
+/** A preview executed before the budget lines became one family: its card lists, its undo is refused. */
+const LEGACY_BUDGET_LINE_TYPES = new Set(['spend_items', 'capex_items']);
+const LEGACY_BUDGET_LINE_UNDO_REFUSAL = 'This change was made before a Plaid update and can no longer be undone here: use the screen.';
 
 export type AiMutationPlanOperationInput = {
   operation_id?: string | null;
@@ -157,6 +161,7 @@ function planStepTargetRef(step: AiMutationPlanStep): string | null {
 
 @Injectable()
 export class AiMutationPreviewService {
+  private readonly logger = new Logger(AiMutationPreviewService.name);
   private readonly languages = new WeakMap<AiExecutionContextWithManager, Promise<AiWriteLanguage>>();
 
   constructor(
@@ -208,8 +213,20 @@ export class AiMutationPreviewService {
   }
 
   private toPreviewDto(preview: AiMutationPreview, language: AiWriteLanguage): AiMutationPreviewDto {
-    const operation = this.operations.getOperation(preview.tool_name);
-    const presentation = operation.presentPreview(preview, language);
+    // An old budget line or relation preview keeps its card in the conversation: the one family's
+    // operation cannot present the stored `spend_items` / `capex_items` type or relation. A card
+    // that cannot present at all falls back to the same neutral one instead of failing the list.
+    let presentation: AiMutationPreviewPresentation;
+    if (this.isLegacyBudgetLinePreview(preview)) {
+      presentation = this.legacyPreviewPresentation(preview);
+    } else {
+      try {
+        presentation = this.operations.getOperation(preview.tool_name).presentPreview(preview, language);
+      } catch (error) {
+        this.logger.warn(`Preview ${preview.id} (${preview.tool_name}) could not present: ${error instanceof Error ? error.message : String(error)}`);
+        presentation = this.legacyPreviewPresentation(preview);
+      }
+    }
 
     return {
       preview_id: preview.id,
@@ -253,6 +270,39 @@ export class AiMutationPreviewService {
   }
 
   /**
+   * A preview stored before the budget lines became one AI family: its target type was
+   * `spend_items` / `capex_items`, or its relation named one of those types.
+   */
+  private isLegacyBudgetLinePreview(preview: AiMutationPreview): boolean {
+    const type = preview.target_entity_type ?? preview.mutation_input?.entity_type;
+    if (LEGACY_BUDGET_LINE_TYPES.has(String(type ?? '').trim())) return true;
+    return preview.tool_name === 'update_entity_relations'
+      && LEGACY_BUDGET_LINE_TYPES.has(String(preview.mutation_input?.relation ?? '').trim());
+  }
+
+  /**
+   * The card of an old preview: no field labels, the stored target only, and a summary that says
+   * it predates the change. The list keeps loading and its undo is refused (`createReversePreview`).
+   */
+  private legacyPreviewPresentation(preview: AiMutationPreview): AiMutationPreviewPresentation {
+    const current = preview.current_values ?? {};
+    const title = String(current.target_title ?? current.target_ref ?? 'Record');
+    const action = String(preview.mutation_input?.action ?? 'change');
+    return {
+      target: {
+        entity_type: preview.target_entity_type,
+        entity_id: preview.target_entity_id ?? null,
+        ref: current.target_ref == null ? null : String(current.target_ref),
+        title,
+      },
+      changes: {},
+      summary: preview.status === 'executed'
+        ? `This ${action} preview was executed before a Plaid update.`
+        : `This ${action} preview was made before a Plaid update.`,
+    };
+  }
+
+  /**
    * A preview of a write on a budget line (its fields, its relations, its versions and amounts)
    * that the person reads but may not modify: refused when the preview is asked, with the 403
    * `DATA_ACCESS_LIMITED` the routes give ("This line is read only in your access.", lot 3).
@@ -263,7 +313,7 @@ export class AiMutationPreviewService {
     context: AiExecutionContextWithManager,
     prepared: Pick<AiPreparedMutationPreview, 'targetEntityType' | 'targetEntityId'>,
   ): Promise<void> {
-    if (prepared.targetEntityType !== 'spend_items' && prepared.targetEntityType !== 'capex_items') return;
+    if (prepared.targetEntityType !== 'budget_lines') return;
     await assertLinesEditable(context.manager, [prepared.targetEntityId]);
   }
 
@@ -1297,6 +1347,9 @@ export class AiMutationPreviewService {
     previewId: string,
   ): Promise<AiMutationPreviewDto> {
     const original = await this.getPreviewForUser(context, previewId);
+    // A change made before the one budget line family has no family to reverse under the current
+    // rules: refused with a readable 4xx, never a 500.
+    if (this.isLegacyBudgetLinePreview(original)) throw new BadRequestException(LEGACY_BUDGET_LINE_UNDO_REFUSAL);
     const operation = this.operations.getOperation(original.tool_name);
     await this.assertWriteRights(context, operation, { preview: original });
     await this.assertNotReservedForPerson(context, original.tool_name, original.target_entity_type);

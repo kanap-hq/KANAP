@@ -112,6 +112,8 @@ import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
     BudgetLineTypeChangeService,
   ],
   exports: [
+    // The unified read engine: Plaid and the MCP read the budget lines of both natures through it.
+    BudgetLinesService,
     // The AI's budget line detail reads each version's allocation as the Allocations tab does.
     AllocationCalculatorService,
     SpendItemsService,

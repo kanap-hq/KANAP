@@ -26,9 +26,8 @@ export function analyticsDimensionsAiContext(
   axes: AnalyticsAxisInfo[],
   readableTypes: readonly string[],
 ): AnalyticsDimensionsPromptContext | undefined {
-  const scopes: Array<'opex' | 'capex'> = [];
-  if (readableTypes.includes('spend_items')) scopes.push('opex');
-  if (readableTypes.includes('capex_items')) scopes.push('capex');
+  // One budget family: a reader of it may give a value on any dimension that applies to a line.
+  const scopes: Array<'opex' | 'capex'> = readableTypes.includes('budget_lines') ? ['opex', 'capex'] : [];
   if (scopes.length === 0) return undefined;
   return axes
     .filter((axis) => axis.status === 'enabled')

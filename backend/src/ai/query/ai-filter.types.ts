@@ -1,3 +1,4 @@
+import type { BudgetNature } from '../../spend/budget-nature';
 import { AiEntitySummaryDto, AiQueryScope } from '../ai.types';
 
 export type AiFilterFieldType = 'set' | 'text' | 'number' | 'date';
@@ -6,8 +7,8 @@ export type AiQueryEntityType =
   | 'analytics_categories'
   | 'applications'
   | 'assets'
+  | 'budget_lines'
   | 'business_processes'
-  | 'capex_items'
   | 'chart_of_accounts'
   | 'companies'
   | 'connections'
@@ -20,7 +21,6 @@ export type AiQueryEntityType =
   | 'locations'
   | 'projects'
   | 'requests'
-  | 'spend_items'
   | 'suppliers'
   | 'tasks'
   | 'technologies'
@@ -63,6 +63,8 @@ export type AiFilterFieldDef = {
   acceptedValueKind?: string;
   /** Date field that also takes `[null]`: rows with no date. */
   blankable?: boolean;
+  /** An analytics dimension that applies to one nature only: the field is blank for the other. */
+  nature?: BudgetNature;
   lookupEntity?: AiQueryEntityType;
   examples?: string[];
   doesNotAccept?: string[];
@@ -90,9 +92,8 @@ export type AiAggregateConfig = {
   baseTable: string;
   alias: string;
   /**
-   * A predicate every statement on `baseTable` carries besides the tenant: the OPEX lines of
-   * `spend_items` (`si.nature = 'opex'`, `spend/budget-nature.ts`). Written here only, never
-   * from a request.
+   * A predicate every statement on `baseTable` carries besides the tenant, written here only,
+   * never from a request. Budget lines name the two natures: the family reads both.
    */
   baseWhere?: string;
   idColumn?: string;

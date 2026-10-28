@@ -28,7 +28,7 @@ export const analyticsCategoriesRegistry: AiEntityFilterRegistry = {
       ai: 'applies_to',
       grid: 'applies_to',
       type: 'set',
-      description: 'The budget lines that may choose the value: opex (OPEX lines only), capex (CAPEX lines only). null is a value for both OPEX and CAPEX lines. A line already holding a value of the other type keeps it.',
+      description: 'The OPEX and CAPEX items that may choose the value: opex (OPEX lines only), capex (CAPEX lines only). null is a value for both OPEX and CAPEX lines. A line already holding a value of the other type keeps it.',
       values: ['opex', 'capex', null],
       discoverable: true,
       sortable: true,

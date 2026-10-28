@@ -112,7 +112,7 @@ describe('PreviewCard in French', () => {
   it('shows a budget line deletion with its versions, tasks and links, in French', () => {
     renderCard(preview({
       tool_name: 'delete_record',
-      target: { entity_type: 'spend_items', entity_id: 'line-1', ref: 'BL-12', title: 'ERP licence' },
+      target: { entity_type: 'budget_lines', entity_id: 'line-1', ref: 'BL-12', title: 'ERP licence' },
       summary: 'Suppression de la ligne OPEX « ERP licence ».',
       changes: {
         deletion: {
@@ -360,8 +360,9 @@ describe('PreviewCard in French', () => {
   it('names the fields of a budget line as the budget line screen does', () => {
     renderCard(preview({
       tool_name: 'create_business_record',
-      target: { entity_type: 'spend_items', entity_id: null, ref: null, title: 'QA-PL montant' },
+      target: { entity_type: 'budget_lines', entity_id: null, ref: null, title: 'QA-PL montant' },
       changes: {
+        nature: { label: 'Nature', from: null, to: 'capex', format: 'text' },
         product_name: { label: 'Product Name', from: null, to: 'QA-PL montant', format: 'text' },
         paying_company_id: { label: 'Paying Company', from: null, to: 'Fromage & Co SA', format: 'text' },
         account_id: { label: 'Account', from: null, to: '612100 - SaaS Subscriptions', format: 'text' },
@@ -372,12 +373,12 @@ describe('PreviewCard in French', () => {
       },
     }));
 
-    for (const text of ['Nom du produit', 'Société payeuse', 'Compte', 'Devise', 'Début d\'effet', 'Responsable IT', 'Run ou build']) {
+    for (const text of ['Type de ligne', 'CAPEX', 'Nom du produit', 'Société payeuse', 'Compte', 'Devise', 'Début d\'effet', 'Responsable IT', 'Run ou build']) {
       expect(screen.getByText(text)).toBeInTheDocument();
     }
     expect(screen.queryByText('Début de validité')).not.toBeInTheDocument();
     // The fields keep the order the server sends, which no longer depends on how the preview was stored.
-    const labels = ['Nom du produit', 'Société payeuse', 'Compte', 'Devise', 'Début d\'effet'].map((text) => screen.getByText(text));
+    const labels = ['Type de ligne', 'Nom du produit', 'Société payeuse', 'Compte', 'Devise', 'Début d\'effet'].map((text) => screen.getByText(text));
     labels.slice(1).forEach((label, index) => {
       expect(labels[index].compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
@@ -404,7 +405,7 @@ describe('PreviewCard in French', () => {
   it('writes budget amounts with the column names of the budget screens, in the language and currency', () => {
     renderCard(preview({
       tool_name: 'create_business_record',
-      target: { entity_type: 'spend_items', entity_id: null, ref: null, title: 'Licences' },
+      target: { entity_type: 'budget_lines', entity_id: null, ref: null, title: 'Licences' },
       changes: {
         amounts: {
           label: 'Amounts',
@@ -422,7 +423,7 @@ describe('PreviewCard in French', () => {
 
     renderCard(preview({
       tool_name: 'write_financial_plan',
-      target: { entity_type: 'spend_items', entity_id: 'line-1', ref: 'BL-7', title: 'Licences / Y2026' },
+      target: { entity_type: 'budget_lines', entity_id: 'line-1', ref: 'BL-7', title: 'Licences / Y2026' },
       changes: {
         amounts: {
           label: 'Amounts',

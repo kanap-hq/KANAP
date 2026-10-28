@@ -155,22 +155,42 @@ export async function resolveToUuid(
   return rows[0].id;
 }
 
+/** The `spend_items` number a budget line reference names, one of the two (or neither for a name). */
+export type BudgetLineReferenceNumbers = {
+  /** The line's own number (`item_number`): a `BL-n` or a bare number. */
+  itemNumber: number | null;
+  /** The old number of its nature (`legacy_number`): an `OPX-n` or a `CPX-n`. */
+  legacyNumber: string | null;
+};
+
+/**
+ * The numbers a budget line reference names, the one rule the read resolver (`resolveBudgetLine`)
+ * and the write resolvers share: `BL-n` and a bare number read `item_number`; `OPX-n` and `CPX-n`
+ * read only `legacy_number` of their nature. A name, or a malformed reference, names neither.
+ */
+export function budgetLineReferenceNumbers(raw: string): BudgetLineReferenceNumbers {
+  const match = String(raw ?? '').match(/^(?:(BL|OPX|CPX)-)?(\d+)$/i);
+  if (!match) return { itemNumber: null, legacyNumber: null };
+  const number = Number(match[2]);
+  if (!Number.isSafeInteger(number) || number > 2147483647) return { itemNumber: null, legacyNumber: null };
+  const prefix = match[1]?.toUpperCase();
+  return prefix && prefix !== 'BL'
+    ? { itemNumber: null, legacyNumber: `${prefix}-${number}` }
+    : { itemNumber: number, legacyNumber: null };
+}
+
 /** Resolve a native budget reference across explicitly named natures in the request's tenant. */
 export async function resolveBudgetLine(raw: string, manager: EntityManager): Promise<{ id: string; nature: 'opex' | 'capex'; reference: string }> {
-  const match = raw.match(/^(?:(BL|OPX|CPX)-)?(\d+)$/i);
   let predicate: string;
   let value: string | number;
   if (UUID_RE.test(raw)) {
     predicate = 'id = $1';
     value = raw;
-  } else if (match) {
-    const number = Number(match[2]);
-    if (!Number.isSafeInteger(number) || number > 2147483647) throw new BadRequestException('Malformed budget line reference');
-    const prefix = match[1]?.toUpperCase();
-    predicate = prefix && prefix !== 'BL' ? 'legacy_number = $1' : 'item_number = $1';
-    value = prefix && prefix !== 'BL' ? `${prefix}-${number}` : number;
   } else {
-    throw new BadRequestException('Malformed budget line reference');
+    const numbers = budgetLineReferenceNumbers(raw);
+    if (numbers.itemNumber == null && numbers.legacyNumber == null) throw new BadRequestException('Malformed budget line reference');
+    predicate = numbers.legacyNumber ? 'legacy_number = $1' : 'item_number = $1';
+    value = numbers.legacyNumber ?? numbers.itemNumber!;
   }
   const [line] = await manager.query(
     `SELECT id, nature, item_number FROM spend_items

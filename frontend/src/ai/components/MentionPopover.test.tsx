@@ -15,14 +15,14 @@ describe.each(['light', 'dark'] as const)('budget mentions in %s mode', (mode) =
   });
 
   it.each(['BL-12', 'OPX-12', 'CPX-3'])('resolves @%s and displays its native reference', async (query) => {
-    const item = { id: 'line-1', entity_type: query === 'CPX-3' ? 'capex_items' : 'spend_items', ref: 'BL-12', label: 'Server renewal', summary: null };
+    const item = { id: 'line-1', entity_type: 'budget_lines', ref: 'BL-12', label: 'Server renewal', summary: null };
     vi.mocked(aiSearchApi.searchEntities).mockResolvedValue([item]);
     const onSelect = vi.fn();
     render(<ThemeProvider theme={createAppTheme(mode)}>
       <MentionPopover query={query} onSelect={onSelect} onCancel={vi.fn()} />
     </ThemeProvider>);
     await waitFor(() => expect(aiSearchApi.searchEntities).toHaveBeenCalledWith(query, {
-      signal: expect.any(AbortSignal), entityTypes: ['spend_items', 'capex_items'],
+      signal: expect.any(AbortSignal), entityTypes: ['budget_lines'],
     }));
     const option = await screen.findByRole('option');
     expect(option).toHaveTextContent('BL-12');
