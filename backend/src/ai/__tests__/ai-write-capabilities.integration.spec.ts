@@ -354,6 +354,11 @@ async function seedGraph(runner: QueryRunner): Promise<SeededTenant> {
      VALUES ($1, $2, $3, $4, 'Seeded spend item', $5, 'EUR', DATE '2026-01-01', 'enabled', 'Original spend note', (SELECT COALESCE(MAX(item_number), 0) + 1 FROM spend_items WHERE tenant_id = $2), now(), now())`,
     [spendItemId, tenantId, companyId, `PLAID Capability Spend ${tag}`, supplierId],
   );
+  // The OPEX number the screens show is its legacy number (`OPX-n`); the line also has its BL-n.
+  await runner.query(
+    `UPDATE spend_items SET legacy_number = 'OPX-' || item_number WHERE tenant_id = $1 AND id = $2`,
+    [tenantId, spendItemId],
+  );
   // Lot Z1: a CAPEX line is a spend line of nature 'capex', its BL number in item_number
   // (one numbering across both natures) and its CPX number in legacy_number.
   await runner.query(
@@ -1027,6 +1032,69 @@ async function testCapexOwnersAnalyticsAndApplications(harness: Harness) {
 }
 
 /**
+ * The audit of an application's budget lines names the table of the line's nature, as the screens
+ * do: `application_capex_items` for a CAPEX line, `application_spend_items` for an OPEX one, one
+ * row per nature an update touches.
+ */
+async function testApplicationLineRelationAuditByNature(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    await runner.query(
+      `DELETE FROM application_spend_items WHERE tenant_id = $1 AND application_id = $2`,
+      [seed.tenantId, seed.applicationId],
+    );
+    const relation = (extra: Record<string, unknown>) => ({
+      entity_type: 'applications', ref: seed.applicationId, relation: 'budget_lines', ...extra,
+    });
+    const auditTables = async (previewId: string) => (await runner.query(
+      `SELECT table_name FROM audit_log WHERE tenant_id = $1 AND source = 'ai_chat' AND source_ref = $2 ORDER BY table_name`,
+      [seed.tenantId, previewId],
+    )).map((row: any) => row.table_name);
+
+    const capexOnly = await executeToolPreview(harness, context(seed, runner, 'audit-capex-only'), 'update_entity_relations', relation({ add: [seed.capexItemId] }));
+    await approvePreview(harness, context(seed, runner, 'audit-capex-only'), capexOnly);
+    assert.deepEqual(await auditTables(capexOnly.preview_id), ['application_capex_items'], 'a CAPEX-only relation is audited as application_capex_items');
+
+    const opexOnly = await executeToolPreview(harness, context(seed, runner, 'audit-opex-only'), 'update_entity_relations', relation({ add: [seed.spendItemId] }));
+    await approvePreview(harness, context(seed, runner, 'audit-opex-only'), opexOnly);
+    assert.deepEqual(await auditTables(opexOnly.preview_id), ['application_spend_items'], 'an OPEX-only relation is audited as application_spend_items');
+
+    const mixed = await executeToolPreview(harness, context(seed, runner, 'audit-both'), 'update_entity_relations', relation({ remove: [seed.capexItemId, seed.spendItemId] }));
+    await approvePreview(harness, context(seed, runner, 'audit-both'), mixed);
+    assert.deepEqual(await auditTables(mixed.preview_id), ['application_capex_items', 'application_spend_items'], 'a mixed relation is audited under both tables');
+  });
+}
+
+/**
+ * The `related` sort of the task tools follows the family the assistant displays: the two stored
+ * budget line types sort together as `budget_line`, not apart under `capex_item` / `spend_item`.
+ */
+async function testTaskRelatedSortByDisplayedFamily(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    for (const [offset, title, relatedType, relatedId] of [
+      [3, `OPEX task ${seed.tag}`, 'spend_item', seed.spendItemId],
+      [4, `Contract task ${seed.tag}`, 'contract', seed.contractId],
+      [5, `CAPEX task sort ${seed.tag}`, 'capex_item', seed.capexItemId],
+    ] as const) {
+      await runner.query(
+        `INSERT INTO tasks (tenant_id, item_number, title, status, related_object_type, related_object_id, labels, owner_ids, viewer_ids, created_at, updated_at)
+         VALUES ($1, $2, $3, 'open', $4, $5, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, now(), now())`,
+        [seed.tenantId, itemNumber(seed.tag, offset), title, relatedType, relatedId],
+      );
+    }
+    const result = await harness.tools.execute(context(seed, runner, 'task-related-sort'), 'query_entities', {
+      entity_type: 'tasks',
+      q: seed.tag,
+      sort: { field: 'related', direction: 'asc' },
+      limit: 50,
+    });
+    const related = result.items
+      .filter((item: any) => String(item.label).includes(seed.tag))
+      .map((item: any) => item.metadata.related);
+    assert.deepEqual(related, ['budget_line', 'budget_line', 'contract', 'project'], `tasks sort by related family (${JSON.stringify(related)})`);
+  });
+}
+
+/**
  * The AI's analytics_category of a line is the default dimension's link: the
  * preview shows the link's value (never the stale item column), the approval
  * writes the link, a value of another dimension or of another tenant is not
@@ -1582,6 +1650,34 @@ async function testBudgetLinesByBusinessReference(harness: Harness) {
         assert.equal(row.notes, `Notes by ${ref}`, `${ref} updates the line`);
       }
     }
+
+    // OPX-n reads only the old OPEX number. A line with BL-12012 but no OPX-12012 is found by
+    // BL-12012 and by its bare number, never by OPX-12012: the write is refused as a missing line.
+    const [blOnly] = await runner.query(
+      `INSERT INTO spend_items (
+         tenant_id, paying_company_id, product_name, currency, effective_start, status, item_number
+       )
+       VALUES ($1, $2, $3, 'EUR', DATE '2026-01-01', 'enabled', 12012)
+       RETURNING id`,
+      [seed.tenantId, seed.companyId, `BL only ${seed.tag}`],
+    );
+    for (const ref of ['BL-12012', '12012']) {
+      const ctx = context(seed, runner, `by-reference-${ref}`);
+      const preview = await executeToolPreview(harness, ctx, 'update_business_record', {
+        entity_type: 'budget_lines',
+        ref,
+        fields: { notes: `Notes by ${ref}` },
+      });
+      assert.equal(preview.target.entity_id, blOnly.id, `${ref} targets BL-12012`);
+    }
+    await expectRejects(
+      () => harness.tools.execute(context(seed, runner, 'by-reference-opx-missing'), 'update_business_record', {
+        entity_type: 'budget_lines', ref: 'OPX-12012', fields: { notes: 'Never written' },
+      }),
+      /No budget lines found matching "OPX-12012"/,
+    );
+    const [untouched] = await runner.query(`SELECT notes FROM spend_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, blOnly.id]);
+    assert.equal(untouched.notes, null, 'OPX-12012 wrote nothing on BL-12012');
   });
 }
 
@@ -1724,6 +1820,17 @@ async function testBudgetLineSingleFamilyWrites(harness: Harness) {
       relation: 'budget_lines',
       add: [seed.spendItemId, seed.capexItemId],
     });
+    // Two lines of the same title stay distinct on the card: each carries its BL-n reference.
+    const lineLabels = await runner.query(
+      `SELECT item_number, product_name FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [seed.tenantId, [seed.spendItemId, seed.capexItemId]],
+    );
+    for (const line of lineLabels) {
+      assert.ok(
+        String(relation.changes.budget_lines.to).includes(`BL-${line.item_number} - ${line.product_name}`),
+        `the relation preview names BL-${line.item_number} - ${line.product_name} (${relation.changes.budget_lines.to})`,
+      );
+    }
     await approvePreview(harness, ctx, relation);
     const links = await runner.query(
       `SELECT spend_item_id FROM application_spend_items WHERE tenant_id = $1 AND application_id = $2`,
@@ -1750,7 +1857,9 @@ async function testBudgetLineSingleFamilyWrites(harness: Harness) {
 
 /**
  * A preview executed before the one budget line family (`spend_items` / `capex_items`): its card
- * still loads in the conversation, and its undo is refused with a readable 400, not a 500.
+ * still loads in the conversation, and its undo is refused with a readable 400, not a 500. A
+ * relation preview of the old type is the same: its stored `spend_items` relation no longer exists,
+ * yet it must not make the conversation's list fail.
  */
 async function testLegacyBudgetLinePreviewUndoRefused(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
@@ -1773,21 +1882,53 @@ async function testLegacyBudgetLinePreviewUndoRefused(harness: Harness) {
                'executed', now(), now() + interval '1 hour', now()) RETURNING id`,
       [seed.tenantId, ctx.conversationId, ctx.userId, seed.spendItemId],
     );
+    // An old relation preview on a current family: only its relation names the old type.
+    const [legacyRelation] = await runner.query(
+      `INSERT INTO ai_mutation_previews (
+         tenant_id, conversation_id, user_id, tool_name, target_entity_type, target_entity_id,
+         mutation_input, current_values, status, executed_at, expires_at, created_at
+       )
+       VALUES ($1, $2, $3, 'update_entity_relations', 'applications', $4,
+               '{"action":"update_relations","entity_type":"applications","relation":"spend_items","next_items":[]}'::jsonb,
+               '{"target_ref":"APP-1","target_title":"Legacy relation","items":[]}'::jsonb,
+               'executed', now(), now() + interval '1 hour', now()) RETURNING id`,
+      [seed.tenantId, ctx.conversationId, ctx.userId, seed.applicationId],
+    );
+    // A preview no operation can present: the list still loads, with a neutral card.
+    const [unknown] = await runner.query(
+      `INSERT INTO ai_mutation_previews (
+         tenant_id, conversation_id, user_id, tool_name, target_entity_type, target_entity_id,
+         mutation_input, current_values, status, executed_at, expires_at, created_at
+       )
+       VALUES ($1, $2, $3, 'a_tool_removed_since', 'applications', $4,
+               '{"action":"update"}'::jsonb, '{"target_title":"Removed tool"}'::jsonb,
+               'executed', now(), now() + interval '1 hour', now()) RETURNING id`,
+      [seed.tenantId, ctx.conversationId, ctx.userId, seed.applicationId],
+    );
     const listed = await harness.previews.listConversationPreviews(ctx, ctx.conversationId);
     const card = listed.find((preview: any) => preview.preview_id === legacy.id);
     assert.ok(card, 'the old preview still lists');
     assert.equal(card.target.entity_type, 'spend_items', 'its card keeps the stored type: no link, no error');
     assert.deepEqual(card.changes, {}, 'no field labels for an old type');
+    const relationCard = listed.find((preview: any) => preview.preview_id === legacyRelation.id);
+    assert.ok(relationCard, 'the old relation preview still lists');
+    assert.equal(relationCard.target.entity_type, 'applications', 'its card keeps the stored family');
+    assert.deepEqual(relationCard.changes, {}, 'no field labels for an old relation');
+    assert.match(String(relationCard.summary), /before a Plaid update/, 'the card says it predates the change');
+    assert.ok(listed.some((preview: any) => preview.preview_id === unknown.id), 'a preview that cannot present still lists');
+    assert.deepEqual(listed.find((preview: any) => preview.preview_id === unknown.id).changes, {}, 'its card is neutral');
 
-    let refusal: any = null;
-    try {
-      await harness.previews.createReversePreview(ctx, legacy.id);
-    } catch (error) {
-      refusal = error;
+    for (const [previewId, what] of [[legacy.id, 'old line'], [legacyRelation.id, 'old relation']] as const) {
+      let refusal: any = null;
+      try {
+        await harness.previews.createReversePreview(ctx, previewId);
+      } catch (error) {
+        refusal = error;
+      }
+      assert.ok(refusal, `the undo of the ${what} preview is refused`);
+      assert.equal(refusal.getStatus?.(), 400, `the undo of the ${what} preview is a clean 4xx, not a 500`);
+      assert.match(String(refusal.message), /before a Plaid update and can no longer be undone here: use the screen\./);
     }
-    assert.ok(refusal, 'the undo is refused');
-    assert.equal(refusal.getStatus?.(), 400, 'a clean 4xx, not a 500');
-    assert.match(String(refusal.message), /before a Plaid update and can no longer be undone here: use the screen\./);
   });
 }
 
@@ -1799,6 +1940,8 @@ async function run() {
     await testRelationWritesAndSupplierPropagationUndo(harness);
     await testBusinessTaskFinancialWritesAndRbac(harness);
     await testCapexOwnersAnalyticsAndApplications(harness);
+    await testApplicationLineRelationAuditByNature(harness);
+    await testTaskRelatedSortByDisplayedFamily(harness);
     await testItemAnalyticsCategoryThroughTheLinks(harness);
     await testItemAnalyticsDimensions(harness);
     await testItemRequiredDimensions(harness);
