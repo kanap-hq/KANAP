@@ -21,7 +21,7 @@ import {
 } from './ai-mutation-operation.types';
 import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 
-export const AI_FINANCIAL_PLAN_ENTITY_TYPES = ['spend_items', 'capex_items'] as const;
+export const AI_FINANCIAL_PLAN_ENTITY_TYPES = ['budget_lines'] as const;
 export type AiFinancialPlanEntityType = typeof AI_FINANCIAL_PLAN_ENTITY_TYPES[number];
 
 export const AI_FINANCIAL_PLAN_ACTIONS = [
@@ -62,6 +62,7 @@ type FinancialItemRef = {
   id: string;
   ref: string | null;
   label: string;
+  nature: BudgetNature;
   row: Record<string, unknown>;
 };
 
@@ -69,6 +70,7 @@ type FinancialVersionRef = {
   id: string;
   ref: string | null;
   label: string;
+  nature: BudgetNature;
   row: Record<string, unknown>;
 };
 
@@ -332,10 +334,10 @@ export class AiFinancialPlanMutationSupportService {
 
   getWritableFieldDescriptions(): string[] {
     return [
-      'spend_items/capex_items action=create_version: fields version_name, input_grain, as_of_date, budget_year, allocation_method, allocation_driver, notes, reporting_currency',
-      'spend_items/capex_items action=update_version: version_ref plus fields version_name, input_grain, as_of_date, allocation_method, allocation_driver, notes, reporting_currency; budget_year is immutable',
-      'spend_items/capex_items action=upsert_amounts: version_ref plus amounts with kind annual, quarterly, or monthly',
-      'spend_items/capex_items action=replace_allocations: version_ref plus allocations for manual_company/manual_department methods, or an empty list for automatic methods',
+      'budget_lines action=create_version: fields version_name, input_grain, as_of_date, budget_year, allocation_method, allocation_driver, notes, reporting_currency',
+      'budget_lines action=update_version: version_ref plus fields version_name, input_grain, as_of_date, allocation_method, allocation_driver, notes, reporting_currency; budget_year is immutable',
+      'budget_lines action=upsert_amounts: version_ref plus amounts with kind annual, quarterly, or monthly',
+      'budget_lines action=replace_allocations: version_ref plus allocations for manual_company/manual_department methods, or an empty list for automatic methods',
     ];
   }
 
@@ -345,7 +347,7 @@ export class AiFinancialPlanMutationSupportService {
   ): Promise<AiPreparedMutationPreview> {
     const entityType = requireFinancialEntityType(input.entity_type);
     const action = requireFinancialAction(input.action);
-    const item = await this.resolveItem(context, entityType, input.ref);
+    const item = await this.resolveItem(context, input.ref);
 
     if (action === 'create_version') {
       const normalized = this.normalizeVersionFields(input.fields, 'create');
@@ -369,16 +371,16 @@ export class AiFinancialPlanMutationSupportService {
       };
     }
 
-    const version = await this.resolveVersion(context, entityType, item.id, input.version_ref);
+    const version = await this.resolveVersion(context, item, input.version_ref);
     if (action === 'update_version') {
-      return this.prepareUpdateVersionPreview(entityType, item, version, input.fields, null);
+      return this.prepareUpdateVersionPreview(item, version, input.fields, null);
     }
     if (action === 'upsert_amounts') {
       const amounts = this.normalizeAmountPayload(input.amounts);
       this.assertAmountsYearMatchesVersion(amounts, version);
       // An unknown spread profile is refused now, with the message the write would give.
       await assertSpreadProfile(context.manager, amounts.kind, 'spread_profile_name' in amounts ? amounts.spread_profile_name : undefined);
-      const before = await this.listAmounts(context, entityType, version.id, amounts.year);
+      const before = await this.listAmounts(context, item.nature, version.id, amounts.year);
       const columns = await readBudgetColumns(context.manager, context.tenantId);
       const beforeItems = Array.isArray(before.items) ? before.items : [];
       const reverseItems = completeAmountRowsForPeriods(beforeItems, amountTouchedPeriods(amounts));
@@ -413,7 +415,7 @@ export class AiFinancialPlanMutationSupportService {
       };
     }
     if (action === 'replace_allocations') {
-      const before = await this.listAllocations(context, entityType, version.id);
+      const before = await this.listAllocations(context, item.nature, version.id);
       const allocations = await this.normalizeAllocations(context, input.allocations ?? [], String(version.row.allocation_method || 'default'));
       return {
         targetEntityType: entityType,
@@ -455,7 +457,7 @@ export class AiFinancialPlanMutationSupportService {
     const entityType = requireFinancialEntityType(preview.target_entity_type || mutation.entity_type);
     const itemId = textOrNull(mutation.item_id) || preview.target_entity_id;
     if (!itemId) throw new BadRequestException('Original preview is missing the financial item.');
-    const item = await this.resolveItemById(context, entityType, itemId);
+    const item = await this.resolveItemById(context, itemId);
 
     if (action === 'create_version') {
       throw new BadRequestException('Undo is not supported for created financial versions.');
@@ -463,14 +465,14 @@ export class AiFinancialPlanMutationSupportService {
     if (action === 'update_version') {
       const versionId = textOrNull(mutation.version_id);
       if (!versionId) throw new BadRequestException('Original preview is missing the financial version.');
-      const version = await this.resolveVersionById(context, entityType, item.id, versionId);
+      const version = await this.resolveVersionById(context, item, versionId);
       const previousValues = objectValue(preview.current_values?.values, 'current_values.values');
-      return this.prepareUpdateVersionPreview(entityType, item, version, previousValues, preview.id);
+      return this.prepareUpdateVersionPreview(item, version, previousValues, preview.id);
     }
     if (action === 'upsert_amounts') {
       const versionId = textOrNull(mutation.version_id);
       if (!versionId) throw new BadRequestException('Original preview is missing the financial version.');
-      const version = await this.resolveVersionById(context, entityType, item.id, versionId);
+      const version = await this.resolveVersionById(context, item, versionId);
       const previousValues = objectValue(preview.current_values?.values, 'current_values.values');
       const previousRows = Array.isArray(previousValues.items) ? previousValues.items : [];
       const year = normalizeYear(previousValues.year ?? version.row.budget_year, 'year');
@@ -485,7 +487,7 @@ export class AiFinancialPlanMutationSupportService {
     if (action === 'replace_allocations') {
       const versionId = textOrNull(mutation.version_id);
       if (!versionId) throw new BadRequestException('Original preview is missing the financial version.');
-      const version = await this.resolveVersionById(context, entityType, item.id, versionId);
+      const version = await this.resolveVersionById(context, item, versionId);
       const previousValues = objectValue(preview.current_values?.values, 'current_values.values');
       const method = textOrNull(previousValues.allocation_method);
       const previousRows = Array.isArray(previousValues.items) ? previousValues.items : [];
@@ -580,40 +582,40 @@ export class AiFinancialPlanMutationSupportService {
     const mutation = preview.mutation_input ?? {};
     const itemId = textOrNull(mutation.item_id) || preview.target_entity_id;
     if (!itemId) throw new BadRequestException('Preview is missing the financial item.');
-    const item = await this.resolveItemById(context, entityType, itemId);
+    const item = await this.resolveItemById(context, itemId);
     // Lock order (`spend/budget-locks.ts`): the line, then the version, before what the preview
     // saw is compared with what is stored, so nothing changes between the check and the write.
-    const scope = this.nature(entityType);
+    const scope = item.nature;
     if (!(await lockBudgetLine(context.manager, scope, context.tenantId, item.id))) {
-      throw new NotFoundException(`${this.itemLabelSingular(entityType)} not found.`);
+      throw new NotFoundException(`${this.itemLabelSingular()} not found.`);
     }
 
     if (action === 'create_version') {
       const fields = objectValue(mutation.fields, 'mutation_input.fields');
-      const saved = await this.createVersion(context, entityType, item.id, fields);
-      const version = await this.resolveVersionById(context, entityType, item.id, String((saved as any).id));
+      const saved = await this.createVersion(context, item.nature, item.id, fields);
+      const version = await this.resolveVersionById(context, item, String((saved as any).id));
       preview.mutation_input = {
         ...mutation,
         version_id: version.id,
         version_ref: version.ref,
         version_title: version.label,
       };
-      await this.logAiAudit(context, preview, this.versionAuditTable(entityType), version.id, 'create', null, version.row);
+      await this.logAiAudit(context, preview, this.versionAuditTable(item.nature), version.id, 'create', null, version.row);
       return;
     }
 
     const versionId = textOrNull(mutation.version_id);
     if (!versionId) throw new BadRequestException('Preview is missing the financial version.');
     await lockBudgetVersions(context.manager, scope, context.tenantId, [versionId]);
-    const version = await this.resolveVersionById(context, entityType, item.id, versionId);
+    const version = await this.resolveVersionById(context, item, versionId);
 
     if (action === 'update_version') {
       const fields = objectValue(mutation.fields, 'mutation_input.fields');
       const previous = objectValue(preview.current_values?.values, 'current_values.values');
       this.assertVersionFieldsUnchanged(version.row, previous);
-      await this.updateVersion(context, entityType, item.id, version.id, fields);
-      const after = await this.resolveVersionById(context, entityType, item.id, version.id);
-      await this.logAiAudit(context, preview, this.versionAuditTable(entityType), version.id, 'update', version.row, after.row);
+      await this.updateVersion(context, item.nature, item.id, version.id, fields);
+      const after = await this.resolveVersionById(context, item, version.id);
+      await this.logAiAudit(context, preview, this.versionAuditTable(item.nature), version.id, 'update', version.row, after.row);
       return;
     }
 
@@ -621,27 +623,27 @@ export class AiFinancialPlanMutationSupportService {
       const amounts = this.normalizeAmountPayload(mutation.amounts);
       this.assertAmountsYearMatchesVersion(amounts, version);
       const previous = objectValue(preview.current_values?.values, 'current_values.values');
-      const before = await this.listAmounts(context, entityType, version.id, amounts.year);
+      const before = await this.listAmounts(context, item.nature, version.id, amounts.year);
       const beforeItems = Array.isArray(before.items) ? before.items : [];
       if (amountRowsSignature(beforeItems) !== String(previous.signature || '')) {
         throw new ConflictException('Financial amounts changed after the preview was created.');
       }
-      await this.upsertAmounts(context, entityType, version.id, amounts);
-      const after = await this.listAmounts(context, entityType, version.id, amounts.year);
-      await this.logAiAudit(context, preview, this.amountsAuditTable(entityType), null, 'update', before, after);
+      await this.upsertAmounts(context, item.nature, version.id, amounts);
+      const after = await this.listAmounts(context, item.nature, version.id, amounts.year);
+      await this.logAiAudit(context, preview, this.amountsAuditTable(item.nature), null, 'update', before, after);
       return;
     }
 
     if (action === 'replace_allocations') {
       const allocations = this.normalizeStoredAllocations(mutation.allocations);
       const previous = objectValue(preview.current_values?.values, 'current_values.values');
-      const before = await this.listAllocations(context, entityType, version.id);
+      const before = await this.listAllocations(context, item.nature, version.id);
       if (allocationSignature(before) !== String(previous.signature || '')) {
         throw new ConflictException('Financial allocations changed after the preview was created.');
       }
-      await this.replaceAllocations(context, entityType, version.id, allocations);
-      const after = await this.listAllocations(context, entityType, version.id);
-      await this.logAiAudit(context, preview, this.allocationsAuditTable(entityType), null, 'update', before, after);
+      await this.replaceAllocations(context, item.nature, version.id, allocations);
+      const after = await this.listAllocations(context, item.nature, version.id);
+      await this.logAiAudit(context, preview, this.allocationsAuditTable(item.nature), null, 'update', before, after);
       return;
     }
 
@@ -655,11 +657,9 @@ export class AiFinancialPlanMutationSupportService {
    */
   async prepareNewLineAmounts(
     context: AiExecutionContextWithManager,
-    entityType: unknown,
     raw: unknown,
     currency: unknown,
   ): Promise<AiNewLineAmounts> {
-    requireFinancialEntityType(entityType);
     const amounts = this.normalizeAmountPayload(raw);
     await assertSpreadProfile(context.manager, amounts.kind, 'spread_profile_name' in amounts ? amounts.spread_profile_name : undefined);
     const columns = await readBudgetColumns(context.manager, context.tenantId);
@@ -679,29 +679,28 @@ export class AiFinancialPlanMutationSupportService {
   async writeNewLineAmounts(
     context: AiExecutionContextWithManager,
     preview: AiMutationPreview,
-    entityType: unknown,
     itemId: string,
     raw: unknown,
   ): Promise<void> {
-    const type = requireFinancialEntityType(entityType);
     const amounts = this.normalizeAmountPayload(raw);
-    const scope = this.nature(type);
-    if (!(await lockBudgetLine(context.manager, scope, context.tenantId, itemId))) {
-      throw new NotFoundException(`${this.itemLabelSingular(type)} not found.`);
+    const item = await this.resolveItemById(context, itemId);
+    const scope = item.nature;
+    if (!(await lockBudgetLine(context.manager, scope, context.tenantId, item.id))) {
+      throw new NotFoundException(`${this.itemLabelSingular()} not found.`);
     }
-    const saved = await this.createVersion(context, type, itemId, {
+    const saved = await this.createVersion(context, item.nature, item.id, {
       version_name: `Y${amounts.year}`,
       budget_year: amounts.year,
       as_of_date: `${amounts.year}-01-01`,
       input_grain: amounts.kind,
     });
-    const version = await this.resolveVersionById(context, type, itemId, String((saved as any).id));
-    await this.logAiAudit(context, preview, this.versionAuditTable(type), version.id, 'create', null, version.row);
+    const version = await this.resolveVersionById(context, item, String((saved as any).id));
+    await this.logAiAudit(context, preview, this.versionAuditTable(item.nature), version.id, 'create', null, version.row);
     await lockBudgetVersions(context.manager, scope, context.tenantId, [version.id]);
-    const before = await this.listAmounts(context, type, version.id, amounts.year);
-    await this.upsertAmounts(context, type, version.id, amounts);
-    const after = await this.listAmounts(context, type, version.id, amounts.year);
-    await this.logAiAudit(context, preview, this.amountsAuditTable(type), null, 'update', before, after);
+    const before = await this.listAmounts(context, item.nature, version.id, amounts.year);
+    await this.upsertAmounts(context, item.nature, version.id, amounts);
+    const after = await this.listAmounts(context, item.nature, version.id, amounts.year);
+    await this.logAiAudit(context, preview, this.amountsAuditTable(item.nature), null, 'update', before, after);
   }
 
   private pendingSummary(action: AiFinancialPlanAction, title: string): string {
@@ -723,7 +722,6 @@ export class AiFinancialPlanMutationSupportService {
   }
 
   private prepareUpdateVersionPreview(
-    entityType: AiFinancialPlanEntityType,
     item: FinancialItemRef,
     version: FinancialVersionRef,
     rawFields: unknown,
@@ -747,11 +745,11 @@ export class AiFinancialPlanMutationSupportService {
       throw new BadRequestException('Financial version already has the requested values.');
     }
     return {
-      targetEntityType: entityType,
+      targetEntityType: 'budget_lines',
       targetEntityId: item.id,
       mutationInput: {
         action: 'update_version',
-        entity_type: entityType,
+        entity_type: 'budget_lines',
         item_id: item.id,
         version_id: version.id,
         version_ref: version.ref,
@@ -969,92 +967,78 @@ export class AiFinancialPlanMutationSupportService {
 
   private async resolveItem(
     context: AiExecutionContextWithManager,
-    entityType: AiFinancialPlanEntityType,
     ref: unknown,
   ): Promise<FinancialItemRef> {
     const normalized = textOrNull(ref);
-    if (!normalized) throw new BadRequestException('Financial item reference is required.');
-    if (isUuid(normalized)) {
-      return this.resolveItemById(context, entityType, normalized);
-    }
-    // The title of a line of either nature is `product_name` (lot Z1); its reference `BL-n`, or the
-    // legacy `OPX-n` / `CPX-n` the screens showed before (issue 127: a new line was addressed as BL-n).
-    const number = this.lineNumberOfReference(entityType, normalized);
+    if (!normalized) throw new BadRequestException('Budget line reference is required.');
+    if (isUuid(normalized)) return this.resolveItemById(context, normalized);
+    // A line of either nature is one family: its title is `product_name`, its reference `BL-n`,
+    // or the legacy `OPX-n` / `CPX-n` the screens showed before.
+    const number = this.lineNumberOfReference(normalized);
     const rows = await context.manager.query(
       `
       SELECT *
       FROM spend_items
-      WHERE tenant_id = $1${this.itemNature(entityType)}
+      WHERE tenant_id = $1 AND nature IN ('opex', 'capex')
         AND (LOWER(product_name) = LOWER($2::text) OR item_number = $3 OR legacy_number = $4::text)
       ORDER BY (LOWER(product_name) = LOWER($2::text)) DESC, product_name
       LIMIT 6
       `,
       [context.tenantId, normalized, number.itemNumber, number.legacyNumber],
     );
-    if (rows.length === 0) throw new NotFoundException(`No ${this.itemLabelPlural(entityType)} found matching "${normalized}".`);
+    if (rows.length === 0) throw new NotFoundException(`No budget lines found matching "${normalized}".`);
     // A reference names one line; a title several when lines share it.
     const exact = rows.filter((row: Record<string, unknown>) => String(row.product_name ?? '').toLowerCase() === normalized.toLowerCase());
     const matches = exact.length > 0 ? exact : rows;
-    if (matches.length > 1) throw new BadRequestException(`Multiple ${this.itemLabelPlural(entityType)} matched "${normalized}". Use a UUID.`);
-    return this.itemRef(entityType, matches[0]);
+    if (matches.length > 1) throw new BadRequestException(`Multiple budget lines matched "${normalized}". Use a UUID.`);
+    return this.itemRef(matches[0]);
   }
 
   /**
-   * The numbers a line reference names: `BL-n` its own number; `OPX-n` an OPEX line's number or the
-   * legacy number it kept; `CPX-n` a CAPEX line's legacy number. A name, or a bare number, names none.
+   * The numbers a budget line reference names: `BL-n` its own number; `OPX-n` an OPEX line's
+   * number or the legacy number it kept; `CPX-n` a CAPEX line's legacy number. A name, or a bare
+   * number, names none.
    */
-  private lineNumberOfReference(entityType: AiFinancialPlanEntityType, ref: string): { itemNumber: number; legacyNumber: string | null } {
+  private lineNumberOfReference(ref: string): { itemNumber: number; legacyNumber: string | null } {
     const none = { itemNumber: -1, legacyNumber: null };
     if (!ref.includes('-')) return none;
-    const nature = this.nature(entityType);
-    try {
-      const parsed = parseItemRef(ref, nature === 'opex' ? 'spend' : 'capex');
-      if (parsed.type !== 'item_number') return none;
-      if (parsed.prefix === BUDGET_LINE_PREFIX) return { itemNumber: parsed.value, legacyNumber: null };
-      if (parsed.prefix === LEGACY_PREFIX[nature]) {
-        return { itemNumber: nature === 'opex' ? parsed.value : -1, legacyNumber: `${LEGACY_PREFIX[nature]}-${parsed.value}` };
-      }
-      return none;
-    } catch {
-      return none;
-    }
+    const match = ref.toUpperCase().match(/^(BL|OPX|CPX)-(\d+)$/);
+    if (!match) return none;
+    const number = Number(match[2]);
+    if (!Number.isSafeInteger(number)) return none;
+    if (match[1] === 'CPX') return { itemNumber: -1, legacyNumber: `${LEGACY_PREFIX.capex}-${number}` };
+    if (match[1] === 'OPX') return { itemNumber: number, legacyNumber: `${LEGACY_PREFIX.opex}-${number}` };
+    return { itemNumber: number, legacyNumber: null };
   }
 
   private async resolveItemById(
     context: AiExecutionContextWithManager,
-    entityType: AiFinancialPlanEntityType,
     id: string,
   ): Promise<FinancialItemRef> {
-    // A line of the other nature is not found (`spend/budget-nature.ts`).
-    const rows = await context.manager.query(`SELECT * FROM spend_items WHERE tenant_id = $1 AND id = $2${this.itemNature(entityType)} LIMIT 1`, [context.tenantId, id]);
-    if (!rows[0]) throw new NotFoundException(`${this.itemLabelSingular(entityType)} not found.`);
-    return this.itemRef(entityType, rows[0]);
+    const rows = await context.manager.query(
+      `SELECT * FROM spend_items WHERE tenant_id = $1 AND id = $2 AND nature IN ('opex', 'capex') LIMIT 1`,
+      [context.tenantId, id],
+    );
+    if (!rows[0]) throw new NotFoundException('Budget line not found.');
+    return this.itemRef(rows[0]);
   }
 
-  /** `spend_items` holds the lines of both natures: this type reads the lines of its own (`spend/budget-nature.ts`). */
-  private itemNature(entityType: AiFinancialPlanEntityType): string {
-    return natureAnd(null, this.nature(entityType));
-  }
-
-  private nature(entityType: AiFinancialPlanEntityType): BudgetNature {
-    return entityType === 'spend_items' ? 'opex' : 'capex';
-  }
-
-  private itemRef(entityType: AiFinancialPlanEntityType, row: Record<string, unknown>): FinancialItemRef {
+  private itemRef(row: Record<string, unknown>): FinancialItemRef {
     const id = String(row.id || '');
-    const label = textOrNull(row.product_name) || (entityType === 'spend_items' ? 'Untitled spend item' : 'Untitled CAPEX item');
-    return { id, ref: label, label, row };
+    const nature: BudgetNature = row.nature === 'capex' ? 'capex' : 'opex';
+    const label = textOrNull(row.product_name) || 'Untitled budget line';
+    const ref = row.item_number == null ? null : `${BUDGET_LINE_PREFIX}-${row.item_number}`;
+    return { id, ref, label, nature, row };
   }
 
   private async resolveVersion(
     context: AiExecutionContextWithManager,
-    entityType: AiFinancialPlanEntityType,
-    itemId: string,
+    item: FinancialItemRef,
     ref: unknown,
   ): Promise<FinancialVersionRef> {
     const normalized = textOrNull(ref);
     if (!normalized) throw new BadRequestException('version_ref is required for this financial plan action.');
-    if (isUuid(normalized)) return this.resolveVersionById(context, entityType, itemId, normalized);
+    if (isUuid(normalized)) return this.resolveVersionById(context, item, normalized);
     // The versions of a line resolved with its nature (`resolveItemById`): no predicate of their own.
     const numericYear = Number(normalized);
     const rows = await context.manager.query(
@@ -1067,35 +1051,34 @@ export class AiFinancialPlanMutationSupportService {
       ORDER BY created_at DESC
       LIMIT 6
       `,
-      [context.tenantId, itemId, normalized, Number.isInteger(numericYear) ? numericYear : -1],
+      [context.tenantId, item.id, normalized, Number.isInteger(numericYear) ? numericYear : -1],
     );
     if (rows.length === 0) throw new NotFoundException(`Financial version "${normalized}" not found.`);
     if (rows.length > 1) throw new BadRequestException(`Multiple financial versions matched "${normalized}". Use a UUID.`);
-    return this.versionRef(entityType, rows[0]);
+    return this.versionRef(item.nature, rows[0]);
   }
 
   private async resolveVersionById(
     context: AiExecutionContextWithManager,
-    entityType: AiFinancialPlanEntityType,
-    itemId: string,
+    item: FinancialItemRef,
     id: string,
   ): Promise<FinancialVersionRef> {
     const rows = await context.manager.query(
       `SELECT * FROM spend_versions WHERE tenant_id = $1 AND spend_item_id = $2 AND id = $3 LIMIT 1`,
-      [context.tenantId, itemId, id],
+      [context.tenantId, item.id, id],
     );
     if (!rows[0]) throw new NotFoundException('Financial version not found.');
-    return this.versionRef(entityType, rows[0]);
+    return this.versionRef(item.nature, rows[0]);
   }
 
   /** A version row as its nature's API names its line (`capex_item_id` for a CAPEX line): what its audit rows record. */
-  private versionRef(entityType: AiFinancialPlanEntityType, stored: Record<string, unknown>): FinancialVersionRef {
-    const row: Record<string, unknown> = presentChild(this.nature(entityType), stored);
+  private versionRef(nature: BudgetNature, stored: Record<string, unknown>): FinancialVersionRef {
+    const row: Record<string, unknown> = presentChild(nature, stored);
     const id = String(row.id || '');
     const ref = textOrNull(row.version_name) || textOrNull(row.budget_year) || id;
     const year = row.budget_year == null ? null : String(row.budget_year);
     const label = [row.version_name, year].map(textOrNull).filter(Boolean).join(' / ') || id;
-    return { id, ref, label, row };
+    return { id, ref, label, nature, row };
   }
 
   private async resolveCompany(context: AiExecutionContextWithManager, ref: string): Promise<{ id: string; label: string }> {
@@ -1152,13 +1135,13 @@ export class AiFinancialPlanMutationSupportService {
 
   private createVersion(
     context: AiExecutionContextWithManager,
-    entityType: AiFinancialPlanEntityType,
+    nature: BudgetNature,
     itemId: string,
     fields: Record<string, unknown>,
   ): Promise<unknown> {
     // A version created since the preview (a budget tab, an import) is refused,
     // not returned as if this action had created it (and audited as such).
-    if (entityType === 'spend_items') {
+    if (nature === 'opex') {
       return this.spendVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager, refuseExisting: true });
     }
     return this.capexVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager, refuseExisting: true });
@@ -1166,13 +1149,13 @@ export class AiFinancialPlanMutationSupportService {
 
   private updateVersion(
     context: AiExecutionContextWithManager,
-    entityType: AiFinancialPlanEntityType,
+    nature: BudgetNature,
     itemId: string,
     versionId: string,
     fields: Record<string, unknown>,
   ): Promise<unknown> {
     const body = { ...fields, id: versionId };
-    if (entityType === 'spend_items') {
+    if (nature === 'opex') {
       return this.spendVersions.updateForItem(itemId, body as any, context.userId, { manager: context.manager });
     }
     return this.capexVersions.updateForItem(itemId, body as any, context.userId, { manager: context.manager });
@@ -1180,11 +1163,11 @@ export class AiFinancialPlanMutationSupportService {
 
   private async upsertAmounts(
     context: AiExecutionContextWithManager,
-    entityType: AiFinancialPlanEntityType,
+    nature: BudgetNature,
     versionId: string,
     amounts: AmountPayload,
   ): Promise<unknown> {
-    if (entityType === 'spend_items') {
+    if (nature === 'opex') {
       return this.spendAmounts.bulkUpsert(versionId, amounts as any, context.userId, { manager: context.manager });
     }
     return this.capexAmounts.bulkUpsert(versionId, amounts as any, context.userId, { manager: context.manager });
@@ -1192,11 +1175,11 @@ export class AiFinancialPlanMutationSupportService {
 
   private async replaceAllocations(
     context: AiExecutionContextWithManager,
-    entityType: AiFinancialPlanEntityType,
+    nature: BudgetNature,
     versionId: string,
     allocations: AllocationInput[],
   ): Promise<unknown> {
-    if (entityType === 'spend_items') {
+    if (nature === 'opex') {
       return this.spendAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager, tenantId: context.tenantId });
     }
     return this.capexAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager, tenantId: context.tenantId });
@@ -1204,11 +1187,11 @@ export class AiFinancialPlanMutationSupportService {
 
   private listAmounts(
     context: AiExecutionContextWithManager,
-    entityType: AiFinancialPlanEntityType,
+    nature: BudgetNature,
     versionId: string,
     year: number,
   ): Promise<Record<string, unknown>> {
-    if (entityType === 'spend_items') {
+    if (nature === 'opex') {
       return this.spendAmounts.listByYear(versionId, year, { manager: context.manager }) as any;
     }
     return this.capexAmounts.listByYear(versionId, year, { manager: context.manager }) as any;
@@ -1216,10 +1199,10 @@ export class AiFinancialPlanMutationSupportService {
 
   private listAllocations(
     context: AiExecutionContextWithManager,
-    entityType: AiFinancialPlanEntityType,
+    nature: BudgetNature,
     versionId: string,
   ): Promise<Record<string, unknown>> {
-    if (entityType === 'spend_items') {
+    if (nature === 'opex') {
       return this.spendAllocations.listForVersion(versionId, { manager: context.manager, tenantId: context.tenantId }) as any;
     }
     return this.capexAllocations.listForVersion(versionId, { manager: context.manager, tenantId: context.tenantId }) as any;
@@ -1326,24 +1309,25 @@ export class AiFinancialPlanMutationSupportService {
     return value.map((row) => [row.company_id, row.department_id].filter(Boolean).join(' / ')).join(', ');
   }
 
-  private itemLabelSingular(entityType: AiFinancialPlanEntityType): string {
-    return entityType === 'spend_items' ? 'spend item' : 'CAPEX item';
+  private itemLabelSingular(): string {
+    return 'budget line';
   }
 
-  private itemLabelPlural(entityType: AiFinancialPlanEntityType): string {
-    return entityType === 'spend_items' ? 'spend items' : 'CAPEX items';
+  private itemLabelPlural(): string {
+    return 'budget lines';
   }
 
   // The audit labels: the rows of a CAPEX line keep their CAPEX table names (`auditTableOf`).
-  private versionAuditTable(entityType: AiFinancialPlanEntityType): string {
-    return auditTableOf(this.nature(entityType), 'spend_versions');
+  private versionAuditTable(nature: BudgetNature): string {
+    return auditTableOf(nature, 'spend_versions');
   }
 
-  private amountsAuditTable(entityType: AiFinancialPlanEntityType): string {
-    return auditTableOf(this.nature(entityType), 'spend_amounts');
+  private amountsAuditTable(nature: BudgetNature): string {
+    return auditTableOf(nature, 'spend_amounts');
   }
 
-  private allocationsAuditTable(entityType: AiFinancialPlanEntityType): string {
-    return auditTableOf(this.nature(entityType), 'spend_allocations');
+  private allocationsAuditTable(nature: BudgetNature): string {
+    return auditTableOf(nature, 'spend_allocations');
   }
+
 }

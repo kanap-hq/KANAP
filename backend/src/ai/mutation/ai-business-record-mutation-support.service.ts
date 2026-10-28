@@ -15,11 +15,10 @@ import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.serv
 import { ClassificationCatalog, resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProjectsService } from '../../portfolio/services';
-import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
+import { BudgetLinesService } from '../../spend/budget-lines.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
-import { auditTableOf, BUDGET_LINE_PREFIX, LEGACY_PREFIX } from '../../spend/budget-nature';
-import { presentLine } from '../../spend/budget-line-presentation';
-import { parseItemRef } from '../../common/resolve-item-id';
+import { auditTableOf, BUDGET_LINE_PREFIX, BUDGET_NATURES, BudgetNature, LEGACY_PREFIX } from '../../spend/budget-nature';
+import { parseItemRef, resolveBudgetLine } from '../../common/resolve-item-id';
 import {
   DISABLED_VALUE_MESSAGE,
   dimensionPhrase,
@@ -65,8 +64,7 @@ export const AI_BUSINESS_RECORD_ENTITY_TYPES = [
   'requests',
   'interfaces',
   'connections',
-  'spend_items',
-  'capex_items',
+  'budget_lines',
 ] as const;
 
 export type AiBusinessRecordEntityType = typeof AI_BUSINESS_RECORD_ENTITY_TYPES[number];
@@ -375,13 +373,16 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       risk_mode: { label: 'Risk Mode', kind: 'enum', enumValues: RISK_MODES },
     },
   },
-  spend_items: {
-    labelSingular: 'spend item',
-    labelPlural: 'spend items',
+  budget_lines: {
+    labelSingular: 'budget line',
+    labelPlural: 'budget lines',
     businessResource: 'budget',
     tableName: 'spend_items',
     fields: {
-      product_name: { label: 'Product Name', kind: 'text', requiredOnCreate: true, aliases: ['name'] },
+      // The nature is required on create and never changes here: a change of type is the budget
+      // screen's action (`spend/budget-lines.service.ts`, `changeType`).
+      nature: { label: 'Nature', kind: 'enum', enumValues: BUDGET_NATURES, requiredOnCreate: true },
+      product_name: { label: 'Title', kind: 'text', requiredOnCreate: true, aliases: ['name'] },
       description: { label: 'Description', kind: 'text', nullable: true },
       supplier_id: { label: 'Supplier', kind: 'relation', nullable: true, relationTarget: 'suppliers', aliases: ['supplier'] },
       paying_company_id: { label: 'Paying Company', kind: 'relation', requiredOnCreate: true, relationTarget: 'companies', aliases: ['company', 'paying_company'] },
@@ -396,40 +397,14 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       project_id: { label: 'Project', kind: 'relation', nullable: true, relationTarget: 'projects', aliases: ['project'] },
       cost_center_id: { label: 'Cost center', kind: 'relation', nullable: true, relationTarget: 'cost_centers', aliases: ['cost_center'] },
       run_build: { label: 'Run or build', kind: 'enum', enumValues: RUN_BUILD, nullable: true },
+      // OPEX only: `BudgetLinesService` refuses it on a CAPEX line, and the preview refuses it first.
       contract_id: { label: 'Contract', kind: 'relation', nullable: true, relationTarget: 'contracts', aliases: ['contract'] },
       status: { label: 'Status', kind: 'enum', enumValues: STATUS_STATES },
       disabled_at: { label: 'End of validity', kind: 'date', nullable: true, aliases: ['end_of_validity'] },
       notes: { label: 'Notes', kind: 'text', nullable: true },
     },
   },
-  capex_items: {
-    labelSingular: 'CAPEX item',
-    labelPlural: 'CAPEX items',
-    businessResource: 'budget',
-    // A CAPEX line lives in `spend_items` (nature `capex`, lot Z1); its audit rows keep `capex_items`.
-    tableName: auditTableOf('capex', 'spend_items'),
-    fields: {
-      // The PP&E type, investment type and priority are the values of the dimensions of those codes
-      // (`analytics:<code>`, lot C1): a dimension required for CAPEX lines is required on create.
-      description: { label: 'Description', kind: 'text', requiredOnCreate: true, aliases: ['name'] },
-      supplier_id: { label: 'Supplier', kind: 'relation', nullable: true, relationTarget: 'suppliers', aliases: ['supplier'] },
-      paying_company_id: { label: 'Paying Company', kind: 'relation', requiredOnCreate: true, relationTarget: 'companies', aliases: ['company', 'paying_company'] },
-      account_id: { label: 'Account', kind: 'relation', nullable: true, relationTarget: 'accounts', aliases: ['account'] },
-      currency: { label: 'Currency', kind: 'upper3', requiredOnCreate: true },
-      effective_start: { label: 'Effective Start', kind: 'date', requiredOnCreate: true },
-      // Deprecated alias of disabled_at for one release: fills an empty end of validity, never clears it.
-      effective_end: { label: 'End of validity', kind: 'date', nullable: true },
-      owner_it_id: { label: 'IT Owner', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['it_owner'] },
-      owner_business_id: { label: 'Business Owner', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['business_owner'] },
-      analytics_category_id: { label: 'Analytics Category', kind: 'relation', nullable: true, relationTarget: 'analytics_categories', aliases: ['analytics_category'] },
-      project_id: { label: 'Project', kind: 'relation', nullable: true, relationTarget: 'projects', aliases: ['project'] },
-      cost_center_id: { label: 'Cost center', kind: 'relation', nullable: true, relationTarget: 'cost_centers', aliases: ['cost_center'] },
-      run_build: { label: 'Run or build', kind: 'enum', enumValues: RUN_BUILD, nullable: true },
-      status: { label: 'Status', kind: 'enum', enumValues: STATUS_STATES },
-      disabled_at: { label: 'End of validity', kind: 'date', nullable: true, aliases: ['end_of_validity'] },
-      notes: { label: 'Notes', kind: 'text', nullable: true },
-    },
-  },
+
 };
 
 export const AI_BUSINESS_RECORD_BUSINESS_RESOURCES = Array.from(
@@ -444,9 +419,6 @@ export function getAiBusinessRecordBusinessResource(entityType: unknown): string
   return ENTITY_CONFIG[normalized].businessResource;
 }
 
-// Budget items whose disabled_at is their end of validity (effective_end is its deprecated alias).
-const END_OF_VALIDITY_ENTITIES = new Set<AiBusinessRecordEntityType>(['spend_items', 'capex_items']);
-
 /** The field of a line's default analytics dimension (`analytics_category` for the model). */
 const DEFAULT_ANALYTICS_FIELD = 'analytics_category_id';
 /**
@@ -457,10 +429,14 @@ const DEFAULT_ANALYTICS_FIELD = 'analytics_category_id';
  */
 const ANALYTICS_AXIS_FIELD_PREFIX = 'analytics_axis:';
 
-function lineScope(entityType: AiBusinessRecordEntityType): ItemAnalyticsScope | null {
-  if (entityType === 'spend_items') return 'opex';
-  if (entityType === 'capex_items') return 'capex';
-  return null;
+function isBudgetLineEntity(entityType: AiBusinessRecordEntityType): entityType is 'budget_lines' {
+  return entityType === 'budget_lines';
+}
+
+/** The nature a stored line carries, else null (a record of another family). */
+function lineNatureOf(row: Record<string, unknown> | null | undefined): BudgetNature | null {
+  const nature = row?.nature;
+  return nature === 'opex' || nature === 'capex' ? nature : null;
 }
 
 function analyticsAxisFieldKey(axisId: string): string {
@@ -583,14 +559,13 @@ export class AiBusinessRecordMutationSupportService {
     private readonly applications: ApplicationsService,
     private readonly assets: AssetsService,
     private readonly audit: AuditService,
-    private readonly capexItems: CapexItemsService,
+    private readonly budgetLines: BudgetLinesService,
     private readonly connections: ConnectionsService,
     private readonly contracts: ContractsService,
     private readonly interfaces: InterfacesService,
     private readonly itOpsSettings: ItOpsSettingsService,
     private readonly portfolioProjects: PortfolioProjectsService,
     private readonly portfolioRequests: PortfolioRequestsService,
-    private readonly spendItems: SpendItemsService,
     private readonly taskSupport: AiTaskMutationSupportService,
   ) {}
 
@@ -602,7 +577,7 @@ export class AiBusinessRecordMutationSupportService {
     return entityTypes.map((entityType) => {
       const fields = Object.keys(ENTITY_CONFIG[entityType].fields);
       // The tenant's other analytics dimensions (listed per tenant in the prompt context).
-      if (lineScope(entityType)) fields.push(`${ANALYTICS_CSV_PREFIX}<dimension code>`);
+      if (isBudgetLineEntity(entityType)) fields.push(`${ANALYTICS_CSV_PREFIX}<dimension code>`);
       return `${entityType}: ${fields.join(', ')}`;
     });
   }
@@ -698,7 +673,7 @@ export class AiBusinessRecordMutationSupportService {
       if (field.kind === 'percent' && parsed > 100) throw new BadRequestException(`${field.label} must be between 0 and 100.`);
       return { value: parsed, displayValue: String(parsed) };
     }
-    if (field.kind === 'date' && END_OF_VALIDITY_ENTITIES.has(entityType) && (fieldName === 'disabled_at' || fieldName === 'effective_end')) {
+    if (field.kind === 'date' && entityType === 'budget_lines' && (fieldName === 'disabled_at' || fieldName === 'effective_end')) {
       // A bare day is stored at 12:00 UTC, like the CSV import, so it reads the same day everywhere.
       let parsed: Date | null;
       try {
@@ -771,6 +746,31 @@ export class AiBusinessRecordMutationSupportService {
     throw new BadRequestException(`${field.label} must be true or false.`);
   }
 
+  /**
+   * The nature of a budget line being written: `nature` on create, the stored line's on update.
+   * A change of nature is the budget screen's action, refused here before any preview.
+   */
+  private lineNatureForWrite(
+    rawFields: Record<string, unknown>,
+    mode: 'create' | 'update',
+    existing?: Record<string, unknown> | null,
+  ): BudgetNature {
+    const rawNature = Object.entries(rawFields).find(([name]) => normalizeFieldKey(name) === 'nature');
+    if (mode === 'update') {
+      if (rawNature) {
+        throw new BadRequestException('The nature of a budget line cannot be changed here: change the line type in the budget screen.');
+      }
+      const nature = lineNatureOf(existing);
+      if (!nature) throw new BadRequestException('The budget line nature could not be read.');
+      return nature;
+    }
+    const value = rawNature ? String(rawNature[1] ?? '').trim().toLowerCase() : '';
+    if (value !== 'opex' && value !== 'capex') {
+      throw new BadRequestException('nature is required to create a budget line: opex or capex.');
+    }
+    return value;
+  }
+
   private async normalizeFields(
     context: AiExecutionContextWithManager,
     entityType: AiBusinessRecordEntityType,
@@ -786,8 +786,12 @@ export class AiBusinessRecordMutationSupportService {
       ? await this.itOpsSettings.getClassificationCatalog(context.tenantId, { manager: context.manager })
       : undefined;
 
-    // OPEX and CAPEX lines also write their analytics dimensions (the tenant's, loaded once when named).
-    const scope = lineScope(entityType);
+    // A budget line also writes its analytics dimensions (the tenant's, loaded once when named).
+    // Its nature is given on create and read from the stored line on update; a change of nature
+    // is the budget screen's action, refused here before any preview.
+    const isLine = isBudgetLineEntity(entityType);
+    const nature: BudgetNature | null = isLine ? this.lineNatureForWrite(rawFields, mode, existing) : null;
+    const scope: ItemAnalyticsScope | null = nature;
     let axes: AnalyticsAxisInfo[] | null = null;
     const tenantAxes = async () => (axes ??= await loadAnalyticsAxes(context.manager, context.tenantId));
 
@@ -816,6 +820,9 @@ export class AiBusinessRecordMutationSupportService {
       if (Object.prototype.hasOwnProperty.call(fields, resolved.name)) {
         const shown = axis && !axis.is_default ? `${ANALYTICS_CSV_PREFIX}${axis.code}` : resolved.name;
         throw new BadRequestException(`Field ${shown} was provided more than once.`);
+      }
+      if (isLine && resolved.name === 'contract_id' && nature === 'capex') {
+        throw new BadRequestException('A contract cannot be written on a CAPEX line: link the contract from the line\'s Relations tab instead.');
       }
       let normalized: { value: unknown; displayValue: string | null };
       let label = resolved.config.label;
@@ -847,7 +854,7 @@ export class AiBusinessRecordMutationSupportService {
       fieldLabels[resolved.name] = label;
     }
 
-    if (END_OF_VALIDITY_ENTITIES.has(entityType) && Object.prototype.hasOwnProperty.call(fields, 'effective_end')) {
+    if (isLine && Object.prototype.hasOwnProperty.call(fields, 'effective_end')) {
       // Deprecated alias: fills an empty end of validity, never overrides a given one, never clears it.
       const legacyValue = fields.effective_end;
       const legacyDisplay = displayValues.effective_end;
@@ -1064,33 +1071,20 @@ export class AiBusinessRecordMutationSupportService {
     return this.referenceFromRow(entityType, rows[0]);
   }
 
-  /** The item number of an OPEX line reference (`OPX-3`, `BL-3`), or -1 when the reference is not one of this type. */
-  private itemNumberOfReference(ref: string, type: 'spend'): number {
-    try {
-      const parsed = parseItemRef(ref, type);
-      // A bare number stays a name: only the prefixed reference names a line.
-      return parsed.type === 'item_number' && ref.includes('-') ? parsed.value : -1;
-    } catch {
-      return -1;
-    }
-  }
-
   /**
-   * The numbers a CAPEX line reference names: `CPX-n` its CPX number (`legacy_number`), `BL-n` its
-   * own number; neither for a name or a bare number (a bare number stays a name, as for OPEX).
+   * The numbers a budget line reference names: `BL-n` or `OPX-n` its own number, `CPX-n` its
+   * CPX number (`legacy_number`); neither for a name or a bare number (a bare number stays a name).
    */
-  private capexNumberOfReference(ref: string): { itemNumber: number; legacyNumber: string | null } {
+  private budgetLineNumberOfReference(ref: string): { itemNumber: number; legacyNumber: string | null } {
     const none = { itemNumber: -1, legacyNumber: null };
     if (!ref.includes('-')) return none;
-    try {
-      const parsed = parseItemRef(ref, 'capex');
-      if (parsed.type !== 'item_number') return none;
-      return parsed.prefix === BUDGET_LINE_PREFIX
-        ? { itemNumber: parsed.value, legacyNumber: null }
-        : { itemNumber: -1, legacyNumber: `${LEGACY_PREFIX.capex}-${parsed.value}` };
-    } catch {
-      return none;
-    }
+    const match = ref.toUpperCase().match(/^(BL|OPX|CPX)-(\d+)$/);
+    if (!match) return none;
+    const number = Number(match[2]);
+    if (!Number.isSafeInteger(number)) return none;
+    return match[1] === 'CPX'
+      ? { itemNumber: -1, legacyNumber: `${LEGACY_PREFIX.capex}-${number}` }
+      : { itemNumber: number, legacyNumber: `${match[1]}-${number}` };
   }
 
   private async queryReferenceCandidates(
@@ -1168,21 +1162,15 @@ export class AiBusinessRecordMutationSupportService {
           `SELECT * FROM connections WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(connection_reference) = LOWER($2::text) OR LOWER(name) = LOWER($2::text)) ORDER BY connection_reference LIMIT 6`,
           [tenantId, ref],
         );
-      case 'spend_items':
-        return this.withDefaultAnalyticsValue(context, 'opex', await manager.query(
-          // OPEX lines only (`spend/budget-nature.ts`).
-          `SELECT * FROM spend_items WHERE tenant_id = $1 AND nature = 'opex' AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text) OR item_number = $3) ORDER BY product_name LIMIT 6`,
-          [tenantId, ref, this.itemNumberOfReference(ref, 'spend')],
-        ));
-      case 'capex_items': {
-        // CAPEX lines only (`spend/budget-nature.ts`), by id, title, CPX number (`legacy_number`)
-        // or BL number; each row in the CAPEX contract (`description` = title, CPX number).
-        const number = this.capexNumberOfReference(ref);
+      case 'budget_lines': {
+        // Both natures in one family (`spend/budget-nature.ts`): by id, native title, own number
+        // (BL-n) or legacy number (OPX-n, CPX-n). Each row keeps its nature.
+        const number = this.budgetLineNumberOfReference(ref);
         const rows: Record<string, unknown>[] = await manager.query(
-          `SELECT * FROM spend_items WHERE tenant_id = $1 AND nature = 'capex' AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text) OR item_number = $3 OR legacy_number = $4::text) ORDER BY product_name LIMIT 6`,
+          `SELECT * FROM spend_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text) OR item_number = $3 OR legacy_number = $4::text) ORDER BY product_name LIMIT 6`,
           [tenantId, ref, number.itemNumber, number.legacyNumber],
         );
-        return this.withDefaultAnalyticsValue(context, 'capex', rows.map((row) => presentLine('capex', row)));
+        return this.withDefaultAnalyticsValue(context, rows);
       }
       case 'companies':
         return manager.query(`SELECT * FROM companies WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
@@ -1224,10 +1212,16 @@ export class AiBusinessRecordMutationSupportService {
    */
   private async withDefaultAnalyticsValue(
     context: AiExecutionContextWithManager,
-    scope: ItemAnalyticsScope,
     rows: Record<string, unknown>[],
   ): Promise<Record<string, unknown>[]> {
-    const values = await loadItemAnalyticsValues(context.manager, scope, context.tenantId, rows.map((row) => String(row.id)));
+    const values = new Map<string, ItemAnalyticsValue[]>();
+    for (const nature of BUDGET_NATURES) {
+      const ids = rows.filter((row) => lineNatureOf(row) === nature).map((row) => String(row.id));
+      if (ids.length === 0) continue;
+      for (const [id, lineValues] of await loadItemAnalyticsValues(context.manager, nature, context.tenantId, ids)) {
+        values.set(id, lineValues);
+      }
+    }
     return rows.map((row) => {
       const lineValues = values.get(String(row.id)) ?? [];
       return { ...row, ...analyticsValueKeys(lineValues), analytics_category_id: itemAnalyticsFields(lineValues).analytics_category_id };
@@ -1236,7 +1230,7 @@ export class AiBusinessRecordMutationSupportService {
 
   /** A line snapshot (`get`) with every dimension's value under its stored key as well. */
   private withAnalyticsValueKeys(entityType: AiBusinessRecordEntityType, row: Record<string, unknown>): Record<string, unknown> {
-    if (!lineScope(entityType)) return row;
+    if (!isBudgetLineEntity(entityType)) return row;
     const values = Array.isArray(row.analytics_values) ? row.analytics_values as ItemAnalyticsValue[] : [];
     return { ...row, ...analyticsValueKeys(values) };
   }
@@ -1267,7 +1261,7 @@ export class AiBusinessRecordMutationSupportService {
         }
       }
     }
-    if (!lineScope(entityType)) return display;
+    if (!isBudgetLineEntity(entityType)) return display;
     const ids = Object.entries(previousValues)
       .filter(([fieldName, value]) => isAnalyticsDimensionField(fieldName) && typeof value === 'string' && isUuid(value))
       .map(([, value]) => String(value));
@@ -1312,8 +1306,7 @@ export class AiBusinessRecordMutationSupportService {
       case 'connections': return textOrNull(row.connection_reference);
       case 'projects': return row.item_number == null ? null : `PRJ-${row.item_number}`;
       case 'requests': return row.item_number == null ? null : `REQ-${row.item_number}`;
-      case 'spend_items': return textOrNull(row.product_name);
-      case 'capex_items': return textOrNull(row.description);
+      case 'budget_lines': return row.item_number == null ? null : `${BUDGET_LINE_PREFIX}-${row.item_number}`;
       case 'accounts': return textOrNull(row.account_number);
       case 'cost_centers': return textOrNull(row.code);
       default: return null;
@@ -1338,10 +1331,8 @@ export class AiBusinessRecordMutationSupportService {
         return [row.item_number == null ? null : `PRJ-${row.item_number}`, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled project';
       case 'requests':
         return [row.item_number == null ? null : `REQ-${row.item_number}`, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled request';
-      case 'spend_items':
-        return textOrNull(row.product_name) || 'Untitled spend item';
-      case 'capex_items':
-        return textOrNull(row.description) || 'Untitled CAPEX item';
+      case 'budget_lines':
+        return textOrNull(row.product_name) || 'Untitled budget line';
       case 'accounts':
         return [row.account_number, row.account_name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled account';
       case 'cost_centers':
@@ -1597,10 +1588,12 @@ export class AiBusinessRecordMutationSupportService {
     if (!preview.target_entity_id) throw new BadRequestException('Preview is missing the target record.');
 
     const expectedValues = coerceRecord(preview.current_values?.values, 'current_values.values');
-    // An OPEX or CAPEX line is locked before what the preview saw is compared with what is
-    // stored (lock order, `spend/budget-locks.ts`): nothing changes between the check and the write.
-    if (entityType === 'spend_items' || entityType === 'capex_items') {
-      await lockBudgetLine(context.manager, entityType === 'spend_items' ? 'opex' : 'capex', context.tenantId, preview.target_entity_id);
+    // A budget line is locked, by its stored nature, before what the preview saw is compared
+    // with what is stored (lock order, `spend/budget-locks.ts`): nothing changes between the check
+    // and the write.
+    if (entityType === 'budget_lines') {
+      const line = await resolveBudgetLine(preview.target_entity_id, context.manager);
+      await lockBudgetLine(context.manager, line.nature, context.tenantId, preview.target_entity_id);
     }
     const live = await this.getRecordSnapshot(context, entityType, preview.target_entity_id);
     // A dimension is compared with the live line's value on that dimension (none reads null).
@@ -1642,7 +1635,7 @@ export class AiBusinessRecordMutationSupportService {
     storedLabels: unknown,
   ): Promise<string> {
     const axisId = analyticsAxisIdOfField(fieldName);
-    if (lineScope(entityType) && fieldName === DEFAULT_ANALYTICS_FIELD) {
+    if (isBudgetLineEntity(entityType) && fieldName === DEFAULT_ANALYTICS_FIELD) {
       const axis = (await loadAnalyticsAxes(context.manager, context.tenantId)).find((candidate) => candidate.is_default);
       return analyticsAxisLabel(axis ?? { name: null });
     }
@@ -1664,9 +1657,11 @@ export class AiBusinessRecordMutationSupportService {
     after: unknown,
   ): Promise<void> {
     const audit = buildAiMutationAudit(preview);
+    // A CAPEX line's audit rows keep their CAPEX table name (`auditTableOf`).
+    const nature = lineNatureOf((after ?? before) as Record<string, unknown> | null) ?? 'opex';
     await this.audit.log(
       {
-        table: this.getConfig(entityType).tableName,
+        table: entityType === 'budget_lines' ? auditTableOf(nature, 'spend_items') : this.getConfig(entityType).tableName,
         recordId: preview.target_entity_id ?? null,
         action,
         before,
@@ -1699,10 +1694,8 @@ export class AiBusinessRecordMutationSupportService {
         return this.interfaces.create(fields as any, context.tenantId, context.userId, { manager: context.manager });
       case 'connections':
         return this.connections.create(fields as any, context.tenantId, context.userId, { manager: context.manager });
-      case 'spend_items':
-        return this.spendItems.create(fields as any, context.userId, { manager: context.manager });
-      case 'capex_items':
-        return this.capexItems.create(fields as any, context.userId, { manager: context.manager });
+      case 'budget_lines':
+        return this.budgetLines.create(fields, context.userId, { manager: context.manager });
     }
   }
 
@@ -1727,10 +1720,8 @@ export class AiBusinessRecordMutationSupportService {
         return this.interfaces.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager });
       case 'connections':
         return this.connections.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager });
-      case 'spend_items':
-        return this.spendItems.update(id, fields as any, context.userId, { manager: context.manager });
-      case 'capex_items':
-        return this.capexItems.update(id, fields as any, context.userId, { manager: context.manager });
+      case 'budget_lines':
+        return this.budgetLines.update(id, fields, context.userId, { manager: context.manager });
     }
   }
 
@@ -1762,10 +1753,8 @@ export class AiBusinessRecordMutationSupportService {
         return this.interfaces.get(id, { include: 'relations' }, { manager: context.manager }) as any;
       case 'connections':
         return this.connections.get(id, context.tenantId, { manager: context.manager, includeLegs: true }) as any;
-      case 'spend_items':
-        return this.spendItems.get(id, { manager: context.manager }) as any;
-      case 'capex_items':
-        return this.capexItems.get(id, { manager: context.manager }) as any;
+      case 'budget_lines':
+        return this.budgetLines.get(id, { manager: context.manager }) as any;
     }
   }
 }

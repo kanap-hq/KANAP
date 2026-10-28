@@ -77,7 +77,7 @@ function compactDomainVocabulary(mode: AiContextProfile['promptMode']): string {
     'Domain vocabulary: users may use synonyms. Translate user wording to KANAP entity families before searching.',
     '- Tasks: tickets, to-dos, work items. They can be standalone or linked to projects, requests, budget lines, contracts, or incidents.',
     '- Documents: docs, articles, pages, knowledge base entries.',
-    '- Budget lines: one family (`budget_lines`) for expenses, recurring costs, subscriptions and OpEx, and for investments, capital expenditure, CapEx and purchases. `nature` says which one (`opex` or `capex`). Cite them as BL-n. Accept OPX-n and CPX-n as legacy input references; search for them to resolve the native BL-n reference.',
+    '- Budget lines: one family (`budget_lines`) for expenses, recurring costs, subscriptions and OpEx, and for investments, capital expenditure, CapEx and purchases. `nature` says which one (`opex` or `capex`). Cite them as BL-n. Accept OPX-n and CPX-n as legacy input references; search for them to resolve the native BL-n reference. A creation sets `nature`; a change of nature and a `contract_id` on a CAPEX line are refused: the budget screen changes the type, and a CAPEX line reaches contracts through its links.',
     '- Applications/assets/projects/requests/contracts/suppliers/users/companies/departments/locations/incidents are standard KANAP families. Company/department year-backed metrics use headcount_year, it_users_year, turnover_year, and metrics_frozen; pass `year` on query_entities or get_entity_detail when the user names a year.',
     '- "me/my/mine" means the current user scope. "my team" means the current user team scope.',
   ];
