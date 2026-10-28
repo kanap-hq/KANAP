@@ -10,10 +10,10 @@ import { LIMITED_ROLE, PgClient, roleExists, seedPerson, seedRole } from './data
 import { nextItemNumber, seed, type Seed } from './data-access-line-seed';
 
 /**
- * Data-scoped access (spec §6.6): `data_access_hidden_category_count(axis, values, active_from)`, the
- * hidden lines of each value of one dimension for the analytics report. On the reference example of
- * lot 2 (`data-access-line-seed.ts`): seven OPEX lines, all on the first dimension's value; Rita reads
- * L1 to L4 and hides L5 to L7; Ulla reads everything.
+ * Data-scoped access (spec §6.6): `data_access_hidden_category_count(axis, values, active_from,
+ * nature)`, the hidden lines of each value of one dimension for the analytics report. On the
+ * reference example of lot 2 (`data-access-line-seed.ts`): seven OPEX lines, all on the first
+ * dimension's value; Rita reads L1 to L4 and hides L5 to L7; Ulla reads everything.
  *
  * The cases: 0 per requested value outside limited mode, no answer when the limited role is taken
  * without `data_access_apply()`, the exact hidden count for a limited person, the lifecycle window
@@ -60,10 +60,10 @@ async function seedScenario(runner: QueryRunner, s: Seed): Promise<Extra> {
     `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, 'capex value') RETURNING id`,
     [s.tenantId, axisId],
   ))[0].id as string;
-  await q(`UPDATE spend_items SET nature = 'capex' WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [s.tenantId, [s.lines.L4, s.lines.L6, s.lines.L7]]);
+  await q(`UPDATE spend_items SET nature = 'capex' WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [s.tenantId, [s.lines.L4, s.lines.L6]]);
   await q(
-    `INSERT INTO spend_item_analytics_values (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4), ($1, $5, $3, $4), ($1, $6, $3, $4)`,
-    [s.tenantId, s.lines.L4, axisId, valueId, s.lines.L6, s.lines.L7],
+    `INSERT INTO spend_item_analytics_values (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4), ($1, $5, $3, $4)`,
+    [s.tenantId, s.lines.L4, axisId, valueId, s.lines.L6],
   );
   // A value only a hidden line carries: the disclosure guard must not answer it.
   const hiddenOnlyAxis = (await q(
@@ -81,10 +81,16 @@ async function seedScenario(runner: QueryRunner, s: Seed): Promise<Extra> {
   return { capexAxis: axisId, capexValue: valueId, hiddenOnlyAxis, hiddenOnlyValue };
 }
 
-async function hidden(runner: QueryRunner, axisId: string, values: string[], activeFrom: string | null): Promise<Array<{ category_id: string | null; n: number | null }>> {
+async function hidden(
+  runner: QueryRunner,
+  axisId: string,
+  values: string[],
+  activeFrom: string | null,
+  nature: 'opex' | 'capex' | null = null,
+): Promise<Array<{ category_id: string | null; n: number | null }>> {
   return runner.query(
-    `SELECT category_id, n FROM data_access_hidden_category_count($1::uuid, $2::uuid[], $3::date)`,
-    [axisId, values, activeFrom],
+    `SELECT category_id, n FROM data_access_hidden_category_count($1::uuid, $2::uuid[], $3::date, $4::text)`,
+    [axisId, values, activeFrom, nature],
   );
 }
 
@@ -117,12 +123,17 @@ async function testWindow(runner: QueryRunner, s: Seed, extra: Extra): Promise<v
     assert.deepEqual(await hidden(runner, s.axis1, [s.category1], `${YEAR}-01-01`), [{ category_id: s.category1, n: 2 }], 'the line ended in 2025 is out');
     assert.deepEqual(await hidden(runner, s.axis1, [s.category1], '2027-01-01'), [{ category_id: s.category1, n: 1 }], 'the line ending in March 2027 stays');
     assert.deepEqual(await hidden(runner, s.axis1, [s.category1], '2027-04-01'), [], 'no hidden line in that window: no row');
+    assert.deepEqual(await hidden(runner, s.axis1, [s.category1], `${YEAR}-01-01`, 'opex'), [{ category_id: s.category1, n: 1 }], 'the OPEX tab counts L7 only');
+    assert.deepEqual(await hidden(runner, s.axis1, [s.category1], `${YEAR}-01-01`, 'capex'), [{ category_id: s.category1, n: 1 }], 'the CAPEX tab counts L6 only');
+    assert.deepEqual(await hidden(runner, s.axis1, [s.category1], `${YEAR}-01-01`, null), [{ category_id: s.category1, n: 2 }], 'both natures together');
     assert.deepEqual(await hidden(runner, s.axis1, [s.category2], `${YEAR}-01-01`), [], 'a value of another dimension is never counted');
   });
 
-  // The CAPEX-only dimension counts L6 and L7; its readable L4 makes the value answerable.
+  // The CAPEX-only dimension counts L6; its readable L4 makes the value answerable.
   await as(runner, s.persons.rita, async () => {
-    assert.deepEqual(await hidden(runner, extra.capexAxis, [extra.capexValue], null), [{ category_id: extra.capexValue, n: 2 }]);
+    assert.deepEqual(await hidden(runner, extra.capexAxis, [extra.capexValue], null), [{ category_id: extra.capexValue, n: 1 }]);
+    assert.deepEqual(await hidden(runner, extra.capexAxis, [extra.capexValue], null, 'capex'), [{ category_id: extra.capexValue, n: 1 }]);
+    assert.deepEqual(await hidden(runner, extra.capexAxis, [extra.capexValue], null, 'opex'), [], 'the dimension applies to CAPEX only');
   });
   await as(runner, s.persons.ulla, async () => {
     assert.deepEqual(await hidden(runner, extra.capexAxis, [extra.capexValue], null), [{ category_id: extra.capexValue, n: 0 }]);
@@ -197,7 +208,7 @@ async function testWindow(runner: QueryRunner, s: Seed, extra: Extra): Promise<v
               WHERE a.grantee = 0 AND a.privilege_type = 'EXECUTE'
             ) AS public_execute
        FROM pg_proc p
-      WHERE p.oid = 'public.data_access_hidden_category_count(uuid, uuid[], date)'::regprocedure`,
+      WHERE p.oid = 'public.data_access_hidden_category_count(uuid, uuid[], date, text)'::regprocedure`,
   );
   assert.equal(fn.definer, true, 'SECURITY DEFINER');
   assert.ok((fn.config ?? []).includes('search_path=public, pg_temp'), 'search_path = public, pg_temp');
@@ -208,7 +219,7 @@ async function testWindow(runner: QueryRunner, s: Seed, extra: Extra): Promise<v
 
 async function testMigrationReplay(runner: QueryRunner): Promise<void> {
   const definition = async () => (await runner.query(
-    `SELECT pg_get_functiondef('public.data_access_hidden_category_count(uuid, uuid[], date)'::regprocedure) AS definition`,
+    `SELECT pg_get_functiondef('public.data_access_hidden_category_count(uuid, uuid[], date, text)'::regprocedure) AS definition`,
   ))[0].definition as string;
   const before = await definition();
   const migration = new DataAccessHiddenCategoryCount1855800000000();
@@ -218,7 +229,7 @@ async function testMigrationReplay(runner: QueryRunner): Promise<void> {
   await runner.query('SAVEPOINT migration_down');
   try {
     await migration.down(runner);
-    const [gone] = await runner.query(`SELECT to_regprocedure('public.data_access_hidden_category_count(uuid, uuid[], date)') IS NULL AS gone`);
+    const [gone] = await runner.query(`SELECT to_regprocedure('public.data_access_hidden_category_count(uuid, uuid[], date, text)') IS NULL AS gone`);
     assert.equal(gone.gone, true, 'down drops the function');
     await migration.up(runner);
     assert.equal(await definition(), before, 'up restores the same function');

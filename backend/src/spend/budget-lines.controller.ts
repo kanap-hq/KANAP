@@ -88,18 +88,20 @@ export class BudgetLinesController {
 
   /**
    * Data-scoped access (spec §6.6): the lines of each dimension value that a limited person cannot
-   * read, for the analytics report. `axis`, `values` (500 at most) and `from`, the report's lifecycle
-   * window; an unscoped person gets `{ counts: {} }` without a counting query.
+   * read, for the analytics report. Body `{ axis, values, year, scope }`: 500 values at most, the
+   * report's first year, its tab. A read, so a frozen tenant keeps it; an unscoped person gets
+   * `{ counts: {} }` without a counting query.
    */
   @ReadOnlyRoute()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'reader')
-  @Get('summary/hidden-by-value')
+  @Post('summary/hidden-by-value')
+  @HttpCode(200)
   hiddenByValue(
-    @Query() query: Record<string, unknown>,
+    @Body() body: unknown,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.svc.hiddenCategoryCounts(query, { manager: ctx.manager as EntityManager });
+    return this.svc.hiddenCategoryCounts(body, { manager: ctx.manager as EntityManager });
   }
 
   /**
