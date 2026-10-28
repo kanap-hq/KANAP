@@ -55,6 +55,9 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(forbidden, i18n.getFixedT('es'), 'fallback')).toBe('No tiene permisos para esta acción.');
     const coded = { response: { status: 403, data: { code: 'administrator_required', message: 'Administrator required' } } };
     expect(getApiErrorMessage(coded, t, 'fallback')).toBe('Only an administrator of this workspace can do this.');
+    const platform = { response: { status: 403, data: { code: 'platform_admin_required', message: 'Platform admin host required' } } };
+    expect(getApiErrorMessage(platform, t, 'fallback')).toBe('Only a platform administrator can do this.');
+    expect(getApiErrorMessage(platform, i18n.getFixedT('fr'), 'fallback')).toBe('Seul un administrateur de la plateforme peut faire cela.');
     const bare = { code: 'ERR_BAD_REQUEST', message: 'Request failed with status code 403', response: { status: 403, data: {} } };
     expect(getApiErrorMessage(bare, i18n.getFixedT('fr'), 'fallback')).toBe("Vous n'avez pas les droits pour cette action.");
   });
