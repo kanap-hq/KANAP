@@ -1189,6 +1189,14 @@ label (`spend_items` or `capex_items`). Legacy route writes retain their audit s
 `/capex-items` alias keeps `description` as the title and its CPX `item_number`. The description
 of a CAPEX line is read through `/budget-lines/:ref`; `/capex-items` does not expose it.
 
+GET `/budget-lines/owner-suggestions?cost_center_id=<uuid>` (`budget:member`) returns the enabled
+people who hold at least the reader right on `budget` and read the cost centre: a limited person
+whose access node covers it (the centre, a parent group, its company, or `all`), or an unscoped
+person (`data_access_mode = 'all'`, or an Administrator). The rows keep the `/users/lookup` columns
+and order, names only, in `{ items, has_more: false }`; no page cap applies. A missing or malformed
+cost centre is `400`, an unknown centre returns no rows. The owner pickers of a line use this list
+as their first group and still offer every enabled person.
+
 ## Budget line relations
 
 GET `/budget-lines/:id/relations` (`budget:reader`) returns the Relations tab of an OPEX or a CAPEX line in one round trip. `:id` is a UUID, `BL-n`, a bare BL number, `OPX-n` or `CPX-n`, the same resolver as GET `/budget-lines/:ref`. A missing line is `404` "Budget line not found". A malformed reference is `400` "Malformed budget line reference".
