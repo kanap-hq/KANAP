@@ -3086,6 +3086,49 @@ export class AiQueryExecutor {
     });
   }
 
+  /**
+   * The values of the technologies filters that no column carries: the tenant's version labels
+   * (`version`) and the display names of the owners of its technologies (`owner` of any type,
+   * `it_owner`, `business_owner`). Read from `technology_versions` and `technology_owners`, never
+   * from the technology row, and only for the fields the caller asked (`grids`).
+   */
+  private async technologyFilterValues(
+    context: AiExecutionContextWithManager,
+    grids: ReadonlySet<string>,
+  ): Promise<Record<string, Array<string | null>>> {
+    const values: Record<string, Array<string | null>> = {};
+    if (grids.has('version')) {
+      const rows: Array<{ value: string }> = await context.manager.query(
+        `SELECT DISTINCT v.label AS value
+           FROM technology_versions v
+          WHERE v.tenant_id = $1 AND btrim(v.label) <> ''
+          ORDER BY value ASC NULLS LAST
+          LIMIT 5000`,
+        [context.tenantId],
+      );
+      values.version = (rows || []).map((row) => String(row.value));
+    }
+    const ownerFields: Array<{ grid: string; type: 'it' | 'business' | null }> = [
+      { grid: 'owner_name', type: null },
+      { grid: 'it_owner_name', type: 'it' },
+      { grid: 'business_owner_name', type: 'business' },
+    ];
+    for (const { grid, type } of ownerFields) {
+      if (!grids.has(grid)) continue;
+      const rows: Array<{ value: string | null }> = await context.manager.query(
+        `SELECT DISTINCT NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS value
+           FROM technology_owners o
+           JOIN users u ON u.id = o.user_id AND u.tenant_id = o.tenant_id
+          WHERE o.tenant_id = $1${type ? ` AND o.owner_type = '${type}'` : ''}
+          ORDER BY value ASC NULLS LAST
+          LIMIT 5000`,
+        [context.tenantId],
+      );
+      values[grid] = (rows || []).map((row) => row.value).filter((value): value is string => !!value);
+    }
+    return values;
+  }
+
   private async loadRegistryFilterValues(
     context: AiExecutionContextWithManager,
     entityType: AiQueryEntityType,
@@ -3299,6 +3342,10 @@ export class AiQueryExecutor {
         manager: context.manager,
         tenantId: context.tenantId,
       }) as any;
+    } else if (input.entity_type === 'technologies') {
+      // The version labels and the owner names have no column on `technologies`: they are read
+      // from their own tables. The other dynamic fields fall back to the registry below.
+      raw = await this.technologyFilterValues(context, new Set(dynamicFieldMap.keys()));
     } else if (input.entity_type === 'incidents') {
       const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
       const reads = this.readProbe(context);

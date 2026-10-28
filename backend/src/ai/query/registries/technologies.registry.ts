@@ -88,6 +88,54 @@ export const technologiesRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: true,
     },
+    version: {
+      ai: 'version',
+      grid: 'version',
+      type: 'set',
+      description: 'Version label of the technology, exact and without case: 16 keeps a technology with version 16, never one with 16.4 only. A technology matches when one of its versions has that label; [null] keeps a technology with no version. Values come from get_filter_values. Each item\'s versions_in_use names the versions in use; the family technology_versions lists every version with its support dates and state.',
+      acceptedValueKind: 'exact version label',
+      examples: ['16'],
+      dynamic: true,
+      discoverable: true,
+      sortable: false,
+      groupable: false,
+    },
+    owner: {
+      ai: 'owner',
+      grid: 'owner_name',
+      type: 'set',
+      description: 'Owner of the technology, whatever the type (IT or business): the exact display name of the user, without case. A technology matches when one of its owners has that name; [null] keeps a technology with no owner. Values come from get_filter_values; get_entity_detail lists the business and IT owners by name.',
+      acceptedValueKind: 'user_display_name',
+      examples: ['Jane Doe'],
+      dynamic: true,
+      discoverable: true,
+      sortable: false,
+      groupable: false,
+    },
+    it_owner: {
+      ai: 'it_owner',
+      grid: 'it_owner_name',
+      type: 'set',
+      description: 'IT owner of the technology: the exact display name of the user, without case. A technology matches when one of its IT owners has that name; [null] keeps a technology with no IT owner. Values come from get_filter_values. Grouping is many-to-many: a technology counts once in each of its IT owners, and a technology with no IT owner is in no group.',
+      acceptedValueKind: 'user_display_name',
+      examples: ['Jane Doe'],
+      dynamic: true,
+      discoverable: true,
+      sortable: false,
+      groupable: true,
+    },
+    business_owner: {
+      ai: 'business_owner',
+      grid: 'business_owner_name',
+      type: 'set',
+      description: 'Business owner of the technology: the exact display name of the user, without case. A technology matches when one of its business owners has that name; [null] keeps a technology with no business owner. Values come from get_filter_values. Grouping is many-to-many: a technology counts once in each of its business owners, and a technology with no business owner is in no group.',
+      acceptedValueKind: 'user_display_name',
+      examples: ['Jane Doe'],
+      dynamic: true,
+      discoverable: true,
+      sortable: false,
+      groupable: true,
+    },
     server_count: {
       ai: 'server_count',
       grid: 'server_count',
@@ -181,6 +229,24 @@ export const technologiesRegistry: AiEntityFilterRegistry = {
       lifecycle: { expression: 't.lifecycle' },
       admin_zone: { expression: 't.admin_zone' },
       support_status: { expression: technologySupportStatusSql('t') },
+      // A technology counts once per owner of that type: an inner join, so one without an owner of
+      // the type is in no group, and a nameless user adds no group.
+      it_owner: {
+        expression: `btrim(concat_ws(' ', u_it.first_name, u_it.last_name))`,
+        joins: [
+          `JOIN technology_owners t_owner_it ON t_owner_it.technology_id = t.id AND t_owner_it.tenant_id = t.tenant_id AND t_owner_it.owner_type = 'it'`,
+          `JOIN users u_it ON u_it.id = t_owner_it.user_id AND u_it.tenant_id = t_owner_it.tenant_id
+             AND NULLIF(btrim(concat_ws(' ', u_it.first_name, u_it.last_name)), '') IS NOT NULL`,
+        ],
+      },
+      business_owner: {
+        expression: `btrim(concat_ws(' ', u_business.first_name, u_business.last_name))`,
+        joins: [
+          `JOIN technology_owners t_owner_business ON t_owner_business.technology_id = t.id AND t_owner_business.tenant_id = t.tenant_id AND t_owner_business.owner_type = 'business'`,
+          `JOIN users u_business ON u_business.id = t_owner_business.user_id AND u_business.tenant_id = t_owner_business.tenant_id
+             AND NULLIF(btrim(concat_ws(' ', u_business.first_name, u_business.last_name)), '') IS NOT NULL`,
+        ],
+      },
     },
     metricFields: {
       server_count: { expression: TECHNOLOGY_SERVER_COUNT, joins: [technologyServerFiguresJoin('t')], type: 'number' },

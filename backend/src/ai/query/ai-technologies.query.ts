@@ -225,18 +225,73 @@ function finite(value: unknown): number {
   return n;
 }
 
+/** A set filter's ticked values: the strings, trimmed, and whether `null` (blank) is ticked. */
+function setModel(column: string, model: any): { values: string[]; blank: boolean } {
+  if (model?.filterType !== 'set' || model.mode === 'exclude' || !Array.isArray(model.values)) {
+    throw new BadRequestException(`Unsupported filter on ${column}.`);
+  }
+  return {
+    values: model.values.filter((v: unknown): v is string => typeof v === 'string' && v.trim() !== '').map((v: string) => v.trim()),
+    blank: model.values.some((v: unknown) => v === null || v === ''),
+  };
+}
+
+/** The owner type each owner filter names; `owner` reads both. The keys are the grid columns. */
+const OWNER_COLUMNS: Record<string, 'it' | 'business' | null> = {
+  owner_name: null,
+  it_owner_name: 'it',
+  business_owner_name: 'business',
+};
+
+/**
+ * The technologies whose versions include one of these labels (`version`), or one of whose owners
+ * (of the filter's type) has one of these display names. A blank tick means no version, or no owner
+ * of that type. Both are read through `EXISTS` on the tenant's links, never a column of `r`.
+ */
+function manyToManyClause(column: string, model: any, bind: (value: unknown) => string): string {
+  const { values, blank } = setModel(column, model);
+  if (column === 'version') {
+    const labels = values.map((value) => value.toLowerCase());
+    const hasVersion = labels.length
+      ? `EXISTS (SELECT 1 FROM technology_versions ev
+                 WHERE ev.tenant_id = $1 AND ev.technology_id = r.id
+                   AND lower(ev.label) = ANY(${bind(labels)}::text[]))`
+      : null;
+    const noVersion = blank
+      ? `NOT EXISTS (SELECT 1 FROM technology_versions ev WHERE ev.tenant_id = $1 AND ev.technology_id = r.id)`
+      : null;
+    const parts = [hasVersion, noVersion].filter((part): part is string => !!part);
+    return parts.length ? `(${parts.join(' OR ')})` : 'false';
+  }
+  const type = OWNER_COLUMNS[column];
+  const typeSql = type ? ` AND o.owner_type = '${type}'` : '';
+  const names = values.map((value) => value.toLowerCase());
+  const hasOwner = names.length
+    ? `EXISTS (SELECT 1 FROM technology_owners o
+               JOIN users u ON u.id = o.user_id AND u.tenant_id = o.tenant_id
+              WHERE o.tenant_id = $1 AND o.technology_id = r.id${typeSql}
+                AND lower(btrim(concat_ws(' ', u.first_name, u.last_name))) = ANY(${bind(names)}::text[]))`
+    : null;
+  const noOwner = blank
+    ? `NOT EXISTS (SELECT 1 FROM technology_owners o
+                   WHERE o.tenant_id = $1 AND o.technology_id = r.id${typeSql})`
+    : null;
+  const parts = [hasOwner, noOwner].filter((part): part is string => !!part);
+  return parts.length ? `(${parts.join(' OR ')})` : 'false';
+}
+
 /** One grid filter model on a column of `r`, or a 400 for a model this list cannot take. */
 function filterClause(column: string, model: any, bind: (value: unknown) => string): string | null {
+  if (column === 'version' || Object.prototype.hasOwnProperty.call(OWNER_COLUMNS, column)) {
+    return manyToManyClause(column, model, bind);
+  }
   const expr = `r.${column}`;
   if (SET_COLUMNS[column]) {
-    if (model?.filterType !== 'set' || model.mode === 'exclude' || !Array.isArray(model.values)) {
-      throw new BadRequestException(`Unsupported filter on ${column}.`);
-    }
+    const { values, blank } = setModel(column, model);
     const { ci } = SET_COLUMNS[column];
-    const values = model.values.filter((v: unknown): v is string => typeof v === 'string' && v.trim() !== '').map((v: string) => (ci ? v.trim().toLowerCase() : v.trim()));
-    const blank = model.values.some((v: unknown) => v === null || v === '');
+    const compared = ci ? values.map((value) => value.toLowerCase()) : values;
     const parts = [
-      ...(values.length ? [`${ci ? `lower(${expr})` : expr} = ANY(${bind(values)}::text[])`] : []),
+      ...(compared.length ? [`${ci ? `lower(${expr})` : expr} = ANY(${bind(compared)}::text[])`] : []),
       ...(blank ? [`${expr} IS NULL`] : []),
     ];
     return parts.length ? `(${parts.join(' OR ')})` : 'false';
