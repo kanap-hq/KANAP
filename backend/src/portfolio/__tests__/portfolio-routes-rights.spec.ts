@@ -135,7 +135,13 @@ async function testProjectBulkReplaceNeedsTheLinkedFamily() {
     const { controller, calls, ctx } = projectController();
     const error = await refusal(() => controller[method](PROJECT, body, ctx({ portfolio_projects: 'member' })));
     assert.ok(error instanceof ForbiddenException, method);
-    assert.equal(error.message, message, method);
+    assert.deepEqual((error as ForbiddenException).getResponse(), {
+      statusCode: 403,
+      error: 'Forbidden',
+      code: 'MODULE_RIGHT_REQUIRED',
+      message,
+      params: { resource: family, level: 'reader' },
+    }, method);
     assert.deepEqual(calls, [], `${method}: nothing read or written`);
     // Counter-check: with the read of the family, the replacement runs.
     await controller[method](PROJECT, body, ctx({ portfolio_projects: 'contributor', [family]: 'reader' }));
@@ -177,23 +183,24 @@ function requestController() {
 }
 
 async function testRequestBulkReplaceNeedsTheLinkedFamily() {
-  const routes: Array<[string, Perms, string, Record<string, unknown>]> = [
-    ['bulkReplaceApplications', { applications: 'reader' }, 'You cannot read applications.', { application_ids: [] }],
-    ['bulkReplaceAssets', { infrastructure: 'reader' }, 'You cannot read assets.', { asset_ids: [] }],
-    ['bulkReplaceCapex', { budget: 'reader' }, 'You cannot read budget lines.', { capex_ids: [] }],
-    ['bulkReplaceOpex', { budget: 'reader' }, 'You cannot read budget lines.', { opex_ids: [] }],
-    ['bulkReplaceBusinessProcesses', { business_processes: 'member' }, 'You cannot read this module.', { business_process_ids: [] }],
+  const routes: Array<[string, Perms, string, string, Record<string, unknown>]> = [
+    ['bulkReplaceApplications', { applications: 'reader' }, 'applications', 'You cannot read applications.', { application_ids: [] }],
+    ['bulkReplaceAssets', { infrastructure: 'reader' }, 'infrastructure', 'You cannot read assets.', { asset_ids: [] }],
+    ['bulkReplaceCapex', { budget: 'reader' }, 'budget', 'You cannot read budget lines.', { capex_ids: [] }],
+    ['bulkReplaceOpex', { budget: 'reader' }, 'budget', 'You cannot read budget lines.', { opex_ids: [] }],
+    ['bulkReplaceBusinessProcesses', { business_processes: 'member' }, 'business_processes', 'You cannot read this module.', { business_process_ids: [] }],
   ];
-  for (const [method, grant, message, body] of routes) {
+  for (const [method, grant, resource, message, body] of routes) {
     const { controller, calls, req } = requestController();
     const error = await refusal(() => controller[method](PROJECT, body, req({ portfolio_requests: 'member' })));
     assert.ok(error instanceof ForbiddenException, method);
-    assert.equal(error.message, message, method);
-    if (method === 'bulkReplaceBusinessProcesses') {
-      const refusalBody = (error as ForbiddenException).getResponse() as any;
-      assert.equal(refusalBody.code, 'MODULE_RIGHT_REQUIRED', method);
-      assert.deepEqual(refusalBody.params, { resource: 'business_processes', level: 'reader' }, method);
-    }
+    assert.deepEqual((error as ForbiddenException).getResponse(), {
+      statusCode: 403,
+      error: 'Forbidden',
+      code: 'MODULE_RIGHT_REQUIRED',
+      message,
+      params: { resource, level: 'reader' },
+    }, method);
     assert.deepEqual(calls, [], `${method}: nothing read or written`);
     await controller[method](PROJECT, body, req({ portfolio_requests: 'member', ...grant }));
     assert.match(calls.join(' '), /bulkReplace/, method);

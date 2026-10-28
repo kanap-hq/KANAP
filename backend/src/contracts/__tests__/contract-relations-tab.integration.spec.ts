@@ -75,6 +75,17 @@ async function rejection(fn: () => Promise<unknown>): Promise<Error> {
   throw new Error('expected a refusal');
 }
 
+function assertModuleRight(err: Error, resource: string, level: string, message: string): void {
+  assert.ok(err instanceof ForbiddenException, 'a ForbiddenException');
+  assert.deepEqual(err.getResponse(), {
+    statusCode: 403,
+    error: 'Forbidden',
+    code: 'MODULE_RIGHT_REQUIRED',
+    message,
+    params: { resource, level },
+  });
+}
+
 async function seedTab(runner: QueryRunner, tag: string): Promise<Seed> {
   const tenantId = await seedTenant(runner, tag);
   const one = async (sql: string, params: unknown[]) => (await runner.query(sql, params))[0];
@@ -415,8 +426,7 @@ async function testRefusals() {
     assert.equal(unknown.message, 'Unknown relation type.');
 
     const refused = await rejection(() => http.unlinkRelation(seed.contractId, 'technologies', seed.techs.alpha.id, noInfra));
-    assert.ok(refused instanceof ForbiddenException);
-    assert.equal(refused.message, 'You cannot read technologies.');
+    assertModuleRight(refused, 'infrastructure', 'reader', 'You cannot read technologies.');
     const refusedLink = await rejection(() => http.linkRelation(seed.contractId, 'technologies', { id: randomUUID() }, noInfra));
     assert.ok(refusedLink instanceof ForbiddenException);
 
