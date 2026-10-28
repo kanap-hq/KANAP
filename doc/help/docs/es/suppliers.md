@@ -50,7 +50,7 @@ Cada celda de una fila es clicable y abre la página de ese proveedor.
 
 Haga clic en una fila para abrir la página del proveedor. Use las flechas de la parte superior, o las teclas de flecha izquierda y derecha, para pasar de un proveedor a otro sin volver a la lista. Cada cambio se guarda solo: no hay botón de guardar.
 
-La página tiene dos pestañas: **Vista general** y **Contactos**.
+La página tiene tres pestañas: **Vista general**, **Contactos** e **Historial** (los cambios hechos en el proveedor, vea [Historial de los registros](record-history.md)).
 
 **Título**: el nombre del proveedor. Haga clic en él para editarlo; el cambio se guarda al salir del campo o al pulsar Intro, y Escape lo cancela. El nombre es obligatorio y debe ser distinto del de todos los demás proveedores, sin distinguir mayúsculas y minúsculas (`SAP` y `sap` son el mismo nombre): KANAP muestra el mensaje bajo el nombre y conserva el nombre guardado.
 

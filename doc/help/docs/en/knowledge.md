@@ -288,7 +288,7 @@ This makes review meaningful. If authors could keep editing the content during a
 
 ## The document workspace sidebar
 
-The sidebar has two tabs: **Properties** and **Comments**.
+The sidebar has three tabs: **Properties**, **Comments** and **History** (the changes made to the document, see [Record history](record-history.md)).
 
 ### Properties tab
 

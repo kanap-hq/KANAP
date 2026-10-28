@@ -288,7 +288,7 @@ Cela rend la revue significative. Si les auteurs pouvaient continuer à modifier
 
 ## La barre latérale de l'espace de travail document
 
-La barre latérale comporte deux onglets : **Propriétés** et **Commentaires**.
+La barre latérale comporte trois onglets : **Propriétés**, **Commentaires** et **Historique** (les modifications apportées au document, voir [Historique des fiches](record-history.md)).
 
 ### Onglet Propriétés
 

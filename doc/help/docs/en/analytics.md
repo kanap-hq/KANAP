@@ -139,7 +139,7 @@ A new dimension goes last in the order of the dimensions. Then go back to the pa
 
 ### The dimension workspace
 
-Open it with **Edit** (**Open** if you can only read) in the selector bar, with the dimension selected.
+Open it with **Edit** (**Open** if you can only read) in the selector bar, with the dimension selected. The **History** button in the header opens the dimension's history in a side panel. See [Record history](record-history.md).
 
 - **Header**: the name of the dimension. Click it to rename the dimension. **Prev** / **Next** move through the dimensions in order, and the close button returns to the page on this dimension
 - **Main area**: a usage line, then the **Description**. The usage line gives the number of values and of budget lines that hold one of them, OPEX and CAPEX together, for example "12 values · Used by 29 lines". **Used by 29 lines** is a link: it opens those lines in the budget lines list, in a new tab, enabled and disabled lines included. A dimension no line uses reads "Not used yet", and one with no values "No values yet." While the dimension is disabled, the count shows without a link
@@ -249,6 +249,8 @@ Click **New value**. The **Dimension** field starts on the dimension selected on
 - **Header**: the name of the value. Click it to rename the value. **Prev** / **Next** move through the values of the same dimension, in the list's current order and filters. The close button returns to the list
 - **Main area**: a usage line, then the **Description**. The usage line counts the budget lines that hold the value, OPEX and CAPEX together, for example "Used by 4 lines". It is a link that opens those lines in the budget lines list, in a new tab. A value no line uses reads "Not used yet". While the dimension is disabled, the count shows without a link
 - **Properties panel** on the right: **Dimension** (read only), **Used for** and **Lifecycle**
+
+The **History** button in the header opens the value's history in a side panel. See [Record history](record-history.md).
 
 Changes save on their own, as in the dimension workspace. A name refused in the header shows at the top of the page.
 

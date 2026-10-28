@@ -51,7 +51,7 @@ The Contacts grid provides a searchable directory of all external contacts. Ever
 
 ## The contact page
 
-Click any row to open the contact page. Every change saves on its own: there is no save button.
+Click any row to open the contact page. Every change saves on its own: there is no save button. The **History** button in the header opens the contact's history in a side panel. See [Record history](record-history.md).
 
 **Title**: The contact's name. Click it to edit the first and last name side by side; the change saves when you leave the two fields or press Enter, and Escape cancels it. A contact without a name shows its email instead.
 

@@ -107,7 +107,7 @@ Quand les vulnérabilités sont suivies, la colonne **Éditeur** ouvre aussi la 
 
 ## La fiche technologie
 
-La fiche comporte un en-tête, un panneau de propriétés à droite et six onglets : **Aperçu**, **Serveurs**, **Applications**, **Exploitation**, **Conformité** et **Relations**. Les onglets **Serveurs**, **Applications** et **Relations** affichent leur nombre en pastille.
+La fiche comporte un en-tête, un panneau de propriétés à droite et sept onglets : **Aperçu**, **Serveurs**, **Applications**, **Exploitation**, **Conformité**, **Relations** et **Historique** (les modifications apportées à la technologie, voir [Historique des fiches](record-history.md)). Les onglets **Serveurs**, **Applications** et **Relations** affichent leur nombre en pastille.
 
 ### En-tête
 

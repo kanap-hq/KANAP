@@ -144,7 +144,7 @@ Click any row to open the workspace. The workspace has a **header** with quick m
 
 An address that names no asset opens an **Asset not found** page, with a link back to the list.
 
-The tabs are **Overview**, **Operations**, **Network**, **Hardware** (physical asset types only), **Dependencies** and **Relations**. When you create an asset, **Overview** and **Network** are open. The other tabs open once you click **Create**.
+The tabs are **Overview**, **Operations**, **Network**, **Hardware** (physical asset types only), **Dependencies**, **Relations** and **History** (the changes made to the asset, see [Record history](record-history.md)). When you create an asset, **Overview** and **Network** are open. The other tabs open once you click **Create**.
 
 ### Header
 

@@ -113,7 +113,7 @@ Alle Zeilenzellen sind anklickbare Links zum Konten-Arbeitsbereich. Sie können 
 
 ## Der Konten-Arbeitsbereich
 
-Klicken Sie auf eine beliebige Zeile im Konten-Grid, um den Konten-Arbeitsbereich zu öffnen.
+Klicken Sie auf eine beliebige Zeile im Konten-Grid, um den Konten-Arbeitsbereich zu öffnen. Die Schaltfläche **Verlauf** in der Kopfzeile öffnet den Verlauf des Kontos in einem Seitenbereich. Siehe [Verlauf der Datensätze](record-history.md).
 
 ### Aufbau
 

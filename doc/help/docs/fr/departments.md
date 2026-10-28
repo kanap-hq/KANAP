@@ -51,7 +51,7 @@ La grille des départements vous offre une vue d'ensemble de tous les départeme
 
 ## L'espace de travail Départements
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte deux onglets : **Vue d'ensemble** et **Détails**.
+Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte trois onglets : **Vue d'ensemble**, **Détails** et **Historique** (les modifications apportées au département, voir [Historique des fiches](record-history.md)).
 
 - **En-tête** : le nom du département. Cliquez dessus pour renommer le département. **Préc** / **Suiv** parcourent les départements dans l'ordre et les filtres de la liste sans revenir à la liste, et le bouton de fermeture ramène à la liste
 - **Panneau Propriétés** à droite : **Société** et **Cycle de vie**

@@ -139,7 +139,7 @@ Eine neue Dimension kommt in der Reihenfolge der Dimensionen an die letzte Stell
 
 ### Der Dimensions-Arbeitsbereich
 
-Öffnen Sie ihn mit **Bearbeiten** (**Öffnen**, wenn Sie nur lesen dürfen) in der Auswahlleiste, bei ausgewählter Dimension.
+Öffnen Sie ihn mit **Bearbeiten** (**Öffnen**, wenn Sie nur lesen dürfen) in der Auswahlleiste, bei ausgewählter Dimension. Die Schaltfläche **Verlauf** in der Kopfzeile öffnet den Verlauf der Dimension in einem Seitenbereich. Siehe [Verlauf der Datensätze](record-history.md).
 
 - **Kopfzeile**: der Name der Dimension. Klicken Sie darauf, um die Dimension umzubenennen. **Zurück** / **Weiter** bewegen sich durch die Dimensionen in ihrer Reihenfolge, und die Schließen-Schaltfläche führt zur Seite mit dieser Dimension zurück
 - **Hauptbereich**: eine Nutzungszeile, dann die **Beschreibung**. Die Nutzungszeile nennt die Anzahl der Werte und der Budgetzeilen, die einen davon tragen, OPEX und CAPEX zusammen, zum Beispiel „12 Werte · Verwendet von 29 Zeilen“. **Verwendet von 29 Zeilen** ist ein Link: Er öffnet diese Zeilen in der Liste der Budgetzeilen, in einem neuen Tab, aktivierte und deaktivierte Zeilen eingeschlossen. Eine Dimension, die keine Zeile verwendet, zeigt „Noch nicht verwendet“, eine ohne Werte „Noch keine Werte.“ Solange die Dimension deaktiviert ist, erscheint die Anzahl ohne Link
@@ -249,6 +249,8 @@ Klicken Sie auf **Neuer Wert**. Das Feld **Dimension** steht zunächst auf der D
 - **Kopfzeile**: der Name des Werts. Klicken Sie darauf, um den Wert umzubenennen. **Zurück** / **Weiter** bewegen sich durch die Werte derselben Dimension, in der aktuellen Reihenfolge und mit den aktuellen Filtern der Liste. Die Schließen-Schaltfläche führt zur Liste zurück
 - **Hauptbereich**: eine Nutzungszeile, dann die **Beschreibung**. Die Nutzungszeile zählt die Budgetzeilen, die den Wert tragen, OPEX und CAPEX zusammen, zum Beispiel „Verwendet von 4 Zeilen“. Sie ist ein Link, der diese Zeilen in der Liste der Budgetzeilen in einem neuen Tab öffnet. Ein Wert, den keine Zeile verwendet, zeigt „Noch nicht verwendet“. Solange die Dimension deaktiviert ist, erscheint die Anzahl ohne Link
 - **Bereich Eigenschaften** rechts: **Dimension** (schreibgeschützt), **Verwendet für** und **Lebenszyklus**
+
+Die Schaltfläche **Verlauf** in der Kopfzeile öffnet den Verlauf des Werts in einem Seitenbereich. Siehe [Verlauf der Datensätze](record-history.md).
 
 Änderungen werden von selbst gespeichert, wie im Dimensions-Arbeitsbereich. Ein in der Kopfzeile abgelehnter Name wird oben auf der Seite angezeigt.
 

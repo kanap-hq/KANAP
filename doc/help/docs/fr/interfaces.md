@@ -62,7 +62,7 @@ La grille Interfaces affiche votre registre d'intégration en un coup d'œil.
 
 ## L'espace de travail des Interfaces
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un panneau latéral avec les propriétés de l'interface à gauche, et cinq onglets à droite.
+Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un panneau latéral avec les propriétés de l'interface à gauche, et six onglets à droite. Le dernier, **Historique**, liste les modifications apportées à l'interface (voir [Historique des fiches](record-history.md)).
 
 ### Propriétés de l'interface (panneau latéral)
 

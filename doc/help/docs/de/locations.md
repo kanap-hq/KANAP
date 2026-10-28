@@ -46,7 +46,7 @@ Sie können Spalten auch über die Spaltenauswahl anzeigen, ausblenden und umord
 
 ## Der Standort-Arbeitsbereich
 
-Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Er hat drei Reiter: **Übersicht**, **Kontakte & Support** und **Beziehungen**. Die Reiter Kontakte & Support und Beziehungen werden nach dem erstmaligen Speichern des Standorts verfügbar.
+Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Er hat vier Reiter: **Übersicht**, **Kontakte & Support**, **Beziehungen** und **Verlauf** (die Änderungen am Standort, siehe [Verlauf der Datensätze](record-history.md)). Die Reiter Kontakte & Support und Beziehungen werden nach dem erstmaligen Speichern des Standorts verfügbar.
 
 ### Übersicht
 

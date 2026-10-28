@@ -46,7 +46,7 @@ También puede mostrar, ocultar y reordenar columnas usando el selector de colum
 
 ## El espacio de trabajo de ubicaciones
 
-Haga clic en cualquier fila para abrir el espacio de trabajo. Tiene tres pestañas: **Vista general**, **Contactos y soporte** y **Relaciones**. Las pestañas de Contactos y soporte y Relaciones están disponibles después de guardar la ubicación por primera vez.
+Haga clic en cualquier fila para abrir el espacio de trabajo. Tiene cuatro pestañas: **Vista general**, **Contactos y soporte**, **Relaciones** e **Historial** (los cambios hechos en la ubicación, vea [Historial de los registros](record-history.md)). Las pestañas de Contactos y soporte y Relaciones están disponibles después de guardar la ubicación por primera vez.
 
 ### Vista general
 

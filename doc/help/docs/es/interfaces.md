@@ -62,7 +62,7 @@ La cuadrícula de Interfaces muestra su registro de integraciones de un vistazo.
 
 ## El espacio de trabajo de Interfaces
 
-Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un panel lateral con las propiedades de la interfaz a la izquierda y cinco pestañas a la derecha.
+Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un panel lateral con las propiedades de la interfaz a la izquierda y seis pestañas a la derecha. La última, **Historial**, lista los cambios hechos en la interfaz (vea [Historial de los registros](record-history.md)).
 
 ### Propiedades de la interfaz (panel lateral)
 

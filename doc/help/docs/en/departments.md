@@ -51,7 +51,7 @@ The Departments grid gives you an overview of all departments with their headcou
 
 ## The Departments workspace
 
-Click any row to open the workspace. It has two tabs: **Overview** and **Details**.
+Click any row to open the workspace. It has three tabs: **Overview**, **Details** and **History** (the changes made to the department, see [Record history](record-history.md)).
 
 - **Header**: the department name. Click it to rename the department. **Prev** / **Next** move between departments in the list's order and filters without returning to the list, and the close button returns to the list
 - **Properties panel** on the right: **Company** and **Lifecycle**

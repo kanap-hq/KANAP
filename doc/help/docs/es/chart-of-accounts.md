@@ -113,7 +113,7 @@ Todas las celdas de fila son enlaces clicables al espacio de trabajo de la cuent
 
 ## El espacio de trabajo de la cuenta
 
-Haga clic en cualquier fila de la cuadrícula de cuentas para abrir el espacio de trabajo de la cuenta.
+Haga clic en cualquier fila de la cuadrícula de cuentas para abrir el espacio de trabajo de la cuenta. El botón **Historial** de la cabecera abre el historial de la cuenta en un panel lateral. Vea [Historial de los registros](record-history.md).
 
 ### Disposición
 

@@ -79,7 +79,7 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 
 ## El espacio de trabajo de la empresa
 
-Haga clic en cualquier fila de la lista para abrir el espacio de trabajo de la empresa. Tiene dos pestañas: **Visión general** y **Detalles**. Las personas que gestionan el acceso a los datos ven además una pestaña **Acceso**, con las personas que ven toda la empresa y las que ven una parte. Vea [Acceso a los datos](data-access.md#the-access-tab-of-companies-and-cost-centers).
+Haga clic en cualquier fila de la lista para abrir el espacio de trabajo de la empresa. Tiene tres pestañas: **Visión general**, **Detalles** e **Historial** (los cambios hechos en la empresa, vea [Historial de los registros](record-history.md)). Las personas que gestionan el acceso a los datos ven además una pestaña **Acceso**, con las personas que ven toda la empresa y las que ven una parte. Vea [Acceso a los datos](data-access.md#the-access-tab-of-companies-and-cost-centers).
 
 - **Encabezado**: el nombre de la empresa. Haga clic en él para cambiar el nombre de la empresa. Las flechas con «N de M» permiten moverse entre empresas en el orden y con los filtros de la lista, sin volver a ella. El enlace de retorno, **Empresas**, vuelve a la lista con su contexto de búsqueda intacto
 - **Estado**, bajo el nombre: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** desactiva la empresa de inmediato: el fin de validez pasa a ser la hora actual

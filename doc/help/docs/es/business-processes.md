@@ -53,7 +53,7 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 
 ## El espacio de trabajo de Procesos de negocio
 
-Haga clic en cualquier fila de la lista (o en el botón **Nuevo**) para abrir el espacio de trabajo.
+Haga clic en cualquier fila de la lista (o en el botón **Nuevo**) para abrir el espacio de trabajo. El botón **Historial** de la cabecera abre el historial del proceso en un panel lateral. Vea [Historial de los registros](record-history.md).
 
 El espacio de trabajo tiene una única pestaña **Visión general** a la izquierda, y una barra de herramientas en la parte superior:
 

@@ -144,7 +144,7 @@ Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de 
 
 Une adresse qui ne désigne aucun actif ouvre une page **Actif introuvable**, avec un lien de retour à la liste.
 
-Les onglets sont **Vue d'ensemble**, **Exploitation**, **Réseau**, **Matériel** (types d'actifs physiques uniquement), **Dépendances** et **Relations**. À la création d'un actif, **Vue d'ensemble** et **Réseau** sont ouverts. Les autres onglets s'ouvrent dès que vous cliquez sur **Créer**.
+Les onglets sont **Vue d'ensemble**, **Exploitation**, **Réseau**, **Matériel** (types d'actifs physiques uniquement), **Dépendances**, **Relations** et **Historique** (les modifications apportées à l'actif, voir [Historique des fiches](record-history.md)). À la création d'un actif, **Vue d'ensemble** et **Réseau** sont ouverts. Les autres onglets s'ouvrent dès que vous cliquez sur **Créer**.
 
 ### En-tête
 

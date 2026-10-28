@@ -51,7 +51,7 @@ La grille Contacts fournit un répertoire consultable de tous les contacts exter
 
 ## La fiche contact
 
-Cliquez sur une ligne pour ouvrir la fiche du contact. Chaque modification s'enregistre d'elle-même : il n'y a pas de bouton d'enregistrement.
+Cliquez sur une ligne pour ouvrir la fiche du contact. Chaque modification s'enregistre d'elle-même : il n'y a pas de bouton d'enregistrement. Le bouton **Historique** de l'en-tête ouvre l'historique du contact dans un panneau latéral. Voir [Historique des fiches](record-history.md).
 
 **Titre** : le nom du contact. Cliquez dessus pour modifier le prénom et le nom côte à côte ; la modification s'enregistre quand vous quittez les deux champs ou appuyez sur Entrée, et Échap l'annule. Un contact sans nom affiche son e-mail à la place.
 
