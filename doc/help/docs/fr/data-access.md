@@ -26,7 +26,7 @@ Un nœud est l'un de ceux-ci :
 | Nœud | Ce qu'il couvre |
 |---|---|
 | Une société | Les lignes que la société paie, les lignes imputées à ses centres de coûts, et ses contrats |
-| Un groupe de centres de coûts | Ses sous-groupes et leurs centres de coûts, quelle que soit leur société |
+| Un groupe de centres | Ses sous-groupes et leurs centres de coûts, quelle que soit leur société |
 | Un centre de coûts | Les lignes qui lui sont imputées |
 | **Tout** | Toutes les lignes et tous les contrats |
 
