@@ -28,6 +28,7 @@ import { describeAllocationWarning } from '../../spend/allocation-distribution';
 import type { SpendVersion } from '../../spend/spend-version.entity';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
+import { EndOfSupportService, type DeadlineRow, type GapRow } from '../../technologies/reports/end-of-support.service';
 import { UsersService } from '../../users/users.service';
 import {
   AiEntityMetadata,
@@ -81,6 +82,7 @@ import {
   technologyVersionFigures,
 } from './ai-technologies.query';
 import { AiVulnerabilityDetailRow, AiVulnerabilityRow, listAiVulnerabilities } from './ai-vulnerabilities.query';
+import { listAiSupportDeadlines, listAiSupportGaps } from './ai-support.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
@@ -589,11 +591,14 @@ export class AiQueryExecutor {
     /** Whether the caller reads applications, for the application figures of the technologies. */
     @Optional() private readonly policy?: AiPolicyService,
     @Optional() private readonly technologies?: TechnologiesService,
+    /** The End of support report of the screen, which the two report families read. */
+    @Optional() private readonly endOfSupport?: EndOfSupportService,
   ) {
     // Absent, the technology figures close (no application count, no detail): say so once, at start.
     const logger = new Logger(AiQueryExecutor.name);
     if (!policy) logger.warn('AiPolicyService is not injected: technologies show no application or contract figure.');
     if (!technologies) logger.warn('TechnologiesService is not injected: the technology detail is unavailable.');
+    if (!endOfSupport) logger.warn('EndOfSupportService is not injected: the end-of-support report families are unavailable.');
   }
 
   private async normalizePersonFilters(
@@ -1263,6 +1268,63 @@ export class AiQueryExecutor {
         application_count: numericScalar(row.application_count),
         family: scalar(row.family),
         lifecycle: scalar(row.lifecycle),
+      },
+    });
+  }
+
+  /**
+   * A record to complete of the End of support report: its gap, its subject (business reference
+   * where the record has one, its name otherwise) and the other end of a link. No identifier: the
+   * subject is read through its own family, by `subject`.
+   */
+  private mapSupportGap(row: GapRow): AiEntitySummaryDto {
+    return toEntitySummary('support_gaps', {
+      id: row.key,
+      reference: row.subject_reference ?? null,
+      label: row.subject_name,
+      status: row.gap,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        gap: row.gap,
+        subject_type: row.subject_type,
+        subject: row.subject_reference ?? row.subject_name,
+        subject_name: row.subject_name,
+        related: row.related_name,
+        related_name: row.related_name,
+        related_type: row.related_type,
+        version: scalar(row.version),
+      },
+    });
+  }
+
+  /**
+   * A deadline of the End of support report: its subject and type, the version, the date and the
+   * state, the recorded ends, and the servers and applications by name (the service keeps the
+   * caller's application scope). No identifier: the subject is read through its own family.
+   */
+  private mapSupportDeadline(row: DeadlineRow): AiEntitySummaryDto {
+    return toEntitySummary('support_deadlines', {
+      id: row.key,
+      reference: row.item_reference ?? null,
+      label: row.version ? `${row.item_name} ${row.version}` : row.item_name,
+      status: row.state,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        subject_type: row.type,
+        subject: row.item_reference ?? row.item_name,
+        subject_name: row.item_name,
+        version: scalar(row.version),
+        date: row.date,
+        state: row.state,
+        milestone: scalar(row.milestone),
+        standard_support_end: scalar(row.standard_support_end),
+        extended_support_end: scalar(row.extended_support_end),
+        server_count: numericScalar(row.server_count),
+        servers: row.servers.map((server) => server.name).join(', ') || null,
+        application_count: numericScalar(row.application_count),
+        applications: row.applications?.map((application) => application.name).join(', ') || null,
       },
     });
   }
@@ -2110,6 +2172,32 @@ export class AiQueryExecutor {
       };
     }
 
+    if (input.entity_type === 'support_gaps' || input.entity_type === 'support_deadlines') {
+      const service = this.endOfSupport;
+      if (!service) throw new BadRequestException('The End of support report is not available.');
+      const applications = await resolveAiApplicationsReach(context, this.policy);
+      const opts = { manager: context.manager, tenantId: context.tenantId, userId: context.userId };
+      const result = input.entity_type === 'support_gaps'
+        ? await listAiSupportGaps(service, opts, applications, scoped.query)
+        : await listAiSupportDeadlines(service, opts, applications, scoped.query);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        items: result.items.map((row) => (input.entity_type === 'support_gaps'
+          ? this.mapSupportGap(row as GapRow)
+          : this.mapSupportDeadline(row as DeadlineRow))),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
     if (input.entity_type === 'vulnerabilities') {
       const applications = await resolveAiApplicationsReach(context, this.policy);
       const result = await listAiVulnerabilities(context.manager, context.tenantId, scoped.query, applications);
@@ -2703,6 +2791,10 @@ export class AiQueryExecutor {
     if (entityType === 'technology_versions') {
       // A version has no page of its own: its technology's detail lists every version.
       throw new BadRequestException('A technology version has no detail of its own: read its technology with get_entity_detail on technologies (by TEC-n reference), or query_entities on technology_versions filtered on technology.');
+    }
+    if (entityType === 'support_gaps' || entityType === 'support_deadlines') {
+      // A report row has no page of its own: it names its subject by `subject`.
+      throw new BadRequestException('An End of support report row has no detail of its own: its `subject` names the record, read with get_entity_detail on its family (applications, assets or technologies) by that reference or name.');
     }
     const entityId = await this.resolveDetailEntityId(context, entityType, input.entity_id);
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);

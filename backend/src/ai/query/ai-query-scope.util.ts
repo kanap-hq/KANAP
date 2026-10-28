@@ -34,6 +34,8 @@ export type ScopedAiEntityType =
   | 'projects'
   | 'requests'
   | 'suppliers'
+  | 'support_deadlines'
+  | 'support_gaps'
   | 'tasks'
   | 'technologies'
   | 'technology_versions'

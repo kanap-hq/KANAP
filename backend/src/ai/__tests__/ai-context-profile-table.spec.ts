@@ -250,6 +250,12 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Technologies dont Paul est responsable IT', profile: 'read_query', mode: 'read' },
   { prompt: 'Liste les technologies en version 16', profile: 'read_query', mode: 'read' },
   { prompt: 'Nombre de versions par état de support', profile: 'read_query', mode: 'read' },
+  // The End of support report and the application dates (lot L5 lot 2).
+  { prompt: 'Quelles applications ont une fin de support dans les six mois ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Quelles fiches faut-il compléter pour le rapport de fin de support ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Which servers have no host?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Échéances de fin de support des douze prochains mois par type', profile: 'read_query', mode: 'read' },
+  { prompt: 'Applications mises en service en 2025', profile: 'read_query', mode: 'read' },
 
   // Lot 6: the general "passe/passer" writes, without losing the reflexive past reads.
   { prompt: 'Passe APP-3 en production', profile: 'write_business', mode: 'write' },

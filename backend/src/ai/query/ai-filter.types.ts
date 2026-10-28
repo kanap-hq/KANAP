@@ -22,6 +22,8 @@ export type AiQueryEntityType =
   | 'projects'
   | 'requests'
   | 'suppliers'
+  | 'support_deadlines'
+  | 'support_gaps'
   | 'tasks'
   | 'technologies'
   | 'technology_versions'

@@ -4,6 +4,8 @@ import { FxRateService } from '../../currency/fx-rate.service';
 import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem, yearRateSetId } from '../../spend/allocation-distribution';
 import { listAiTechnologies, listAiTechnologyVersions, resolveAiApplicationsReach } from './ai-technologies.query';
 import { listAiVulnerabilities } from './ai-vulnerabilities.query';
+import { aggregateSupportRows, listAiSupportDeadlines, listAiSupportGaps } from './ai-support.query';
+import { EndOfSupportService } from '../../technologies/reports/end-of-support.service';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
 import { aiDataAccessNote } from './ai-data-access-note.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
@@ -544,6 +546,8 @@ export class AiAggregateExecutor {
     @Optional() private readonly policy?: AiPolicyService,
     /** Live rates for company turnover aggregates. Tests that build the executor by hand omit it. */
     @Optional() private readonly fxRates?: FxRateService,
+    /** The End of support report of the screen, which the two report families group. */
+    @Optional() private readonly endOfSupport?: EndOfSupportService,
   ) {
     // Absent, a technology filter on application_count matches nothing: say so once, at start.
     if (!policy) new Logger(AiAggregateExecutor.name).warn('AiPolicyService is not injected: technology aggregates see no application.');
@@ -1610,6 +1614,31 @@ export class AiAggregateExecutor {
     }
     const isCompleteAggregateResult = (scope: ResolvedAiScope | null): boolean =>
       adapted.ignored.length === 0 && (scope?.resolved !== false);
+    if (input.entity_type === 'support_gaps' || input.entity_type === 'support_deadlines') {
+      const service = this.endOfSupport;
+      if (!service) throw new BadRequestException('The End of support report is not available.');
+      const applications = await resolveAiApplicationsReach(context, this.policy);
+      const opts = { manager: context.manager, tenantId: context.tenantId, userId: context.userId };
+      const query = { q: input.q?.trim(), filters: adapted.filters };
+      const rows = input.entity_type === 'support_gaps'
+        ? (await listAiSupportGaps(service, opts, applications, query, true)).items
+        : (await listAiSupportDeadlines(service, opts, applications, query, true)).items;
+      const groups = aggregateSupportRows(input.entity_type, rows, input.group_by, fn, metric?.key ?? null);
+      const total = rows.length;
+      return {
+        group_by: input.group_by,
+        metric: metric?.key ?? null,
+        function: fn,
+        groups,
+        total,
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(null),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: null,
+      };
+    }
     if (input.entity_type === 'documents') {
       const scoped = await applyScopeToAiQuery(
         context,

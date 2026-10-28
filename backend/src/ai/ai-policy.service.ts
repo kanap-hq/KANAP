@@ -67,6 +67,9 @@ const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> =
   technologies: 'infrastructure',
   // One row per version of a technology, read with the technology right.
   technology_versions: 'infrastructure',
+  // The two End of support report lists, read with the report's right.
+  support_gaps: 'infrastructure',
+  support_deadlines: 'infrastructure',
   users: 'users',
   documents: 'knowledge',
   // The CVE rows of the technologies, as the vulnerabilities page reads them.

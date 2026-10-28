@@ -75,10 +75,11 @@ export const AI_SEARCH_ENTITY_TYPES = [
  * The families query_entities, aggregate_entities and get_filter_values read: every searched
  * family, and the ones with no search index. `vulnerabilities` (the CVE rows of the technologies,
  * `query/ai-vulnerabilities.query.ts`) is listed only: `search_all` does not search it.
- * `technology_versions` (the versions of the technologies, `query/ai-technologies.query.ts`) is
- * listed only too: it has no record detail of its own.
+ * `technology_versions` (the versions of the technologies, `query/ai-technologies.query.ts`),
+ * `support_gaps` and `support_deadlines` (the End of support report, `query/ai-support.query.ts`)
+ * are listed only too: they have no record detail of their own.
  */
-export const AI_QUERY_ENTITY_TYPES = [...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities', 'technology_versions'] as const;
+export const AI_QUERY_ENTITY_TYPES = [...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines'] as const;
 
 /**
  * The families get_entity_detail reads: every queried family but the ones with no record detail.
@@ -86,10 +87,10 @@ export const AI_QUERY_ENTITY_TYPES = [...AI_SEARCH_ENTITY_TYPES, 'vulnerabilitie
  * no page of their own.
  */
 export const AI_DETAIL_ENTITY_TYPES = AI_QUERY_ENTITY_TYPES.filter(
-  (type) => type !== 'technology_versions',
+  (type) => type !== 'technology_versions' && type !== 'support_gaps' && type !== 'support_deadlines',
 ) as [
-  Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions'>,
-  ...Array<Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions'>>,
+  Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines'>,
+  ...Array<Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines'>>,
 ];
 
 export const AI_CONTEXT_ENTITY_TYPES = [
