@@ -1590,6 +1590,9 @@
       "lines": "Zeilen",
       "nature": "Art",
       "detail": "Detail pro Zeile",
+      "level": "Ebene",
+      "levelValue": "Wert",
+      "levelLine": "Zeile",
       "hidden_one": "und {{count}} Zeile außerhalb Ihres Zugriffs",
       "hidden_other": "und {{count}} Zeilen außerhalb Ihres Zugriffs",
       "defaultDimensionInSentence": "Analysedimension"

@@ -18,7 +18,7 @@ import type { AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import type { AnalyticsAxis } from '../../services/analytics';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { useTranslation } from 'react-i18next';
-import { formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
+import { formatCount, formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 import { NO_ANALYTICS_VALUE, analyticsLinesRequest, analyticsRequest, readAnalytics, requestFirstYear } from './reportAggregates';
 import { analyticsTable } from './reportTables';
@@ -36,6 +36,8 @@ import { LinkCellRenderer } from '../../components/grid/renderers';
 const AXIS_PARAM = 'axis';
 /** `?detail=lines`: the table lists the lines of every value; absent, values only. */
 const DETAIL_PARAM = 'detail';
+/** A share with no total to divide by: the report's empty value, as the grid helpers write it. */
+const EMPTY_SHARE = '—';
 
 /**
  * The dimension named in the address when it is enabled, else the default one. Kept in the address
@@ -171,21 +173,40 @@ export default function AnalyticsCategoryReport() {
   const hiddenCounts = useHiddenCategoryCounts({
     axisId,
     valueIds,
-    from: `${firstYear}-01-01`,
+    year: firstYear,
+    scope,
     enabled: report.data?.dataAccessLimited === true,
   });
   const screenRows = useMemo(() => {
     if (report.data?.dataAccessLimited !== true) return table.rows;
     const rows: typeof table.rows = [];
+    let mention: (typeof table.rows)[number] | null = null;
+    const flushMention = () => {
+      if (mention) rows.push(mention);
+      mention = null;
+    };
     for (const row of table.rows) {
-      rows.push(row);
-      if (Number(row.level ?? 0) !== 0) continue;
-      const valueId = typeof row.valueId === 'string' ? row.valueId.toLowerCase() : null;
-      const count = valueId ? hiddenCounts[valueId] ?? 0 : 0;
-      if (count > 0) rows.push({ group: t('reports.analyticsCategory.hidden', { count }), level: 1, hiddenRow: 'yes' });
+      if (Number(row.level ?? 0) === 0) {
+        flushMention();
+        rows.push(row);
+        const valueId = typeof row.valueId === 'string' ? row.valueId.toLowerCase() : null;
+        const count = valueId ? hiddenCounts[valueId] ?? 0 : 0;
+        if (count > 0) {
+          const hiddenRow = { group: t('reports.analyticsCategory.hidden', { count }), level: 1, hiddenRow: 'yes' };
+          // With the detail, the mention follows the value's lines; alone, it sits right under the value.
+          if (detail) mention = hiddenRow;
+          else rows.push(hiddenRow);
+        }
+      } else {
+        rows.push(row);
+      }
     }
+    flushMention();
     return rows;
-  }, [table.rows, hiddenCounts, report.data?.dataAccessLimited, t]);
+  }, [table.rows, hiddenCounts, report.data?.dataAccessLimited, detail, t]);
+  // Sorting a flat hierarchy would move lines under another value: it is off while rows are nested
+  // (the detail, or a hidden-line mention under its value).
+  const hierarchicalRows = detail || screenRows.some((row) => row.hiddenRow === 'yes');
   const columns = useMemo<ColDef[]>(() => table.columns.map((column): ColDef => {
     if (column.key === 'group') {
       return {
@@ -216,15 +237,33 @@ export default function AnalyticsCategoryReport() {
       };
     }
     if (column.kind === 'count') {
-      return { field: column.key, headerName: column.header, width: 100, type: 'rightAligned', valueFormatter: (p) => (p.value == null ? '' : String(p.value)) };
+      return {
+        field: column.key,
+        headerName: column.header,
+        width: 100,
+        type: 'rightAligned',
+        valueFormatter: (p) => (p.data?.hiddenRow || p.value == null ? '' : formatCount(Number(p.value), locale)),
+      };
     }
     if (column.kind === 'percent') {
-      return { field: column.key, headerName: column.header, width: 150, type: 'rightAligned', valueFormatter: (p) => (p.value == null ? '' : formatSharePercent(Number(p.value) * 100, locale, 1)) };
+      return {
+        field: column.key,
+        headerName: column.header,
+        width: 150,
+        type: 'rightAligned',
+        valueFormatter: (p) => (p.data?.hiddenRow ? '' : p.value == null ? EMPTY_SHARE : formatSharePercent(Number(p.value) * 100, locale, 1)),
+      };
     }
-    if (column.key === 'nature') {
+    if (column.key === 'levelLabel' || column.key === 'nature') {
       return { field: column.key, headerName: column.header, width: 100 };
     }
-    return { field: column.key, headerName: column.header, width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) };
+    return {
+      field: column.key,
+      headerName: column.header,
+      width: 140,
+      type: 'rightAligned',
+      valueFormatter: (p) => (p.data?.hiddenRow ? '' : formatNumber(p.value)),
+    };
   }), [table, valueLink, formatNumber, scope, locale]);
 
   // The column as the measure reads it: `Budget`, or `Budget FTE`.
@@ -491,7 +530,7 @@ export default function AnalyticsCategoryReport() {
             wrapperSx={{ height: 520 }}
             rowData={printing ? table.rows : screenRows}
             columnDefs={columns}
-            defaultColDef={{ sortable: true, resizable: true }}
+            defaultColDef={{ sortable: !hierarchicalRows, resizable: true }}
             pinnedBottomRowData={table.footer}
           />
           <ReportFteNotice scope={scope} request={request} result={report.data} columnLabel={(column) => `${budgetColumns.label(column.metric)} ${column.year}`} />

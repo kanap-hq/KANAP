@@ -57,6 +57,7 @@ vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
     </div>
   ),
 }));
+const access = vi.hoisted(() => ({ limited: false, counts: {} as Record<string, number> }));
 const chart = vi.hoisted(() => ({ options: null as any }));
 vi.mock('../../components/reports/ChartCard', () => ({
   default: React.forwardRef(({ options }: { options: unknown }, _ref) => {
@@ -64,10 +65,11 @@ vi.mock('../../components/reports/ChartCard', () => ({
     return null;
   }),
 }));
-const grid = vi.hoisted(() => ({ columns: [] as Array<{ headerName?: string }> }));
+const grid = vi.hoisted(() => ({ columns: [] as Array<{ headerName?: string }>, defaultColDef: null as any }));
 vi.mock('../../components/reports/ReportGrid', () => ({
-  default: ({ rowData, columnDefs }: { rowData?: unknown[]; columnDefs?: Array<{ headerName?: string }> }) => {
+  default: ({ rowData, columnDefs, defaultColDef }: { rowData?: unknown[]; columnDefs?: Array<{ headerName?: string }>; defaultColDef?: unknown }) => {
     grid.columns = columnDefs ?? [];
+    grid.defaultColDef = defaultColDef ?? null;
     return <pre data-testid="grid">{JSON.stringify(rowData ?? [])}</pre>;
   },
 }));
@@ -172,6 +174,8 @@ beforeEach(() => {
   tree.ready = true;
   axesState.list = [DEFAULT_AXIS, NATURE];
   chart.options = null;
+  access.limited = false;
+  access.counts = {};
   get.mockReset();
   get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
     if (url.endsWith('/summary/filter-values')) return { data: fakeFilterValues(serverRows, String(config?.params?.fields ?? '').split(',')) };
@@ -180,7 +184,8 @@ beforeEach(() => {
   // The server's aggregates, computed from the same lines.
   post.mockReset();
   post.mockImplementation(async (url: string, body: any) => {
-    if (url.endsWith('/summary/aggregate')) return { data: fakeAggregate(serverRows, body) };
+    if (url === '/budget-lines/summary/hidden-by-value') return { data: { counts: access.counts } };
+    if (url.endsWith('/summary/aggregate')) return { data: { ...fakeAggregate(serverRows, body), ...(access.limited ? { dataAccessLimited: true } : {}) } };
     throw new Error(`unexpected POST ${url}`);
   });
 });
@@ -457,52 +462,59 @@ describe('Analytics report dimensions', () => {
     expect(grid.columns.map((column) => column.headerName)).toEqual([
       'Nature',
       'reports.analyticsCategory.lines',
+      'reports.analyticsCategory.level',
       'opex.columns.reference',
       'reports.analyticsCategory.nature',
       String(Y),
       'reports.columns.shareOfTotal ' + Y,
     ]);
+    expect(valueRows.map((row) => row.levelLabel)).toEqual(['reports.analyticsCategory.levelValue', 'reports.analyticsCategory.levelValue', 'reports.analyticsCategory.levelValue']);
+    expect(lineRows.map((row) => row.levelLabel)).toEqual(Array(5).fill('reports.analyticsCategory.levelLine'));
     const reference = grid.columns.find((column) => column.headerName === 'opex.columns.reference') as any;
     expect(reference.cellRendererParams.getHref({ id: 'd', itemNumber: 4 })).toBe('/ops/budget/BL-4');
     const share = grid.columns.find((column) => String(column.headerName).startsWith('reports.columns.shareOfTotal')) as any;
     expect(share.valueFormatter({ value: 1000 / 1100 })).toBe('90.9%');
     expect(rows.find((row) => row.group === 'Line a')!.share_2026).toBeCloseTo(100 / 1100, 10);
+    expect(grid.defaultColDef?.sortable).toBe(false);
   });
 
   it('adds the hidden lines under each value for a limited person, singular and plural', async () => {
-    post.mockImplementation(async (url: string, body: any) => ({
-      data: url.endsWith('/summary/aggregate') ? { ...fakeAggregate(serverRows, body), dataAccessLimited: true } : undefined,
-    }));
-    get.mockImplementation(async (url: string) => {
-      if (url === '/budget-lines/summary/hidden-by-value') return { data: { counts: { 'cat-e': 2, 'cat-a': 1 } } };
-      return { data: { items: [], total: 0 } };
-    });
+    access.limited = true;
+    access.counts = { 'cat-e': 2, 'cat-a': 1 };
     renderReport(<AnalyticsCategoryReport />, '/report');
     await waitFor(() => expect(gridRows().some((row) => row.hiddenRow)).toBe(true));
     expect(gridRows().filter((row) => row.hiddenRow).map((row) => row.group)).toEqual([
       'and 2 lines outside your access',
       'and 1 line outside your access',
     ]);
-    const [call] = get.mock.calls.filter(([url]) => url === '/budget-lines/summary/hidden-by-value');
-    expect(call[1].params).toEqual({ axis: 'ax-def', values: 'cat-e,cat-d,cat-a,cat-b,cat-c', from: `${Y - 1}-01-01` });
+    const [call] = post.mock.calls.filter(([url]) => url === '/budget-lines/summary/hidden-by-value');
+    expect(call[1]).toEqual({ axis: 'ax-def', values: ['cat-e', 'cat-d', 'cat-a', 'cat-b', 'cat-c'], year: Y - 1, scope: 'all' });
   });
 
-  it('keeps the hidden mention under a value, never under unassigned, and leaves it off paper', async () => {
-    post.mockImplementation(async (url: string, body: any) => ({
-      data: url.endsWith('/summary/aggregate') ? { ...fakeAggregate(serverRows, body), dataAccessLimited: true } : undefined,
-    }));
-    get.mockImplementation(async (url: string) => {
-      if (url === '/budget-lines/summary/hidden-by-value') return { data: { counts: { 'n-hw': 1 } } };
-      return { data: { items: [], total: 0 } };
-    });
+  it('keeps the hidden mention under a value, never under unassigned, after its lines, and leaves it off paper', async () => {
+    access.limited = true;
+    access.counts = { 'n-hw': 1 };
     const { setReportPrinting } = await import('../../components/reports/reportPrint');
-    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat');
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat&detail=lines');
     await waitFor(() => expect(gridRows().filter((row) => row.hiddenRow).map((row) => row.group)).toEqual([
       'and 1 line outside your access',
     ]));
-    const unassigned = gridRows().find((row) => row.group === 'reports.analyticsCategory.unassigned');
+    const rows = gridRows();
+    const unassigned = rows.find((row) => row.group === 'reports.analyticsCategory.unassigned');
     expect(unassigned?.hiddenRow).toBeUndefined();
-    expect(gridRows().filter((row) => row.hiddenRow)).toHaveLength(1);
+    expect(rows.filter((row) => row.hiddenRow)).toHaveLength(1);
+    const mention = rows.findIndex((row) => row.hiddenRow);
+    const hardware = rows.findIndex((row) => row.group === 'Hardware' && row.level === 0);
+    const software = rows.findIndex((row) => row.group === 'Software' && row.level === 0);
+    expect(hardware).toBeGreaterThan(-1);
+    expect(mention).toBeGreaterThan(hardware);
+    expect(mention).toBeLessThan(software);
+    expect(grid.defaultColDef?.sortable).toBe(false);
+    const amountColumn = grid.columns.find((column) => column.headerName === String(Y)) as any;
+    const shareColumn = grid.columns.find((column) => String(column.headerName).startsWith('reports.columns.shareOfTotal')) as any;
+    expect(amountColumn.valueFormatter({ data: { hiddenRow: 'yes' }, value: undefined })).toBe('');
+    expect(shareColumn.valueFormatter({ data: { hiddenRow: 'yes' }, value: undefined })).toBe('');
+    expect(shareColumn.valueFormatter({ data: {}, value: null })).toBe('—');
     setReportPrinting(true);
     await waitFor(() => expect(gridRows().some((row) => row.hiddenRow)).toBe(false));
     setReportPrinting(false);
@@ -511,7 +523,7 @@ describe('Analytics report dimensions', () => {
   it('asks no hidden count outside limited mode', async () => {
     renderReport(<AnalyticsCategoryReport />, '/report');
     await waitFor(() => expect(gridRows()).toHaveLength(5));
-    expect(get.mock.calls.filter(([url]) => url === '/budget-lines/summary/hidden-by-value')).toEqual([]);
+    expect(post.mock.calls.filter(([url]) => url === '/budget-lines/summary/hidden-by-value')).toEqual([]);
   });
 
   it('does not ask for the lines while the detail is off, the setting default', async () => {
@@ -522,6 +534,9 @@ describe('Analytics report dimensions', () => {
     expect(gridRows().map((row) => row.count)).toEqual([2, 2, 1]);
     expect(post.mock.calls.filter(([, body]) => (body as any).spec.groupBy.length > 2)).toEqual([]);
     expect(screen.getByRole('checkbox', { name: 'reports.analyticsCategory.detail' })).not.toBeChecked();
+    expect(grid.defaultColDef?.sortable).toBe(true);
+    const countColumn = grid.columns.find((column) => column.headerName === 'reports.analyticsCategory.lines') as any;
+    expect(countColumn.valueFormatter({ data: {}, value: 12345 })).toBe('12,345');
   });
 
   it('drops the value exclusions when the dimension or the item type changes', async () => {

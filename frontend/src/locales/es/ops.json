@@ -1590,6 +1590,9 @@
       "lines": "Líneas",
       "nature": "Naturaleza",
       "detail": "Detalle por línea",
+      "level": "Nivel",
+      "levelValue": "Valor",
+      "levelLine": "Línea",
       "hidden_one": "y {{count}} línea fuera de su acceso",
       "hidden_other": "y {{count}} líneas fuera de su acceso",
       "defaultDimensionInSentence": "dimensión analítica"

@@ -52,6 +52,9 @@ const LABELS: T.ReportTableLabels = {
   analyticsTotal: (metric) => `Total ${metric}`,
   analyticsLines: 'Lines',
   analyticsNature: 'Nature',
+  analyticsLevel: 'Level',
+  analyticsLevelValue: 'Value',
+  analyticsLevelLine: 'Line',
   natureOpex: 'OPEX',
   natureCapex: 'CAPEX',
   monthNames: T.shortMonthNames('en'),
@@ -93,6 +96,7 @@ function rowsOf(table: T.ReportTableData) {
   return table.rows.map((row) => ({
     group: row.group,
     level: row.level,
+    levelLabel: row.levelLabel,
     count: row.count,
     reference: row.reference,
     nature: row.nature,
@@ -117,12 +121,13 @@ async function testUnscoped(runner: QueryRunner, s: Seed): Promise<void> {
       lineAnswer as any,
     );
     const rows = rowsOf(table);
-    assert.deepEqual(rows[0], { group: 'a1 value', level: 0, count: 7, reference: undefined, nature: undefined, year: 700, share: undefined });
+    assert.deepEqual(rows[0], { group: 'a1 value', level: 0, levelLabel: 'Value', count: 7, reference: undefined, nature: undefined, year: 700, share: undefined });
     const lines = rows.slice(1);
     assert.equal(lines.length, 7, 'the seven lines of the value');
     assert.equal(lines.filter((line) => line.nature === 'OPEX').length, 6);
     assert.equal(lines.filter((line) => line.nature === 'CAPEX').length, 1);
     assert.ok(lines.every((line) => String(line.reference ?? '').startsWith('BL-')), 'every line has its BL reference');
+    assert.ok(lines.every((line) => line.levelLabel === 'Line'), 'every line row says Line');
     assert.ok(lines.every((line) => line.share === 1 / 7), 'each line is a seventh of the value');
     assert.deepEqual(lines.map((line) => line.year), [100, 100, 100, 100, 100, 100, 100]);
     console.log('  unscoped: one value row (7 lines, 700) and its OPEX and CAPEX lines, shares exact: OK');
@@ -146,7 +151,7 @@ async function testLimited(runner: QueryRunner, s: Seed): Promise<void> {
       lineAnswer as any,
     );
     const rows = rowsOf(table);
-    assert.deepEqual(rows[0], { group: 'a1 value', level: 0, count: 4, reference: undefined, nature: undefined, year: 400, share: undefined });
+    assert.deepEqual(rows[0], { group: 'a1 value', level: 0, levelLabel: 'Value', count: 4, reference: undefined, nature: undefined, year: 400, share: undefined });
     assert.equal(rows.length, 5, 'her four lines only');
     assert.ok(rows.slice(1).every((line) => line.share === 1 / 4));
     const hidden = await hiddenCategoryLineCounts(m, s.axis1, [s.category1], `${YEAR}-01-01`);
@@ -173,11 +178,13 @@ async function testExport(runner: QueryRunner, s: Seed): Promise<void> {
 
     const withDetail = await svc.export.export('analytics', { ...base, detail: 'lines' }, ctx);
     const withRows = csvRows(withDetail.body);
-    assert.deepEqual(withRows[0], [axisName, 'Lines', 'Ref', 'Nature', String(YEAR), `Share of total ${YEAR}`]);
+    assert.deepEqual(withRows[0], [axisName, 'Lines', 'Level', 'Ref', 'Nature', String(YEAR), `Share of total ${YEAR}`]);
     assert.equal(withRows.length, 1 + 9, 'the value row, the seven lines and the total');
-    assert.ok(withRows.slice(2, 9).every((row) => /^BL-\d+$/.test(row[2])), 'every line names its reference');
-    assert.deepEqual(withRows.slice(2, 9).map((row) => row[3]).sort(), ['CAPEX', 'OPEX', 'OPEX', 'OPEX', 'OPEX', 'OPEX', 'OPEX']);
-    assert.ok(withRows.slice(2, 9).every((row) => row[5] === '14.29%'), 'a seventh, as the CSV writes a percent');
+    assert.equal(withRows[1][2], 'Value', 'the value row says Value');
+    assert.ok(withRows.slice(2, 9).every((row) => row[2] === 'Line'), 'every line row says Line');
+    assert.ok(withRows.slice(2, 9).every((row) => /^BL-\d+$/.test(row[3])), 'every line names its reference');
+    assert.deepEqual(withRows.slice(2, 9).map((row) => row[4]).sort(), ['CAPEX', 'OPEX', 'OPEX', 'OPEX', 'OPEX', 'OPEX', 'OPEX']);
+    assert.ok(withRows.slice(2, 9).every((row) => row[6] === '14.29%'), 'a seventh, as the CSV writes a percent');
     console.log('  export: without detail the value row only, with detail its lines, references, natures and shares: OK');
   });
 }

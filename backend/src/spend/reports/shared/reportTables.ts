@@ -103,6 +103,10 @@ export interface ReportTableLabels {
   analyticsLines: string;
   /** `reports.analyticsCategory.nature`: the nature of a line (OPEX or CAPEX). */
   analyticsNature: string;
+  /** `reports.analyticsCategory.level`, `.levelValue` and `.levelLine`: the row type (value or line). */
+  analyticsLevel: string;
+  analyticsLevelValue: string;
+  analyticsLevelLine: string;
   /** `operations.scope.opex` and `operations.scope.capex`: the two nature values. */
   natureOpex: string;
   natureCapex: string;
@@ -422,7 +426,8 @@ export function analyticsTable(
   labels: Pick<
     ReportTableLabels,
     'columnNames' | 'columnFte' | 'analyticsUnassigned' | 'analyticsUnnamed' | 'analyticsTotal' | 'analyticsLines'
-    | 'analyticsNature' | 'natureOpex' | 'natureCapex' | 'reference' | 'shareOfTotal'
+    | 'analyticsNature' | 'analyticsLevel' | 'analyticsLevelValue' | 'analyticsLevelLine'
+    | 'natureOpex' | 'natureCapex' | 'reference' | 'shareOfTotal'
   >,
   lines?: AggregateResult | undefined,
 ): ReportTableData {
@@ -434,6 +439,7 @@ export function analyticsTable(
     { key: 'group', header: p.dimension, kind: 'text' },
     { key: 'count', header: labels.analyticsLines, kind: 'count' },
     ...(detail ? [
+      { key: 'levelLabel', header: labels.analyticsLevel, kind: 'text' as const },
       { key: 'reference', header: labels.reference, kind: 'text' as const },
       { key: 'nature', header: labels.analyticsNature, kind: 'text' as const },
     ] : []),
@@ -444,7 +450,7 @@ export function analyticsTable(
   for (const year of p.years) footer[String(year)] = measureCell(read.totals[year], p.measure);
   const rows: ReportTableRow[] = [];
   for (const group of read.groups) {
-    const row: ReportTableRow = { group: group.label, groupKey: group.key, groupName: group.name ?? null, valueId: group.id ?? null, count: group.count ?? null, level: 0 };
+    const row: ReportTableRow = { group: group.label, groupKey: group.key, groupName: group.name ?? null, valueId: group.id ?? null, count: group.count ?? null, level: 0, ...(detail ? { levelLabel: labels.analyticsLevelValue } : {}) };
     for (const year of p.years) row[String(year)] = measureCell(group.values[year], p.measure);
     rows.push(row);
     if (!detail) continue;
@@ -452,6 +458,7 @@ export function analyticsTable(
       const lineRow: ReportTableRow = {
         group: line.name,
         level: 1,
+        levelLabel: labels.analyticsLevelLine,
         id: line.id,
         itemNumber: line.itemNumber,
         reference: budgetLineReference(line.itemNumber),
@@ -461,7 +468,7 @@ export function analyticsTable(
         lineRow[String(year)] = measureCell(line.values[year], p.measure);
         const total = group.values[year];
         const value = line.values[year];
-        lineRow[`share_${year}`] = total == null || value == null ? null : total === 0 ? 0 : value / total;
+        lineRow[`share_${year}`] = total == null || total === 0 || value == null ? null : value / total;
       }
       rows.push(lineRow);
     }

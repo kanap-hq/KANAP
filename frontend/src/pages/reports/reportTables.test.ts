@@ -38,6 +38,9 @@ const labels: ReportTableLabels = {
   analyticsTotal: (metric) => `All ${metric}`,
   analyticsLines: 'Lines',
   analyticsNature: 'Nature',
+  analyticsLevel: 'Level',
+  analyticsLevelValue: 'Value',
+  analyticsLevelLine: 'Line',
   natureOpex: 'OPEX',
   natureCapex: 'CAPEX',
   monthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
@@ -250,21 +253,34 @@ describe('analyticsTable', () => {
     expect(table.columns.map((column) => [column.key, column.header, column.kind])).toEqual([
       ['group', 'Domain', 'text'],
       ['count', 'Lines', 'count'],
+      ['levelLabel', 'Level', 'text'],
       ['reference', 'Ref', 'text'],
       ['nature', 'Nature', 'text'],
       ['2026', '2026', 'amount'],
       ['share_2026', 'Share of total 2026', 'percent'],
     ]);
-    expect(table.rows.map((rowData) => [rowData.group, rowData.level, rowData.count, rowData.reference, rowData.nature])).toEqual([
-      ['Cloud', 0, 2, undefined, undefined],
-      ['Big line', 1, undefined, 'BL-12', 'OPEX'],
-      ['Small line', 1, undefined, 'BL-13', 'CAPEX'],
-      ['No value', 0, 1, undefined, undefined],
-      ['No value line', 1, undefined, 'BL-14', 'OPEX'],
+    expect(table.rows.map((rowData) => [rowData.group, rowData.level, rowData.levelLabel, rowData.count, rowData.reference, rowData.nature])).toEqual([
+      ['Cloud', 0, 'Value', 2, undefined, undefined],
+      ['Big line', 1, 'Line', undefined, 'BL-12', 'OPEX'],
+      ['Small line', 1, 'Line', undefined, 'BL-13', 'CAPEX'],
+      ['No value', 0, 'Value', 1, undefined, undefined],
+      ['No value line', 1, 'Line', undefined, 'BL-14', 'OPEX'],
     ]);
     expect(table.rows[1].share_2026).toBe(40 / 60);
     expect(table.rows[2].share_2026).toBe(20 / 60);
     expect(table.rows[4].share_2026).toBe(1);
+  });
+
+  it('leaves a share blank when its value total is zero or absent', () => {
+    const groups = [row({ y2026: 0 }, ['v1', 'Zero'])];
+    const lines = [row({ y2026: 0 }, ['v1', 'L1', 'Zero line', '12', 'opex'])];
+    const table = analyticsTable(
+      { scope: 'all', years: [2026], metric: 'budget', measure: 'amount', dimension: 'Domain', detail: true },
+      answer({ y2026: 0 }, groups),
+      labels,
+      answer({ y2026: 0 }, lines),
+    );
+    expect(table.rows[1].share_2026).toBeNull();
   });
 });
 
