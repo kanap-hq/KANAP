@@ -9,11 +9,16 @@ import { isReservedDimensionValueWrite } from '../../data-access/reserved-operat
  * - dimension values (analytics categories): create and update, as on the dimension page
  *   (`isReservedDimensionValueWrite` without a dimension: open values come from a line only);
  * - suppliers and shared contacts: update, and a supplier's contacts; creating one stays allowed.
- * Lines, contracts, tasks, documents, locations and the other records follow the person's access.
+ * - deleting a contact: its delete routes are reserved too.
+ * - deleting a budget line: `DELETE /budget-lines/bulk` and `POST /budget-lines/delete-check`
+ *   carry `@ReservedToUnscopedDataAccess`, for both natures.
+ * Lines, contracts, tasks, documents, locations, connections, interfaces and the other records
+ * follow the person's access.
  */
 
 const ORGANISATION = new Set(['companies', 'departments', 'accounts', 'chart_of_accounts', 'business_processes']);
 const SHARED_RECORDS = new Set(['suppliers', 'contacts']);
+const RESERVED_DELETES = new Set(['contacts', 'spend_items', 'capex_items']);
 
 /** Whether this write tool on this entity type is reserved to unscoped persons. */
 export function isReservedAiMutation(toolName: string, entityType: unknown): boolean {
@@ -28,6 +33,9 @@ export function isReservedAiMutation(toolName: string, entityType: unknown): boo
     case 'update_entity_relations':
       // The contacts of a supplier (as `suppliers/:id/contacts`).
       return type === 'suppliers';
+    case 'delete_record':
+      // The contact and budget line delete routes, reserved as their screens are.
+      return RESERVED_DELETES.has(type);
     default:
       return false;
   }

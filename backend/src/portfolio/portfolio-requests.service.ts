@@ -2805,7 +2805,10 @@ export class PortfolioRequestsService {
     // Its cascade would drop links to lines the person cannot read (spec §5.4).
     await assertNoHiddenLines(mg, 'request', request.id);
 
-    await this.integratedDocuments.deleteForEntity('requests', id, userId, { manager: mg });
+    // Its managed documents name it without a foreign key: they go here, audited under the actor.
+    // The request delete right (admin, as the page) covers them: the Knowledge library rights are
+    // not checked again, as the application, incident and interface deletes do.
+    await this.integratedDocuments.deleteForEntity('requests', id, userId, { manager: mg, checkAccess: false });
 
     // Delete all attachment files from S3 before cascade removes DB rows
     const attachments: PortfolioRequestAttachment[] = await mg

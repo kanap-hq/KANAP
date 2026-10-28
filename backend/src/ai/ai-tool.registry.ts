@@ -176,6 +176,9 @@ const PrepareMutationPlanOperationSchema = z.object({
     .describe('Input object for the selected write-preview tool. Dependent steps may use placeholders like {{create_project.ref}}.'),
   depends_on: z.array(z.string().trim().min(1)).optional()
     .describe('Step keys that must execute before this step can prepare its preview.'),
+}).refine((operation) => operation.tool_name !== 'delete_record', {
+  message: 'delete_record prepares one record at a time and cannot be part of a mutation plan.',
+  path: ['tool_name'],
 });
 
 const BulkExplicitExclusionSchema = z.object({

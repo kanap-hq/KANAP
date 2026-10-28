@@ -518,6 +518,21 @@ function textOrNull(value: unknown): string | null {
   return normalized || null;
 }
 
+/**
+ * A record's name without a reference it repeats at its start ("CON-1 - DB link" for CON-1):
+ * the label prepends the reference for the screens, and prepending it to a name that already
+ * carries it would show it twice ("CON-1 - CON-1 - DB link").
+ */
+function nameWithoutLeadingReference(reference: string | null, name: string | null): string | null {
+  if (!name) return null;
+  if (!reference) return name;
+  const escaped = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const rest = name.replace(new RegExp(`^${escaped}(?:\\s*[-–—·:|]\\s*|\\s+)`, 'i'), '').trim();
+  if (rest && rest !== name) return rest;
+  // A name that is only the reference leaves the title to the reference the card already shows.
+  return name.toLowerCase() === reference.toLowerCase() ? null : name;
+}
+
 function formatPlainValue(value: unknown): string | null {
   if (value == null || value === '') return null;
   if (value instanceof Date) return value.toISOString();
@@ -1029,7 +1044,11 @@ export class AiBusinessRecordMutationSupportService {
     };
   }
 
-  private async resolveRecordReference(
+  /**
+   * The one record a uuid, business reference or exact name names, with the label the screens
+   * show. Shared with the delete of a connection or an interface.
+   */
+  async resolveRecordReference(
     context: AiExecutionContextWithManager,
     entityType: RelationTarget,
     ref: string,
@@ -1307,10 +1326,14 @@ export class AiBusinessRecordMutationSupportService {
         return [row.sequential_id, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled application';
       case 'assets':
         return [row.asset_reference, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled asset';
-      case 'interfaces':
-        return [row.interface_reference || row.interface_id, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled interface';
-      case 'connections':
-        return [row.connection_reference, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled connection';
+      case 'interfaces': {
+        const reference = textOrNull(row.interface_reference) || textOrNull(row.interface_id);
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled interface';
+      }
+      case 'connections': {
+        const reference = textOrNull(row.connection_reference);
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled connection';
+      }
       case 'projects':
         return [row.item_number == null ? null : `PRJ-${row.item_number}`, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled project';
       case 'requests':

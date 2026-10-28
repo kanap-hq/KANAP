@@ -171,12 +171,15 @@ export function ContactNameTitle({
   firstName,
   lastName,
   fallback,
+  fallbackIsPlaceholder = false,
   canEdit,
   onSave,
 }: {
   firstName: string | null;
   lastName: string | null;
   fallback: string;
+  /** The fallback is the generic "Contact" text, not the contact's own email. */
+  fallbackIsPlaceholder?: boolean;
   canEdit: boolean;
   onSave: (next: { first_name: string | null; last_name: string | null }) => void;
 }) {
@@ -188,7 +191,7 @@ export function ContactNameTitle({
   const openRef = React.useRef(false);
   const name = [firstName, lastName].map((part) => (part ?? '').trim()).filter(Boolean).join(' ');
 
-  const showingPlaceholder = !name && fallback === t('contacts.contactFallback');
+  const showingPlaceholder = !name && fallbackIsPlaceholder;
   if (!editing) {
     return (
       <EditableTitleDisplay

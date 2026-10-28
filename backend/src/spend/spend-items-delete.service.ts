@@ -5,7 +5,7 @@ import { SpendItem } from './spend-item.entity';
 import { SpendVersion } from './spend-version.entity';
 import { SpendAmount } from './spend-amount.entity';
 import { SpendAllocation } from './spend-allocation.entity';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { checkIds, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
@@ -52,12 +52,19 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
   override async delete(itemId: string, opts?: DeleteOptions): Promise<void> {
     const manager = opts?.manager ?? this.repository.manager;
     const tenantId = await currentTenantId(manager);
-    const paths = await this.deleteRows(itemId, tenantId, manager, opts?.userId ?? null, !!opts?.skipAudit);
+    const paths = await this.deleteRows(itemId, tenantId, manager, opts?.userId ?? null, !!opts?.skipAudit, opts?.audit);
     await deleteBlobs(this.storage, paths, this.logger);
   }
 
   /** Deletes the item's rows; returns the attachment paths nothing references any more. */
-  private async deleteRows(itemId: string, tenantId: string, manager: EntityManager, userId: string | null, skipAudit: boolean) {
+  private async deleteRows(
+    itemId: string,
+    tenantId: string,
+    manager: EntityManager,
+    userId: string | null,
+    skipAudit: boolean,
+    audit?: AuditSourceOptions,
+  ) {
     const itemRepo = this.getRepo(manager);
     const versionRepo = manager.getRepository(SpendVersion);
     const amountRepo = manager.getRepository(SpendAmount);
@@ -80,6 +87,7 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
       audit: this.audit,
       timeAggregates: this.timeAggregates,
       userId,
+      auditSource: audit,
     });
 
     const versions = await versionRepo.find({ where: { tenant_id: tenantId, spend_item_id: itemId } });
@@ -103,6 +111,7 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
           before: auditLine(this.nature, item),
           after: null,
           userId,
+          ...(audit ? { source: audit.source, sourceRef: audit.sourceRef ?? null } : {}),
         },
         { manager }
       );

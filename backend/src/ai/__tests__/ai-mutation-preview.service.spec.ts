@@ -628,6 +628,23 @@ function createService(options?: {
         },
       } as any,
     ),
+    // The delete operation is not under test here; the registry only needs it registered.
+    {
+      toolName: 'delete_record',
+      description: 'Delete one record.',
+      inputSchema: { safeParse: (value: any) => ({ success: true, data: value }) },
+      inputSummary: {},
+      businessResource: 'tasks',
+      businessResources: ['tasks', 'contacts', 'locations'],
+      writePreview: { entity_type: 'records', fields: ['entity_type', 'ref'], reversible: false, prompt_hint: '' },
+      presentPreview: () => ({
+        target: { entity_type: 'tasks', entity_id: null, ref: null, title: null },
+        changes: {},
+        summary: 'Delete task.',
+      }),
+      prepareCreatePreview: async () => { throw new Error('not used'); },
+      executePreview: async () => undefined,
+    } as any,
     new ImportTicketAiMutationOperation(
       support,
       tasks as any,
@@ -1110,6 +1127,24 @@ async function testMutationPlanAcceptsExplicitTargetExclusion() {
   assert.deepEqual(plan.missing_refs, []);
   assert.deepEqual(plan.excluded, [{ ref: 'T-4', reason: 'Task is not active under the stated assumption.' }]);
   assert.equal(plan.complete, true);
+}
+
+async function testMutationPlanRefusesDeleteRecord() {
+  const { service, context, plans, planSteps } = createService({ previews: [] });
+
+  await assert.rejects(
+    () => service.createMutationPlan(context, {
+      summary: 'Delete two tasks.',
+      operations: [
+        { operation_id: 't_1', tool_name: 'delete_record', input: { entity_type: 'tasks', ref: 'T-1' } },
+        { operation_id: 't_2', tool_name: 'delete_record', input: { entity_type: 'tasks', ref: 'T-2' } },
+      ],
+    }),
+    /one record at a time and cannot be part of a mutation plan/,
+  );
+  assert.equal(plans.length, 0);
+  assert.equal(planSteps.length, 0);
+  console.log('  delete_record is refused in a mutation plan: OK');
 }
 
 async function testCreateCommentPreviewPersistsMarkdownPayload() {
@@ -3048,6 +3083,7 @@ async function main() {
   await testMutationPlanFailedStepsNameTheirTargets();
   await testMutationPlanReportsMissingExpectedTargetRefs();
   await testMutationPlanAcceptsExplicitTargetExclusion();
+  await testMutationPlanRefusesDeleteRecord();
   await testCreateCommentPreviewPersistsMarkdownPayload();
   await testCreateTaskPreviewPersistsResolvedStandaloneFields();
   await testCreateTaskPreviewPersistsResolvedProjectFields();

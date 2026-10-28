@@ -450,8 +450,10 @@ export class InterfacesController {
     });
   }
 
+  // Admin, as the list's bulk delete, the only screen that deletes an interface: the delete takes
+  // its integrated documents with it, whatever the Knowledge library rights.
   @UseGuards(PermissionGuard)
-  @RequireLevel('applications', 'member')
+  @RequireLevel('applications', 'admin')
   @Delete(':id')
   delete(
     @Param('id') id: string,

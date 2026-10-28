@@ -15,7 +15,8 @@ export type AiMutationWriteToolName =
   | 'update_task_fields'
   | 'update_task_status'
   | 'update_task_assignee'
-  | 'add_task_comment';
+  | 'add_task_comment'
+  | 'delete_record';
 
 export type AiMutationPreviewStatus =
   | 'pending'

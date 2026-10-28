@@ -555,7 +555,7 @@ export class LocationsService {
     return { ok: true };
   }
 
-  async delete(id: string, userId: string | null, opts?: { manager?: EntityManager }) {
+  async delete(id: string, userId: string | null, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const repo = this.getRepo(opts?.manager);
     const mg = opts?.manager ?? repo.manager;
     const existing = await repo.findOne({ where: { id } });
@@ -569,7 +569,16 @@ export class LocationsService {
       .execute();
     await repo.delete({ id } as any);
     await this.audit.log(
-      { table: 'locations', recordId: id, action: 'delete', before: existing, after: null, userId },
+      {
+        table: 'locations',
+        recordId: id,
+        action: 'delete',
+        before: existing,
+        after: null,
+        userId,
+        source: opts?.audit?.source,
+        sourceRef: opts?.audit?.sourceRef ?? null,
+      },
       { manager: mg },
     );
     return { ok: true };

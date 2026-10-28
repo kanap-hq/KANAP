@@ -134,6 +134,11 @@ function useZoneName() {
   }, [byField, t]);
 }
 
+/** A zone name read from a shared address: the same text, whatever its no-break spacing. */
+function zoneNameKey(value: string): string {
+  return value.replace(/[\u00a0\u202f]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 /** A neutral link (a record of another page): underline and teal on hover only. */
 function RecordLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
@@ -814,6 +819,8 @@ export default function AdministrationViewPage() {
   const zoneNameRef = useRef(zoneName);
   zoneNameRef.current = zoneName;
   // The grid filters by the catalog code. The address shows the name, so a link never carries a code such as tiens_1.
+  // A shared address may still name the zone, in the spelling of any past release: compare the
+  // names without their spacing, and read the stored name too when the translation changed.
   const zoneFilterAsCodes = useCallback((model: Record<string, any> | null | undefined) => {
     const zone = model?.zone;
     const values = zone?.values;
@@ -821,7 +828,10 @@ export default function AdministrationViewPage() {
     let changed = false;
     const next = values.map((value: unknown) => {
       if (typeof value !== 'string' || zonesRef.current.some((zone) => zone.code === value)) return value;
-      const match = zonesRef.current.find((zone) => zoneNameRef.current(zone.code) === value);
+      const key = zoneNameKey(value);
+      const match = zonesRef.current.find((zone) => (
+        zoneNameKey(zoneNameRef.current(zone.code)) === key || zoneNameKey(zone.label ?? '') === key
+      ));
       if (!match) return value;
       changed = true;
       return match.code;

@@ -375,6 +375,7 @@ export function usePreviewChangeLabels(preview?: AiMutationPreview) {
       const entity = preview.target.entity_type;
       return known([
         preview.tool_name === 'update_entity_relations' ? `ai:previewCard.relationFields.${field}` : '',
+        preview.tool_name === 'delete_record' ? 'ai:previewCard.fields.deletion' : '',
         SCREEN_FIELD_KEYS[entity]?.[field] ?? '',
         `ai:previewCard.fields.${field}`,
       ]) ?? (label || field);

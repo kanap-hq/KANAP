@@ -11,6 +11,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../api';
+import { useAuth } from '../auth/AuthContext';
 import { useLocale } from '../i18n/useLocale';
 import { TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '../pages/tasks/task.constants';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
@@ -53,9 +54,13 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
   const location = useLocation();
   const queryClient = useQueryClient();
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
+  const { hasLevel } = useAuth();
   const dialogs = useKanapDialogs();
   const locale = useLocale();
   const isProject = entityType === 'project';
+  const canCreateTask = hasLevel('tasks', 'member');
+  // Deleting a task is the tasks module's admin action, whatever the host record allows.
+  const canDeleteTask = hasLevel('tasks', 'admin');
   const { tasks, isLoading, refetch, taskPath: buildTaskWorkspacePath, createTask: handleCreateTask } = useEntityTasks(entityType, entityId);
 
   const listFilters = React.useMemo(
@@ -128,7 +133,7 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
             <ClearIcon fontSize="small" />
           </IconButton>
         )}
-        {!disabled && (
+        {!disabled && canCreateTask && (
           <Button startIcon={<AddIcon />} size="small" onClick={() => handleCreateTask()}>
             {t('portfolio:shared.entityTasksPanel.addTask')}
           </Button>
@@ -265,7 +270,7 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
                   >
                     <OpenInNewIcon fontSize="small" />
                   </IconButton>
-                  {!disabled && (
+                  {!disabled && canDeleteTask && (
                     <IconButton
                       size="small"
                       title={t('portfolio:shared.entityTasksPanel.actions.deleteTask')}

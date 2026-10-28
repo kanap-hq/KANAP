@@ -55,11 +55,13 @@ function testRouteLevels() {
   for (const method of PROJECT_CONTRIBUTOR_WRITES) {
     assert.deepEqual(levelOf(proto, method), { resource: 'portfolio_projects', level: 'contributor' }, method);
   }
-  // Every write of the request page is a member's, except its Relations tab.
+  // Every write of the request page is a member's, except its Relations tab and its delete,
+  // which the page keeps behind `canAdmin` as its route is.
   const req = PortfolioRequestsController.prototype as any;
   for (const method of ['bulkReplaceApplications', 'bulkReplaceAssets', 'bulkReplaceCapex', 'bulkReplaceOpex', 'bulkReplaceBusinessProcesses']) {
     assert.deepEqual(levelOf(req, method), { resource: 'portfolio_requests', level: 'member' }, method);
   }
+  assert.deepEqual(levelOf(req, 'delete'), { resource: 'portfolio_requests', level: 'admin' });
 }
 
 type Perms = Record<string, string>;

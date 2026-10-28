@@ -204,6 +204,7 @@
       "country_iso": "Country",
       "criteria_values": "Criteria values",
       "data_class": "Data confidentiality",
+      "deletion": "What goes with it",
       "destination_asset_id": "Destination asset",
       "destination_entity_code": "Destination entity code",
       "disabled_at": "Disabled on",
