@@ -6,11 +6,24 @@ import { backendPath } from '../../common/__tests__/backend-root';
 
 // A module right refusal is written once, through `moduleRightRequired`, so the screen can name the
 // missing right (`errors:MODULE_RIGHT_REQUIRED`). This inventory fails when a hand-written
-// `new ForbiddenException('...')` with one of the old sentences comes back in the backend sources.
-// It reads files outside its own folder: `backendPath()`, never `__dirname` (the compiled tree has
-// no `.ts` file).
+// `new ForbiddenException('...')` or `new ForbiddenException(`...`)` with one of the old sentences
+// comes back in the backend sources. It reads files outside its own folder: `backendPath()`, never
+// `__dirname` (the compiled tree has no `.ts` file).
 
-const FORBIDDEN_REFUSAL = /new\s+ForbiddenException\(\s*'(You cannot read|You cannot edit|Missing required permission|You need |Platform admin)/g;
+const FORBIDDEN_REFUSAL = /new\s+ForbiddenException\(\s*(['`])(You cannot read|You cannot edit|Missing required permission|You need |Platform admin)/g;
+
+/**
+ * A hand-written refusal kept on purpose: its condition accepts `budget_ops:admin` or the admin
+ * right of the record's own scope (`companies` or `departments`), so no single module right names
+ * it. The rest of that file stays under the inventory.
+ */
+const ALLOWED_REFUSALS = [
+  {
+    file: 'src/master-data/master-data-access.util.ts',
+    prefix: 'You need ',
+    reason: 'budget_ops:admin or companies/departments:admin: several possible rights',
+  },
+];
 
 function sourceFiles(dir: string): string[] {
   const files: string[] = [];
@@ -34,8 +47,9 @@ function run(): void {
     const source = fs.readFileSync(file, 'utf8');
     for (const match of source.matchAll(FORBIDDEN_REFUSAL)) {
       const relative = path.relative(backendPath(), file);
+      if (ALLOWED_REFUSALS.some((allowed) => allowed.file === relative && allowed.prefix === match[2])) continue;
       failures.push(
-        `${relative}:${lineOf(source, match.index ?? 0)}: new ForbiddenException('${match[1]}...') ` +
+        `${relative}:${lineOf(source, match.index ?? 0)}: new ForbiddenException(${match[1]}${match[2]}...) ` +
         'is a module right refusal written by hand. Use moduleRightRequired(resource, level, message) ' +
         'from src/auth/module-right-required.ts so the screen can name the missing right.',
       );
