@@ -11,7 +11,13 @@ import type { CostCenterNode } from '../../services/costCenters';
 import type { AnalyticsAxis } from '../../services/analytics';
 
 vi.mock('react-i18next', () => {
-  const t = (key: string, options?: Record<string, unknown>) => (options ? `${key} ${JSON.stringify(options)}` : key);
+  const t = (key: string, options?: Record<string, unknown>) => {
+    if (key === 'reports.analyticsCategory.hidden' && options) {
+      const count = Number(options.count);
+      return `and ${count} ${count === 1 ? 'line' : 'lines'} outside your access`;
+    }
+    return options ? `${key} ${JSON.stringify(options)}` : key;
+  };
   const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
@@ -461,6 +467,51 @@ describe('Analytics report dimensions', () => {
     const share = grid.columns.find((column) => String(column.headerName).startsWith('reports.columns.shareOfTotal')) as any;
     expect(share.valueFormatter({ value: 1000 / 1100 })).toBe('90.9%');
     expect(rows.find((row) => row.group === 'Line a')!.share_2026).toBeCloseTo(100 / 1100, 10);
+  });
+
+  it('adds the hidden lines under each value for a limited person, singular and plural', async () => {
+    post.mockImplementation(async (url: string, body: any) => ({
+      data: url.endsWith('/summary/aggregate') ? { ...fakeAggregate(serverRows, body), dataAccessLimited: true } : undefined,
+    }));
+    get.mockImplementation(async (url: string) => {
+      if (url === '/budget-lines/summary/hidden-by-value') return { data: { counts: { 'cat-e': 2, 'cat-a': 1 } } };
+      return { data: { items: [], total: 0 } };
+    });
+    renderReport(<AnalyticsCategoryReport />, '/report');
+    await waitFor(() => expect(gridRows().some((row) => row.hiddenRow)).toBe(true));
+    expect(gridRows().filter((row) => row.hiddenRow).map((row) => row.group)).toEqual([
+      'and 2 lines outside your access',
+      'and 1 line outside your access',
+    ]);
+    const [call] = get.mock.calls.filter(([url]) => url === '/budget-lines/summary/hidden-by-value');
+    expect(call[1].params).toEqual({ axis: 'ax-def', values: 'cat-e,cat-d,cat-a,cat-b,cat-c', from: `${Y - 1}-01-01` });
+  });
+
+  it('keeps the hidden mention under a value, never under unassigned, and leaves it off paper', async () => {
+    post.mockImplementation(async (url: string, body: any) => ({
+      data: url.endsWith('/summary/aggregate') ? { ...fakeAggregate(serverRows, body), dataAccessLimited: true } : undefined,
+    }));
+    get.mockImplementation(async (url: string) => {
+      if (url === '/budget-lines/summary/hidden-by-value') return { data: { counts: { 'n-hw': 1 } } };
+      return { data: { items: [], total: 0 } };
+    });
+    const { setReportPrinting } = await import('../../components/reports/reportPrint');
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat');
+    await waitFor(() => expect(gridRows().filter((row) => row.hiddenRow).map((row) => row.group)).toEqual([
+      'and 1 line outside your access',
+    ]));
+    const unassigned = gridRows().find((row) => row.group === 'reports.analyticsCategory.unassigned');
+    expect(unassigned?.hiddenRow).toBeUndefined();
+    expect(gridRows().filter((row) => row.hiddenRow)).toHaveLength(1);
+    setReportPrinting(true);
+    await waitFor(() => expect(gridRows().some((row) => row.hiddenRow)).toBe(false));
+    setReportPrinting(false);
+  });
+
+  it('asks no hidden count outside limited mode', async () => {
+    renderReport(<AnalyticsCategoryReport />, '/report');
+    await waitFor(() => expect(gridRows()).toHaveLength(5));
+    expect(get.mock.calls.filter(([url]) => url === '/budget-lines/summary/hidden-by-value')).toEqual([]);
   });
 
   it('does not ask for the lines while the detail is off, the setting default', async () => {

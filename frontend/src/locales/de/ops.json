@@ -1589,6 +1589,8 @@
       "lines": "Zeilen",
       "nature": "Art",
       "detail": "Detail pro Zeile",
+      "hidden_one": "und {{count}} Zeile außerhalb Ihres Zugriffs",
+      "hidden_other": "und {{count}} Zeilen außerhalb Ihres Zugriffs",
       "defaultDimensionInSentence": "Analysedimension"
     },
     "staffing": {

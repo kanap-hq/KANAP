@@ -15,7 +15,15 @@ export default function AnalyticsGroupCell(props: AnalyticsGroupCellParams) {
     return (
       <Box
         component="span"
-        sx={{ display: 'block', pl: 3, color: 'kanap.text.secondary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        sx={{
+          display: 'block',
+          pl: 3,
+          color: 'kanap.text.secondary',
+          fontStyle: props.data?.hiddenRow ? 'italic' : undefined,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
       >
         {props.value ?? ''}
       </Box>

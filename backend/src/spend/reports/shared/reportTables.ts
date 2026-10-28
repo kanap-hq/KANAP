@@ -448,7 +448,7 @@ export function analyticsTable(
   for (const year of p.years) footer[String(year)] = measureCell(read.totals[year], p.measure);
   const rows: ReportTableRow[] = [];
   for (const group of read.groups) {
-    const row: ReportTableRow = { group: group.label, groupKey: group.key, groupName: group.name ?? null, count: group.count ?? null, level: 0 };
+    const row: ReportTableRow = { group: group.label, groupKey: group.key, groupName: group.name ?? null, valueId: group.id ?? null, count: group.count ?? null, level: 0 };
     for (const year of p.years) row[String(year)] = measureCell(group.values[year], p.measure);
     rows.push(row);
     if (!detail) continue;

@@ -115,6 +115,8 @@ export interface AggregateResult {
   reportingCurrency: string | null;
   /** The amounts the converted measures leave out for lack of an exchange rate (`[]` when none). */
   fxMissing: Array<{ currency: string; year: number; lines: number }>;
+  /** The answer is computed on a limited person's access. */
+  dataAccessLimited?: true;
 }
 
 // ----- fields and filters -----

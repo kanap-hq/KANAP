@@ -7,6 +7,7 @@ import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import ReportExclusionPicker from '../../components/reports/ReportExclusionPicker';
 import ReportDataStatus from '../../components/reports/ReportDataStatus';
+import { useReportPrinting } from '../../components/reports/reportPrint';
 import { itemHref, useReportScope } from './useReportScope';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
@@ -28,6 +29,7 @@ import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure 
 import { axisListColumn, reportListLink, reportListPicks, rowListGroup } from './reportListLink';
 import ReportGroupLinkCell from './ReportGroupLinkCell';
 import AnalyticsGroupCell from './AnalyticsGroupCell';
+import { useHiddenCategoryCounts } from './useHiddenCategoryCounts';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 
 /** `?axis=<dimension id>`: the dimension the report groups on. */
@@ -56,6 +58,7 @@ function useReportAxis(axes: AnalyticsAxes): [AnalyticsAxis | null, (id: string)
 export default function AnalyticsCategoryReport() {
   const { t } = useTranslation(["ops"]);
   const locale = useLocale();
+  const printing = useReportPrinting();
   const budgetColumns = useBudgetColumns();
   const now = new Date();
   const Y = now.getFullYear();
@@ -139,11 +142,12 @@ export default function AnalyticsCategoryReport() {
   // FTE: only the values that declare FTE in one of the years.
   const { groups } = useMemo(() => readAnalytics(years, report.data, labels, measure), [years, report.data, labels, measure]);
 
+  // The report's lifecycle window: the lines still active on 1 January of its first year.
+  const firstYear = requestFirstYear(request, Y);
   // A value opens the list filtered on it and on the bar, in a new tab; the total row stays plain.
   const listPicks = useMemo(() => reportListPicks(reportFilters), [reportFilters]);
   const axisColumn = axis ? axisListColumn(axis) : null;
   // The list shows the lines the row counts: the report's window, and with FTE the lines that declare it.
-  const firstYear = requestFirstYear(request, Y);
   const fteOnly = measure === 'fte';
   const valueLink = useCallback((row: { groupName?: string | null }) => {
     if (row.groupName === undefined || !listPicks) return null;
@@ -161,6 +165,27 @@ export default function AnalyticsCategoryReport() {
     ),
     [scope, years, metric, measure, dimensionLabel, detail, report.data, tableLabels, detailReport.data],
   );
+  // Data-scoped access: the values on screen, and the hidden lines of each of them in the report's
+  // window. Nothing is asked outside limited mode, and the print view leaves these mentions out.
+  const valueIds = useMemo(() => groups.map((group) => group.id).filter((id): id is string => id != null), [groups]);
+  const hiddenCounts = useHiddenCategoryCounts({
+    axisId,
+    valueIds,
+    from: `${firstYear}-01-01`,
+    enabled: report.data?.dataAccessLimited === true,
+  });
+  const screenRows = useMemo(() => {
+    if (report.data?.dataAccessLimited !== true) return table.rows;
+    const rows: typeof table.rows = [];
+    for (const row of table.rows) {
+      rows.push(row);
+      if (Number(row.level ?? 0) !== 0) continue;
+      const valueId = typeof row.valueId === 'string' ? row.valueId.toLowerCase() : null;
+      const count = valueId ? hiddenCounts[valueId] ?? 0 : 0;
+      if (count > 0) rows.push({ group: t('reports.analyticsCategory.hidden', { count }), level: 1, hiddenRow: 'yes' });
+    }
+    return rows;
+  }, [table.rows, hiddenCounts, report.data?.dataAccessLimited, t]);
   const columns = useMemo<ColDef[]>(() => table.columns.map((column): ColDef => {
     if (column.key === 'group') {
       return {
@@ -464,7 +489,7 @@ export default function AnalyticsCategoryReport() {
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>{t("reports.shared.summaryTable")}</Typography>
           <ReportGrid
             wrapperSx={{ height: 520 }}
-            rowData={table.rows}
+            rowData={printing ? table.rows : screenRows}
             columnDefs={columns}
             defaultColDef={{ sortable: true, resizable: true }}
             pinnedBottomRowData={table.footer}

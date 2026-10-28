@@ -1589,6 +1589,8 @@
       "lines": "Lines",
       "nature": "Nature",
       "detail": "Detail by line",
+      "hidden_one": "and {{count}} line outside your access",
+      "hidden_other": "and {{count}} lines outside your access",
       "defaultDimensionInSentence": "analytics dimension"
     },
     "staffing": {

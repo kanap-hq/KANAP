@@ -227,9 +227,9 @@ describe('analyticsTable', () => {
       { key: 'count', header: 'Lines', kind: 'count' },
     ]);
     expect(table.rows).toEqual([
-      { group: 'Cloud', groupKey: 'cat_v1', groupName: ' Cloud ', count: 1, level: 0, 2026: 30 },
-      { group: 'Unnamed value', groupKey: 'cat_v2', groupName: '  ', count: 1, level: 0, 2026: 20 },
-      { group: 'No value', groupKey: 'uncategorized', groupName: null, count: 1, level: 0, 2026: 10 },
+      { group: 'Cloud', groupKey: 'cat_v1', groupName: ' Cloud ', valueId: 'v1', count: 1, level: 0, 2026: 30 },
+      { group: 'Unnamed value', groupKey: 'cat_v2', groupName: '  ', valueId: 'v2', count: 1, level: 0, 2026: 20 },
+      { group: 'No value', groupKey: 'uncategorized', groupName: null, valueId: null, count: 1, level: 0, 2026: 10 },
     ]);
     expect(table.footer).toEqual([{ group: 'All Budget', count: 1, 2026: 60 }]);
   });

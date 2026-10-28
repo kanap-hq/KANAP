@@ -1589,6 +1589,8 @@
       "lines": "Líneas",
       "nature": "Naturaleza",
       "detail": "Detalle por línea",
+      "hidden_one": "y {{count}} línea fuera de su acceso",
+      "hidden_other": "y {{count}} líneas fuera de su acceso",
       "defaultDimensionInSentence": "dimensión analítica"
     },
     "staffing": {
