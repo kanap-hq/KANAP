@@ -183,6 +183,9 @@ export default function BusinessProcessWorkspacePage() {
           <Button onClick={handleNext} disabled={!hasNext}>
             {t('shared.labels.next')}
           </Button>
+          {!isCreate && data && (
+            <RecordHistoryButton table="business_processes" recordId={data.id} />
+          )}
           {!isCreate && data && canDelete && (
             <RecordDeleteButton
               base="/business-processes"
@@ -192,9 +195,6 @@ export default function BusinessProcessWorkspacePage() {
               confirmMessage={t('businessProcesses.deleteWarning', { count: 1 })}
               onDeleted={() => { setDeletedId(data.id); closeToList(); }}
             />
-          )}
-          {!isCreate && data && (
-            <RecordHistoryButton table="business_processes" recordId={data.id} />
           )}
           <IconButton
             aria-label={t('common:buttons.close')}

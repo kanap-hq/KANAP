@@ -444,8 +444,9 @@ export default function PortfolioDetailWorkspaceShell({
                   flexWrap: 'wrap',
                 }}
               >
-                {actions}
+                {/* The history sits left of the page's own actions (the delete pill comes last). */}
                 {history && <RecordHistoryButton table={history.table} recordId={history.recordId} />}
+                {actions}
               </Box>
             )}
           </Box>
