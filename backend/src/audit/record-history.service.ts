@@ -30,11 +30,13 @@ import {
  * `GET /records/:table/:id/history` loads the record first, in the request's transaction
  * (`ctx.manager`: tenant context and the person's data access), then reads the audit rows by its id.
  * `audit_log` has only its tenant policy, so this order is what keeps a person from reading the
- * history of a record they cannot open: a record outside their access (or missing) is not found.
+ * history of a record they cannot open: the record check runs the visibility rule of the entry's
+ * reference family (`familyVisibilitySql`), the same rule `loadReferences` applies to every
+ * reference it resolves, so a record outside the person's access (or missing) is not found.
  *
  * The service is generic: a record family is declared in `record-history.inventory.ts` (its table,
- * module, audit labels and children). The presentation of a child kind and the reference families
- * live here; a new family that only adds a record entry needs no change to the route.
+ * module, family, audit labels and children). The presentation of a child kind and the reference
+ * families live here; a new family that only adds a record entry needs no change to the route.
  *
  * Large pages cost a bounded number of statements: the audit page, the authors, the versions, one
  * query per reference family present in the page, and the dimensions it names. No query loops over
@@ -238,6 +240,11 @@ const REFERENCE_FAMILIES: Readonly<Record<FamilyKey, ReferenceFamily>> = {
 };
 
 export const FAMILY_KEYS = Object.keys(REFERENCE_FAMILIES) as FamilyKey[];
+
+/** The permission resource that reads each family, for the inventory's own check (`record-history-inventory.spec.ts`). */
+export const FAMILY_MODULES: Readonly<Record<FamilyKey, string | null>> = Object.fromEntries(
+  FAMILY_KEYS.map((family) => [family, REFERENCE_FAMILIES[family].module]),
+) as Record<FamilyKey, string | null>;
 
 /** The screen rule of each participation resource, as the Relations tabs apply it. */
 const PARTICIPATION_CONDITIONS: Readonly<Record<ParticipationResource, (alias: string, userRef: string) => string>> = {
@@ -773,6 +780,61 @@ export type ReferenceReader = {
 };
 
 /**
+ * The visibility predicate of one reference family, on the alias `r`, appended to `params`:
+ * `$1` and `$2` are the caller's tenant and ids (or id), so a rule that needs a value starts at
+ * `$3`. It is the family's own screen rule: the Business Contributor participation of its
+ * resource (resolved once per page through `scopes`), the confidential incidents a task names,
+ * and the two natures of a budget line. RLS and data access stay the manager's job.
+ */
+async function familyVisibilitySql(
+  reader: ReferenceReader,
+  family: FamilyKey,
+  scopes: Map<ParticipationResource, ParticipationAccessScope | undefined>,
+  params: unknown[],
+): Promise<string> {
+  const spec = REFERENCE_FAMILIES[family];
+  let visibilitySql = '';
+  const scopeResource = spec.visibility.scope;
+  if (scopeResource) {
+    if (!scopes.has(scopeResource)) {
+      scopes.set(scopeResource, await resolveBusinessContributorScopeForUser({
+        manager: reader.manager,
+        userId: reader.userId,
+        tenantId: reader.tenantId,
+        isAdmin: reader.isAdmin,
+      }, scopeResource));
+    }
+    const scope = scopes.get(scopeResource);
+    if (scope) {
+      params.push(scope.userId);
+      visibilitySql += ` AND ${PARTICIPATION_CONDITIONS[scopeResource]('r', `$${params.length}`)}`;
+    }
+  }
+  if (spec.visibility.natures) visibilitySql += " AND r.nature IN ('opex', 'capex')";
+  if (spec.visibility.incident) visibilitySql += taskIncidentVisibilitySql('r', reader.viewer, params);
+  return visibilitySql;
+}
+
+/**
+ * Whether the person may read one record, under the request's transaction: the same read the
+ * reference resolution runs for a named id, with the record's own family rule. A false answer is
+ * the 404 of `list`, never a 403: the record is outside the person's access or does not exist.
+ */
+export async function recordIsVisible(reader: ReferenceReader, family: FamilyKey, id: string): Promise<boolean> {
+  const spec = REFERENCE_FAMILIES[family];
+  const params: unknown[] = [reader.tenantId, id];
+  const visibilitySql = await familyVisibilitySql(reader, family, new Map(), params);
+  const rows: Array<{ id: string }> = await reader.manager.query(
+    `SELECT r.id::text AS id
+       FROM ${spec.table} r
+      WHERE r.tenant_id = $1 AND r.id = $2::uuid${visibilitySql}
+      LIMIT 1`,
+    params,
+  );
+  return rows.length > 0;
+}
+
+/**
  * The rows of each family the person may name, under the tenant predicate, RLS and data access,
  * plus the rule the family's own screen applies:
  * - applications, projects and requests: a Business Contributor only sees the records they take
@@ -798,25 +860,7 @@ export async function loadReferences(
     }
     const spec = REFERENCE_FAMILIES[family];
     const params: unknown[] = [reader.tenantId, Array.from(wanted)];
-    let visibilitySql = '';
-    const scopeResource = spec.visibility.scope;
-    if (scopeResource) {
-      if (!scopes.has(scopeResource)) {
-        scopes.set(scopeResource, await resolveBusinessContributorScopeForUser({
-          manager: reader.manager,
-          userId: reader.userId,
-          tenantId: reader.tenantId,
-          isAdmin: reader.isAdmin,
-        }, scopeResource));
-      }
-      const scope = scopes.get(scopeResource);
-      if (scope) {
-        params.push(scope.userId);
-        visibilitySql += ` AND ${PARTICIPATION_CONDITIONS[scopeResource]('r', `$${params.length}`)}`;
-      }
-    }
-    if (spec.visibility.natures) visibilitySql += " AND r.nature IN ('opex', 'capex')";
-    if (spec.visibility.incident) visibilitySql += taskIncidentVisibilitySql('r', reader.viewer, params);
+    const visibilitySql = await familyVisibilitySql(reader, family, scopes, params);
     const reference = spec.reference ? `, ${spec.reference} AS reference` : '';
     const rows: ReferenceRow[] = await reader.manager.query(
       `SELECT r.id::text AS id, ${spec.label} AS label${reference}
@@ -1551,11 +1595,16 @@ export class RecordHistoryService {
     const manager = ctx.manager;
     if (!manager) throw new Error('RecordHistoryService.list needs the request transaction (ctx.manager).');
 
-    // `AGENTS.md`: a read of `spend_items` names its nature. The inventory's check covers both
-    // natures by design; the guard is added here because the inventory is shared with another lot.
-    const natureGuard = entry.table === 'spend_items' ? " AND nature IN ('opex', 'capex')" : '';
-    const found: Array<{ id: string; item_number?: number | string | null }> = await manager.query(`${entry.checkSql}${natureGuard}`, [ctx.tenantId, id]);
-    if (!found[0]) throw new NotFoundException('Record not found');
+    // The record is read first, under the person's access and the entry family's own screen rule:
+    // a hidden or missing record is not found (404), never served with a partial history.
+    const reader: ReferenceReader = {
+      manager,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      isAdmin: ctx.isAdmin === true,
+      viewer: incidentViewerFromContext(ctx),
+    };
+    if (!(await recordIsVisible(reader, entry.family, id))) throw new NotFoundException('Record not found');
 
     const limit = parseLimit(options.limit);
     const cursor = decodeCursor(options.cursor);

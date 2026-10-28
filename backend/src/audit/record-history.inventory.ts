@@ -1,12 +1,14 @@
 import type { PermissionLevel } from '../auth/require-level.decorator';
+import type { FamilyKey } from './record-history.service';
 
 /**
  * The records whose history the API serves (`GET /records/:table/:id/history`), by route key.
  *
- * A record entry says how to read one record under the request's transaction (`ctx.manager`), the
- * permission module that opens its page, the audit labels its own rows carry, and the audit labels
- * of its children with the kind the history shows them as. The service (`record-history.service.ts`)
- * owns the presentation; a new record family only adds an entry here.
+ * A record entry names the reference family whose screen rule decides who may read the record (the
+ * same family the history resolves its references with), the permission module that opens its page,
+ * the audit labels its own rows carry, and the audit labels of its children with the kind the
+ * history shows them as. The service (`record-history.service.ts`) owns the presentation; a new
+ * record family only adds an entry here.
  *
  * Two declarations keep the parent rules and the data-access inventory honest:
  * - every child label has a parent rule in `audit-parent-rules.ts`, except the labels listed in
@@ -50,11 +52,11 @@ export type RecordHistoryRecord = {
   /** The audit labels of the record's own rows, both natures where the family has two (`budget-nature.ts`). */
   auditLabels: readonly string[];
   /**
-   * The read that finds the record under `ctx.manager` (RLS, data access): `$1` the tenant, `$2`
-   * the record id. It returns the row, or nothing when the record does not exist or is outside the
-   * person's access. Never run it on `repo.manager` or `dataSource.manager`.
+   * The reference family whose visibility rule decides whether a person may read the record: the
+   * tenant predicate and RLS under `ctx.manager`, then the family's own screen rule (participation,
+   * incidents, natures). The family's module must be this entry's module.
    */
-  checkSql: string;
+  family: FamilyKey;
   /** Audit label → the kind the child shows as. */
   children: Readonly<Record<string, RecordHistoryChildKind>>;
   /** Child labels whose write declares the record as `parent`, with no label rule. */
@@ -72,7 +74,7 @@ export const RECORD_HISTORY: Readonly<Record<string, RecordHistoryRecord>> = {
     // A CAPEX line keeps the CAPEX audit label of before lot Z1 (`budget-nature.ts`, `auditTableOf`);
     // a line that changed nature keeps rows under both labels.
     auditLabels: ['spend_items', 'capex_items'],
-    checkSql: 'SELECT id, item_number FROM spend_items WHERE tenant_id = $1 AND id = $2',
+    family: 'budget_line',
     children: {
       // Versions and their budget tables: both labels of the single physical family.
       spend_versions: 'version',

@@ -7,6 +7,7 @@ import {
   recordHistoryChildKind,
   recordHistoryModules,
 } from '../record-history.inventory';
+import { FAMILY_KEYS, FAMILY_MODULES } from '../record-history.service';
 
 // The inventory of record histories (lot 1B): the entries, the parent rules and the data-access
 // tables of the line family agree both ways. A record family added later without its child rules,
@@ -21,9 +22,8 @@ function testEntries() {
     assert.equal(entry.level, 'reader', `${key}: opening the record's page is a read`);
     assert.deepEqual(entry.auditLabels, Array.from(new Set(entry.auditLabels)), `${key}: audit labels are unique`);
     assert.ok(entry.auditLabels.length > 0, `${key}: the record has an audit label`);
-    assert.match(entry.checkSql, new RegExp(`\\b${entry.table}\\b`), `${key}: the read names the table`);
-    assert.match(entry.checkSql, /\$1/, `${key}: the read takes the tenant`);
-    assert.match(entry.checkSql, /\$2/, `${key}: the read takes the record id`);
+    assert.ok(FAMILY_KEYS.includes(entry.family), `${key}: ${entry.family} is a reference family`);
+    assert.equal(entry.module, FAMILY_MODULES[entry.family], `${key}: the record module reads its reference family`);
     assert.ok(entry.exclusions.every((exclusion) => exclusion.reason.trim().length > 0), `${key}: an exclusion has its reason`);
     assert.ok(entry.explicitParentLabels.every((label) => recordHistoryChildKind(entry, label) !== null), `${key}: an explicit parent is a child label`);
   }
