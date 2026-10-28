@@ -40,7 +40,7 @@ function testEntries() {
       childReads += 1;
     }
   }
-  assert.deepEqual(recordHistoryModules(), ['accounts', 'budget', 'cost_centers'], 'the modules of the route guard');
+  assert.deepEqual(recordHistoryModules(), ['accounts', 'budget', 'cost_centers', 'infrastructure'], 'the modules of the route guard');
   // Every reference family has a reader module (people are the only exception, `null`), and the
   // module is a permission resource: a family declared ahead of its record page is already checked.
   for (const family of FAMILY_KEYS) {
@@ -71,13 +71,17 @@ function testParentRulesAgree() {
     for (const label of entry.explicitParentLabels) explicit.add(label);
   }
 
-  // Every child has a rule, or its write hands the record as an explicit parent.
-  for (const label of children) {
-    if (explicit.has(label)) {
-      assert.equal(AUDIT_PARENT_RULES[label], undefined, `${label}: an explicit parent carries no label rule`);
-      continue;
+  // Every child has a rule, its write hands the record as an explicit parent, or its rows name the
+  // record in `record_id` (the `record` read mode, where `parent_*` is not needed).
+  for (const entry of Object.values(RECORD_HISTORY)) {
+    for (const label of Object.keys(entry.children)) {
+      if (entry.childReads?.[label] === 'record') continue;
+      if (explicit.has(label)) {
+        assert.equal(AUDIT_PARENT_RULES[label], undefined, `${label}: an explicit parent carries no label rule`);
+        continue;
+      }
+      assert.ok(AUDIT_PARENT_RULES[label], `${label}: a child label needs a parent rule (or explicitParentLabels)`);
     }
-    assert.ok(AUDIT_PARENT_RULES[label], `${label}: a child label needs a parent rule (or explicitParentLabels)`);
   }
   // Every rule is a child of a declared record: a rule whose rows no history reads would be dead.
   for (const [label, rule] of Object.entries(AUDIT_PARENT_RULES)) {
@@ -107,9 +111,18 @@ function testDataAccessTablesAreDeclared() {
   }
   const missing = followed.filter((table) => !declared.has(table));
   assert.deepEqual(missing, [], 'every follows_line and link_to_line table is a child or an exclusion');
+  const dataAccess = new Map(DATA_ACCESS_TABLES.map((table) => [table.table, table]));
   for (const entry of Object.values(RECORD_HISTORY)) {
     for (const exclusion of entry.exclusions) {
-      assert.ok(followed.includes(exclusion.table), `${exclusion.table}: an exclusion is a follows_line or link_to_line table`);
+      const table = dataAccess.get(exclusion.table);
+      // A family may also exclude a table it follows outside the data-access inventory (an asset's
+      // application assignments, an incident's links). A scoped table may only be excluded when it
+      // follows or links to a line.
+      if (!table) continue;
+      assert.ok(
+        table.cls === 'follows_line' || table.cls === 'link_to_line',
+        `${exclusion.table}: an exclusion of a scoped table is a follows_line or link_to_line table`,
+      );
     }
   }
   console.log(`  ${followed.length} follows_line/link_to_line tables declared: OK`);

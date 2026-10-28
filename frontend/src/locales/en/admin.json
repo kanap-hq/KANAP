@@ -553,7 +553,73 @@
       "kind": "Type",
       "parent_id": "Parent group",
       "accountNature": "Used for",
-      "costCenterOwner": "Budget holder"
+      "costCenterOwner": "Budget holder",
+      "asset_reference": "Asset reference",
+      "provider": "Provider",
+      "region": "Region",
+      "zone": "Zone",
+      "hostname": "Host name",
+      "domain": "Domain",
+      "fqdn": "FQDN",
+      "aliases": "Aliases",
+      "admin_zone": "Administration zone",
+      "is_cluster": "Cluster",
+      "end_of_life_date": "End-of-life date",
+      "location_id": "Site",
+      "sub_location_id": "Sub-site",
+      "operating_system": "Operating system",
+      "members": "Members",
+      "relations": "Relations",
+      "external_links": "External inventory links",
+      "ip_addresses": "IP addresses",
+      "cluster": "Cluster (legacy text)",
+      "serial_number": "Serial number",
+      "manufacturer": "Manufacturer",
+      "model": "Model",
+      "purchase_date": "Purchase date",
+      "rack_location": "Rack location",
+      "rack_unit": "Rack unit",
+      "vendor_id": "Vendor",
+      "support_contract_id": "Support contract",
+      "support_tier": "Support tier",
+      "support_expiry": "Support expiry",
+      "spend_item_id": "Budget line",
+      "family": "Family",
+      "hosting_type": "Hosting type",
+      "cpe_products": "CPE products",
+      "replaced_by_id": "Replaced by",
+      "vulnerability_alerts": "Vulnerability alerts",
+      "catalog_sync": "Catalogue synchronization",
+      "versions_added": "Versions added",
+      "versions_updated": "Versions updated",
+      "versions_attached": "Versions attached",
+      "cpe_products_added": "CPE products added",
+      "cpe_products_removed": "CPE products removed",
+      "cve_names_added": "CVE names added",
+      "cve_names_removed": "CVE names removed",
+      "description_filled": "Description filled",
+      "description_updated": "Description updated",
+      "converted_from_application": "Converted from application",
+      "moved": "Moved items",
+      "catalog_key": "Catalogue key",
+      "catalog_state": "Catalogue state",
+      "cve_names": "CVE names",
+      "cpe_version": "CPE version",
+      "build_prefixes": "Build prefixes",
+      "standard_support_end": "Standard support end",
+      "extended_support_end": "Extended support end",
+      "vulnerability_alerts_effective": "Effective vulnerability alerts",
+      "owner_type": "Owner type",
+      "application_id": "Application",
+      "technology_version_id": "Version",
+      "is_operating_system": "Operating system",
+      "cve_id": "CVE",
+      "state": "State",
+      "note": "Note",
+      "vulnerability_state": "State",
+      "asset_id": "Asset",
+      "related_asset_id": "Related asset",
+      "relation_type": "Relation type"
     },
     "history": {
       "empty": "No history yet",
@@ -634,6 +700,34 @@
         "request": {
           "added": "Request added: {{label}}",
           "removed": "Request removed: {{label}}"
+        },
+        "budget_line": {
+          "added": "Budget line added: {{label}}",
+          "removed": "Budget line removed: {{label}}"
+        },
+        "relation_contains": {
+          "added": "Component added: {{label}}",
+          "removed": "Component removed: {{label}}"
+        },
+        "relation_depends_on": {
+          "added": "Dependency added: {{label}}",
+          "removed": "Dependency removed: {{label}}"
+        },
+        "member": {
+          "added": "Member added: {{label}}",
+          "removed": "Member removed: {{label}}"
+        },
+        "owner_it": {
+          "added": "IT owner added: {{label}}",
+          "removed": "IT owner removed: {{label}}"
+        },
+        "owner_business": {
+          "added": "Business owner added: {{label}}",
+          "removed": "Business owner removed: {{label}}"
+        },
+        "operating_system": {
+          "added": "Operating system added: {{label}}",
+          "removed": "Operating system removed: {{label}}"
         }
       },
       "unnamed": {
@@ -669,9 +763,24 @@
         "calendar": "a working-day calendar",
         "analytics_axis": "an analytics dimension",
         "analytics_category": "an analytics value",
-        "contributor": "a contributor"
+        "contributor": "a contributor",
+        "relation": "a relation",
+        "member": "a member",
+        "hardware": "a hardware sheet",
+        "support": "a support sheet",
+        "technology_version": "a version",
+        "owner": "an owner",
+        "vulnerability": "a vulnerability"
       },
-      "title": "History"
+      "title": "History",
+      "hardware": "Hardware",
+      "support": "Support",
+      "vulnerability": "Vulnerability {{cve}}",
+      "vulnerabilityNoName": "Vulnerability",
+      "hardwareCreated": "Hardware added",
+      "hardwareDeleted": "Hardware removed",
+      "supportCreated": "Support added",
+      "supportDeleted": "Support removed"
     },
     "messages": {
       "loadDetailsFailed": "Failed to load audit entry details."
@@ -951,6 +1060,56 @@
       "costCenterKind": {
         "group": "Group",
         "cost_center": "Cost center"
+      },
+      "assetKind": {
+        "physical_server": "Physical server",
+        "virtual_machine": "Virtual machine",
+        "container": "Container",
+        "serverless": "Serverless",
+        "appliance": "Appliance",
+        "saas": "SaaS",
+        "other": "Other",
+        "switch": "Switch",
+        "firewall": "Firewall",
+        "load_balancer": "Load balancer",
+        "access_point": "Access point",
+        "san": "SAN",
+        "nas": "NAS",
+        "backup_appliance": "Backup appliance",
+        "tape_library": "Tape library",
+        "industrial_robot": "Industrial robot",
+        "industrial_machine": "Industrial machine",
+        "rack": "Rack"
+      },
+      "technologyFamily": {
+        "operating_system": "Operating system",
+        "database": "Database",
+        "application_server": "Application server",
+        "web_server": "Web server",
+        "hypervisor": "Hypervisor",
+        "container": "Containers",
+        "directory": "Directory and identity",
+        "messaging": "Messaging",
+        "integration": "Integration",
+        "backup": "Backup",
+        "monitoring": "Monitoring",
+        "runtime": "Runtime and framework",
+        "storage": "Storage",
+        "network": "Network",
+        "network_security": "Security",
+        "administration": "Administration",
+        "other": "Other"
+      },
+      "hostingType": {
+        "on_prem": "On-prem",
+        "colocation": "Colocation",
+        "public_cloud": "Public cloud",
+        "private_cloud": "Private cloud"
+      },
+      "vulnerabilityState": {
+        "to_review": "To review",
+        "handled": "Handled",
+        "not_affected": "Not affected"
       }
     },
     "dataAccess": {

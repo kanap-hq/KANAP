@@ -553,7 +553,73 @@
       "kind": "Type",
       "parent_id": "Groupe parent",
       "accountNature": "Utilisé pour",
-      "costCenterOwner": "Responsable budgétaire"
+      "costCenterOwner": "Responsable budgétaire",
+      "asset_reference": "Référence de l'actif",
+      "provider": "Fournisseur",
+      "region": "Région",
+      "zone": "Zone",
+      "hostname": "Nom d'hôte",
+      "domain": "Domaine",
+      "fqdn": "FQDN",
+      "aliases": "Alias",
+      "admin_zone": "Zone d'administration",
+      "is_cluster": "Grappe",
+      "end_of_life_date": "Date de fin de vie",
+      "location_id": "Site",
+      "sub_location_id": "Sous-site",
+      "operating_system": "Système d'exploitation",
+      "members": "Membres",
+      "relations": "Relations",
+      "external_links": "Liens d'inventaire externe",
+      "ip_addresses": "Adresses IP",
+      "cluster": "Grappe (texte historique)",
+      "serial_number": "Numéro de série",
+      "manufacturer": "Fabricant",
+      "model": "Modèle",
+      "purchase_date": "Date d'achat",
+      "rack_location": "Emplacement de baie",
+      "rack_unit": "Unité de baie",
+      "vendor_id": "Fournisseur",
+      "support_contract_id": "Contrat de support",
+      "support_tier": "Niveau de support",
+      "support_expiry": "Fin du support",
+      "spend_item_id": "Ligne budgétaire",
+      "family": "Famille",
+      "hosting_type": "Type d'hébergement",
+      "cpe_products": "Produits CPE",
+      "replaced_by_id": "Remplacée par",
+      "vulnerability_alerts": "Alertes de vulnérabilité",
+      "catalog_sync": "Synchronisation du catalogue",
+      "versions_added": "Versions ajoutées",
+      "versions_updated": "Versions mises à jour",
+      "versions_attached": "Versions rattachées",
+      "cpe_products_added": "Produits CPE ajoutés",
+      "cpe_products_removed": "Produits CPE retirés",
+      "cve_names_added": "Noms de CVE ajoutés",
+      "cve_names_removed": "Noms de CVE retirés",
+      "description_filled": "Description renseignée",
+      "description_updated": "Description mise à jour",
+      "converted_from_application": "Convertie depuis une application",
+      "moved": "Éléments déplacés",
+      "catalog_key": "Clé de catalogue",
+      "catalog_state": "État du catalogue",
+      "cve_names": "Noms de CVE",
+      "cpe_version": "Version CPE",
+      "build_prefixes": "Préfixes de build",
+      "standard_support_end": "Fin du support standard",
+      "extended_support_end": "Fin du support étendu",
+      "vulnerability_alerts_effective": "Alertes de vulnérabilité effectives",
+      "owner_type": "Type de propriétaire",
+      "application_id": "Application",
+      "technology_version_id": "Version",
+      "is_operating_system": "Système d'exploitation",
+      "cve_id": "CVE",
+      "state": "État",
+      "note": "Note",
+      "vulnerability_state": "État",
+      "asset_id": "Actif",
+      "related_asset_id": "Actif lié",
+      "relation_type": "Type de relation"
     },
     "history": {
       "empty": "Aucun historique",
@@ -634,6 +700,34 @@
         "request": {
           "added": "Demande ajoutée : {{label}}",
           "removed": "Demande retirée : {{label}}"
+        },
+        "budget_line": {
+          "added": "Ligne budgétaire ajoutée : {{label}}",
+          "removed": "Ligne budgétaire retirée : {{label}}"
+        },
+        "relation_contains": {
+          "added": "Composant ajouté : {{label}}",
+          "removed": "Composant retiré : {{label}}"
+        },
+        "relation_depends_on": {
+          "added": "Dépendance ajoutée : {{label}}",
+          "removed": "Dépendance retirée : {{label}}"
+        },
+        "member": {
+          "added": "Membre ajouté : {{label}}",
+          "removed": "Membre retiré : {{label}}"
+        },
+        "owner_it": {
+          "added": "Propriétaire IT ajouté : {{label}}",
+          "removed": "Propriétaire IT retiré : {{label}}"
+        },
+        "owner_business": {
+          "added": "Propriétaire métier ajouté : {{label}}",
+          "removed": "Propriétaire métier retiré : {{label}}"
+        },
+        "operating_system": {
+          "added": "Système d'exploitation ajouté : {{label}}",
+          "removed": "Système d'exploitation retiré : {{label}}"
         }
       },
       "unnamed": {
@@ -669,9 +763,24 @@
         "calendar": "un calendrier de jours ouvrés",
         "analytics_axis": "une dimension analytique",
         "analytics_category": "une valeur analytique",
-        "contributor": "un contributeur"
+        "contributor": "un contributeur",
+        "relation": "une relation",
+        "member": "un membre",
+        "hardware": "une fiche matériel",
+        "support": "une fiche de support",
+        "technology_version": "une version",
+        "owner": "un propriétaire",
+        "vulnerability": "une vulnérabilité"
       },
-      "title": "Historique"
+      "title": "Historique",
+      "hardware": "Matériel",
+      "support": "Support",
+      "vulnerability": "Vulnérabilité {{cve}}",
+      "vulnerabilityNoName": "Vulnérabilité",
+      "hardwareCreated": "Matériel ajouté",
+      "hardwareDeleted": "Matériel supprimé",
+      "supportCreated": "Support ajouté",
+      "supportDeleted": "Support supprimé"
     },
     "messages": {
       "loadDetailsFailed": "Impossible de charger les détails de l'entrée d'audit."
@@ -951,6 +1060,56 @@
       "costCenterKind": {
         "group": "Groupe",
         "cost_center": "Centre de coûts"
+      },
+      "assetKind": {
+        "physical_server": "Serveur physique",
+        "virtual_machine": "Machine virtuelle",
+        "container": "Conteneur",
+        "serverless": "Serverless",
+        "appliance": "Appliance",
+        "saas": "SaaS",
+        "other": "Autre",
+        "switch": "Switch",
+        "firewall": "Pare-feu",
+        "load_balancer": "Répartiteur de charge",
+        "access_point": "Point d'accès",
+        "san": "SAN",
+        "nas": "NAS",
+        "backup_appliance": "Appliance de sauvegarde",
+        "tape_library": "Librairie de bandes",
+        "industrial_robot": "Robot industriel",
+        "industrial_machine": "Machine industrielle",
+        "rack": "Baie"
+      },
+      "technologyFamily": {
+        "operating_system": "Système d'exploitation",
+        "database": "Base de données",
+        "application_server": "Serveur d’applications",
+        "web_server": "Serveur web",
+        "hypervisor": "Hyperviseur",
+        "container": "Conteneurs",
+        "directory": "Annuaire et identité",
+        "messaging": "Messagerie",
+        "integration": "Intégration",
+        "backup": "Sauvegarde",
+        "monitoring": "Supervision",
+        "runtime": "Environnement d’exécution et framework",
+        "storage": "Stockage",
+        "network": "Réseau",
+        "network_security": "Sécurité",
+        "administration": "Administration",
+        "other": "Autre"
+      },
+      "hostingType": {
+        "on_prem": "Sur site",
+        "colocation": "Colocation",
+        "public_cloud": "Cloud public",
+        "private_cloud": "Cloud privé"
+      },
+      "vulnerabilityState": {
+        "to_review": "À traiter",
+        "handled": "Traitée",
+        "not_affected": "Non concernée"
       }
     },
     "dataAccess": {

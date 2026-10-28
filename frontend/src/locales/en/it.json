@@ -2083,7 +2083,8 @@
         "network": "Network",
         "hardware": "Hardware",
         "dependencies": "Dependencies",
-        "relations": "Relations"
+        "relations": "Relations",
+        "history": "History"
       },
       "operations": {
         "hostedApplications": "Hosted applications"
@@ -2379,7 +2380,8 @@
         "applications": "Applications",
         "operations": "Operations",
         "compliance": "Compliance",
-        "relations": "Relations"
+        "relations": "Relations",
+        "history": "History"
       },
       "fields": {
         "name": "Name",
