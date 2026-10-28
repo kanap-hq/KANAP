@@ -520,6 +520,22 @@ export function technologyVersionCardText(
   }[language];
 }
 
+/**
+ * The versions a technology link write created on the way: an undo removes the links, never the
+ * version. The card says so, in the person's language.
+ */
+export function technologyKeptVersionCardText(language: AiWriteLanguage, labels: string[]): string | null {
+  if (labels.length === 0) return null;
+  const heading = { en: 'Kept', fr: 'Conservées', de: 'Beibehalten', es: 'Conservadas' }[language];
+  const note = {
+    en: 'the undo removes the links, not the version',
+    fr: "l'annulation retire les liens, pas la version",
+    de: 'das Rückgängigmachen entfernt die Verknüpfungen, nicht die Version',
+    es: 'la anulación quita los vínculos, no la versión',
+  }[language];
+  return [`**${heading}**`, ...labels.map((label) => `- ${technologyVersionCardText(language, '', { label, created: true })} (${note})`)].join('\n');
+}
+
 /** The detail lines of a task preview: its assignee and its priority. */
 export const taskDetailText = {
   assignee(language: AiTranslatedWriteLanguage, name: string): string {

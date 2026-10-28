@@ -275,11 +275,19 @@ describe('PreviewCard in French', () => {
           to: '**Ajoutés**\n- AST-12 - srv-db-01 (nouvelle version 16, sans date de support)',
           format: 'markdown',
         },
+        technology_versions: {
+          label: 'Versions',
+          from: null,
+          to: "**Conservées**\n- nouvelle version 17, sans date de support (l'annulation retire les liens, pas la version)",
+          format: 'markdown',
+        },
       },
     }));
 
     expect(screen.getByText('Applications')).toBeInTheDocument();
     expect(screen.getByText('Serveurs')).toBeInTheDocument();
+    expect(screen.getByText('Versions')).toBeInTheDocument();
+    expect(screen.getByText('Conservées')).toBeInTheDocument();
     expect(screen.getAllByText('Ajoutés')).toHaveLength(2);
     expect(screen.getByText(/APP-36 - CheeseTrack/)).toBeInTheDocument();
     expect(screen.getByText(/AST-12 - srv-db-01/)).toBeInTheDocument();

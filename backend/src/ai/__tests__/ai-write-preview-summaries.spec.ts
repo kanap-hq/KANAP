@@ -351,6 +351,14 @@ function testTechnologyLinkCards() {
   );
   assert.equal(summary(operation, { ...pending, status: 'executed' } as AiMutationPreview, 'fr'),
     'Appliqué : modification des liens de « TEC-1 - PostgreSQL ».');
+  const undo = preview({
+    ...pending,
+    mutation_input: { ...(pending.mutation_input ?? {}), kept_versions: ['17'] },
+  });
+  assert.equal(
+    operation.presentPreview(undo, 'fr').changes.technology_versions.to,
+    "**Conservées**\n- nouvelle version 17, sans date de support (l'annulation retire les liens, pas la version)",
+  );
 }
 
 function testIncidentStateAndConfidentialityCards() {

@@ -8,6 +8,7 @@ import {
   previewSummaryText,
   quoted,
   technologyLinkCardText,
+  technologyKeptVersionCardText,
   technologyVersionCardText,
   writeActionText,
 } from '../../ai-write-texts';
@@ -436,6 +437,18 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
         format: 'markdown',
       };
     }
+    const keptVersions = Array.isArray(mutation.kept_versions)
+      ? mutation.kept_versions.map((label) => String(label ?? '').trim()).filter(Boolean)
+      : [];
+    const keptText = technologyKeptVersionCardText(language, keptVersions);
+    if (keptText) {
+      cardChanges.technology_versions = {
+        label: { en: 'Versions', fr: 'Versions', de: 'Versionen', es: 'Versiones' }[language],
+        from: null,
+        to: keptText,
+        format: 'markdown',
+      };
+    }
     return { target: buildTarget(preview), changes: cardChanges, summary };
   }
 
@@ -587,6 +600,7 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
         technology_name: technology.name,
         technology_label: technology.label,
         changes,
+        kept_versions: applied.versions_created.map((version) => version.label),
         reverse_of: preview.id,
       },
       currentValues: {

@@ -413,6 +413,8 @@ async function testCreatedVersion(harness: Harness) {
     // The undo removes the link, never the version the write created (decision 12).
     const undo = await harness.tools.execute(ctx, 'undo_preview', { preview_id: preview.preview_id }) as any;
     assert.equal(undo.status, 'pending');
+    assert.match(undo.changes.technology_versions.to, /new version 17, no support date/,
+      'the undo card says the created version stays');
     await approvePreview(harness, ctx, undo);
     const links = await runner.query(
       `SELECT 1 FROM application_technologies WHERE tenant_id = $1 AND application_id = $2 AND technology_version_id = $3`,
