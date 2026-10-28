@@ -1,7 +1,8 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import type { TenantRequest } from '../common/decorators/tenant.decorator';
 import { hasLevel } from '../common/relations/relations-access';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { formatCentsFixed, toCents } from '../common/amount';
 import {
   applicationParticipantCondition,
@@ -1545,7 +1546,7 @@ export class RecordHistoryService {
     if (!entry) throw new NotFoundException('Record not found');
     if (!isUuid(id)) throw new NotFoundException('Record not found');
     if (!hasLevel(ctx, entry.module, entry.level)) {
-      throw new ForbiddenException(`You cannot read this record's history.`);
+      throw moduleRightRequired(entry.module, entry.level, `You cannot read this record's history.`);
     }
     const manager = ctx.manager;
     if (!manager) throw new Error('RecordHistoryService.list needs the request transaction (ctx.manager).');
