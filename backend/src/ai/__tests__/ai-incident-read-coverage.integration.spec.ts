@@ -528,6 +528,13 @@ async function testBusinessContributorScope(harness: Harness, runner: QueryRunne
     assert.equal(referenceSearch.total, 0, 'nor the application reference');
     const visibleSearch = await harness.incidents.list({ q: 'Alpha App', limit: 100 }, listOptions);
     assert.equal(visibleSearch.total, 1, 'an application of theirs still finds the incident');
+    const byCount = await harness.incidents.list({
+      filters: { application_count: { filterType: 'number', type: 'equals', filter: 1 } },
+      limit: 100,
+    }, listOptions);
+    assert.deepEqual(byCount.items.map((item: any) => item.id), [r.one], 'filtering on the count keeps only their application');
+    const byCountDesc = await harness.incidents.list({ sort: 'application_count:desc', limit: 100 }, listOptions);
+    assert.equal(byCountDesc.items[0].id, r.one, 'sorting on the count does not rank a hidden link first');
   });
 }
 

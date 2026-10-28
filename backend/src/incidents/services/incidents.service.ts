@@ -257,7 +257,7 @@ export class IncidentsService extends IncidentsBaseService {
     const items = await mg.query(
       `SELECT ${ROW_COLUMNS} ${BASE_FROM}
        WHERE ${where}
-       ORDER BY ${this.orderBy(sort, await textSortKey(mg))}
+       ORDER BY ${this.orderBy(sort, await textSortKey(mg), params, opts?.applicationScope)}
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, skip],
     );
@@ -298,7 +298,7 @@ export class IncidentsService extends IncidentsBaseService {
     const rows: Array<{ id: string; item_number: number }> = await mg.query(
       `SELECT i.id, i.item_number ${BASE_FROM}
        WHERE ${where}
-       ORDER BY ${this.orderBy(sort, await textSortKey(mg))}
+       ORDER BY ${this.orderBy(sort, await textSortKey(mg), params, opts?.applicationScope)}
        LIMIT $${params.length + 1}`,
       [...params, limit],
     );
@@ -319,7 +319,8 @@ export class IncidentsService extends IncidentsBaseService {
       filters, q, tenantId, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
       technologies: opts?.technologies, applications: opts?.applications, applicationScope: opts?.applicationScope,
     });
-    return { where, params, orderBy: this.orderBy(sort, await textSortKey(mg)) };
+    const orderBy = this.orderBy(sort, await textSortKey(mg), params, opts?.applicationScope);
+    return { where, params, orderBy };
   }
 
   /**
@@ -391,10 +392,28 @@ export class IncidentsService extends IncidentsBaseService {
   }
 
   /** Text columns sort alphabetically, case and accents ignored (`textSortKey`). */
-  private orderBy(sort: Sort, textKey: TextSortKey): string {
-    const raw = FIELD_EXPRESSIONS[sort.field] || FIELD_EXPRESSIONS.detected_at;
+  private orderBy(
+    sort: Sort,
+    textKey: TextSortKey,
+    params: unknown[] = [],
+    applicationScope?: { userId: string },
+  ): string {
+    let raw = FIELD_EXPRESSIONS[sort.field] || FIELD_EXPRESSIONS.detected_at;
+    // A Business Contributor sorts on the applications they take part in only.
+    if (sort.field === 'application_count' && applicationScope) {
+      raw = this.applicationCountExpression(params, applicationScope);
+    }
     const expression = INCIDENT_TEXT_SORTS.has(sort.field) ? textKey(raw) : raw;
     return `${expression} ${sort.direction} NULLS LAST, i.item_number ${sort.direction}`;
+  }
+
+  /** The scoped application count, with its user id pushed into `params`. */
+  private applicationCountExpression(params: unknown[], applicationScope: { userId: string }): string {
+    const userRef = binder(params)(applicationScope.userId);
+    return `(SELECT COUNT(*) FROM incident_applications iap
+      JOIN applications app ON app.id = iap.application_id AND app.tenant_id = iap.tenant_id
+      WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id
+        AND ${applicationParticipantCondition('app', userRef)})::int`;
   }
 
   private buildWhere(input: IncidentWhere): { where: string; params: any[] } {
@@ -407,7 +426,9 @@ export class IncidentsService extends IncidentsBaseService {
       if (field === input.skipField) continue;
       // A filter on a module the reader does not read is ignored, as the column is empty for them.
       if (LINKED_FIELD_READS[field] && input[LINKED_FIELD_READS[field]] === false) continue;
-      const expression = FIELD_EXPRESSIONS[field];
+      const expression = field === 'application_count' && input.applicationScope
+        ? this.applicationCountExpression(params, input.applicationScope)
+        : FIELD_EXPRESSIONS[field];
       if (!expression || !model || typeof model !== 'object') continue;
 
       if (LINK_FILTERS[field]) {
