@@ -1,7 +1,10 @@
 import type { PermissionLevel } from '../auth/require-level.decorator';
 import type { FamilyKey } from './record-history/families';
 import { accountsRecord } from './record-history/records/accounts';
+import { connectionsRecord } from './record-history/records/connections';
 import { costCentersRecord } from './record-history/records/cost_centers';
+import { interfacesRecord } from './record-history/records/interfaces';
+import { locationsRecord } from './record-history/records/locations';
 import { spendItemsRecord } from './record-history/records/spend_items';
 
 /**
@@ -54,7 +57,12 @@ export type RecordHistoryChildKind =
   | 'contract'
   | 'project'
   | 'request'
-  | 'task';
+  | 'task'
+  | 'sub_item'
+  | 'leg'
+  | 'set'
+  | 'binding'
+  | 'person';
 
 export type RecordHistoryExclusion = {
   /** The physical table of the data-access inventory. */
@@ -108,7 +116,10 @@ export type RecordHistoryRecord = {
  */
 const RECORD_HISTORY_DEFINITION = [
   accountsRecord,
+  connectionsRecord,
   costCentersRecord,
+  interfacesRecord,
+  locationsRecord,
   spendItemsRecord,
 ] as const satisfies readonly RecordHistoryRecord[];
 

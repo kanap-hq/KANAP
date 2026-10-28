@@ -1,6 +1,9 @@
 import type { HistoryFields } from './field-rules';
 import { accountsFields } from './records/accounts';
+import { connectionsFields } from './records/connections';
 import { costCentersFields } from './records/cost_centers';
+import { interfacesFields } from './records/interfaces';
+import { locationsFields } from './records/locations';
 import { spendItemsFields } from './records/spend_items';
 
 /**
@@ -10,7 +13,10 @@ import { spendItemsFields } from './records/spend_items';
  */
 const FIELD_SETS = [
   accountsFields,
+  connectionsFields,
   costCentersFields,
+  interfacesFields,
+  locationsFields,
   spendItemsFields,
 ] as const;
 

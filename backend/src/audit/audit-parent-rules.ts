@@ -1,5 +1,8 @@
 import type { EntityManager } from 'typeorm';
 import type { RecordHistoryTable } from './record-history.inventory';
+import { connectionsParentRules } from './record-history/records/connections';
+import { interfacesParentRules } from './record-history/records/interfaces';
+import { locationsParentRules } from './record-history/records/locations';
 import { spendItemsParentRules } from './record-history/records/spend_items';
 
 /**
@@ -41,6 +44,9 @@ export type AuditParentRule =
  * own file and its own line, never the same line.
  */
 const PARENT_RULE_SETS = [
+  connectionsParentRules,
+  interfacesParentRules,
+  locationsParentRules,
   spendItemsParentRules,
 ] as const;
 

@@ -40,7 +40,11 @@ function testEntries() {
       childReads += 1;
     }
   }
-  assert.deepEqual(recordHistoryModules(), ['accounts', 'budget', 'cost_centers'], 'the modules of the route guard');
+  assert.deepEqual(
+    recordHistoryModules(),
+    ['accounts', 'applications', 'budget', 'cost_centers', 'infrastructure', 'locations'],
+    'the modules of the route guard',
+  );
   // Every reference family has a reader module (people are the only exception, `null`), and the
   // module is a permission resource: a family declared ahead of its record page is already checked.
   for (const family of FAMILY_KEYS) {
@@ -66,18 +70,24 @@ function testFrontendTables() {
 function testParentRulesAgree() {
   const children = new Set<string>();
   const explicit = new Set<string>();
+  const recordRead = new Set<string>();
   for (const entry of Object.values(RECORD_HISTORY)) {
     for (const label of Object.keys(entry.children)) children.add(label);
     for (const label of entry.explicitParentLabels) explicit.add(label);
+    for (const [label, mode] of Object.entries(entry.childReads ?? {})) {
+      if (mode === 'record') recordRead.add(label);
+    }
   }
 
-  // Every child has a rule, or its write hands the record as an explicit parent.
+  // Every child has a rule, or its write names the record where its rows are read: as an explicit
+  // parent (`explicitParentLabels`) or in `record_id` (`childReads` `record`).
   for (const label of children) {
     if (explicit.has(label)) {
       assert.equal(AUDIT_PARENT_RULES[label], undefined, `${label}: an explicit parent carries no label rule`);
       continue;
     }
-    assert.ok(AUDIT_PARENT_RULES[label], `${label}: a child label needs a parent rule (or explicitParentLabels)`);
+    if (recordRead.has(label)) continue;
+    assert.ok(AUDIT_PARENT_RULES[label], `${label}: a child label needs a parent rule (or a read by record_id)`);
   }
   // Every rule is a child of a declared record: a rule whose rows no history reads would be dead.
   for (const [label, rule] of Object.entries(AUDIT_PARENT_RULES)) {

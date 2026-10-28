@@ -125,10 +125,17 @@ const CHILD_KIND_LABELS: Record<RecordHistoryChildKind, string> = {
   project: 'project',
   request: 'request',
   task: 'task',
+  sub_item: 'sub_item',
+  leg: 'leg',
+  set: 'set',
+  binding: 'binding',
+  person: 'person',
 };
 
-/** The children whose creation is a title only: a version, a budget input, an allocation. */
-const TECHNICAL_CHILD_KINDS: ReadonlySet<RecordHistoryChildKind> = new Set(['version', 'round_input', 'allocations']);
+/** The children whose creation is a title only: a version, a budget input, an allocation, a leg, a binding. */
+const TECHNICAL_CHILD_KINDS: ReadonlySet<RecordHistoryChildKind> = new Set([
+  'version', 'round_input', 'allocations', 'leg', 'binding',
+]);
 
 /**
  * A technical child's creation: the entry reads as its title, with no field list. A version and a
@@ -432,7 +439,8 @@ function linkChanges(row: AuditRow): RecordHistoryChange[] {
   const changes: RecordHistoryChange[] = [];
   const before = isPlainObject(row.before_json) ? row.before_json : {};
   const after = isPlainObject(row.after_json) ? row.after_json : {};
-  for (const field of ['url', 'description']) {
+  // `kind` belongs to the interface's links; the budget line's links do not carry it.
+  for (const field of ['kind', 'url', 'description']) {
     if (!deepEqual(before[field], after[field])) {
       changes.push({ field, before: safeScalar(before[field]) ?? null, after: safeScalar(after[field]) ?? null });
     }
@@ -540,6 +548,221 @@ function taskChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   }
   // A legacy update writes `before: null`: a modification whose detail is not known.
   return [];
+}
+
+/** A sub-location: its creation and removal name it, its update reads its fields. */
+function subItemChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const name = labelOf(row, ['name']);
+  if (row.action === 'create') return [{ field: 'sub_item', event: 'added', after: name }];
+  if (row.action === 'delete') return [{ field: 'sub_item', event: 'removed', before: name }];
+  return genericChanges(row, ctx, { label: row.table_name });
+}
+
+/** The person of an internal contact link, resolved with the reader's rights (people are always readable). */
+function personChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) && isUuid(row.before_json.user_id) ? row.before_json.user_id : null;
+  const after = isPlainObject(row.after_json) && isUuid(row.after_json.user_id) ? row.after_json.user_id : null;
+  if (row.action === 'create' || (before === null && after !== null)) {
+    return [{ field: 'person', event: 'added', after: referenceValue(ctx, 'user', after) }];
+  }
+  if (row.action === 'delete' || (after === null && before !== null)) {
+    return [{ field: 'person', event: 'removed', before: referenceValue(ctx, 'user', before) }];
+  }
+  return genericChanges(row, ctx, { label: row.table_name });
+}
+
+/** The order of one leg in a before or after snapshot; null when the snapshot is not a leg list. */
+function legOrderOf(value: unknown, legId: string | null): number | null {
+  if (!Array.isArray(value)) return null;
+  for (const entry of value) {
+    if (!isPlainObject(entry)) continue;
+    if (legId && String(entry.id ?? '').toLowerCase() !== legId) continue;
+    const order = Number(entry.order_index);
+    if (Number.isFinite(order)) return order;
+  }
+  return null;
+}
+
+/** The saved order of a leg row, from its payload. */
+function legOrder(row: AuditRow): number | null {
+  for (const payload of [row.after_json, row.before_json]) {
+    if (!isPlainObject(payload)) continue;
+    const order = Number(payload.order_index);
+    if (Number.isFinite(order)) return order;
+  }
+  return null;
+}
+
+/**
+ * A path segment: its creation and removal read as "Segment 2 added", its modification as the
+ * fields that moved. The swap writes both legs in one row; the entry names the leg it moved.
+ */
+function legChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  if (Array.isArray(row.before_json) || Array.isArray(row.after_json)) {
+    const legId = row.record_id ? String(row.record_id).toLowerCase() : null;
+    const before = legOrderOf(row.before_json, legId);
+    const after = legOrderOf(row.after_json, legId);
+    if (before === after) return [];
+    return [{ field: 'order_index', before, after }];
+  }
+  return genericChanges(row, ctx, { label: row.table_name });
+}
+
+/** A binding of one flow leg to one environment; its creation and removal read as its environment. */
+function bindingChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  return genericChanges(row, ctx, { label: row.table_name });
+}
+
+/** The string states of a whole-set write (`["business:<id>"]`), unique and ordered. */
+function stateStrings(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return Array.from(new Set(value.filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '')));
+}
+
+/** The id a `type:id` or `direction:id` state carries. */
+function stateId(state: string): string | null {
+  const index = state.indexOf(':');
+  const id = index >= 0 ? state.slice(index + 1) : state;
+  return isUuid(id) ? id : null;
+}
+
+/** The readable label of a web link in a whole-set write. */
+function setLinkLabel(entry: unknown): string | null {
+  if (!isPlainObject(entry)) return null;
+  for (const field of ['description', 'url']) {
+    const value = entry[field];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+/** Stable identity of a link in a whole-set write: its kind, description and address. */
+function setLinkKey(entry: unknown): string {
+  return isPlainObject(entry)
+    ? [entry.kind, entry.description, entry.url].map((value) => (value == null ? '' : String(value))).join('\u0000')
+    : '';
+}
+
+/** A leg of the Flow tab, as a nameless reference the frontend reads as "Segment N". */
+function interfaceLegRef(entry: Record<string, unknown>): RecordHistoryReference | null {
+  const id = entry.id;
+  if (!isUuid(id)) return null;
+  const order = Number(entry.order_index);
+  return { kind: 'leg', id: id.toLowerCase(), label: Number.isFinite(order) ? String(order) : null };
+}
+
+/**
+ * A set the interface's writers replace as a whole: every element added or removed is one line,
+ * the removed elements keep their readable label. The interface legs also report the fields a
+ * leg changed, so an edit inside the Flow tab is not silent.
+ */
+function setChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const label = row.table_name;
+  if (label === 'interface_links' && !Array.isArray(row.before_json) && !Array.isArray(row.after_json)) {
+    // A single-row write: the link presenter reads its address and description.
+    return linkChanges(row);
+  }
+  if (label === 'interface_mapping_sets') {
+    const name = labelOf(row, ['name']);
+    if (row.action === 'create') return [{ field: 'mapping_set', event: 'added', after: name }];
+    if (row.action === 'delete') return [{ field: 'mapping_set', event: 'removed', before: name }];
+    return genericChanges(row, ctx, { label });
+  }
+  if (label === 'interface_legs') {
+    const changes: RecordHistoryChange[] = [];
+    const before = Array.isArray(row.before_json) ? row.before_json.filter(isPlainObject) : [];
+    const after = Array.isArray(row.after_json) ? row.after_json.filter(isPlainObject) : [];
+    const beforeById = new Map(before.filter((leg) => isUuid(leg.id)).map((leg) => [String(leg.id).toLowerCase(), leg]));
+    const afterById = new Map(after.filter((leg) => isUuid(leg.id)).map((leg) => [String(leg.id).toLowerCase(), leg]));
+    for (const [id, leg] of afterById) {
+      if (!beforeById.has(id)) changes.push({ field: 'interface_leg', event: 'added', after: interfaceLegRef(leg) });
+    }
+    for (const [id, leg] of beforeById) {
+      if (!afterById.has(id)) changes.push({ field: 'interface_leg', event: 'removed', before: interfaceLegRef(leg) });
+    }
+    for (const [id, leg] of afterById) {
+      const previous = beforeById.get(id);
+      if (!previous) continue;
+      for (const field of ['leg_type', 'from_role', 'to_role', 'trigger_type', 'integration_pattern', 'data_format', 'job_name', 'order_index']) {
+        if (!deepEqual(previous[field], leg[field])) {
+          changes.push({ field, before: previous[field] ?? null, after: leg[field] ?? null });
+        }
+      }
+    }
+    return changes;
+  }
+  if (label === 'interface_links') {
+    const describe = (entry: unknown) => setLinkLabel(entry);
+    const before = new Map((Array.isArray(row.before_json) ? row.before_json : []).map((entry) => [setLinkKey(entry), entry]));
+    const after = new Map((Array.isArray(row.after_json) ? row.after_json : []).map((entry) => [setLinkKey(entry), entry]));
+    const changes: RecordHistoryChange[] = [];
+    for (const [key, entry] of after) {
+      if (!before.has(key)) changes.push({ field: 'link', event: 'added', after: describe(entry) });
+    }
+    for (const [key, entry] of before) {
+      if (!after.has(key)) changes.push({ field: 'link', event: 'removed', before: describe(entry) });
+    }
+    return changes;
+  }
+  const beforeStates = stateStrings(row.before_json);
+  const afterStates = stateStrings(row.after_json);
+  if (beforeStates.length === 0 && afterStates.length === 0) return [];
+  const beforeSet = new Set(beforeStates);
+  const afterSet = new Set(afterStates);
+  const changes: RecordHistoryChange[] = [];
+  const valueOf = (state: string): unknown => {
+    switch (label) {
+      case 'interface_owners':
+        return referenceValue(ctx, 'user', stateId(state));
+      case 'interface_companies':
+        return referenceValue(ctx, 'company', stateId(state));
+      case 'interface_dependencies':
+        return referenceValue(ctx, 'interface', stateId(state));
+      case 'interface_key_identifiers': {
+        const [source = '', destination = ''] = state.split(':');
+        return [source, destination].filter((part) => part.trim() !== '').join(' → ');
+      }
+      case 'interface_data_residency':
+        return state;
+      default:
+        return state;
+    }
+  };
+  const fieldOf = (): string => {
+    switch (label) {
+      case 'interface_owners': return 'owner';
+      case 'interface_companies': return 'company';
+      case 'interface_dependencies': return 'dependency';
+      case 'interface_key_identifiers': return 'key_identifier';
+      case 'interface_data_residency': return 'country';
+      default: return 'set';
+    }
+  };
+  const field = fieldOf();
+  for (const state of afterStates) {
+    if (!beforeSet.has(state)) changes.push({ field, event: 'added', after: valueOf(state) });
+  }
+  for (const state of beforeStates) {
+    if (!afterSet.has(state)) changes.push({ field, event: 'removed', before: valueOf(state) });
+  }
+  return changes;
+}
+
+/** The interface's middleware applications, written as an id list by older writers. */
+function middlewareChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const idsOf = (value: unknown): string[] => (
+    Array.isArray(value) ? value.filter(isUuid).map((id) => id.toLowerCase()) : []
+  );
+  const before = new Set(idsOf(isPlainObject(row.before_json) ? row.before_json.middleware_application_ids : null));
+  const after = new Set(idsOf(isPlainObject(row.after_json) ? row.after_json.middleware_application_ids : null));
+  const changes: RecordHistoryChange[] = [];
+  for (const id of after) {
+    if (!before.has(id)) changes.push({ field: 'middleware', event: 'added', after: referenceValue(ctx, 'application', id) });
+  }
+  for (const id of before) {
+    if (!after.has(id)) changes.push({ field: 'middleware', event: 'removed', before: referenceValue(ctx, 'application', id) });
+  }
+  return changes;
 }
 
 /** One change per dimension whose category changed; a removed value shows as `null`. */
@@ -659,7 +882,10 @@ function columnOperationChanges(row: AuditRow): RecordHistoryChange[] | null {
 function recordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   const columnOperation = columnOperationChanges(row);
   if (columnOperation) return columnOperation;
-  return genericChanges(row, ctx, { label: row.table_name });
+  const changes = genericChanges(row, ctx, { label: row.table_name });
+  // An id list has no field line: each middleware application added or removed is one event.
+  if (row.table_name === 'interfaces') return [...middlewareChanges(row, ctx), ...changes];
+  return changes;
 }
 
 function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: PageContext): RecordHistoryChange[] {
@@ -690,6 +916,16 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
       return linkedRecordChanges(kind, row, ctx);
     case 'task':
       return taskChanges(row, ctx);
+    case 'sub_item':
+      return subItemChanges(row, ctx);
+    case 'person':
+      return personChanges(row, ctx);
+    case 'leg':
+      return legChanges(row, ctx);
+    case 'set':
+      return setChanges(row, ctx);
+    case 'binding':
+      return bindingChanges(row, ctx);
     case 'version':
       return genericChanges(row, ctx, { label: row.table_name });
     default:
@@ -725,6 +961,47 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
     }
     case 'attachment':
       return labelOf(row, ['original_filename']);
+    case 'sub_item':
+      // The event line of a creation or removal carries the name; an update names it in its title.
+      return row.action === 'create' || row.action === 'delete' ? null : labelOf(row, ['name']);
+    case 'leg': {
+      const order = Array.isArray(row.before_json) || Array.isArray(row.after_json)
+        ? (legOrderOf(row.after_json, row.record_id ? String(row.record_id).toLowerCase() : null)
+          ?? legOrderOf(row.before_json, row.record_id ? String(row.record_id).toLowerCase() : null))
+        : legOrder(row);
+      return order === null ? null : String(order);
+    }
+    case 'binding':
+      return labelOf(row, ['environment']);
+    case 'person': {
+      if (row.action === 'create' || row.action === 'delete') return null;
+      for (const payload of [row.after_json, row.before_json]) {
+        if (!isPlainObject(payload) || !isUuid(payload.user_id)) continue;
+        const person = referenceValue(ctx, 'user', payload.user_id);
+        return person && !('hidden' in person) ? person.label : null;
+      }
+      return null;
+    }
+    case 'set': {
+      if (row.table_name === 'interface_legs' && Array.isArray(row.before_json) && Array.isArray(row.after_json)) {
+        const before = new Map(row.before_json.filter(isPlainObject).filter((leg) => isUuid(leg.id)).map((leg) => [String(leg.id).toLowerCase(), leg]));
+        const after = new Map(row.after_json.filter(isPlainObject).filter((leg) => isUuid(leg.id)).map((leg) => [String(leg.id).toLowerCase(), leg]));
+        const changed: number[] = [];
+        for (const [id, leg] of after) {
+          const previous = before.get(id);
+          if (!previous) continue;
+          if (JSON.stringify(previous) !== JSON.stringify(leg)) {
+            const order = Number(leg.order_index);
+            if (Number.isFinite(order)) changed.push(order);
+          }
+        }
+        return changed.length === 1 ? String(changed[0]) : null;
+      }
+      if (row.table_name === 'interface_links' && !Array.isArray(row.before_json) && !Array.isArray(row.after_json)) {
+        return labelOf(row, ['description', 'url']);
+      }
+      return null;
+    }
     case 'contact':
     case 'application':
     case 'technology':

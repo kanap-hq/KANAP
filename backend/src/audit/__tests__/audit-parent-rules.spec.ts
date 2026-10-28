@@ -9,11 +9,13 @@ import {
   singleChangedId,
 } from '../audit-parent-rules';
 import { RECORD_HISTORY } from '../record-history.inventory';
+import { spendItemsParentRules } from '../record-history/records/spend_items';
 
 // The rules that give an audit row its budget line (`audit-parent-rules.ts`): the payload key of
 // a child, or the line of a version. The links both sides write (application, technology, asset)
 // have no rule: their writers hand the parent. The same labels are copied in the migration's SQL;
-// the last test reads that file and checks that both lists agree.
+// the last test reads that file and checks that both lists agree. The other families have their
+// own migration and their own comparison spec (`record-history-family-c-migration.spec.ts`).
 
 const LINE = '11111111-1111-4111-8111-111111111111';
 const VERSION = '22222222-2222-4222-8222-222222222222';
@@ -160,7 +162,7 @@ function migrationLineRecordLabels(): string[] {
 }
 
 function testMigrationLabelsMatchRules() {
-  assert.deepEqual(migrationLabels(), Object.keys(AUDIT_PARENT_RULES).sort(), 'the migration and the write rules cover the same labels');
+  assert.deepEqual(migrationLabels(), Object.keys(spendItemsParentRules).sort(), 'the migration and the budget write rules cover the same labels');
   // The links the backfill fills by `record_id` are the explicit-parent labels, minus the asset
   // links whose `record_id` is the asset, and minus the contract, project and request links added
   // by correctifs C: their old rows stay without parent (the payload cannot choose the line
@@ -175,7 +177,7 @@ function testMigrationLabelsMatchRules() {
   for (const label of ['contract_spend_items', 'contract_capex_items', 'portfolio_project_opex', 'portfolio_project_capex', 'portfolio_request_opex', 'portfolio_request_capex']) {
     assert.ok(!migrationLineRecordLabels().includes(label), `${label}: no backfill of existing rows`);
   }
-  for (const [label, rule] of Object.entries(AUDIT_PARENT_RULES)) {
+  for (const [label, rule] of Object.entries(spendItemsParentRules)) {
     assert.equal(rule.parentTable, 'spend_items', `${label}: the physical line table`);
   }
   assert.equal(AUDIT_PARENT_RULES.spend_items, undefined);

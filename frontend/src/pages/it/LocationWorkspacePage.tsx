@@ -30,8 +30,10 @@ import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessag
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
+import RecordHistoryTab from '../../components/history/RecordHistoryTab';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
-type TabKey = 'overview' | 'contacts' | 'relations';
+type TabKey = 'overview' | 'contacts' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
 
 type LocationRecord = {
   id: string;
@@ -48,7 +50,7 @@ type LocationRecord = {
 
 type HostingCategory = 'on_prem' | 'cloud';
 
-const TAB_KEYS: TabKey[] = ['overview', 'contacts', 'relations'];
+const TAB_KEYS: TabKey[] = ['overview', 'contacts', 'relations', RECORD_HISTORY_TAB_KEY];
 
 export default function LocationWorkspacePage() {
   const { t } = useTranslation(['it', 'common']);
@@ -401,6 +403,7 @@ export default function LocationWorkspacePage() {
     { key: 'overview', label: t('workspace.location.tabs.overview') },
     { key: 'contacts', label: t('workspace.location.tabs.contacts'), disabled: isCreate },
     { key: 'relations', label: t('workspace.location.tabs.relations'), disabled: isCreate, badge: relationsCount || undefined },
+    { key: RECORD_HISTORY_TAB_KEY, label: t('workspace.location.tabs.history'), disabled: isCreate },
   ];
 
   const title = isCreate
@@ -565,6 +568,9 @@ export default function LocationWorkspacePage() {
             )}
             {validTab === 'relations' && (
               <LocationRelationsTab locationId={data.id} onRelationsChange={() => { void loadRelationCounts(); }} />
+            )}
+            {validTab === RECORD_HISTORY_TAB_KEY && (
+              <RecordHistoryTab table="locations" recordId={data.id} />
             )}
           </>
         )}
