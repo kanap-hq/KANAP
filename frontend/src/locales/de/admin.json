@@ -553,7 +553,17 @@
       "kind": "Typ",
       "parent_id": "Übergeordnete Gruppe",
       "accountNature": "Verwendet für",
-      "costCenterOwner": "Budgetverantwortlicher"
+      "costCenterOwner": "Budgetverantwortlicher",
+      "summary": "Zusammenfassung",
+      "folder_id": "Ordner",
+      "library_id": "Bibliothek",
+      "document_type_id": "Dokumenttyp",
+      "template_document_id": "Vorlage",
+      "review_due_at": "Prüfung fällig",
+      "last_reviewed_at": "Zuletzt geprüft",
+      "published_at": "Veröffentlicht am",
+      "current_version_number": "Version",
+      "revision": "Revision"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -585,6 +595,11 @@
       "childDeleted": "{{title}} gelöscht",
       "version": "Version {{name}}",
       "versionNoName": "Version",
+      "versionNumber": "Version {{number}}",
+      "versionChanged": "Version {{before}} → {{after}}",
+      "texts": {
+        "contentChanged": "Inhalt geändert"
+      },
       "actors": {
         "assistant": "Plaid",
         "assistantFor": "Plaid für {{name}}",
@@ -669,7 +684,11 @@
         "calendar": "ein Arbeitstagekalender",
         "analytics_axis": "eine Analyse-Dimension",
         "analytics_category": "ein Analysewert",
-        "contributor": "ein Mitwirkender"
+        "contributor": "ein Mitwirkender",
+        "document": "ein Dokument",
+        "document_folder": "ein Ordner",
+        "document_library": "eine Bibliothek",
+        "document_type": "ein Dokumenttyp"
       },
       "title": "Verlauf"
     },

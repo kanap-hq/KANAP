@@ -553,7 +553,17 @@
       "kind": "Tipo",
       "parent_id": "Grupo superior",
       "accountNature": "Usada para",
-      "costCenterOwner": "Responsable del presupuesto"
+      "costCenterOwner": "Responsable del presupuesto",
+      "summary": "Resumen",
+      "folder_id": "Carpeta",
+      "library_id": "Biblioteca",
+      "document_type_id": "Tipo de documento",
+      "template_document_id": "Plantilla",
+      "review_due_at": "Revisión pendiente",
+      "last_reviewed_at": "Última revisión",
+      "published_at": "Publicado el",
+      "current_version_number": "Versión",
+      "revision": "Revisión"
     },
     "history": {
       "empty": "Todavía no hay historial",
@@ -585,6 +595,11 @@
       "childDeleted": "{{title}} eliminada",
       "version": "Versión {{name}}",
       "versionNoName": "Versión",
+      "versionNumber": "Versión {{number}}",
+      "versionChanged": "Versión {{before}} → {{after}}",
+      "texts": {
+        "contentChanged": "Contenido modificado"
+      },
       "actors": {
         "assistant": "Plaid",
         "assistantFor": "Plaid para {{name}}",
@@ -669,7 +684,11 @@
         "calendar": "un calendario de días laborables",
         "analytics_axis": "una dimensión analítica",
         "analytics_category": "un valor analítico",
-        "contributor": "un colaborador"
+        "contributor": "un colaborador",
+        "document": "un documento",
+        "document_folder": "una carpeta",
+        "document_library": "una biblioteca",
+        "document_type": "un tipo de documento"
       },
       "title": "Historial"
     },

@@ -39,6 +39,8 @@ export type RecordHistoryChange = {
   wholeYear?: boolean;
   dimension?: string | null;
   changed?: boolean;
+  /** A fixed word standing for the change of a hidden value (a document body): `contentChanged`. */
+  text?: string;
 };
 export type RecordHistorySubject = {
   kind: 'record' | 'version' | 'amounts' | 'allocations' | 'round_input' | 'link' | 'attachment'
@@ -90,6 +92,7 @@ const UNNAMED_KINDS = [
   'chart_of_accounts', 'project', 'request', 'contract', 'cost_center', 'budget_line',
   'location', 'connection', 'interface', 'incident', 'department', 'business_process', 'calendar',
   'analytics_axis', 'analytics_category', 'contributor', 'line',
+  'document', 'document_folder', 'document_library', 'document_type',
 ] as const;
 
 export function isHiddenReference(value: unknown): value is RecordHistoryHiddenReference {
@@ -326,6 +329,22 @@ function allocationsLine(change: RecordHistoryChange, context: HistoryTextContex
 
 /** A changed field: its label, and the side(s) the write carried, or the full sentence of an event. */
 function fieldLine(change: RecordHistoryChange, context: HistoryTextContext): HistoryLine | null {
+  // A hidden value speaks through its word: a document body changed, never its text.
+  if (change.text) {
+    return {
+      text: context.t(`auditLogs.history.texts.${change.text}`, { defaultValue: change.text }),
+    };
+  }
+  // A document's version numbers read as versions, not as a counter.
+  if (change.field === 'current_version_number') {
+    const before = has(change, 'before') ? change.before : undefined;
+    const after = has(change, 'after') ? change.after : undefined;
+    if (before !== undefined && after !== undefined) {
+      return { text: context.t('auditLogs.history.versionChanged', { before: String(before), after: String(after) }) };
+    }
+    const number = after ?? before;
+    return { text: context.t('auditLogs.history.versionNumber', { number: String(number) }) };
+  }
   const event = eventLine(change, context.t);
   if (event) return event;
   if (change.field === 'dimension') return dimensionLine(change, context);

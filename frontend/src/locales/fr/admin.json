@@ -553,7 +553,17 @@
       "kind": "Type",
       "parent_id": "Groupe parent",
       "accountNature": "Utilisé pour",
-      "costCenterOwner": "Responsable budgétaire"
+      "costCenterOwner": "Responsable budgétaire",
+      "summary": "Résumé",
+      "folder_id": "Dossier",
+      "library_id": "Bibliothèque",
+      "document_type_id": "Type de document",
+      "template_document_id": "Modèle",
+      "review_due_at": "Échéance de revue",
+      "last_reviewed_at": "Dernière revue",
+      "published_at": "Publié le",
+      "current_version_number": "Version",
+      "revision": "Révision"
     },
     "history": {
       "empty": "Aucun historique",
@@ -585,6 +595,11 @@
       "childDeleted": "{{title}} supprimée",
       "version": "Version {{name}}",
       "versionNoName": "Version",
+      "versionNumber": "Version {{number}}",
+      "versionChanged": "Version {{before}} → {{after}}",
+      "texts": {
+        "contentChanged": "Contenu modifié"
+      },
       "actors": {
         "assistant": "Plaid",
         "assistantFor": "Plaid pour {{name}}",
@@ -669,7 +684,11 @@
         "calendar": "un calendrier de jours ouvrés",
         "analytics_axis": "une dimension analytique",
         "analytics_category": "une valeur analytique",
-        "contributor": "un contributeur"
+        "contributor": "un contributeur",
+        "document": "un document",
+        "document_folder": "un dossier",
+        "document_library": "une bibliothèque",
+        "document_type": "un type de document"
       },
       "title": "Historique"
     },

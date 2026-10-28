@@ -285,7 +285,9 @@ export class RecordHistoryService {
    * `knowledge` reads the families whose screen right is not SQL (a document's library ACL and its
    * incident review). It is optional so a history of another record can be built without it, as
    * the framework's specs do; a document reference then stays hidden and a document history is
-   * not found. The module cycle AuditModule ⇄ KnowledgeModule is resolved with `forwardRef`.
+   * not found. The route and this service live in `record-history.module.ts`, which imports both
+   * modules: importing KnowledgeModule from AuditModule would close a module cycle
+   * (`AuditModule → KnowledgeModule → NotificationsModule → AuditModule`).
    */
   constructor(@Optional() private readonly knowledge?: KnowledgeService) {}
 

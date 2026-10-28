@@ -317,7 +317,9 @@ function enumerationLabel(field: string, code: string, context: AuditValueContex
     return screenLabel(context, `auditLogs.values.costCenterKind.${code}`);
   }
   const group = field === 'status'
-    ? (context.table === 'incidents' ? 'it:enums.incidentStatus' : 'common:statuses')
+    ? (context.table === 'incidents'
+      ? 'it:enums.incidentStatus'
+      : context.table === 'documents' ? 'knowledge:statuses' : 'common:statuses')
     : field === 'lifecycle'
       ? 'common:statuses'
       : field === 'nature' && context.table === 'accounts'

@@ -15,7 +15,7 @@ import {
   type RecordHistoryItem,
   type ReferenceReader,
 } from '../record-history.service';
-import { readableFamilies } from '../record-history/families';
+import { readableFamilies, REFERENCE_FAMILIES } from '../record-history/families';
 import {
   audit,
   linePayload,
@@ -39,6 +39,7 @@ const ALL_MODULES: Record<string, Level> = {
   portfolio_projects: 'reader', portfolio_requests: 'reader', contacts: 'reader', applications: 'reader',
   infrastructure: 'reader', tasks: 'reader', locations: 'reader', incidents: 'reader', departments: 'reader',
   business_processes: 'reader', working_day_profiles: 'reader', analytics: 'reader', portfolio_settings: 'reader',
+  knowledge: 'reader',
 };
 
 const BC_PERMISSIONS: Record<string, Level> = {
@@ -46,7 +47,24 @@ const BC_PERMISSIONS: Record<string, Level> = {
   tasks: 'reader',
 };
 
-type Seeded = { seed: HistorySeed; reader: Person; bc: Person; foreign: HistorySeed };
+type Seeded = {
+  seed: HistorySeed;
+  reader: Person;
+  bc: Person;
+  foreign: HistorySeed;
+  documentType: string;
+  foreignDocumentType: string;
+};
+
+/** A tenant-wide Knowledge document type: the one document family whose rule is plain SQL. */
+async function seedDocumentType(runner: QueryRunner, tenantId: string): Promise<string> {
+  const [row] = await runner.query(
+    `INSERT INTO document_types (tenant_id, name, is_active, is_system, is_default, display_order, created_at, updated_at)
+     VALUES ($1, 'Spec type', true, false, false, 10, now(), now()) RETURNING id`,
+    [tenantId],
+  );
+  return row.id;
+}
 
 function readableAll(): Record<FamilyKey, boolean> {
   return Object.fromEntries(FAMILY_KEYS.map((family) => [family, true])) as Record<FamilyKey, boolean>;
@@ -148,19 +166,24 @@ function familyCases(seeded: Seeded): FamilyCase[] {
     { family: 'analytics_axis', home: home.axis, away: away.axis, label: 'analytics dimension' },
     { family: 'analytics_category', home: home.categoryA, away: away.categoryA, label: 'analytics value' },
     { family: 'contributor', home: home.contributor, away: away.contributor, label: 'contributor' },
+    { family: 'document_type', home: seeded.documentType, away: seeded.foreignDocumentType, label: 'document type' },
   ];
 }
 
 /** The families this run declares ahead of their record pages. */
 const NEW_FAMILIES: readonly FamilyKey[] = [
   'location', 'connection', 'interface', 'incident', 'department', 'business_process', 'calendar',
-  'analytics_axis', 'analytics_category', 'contributor',
+  'analytics_axis', 'analytics_category', 'contributor', 'document_type',
 ];
 
 /** The tenant's record is named, another tenant's record is not (the tenant predicate and RLS). */
 async function testEveryFamily(seeded: Seeded) {
   const cases = familyCases(seeded);
-  assert.deepEqual(cases.map((entry) => entry.family).sort(), [...FAMILY_KEYS].sort(), 'one case per family');
+  // A family read by code (the Knowledge document, its folder and library) has no SQL visibility
+  // predicate to probe here: `record-history-documents.integration.spec.ts` covers it through
+  // `KnowledgeService`. Every SQL family still has exactly one case.
+  const sqlFamilies = FAMILY_KEYS.filter((family) => !REFERENCE_FAMILIES[family].visibility.check);
+  assert.deepEqual(cases.map((entry) => entry.family).sort(), [...sqlFamilies].sort(), 'one case per SQL family');
 
   const references = await referencesFor(seeded.reader, idMap(cases.map((entry) => [entry.family, [entry.home, entry.away]])));
   const reported: string[] = [];
@@ -373,10 +396,14 @@ async function run() {
         BC_PERMISSIONS,
         { exactRoleName: 'Business Contributor' },
       );
-      return { seed: seedData, reader, bc };
+      const documentType = await seedDocumentType(runner, tenantId);
+      return { seed: seedData, reader, bc, documentType };
     });
-    const foreign = await seed(foreignTenantId, (runner) => seedHistoryData(runner, foreignTenantId));
-    const full = { ...seeded, foreign };
+    const foreign = await seed(foreignTenantId, async (runner) => {
+      const seedRow = await seedHistoryData(runner, foreignTenantId);
+      return { seed: seedRow, documentType: await seedDocumentType(runner, foreignTenantId) };
+    });
+    const full = { ...seeded, foreign: foreign.seed, foreignDocumentType: foreign.documentType };
 
     const participation = await seed(tenantId, (runner) => createParticipationFixtures(full.seed, full.bc, runner));
     await testEveryFamily(full);

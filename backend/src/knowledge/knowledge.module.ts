@@ -65,7 +65,7 @@ import { InlineImageResolverService } from './inline-image-resolver.service';
       DocumentWorkflow,
       DocumentWorkflowParticipant,
     ]),
-    forwardRef(() => AuditModule),
+    AuditModule,
     CommonModule,
     StorageModule,
     EmailModule,
