@@ -152,6 +152,20 @@ describe('history lines', () => {
     expect(historyLines(item({ kind: 'round_input', label: 'planned' }, [
       { field: 'line', event: 'added', after: { kind: 'line', id: ID, label: 'Database' } },
     ]), context)).toEqual([{ text: 'Costed line added: Database' }]);
+    // A contact's supplier link: the supplier named, the link's role and primary flag in words.
+    expect(historyLines(item({ kind: 'supplier', label: 'Acme Supplies' }, [
+      { field: 'supplier', event: 'added', after: { kind: 'supplier', id: ID, label: 'Acme Supplies' } },
+      { field: 'role', after: 'commercial' },
+      { field: 'is_primary', after: true },
+    ]), context)).toEqual([
+      { text: 'Supplier added: Acme Supplies' },
+      { label: 'Role', after: 'Commercial' },
+      { label: 'Primary', after: 'Yes' },
+    ]);
+    // A contact's budget-line link: the line named with its business reference.
+    expect(historyLines(item({ kind: 'budget_line', label: 'Main line' }, [
+      { field: 'budget_line', event: 'added', after: { kind: 'budget_line', id: ID, label: 'Main line', reference: 'BL-1' } },
+    ]), context)).toEqual([{ text: 'Budget line added: Main line (BL-1)' }]);
   });
 
   it('falls back to the stored field key when the audit log has no label for it', () => {

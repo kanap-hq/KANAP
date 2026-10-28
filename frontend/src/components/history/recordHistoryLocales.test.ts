@@ -233,6 +233,24 @@ describe('record history locales', () => {
       subject: { kind: 'contact', label: 'Cora Contact' },
       changes: [{ field: 'contact', event: 'added', after: { kind: 'contact', id: ID, label: 'Cora Contact' } }],
     }), frCtx)[0].text).toBe('Contact ajouté\u00a0: Cora Contact');
+    expect(historyLines(item({
+      subject: { kind: 'supplier', label: 'Acme Supplies' },
+      changes: [{ field: 'supplier', event: 'added', after: { kind: 'supplier', id: ID, label: 'Acme Supplies' } }],
+    }), frCtx)[0].text).toBe('Fournisseur ajouté\u00a0: Acme Supplies');
+    expect(historyLines(item({
+      subject: { kind: 'budget_line', label: 'Main line' },
+      changes: [{ field: 'budget_line', event: 'added', after: { kind: 'budget_line', id: ID, label: 'Main line', reference: 'BL-1' } }],
+    }), frCtx)[0].text).toBe('Ligne budgétaire ajoutée\u00a0: Main line (BL-1)');
+    expect(historyLines(item({
+      subject: { kind: 'supplier' },
+      changes: [
+        { field: 'role', before: 'commercial', after: 'technical' },
+        { field: 'is_primary', before: false, after: true },
+      ],
+    }), frCtx)).toEqual([
+      { label: 'Rôle', before: 'Commercial', after: 'Technique' },
+      { label: 'Principal', before: 'Non', after: 'Oui' },
+    ]);
 
     const frHidden = historyLines(item({
       changes: [{ field: 'contract_id', before: null, after: { hidden: true, kind: 'contract' } }],
@@ -244,5 +262,15 @@ describe('record history locales', () => {
       changes: [{ field: 'contract_id', before: null, after: { hidden: true, kind: 'contract' } }],
     }), enCtx);
     expect(lineText(enHidden[0], enCtx)).toBe('Contract: — → a contract');
+    expect(historyLines(item({
+      subject: { kind: 'supplier' },
+      changes: [
+        { field: 'role', before: 'commercial', after: 'technical' },
+        { field: 'is_primary', before: false, after: true },
+      ],
+    }), enCtx)).toEqual([
+      { label: 'Role', before: 'Commercial', after: 'Technical' },
+      { label: 'Primary', before: 'No', after: 'Yes' },
+    ]);
   });
 });

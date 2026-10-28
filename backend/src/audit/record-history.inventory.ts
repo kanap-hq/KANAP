@@ -16,10 +16,12 @@ import { suppliersRecord } from './record-history/records/suppliers';
  * record family only adds a file in `record-history/records/`.
  *
  * Two declarations keep the parent rules and the data-access inventory honest:
- * - every child label has a parent rule in `audit-parent-rules.ts`, except the labels listed in
- *   `explicitParentLabels`: their write hands the record to `writeAuditLog` (`parent`), because the
- *   payload names several records and no rule can choose one (an asset link holds the ids of every
- *   line linked to the asset);
+ * - every child label read through its parent columns has a parent rule in `audit-parent-rules.ts`,
+ *   except the labels listed in `explicitParentLabels`: their write hands the record to
+ *   `writeAuditLog` (`parent`), because the payload names several records and no rule can choose one
+ *   (an asset link holds the ids of every line linked to the asset). A label read by `childReads`
+ *   is not read through the parent columns, so it needs no parent rule of its own (`supplier_contacts`
+ *   still has one for the supplier's page);
  * - every table of the data-access families `follows_line` and `link_to_line`
  *   (`data-access/data-access-tables.inventory.ts`) is a child here or an exclusion with its reason.
  *   `__tests__/record-history-inventory.spec.ts` checks both ways, beside the catalog spec.
