@@ -1587,7 +1587,8 @@
       "unassigned": "Sin asignar",
       "unnamed": "Valor sin nombre",
       "lines": "Líneas",
-      "lines": "Líneas",
+      "nature": "Naturaleza",
+      "detail": "Detalle por línea",
       "defaultDimensionInSentence": "dimensión analítica"
     },
     "staffing": {

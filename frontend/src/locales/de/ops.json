@@ -1587,7 +1587,8 @@
       "unassigned": "Nicht zugeordnet",
       "unnamed": "Unbenannter Wert",
       "lines": "Zeilen",
-      "lines": "Zeilen",
+      "nature": "Art",
+      "detail": "Detail pro Zeile",
       "defaultDimensionInSentence": "Analysedimension"
     },
     "staffing": {

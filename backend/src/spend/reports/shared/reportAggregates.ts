@@ -863,6 +863,70 @@ export function readAnalytics(years: readonly number[], result: AggregateResult 
   return { groups, totals: yearValues(result?.total, years, measure), lineCount: result?.total.count ?? 0 };
 }
 
+/** A line of one dimension value, as the detail table lists it: its id, name, number, nature and amounts. */
+export type AnalyticsLine = {
+  id: string;
+  itemNumber: number | null;
+  name: string;
+  nature: 'opex' | 'capex' | null;
+  values: Record<number, number | null>;
+};
+
+export interface AnalyticsLinesParams extends AnalyticsParams {
+  scope: BudgetScope;
+}
+
+/**
+ * The lines of every value on the dimension, in one aggregate: grouped by value, then by line (id, name,
+ * number) and, on the all-natures scope, by nature. Same filters, exclusions and window as the value
+ * request; the first year's largest line first. The reader regroups by value (`readAnalyticsLines`).
+ */
+export function analyticsLinesRequest(p: AnalyticsLinesParams): AggregateRequest {
+  const excluded = p.excludedIds.map((id) => (id === NO_ANALYTICS_VALUE ? null : id));
+  const filters = excluded.length ? withFilter(p.filters, analyticsIdField(p.axisId), dropValues(excluded)) : p.filters;
+  return {
+    query: { filters },
+    spec: withFteNotice({
+      groupBy: [analyticsIdField(p.axisId), ...lineKeys(p.scope), ...(p.scope === 'all' ? ['nature'] : [])],
+      measures: yearMeasures(p.years, p.metric, p.measure),
+      order: [{ by: 'measure', id: `y${p.years[0]}`, dir: 'DESC' }],
+    }),
+  };
+}
+
+/**
+ * The lines of each value, keyed by the raw value id (an empty key for the lines without a value).
+ * Rows keep the server order (the first year's largest first). FTE: a line that declares none is left
+ * out, as the value reader leaves its value out; amounts keep every line.
+ */
+export function readAnalyticsLines(
+  scope: BudgetScope,
+  years: readonly number[],
+  result: AggregateResult | undefined,
+  measure: ReportMeasure = 'amount',
+): Map<string, AnalyticsLine[]> {
+  const byValue = new Map<string, AnalyticsLine[]>();
+  for (const group of declaredGroups(result, years, measure)) {
+    const valueId = group.keys[0];
+    const id = group.keys[1];
+    if (!id) continue;
+    const number = group.keys[3];
+    const nature = group.keys[4];
+    const line: AnalyticsLine = {
+      id,
+      itemNumber: number == null || number === '' ? null : Number(number),
+      name: (group.keys[2] ?? '').trim(),
+      nature: scope === 'all' ? (nature === 'opex' || nature === 'capex' ? nature : null) : scope,
+      values: yearValues(group, years, measure),
+    };
+    const key = valueId ?? '';
+    const lines = byValue.get(key);
+    if (lines) lines.push(line);
+    else byValue.set(key, [line]);
+  }
+  return byValue;
+}
+
 // ----- staffing by month (StaffingByMonthReport) -----
 
 /** What the staffing report groups on: a cost center, an item, a supplier or the value on a dimension. */

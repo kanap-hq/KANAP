@@ -14,6 +14,8 @@ import {
   METRIC_SUFFIX,
   MONTHS,
   readAnalytics,
+  readAnalyticsLines,
+  type AnalyticsLine,
   readColumnsCompare,
   readConsolidation,
   readCostPerFte,
@@ -23,6 +25,7 @@ import {
   readTopItems,
   readTrend,
   type AggregateResult,
+  type BudgetScope,
   type ColumnYear,
   type DeltaMode,
   type FteYearGroups,
@@ -98,6 +101,11 @@ export interface ReportTableLabels {
   analyticsTotal: (metric: string) => string;
   /** `reports.analyticsCategory.lines`: the number of lines of a value. */
   analyticsLines: string;
+  /** `reports.analyticsCategory.nature`: the nature of a line (OPEX or CAPEX). */
+  analyticsNature: string;
+  /** `operations.scope.opex` and `operations.scope.capex`: the two nature values. */
+  natureOpex: string;
+  natureCapex: string;
   /** The twelve short month names, January first, in the table's language (`shortMonthNames`). */
   monthNames: readonly string[];
   /** `reports.staffing.average` */
@@ -398,21 +406,71 @@ export function consolidationTable(
 }
 
 export interface AnalyticsTableParams extends YearGroupsTableParams {
+  /** The lines the report reads: the detail request groups the nature of the all-natures scope. */
+  scope: BudgetScope;
   /** The header of the group column: the dimension's name, or the product name of the default one. */
   dimension: string;
+  /** List the lines of every value under it (the detail request's answer is the fourth argument). */
+  detail?: boolean;
 }
 
-/** By value on the dimension (server order: the first year's largest first), the total as footer. */
+/**
+ * By value on the dimension (server order: the first year's largest first), the total as footer.
+ * With `detail`, the lines of each value follow it, indented by the row's `level` (1), with their
+ * reference, nature, amounts and share of their value's total for each year (a fraction). The rows
+ * stay flat, so the print view and the export write the same table without a tree.
+ */
 export function analyticsTable(
   p: AnalyticsTableParams,
   result: AggregateResult | undefined,
-  labels: Pick<ReportTableLabels, 'columnNames' | 'columnFte' | 'analyticsUnassigned' | 'analyticsUnnamed' | 'analyticsTotal' | 'analyticsLines'>,
+  labels: Pick<
+    ReportTableLabels,
+    'columnNames' | 'columnFte' | 'analyticsUnassigned' | 'analyticsUnnamed' | 'analyticsTotal' | 'analyticsLines'
+    | 'analyticsNature' | 'natureOpex' | 'natureCapex' | 'reference' | 'shareOfTotal'
+  >,
+  lines?: AggregateResult | undefined,
 ): ReportTableData {
   const read = readAnalytics(p.years, result, { unassigned: labels.analyticsUnassigned, unnamed: labels.analyticsUnnamed }, p.measure);
-  return yearGroupsTable(p, read, {
-    header: p.dimension,
-    total: labels.analyticsTotal(measureColumnName(labels, p.metric, p.measure)),
-  }, { countHeader: labels.analyticsLines });
+  const detail = p.detail === true;
+  const byValue = detail ? readAnalyticsLines(p.scope, p.years, lines, p.measure) : new Map<string, AnalyticsLine[]>();
+  const kind = measureKind(p.measure);
+  const columns: ReportTableColumn[] = [
+    { key: 'group', header: p.dimension, kind: 'text' },
+    { key: 'count', header: labels.analyticsLines, kind: 'count' },
+    ...(detail ? [
+      { key: 'reference', header: labels.reference, kind: 'text' as const },
+      { key: 'nature', header: labels.analyticsNature, kind: 'text' as const },
+    ] : []),
+    ...p.years.map((year): ReportTableColumn => ({ key: String(year), header: String(year), kind })),
+    ...(detail ? p.years.map((year): ReportTableColumn => ({ key: `share_${year}`, header: `${labels.shareOfTotal} ${year}`, kind: 'percent' as const })) : []),
+  ];
+  const footer: ReportTableRow = { group: labels.analyticsTotal(measureColumnName(labels, p.metric, p.measure)), count: read.lineCount ?? null };
+  for (const year of p.years) footer[String(year)] = measureCell(read.totals[year], p.measure);
+  const rows: ReportTableRow[] = [];
+  for (const group of read.groups) {
+    const row: ReportTableRow = { group: group.label, groupKey: group.key, groupName: group.name ?? null, count: group.count ?? null, level: 0 };
+    for (const year of p.years) row[String(year)] = measureCell(group.values[year], p.measure);
+    rows.push(row);
+    if (!detail) continue;
+    for (const line of byValue.get(group.id ?? '') ?? []) {
+      const lineRow: ReportTableRow = {
+        group: line.name,
+        level: 1,
+        id: line.id,
+        itemNumber: line.itemNumber,
+        reference: budgetLineReference(line.itemNumber),
+        nature: line.nature === 'opex' ? labels.natureOpex : line.nature === 'capex' ? labels.natureCapex : null,
+      };
+      for (const year of p.years) {
+        lineRow[String(year)] = measureCell(line.values[year], p.measure);
+        const total = group.values[year];
+        const value = line.values[year];
+        lineRow[`share_${year}`] = total == null || value == null ? null : total === 0 ? 0 : value / total;
+      }
+      rows.push(lineRow);
+    }
+  }
+  return { columns, rows, footer: [footer] };
 }
 
 // ----- By group (StaffingByMonthReport, CostPerFteReport): grouped on a cost center, a line, a supplier or a dimension -----

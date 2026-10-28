@@ -429,6 +429,48 @@ describe('Analytics report dimensions', () => {
     expect(screen.getByRole('combobox', { name: 'reports.filters.dimension' }).textContent).toBe('Nature');
   });
 
+  it('lists the lines of each value, with reference, nature and share, when the address asks for the detail', async () => {
+    serverRows = ROWS.map((row, index) => ({ ...row, item_number: index + 1, nature: index === 4 ? 'capex' : 'opex' })) as typeof ROWS;
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat&detail=lines');
+    await waitFor(() => expect(gridRows().length).toBeGreaterThan(5));
+    const rows = gridRows();
+    const valueRows = rows.filter((row) => row.level === 0);
+    const lineRows = rows.filter((row) => row.level === 1);
+    expect(valueRows.map((row) => [row.group, row.count])).toEqual([
+      ['reports.analyticsCategory.unassigned', 2],
+      ['Hardware', 2],
+      ['Software', 1],
+    ]);
+    expect(lineRows.map((row) => [row.group, row.reference, row.nature])).toEqual([
+      ['Line e', 'BL-5', 'operations.scope.capex'],
+      ['Line b', 'BL-2', 'operations.scope.opex'],
+      ['Line d', 'BL-4', 'operations.scope.opex'],
+      ['Line a', 'BL-1', 'operations.scope.opex'],
+      ['Line c', 'BL-3', 'operations.scope.opex'],
+    ]);
+    expect(grid.columns.map((column) => column.headerName)).toEqual([
+      'Nature',
+      'reports.analyticsCategory.lines',
+      'opex.columns.reference',
+      'reports.analyticsCategory.nature',
+      String(Y),
+      'reports.columns.shareOfTotal ' + Y,
+    ]);
+    const reference = grid.columns.find((column) => column.headerName === 'opex.columns.reference') as any;
+    expect(reference.cellRendererParams.getHref({ id: 'd', itemNumber: 4 })).toBe('/ops/budget/BL-4');
+    const share = grid.columns.find((column) => String(column.headerName).startsWith('reports.columns.shareOfTotal')) as any;
+    expect(share.valueFormatter({ value: 1000 / 1100 })).toBe('90.9%');
+    expect(rows.find((row) => row.group === 'Line a')!.share_2026).toBeCloseTo(100 / 1100, 10);
+  });
+
+  it('does not ask for the lines while the detail is off, the setting default', async () => {
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat');
+    await waitFor(() => expect(gridRows()).toHaveLength(3));
+    expect(gridRows().every((row) => row.level === 0)).toBe(true);
+    expect(post.mock.calls.filter(([, body]) => (body as any).spec.groupBy.length > 2)).toEqual([]);
+    expect(screen.getByRole('checkbox', { name: 'reports.analyticsCategory.detail' })).not.toBeChecked();
+  });
+
   it('drops the value exclusions when the dimension or the item type changes', async () => {
     renderReport(<AnalyticsCategoryReport />, '/report');
     await waitFor(() => expect(groups()).toHaveLength(5));

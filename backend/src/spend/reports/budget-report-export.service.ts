@@ -30,6 +30,7 @@ import {
 import {
   accountIdOptionsRequest,
   accountLabelOptions,
+  analyticsLinesRequest,
   analyticsRequest,
   columnsCompareRequest,
   consolidationRequest,
@@ -127,6 +128,9 @@ export class BudgetReportExportService {
       analyticsUnnamed: labels.analyticsUnnamed,
       analyticsTotal: (metric) => fillLabel(labels.analyticsTotal, 'metric', metric),
       analyticsLines: labels.analyticsLines,
+      analyticsNature: labels.analyticsNature,
+      natureOpex: labels.scope_opex,
+      natureCapex: labels.scope_capex,
       monthNames: shortMonthNames(language),
       average: labels.average,
       peak: labels.peak,
@@ -276,20 +280,28 @@ export class BudgetReportExportService {
         own = [...range, ...(excluded.length ? [[labels.excludeAccounts, excluded.join(', ')] as [string, string]] : [])];
       } else {
         const excluded = await this.excludedValues(params, manager, ctx, labels);
-        answer = await run(analyticsRequest({
+        const analytics = {
           axisId: params.axis?.id ?? null,
           years,
           metric: params.metric,
           excludedIds: params.excludeValues,
           filters,
           measure: params.measure,
-        }));
+        };
+        answer = await run(analyticsRequest(analytics));
+        const lineAnswer = params.detail ? await run(analyticsLinesRequest({ ...analytics, scope: params.scope })) : undefined;
+        if (lineAnswer?.dataAccessLimited === true) limited = true;
         // The screen's header: the dimension's name, the product name of the default one.
         const dimension = params.axis ? axisLabel(params.axis, language) : labels.analyticsDimension;
-        table = analyticsTable({ years, metric: params.metric, measure: params.measure, dimension }, answer, tableLabels);
+        table = analyticsTable({ scope: params.scope, years, metric: params.metric, measure: params.measure, dimension, detail: params.detail }, answer, tableLabels, lineAnswer);
         sheet = labels.analyticsSheet;
         fileBase = `analytics-${params.scope}-${params.startYear}-${params.endYear}`;
-        own = [[labels.dimension, dimension], ...range, ...(excluded.length ? [[labels.excludeValues, excluded.join(', ')] as [string, string]] : [])];
+        own = [
+          ...(params.detail ? [[labels.analyticsDetail, labels.yes] as [string, string]] : []),
+          [labels.dimension, dimension],
+          ...range,
+          ...(excluded.length ? [[labels.excludeValues, excluded.join(', ')] as [string, string]] : []),
+        ];
       }
     }
 

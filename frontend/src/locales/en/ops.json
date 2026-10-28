@@ -1587,7 +1587,8 @@
       "unassigned": "Unassigned",
       "unnamed": "Unnamed value",
       "lines": "Lines",
-      "lines": "Lines",
+      "nature": "Nature",
+      "detail": "Detail by line",
       "defaultDimensionInSentence": "analytics dimension"
     },
     "staffing": {

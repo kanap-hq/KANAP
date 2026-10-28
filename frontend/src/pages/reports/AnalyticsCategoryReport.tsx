@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Box, Checkbox, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import ReportGrid from '../../components/reports/ReportGrid';
 import type { ColDef } from 'ag-grid-community';
 import { useSearchParams } from 'react-router-dom';
@@ -7,7 +7,7 @@ import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import ReportExclusionPicker from '../../components/reports/ReportExclusionPicker';
 import ReportDataStatus from '../../components/reports/ReportDataStatus';
-import { useReportScope } from './useReportScope';
+import { itemHref, useReportScope } from './useReportScope';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { MetricKey, useReportMetric } from './reportMetrics';
@@ -17,9 +17,9 @@ import type { AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import type { AnalyticsAxis } from '../../services/analytics';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { useTranslation } from 'react-i18next';
-import { formatPercentPoints } from '../../i18n/formatters';
+import { formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
-import { NO_ANALYTICS_VALUE, analyticsRequest, readAnalytics, requestFirstYear } from './reportAggregates';
+import { NO_ANALYTICS_VALUE, analyticsLinesRequest, analyticsRequest, readAnalytics, requestFirstYear } from './reportAggregates';
 import { analyticsTable } from './reportTables';
 import { useReportTableLabels } from './useReportTableLabels';
 import { useBudgetAggregate } from './useBudgetAggregate';
@@ -27,9 +27,13 @@ import { useAxisValueOptions } from './useReportOptions';
 import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
 import { axisListColumn, reportListLink, reportListPicks, rowListGroup } from './reportListLink';
 import ReportGroupLinkCell from './ReportGroupLinkCell';
+import AnalyticsGroupCell from './AnalyticsGroupCell';
+import { LinkCellRenderer } from '../../components/grid/renderers';
 
 /** `?axis=<dimension id>`: the dimension the report groups on. */
 const AXIS_PARAM = 'axis';
+/** `?detail=lines`: the table lists the lines of every value; absent, values only. */
+const DETAIL_PARAM = 'detail';
 
 /**
  * The dimension named in the address when it is enabled, else the default one. Kept in the address
@@ -69,6 +73,16 @@ export default function AnalyticsCategoryReport() {
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
   const [measure, setMeasure] = useReportMeasure();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const detail = searchParams.get(DETAIL_PARAM) === 'lines';
+  const setDetail = useCallback((next: boolean) => {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      if (next) params.set(DETAIL_PARAM, 'lines');
+      else params.delete(DETAIL_PARAM);
+      return params;
+    }, { replace: true });
+  }, [setSearchParams]);
   const measureText = useMeasureText(measure);
   const formatNumber = measureText.format;
   const tableLabels = useReportTableLabels();
@@ -107,8 +121,20 @@ export default function AnalyticsCategoryReport() {
     measure,
   })), [reportFilters.queryFilters, analyticsAxes.ready, axisId, years, metric, excludedCategories, measure]);
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
+  // The lines of every value, in one aggregate: asked only when the address turns the detail on.
+  const detailRequest = useMemo(() => (detail && reportFilters.queryFilters != null && analyticsAxes.ready ? analyticsLinesRequest({
+    scope,
+    axisId,
+    years,
+    metric,
+    excludedIds: excludedCategories,
+    filters: reportFilters.queryFilters,
+    measure,
+  }) : null), [detail, reportFilters.queryFilters, analyticsAxes.ready, scope, axisId, years, metric, excludedCategories, measure]);
+  const detailReport = useBudgetAggregate(scope, detailRequest, { keepPrevious: true });
   // Loading, waiting for the filter bar or the dimensions, or the last answer kept while the new one loads.
-  const busy = reportFilters.queryFilters == null || !analyticsAxes.ready || report.isLoading || report.isPlaceholderData;
+  const busy = reportFilters.queryFilters == null || !analyticsAxes.ready || report.isLoading || report.isPlaceholderData
+    || (detail && (detailReport.isLoading || detailReport.isPlaceholderData));
   const labels = useMemo(() => ({ unassigned: t('reports.analyticsCategory.unassigned'), unnamed: t('reports.analyticsCategory.unnamed') }), [t]);
   // FTE: only the values that declare FTE in one of the years.
   const { groups } = useMemo(() => readAnalytics(years, report.data, labels, measure), [years, report.data, labels, measure]);
@@ -127,8 +153,13 @@ export default function AnalyticsCategoryReport() {
 
   // The key table (`reportTables.ts`, the same code as the export): one row per value, the total as footer.
   const table = useMemo(
-    () => analyticsTable({ years, metric, measure, dimension: dimensionLabel }, report.data, tableLabels),
-    [years, metric, measure, dimensionLabel, report.data, tableLabels],
+    () => analyticsTable(
+      { scope, years, metric, measure, dimension: dimensionLabel, detail },
+      report.data,
+      tableLabels,
+      detail ? detailReport.data : undefined,
+    ),
+    [scope, years, metric, measure, dimensionLabel, detail, report.data, tableLabels, detailReport.data],
   );
   const columns = useMemo<ColDef[]>(() => table.columns.map((column): ColDef => {
     if (column.key === 'group') {
@@ -137,15 +168,39 @@ export default function AnalyticsCategoryReport() {
         headerName: column.header,
         flex: 1,
         minWidth: 240,
-        cellRenderer: ReportGroupLinkCell,
+        cellRenderer: AnalyticsGroupCell,
         cellRendererParams: { getLink: valueLink },
+      };
+    }
+    if (column.key === 'reference') {
+      return {
+        field: column.key,
+        headerName: column.header,
+        width: 110,
+        cellRenderer: LinkCellRenderer,
+        cellRendererParams: {
+          newTab: true,
+          getHref: (row: { id?: string | null; itemNumber?: number | null }) => itemHref(scope, row.id, row.itemNumber),
+        },
+        cellStyle: {
+          color: 'var(--kanap-text-secondary)',
+          fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
+          fontVariantNumeric: 'tabular-nums',
+          fontSize: '12px',
+        },
       };
     }
     if (column.kind === 'count') {
       return { field: column.key, headerName: column.header, width: 100, type: 'rightAligned', valueFormatter: (p) => (p.value == null ? '' : String(p.value)) };
     }
+    if (column.kind === 'percent') {
+      return { field: column.key, headerName: column.header, width: 150, type: 'rightAligned', valueFormatter: (p) => (p.value == null ? '' : formatSharePercent(Number(p.value) * 100, locale, 1)) };
+    }
+    if (column.key === 'nature') {
+      return { field: column.key, headerName: column.header, width: 100 };
+    }
     return { field: column.key, headerName: column.header, width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) };
-  }), [table, valueLink, formatNumber]);
+  }), [table, valueLink, formatNumber, scope, locale]);
 
   // The column as the measure reads it: `Budget`, or `Budget FTE`.
   const metricLabel = measureText.column(budgetColumns.label(metric));
@@ -344,6 +399,15 @@ export default function AnalyticsCategoryReport() {
               ))}
             </TextField>
           </ReportFilter>
+          <ReportFilter label={t('reports.analyticsCategory.detail')} width={150}>
+            <Checkbox
+              size="small"
+              checked={detail}
+              onChange={(e) => setDetail(e.target.checked)}
+              inputProps={{ 'aria-label': t('reports.analyticsCategory.detail') }}
+              sx={{ p: '5px', alignSelf: 'flex-start' }}
+            />
+          </ReportFilter>
           <ReportFilter label={t('reports.filters.chartType')} width={180}>
             <TextField
               select
@@ -386,6 +450,7 @@ export default function AnalyticsCategoryReport() {
           endYear,
           metric,
           excludeValues: excludedCategories.join(','),
+          detail: detail ? 'lines' : 'values',
         },
         fileBase: measureText.fileName(`analytics-${scope}-${years[0]}-${years[years.length - 1]}`),
       }}
