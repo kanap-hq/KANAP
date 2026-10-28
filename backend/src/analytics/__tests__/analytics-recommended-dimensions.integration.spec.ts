@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { ExecutionContext } from '@nestjs/common';
+import { ExecutionContext, HttpException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
@@ -255,8 +255,16 @@ async function testPermissions() {
         const req: any = { method: handler === proto.recommended ? 'GET' : 'POST', user: { sub: userId }, tenant: { id: tenantId }, queryRunner: runner };
         const http = { getRequest: () => req, getResponse: () => ({}), getNext: () => undefined };
         const ctx = { getHandler: () => handler, getClass: () => AnalyticsAxesController, switchToHttp: () => http, getType: () => 'http' } as unknown as ExecutionContext;
-        // A guard that answers false makes Nest send 403.
-        assert.equal(await guard.canActivate(ctx), allowed, `${who} on ${req.method} /analytics-axes/recommended`);
+        if (allowed) {
+          assert.equal(await guard.canActivate(ctx), true, `${who} on ${req.method} /analytics-axes/recommended`);
+        } else {
+          // A missing module right answers 403 MODULE_RIGHT_REQUIRED.
+          await assert.rejects(
+            () => guard.canActivate(ctx),
+            (error: unknown) => error instanceof HttpException && error.getStatus() === 403,
+            `${who} on ${req.method} /analytics-axes/recommended`,
+          );
+        }
       }
     }
   });
