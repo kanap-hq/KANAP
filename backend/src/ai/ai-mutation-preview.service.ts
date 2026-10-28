@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -160,6 +161,7 @@ function planStepTargetRef(step: AiMutationPlanStep): string | null {
 
 @Injectable()
 export class AiMutationPreviewService {
+  private readonly logger = new Logger(AiMutationPreviewService.name);
   private readonly languages = new WeakMap<AiExecutionContextWithManager, Promise<AiWriteLanguage>>();
 
   constructor(
@@ -220,7 +222,8 @@ export class AiMutationPreviewService {
     } else {
       try {
         presentation = this.operations.getOperation(preview.tool_name).presentPreview(preview, language);
-      } catch {
+      } catch (error) {
+        this.logger.warn(`Preview ${preview.id} (${preview.tool_name}) could not present: ${error instanceof Error ? error.message : String(error)}`);
         presentation = this.legacyPreviewPresentation(preview);
       }
     }
