@@ -199,6 +199,14 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. 
 - **Cinq onglets** : **Vue d'ensemble**, **Budget**, **Ventilations**, **Relations** (l'onglet Relations indique le nombre de liens de la ligne) et **Historique**
 - **Panneau Propriétés** à droite : les champs principaux de la ligne, en commençant par **Type** (avec **Changer le type...** à côté sur une ligne existante, voir [Changer le type](#changer-le-type)). Ouvrez-le ou fermez-le avec le bouton des propriétés ; l'espace de travail mémorise votre choix
 
+**Choix des responsables** :
+
+- Dans le panneau **Propriétés** d'une nouvelle ligne et dans la barre de métadonnées d'une ligne existante, les listes **Responsable IT** et **Responsable métier** commencent, sous **Accès au centre de coûts**, par les personnes qui ont un accès au budget et peuvent lire les lignes du centre de coûts de la ligne. Toutes les autres suivent, après un séparateur
+- La saisie cherche parmi tout le monde, comme avant. Vous pouvez choisir n'importe qui
+- Sans centre de coûts, la liste reste la liste habituelle. Le groupe n'apparaît pas quand il contiendrait tout le monde, par exemple quand personne n'a d'[accès aux données](data-access.md) limité
+- Quand votre propre accès aux données est limité, le groupe apparaît pour les centres de coûts de votre accès et pour la ligne que vous modifiez
+- Choisir un responsable donne à cette personne l'accès à la ligne
+
 **Enregistrement automatique** :
 
 - Chaque modification s'enregistre automatiquement. L'indication **Enregistrement...** / **Enregistré** apparaît dans l'en-tête

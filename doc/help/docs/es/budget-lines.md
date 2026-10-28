@@ -199,6 +199,14 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Su dir
 - **Cinco pestañas**: **Vista general**, **Presupuesto**, **Asignaciones**, **Relaciones** (la pestaña Relaciones muestra cuántos vínculos tiene la línea) e **Historial**
 - **Panel Propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo** (con **Cambiar el tipo…** junto a él en una línea existente, consulte [Cambiar el tipo](#cambiar-el-tipo)). Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
 
+**Elección de responsables**:
+
+- En el panel **Propiedades** de una línea nueva y en la barra de metadatos de una línea existente, las listas **Responsable de TI** y **Responsable de negocio** empiezan, bajo **Acceso al centro de coste**, por las personas que tienen acceso al presupuesto y pueden leer las líneas del centro de coste de la línea. Las demás siguen tras un separador
+- Al escribir se busca entre todas las personas, como antes. Puede elegir a cualquiera
+- Sin centro de coste, la lista es la habitual. El grupo no aparece cuando incluiría a todo el mundo, por ejemplo cuando nadie tiene un [acceso a los datos](data-access.md) limitado
+- Cuando su propio acceso a los datos está limitado, el grupo aparece para los centros de coste de su acceso y para la línea que está editando
+- Elegir a un responsable le da acceso a la línea
+
 **Guardado automático**:
 
 - Cada cambio se guarda automáticamente. La indicación **Guardando...** / **Guardado** aparece en la cabecera
