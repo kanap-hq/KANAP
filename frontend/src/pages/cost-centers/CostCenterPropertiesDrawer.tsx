@@ -5,7 +5,7 @@ import { PropertyGroup, PropertyRow } from '../../components/design';
 import CostCenterSelect from '../../components/fields/CostCenterSelect';
 import CompanySelect from '../../components/fields/CompanySelect';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
-import MetadataUserPicker from '../../components/workspace/MetadataUserPicker';
+import UserSelect from '../../components/fields/UserSelect';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import type { CostCenterDetail, CostCenterKind } from '../../services/costCenters';
@@ -142,15 +142,17 @@ export default function CostCenterPropertiesDrawer({
         )}
         <PropertyRow label={t('costCenters.fields.owner')} helperText={t('costCenters.hints.owner')}>
           <Box>
-            <MetadataUserPicker
+            <UserSelect
+              hideLabel
+              label={t('costCenters.fields.owner')}
               value={node.owner_user_id}
-              displayName={node.owner_name}
+              // The name the node carries: shown at once, also to a reader who cannot list people.
+              selectedOption={node.owner_user_id && node.owner_name ? { id: node.owner_user_id, first_name: node.owner_name } : null}
+              onChange={(userId) => onOwnerChange(userId)}
               placeholder={t('costCenters.placeholders.ownerMissing')}
-              searchPlaceholder={t('costCenters.fields.owner')}
               disabled={disabled}
-              showAvatar={false}
-              onChange={onOwnerChange}
-              sx={{ maxWidth: '100%' }}
+              error={!!errors.owner_user_id}
+              textFieldSx={drawerFieldValueSx}
             />
             <ErrorLine message={errors.owner_user_id} />
           </Box>

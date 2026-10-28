@@ -950,6 +950,7 @@
     "roles": "Roles",
     "server": "Server",
     "costCenter": "Cost center",
+    "costCenterAccess": "Cost center access",
     "noCostCenterYet": "No cost center yet.",
     "noCostCenterForCompany": "No cost center for this company.",
     "createCostCenter": "Create one",

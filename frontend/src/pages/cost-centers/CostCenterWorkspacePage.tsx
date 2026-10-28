@@ -9,7 +9,7 @@ import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetai
 import { PropertyRow, useKanapDialogs } from '../../components/design';
 import CostCenterSelect from '../../components/fields/CostCenterSelect';
 import CompanySelect from '../../components/fields/CompanySelect';
-import MetadataUserPicker from '../../components/workspace/MetadataUserPicker';
+import UserSelect from '../../components/fields/UserSelect';
 import { COST_CENTER_TREE_QUERY_KEY, useCostCenterTree } from '../../hooks/useCostCenterTree';
 import { useCostCenterNav } from '../../hooks/useCostCenterNav';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
@@ -526,13 +526,14 @@ function CostCenterCreate({
             </PropertyRow>
           )}
           <PropertyRow label={t('costCenters.fields.owner')} helperText={t('costCenters.hints.owner')} valueSx={{ maxWidth: 520 }}>
-            <MetadataUserPicker
+            <UserSelect
+              hideLabel
+              label={t('costCenters.fields.owner')}
               value={form.owner_user_id}
-              placeholder={t('costCenters.placeholders.ownerMissing')}
-              searchPlaceholder={t('costCenters.fields.owner')}
-              showAvatar={false}
               onChange={(userId) => update({ owner_user_id: userId })}
-              sx={{ maxWidth: '100%' }}
+              placeholder={t('costCenters.placeholders.ownerMissing')}
+              error={!!errors.owner_user_id}
+              textFieldSx={drawerFieldValueSx}
             />
             <ErrorLine message={errors.owner_user_id} />
           </PropertyRow>

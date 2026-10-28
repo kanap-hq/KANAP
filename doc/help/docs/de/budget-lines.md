@@ -199,6 +199,14 @@ Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen
 - **Fünf Tabs**: **Übersicht**, **Budget**, **Zuordnungen**, **Verknüpfungen** (der Tab Verknüpfungen zeigt die Anzahl der Verknüpfungen der Zeile) und **Verlauf**
 - **Bereich Eigenschaften** rechts: die Hauptfelder der Zeile, beginnend mit **Typ** (bei einer bestehenden Zeile mit **Typ ändern…** daneben, siehe [Typ ändern](#typ-andern)). Öffnen oder schließen Sie ihn mit der Eigenschaften-Schaltfläche; der Arbeitsbereich merkt sich Ihre Wahl
 
+**Auswahl der Verantwortlichen**:
+
+- Im Bereich **Eigenschaften** einer neuen Zeile und in der Metadatenleiste einer bestehenden Zeile beginnen die Listen **IT-Verantwortlicher** und **Fachbereichsverantwortlicher** unter **Zugriff auf die Kostenstelle** mit den Personen, die Budgetzugriff haben und Zeilen der Kostenstelle der Zeile lesen können. Alle anderen folgen nach einem Trennstrich
+- Die Eingabe durchsucht wie bisher alle Personen. Sie können jede Person wählen
+- Ohne Kostenstelle bleibt die Liste wie gewohnt. Die Gruppe erscheint nicht, wenn sie alle Personen enthielte, etwa wenn niemand einen begrenzten [Datenzugriff](data-access.md) hat
+- Ist Ihr eigener Datenzugriff begrenzt, erscheint die Gruppe für die Kostenstellen in Ihrem Zugriff und für die Zeile, die Sie bearbeiten
+- Wer als Verantwortlicher gewählt wird, erhält Zugriff auf die Zeile
+
 **Automatisches Speichern**:
 
 - Jede Änderung wird automatisch gespeichert. In der Kopfzeile erscheint der Hinweis **Wird gespeichert...** / **Gespeichert**

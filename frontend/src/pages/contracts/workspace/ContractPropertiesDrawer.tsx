@@ -6,7 +6,7 @@ import CompanySelect from '../../../components/fields/CompanySelect';
 import CostCenterSelect from '../../../components/fields/CostCenterSelect';
 import DateEUField from '../../../components/fields/DateEUField';
 import StatusLifecycleField from '../../../components/fields/StatusLifecycleField';
-import MetadataUserPicker from '../../../components/workspace/MetadataUserPicker';
+import UserSelect from '../../../components/fields/UserSelect';
 import { useCostCenterNode } from '../../../hooks/useCostCenterTree';
 import { useContractPlacementFilter } from '../../../hooks/usePlacementOptions';
 import { STATUS_DISABLED, deriveStatusFromDisabledAt, normalizeDisabledAtInput, type StatusValue } from '../../../constants/status';
@@ -112,16 +112,17 @@ export default function ContractPropertiesDrawer({ values, names, disabled, onPa
           </Box>
         </PropertyRow>
         <PropertyRow label={t('contracts.fields.owner')}>
-          <MetadataUserPicker
-            value={values.owner_user_id}
-            displayName={names.owner}
-            placeholder={t('contracts.metadata.ownerMissing')}
-            searchPlaceholder={t('contracts.fields.owner')}
-            disabled={disabled}
-            showAvatar={false}
-            onChange={(next) => onPatch({ owner_user_id: next })}
-            sx={{ maxWidth: '100%' }}
-          />
+          <Box sx={hideInnerLabelSx}>
+            <UserSelect
+              hideLabel
+              label={t('contracts.fields.owner')}
+              value={values.owner_user_id}
+              selectedOption={values.owner_user_id && names.owner ? { id: values.owner_user_id, first_name: names.owner } : null}
+              onChange={(next) => onPatch({ owner_user_id: next })}
+              placeholder={t('contracts.metadata.ownerMissing')}
+              disabled={disabled}
+            />
+          </Box>
         </PropertyRow>
       </PropertyGroup>
 

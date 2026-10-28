@@ -950,6 +950,7 @@
     "roles": "Rollen",
     "server": "Server",
     "costCenter": "Kostenstelle",
+    "costCenterAccess": "Zugriff auf die Kostenstelle",
     "noCostCenterYet": "Noch keine Kostenstelle.",
     "noCostCenterForCompany": "Keine Kostenstelle für dieses Unternehmen.",
     "createCostCenter": "Eine anlegen",

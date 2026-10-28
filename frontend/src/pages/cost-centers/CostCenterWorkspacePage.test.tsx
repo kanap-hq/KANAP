@@ -53,7 +53,7 @@ vi.mock('../../components/fields/CompanySelect', () => ({
     </div>
   ),
 }));
-vi.mock('../../components/workspace/MetadataUserPicker', () => ({
+vi.mock('../../components/fields/UserSelect', () => ({
   default: (props: { onChange: (v: string | null) => void }) => (
     <button type="button" onClick={() => props.onChange('user-2')}>pick owner</button>
   ),
