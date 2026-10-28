@@ -260,11 +260,140 @@ async function testEqualFileTotalLeavesTheColumnOnItsLines(kind: Kind) {
   });
 }
 
+/** The annual spread the Budget tab sends for a column (`recordSpread` through the amounts payload). */
+async function replaceWithBudgetTabSpread(ctx: Pick<Ctx, 'runner' | 'versionId'>, kind: Kind, total: string) {
+  await amountsService(kind).bulkUpsert(
+    ctx.versionId,
+    {
+      kind: 'annual',
+      year: YEAR,
+      totals: { planned: total },
+      period_start: `${YEAR}-01-01`,
+      period_end: `${YEAR}-12-31`,
+    },
+    null,
+    { manager: ctx.runner.manager },
+  );
+}
+
+const COMPARISON_IGNORED = new Set(['id', 'tenant_id', 'version_id', 'round_input_id', 'updated_at', 'updated_by', 'working_day_profile_id']);
+
+/** What two tenants' copies of the same column can be compared on: the rows' keys and the calendar's UUID differ. */
+function comparable(value: any): any {
+  if (Array.isArray(value)) return value.map(comparable);
+  if (value && typeof value === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value)) {
+      if (!COMPARISON_IGNORED.has(key)) result[key] = comparable(entry);
+    }
+    return result;
+  }
+  return value;
+}
+
+/**
+ * The same yearly total in the Budget tab: `recordSpread` replaces the months
+ * with a flat spread and carries the lines' result, exactly as the file does
+ * for a different total. Both keep the lines and their result; nothing
+ * distinguishes the file's record from the tab's.
+ */
+async function testBudgetTabWritesTheSameColumnAsTheFile(kind: Kind) {
+  const file = await withCalculationLines(kind, 'tab-same-file', async (ctx) => {
+    await loadBudgetTotal(ctx, kind, DIFFERENT_TOTAL);
+    return {
+      column: await column(ctx.runner, kind, ctx.versionId, 'planned'),
+      screen: await screenRecord(ctx, kind, 'planned'),
+      exported: await exportedTotal(ctx, kind),
+    };
+  });
+  const tab = await withCalculationLines(kind, 'tab-same-tab', async (ctx) => {
+    await replaceWithBudgetTabSpread(ctx, kind, DIFFERENT_TOTAL);
+    return {
+      column: await column(ctx.runner, kind, ctx.versionId, 'planned'),
+      screen: await screenRecord(ctx, kind, 'planned'),
+      exported: await exportedTotal(ctx, kind),
+    };
+  });
+
+  assert.deepEqual(tab.column.months, repeat('6000.00', 12), `${kind}: the tab spreads the total flat`);
+  assert.deepEqual(
+    [tab.column.record!.method, tab.column.record!.last_calculation.kind, tab.column.record!.last_calculation.total, tab.column.record!.fte],
+    ['spread', 'annual', DIFFERENT_TOTAL, '0.75'],
+    `${kind}: the tab records its spread and keeps the FTE`,
+  );
+  assert.equal(tab.column.record!.last_calculation.lines_result.total, TOTAL_FROM_LINES, `${kind}: the tab keeps the lines' result`);
+  assert.deepEqual(tab.column.lines.map((line) => line.label), ['Consultant', 'Developer'], `${kind}: the tab keeps the lines`);
+  assert.deepEqual(
+    [tab.screen.method, tab.screen.last_calculation.lines_result.total, tab.screen.lines.length],
+    ['spread', TOTAL_FROM_LINES, 2],
+    `${kind}: the tab reads the lines back as a reference with their result`,
+  );
+  assert.equal(tab.exported, DIFFERENT_TOTAL, `${kind}: the tab's next export writes its total`);
+
+  assert.deepEqual(comparable(file.column), comparable(tab.column), `${kind}: the file and the tab write the same column`);
+  assert.deepEqual(comparable(file.screen), comparable(tab.screen), `${kind}: and the tab reads the same record back`);
+  assert.equal(file.exported, DIFFERENT_TOTAL, `${kind}: the file's next export writes its total`);
+}
+
+/**
+ * An equal yearly total: the file writes nothing, so the column keeps the
+ * lines' own monthly split (8 000 then 2 000) and stays computed. The Budget
+ * tab still records its annual spread: the months become 5 000 flat and the
+ * lines become a reference with their result. That is the one difference.
+ */
+async function testEqualTotalOnlyTheBudgetTabRewritesTheColumn(kind: Kind) {
+  const file = await withCalculationLines(kind, 'tab-equal-file', async (ctx) => {
+    const { loaded } = await loadBudgetTotal(ctx, kind);
+    return {
+      loaded,
+      column: await column(ctx.runner, kind, ctx.versionId, 'planned'),
+      screen: await screenRecord(ctx, kind, 'planned'),
+      exported: await exportedTotal(ctx, kind),
+    };
+  });
+  const tab = await withCalculationLines(kind, 'tab-equal-tab', async (ctx) => {
+    await replaceWithBudgetTabSpread(ctx, kind, TOTAL_FROM_LINES);
+    return {
+      column: await column(ctx.runner, kind, ctx.versionId, 'planned'),
+      screen: await screenRecord(ctx, kind, 'planned'),
+      exported: await exportedTotal(ctx, kind),
+    };
+  });
+
+  assert.equal(file.loaded.updated, 0, `${kind}: the file writes nothing for an equal total`);
+  assert.deepEqual(
+    [file.column.record!.method, file.column.record!.last_calculation.kind, file.column.record!.last_calculation.total],
+    ['computed', 'computed', TOTAL_FROM_LINES],
+    `${kind}: the file leaves the column on its lines`,
+  );
+  assert.deepEqual(file.column.months.slice(0, 7), ['8000.00', '8000.00', '8000.00', '8000.00', '8000.00', '8000.00', '2000.00']);
+  assert.equal(file.screen.last_calculation.lines_result, undefined, `${kind}: the tab has no reference result to read`);
+  assert.equal(file.exported, TOTAL_FROM_LINES);
+
+  assert.deepEqual(tab.column.months, repeat('5000.00', 12), `${kind}: the tab still spreads the equal total flat`);
+  assert.deepEqual(
+    [tab.column.record!.method, tab.column.record!.last_calculation.kind, tab.column.record!.last_calculation.total],
+    ['spread', 'annual', TOTAL_FROM_LINES],
+    `${kind}: the tab records the spread even when the total is equal`,
+  );
+  assert.equal(tab.column.record!.last_calculation.lines_result.total, TOTAL_FROM_LINES, `${kind}: and keeps the lines' result`);
+  assert.deepEqual(
+    [tab.screen.method, tab.screen.last_calculation.lines_result.total, tab.screen.lines.length],
+    ['spread', TOTAL_FROM_LINES, 2],
+    `${kind}: the tab reads the lines back as a reference`,
+  );
+  assert.equal(tab.exported, TOTAL_FROM_LINES);
+
+  assert.notDeepEqual(comparable(file.column), comparable(tab.column), `${kind}: the file and the tab differ at an equal total`);
+}
+
 void runSpecs(
   'budget-file-calculation-lines.integration.spec',
   KINDS.flatMap((kind) => [
     [`a different yearly total keeps the calculation lines and their result (${kind})`, () => testDifferentFileTotalKeepsTheLinesAndTheirResult(kind)],
     [`an equal yearly total leaves the column on its calculation lines (${kind})`, () => testEqualFileTotalLeavesTheColumnOnItsLines(kind)],
+    [`the Budget tab writes the same column as the file for a different total (${kind})`, () => testBudgetTabWritesTheSameColumnAsTheFile(kind)],
+    [`at an equal total only the Budget tab rewrites the column (${kind})`, () => testEqualTotalOnlyTheBudgetTabRewritesTheColumn(kind)],
   ] as Array<[string, () => Promise<void>]>),
 );
 
