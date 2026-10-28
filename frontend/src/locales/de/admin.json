@@ -553,7 +553,9 @@
       "kind": "Typ",
       "parent_id": "Übergeordnete Gruppe",
       "accountNature": "Verwendet für",
-      "costCenterOwner": "Budgetverantwortlicher"
+      "costCenterOwner": "Budgetverantwortlicher",
+      "erp_supplier_id": "ERP-Lieferanten-ID",
+      "is_primary": "Primär"
     },
     "history": {
       "empty": "Noch kein Verlauf",

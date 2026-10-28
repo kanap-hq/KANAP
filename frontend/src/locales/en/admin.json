@@ -553,7 +553,9 @@
       "kind": "Type",
       "parent_id": "Parent group",
       "accountNature": "Used for",
-      "costCenterOwner": "Budget holder"
+      "costCenterOwner": "Budget holder",
+      "erp_supplier_id": "ERP supplier ID",
+      "is_primary": "Primary"
     },
     "history": {
       "empty": "No history yet",

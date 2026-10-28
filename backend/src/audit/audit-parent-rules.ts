@@ -1,6 +1,7 @@
 import type { EntityManager } from 'typeorm';
 import type { RecordHistoryTable } from './record-history.inventory';
 import { spendItemsParentRules } from './record-history/records/spend_items';
+import { suppliersParentRules } from './record-history/records/suppliers';
 
 /**
  * How an audit row finds the record it belongs to, by its audit label (`audit_log.table_name`).
@@ -42,6 +43,7 @@ export type AuditParentRule =
  */
 const PARENT_RULE_SETS = [
   spendItemsParentRules,
+  suppliersParentRules,
 ] as const;
 
 /** The audit labels that carry a record, and how to find it. */

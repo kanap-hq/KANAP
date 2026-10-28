@@ -553,7 +553,9 @@
       "kind": "Tipo",
       "parent_id": "Grupo superior",
       "accountNature": "Usada para",
-      "costCenterOwner": "Responsable del presupuesto"
+      "costCenterOwner": "Responsable del presupuesto",
+      "erp_supplier_id": "ID de proveedor ERP",
+      "is_primary": "Principal"
     },
     "history": {
       "empty": "Todavía no hay historial",

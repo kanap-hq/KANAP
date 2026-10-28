@@ -40,7 +40,7 @@ function testEntries() {
       childReads += 1;
     }
   }
-  assert.deepEqual(recordHistoryModules(), ['accounts', 'budget', 'cost_centers'], 'the modules of the route guard');
+  assert.deepEqual(recordHistoryModules(), ['accounts', 'budget', 'cost_centers', 'suppliers'], 'the modules of the route guard');
   // Every reference family has a reader module (people are the only exception, `null`), and the
   // module is a permission resource: a family declared ahead of its record page is already checked.
   for (const family of FAMILY_KEYS) {

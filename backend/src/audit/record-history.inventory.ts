@@ -3,6 +3,7 @@ import type { FamilyKey } from './record-history/families';
 import { accountsRecord } from './record-history/records/accounts';
 import { costCentersRecord } from './record-history/records/cost_centers';
 import { spendItemsRecord } from './record-history/records/spend_items';
+import { suppliersRecord } from './record-history/records/suppliers';
 
 /**
  * The records whose history the API serves (`GET /records/:table/:id/history`), by route key.
@@ -54,7 +55,9 @@ export type RecordHistoryChildKind =
   | 'contract'
   | 'project'
   | 'request'
-  | 'task';
+  | 'task'
+  | 'supplier'
+  | 'budget_line';
 
 export type RecordHistoryExclusion = {
   /** The physical table of the data-access inventory. */
@@ -110,6 +113,7 @@ const RECORD_HISTORY_DEFINITION = [
   accountsRecord,
   costCentersRecord,
   spendItemsRecord,
+  suppliersRecord,
 ] as const satisfies readonly RecordHistoryRecord[];
 
 /** A physical table the history serves: the route key of `GET /records/:table/:id/history`. */

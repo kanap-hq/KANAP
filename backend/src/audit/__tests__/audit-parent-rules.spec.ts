@@ -160,7 +160,13 @@ function migrationLineRecordLabels(): string[] {
 }
 
 function testMigrationLabelsMatchRules() {
-  assert.deepEqual(migrationLabels(), Object.keys(AUDIT_PARENT_RULES).sort(), 'the migration and the write rules cover the same labels');
+  // The frozen budget migration covers the budget-line rules only; the supplier family copies its
+  // own rule in its migration (`audit-log-supplier-contact-parents` spec).
+  const budgetRules = Object.entries(AUDIT_PARENT_RULES)
+    .filter(([, rule]) => rule.parentTable === 'spend_items')
+    .map(([label]) => label)
+    .sort();
+  assert.deepEqual(migrationLabels(), budgetRules, 'the migration and the budget-line write rules cover the same labels');
   // The links the backfill fills by `record_id` are the explicit-parent labels, minus the asset
   // links whose `record_id` is the asset, and minus the contract, project and request links added
   // by correctifs C: their old rows stay without parent (the payload cannot choose the line
@@ -175,8 +181,8 @@ function testMigrationLabelsMatchRules() {
   for (const label of ['contract_spend_items', 'contract_capex_items', 'portfolio_project_opex', 'portfolio_project_capex', 'portfolio_request_opex', 'portfolio_request_capex']) {
     assert.ok(!migrationLineRecordLabels().includes(label), `${label}: no backfill of existing rows`);
   }
-  for (const [label, rule] of Object.entries(AUDIT_PARENT_RULES)) {
-    assert.equal(rule.parentTable, 'spend_items', `${label}: the physical line table`);
+  for (const label of budgetRules) {
+    assert.equal(AUDIT_PARENT_RULES[label].parentTable, 'spend_items', `${label}: the physical line table`);
   }
   assert.equal(AUDIT_PARENT_RULES.spend_items, undefined);
   assert.equal(AUDIT_PARENT_RULES.capex_items, undefined);

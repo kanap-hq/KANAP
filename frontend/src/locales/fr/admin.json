@@ -553,7 +553,9 @@
       "kind": "Type",
       "parent_id": "Groupe parent",
       "accountNature": "Utilisé pour",
-      "costCenterOwner": "Responsable budgétaire"
+      "costCenterOwner": "Responsable budgétaire",
+      "erp_supplier_id": "ID fournisseur ERP",
+      "is_primary": "Principal"
     },
     "history": {
       "empty": "Aucun historique",
