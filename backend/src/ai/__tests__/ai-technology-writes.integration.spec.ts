@@ -36,7 +36,7 @@ process.env.S3_BUCKET ||= 'test-bucket';
 process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
-type Harness = { app: any; dataSource: DataSource; tools: any; previews: any; feed: any };
+type Harness = { app: any; dataSource: DataSource; tools: any; previews: any; feed: any; cpeEvents: Array<{ tenantId: string; technologyId: string }> };
 type Seed = {
   tenantId: string;
   users: Record<'member' | 'reader' | 'serverOnly' | 'bc', string>;
@@ -265,13 +265,19 @@ async function createHarness(): Promise<Harness> {
   const { AiToolRegistry } = require('../ai-tool.registry');
   const { AiMutationPreviewService } = require('../ai-mutation-preview.service');
   const { NvdFeedService } = require('../../vulnerabilities/nvd-feed.service');
+  const { TechnologyCpeEvents } = require('../../technologies/technology-cpe-events');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
+  const cpeEvents: Array<{ tenantId: string; technologyId: string }> = [];
+  app.get(TechnologyCpeEvents).subscribe(async (event: any) => {
+    cpeEvents.push({ tenantId: event.tenantId, technologyId: event.technologyId });
+  });
   return {
     app,
     dataSource: app.get(DataSource),
     tools: app.get(AiToolRegistry),
     previews: app.get(AiMutationPreviewService),
     feed: app.get(NvdFeedService, { strict: false }),
+    cpeEvents,
   };
 }
 
@@ -365,10 +371,10 @@ async function testFlagshipVersion16(harness: Harness) {
       { table: audit.table_name, action: audit.action, source: audit.source, sourceRef: audit.source_ref },
       { table: 'application_technologies', action: 'create', source: 'ai_chat', sourceRef: preview.preview_id },
     );
-    if (harness.feed) {
-      assert.ok(harness.feed.pendingTechnologyIds(seed.tenantId).includes(seed.technologies.postgres),
-        'the technology is queued for its vulnerability match');
-    }
+    assert.ok(
+      harness.cpeEvents.some((event) => event.tenantId === seed.tenantId && event.technologyId === seed.technologies.postgres),
+      'the technology is emitted for its vulnerability match',
+    );
   });
 }
 
@@ -559,6 +565,57 @@ async function testAlreadyAndAbsent(harness: Harness) {
   });
 }
 
+async function testCardListsAlreadyAndAbsentBesideAChange(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'card-already');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_links', {
+      technology: 'PostgreSQL',
+      applications: {
+        add: [
+          { application: 'CheeseTrack', version: '16', servers: ['AST-12', 'AST-13'] },
+          { application: 'CheeseTrack', version: '14' },
+        ],
+        remove: [{ application: 'Mail', version: '14' }],
+      },
+    });
+    const applications = preview.changes.technology_applications.to;
+    assert.match(applications, /\*\*Added\*\*\n- APP-36 - CheeseTrack: PostgreSQL 16/);
+    assert.match(applications, /\*\*Already linked\*\*\n- APP-36 - CheeseTrack: PostgreSQL 14/);
+    assert.match(applications, /\*\*Not linked\*\*\n- APP-2 - Mail: PostgreSQL 14/);
+    const servers = preview.changes.technology_servers.to;
+    assert.match(servers, /\*\*Added\*\*\n- AST-12 - srv-db-01: PostgreSQL 16/);
+    assert.match(servers, /\*\*Already equipped\*\*\n- AST-13 - srv-web-01 \(already equipped\)/);
+    await approvePreview(harness, ctx, preview);
+    const [added] = await runner.query(
+      `SELECT source FROM application_technologies
+        WHERE tenant_id = $1 AND application_id = $2 AND technology_version_id = $3`,
+      [seed.tenantId, seed.apps.cheeseTrack, seed.versions.pg16],
+    );
+    assert.equal(added.source, 'ai');
+  });
+}
+
+async function testServerDriftIsRefused(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'server-drift');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_links', {
+      technology: 'nginx', servers: { add: [{ server: 'AST-12', version: '1.26' }] },
+    });
+    await runner.query(
+      `INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id)
+       VALUES ($1, $2, $3, $4)`,
+      [seed.tenantId, seed.servers.db, seed.technologies.nginx, seed.versions.nginx126],
+    );
+    const failed = await approveFailingPreview(harness, ctx, preview);
+    assert.equal(failed.error_message, 'Links of TEC-2 - nginx changed after the preview was created.');
+    const [link] = await runner.query(
+      `SELECT source FROM asset_technologies WHERE tenant_id = $1 AND asset_id = $2 AND technology_id = $3`,
+      [seed.tenantId, seed.servers.db, seed.technologies.nginx],
+    );
+    assert.equal(link.source, 'manual', 'the screen link stays, nothing of the preview is written');
+  });
+}
+
 async function testUndoRestoresTheRemovedRows(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'undo-restore');
@@ -712,6 +769,8 @@ async function run() {
     await testRemoveOneDeclaration(harness);
     await testRemoveAllDeclarations(harness);
     await testAlreadyAndAbsent(harness);
+    await testCardListsAlreadyAndAbsentBesideAChange(harness);
+    await testServerDriftIsRefused(harness);
     await testUndoRestoresTheRemovedRows(harness);
     await testDriftIsRefused(harness);
     await testRights(harness);
