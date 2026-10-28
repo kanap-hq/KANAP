@@ -383,7 +383,7 @@ function ReportView({
       {hasErrors && (
         <Section title={t(`${K}errorsTitle`)}>
           {report.fileErrors.map((message) => <Line key={`f-${message}`} text={serverSentence(message, t)} danger />)}
-          {report.headerErrors.map((message) => <Line key={`h-${message}`} text={message} danger />)}
+          {report.headerErrors.map((message) => <Line key={`h-${message}`} text={serverSentence(message, t)} danger />)}
           {report.missing.map((item) => <Line key={`m-${item.type}`} text={missingText(item, t)} danger />)}
           {report.supplierMessage && (
             <Line

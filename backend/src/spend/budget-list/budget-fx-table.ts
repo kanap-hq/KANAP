@@ -127,14 +127,16 @@ export async function buildFxTable(
   tenantId: string,
   years: number[],
 ): Promise<FxTable> {
-  const [currencyRows, setRows] = await Promise.all([
-    manager.query(
-      `SELECT DISTINCT ${fxKeyCurrency('i')} AS raw, ${lineCurrencySql('i')} AS cur FROM ${config.itemTable} i WHERE i.tenant_id = $1${natureAnd('i', config.nature)}`,
-      [tenantId],
-    ),
-    manager.query(`SELECT s.id FROM currency_rate_sets s WHERE s.tenant_id = $1`, [tenantId]),
-  ]);
-  const currencies: Array<{ raw: string; cur: string }> = currencyRows;
+  // One connection in the request's transaction: the two reads run one after the other.
+  const currencyRows: Array<{ raw: string; cur: string }> = await manager.query(
+    `SELECT DISTINCT ${fxKeyCurrency('i')} AS raw, ${lineCurrencySql('i')} AS cur FROM ${config.itemTable} i WHERE i.tenant_id = $1${natureAnd('i', config.nature)}`,
+    [tenantId],
+  );
+  const setRows: Array<{ id: string }> = await manager.query(
+    `SELECT s.id FROM currency_rate_sets s WHERE s.tenant_id = $1`,
+    [tenantId],
+  );
+  const currencies = currencyRows;
   const knownSets: string[] = setRows.map((row: { id: string }) => row.id);
   const uniqueYears = Array.from(new Set(years));
   const entries: Array<{ setKey: string; year: number; raw: string; lookup: FxLookupKey }> = [];

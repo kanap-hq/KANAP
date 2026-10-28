@@ -54,6 +54,7 @@
   "CSV_HEADER_MISSING_COLUMNS": "Columnas que faltan: {{missing}}.",
   "CSV_HEADER_UNKNOWN_COLUMNS": "Columnas desconocidas: {{extra}}.",
   "CSV_HEADER_MISMATCH": "Columnas que faltan: {{missing}}. Columnas desconocidas: {{extra}}.",
+  "CSV_HEADER_NOT_BUDGET_FILE": "La primera línea de este archivo no es un encabezado de archivo de presupuesto. Exporte un archivo nuevo desde esta lista, copie sus cambios en él e impórtelo de nuevo.",
   "CSV_ACCOUNT_COA_CODE_REQUIRED": "Indique el código del plan de cuentas (coa_code).",
   "CSV_ACCOUNT_NUMBER_REQUIRED": "El número de cuenta (account_number) es obligatorio y debe ser un número entero.",
   "CSV_ACCOUNT_NUMBER_TOO_LONG": "{{value}} tiene más de {{max}} dígitos. Utilice como máximo {{max}} dígitos.",

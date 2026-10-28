@@ -152,6 +152,10 @@ async function testRowsFollowTheScreen() {
   const expected = screenTables(generated);
   assert.ok(expected.contributors.length >= 5 && expected.teams.length >= 5, 'three contributors, three teams');
   assert.ok(expected.teams.some((row) => row[0] === 'No team'), 'a contributor without a team');
+  // The answer names no team as null; the label is the screen's, and the export writes the same word.
+  assert.ok(generated.teamOccupation.some((row) => row.teamId === null), 'a team row for the people without a team');
+  assert.ok(generated.teamOccupation.filter((row) => row.teamId === null).every((row) => row.teamName === null), 'the API sends no label');
+  assert.ok(generated.occupation.filter((row) => row.teamId === null).every((row) => row.teamName === null), 'nor for a contributor');
   assert.deepEqual(await exportCsv('contributors'), expected.contributors);
   assert.deepEqual(await exportCsv('teams'), expected.teams);
 }

@@ -23,7 +23,7 @@ const heatmap = (filters: CapacityHeatmapResponse['filters']): CapacityHeatmapRe
   ],
   teams: [
     { teamId: TEAM_A, teamName: 'Applications', memberCount: 2, remainingDays: 12.5, capacityDaysPerMonth: 18, monthsOfWork: 0.7, colorBand: 'green' },
-    { teamId: 'no-team', teamName: 'No team', memberCount: 2, remainingDays: 7, capacityDaysPerMonth: null, monthsOfWork: null, colorBand: 'na' },
+    { teamId: 'no-team', teamName: null, memberCount: 2, remainingDays: 7, capacityDaysPerMonth: null, monthsOfWork: null, colorBand: 'na' },
   ],
   unassignedSummary: { totalProjects: 0, totalUnallocatedDays: 0 },
   unassignedProjects: [],
@@ -88,7 +88,7 @@ function grids(result: CapacityHeatmapResponse, language: 'en' | 'fr') {
       row.capacitySource ? labels[row.capacitySource] : '',
       n(row.monthsOfWork),
     ]),
-    team: result.teams.map((row) => [row.teamId === 'no-team' ? labels.noTeam : row.teamName, n(row.memberCount), n(row.remainingDays), n(row.capacityDaysPerMonth), n(row.monthsOfWork)]),
+    team: result.teams.map((row) => [row.teamId === 'no-team' || !row.teamName ? labels.noTeam : row.teamName, n(row.memberCount), n(row.remainingDays), n(row.capacityDaysPerMonth), n(row.monthsOfWork)]),
   };
 }
 

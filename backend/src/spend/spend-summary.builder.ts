@@ -862,12 +862,11 @@ export async function buildBudgetSummaryRows(
   const allocationForY = labelsFromList ? new Map<string, AllocationLike>() : await allocate(Y);
   const allocationForNext = options.includeNextYearAllocation && !grid ? await allocate(Y + 1) : new Map<string, AllocationLike>();
 
-  const [suppliers, accounts, owners, payingCompanies] = await Promise.all([
-    findByIds<Supplier>(manager, Supplier, tenantId, distinct(items.map((i) => i.supplier_id))),
-    findByIds<Account>(manager, Account, tenantId, distinct(items.map((i) => i.account_id))),
-    findByIds<User>(manager, User, tenantId, distinct(items.flatMap((i) => [i.owner_it_id, i.owner_business_id]))),
-    findByIds<Company>(manager, Company, tenantId, distinct(items.map((i) => i.paying_company_id))),
-  ]);
+  // The request's transaction has one connection: its reads run one after the other.
+  const suppliers = await findByIds<Supplier>(manager, Supplier, tenantId, distinct(items.map((i) => i.supplier_id)));
+  const accounts = await findByIds<Account>(manager, Account, tenantId, distinct(items.map((i) => i.account_id)));
+  const owners = await findByIds<User>(manager, User, tenantId, distinct(items.flatMap((i) => [i.owner_it_id, i.owner_business_id])));
+  const payingCompanies = await findByIds<Company>(manager, Company, tenantId, distinct(items.map((i) => i.paying_company_id)));
   const analytics = await loadAnalyticsForRows(config, manager, tenantId, itemIds);
   const costCenterById = await loadCostCentersForRows(manager, tenantId, items);
   const supplierById = new Map(suppliers.map((s) => [s.id, s]));
@@ -967,10 +966,8 @@ export async function buildBudgetSummaryRows(
   let departmentById = new Map<string, Department>();
   if (options.includeRecipientDetails && !grid && allocationForY.size) {
     const shares = Array.from(allocationForY.values()).flatMap((entry) => entry.shares ?? []);
-    const [companies, departments] = await Promise.all([
-      findByIds<Company>(manager, Company, tenantId, distinct(shares.map((s) => s.company_id))),
-      findByIds<Department>(manager, Department, tenantId, distinct(shares.map((s) => s.department_id))),
-    ]);
+    const companies = await findByIds<Company>(manager, Company, tenantId, distinct(shares.map((s) => s.company_id)));
+    const departments = await findByIds<Department>(manager, Department, tenantId, distinct(shares.map((s) => s.department_id)));
     companyById = new Map(companies.map((c) => [c.id, c]));
     departmentById = new Map(departments.map((d) => [d.id, d]));
   }

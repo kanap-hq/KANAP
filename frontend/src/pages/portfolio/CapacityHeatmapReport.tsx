@@ -47,7 +47,7 @@ type ContributorCapacityRow = {
 
 type TeamCapacityRow = {
   teamId: string;
-  teamName: string;
+  teamName: string | null;
   memberCount: number;
   remainingDays: number;
   capacityDaysPerMonth: number | null;

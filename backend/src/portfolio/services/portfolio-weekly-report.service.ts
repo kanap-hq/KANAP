@@ -1618,23 +1618,22 @@ export class PortfolioWeeklyReportService {
 
     const mg = opts?.manager;
     const names = new Map<RefTable, Map<string, string>>();
-    await Promise.all(
-      Array.from(idsByTable.entries()).map(async ([table, ids]) => {
-        const byId = new Map<string, string>();
-        names.set(table, byId);
-        if (!mg || ids.size === 0) return;
-        const found: Array<{ id: string; name: string | null }> = await mg.query(
-          `
-          SELECT r.id::text AS id, ${table.nameSql('r')} AS name
-          FROM ${table.table} r
-          WHERE r.tenant_id = $1
-            AND r.id::text = ANY($2::text[])
-          `,
-          [tenantId, Array.from(ids)],
-        );
-        found.forEach((row) => byId.set(row.id, row.name ?? ''));
-      }),
-    );
+    // One connection in the request's transaction: the reference reads run one after the other.
+    for (const [table, ids] of idsByTable) {
+      const byId = new Map<string, string>();
+      names.set(table, byId);
+      if (!mg || ids.size === 0) continue;
+      const found: Array<{ id: string; name: string | null }> = await mg.query(
+        `
+        SELECT r.id::text AS id, ${table.nameSql('r')} AS name
+        FROM ${table.table} r
+        WHERE r.tenant_id = $1
+          AND r.id::text = ANY($2::text[])
+        `,
+        [tenantId, Array.from(ids)],
+      );
+      found.forEach((row) => byId.set(row.id, row.name ?? ''));
+    }
 
     refs.forEach((field) => {
       const byId = names.get(REF_TABLES[field.key]);

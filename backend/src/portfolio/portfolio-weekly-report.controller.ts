@@ -9,6 +9,7 @@ import { languageOf } from '../common/csv-sheet';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { isCalendarDate } from '../common/report-period';
 import { resolveAppBaseUrl, resolveConfiguredAppBaseUrl, resolveTenantAppBaseUrl } from '../common/url';
+import { parseExportFormat } from '../common/xlsx/format';
 import { Features } from '../config/features';
 import { parseCsvIds as parseCsv } from './services/portfolio-report-filters';
 import {
@@ -52,7 +53,7 @@ export class PortfolioWeeklyReportController {
     @Res() res: Response,
   ) {
     const parsed = this.parseQuery(query, ctx);
-    const format = String(query?.format || 'csv').toLowerCase();
+    const format = parseExportFormat(query?.format);
     const tenantSlug = String(req?.tenant?.slug || '').trim().toLowerCase() || null;
     // The screen's language (the user's own when the screen sends none): the words, days and
     // decimals of both files, and the CSV's separator.

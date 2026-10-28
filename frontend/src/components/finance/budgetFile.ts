@@ -165,6 +165,9 @@ export const DECODE_SENTENCE_CODES: Record<string, string> = {
   'This file is not a CSV file. Save it as CSV UTF-8 and import it again.': 'CSV_FILE_NOT_TEXT',
   // `common/csv-sheet/read.ts` CSV_FILE_EMPTY_MESSAGE.
   'The file is empty.': 'CSV_FILE_EMPTY',
+  // `budget-file/columns.ts` MISSING_BUDGET_HEADER_MESSAGE.
+  'The first line of this file is not a budget file header. Export a fresh file from this list, copy your changes into it, and import it again.':
+    'CSV_HEADER_NOT_BUDGET_FILE',
   // `common/xlsx/read.ts`: an Excel file that cannot be read (its `XlsxReadErrorCode`).
   'This is an old Excel file (.xls). Save it as .xlsx or CSV and import it again.': 'XLSX_OLD_FORMAT',
   'This file is not an Excel workbook (.xlsx). Save it as .xlsx or CSV and import it again.': 'XLSX_NOT_WORKBOOK',

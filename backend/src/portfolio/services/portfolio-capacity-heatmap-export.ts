@@ -219,7 +219,7 @@ export function capacityHeatmapTables(heatmap: CapacityHeatmapResponse, labels: 
       { header: labels.monthsOfWork, kind: 'number', decimals: 2 },
     ],
     rows: heatmap.teams.map((row) => [
-      row.teamId === NO_TEAM_ID ? labels.noTeam : row.teamName,
+      row.teamId === NO_TEAM_ID || !row.teamName ? labels.noTeam : row.teamName,
       days(row.memberCount),
       days(row.remainingDays),
       days(row.capacityDaysPerMonth),

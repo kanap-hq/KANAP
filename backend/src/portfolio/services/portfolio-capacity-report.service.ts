@@ -37,6 +37,8 @@ const DEFAULT_STATUSES: ProjectStatus[] = [
 ];
 
 const NO_TEAM_ID = 'no-team';
+/** The label a missing team sorts under, kept internal: the answer names it `null`, the screen and exports word it. */
+const NO_TEAM_SORT_NAME = 'No team';
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
@@ -413,7 +415,7 @@ export class PortfolioCapacityReportService {
     const teamMap = new Map<string, TeamCapacityRow>();
     for (const row of contributors) {
       const teamId = row.teamId ?? NO_TEAM_ID;
-      const teamName = row.teamName ?? 'No team';
+      const teamName = row.teamName;
       if (!teamMap.has(teamId)) {
         teamMap.set(teamId, {
           teamId,
@@ -447,7 +449,8 @@ export class PortfolioCapacityReportService {
       }
     }
 
-    const teams = Array.from(teamMap.values()).sort((a, b) => a.teamName.localeCompare(b.teamName));
+    const teams = Array.from(teamMap.values()).sort((a, b) =>
+      (a.teamName ?? NO_TEAM_SORT_NAME).localeCompare(b.teamName ?? NO_TEAM_SORT_NAME));
 
     unassignedProjects.sort((a, b) => b.unallocatedDays - a.unallocatedDays || a.projectName.localeCompare(b.projectName));
 

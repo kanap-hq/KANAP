@@ -30,6 +30,14 @@ export const CRITERIA_COLUMNS_MESSAGE =
   'The ppe_type, investment_type and priority columns are now dimension columns (analytics:ppe_type, analytics:investment_type, analytics:priority). '
   + 'Export a fresh file from this list, copy your changes into it, and import it again.';
 
+/**
+ * A first line that names none of the budget file's columns (a title, free text, a row of values):
+ * the file is refused as a whole. A header that names some of them, in any language and any order,
+ * keeps the partial-file behaviour (unknown columns are only warnings).
+ */
+export const MISSING_BUDGET_HEADER_MESSAGE =
+  'The first line of this file is not a budget file header. Export a fresh file from this list, copy your changes into it, and import it again.';
+
 /** File names of the five columns, in the order the export writes them. */
 export const FILE_COLUMNS = ['budget', 'revision', 'forecast', 'actual', 'landing'] as const;
 
