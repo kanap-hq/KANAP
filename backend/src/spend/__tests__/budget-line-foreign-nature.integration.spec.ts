@@ -46,6 +46,8 @@ import { AiFinancialPlanMutationSupportService } from '../../ai/mutation/ai-fina
 import { AiRelationMutationSupportService } from '../../ai/mutation/ai-relation-mutation-support.service';
 import { AiTaskMutationSupportService } from '../../ai/mutation/ai-task-mutation-support.service';
 import { AiBusinessRecordMutationSupportService } from '../../ai/mutation/ai-business-record-mutation-support.service';
+import { budgetLinesRegistry } from '../../ai/query/registries/budget-lines.registry';
+import { AiAggregateExecutor } from '../../ai/query/ai-aggregate.executor';
 import { clearBudgetColumn, copyBudgetColumn } from '../budget-column-operations';
 import { copyAllocations } from '../budget-allocation-operations';
 import { realSummaryDeps } from './oracle/oracle-deps';
@@ -676,6 +678,11 @@ async function testAi() {
       const asOpex = await asOpexLine(runner, w, () => statusOf(runner, probe));
       assert.ok(seesForeign(asOpex), `AI ${label}: found once the line is OPEX (${JSON.stringify(asOpex)})`);
     }
+    // The unified registry names the two natures in its `baseWhere`: the aggregate by ids reads the
+    // OPEX and the CAPEX lines, and no other value the column's CHECK keeps out.
+    const aggregate: any = new (AiAggregateExecutor as any)();
+    const keys = (await aggregate.aggregateByIds(context, budgetLinesRegistry, 'supplier', [w.opex.id, F], 'count', null)).map((row: any) => row.key);
+    assert.deepEqual(keys.sort(), ['CAPEX line supplier', 'OPEX line supplier'], 'the unified registry aggregate reads both natures');
     // Replacing an application's OPEX lines through the AI keeps its link to the CAPEX line.
     const kept = await inSavepoint(runner, async () => {
       await rel.replaceSimpleRelation(context, appSpendItems, w.applicationId, []);

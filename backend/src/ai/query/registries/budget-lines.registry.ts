@@ -274,7 +274,8 @@ export const budgetLinesRegistry: AiEntityFilterRegistry = {
   aggregate: {
     baseTable: 'spend_items',
     alias: 'i',
-    // `spend_items` holds both natures (lot Z1): the family reads both.
+    // `spend_items` holds both natures: the family reads those two, never another value.
+    baseWhere: `i.nature IN ('opex', 'capex')`,
     groupFields: {
       nature: { expression: 'i.nature' },
       status: { expression: 'i.status' },

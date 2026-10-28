@@ -93,7 +93,7 @@ export type AiAggregateConfig = {
   alias: string;
   /**
    * A predicate every statement on `baseTable` carries besides the tenant, written here only,
-   * never from a request. Budget lines carry none: the family reads both natures.
+   * never from a request. Budget lines name the two natures: the family reads both.
    */
   baseWhere?: string;
   idColumn?: string;
