@@ -16,6 +16,8 @@ export function ownerSuggestionsKey(costCenterId: string | null | undefined) {
 
 type OwnerSuggestionsPage = { items?: UserOption[]; has_more?: boolean };
 
+const NO_SUGGESTIONS: UserOption[] = [];
+
 /**
  * The suggested people of this cost centre. Disabled without a centre (the picker is the plain
  * lookup then); `enabled` lets a caller wait for its list to open before reading.
@@ -29,10 +31,10 @@ export function useOwnerSuggestions(costCenterId: string | null | undefined, ena
         params: { cost_center_id: center },
         signal,
       });
-      return res.data?.items ?? [];
+      return res.data?.items ?? NO_SUGGESTIONS;
     },
     enabled: enabled && !!center,
     staleTime: 30_000,
   });
-  return query.data ?? [];
+  return query.data ?? NO_SUGGESTIONS;
 }
