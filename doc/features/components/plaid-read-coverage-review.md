@@ -31,6 +31,8 @@ Plaid can now search, query, filter, sort, aggregate, and fetch detail for these
 - `requests`
 - `suppliers`
 - `tasks`
+- `technologies`
+- `technology_versions`
 - `users`
 
 The most important change is the new generic `get_entity_detail` tool. `query_entities` is used for list discovery and pagination; `get_entity_detail` is used when Plaid needs the full safe scalar payload for one item. Detail payloads strip `tenant_id`, storage/object keys, file paths, secrets, tokens, API keys, and encrypted secret fields. Attachments are metadata-only at this stage.
@@ -72,6 +74,8 @@ Entity-to-resource mapping:
 | `requests` | `portfolio_requests` |
 | `suppliers` | `suppliers` |
 | `tasks` | `tasks` |
+| `technologies` | `infrastructure` |
+| `technology_versions` | `infrastructure` |
 | `users` | `users` |
 
 ## Read Tools
@@ -103,6 +107,7 @@ Entity-to-resource mapping:
 | Tasks | Search, query, aggregate, detail, relationship context, comments. | Attachments/time entries are not fully surfaced as separate AI reads yet. |
 | Knowledge documents | Search, query, aggregate, detail, markdown document read. | Binary attachments are metadata-only; version history, workflow decisions, locks, and activity are not first-class AI reads. |
 | Incidents | Search, query, aggregate, detail. | One register family (`incidents`). `asset`, `application` and `technology` filter on the link table by exact reference or exact name, case-insensitive: `APP-1` does not match `APP-12`. Grouping by one of them is many-to-many: the key is the linked record's name, an incident counts once per link, and an incident without a link is in no group. `detected_month` and `resolved_month` (`YYYY-MM`, UTC) filter and group; `resolution_hours` is the detected-to-resolved delay in hours with one decimal, null for a cancelled or unresolved incident or a negative delay, and also a line field. Date metrics answer `YYYY-MM-DD`. A confidential incident the caller cannot see enters no list, group or average. A Business Contributor filters and groups only the applications they take part in. Incident writes are outside this read review. |
+| Technologies and technology versions | `technologies`: search, query, aggregate, detail, relationship context. `technology_versions`: query and aggregate, no detail. | Technologies filter and group by `version` (exact label, without case) and by `owner` (any type), `it_owner` and `business_owner` (exact user display names, without case). `it_owner` and `business_owner` group many-to-many: a technology counts once per owner, and one without an owner of that type is in no group. `get_filter_values` lists the tenant's version labels and owner names. `technology_versions` is one row per version of a technology: `technology` (`TEC-n`), `technology_name`, `label`, `end_of_standard_support`, `end_of_support`, `support_status`, `support_date`, `in_use`, `server_count`, `application_count`, `family`, `lifecycle`. Its support dates and state are the technology detail's own rule, so a technology's `versions` and the family's rows agree. Filters: `technology` (reference or exact name), `label`, `support_status`, `in_use`, the two dates, `family`, `lifecycle`, `end_of_support_year`; groups: `technology`, `support_status`, `in_use`, `family`, `lifecycle`, `end_of_support_year`; metrics: count, `MIN`/`MAX` of the dates as `YYYY-MM-DD`, sum of `server_count`. A version has no reference of its own: `ref` is its technology's `TEC-n`, and `get_entity_detail` refuses the family, the technology's detail listing every version. |
 | Budget lines | Search, query, aggregate, detail. | One family, both natures (`nature`: `opex` or `capex`); a question without a nature covers both. Generic current-year/relative-year summary metrics and the native title (`product_name`) and description are available. Full allocation/version/report views are out of scope. |
 | Contracts | Search, query, aggregate, detail. | Attachments are metadata-only through detail; renewal workflows and full history are not separate AI reads. |
 | Companies | Search, query, aggregate, detail. | Company metrics/rollups are not report-grade AI views yet. |

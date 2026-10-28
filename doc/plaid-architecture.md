@@ -128,7 +128,8 @@ Plaid can currently read these entity families:
 `budget_lines`, `business_processes`, `chart_of_accounts`, `companies`,
 `connections`, `contacts`, `contracts`, `departments`, `documents`,
 `incidents`, `interfaces`, `locations`, `projects`, `requests`,
-`suppliers`, `tasks`, `technologies`, `users`, and `vulnerabilities`.
+`suppliers`, `tasks`, `technologies`, `technology_versions`, `users`, and
+`vulnerabilities`.
 
 `budget_lines` is one family for the OPEX and CAPEX lines of `spend_items`
 (`nature`, `opex` or `capex`). A question without a nature covers both;
@@ -136,9 +137,10 @@ Plaid can currently read these entity families:
 the line is. The references are `BL-n`; a typed `OPX-n` or `CPX-n` is accepted
 as an input reference and resolves to the same line.
 
-`search_all` searches every family but `vulnerabilities`, which has no search
-index: `AI_SEARCH_ENTITY_TYPES` (the searched families) and
-`AI_QUERY_ENTITY_TYPES` (the listed ones) are two lists in `ai.types.ts`.
+`search_all` searches every family but the ones without a search index:
+`vulnerabilities` and `technology_versions`. `AI_SEARCH_ENTITY_TYPES` (the
+searched families) and `AI_QUERY_ENTITY_TYPES` (the listed ones) are two lists
+in `ai.types.ts`; the listed-only families have no detail of their own.
 
 `get_entity_context` takes `applications`, `assets`, `projects`, `requests`,
 `tasks` and `technologies` (`AI_CONTEXT_ENTITY_TYPES` in `ai.types.ts`).
@@ -270,7 +272,22 @@ aggregate:
 
 The other fields are `reference` (`TEC-n`), `name`, `family`, `publisher`,
 `hosting_type`, `lifecycle` and `admin_zone`. `publisher` filters and groups
-without case. `get_entity_detail` adds the versions (end dates, support state and its date,
+without case. The filters also name a version and an owner, both many-to-many
+on the technology and read through `EXISTS`, never a column of `technologies`:
+
+- `version`: the exact label of one of its versions, without case (`16` keeps a
+  technology with version `16`, never one with `16.4` only); `[null]` keeps a
+  technology with no version;
+- `owner` (any type), `it_owner`, `business_owner`: the exact display name of a
+  user, without case; `[null]` keeps a technology with no owner of that type.
+  `get_filter_values` lists the tenant's version labels and owner names, read
+  from `technology_versions` and `technology_owners` (`technologyFilterValues`
+  in `ai-query.executor.ts`), not from the technology row;
+- `it_owner` and `business_owner` group many-to-many, as the incident links do:
+  a technology counts once in each of its owners of that type, and a technology
+  without an owner of that type is in no group.
+
+`get_entity_detail` adds the versions (end dates, support state and its date,
 whether in use, servers in service per version), the owners by name and the number of contracts (null for
 a user who cannot read contracts, as on the technology page). `get_entity_context` lists the servers the technology
 is installed on (version, operating system or not), and, for a user who reads
@@ -283,6 +300,37 @@ and `truncated`; the technology context reads only those 25 servers and
 applications from the database. The chat's read profile (`read_query`) offers
 `get_entity_context` too, so a question that names a server or a technology
 without its reference can reach its related records.
+
+### Technology versions
+
+`technology_versions` (right `infrastructure`) is a family of its own, read
+through `listAiTechnologyVersions` (`backend/src/ai/query/ai-technologies.query.ts`):
+one item per version of a technology, for questions across technologies (which
+versions are no longer used, which end in 2027). Fields: `technology` (`TEC-n`),
+`technology_name`, `label`, `end_of_standard_support` and `end_of_support` (the
+recorded standard and extended ends), `support_status`, `support_date`, `in_use`,
+`server_count`, `application_count`, and the technology's `family` and
+`lifecycle`. The support state and its date come from the report's rule
+(`versionSupportSql`, `versionInUseSql`), through the same
+`technologyVersionFiguresColumns` as the technology detail: the rows of this
+family and the `versions` of `get_entity_detail` on a technology cannot
+disagree. `in_use` is true when the version is installed on a server in service
+or declared by an application in service; `server_count` counts the former
+(clusters excluded); `application_count` is the technology's count, within the
+user's application read scope, as the `technologies` family gives it, and no
+aggregate metric.
+
+Filters: `technology` (`TEC-n` or exact name, without case), `label` (exact,
+without case), `support_status`, `in_use` (`true` or `false`), the two dates
+(blank, ranges), `family`, `lifecycle` and `end_of_support_year` (the year of
+`support_date`). Groups: `technology` (by name), `support_status`, `in_use`,
+`family`, `lifecycle` and `end_of_support_year`, many-to-many for nothing here:
+each version is one row. Metrics: the count, the sum of `server_count`, and
+`MIN`/`MAX` of the two dates as `YYYY-MM-DD`.
+
+A version has no reference of its own and no detail: an item's `ref` is its
+technology's `TEC-n`, and `get_entity_detail` refuses the family with the reason
+(its technology's detail lists every version).
 
 ### Vulnerabilities
 
