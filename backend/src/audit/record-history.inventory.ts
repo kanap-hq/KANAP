@@ -2,6 +2,7 @@ import type { PermissionLevel } from '../auth/require-level.decorator';
 import type { FamilyKey } from './record-history/families';
 import { accountsRecord } from './record-history/records/accounts';
 import { costCentersRecord } from './record-history/records/cost_centers';
+import { documentsRecord } from './record-history/records/documents';
 import { spendItemsRecord } from './record-history/records/spend_items';
 
 /**
@@ -109,6 +110,7 @@ export type RecordHistoryRecord = {
 const RECORD_HISTORY_DEFINITION = [
   accountsRecord,
   costCentersRecord,
+  documentsRecord,
   spendItemsRecord,
 ] as const satisfies readonly RecordHistoryRecord[];
 

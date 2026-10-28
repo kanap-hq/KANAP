@@ -61,6 +61,8 @@ export type RecordHistoryChange = {
   dimension?: string | null;
   /** Allocation or costed-line changes whose counts are equal. */
   changed?: boolean;
+  /** A fixed word standing for the change of a hidden value (a document body): `contentChanged`. */
+  text?: string;
 };
 
 export type RecordHistorySubject = {
@@ -583,11 +585,16 @@ function genericChanges(row: AuditRow, ctx: PageContext, options: GenericOptions
   for (const field of keys) {
     if (!Object.prototype.hasOwnProperty.call(fields, field)) continue;
     const rule = fields[field];
-    if (rule.hidden) continue;
     const b = before[field];
     const a = after[field];
     if (deepEqual(b, a)) continue;
     if ((b === null || b === undefined || b === '') && (a === null || a === undefined || a === '')) continue;
+    if (rule.hidden) {
+      // A hidden value never comes out; a field that declares a word still tells that it changed,
+      // on an update only (a creation or a deletion is the entry itself).
+      if (rule.changedWord && !creating && !deleting) changes.push({ field, text: rule.changedWord });
+      continue;
+    }
     if (field === 'analytics_values') {
       changes.push(...dimensionChanges(b, a, ctx));
       continue;

@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import type { TenantRequest } from '../common/decorators/tenant.decorator';
 import { hasLevel } from '../common/relations/relations-access';
@@ -16,10 +16,12 @@ import {
   loadReferences,
   readableFamilies,
   recordIsVisible,
+  type FamilyCodeCheckKey,
   type FamilyKey,
   type ReferenceReader,
   type ReferenceRow,
 } from './record-history/families';
+import { KnowledgeService } from '../knowledge/knowledge.service';
 import { HISTORY_FIELDS, historyFields } from './record-history/fields';
 import type { HistoryFieldRule, HistoryFields } from './record-history/field-rules';
 import { auditPageQuery, type AuditCursor } from './record-history/query';
@@ -227,29 +229,23 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
 
 async function loadPageContext(
   ctx: RecordHistoryContext,
-  manager: EntityManager,
   entry: RecordHistoryRecord,
   id: string,
   rows: AuditRow[],
+  reader: ReferenceReader,
 ): Promise<PageContext> {
   const tenantId = ctx.tenantId;
   const collected = collectPageIds(rows, entry, id);
   const readable = readableFamilies(ctx);
 
   const users: Map<string, ReferenceRow> = new Map();
-  const references = await loadReferences({
-    manager,
-    tenantId,
-    userId: ctx.userId,
-    isAdmin: ctx.isAdmin === true,
-    viewer: incidentViewerFromContext(ctx),
-  }, collected.ids, readable);
+  const references = await loadReferences(reader, collected.ids, readable);
   const userRows = references.get('user');
   if (userRows) for (const [userId, row] of userRows) users.set(userId, row);
 
   const versions: PageContext['versions'] = new Map();
   if (collected.versions.size > 0) {
-    const rows: Array<{ id: string; version_name: string | null; budget_year: number | string | null }> = await manager.query(
+    const rows: Array<{ id: string; version_name: string | null; budget_year: number | string | null }> = await reader.manager.query(
       `SELECT id::text AS id, version_name, budget_year
          FROM spend_versions
         WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
@@ -266,14 +262,14 @@ async function loadPageContext(
   const dimensions = new Map<string, string>();
   const categories = new Map<string, string>();
   if (collected.axes.size > 0) {
-    const rows: Array<{ id: string; name: string | null }> = await manager.query(
+    const rows: Array<{ id: string; name: string | null }> = await reader.manager.query(
       `SELECT id::text AS id, name FROM analytics_axes WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
       [tenantId, Array.from(collected.axes)],
     );
     for (const row of rows) if (row.name) dimensions.set(row.id.toLowerCase(), row.name);
   }
   if (collected.categories.size > 0) {
-    const rows: Array<{ id: string; name: string | null }> = await manager.query(
+    const rows: Array<{ id: string; name: string | null }> = await reader.manager.query(
       `SELECT id::text AS id, name FROM analytics_categories WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
       [tenantId, Array.from(collected.categories)],
     );
@@ -283,7 +279,43 @@ async function loadPageContext(
   return { entry, recordId: id, users, versions, references, readable, dimensions, categories };
 }
 
+@Injectable()
 export class RecordHistoryService {
+  /**
+   * `knowledge` reads the families whose screen right is not SQL (a document's library ACL and its
+   * incident review). It is optional so a history of another record can be built without it, as
+   * the framework's specs do; a document reference then stays hidden and a document history is
+   * not found. The route and this service live in `record-history.module.ts`, which imports both
+   * modules: importing KnowledgeModule from AuditModule would close a module cycle
+   * (`AuditModule → KnowledgeModule → NotificationsModule → AuditModule`).
+   */
+  constructor(@Optional() private readonly knowledge?: KnowledgeService) {}
+
+  /** The reader of one request: its transaction, tenant and person, and the code checks it can run. */
+  private referenceReader(ctx: RecordHistoryContext, manager: EntityManager): ReferenceReader {
+    const knowledge = this.knowledge;
+    const checks = knowledge
+      ? {
+        // The code checks capture the request transaction: a record read for one person, in the
+        // tenant it names, never a second connection or another person's rights.
+        knowledge_document: (ids: readonly string[]) =>
+          knowledge.readableDocumentIds(manager, ctx.tenantId, ctx.userId, ids),
+        knowledge_folder: (ids: readonly string[]) =>
+          knowledge.readableFolderIds(manager, ctx.tenantId, ctx.userId, ids),
+        knowledge_library: (ids: readonly string[]) =>
+          knowledge.readableLibraryIds(manager, ctx.tenantId, ctx.userId, ids),
+      } satisfies Partial<Record<FamilyCodeCheckKey, (ids: readonly string[]) => Promise<ReadonlySet<string>>>>
+      : undefined;
+    return {
+      manager,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      isAdmin: ctx.isAdmin === true,
+      viewer: incidentViewerFromContext(ctx),
+      checks,
+    };
+  }
+
   /**
    * The history of one record, newest first. The record is read first under `ctx.manager` (the
    * tenant and the person's access); a table outside the inventory or an id that is not a uuid is a
@@ -306,20 +338,14 @@ export class RecordHistoryService {
 
     // The record is read first, under the person's access and the entry family's own screen rule:
     // a hidden or missing record is not found (404), never served with a partial history.
-    const reader: ReferenceReader = {
-      manager,
-      tenantId: ctx.tenantId,
-      userId: ctx.userId,
-      isAdmin: ctx.isAdmin === true,
-      viewer: incidentViewerFromContext(ctx),
-    };
+    const reader = this.referenceReader(ctx, manager);
     if (!(await recordIsVisible(reader, entry.family, id))) throw new NotFoundException('Record not found');
 
     const limit = parseLimit(options.limit);
     const cursor = decodeCursor(options.cursor);
     const rows = await readAuditPage(manager, ctx.tenantId, entry, id, cursor, limit + 1);
     const page = rows.slice(0, limit);
-    const pageContext = await loadPageContext(ctx, manager, entry, id, page);
+    const pageContext = await loadPageContext(ctx, entry, id, page, reader);
     const items = page.map((row) => presentItem(row, entry, pageContext))
       // A write the reader cannot see as a change is not an entry: an update that presents nothing
       // (an import marker, a copied method that did not move) stays out. A creation and a deletion

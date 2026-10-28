@@ -553,7 +553,17 @@
       "kind": "Type",
       "parent_id": "Parent group",
       "accountNature": "Used for",
-      "costCenterOwner": "Budget holder"
+      "costCenterOwner": "Budget holder",
+      "summary": "Summary",
+      "folder_id": "Folder",
+      "library_id": "Library",
+      "document_type_id": "Document type",
+      "template_document_id": "Template",
+      "review_due_at": "Review due",
+      "last_reviewed_at": "Last reviewed",
+      "published_at": "Published on",
+      "current_version_number": "Version",
+      "revision": "Revision"
     },
     "history": {
       "empty": "No history yet",
@@ -585,6 +595,11 @@
       "childDeleted": "{{title}} deleted",
       "version": "Version {{name}}",
       "versionNoName": "Version",
+      "versionNumber": "Version {{number}}",
+      "versionChanged": "Version {{before}} → {{after}}",
+      "texts": {
+        "contentChanged": "Content changed"
+      },
       "actors": {
         "assistant": "Plaid",
         "assistantFor": "Plaid for {{name}}",
@@ -669,7 +684,11 @@
         "calendar": "a working-day calendar",
         "analytics_axis": "an analytics dimension",
         "analytics_category": "an analytics value",
-        "contributor": "a contributor"
+        "contributor": "a contributor",
+        "document": "a document",
+        "document_folder": "a folder",
+        "document_library": "a library",
+        "document_type": "a document type"
       },
       "title": "History"
     },

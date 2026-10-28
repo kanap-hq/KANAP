@@ -6,6 +6,10 @@ import en from '../../locales/en/admin.json';
 import enOps from '../../locales/en/ops.json';
 import es from '../../locales/es/admin.json';
 import esOps from '../../locales/es/ops.json';
+import deKnowledge from '../../locales/de/knowledge.json';
+import enKnowledge from '../../locales/en/knowledge.json';
+import esKnowledge from '../../locales/es/knowledge.json';
+import frKnowledge from '../../locales/fr/knowledge.json';
 import fr from '../../locales/fr/admin.json';
 import frOps from '../../locales/fr/ops.json';
 import type { Translate } from '../../lib/audit/auditLogLabels';
@@ -24,6 +28,7 @@ import {
 
 const LOCALES = { en, fr, de, es } as Record<string, any>;
 const OPS = { en: enOps, fr: frOps, de: deOps, es: esOps } as Record<string, any>;
+const KNOWLEDGE = { en: enKnowledge, fr: frKnowledge, de: deKnowledge, es: esKnowledge } as Record<string, any>;
 const LANGUAGE_NAMES = ['en', 'fr', 'de', 'es'] as const;
 const ID = '11111111-2222-4333-8444-555555555555';
 const EVENT_KINDS = ['link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line'];
@@ -96,6 +101,7 @@ describe('record history locales', () => {
       paths.push(`events.${kind}.added`, `events.${kind}.removed`);
     }
     for (const kind of RECORD_HISTORY_UNNAMED_KINDS) paths.push(`unnamed.${kind}`);
+    paths.push('versionNumber', 'versionChanged', 'texts.contentChanged');
 
     for (const language of LANGUAGE_NAMES) {
       const target = LOCALES[language].auditLogs.history;
@@ -117,12 +123,15 @@ describe('record history locales', () => {
       'costCenterOwner', 'effective_start', 'input_grain', 'kind', 'lines', 'measure', 'native_name', 'nature',
       'owner_business_id', 'owner_it_id', 'parent_id', 'paying_company_id', 'product_name',
       'project_id', 'run_build', 'successor_id', 'version_name',
+      'summary', 'folder_id', 'library_id', 'document_type_id', 'template_document_id',
+      'review_due_at', 'last_reviewed_at', 'published_at', 'current_version_number', 'revision',
     ];
     for (const language of LANGUAGE_NAMES) {
       for (const key of fields) {
         expect(LOCALES[language].auditLogs.fields[key], `${language} ${key}`).toBeTruthy();
       }
       expect(OPS[language].opex.tabs.history, `${language} tab`).toBeTruthy();
+      expect(KNOWLEDGE[language].sidebar.tabs.history, `${language} knowledge tab`).toBeTruthy();
     }
   });
 
@@ -198,6 +207,28 @@ describe('record history locales', () => {
     expect(lineText(costFr[0], frCost)).toBe('Type\u00a0: Centre de coûts → Groupe');
     expect(lineText(costFr[1], frCost)).toBe('Groupe parent\u00a0: CC-B · Centre B');
     expect(lineText(costFr[2], frCost)).toBe('Société\u00a0: une société');
+  });
+
+  it('reads a document entry: a content word, a version and its status in French and English', () => {
+    const docChanges = [
+      { field: 'content_markdown', text: 'contentChanged' },
+      { field: 'current_version_number', before: 3, after: 4 },
+      { field: 'current_version_number', after: 1 },
+      { field: 'status', after: 'published' },
+    ];
+    const docEn = { ...context('en'), table: 'documents' };
+    const enLines = historyLines(item({ changes: docChanges }), docEn);
+    expect(lineText(enLines[0], docEn)).toBe('Content changed');
+    expect(lineText(enLines[1], docEn)).toBe('Version 3 → 4');
+    expect(lineText(enLines[2], docEn)).toBe('Version 1');
+    expect(lineText(enLines[3], docEn)).toBe('Status: Published');
+
+    const docFr = { ...context('fr'), table: 'documents' };
+    const frLines = historyLines(item({ changes: docChanges }), docFr);
+    expect(lineText(frLines[0], docFr)).toBe('Contenu modifié');
+    expect(lineText(frLines[1], docFr)).toBe('Version 3 → 4');
+    expect(lineText(frLines[2], docFr)).toBe('Version 1');
+    expect(lineText(frLines[3], docFr)).toBe('Statut\u00a0: Publié');
   });
 
   it('reads the brief examples in French and English', () => {
