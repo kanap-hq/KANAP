@@ -130,6 +130,8 @@ type BindingConnection = {
 
 type Props = {
   interfaceId: string;
+  canManage: boolean;
+  canCreateConnection: boolean;
   interfaceName?: string | null;
   sourceApplicationId: string;
   targetApplicationId: string;
@@ -252,6 +254,8 @@ const panelFormGridSx = {
 
 export default function InterfaceBindingsMatrix({
   interfaceId,
+  canManage,
+  canCreateConnection,
   interfaceName,
   sourceApplicationId,
   targetApplicationId,
@@ -606,6 +610,7 @@ export default function InterfaceBindingsMatrix({
   }, [middlewareApplicationIds]);
 
   const openCreate = (env: string, leg: InterfaceLeg) => {
+    if (!canManage) return;
     const sourceOptions = instanceOptionsFor(leg.from_role, env);
     const targetOptions = instanceOptionsFor(leg.to_role, env);
     const integrationToolOptions = integrationToolOptionsFor(env);
@@ -689,6 +694,7 @@ export default function InterfaceBindingsMatrix({
   };
 
   const autosaveBindingPatch = React.useCallback(async (bindingId: string, patch: BindingAutosavePatch) => {
+    if (!canManage) return;
     const requestId = autosaveRequestRef.current + 1;
     autosaveRequestRef.current = requestId;
     setAutosaveStatus('saving');
@@ -709,12 +715,13 @@ export default function InterfaceBindingsMatrix({
       }
       setError(getApiErrorMessage(e, t, t('messages.saveBindingFailed')));
     }
-  }, [t]);
+  }, [canManage, t]);
 
   const saveBindingConnectionSelection = async (
     bindingId: string,
     selectedConnectionOption: ConnectionOption | null,
   ) => {
+    if (!canManage) return;
     const currentLinks = linksByBindingId[bindingId] ?? await fetchLinksForBinding(bindingId);
     const primaryLink = currentLinks[0] || null;
     const selectedConnectionId = selectedConnectionOption?.id || null;
@@ -740,6 +747,7 @@ export default function InterfaceBindingsMatrix({
     bindingId: string,
     selectedConnectionOption: ConnectionOption | null,
   ) => {
+    if (!canManage) return;
     const requestId = autosaveRequestRef.current + 1;
     autosaveRequestRef.current = requestId;
     setAutosaveStatus('saving');
@@ -759,7 +767,7 @@ export default function InterfaceBindingsMatrix({
   };
 
   const handleSaveDialog = async () => {
-    if (!dialogState) return;
+    if (!canManage || !dialogState) return;
     if (!dialogState.source_instance_id || !dialogState.target_instance_id) {
       setError(t('it:workspace.interface.bindings.selectInstances'));
       return;
@@ -802,11 +810,12 @@ export default function InterfaceBindingsMatrix({
   };
 
   const handleDeleteBinding = async (binding: BindingRow) => {
+    if (!canManage) return;
     setPendingDeleteBinding(binding);
   };
 
   const confirmDeleteBinding = async () => {
-    if (!pendingDeleteBinding) return;
+    if (!canManage || !pendingDeleteBinding) return;
     const deletedBindingId = pendingDeleteBinding.id;
     const deletedEnvironment = pendingDeleteBinding.environment;
     const hasRemainingBindingInEnv = bindings.some(
@@ -829,7 +838,7 @@ export default function InterfaceBindingsMatrix({
   };
 
   const confirmDeleteEnvironment = async () => {
-    if (!pendingDeleteEnvironment) return;
+    if (!canManage || !pendingDeleteEnvironment) return;
     const env = pendingDeleteEnvironment;
     const envBindings = bindings.filter((b) => b.environment === env);
     setError(null);
@@ -848,7 +857,7 @@ export default function InterfaceBindingsMatrix({
   };
 
   const handleLinkConnection = React.useCallback(async () => {
-    if (!manageConnections || !selectedConnection) return;
+    if (!canManage || !manageConnections || !selectedConnection) return;
     setLinkSaving(true);
     setLinksError(null);
     try {
@@ -862,10 +871,11 @@ export default function InterfaceBindingsMatrix({
     } finally {
       setLinkSaving(false);
     }
-  }, [manageConnections, selectedConnection, loadLinksForBinding]);
+  }, [canManage, manageConnections, selectedConnection, loadLinksForBinding]);
 
   const handleUnlinkConnection = React.useCallback(
     async (linkId: string, bindingId: string) => {
+      if (!canManage) return;
       setUnlinkingLinkId(linkId);
       setLinksError(null);
       try {
@@ -877,7 +887,7 @@ export default function InterfaceBindingsMatrix({
         setUnlinkingLinkId((prev) => (prev === linkId ? null : prev));
       }
     },
-    [loadLinksForBinding],
+    [canManage, loadLinksForBinding],
   );
 
   const authOptions = React.useMemo(() => {
@@ -939,7 +949,8 @@ export default function InterfaceBindingsMatrix({
   ]);
   const bindingSaveDisabled = bindingSaving || !dialogState?.source_instance_id || !dialogState?.target_instance_id;
   const autosaveEditEnabled = Boolean(
-    USE_RUNTIME_MATRIX_EXPERIMENT
+    canManage
+    && USE_RUNTIME_MATRIX_EXPERIMENT
     && bindingPanelOpen
     && dialogState?.mode === 'edit'
     && dialogState.bindingId,
@@ -953,7 +964,7 @@ export default function InterfaceBindingsMatrix({
     field: keyof BindingAutosavePatch,
     value: BindingAutosavePatch[keyof BindingAutosavePatch],
   ) => {
-    if (!autosaveEditEnabled || !dialogState?.bindingId) return;
+    if (!canManage || !autosaveEditEnabled || !dialogState?.bindingId) return;
     void autosaveBindingPatch(dialogState.bindingId, { [field]: value } as BindingAutosavePatch);
   };
 
@@ -975,6 +986,14 @@ export default function InterfaceBindingsMatrix({
     targetApplicationName,
   ]);
 
+  const openManageConnections = (binding: BindingRow) => {
+    if (!canManage) return;
+    setManageConnections({ binding });
+    if (linksByBindingId[binding.id] === undefined) {
+      void loadLinksForBinding(binding.id);
+    }
+  };
+
   const openBindingCell = (env: string, leg: InterfaceLeg, binding: BindingRow | undefined) => {
     if (binding) {
       openEdit(env, leg, binding);
@@ -983,7 +1002,7 @@ export default function InterfaceBindingsMatrix({
       }
       return;
     }
-    openCreate(env, leg);
+    if (canManage) openCreate(env, leg);
   };
 
   const renderStatusDot = (label: string, muiColor: string = 'default') => (
@@ -1107,6 +1126,7 @@ export default function InterfaceBindingsMatrix({
                 commitBindingField('status', nextValue || 'proposed');
               }}
               variant="standard"
+              disabled={!canManage}
               sx={selectFieldSx}
             >
               {lifecycleOptions.map((opt) => (
@@ -1126,6 +1146,7 @@ export default function InterfaceBindingsMatrix({
               }}
               variant="standard"
               displayEmpty
+              disabled={!canManage}
               renderValue={(value) => {
                 const code = String(value || '');
                 if (!code) return t('it:workspace.interface.bindings.notSpecified');
@@ -1145,6 +1166,7 @@ export default function InterfaceBindingsMatrix({
             <Autocomplete
               options={bindingConnectionOptions}
               loading={bindingConnectionLoading || (Boolean(dialogState.bindingId) && linksLoadingBindingId === dialogState.bindingId)}
+              disabled={!canManage}
               value={selectedBindingConnection}
               onInputChange={(_, value, reason) => {
                 if (reason === 'input' || reason === 'clear') {
@@ -1214,6 +1236,7 @@ export default function InterfaceBindingsMatrix({
               onChange={(event) => updateDialogField('source_endpoint', event.target.value)}
               onBlur={(event) => commitBindingField('source_endpoint', event.target.value || null)}
               variant="standard"
+              disabled={!canManage}
               fullWidth
               sx={textFieldSx}
               placeholder={t('it:workspace.interface.bindings.endpointPlaceholder')}
@@ -1225,6 +1248,7 @@ export default function InterfaceBindingsMatrix({
               onChange={(event) => updateDialogField('target_endpoint', event.target.value)}
               onBlur={(event) => commitBindingField('target_endpoint', event.target.value || null)}
               variant="standard"
+              disabled={!canManage}
               fullWidth
               sx={textFieldSx}
               placeholder={t('it:workspace.interface.bindings.endpointPlaceholder')}
@@ -1236,6 +1260,7 @@ export default function InterfaceBindingsMatrix({
               onChange={(event) => updateDialogField('trigger_details', event.target.value)}
               onBlur={(event) => commitBindingField('trigger_details', event.target.value || null)}
               variant="standard"
+              disabled={!canManage}
               fullWidth
               multiline
               minRows={surface === 'panel' ? 3 : 2}
@@ -1249,6 +1274,7 @@ export default function InterfaceBindingsMatrix({
               onChange={(event) => updateDialogField('env_job_name', event.target.value)}
               onBlur={(event) => commitBindingField('env_job_name', event.target.value || null)}
               variant="standard"
+              disabled={!canManage}
               fullWidth
               sx={textFieldSx}
               placeholder={dialogState.leg.job_name ? t('it:workspace.interface.bindings.usesJobName', { name: dialogState.leg.job_name }) : t('it:workspace.interface.bindings.usesFlowJobName')}
@@ -1260,6 +1286,7 @@ export default function InterfaceBindingsMatrix({
               onChange={(event) => updateDialogField('monitoring_url', event.target.value)}
               onBlur={(event) => commitBindingField('monitoring_url', event.target.value || null)}
               variant="standard"
+              disabled={!canManage}
               fullWidth
               sx={textFieldSx}
               placeholder="https://..."
@@ -1271,6 +1298,7 @@ export default function InterfaceBindingsMatrix({
               onChange={(event) => updateDialogField('env_notes', event.target.value)}
               onBlur={(event) => commitBindingField('env_notes', event.target.value || null)}
               variant="standard"
+              disabled={!canManage}
               fullWidth
               multiline
               minRows={3}
@@ -1342,30 +1370,31 @@ export default function InterfaceBindingsMatrix({
           ? `${links[0].connection.connection_reference} · ${links[0].connection.name}${links.length > 1 ? ` +${links.length - 1}` : ''}`
           : t('it:workspace.interface.bindings.noInfraConnection');
     const emptyDetails = binding && endpointLines.length === 0 && !connectionSummary;
+    const actionable = Boolean(binding) || canManage;
 
     return (
       <TableCell key={`${env}-${leg.id}`} sx={{ width: 220, minWidth: 220, verticalAlign: 'top' }}>
         <Box
-          role="button"
-          tabIndex={0}
-          onClick={() => openBindingCell(env, leg, binding)}
-          onKeyDown={(event) => {
+          role={actionable ? 'button' : undefined}
+          tabIndex={actionable ? 0 : undefined}
+          onClick={actionable ? () => openBindingCell(env, leg, binding) : undefined}
+          onKeyDown={actionable ? (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
               openBindingCell(env, leg, binding);
             }
-          }}
+          } : undefined}
           sx={(theme) => ({
             minHeight: 72,
             borderRadius: '6px',
             px: 1,
             py: 0.875,
-            cursor: 'pointer',
+            cursor: actionable ? 'pointer' : 'default',
             border: `1px solid ${isSelected ? theme.palette.kanap.teal : theme.palette.kanap.border.default}`,
             bgcolor: isSelected ? theme.palette.kanap.bg.composer : theme.palette.kanap.bg.primary,
             transition: 'background-color 120ms ease, border-color 120ms ease',
             '&:hover': {
-              bgcolor: theme.palette.kanap.bg.composer,
+              bgcolor: actionable ? theme.palette.kanap.bg.composer : undefined,
             },
             '&:focus-visible': {
               outline: `2px solid ${theme.palette.kanap.teal}`,
@@ -1375,7 +1404,7 @@ export default function InterfaceBindingsMatrix({
         >
           <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ minWidth: 0 }}>
             {renderStatusDot(statusLabel, statusColor)}
-            {binding && (
+            {binding && canManage && (
               <Stack direction="row" spacing={0.25} alignItems="center" sx={{ flex: '0 0 auto' }}>
                 <Tooltip title={t('it:workspace.interface.bindings.editBinding')}>
                   <EditIcon
@@ -1409,7 +1438,7 @@ export default function InterfaceBindingsMatrix({
               </Stack>
             )}
           </Stack>
-          {!binding && (
+          {!binding && canManage && (
             <Typography
               sx={{
                 mt: 0.625,
@@ -1454,7 +1483,7 @@ export default function InterfaceBindingsMatrix({
               {connectionSummary}
             </Typography>
           )}
-          {emptyDetails && (
+          {emptyDetails && canManage && (
             <Typography
               sx={{
                 mt: 0.625,
@@ -1490,22 +1519,25 @@ export default function InterfaceBindingsMatrix({
                   <Typography sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary' }}>
                     {environmentLabel(t, env)}
                   </Typography>
-                  <Tooltip title={t('it:workspace.interface.bindings.deleteEnvironment')}>
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        const envBindings = bindings.filter((binding) => binding.environment === env);
-                        if (envBindings.length > 0) {
-                          setPendingDeleteEnvironment(env);
-                        } else {
-                          setManualEnvs((prev) => prev.filter((item) => item !== env));
-                        }
-                      }}
-                      sx={{ p: 0.25 }}
-                    >
-                      <DeleteIcon sx={{ fontSize: 15 }} />
-                    </IconButton>
-                  </Tooltip>
+                  {canManage && (
+                    <Tooltip title={t('it:workspace.interface.bindings.deleteEnvironment')}>
+                      <IconButton
+                        size="small"
+                        aria-label={t('it:workspace.interface.bindings.deleteEnvironment')}
+                        onClick={() => {
+                          const envBindings = bindings.filter((binding) => binding.environment === env);
+                          if (envBindings.length > 0) {
+                            setPendingDeleteEnvironment(env);
+                          } else {
+                            setManualEnvs((prev) => prev.filter((item) => item !== env));
+                          }
+                        }}
+                        sx={{ p: 0.25 }}
+                      >
+                        <DeleteIcon sx={{ fontSize: 15 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                 </Stack>
               </TableCell>
             ))}
@@ -1544,6 +1576,9 @@ export default function InterfaceBindingsMatrix({
 
   const renderBindingSidePanel = () => {
     if (!bindingPanelOpen || !dialogState) return null;
+    const manageBinding = dialogState.bindingId
+      ? bindings.find((binding) => binding.id === dialogState.bindingId)
+      : undefined;
     const autosaveStatusText = dialogState.mode === 'edit'
       ? autosaveStatus === 'saving'
         ? t('common:status.saving')
@@ -1638,6 +1673,22 @@ export default function InterfaceBindingsMatrix({
               disabled={bindingSaveDisabled}
             >
               {bindingSaving ? t('common:status.saving') : t('it:workspace.interface.bindings.addBinding')}
+            </Button>
+          </Stack>
+        )}
+        {dialogState.mode === 'edit' && canManage && manageBinding && (
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={(theme) => ({
+              px: 1.5,
+              py: 1.25,
+              borderTop: `1px solid ${theme.palette.kanap.border.default}`,
+            })}
+          >
+            <Button size="small" variant="action" onClick={() => openManageConnections(manageBinding)}>
+              {t('it:workspace.interface.bindings.manageConnectionButton')}
             </Button>
           </Stack>
         )}
@@ -1759,7 +1810,7 @@ export default function InterfaceBindingsMatrix({
               —
             </Typography>
           )}
-          {hasBinding && (
+          {hasBinding && canManage && (
             <Tooltip title={t('it:workspace.interface.bindings.manageConnections')}>
               <span>
                 <Button
@@ -1779,30 +1830,32 @@ export default function InterfaceBindingsMatrix({
           )}
         </TableCell>
         <TableCell align="right">
-          <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-            <Tooltip title={hasBinding ? t('it:workspace.interface.bindings.editBinding') : t('it:workspace.interface.bindings.addBinding')}>
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    if (hasBinding && binding) openEdit(env, leg, binding);
-                    else openCreate(env, leg);
-                  }}
-                >
-                  {hasBinding ? <EditIcon fontSize="small" /> : <AddIcon fontSize="small" />}
-                </IconButton>
-              </span>
-            </Tooltip>
-            {hasBinding && (
-              <Tooltip title={t('it:workspace.interface.bindings.deleteBinding')}>
+          {canManage && (
+            <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+              <Tooltip title={hasBinding ? t('it:workspace.interface.bindings.editBinding') : t('it:workspace.interface.bindings.addBinding')}>
                 <span>
-                  <IconButton size="small" onClick={() => void handleDeleteBinding(binding!)}>
-                    <DeleteIcon fontSize="small" />
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      if (hasBinding && binding) openEdit(env, leg, binding);
+                      else openCreate(env, leg);
+                    }}
+                  >
+                    {hasBinding ? <EditIcon fontSize="small" /> : <AddIcon fontSize="small" />}
                   </IconButton>
                 </span>
               </Tooltip>
-            )}
-          </Stack>
+              {hasBinding && (
+                <Tooltip title={t('it:workspace.interface.bindings.deleteBinding')}>
+                  <span>
+                    <IconButton size="small" onClick={() => void handleDeleteBinding(binding!)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
+            </Stack>
+          )}
         </TableCell>
       </TableRow>
     );
@@ -1828,20 +1881,22 @@ export default function InterfaceBindingsMatrix({
             </Typography>
           )}
         </Stack>
-        <Stack direction="row" spacing={1}>
-          <Button
-            variant="action"
-            startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />}
-            onClick={() => {
-              const first = selectableEnvs[0] || '';
-              setEnvDraft(first);
-              setEnvDialogOpen(true);
-            }}
-            disabled={selectableEnvs.length === 0}
-          >
-            {t('it:workspace.interface.bindings.addEnvironment')}
-          </Button>
-        </Stack>
+        {canManage && (
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="action"
+              startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />}
+              onClick={() => {
+                const first = selectableEnvs[0] || '';
+                setEnvDraft(first);
+                setEnvDialogOpen(true);
+              }}
+              disabled={selectableEnvs.length === 0}
+            >
+              {t('it:workspace.interface.bindings.addEnvironment')}
+            </Button>
+          </Stack>
+        )}
       </Stack>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -1885,20 +1940,22 @@ export default function InterfaceBindingsMatrix({
                   <Typography variant="subtitle1">
                     {t('it:workspace.interface.bindings.environmentLine', { env: environmentLabel(t, env) })}
                   </Typography>
-                  <Button
-                    size="small"
-                    color="error"
-                    onClick={() => {
-                      const envBindings = bindings.filter((b) => b.environment === env);
-                      if (envBindings.length > 0) {
-                        setPendingDeleteEnvironment(env);
-                      } else {
-                        setManualEnvs((prev) => prev.filter((e) => e !== env));
-                      }
-                    }}
-                  >
-                    {t('it:workspace.interface.bindings.deleteEnvironment')}
-                  </Button>
+                  {canManage && (
+                    <Button
+                      size="small"
+                      color="error"
+                      onClick={() => {
+                        const envBindings = bindings.filter((b) => b.environment === env);
+                        if (envBindings.length > 0) {
+                          setPendingDeleteEnvironment(env);
+                        } else {
+                          setManualEnvs((prev) => prev.filter((e) => e !== env));
+                        }
+                      }}
+                    >
+                      {t('it:workspace.interface.bindings.deleteEnvironment')}
+                    </Button>
+                  )}
                 </Stack>
                 <Table size="small">
                   <TableHead>
@@ -2006,85 +2063,91 @@ export default function InterfaceBindingsMatrix({
                         >
                           {t('it:workspace.interface.bindings.openConnection')}
                         </Button>
-                        <Button
-                          size="small"
-                          color="error"
-                          onClick={() => void handleUnlinkConnection(link.id, manageConnections.binding.id)}
-                          disabled={unlinkingLinkId === link.id}
-                        >
-                          {unlinkingLinkId === link.id ? t('it:workspace.interface.bindings.unlinking') : t('it:workspace.connection.overview.unlink')}
-                        </Button>
+                        {canManage && (
+                          <Button
+                            size="small"
+                            color="error"
+                            onClick={() => void handleUnlinkConnection(link.id, manageConnections.binding.id)}
+                            disabled={unlinkingLinkId === link.id}
+                          >
+                            {unlinkingLinkId === link.id ? t('it:workspace.interface.bindings.unlinking') : t('it:workspace.connection.overview.unlink')}
+                          </Button>
+                        )}
                       </Stack>
                     </Box>
                   ))}
                 </Stack>
               )}
 
-              <Box>
-                <Typography variant="subtitle2" gutterBottom>
-                  {t('it:workspace.interface.bindings.linkExisting')}
-                </Typography>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={1}
-                  alignItems={{ xs: 'stretch', sm: 'center' }}
-                >
-                  <Autocomplete
-                    options={connectionOptions}
-                    loading={connectionLoading}
-                    value={selectedConnection}
-                    inputValue={connectionSearch}
-                    onInputChange={(_, v) => setConnectionSearch(v)}
-                    onChange={(_, val) => setSelectedConnection(val)}
-                    getOptionLabel={(opt) => (opt?.name ? `${opt.connection_reference} · ${opt.name}` : opt?.connection_reference || '')}
-                    isOptionEqualToValue={(opt, val) => opt.id === val.id}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label={t('it:workspace.interface.bindings.searchConnections')}
-                        placeholder={t('it:workspace.interface.bindings.nameOrId')}
-                        InputLabelProps={{ shrink: true }}
-                        InputProps={{
-                          ...params.InputProps,
-                          endAdornment: (
-                            <>
-                              {connectionLoading ? <CircularProgress size={16} /> : null}
-                              {params.InputProps.endAdornment}
-                            </>
-                          ),
-                        }}
-                      />
-                    )}
-                    sx={{ minWidth: 280, flex: 1 }}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={() => void handleLinkConnection()}
-                    disabled={!selectedConnection || linkSaving}
+              {canManage && (
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    {t('it:workspace.interface.bindings.linkExisting')}
+                  </Typography>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1}
+                    alignItems={{ xs: 'stretch', sm: 'center' }}
                   >
-                    {linkSaving ? t('it:workspace.interface.bindings.linking') : t('common:buttons.link')}
+                    <Autocomplete
+                      options={connectionOptions}
+                      loading={connectionLoading}
+                      value={selectedConnection}
+                      inputValue={connectionSearch}
+                      onInputChange={(_, v) => setConnectionSearch(v)}
+                      onChange={(_, val) => setSelectedConnection(val)}
+                      getOptionLabel={(opt) => (opt?.name ? `${opt.connection_reference} · ${opt.name}` : opt?.connection_reference || '')}
+                      isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label={t('it:workspace.interface.bindings.searchConnections')}
+                          placeholder={t('it:workspace.interface.bindings.nameOrId')}
+                          InputLabelProps={{ shrink: true }}
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {connectionLoading ? <CircularProgress size={16} /> : null}
+                                {params.InputProps.endAdornment}
+                              </>
+                            ),
+                          }}
+                        />
+                      )}
+                      sx={{ minWidth: 280, flex: 1 }}
+                    />
+                    <Button
+                      variant="contained"
+                      onClick={() => void handleLinkConnection()}
+                      disabled={!selectedConnection || linkSaving}
+                    >
+                      {linkSaving ? t('it:workspace.interface.bindings.linking') : t('common:buttons.link')}
+                    </Button>
+                  </Stack>
+                </Box>
+              )}
+
+              {canManage && canCreateConnection && (
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      const b = manageConnections.binding;
+                      const params = new URLSearchParams({
+                        interfaceId,
+                        bindingId: b.id,
+                        environment: b.environment,
+                        legType: b.leg_type,
+                      });
+                      setManageConnections(null);
+                      navigate(`/it/connections/new/overview?${params.toString()}`);
+                    }}
+                  >
+                    {t('it:workspace.interface.bindings.createConnection')}
                   </Button>
                 </Stack>
-              </Box>
-
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    const b = manageConnections.binding;
-                    const params = new URLSearchParams({
-                      interfaceId,
-                      bindingId: b.id,
-                      environment: b.environment,
-                      legType: b.leg_type,
-                    });
-                    setManageConnections(null);
-                    navigate(`/it/connections/new/overview?${params.toString()}`);
-                  }}
-                >
-                  {t('it:workspace.interface.bindings.createConnection')}
-                </Button>
-              </Stack>
+              )}
             </Stack>
           )}
         </DialogContent>
