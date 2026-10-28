@@ -109,6 +109,13 @@ const ENUM_GROUPS: Record<string, string> = {
   criticality: 'it:enums.criticality',
   hosting_model: 'it:enums.hostingModel',
   severity: 'it:enums.incidentSeverity',
+  // The IT landscape's fixed lists, named as their screens name them.
+  topology: 'it:enums.topology',
+  risk_mode: 'it:enums.riskMode',
+  leg_type: 'it:enums.legType',
+  integration_route_type: 'it:enums.routeType',
+  direction: 'auditLogs.values.direction',
+  owner_type: 'auditLogs.values.ownerType',
   // The budget history's own enumerations, named as the line screens name them.
   input_grain: 'auditLogs.values.inputGrain',
   allocation_method: 'auditLogs.values.allocationMethod',
