@@ -65,6 +65,8 @@ const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> =
   suppliers: 'suppliers',
   tasks: 'tasks',
   technologies: 'infrastructure',
+  // One row per version of a technology, read with the technology right.
+  technology_versions: 'infrastructure',
   users: 'users',
   documents: 'knowledge',
   // The CVE rows of the technologies, as the vulnerabilities page reads them.

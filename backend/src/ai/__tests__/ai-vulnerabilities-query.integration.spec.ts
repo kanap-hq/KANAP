@@ -565,7 +565,10 @@ async function testFamilies() {
   const { AI_QUERY_ENTITY_TYPES, AI_SEARCH_ENTITY_TYPES } = require('../ai.types');
   assert.ok(AI_QUERY_ENTITY_TYPES.includes('vulnerabilities'), 'listable and aggregatable');
   assert.ok(!AI_SEARCH_ENTITY_TYPES.includes('vulnerabilities'), 'not searched: no search index for it');
-  assert.deepEqual(AI_QUERY_ENTITY_TYPES.filter((type: string) => type !== 'vulnerabilities'), [...AI_SEARCH_ENTITY_TYPES], 'every searched family is listable');
+  // A family read without a search index is listed only: the technology versions have none either.
+  const listedOnly = new Set(['vulnerabilities', 'technology_versions']);
+  assert.ok(AI_QUERY_ENTITY_TYPES.includes('technology_versions'), 'listable and aggregatable');
+  assert.deepEqual(AI_QUERY_ENTITY_TYPES.filter((type: string) => !listedOnly.has(type)), [...AI_SEARCH_ENTITY_TYPES], 'every searched family is listable');
 }
 
 async function run() {

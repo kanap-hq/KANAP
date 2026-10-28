@@ -61,6 +61,7 @@ const SERVICE_FALLBACK_SORT: Record<string, string> = {
   requests: 'created_at',
   tasks: 'created_at',
   technologies: 'name',
+  technology_versions: 'technology',
   users: 'last_name',
   vulnerabilities: 'exploited',
 };
@@ -186,6 +187,10 @@ async function seedTenant(runner: QueryRunner): Promise<Seed> {
   await pair('technologies', (n, at) => insertId(runner,
     `INSERT INTO technologies (tenant_id, name, item_number, editor, created_at, updated_at) VALUES ($1, $2, $3, 'Contract Inc.', $4, $4)`,
     [tenantId, `Technology ${n}`, n, at]));
+  // One row per version of a technology: the two rows hang on the older technology.
+  await pair('technology_versions', (n, at) => insertId(runner,
+    `INSERT INTO technology_versions (tenant_id, technology_id, label, created_at, updated_at) VALUES ($1, $2, $3, $4, $4)`,
+    [tenantId, rows.technologies.older, `Contract ${n}`, at]));
   // The CVE cache is shared by every tenant; the rows are this tenant's, first detected a year apart.
   const cves = [1, 2].map((n) => `CVE-2098-${`${tag.replace(/\D/g, '')}0000`.slice(0, 4)}${n}`);
   await runner.query(`INSERT INTO vulnerability_cves (cve_id, severity) VALUES ($1, 'high'), ($2, 'low') ON CONFLICT DO NOTHING`, cves);

@@ -73,7 +73,9 @@ import { LinkedReads, loadLinkedReads } from '../../common/relations/linked-read
 import type { PortfolioLinkedReads } from '../../portfolio/portfolio-linked-reads';
 import {
   AiTechnologyRow,
+  AiTechnologyVersionRow,
   listAiTechnologies,
+  listAiTechnologyVersions,
   resolveAiApplicationsReach,
   technologyContractCount,
   technologyVersionFigures,
@@ -1234,6 +1236,36 @@ export class AiQueryExecutor {
     });
   }
 
+  /**
+   * A technology version as listed: the technology's reference and name, the label, the support
+   * dates and state, whether it is in use, and its servers and the technology's applications. It
+   * has no reference of its own: `ref` is its technology's (`TEC-n`).
+   */
+  private mapTechnologyVersion(row: AiTechnologyVersionRow): AiEntitySummaryDto {
+    return toEntitySummary('technology_versions', {
+      id: row.id,
+      reference: row.technology,
+      label: row.label,
+      status: row.support_status,
+      created_at: row.created_at ?? null,
+      updated_at: row.updated_at ?? null,
+      metadata: {
+        technology: row.technology,
+        technology_name: row.technology_name,
+        label: row.label,
+        end_of_standard_support: scalar(row.end_of_standard_support),
+        end_of_support: scalar(row.end_of_support),
+        support_status: scalar(row.support_status),
+        support_date: scalar(row.support_date),
+        in_use: row.in_use,
+        server_count: numericScalar(row.server_count),
+        application_count: numericScalar(row.application_count),
+        family: scalar(row.family),
+        lifecycle: scalar(row.lifecycle),
+      },
+    });
+  }
+
   private mapLocation(row: any): AiEntitySummaryDto {
     const subLocations = Array.isArray(row.sub_locations) && row.sub_locations.length > 0
       ? row.sub_locations
@@ -2058,6 +2090,25 @@ export class AiQueryExecutor {
       };
     }
 
+    if (input.entity_type === 'technology_versions') {
+      const applications = await resolveAiApplicationsReach(context, this.policy);
+      const result = await listAiTechnologyVersions(context.manager, context.tenantId, scoped.query, applications);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        items: result.items.map((row) => this.mapTechnologyVersion(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
     if (input.entity_type === 'vulnerabilities') {
       const applications = await resolveAiApplicationsReach(context, this.policy);
       const result = await listAiVulnerabilities(context.manager, context.tenantId, scoped.query, applications);
@@ -2648,6 +2699,10 @@ export class AiQueryExecutor {
     },
   ): Promise<AiEntityDetailDto> {
     const entityType = input.entity_type;
+    if (entityType === 'technology_versions') {
+      // A version has no page of its own: its technology's detail lists every version.
+      throw new BadRequestException('A technology version has no detail of its own: read its technology with get_entity_detail on technologies (by TEC-n reference), or query_entities on technology_versions filtered on technology.');
+    }
     const entityId = await this.resolveDetailEntityId(context, entityType, input.entity_id);
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
 

@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, Logger, Optional } from '@nestjs/commo
 import { AiPolicyService } from '../ai-policy.service';
 import { FxRateService } from '../../currency/fx-rate.service';
 import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem, yearRateSetId } from '../../spend/allocation-distribution';
-import { listAiTechnologies, resolveAiApplicationsReach } from './ai-technologies.query';
+import { listAiTechnologies, listAiTechnologyVersions, resolveAiApplicationsReach } from './ai-technologies.query';
 import { listAiVulnerabilities } from './ai-vulnerabilities.query';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
 import { aiDataAccessNote } from './ai-data-access-note.util';
@@ -118,6 +118,7 @@ type SupportedAggregateEntityType =
   | 'suppliers'
   | 'tasks'
   | 'technologies'
+  | 'technology_versions'
   | 'users'
   | 'vulnerabilities'
   | 'documents';
@@ -927,6 +928,20 @@ export class AiAggregateExecutor {
       await applyScopeToAiQuery(context, entityType, {}, scope);
       const applications = await resolveAiApplicationsReach(context, this.policy);
       const result = await listAiTechnologies(
+        context.manager,
+        context.tenantId,
+        { q, limit: AGGREGATE_ID_COLLECTION_LIMIT, filters: adaptedFilters },
+        applications,
+        { idsOnly: true },
+      );
+      return { ids: result.ids, total: result.total, scope: null };
+    }
+
+    if (entityType === 'technology_versions') {
+      // "me" and "my_team" do not apply to versions either: refused as for technologies.
+      await applyScopeToAiQuery(context, entityType, {}, scope);
+      const applications = await resolveAiApplicationsReach(context, this.policy);
+      const result = await listAiTechnologyVersions(
         context.manager,
         context.tenantId,
         { q, limit: AGGREGATE_ID_COLLECTION_LIMIT, filters: adaptedFilters },

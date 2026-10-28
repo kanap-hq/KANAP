@@ -36,6 +36,7 @@ export type ScopedAiEntityType =
   | 'suppliers'
   | 'tasks'
   | 'technologies'
+  | 'technology_versions'
   | 'users'
   | 'vulnerabilities';
 

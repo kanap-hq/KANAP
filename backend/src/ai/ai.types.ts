@@ -75,8 +75,10 @@ export const AI_SEARCH_ENTITY_TYPES = [
  * The families query_entities, aggregate_entities, get_filter_values and get_entity_detail read:
  * every searched family, and the ones with no search index. `vulnerabilities` (the CVE rows of the
  * technologies, `query/ai-vulnerabilities.query.ts`) is listed only: `search_all` does not search it.
+ * `technology_versions` (the versions of the technologies, `query/ai-technologies.query.ts`) is
+ * listed only too: it has no detail of its own.
  */
-export const AI_QUERY_ENTITY_TYPES = [...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities'] as const;
+export const AI_QUERY_ENTITY_TYPES = [...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities', 'technology_versions'] as const;
 
 export const AI_CONTEXT_ENTITY_TYPES = [
   'applications',

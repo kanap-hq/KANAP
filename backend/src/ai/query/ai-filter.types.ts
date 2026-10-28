@@ -24,6 +24,7 @@ export type AiQueryEntityType =
   | 'suppliers'
   | 'tasks'
   | 'technologies'
+  | 'technology_versions'
   | 'users'
   | 'vulnerabilities';
 

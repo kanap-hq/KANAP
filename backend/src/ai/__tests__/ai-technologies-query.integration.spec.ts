@@ -476,6 +476,12 @@ async function testInfrastructureRight(harness: Harness, runner: QueryRunner, s:
   await rejects(runner, () => call('get_filter_values', { entity_type: 'technologies', fields: ['family'] }), /infrastructure/, 'get_filter_values');
   await rejects(runner, () => call('describe_entity_filters', { entity_type: 'technologies' }), /infrastructure/, 'describe_entity_filters');
   await rejects(runner, () => call('get_entity_detail', { entity_type: 'technologies', entity_id: 'TEC-1' }), /infrastructure/, 'get_entity_detail');
+  // The technology versions follow the technology right, through every read tool.
+  await rejects(runner, () => call('query_entities', { entity_type: 'technology_versions' }), /infrastructure/, 'query_entities technology_versions');
+  await rejects(runner, () => call('aggregate_entities', { entity_type: 'technology_versions', group_by: 'technology' }), /infrastructure/, 'aggregate_entities technology_versions');
+  await rejects(runner, () => call('get_filter_values', { entity_type: 'technology_versions', fields: ['technology'] }), /infrastructure/, 'get_filter_values technology_versions');
+  await rejects(runner, () => call('describe_entity_filters', { entity_type: 'technology_versions' }), /infrastructure/, 'describe_entity_filters technology_versions');
+  await rejects(runner, () => call('get_entity_detail', { entity_type: 'technology_versions', entity_id: 'TEC-1' }), /infrastructure/, 'get_entity_detail technology_versions');
 }
 
 async function testTenantIsolation(harness: Harness, runner: QueryRunner, s: Seed) {
@@ -575,6 +581,7 @@ async function testMcpToolsCall(harness: Harness, runner: QueryRunner, s: Seed) 
     assert.ok(tool, 'query_entities is exposed over MCP');
     assert.equal(tool.annotations.readOnlyHint, true, 'read only');
     assert.ok(tool.inputSchema.properties.entity_type.enum.includes('technologies'), 'technologies is one of its families');
+    assert.ok(tool.inputSchema.properties.entity_type.enum.includes('technology_versions'), 'technology_versions is one of its families');
     const called = await rpc({
       jsonrpc: '2.0',
       id: 2,
@@ -759,6 +766,232 @@ async function testSupportStatus(harness: Harness, runner: QueryRunner, s: Seed)
   assert.deepEqual(fromAssistant, fromReport, 'same versions, states and dates as the End of support report');
 }
 
+/**
+ * CA12: the version and owner filters (version labels exact without case, owner names exact
+ * without case) and the many-to-many owner groups. Every technology here has its own publisher,
+ * so the assertions do not depend on the rows the other tests seed.
+ */
+async function testVersionAndOwnerFilters(harness: Harness, runner: QueryRunner, s: Seed) {
+  const t = s.tenantId;
+  const technology = (n: number, name: string, editor: string) => insertId(runner,
+    `INSERT INTO technologies (tenant_id, item_number, name, family, editor, hosting_type, lifecycle)
+     VALUES ($1, $2, $3, 'database', $4, 'on_prem', 'active')`,
+    [t, n, name, editor]);
+  const version = (technologyId: string, label: string) => insertId(runner,
+    `INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, $3)`,
+    [t, technologyId, label]);
+  const v16 = await technology(21, 'Version Sixteen', 'Versioned');
+  const v164 = await technology(22, 'Version Sixteen Four', 'Versioned');
+  const vUpper = await technology(23, 'Version Upper', 'Versioned');
+  await version(v16, '16');
+  await version(v164, '16.4');
+  await version(vUpper, 'V16');
+
+  const byVersion = (value: string) => list(harness, runner, s, { filters: { version: [value] } });
+  assert.deepEqual(labels(await byVersion('16')), ['Version Sixteen'], '16 never matches 16.4');
+  assert.deepEqual(labels(await byVersion('v16')), ['Version Upper'], 'the label compares without case (V16)');
+  assert.deepEqual(labels(await byVersion('V16')), ['Version Upper']);
+  assert.deepEqual(labels(await byVersion('16.4')), ['Version Sixteen Four']);
+  assert.ok(labels(await byVersion('17')).length === 0);
+
+  const paul = await insertId(runner,
+    `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status)
+     SELECT $1, $2, 'Paul', 'Tester', role_id, 'enabled' FROM users WHERE tenant_id = $1 AND id = $3`,
+    [t, `paul-${t.slice(0, 8)}@example.test`, s.users.full]);
+  const owner = (technologyId: string, userId: string, type: 'it' | 'business') => runner.query(
+    `INSERT INTO technology_owners (tenant_id, technology_id, user_id, owner_type) VALUES ($1, $2, $3, $4)`,
+    [t, technologyId, userId, type]);
+  const ownedIt = await technology(24, 'Owned IT', 'Owner Test');
+  const ownedBusiness = await technology(25, 'Owned Business', 'Owner Test');
+  const ownedTwice = await technology(26, 'Owned Twice', 'Owner Test');
+  await technology(27, 'Owned Nobody', 'Owner Test');
+  await owner(ownedIt, paul, 'it');
+  await owner(ownedBusiness, paul, 'business');
+  await owner(ownedTwice, paul, 'it');
+  await owner(ownedTwice, s.users.full, 'it');
+
+  const byOwner = (field: 'owner' | 'it_owner' | 'business_owner', value: string) =>
+    list(harness, runner, s, { filters: { [field]: [value] } });
+  assert.deepEqual(labels(await byOwner('it_owner', 'Paul Tester')), ['Owned IT', 'Owned Twice'], 'only the IT owners');
+  assert.deepEqual(labels(await byOwner('business_owner', 'Paul Tester')), ['Owned Business'], 'only the business owners');
+  assert.deepEqual(labels(await byOwner('owner', 'Paul Tester')), ['Owned Business', 'Owned IT', 'Owned Twice'], 'any type');
+  assert.deepEqual(labels(await byOwner('it_owner', 'paul tester')), ['Owned IT', 'Owned Twice'], 'the name compares without case');
+  assert.deepEqual(labels(await byOwner('it_owner', 'Nobody Here')), []);
+
+  const aggregate = (groupBy: string) => harness.aggregates.execute(ctx(runner, s, 'full'), {
+    entity_type: 'technologies',
+    group_by: groupBy,
+    filters: { publisher: ['Owner Test'] },
+  });
+  const byItOwner = await aggregate('it_owner');
+  assert.deepEqual(
+    byItOwner.groups.map((g: any) => [g.key, g.count]).sort(),
+    [['Full Tester', 1], ['Paul Tester', 2]],
+    'a technology counts once in each of its IT owners; one without an IT owner is in no group',
+  );
+  assert.equal(byItOwner.total, 4, 'the four technologies; the no-owner one is in no group');
+  const byBusinessOwner = await aggregate('business_owner');
+  assert.deepEqual(byBusinessOwner.groups.map((g: any) => [g.key, g.count]), [['Paul Tester', 1]]);
+}
+
+/**
+ * LA22: the technology_versions family, one row per version, its support dates and state exactly
+ * as the technology detail gives them, its use and servers, and the aggregate metrics and groups.
+ */
+async function testTechnologyVersions(harness: Harness, runner: QueryRunner, s: Seed) {
+  const t = s.tenantId;
+  const [{ today }] = await runner.query(`SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS today`);
+  const shift = (days: number) => {
+    const d = new Date(`${today}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  };
+  const technology = await insertId(runner,
+    `INSERT INTO technologies (tenant_id, item_number, name, family, editor, hosting_type, lifecycle)
+     VALUES ($1, 31, 'Version Family', 'database', 'Versions', 'on_prem', 'active')`, [t]);
+  const version = (label: string, standard: string | null, extended: string | null) => insertId(runner,
+    `INSERT INTO technology_versions (tenant_id, technology_id, label, standard_support_end, extended_support_end)
+     VALUES ($1, $2, $3, $4, $5)`, [t, technology, label, standard, extended]);
+  const used = await version('used', shift(300), shift(900));
+  await version('unused', '2027-03-31', '2027-12-31');
+  await version('undated', null, null);
+  const server = await insertId(runner,
+    `INSERT INTO assets (tenant_id, name, kind, environment, status) VALUES ($1, 'versions-srv', 'server', 'prod', 'active')`, [t]);
+  await runner.query(`INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id) VALUES ($1, $2, $3, $4)`,
+    [t, server, technology, used]);
+
+  const versions = (input: Record<string, unknown> = {}, user: keyof Seed['users'] = 'full') =>
+    harness.executor.execute(ctx(runner, s, user), { entity_type: 'technology_versions', ...input });
+  const all = await versions({ filters: { technology: ['TEC-31'] } });
+  assert.equal(all.total, 3, 'the three versions of the technology');
+  assert.deepEqual(all.items.map((item: any) => item.ref), ['TEC-31', 'TEC-31', 'TEC-31'], 'a version has no reference of its own');
+  const rows = new Map(all.items.map((item: any) => [item.metadata.label, item]));
+  const usedRow: any = rows.get('used');
+  assert.deepEqual(
+    [usedRow.metadata.technology, usedRow.metadata.technology_name, usedRow.metadata.family, usedRow.metadata.lifecycle],
+    ['TEC-31', 'Version Family', 'database', 'active'],
+  );
+  assert.deepEqual(
+    [usedRow.metadata.in_use, usedRow.metadata.server_count, usedRow.metadata.support_status, usedRow.metadata.support_date],
+    [true, 1, 'supported', shift(300)],
+    'installed on a server in service',
+  );
+  assert.deepEqual([usedRow.metadata.end_of_standard_support, usedRow.metadata.end_of_support], [shift(300), shift(900)]);
+  const unusedRow: any = rows.get('unused');
+  assert.deepEqual(
+    [unusedRow.metadata.in_use, unusedRow.metadata.server_count, unusedRow.metadata.support_date],
+    [false, 0, '2027-03-31'],
+    'no link: out of use, and its dates stay',
+  );
+  assert.deepEqual([unusedRow.metadata.end_of_standard_support, unusedRow.metadata.end_of_support], ['2027-03-31', '2027-12-31']);
+  const undatedRow: any = rows.get('undated');
+  assert.deepEqual(
+    [undatedRow.metadata.support_status, undatedRow.metadata.support_date, undatedRow.metadata.end_of_standard_support, undatedRow.metadata.end_of_support, undatedRow.metadata.in_use],
+    ['unknown', null, null, null, false],
+  );
+  assert.doesNotMatch(JSON.stringify(all.items.map((item: any) => ({ ...item, id: undefined }))), UUID_IN_TEXT, 'references and names only');
+
+  // The family and the detail of the technology give the same versions, states and dates.
+  const detail = await harness.executor.executeDetail(ctx(runner, s, 'full'), { entity_type: 'technologies', entity_id: 'TEC-31' });
+  assert.equal(detail.data.versions.length, 3);
+  for (const v of detail.data.versions) {
+    const row: any = rows.get(v.label);
+    assert.deepEqual(
+      [row.metadata.end_of_standard_support, row.metadata.end_of_support, row.metadata.support_status, row.metadata.support_date, row.metadata.in_use, row.metadata.server_count],
+      [v.standard_support_end, v.extended_support_end, v.support_status, v.support_date, v.in_use, v.server_count],
+      `${v.label}: the detail's figures`,
+    );
+  }
+
+  const notInUse = await versions({ filters: { technology: ['TEC-31'], in_use: ['false'] } });
+  assert.deepEqual(notInUse.items.map((item: any) => item.metadata.label), ['undated', 'unused'], 'in_use false');
+  const unknown = await versions({ filters: { technology: ['TEC-31'], support_status: ['unknown'] } });
+  assert.deepEqual(unknown.items.map((item: any) => item.metadata.label), ['undated']);
+  const label = await versions({ filters: { technology: ['TEC-31'], label: ['unused'] } });
+  assert.deepEqual(label.items.map((item: any) => item.metadata.label), ['unused']);
+  const byName = await versions({ filters: { technology: ['version family'] } });
+  assert.equal(byName.total, 3, 'the exact technology name, without case');
+
+  const aggregate = (input: Record<string, unknown>) => harness.aggregates.execute(ctx(runner, s, 'full'), {
+    entity_type: 'technology_versions',
+    filters: { technology: ['TEC-31'] },
+    ...input,
+  });
+  const groups = await aggregate({ group_by: 'end_of_support_year' });
+  const yearOf = (row: any) => (row.metadata.support_date ? row.metadata.support_date.slice(0, 4) : null);
+  const expectedYears = new Map<string | null, number>();
+  for (const item of all.items) {
+    const year = yearOf(item);
+    expectedYears.set(year, (expectedYears.get(year) ?? 0) + 1);
+  }
+  assert.deepEqual(
+    groups.groups.map((g: any) => [g.key, g.count]).sort((a: any, b: any) => String(a[0]).localeCompare(String(b[0]))),
+    [...expectedYears.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+    'one group per end of support year, 2027 included',
+  );
+  assert.ok(groups.groups.some((g: any) => g.key === '2027'), 'the version that ends in 2027');
+  const min = await aggregate({ group_by: 'technology', metric: 'end_of_support', function: 'min' });
+  assert.equal(min.groups[0].value, '2027-12-31', 'MIN of end_of_support as YYYY-MM-DD');
+  const max = await aggregate({ group_by: 'technology', metric: 'end_of_standard_support', function: 'max' });
+  assert.equal(max.groups[0].value, shift(300));
+  const servers = await aggregate({ group_by: 'technology', metric: 'server_count', function: 'sum' });
+  assert.equal(servers.groups[0].value, 1);
+  const count = await aggregate({ group_by: 'technology' });
+  assert.deepEqual(count.groups, [{ key: 'Version Family', count: 3 }], 'one group for the technology, three versions');
+  const inUseGroups = await aggregate({ group_by: 'in_use' });
+  assert.deepEqual(
+    inUseGroups.groups.map((g: any) => [g.key, g.count]).sort(),
+    [['false', 2], ['true', 1]],
+  );
+
+  // The application count follows the caller's application scope, as the technologies family.
+  const pgForBc = await versions({ filters: { technology: ['TEC-1'] } }, 'bc');
+  assert.ok(pgForBc.items.length > 0 && pgForBc.items.every((item: any) => item.metadata.application_count === 1),
+    'a Business Contributor counts its own applications only');
+  const pgForFull = await versions({ filters: { technology: ['TEC-1'] } }, 'full');
+  assert.ok(pgForFull.items.every((item: any) => item.metadata.application_count === 2));
+}
+
+/**
+ * The dynamic values of the new technologies filters: the version labels and the owner names of
+ * one tenant, never another's.
+ */
+async function testVersionAndOwnerFilterValues(harness: Harness, runner: QueryRunner, s: Seed) {
+  await useTenant(runner, s.otherTenantId);
+  const otherRole = await insertId(runner,
+    `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Owner role', 'Owner role')`, [s.otherTenantId]);
+  const otherUser = await insertId(runner,
+    `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status)
+     VALUES ($1, $2, 'Other', 'Owner', $3, 'enabled')`,
+    [s.otherTenantId, `other-owner-${s.otherTenantId.slice(0, 8)}@example.test`, otherRole]);
+  await runner.query(
+    `INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, '99.99')`,
+    [s.otherTenantId, s.otherTechnologyId]);
+  await runner.query(
+    `INSERT INTO technology_owners (tenant_id, technology_id, user_id, owner_type) VALUES ($1, $2, $3, 'it')`,
+    [s.otherTenantId, s.otherTechnologyId, otherUser]);
+  await useTenant(runner, s.tenantId);
+
+  const values = await harness.executor.executeFilterValues(ctx(runner, s, 'full'), {
+    entity_type: 'technologies',
+    fields: ['version', 'owner', 'it_owner', 'business_owner'],
+  });
+  assert.deepEqual(values.fields_ignored, []);
+  assert.ok(values.values.version.includes('16'), 'this tenant\'s version labels');
+  assert.ok(values.values.version.includes('V16'), 'the label keeps its spelling');
+  assert.ok(!values.values.version.includes('99.99'), 'never another tenant\'s labels');
+  assert.ok(values.values.it_owner.includes('Paul Tester'));
+  assert.ok(values.values.it_owner.includes('Full Tester'));
+  assert.ok(!values.values.it_owner.includes('Other Owner'), 'never another tenant\'s owners');
+  assert.ok(values.values.owner.includes('Paul Tester') && values.values.owner.includes('Full Tester'));
+  assert.deepEqual(values.values.business_owner, ['Paul Tester'], 'the business owners only');
+
+  const isolated = await harness.executor.execute(ctx(runner, s, 'full'), {
+    entity_type: 'technology_versions', q: '99.99',
+  });
+  assert.equal(isolated.total, 0, 'another tenant\'s version is not listed');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -782,6 +1015,9 @@ async function run() {
       await testContextBounds(harness, runner, s);
       await testSupportStatus(harness, runner, s);
       await testServersAsTheTechnologyList(harness, runner, s);
+      await testVersionAndOwnerFilters(harness, runner, s);
+      await testTechnologyVersions(harness, runner, s);
+      await testVersionAndOwnerFilterValues(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
