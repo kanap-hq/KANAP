@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DataSource, EntityManager } from 'typeorm';
 import {
@@ -16,6 +16,17 @@ import { Subscription } from '../billing/subscription.entity';
 import { evaluateSubscriptionAccess } from '../billing/subscription-freeze.util';
 
 const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
+
+/** 403 `MODULE_RIGHT_REQUIRED`: the person lacks the module right the route asks for. */
+function moduleRightRequired(resource: string, level: string): ForbiddenException {
+  return new ForbiddenException({
+    statusCode: HttpStatus.FORBIDDEN,
+    error: 'Forbidden',
+    code: 'MODULE_RIGHT_REQUIRED',
+    message: 'You do not have the rights for this action.',
+    params: { resource, level },
+  });
+}
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -91,14 +102,19 @@ export class PermissionGuard implements CanActivate {
       };
 
       if (requiredMeta) {
-        if (!hasRequiredLevel(requiredMeta.resource, requiredMeta.level)) return false;
+        if (!hasRequiredLevel(requiredMeta.resource, requiredMeta.level)) {
+          throw moduleRightRequired(requiredMeta.resource, requiredMeta.level);
+        }
         currentLevel = map.get(requiredMeta.resource);
         freezeMeta = requiredMeta;
       }
 
       if (anyMeta && anyMeta.length > 0) {
         const matchedAny = anyMeta.find((entry) => hasRequiredLevel(entry.resource, entry.level));
-        if (!matchedAny) return false;
+        if (!matchedAny) {
+          // Any entry of the list would do: the refusal names the first one.
+          throw moduleRightRequired(anyMeta[0].resource, anyMeta[0].level);
+        }
         if (!requiredMeta) {
           currentLevel = map.get(matchedAny.resource);
           freezeMeta = matchedAny;
