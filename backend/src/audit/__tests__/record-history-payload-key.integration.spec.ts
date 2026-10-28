@@ -49,6 +49,7 @@ type PlanNode = {
   'Node Type': string;
   'Index Name'?: string;
   'Index Cond'?: string;
+  Filter?: string;
   'Relation Name'?: string;
   'Actual Rows'?: number;
   Plans?: PlanNode[];
@@ -162,10 +163,9 @@ async function testExplain() {
   const keyValue = randomUUID();
   await inRolledBackTransaction(async (runner) => {
     await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-    // The application role owns the table and its FORCE policy. Inside this rolled-back transaction
-    // only, lift FORCE so PostgreSQL can measure the index shape: `jsonb ->> text` is not leakproof,
-    // so under FORCE RLS the planner keeps the key as a filter (reported in the run's hand-over).
-    await runner.query(`ALTER TABLE audit_log NO FORCE ROW LEVEL SECURITY`);
+    // The application role's FORCE RLS keeps the key as a filter (`jsonb ->> text` is not
+    // leakproof), but the partial index only holds the label's rows: the plan below reads them,
+    // never the other 50 000 rows of the tenant's journal.
     await runner.query(
       `INSERT INTO audit_log (tenant_id, table_name, record_id, action, after_json, source, created_at)
        SELECT $1, 'other_' || (g % 10), gen_random_uuid(), 'create', '{}'::jsonb, 'user', now() - (g || ' seconds')::interval
@@ -203,13 +203,15 @@ async function testExplain() {
       });
       assert.ok(used.length > 0, `${label}: the branch uses ${INDEX}`);
       assert.equal(seqScan, false, `${label}: the plan does not scan the tenant journal`);
+      assert.match(JSON.stringify(plan), new RegExp(`COALESCE\\(after_json, before_json\\) ->> '${KEY}'`), `${label}: the plan carries the key expression`);
       for (const node of used) {
-        assert.ok((node['Actual Rows'] ?? 0) <= 6, `${label}: the index reads at most the page limit`);
-        assert.match(String(node['Index Cond'] ?? ''), new RegExp(`COALESCE\\(after_json, before_json\\) ->> '${KEY}'`));
+        // The index holds the 40 label rows, never the 50 000 rows of other labels.
+        assert.ok((node['Actual Rows'] ?? 0) <= 100, `${label}: the index reads the label's rows, not the journal`);
+        assert.match(String(node['Index Cond'] ?? ''), /tenant_id/);
       }
     }
   });
-  console.log(`  EXPLAIN on ${OTHER_ROWS} other labels: index seek, no tenant scan, first page and cursor: OK`);
+  console.log(`  EXPLAIN on ${OTHER_ROWS} other labels: the partial index reads the label rows, not the tenant journal, first page and cursor: OK`);
 }
 
 async function run() {

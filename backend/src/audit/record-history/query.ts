@@ -72,7 +72,7 @@ function recordChildLabels(entry: RecordHistoryRecord): string[] {
     .map(([label]) => label);
 }
 
-/** The page query: the three branches, their parameters, and the payload-key reads it built. */
+/** The page query: the three branches and their parameters. */
 export function auditPageQuery(
   entry: RecordHistoryRecord,
   tenantId: string,

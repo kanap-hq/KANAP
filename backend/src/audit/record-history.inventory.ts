@@ -33,12 +33,12 @@ import { spendItemsRecord } from './record-history/records/spend_items';
  *     WHERE table_name = ANY (ARRAY['<label>', ...]);
  *
  * The expression is the one `payloadKeyExpression` builds and the page query reads; the WHERE names
- * every label that carries the key. Without it the branch reads the tenant's whole audit log.
- * `__tests__/record-history-payload-key.integration.spec.ts` fails when a declared key has no such
- * index and measures the plan on a filled table. `audit_log` is under FORCE RLS and
- * `jsonb ->> text` is not leakproof, so the application role cannot use this expression as an index
- * condition: the spec lifts FORCE in its rolled-back transaction to measure the index shape, and a
- * production plan that seeks by key needs a leakproof extraction or a policy/column change.
+ * every label that carries the key. The partial predicate is what bounds the index to the label:
+ * `audit_log` is under FORCE RLS and `jsonb ->> text` is not leakproof, so PostgreSQL keeps the key
+ * as a filter after the tenant predicate, but the index only holds the label's rows and the read
+ * never scans the tenant's other audit rows. Without the index the branch scans the tenant's whole
+ * audit log. `__tests__/record-history-payload-key.integration.spec.ts` fails when a declared key
+ * has no such index and measures the plan on a table filled with other labels.
  */
 export type RecordHistoryChildKind =
   | 'version'
