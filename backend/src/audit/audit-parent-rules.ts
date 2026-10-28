@@ -1,5 +1,6 @@
 import type { EntityManager } from 'typeorm';
 import type { RecordHistoryTable } from './record-history.inventory';
+import { spendItemsParentRules } from './record-history/records/spend_items';
 
 /**
  * How an audit row finds the record it belongs to, by its audit label (`audit_log.table_name`).
@@ -7,13 +8,16 @@ import type { RecordHistoryTable } from './record-history.inventory';
  * Every `parentTable` is a table of `record-history.inventory.ts`.
  *
  * The budget-line labels keep their CAPEX name (`budget-nature.ts`, `auditTableOf`); both natures
- * write the same physical tables, so every existing rule points at `spend_items`.
+ * write the same physical tables, so every existing rule points at `spend_items`. A family declares
+ * the rules of its own labels in its record file (`record-history/records/<table>.ts`, export
+ * `<table>ParentRules`); this file only aggregates them, one line per record file.
  *
  * Adding a family (the procedure, so a later run follows it):
- * 1. Declare the child labels in that family's `RECORD_HISTORY` entry, then add their rules here
- *    (`AUDIT_PARENT_RULES`): the payload key that names the record, or the version lookup when the
- *    row names a version whose record is the parent. A label whose write knows the parent names it
- *    explicitly (`AuditParent`) instead, when no rule can choose safely.
+ * 1. Declare the child labels in that family's `RECORD_HISTORY` entry, then add their rules to the
+ *    record file's `<table>ParentRules` and its import line below: the payload key that names the
+ *    record, or the version lookup when the row names a version whose record is the parent. A
+ *    label whose write knows the parent names it explicitly (`AuditParent`) instead, when no rule
+ *    can choose safely.
  * 2. Write a backfill migration for that family, never edit `1855500000000-audit-log-parent-record.ts`
  *    (frozen). It copies the family's rules in SQL, stays idempotent (only rows still missing
  *    `parent_*`), loops over the tenants with `set_config('app.current_tenant', <tenant>, true)`,
@@ -32,39 +36,18 @@ export type AuditParentRule =
   /** The row names a version, through `record_id` or the payload's `version_id`, whose record is the parent. */
   | { parentTable: RecordHistoryTable; from: 'version'; via: 'record_id' | 'payload.version_id' };
 
-const LINE_KEYS = ['spend_item_id', 'capex_item_id'] as const;
+/**
+ * The rule sets of the record files, one line per file, sorted by table name: a family run adds its
+ * own file and its own line, never the same line.
+ */
+const PARENT_RULE_SETS = [
+  spendItemsParentRules,
+] as const;
 
-/** The audit labels that carry a budget line, and how to find it. */
-export const AUDIT_PARENT_RULES: Readonly<Record<string, AuditParentRule>> = {
-  // Versions and their budget tables: the audit row names the version.
-  spend_versions: { parentTable: 'spend_items', from: 'version', via: 'record_id' },
-  capex_versions: { parentTable: 'spend_items', from: 'version', via: 'record_id' },
-  spend_amounts: { parentTable: 'spend_items', from: 'version', via: 'record_id' },
-  capex_amounts: { parentTable: 'spend_items', from: 'version', via: 'record_id' },
-  spend_allocations: { parentTable: 'spend_items', from: 'version', via: 'record_id' },
-  capex_allocations: { parentTable: 'spend_items', from: 'version', via: 'record_id' },
-  // Round inputs name their version in the payload, before or after.
-  spend_round_inputs: { parentTable: 'spend_items', from: 'version', via: 'payload.version_id' },
-  capex_round_inputs: { parentTable: 'spend_items', from: 'version', via: 'payload.version_id' },
-  // Links and attachments carry the child's line in their payload (CAPEX renames the key).
-  spend_links: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS },
-  capex_links: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS },
-  spend_attachments: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS },
-  capex_attachments: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS },
-  // A contact link carries its line in the payload; the supplier sync writes the line in record_id.
-  spend_item_contacts: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS, fallback: 'record_id' },
-  capex_item_contacts: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS, fallback: 'record_id' },
-  // A budget task names its line in the saved task (`related_object_id`).
-  spend_tasks: { parentTable: 'spend_items', from: 'payload', keys: ['related_object_id'] },
-  // No rule for the application, technology, asset, contract, project and request links
-  // (`application_spend_items`, `application_capex_items`, `technology_spend_items`,
-  // `asset_*_items`, `contract_*_items`, `portfolio_project_*`, `portfolio_request_*`): both sides
-  // write the same label, and `record_id` is the line from the line, the other object from the
-  // other side. The line-side writers hand the line as `parent`. From the asset, contract, project
-  // or request, a write that adds or removes a single line names it (`singleChangedId`).
-  // From the application or the technology, no parent: the payload lists line ids, which the
-  // line's history would read as applications or technologies, and a write may touch several lines.
-};
+/** The audit labels that carry a record, and how to find it. */
+export const AUDIT_PARENT_RULES: Readonly<Record<string, AuditParentRule>> = Object.freeze(
+  Object.assign({}, ...PARENT_RULE_SETS) as Record<string, AuditParentRule>,
+);
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

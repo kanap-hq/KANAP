@@ -1,5 +1,8 @@
 import type { PermissionLevel } from '../auth/require-level.decorator';
-import type { FamilyKey } from './record-history.service';
+import type { FamilyKey } from './record-history/families';
+import { accountsRecord } from './record-history/records/accounts';
+import { costCentersRecord } from './record-history/records/cost_centers';
+import { spendItemsRecord } from './record-history/records/spend_items';
 
 /**
  * The records whose history the API serves (`GET /records/:table/:id/history`), by route key.
@@ -8,7 +11,7 @@ import type { FamilyKey } from './record-history.service';
  * same family the history resolves its references with), the permission module that opens its page,
  * the audit labels its own rows carry, and the audit labels of its children with the kind the
  * history shows them as. The service (`record-history.service.ts`) owns the presentation; a new
- * record family only adds an entry here.
+ * record family only adds a file in `record-history/records/`.
  *
  * Two declarations keep the parent rules and the data-access inventory honest:
  * - every child label has a parent rule in `audit-parent-rules.ts`, except the labels listed in
@@ -65,115 +68,23 @@ export type RecordHistoryRecord = {
   exclusions: readonly RecordHistoryExclusion[];
 };
 
-/** The inventory, by route key: the budget line (lot 1) and the account and cost center pilots (lot 2). */
-const RECORD_HISTORY_DEFINITION = {
-  spend_items: {
-    table: 'spend_items',
-    module: 'budget',
-    level: 'reader',
-    // A CAPEX line keeps the CAPEX audit label of before lot Z1 (`budget-nature.ts`, `auditTableOf`);
-    // a line that changed nature keeps rows under both labels.
-    auditLabels: ['spend_items', 'capex_items'],
-    family: 'budget_line',
-    children: {
-      // Versions and their budget tables: both labels of the single physical family.
-      spend_versions: 'version',
-      capex_versions: 'version',
-      spend_amounts: 'amounts',
-      capex_amounts: 'amounts',
-      spend_allocations: 'allocations',
-      capex_allocations: 'allocations',
-      spend_round_inputs: 'round_input',
-      capex_round_inputs: 'round_input',
-      // Children of the line.
-      spend_links: 'link',
-      capex_links: 'link',
-      spend_attachments: 'attachment',
-      capex_attachments: 'attachment',
-      spend_item_contacts: 'contact',
-      capex_item_contacts: 'contact',
-      spend_tasks: 'task',
-      // Links to another object. Both sides write the same label: from the line, `record_id` is the
-      // line; from the application, technology, asset, contract, project or request, it is that
-      // object. Technologies keep one label for both natures.
-      application_spend_items: 'application',
-      application_capex_items: 'application',
-      technology_spend_items: 'technology',
-      asset_spend_items: 'asset',
-      asset_capex_items: 'asset',
-      // Contract, project and request links hold the line of either nature under the OPEX label
-      // from their own side, and under their nature's label from the line (`auditTableOf`).
-      contract_spend_items: 'contract',
-      contract_capex_items: 'contract',
-      portfolio_project_opex: 'project',
-      portfolio_project_capex: 'project',
-      portfolio_request_opex: 'request',
-      portfolio_request_capex: 'request',
-    },
-    // `record_id` names the line or the other object depending on the side that wrote, so no label
-    // rule can be exact: the writer gives the line as `parent`, and the other side only when a
-    // single line changed (`singleChangedId`). The line side always does
-    // (`item-applications.ts`, `item-technologies.ts`, `budget-line-relations.ts`); the asset,
-    // contract, project and request sides do it when their write adds or removes a single line;
-    // the application and technology sides never (`audit-parent-rules.ts`).
-    explicitParentLabels: [
-      'application_spend_items',
-      'application_capex_items',
-      'technology_spend_items',
-      'asset_spend_items',
-      'asset_capex_items',
-      'contract_spend_items',
-      'contract_capex_items',
-      'portfolio_project_opex',
-      'portfolio_project_capex',
-      'portfolio_request_opex',
-      'portfolio_request_capex',
-    ],
-    exclusions: [
-      {
-        table: 'spend_round_input_lines',
-        reason: 'the costed lines ride in the audit row of their round input (`lines`), with no audit row of their own',
-      },
-      {
-        table: 'spend_version_totals',
-        reason: 'derived by the version triggers, never audited: its changes are the amounts and allocation rows that caused them',
-      },
-      {
-        table: 'spend_item_analytics_values',
-        reason: 'the dimension values ride in the audit row of the line (`analytics_values`), with no audit row of their own',
-      },
-    ],
-  },
-  // The master-data pilots of lot 2: no child table writes under another audit label, so their
-  // entries have no children and no exclusions. Their references (chart, company, parent cost
-  // center, owner) resolve through the families in `record-history.service.ts`.
-  accounts: {
-    table: 'accounts',
-    module: 'accounts',
-    level: 'reader',
-    auditLabels: ['accounts'],
-    family: 'account',
-    children: {},
-    explicitParentLabels: [],
-    exclusions: [],
-  },
-  cost_centers: {
-    table: 'cost_centers',
-    module: 'cost_centers',
-    level: 'reader',
-    auditLabels: ['cost_centers'],
-    family: 'cost_center',
-    children: {},
-    explicitParentLabels: [],
-    exclusions: [],
-  },
-} as const satisfies Readonly<Record<string, RecordHistoryRecord>>;
+/**
+ * The inventory, one line per record file, sorted by table name: two record families add their own
+ * file and their own line, never the same line.
+ */
+const RECORD_HISTORY_DEFINITION = [
+  accountsRecord,
+  costCentersRecord,
+  spendItemsRecord,
+] as const satisfies readonly RecordHistoryRecord[];
 
 /** A physical table the history serves: the route key of `GET /records/:table/:id/history`. */
-export type RecordHistoryTable = keyof typeof RECORD_HISTORY_DEFINITION;
+export type RecordHistoryTable = (typeof RECORD_HISTORY_DEFINITION)[number]['table'];
 
 /** The inventory, by route key. */
-export const RECORD_HISTORY: Readonly<Record<RecordHistoryTable, RecordHistoryRecord>> = RECORD_HISTORY_DEFINITION;
+export const RECORD_HISTORY = Object.fromEntries(
+  RECORD_HISTORY_DEFINITION.map((entry) => [entry.table, entry]),
+) as unknown as Readonly<Record<RecordHistoryTable, RecordHistoryRecord>>;
 
 /** The entry of a route key, or undefined when the table is outside the inventory (never a prototype key). */
 export function recordHistoryEntry(table: string): RecordHistoryRecord | undefined {
