@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
-import { useDataAccessLimited } from '../auth/dataAccess';
+import { isReservedInLimitedAccess, useDataAccessLimited } from '../auth/dataAccess';
 import { useTenant } from '../tenant/TenantContext';
 import { useFeatures } from '../config/FeaturesContext';
 import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
@@ -363,8 +363,10 @@ export default function ProtectedRoute() {
       if (requirement.resource === 'ai_chat') {
         return aiChatRightRefusal;
       }
-      // A limited person's role may hold the level: their scope is what blocks, so the state names no module.
-      return createRequirement && dataAccessLimited ? refuse() : refuse(requirement);
+      // A level a limited person never gets: no module right would help, so the state names none.
+      return dataAccessLimited && isReservedInLimitedAccess(requirement.resource, requirement.level)
+        ? refuse()
+        : refuse(requirement);
     }
 
     // Redirect billing admins to billing page when subscription is unhealthy (only when billing is enabled)

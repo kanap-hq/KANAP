@@ -117,9 +117,19 @@ describe('ProtectedRoute on creation addresses', () => {
     expectForbidden(path, { from, resource, level: 'member' });
   });
 
-  it('names no module when the person is limited by scope', () => {
+  it('names no module when the level is reserved to people with access to all data', () => {
     rights.grants = { companies: 'member' };
     rights.dataAccessLimited = true;
     expectForbidden('/master-data/companies/new', { from: '/master-data/companies/new' });
+  });
+
+  it('names the missing module right of a limited person on a module open to them', () => {
+    rights.grants = { portfolio_projects: 'contributor' };
+    rights.dataAccessLimited = true;
+    expectForbidden('/portfolio/projects/new/summary', {
+      from: '/portfolio/projects/new/summary',
+      resource: 'portfolio_projects',
+      level: 'member',
+    });
   });
 });
