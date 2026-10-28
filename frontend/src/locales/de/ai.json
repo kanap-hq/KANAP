@@ -257,6 +257,8 @@
       "source_entity_code": "Code der Quellentität",
       "status": "Status",
       "supplier_role": "Lieferantenrolle",
+      "technology_applications": "Anwendungen",
+      "technology_servers": "Server",
       "turnover": "Umsatz",
       "typical_data": "Typische Daten",
       "users_year": "Benutzerjahr",

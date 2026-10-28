@@ -257,6 +257,35 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText("Modification des liens de l'incident « INC-7 - Mail outage ».")).toBeInTheDocument();
   });
 
+  it('shows the technology links with their applications and servers, in French', () => {
+    renderCard(preview({
+      tool_name: 'update_technology_links',
+      target: { entity_type: 'technologies', entity_id: 'tec-1', ref: 'TEC-1', title: 'TEC-1 - PostgreSQL' },
+      summary: 'Modification des liens de « TEC-1 - PostgreSQL ».',
+      changes: {
+        technology_applications: {
+          label: 'Applications',
+          from: null,
+          to: '**Ajoutés**\n- APP-36 - CheeseTrack: PostgreSQL 16 (existante, fin de support 2028-11-09)',
+          format: 'markdown',
+        },
+        technology_servers: {
+          label: 'Servers',
+          from: null,
+          to: '**Ajoutés**\n- AST-12 - srv-db-01 (nouvelle version 16, sans date de support)',
+          format: 'markdown',
+        },
+      },
+    }));
+
+    expect(screen.getByText('Applications')).toBeInTheDocument();
+    expect(screen.getByText('Serveurs')).toBeInTheDocument();
+    expect(screen.getAllByText('Ajoutés')).toHaveLength(2);
+    expect(screen.getByText(/APP-36 - CheeseTrack/)).toBeInTheDocument();
+    expect(screen.getByText(/AST-12 - srv-db-01/)).toBeInTheDocument();
+    expect(screen.getByText('Modification des liens de « TEC-1 - PostgreSQL ».')).toBeInTheDocument();
+  });
+
   it('shows a budget line deletion with its versions, tasks and links, in French', () => {
     renderCard(preview({
       tool_name: 'delete_record',

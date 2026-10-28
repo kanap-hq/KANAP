@@ -257,6 +257,8 @@
       "source_entity_code": "Code de l'entité source",
       "status": "Statut",
       "supplier_role": "Rôle fournisseur",
+      "technology_applications": "Applications",
+      "technology_servers": "Serveurs",
       "turnover": "Chiffre d'affaires",
       "typical_data": "Données typiques",
       "users_year": "Année des utilisateurs",

@@ -9,6 +9,7 @@ export type AiMutationWriteToolName =
   | 'update_master_data_record'
   | 'update_business_record'
   | 'update_incident_links'
+  | 'update_technology_links'
   | 'update_entity_relations'
   | 'update_document_content'
   | 'update_document_metadata'

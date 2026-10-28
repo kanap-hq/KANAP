@@ -2767,69 +2767,68 @@ function sentInstructions(recordedRequests: any[]): string[] {
  * bulk target set: the single call runs as asked, its refusal comes back, and the answer is shown.
  */
 async function testSingleTargetWriteIsNotTurnedIntoABulkWrite() {
-  const refusal = "Je ne peux pas ajouter de technologie à une application : les technologies sont en lecture seule pour Plaid. Ajoutez-la depuis l'onglet Technologies de CheeseTrack.";
+  const preview = {
+    preview_id: 'preview-tec-1',
+    tool_name: 'update_technology_links',
+    status: 'pending',
+    target: { entity_type: 'technologies', entity_id: 'tec-1', ref: 'TEC-1', title: 'TEC-1 - PostgreSQL' },
+    changes: {
+      technology_applications: {
+        label: 'Applications',
+        from: null,
+        to: '**Ajoutés**\n- APP-36 - CheeseTrack: PostgreSQL 16 (existante, fin de support 2028-11-09)',
+        format: 'markdown',
+      },
+    },
+    requires_confirmation: true,
+    actions: ['approve', 'reject'],
+    summary: 'Modification des liens de « TEC-1 - PostgreSQL ».',
+    error_message: null,
+    conversation_id: 'conv-1',
+    created_at: '2026-03-24T10:00:00.000Z',
+    expires_at: '2026-03-24T10:10:00.000Z',
+    approved_at: null,
+    rejected_at: null,
+    executed_at: null,
+  };
+  const answer = "J'ai préparé l'aperçu : il ajoute PostgreSQL 16 à CheeseTrack. Approuvez-le pour l'appliquer.";
   const { orchestrator, executedToolCalls, recordedRequests } = createOrchestrator({
     historyMessages: [{ role: 'user', content: "Ajoute la technologie PostgreSQL version 16 sur l'application CheeseTrack." }],
     availableTools: [
       { name: 'query_entities', category: 'authoritative', description: 'Query entities', input_summary: {}, read_only: true, surfaces: ['chat'] },
       PLAN_TOOL,
       {
-        name: 'update_entity_relations',
+        name: 'update_technology_links',
         category: 'mutation',
-        description: 'Update entity relations.',
+        description: 'Update technology links.',
         input_summary: {},
         read_only: false,
         surfaces: ['chat'],
         write_preview: {
-          entity_type: 'applications',
-          fields: ['relations'],
+          entity_type: 'technologies',
+          fields: ['linked_applications', 'linked_servers'],
           reversible: true,
-          prompt_hint: 'Use update_entity_relations with the record ref.',
+          prompt_hint: 'Use update_technology_links with the technology and, per side, what to add or remove.',
         },
       },
     ],
     providerEventBatches: [
       [
-        { type: 'text_delta', text: "Je peux lier PostgreSQL 16 (TEC-3) à CheeseTrack (APP-36). Voulez-vous que j'applique cette modification ?" },
+        { type: 'text_delta', text: "Je vais ajouter PostgreSQL 16 à CheeseTrack. Voulez-vous que j'applique ce changement ?" },
         { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
       ],
       [
-        { type: 'tool_call_start', id: 'tc-rel', name: 'update_entity_relations' },
-        { type: 'tool_call_delta', id: 'tc-rel', arguments: '{"ref":"APP-36","relation":"technologies","add":["TEC-3"]}' },
-        { type: 'tool_call_end', id: 'tc-rel' },
+        { type: 'tool_call_start', id: 'tc-tech', name: 'update_technology_links' },
+        { type: 'tool_call_delta', id: 'tc-tech', arguments: '{"technology":"PostgreSQL","applications":{"add":[{"application":"CheeseTrack","version":"16"}]}}' },
+        { type: 'tool_call_end', id: 'tc-tech' },
         { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
       ],
       [
-        { type: 'text_delta', text: refusal },
+        { type: 'text_delta', text: answer },
         { type: 'done', usage: { input_tokens: 140, output_tokens: 30 } },
       ],
     ],
-    toolResultsByName: {
-      update_entity_relations: { error: 'Unsupported relation "technologies" for applications.' },
-      // What the plan service returned before the fix when it was handed this pair: two failed steps without a ref.
-      prepare_mutation_plan: {
-        previews: [],
-        errors: ['APP-36', 'TEC-3'].map((ref, index) => ({
-          index,
-          step_key: `update_entity_relations_${ref.toLowerCase()}_${index + 1}`,
-          label: null,
-          tool_name: 'update_entity_relations',
-          message: 'Unsupported relation "technologies" for applications.',
-        })),
-        deferred: [],
-        total: 2,
-        created: 0,
-        failed: 2,
-        deferred_count: 0,
-        target_set_label: 'assistant stated target set',
-        expected_count: 2,
-        expected_refs: ['APP-36', 'TEC-3'],
-        covered_refs: [],
-        missing_refs: [],
-        excluded: [],
-        complete: false,
-      },
-    },
+    toolPreviews: [preview],
   });
 
   const events = await collectEvents(orchestrator.stream({
@@ -2838,10 +2837,16 @@ async function testSingleTargetWriteIsNotTurnedIntoABulkWrite() {
     userMessage: "Ajoute la technologie PostgreSQL version 16 sur l'application CheeseTrack.",
   }));
 
-  assert.deepEqual(executedToolCalls.map((call) => call.toolName), ['update_entity_relations']);
-  assert.equal(executedToolCalls[0].input.ref, 'APP-36');
+  // One target, one tool, one preview: the phrase never becomes a bulk plan or a substitute write.
+  assert.deepEqual(executedToolCalls.map((call) => call.toolName), ['update_technology_links']);
+  assert.equal(executedToolCalls[0].input.technology, 'PostgreSQL');
+  assert.equal(executedToolCalls[0].input.applications.add[0].application, 'CheeseTrack');
   assert.ok(!sentInstructions(recordedRequests).some((content) => /complete resolved bulk target set/i.test(content)));
-  assert.equal(streamedText(events), refusal);
+  const previews = events.filter((event) => event.type === 'preview') as any[];
+  assert.equal(previews.length, 1, 'one preview, not a plan of substitute changes');
+  assert.equal(previews[0].preview_id, preview.preview_id);
+  assert.equal(previews[0].tool_name, 'update_technology_links');
+  assert.equal(streamedText(events), answer);
   assert.doesNotMatch(streamedText(events), /previews de masse/);
 }
 

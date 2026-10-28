@@ -2148,6 +2148,7 @@ function buildToolIsolationCases(
     case 'update_master_data_record':
     case 'update_business_record':
     case 'update_incident_links':
+    case 'update_technology_links':
     case 'update_entity_relations':
     case 'update_task_fields':
     case 'update_task_status':

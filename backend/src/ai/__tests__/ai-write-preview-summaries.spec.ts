@@ -16,6 +16,7 @@ import { DeleteRecordAiMutationOperation } from '../mutation/operations/delete-r
 import { ImportGlpiTicketAiMutationOperation } from '../mutation/operations/import-glpi-ticket.ai-mutation-operation';
 import { SetIncidentConfidentialityAiMutationOperation } from '../mutation/operations/set-incident-confidentiality.ai-mutation-operation';
 import { UpdateIncidentLinksAiMutationOperation } from '../mutation/operations/update-incident-links.ai-mutation-operation';
+import { UpdateTechnologyLinksAiMutationOperation } from '../mutation/operations/update-technology-links.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from '../mutation/operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskStatusAiMutationOperation } from '../mutation/operations/update-task-status.ai-mutation-operation';
 
@@ -298,6 +299,58 @@ function testIncidentNoteAndLinkCards() {
   assert.equal(escaped('+ plus'), '**Ajoutés**\n- \\+ plus');
   assert.equal(escaped('1. ordered'), '**Ajoutés**\n- 1\\. ordered');
   assert.equal(escaped('version 1.2'), '**Ajoutés**\n- version 1.2');
+}
+
+function testTechnologyLinkCards() {
+  const operation = make(UpdateTechnologyLinksAiMutationOperation);
+  const version16 = {
+    id: 'version-16', label: '16', created: false,
+    standard_support_end: '2028-11-09', extended_support_end: null,
+  };
+  const application = { id: 'app-36', ref: 'APP-36', name: 'CheeseTrack', label: 'APP-36 - CheeseTrack' };
+  const server = { id: 'asset-12', ref: 'AST-12', name: 'srv-db-01', label: 'AST-12 - srv-db-01' };
+  const empty = { add: [], remove: [], already: [], absent: [] };
+  const pending = preview({
+    tool_name: 'update_technology_links',
+    target_entity_type: 'technologies',
+    target_entity_id: 'tec-1',
+    mutation_input: {
+      technology_ref: 'TEC-1',
+      technology_name: 'PostgreSQL',
+      technology_label: 'TEC-1 - PostgreSQL',
+      changes: {
+        applications: {
+          ...empty,
+          add: [{ application, version: version16, servers: [{ server, install: true }] }],
+          remove: [{ application: { id: 'app-2', ref: 'APP-2', name: 'Mail', label: 'APP-2 - Mail' }, version: null, allVersions: true, declarations: [] }],
+        },
+        servers: {
+          ...empty,
+          already: [{ server: { id: 'asset-13', ref: 'AST-13', name: 'srv-web-01', label: 'AST-13 - srv-web-01' }, version: null }],
+        },
+      },
+    },
+    current_values: { target_ref: 'TEC-1', target_title: 'TEC-1 - PostgreSQL' },
+  });
+  assert.equal(summary(operation, pending, 'en'), 'Update the links of TEC-1 - PostgreSQL.');
+  assert.equal(summary(operation, pending, 'fr'), 'Modification des liens de « TEC-1 - PostgreSQL ».');
+  assert.equal(summary(operation, pending, 'de'), 'Verknüpfungen von „TEC-1 - PostgreSQL“ ändern.');
+  assert.equal(summary(operation, pending, 'es'), 'Modificación de los vínculos de «TEC-1 - PostgreSQL».');
+  const changes = operation.presentPreview(pending, 'en').changes;
+  assert.equal(
+    changes.technology_applications.to,
+    '**Added**\n- APP-36 - CheeseTrack: PostgreSQL 16 (existing, end of support 2028-11-09)'
+    + '\n\n**Removed**\n- APP-2 - Mail',
+    'the application card',
+  );
+  assert.equal(
+    changes.technology_servers.to,
+    '**Added**\n- AST-12 - srv-db-01: PostgreSQL 16 (existing, end of support 2028-11-09)'
+    + '\n\n**Already equipped**\n- AST-13 - srv-web-01 (already linked)',
+    'the server card',
+  );
+  assert.equal(summary(operation, { ...pending, status: 'executed' } as AiMutationPreview, 'fr'),
+    'Appliqué : modification des liens de « TEC-1 - PostgreSQL ».');
 }
 
 function testIncidentStateAndConfidentialityCards() {
@@ -891,6 +944,7 @@ async function main() {
   testCardCodesAndFieldOrder();
   testIncidentPreviewsAndWarnings();
   testIncidentNoteAndLinkCards();
+  testTechnologyLinkCards();
   testIncidentStateAndConfidentialityCards();
   testDeleteRecordSummaryAndCard();
   await testDefaultTaskType();
