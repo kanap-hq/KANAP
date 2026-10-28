@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { z } from 'zod';
 import { validate as isUuid } from 'uuid';
-import { incidentVisibilitySql, resolveIncidentViewer, taskIncidentVisibilitySql } from '../../../incidents/incident-visibility';
+import { taskIncidentVisibilitySql } from '../../../incidents/incident-visibility';
 import { Task, TASK_STATUSES, TaskStatus } from '../../../tasks/task.entity';
 import { RelatedType, TasksUnifiedService } from '../../../tasks/tasks-unified.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
@@ -274,6 +274,10 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
     // A move to a project: checked again when the preview runs, as when it was asked.
     if (fields.related_object_type === 'project') {
       await this.assertProjectTarget(context, textOrNull(fields.related_object_id));
+    }
+    // A move to an incident keeps the incident's visibility and closure lock when it runs.
+    if (fields.related_object_type === 'incident') {
+      await this.support.resolveIncidentTarget(context, textOrNull(fields.related_object_id));
     }
 
     await this.tasks.updateById(
@@ -632,28 +636,10 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
     context: AiExecutionContextWithManager,
     ref: string | null,
   ): Promise<{ mode: 'incident'; type: 'incident'; id: string; label: string }> {
-    const normalized = textOrNull(ref);
-    if (!normalized) throw new BadRequestException('relation_ref is required when relation_type is incident.');
-    const uuid = isUuid(normalized);
-    const itemNumber = normalized.match(/^INC-(\d+)$/i)?.[1] ?? null;
-    const params: unknown[] = [context.tenantId, normalized, itemNumber];
-    const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
-    const visibility = incidentVisibilitySql('i', viewer, params);
-    const rows = await context.manager.query(
-      `SELECT i.id, i.item_number,
-              CASE WHEN i.confidential THEN CONCAT('INC-', i.item_number::text)
-                   ELSE CONCAT('INC-', i.item_number::text, ' - ', i.title)
-              END AS label
-       FROM incidents i
-       WHERE i.tenant_id = $1
-         AND (${uuid ? 'i.id = $2 OR ' : ''}($3::int IS NOT NULL AND i.item_number = $3::int) OR LOWER(i.title) = LOWER($2::text))
-         ${visibility}
-       ORDER BY i.item_number LIMIT 6`,
-      params,
-    );
-    if (rows.length === 0) throw new NotFoundException(`Incident "${normalized}" not found.`);
-    if (rows.length > 1) throw new BadRequestException(`Multiple incidents matched "${normalized}". Use an INC reference.`);
-    return { mode: 'incident', type: 'incident', id: String(rows[0].id), label: String(rows[0].label || rows[0].id) };
+    // The task support keeps the incident visibility and the closure lock, as the sub-route does.
+    const target = await this.support.resolveIncidentTarget(context, ref);
+    if (!target.id) throw new NotFoundException(`Incident "${textOrNull(ref) ?? ''}" not found.`);
+    return { mode: 'incident', type: 'incident', id: target.id, label: target.label };
   }
 
   private async describeRelation(context: AiExecutionContextWithManager, type: RelatedType, id: string | null): Promise<string | null> {

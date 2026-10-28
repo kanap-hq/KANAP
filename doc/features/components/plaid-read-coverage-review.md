@@ -9,7 +9,7 @@ This review maps what Plaid, the KANAP AI agent, can read through chat and MCP a
 
 Plaid is not a raw database reader. It reads KANAP data through AI tools in `AiToolRegistry`, and every tool is gated by AI surface access, tenant availability, RBAC, tenant-scoped query execution, and knowledge-library access where relevant.
 
-Plaid can now search, query, filter, sort, aggregate, and fetch detail for these 20 business/domain entity families:
+Plaid can now search, query, filter, sort, aggregate, and fetch detail for these business/domain entity families:
 
 - `accounts`
 - `analytics_categories`
@@ -24,6 +24,7 @@ Plaid can now search, query, filter, sort, aggregate, and fetch detail for these
 - `contracts`
 - `departments`
 - `documents`
+- `incidents`
 - `interfaces`
 - `locations`
 - `projects`
@@ -64,6 +65,7 @@ Entity-to-resource mapping:
 | `contracts` | `contracts` |
 | `departments` | `departments` |
 | `documents` | `knowledge` |
+| `incidents` | `incidents` |
 | `interfaces` | `applications` |
 | `locations` | `locations` |
 | `projects` | `portfolio_projects` |
@@ -100,6 +102,7 @@ Entity-to-resource mapping:
 | Requests | Search, query, aggregate, detail, relationship context. | Request comments and full activity/decision pagination are not first-class AI reads yet. |
 | Tasks | Search, query, aggregate, detail, relationship context, comments. | Attachments/time entries are not fully surfaced as separate AI reads yet. |
 | Knowledge documents | Search, query, aggregate, detail, markdown document read. | Binary attachments are metadata-only; version history, workflow decisions, locks, and activity are not first-class AI reads. |
+| Incidents | Search, query, aggregate, detail. | One register family (`incidents`). `asset`, `application` and `technology` filter on the link table by exact reference or exact name, case-insensitive: `APP-1` does not match `APP-12`. Grouping by one of them is many-to-many: the key is the linked record's name, an incident counts once per link, and an incident without a link is in no group. `detected_month` and `resolved_month` (`YYYY-MM`, UTC) filter and group; `resolution_hours` is the detected-to-resolved delay in hours with one decimal, null for a cancelled or unresolved incident or a negative delay, and also a line field. Date metrics answer `YYYY-MM-DD`. A confidential incident the caller cannot see enters no list, group or average. A Business Contributor filters and groups only the applications they take part in. Incident writes are outside this read review. |
 | Budget lines | Search, query, aggregate, detail. | One family, both natures (`nature`: `opex` or `capex`); a question without a nature covers both. Generic current-year/relative-year summary metrics and the native title (`product_name`) and description are available. Full allocation/version/report views are out of scope. |
 | Contracts | Search, query, aggregate, detail. | Attachments are metadata-only through detail; renewal workflows and full history are not separate AI reads. |
 | Companies | Search, query, aggregate, detail. | Company metrics/rollups are not report-grade AI views yet. |
@@ -110,6 +113,8 @@ Entity-to-resource mapping:
 | Analytics categories | Search, query, aggregate, detail. | Master-data read support only. |
 | Business processes | Search, query, aggregate, detail. | Categories and owner metadata are exposed where the service returns them. |
 | Users | Search, query, aggregate, detail. | Business user profile fields are readable; auth tokens, notification settings, and full permission maps are out of scope. |
+
+Incident linked groups are many-to-many, as the task linked groups are: the group counts need not add up to `total`, and a record with no link is in none of them. `detected_month` and `resolved_month` are read in UTC, whatever the database session time zone; `resolved_month` is empty unless the incident is resolved or closed.
 
 ## Deliberately Not First-Class Yet
 
@@ -140,5 +145,8 @@ These areas are still not separate AI entity families in this stage:
 - `backend/src/ai/ai-entity.service.ts`
 - `backend/src/ai/query/ai-query.executor.ts`
 - `backend/src/ai/query/ai-aggregate.executor.ts`
+- `backend/src/ai/query/ai-filter.types.ts`
 - `backend/src/ai/query/registries/*.registry.ts`
+- `backend/src/incidents/incident-sql.ts`
+- `backend/src/incidents/services/incidents.service.ts`
 - Domain service/module exports needed by the AI query executors.

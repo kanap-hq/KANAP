@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { ApplicationsService } from '../../applications/services/applications.service';
@@ -12,6 +12,7 @@ import { ConnectionsService } from '../../connections/services/connections.servi
 import { ContractsService } from '../../contracts/contracts.service';
 import { InterfacesService } from '../../interfaces/services/interfaces.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { findCatalogOption } from '../../it-ops-settings/catalog-resolve';
 import { ClassificationCatalog, resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProjectsService } from '../../portfolio/services';
@@ -54,7 +55,23 @@ import {
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
-import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
+import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, INCIDENT_STATUS_RANK } from '../../incidents/incident.entity';
+import {
+  INCIDENT_LOCKED_MESSAGE,
+  incidentVisibilitySql,
+  isFrozenIncidentStatus,
+  resolveIncidentViewer,
+} from '../../incidents/incident-visibility';
+import { IncidentsService } from '../../incidents/services/incidents.service';
+import {
+  AiWriteLanguage,
+  PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE,
+  incidentClosureWarning,
+  incidentAccessWarning,
+  previewSummaryText,
+  quoted,
+  writeActionText,
+} from '../ai-write-texts';
 
 export const AI_BUSINESS_RECORD_ENTITY_TYPES = [
   'applications',
@@ -65,6 +82,7 @@ export const AI_BUSINESS_RECORD_ENTITY_TYPES = [
   'interfaces',
   'connections',
   'budget_lines',
+  'incidents',
 ] as const;
 
 export type AiBusinessRecordEntityType = typeof AI_BUSINESS_RECORD_ENTITY_TYPES[number];
@@ -105,6 +123,8 @@ type FieldKind =
   | 'json'
   | 'application_category'
   | 'application_classification'
+  | 'incident_category'
+  | 'date_time'
   | 'non_negative_decimal'
   | 'percent'
   | 'relation'
@@ -373,6 +393,32 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       risk_mode: { label: 'Risk Mode', kind: 'enum', enumValues: RISK_MODES },
     },
   },
+  incidents: {
+    labelSingular: 'incident',
+    labelPlural: 'incidents',
+    businessResource: 'incidents',
+    tableName: 'incidents',
+    fields: {
+      title: { label: 'Title', kind: 'text', requiredOnCreate: true },
+      category: { label: 'Category', kind: 'incident_category', nullable: true },
+      severity: { label: 'Severity', kind: 'enum', enumValues: INCIDENT_SEVERITIES, requiredOnCreate: true },
+      status: { label: 'Status', kind: 'enum', enumValues: INCIDENT_STATUSES },
+      started_at: { label: 'Started', kind: 'date_time', nullable: true },
+      // Always stamped: a null would only be refused by the table at execution.
+      detected_at: { label: 'Detected', kind: 'date_time' },
+      resolved_at: { label: 'Resolved', kind: 'date_time', nullable: true },
+      closed_at: { label: 'Closed', kind: 'date_time', nullable: true },
+      reporter_user_id: { label: 'Reporter', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['reporter'] },
+      owner_user_id: { label: 'Owner', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['owner'] },
+      description: { label: 'Description', kind: 'text', nullable: true },
+      source_ref: { label: 'External reference', kind: 'text', nullable: true },
+      personal_data_affected: { label: 'Personal data affected', kind: 'boolean' },
+      authority_notification_required: { label: 'Authority notification required', kind: 'boolean' },
+      confidential: { label: 'Restricted access', kind: 'boolean' },
+      authority_notified_at: { label: 'Authority notified on', kind: 'date_time', nullable: true },
+      notified_parties: { label: 'Parties informed', kind: 'text', nullable: true },
+    },
+  },
   budget_lines: {
     labelSingular: 'budget line',
     labelPlural: 'budget lines',
@@ -406,6 +452,9 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
   },
 
 };
+
+/** Every field of the incident family, as the contributor screen accepts them. */
+export const AI_INCIDENT_WRITABLE_FIELDS: readonly string[] = Object.keys(ENTITY_CONFIG.incidents.fields);
 
 export const AI_BUSINESS_RECORD_BUSINESS_RESOURCES = Array.from(
   new Set(AI_BUSINESS_RECORD_ENTITY_TYPES.map((entityType) => ENTITY_CONFIG[entityType].businessResource)),
@@ -567,6 +616,7 @@ export class AiBusinessRecordMutationSupportService {
     private readonly portfolioProjects: PortfolioProjectsService,
     private readonly portfolioRequests: PortfolioRequestsService,
     private readonly taskSupport: AiTaskMutationSupportService,
+    private readonly incidents: IncidentsService,
   ) {}
 
   getBusinessResource(entityType: unknown): string {
@@ -673,6 +723,17 @@ export class AiBusinessRecordMutationSupportService {
       if (field.kind === 'percent' && parsed > 100) throw new BadRequestException(`${field.label} must be between 0 and 100.`);
       return { value: parsed, displayValue: String(parsed) };
     }
+    if (field.kind === 'date_time') {
+      // ISO 8601 with an explicit offset: the model converts a said time into the person's
+      // `time_zone` and says which instant it means; a bare day would be ambiguous.
+      const text = String(rawValue).trim();
+      const withZone = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(text);
+      const parsed = new Date(text);
+      if (!withZone || Number.isNaN(parsed.getTime())) {
+        throw new BadRequestException(`${field.label} must be an ISO date-time with a time zone, for example 2026-10-28T15:00:00+01:00.`);
+      }
+      return { value: parsed.toISOString(), displayValue: parsed.toISOString() };
+    }
     if (field.kind === 'date' && entityType === 'budget_lines' && (fieldName === 'disabled_at' || fieldName === 'effective_end')) {
       // A bare day is stored at 12:00 UTC, like the CSV import, so it reads the same day everywhere.
       let parsed: Date | null;
@@ -702,6 +763,22 @@ export class AiBusinessRecordMutationSupportService {
         manager: context.manager,
       });
       return { value: option.code, displayValue: option.label || option.code };
+    }
+    if (field.kind === 'incident_category') {
+      const settings = await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager });
+      const current = existing?.[fieldName] == null ? null : String(existing[fieldName]);
+      // A deprecated category is refused unless it is the one the incident already holds; the
+      // refusal lists only the categories a new value may take, as the screen's selector does.
+      const option = findCatalogOption(rawValue, settings.incidentCategories, current, true);
+      if (!option) {
+        const allowed = settings.incidentCategories
+          .filter((item) => !item.deprecated || item.code === current)
+          .map((item) => item.label || item.code)
+          .join(', ');
+        throw new BadRequestException(`Unknown incident category "${String(rawValue).trim()}". Valid incident categories: ${allowed}.`);
+      }
+      // The card names the category from the tenant's own list in the person's language: keep the code.
+      return { value: option.code, displayValue: option.code };
     }
     if (field.kind === 'application_classification') {
       if (!catalog || !field.classificationAxis) throw new BadRequestException('Application classification catalog is unavailable.');
@@ -769,6 +846,40 @@ export class AiBusinessRecordMutationSupportService {
       throw new BadRequestException('nature is required to create a budget line: opex or capex.');
     }
     return value;
+  }
+
+  /**
+   * The status rules of the incident screen, checked before any preview: an incident is created
+   * open or in progress and it only moves forward. Cancelling and lifting the confidentiality are
+   * separate administrator actions, so the field path names their tools. The service
+   * checks again at apply.
+   */
+  private assertIncidentTransition(
+    fields: Record<string, unknown>,
+    mode: 'create' | 'update',
+    existing?: Record<string, unknown> | null,
+  ): void {
+    const status = fields.status as string | undefined;
+    if (status !== undefined) {
+      if (status === 'cancelled') {
+        throw new BadRequestException('Cancelling an incident needs a register administrator: use `change_incident_state`.');
+      }
+      if (mode === 'create') {
+        if (status !== 'open' && status !== 'in_progress') {
+          throw new BadRequestException('An incident is created open or in progress. Create it open, then move it forward so the step stays visible.');
+        }
+      } else {
+        const current = String(existing?.status ?? '');
+        if (current
+          && INCIDENT_STATUS_RANK[status as keyof typeof INCIDENT_STATUS_RANK]
+            < INCIDENT_STATUS_RANK[current as keyof typeof INCIDENT_STATUS_RANK]) {
+          throw new BadRequestException('Status cannot move backwards: reopening an incident needs a register administrator (`change_incident_state`).');
+        }
+      }
+    }
+    if (mode === 'update' && fields.confidential === false && existing?.confidential === true) {
+      throw new BadRequestException('Lifting the confidentiality needs a register administrator: use `set_incident_confidentiality`.');
+    }
   }
 
   private async normalizeFields(
@@ -870,6 +981,9 @@ export class AiBusinessRecordMutationSupportService {
 
     if (Object.keys(fields).length === 0) {
       throw new BadRequestException('At least one writable field is required.');
+    }
+    if (entityType === 'incidents') {
+      this.assertIncidentTransition(fields, mode, existing);
     }
     if (mode === 'create') {
       for (const [name, field] of Object.entries(config.fields)) {
@@ -1146,6 +1260,21 @@ export class AiBusinessRecordMutationSupportService {
           `SELECT * FROM connections WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(connection_reference) = LOWER($2::text) OR LOWER(name) = LOWER($2::text)) ORDER BY connection_reference LIMIT 6`,
           [tenantId, ref],
         );
+      case 'incidents': {
+        // The reference, the exact title, or the uuid, with the viewer's confidentiality rule: a
+        // hidden incident matches nothing, as it does on the screen.
+        const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
+        const params: unknown[] = [tenantId, ref, Number.isInteger(itemNumber) ? itemNumber : -1];
+        const visibility = incidentVisibilitySql('incident_row', viewer, params);
+        return manager.query(
+          `SELECT * FROM incidents incident_row
+            WHERE incident_row.tenant_id = $1
+              AND (${uuid ? 'incident_row.id = $2 OR ' : ''}LOWER(incident_row.title) = LOWER($2::text) OR incident_row.item_number = $3)
+              ${visibility}
+            ORDER BY incident_row.item_number LIMIT 6`,
+          params,
+        );
+      }
       case 'budget_lines': {
         // Both natures in one family (`spend/budget-nature.ts`): by id, native title, own number
         // (BL-n or a bare number) or legacy number (OPX-n, CPX-n). Each row keeps its nature.
@@ -1291,6 +1420,7 @@ export class AiBusinessRecordMutationSupportService {
       case 'projects': return row.item_number == null ? null : `PRJ-${row.item_number}`;
       case 'requests': return row.item_number == null ? null : `REQ-${row.item_number}`;
       case 'budget_lines': return row.item_number == null ? null : `${BUDGET_LINE_PREFIX}-${row.item_number}`;
+      case 'incidents': return row.item_number == null ? null : `INC-${row.item_number}`;
       case 'accounts': return textOrNull(row.account_number);
       case 'cost_centers': return textOrNull(row.code);
       default: return null;
@@ -1317,6 +1447,10 @@ export class AiBusinessRecordMutationSupportService {
         return [row.item_number == null ? null : `REQ-${row.item_number}`, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled request';
       case 'budget_lines':
         return textOrNull(row.product_name) || 'Untitled budget line';
+      case 'incidents': {
+        const reference = this.recordRef('incidents', row);
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.title))].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled incident';
+      }
       case 'accounts':
         return [row.account_number, row.account_name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled account';
       case 'cost_centers':
@@ -1342,16 +1476,61 @@ export class AiBusinessRecordMutationSupportService {
     return values;
   }
 
+  /**
+   * What the incident card warns about before approval, computed from the state the write would
+   * leave: the record freezes on closure (only an administrator reopens it), and a restricted
+   * incident whose reporter and owner are both somebody else disappears from the person's
+   * register (the screen's `loseAccessMessage`). The card says it; the write itself is offered.
+   */
+  private async incidentWriteWarnings(
+    context: AiExecutionContextWithManager,
+    entityType: AiBusinessRecordEntityType,
+    existing: Record<string, unknown> | null,
+    fields: Record<string, unknown>,
+  ): Promise<Record<string, boolean> | undefined> {
+    if (entityType !== 'incidents') return undefined;
+    const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
+    const confidential = fields.confidential !== undefined
+      ? fields.confidential === true
+      : existing?.confidential === true;
+    // On a change, an incident without a reporter stays without one: only a creation defaults
+    // the reporter to the person, as the screen does.
+    const reporter = fields.reporter_user_id !== undefined
+      ? fields.reporter_user_id
+      : (existing ? (existing.reporter_user_id ?? null) : context.userId);
+    const owner = fields.owner_user_id !== undefined
+      ? fields.owner_user_id
+      : (existing?.owner_user_id ?? null);
+    const stillVisible = !!viewer.isAdmin
+      || String(reporter ?? '') === String(viewer.userId ?? '')
+      || String(owner ?? '') === String(viewer.userId ?? '');
+    const losesAccess = confidential && !stillVisible;
+    const closure = fields.status === 'closed' && existing?.status !== 'closed';
+    if (!losesAccess && !closure) return undefined;
+    return {
+      ...(closure ? { closure: true } : {}),
+      ...(losesAccess ? { lose_access: true } : {}),
+    };
+  }
+
   async prepareCreatePreview(
     context: AiExecutionContextWithManager,
     input: AiCreateBusinessRecordInput,
   ): Promise<AiPreparedMutationPreview> {
     const entityType = requireEntityType(input.entity_type);
     const normalized = await this.normalizeFields(context, entityType, coerceRecord(input.fields, 'fields'), 'create');
+    // An incident is created open when the request names no status: the card says which step it
+    // starts at. The service applies the same default.
+    if (entityType === 'incidents' && normalized.fields.status === undefined) {
+      normalized.fields.status = 'open';
+      normalized.displayValues.status = 'open';
+      normalized.fieldLabels.status = ENTITY_CONFIG.incidents.fields.status.label;
+    }
     const classification = entityType === 'applications'
       ? this.applicationClassificationPreviewState(normalized.fields, null)
       : null;
     const title = this.titleForPendingCreate(entityType, normalized.fields);
+    const warnings = await this.incidentWriteWarnings(context, entityType, null, normalized.fields);
     return {
       targetEntityType: entityType,
       targetEntityId: null,
@@ -1362,6 +1541,7 @@ export class AiBusinessRecordMutationSupportService {
         display_values: normalized.displayValues,
         field_labels: normalized.fieldLabels,
         ...(classification ? { classification } : {}),
+        ...(warnings ? { warnings } : {}),
       },
       currentValues: {
         target_ref: null,
@@ -1389,7 +1569,29 @@ export class AiBusinessRecordMutationSupportService {
   ): Promise<AiPreparedMutationPreview> {
     const entityType = requireEntityType(preview.target_entity_type || preview.mutation_input?.entity_type);
     if (!preview.target_entity_id) throw new BadRequestException('Original preview is missing the target record.');
+    if (entityType === 'incidents') {
+      const changed = coerceRecord(preview.mutation_input?.fields, 'mutation_input.fields');
+      // Going back would reopen the incident (administrator) or lift its confidentiality (lot 4):
+      // neither is a field to restore.
+      if (changed.status !== undefined) {
+        throw new BadRequestException('A status change cannot be undone: reopening the incident needs a register administrator (`change_incident_state`).');
+      }
+      if (changed.confidential === true) {
+        throw new BadRequestException('Setting the confidentiality cannot be undone here: lifting it needs a register administrator (`set_incident_confidentiality`).');
+      }
+    }
     const previousValues = coerceRecord(preview.current_values?.values, 'current_values.values');
+    if (entityType === 'incidents' && previousValues.category !== undefined) {
+      // The screen also refuses to go back to a retired category, but the sentence names the
+      // original value and the way out, never "Unknown incident category".
+      const settings = await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager });
+      const original = findCatalogOption(previousValues.category, settings.incidentCategories, null, false);
+      if (original?.deprecated) {
+        throw new BadRequestException(
+          `The incident's original category "${original.label || original.code}" was removed; choose an active category.`,
+        );
+      }
+    }
     const targetRow = this.withAnalyticsValueKeys(entityType, await this.getRecordSnapshot(context, entityType, preview.target_entity_id));
     const target = this.referenceFromRow(entityType, targetRow);
     return this.prepareUpdatePreviewForTarget(context, entityType, target, previousValues, {
@@ -1404,6 +1606,9 @@ export class AiBusinessRecordMutationSupportService {
     rawFields: Record<string, unknown>,
     opts: { sourcePreviewId: string | null },
   ): Promise<AiPreparedMutationPreview> {
+    if (entityType === 'incidents' && isFrozenIncidentStatus(String(target.row.status ?? ''))) {
+      throw new ForbiddenException(INCIDENT_LOCKED_MESSAGE);
+    }
     const normalized = await this.normalizeFields(context, entityType, rawFields, 'update', target.row);
     const requestedFieldNames = Object.keys(normalized.fields);
     const currentValues = this.pickFieldValues(entityType, target.row, requestedFieldNames);
@@ -1425,6 +1630,7 @@ export class AiBusinessRecordMutationSupportService {
     const classification = entityType === 'applications'
       ? this.applicationClassificationPreviewState(nextFields, target.row)
       : null;
+    const warnings = await this.incidentWriteWarnings(context, entityType, target.row, nextFields);
 
     return {
       targetEntityType: entityType,
@@ -1437,6 +1643,7 @@ export class AiBusinessRecordMutationSupportService {
         field_labels: fieldLabels,
         source_preview_id: opts.sourcePreviewId,
         ...(classification ? { classification } : {}),
+        ...(warnings ? { warnings } : {}),
       },
       currentValues: {
         target_ref: target.ref,
@@ -1510,13 +1717,14 @@ export class AiBusinessRecordMutationSupportService {
     }
 
     const previousCodes = current.values && typeof current.values === 'object' ? current.values as Record<string, unknown> : {};
+    const shownValue = (_fieldName: string, value: unknown): string | null => formatPlainValue(value);
     const changes: Record<string, AiMutationPreviewChangeDto> = {};
     for (const fieldName of fieldNames) {
       const field = config.fields[fieldName];
       changes[fieldName] = {
         label: String(fieldLabels[fieldName] || fieldName),
-        from: action === 'create' ? null : formatPlainValue(currentValues[fieldName]),
-        to: formatPlainValue(displayValues[fieldName]),
+        from: action === 'create' ? null : shownValue(fieldName, currentValues[fieldName]),
+        to: shownValue(fieldName, displayValues[fieldName]),
         format: 'text',
         // The card names a level from the catalog in the person's language, as the application screens do.
         ...(field?.kind === 'application_classification' && field.classificationAxis ? {
@@ -1535,6 +1743,15 @@ export class AiBusinessRecordMutationSupportService {
       changes.classification_review_state = {
         label: 'Classification Review', from: 'Reviewed', to: 'Stale after this change', format: 'text',
       };
+    }
+    const warnings = mutation.warnings && typeof mutation.warnings === 'object'
+      ? mutation.warnings as Record<string, unknown>
+      : null;
+    if (warnings?.closure) {
+      changes.closure_warning = { label: 'Closure', from: null, to: incidentClosureWarning(language), format: 'text' };
+    }
+    if (warnings?.lose_access) {
+      changes.access_warning = { label: 'Access', from: null, to: incidentAccessWarning(language), format: 'text' };
     }
 
     return {
@@ -1555,9 +1772,15 @@ export class AiBusinessRecordMutationSupportService {
     const action = String(mutation.action || '');
     const fields = coerceRecord(mutation.fields, 'mutation_input.fields');
     const executionFields = this.executionFields(fields);
+    const audit = buildAiMutationAudit(preview);
     if (action === 'create') {
-      const saved = await this.createRecord(context, entityType, executionFields);
-      const snapshot = await this.getRecordSnapshot(context, entityType, String((saved as any).id));
+      const saved = await this.createRecord(context, entityType, executionFields, audit);
+      // The incident service already writes the audit row with the preview's source and reference:
+      // the created detail is the snapshot (its viewer stays the author's, even when they no
+      // longer see the restricted incident they have just created).
+      const snapshot = entityType === 'incidents'
+        ? coerceRecord(saved, 'created incident')
+        : await this.getRecordSnapshot(context, entityType, String((saved as any).id));
       const ref = this.referenceFromRow(entityType, snapshot);
       preview.target_entity_id = ref.id;
       preview.current_values = {
@@ -1565,7 +1788,7 @@ export class AiBusinessRecordMutationSupportService {
         target_ref: ref.ref,
         target_title: ref.label,
       };
-      await this.logAiAudit(context, preview, entityType, 'create', null, snapshot);
+      if (entityType !== 'incidents') await this.logAiAudit(context, preview, entityType, 'create', null, snapshot);
       return;
     }
     if (action !== 'update') throw new BadRequestException('Unsupported business record mutation action.');
@@ -1589,7 +1812,17 @@ export class AiBusinessRecordMutationSupportService {
       }
     }
     const before = { ...live };
-    await this.updateRecord(context, entityType, preview.target_entity_id, executionFields);
+    try {
+      await this.updateRecord(context, entityType, preview.target_entity_id, executionFields, audit);
+    } catch (error) {
+      if (entityType === 'incidents' && (error as { getStatus?: () => number })?.getStatus?.() === 423) {
+        throw new BadRequestException(PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE);
+      }
+      throw error;
+    }
+    // The incident service writes its own audit row, with the preview's source and reference; the
+    // detail it returns stays the author's, even when the change makes the record invisible to them.
+    if (entityType === 'incidents') return;
     const after = await this.getRecordSnapshot(context, entityType, preview.target_entity_id);
     await this.logAiAudit(context, preview, entityType, 'update', before, after);
   }
@@ -1632,6 +1865,15 @@ export class AiBusinessRecordMutationSupportService {
     return this.getConfig(entityType).fields[fieldName]?.label ?? fieldName;
   }
 
+  /** The incident services' options for a Plaid write: the person's viewer and the preview's audit source. */
+  private async incidentWriteOptions(
+    context: AiExecutionContextWithManager,
+    audit?: ReturnType<typeof buildAiMutationAudit>,
+  ) {
+    const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
+    return { manager: context.manager, tenantId: context.tenantId, viewer, ...(audit ? { audit } : {}) };
+  }
+
   private async logAiAudit(
     context: AiExecutionContextWithManager,
     preview: AiMutationPreview,
@@ -1662,6 +1904,7 @@ export class AiBusinessRecordMutationSupportService {
     context: AiExecutionContextWithManager,
     entityType: AiBusinessRecordEntityType,
     fields: Record<string, unknown>,
+    audit?: ReturnType<typeof buildAiMutationAudit>,
   ): Promise<unknown> {
     switch (entityType) {
       case 'applications':
@@ -1680,6 +1923,8 @@ export class AiBusinessRecordMutationSupportService {
         return this.connections.create(fields as any, context.tenantId, context.userId, { manager: context.manager });
       case 'budget_lines':
         return this.budgetLines.create(fields, context.userId, { manager: context.manager });
+      case 'incidents':
+        return this.incidents.create(fields, context.userId, await this.incidentWriteOptions(context, audit));
     }
   }
 
@@ -1688,6 +1933,7 @@ export class AiBusinessRecordMutationSupportService {
     entityType: AiBusinessRecordEntityType,
     id: string,
     fields: Record<string, unknown>,
+    audit?: ReturnType<typeof buildAiMutationAudit>,
   ): Promise<unknown> {
     switch (entityType) {
       case 'applications':
@@ -1706,6 +1952,8 @@ export class AiBusinessRecordMutationSupportService {
         return this.connections.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager });
       case 'budget_lines':
         return this.budgetLines.update(id, fields, context.userId, { manager: context.manager });
+      case 'incidents':
+        return this.incidents.update(id, fields, context.userId, await this.incidentWriteOptions(context, audit));
     }
   }
 
@@ -1739,6 +1987,8 @@ export class AiBusinessRecordMutationSupportService {
         return this.connections.get(id, context.tenantId, { manager: context.manager, includeLegs: true }) as any;
       case 'budget_lines':
         return this.budgetLines.get(id, { manager: context.manager }) as any;
+      case 'incidents':
+        return this.incidents.get(id, await this.incidentWriteOptions(context)) as any;
     }
   }
 }

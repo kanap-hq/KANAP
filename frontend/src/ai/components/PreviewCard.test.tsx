@@ -15,7 +15,9 @@ vi.mock('../../hooks/useItOpsEnumOptions', () => ({
     labelFor: (field: string, code?: string | null) => (
       field === 'lifecycleStatus' && code === 'retired' ? 'Retirée'
         : field === 'serverRole' && code === 'database' ? 'Base de données'
-          : String(code ?? '')
+          : field === 'incidentCategories' && code === 'security' ? 'Sécurité'
+            : field === 'incidentCategories' && code === 'infrastructure' ? 'Infrastructure'
+              : String(code ?? '')
     ),
   }),
 }));
@@ -107,6 +109,152 @@ describe('PreviewCard in French', () => {
     }
     expect(screen.getByText('Suppression de la tâche « Migration ».')).toBeInTheDocument();
     expect(screen.queryByText('What goes with it')).not.toBeInTheDocument();
+  });
+
+  it('shows an incident closure with its status, category, date-time and warnings, in French', () => {
+    renderCard(preview({
+      tool_name: 'update_business_record',
+      target: { entity_type: 'incidents', entity_id: 'incident-1', ref: 'INC-7', title: 'INC-7 - Mail outage' },
+      summary: "Clôturé : modification de l'incident « INC-7 - Mail outage ».",
+      changes: {
+        title: { label: 'Title', from: 'Mail outage', to: 'Mail outage resolved', format: 'text' },
+        status: { label: 'Status', from: 'open', to: 'closed', format: 'text' },
+        severity: { label: 'Severity', from: 'major', to: 'minor', format: 'text' },
+        category: { label: 'Category', from: 'infrastructure', to: 'security', format: 'text' },
+        detected_at: { label: 'Detected', from: '2026-10-27T08:00:00.000Z', to: '2026-10-27T09:30:00.000Z', format: 'text' },
+        closure_warning: {
+          label: 'Closure',
+          from: null,
+          to: "Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.",
+          format: 'text',
+        },
+        access_warning: {
+          label: 'Access',
+          from: null,
+          to: "Après cette modification, seuls les administrateurs du registre, le déclarant et le responsable pourront l'ouvrir. Vous serez renvoyé vers le registre.",
+          format: 'text',
+        },
+      },
+    }));
+
+    expect(screen.getByText('Ouvert')).toBeInTheDocument();
+    expect(screen.getByText('Clôturé')).toBeInTheDocument();
+    expect(screen.getByText('Majeure')).toBeInTheDocument();
+    expect(screen.getByText('Mineure')).toBeInTheDocument();
+    expect(screen.getByText('Infrastructure')).toBeInTheDocument();
+    expect(screen.getByText('Sécurité')).toBeInTheDocument();
+    expect(screen.getByText('Titre')).toBeInTheDocument();
+    expect(screen.getByText('Statut')).toBeInTheDocument();
+    expect(screen.getByText('Gravité')).toBeInTheDocument();
+    expect(screen.getByText('Catégorie')).toBeInTheDocument();
+    expect(screen.getByText('Détecté')).toBeInTheDocument();
+    expect(screen.getAllByText(/2026, \d{2}:\d{2}/)).toHaveLength(2);
+    expect(screen.getByText("Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.")).toBeInTheDocument();
+    expect(screen.getByText("Après cette modification, seuls les administrateurs du registre, le déclarant et le responsable pourront l'ouvrir. Vous serez renvoyé vers le registre.")).toBeInTheDocument();
+    expect(screen.getByText('Clôture')).toBeInTheDocument();
+    expect(screen.getByText('Accès')).toBeInTheDocument();
+  });
+
+  it('shows an incident reopen with its before and after status and the reason, in French', () => {
+    renderCard(preview({
+      tool_name: 'change_incident_state',
+      target: { entity_type: 'incidents', entity_id: 'incident-1', ref: 'INC-7', title: 'INC-7 - Mail outage' },
+      summary: "Réouverture de l'incident « INC-7 - Mail outage ».",
+      changes: {
+        status: { label: 'Status', from: 'closed', to: 'in_progress', format: 'text' },
+        reason: { label: 'Reason', from: null, to: 'Retour après correctif.', format: 'text' },
+      },
+    }));
+
+    expect(screen.getByText('Statut')).toBeInTheDocument();
+    expect(screen.getByText('Clôturé')).toBeInTheDocument();
+    expect(screen.getByText('En cours')).toBeInTheDocument();
+    expect(screen.getByText('Raison')).toBeInTheDocument();
+    expect(screen.getByText('Retour après correctif.')).toBeInTheDocument();
+    expect(screen.getByText("Réouverture de l'incident « INC-7 - Mail outage ».")).toBeInTheDocument();
+  });
+
+  it('shows an incident cancellation with the freeze warning, in French', () => {
+    renderCard(preview({
+      tool_name: 'change_incident_state',
+      target: { entity_type: 'incidents', entity_id: 'incident-1', ref: 'INC-7', title: 'INC-7 - Mail outage' },
+      summary: "Annulation de l'incident « INC-7 - Mail outage ».",
+      changes: {
+        status: { label: 'Status', from: 'open', to: 'cancelled', format: 'text' },
+        reason: { label: 'Reason', from: null, to: 'Doublon de INC-6.', format: 'text' },
+        cancel_warning: {
+          label: 'Cancellation',
+          from: null,
+          to: "Cette annulation fige l'incident : seul un administrateur pourra le rouvrir.",
+          format: 'text',
+        },
+      },
+    }));
+
+    expect(screen.getByText('Ouvert')).toBeInTheDocument();
+    expect(screen.getByText('Annulé')).toBeInTheDocument();
+    expect(screen.getByText('Doublon de INC-6.')).toBeInTheDocument();
+    expect(screen.getByText("Cette annulation fige l'incident : seul un administrateur pourra le rouvrir.")).toBeInTheDocument();
+    expect(screen.getByText('Annulation')).toBeInTheDocument();
+  });
+
+  it('shows an incident confidentiality lifted, in French', () => {
+    renderCard(preview({
+      tool_name: 'set_incident_confidentiality',
+      target: { entity_type: 'incidents', entity_id: 'incident-1', ref: 'INC-7', title: 'INC-7 - Mail outage' },
+      summary: "Levée de la confidentialité de l'incident « INC-7 - Mail outage ».",
+      changes: {
+        confidential: { label: 'Confidential', from: 'Yes', to: 'No', format: 'text' },
+      },
+    }));
+
+    expect(screen.getByText('Restreindre aux administrateurs du registre')).toBeInTheDocument();
+    expect(screen.getByText('Oui')).toBeInTheDocument();
+    expect(screen.getByText('Non')).toBeInTheDocument();
+    expect(screen.getByText("Levée de la confidentialité de l'incident « INC-7 - Mail outage ».")).toBeInTheDocument();
+  });
+
+  it('shows an incident note with its text and event time, in French', () => {
+    renderCard(preview({
+      tool_name: 'add_incident_note',
+      target: { entity_type: 'incidents', entity_id: 'incident-1', ref: 'INC-7', title: 'INC-7 - Mail outage' },
+      summary: "Ajout d'une note à l'incident « INC-7 - Mail outage ».",
+      changes: {
+        note: { label: 'Note', from: null, to: 'Mail is back.\nFailover to the secondary site done.', format: 'markdown' },
+        occurred_at: { label: "Date de l'événement", from: null, to: '2026-10-28T14:00:00.000Z', format: 'text' },
+      },
+    }));
+
+    expect(screen.getByText('Note')).toBeInTheDocument();
+    expect(screen.getByText(/Mail is back\./)).toBeInTheDocument();
+    expect(screen.getByText(/Failover to the secondary site done\./)).toBeInTheDocument();
+    expect(screen.getByText("Date de l'événement")).toBeInTheDocument();
+    expect(screen.getByText(/2026, \d{2}:\d{2}/)).toBeInTheDocument();
+    expect(screen.getByText("Ajout d'une note à l'incident « INC-7 - Mail outage ».")).toBeInTheDocument();
+  });
+
+  it('shows the incident links added, removed and already present, in French', () => {
+    renderCard(preview({
+      tool_name: 'update_incident_links',
+      target: { entity_type: 'incidents', entity_id: 'incident-1', ref: 'INC-7', title: 'INC-7 - Mail outage' },
+      summary: "Modification des liens de l'incident « INC-7 - Mail outage ».",
+      changes: {
+        linked_assets: { label: 'Linked assets', from: null, to: '**Ajoutés**\n- AST-12 - PAR-ESX-01', format: 'markdown' },
+        linked_applications: { label: 'Linked applications', from: null, to: '**Retirés**\n- APP-2 - Mail', format: 'markdown' },
+        linked_technologies: { label: 'Linked technologies', from: null, to: '**Déjà liés**\n- TEC-3 - PostgreSQL', format: 'markdown' },
+      },
+    }));
+
+    expect(screen.getByText('Actifs liés')).toBeInTheDocument();
+    expect(screen.getByText('Applications liées')).toBeInTheDocument();
+    expect(screen.getByText('Technologies liées')).toBeInTheDocument();
+    expect(screen.getByText('Ajoutés')).toBeInTheDocument();
+    expect(screen.getByText('Retirés')).toBeInTheDocument();
+    expect(screen.getByText('Déjà liés')).toBeInTheDocument();
+    for (const text of ['AST-12 - PAR-ESX-01', 'APP-2 - Mail', 'TEC-3 - PostgreSQL']) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.getByText("Modification des liens de l'incident « INC-7 - Mail outage ».")).toBeInTheDocument();
   });
 
   it('shows a budget line deletion with its versions, tasks and links, in French', () => {

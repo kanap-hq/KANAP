@@ -1553,6 +1553,9 @@
     "incident": {
       "title": "Incidente",
       "newTitle": "Nuevo incidente",
+      "fields": {
+        "title": "Título"
+      },
       "untitled": "Incidente sin título",
       "backLabel": "Registro de incidentes",
       "previous": "Incidente anterior",

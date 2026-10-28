@@ -36,6 +36,12 @@ export interface AiMutationOperation<TInput = unknown> {
     preview?: AiMutationPreview;
   }): string;
 
+  /** The family the write's level and field rules apply to, when the input names no `entity_type`. */
+  resolveWriteFamily?(params: {
+    input?: TInput;
+    preview?: AiMutationPreview;
+  }): string;
+
   prepareCreatePreview(
     context: AiExecutionContextWithManager,
     input: TInput,

@@ -296,7 +296,19 @@ Gardez la liste courte. Les catégories sont ce qui vous servira à regrouper un
 
 ## Demander à l'assistant
 
-Plaid peut interroger le registre dans le chat, avec les mêmes droits que dans le reste de l'application. Demandez-lui un décompte (« Combien d'incidents critiques ce trimestre ? »), une liste filtrée (« Liste des incidents ouverts sur PAR-ESX-01 ») ou une fiche complète (« Résumé de INC-2 »). Cette dernière inclut le journal et la revue d'incident : une question peut donc trouver sa réponse dans la cause racine ou le retour d'expérience. Les heures sont données dans votre propre fuseau horaire. Quand Plaid lit un incident, les objets liés suivent les mêmes droits que le rapport PDF. Un incident restreint reste hors des réponses, des décomptes et des sources, revue comprise.
+Plaid lit et écrit le registre dans le chat, avec les mêmes droits que dans le reste de l'application. Chaque modification arrive sous forme d'aperçu que vous approuvez.
+
+**Lecture** : demandez à Plaid un décompte (« Combien d'incidents critiques ce trimestre ? »), une liste filtrée (« Liste des incidents ouverts sur PAR-ESX-01 ») ou une fiche complète (« Résumé de INC-2 »). La fiche complète inclut le journal et la revue d'incident : une question peut donc trouver sa réponse dans la cause racine ou le retour d'expérience. Les heures sont données dans votre propre fuseau horaire. Quand Plaid lit un incident, les objets liés suivent les mêmes droits que le rapport PDF. Un incident restreint que vous ne pouvez pas voir reste hors des réponses, des décomptes, des regroupements, des moyennes et des sources, revue comprise.
+
+Plaid filtre les incidents par actif, application ou technologie, désignés par leur référence ou leur nom exact : `APP-1` n'amène pas les incidents de `APP-12`. Regroupé par actif, application ou technologie, un incident compte dans chacune de ses fiches liées, si bien que la somme des groupes peut dépasser le total. Un incident sans lien n'apparaît dans aucun groupe. Plaid regroupe aussi les incidents par mois de détection ou de résolution. Les mois suivent l'UTC (temps universel coordonné) : un incident détecté à 00:30 le 1er novembre à Paris compte en octobre. Plaid lit le délai de résolution, de la détection à la résolution en heures, pour chaque incident ou en moyenne, en minimum ou en maximum. Les incidents annulés et non résolus en sont exclus. Demandez par exemple : « Délai de résolution moyen des incidents majeurs par mois cette année ».
+
+**Écriture** (niveau Contributeur sur Incidents) : Plaid enregistre un incident, modifie ses champs et fait avancer son statut jusqu'à Clôturé. Il enregistre un incident Ouvert ou En cours. Un incident déjà résolu est enregistré ouvert, puis avancé dans un second aperçu, pour que l'étape apparaisse dans le journal. Plaid peut activer **Restreindre aux administrateurs du registre**. L'aperçu vous avertit quand cela vous masquerait l'incident. Plaid ajoute aussi des notes au journal, avec l'heure à laquelle la note se rapporte si vous la donnez, et lie ou délie des actifs, des applications et des technologies, désignés par leur référence ou leur nom exact, ou par le nom d'hôte ou le FQDN pour un actif. Avec le niveau Membre sur Tâches, il crée une tâche de suivi sur l'incident. Demandez par exemple : « Enregistre un incident majeur : messagerie indisponible au bureau de Lyon depuis 08:40, lié à PAR-MAIL-01 ».
+
+La clôture fige la fiche, et l'aperçu de clôture le signale. Seul un administrateur peut rouvrir l'incident.
+
+**Actions d'administrateur** (niveau Administrateur sur Incidents) : Plaid rouvre un incident résolu, clôturé ou annulé, annule un incident, et active ou désactive **Restreindre aux administrateurs du registre**, y compris sur un incident clôturé ou annulé. Rouvrir et annuler demandent une raison, inscrite au journal, par exemple : « Rouvre INC-14 : le problème est revenu après le correctif ».
+
+La suppression d'un incident et l'ajout de pièces jointes restent sur la page de l'incident (voir [Supprimer un incident](#supprimer-un-incident)). Les assistants connectés par MCP ne font que lire.
 
 ---
 

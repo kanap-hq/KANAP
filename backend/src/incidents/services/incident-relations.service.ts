@@ -482,6 +482,8 @@ export class IncidentRelationsService extends IncidentsBaseService {
         before: current.map((item) => item.id),
         after: next.map((item) => item.id),
         userId,
+        // The screen leaves the source out (`user`); Plaid names its preview, as the other incident writes do.
+        ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef ?? null } : {}),
       },
       { manager: mg },
     );
