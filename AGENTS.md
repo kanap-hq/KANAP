@@ -342,6 +342,7 @@ or subscriptions must work in both modes.
   printing stay in the browser: they render the screen.
 - License and marketing copy leads with user benefits (no lock-in, self-hosting, control), not the
   license itself.
+- The interface shows only the actions the person can take: a creation address opened without the right to create leads to the access denied page, and an existing record the person may only read opens with read-only fields. A new creation address goes into `CREATE_ROUTE_REQUIREMENTS` (`frontend/src/components/createRouteRequirements.ts`).
 
 ## UI and design
 
