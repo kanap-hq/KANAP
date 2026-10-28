@@ -101,6 +101,42 @@ export class BudgetLinesService {
     return budgetList.budgetListAggregateRequest(SUMMARY_SCOPES.all, this.deps(opts.access), body, opts.manager);
   }
 
+  /** The lines of `ids` as the unified list draws them (the AI detail, which names its line by id). */
+  summaryRowsByIds(
+    ids: string[],
+    query: {
+      years?: number[];
+      includeRecipientDetails?: boolean;
+      includeLatestTask?: boolean;
+      includeNextYearAllocation?: boolean;
+    } = {},
+    opts: { manager: EntityManager },
+  ) {
+    return budgetList.budgetListRowsByIds(SUMMARY_SCOPES.all, this.deps(), { ...query, ids }, opts.manager);
+  }
+
+  /** The lines of a list state grouped and measured, both natures (`budgetListAggregate`). */
+  summaryAggregate(query: any, spec: unknown, opts: ReadOptions) {
+    return budgetList.budgetListAggregate(SUMMARY_SCOPES.all, this.deps(opts.access), query, spec as any, opts.manager);
+  }
+
+  // The children of one line, read through the service of its nature (their routes' contract).
+  listApplications(id: string, nature: BudgetNature, opts: { manager: EntityManager }) {
+    return this.items(nature).listApplications(id, opts);
+  }
+
+  listProjects(id: string, nature: BudgetNature, opts: { manager: EntityManager }) {
+    return this.items(nature).listProjects(id, opts);
+  }
+
+  listLinks(id: string, nature: BudgetNature, opts: { manager: EntityManager }) {
+    return this.items(nature).listLinks(id, opts);
+  }
+
+  listAttachments(id: string, nature: BudgetNature, opts: { manager: EntityManager }) {
+    return this.items(nature).listAttachments(id, opts);
+  }
+
   /**
    * The check before a delete (`POST /budget-lines/delete-check`): the lines of either nature
    * with amounts in a frozen budget column, in the order asked (each nature's `deleteCheck`).

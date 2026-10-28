@@ -25,6 +25,7 @@ import {
 } from '../../spend/reports/shared/reportAggregates';
 import { CAPEX_NUMBER_OFFSET, inRolledBackTransaction, Kind, runSpecs } from '../../spend/__tests__/round-inputs.fixtures';
 import { realAllocationCalculator, realSummaryDeps } from '../../spend/__tests__/oracle/oracle-deps';
+import { budgetReadService } from '../../spend/__tests__/budget-lines.fixtures';
 import { PgClient, roleExists, seedNodes, seedPerson, seedRole } from '../../data-access/__tests__/data-access-test-helpers';
 
 // Staff cost, cost per FTE and day rate in the AI layer (lot L2 of the Plaid and MCP pass), against
@@ -43,7 +44,7 @@ import { PgClient, roleExists, seedNodes, seedPerson, seedRole } from '../../dat
 
 const Y = new Date().getFullYear();
 const KINDS: Kind[] = ['opex', 'capex'];
-const ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
+const ENTITY: Record<Kind, 'budget_lines'> = { opex: 'budget_lines', capex: 'budget_lines' };
 
 const CALENDAR_ID = '66666666-6666-4666-8666-666666666666';
 /** A calendar of 20 working days in every month. */
@@ -181,19 +182,21 @@ function itemService(kind: Kind): any {
   return kind === 'opex' ? new (SpendItemsService as any)(...args) : new (CapexItemsService as any)(...args);
 }
 
-// Constructor positions (both executors): spendItems 5, contracts 6, capexItems 17; the query executor's allocation calculator 23.
-function aggregateExecutor(kind: Kind): AiAggregateExecutor {
-  const args: any[] = Array.from({ length: 22 }, () => ({}));
-  args[kind === 'opex' ? 5 : 17] = itemService(kind);
-  return new (AiAggregateExecutor as any)(...args);
+// Constructor positions: budgetLines 1; the query executor's allocation calculator 22, policy 23.
+function queryExecutor(_kind: Kind): AiQueryExecutor {
+  const args: any[] = Array.from({ length: 25 }, () => ({}));
+  args[1] = budgetReadService();
+  args[6] = { listContractsForSpendItem: async () => ({ items: [] }), listContractsForCapexItem: async () => ({ items: [] }) };
+  args[22] = realAllocationCalculator();
+  args[23] = { canReadEntityType: async () => true };
+  return new (AiQueryExecutor as any)(...args);
 }
 
-function queryExecutor(kind: Kind): AiQueryExecutor {
-  const args: any[] = Array.from({ length: 24 }, () => ({}));
-  args[kind === 'opex' ? 5 : 17] = itemService(kind);
-  args[6] = { listContractsForSpendItem: async () => ({ items: [] }), listContractsForCapexItem: async () => ({ items: [] }) };
-  args[23] = realAllocationCalculator();
-  return new (AiQueryExecutor as any)(...args);
+function aggregateExecutor(_kind: Kind): AiAggregateExecutor {
+  const args: any[] = Array.from({ length: 23 }, () => ({}));
+  args[1] = budgetReadService();
+  args[21] = { canReadEntityType: async () => true };
+  return new (AiAggregateExecutor as any)(...args);
 }
 
 function context(runner: QueryRunner, tenantId: string, userId: string | null = null): AiExecutionContextWithManager {

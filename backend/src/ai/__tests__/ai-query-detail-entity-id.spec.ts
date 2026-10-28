@@ -202,11 +202,12 @@ async function testNativeBudgetReferences() {
   const { executor } = createExecutor();
   const map = executor as any;
   const registry = { fields: {} };
-  const opex = map.mapSpendItem({ id: 'opex', item_number: 12, reference: 'BL-12', product_name: 'License' }, registry);
-  const capex = map.mapCapexItem({ id: 'capex', item_number: 3, reference: 'BL-103', description: 'Server' }, registry);
+  const opex = map.mapBudgetLine({ id: 'opex', nature: 'opex', item_number: 12, reference: 'BL-12', product_name: 'License' }, registry);
+  const capex = map.mapBudgetLine({ id: 'capex', nature: 'capex', item_number: 103, reference: 'BL-103', product_name: 'Server' }, registry);
   assert.equal(opex.ref, 'BL-12');
-  assert.equal(capex.ref, 'BL-103', 'CAPEX alias item_number is its CPX number, reference is native');
-  assert.equal(map.mapSpendItem({ id: 'opex', item_number: 12 }, registry).ref, 'BL-12');
+  assert.equal(capex.ref, 'BL-103', 'the CAPEX line carries its native BL reference');
+  assert.equal(capex.metadata.nature, 'capex', 'the CAPEX line says its nature');
+  assert.equal(map.mapBudgetLine({ id: 'opex', nature: 'opex', item_number: 12 }, registry).ref, 'BL-12');
 }
 
 async function run() {

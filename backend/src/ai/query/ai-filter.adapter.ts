@@ -9,13 +9,12 @@ import {
 } from './ai-filter.types';
 
 /**
- * Set columns whose list understands a set filter in exclude mode: every column of the OPEX and CAPEX
- * lists (SQL list engine), and the application lifecycle (`{ not: ['retired'] }` is the scope of the
- * Applications list and of the Compliance tile).
+ * Set columns whose list understands a set filter in exclude mode: every column of the budget lines
+ * list (SQL list engine, both natures), and the application lifecycle (`{ not: ['retired'] }` is the
+ * scope of the Applications list and of the Compliance tile).
  */
 const EXCLUDE_SET_COLUMNS: Partial<Record<string, 'all' | Set<string>>> = {
-  spend_items: 'all',
-  capex_items: 'all',
+  budget_lines: 'all',
   applications: new Set(['lifecycle']),
 };
 

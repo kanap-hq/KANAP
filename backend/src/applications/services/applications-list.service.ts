@@ -1,5 +1,5 @@
 import { classificationSqlExpressions } from '../../it-ops-settings/classification-sql';
-import { linkedLineOf } from '../../spend/budget-nature';
+import { linkedLineOf, linkedLineOfAnyNature } from '../../spend/budget-nature';
 import { catalogFromMetadata } from '../../it-ops-settings/classification-catalog';
 import { classificationLabels, classificationReadState } from './application-classification';
 import { Injectable, NotFoundException } from '@nestjs/common';
@@ -54,6 +54,7 @@ const classificationSort: Record<string, string> = { ...classificationSql, criti
 const SEQUENTIAL_ID_SORT_SQL = `NULLIF(substring(a.sequential_id FROM '([0-9]+)$'), '')::int`;
 /** The count columns, sortable when the list includes them. */
 const COUNT_SORT_SQL: Record<string, { include: string; sql: string }> = {
+  budget_lines_count: { include: 'counts', sql: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOfAnyNature('l.tenant_id', 'l.spend_item_id')})` },
   spend_count: { include: 'counts', sql: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')})` },
   capex_count: { include: 'counts', sql: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')})` },
   contracts_count: { include: 'counts', sql: '(SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)' },
@@ -439,6 +440,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
     }
 
     // Derived filter targets
+    targets['budget_lines_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOfAnyNature('l.tenant_id', 'l.spend_item_id')})`, dataType: 'number' };
     targets['spend_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')})`, dataType: 'number' };
     targets['capex_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')})`, dataType: 'number' };
     targets['contracts_count'] = { expression: 'a.id', numericExpression: `(SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)`, dataType: 'number' };
@@ -698,6 +700,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
           const s = expansions.spendAgg[app.id];
           const cpx = expansions.capexAgg[app.id];
           const ct = expansions.contractAgg[app.id];
+          base.budget_lines_count = (s?.c || 0) + (cpx?.c || 0);
           base.spend_count = s?.c || 0;
           base.spend_first_name = s?.first_name || null;
           base.capex_count = cpx?.c || 0;

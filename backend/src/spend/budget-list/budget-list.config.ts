@@ -503,11 +503,17 @@ export class BudgetListConfig implements ListConfig {
     return { kind: 'text', sql: `${category}.name`, joins: [category], position: `${category}.sort_order` };
   }
 
-  /** The line's link on the tenant's dimension of that index (one row at most: the link's primary key). */
+  /**
+   * The line's link on the tenant's dimension of that index (one row at most: the link's primary
+   * key). In the all-natures scope, a dimension that applies to one nature only links the lines of
+   * that nature: the field stays blank for the other nature (a stale value is never read).
+   */
   private axisLink(stmt: SqlStatement, index: number): string {
     const link = `ax${index}`;
+    const appliesTo = this.rt.axes!.appliesTo[index];
+    const nature = this.scope.allNatures && appliesTo ? ` AND i.nature = ${sqlLiteral(appliesTo)}` : '';
     // The axis id is one of the tenant's dimension ids read from the database (a validated uuid), not request text.
-    return this.join(stmt, link, `LEFT JOIN ${this.scope.analyticsLink.table} ${link} ON ${link}.tenant_id = ${stmt.tenant} AND ${link}.item_id = i.id AND ${link}.axis_id = ${sqlLiteral(this.rt.axes!.ids[index])}::uuid`);
+    return this.join(stmt, link, `LEFT JOIN ${this.scope.analyticsLink.table} ${link} ON ${link}.tenant_id = ${stmt.tenant} AND ${link}.item_id = i.id AND ${link}.axis_id = ${sqlLiteral(this.rt.axes!.ids[index])}::uuid${nature}`);
   }
 
   /**

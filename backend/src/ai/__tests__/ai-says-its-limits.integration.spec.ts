@@ -133,7 +133,7 @@ const cents = (value: number) => Math.round(value * 100);
 async function testTotals(h: Harness, runner: QueryRunner, s: Seed) {
   const full = ctx(runner, s, 'full');
   // The top 10 of the pass: one page of ten, the totals of the twelve lines.
-  const page = await h.tools.execute(full, 'query_entities', { entity_type: 'spend_items', limit: 10, sort: { field: 'y_budget', direction: 'desc' } });
+  const page = await h.tools.execute(full, 'query_entities', { entity_type: 'budget_lines', limit: 10, sort: { field: 'y_budget', direction: 'desc' } });
   assert.equal(page.total, BUDGETS.length);
   assert.equal(page.returned, 10, 'one page of ten');
   const totals = page.amount_totals;
@@ -154,12 +154,12 @@ async function testTotals(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(cents(pageTotals.values.y_budget), cents(topTen.reduce((sum: number, value: number) => sum + value, 0)), 'the sum of the ten');
   assert.equal(cents(pageTotals.values.y_budget), cents(2792515.83));
   assert.match(pageTotals.note, /returned on this page only/);
-  const secondPage = await h.tools.execute(full, 'query_entities', { entity_type: 'spend_items', limit: 10, page: 2, sort: { field: 'y_budget', direction: 'desc' } });
+  const secondPage = await h.tools.execute(full, 'query_entities', { entity_type: 'budget_lines', limit: 10, page: 2, sort: { field: 'y_budget', direction: 'desc' } });
   assert.equal(cents(secondPage.page_amount_totals.values.y_budget), cents(191840 + 1000), 'the second page: its two lines');
-  const aggregate = await h.tools.execute(full, 'aggregate_entities', { entity_type: 'spend_items', group_by: 'status', metric: 'y_budget', function: 'sum' });
+  const aggregate = await h.tools.execute(full, 'aggregate_entities', { entity_type: 'budget_lines', group_by: 'status', metric: 'y_budget', function: 'sum' });
   assert.equal(cents(aggregate.groups.reduce((sum: number, group: any) => sum + Number(group.value), 0)), cents(totals.values.y_budget), 'the aggregate of the same lines');
   // A filtered selection: its own total.
-  const filtered = await h.tools.execute(full, 'query_entities', { entity_type: 'spend_items', filters: { y_budget: { op: 'lt', value: 200000 } } });
+  const filtered = await h.tools.execute(full, 'query_entities', { entity_type: 'budget_lines', filters: { y_budget: { op: 'lt', value: 200000 } } });
   assert.equal(cents(filtered.amount_totals.values.y_budget), cents(191840 + 191840 + 1000), 'the filtered lines only');
 
   const contracts = await h.tools.execute(full, 'query_entities', { entity_type: 'contracts', limit: 1 });
@@ -258,16 +258,16 @@ async function testFilterValues(h: Harness, runner: QueryRunner, s: Seed) {
 
 async function testDataAccessNote(h: Harness, runner: QueryRunner, s: Seed) {
   const full = ctx(runner, s, 'full');
-  const unscoped = await h.executor.execute(full, { entity_type: 'spend_items' });
+  const unscoped = await h.executor.execute(full, { entity_type: 'budget_lines' });
   assert.equal(unscoped.data_access, undefined, 'an unscoped person: no note');
   await runner.query(`SELECT set_config('app.da_mode', 'limited', true)`);
   try {
     // B9: the total of a limited account.
-    const lines = await h.executor.execute(full, { entity_type: 'spend_items' });
+    const lines = await h.executor.execute(full, { entity_type: 'budget_lines' });
     assert.equal(lines.data_access, 'limited');
     assert.match(lines.data_access_note, /within your access/);
     assert.match(lines.data_access_note, /never call it the workspace total/);
-    const grouped = await h.aggregates.execute(full, { entity_type: 'spend_items', group_by: 'status', metric: 'y_budget', function: 'sum' });
+    const grouped = await h.aggregates.execute(full, { entity_type: 'budget_lines', group_by: 'status', metric: 'y_budget', function: 'sum' });
     assert.equal(grouped.data_access, 'limited');
     const applications = await h.executor.execute(full, { entity_type: 'applications' });
     assert.equal(applications.data_access, undefined, 'applications are not narrowed by data access');
@@ -279,7 +279,7 @@ async function testDataAccessNote(h: Harness, runner: QueryRunner, s: Seed) {
 
 async function testRefusalsAndTerms(h: Harness, runner: QueryRunner, s: Seed) {
   // P4-9: the missing right in plain words.
-  const refusal = await h.tools.execute(ctx(runner, s, 'appsOnly'), 'query_entities', { entity_type: 'spend_items' }).then(() => null, (error: any) => error);
+  const refusal = await h.tools.execute(ctx(runner, s, 'appsOnly'), 'query_entities', { entity_type: 'budget_lines' }).then(() => null, (error: any) => error);
   assert.ok(refusal, 'refused');
   assert.equal(refusal.message, 'You need the right to read budget lines, which your role does not give. An administrator can add it to your role.');
   assert.doesNotMatch(refusal.message, /budget:reader/);

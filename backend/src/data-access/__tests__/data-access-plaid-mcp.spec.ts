@@ -68,6 +68,8 @@ let contractVisible: string;
 let contractHidden: string;
 let contractTaskId: string;
 let technologyId: string;
+/** A CAPEX budget line of the same family, visible to Rita (her company and centre). */
+let capexLineId: string;
 const itemNumbers = {} as Record<Label, number>;
 const conversations: Record<string, string> = {};
 const HIDDEN: Label[] = ['L5', 'L6', 'L7'];
@@ -117,6 +119,11 @@ async function seedPlaid(): Promise<void> {
       const label = (Object.keys(s.lines) as Label[]).find((l) => s.lines[l] === row.id);
       if (label) itemNumbers[label] = Number(row.item_number);
     }
+    capexLineId = (await q(
+      `INSERT INTO spend_items (tenant_id, nature, product_name, currency, effective_start, item_number, paying_company_id, cost_center_id)
+       VALUES ($1, 'capex', $2, 'EUR', '2026-01-01', 9001, $3, $4) RETURNING id`,
+      [s.tenantId, `DA line C1 ${tag}`, s.fr, s.infFr],
+    ))[0].id;
     applicationId = (await q(`INSERT INTO applications (tenant_id, name) VALUES ($1, $2) RETURNING id`, [s.tenantId, `DA 4D application ${tag}`]))[0].id;
     for (const line of [s.lines.L1, s.lines.L5]) {
       await q(`INSERT INTO application_spend_items (tenant_id, application_id, spend_item_id) VALUES ($1, $2, $3)`, [s.tenantId, applicationId, line]);
@@ -269,13 +276,18 @@ function assertReadOnlyRefusal(error: any, what: string): void {
 
 async function testPlaidReads(): Promise<void> {
   const { rita, ulla } = s.persons;
-  const query = { entity_type: 'spend_items', q: `DA line`, limit: 50 };
+  const query = { entity_type: 'budget_lines', q: `DA line`, limit: 50 };
   const ritaLines = await tool(rita, 'query_entities', query);
   assert.deepEqual(linesIn(ritaLines), VISIBLE, 'query_entities: Rita lists L1 to L4');
-  assert.equal(ritaLines.total, 4, 'query_entities: Rita counts 4 lines');
+  assert.deepEqual(new Set((ritaLines.items ?? []).map((item: any) => item.metadata?.nature)), new Set(['opex', 'capex']), 'query_entities: without a nature, both natures');
+  const capexOnly = await tool(rita, 'query_entities', { entity_type: 'budget_lines', filters: { nature: ['capex'] }, limit: 50 });
+  assert.ok((capexOnly.items ?? []).length > 0 && (capexOnly.items ?? []).every((item: any) => item.metadata?.nature === 'capex'), 'query_entities: nature=capex keeps the CAPEX lines only');
+  assert.equal(capexOnly.items.some((item: any) => item.id === capexLineId), true, 'query_entities: the CAPEX line');
+  assert.equal(ritaLines.total, 5, 'query_entities: Rita counts her 5 lines, both natures');
+  assert.equal((ritaLines.items ?? []).find((item: any) => item.id === capexLineId)?.metadata?.nature, 'capex', 'query_entities: the CAPEX line is in the same family');
   assertNoTrace(ritaLines, 'query_entities spend_items (Rita)');
   const ullaLines = await tool(ulla, 'query_entities', query);
-  assert.equal(ullaLines.total, 7, 'query_entities: Ulla counts 7 lines');
+  assert.equal(ullaLines.total, 8, 'query_entities: Ulla counts 8 lines, both natures');
 
   const ritaTasks = await tool(rita, 'query_entities', { entity_type: 'tasks', q: `DA 4D task ${tag}` });
   const ritaTask = (ritaTasks.items ?? []).find((item: any) => item.id === hiddenTaskId);
@@ -299,29 +311,31 @@ async function testPlaidReads(): Promise<void> {
   const byRef = await tool(rita, 'search_all', { query: `BL-${itemNumbers.L5}` });
   assertNoTrace(byRef, 'search_all by the hidden reference (Rita)');
 
-  const aggregate = { entity_type: 'spend_items', group_by: 'currency', q: 'DA line' };
+  const aggregate = { entity_type: 'budget_lines', group_by: 'currency', q: 'DA line' };
   const ritaCount = await tool(rita, 'aggregate_entities', aggregate);
   const ullaCount = await tool(ulla, 'aggregate_entities', aggregate);
   assertNoTrace(ritaCount, 'aggregate_entities (Rita)');
   const countOf = (result: any) => (result.groups ?? []).reduce((sum: number, g: any) => sum + Number(g.count ?? g.value ?? 0), 0);
-  assert.equal(countOf(ritaCount), 4, `aggregate_entities: Rita counts 4 (${JSON.stringify(ritaCount)})`);
-  assert.equal(countOf(ullaCount), 7, `aggregate_entities: Ulla counts 7 (${JSON.stringify(ullaCount)})`);
+  assert.equal(countOf(ritaCount), 5, `aggregate_entities: Rita counts 5, both natures (${JSON.stringify(ritaCount)})`);
+  assert.equal(countOf(ullaCount), 8, `aggregate_entities: Ulla counts 8, both natures (${JSON.stringify(ullaCount)})`);
 
-  const detail = await tool(rita, 'get_entity_detail', { entity_type: 'spend_items', entity_id: s.lines.L1 });
+  const detail = await tool(rita, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: s.lines.L1 });
   assertShows(detail, 'L1', 'get_entity_detail L1 (Rita)');
   assertNoTrace(detail, 'get_entity_detail L1 (Rita)');
   const missingId = randomUUID();
-  const missing = await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'spend_items', entity_id: missingId }));
+  const missing = await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: missingId }));
   sameRefusal(
-    await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'spend_items', entity_id: s.lines.L5 })),
+    await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: s.lines.L5 })),
     missing, s.lines.L5, missingId, 'get_entity_detail of L5 by id (Rita)',
   );
-  const missingRef = await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'spend_items', entity_id: 'BL-999999' }));
+  const missingRef = await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: 'BL-999999' }));
   sameRefusal(
-    await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'spend_items', entity_id: `BL-${itemNumbers.L5}` })),
+    await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: `BL-${itemNumbers.L5}` })),
     missingRef, `BL-${itemNumbers.L5}`, 'BL-999999', 'get_entity_detail of L5 by reference (Rita)',
   );
-  assertShows(await tool(ulla, 'get_entity_detail', { entity_type: 'spend_items', entity_id: `BL-${itemNumbers.L5}` }), 'L5', 'get_entity_detail L5 (Ulla)');
+  assertShows(await tool(ulla, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: `BL-${itemNumbers.L5}` }), 'L5', 'get_entity_detail L5 (Ulla)');
+  const capexDetail = await tool(rita, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: capexLineId });
+  assert.equal(capexDetail.entity.metadata.nature, 'capex', 'get_entity_detail: the CAPEX line says its nature');
   assertNoTrace(await tool(rita, 'get_entity_detail', { entity_type: 'tasks', entity_id: hiddenTaskId }), 'get_entity_detail of the task of L5 (Rita)');
 
   const appContext = await tool(rita, 'get_entity_context', { entity_type: 'applications', entity_id: applicationId });
@@ -411,7 +425,7 @@ async function testPlaidReads(): Promise<void> {
   assert.ok((await tool(ulla, 'search_all', { query: `DA 4D contract hidden ${tag}` })).items?.some((item: any) => item.id === contractTaskId), 'Ulla finds the task by the contract name');
 
   // The line detail names its visible contract only.
-  const lineDetail = await tool(rita, 'get_entity_detail', { entity_type: 'spend_items', entity_id: s.lines.L1 });
+  const lineDetail = await tool(rita, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: s.lines.L1 });
   assert.ok(JSON.stringify(lineDetail).includes(`DA 4D contract visible ${tag}`), 'the line detail names its contract (Rita)');
   assertNoContractTrace(lineDetail, 'get_entity_detail L1 (Rita)');
 
@@ -433,7 +447,7 @@ async function testGlobalSearch(): Promise<void> {
   assert.deepEqual(linesIn(ritaPicked), VISIBLE, `mention picker: Rita gets L1 to L4 (${JSON.stringify(ritaPicked)})`);
   assertNoTrace(ritaPicked, 'mention picker (Rita)');
   assert.deepEqual(linesIn(await picker.searchEntities(req(ulla), 'DA line')), [...VISIBLE, ...HIDDEN].sort(), 'mention picker: Ulla gets all');
-  const recent = await picker.searchEntities(req(rita), '', '50', 'spend_items,tasks');
+  const recent = await picker.searchEntities(req(rita), '', '50', 'budget_lines,tasks');
   assertNoTrace(recent, 'mention picker, recent lines and tasks (Rita)');
   const pickedByName = await picker.searchEntities(req(rita), `DA line L5 ${tag}`);
   assertNoTrace(pickedByName, 'mention picker by the hidden name (Rita)');
@@ -724,12 +738,12 @@ async function testMcp(): Promise<void> {
   const { rita, ulla } = s.persons;
   const keys = { [rita]: await createKey(rita), [ulla]: await createKey(ulla) };
   const calls: Array<[string, Record<string, unknown>]> = [
-    ['query_entities', { entity_type: 'spend_items', q: 'DA line', limit: 50 }],
+    ['query_entities', { entity_type: 'budget_lines', q: 'DA line', limit: 50 }],
     ['query_entities', { entity_type: 'tasks', q: `DA 4D task ${tag}` }],
-    ['aggregate_entities', { entity_type: 'spend_items', group_by: 'currency', q: 'DA line' }],
+    ['aggregate_entities', { entity_type: 'budget_lines', group_by: 'currency', q: 'DA line' }],
     ['search_all', { query: 'DA line', limit: 100 }],
     ['search_all', { query: `DA line L5 ${tag}` }],
-    ['get_entity_detail', { entity_type: 'spend_items', entity_id: s.lines.L1 }],
+    ['get_entity_detail', { entity_type: 'budget_lines', entity_id: s.lines.L1 }],
     ['get_entity_detail', { entity_type: 'tasks', entity_id: hiddenTaskId }],
     ['query_entities', { entity_type: 'contracts', q: 'DA 4D contract', limit: 50 }],
     ['aggregate_entities', { entity_type: 'contracts', group_by: 'status', q: 'DA 4D contract' }],
@@ -754,8 +768,8 @@ async function testMcp(): Promise<void> {
     assert.equal(linesIn((await mcpCall(url, keys[ulla], 'query_entities', calls[0][1])).result).length, 7, 'MCP query_entities: Ulla lists 7');
     // A hidden line answers as a missing one.
     const missingId = randomUUID();
-    const hidden = await mcpCall(url, keys[rita], 'get_entity_detail', { entity_type: 'spend_items', entity_id: s.lines.L5 });
-    const missing = await mcpCall(url, keys[rita], 'get_entity_detail', { entity_type: 'spend_items', entity_id: missingId });
+    const hidden = await mcpCall(url, keys[rita], 'get_entity_detail', { entity_type: 'budget_lines', entity_id: s.lines.L5 });
+    const missing = await mcpCall(url, keys[rita], 'get_entity_detail', { entity_type: 'budget_lines', entity_id: missingId });
     assert.ok(hidden.error && missing.error, 'MCP get_entity_detail of L5: refused');
     assert.equal(hidden.error!.split(s.lines.L5).join('<ref>'), missing.error!.split(missingId).join('<ref>'), 'MCP get_entity_detail of L5: as a missing line');
     const hiddenContract = await mcpCall(url, keys[rita], 'get_entity_detail', { entity_type: 'contracts', entity_id: contractHidden });

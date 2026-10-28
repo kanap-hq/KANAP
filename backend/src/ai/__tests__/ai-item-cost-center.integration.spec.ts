@@ -24,7 +24,9 @@ import { ContractAttachment } from '../../contracts/contract-attachment.entity';
 //   stores the cost center.
 
 const KINDS: Kind[] = ['opex', 'capex'];
-const ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
+const ENTITY: Record<Kind, 'budget_lines'> = { opex: 'budget_lines', capex: 'budget_lines' };
+/** The write surface of lot 1 still takes the two historical types (lot 2 merges it). */
+const WRITE_ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
 /** Both natures are lines of `spend_items` since lot Z1. */
 const LINE_TABLE = 'spend_items';
 
@@ -127,7 +129,7 @@ async function testMutations(kind: Kind) {
 
     const support = mutationSupport();
     const ctx = context(runner, tenantId);
-    const entity_type = ENTITY[kind];
+    const entity_type = WRITE_ENTITY[kind];
 
     const prepared = await support.prepareCreatePreview(ctx, { entity_type, fields: createFields(kind, 'AI company', { cost_center: 'ai-1', run_build: 'Build' }) });
     const fields = prepared.mutationInput.fields as Record<string, unknown>;

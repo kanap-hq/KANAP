@@ -42,8 +42,6 @@ import { ScheduledNotificationsService } from '../../notifications/scheduled-not
 import { CurrencyController } from '../../currency/currency.controller';
 import { FreezeService } from '../../freeze/freeze.service';
 import { ItemNumberService } from '../../common/item-number.service';
-import { spendItemsRegistry } from '../../ai/query/registries/spend-items.registry';
-import { AiAggregateExecutor } from '../../ai/query/ai-aggregate.executor';
 import { AiFinancialPlanMutationSupportService } from '../../ai/mutation/ai-financial-plan-mutation-support.service';
 import { AiRelationMutationSupportService } from '../../ai/mutation/ai-relation-mutation-support.service';
 import { AiTaskMutationSupportService } from '../../ai/mutation/ai-task-mutation-support.service';
@@ -655,7 +653,6 @@ async function testAi() {
     const task: any = new AiTaskMutationSupportService();
     const rel: any = new AiRelationMutationSupportService(audit, none, task, undefined as any);
     const biz: any = new (AiBusinessRecordMutationSupportService as any)(...Array.from({ length: 20 }, (_, i) => (i === 2 ? audit : undefined)));
-    const aggregate: any = new (AiAggregateExecutor as any)();
     const appSpendItems = {
       sourceEntity: 'applications', relation: 'spend_items', label: 'Spend Items', table: 'application_spend_items',
       sourceColumn: 'application_id', targetColumn: 'spend_item_id', target: 'spend_items', businessResource: 'applications', kind: 'simple',
@@ -672,8 +669,6 @@ async function testAi() {
       ['tasks: target search', async () => (await task.searchTargetCandidates(context, 'spend_item', 'line', 10)).map((c: any) => c.id), (a) => has(a.body)],
       ['business records: reference by id', async () => (await biz.queryReferenceCandidates(context, 'spend_items', F)).map((r: any) => r.id), (a) => has(a.body)],
       ['business records: reference by BL-n', async () => (await biz.queryReferenceCandidates(context, 'spend_items', `BL-${FOREIGN_NUMBER}`)).map((r: any) => r.id), (a) => has(a.body)],
-      ['registry baseWhere: aggregate by ids', async () => (await aggregate.aggregateByIds(context, spendItemsRegistry, 'supplier', [w.opex.id, F], 'count', null)).map((r: any) => r.key),
-        (a) => a.body.includes('CAPEX line supplier')],
     ];
     for (const [label, probe, seesForeign] of probes) {
       const asCapex = await statusOf(runner, probe);

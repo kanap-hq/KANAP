@@ -20,6 +20,7 @@ import {
   TABLES,
 } from '../../spend/__tests__/round-inputs.fixtures';
 import { itemService } from '../../spend/__tests__/cost-center.fixtures';
+import { budgetReadService } from '../../spend/__tests__/budget-lines.fixtures';
 import { realAllocationCalculator } from '../../spend/__tests__/oracle/oracle-deps';
 
 // FTE in the AI layer, on OPEX and CAPEX, against the database:
@@ -33,7 +34,7 @@ import { realAllocationCalculator } from '../../spend/__tests__/oracle/oracle-de
 
 const Y = new Date().getFullYear();
 const KINDS: Kind[] = ['opex', 'capex'];
-const ENTITY: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_items', capex: 'capex_items' };
+const ENTITY: Record<Kind, 'budget_lines'> = { opex: 'budget_lines', capex: 'budget_lines' };
 const ENGINE_KEY = /^fte_/;
 
 function context(runner: QueryRunner, tenantId: string): AiExecutionContextWithManager {
@@ -50,17 +51,19 @@ function context(runner: QueryRunner, tenantId: string): AiExecutionContextWithM
 const noContracts = { listContractsForSpendItem: async () => ({ items: [] }), listContractsForCapexItem: async () => ({ items: [] }) };
 
 // Constructor positions (both executors): spendItems 5, contracts 6, capexItems 17; the query executor's allocation calculator 23.
-function queryExecutor(kind: Kind): AiQueryExecutor {
-  const args: any[] = Array.from({ length: 24 }, () => ({}));
-  args[kind === 'opex' ? 5 : 17] = itemService(kind);
+function queryExecutor(_kind: Kind): AiQueryExecutor {
+  const args: any[] = Array.from({ length: 25 }, () => ({}));
+  args[1] = budgetReadService();
   args[6] = noContracts;
-  args[23] = realAllocationCalculator();
+  args[22] = realAllocationCalculator();
+  args[23] = { canReadEntityType: async () => true };
   return new (AiQueryExecutor as any)(...args);
 }
 
-function aggregateExecutor(kind: Kind): AiAggregateExecutor {
-  const args: any[] = Array.from({ length: 22 }, () => ({}));
-  args[kind === 'opex' ? 5 : 17] = itemService(kind);
+function aggregateExecutor(_kind: Kind): AiAggregateExecutor {
+  const args: any[] = Array.from({ length: 23 }, () => ({}));
+  args[1] = budgetReadService();
+  args[21] = { canReadEntityType: async () => true };
   return new (AiAggregateExecutor as any)(...args);
 }
 
