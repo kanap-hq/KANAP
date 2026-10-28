@@ -50,6 +50,7 @@ const SYNC_LOCK_TIMEOUT = '5s';
  */
 const DIRECT_CALL_FUNCTIONS = [
   'data_access_hidden_count(text, uuid)',
+  'data_access_hidden_category_count(uuid, uuid[])',
   'data_access_reference(text, uuid)',
   'data_access_can_read(uuid, text, uuid)',
 ];
