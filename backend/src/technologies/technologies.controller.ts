@@ -1,10 +1,11 @@
-import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Put, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { resolveBusinessContributorScopeForUser, type ParticipationAccessScope } from '../auth/business-contributor-scope';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { contentDisposition } from '../common/content-disposition';
 import { parseLookupRequest, runLookup, type LookupSpec } from '../common/lookup/reference-lookup';
@@ -116,7 +117,7 @@ export class TechnologiesController {
   /** As `applicationsReach`, for a route that cannot answer without it: 403. */
   private async requireApplications(ctx: TenantRequest): Promise<{ scope?: ParticipationAccessScope }> {
     const reach = await this.applicationsReach(ctx);
-    if (!reach) throw new ForbiddenException('You cannot read applications.');
+    if (!reach) throw moduleRightRequired('applications', 'reader', 'You cannot read applications.');
     return reach;
   }
 

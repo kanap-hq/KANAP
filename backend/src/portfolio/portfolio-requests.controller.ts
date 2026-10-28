@@ -783,7 +783,7 @@ export class PortfolioRequestsController {
   ) {
     // The applications are the applications module's: listed only to its readers, in their scope.
     if (!hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'applications', 'reader')) {
-      throw new ForbiddenException('You cannot read applications.');
+      throw moduleRightRequired('applications', 'reader', 'You cannot read applications.');
     }
     const { id } = await this.resolveForAccess(idOrRef, req, 'reader');
     const linked = await this.svc.listLinkedApplications(id, {
@@ -804,7 +804,7 @@ export class PortfolioRequestsController {
   ) {
     // As the Relations tab: a read of the applications, and only applications in the person's scope.
     if (!hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'applications', 'reader')) {
-      throw new ForbiddenException('You cannot read applications.');
+      throw moduleRightRequired('applications', 'reader', 'You cannot read applications.');
     }
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
     const linked = await this.svc.listLinkedApplications(id, { manager: req?.queryRunner?.manager });
@@ -830,7 +830,7 @@ export class PortfolioRequestsController {
   ) {
     // The assets are the infrastructure's: listed only to its readers.
     if (!hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'infrastructure', 'reader')) {
-      throw new ForbiddenException('You cannot read assets.');
+      throw moduleRightRequired('infrastructure', 'reader', 'You cannot read assets.');
     }
     const { id } = await this.resolveForAccess(idOrRef, req, 'reader');
     return this.svc.listLinkedAssets(id, {
@@ -847,7 +847,7 @@ export class PortfolioRequestsController {
     @Req() req: any,
   ) {
     if (!hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'infrastructure', 'reader')) {
-      throw new ForbiddenException('You cannot read assets.');
+      throw moduleRightRequired('infrastructure', 'reader', 'You cannot read assets.');
     }
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
     return this.svc.bulkReplaceAssets(id, body?.asset_ids ?? [], {
@@ -867,7 +867,7 @@ export class PortfolioRequestsController {
     @Req() req: any,
   ) {
     if (!hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'budget', 'reader')) {
-      throw new ForbiddenException('You cannot read budget lines.');
+      throw moduleRightRequired('budget', 'reader', 'You cannot read budget lines.');
     }
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
     return this.svc.bulkReplaceCapex(id, body?.capex_ids ?? [], {
@@ -887,7 +887,7 @@ export class PortfolioRequestsController {
     @Req() req: any,
   ) {
     if (!hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'budget', 'reader')) {
-      throw new ForbiddenException('You cannot read budget lines.');
+      throw moduleRightRequired('budget', 'reader', 'You cannot read budget lines.');
     }
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
     return this.svc.bulkReplaceOpex(id, body?.opex_ids ?? [], {

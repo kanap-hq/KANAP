@@ -1,5 +1,6 @@
-import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { canReadResource } from '../common/record-usages';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CapexItemsService, SpendItemsService } from './spend-items.service';
 import { CapexItemsDeleteService } from './spend-items-delete.service';
@@ -483,7 +484,7 @@ export class CapexItemsController {
     @Body() body: { technology_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
-    if (!canReadResource(ctx, 'infrastructure')) throw new ForbiddenException('You cannot read technologies.');
+    if (!canReadResource(ctx, 'infrastructure')) throw moduleRightRequired('infrastructure', 'reader', 'You cannot read technologies.');
     const id = await this.resolveId(idOrRef, ctx.manager as EntityManager);
     return this.svc.bulkReplaceTechnologies(id, body?.technology_ids ?? [], ctx.userId || null, { manager: ctx.manager });
   }

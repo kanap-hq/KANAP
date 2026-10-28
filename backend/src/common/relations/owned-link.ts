@@ -6,6 +6,7 @@ import { assertLinesEditable, DATA_ACCESS_CONTRACT_NOT_FOUND_MESSAGE, isLimitedT
 import { auditedLinkSet, hiddenLineCount, type HiddenLineOwner } from '../../data-access/hidden-links';
 import { binder } from './related-objects';
 import { parseTargetId } from './relation-target';
+import { moduleRightRequired } from '../../auth/module-right-required';
 
 /**
  * The kinds `setOwnedLink` writes one row at a time. Incidents stay with their own service.
@@ -13,6 +14,17 @@ import { parseTargetId } from './relation-target';
  * or 400 with the caller's `notFound`.
  */
 export type OwnedRelationKind = 'budget_lines' | 'contracts' | 'projects' | 'applications' | 'assets' | 'technologies' | 'processes';
+
+/** The module each link reads: a denied `allowed` names it in the coded refusal. */
+const OWNED_LINK_RESOURCES: Record<OwnedRelationKind, string> = {
+  budget_lines: 'budget',
+  contracts: 'contracts',
+  projects: 'portfolio_projects',
+  applications: 'applications',
+  assets: 'infrastructure',
+  technologies: 'infrastructure',
+  processes: 'business_processes',
+};
 
 /** Existence of an application, an asset, a technology or a business process. The table names come only from here. */
 /** The owners whose hidden lines `data_access_hidden_count` counts, by their table. */
@@ -114,7 +126,7 @@ export async function setOwnedLink(args: {
   applicationScope?: ParticipationAccessScope;
   audit: OwnedLinkAudit;
 }): Promise<{ ok: true; changed: boolean }> {
-  if (!args.allowed) throw new ForbiddenException('You cannot read this module.');
+  if (!args.allowed) throw moduleRightRequired(OWNED_LINK_RESOURCES[args.kind], 'reader', 'You cannot read this module.');
   const id = parseTargetId(args.targetId);
   const loaded = await args.loadOwner();
   const tenantId = loaded.tenantId;

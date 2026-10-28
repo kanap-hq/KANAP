@@ -1,8 +1,9 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { resolveBusinessContributorScopeForUser, type ParticipationAccessScope } from '../auth/business-contributor-scope';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { hasLevel } from '../technologies/technologies.controller';
 import { TechnologyLinksService, type ApplicationsReach } from '../technologies/technology-links.service';
@@ -31,7 +32,7 @@ export class BusinessProcessApplicationsController {
 
   private async requireApplications(ctx: TenantRequest): Promise<{ scope?: ParticipationAccessScope }> {
     const reach = await this.applicationsReach(ctx);
-    if (!reach) throw new ForbiddenException('You cannot read applications.');
+    if (!reach) throw moduleRightRequired('applications', 'reader', 'You cannot read applications.');
     return reach;
   }
 

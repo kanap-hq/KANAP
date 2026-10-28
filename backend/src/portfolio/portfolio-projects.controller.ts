@@ -8,6 +8,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { DataSource, EntityManager } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { Public } from '../auth/public.decorator';
@@ -777,7 +778,7 @@ export class PortfolioProjectsController {
   private writeRelation(kind: string, idOrRef: string, targetId: string, add: boolean, ctx: TenantRequest) {
     const relation = projectRelationKindOrThrow(kind);
     if (relation === 'technologies' && !hasLevel(ctx, 'infrastructure', 'reader')) {
-      throw new ForbiddenException('You cannot read technologies.');
+      throw moduleRightRequired('infrastructure', 'reader', 'You cannot read technologies.');
     }
     return this.projectRelationsContext(ctx).then((relCtx) =>
       this.relations.setProjectLink(relation, targetId, add, relCtx, async () => {
@@ -797,7 +798,7 @@ export class PortfolioProjectsController {
     @Tenant() ctx: TenantRequest,
   ) {
     // The applications are the applications module's: listed only to its readers, in their scope.
-    if (!hasLevel(ctx, 'applications', 'reader')) throw new ForbiddenException('You cannot read applications.');
+    if (!hasLevel(ctx, 'applications', 'reader')) throw moduleRightRequired('applications', 'reader', 'You cannot read applications.');
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'reader');
     const linked = await this.svc.listLinkedApplications(id, { manager: ctx.manager });
     const { applicationScope } = await this.projectRelationsContext(ctx);
@@ -814,7 +815,7 @@ export class PortfolioProjectsController {
     @Tenant() ctx: TenantRequest,
   ) {
     // As the Relations tab: a read of the applications, and only applications in the person's scope.
-    if (!hasLevel(ctx, 'applications', 'reader')) throw new ForbiddenException('You cannot read applications.');
+    if (!hasLevel(ctx, 'applications', 'reader')) throw moduleRightRequired('applications', 'reader', 'You cannot read applications.');
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     const linked = await this.svc.listLinkedApplications(id, { manager: ctx.manager });
     const { applicationScope } = await this.projectRelationsContext(ctx);
@@ -839,7 +840,7 @@ export class PortfolioProjectsController {
     @Tenant() ctx: TenantRequest,
   ) {
     // The assets are the infrastructure's: listed only to its readers.
-    if (!hasLevel(ctx, 'infrastructure', 'reader')) throw new ForbiddenException('You cannot read assets.');
+    if (!hasLevel(ctx, 'infrastructure', 'reader')) throw moduleRightRequired('infrastructure', 'reader', 'You cannot read assets.');
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'reader');
     return this.svc.listLinkedAssets(id, { manager: ctx.manager });
   }
@@ -852,7 +853,7 @@ export class PortfolioProjectsController {
     @Body() body: { asset_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
-    if (!hasLevel(ctx, 'infrastructure', 'reader')) throw new ForbiddenException('You cannot read assets.');
+    if (!hasLevel(ctx, 'infrastructure', 'reader')) throw moduleRightRequired('infrastructure', 'reader', 'You cannot read assets.');
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     return this.svc.bulkReplaceLinkedAssets(id, body?.asset_ids ?? [], {
       manager: ctx.manager,
@@ -870,7 +871,7 @@ export class PortfolioProjectsController {
     @Body() body: { capex_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
-    if (!hasLevel(ctx, 'budget', 'reader')) throw new ForbiddenException('You cannot read budget lines.');
+    if (!hasLevel(ctx, 'budget', 'reader')) throw moduleRightRequired('budget', 'reader', 'You cannot read budget lines.');
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     return this.svc.bulkReplaceCapex(id, body?.capex_ids ?? [], {
       manager: ctx.manager,
@@ -888,7 +889,7 @@ export class PortfolioProjectsController {
     @Body() body: { opex_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
-    if (!hasLevel(ctx, 'budget', 'reader')) throw new ForbiddenException('You cannot read budget lines.');
+    if (!hasLevel(ctx, 'budget', 'reader')) throw moduleRightRequired('budget', 'reader', 'You cannot read budget lines.');
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     return this.svc.bulkReplaceOpex(id, body?.opex_ids ?? [], {
       manager: ctx.manager,

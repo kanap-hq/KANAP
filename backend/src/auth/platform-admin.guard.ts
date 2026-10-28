@@ -1,5 +1,15 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 import { isPlatformAdmin } from './platform-admin.util';
+
+/** 403 `platform_admin_required`: the screen translates it (`errors:platform_admin_required`). */
+function platformAdminRequired(message: string): ForbiddenException {
+  return new ForbiddenException({
+    statusCode: HttpStatus.FORBIDDEN,
+    error: 'Forbidden',
+    code: 'platform_admin_required',
+    message,
+  });
+}
 
 @Injectable()
 export class PlatformAdminGuard implements CanActivate {
@@ -8,10 +18,10 @@ export class PlatformAdminGuard implements CanActivate {
     const user = req?.user as { email?: string; role?: { role_name?: string } } | undefined;
     if (!user) throw new UnauthorizedException('Authentication required');
     if (!req?.isPlatformHost) {
-      throw new ForbiddenException('Platform admin host required');
+      throw platformAdminRequired('Platform admin host required');
     }
     if (!isPlatformAdmin(user)) {
-      throw new ForbiddenException('Platform admin access required');
+      throw platformAdminRequired('Platform admin access required');
     }
     return true;
   }
