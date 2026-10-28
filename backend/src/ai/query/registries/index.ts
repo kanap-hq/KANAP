@@ -98,7 +98,7 @@ export function withAnalyticsAxisFields(registry: AiEntityFilterRegistry, axes: 
         ai: key,
         grid: analyticsFieldKey(axis.id),
         type: 'set',
-        description: `Analytics dimension "${name}": the line's value on it.${axisScopeSentence(axis)} null is a line without a value on this dimension, or without a value at all.`,
+        description: `Analytics dimension "${name}": the line's value on it.${axisScopeSentence(axis)} null is a line without a value on this dimension, or a line of the other nature.`,
         ...(axisNatureScope(axis) ? { nature: axisNatureScope(axis)! } : {}),
         dynamic: true,
         discoverable: true,

@@ -1922,7 +1922,7 @@ export class AiChatOrchestratorService {
     });
   }
 
-  /** The tenant's budget column names for users who can read OPEX or CAPEX items; none otherwise. */
+  /** The tenant's budget column names for users who can read budget lines; none otherwise. */
   private async loadBudgetColumnsPromptContext(
     ctx: AiExecutionContext & { manager: any },
     readableTypes: readonly string[],
@@ -1931,7 +1931,7 @@ export class AiChatOrchestratorService {
     return budgetColumnsAiContext(await readBudgetColumns(ctx.manager, ctx.tenantId));
   }
 
-  /** The analytics dimensions OPEX and CAPEX lines may hold, for users who can read those lines; none otherwise. */
+  /** The analytics dimensions budget lines may hold, for users who can read those lines; none otherwise. */
   private async loadAnalyticsDimensionsPromptContext(
     ctx: AiExecutionContext & { manager: any },
     readableTypes: readonly string[],
