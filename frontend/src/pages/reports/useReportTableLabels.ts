@@ -30,6 +30,7 @@ export function useReportTableLabels(): ReportTableLabels {
     analyticsUnassigned: t('reports.analyticsCategory.unassigned'),
     analyticsUnnamed: t('reports.analyticsCategory.unnamed'),
     analyticsTotal: (metric) => t('reports.analyticsCategory.totalMetric', { metric }),
+    analyticsLines: t('reports.analyticsCategory.lines'),
     monthNames: shortMonthNames(locale),
     average: t('reports.staffing.average'),
     peak: t('reports.staffing.peak'),

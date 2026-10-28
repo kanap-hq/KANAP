@@ -31,8 +31,8 @@ import {
   type StaffingLabels,
 } from './reportAggregates';
 
-/** `amount`: currency units; `number`: FTE, years, counts; `percent`: a fraction. */
-export type ReportTableColumnKind = 'text' | 'number' | 'amount' | 'percent';
+/** `amount`: currency units; `number`: FTE and years; `count`: a number of lines (a whole number); `percent`: a fraction. */
+export type ReportTableColumnKind = 'text' | 'number' | 'count' | 'amount' | 'percent';
 
 export interface ReportTableColumn {
   /** The row field the column reads (the grid's `field`). */
@@ -96,6 +96,8 @@ export interface ReportTableLabels {
   analyticsUnnamed: string;
   /** `reports.analyticsCategory.totalMetric`: `Total Budget`. */
   analyticsTotal: (metric: string) => string;
+  /** `reports.analyticsCategory.lines`: the number of lines of a value. */
+  analyticsLines: string;
   /** The twelve short month names, January first, in the table's language (`shortMonthNames`). */
   monthNames: readonly string[];
   /** `reports.staffing.average` */
@@ -361,17 +363,21 @@ function yearGroupsTable(
   p: YearGroupsTableParams,
   read: FteYearGroups,
   group: { header: string; total: string },
+  options: { countHeader?: string } = {},
 ): ReportTableData {
   const kind = measureKind(p.measure);
   const footer: ReportTableRow = { group: group.total };
+  if (options.countHeader) footer.count = read.lineCount ?? null;
   for (const year of p.years) footer[String(year)] = measureCell(read.totals[year], p.measure);
   return {
     columns: [
       { key: 'group', header: group.header, kind: 'text' },
+      ...(options.countHeader ? [{ key: 'count', header: options.countHeader, kind: 'count' as const }] : []),
       ...p.years.map((year): ReportTableColumn => ({ key: String(year), header: String(year), kind })),
     ],
     rows: read.groups.map((g) => {
       const row: ReportTableRow = { group: g.label, groupKey: g.key, groupName: g.name ?? null };
+      if (options.countHeader) row.count = g.count ?? null;
       for (const year of p.years) row[String(year)] = measureCell(g.values[year], p.measure);
       return row;
     }),
@@ -400,13 +406,13 @@ export interface AnalyticsTableParams extends YearGroupsTableParams {
 export function analyticsTable(
   p: AnalyticsTableParams,
   result: AggregateResult | undefined,
-  labels: Pick<ReportTableLabels, 'columnNames' | 'columnFte' | 'analyticsUnassigned' | 'analyticsUnnamed' | 'analyticsTotal'>,
+  labels: Pick<ReportTableLabels, 'columnNames' | 'columnFte' | 'analyticsUnassigned' | 'analyticsUnnamed' | 'analyticsTotal' | 'analyticsLines'>,
 ): ReportTableData {
   const read = readAnalytics(p.years, result, { unassigned: labels.analyticsUnassigned, unnamed: labels.analyticsUnnamed }, p.measure);
   return yearGroupsTable(p, read, {
     header: p.dimension,
     total: labels.analyticsTotal(measureColumnName(labels, p.metric, p.measure)),
-  });
+  }, { countHeader: labels.analyticsLines });
 }
 
 // ----- By group (StaffingByMonthReport, CostPerFteReport): grouped on a cost center, a line, a supplier or a dimension -----

@@ -179,8 +179,8 @@ describe('per year groups', () => {
   it('Analytics: by value, unnamed for a blank name, unassigned without a value', () => {
     const read = readAnalytics([2026], result([row(['v1', ' '], { y2026: 3 }), row([null, null], { y2026: 2 })], row([], { y2026: 5 })), { unassigned: 'U', unnamed: 'N' });
     expect(read.groups).toEqual([
-      { key: 'cat_v1', label: 'N', name: ' ', values: { 2026: 3 } },
-      { key: 'uncategorized', label: 'U', name: null, values: { 2026: 2 } },
+      { key: 'cat_v1', label: 'N', name: ' ', id: 'v1', count: 1, values: { 2026: 3 } },
+      { key: 'uncategorized', label: 'U', name: null, id: null, count: 1, values: { 2026: 2 } },
     ]);
   });
 
@@ -392,7 +392,7 @@ describe('the FTE measure', () => {
     ]);
     expect(read.totals).toEqual({ 2026: 3, 2027: 0.5 });
     expect(readAnalytics([2026], result([fteRow(['v', 'V'], { y2026: null })], fteRow([], { y2026: null })), { unassigned: 'U', unnamed: 'N' }, 'fte'))
-      .toEqual({ groups: [], totals: { 2026: null } });
+      .toEqual({ groups: [], totals: { 2026: null }, lineCount: 1 });
   });
 
   it('asks the notice on its own, over the same lines, when it does not fit in a grouped request', () => {

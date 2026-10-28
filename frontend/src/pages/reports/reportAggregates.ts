@@ -719,12 +719,12 @@ export function readDeltaYears(result: AggregateResult | undefined, currentYear:
 
 // ----- per year groups (ConsolidationReport, AnalyticsCategoryReport) -----
 
-/** `name`: the dimension value's stored name (Analytics), null for the lines without a value. */
-export type YearGroup = { key: string; label: string; name?: string | null; values: Record<number, number> };
-export type YearGroups = { groups: YearGroup[]; totals: Record<number, number> };
+/** `name`: the dimension value's stored name (Analytics), null for the lines without a value. `count`: its number of lines. */
+export type YearGroup = { key: string; label: string; name?: string | null; id?: string | null; count?: number; values: Record<number, number> };
+export type YearGroups = { groups: YearGroup[]; totals: Record<number, number>; /** The number of lines the groups hold (the answer's total count). */ lineCount?: number };
 /** FTE: a year no line of the group declares is null. */
-export type FteYearGroup = { key: string; label: string; name?: string | null; values: Record<number, number | null> };
-export type FteYearGroups = { groups: FteYearGroup[]; totals: Record<number, number | null> };
+export type FteYearGroup = { key: string; label: string; name?: string | null; id?: string | null; count?: number; values: Record<number, number | null> };
+export type FteYearGroups = { groups: FteYearGroup[]; totals: Record<number, number | null>; lineCount?: number };
 
 function yearMeasures(years: readonly number[], metric: MetricKey, measure?: ReportMeasure): AggregateMeasure[] {
   return years.map((year) => ({ id: `y${year}`, fn: 'sum', field: measureField(year, metric, measure) }));
@@ -825,6 +825,9 @@ export interface AnalyticsParams {
   measure?: ReportMeasure;
 }
 
+/** The value fields of an analytics answer: its raw id (null for unassigned) and its line count. */
+export type AnalyticsValueFields = { id: string | null; count: number };
+
 /**
  * By the line's value on the dimension (none: unassigned), one sum per year, the first year's largest first.
  * An excluded `NO_ANALYTICS_VALUE` leaves out the lines without a value.
@@ -852,10 +855,12 @@ export function readAnalytics(years: readonly number[], result: AggregateResult 
       key: id ? `cat_${id}` : 'uncategorized',
       label: id ? (group.keys[1] ?? '').trim() || labels.unnamed : labels.unassigned,
       name: id ? group.keys[1] ?? '' : null,
+      id,
+      count: group.count,
       values: yearValues(group, years, measure),
     };
   });
-  return { groups, totals: yearValues(result?.total, years, measure) };
+  return { groups, totals: yearValues(result?.total, years, measure), lineCount: result?.total.count ?? 0 };
 }
 
 // ----- staffing by month (StaffingByMonthReport) -----

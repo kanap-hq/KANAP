@@ -130,16 +130,22 @@ export default function AnalyticsCategoryReport() {
     () => analyticsTable({ years, metric, measure, dimension: dimensionLabel }, report.data, tableLabels),
     [years, metric, measure, dimensionLabel, report.data, tableLabels],
   );
-  const columns = useMemo<ColDef[]>(() => table.columns.map((column): ColDef => (column.key === 'group'
-    ? {
-      field: column.key,
-      headerName: column.header,
-      flex: 1,
-      minWidth: 240,
-      cellRenderer: ReportGroupLinkCell,
-      cellRendererParams: { getLink: valueLink },
+  const columns = useMemo<ColDef[]>(() => table.columns.map((column): ColDef => {
+    if (column.key === 'group') {
+      return {
+        field: column.key,
+        headerName: column.header,
+        flex: 1,
+        minWidth: 240,
+        cellRenderer: ReportGroupLinkCell,
+        cellRendererParams: { getLink: valueLink },
+      };
     }
-    : { field: column.key, headerName: column.header, width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) })), [table, valueLink, formatNumber]);
+    if (column.kind === 'count') {
+      return { field: column.key, headerName: column.header, width: 100, type: 'rightAligned', valueFormatter: (p) => (p.value == null ? '' : String(p.value)) };
+    }
+    return { field: column.key, headerName: column.header, width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) };
+  }), [table, valueLink, formatNumber]);
 
   // The column as the measure reads it: `Budget`, or `Budget FTE`.
   const metricLabel = measureText.column(budgetColumns.label(metric));

@@ -126,6 +126,7 @@ export class BudgetReportExportService {
       analyticsUnassigned: labels.analyticsUnassigned,
       analyticsUnnamed: labels.analyticsUnnamed,
       analyticsTotal: (metric) => fillLabel(labels.analyticsTotal, 'metric', metric),
+      analyticsLines: labels.analyticsLines,
       monthNames: shortMonthNames(language),
       average: labels.average,
       peak: labels.peak,
@@ -453,15 +454,15 @@ function reportTable(key: string, sheet: string, table: ReportTableData): Report
     if (column.kind === 'text') return String(value);
     if (typeof value !== 'number' || !Number.isFinite(value)) return null;
     if (column.kind === 'amount') return { kind: 'amount', value: reportAmount(value) };
-    return { kind: column.kind, value };
+    return { kind: column.kind === 'count' ? 'number' : column.kind, value };
   });
   return {
     key,
     sheet,
-    // FTE and days show two decimals, as the screens; a year stays a plain number.
+    // FTE and days show two decimals, as the screens; a year and a count stay whole numbers.
     columns: table.columns.map((column) => (column.kind === 'number' && column.key !== 'year'
       ? { header: column.header, kind: column.kind, decimals: 2 as const }
-      : { header: column.header, kind: column.kind })),
+      : { header: column.header, kind: column.kind === 'count' ? 'number' as const : column.kind })),
     rows: table.rows.map(cells),
     footer: table.footer.map(cells),
   };

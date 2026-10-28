@@ -98,6 +98,7 @@ const LABELS: T.ReportTableLabels = {
   analyticsUnassigned: L.analyticsUnassigned,
   analyticsUnnamed: L.analyticsUnnamed,
   analyticsTotal: (metric) => L.analyticsTotal.replace('{{metric}}', metric),
+  analyticsLines: L.analyticsLines,
   monthNames: T.shortMonthNames('en'),
   average: L.average,
   peak: L.peak,
@@ -510,7 +511,7 @@ async function testDeltaGroupTables(runner: QueryRunner, f: Fixture): Promise<vo
     });
     const csv = valuedFile.body().toString('utf8').replace(/^﻿/, '').trim().split(/\r?\n/);
     assert.equal(csv.length, 1 + valued.rows.length + 1, 'CSV: header, the valued group, the total');
-    assert.equal(csv[0], `${f.axis2Name},${Y},${Y + 1}`);
+    assert.equal(csv[0], `${f.axis2Name},${L.analyticsLines},${Y},${Y + 1}`);
   });
 
   // A person who cannot read the accounts page: every line unassigned, on the screen and in the file.

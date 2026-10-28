@@ -1000,7 +1000,6 @@
       "capex": "CAPEX"
     },
     "budgetFile": {
-      "lines": "Zeilen",
       "allLines": "Alle Zeilen",
       "allLinesHint": "Enthält beendete Zeilen. Filter und Suche der Liste gelten nicht.",
       "exportAll": "Alle Zeilen exportieren",
@@ -1587,6 +1586,8 @@
       "totalMetric": "Gesamt {{metric}}",
       "unassigned": "Nicht zugeordnet",
       "unnamed": "Unbenannter Wert",
+      "lines": "Zeilen",
+      "lines": "Zeilen",
       "defaultDimensionInSentence": "Analysedimension"
     },
     "staffing": {

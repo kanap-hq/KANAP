@@ -36,6 +36,7 @@ const labels: ReportTableLabels = {
   analyticsUnassigned: 'No value',
   analyticsUnnamed: 'Unnamed value',
   analyticsTotal: (metric) => `All ${metric}`,
+  analyticsLines: 'Lines',
   monthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   average: 'Average',
   peak: 'Peak',
@@ -218,13 +219,16 @@ describe('analyticsTable', () => {
   it('names the group column after the dimension and words the values without a name', () => {
     const groups = [row({ y2026: 30 }, ['v1', ' Cloud ']), row({ y2026: 20 }, ['v2', '  ']), row({ y2026: 10 }, [null, null])];
     const table = analyticsTable({ years: [2026], metric: 'budget', measure: 'amount', dimension: 'Domain' }, answer({ y2026: 60 }, groups), labels);
-    expect(table.columns[0]).toEqual({ key: 'group', header: 'Domain', kind: 'text' });
-    expect(table.rows).toEqual([
-      { group: 'Cloud', groupKey: 'cat_v1', groupName: ' Cloud ', 2026: 30 },
-      { group: 'Unnamed value', groupKey: 'cat_v2', groupName: '  ', 2026: 20 },
-      { group: 'No value', groupKey: 'uncategorized', groupName: null, 2026: 10 },
+    expect(table.columns.slice(0, 2)).toEqual([
+      { key: 'group', header: 'Domain', kind: 'text' },
+      { key: 'count', header: 'Lines', kind: 'count' },
     ]);
-    expect(table.footer).toEqual([{ group: 'All Budget', 2026: 60 }]);
+    expect(table.rows).toEqual([
+      { group: 'Cloud', groupKey: 'cat_v1', groupName: ' Cloud ', count: 1, 2026: 30 },
+      { group: 'Unnamed value', groupKey: 'cat_v2', groupName: '  ', count: 1, 2026: 20 },
+      { group: 'No value', groupKey: 'uncategorized', groupName: null, count: 1, 2026: 10 },
+    ]);
+    expect(table.footer).toEqual([{ group: 'All Budget', count: 1, 2026: 60 }]);
   });
 });
 
