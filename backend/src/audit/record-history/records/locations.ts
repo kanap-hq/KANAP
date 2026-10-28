@@ -105,7 +105,7 @@ export const locationsFields: Readonly<Record<string, HistoryFields>> = {
 /**
  * The audit labels that carry a site. The migration `1855720000000` copies these labels in SQL on
  * purpose: a migration is frozen and must not import this module
- * (`__tests__/record-history-family-c-migration.spec.ts` compares them).
+ * (`__tests__/record-history-family-c-migration.integration.spec.ts` compares them).
  */
 export const locationsParentRules: Readonly<Record<string, AuditParentRule>> = {
   location_user_contacts: { parentTable: 'locations', from: 'payload', keys: ['location_id'] },

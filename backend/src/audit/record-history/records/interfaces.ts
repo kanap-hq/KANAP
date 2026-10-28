@@ -246,7 +246,7 @@ export const interfacesFields: Readonly<Record<string, HistoryFields>> = {
 /**
  * The audit labels that carry an interface. The migration `1855720000000` copies these labels in
  * SQL on purpose: a migration is frozen and must not import this module
- * (`__tests__/record-history-family-c-migration.spec.ts` compares them).
+ * (`__tests__/record-history-family-c-migration.integration.spec.ts` compares them).
  *
  * The set labels have no rule: they name the interface in `record_id`. `interface_links` carries
  * the link in `record_id` for a whole-set replacement and the interface in its payload for a

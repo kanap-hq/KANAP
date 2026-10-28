@@ -70,7 +70,7 @@ export const connectionsFields: Readonly<Record<string, HistoryFields>> = {
 /**
  * The audit labels that carry a connection. The migration `1855720000000` copies these labels in
  * SQL on purpose: a migration is frozen and must not import this module
- * (`__tests__/record-history-family-c-migration.spec.ts` compares them).
+ * (`__tests__/record-history-family-c-migration.integration.spec.ts` compares them).
  */
 export const connectionsParentRules: Readonly<Record<string, AuditParentRule>> = {
   connection_legs: { parentTable: 'connections', from: 'payload', keys: ['connection_id'] },
