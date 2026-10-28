@@ -1,24 +1,36 @@
 import type { EntityManager } from 'typeorm';
+import type { RecordHistoryTable } from './record-history.inventory';
 
 /**
- * How an audit row finds the budget line it belongs to, by its audit label
- * (`audit_log.table_name`). The line itself (`spend_items`, `capex_items`) has
- * no rule: its rows name it in `record_id`, and `parent_*` stays NULL.
+ * How an audit row finds the record it belongs to, by its audit label (`audit_log.table_name`).
+ * A record's own labels have no rule: their rows name it in `record_id`, and `parent_*` stays NULL.
+ * Every `parentTable` is a table of `record-history.inventory.ts`.
  *
- * The labels of a CAPEX line keep their CAPEX name (`budget-nature.ts`,
- * `auditTableOf`); both natures write the same physical tables, so every rule
- * points at `spend_items`.
+ * The budget-line labels keep their CAPEX name (`budget-nature.ts`, `auditTableOf`); both natures
+ * write the same physical tables, so every existing rule points at `spend_items`.
  *
- * The migration `1855500000000-audit-log-parent-record.ts` copies the same
- * labels in SQL on purpose: a migration is frozen and must not import this
- * module. `__tests__/audit-parent-rules.spec.ts` reads the migration text and
- * checks that both lists agree.
+ * Adding a family (the procedure, so a later run follows it):
+ * 1. Declare the child labels in that family's `RECORD_HISTORY` entry, then add their rules here
+ *    (`AUDIT_PARENT_RULES`): the payload key that names the record, or the version lookup when the
+ *    row names a version whose record is the parent. A label whose write knows the parent names it
+ *    explicitly (`AuditParent`) instead, when no rule can choose safely.
+ * 2. Write a backfill migration for that family, never edit `1855500000000-audit-log-parent-record.ts`
+ *    (frozen). It copies the family's rules in SQL, stays idempotent (only rows still missing
+ *    `parent_*`), loops over the tenants with `set_config('app.current_tenant', <tenant>, true)`,
+ *    reads bounded batches as `1855500000000` does (keyset on `(created_at, id)`, a fixed batch
+ *    size), and never disables the RLS.
+ * 3. Add a spec that reads the new migration and compares its labels and lookups with these TS
+ *    rules, as `__tests__/audit-parent-rules.spec.ts` does for the budget lines.
+ *
+ * The migration `1855500000000-audit-log-parent-record.ts` copies the budget-line labels in SQL on
+ * purpose: a migration is frozen and must not import this module.
+ * `__tests__/audit-parent-rules.spec.ts` reads the migration text and checks that both lists agree.
  */
 export type AuditParentRule =
-  /** The line id is a key of the before/after payload: the child's `spend_item_id` (CAPEX: `capex_item_id`). */
-  | { parentTable: 'spend_items'; from: 'payload'; keys: readonly string[]; fallback?: 'record_id' }
-  /** The row names a version, through `record_id` or the payload's `version_id`, whose line is the parent. */
-  | { parentTable: 'spend_items'; from: 'version'; via: 'record_id' | 'payload.version_id' };
+  /** The record id is a key of the before/after payload (a line: the child's `spend_item_id`, CAPEX: `capex_item_id`). */
+  | { parentTable: RecordHistoryTable; from: 'payload'; keys: readonly string[]; fallback?: 'record_id' }
+  /** The row names a version, through `record_id` or the payload's `version_id`, whose record is the parent. */
+  | { parentTable: RecordHistoryTable; from: 'version'; via: 'record_id' | 'payload.version_id' };
 
 const LINE_KEYS = ['spend_item_id', 'capex_item_id'] as const;
 
@@ -61,7 +73,7 @@ export function isAuditUuid(value: unknown): value is string {
 }
 
 /** The parent a write names explicitly, when it is a valid one. */
-export type AuditParent = { table: string; id: string };
+export type AuditParent = { table: RecordHistoryTable; id: string };
 
 /** The fields of an audit write the parent resolution reads (`AuditEntry` in `audit.service.ts`). */
 export type AuditParentInput = {

@@ -48,7 +48,8 @@ function testParentRulesAgree() {
     assert.ok(AUDIT_PARENT_RULES[label], `${label}: a child label needs a parent rule (or explicitParentLabels)`);
   }
   // Every rule is a child of a declared record: a rule whose rows no history reads would be dead.
-  for (const label of Object.keys(AUDIT_PARENT_RULES)) {
+  for (const [label, rule] of Object.entries(AUDIT_PARENT_RULES)) {
+    assert.ok(Object.prototype.hasOwnProperty.call(RECORD_HISTORY, rule.parentTable), `${label}: ${rule.parentTable} is a record table`);
     assert.ok(children.has(label), `${label}: a parent rule outside the inventory's children`);
     assert.ok(
       Object.values(RECORD_HISTORY).some((entry) => recordHistoryChildKind(entry, label) !== null),

@@ -18,8 +18,8 @@ import {
   type IncidentViewer,
 } from '../incidents/incident-visibility';
 import {
-  RECORD_HISTORY,
   recordHistoryChildKind,
+  recordHistoryEntry,
   type RecordHistoryChildKind,
   type RecordHistoryRecord,
 } from './record-history.inventory';
@@ -1585,8 +1585,7 @@ export class RecordHistoryService {
     id: string,
     options: RecordHistoryListOptions = {},
   ): Promise<RecordHistoryPage> {
-    const key = String(table ?? '');
-    const entry = Object.prototype.hasOwnProperty.call(RECORD_HISTORY, key) ? RECORD_HISTORY[key] : undefined;
+    const entry = recordHistoryEntry(String(table ?? ''));
     if (!entry) throw new NotFoundException('Record not found');
     if (!isUuid(id)) throw new NotFoundException('Record not found');
     if (!hasLevel(ctx, entry.module, entry.level)) {

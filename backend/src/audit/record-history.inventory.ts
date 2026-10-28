@@ -66,7 +66,7 @@ export type RecordHistoryRecord = {
 };
 
 /** The inventory, by route key. Only the budget lines are declared in this run (lot 1B). */
-export const RECORD_HISTORY: Readonly<Record<string, RecordHistoryRecord>> = {
+const RECORD_HISTORY_DEFINITION = {
   spend_items: {
     table: 'spend_items',
     module: 'budget',
@@ -144,7 +144,20 @@ export const RECORD_HISTORY: Readonly<Record<string, RecordHistoryRecord>> = {
       },
     ],
   },
-};
+} as const satisfies Readonly<Record<string, RecordHistoryRecord>>;
+
+/** A physical table the history serves: the route key of `GET /records/:table/:id/history`. */
+export type RecordHistoryTable = keyof typeof RECORD_HISTORY_DEFINITION;
+
+/** The inventory, by route key. */
+export const RECORD_HISTORY: Readonly<Record<RecordHistoryTable, RecordHistoryRecord>> = RECORD_HISTORY_DEFINITION;
+
+/** The entry of a route key, or undefined when the table is outside the inventory (never a prototype key). */
+export function recordHistoryEntry(table: string): RecordHistoryRecord | undefined {
+  return Object.prototype.hasOwnProperty.call(RECORD_HISTORY, table)
+    ? RECORD_HISTORY[table as RecordHistoryTable]
+    : undefined;
+}
 
 /** The route keys of the inventory, sorted: the permission modules of `GET /records/:table/:id/history`. */
 export function recordHistoryModules(): string[] {
