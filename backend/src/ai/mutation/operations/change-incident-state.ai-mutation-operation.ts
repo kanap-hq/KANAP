@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { IncidentsService } from '../../../incidents/services/incidents.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
@@ -204,6 +204,11 @@ export class ChangeIncidentStateAiMutationOperation implements AiMutationOperati
     if (!preview.target_entity_id) throw new BadRequestException('Preview is missing the incident.');
     // The visibility and the state are checked again when the preview runs.
     const incident = await this.support.resolveIncident(context, preview.target_entity_id);
+    const expectedStatus = textOrNull(mutation.from_status);
+    // Another change moved the status since the preview: refuse rather than act on another state.
+    if (expectedStatus && incident.status !== expectedStatus) {
+      throw new ConflictException(`${incident.ref} changed after the preview was created.`);
+    }
     if (action === 'reopen' && (incident.status === 'open' || incident.status === 'in_progress')) {
       throw new BadRequestException('Only resolved, closed or cancelled incidents can be reopened.');
     }

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { IncidentsService } from '../../../incidents/services/incidents.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
@@ -174,6 +174,14 @@ export class SetIncidentConfidentialityAiMutationOperation implements AiMutation
     // The visibility is checked again when the preview runs; the state may be frozen, as the
     // screen's confidentiality route accepts a closed record.
     const incident = await this.support.resolveIncident(context, preview.target_entity_id);
+    const expectedConfidential = mutation.from_confidential;
+    // The flag moved since the preview, or a preview without the stored value would write nothing:
+    // refuse instead of marking it executed.
+    if (typeof expectedConfidential === 'boolean'
+      ? incident.confidential !== expectedConfidential
+      : incident.confidential === confidential) {
+      throw new ConflictException(`${incident.ref} changed after the preview was created.`);
+    }
     const options = await this.support.writeOptions(context);
     await this.incidents.setConfidentiality(
       incident.id,

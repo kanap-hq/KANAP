@@ -805,6 +805,54 @@ async function testDriftIsRefused(harness: Harness) {
   });
 }
 
+async function testIncidentStateDriftIsRefused(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'state-drift', seed.adminId);
+    const preview = await executeToolPreview(harness, ctx, 'change_incident_state', {
+      ref: 'INC-4', action: 'cancel', reason: 'Before the drift',
+    });
+    await runner.query(
+      `UPDATE incidents SET status = 'in_progress' WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.incidents.open],
+    );
+    const failed = await approveFailingPreview(harness, ctx, preview);
+    assert.match(String(failed.error_message), /INC-4 changed after the preview was created/);
+    const [row] = await runner.query(
+      `SELECT status FROM incidents WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.incidents.open],
+    );
+    assert.equal(row.status, 'in_progress', 'the refused cancellation wrote nothing');
+  });
+}
+
+async function testConfidentialityDriftIsRefused(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'confidentiality-drift', seed.adminId);
+    const preview = await executeToolPreview(harness, ctx, 'set_incident_confidentiality', {
+      ref: 'INC-8', confidential: false,
+    });
+    // The flag was lifted elsewhere: the preview would write nothing and must not read executed.
+    await runner.query(
+      `UPDATE incidents SET confidential = false WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.incidents.ownConfidential],
+    );
+    const failed = await approveFailingPreview(harness, ctx, preview);
+    assert.match(String(failed.error_message), /INC-8 changed after the preview was created/);
+    assert.equal(failed.status, 'failed');
+    const [row] = await runner.query(
+      `SELECT confidential FROM incidents WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.incidents.ownConfidential],
+    );
+    assert.equal(row.confidential, false);
+    const audits = await runner.query(
+      `SELECT 1 FROM audit_log
+        WHERE tenant_id = $1 AND record_id = $2 AND source = 'ai_chat' AND source_ref = $3`,
+      [seed.tenantId, seed.incidents.ownConfidential, preview.preview_id],
+    );
+    assert.equal(audits.length, 0, 'the refused execution wrote no audit row');
+  });
+}
+
 async function testReporterFallbackOnlyOnCreate(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'no-reporter');
@@ -1207,7 +1255,7 @@ async function testAdminLiftsConfidentialityOnOpenAndClosed(harness: Harness) {
     const openPreview = await executeToolPreview(harness, ctx, 'set_incident_confidentiality', {
       ref: 'INC-8', confidential: false,
     });
-    assert.equal(openPreview.summary, "Levée de la confidentialité de l'incident « INC-8 ».");
+    assert.equal(openPreview.summary, "Levée de la confidentialité de l'incident « INC-8 - Restricted outage ».");
     assert.equal(openPreview.changes.confidential.from, 'Yes');
     assert.equal(openPreview.changes.confidential.to, 'No');
     assert.equal(openPreview.changes.access_warning, undefined);
@@ -1242,7 +1290,7 @@ async function testAdminLiftsConfidentialityOnOpenAndClosed(harness: Harness) {
     const closedPreview = await executeToolPreview(harness, ctx, 'set_incident_confidentiality', {
       ref: 'INC-10', confidential: false,
     });
-    assert.equal(closedPreview.summary, "Levée de la confidentialité de l'incident « INC-10 ».");
+    assert.equal(closedPreview.summary, "Levée de la confidentialité de l'incident « INC-10 - Closed restricted outage ».");
     await approvePreview(harness, ctx, closedPreview);
     const [closedRow] = await runner.query(
       `SELECT confidential, status FROM incidents WHERE tenant_id = $1 AND id = $2`,
@@ -1727,6 +1775,8 @@ async function run() {
     await testIncidentHiddenBetweenPreviewAndApprovalFails(harness);
     await testPlanCreatesThenMovesTheIncident(harness);
     await testDriftIsRefused(harness);
+    await testIncidentStateDriftIsRefused(harness);
+    await testConfidentialityDriftIsRefused(harness);
     await testReviewLockIsRelayed(harness);
     await testReporterFallbackOnlyOnCreate(harness);
     await testDetectedAtCannotBeCleared(harness);

@@ -80,11 +80,13 @@ export class AiIncidentMutationSupportService {
     if (rows.length > 1) throw new BadRequestException(`Multiple incidents matched "${raw}". Use an INC reference.`);
     const row = rows[0];
     const ref = `INC-${row.item_number}`;
+    const title = String(row.title ?? '').trim();
     return {
       id: String(row.id),
       ref,
-      title: String(row.title ?? ''),
-      label: row.confidential ? ref : `${ref} - ${String(row.title ?? '').trim()}`,
+      title,
+      // The resolution already applies the visibility: the card names the title, as every card.
+      label: title ? `${ref} - ${title}` : ref,
       status: String(row.status ?? ''),
       confidential: row.confidential === true,
       reporterUserId: row.reporter_user_id ? String(row.reporter_user_id) : null,
