@@ -475,7 +475,7 @@ links to the vulnerabilities page searched on its CVE
 (`frontend/src/ai/utils/entityUrls.ts`).
 
 Page size: 25 items by default, at most 50, 30 for `applications`,
-`technologies`, `vulnerabilities` and `budget_lines` (`aiQueryLimit` in
+`technologies`, `vulnerabilities`, `support_deadlines` and `budget_lines` (`aiQueryLimit` in
 `ai-query.executor.ts`; the budget cap is the 15 per nature the two former
 families had, summed). A
 larger `limit` is reduced and the result's `limit` is the one applied. The
