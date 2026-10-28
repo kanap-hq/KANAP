@@ -69,7 +69,7 @@ export class AddIncidentNoteAiMutationOperation implements AiMutationOperation<A
     entity_type: 'incidents',
     fields: ['note', 'occurred_at'],
     reversible: false,
-    prompt_hint: 'For an incident journal, use `add_incident_note` with an INC reference, the exact note text and, when the person gives one, the event time as an ISO 8601 date-time with a time zone in their `time_zone`. The journal only takes additions: the preview cannot be undone. A closed or cancelled incident is refused. Reopening, cancelling and lifting the confidentiality stay on the incident screen.',
+    prompt_hint: 'For an incident journal, use `add_incident_note` with an INC reference, the exact note text and, when the person gives one, the event time as an ISO 8601 date-time with a time zone in their `time_zone`. The journal only takes additions: the preview cannot be undone. A closed or cancelled incident is refused. Reopening, cancelling and lifting the confidentiality need a register administrator (`change_incident_state`, `set_incident_confidentiality`).',
   };
 
   constructor(
