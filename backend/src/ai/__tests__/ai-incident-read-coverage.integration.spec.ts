@@ -438,6 +438,44 @@ async function testMonthsReadInUtcWhateverTheSession(harness: Harness, runner: Q
   }
 }
 
+async function testUtcDayFilters(harness: Harness, runner: QueryRunner, s: Seed) {
+  await runner.query('SAVEPOINT incident_read_day_time_zone');
+  try {
+    // 31 October 23:30 UTC is 1 November 00:30 in Paris: the screen's day filter stays 31 October.
+    const nearMidnight = await insertId(runner,
+      `INSERT INTO incidents (tenant_id, title, item_number, severity, status, detected_at, reporter_user_id, owner_user_id)
+       VALUES ($1, 'Near midnight day', 31, 'minor', 'open', '2026-10-31T23:30:00Z', $2, $2)`,
+      [s.tenantId, s.reader]);
+    await runner.query(`SET LOCAL TIME ZONE 'Europe/Paris'`);
+    const options = {
+      manager: runner.manager,
+      tenantId: s.tenantId,
+      viewer: { userId: s.reader, isAdmin: false },
+      technologies: true,
+      applications: true,
+    };
+    const day = await harness.incidents.list({
+      filters: { detected_at: { filterType: 'date', type: 'equals', dateFrom: '2026-10-31' } },
+      limit: 100,
+    }, options);
+    assert.deepEqual(day.items.map((item: any) => item.id), [nearMidnight], 'the UTC day is 31 October, not the Paris day');
+    const nextDay = await harness.incidents.list({
+      filters: { detected_at: { filterType: 'date', type: 'equals', dateFrom: '2026-11-01' } },
+      limit: 100,
+    }, options);
+    assert.equal(nextDay.total, 0, 'the UTC day is never 1 November');
+    const range = await harness.incidents.list({
+      filters: { detected_at: { filterType: 'date', type: 'inRange', dateFrom: '2026-10-31', dateTo: '2026-10-31' } },
+      limit: 100,
+    }, options);
+    assert.deepEqual(range.items.map((item: any) => item.id), [nearMidnight], 'a range uses the same UTC days');
+    await runner.query("SET LOCAL TIME ZONE 'UTC'");
+  } finally {
+    await runner.query('ROLLBACK TO SAVEPOINT incident_read_day_time_zone');
+    await runner.query('RELEASE SAVEPOINT incident_read_day_time_zone');
+  }
+}
+
 async function testConfidentialInvisible(harness: Harness, runner: QueryRunner, s: Seed) {
   const ctx = context(runner, s);
   const r = s.records;
@@ -468,6 +506,28 @@ async function testBusinessContributorScope(harness: Harness, runner: QueryRunne
       sorted([r.two, r.twoHours, r.fourHours, r.cancelled, r.unresolved, r.negative]),
       'an incident linked only to an application outside their scope has no application',
     );
+
+    // The screen list's count and its search follow the same participation: a hidden link never
+    // counts and never makes the incident findable by its application's name.
+    const listOptions = {
+      manager: runner.manager,
+      tenantId: s.tenantId,
+      viewer: { userId: s.contributor, isAdmin: false },
+      applications: true,
+      technologies: true,
+      applicationScope: { userId: s.contributor },
+    };
+    const list = await harness.incidents.list({ limit: 100 }, listOptions);
+    const one = list.items.find((item: any) => item.id === r.one);
+    const two = list.items.find((item: any) => item.id === r.two);
+    assert.equal(Number(one.application_count), 1, 'only the application they take part in counts');
+    assert.equal(Number(two.application_count), 0, 'a link outside their scope does not count');
+    const hiddenSearch = await harness.incidents.list({ q: 'Beta App', limit: 100 }, listOptions);
+    assert.equal(hiddenSearch.total, 0, 'the search does not reveal a link outside their participation');
+    const referenceSearch = await harness.incidents.list({ q: 'APP-12', limit: 100 }, listOptions);
+    assert.equal(referenceSearch.total, 0, 'nor the application reference');
+    const visibleSearch = await harness.incidents.list({ q: 'Alpha App', limit: 100 }, listOptions);
+    assert.equal(visibleSearch.total, 1, 'an application of theirs still finds the incident');
   });
 }
 
@@ -521,6 +581,7 @@ async function run() {
       await testModuleReads(harness, runner, s);
       await testTextOperatorsAreRefused(harness, runner, s);
       await testMonthsReadInUtcWhateverTheSession(harness, runner, s);
+      await testUtcDayFilters(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

@@ -8,6 +8,7 @@ import {
   INCIDENT_DETECTED_MONTH_SQL,
   INCIDENT_RESOLUTION_HOURS_SQL,
   INCIDENT_RESOLVED_MONTH_SQL,
+  incidentDaySql,
 } from '../incident-sql';
 import { AuditService } from '../../audit/audit.service';
 import { ItemNumberService } from '../../common/item-number.service';
@@ -261,7 +262,20 @@ export class IncidentsService extends IncidentsBaseService {
       [...params, limit, skip],
     );
     // The linked counts of a module the reader does not read are null, never a number.
-    return { items: items.map((row: Record<string, unknown>) => withReadableCounts(row, opts)), total, page, limit };
+    const readable = items.map((row: Record<string, unknown>) => withReadableCounts(row, opts));
+    // A Business Contributor counts the applications they may see, as the detail does.
+    if (opts?.applications === true && opts.applicationScope) {
+      const counts = await this.applicationCountsInScope(
+        mg,
+        tenantId,
+        readable.map((row: Record<string, unknown>) => String(row.id)),
+        opts.applicationScope.userId,
+      );
+      for (const row of readable) {
+        row.application_count = counts.get(String(row.id)) ?? 0;
+      }
+    }
+    return { items: readable, total, page, limit };
   }
 
   /**
@@ -422,7 +436,8 @@ export class IncidentsService extends IncidentsBaseService {
         if (hasNull) clauses.push(`${expression} IS NULL`);
         where += clauses.length > 0 ? ` AND (${clauses.join(' OR ')})` : ' AND 1=0';
       } else if (DATE_FIELDS.has(field) && (model.filterType === 'date' || model.filterType === 'text')) {
-        where += this.dateClause(model, `${expression}::date`, params);
+        // The same UTC day as the metrics: a date-time stored at 23:30 UTC stays that day in Paris.
+        where += this.dateClause(model, incidentDaySql(expression), params);
       } else if (NUMBER_FIELDS.has(field) && (model.filterType === 'number' || model.filterType === 'text')) {
         where += this.numberClause(model, expression, params);
       } else if (model.filterType === 'text' && model.filter) {
@@ -451,6 +466,10 @@ export class IncidentsService extends IncidentsBaseService {
     if (input.q) {
       params.push(`%${input.q.trim()}%`);
       const idx = params.length;
+      // A Business Contributor searches the applications they take part in only, as the detail.
+      const applicationScope = input.applications !== false && input.applicationScope
+        ? ` AND ${applicationParticipantCondition('app', binder(params)(input.applicationScope.userId))}`
+        : '';
       where += ` AND (
         i.title ILIKE $${idx}
         OR i.description ILIKE $${idx}
@@ -470,6 +489,7 @@ export class IncidentsService extends IncidentsBaseService {
           SELECT 1 FROM incident_applications iap
           JOIN applications app ON app.id = iap.application_id AND app.tenant_id = iap.tenant_id
           WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id
+            ${applicationScope}
             AND (
               app.name ILIKE $${idx}
               OR COALESCE(app.sequential_id, '') ILIKE $${idx}
@@ -487,9 +507,15 @@ export class IncidentsService extends IncidentsBaseService {
     }
     if (input.applicationId) {
       params.push(input.applicationId);
+      const applicationParam = params.length;
+      const applicationScope = input.applicationScope
+        ? ` AND ${applicationParticipantCondition('app', binder(params)(input.applicationScope.userId))}`
+        : '';
       where += ` AND EXISTS (
         SELECT 1 FROM incident_applications iap
-        WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id AND iap.application_id = $${params.length}
+        JOIN applications app ON app.id = iap.application_id AND app.tenant_id = iap.tenant_id
+        WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id
+          AND iap.application_id = $${applicationParam}${applicationScope}
       )`;
     }
 
@@ -571,7 +597,8 @@ export class IncidentsService extends IncidentsBaseService {
 
     const pushDate = (value: any) => {
       params.push(value);
-      return `$${params.length}::date`;
+      // The expression is a `YYYY-MM-DD` text: compare it with the day as text too.
+      return `to_char($${params.length}::date, 'YYYY-MM-DD')`;
     };
     if (type === 'inRange') {
       if (!fromRaw || !toRaw) return '';
@@ -697,6 +724,28 @@ export class IncidentsService extends IncidentsBaseService {
       params,
     );
     return Number(row?.n ?? 0);
+  }
+
+  /** The same count for a page of the list, in one query. */
+  private async applicationCountsInScope(
+    mg: EntityManager,
+    tenantId: string,
+    incidentIds: string[],
+    userId: string,
+  ): Promise<Map<string, number>> {
+    if (incidentIds.length === 0) return new Map();
+    const params: unknown[] = [tenantId, incidentIds];
+    const bind = binder(params);
+    const rows: Array<{ incident_id: string; n: number }> = await mg.query(
+      `SELECT l.incident_id::text AS incident_id, COUNT(*)::int AS n
+         FROM incident_applications l
+         JOIN applications a ON a.id = l.application_id AND a.tenant_id = l.tenant_id
+        WHERE l.tenant_id = $1 AND l.incident_id = ANY($2::uuid[])
+          AND ${applicationParticipantCondition('a', bind(userId))}
+        GROUP BY l.incident_id`,
+      params,
+    );
+    return new Map(rows.map((row) => [String(row.incident_id), Number(row.n)]));
   }
 
   /**

@@ -66,10 +66,8 @@ import { IncidentsService } from '../../incidents/services/incidents.service';
 import {
   AiWriteLanguage,
   PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE,
-  incidentAccessWarning,
   incidentClosureWarning,
-  incidentSeverityText,
-  incidentStatusText,
+  incidentAccessWarning,
   previewSummaryText,
   quoted,
   writeActionText,
@@ -406,7 +404,8 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       severity: { label: 'Severity', kind: 'enum', enumValues: INCIDENT_SEVERITIES, requiredOnCreate: true },
       status: { label: 'Status', kind: 'enum', enumValues: INCIDENT_STATUSES },
       started_at: { label: 'Started', kind: 'date_time', nullable: true },
-      detected_at: { label: 'Detected', kind: 'date_time', nullable: true },
+      // Always stamped: a null would only be refused by the table at execution.
+      detected_at: { label: 'Detected', kind: 'date_time' },
       resolved_at: { label: 'Resolved', kind: 'date_time', nullable: true },
       closed_at: { label: 'Closed', kind: 'date_time', nullable: true },
       reporter_user_id: { label: 'Reporter', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['reporter'] },
@@ -767,9 +766,15 @@ export class AiBusinessRecordMutationSupportService {
     }
     if (field.kind === 'incident_category') {
       const settings = await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager });
-      const option = findCatalogOption(rawValue, settings.incidentCategories);
+      const current = existing?.[fieldName] == null ? null : String(existing[fieldName]);
+      // A deprecated category is refused unless it is the one the incident already holds; the
+      // refusal lists only the categories a new value may take, as the screen's selector does.
+      const option = findCatalogOption(rawValue, settings.incidentCategories, current, true);
       if (!option) {
-        const allowed = settings.incidentCategories.map((item) => item.label || item.code).join(', ');
+        const allowed = settings.incidentCategories
+          .filter((item) => !item.deprecated || item.code === current)
+          .map((item) => item.label || item.code)
+          .join(', ');
         throw new BadRequestException(`Unknown incident category "${String(rawValue).trim()}". Valid incident categories: ${allowed}.`);
       }
       // The card names the category from the tenant's own list in the person's language: keep the code.
@@ -1487,9 +1492,11 @@ export class AiBusinessRecordMutationSupportService {
     const confidential = fields.confidential !== undefined
       ? fields.confidential === true
       : existing?.confidential === true;
+    // On a change, an incident without a reporter stays without one: only a creation defaults
+    // the reporter to the person, as the screen does.
     const reporter = fields.reporter_user_id !== undefined
       ? fields.reporter_user_id
-      : (existing?.reporter_user_id ?? context.userId);
+      : (existing ? (existing.reporter_user_id ?? null) : context.userId);
     const owner = fields.owner_user_id !== undefined
       ? fields.owner_user_id
       : (existing?.owner_user_id ?? null);
@@ -1698,15 +1705,7 @@ export class AiBusinessRecordMutationSupportService {
     }
 
     const previousCodes = current.values && typeof current.values === 'object' ? current.values as Record<string, unknown> : {};
-    const shownValue = (fieldName: string, value: unknown): string | null => {
-      // Incident statuses and severities read in the person's language; the category stays its
-      // code, which the card names from the tenant's own list as the incident screen does.
-      if (entityType === 'incidents' && typeof value === 'string' && value) {
-        if (fieldName === 'status') return incidentStatusText(language, value);
-        if (fieldName === 'severity') return incidentSeverityText(language, value);
-      }
-      return formatPlainValue(value);
-    };
+    const shownValue = (_fieldName: string, value: unknown): string | null => formatPlainValue(value);
     const changes: Record<string, AiMutationPreviewChangeDto> = {};
     for (const fieldName of fieldNames) {
       const field = config.fields[fieldName];
