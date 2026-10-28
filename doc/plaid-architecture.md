@@ -364,7 +364,7 @@ Live write-preview coverage includes:
   accounts, charts of accounts, analytics categories, business processes, and
   locations
 - business-record create/update for applications, assets, contracts, projects,
-  requests, interfaces, connections, and budget lines
+  requests, interfaces, connections, budget lines, and incidents
 - relation updates for supported application, asset, supplier, contract,
   budget line, project, request, document, and location links
 - financial plan writes for budget line versions, amounts, and allocations
@@ -376,6 +376,24 @@ Live write-preview coverage includes:
   counts the rest, and apply refuses a record changed since the preview
 - grouped mutation plans and undo previews where a reversible operation supports
   reversal
+
+Incident previews go through `IncidentsService`, never the tables. An incident
+is created `open` or `in_progress` only: a resolved or closed incident is
+created open and moved forward in a second preview, so the step stays visible.
+The status only moves forward (`open` → `in_progress` → `resolved` → `closed`);
+a backward move is refused with the screen's Reopen message, and `cancelled` is
+refused (an administrator action on the screen). The preview that closes an
+incident says the record freezes and only an administrator reopens it. A change
+of a closed or cancelled incident is refused at preparation. `category` is
+validated against the tenant's incident categories by code or exact label, with
+the allowed values in the refusal. Date-times are ISO 8601 with a time zone,
+converted into the person's `time_zone`; `detected_at` defaults to now.
+`confidential: true` is allowed; a preview warns when the change makes the
+restricted incident disappear for the person, as the screen's lose-access
+dialog does. `confidential: false` is refused (lot 4). A field change is
+undoable, a status or confidentiality change is not. The journal, links,
+follow-up task, reopening, cancelling and lifting the confidentiality stay on
+the incident screen for lots 3 and 4.
 
 Application classification create/update previews use the normal application
 mutation service. They can set or clear business criticality, cyber,
