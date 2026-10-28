@@ -141,11 +141,8 @@ async function seedFamily(runner: QueryRunner, data: HistorySeed): Promise<Seede
      VALUES ($1, $2, '2.1', '2.1', ARRAY['2.1.'], '2027-06-30', '2028-06-30') RETURNING id`,
     [data.tenantId, data.technology],
   ))[0].id as string;
-  const subLocation = (await runner.query(
-    `INSERT INTO location_sub_items (tenant_id, location_id, name, description)
-     VALUES ($1, $2, 'Rack A', 'Cold aisle') RETURNING id`,
-    [data.tenantId, data.location],
-  ))[0].id as string;
+  // The shared fixture already holds one sub-location of the site.
+  const subLocation = data.subLocation;
 
   const assetReader = await seedPerson(runner, data.tenantId, { first: 'Aline', last: 'Asset' }, { infrastructure: 'reader' });
   const technologyReader = await seedPerson(runner, data.tenantId, { first: 'Tina', last: 'Tech' }, { infrastructure: 'reader' });
