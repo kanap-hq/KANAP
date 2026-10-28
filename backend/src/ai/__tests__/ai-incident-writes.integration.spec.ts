@@ -1133,10 +1133,11 @@ async function testAdminCancelsAnIncident(harness: Harness) {
     assert.equal(preview.changes.status.from, 'open');
     assert.equal(preview.changes.status.to, 'cancelled');
     assert.equal(preview.changes.reason.to, 'Duplicate of INC-6.');
+    assert.equal(preview.changes.closure_warning, undefined);
     assert.equal(
-      preview.changes.closure_warning.to,
-      "Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.",
-      'a cancellation carries the closure warning',
+      preview.changes.cancel_warning.to,
+      "Cette annulation fige l'incident : seul un administrateur pourra le rouvrir.",
+      'a cancellation carries its own freeze warning',
     );
     const executed = await approvePreview(harness, ctx, preview);
     assert.equal(executed.status, 'executed');

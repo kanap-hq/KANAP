@@ -340,6 +340,14 @@ const INCIDENT_CLOSURE_WARNING: Texts = {
   es: 'Esto cierra y bloquea el incidente: solo un administrador podrá reabrirlo.',
 };
 
+/** The card's warning on a cancellation: the record freezes until an administrator reopens it. */
+const INCIDENT_CANCEL_WARNING: Texts = {
+  en: 'This cancellation freezes the incident: only an administrator can reopen it.',
+  fr: "Cette annulation fige l'incident : seul un administrateur pourra le rouvrir.",
+  de: 'Diese Annullierung sperrt den Vorfall: Nur ein Administrator kann ihn wieder öffnen.',
+  es: 'Esta anulación bloquea el incidente: solo un administrador podrá reabrirlo.',
+};
+
 /** The card's warning when the change makes the restricted incident disappear for the person. */
 const INCIDENT_ACCESS_WARNING: Texts = {
   en: 'After this change, only register administrators, the reporter and the owner can open it. You will be taken back to the register.',
@@ -350,6 +358,10 @@ const INCIDENT_ACCESS_WARNING: Texts = {
 
 export function incidentClosureWarning(language: AiWriteLanguage): string {
   return INCIDENT_CLOSURE_WARNING[language];
+}
+
+export function incidentCancelWarning(language: AiWriteLanguage): string {
+  return INCIDENT_CANCEL_WARNING[language];
 }
 
 export function incidentAccessWarning(language: AiWriteLanguage): string {

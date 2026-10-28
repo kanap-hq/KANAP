@@ -334,7 +334,15 @@ function testIncidentStateAndConfidentialityCards() {
   assert.equal(cancelled.status.from, 'open');
   assert.equal(cancelled.status.to, 'cancelled');
   assert.equal(cancelled.reason.to, 'Duplicate of INC-6.');
-  assert.equal(cancelled.closure_warning.to, "Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.");
+  assert.equal(cancelled.closure_warning, undefined, 'a cancellation carries its own warning');
+  for (const [language, text] of [
+    ['en', 'This cancellation freezes the incident: only an administrator can reopen it.'],
+    ['fr', "Cette annulation fige l'incident : seul un administrateur pourra le rouvrir."],
+    ['de', 'Diese Annullierung sperrt den Vorfall: Nur ein Administrator kann ihn wieder öffnen.'],
+    ['es', 'Esta anulación bloquea el incidente: solo un administrador podrá reabrirlo.'],
+  ] as const) {
+    assert.equal(state.presentPreview(cancel, language).changes.cancel_warning.to, text, language);
+  }
   assert.equal(summary(state, cancel, 'fr'), "Annulation de l'incident « INC-7 - Mail outage ».");
   assert.equal(summary(state, cancel, 'en'), 'Cancel INC-7 - Mail outage.');
 

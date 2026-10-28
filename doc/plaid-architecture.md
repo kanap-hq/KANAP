@@ -417,8 +417,8 @@ member or a contributor is not offered them. `change_incident_state` takes
 `cancel`, and carries the before and after status and the reason on the card.
 Reopening refuses an open or in-progress incident before the preview with the
 service's sentence; cancelling refuses a frozen record. A cancellation carries
-the same freeze warning as a closure, writes a `status_change` journal entry and
-cannot be undone. The 423 of the review lock at cancellation is relayed as the
+its own `cancel_warning` (the record freezes until an administrator reopens
+it), writes a `status_change` journal entry and cannot be undone. The 423 of the review lock at cancellation is relayed as the
 readable closure message. `set_incident_confidentiality` takes the boolean
 directly, works on an open, closed or cancelled record as the screen's route
 does, and asks for the administrator right in both directions; a register

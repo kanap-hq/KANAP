@@ -199,6 +199,7 @@
       "business_purpose": "Business purpose",
       "classification_review_state": "Classification review",
       "access_warning": "Access",
+      "cancel_warning": "Cancellation",
       "closure_warning": "Closure",
       "coa_id": "Chart of accounts",
       "content": "Content",

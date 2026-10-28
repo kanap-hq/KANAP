@@ -199,6 +199,7 @@
       "business_purpose": "Finalidad de negocio",
       "classification_review_state": "Revisión de la clasificación",
       "access_warning": "Acceso",
+      "cancel_warning": "Anulación",
       "closure_warning": "Cierre",
       "coa_id": "Plan de cuentas",
       "content": "Contenido",

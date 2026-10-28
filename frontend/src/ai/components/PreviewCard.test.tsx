@@ -182,10 +182,10 @@ describe('PreviewCard in French', () => {
       changes: {
         status: { label: 'Status', from: 'open', to: 'cancelled', format: 'text' },
         reason: { label: 'Reason', from: null, to: 'Doublon de INC-6.', format: 'text' },
-        closure_warning: {
-          label: 'Closure',
+        cancel_warning: {
+          label: 'Cancellation',
           from: null,
-          to: "Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.",
+          to: "Cette annulation fige l'incident : seul un administrateur pourra le rouvrir.",
           format: 'text',
         },
       },
@@ -194,8 +194,8 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText('Ouvert')).toBeInTheDocument();
     expect(screen.getByText('Annulé')).toBeInTheDocument();
     expect(screen.getByText('Doublon de INC-6.')).toBeInTheDocument();
-    expect(screen.getByText("Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.")).toBeInTheDocument();
-    expect(screen.getByText('Clôture')).toBeInTheDocument();
+    expect(screen.getByText("Cette annulation fige l'incident : seul un administrateur pourra le rouvrir.")).toBeInTheDocument();
+    expect(screen.getByText('Annulation')).toBeInTheDocument();
   });
 
   it('shows an incident confidentiality lifted, in French', () => {

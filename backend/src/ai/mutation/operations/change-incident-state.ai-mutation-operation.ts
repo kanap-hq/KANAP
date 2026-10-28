@@ -5,7 +5,7 @@ import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import {
   AiWriteLanguage,
   PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE,
-  incidentClosureWarning,
+  incidentCancelWarning,
   incidentReasonLabel,
   previewSummaryText,
   quoted,
@@ -181,10 +181,10 @@ export class ChangeIncidentStateAiMutationOperation implements AiMutationOperati
           format: 'text',
         },
         ...(action === 'cancel' ? {
-          closure_warning: {
-            label: 'Closure',
+          cancel_warning: {
+            label: 'Cancellation',
             from: null,
-            to: incidentClosureWarning(language),
+            to: incidentCancelWarning(language),
             format: 'text' as const,
           },
         } : {}),
