@@ -986,14 +986,6 @@ export default function InterfaceBindingsMatrix({
     targetApplicationName,
   ]);
 
-  const openManageConnections = (binding: BindingRow) => {
-    if (!canManage) return;
-    setManageConnections({ binding });
-    if (linksByBindingId[binding.id] === undefined) {
-      void loadLinksForBinding(binding.id);
-    }
-  };
-
   const openBindingCell = (env: string, leg: InterfaceLeg, binding: BindingRow | undefined) => {
     if (binding) {
       openEdit(env, leg, binding);
@@ -1576,9 +1568,6 @@ export default function InterfaceBindingsMatrix({
 
   const renderBindingSidePanel = () => {
     if (!bindingPanelOpen || !dialogState) return null;
-    const manageBinding = dialogState.bindingId
-      ? bindings.find((binding) => binding.id === dialogState.bindingId)
-      : undefined;
     const autosaveStatusText = dialogState.mode === 'edit'
       ? autosaveStatus === 'saving'
         ? t('common:status.saving')
@@ -1617,7 +1606,11 @@ export default function InterfaceBindingsMatrix({
         >
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ fontSize: 14, lineHeight: 1.35, fontWeight: 500, color: 'kanap.text.primary' }}>
-              {dialogState.mode === 'edit' ? t('it:workspace.interface.bindings.editBinding') : t('it:workspace.interface.bindings.addBinding')}
+              {dialogState.mode !== 'edit'
+                ? t('it:workspace.interface.bindings.addBinding')
+                : canManage
+                  ? t('it:workspace.interface.bindings.editBinding')
+                  : t('it:workspace.interface.bindings.bindingIn', { env: environmentLabel(t, dialogState.environment) })}
             </Typography>
             <Typography
               sx={{
@@ -1673,22 +1666,6 @@ export default function InterfaceBindingsMatrix({
               disabled={bindingSaveDisabled}
             >
               {bindingSaving ? t('common:status.saving') : t('it:workspace.interface.bindings.addBinding')}
-            </Button>
-          </Stack>
-        )}
-        {dialogState.mode === 'edit' && canManage && manageBinding && (
-          <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            sx={(theme) => ({
-              px: 1.5,
-              py: 1.25,
-              borderTop: `1px solid ${theme.palette.kanap.border.default}`,
-            })}
-          >
-            <Button size="small" variant="action" onClick={() => openManageConnections(manageBinding)}>
-              {t('it:workspace.interface.bindings.manageConnectionButton')}
             </Button>
           </Stack>
         )}

@@ -165,8 +165,9 @@ describe('InterfaceBindingsMatrix connection picker', () => {
     expect(screen.queryByRole('button', { name: 'Ajouter un environnement' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Supprimer la liaison' })).toBeNull();
     expect(screen.queryByRole('button', { name: "Supprimer l'environnement" })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Gérer les connexions' })).toBeNull();
     expect(screen.queryByText('Cliquez pour ajouter')).toBeNull();
+    expect(screen.queryByText('Modifier la liaison')).toBeNull();
+    expect(screen.getByText(/^Liaison en /)).toBeInTheDocument();
 
     const endpoint = screen.getByDisplayValue('https://src.fromage');
     expect(endpoint).toBeDisabled();
@@ -176,7 +177,7 @@ describe('InterfaceBindingsMatrix connection picker', () => {
     await waitFor(() => expect(patch).not.toHaveBeenCalled());
   });
 
-  it('shows the management actions to an Applications member, without creating a connection', async () => {
+  it('shows the management actions to an Applications member', async () => {
     renderMatrix({ canManage: true, canCreateConnection: false, bindings: [BINDING] });
 
     await openBindingPanel();
@@ -190,20 +191,6 @@ describe('InterfaceBindingsMatrix connection picker', () => {
     fireEvent.change(endpoint, { target: { value: 'https://changed.fromage' } });
     fireEvent.blur(endpoint);
     await waitFor(() => expect(patch).toHaveBeenCalledTimes(1));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Gérer les connexions' }));
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).queryByText(/Créer une connexion/)).toBeNull();
-    expect(within(dialog).getByRole('button', { name: 'Lier' })).toBeInTheDocument();
-  });
-
-  it('offers the connection creation to a member of both modules', async () => {
-    renderMatrix({ canManage: true, canCreateConnection: true, bindings: [BINDING] });
-
-    await openBindingPanel();
-    fireEvent.click(screen.getByRole('button', { name: 'Gérer les connexions' }));
-
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(/Créer une connexion/)).toBeInTheDocument();
+    expect(screen.getByText('Modifier la liaison')).toBeInTheDocument();
   });
 });
