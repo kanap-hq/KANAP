@@ -81,13 +81,13 @@ function testParentRulesAgree() {
       if (entry.explicitParentLabels.includes(label)) {
         // The writer hands the record as an explicit parent; a label rule would be dead.
         assert.equal(rule, undefined, `${label}: an explicit parent carries no label rule`);
-      } else if (read === 'record') {
-        // The child's row already names the record in `record_id`: `parent_*` is not needed.
-        assert.equal(rule, undefined, `${label}: a parent read by record_id carries no label rule`);
       } else if (read === undefined) {
         // Read through `parent_table` / `parent_id`: the label needs its rule.
         assert.ok(rule, `${label}: a child label read by its parent needs a parent rule (or explicitParentLabels)`);
       }
+      // A child read by `record_id` (`childReads: 'record'`, where `parent_*` is not needed) may
+      // still carry a rule for its other rows (`interface_links`: the whole-set replacement names
+      // the interface in `record_id`, the single link rows in the payload).
       // A child read through a payload key is not read through the parent columns here:
       // `contract_contacts` has no parent rule until the contract family declares one, while the
       // supplier's own rule still serves the supplier's page.
