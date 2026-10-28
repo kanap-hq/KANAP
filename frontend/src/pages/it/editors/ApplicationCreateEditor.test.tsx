@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n';
 import { createAppTheme } from '../../../config/ThemeContext';
 import ApplicationCreateEditor, { type ApplicationCreateEditorHandle } from './ApplicationCreateEditor';
@@ -69,6 +69,10 @@ function assertLabelOrder(text: string, labels: string[]) {
 }
 
 describe('ApplicationCreateEditor', () => {
+  beforeEach(() => {
+    post.mockReset();
+  });
+
   afterEach(async () => {
     cleanup();
     await i18n.changeLanguage('en');
@@ -96,6 +100,21 @@ describe('ApplicationCreateEditor', () => {
     expect(post).not.toHaveBeenCalled();
     await act(async () => { ref.current?.dismissNameError(); });
     expect(screen.queryByText(c.nameRequired)).toBeNull();
+  });
+
+  it('keeps a save refusal when the name error is dismissed', async () => {
+    post.mockRejectedValueOnce({ response: { status: 400, data: { message: 'Name already used' } } });
+    const ref = React.createRef<ApplicationCreateEditorHandle>();
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <ApplicationCreateEditor ref={ref} />
+      </ThemeProvider>,
+    );
+    await act(async () => { ref.current?.setName('Billing'); });
+    await act(async () => { await ref.current?.save().catch(() => undefined); });
+    expect(screen.getByText('Name already used')).toBeInTheDocument();
+    await act(async () => { ref.current?.dismissNameError(); });
+    expect(screen.getByText('Name already used')).toBeInTheDocument();
   });
 
   it('posts the header name with the same payload', async () => {

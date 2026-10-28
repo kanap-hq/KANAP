@@ -1067,6 +1067,17 @@ describe('Asset workspace: section placement', () => {
       await waitFor(() => expect(button).toBeEnabled());
     });
 
+    it('clears the missing site refusal once a site is picked', async () => {
+      renderAt('/it/assets/new/overview');
+      fireEvent.change(await screen.findByPlaceholderText('workspace.asset.overview.namePlaceholder'), { target: { value: 'web 1' } });
+      await chooseAssetType();
+      // The Create button waits for the site; the save shortcut still says what is missing.
+      fireEvent.keyDown(window, { key: 's', ctrlKey: true });
+      expect(await screen.findByText('messages.locationRequired')).toBeInTheDocument();
+      fireEvent.click(screen.getAllByText('pick-location')[0]);
+      await waitFor(() => expect(screen.queryByText('messages.locationRequired')).toBeNull());
+    });
+
     it('shows type, environment and site once, in the properties', async () => {
       renderAt('/it/assets/new/overview');
       await screen.findByText('workspace.asset.overview.basics');

@@ -144,6 +144,14 @@ describe('ContactWorkspacePage', () => {
     expect(await screen.findByText('alex@example.com', { selector: 'span' })).toBeInTheDocument();
   });
 
+  it('shows the generic fallback as an empty title when the contact has no name and no email', async () => {
+    stored = { ...CONTACT, first_name: null, last_name: null, email: null };
+    renderAt('/master-data/contacts/c-1/overview');
+    await screen.findByLabelText('contacts.fields.email');
+    const title = within(screen.getByRole('button', { name: 'common:buttons.editTitle' })).getByText('contacts.contactFallback');
+    expect(getComputedStyle(title).borderBottomStyle).toBe('dashed');
+  });
+
   it('saves first and last name together when focus leaves the title', async () => {
     renderAt('/master-data/contacts/c-1/overview');
     fireEvent.click(await screen.findByText('Alex Martin'));
