@@ -21,6 +21,7 @@ import { LocationsService } from '../../locations/locations.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProjectsService } from '../../portfolio/services';
 import { BudgetLinesService } from '../../spend/budget-lines.service';
+import { budgetLineReference } from '../../spend/budget-nature';
 import { TaskLinkedScopes, TasksService } from '../../spend/tasks.service';
 import { AllocationCalculatorService } from '../../spend/allocation-calculator.service';
 import { describeAllocationWarning } from '../../spend/allocation-distribution';
@@ -63,6 +64,7 @@ import { aiDataAccessNote } from './ai-data-access-note.util';
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
 import { hiddenContractLineCount } from '../../contracts/contract-relations';
 import { AiReadProbe, analyticsAxisFields, resolveAiEntityRegistry } from './registries';
+import { taskRelatedFamily } from './registries/tasks.registry';
 import { budgetFteFields, budgetLineTotalFieldsOf, budgetPairOfKey, isBudgetMoneyKey } from './registries/budget-amount-fields';
 import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
 import { entityNotFound, isUuid, resolveAiEntityReference } from '../ai-entity-reference.util';
@@ -162,12 +164,12 @@ function readableRelationCounts<T extends { opex: number; capex: number; contrac
 function mergeLinkedBudgetLines(
   opex: { items?: Array<{ id: string; product_name: string | null; item_number?: number | null }> } | null,
   capex: { items?: Array<{ id: string; description: string | null; item_number?: number | null }> } | null,
-): { items: Array<{ id: string; product_name: string | null; item_number: number | null; nature: 'opex' | 'capex' }> } | null {
+): { items: Array<{ id: string; reference: string | null; product_name: string | null; item_number: number | null; nature: 'opex' | 'capex' }> } | null {
   if (!opex && !capex) return null;
   return {
     items: [
-      ...(opex?.items ?? []).map((line) => ({ id: line.id, product_name: line.product_name, item_number: line.item_number ?? null, nature: 'opex' as const })),
-      ...(capex?.items ?? []).map((line) => ({ id: line.id, product_name: line.description, item_number: line.item_number ?? null, nature: 'capex' as const })),
+      ...(opex?.items ?? []).map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.product_name, item_number: line.item_number ?? null, nature: 'opex' as const })),
+      ...(capex?.items ?? []).map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.description, item_number: line.item_number ?? null, nature: 'capex' as const })),
     ],
   };
 }
@@ -745,7 +747,7 @@ export class AiQueryExecutor {
         due_date: scalar(row.due_date),
         phase: scalar(row.phase_name),
         labels: scalar(Array.isArray(row.labels) ? row.labels.join(', ') : null),
-        related: scalar(row.related_object_type),
+        related: scalar(taskRelatedFamily(row.related_object_type)),
         related_label: hiddenLine ? null : scalar(row.related_object_name),
         applications: scalar(Array.isArray(row.applications) ? row.applications.map((item: any) => item?.name).filter(Boolean).join(', ') : null),
         assets: scalar(Array.isArray(row.assets) ? row.assets.map((item: any) => item?.name).filter(Boolean).join(', ') : null),
@@ -896,7 +898,7 @@ export class AiQueryExecutor {
   private mapBudgetLine(row: any, registry: AiEntityFilterRegistry): AiEntitySummaryDto {
     const anchorYear = new Date().getFullYear();
     const summary = row.description
-      ?? ([row.supplier_name ?? row.company_name, row.paying_company_name, row.account_display].filter(Boolean).join(' | ') || null);
+      ?? ([row.supplier_name, row.paying_company_name, row.account_display].filter(Boolean).join(' | ') || null);
     return toEntitySummary('budget_lines', {
       id: row.id,
       reference: row.reference,
@@ -2464,7 +2466,7 @@ export class AiQueryExecutor {
   private async loadContractDeepDetail(
     context: AiExecutionContextWithManager,
     contractId: string,
-    linkedSpendItems: Array<{ id: string; product_name: string | null }> | null,
+    linkedSpendItems: Array<{ id: string; product_name: string | null; item_number?: number | null }> | null,
   ): Promise<Record<string, unknown>> {
     const rows = await context.manager.query(
       `
@@ -2510,9 +2512,9 @@ export class AiQueryExecutor {
     const linkedBudgetLines = reads.budget
       ? {
         items: [
-          ...(linkedSpendItems ?? []).map((line) => ({ id: line.id, product_name: line.product_name, nature: 'opex' as const })),
-          ...((linkedCapexItems?.items ?? []) as Array<{ id: string; description: string | null }>)
-            .map((line) => ({ id: line.id, product_name: line.description, nature: 'capex' as const })),
+          ...(linkedSpendItems ?? []).map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.product_name, nature: 'opex' as const })),
+          ...((linkedCapexItems?.items ?? []) as Array<{ id: string; description: string | null; item_number?: number | null }>)
+            .map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.description, nature: 'capex' as const })),
         ],
       }
       : null;
@@ -2651,7 +2653,11 @@ export class AiQueryExecutor {
         linkedScopes: await this.taskLinkedScopes(context),
       });
       if (!row) throw new NotFoundException('Task not found.');
-      return this.toDetailResult(this.mapTask(row), withoutHiddenLine(row));
+      const task: any = withoutHiddenLine(row);
+      // The stored `spend_item` / `capex_item` never reaches the model: both natures are one
+      // `budget_line` family on the AI surface.
+      if (task.related_object_type) task.related_object_type = taskRelatedFamily(task.related_object_type);
+      return this.toDetailResult(this.mapTask(row), task);
     }
 
     if (entityType === 'projects') {
@@ -2789,6 +2795,11 @@ export class AiQueryExecutor {
       // and answers the line of either nature (`resolveBudgetLine`).
       const row: any = await this.budgetLines.get(entityId, { manager: context.manager });
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Budget line not found.');
+      // The workspace's own read adds its picker references, its change-of-type lineage and, for a
+      // limited person, whether the line is editable: none of them is part of the AI's detail.
+      delete row.references;
+      delete row.lineage;
+      delete row.editable;
       await this.withoutHiddenAnalyticsValues(context, row, row.nature);
       const registry = await resolveAiEntityRegistry(context, entityType, this.readProbe(context));
       // The id, not the reference the caller may have given (`get` accepts both).
