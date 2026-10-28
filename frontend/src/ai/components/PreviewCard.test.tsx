@@ -155,6 +155,49 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText('Accès')).toBeInTheDocument();
   });
 
+  it('shows an incident note with its text and event time, in French', () => {
+    renderCard(preview({
+      tool_name: 'add_incident_note',
+      target: { entity_type: 'incidents', entity_id: 'incident-1', ref: 'INC-7', title: 'INC-7 - Mail outage' },
+      summary: "Ajout d'une note à l'incident « INC-7 - Mail outage ».",
+      changes: {
+        note: { label: 'Note', from: null, to: 'Mail is back.\nFailover to the secondary site done.', format: 'markdown' },
+        occurred_at: { label: "Date de l'événement", from: null, to: '2026-10-28T14:00:00.000Z', format: 'text' },
+      },
+    }));
+
+    expect(screen.getByText('Note')).toBeInTheDocument();
+    expect(screen.getByText(/Mail is back\./)).toBeInTheDocument();
+    expect(screen.getByText(/Failover to the secondary site done\./)).toBeInTheDocument();
+    expect(screen.getByText("Date de l'événement")).toBeInTheDocument();
+    expect(screen.getByText(/2026, \d{2}:\d{2}/)).toBeInTheDocument();
+    expect(screen.getByText("Ajout d'une note à l'incident « INC-7 - Mail outage ».")).toBeInTheDocument();
+  });
+
+  it('shows the incident links added, removed and already present, in French', () => {
+    renderCard(preview({
+      tool_name: 'update_incident_links',
+      target: { entity_type: 'incidents', entity_id: 'incident-1', ref: 'INC-7', title: 'INC-7 - Mail outage' },
+      summary: "Modification des liens de l'incident « INC-7 - Mail outage ».",
+      changes: {
+        linked_assets: { label: 'Linked assets', from: null, to: '**Ajoutés**\n- AST-12 - PAR-ESX-01', format: 'markdown' },
+        linked_applications: { label: 'Linked applications', from: null, to: '**Retirés**\n- APP-2 - Mail', format: 'markdown' },
+        linked_technologies: { label: 'Linked technologies', from: null, to: '**Déjà liés**\n- TEC-3 - PostgreSQL', format: 'markdown' },
+      },
+    }));
+
+    expect(screen.getByText('Actifs liés')).toBeInTheDocument();
+    expect(screen.getByText('Applications liées')).toBeInTheDocument();
+    expect(screen.getByText('Technologies liées')).toBeInTheDocument();
+    expect(screen.getByText('Ajoutés')).toBeInTheDocument();
+    expect(screen.getByText('Retirés')).toBeInTheDocument();
+    expect(screen.getByText('Déjà liés')).toBeInTheDocument();
+    for (const text of ['AST-12 - PAR-ESX-01', 'APP-2 - Mail', 'TEC-3 - PostgreSQL']) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.getByText("Modification des liens de l'incident « INC-7 - Mail outage ».")).toBeInTheDocument();
+  });
+
   it('shows a budget line deletion with its versions, tasks and links, in French', () => {
     renderCard(preview({
       tool_name: 'delete_record',

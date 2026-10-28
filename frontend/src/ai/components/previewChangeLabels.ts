@@ -40,7 +40,7 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2
 /** An ISO instant with a time: the card shows its day and time, not just its day. */
 const ISO_DATE_TIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 /** The incident date-time fields: they read with the time, a date field keeps its day. */
-const DATE_TIME_FIELDS = new Set(['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at']);
+const DATE_TIME_FIELDS = new Set(['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at', 'occurred_at']);
 
 type ValueRule = {
   fields: string[];
