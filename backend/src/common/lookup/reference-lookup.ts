@@ -50,6 +50,11 @@ export interface LookupRequest {
   limit?: number | null;
   /** Further predicates of a search (a company's chart, a dimension...). */
   scope?: Array<(bind: Bind) => string>;
+  /**
+   * Return every row the scope matches, without a page: the caller already holds the finite set
+   * (the owner suggestions of a cost centre) and a cap would silently drop people from it.
+   */
+  unlimited?: boolean;
 }
 
 export interface LookupResult<T> {
@@ -118,7 +123,7 @@ export async function runLookup<T = Record<string, unknown>>(
   }
 
   const maxLimit = spec.maxLimit ?? 50;
-  const limit = Math.min(Math.max(1, request.limit ?? spec.defaultLimit ?? 30), maxLimit);
+  const limit = request.unlimited ? null : Math.min(Math.max(1, request.limit ?? spec.defaultLimit ?? 30), maxLimit);
   if (spec.offered) where.push(`(${spec.offered})`);
   for (const predicate of request.scope ?? []) where.push(`(${predicate(bind)})`);
 
@@ -138,9 +143,11 @@ export async function runLookup<T = Record<string, unknown>>(
   order.push(...sortKeys(spec));
 
   const rows: T[] = await manager.query(
-    `SELECT ${select} FROM ${spec.table} t WHERE ${where.join(' AND ')} ORDER BY ${order.join(', ')} LIMIT ${bind(limit + 1, 'int')}`,
+    `SELECT ${select} FROM ${spec.table} t WHERE ${where.join(' AND ')} ORDER BY ${order.join(', ')}`
+      + (limit === null ? '' : ` LIMIT ${bind(limit + 1, 'int')}`),
     params,
   );
+  if (limit === null) return { items: rows, has_more: false };
   return { items: rows.slice(0, limit), has_more: rows.length > limit };
 }
 

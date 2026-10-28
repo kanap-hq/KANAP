@@ -18,6 +18,13 @@ function optionalUuid(value: unknown, name: string): string | null {
   return raw;
 }
 
+/** A required uuid parameter: absent or malformed is a 400. */
+export function requiredUuid(value: unknown, name: string): string {
+  const id = optionalUuid(value, name);
+  if (!id) throw new BadRequestException(`${name} is required.`);
+  return id;
+}
+
 export const SUPPLIER_LOOKUP: LookupSpec = {
   table: 'suppliers',
   columns: { id: 't.id', name: 't.name', erp_supplier_id: 't.erp_supplier_id', status: 't.status' },
@@ -173,6 +180,20 @@ export async function lookupDepartments(call: LookupCall, query: any) {
   const companyId = optionalUuid(query?.company_id ?? query?.companyId, 'company_id');
   if (companyId) request.scope = [(bind: Bind) => `t.company_id = ${bind(companyId, 'uuid')}`];
   return lookup(call, DEPARTMENT_LOOKUP, request);
+}
+
+/**
+ * The people of a precomputed id set, with the `USER_LOOKUP` columns and order (names only). The
+ * owner suggestions of a budget line come that way: the ids are the people who read a cost centre,
+ * and the response never says why a person is there. No page cap: the set is finite and dropping
+ * its tail would hide a person from the picker.
+ */
+export async function lookupUsersByIds(call: LookupCall, ids: string[], query: any) {
+  if (ids.length === 0) return { items: [], has_more: false };
+  const request = parseLookupRequest(query);
+  request.unlimited = true;
+  request.scope = [(bind: Bind) => `t.id = ANY(${bind(ids, 'uuid[]')})`];
+  return lookup(call, USER_LOOKUP, request);
 }
 
 /** An optional line type (`opex`, `capex`) in the parameter `param`: absent is null, anything else a 400. */

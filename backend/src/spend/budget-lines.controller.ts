@@ -6,6 +6,8 @@ import { resolveBusinessContributorScopeForUser } from '../auth/business-contrib
 import { PermissionGuard } from '../auth/permission.guard';
 import { ReadOnlyRoute, RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
+import { lookupUsersByIds, requiredUuid } from '../common/lookup/reference-lookups';
+import { peopleWithCostCenterAccess } from '../data-access/data-access-people';
 import { resolveBudgetLine } from '../common/resolve-item-id';
 import { buildRelationsAccess } from '../common/relations/relations-access';
 import {
@@ -176,6 +178,21 @@ export class BudgetLinesController {
     @Tenant() ctx: TenantRequest,
   ) {
     return this.budgetOps.clearBudgetColumns(body, ctx.userId || null, { manager: ctx.manager as EntityManager });
+  }
+
+  /**
+   * The people to propose first as IT or business owner of a line placed on this cost centre: the
+   * ones who read it and may open a line there (`peopleWithCostCenterAccess`), names only, in the
+   * `USER_LOOKUP` order. The picker still offers every enabled person; this group only comes first.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'member')
+  @Get('owner-suggestions')
+  async ownerSuggestions(@Query() query: any, @Tenant() ctx: TenantRequest) {
+    const costCenterId = requiredUuid(query?.cost_center_id, 'cost_center_id');
+    const manager = ctx.manager as EntityManager;
+    const ids = await peopleWithCostCenterAccess(manager, ctx.tenantId, costCenterId);
+    return lookupUsersByIds({ manager, tenantId: ctx.tenantId }, ids, query);
   }
 
   @UseGuards(PermissionGuard)
