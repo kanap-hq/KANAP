@@ -17,7 +17,15 @@ export const MEASURES: Measure[] = ['planned', 'forecast', 'committed', 'actual'
 
 export const noFreeze = { assertNotFrozen: async () => undefined };
 
-export type AuditEntry = { table: string; recordId?: string | null; action: string; before?: any; after?: any; userId?: string | null };
+export type AuditEntry = {
+  table: string;
+  recordId?: string | null;
+  action: string;
+  before?: any;
+  after?: any;
+  userId?: string | null;
+  parent?: { table: string; id: string } | null;
+};
 
 /** An audit double that keeps what was logged; `failOn` throws for a matching entry. */
 export function captureAudit(failOn?: (entry: AuditEntry) => boolean) {

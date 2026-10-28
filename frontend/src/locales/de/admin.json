@@ -404,7 +404,12 @@
     },
     "fields": {
       "access_methods": "Zugriffsarten",
+      "account_id": "Konto",
+      "allocation_method": "Zuordnungsmethode",
+      "allocation_pct": "Zuordnung",
       "amount": "Betrag",
+      "as_of_date": "Stand",
+      "budget_year": "Budgetjahr",
       "business_lead_id": "Fachbereichsleiter",
       "category": "Kategorie",
       "classification_justification": "Begründung der Einstufung",
@@ -415,6 +420,8 @@
       "confidential": "Vertraulich",
       "contains_pii": "Enthält personenbezogene Daten",
       "content_markdown": "Inhalt",
+      "contract_id": "Vertrag",
+      "cost_center_id": "Kostenstelle",
       "created_at": "Erstellt am",
       "created_by": "Erstellt von",
       "created_by_user_id": "Erstellt von",
@@ -428,6 +435,7 @@
       "disabled_at": "Deaktiviert am",
       "due_date": "Fälligkeitsdatum",
       "editor": "Herausgeber",
+      "effective_start": "Gültig ab",
       "email": "E-Mail",
       "end_date": "Enddatum",
       "end_of_support_date": "Datum des Supportendes",
@@ -440,6 +448,7 @@
       "fte": "VZÄ",
       "go_live_date": "Datum der Inbetriebnahme",
       "hosting_model": "Hosting",
+      "input_grain": "Eingabegranularität",
       "ip": "IP-Adresse",
       "is_suite": "Kann weitere Anwendungen enthalten",
       "it_lead_id": "IT-Leiter",
@@ -449,15 +458,21 @@
       "last_name": "Nachname",
       "licensing": "Lizenzierung",
       "lifecycle": "Lebenszyklus",
+      "lines": "Bepreiste Zeilen",
+      "measure": "Kennzahl",
       "method": "Methode",
       "mfa_supported": "MFA unterstützt",
       "mode": "Modus",
       "name": "Name",
+      "nature": "Art",
       "nodes": "Knoten",
       "notes": "Notizen",
       "operation": "Vorgang",
+      "owner_business_id": "Fachbereichsverantwortlicher",
+      "owner_it_id": "IT-Verantwortlicher",
       "owner_user_id": "Verantwortlicher",
       "path": "Route",
+      "paying_company_id": "Zahlendes Unternehmen",
       "period_end": "Periodenende",
       "period_start": "Periodenbeginn",
       "personal_data_affected": "Personenbezogene Daten betroffen",
@@ -465,6 +480,8 @@
       "planned_start": "Geplanter Start",
       "predecessor_id": "Vorgänger",
       "priority": "Priorität",
+      "product_name": "Produktname",
+      "project_id": "Projekt",
       "purpose": "Zweck",
       "query": "Parameter",
       "recovery_wave": "Wiederanlaufwelle",
@@ -478,6 +495,7 @@
       "rows": "Zeilen",
       "rpo_minutes": "Datenverlustziel (Minuten)",
       "rto_minutes": "Wiederanlaufzeitziel (Minuten)",
+      "run_build": "Run oder Build",
       "sequential_id": "Referenz",
       "severity": "Schweregrad",
       "source": "Quelle",
@@ -485,6 +503,7 @@
       "start_date": "Startdatum",
       "started_at": "Gestartet am",
       "status": "Status",
+      "successor_id": "Nachfolger",
       "supplier_id": "Lieferant",
       "support_notes": "Support-Notizen",
       "title": "Titel",
@@ -498,7 +517,137 @@
       "users_year": "Jahr der Benutzer",
       "version": "Version",
       "version_id": "Version",
-      "year": "Jahr"
+      "version_name": "Versionsname",
+      "year": "Jahr",
+      "actual": "Ist-Werte",
+      "allocation_driver": "Zuordnungsschlüssel",
+      "analytics_values": "Dimensionen",
+      "assignee_user_id": "Zuständig",
+      "committed": "Revision",
+      "contact_id": "Kontakt",
+      "expected_landing": "Erwarteter Endwert",
+      "forecast": "Prognose",
+      "investment_type": "Investitionstyp",
+      "is_approved": "Genehmigt",
+      "legacy_effective_end": "Ende der Gültigkeit",
+      "legacy_number": "Historische Referenz",
+      "mime_type": "Dateityp",
+      "origin": "Herkunft",
+      "original_filename": "Dateiname",
+      "period": "Zeitraum",
+      "planned": "Budget",
+      "ppe_type": "PPE-Typ",
+      "reason": "Grund",
+      "reporting_currency": "Berichtswährung",
+      "role": "Rolle",
+      "size": "Größe",
+      "spread_profile_name": "Verteilungsprofil"
+    },
+    "history": {
+      "empty": "Noch kein Verlauf",
+      "error": "Der Verlauf konnte nicht geladen werden",
+      "loadMore": "Mehr laden",
+      "separator": ": ",
+      "actions": {
+        "create": "Erstellt",
+        "update": "Aktualisiert",
+        "delete": "Gelöscht"
+      },
+      "dimension": "Dimension {{name}}",
+      "dimensionNoName": "Dimension",
+      "amount": "Betrag {{column}}",
+      "amountYear": "Betrag {{year}}, {{column}}",
+      "amountMonthly": "{{label}}: monatliche Verteilung geändert",
+      "amountMonths": "Monate {{months}}",
+      "amountWholeYear": "ganzes Jahr",
+      "allocations": "Zuordnungen",
+      "allocationsYear": "Zuordnungen {{year}}",
+      "distributionChanged": "{{label}}: Verteilung geändert",
+      "copiedFrom": "kopiert von {{source}}",
+      "overwriteManual": "manuelle Zeilen ersetzt",
+      "roundInput": "Eingabe {{column}}",
+      "roundInputNoColumn": "Eingabe",
+      "allocation": "Zuordnung {{name}}",
+      "allocationNoName": "Zuordnung",
+      "childCreated": "{{title}} hinzugefügt",
+      "childDeleted": "{{title}} gelöscht",
+      "version": "Version {{name}}",
+      "versionNoName": "Version",
+      "actors": {
+        "assistant": "Plaid",
+        "assistantFor": "Plaid für {{name}}",
+        "unknown": "Unbekannte Person"
+      },
+      "events": {
+        "link": {
+          "added": "Link hinzugefügt: {{label}}",
+          "removed": "Link entfernt: {{label}}"
+        },
+        "attachment": {
+          "added": "Anhang hinzugefügt: {{label}}",
+          "removed": "Anhang entfernt: {{label}}"
+        },
+        "contact": {
+          "added": "Kontakt hinzugefügt: {{label}}",
+          "removed": "Kontakt entfernt: {{label}}"
+        },
+        "application": {
+          "added": "Anwendung hinzugefügt: {{label}}",
+          "removed": "Anwendung entfernt: {{label}}"
+        },
+        "technology": {
+          "added": "Technologie hinzugefügt: {{label}}",
+          "removed": "Technologie entfernt: {{label}}"
+        },
+        "asset": {
+          "added": "Asset hinzugefügt: {{label}}",
+          "removed": "Asset entfernt: {{label}}"
+        },
+        "task": {
+          "added": "Aufgabe hinzugefügt: {{label}}",
+          "removed": "Aufgabe entfernt: {{label}}"
+        },
+        "line": {
+          "added": "Bepreiste Zeile hinzugefügt: {{label}}",
+          "removed": "Bepreiste Zeile entfernt: {{label}}"
+        },
+        "contract": {
+          "added": "Vertrag hinzugefügt: {{label}}",
+          "removed": "Vertrag entfernt: {{label}}"
+        },
+        "project": {
+          "added": "Projekt hinzugefügt: {{label}}",
+          "removed": "Projekt entfernt: {{label}}"
+        },
+        "request": {
+          "added": "Anfrage hinzugefügt: {{label}}",
+          "removed": "Anfrage entfernt: {{label}}"
+        }
+      },
+      "unnamed": {
+        "record": "ein Datensatz",
+        "version": "eine Version",
+        "amounts": "ein Betrag",
+        "allocations": "eine Zuordnung",
+        "round_input": "eine Eingabe",
+        "link": "ein Link",
+        "attachment": "ein Anhang",
+        "contact": "ein Kontakt",
+        "application": "eine Anwendung",
+        "technology": "eine Technologie",
+        "asset": "ein Asset",
+        "task": "eine Aufgabe",
+        "line": "eine bepreiste Zeile",
+        "user": "ein Benutzer",
+        "company": "ein Unternehmen",
+        "supplier": "ein Lieferant",
+        "account": "ein Konto",
+        "project": "ein Projekt",
+        "request": "eine Anfrage",
+        "contract": "ein Vertrag",
+        "cost_center": "eine Kostenstelle",
+        "budget_line": "eine Budgetzeile"
+      }
     },
     "messages": {
       "loadDetailsFailed": "Details des Audit-Eintrags konnten nicht geladen werden."
@@ -724,7 +873,53 @@
       "no": "Nein",
       "unknownAccount": "Unbekanntes Konto",
       "unknownUser": "Unbekannt ({{id}}…)",
-      "yes": "Ja"
+      "yes": "Ja",
+      "inputGrain": {
+        "annual": "Jährlich",
+        "quarterly": "Vierteljährlich",
+        "monthly": "Monatlich"
+      },
+      "allocationMethod": {
+        "default": "Standard",
+        "headcount": "Mitarbeiterzahl",
+        "itUsers": "IT-Benutzer",
+        "turnover": "Umsatz",
+        "manualCompany": "Manuell nach Unternehmen",
+        "manualDepartment": "Manuell nach Abteilung",
+        "manualPct": "Manuelle Prozentsätze"
+      },
+      "allocationDriver": {
+        "headcount": "Mitarbeiterzahl",
+        "itUsers": "IT-Benutzer",
+        "turnover": "Umsatz"
+      },
+      "spreadProfile": {
+        "flat": "Gleichmäßig",
+        "p445": "4-4-5"
+      },
+      "roundInputMethod": {
+        "spread": "Verteilt",
+        "manual": "Manuell (monatlich)",
+        "computed": "Berechnete Zeilen"
+      },
+      "nature": {
+        "opex": "OPEX",
+        "capex": "CAPEX"
+      },
+      "runBuild": {
+        "run": "Run",
+        "build": "Build"
+      },
+      "contactRole": {
+        "commercial": "Kaufmännisch",
+        "technical": "Technisch",
+        "support": "Support",
+        "other": "Sonstiges"
+      },
+      "origin": {
+        "manual": "Manuell",
+        "supplier": "Lieferant"
+      }
     },
     "dataAccess": {
       "allData": "Alle Daten",

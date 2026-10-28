@@ -107,7 +107,7 @@ async function testApplications(kind: Kind) {
     assert.deepEqual(await linkedApplications(runner, kind, tenantId, itemId), [alpha, zeta].sort(), `${kind}: stored set`);
     const expectedAfter = [alpha, zeta].sort();
     assert.deepEqual(audit.entries, [
-      { table: T[kind].auditLinks, recordId: itemId, action: 'update', before: [], after: expectedAfter, userId: USER },
+      { table: T[kind].auditLinks, recordId: itemId, action: 'update', before: [], after: expectedAfter, userId: USER, parent: { table: 'spend_items', id: itemId } },
     ], `${kind}: one audit row with the sorted application ids`);
 
     const listed = await svc.listApplications(itemId, { manager: mg });
@@ -140,7 +140,7 @@ async function testApplications(kind: Kind) {
     // Emptying the set.
     const emptied = await svc.bulkReplaceApplications(itemId, [], USER, { manager: mg });
     assert.deepEqual(emptied.items, [], `${kind}: emptied`);
-    assert.deepEqual(audit.entries[1], { table: T[kind].auditLinks, recordId: itemId, action: 'update', before: expectedAfter, after: [], userId: USER });
+    assert.deepEqual(audit.entries[1], { table: T[kind].auditLinks, recordId: itemId, action: 'update', before: expectedAfter, after: [], userId: USER, parent: { table: 'spend_items', id: itemId } });
 
     assert.deepEqual(await linkedApplications(runner, kind, tenantId, otherItemId), [alpha], `${kind}: the other line's link is untouched`);
     await setTenant(runner, otherTenant);

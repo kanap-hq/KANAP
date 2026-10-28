@@ -43,7 +43,8 @@
       "budget": "Budget",
       "allocations": "Zuordnungen",
       "tasks": "Aufgaben",
-      "relations": "Verknüpfungen"
+      "relations": "Verknüpfungen",
+      "history": "Verlauf"
     },
     "editor": {
       "productNameRequired": "Produktname ist erforderlich",

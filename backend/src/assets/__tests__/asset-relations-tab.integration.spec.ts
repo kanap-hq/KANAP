@@ -331,6 +331,8 @@ async function testOwnedLinks() {
       assert.deepEqual(audit.entries.slice(start), [{
         table: c.label, recordId: seed.asset.id, action: 'update',
         before: { ids: c.before }, after: { ids: sorted(...c.before, c.target) }, userId: seed.userId,
+        // A link set that gains a single line names it, for the line's history.
+        ...(c.kind === 'budget_lines' ? { parent: { table: 'spend_items', id: c.target } } : {}),
       }], c.label);
       assert.ok((await ids(runner, `SELECT ${c.column} AS id FROM ${c.table} WHERE asset_id = $1`, [seed.asset.id])).includes(c.target));
       assert.deepEqual(await http.unlinkRelation(seed.asset.id, c.kind, c.target, writer), { ok: true, changed: true });

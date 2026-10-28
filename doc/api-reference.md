@@ -1960,6 +1960,20 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
   - Returns one audit entry with the same shape as list items.
   - Used by the detail dialog to display full before/after JSON payloads.
 
+## Record history
+- GET `/records/:table/:id/history?cursor=&limit=`
+  - The history of one record, for the person who can open its page: no other right. `:table` is the route key of the record family (`spend_items` for every budget line, OPEX or CAPEX). The permission is the record's module at `reader` (`budget:reader` for a budget line), else `403`.
+  - The record is read first in the request transaction, under the tenant and the person's data access. An unknown table, an id that is not a UUID, and a record that is missing or outside the person's access answer `404`, as the record's page does.
+  - `limit` defaults to 50 and is capped at 100. `cursor` is the opaque `nextCursor` of the previous page. The answer is `{ items, nextCursor }`, newest first; `nextCursor` is `null` on the last page. An invalid cursor, including a timestamp that is not a complete ISO date with its offset, is a `400`.
+  - Item: `{ id, at, action, actor: { kind, name }, subject: { kind, label? }, changes: [...] }`.
+    - `action` is the stored action (`create`, `update`, `delete`, `disable`, `restored`).
+    - `actor.kind`: `user` (the person named), `system` (source `system`, or no author), `import` (the budget file, an import), `assistant` (Plaid, source `ai_chat` or `ai_mcp`; `name` is the person it acted for, or `null`).
+    - `subject.kind`: `record` for the record's own rows, else `version`, `amounts`, `allocations`, `round_input`, `link`, `attachment`, `contact`, `application`, `technology`, `asset` or `task`. `label` names the version, the file, the link, the contact, the application, the technology, the asset or the task; a set change has no label.
+    - `changes` holds `{ field, before?, after?, event?, year?, column?, sourceYear?, sourceColumn?, percentageIncrease?, monthlyOnly?, months?, wholeYear?, dimension?, changed? }`. Fields are the stored keys (`planned`, `supplier_id`, `status`, ...), values are raw except the references below. Only the keys a label knows are returned: an unknown key of an old or new payload is dropped. A creation has `after` only, a deletion `before` only.
+    - A budget amount is one change per year and column: the `year` and `column` context, the sum of the months the write touched before and after, and the list of those `months` (`YYYY-MM`); `wholeYear: true` marks the twelve months of the year. `monthlyOnly: true` marks a write whose touched months total the same before and after, so only their distribution moved. A budget-file flat spread writes yearly totals instead: `after` (and `before` when the payload carries it), `year`, `column` and `wholeYear: true`, with no month list. An allocation change gives the number of targets; an allocation copy adds `sourceYear` and `year` (the destination). A dimension change has `field: 'dimension'`, the dimension name and the category names before and after. A link, attachment, contact, application, technology, asset or task change carries `event: 'added' | 'removed'` and the child in `before` or `after`.
+    - A value that names another module's record is `{ kind, id, label, reference? }` when the person reads that module and the record is visible in their access, with the screen's own rules: a Business Contributor's participation for applications, projects and requests, and their tasks; a task on a confidential incident follows the incident register. Otherwise it is `{ hidden: true, kind }`. A person outside the tenant or a deleted account is hidden the same way. No neighbouring label from the audit payload (`supplier_name`, `contract_name`, `*_label`) is copied.
+  - Only the budget lines (`spend_items`) are declared in this run. The inventory (`backend/src/audit/record-history.inventory.ts`) declares each family's table, module, audit labels, children and the document checks.
+
 ## Budget Operations (budget admin)
 
 ### Copy budget columns (all lines or one nature)

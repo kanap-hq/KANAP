@@ -62,6 +62,8 @@ const routeToDocSlug: [RegExp, string][] = [
   [/^\/it\/netbox/, 'netbox'],
 
   // Budget Management
+  // The History tab of a line opens the record history manual.
+  [/^\/ops\/budget\/[^/]+\/history(?:\/|$)/, 'record-history'],
   [/^\/ops\/budget(?:\/|$)/, 'budget-lines'],
   [/^\/ops\/contracts\/\d+/, 'contracts'],
   [/^\/ops\/contracts/, 'contracts'],

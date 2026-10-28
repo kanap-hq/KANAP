@@ -77,7 +77,8 @@
       "budget": "Budget",
       "allocations": "Allocations",
       "tasks": "Tasks",
-      "relations": "Relations"
+      "relations": "Relations",
+      "history": "History"
     },
     "editor": {
       "productNameRequired": "Product name is required",

@@ -1,0 +1,151 @@
+import type { EntityManager } from 'typeorm';
+
+/**
+ * How an audit row finds the budget line it belongs to, by its audit label
+ * (`audit_log.table_name`). The line itself (`spend_items`, `capex_items`) has
+ * no rule: its rows name it in `record_id`, and `parent_*` stays NULL.
+ *
+ * The labels of a CAPEX line keep their CAPEX name (`budget-nature.ts`,
+ * `auditTableOf`); both natures write the same physical tables, so every rule
+ * points at `spend_items`.
+ *
+ * The migration `1855500000000-audit-log-parent-record.ts` copies the same
+ * labels in SQL on purpose: a migration is frozen and must not import this
+ * module. `__tests__/audit-parent-rules.spec.ts` reads the migration text and
+ * checks that both lists agree.
+ */
+export type AuditParentRule =
+  /** The line id is a key of the before/after payload: the child's `spend_item_id` (CAPEX: `capex_item_id`). */
+  | { parentTable: 'spend_items'; from: 'payload'; keys: readonly string[]; fallback?: 'record_id' }
+  /** The row names a version, through `record_id` or the payload's `version_id`, whose line is the parent. */
+  | { parentTable: 'spend_items'; from: 'version'; via: 'record_id' | 'payload.version_id' };
+
+const LINE_KEYS = ['spend_item_id', 'capex_item_id'] as const;
+
+/** The audit labels that carry a budget line, and how to find it. */
+export const AUDIT_PARENT_RULES: Readonly<Record<string, AuditParentRule>> = {
+  // Versions and their budget tables: the audit row names the version.
+  spend_versions: { parentTable: 'spend_items', from: 'version', via: 'record_id' },
+  capex_versions: { parentTable: 'spend_items', from: 'version', via: 'record_id' },
+  spend_amounts: { parentTable: 'spend_items', from: 'version', via: 'record_id' },
+  capex_amounts: { parentTable: 'spend_items', from: 'version', via: 'record_id' },
+  spend_allocations: { parentTable: 'spend_items', from: 'version', via: 'record_id' },
+  capex_allocations: { parentTable: 'spend_items', from: 'version', via: 'record_id' },
+  // Round inputs name their version in the payload, before or after.
+  spend_round_inputs: { parentTable: 'spend_items', from: 'version', via: 'payload.version_id' },
+  capex_round_inputs: { parentTable: 'spend_items', from: 'version', via: 'payload.version_id' },
+  // Links and attachments carry the child's line in their payload (CAPEX renames the key).
+  spend_links: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS },
+  capex_links: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS },
+  spend_attachments: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS },
+  capex_attachments: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS },
+  // A contact link carries its line in the payload; the supplier sync writes the line in record_id.
+  spend_item_contacts: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS, fallback: 'record_id' },
+  capex_item_contacts: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS, fallback: 'record_id' },
+  // A budget task names its line in the saved task (`related_object_id`).
+  spend_tasks: { parentTable: 'spend_items', from: 'payload', keys: ['related_object_id'] },
+  // No rule for the application, technology, asset, contract, project and request links
+  // (`application_spend_items`, `application_capex_items`, `technology_spend_items`,
+  // `asset_*_items`, `contract_*_items`, `portfolio_project_*`, `portfolio_request_*`): both sides
+  // write the same label, and `record_id` is the line from the line, the other object from the
+  // other side. The line-side writers hand the line as `parent`. From the asset, contract, project
+  // or request, a write that adds or removes a single line names it (`singleChangedId`).
+  // From the application or the technology, no parent: the payload lists line ids, which the
+  // line's history would read as applications or technologies, and a write may touch several lines.
+};
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isAuditUuid(value: unknown): value is string {
+  return typeof value === 'string' && UUID_RE.test(value);
+}
+
+/** The parent a write names explicitly, when it is a valid one. */
+export type AuditParent = { table: string; id: string };
+
+/** The fields of an audit write the parent resolution reads (`AuditEntry` in `audit.service.ts`). */
+export type AuditParentInput = {
+  table: string;
+  recordId?: string | null;
+  before?: unknown;
+  after?: unknown;
+  parent?: AuditParent | null;
+};
+
+function fieldOf(value: unknown, key: string): unknown {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>)[key] : undefined;
+}
+
+/** The first valid uuid among the rule's keys, in `after` then `before`. */
+export function payloadParentId(rule: { keys: readonly string[] }, after: unknown, before: unknown): string | null {
+  for (const payload of [after, before]) {
+    for (const key of rule.keys) {
+      const value = fieldOf(payload, key);
+      if (isAuditUuid(value)) return value;
+    }
+  }
+  return null;
+}
+
+/** The version id a round-input row names, in `after` then `before`. */
+export function payloadVersionId(after: unknown, before: unknown): string | null {
+  for (const payload of [after, before]) {
+    const value = fieldOf(payload, 'version_id');
+    if (isAuditUuid(value)) return value;
+  }
+  return null;
+}
+
+function idsOf(value: unknown): string[] {
+  const list = Array.isArray(value) ? value : fieldOf(value, 'ids');
+  return Array.isArray(list) ? list.filter(isAuditUuid).map((id) => id.toLowerCase()) : [];
+}
+
+/**
+ * The one id a link-set write added or removed, from its before and after sets (an id array, or
+ * `{ ids }` as the asset writers and `auditedLinkSet` shape them); null when none or several
+ * changed. A write from the other side of a line link names the line as parent only through this.
+ */
+export function singleChangedId(before: unknown, after: unknown): string | null {
+  const beforeSet = new Set(idsOf(before));
+  const afterSet = new Set(idsOf(after));
+  const changed = [
+    ...Array.from(afterSet).filter((id) => !beforeSet.has(id)),
+    ...Array.from(beforeSet).filter((id) => !afterSet.has(id)),
+  ];
+  return changed.length === 1 ? changed[0] : null;
+}
+
+/**
+ * The parent of one audit write, resolved before the insert: the caller's
+ * `parent` when given, else the rule of its label. A label without a rule (a
+ * line, a contract, a task of another module) has no parent: NULL.
+ *
+ * A version lookup runs on the same `manager` as the insert and names the
+ * transaction's tenant (`app_current_tenant()`, the default of the row's
+ * `tenant_id`), beside RLS: the writer reads its own line. A manager outside a
+ * tenant transaction finds no version and leaves the parent NULL, but its insert
+ * then fails anyway: `audit_log.tenant_id` is NOT NULL and takes the same default.
+ */
+export async function resolveAuditParent(
+  manager: Pick<EntityManager, 'query'>,
+  entry: AuditParentInput,
+): Promise<AuditParent | null> {
+  if (entry.parent) return isAuditUuid(entry.parent.id) ? { table: entry.parent.table, id: entry.parent.id } : null;
+  const rule = AUDIT_PARENT_RULES[entry.table];
+  if (!rule) return null;
+  if (rule.from === 'payload') {
+    const fromPayload = payloadParentId(rule, entry.after, entry.before);
+    if (fromPayload) return { table: rule.parentTable, id: fromPayload };
+    if (rule.fallback === 'record_id' && isAuditUuid(entry.recordId)) return { table: rule.parentTable, id: entry.recordId };
+    return null;
+  }
+  const versionId = rule.via === 'record_id' ? entry.recordId : payloadVersionId(entry.after, entry.before);
+  if (!isAuditUuid(versionId)) return null;
+  const rows: Array<{ spend_item_id: string }> = await manager.query(
+    'SELECT spend_item_id FROM spend_versions WHERE tenant_id = app_current_tenant() AND id = $1',
+    [versionId],
+  );
+  const lineId = rows[0]?.spend_item_id;
+  return isAuditUuid(lineId) ? { table: rule.parentTable, id: lineId } : null;
+}

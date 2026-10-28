@@ -149,6 +149,7 @@ plugins:
             Administration: Administration
             "Admin & Users": Utilisateurs
             Data access: "Accès aux données"
+            "Record history": "Historique des fiches"
             Branding: Personnalisation
             Sample data: Données d'exemple
             Master data freeze and metrics copy: Gel des données de référence et copie des indicateurs
@@ -236,6 +237,7 @@ plugins:
             Administration: Administration
             "Admin & Users": Benutzer
             Data access: Datenzugriff
+            "Record history": "Verlauf der Datensätze"
             Branding: Branding
             Sample data: Beispieldaten
             Master data freeze and metrics copy: Stammdaten einfrieren und Kennzahlen kopieren
@@ -323,6 +325,7 @@ plugins:
             Administration: Administración
             "Admin & Users": Usuarios
             Data access: "Acceso a los datos"
+            "Record history": "Historial de los registros"
             Branding: Personalización
             Sample data: Datos de ejemplo
             Master data freeze and metrics copy: Congelar datos maestros y copiar indicadores
@@ -433,6 +436,7 @@ nav:
   - Administration:
     - Admin & Users: admin.md
     - Data access: data-access.md
+    - "Record history": record-history.md
     - Branding: branding.md
     - Sample data: sample-data.md
     - "AI models": ai-models.md

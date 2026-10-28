@@ -18,12 +18,49 @@ import {
 
 const t = i18n.getFixedT('en', 'admin') as unknown as Translate;
 const tFr = i18n.getFixedT('fr', 'admin') as unknown as Translate;
+const ADMIN = { en, fr, de, es } as Record<string, any>;
 const uuid = '11111111-1111-4111-8111-111111111111';
 const otherUuid = '22222222-2222-4222-8222-222222222222';
 
 function context(overrides: Partial<AuditValueContext> = {}): AuditValueContext {
   return { locale: 'en', t, snapshot: undefined, users: undefined, ...overrides };
 }
+
+function valueAt(tree: any, path: string): unknown {
+  return path.split('.').reduce((node, part) => node?.[part], tree);
+}
+
+/** The budget history's enumerations, their stored code and their locale key. */
+const BUDGET_ENUM_CASES: Array<{ field: string; code: string; key: string }> = [
+  { field: 'input_grain', code: 'annual', key: 'inputGrain.annual' },
+  { field: 'input_grain', code: 'quarterly', key: 'inputGrain.quarterly' },
+  { field: 'input_grain', code: 'monthly', key: 'inputGrain.monthly' },
+  { field: 'allocation_method', code: 'default', key: 'allocationMethod.default' },
+  { field: 'allocation_method', code: 'headcount', key: 'allocationMethod.headcount' },
+  { field: 'allocation_method', code: 'it_users', key: 'allocationMethod.itUsers' },
+  { field: 'allocation_method', code: 'turnover', key: 'allocationMethod.turnover' },
+  { field: 'allocation_method', code: 'manual_company', key: 'allocationMethod.manualCompany' },
+  { field: 'allocation_method', code: 'manual_department', key: 'allocationMethod.manualDepartment' },
+  { field: 'allocation_method', code: 'manual_pct', key: 'allocationMethod.manualPct' },
+  { field: 'allocation_driver', code: 'headcount', key: 'allocationDriver.headcount' },
+  { field: 'allocation_driver', code: 'it_users', key: 'allocationDriver.itUsers' },
+  { field: 'allocation_driver', code: 'turnover', key: 'allocationDriver.turnover' },
+  { field: 'spread_profile_name', code: 'flat', key: 'spreadProfile.flat' },
+  { field: 'spread_profile_name', code: '4-4-5', key: 'spreadProfile.p445' },
+  { field: 'method', code: 'spread', key: 'roundInputMethod.spread' },
+  { field: 'method', code: 'manual', key: 'roundInputMethod.manual' },
+  { field: 'method', code: 'computed', key: 'roundInputMethod.computed' },
+  { field: 'nature', code: 'opex', key: 'nature.opex' },
+  { field: 'nature', code: 'capex', key: 'nature.capex' },
+  { field: 'run_build', code: 'run', key: 'runBuild.run' },
+  { field: 'run_build', code: 'build', key: 'runBuild.build' },
+  { field: 'role', code: 'commercial', key: 'contactRole.commercial' },
+  { field: 'role', code: 'technical', key: 'contactRole.technical' },
+  { field: 'role', code: 'support', key: 'contactRole.support' },
+  { field: 'role', code: 'other', key: 'contactRole.other' },
+  { field: 'origin', code: 'manual', key: 'origin.manual' },
+  { field: 'origin', code: 'supplier', key: 'origin.supplier' },
+];
 
 describe('formatAuditValue', () => {
   it('marks every empty value with the empty-cell glyph', () => {
@@ -164,6 +201,27 @@ describe('formatAuditValue', () => {
     expect(formatAuditValue('manual_company', 'mode', context({ table: 'allocation_rules' })).text).toBe('Selected companies');
     expect(formatAuditValue('custom', 'mode', context({ table: 'allocation_rules' })).text).toBe('custom');
     expect(formatAuditValue('on_premise', 'hosting_model', context({ locale: 'fr', t: tFr })).text).toBe('Sur site');
+  });
+
+  it('translates every known budget history enumeration in the four languages', () => {
+    for (const language of ['en', 'fr', 'de', 'es']) {
+      const langContext = context({
+        locale: language,
+        t: i18n.getFixedT(language, 'admin') as unknown as Translate,
+      });
+      for (const item of BUDGET_ENUM_CASES) {
+        const expected = valueAt(ADMIN[language].auditLogs.values, item.key);
+        expect(typeof expected, `${language} ${item.key}`).toBe('string');
+        expect((expected as string).trim().length, `${language} ${item.key}`).toBeGreaterThan(0);
+        expect(formatAuditValue(item.code, item.field, langContext).text, `${language} ${item.field}=${item.code}`)
+          .toBe(expected);
+      }
+    }
+  });
+
+  it('leaves an unknown budget enumeration code as stored', () => {
+    expect(formatAuditValue('not_a_profile', 'spread_profile_name', context()).text).toBe('not_a_profile');
+    expect(formatAuditValue('not_a_method', 'method', context()).text).toBe('not_a_method');
   });
 });
 

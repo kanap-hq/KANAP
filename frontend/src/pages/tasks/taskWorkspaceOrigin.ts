@@ -55,8 +55,8 @@ export const PROJECT_ORIGIN_TABS = new Set([
   'knowledge',
 ]);
 
-export const SPEND_ORIGIN_TABS = new Set(['overview', 'budget', 'allocations', 'relations']);
-export const CAPEX_ORIGIN_TABS = new Set(['overview', 'budget', 'allocations', 'relations']);
+export const SPEND_ORIGIN_TABS = new Set(['overview', 'budget', 'allocations', 'relations', 'history']);
+export const CAPEX_ORIGIN_TABS = new Set(['overview', 'budget', 'allocations', 'relations', 'history']);
 export const CONTRACT_ORIGIN_TABS = new Set(['overview', 'budget', 'relations']);
 export const INCIDENT_ORIGIN_TABS = new Set(['overview', 'journal', 'relations', 'documents', 'attachments']);
 

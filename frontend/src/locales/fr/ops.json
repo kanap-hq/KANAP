@@ -43,7 +43,8 @@
       "budget": "Budget",
       "allocations": "Ventilations",
       "tasks": "Tâches",
-      "relations": "Relations"
+      "relations": "Relations",
+      "history": "Historique"
     },
     "editor": {
       "productNameRequired": "Le nom du produit est requis",

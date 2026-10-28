@@ -64,7 +64,7 @@ while IFS= read -r f; do
       frontend/src/pages/portfolio/contributorsOrdering.* | frontend/src/pages/portfolio/skillsMatrix.* | \
       frontend/src/pages/portfolio/roadmapOccupation.* | \
       frontend/src/locales/*/portfolio.json | frontend/src/locales/*/it.json | frontend/src/locales/*/ops.json | \
-      frontend/src/locales/*/master-data.json | frontend/src/locales/*/nav.json)
+      frontend/src/locales/*/admin.json | frontend/src/locales/*/master-data.json | frontend/src/locales/*/nav.json)
       need_backend full; frontend=true ;;
     frontend/*)
       frontend=true ;;

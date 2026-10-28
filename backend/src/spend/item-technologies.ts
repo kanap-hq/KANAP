@@ -106,7 +106,16 @@ export async function replaceItemTechnologies(
   }
   if (removed.length || added.length) {
     await deps.audit.log(
-      { table: LINKS, recordId: item.id, action: 'update', before: beforeIds, after: nextIds, userId },
+      {
+        table: LINKS,
+        recordId: item.id,
+        action: 'update',
+        before: beforeIds,
+        after: nextIds,
+        userId,
+        // The technology side writes the same label with the technology as record: the line names itself.
+        parent: { table: 'spend_items', id: item.id },
+      },
       { manager },
     );
   }

@@ -345,6 +345,14 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     allowed: {},
   },
   {
+    file: 'audit/record-history.controller.ts',
+    controller: 'RecordHistoryController',
+    reserved: [],
+    allowed: {
+      list: 'a read of a record the person already opens: the record is read first under their access, and its audit rows follow (lot 1B)',
+    },
+  },
+  {
     file: 'spend/spend-items.controller.ts',
     controller: 'SpendItemsController',
     reserved: ['bulkDelete', 'clearBudgetColumn', 'copyAllocations', 'copyBudgetColumn', 'delete'],

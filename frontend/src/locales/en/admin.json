@@ -404,7 +404,12 @@
     },
     "fields": {
       "access_methods": "Access methods",
+      "account_id": "Account",
+      "allocation_method": "Allocation method",
+      "allocation_pct": "Allocation",
       "amount": "Amount",
+      "as_of_date": "As of date",
+      "budget_year": "Budget year",
       "business_lead_id": "Business lead",
       "category": "Category",
       "classification_justification": "Classification justification",
@@ -415,6 +420,8 @@
       "confidential": "Confidential",
       "contains_pii": "Contains personal data",
       "content_markdown": "Content",
+      "contract_id": "Contract",
+      "cost_center_id": "Cost center",
       "created_at": "Created on",
       "created_by": "Created by",
       "created_by_user_id": "Created by",
@@ -428,6 +435,7 @@
       "disabled_at": "Disabled on",
       "due_date": "Due date",
       "editor": "Publisher",
+      "effective_start": "Effective start",
       "email": "Email",
       "end_date": "End date",
       "end_of_support_date": "End-of-support date",
@@ -440,6 +448,7 @@
       "fte": "FTE",
       "go_live_date": "Go-live date",
       "hosting_model": "Hosting",
+      "input_grain": "Input grain",
       "ip": "IP address",
       "is_suite": "Can include other applications",
       "it_lead_id": "IT lead",
@@ -449,15 +458,21 @@
       "last_name": "Last name",
       "licensing": "Licensing",
       "lifecycle": "Lifecycle",
+      "lines": "Costed lines",
+      "measure": "Measure",
       "method": "Method",
       "mfa_supported": "MFA supported",
       "mode": "Mode",
       "name": "Name",
+      "nature": "Nature",
       "nodes": "Nodes",
       "notes": "Notes",
       "operation": "Operation",
+      "owner_business_id": "Business owner",
+      "owner_it_id": "IT owner",
       "owner_user_id": "Owner",
       "path": "Route",
+      "paying_company_id": "Paying company",
       "period_end": "Period end",
       "period_start": "Period start",
       "personal_data_affected": "Personal data affected",
@@ -465,6 +480,8 @@
       "planned_start": "Planned start",
       "predecessor_id": "Predecessor",
       "priority": "Priority",
+      "product_name": "Product name",
+      "project_id": "Project",
       "purpose": "Purpose",
       "query": "Parameters",
       "recovery_wave": "Recovery wave",
@@ -478,6 +495,7 @@
       "rows": "Rows",
       "rpo_minutes": "Recovery point objective (minutes)",
       "rto_minutes": "Recovery time objective (minutes)",
+      "run_build": "Run or build",
       "sequential_id": "Reference",
       "severity": "Severity",
       "source": "Source",
@@ -485,6 +503,7 @@
       "start_date": "Start date",
       "started_at": "Started on",
       "status": "Status",
+      "successor_id": "Successor",
       "supplier_id": "Supplier",
       "support_notes": "Support notes",
       "title": "Title",
@@ -498,7 +517,137 @@
       "users_year": "Users year",
       "version": "Version",
       "version_id": "Version",
-      "year": "Year"
+      "version_name": "Version name",
+      "year": "Year",
+      "actual": "Actuals",
+      "allocation_driver": "Allocation driver",
+      "analytics_values": "Dimensions",
+      "assignee_user_id": "Assignee",
+      "committed": "Revision",
+      "contact_id": "Contact",
+      "expected_landing": "Expected landing",
+      "forecast": "Forecast",
+      "investment_type": "Investment type",
+      "is_approved": "Approved",
+      "legacy_effective_end": "End of validity",
+      "legacy_number": "Legacy reference",
+      "mime_type": "File type",
+      "origin": "Origin",
+      "original_filename": "File name",
+      "period": "Period",
+      "planned": "Budget",
+      "ppe_type": "PPE type",
+      "reason": "Reason",
+      "reporting_currency": "Reporting currency",
+      "role": "Role",
+      "size": "Size",
+      "spread_profile_name": "Spread profile"
+    },
+    "history": {
+      "empty": "No history yet",
+      "error": "The history could not be loaded",
+      "loadMore": "Load more",
+      "separator": ": ",
+      "actions": {
+        "create": "Created",
+        "update": "Updated",
+        "delete": "Deleted"
+      },
+      "dimension": "Dimension {{name}}",
+      "dimensionNoName": "Dimension",
+      "amount": "Amount {{column}}",
+      "amountYear": "Amount {{year}}, {{column}}",
+      "amountMonthly": "{{label}}: monthly distribution changed",
+      "amountMonths": "months {{months}}",
+      "amountWholeYear": "whole year",
+      "allocations": "Allocations",
+      "allocationsYear": "Allocations {{year}}",
+      "distributionChanged": "{{label}}: distribution changed",
+      "copiedFrom": "copied from {{source}}",
+      "overwriteManual": "manual rows replaced",
+      "roundInput": "Budget input {{column}}",
+      "roundInputNoColumn": "Budget input",
+      "allocation": "Allocation {{name}}",
+      "allocationNoName": "Allocation",
+      "childCreated": "{{title}} added",
+      "childDeleted": "{{title}} deleted",
+      "version": "Version {{name}}",
+      "versionNoName": "Version",
+      "actors": {
+        "assistant": "Plaid",
+        "assistantFor": "Plaid for {{name}}",
+        "unknown": "Unknown person"
+      },
+      "events": {
+        "link": {
+          "added": "Link added: {{label}}",
+          "removed": "Link removed: {{label}}"
+        },
+        "attachment": {
+          "added": "Attachment added: {{label}}",
+          "removed": "Attachment removed: {{label}}"
+        },
+        "contact": {
+          "added": "Contact added: {{label}}",
+          "removed": "Contact removed: {{label}}"
+        },
+        "application": {
+          "added": "Application added: {{label}}",
+          "removed": "Application removed: {{label}}"
+        },
+        "technology": {
+          "added": "Technology added: {{label}}",
+          "removed": "Technology removed: {{label}}"
+        },
+        "asset": {
+          "added": "Asset added: {{label}}",
+          "removed": "Asset removed: {{label}}"
+        },
+        "task": {
+          "added": "Task added: {{label}}",
+          "removed": "Task removed: {{label}}"
+        },
+        "line": {
+          "added": "Costed line added: {{label}}",
+          "removed": "Costed line removed: {{label}}"
+        },
+        "contract": {
+          "added": "Contract added: {{label}}",
+          "removed": "Contract removed: {{label}}"
+        },
+        "project": {
+          "added": "Project added: {{label}}",
+          "removed": "Project removed: {{label}}"
+        },
+        "request": {
+          "added": "Request added: {{label}}",
+          "removed": "Request removed: {{label}}"
+        }
+      },
+      "unnamed": {
+        "record": "a record",
+        "version": "a version",
+        "amounts": "an amount",
+        "allocations": "an allocation",
+        "round_input": "a budget input",
+        "link": "a link",
+        "attachment": "an attachment",
+        "contact": "a contact",
+        "application": "an application",
+        "technology": "a technology",
+        "asset": "an asset",
+        "task": "a task",
+        "line": "a costed line",
+        "user": "a user",
+        "company": "a company",
+        "supplier": "a supplier",
+        "account": "an account",
+        "project": "a project",
+        "request": "a request",
+        "contract": "a contract",
+        "cost_center": "a cost center",
+        "budget_line": "a budget line"
+      }
     },
     "messages": {
       "loadDetailsFailed": "Failed to load audit entry details."
@@ -724,7 +873,53 @@
       "no": "No",
       "unknownAccount": "Unknown account",
       "unknownUser": "Unknown ({{id}}…)",
-      "yes": "Yes"
+      "yes": "Yes",
+      "inputGrain": {
+        "annual": "Annual",
+        "quarterly": "Quarterly",
+        "monthly": "Monthly"
+      },
+      "allocationMethod": {
+        "default": "Default",
+        "headcount": "Headcount",
+        "itUsers": "IT users",
+        "turnover": "Turnover",
+        "manualCompany": "Manual by company",
+        "manualDepartment": "Manual by department",
+        "manualPct": "Manual percentages"
+      },
+      "allocationDriver": {
+        "headcount": "Headcount",
+        "itUsers": "IT users",
+        "turnover": "Turnover"
+      },
+      "spreadProfile": {
+        "flat": "Flat",
+        "p445": "4-4-5"
+      },
+      "roundInputMethod": {
+        "spread": "Spread",
+        "manual": "Manual (monthly)",
+        "computed": "Costed lines"
+      },
+      "nature": {
+        "opex": "OPEX",
+        "capex": "CAPEX"
+      },
+      "runBuild": {
+        "run": "Run",
+        "build": "Build"
+      },
+      "contactRole": {
+        "commercial": "Commercial",
+        "technical": "Technical",
+        "support": "Support",
+        "other": "Other"
+      },
+      "origin": {
+        "manual": "Manual",
+        "supplier": "Supplier"
+      }
     },
     "dataAccess": {
       "allData": "All data",

@@ -43,7 +43,8 @@
       "budget": "Presupuesto",
       "allocations": "Asignaciones",
       "tasks": "Tareas",
-      "relations": "Relaciones"
+      "relations": "Relaciones",
+      "history": "Historial"
     },
     "editor": {
       "productNameRequired": "El nombre del producto es obligatorio",

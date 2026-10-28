@@ -14,6 +14,13 @@ export class AuditLog {
   @Column('uuid', { nullable: true })
   record_id!: string | null;
 
+  /** The budget line this row belongs to (NULL for the line's own rows and for other tables). */
+  @Column('text', { nullable: true })
+  parent_table!: string | null;
+
+  @Column('uuid', { nullable: true })
+  parent_id!: string | null;
+
   @Column('text')
   action!: string; // create|update|disable
 

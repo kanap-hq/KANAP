@@ -109,6 +109,8 @@ interface AuditRow {
   action: 'create' | 'update';
   before: unknown;
   after: unknown;
+  /** The line an amounts row belongs to; the line's own rows keep it empty. */
+  parent?: { table: 'spend_items'; id: string } | null;
 }
 
 /**
@@ -711,6 +713,8 @@ async function writeFlatSpreads(
           year: flat.year,
           totals: Object.fromEntries(measures.map((measure) => [measure, formatCents(flat.totals[measure] as bigint)])),
         },
+        // The version names the line; a budget-file load writes the audit rows itself, in one statement.
+        parent: { table: 'spend_items', id: flat.itemId },
       },
       {
         table: auditLabel(flat.nature, 'items'),
@@ -922,12 +926,12 @@ async function createDimensionValues(
 async function insertAudits(manager: EntityManager, userId: string | null, rows: AuditRow[]): Promise<void> {
   if (rows.length === 0) return;
   await manager.query(
-    `INSERT INTO audit_log (table_name, record_id, action, before_json, after_json, user_id, source, created_at)
+    `INSERT INTO audit_log (table_name, record_id, action, before_json, after_json, user_id, source, parent_table, parent_id, created_at)
      SELECT t.table_name, t.record_id, t.action,
             CASE WHEN t.before_json IS NULL THEN NULL ELSE t.before_json::jsonb END,
-            t.after_json::jsonb, $4, 'budget_file', clock_timestamp()
-       FROM unnest($1::text[], $2::uuid[], $3::text[], $5::text[], $6::text[])
-         AS t(table_name, record_id, action, before_json, after_json)`,
+            t.after_json::jsonb, $4, 'budget_file', t.parent_table, t.parent_id, clock_timestamp()
+       FROM unnest($1::text[], $2::uuid[], $3::text[], $5::text[], $6::text[], $7::text[], $8::uuid[])
+         AS t(table_name, record_id, action, before_json, after_json, parent_table, parent_id)`,
     [
       rows.map((row) => row.table),
       rows.map((row) => row.recordId),
@@ -935,6 +939,8 @@ async function insertAudits(manager: EntityManager, userId: string | null, rows:
       userId,
       rows.map((row) => (row.before == null ? null : JSON.stringify(row.before))),
       rows.map((row) => JSON.stringify(row.after)),
+      rows.map((row) => row.parent?.table ?? null),
+      rows.map((row) => row.parent?.id ?? null),
     ],
   );
 }

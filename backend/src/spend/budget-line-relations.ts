@@ -336,6 +336,10 @@ export async function setBudgetLineRelation(
         before: entry.before,
         after: entry.after,
         userId: entry.userId,
+        // The record is the line (`loadOwner`). The application, technology, contract and project
+        // labels are shared with the other side, whose record is the other object: the line names
+        // itself as parent from this side.
+        parent: { table: 'spend_items', id: entry.recordId },
       },
       opts,
     ),
@@ -426,6 +430,8 @@ async function setAssetLink(
       before: { ids: before },
       after: { ids: after },
       userId,
+      // The audit row names the asset; the line is the parent this write knows (`ids` may hold several).
+      parent: { table: 'spend_items', id: line.id },
     },
     { manager: deps.manager },
   );

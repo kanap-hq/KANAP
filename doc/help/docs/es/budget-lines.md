@@ -196,7 +196,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Su dir
 
 - **Cabecera**: la referencia de la línea (p. ej., `BL-12`) con un botón para copiarla, el título de la línea (haga clic en él para cambiar el nombre de la línea), **Ant.** / **Sig.**, **Compartir** y el botón de cierre
 - **Barra de metadatos** bajo el título: **Estado**, **Responsable de TI** y **Responsable de negocio**, editables en el sitio. Cuando el centro de coste de la línea tiene un responsable del presupuesto, **Responsable del presupuesto** aparece a continuación. Es de solo lectura y se deriva del centro de coste, no se almacena en la línea: pase el cursor por encima para ver de qué centro de coste procede, y cámbielo en el centro de coste (consulte [Centros de coste](cost-centers.md#responsable-del-presupuesto-en-las-lineas-de-presupuesto))
-- **Cuatro pestañas**: **Vista general**, **Presupuesto**, **Asignaciones** y **Relaciones** (la pestaña Relaciones muestra cuántos vínculos tiene la línea)
+- **Cinco pestañas**: **Vista general**, **Presupuesto**, **Asignaciones**, **Relaciones** (la pestaña Relaciones muestra cuántos vínculos tiene la línea) e **Historial**
 - **Panel Propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo** (con **Cambiar el tipo…** junto a él en una línea existente, consulte [Cambiar el tipo](#cambiar-el-tipo)). Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
 
 **Guardado automático**:
@@ -590,6 +590,16 @@ La sección no aparece cuando la línea no tiene proveedor o no hay nada que sug
 - Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
 
 **Consejo**: Vincule los contratos para seguir las renovaciones en varias líneas. Adjunte presupuestos y facturas para tener todos los documentos de una línea en un solo lugar.
+
+---
+
+### Historial
+
+La pestaña Historial lista los cambios hechos en la línea, el más reciente arriba. Cada entrada muestra la fecha y la hora, el autor (una persona, **Sistema**, **Importación** o **Plaid para** una persona) y cada campo cambiado con su valor antes y después. Un cambio de importe indica el año, la columna y los valores antes y después.
+
+Los cambios en los elementos de la línea también aparecen aquí: importes, dimensiones, asignaciones, enlaces, archivos adjuntos, contactos, aplicaciones, tecnologías, activos y tareas. Cualquier persona que pueda abrir la línea puede leer su historial. Un registro de un módulo que usted no puede leer aparece solo por su tipo, por ejemplo «un contrato».
+
+Vea [Historial de los registros](record-history.md) para más detalles.
 
 ---
 
