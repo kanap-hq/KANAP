@@ -1,5 +1,10 @@
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES } from '../../../incidents/incident.entity';
-import { INCIDENT_RESOLUTION_HOURS_SQL } from '../../../incidents/incident-sql';
+import {
+  INCIDENT_DETECTED_MONTH_SQL,
+  INCIDENT_RESOLUTION_HOURS_SQL,
+  INCIDENT_RESOLVED_MONTH_SQL,
+  incidentDaySql,
+} from '../../../incidents/incident-sql';
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 
 export const incidentsRegistry: AiEntityFilterRegistry = {
@@ -73,7 +78,8 @@ export const incidentsRegistry: AiEntityFilterRegistry = {
       ai: 'application',
       grid: 'linked_applications',
       type: 'set',
-      description: 'Linked application reference or exact name. Grouping counts an incident once per linked application.',
+      description: 'Linked application reference or exact name. Grouping counts an incident once per linked application. '
+        + 'A Business Contributor only sees and matches the applications they take part in: another application returns no row, which does not mean the workspace has none.',
       dynamic: true,
       discoverable: true,
       sortable: false,
@@ -136,8 +142,10 @@ export const incidentsRegistry: AiEntityFilterRegistry = {
     detected_month: {
       ai: 'detected_month',
       grid: 'detected_month',
-      type: 'text',
-      description: 'Month the incident was detected, as YYYY-MM in UTC. Grouping counts an incident once, in its detection month.',
+      type: 'set',
+      description: 'Month the incident was detected, as YYYY-MM in UTC. Set one or more exact months; values come from get_filter_values. '
+        + 'Grouping counts an incident once, in its detection month.',
+      dynamic: true,
       discoverable: true,
       sortable: true,
       groupable: true,
@@ -146,8 +154,10 @@ export const incidentsRegistry: AiEntityFilterRegistry = {
     resolved_month: {
       ai: 'resolved_month',
       grid: 'resolved_month',
-      type: 'text',
-      description: 'Month service was restored, as YYYY-MM in UTC; empty for an incident that is not resolved. Grouping counts an incident once, in its resolution month.',
+      type: 'set',
+      description: 'Month service was restored, as YYYY-MM in UTC; empty for an incident that is not resolved or closed. Set one or more exact months; values come from get_filter_values. '
+        + 'Grouping counts an incident once, in its resolution month.',
+      dynamic: true,
       discoverable: true,
       sortable: true,
       groupable: true,
@@ -281,31 +291,33 @@ export const incidentsRegistry: AiEntityFilterRegistry = {
             AND incident_technology.tenant_id = incident_technology_link.tenant_id`,
         ],
       },
-      detected_month: { expression: `to_char(i.detected_at, 'YYYY-MM')` },
-      resolved_month: { expression: `to_char(i.resolved_at, 'YYYY-MM')` },
+      detected_month: { expression: INCIDENT_DETECTED_MONTH_SQL },
+      resolved_month: { expression: INCIDENT_RESOLVED_MONTH_SQL },
     },
     metricFields: {
       // Date metrics keep the day only, as the other registries do: a raw timestamptz would
       // reach the model as `String(Date)`.
       started_at: {
-        expression: `to_char(i.started_at, 'YYYY-MM-DD')`,
+        expression: incidentDaySql('i.started_at'),
         type: 'date',
       },
       detected_at: {
-        expression: `to_char(i.detected_at, 'YYYY-MM-DD')`,
+        expression: incidentDaySql('i.detected_at'),
         type: 'date',
       },
       resolved_at: {
-        expression: `to_char(i.resolved_at, 'YYYY-MM-DD')`,
+        expression: incidentDaySql('i.resolved_at'),
         type: 'date',
       },
       closed_at: {
-        expression: `to_char(i.closed_at, 'YYYY-MM-DD')`,
+        expression: incidentDaySql('i.closed_at'),
         type: 'date',
       },
       resolution_hours: {
         expression: INCIDENT_RESOLUTION_HOURS_SQL,
         type: 'number',
+        // The exact value stays in the definition; a group shows one decimal, as the line does.
+        round: 1,
       },
     },
   },

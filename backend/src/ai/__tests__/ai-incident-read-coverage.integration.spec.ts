@@ -26,7 +26,7 @@ process.env.S3_BUCKET ||= 'ai-incident-read-spec';
 process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
-type Harness = { app: any; dataSource: DataSource; executor: any; aggregates: any; registries: any; policy: any };
+type Harness = { app: any; dataSource: DataSource; executor: any; aggregates: any; registries: any; policy: any; incidents: any };
 
 type Seed = {
   tenantId: string;
@@ -41,6 +41,7 @@ async function createHarness(): Promise<Harness> {
   const { AiQueryExecutor } = require('../query/ai-query.executor');
   const { AiAggregateExecutor } = require('../query/ai-aggregate.executor');
   const { AiPolicyService } = require('../ai-policy.service');
+  const { IncidentsService } = require('../../incidents/services/incidents.service');
   const registries = require('../query/registries');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   // The surface checks (tenant AI settings, provider, subscription) are not what this spec tests.
@@ -53,6 +54,7 @@ async function createHarness(): Promise<Harness> {
     aggregates: app.get(AiAggregateExecutor),
     registries,
     policy,
+    incidents: app.get(IncidentsService),
   };
 }
 
@@ -96,10 +98,11 @@ async function seed(runner: QueryRunner): Promise<Seed> {
   const app1 = await application('Alpha App', 'APP-1');
   const app2 = await application('Beta App', 'APP-12');
 
-  const asset = (name: string, reference: string) => insertId(runner,
-    `INSERT INTO assets (tenant_id, name, kind, environment, asset_reference) VALUES ($1, $2, 'server', 'prod', $3)`,
-    [tenantId, name, reference]);
-  const asset1 = await asset('srv-one', 'AST-1');
+  const asset = (name: string, reference: string, hostname: string | null = null) => insertId(runner,
+    `INSERT INTO assets (tenant_id, name, kind, environment, asset_reference, hostname)
+     VALUES ($1, $2, 'server', 'prod', $3, $4)`,
+    [tenantId, name, reference, hostname]);
+  const asset1 = await asset('srv-one', 'AST-1', 'db-one.corp.example');
   const asset2 = await asset('srv-twelve', 'AST-12');
   const secretAsset = await asset('secret-asset', 'AST-99');
 
@@ -224,15 +227,19 @@ async function testExactLinkFilters(harness: Harness, runner: QueryRunner, s: Se
     assert.deepEqual(await incidentIds(harness, ctx, { filters: { application: ['APP-1'] } }), [r.one], 'APP-1 does not match APP-12');
     assert.deepEqual(await incidentIds(harness, ctx, { filters: { application: ['app-12'] } }), sorted([r.one, r.two]), 'APP-12 by reference, case-insensitive');
     assert.deepEqual(await incidentIds(harness, ctx, { filters: { application: ['alpha app'] } }), [r.one], 'an application exact name, case-insensitive');
+    assert.deepEqual(await incidentIds(harness, ctx, { filters: { application: [null] } }), sorted([r.twoHours, r.fourHours, r.cancelled, r.unresolved, r.negative]), 'no application at all');
 
     assert.deepEqual(await incidentIds(harness, ctx, { filters: { asset: ['AST-1'] } }), [r.one], 'AST-1 does not match AST-12');
     assert.deepEqual(await incidentIds(harness, ctx, { filters: { asset: ['ast-12'] } }), sorted([r.one, r.two]), 'AST-12 by reference, case-insensitive');
     assert.deepEqual(await incidentIds(harness, ctx, { filters: { asset: ['srv-one'] } }), [r.one], 'an asset exact name, case-insensitive');
+    assert.deepEqual(await incidentIds(harness, ctx, { filters: { asset: ['DB-one.corp.example'] } }), [r.one], 'an asset host name, case-insensitive');
+    assert.deepEqual(await incidentIds(harness, ctx, { filters: { asset: [null] } }), sorted([r.twoHours, r.fourHours, r.cancelled, r.unresolved, r.negative]), 'no asset at all');
 
     assert.deepEqual(await incidentIds(harness, ctx, { filters: { technology: ['TEC-1'] } }), [r.one], 'TEC-1 does not match TEC-12');
     assert.deepEqual(await incidentIds(harness, ctx, { filters: { technology: ['tec-12'] } }), sorted([r.one, r.two]), 'TEC-12 by reference, case-insensitive');
     assert.deepEqual(await incidentIds(harness, ctx, { filters: { technology: ['PostgreSQL'] } }), [r.one], 'a technology exact name');
     assert.deepEqual(await incidentIds(harness, ctx, { filters: { technology: ['postgres twelve'] } }), sorted([r.one, r.two]), 'a technology exact name, case-insensitive');
+    assert.deepEqual(await incidentIds(harness, ctx, { filters: { technology: [null] } }), sorted([r.twoHours, r.fourHours, r.cancelled, r.unresolved, r.negative]), 'no technology at all');
   });
 }
 
@@ -269,9 +276,16 @@ async function testMonths(harness: Harness, runner: QueryRunner, s: Seed) {
     );
     assert.deepEqual(
       await incidentIds(harness, ctx, { filters: { resolved_month: '2026-10' } }),
-      sorted([r.twoHours, r.cancelled, r.negative]),
-      'filtered on one resolution month',
+      sorted([r.twoHours, r.negative]),
+      'filtered on one resolution month: a cancelled incident has none',
     );
+    assert.deepEqual(
+      await incidentIds(harness, ctx, { filters: { detected_month: ['2026-09', '2026-10'] } }),
+      sorted([r.one, r.two, r.twoHours, r.fourHours, r.cancelled, r.unresolved, r.negative]),
+      'a set of months filters on each exact month',
+    );
+    assert.deepEqual(await incidentIds(harness, ctx, { filters: { detected_month: '2026-1' } }), [], 'a partial month matches nothing');
+    assert.deepEqual(await incidentIds(harness, ctx, { filters: { detected_month: '2026-11' } }), [], 'a month with no incident matches nothing');
   });
 }
 
@@ -292,6 +306,37 @@ async function testResolutionHours(harness: Harness, runner: QueryRunner, s: See
     const minor = average.groups.find((group: any) => group.key === 'minor');
     assert.equal(major.value, 3, '2 h and 4 h average 3.0: the cancelled, unresolved, negative and invisible incidents are left out');
     assert.equal(minor.value, null, 'no resolved incident, no average');
+
+    // The extra rows live in a savepoint: they leave the seed as the other cases expect it.
+    await runner.query('SAVEPOINT incident_resolution_extra');
+    try {
+      // An incident still open with a hand-entered resolution date has no delay and no resolution month.
+      await insertId(runner,
+        `INSERT INTO incidents (tenant_id, title, item_number, severity, status, detected_at, resolved_at, reporter_user_id, owner_user_id)
+         VALUES ($1, 'Open with a date', 20, 'major', 'open', '2026-10-04T08:00:00Z', '2026-10-04T10:00:00Z', $2, $2)`,
+        [s.tenantId, s.reader]);
+      const withOpen = await harness.aggregates.execute(ctx, {
+        entity_type: 'incidents', group_by: 'severity', metric: 'resolution_hours', function: 'avg',
+      });
+      assert.equal(withOpen.groups.find((group: any) => group.key === 'major').value, 3, 'the open incident with a date is still left out');
+      assert.deepEqual(await incidentIds(harness, ctx, { filters: { resolved_month: '2026-10' } }), sorted([r.twoHours, r.negative]),
+        'the open incident has no resolution month either');
+
+      // An exact delay is rounded to one decimal in the group and on the line.
+      const third = await insertId(runner,
+        `INSERT INTO incidents (tenant_id, title, item_number, severity, status, detected_at, resolved_at, reporter_user_id, owner_user_id)
+         VALUES ($1, 'Eighty minutes', 21, 'low', 'resolved', '2026-10-05T08:00:00Z', '2026-10-05T09:20:00Z', $2, $2)`,
+        [s.tenantId, s.reader]);
+      const rounded = await harness.aggregates.execute(ctx, {
+        entity_type: 'incidents', group_by: 'severity', metric: 'resolution_hours', function: 'avg',
+      });
+      assert.equal(rounded.groups.find((group: any) => group.key === 'low').value, 1.3, '1 h 20 rounds to 1.3');
+      const rowsAfter = await harness.executor.execute(ctx, { entity_type: 'incidents', filters: { status: ['resolved'] } });
+      assert.equal(rowsAfter.items.find((item: any) => String(item.id) === third)?.metadata.resolution_hours, 1.3);
+    } finally {
+      await runner.query('ROLLBACK TO SAVEPOINT incident_resolution_extra');
+      await runner.query('RELEASE SAVEPOINT incident_resolution_extra');
+    }
 
     const rows = await harness.executor.execute(ctx, { entity_type: 'incidents', filters: { status: ['resolved'] } });
     const byId = new Map<string, any>(rows.items.map((item: any) => [String(item.id), item]));
@@ -334,7 +379,63 @@ async function testFilterValues(harness: Harness, runner: QueryRunner, s: Seed) 
     assert.deepEqual(sorted(values.values.technology), sorted(['Postgres Twelve', 'PostgreSQL']), 'technology values are exact names');
     assert.equal('asset_count' in values.values, false, 'a count is not a set field');
     assert.deepEqual(values.fields_ignored, ['asset_count'], 'and the answer says so');
+
+    const months = await harness.executor.executeFilterValues(ctx, {
+      entity_type: 'incidents',
+      fields: ['detected_month', 'resolved_month'],
+    });
+    assert.deepEqual(sorted(months.values.detected_month), ['2026-09', '2026-10'], 'the detection months, exact values');
+    assert.deepEqual(sorted(months.values.resolved_month.filter((value: string | null) => value != null)), ['2026-09', '2026-10'], 'the resolution months');
+    assert.ok(months.values.resolved_month.includes(null), 'an unresolved incident has no resolution month to filter on');
   });
+}
+
+async function testTextOperatorsAreRefused(harness: Harness, runner: QueryRunner, s: Seed) {
+  const opts = {
+    manager: runner.manager,
+    tenantId: s.tenantId,
+    viewer: { userId: s.reader, isAdmin: false },
+    technologies: true,
+    applications: true,
+  };
+  await inSavepoint(runner, async () => {
+    for (const type of ['startsWith', 'endsWith', 'notContains', 'notEqual']) {
+      await assert.rejects(
+        () => harness.incidents.list({ filters: { linked_assets: { type, filter: 'srv' } } }, opts),
+        /Use equals or contains/,
+        type,
+      );
+    }
+    // equals and contains both mean the exact reference or name, never a substring.
+    const equals = await harness.incidents.list({ filters: { linked_assets: { type: 'equals', filter: 'AST-1' } } }, opts);
+    assert.deepEqual(sorted(equals.items.map((item: any) => String(item.id))), [s.records.one]);
+    const contains = await harness.incidents.list({ filters: { linked_assets: { type: 'contains', filter: 'srv' } } }, opts);
+    assert.deepEqual(contains.items, [], 'contains is exact too: no partial name');
+  });
+}
+
+async function testMonthsReadInUtcWhateverTheSession(harness: Harness, runner: QueryRunner, s: Seed) {
+  const ctx = context(runner, s);
+  await runner.query('SAVEPOINT incident_read_time_zone');
+  try {
+    // 31 October 23:30 UTC is 1 November 00:30 in Paris: the month stays October.
+    const nearMidnight = await insertId(runner,
+      `INSERT INTO incidents (tenant_id, title, item_number, severity, status, detected_at, reporter_user_id, owner_user_id)
+       VALUES ($1, 'Near midnight', 30, 'minor', 'open', '2026-10-31T23:30:00Z', $2, $2)`,
+      [s.tenantId, s.reader]);
+    await runner.query(`SET LOCAL TIME ZONE 'Europe/Paris'`);
+    const october = await incidentIds(harness, ctx, { filters: { detected_month: '2026-10' } });
+    assert.equal(october.length, 6, 'the October incidents stay in October in a Paris session');
+    assert.ok(october.includes(nearMidnight), 'the incident at 23:30 UTC is still in October');
+    assert.deepEqual(await incidentIds(harness, ctx, { filters: { detected_month: '2026-11' } }), [], 'never November');
+    const byMonth = await harness.aggregates.execute(ctx, { entity_type: 'incidents', group_by: 'detected_month' });
+    assert.equal(groupCounts(byMonth)['2026-10'], 6, 'the group counts it in October');
+    assert.equal('2026-11' in groupCounts(byMonth), false);
+    await runner.query("SET LOCAL TIME ZONE 'UTC'");
+  } finally {
+    await runner.query('ROLLBACK TO SAVEPOINT incident_read_time_zone');
+    await runner.query('RELEASE SAVEPOINT incident_read_time_zone');
+  }
 }
 
 async function testConfidentialInvisible(harness: Harness, runner: QueryRunner, s: Seed) {
@@ -361,6 +462,12 @@ async function testBusinessContributorScope(harness: Harness, runner: QueryRunne
 
     const values = await harness.executor.executeFilterValues(ctx, { entity_type: 'incidents', fields: ['application'] });
     assert.deepEqual(values.values.application, ['Alpha App'], 'the values list only their applications');
+
+    assert.deepEqual(
+      await incidentIds(harness, ctx, { filters: { application: [null] } }),
+      sorted([r.two, r.twoHours, r.fourHours, r.cancelled, r.unresolved, r.negative]),
+      'an incident linked only to an application outside their scope has no application',
+    );
   });
 }
 
@@ -412,6 +519,8 @@ async function run() {
       await testConfidentialInvisible(harness, runner, s);
       await testBusinessContributorScope(harness, runner, s);
       await testModuleReads(harness, runner, s);
+      await testTextOperatorsAreRefused(harness, runner, s);
+      await testMonthsReadInUtcWhateverTheSession(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

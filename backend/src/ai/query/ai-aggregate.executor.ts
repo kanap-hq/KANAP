@@ -449,19 +449,24 @@ function aggregateConverted(fn: 'sum' | 'avg' | 'min' | 'max', values: number[])
   return total;
 }
 
-function buildMetricAggregateExpression(fn: AiAggregateFunction, expression: string): string {
-  switch (fn) {
-    case 'sum':
-      return `SUM(${expression})`;
-    case 'avg':
-      return `AVG(${expression})`;
-    case 'min':
-      return `MIN(${expression})`;
-    case 'max':
-      return `MAX(${expression})`;
-    default:
-      return 'COUNT(*)::int';
-  }
+function buildMetricAggregateExpression(fn: AiAggregateFunction, expression: string, round?: number): string {
+  const aggregate = (() => {
+    switch (fn) {
+      case 'sum':
+        return `SUM(${expression})`;
+      case 'avg':
+        return `AVG(${expression})`;
+      case 'min':
+        return `MIN(${expression})`;
+      case 'max':
+        return `MAX(${expression})`;
+      default:
+        return 'COUNT(*)::int';
+    }
+  })();
+  // A definition can carry more precision than the card reads (an exact delay): the group keeps
+  // the readable figure, the sum stays exact.
+  return round != null && fn !== 'sum' && fn !== 'count' ? `ROUND(${aggregate}, ${round})` : aggregate;
 }
 
 type BudgetValueGroup = { key: string | null; value: number | null; unknown?: number };
@@ -1234,7 +1239,7 @@ export class AiAggregateExecutor {
       }));
     }
 
-    const aggregateExpression = buildMetricAggregateExpression(fn, metric.def.expression);
+    const aggregateExpression = buildMetricAggregateExpression(fn, metric.def.expression, metric.def.round);
     const orderDirection = getMetricOrderDirection(fn);
     const rows = await context.manager.query(
       `SELECT ${groupField.expression} AS key, ${aggregateExpression} AS value
@@ -1647,7 +1652,7 @@ export class AiAggregateExecutor {
           count: Number(row.count) || 0,
         }));
       } else {
-        const aggregateExpression = buildMetricAggregateExpression(fn, metric.def.expression);
+        const aggregateExpression = buildMetricAggregateExpression(fn, metric.def.expression, metric.def.round);
         const valueRows = await qb
           .clone()
           .select(groupExpression, 'key')

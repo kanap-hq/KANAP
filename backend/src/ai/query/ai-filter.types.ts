@@ -96,6 +96,8 @@ export type AiAggregateMetricDef = {
   expression: string;
   joins?: string[];
   type: AiAggregateMetricType;
+  /** The decimal places the server keeps in a group's value (an exact definition, a readable figure). */
+  round?: number;
 };
 
 export type AiAggregateConfig = {

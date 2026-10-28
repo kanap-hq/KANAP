@@ -4,7 +4,11 @@ import { EntityManager, Repository } from 'typeorm';
 import { textSortKey, type TextSortKey } from '../../common/list-sort';
 import { Incident, INCIDENT_STATUS_RANK, IncidentStatus } from '../incident.entity';
 import { IncidentChangedFields } from '../incident-entry.entity';
-import { INCIDENT_RESOLUTION_HOURS_SQL } from '../incident-sql';
+import {
+  INCIDENT_DETECTED_MONTH_SQL,
+  INCIDENT_RESOLUTION_HOURS_SQL,
+  INCIDENT_RESOLVED_MONTH_SQL,
+} from '../incident-sql';
 import { AuditService } from '../../audit/audit.service';
 import { ItemNumberService } from '../../common/item-number.service';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
@@ -45,7 +49,7 @@ const ROW_COLUMNS = `
   i.owner_user_id, ${OWNER_NAME} AS owner_name,
   i.reporter_user_id, ${REPORTER_NAME} AS reporter_name,
   ${COUNT_COLUMNS},
-  ${INCIDENT_RESOLUTION_HOURS_SQL} AS resolution_hours,
+  ROUND(${INCIDENT_RESOLUTION_HOURS_SQL}, 1) AS resolution_hours,
   i.created_at, i.updated_at`;
 
 /**
@@ -58,7 +62,8 @@ type LinkFilterSpec = {
   column: string;
   target: string;
   alias: string;
-  reference: string;
+  /** The target's business reference and every field its exact name answers to (a host name, an fqdn). */
+  references: string[];
   /** Applications are narrowed to a Business Contributor's participation, as the detail is. */
   scoped: boolean;
 };
@@ -69,7 +74,12 @@ const LINK_FILTERS: Record<string, LinkFilterSpec> = {
     column: 'asset_id',
     target: 'assets',
     alias: 'linked_asset',
-    reference: 'linked_asset.asset_reference',
+    references: [
+      'linked_asset.asset_reference',
+      'linked_asset.name',
+      'linked_asset.hostname',
+      'linked_asset.fqdn',
+    ],
     scoped: false,
   },
   linked_applications: {
@@ -77,7 +87,7 @@ const LINK_FILTERS: Record<string, LinkFilterSpec> = {
     column: 'application_id',
     target: 'applications',
     alias: 'linked_application',
-    reference: 'linked_application.sequential_id',
+    references: ['linked_application.sequential_id', 'linked_application.name'],
     scoped: true,
   },
   linked_technologies: {
@@ -85,7 +95,7 @@ const LINK_FILTERS: Record<string, LinkFilterSpec> = {
     column: 'technology_id',
     target: 'technologies',
     alias: 'linked_technology',
-    reference: `('TEC-' || linked_technology.item_number)`,
+    references: [`('TEC-' || linked_technology.item_number)`, 'linked_technology.name'],
     scoped: false,
   },
 };
@@ -119,8 +129,8 @@ const FIELD_EXPRESSIONS: Record<string, string> = {
     FROM incident_technologies it
     JOIN technologies t ON t.id = it.technology_id AND t.tenant_id = it.tenant_id
     WHERE it.incident_id = i.id AND it.tenant_id = i.tenant_id)`,
-  detected_month: `to_char(i.detected_at, 'YYYY-MM')`,
-  resolved_month: `to_char(i.resolved_at, 'YYYY-MM')`,
+  detected_month: INCIDENT_DETECTED_MONTH_SQL,
+  resolved_month: INCIDENT_RESOLVED_MONTH_SQL,
   resolution_hours: INCIDENT_RESOLUTION_HOURS_SQL,
   confidential: 'i.confidential',
   created_at: 'i.created_at',
@@ -137,6 +147,7 @@ const BOOLEAN_FILTER_FIELDS = new Set<string>(['personal_data_affected', 'author
 
 const FILTER_VALUE_FIELDS = new Set([
   'category', 'severity', 'status', 'owner_name', 'reporter_name',
+  'detected_month', 'resolved_month',
   'linked_assets', 'linked_applications', 'linked_technologies',
 ]);
 
@@ -488,9 +499,12 @@ export class IncidentsService extends IncidentsBaseService {
   }
 
   /**
-   * Exact link filter: one of the target's business references or its exact name, case-insensitive,
-   * on the link table. A `null` value matches an incident without that link. A reader's
-   * applications scope is applied to the joined application, as the Relations tab does.
+   * Exact link filter: one of the target's business references or one of its exact names
+   * (a host name or an fqdn for an asset), case-insensitive, on the link table. A `null` value
+   * matches an incident without that link. A reader's applications scope is applied to the joined
+   * application, as the Relations tab does, so an incident linked only to an application outside
+   * their scope counts as having no application. Only `equals` and `contains` are accepted, both
+   * as an exact match; another text operator is refused rather than silently widened.
    */
   private linkFilterClause(field: string, model: any, params: any[], input: IncidentWhere): string {
     const spec = LINK_FILTERS[field];
@@ -498,25 +512,36 @@ export class IncidentsService extends IncidentsBaseService {
       .filter((value) => value !== null && value !== undefined)
       .map((value) => String(value).trim().toLowerCase())
       .filter((value) => value.length > 0);
+    const scope = spec.scoped && input.applicationScope
+      ? ` AND ${applicationParticipantCondition(spec.alias, binder(params)(input.applicationScope.userId))}`
+      : '';
     const exists = (values: string[]): string => {
       params.push(values);
       const placeholder = `$${params.length}::text[]`;
-      const scope = spec.scoped && input.applicationScope
-        ? ` AND ${applicationParticipantCondition(spec.alias, binder(params)(input.applicationScope.userId))}`
-        : '';
+      const matches = spec.references
+        .map((reference) => `LOWER(BTRIM(${reference})) = ANY(${placeholder})`)
+        .join('\n            OR ');
       return `EXISTS (
         SELECT 1 FROM ${spec.table} link
         JOIN ${spec.target} ${spec.alias}
           ON ${spec.alias}.id = link.${spec.column} AND ${spec.alias}.tenant_id = link.tenant_id
         WHERE link.incident_id = i.id AND link.tenant_id = i.tenant_id
-          AND (LOWER(BTRIM(${spec.reference})) = ANY(${placeholder})
-            OR LOWER(BTRIM(${spec.alias}.name)) = ANY(${placeholder}))${scope}
+          AND (${matches})${scope}
       )`;
     };
-    const hasLink = `EXISTS (
-      SELECT 1 FROM ${spec.table} link
-      WHERE link.incident_id = i.id AND link.tenant_id = i.tenant_id
-    )`;
+    // The contribution scope narrows what counts as a link too: an incident linked only to an
+    // application outside the person's participation has no application for them, as its detail.
+    const hasLink = scope
+      ? `EXISTS (
+        SELECT 1 FROM ${spec.table} link
+        JOIN ${spec.target} ${spec.alias}
+          ON ${spec.alias}.id = link.${spec.column} AND ${spec.alias}.tenant_id = link.tenant_id
+        WHERE link.incident_id = i.id AND link.tenant_id = i.tenant_id${scope}
+      )`
+      : `EXISTS (
+        SELECT 1 FROM ${spec.table} link
+        WHERE link.incident_id = i.id AND link.tenant_id = i.tenant_id
+      )`;
 
     if (model.filterType === 'set' && Array.isArray(model.values)) {
       const hasNull = model.values.some((value: any) => value === null || value === undefined);
@@ -528,6 +553,9 @@ export class IncidentsService extends IncidentsBaseService {
     const type = String(model.type || (model.filterType === 'text' ? 'contains' : ''));
     if (type === 'blank') return ` AND NOT ${hasLink}`;
     if (type === 'notBlank') return ` AND ${hasLink}`;
+    if (type !== '' && type !== 'contains' && type !== 'equals') {
+      throw new BadRequestException(`Filter operator "${type}" is not supported on ${field}. Use equals or contains.`);
+    }
     const values = normalized([model.filter ?? model.value]);
     if (values.length === 0) return '';
     return ` AND ${exists(values)}`;
@@ -611,7 +639,7 @@ export class IncidentsService extends IncidentsBaseService {
          ${OWNER_NAME} AS owner_name,
          ${REPORTER_NAME} AS reporter_name,
          ${COUNT_COLUMNS},
-         ${INCIDENT_RESOLUTION_HOURS_SQL} AS resolution_hours,
+         ROUND(${INCIDENT_RESOLUTION_HOURS_SQL}, 1) AS resolution_hours,
          -- The entries the journal shows: it leaves out a link change of an unread module.
          (SELECT COUNT(*) FROM incident_entries e
            WHERE e.incident_id = i.id AND e.tenant_id = i.tenant_id
@@ -683,6 +711,8 @@ export class IncidentsService extends IncidentsBaseService {
       technologies: opts?.technologies,
       applications: opts?.applications,
       applicationScope: opts?.applicationScope,
+      tasks: opts?.tasks,
+      audit: opts?.audit,
     };
   }
 
@@ -745,7 +775,8 @@ export class IncidentsService extends IncidentsBaseService {
       author_id: userId,
     });
     await this.audit.log(
-      { table: 'incidents', recordId: saved.id, action: 'create', before: null, after: saved, userId },
+      { table: 'incidents', recordId: saved.id, action: 'create', before: null, after: saved, userId,
+        source: opts?.audit?.source, sourceRef: opts?.audit?.sourceRef ?? null },
       { manager: mg },
     );
     return this.get(saved.id, this.viewed(opts, { userId, isAdmin: true }));
@@ -831,7 +862,8 @@ export class IncidentsService extends IncidentsBaseService {
       await this.refreshLinkedTaskSearchIndex(mg, tenantId, saved.id);
     }
     await this.audit.log(
-      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
+      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId,
+        source: opts?.audit?.source, sourceRef: opts?.audit?.sourceRef ?? null },
       { manager: mg },
     );
     return this.get(saved.id, this.viewed(opts, { userId, isAdmin: true }));
@@ -862,7 +894,8 @@ export class IncidentsService extends IncidentsBaseService {
     const changed: IncidentChangedFields = { status: { from: before.status, to: saved.status } };
     await this.addEntry(mg, saved, { kind: 'reopen', content: reason, changed_fields: changed, occurred_at: now, author_id: userId });
     await this.audit.log(
-      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
+      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId,
+        source: opts?.audit?.source, sourceRef: opts?.audit?.sourceRef ?? null },
       { manager: mg },
     );
     return this.get(saved.id, this.viewed(opts, opts?.viewer ?? { userId, isAdmin: true }));
@@ -894,7 +927,8 @@ export class IncidentsService extends IncidentsBaseService {
     };
     await this.addEntry(mg, saved, { kind: 'status_change', content: reason, changed_fields: changed, occurred_at: now, author_id: userId });
     await this.audit.log(
-      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
+      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId,
+        source: opts?.audit?.source, sourceRef: opts?.audit?.sourceRef ?? null },
       { manager: mg },
     );
     return this.get(saved.id, this.viewed(opts, opts?.viewer ?? { userId, isAdmin: true }));
@@ -935,7 +969,8 @@ export class IncidentsService extends IncidentsBaseService {
       author_id: userId,
     });
     await this.audit.log(
-      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
+      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId,
+        source: opts?.audit?.source, sourceRef: opts?.audit?.sourceRef ?? null },
       { manager: mg },
     );
     await this.refreshLinkedTaskSearchIndex(mg, tenantId, saved.id);

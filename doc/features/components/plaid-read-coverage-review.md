@@ -114,7 +114,7 @@ Entity-to-resource mapping:
 | Business processes | Search, query, aggregate, detail. | Categories and owner metadata are exposed where the service returns them. |
 | Users | Search, query, aggregate, detail. | Business user profile fields are readable; auth tokens, notification settings, and full permission maps are out of scope. |
 
-Incident linked groups are many-to-many, as the task linked groups are: the group counts add up to more than `total`, and a record with no link is in none of them. `detected_month` and `resolved_month` follow the other date-only reads (the database session time zone, UTC on KANAP installations), not the reader's local time zone.
+Incident linked groups are many-to-many, as the task linked groups are: the group counts need not add up to `total`, and a record with no link is in none of them. `detected_month` and `resolved_month` are read in UTC, whatever the database session time zone; `resolved_month` is empty unless the incident is resolved or closed.
 
 ## Deliberately Not First-Class Yet
 
