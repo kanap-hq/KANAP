@@ -42,8 +42,9 @@ function textOrNull(value: unknown): string | null {
 function displayTitle(current: Record<string, unknown>): string {
   const ref = textOrNull(current.target_ref);
   const title = textOrNull(current.target_title);
-  if (title && ref && title.startsWith(ref)) {
-    const stripped = title.slice(ref.length).replace(/^\s*[-–—·:|]\s*/, '').trim();
+  // Only the reference itself, followed by a separator: DOC-1 leaves "DOC-12 review" whole.
+  if (title && ref && title.startsWith(ref) && /^(?:\s*[-–—·:|]\s*|\s+)/.test(title.slice(ref.length))) {
+    const stripped = title.slice(ref.length).replace(/^(?:\s*[-–—·:|]\s*|\s+)/, '').trim();
     if (stripped) return stripped;
   }
   return title || ref || 'record';

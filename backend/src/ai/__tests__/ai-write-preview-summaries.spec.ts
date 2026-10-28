@@ -567,6 +567,17 @@ function testDeleteRecordSummaryAndCard() {
   assert.equal(summary(operation, document, 'fr'), 'Suppression du document « Runbook ».');
   assert.equal(summary(operation, document, 'de'), 'Dokument „Runbook“ löschen.');
   assert.equal(summary(operation, document, 'es'), 'Eliminación del documento «Runbook».');
+  // A title that starts with a longer reference keeps it whole: DOC-1 is not DOC-12.
+  const prefixed: AiMutationPreview = {
+    ...document,
+    current_values: { ...document.current_values, target_ref: 'DOC-1', target_title: 'DOC-12 review' },
+  };
+  assert.equal(summary(operation, prefixed, 'fr'), 'Suppression du document « DOC-12 review ».');
+  const named: AiMutationPreview = {
+    ...document,
+    current_values: { ...document.current_values, target_ref: 'DOC-1', target_title: 'DOC-1 Runbook' },
+  };
+  assert.equal(summary(operation, named, 'fr'), 'Suppression du document « Runbook ».');
   assert.equal(
     operation.presentPreview(document, 'fr').changes.deletion.to,
     [
