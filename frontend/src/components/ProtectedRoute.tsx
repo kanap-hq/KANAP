@@ -11,6 +11,15 @@ import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
 import PendingAccessPage from '../pages/PendingAccessPage';
 import { canUseAnyOperation, canUseOperation } from '../pages/operations/operationAccess';
 
+/** Router state of a /403 redirect: where the refusal comes from, and the missing module right when known. */
+export type ForbiddenState = {
+  from?: string;
+  resource?: string;
+  level?: string;
+  /** Set for a missing AI chat right: the page names that right in its own words. */
+  reason?: string;
+};
+
 /** Router state of a /403 redirect caused by a missing AI chat right: the page names the right. */
 export const FORBIDDEN_REASON_AI_CHAT_RIGHT = 'ai_chat_right';
 const aiChatRightRefusal = <Navigate to="/403" replace state={{ reason: FORBIDDEN_REASON_AI_CHAT_RIGHT }} />;
@@ -101,6 +110,15 @@ export default function ProtectedRoute() {
   // Minimal per-route gating based on path prefix and resource name
   if (token && claims && profile) {
     const path = location.pathname;
+    // Every refusal names the address it answers, and the missing right when it is the only one.
+    const refuse = (requirement?: Pick<RouteRequirement, 'resource' | 'level'>) => {
+      const state: ForbiddenState = { from: path };
+      if (requirement) {
+        state.resource = requirement.resource;
+        state.level = requirement.level;
+      }
+      return <Navigate to="/403" replace state={state} />;
+    };
     const isAiWorkspaceRoute = path === '/ai' || path.startsWith('/ai/');
     const isAgentsRoute = path === '/agents' || path.startsWith('/agents/');
     const isAdminAiRoute = path === '/admin/ai' || path.startsWith('/admin/ai/')
@@ -126,11 +144,11 @@ export default function ProtectedRoute() {
       hasScopedApplicationOnlyAccess
       && (path === '/it/interfaces' || path.startsWith('/it/interfaces/') || path === '/it/interface-map')
     ) {
-      return <Navigate to="/403" replace />;
+      return refuse();
     }
     if (isAiWorkspaceRoute) {
       if (!config.features.aiChat) {
-        return <Navigate to="/403" replace />;
+        return refuse();
       }
       if (aiCapabilities.isLoading || (!aiCapabilities.data && aiCapabilities.isFetching)) {
         return (
@@ -158,12 +176,12 @@ export default function ProtectedRoute() {
         aiCapabilities.isError
         || (aiCapabilities.data?.surfaces.chat.available !== true && !chatAwaitsIncludedModelConfirmation(aiCapabilities.data))
       ) {
-        return <Navigate to="/403" replace />;
+        return refuse();
       }
     }
     if (isAgentsRoute) {
       if (!config.features.aiSettings) {
-        return <Navigate to="/403" replace />;
+        return refuse();
       }
       if (aiCapabilities.isLoading || (!aiCapabilities.data && aiCapabilities.isFetching)) {
         return (
@@ -178,7 +196,7 @@ export default function ProtectedRoute() {
         );
       }
       if (aiCapabilities.isError || aiCapabilities.data?.instance_features.ai_settings !== true) {
-        return <Navigate to="/403" replace />;
+        return refuse();
       }
     }
     // The integrations page also hosts non-AI connectors (Netbox), so an infrastructure
@@ -186,7 +204,7 @@ export default function ProtectedRoute() {
     const integrationsViaInfrastructure = isAdminIntegrationsRoute && hasLevel('infrastructure', 'admin');
     if ((isAdminAiRoute || isAdminIntegrationsRoute) && !integrationsViaInfrastructure) {
       if (!config.features.aiSettings) {
-        return <Navigate to="/403" replace />;
+        return refuse();
       }
       if (aiCapabilities.isLoading || (!aiCapabilities.data && aiCapabilities.isFetching)) {
         return (
@@ -201,7 +219,7 @@ export default function ProtectedRoute() {
         );
       }
       if (aiCapabilities.isError || aiCapabilities.data?.surfaces.settings.available !== true) {
-        return <Navigate to="/403" replace />;
+        return refuse();
       }
     }
 
@@ -279,7 +297,7 @@ export default function ProtectedRoute() {
         'analytics',
       ].some((resource) => hasLevel(resource, 'reader'));
       if (!hasMasterDataAccess) {
-        return <Navigate to="/403" replace />;
+        return refuse();
       }
       requirement = null;
     } else if (path.startsWith('/admin/')) {
@@ -292,13 +310,13 @@ export default function ProtectedRoute() {
     } else if (path === '/ops/operations' || path === '/ops/operations/') {
       // The administration landing opens when at least one of its pages can be used.
       if (!canUseAnyOperation(hasLevel, dataAccessLimited)) {
-        return <Navigate to="/403" replace />;
+        return refuse();
       }
       requirement = null;
     } else if (path.startsWith('/ops/operations/')) {
       // Each administration page opens only to the users who can act on it.
       if (!canUseOperation(path.split('/')[3] ?? '', hasLevel, dataAccessLimited)) {
-        return <Navigate to="/403" replace />;
+        return refuse();
       }
       requirement = null;
     } else if (path.startsWith('/ops/')) {
@@ -309,7 +327,7 @@ export default function ProtectedRoute() {
       // Lists need settings. Netbox, on the same page, needs an infrastructure administrator.
       if (seg === 'settings') {
         if (!hasLevel('settings', 'reader') && !hasLevel('infrastructure', 'admin')) {
-          return <Navigate to="/403" replace />;
+          return refuse({ resource: 'settings', level: 'reader' });
         }
         requirement = null;
       } else {
@@ -329,14 +347,14 @@ export default function ProtectedRoute() {
     }
     if (isAdminAiRoute) {
       if (!hasLevel('ai_settings', 'admin')) {
-        return <Navigate to="/403" replace />;
+        return refuse({ resource: 'ai_settings', level: 'admin' });
       }
     } else if (isAdminIntegrationsRoute) {
       if (!hasLevel('ai_settings', 'admin') && !hasLevel('infrastructure', 'admin')) {
-        return <Navigate to="/403" replace />;
+        return refuse();
       }
     } else if (requirement && !hasLevel(requirement.resource, requirement.level)) {
-      return requirement.resource === 'ai_chat' ? aiChatRightRefusal : <Navigate to="/403" replace />;
+      return requirement.resource === 'ai_chat' ? aiChatRightRefusal : refuse(requirement);
     }
 
     // Redirect billing admins to billing page when subscription is unhealthy (only when billing is enabled)
