@@ -244,6 +244,7 @@
       "operating_company_id": "Betreibendes Unternehmen",
       "override_justification": "Begründung der Übersteuerung",
       "overview_notes": "Übersichtsnotizen",
+      "reason": "Grund",
       "replaced_host_links": "Ersetzte Host-Verknüpfungen",
       "reporting_currency": "Berichtswährung",
       "review_due_at": "Review fällig am",

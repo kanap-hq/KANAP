@@ -29,6 +29,8 @@ const RECORD_TOOLS = new Set([
   'create_master_data_record',
   'update_master_data_record',
   'write_financial_plan',
+  // The incident confidentiality card reads its Yes/No values as the record cards do.
+  'set_incident_confidentiality',
 ]);
 
 /** A stored code as the catalogs key it: `in progress` and `In_Progress` read as `in_progress`. */

@@ -155,6 +155,65 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText('Accès')).toBeInTheDocument();
   });
 
+  it('shows an incident reopen with its before and after status and the reason, in French', () => {
+    renderCard(preview({
+      tool_name: 'change_incident_state',
+      target: { entity_type: 'incidents', entity_id: 'incident-1', ref: 'INC-7', title: 'INC-7 - Mail outage' },
+      summary: "Réouverture de l'incident « INC-7 - Mail outage ».",
+      changes: {
+        status: { label: 'Status', from: 'closed', to: 'in_progress', format: 'text' },
+        reason: { label: 'Reason', from: null, to: 'Retour après correctif.', format: 'text' },
+      },
+    }));
+
+    expect(screen.getByText('Statut')).toBeInTheDocument();
+    expect(screen.getByText('Clôturé')).toBeInTheDocument();
+    expect(screen.getByText('En cours')).toBeInTheDocument();
+    expect(screen.getByText('Raison')).toBeInTheDocument();
+    expect(screen.getByText('Retour après correctif.')).toBeInTheDocument();
+    expect(screen.getByText("Réouverture de l'incident « INC-7 - Mail outage ».")).toBeInTheDocument();
+  });
+
+  it('shows an incident cancellation with the freeze warning, in French', () => {
+    renderCard(preview({
+      tool_name: 'change_incident_state',
+      target: { entity_type: 'incidents', entity_id: 'incident-1', ref: 'INC-7', title: 'INC-7 - Mail outage' },
+      summary: "Annulation de l'incident « INC-7 - Mail outage ».",
+      changes: {
+        status: { label: 'Status', from: 'open', to: 'cancelled', format: 'text' },
+        reason: { label: 'Reason', from: null, to: 'Doublon de INC-6.', format: 'text' },
+        closure_warning: {
+          label: 'Closure',
+          from: null,
+          to: "Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.",
+          format: 'text',
+        },
+      },
+    }));
+
+    expect(screen.getByText('Ouvert')).toBeInTheDocument();
+    expect(screen.getByText('Annulé')).toBeInTheDocument();
+    expect(screen.getByText('Doublon de INC-6.')).toBeInTheDocument();
+    expect(screen.getByText("Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.")).toBeInTheDocument();
+    expect(screen.getByText('Clôture')).toBeInTheDocument();
+  });
+
+  it('shows an incident confidentiality lifted, in French', () => {
+    renderCard(preview({
+      tool_name: 'set_incident_confidentiality',
+      target: { entity_type: 'incidents', entity_id: 'incident-1', ref: 'INC-7', title: 'INC-7 - Mail outage' },
+      summary: "Levée de la confidentialité de l'incident « INC-7 - Mail outage ».",
+      changes: {
+        confidential: { label: 'Confidential', from: 'Yes', to: 'No', format: 'text' },
+      },
+    }));
+
+    expect(screen.getByText('Restreindre aux administrateurs du registre')).toBeInTheDocument();
+    expect(screen.getByText('Oui')).toBeInTheDocument();
+    expect(screen.getByText('Non')).toBeInTheDocument();
+    expect(screen.getByText("Levée de la confidentialité de l'incident « INC-7 - Mail outage ».")).toBeInTheDocument();
+  });
+
   it('shows an incident note with its text and event time, in French', () => {
     renderCard(preview({
       tool_name: 'add_incident_note',

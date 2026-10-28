@@ -244,6 +244,7 @@
       "operating_company_id": "Société exploitante",
       "override_justification": "Justification du forçage",
       "overview_notes": "Notes de synthèse",
+      "reason": "Raison",
       "replaced_host_links": "Liens d'hébergement remplacés",
       "reporting_currency": "Devise de reporting",
       "review_due_at": "Revue prévue le",

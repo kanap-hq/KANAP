@@ -244,6 +244,7 @@
       "operating_company_id": "Empresa operadora",
       "override_justification": "Justificación del ajuste manual",
       "overview_notes": "Notas generales",
+      "reason": "Motivo",
       "replaced_host_links": "Vínculos de alojamiento sustituidos",
       "reporting_currency": "Moneda de reporting",
       "review_due_at": "Revisión prevista",

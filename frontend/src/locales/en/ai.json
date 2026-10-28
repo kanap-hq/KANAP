@@ -244,6 +244,7 @@
       "operating_company_id": "Operating company",
       "override_justification": "Override justification",
       "overview_notes": "Overview notes",
+      "reason": "Reason",
       "replaced_host_links": "Host links replaced",
       "reporting_currency": "Reporting currency",
       "review_due_at": "Review due",

@@ -17,6 +17,8 @@ export type AiMutationWriteToolName =
   | 'update_task_status'
   | 'update_task_assignee'
   | 'add_incident_note'
+  | 'change_incident_state'
+  | 'set_incident_confidentiality'
   | 'add_task_comment'
   | 'delete_record';
 
