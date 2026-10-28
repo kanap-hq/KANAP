@@ -396,8 +396,8 @@ the allowed values in the refusal. Date-times are ISO 8601 with a time zone,
 converted into the person's `time_zone`; `detected_at` defaults to now.
 `confidential: true` is allowed; a preview warns when the change makes the
 restricted incident disappear for the person, as the screen's lose-access
-dialog does. `confidential: false` is refused on the field path. A field change
-is undoable, a status or confidentiality change is not. The journal note goes
+dialog does. A field change is undoable, a status or confidentiality change is
+not. The journal note goes
 through `IncidentEntriesService.createNote` (`add_incident_note`): the journal
 only takes additions, so the preview is not reversible. The links go through
 `IncidentRelationsService.setLink` once per link (`update_incident_links`), so
