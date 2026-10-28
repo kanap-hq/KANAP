@@ -389,7 +389,16 @@ export class AiMutationPreviewService {
   ): Promise<void> {
     const relation = mutationInput?.relation
       ?? (params.input as { relation?: unknown } | null | undefined)?.relation
-      ?? params.preview?.mutation_input?.relation;
+      ?? params.preview?.mutation_input?.relation
+      // A technology link touches applications when either side of the request names one: the
+      // preparation input, or the stored changes of a preview being run or undone.
+      ?? (operation.toolName === 'update_technology_links'
+        && [(params.input as { applications?: unknown } | null | undefined)?.applications, mutationInput?.applications, params.preview?.mutation_input?.applications]
+          .some((group) => group && typeof group === 'object'
+            && ((Array.isArray((group as any).add) && (group as any).add.length > 0)
+              || (Array.isArray((group as any).remove) && (group as any).remove.length > 0)))
+        ? 'applications'
+        : undefined);
     const requirement = aiRelationTargetRequirement(operation.toolName, family, relation);
     if (requirement) {
       await this.policy.assertBusinessPermission(context, requirement.resource, requirement.level, context.manager);

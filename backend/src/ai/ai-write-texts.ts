@@ -212,6 +212,14 @@ export const writeActionText = {
       case 'es': return `modificación de las relaciones de ${subject}`;
     }
   },
+  /** The links of a technology to its applications and servers. */
+  updateTechnologyLinks(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `modification des liens de ${subject}`;
+      case 'de': return `Verknüpfungen von ${subject} ändern`;
+      case 'es': return `modificación de los vínculos de ${subject}`;
+    }
+  },
   /** A journal note on an incident: the journal only takes additions. */
   addIncidentNote(language: AiTranslatedWriteLanguage, subject: string): string {
     switch (language) {
@@ -429,7 +437,7 @@ export function incidentLinkCardText(language: AiWriteLanguage, group: IncidentL
 }
 
 /** A record's label is data, not Markdown: escape the characters that would style the card. */
-function escapeMarkdownLabel(value: string): string {
+export function escapeMarkdownLabel(value: string): string {
   return value
     // The escape character itself first, so the backslashes added below stay single.
     .replace(/\\/g, '\\\\')
@@ -437,7 +445,79 @@ function escapeMarkdownLabel(value: string): string {
     // A leading list marker, quote or ordered-list number would structure the line.
     .replace(/^([>+-])/, '\\$1')
     .replace(/^(\d+)\./, '$1\\.')
-    .replace(/([*_\[\]()`#])/g, '\\$1');
+    .replace(/([*_\[\]`#])/g, '\\$1');
+}
+
+/** The tech-link card group: the four headings of one kind, with the server wording for `already`. */
+export type TechnologyLinkCardGroup = {
+  add: string[];
+  remove: string[];
+  already: string[];
+  absent: string[];
+};
+
+/**
+ * The markdown block of the applications or the servers of a technology: what the approval adds
+ * and removes, then what it leaves as it is. A server that already has the technology is listed as
+ * equipped, not as linked. Labels are data: they are escaped as the incident card escapes them.
+ */
+export function technologyLinkCardText(
+  language: AiWriteLanguage,
+  group: TechnologyLinkCardGroup,
+  alreadyHeading: 'linked' | 'equipped' = 'linked',
+): string {
+  const headings = {
+    add: { en: 'Added', fr: 'Ajoutés', de: 'Hinzugefügt', es: 'Añadidos' }[language],
+    remove: { en: 'Removed', fr: 'Retirés', de: 'Entfernt', es: 'Retirados' }[language],
+    already: alreadyHeading === 'equipped'
+      ? { en: 'Already equipped', fr: 'Déjà équipés', de: 'Bereits ausgestattet', es: 'Ya equipados' }[language]
+      : { en: 'Already linked', fr: 'Déjà liés', de: 'Bereits verknüpft', es: 'Ya vinculados' }[language],
+    absent: { en: 'Not linked', fr: 'Pas liés', de: 'Nicht verknüpft', es: 'No vinculados' }[language],
+  };
+  const blocks: string[] = [];
+  for (const key of ['add', 'remove', 'already', 'absent'] as const) {
+    const items = group[key].filter((item) => item.trim().length > 0);
+    if (items.length === 0) continue;
+    blocks.push([`**${headings[key]}**`, ...items.map((item) => `- ${escapeMarkdownLabel(item)}`)].join('\n'));
+  }
+  return blocks.join('\n\n');
+}
+
+/**
+ * A version as the technology card names it: the technology and its label with the existing end of
+ * support date, or "new version 16, no support date" when the write creates it. Null is the
+ * version-unknown link.
+ */
+export function technologyVersionCardText(
+  language: AiWriteLanguage,
+  technologyName: string,
+  version: { label: string; created?: boolean; standard_support_end?: string | null; extended_support_end?: string | null } | null,
+): string {
+  if (!version) return { en: 'version unknown', fr: 'version inconnue', de: 'Version unbekannt', es: 'versión desconocida' }[language];
+  const label = `${technologyName} ${version.label}`.trim();
+  const end = version.extended_support_end ?? version.standard_support_end ?? null;
+  if (version.created) {
+    return {
+      en: `new version ${version.label}, no support date`,
+      fr: `nouvelle version ${version.label}, sans date de support`,
+      de: `neue Version ${version.label}, ohne Supportdatum`,
+      es: `nueva versión ${version.label}, sin fecha de soporte`,
+    }[language];
+  }
+  if (end) {
+    return {
+      en: `${label} (existing, end of support ${end})`,
+      fr: `${label} (existante, fin de support ${end})`,
+      de: `${label} (vorhanden, Supportende ${end})`,
+      es: `${label} (existente, fin de soporte ${end})`,
+    }[language];
+  }
+  return {
+    en: `${label} (existing, no support date)`,
+    fr: `${label} (existante, sans date de support)`,
+    de: `${label} (vorhanden, ohne Supportdatum)`,
+    es: `${label} (existente, sin fecha de soporte)`,
+  }[language];
 }
 
 /** The detail lines of a task preview: its assignee and its priority. */

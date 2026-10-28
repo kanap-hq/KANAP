@@ -16,6 +16,7 @@ import { UpdateDocumentRelationsAiMutationOperation } from './operations/update-
 import { UpdateBusinessRecordAiMutationOperation } from './operations/update-business-record.ai-mutation-operation';
 import { UpdateEntityRelationsAiMutationOperation } from './operations/update-entity-relations.ai-mutation-operation';
 import { UpdateIncidentLinksAiMutationOperation } from './operations/update-incident-links.ai-mutation-operation';
+import { UpdateTechnologyLinksAiMutationOperation } from './operations/update-technology-links.ai-mutation-operation';
 import { UpdateMasterDataRecordAiMutationOperation } from './operations/update-master-data-record.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from './operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskFieldsAiMutationOperation } from './operations/update-task-fields.ai-mutation-operation';
@@ -41,6 +42,7 @@ export class AiMutationOperationRegistry {
     updateBusinessRecord: UpdateBusinessRecordAiMutationOperation,
     updateEntityRelations: UpdateEntityRelationsAiMutationOperation,
     updateIncidentLinks: UpdateIncidentLinksAiMutationOperation,
+    updateTechnologyLinks: UpdateTechnologyLinksAiMutationOperation,
     updateTaskFields: UpdateTaskFieldsAiMutationOperation,
     updateTaskStatus: UpdateTaskStatusAiMutationOperation,
     updateTaskAssignee: UpdateTaskAssigneeAiMutationOperation,
@@ -67,6 +69,7 @@ export class AiMutationOperationRegistry {
       updateBusinessRecord,
       updateEntityRelations,
       updateIncidentLinks,
+      updateTechnologyLinks,
       updateTaskFields,
       updateTaskStatus,
       updateTaskAssignee,

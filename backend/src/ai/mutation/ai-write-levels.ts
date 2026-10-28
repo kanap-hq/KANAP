@@ -122,9 +122,16 @@ export function aiRelationTargetRequirement(
   family: unknown,
   relation: unknown,
 ): { resource: string; level: PermissionLevel } | null {
-  if (toolName !== 'update_entity_relations') return null;
   // The relation as the relation writes read it (`getRelationConfig`).
   const key = String(relation ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (toolName === 'update_technology_links') {
+    // A technology link to an application needs the application read, as the technology's
+    // Applications tab does; the servers stay under the infrastructure write.
+    return String(family ?? '').trim() === 'technologies' && key === 'applications'
+      ? { resource: 'applications', level: 'reader' }
+      : null;
+  }
+  if (toolName !== 'update_entity_relations') return null;
   return RELATION_TARGET_REQUIREMENTS[String(family ?? '').trim()]?.[key] ?? null;
 }
 
