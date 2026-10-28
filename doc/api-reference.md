@@ -1085,10 +1085,13 @@ These neutral routes use the existing budget SQL list engine with an explicit `a
 | GET `/budget-lines/summary/filter-values` | `budget:reader` | `{ [field]: [value, ...] }`, including `nature` |
 | GET `/budget-lines/summary/ids` | `budget:reader` | `{ ids, item_numbers, total }` |
 | GET `/budget-lines/summary/neighbors` | `budget:reader` | `{ index, total, prev, next }`; neighbors are `{ id, item_number, nature }` or `null` |
+| GET `/budget-lines/summary/hidden-by-value` | `budget:reader` | `{ counts: { [valueId]: n } }`: the lines of each dimension value the person cannot read; empty outside limited mode |
 | POST `/budget-lines/summary/aggregate` | `budget:reader` | `{ groups, others, total, groupCount, reportingCurrency, fxMissing }` |
 | GET `/budget-lines/resolve/:ref` | `budget:reader` | `{ id, nature, reference }` |
 | DELETE `/budget-lines/bulk` | `budget:admin` | `{ deleted, failed }` |
 | GET `/budget-lines/budget-file/export` | `budget:admin` | CSV attachment `budget.csv`, or `budget.xlsx` with `format=xlsx`; the lines of both natures, with the parameters of the [Budget file](#budget-file-opex-and-capex) export |
+
+`GET /budget-lines/summary/hidden-by-value?axis=<uuid>&values=<uuid,...>&from=<yyyy-mm-dd>` counts, for each value of the dimension, the budget lines the person may not read, without naming them. It requires `axis` and `values` (at most 500 values, UUIDs, else a 400); `from` is the report's lifecycle window, a day: a line with no end of validity or one ending on or after that day is counted, and omitting it counts every line. The answer is `{ counts: { [valueId]: n } }`; outside limited mode it is `{ counts: {} }` and no counting query runs. Only values of the requested dimension and tenant answer; a value with no hidden line is absent, which the caller reads as zero.
 
 The summary routes take the same query parameters and response shapes as their `/spend-items/summary` equivalents: `page`, `limit`, `sort`, `q`, `filters`, lifecycle/status options, `years`, `shape`, `amounts`, `fte` and saved filter `ctx`, as applicable to each route. The summary uses the existing year-window default; ids and neighbors use the existing enabled-lines default. The native row has `product_name` as its title, `description` as its description, `item_number` as its shared BL number, `nature` (`opex` or `capex`), `reference` (`BL-n`) and `legacy_number`. `shape=grid` preserves these fields. Nature supports set filtering and sorting; filter values include both natures subject to the other filters. Analytics columns include shared and nature-specific dimensions. Quick search matches existing text plus `BL-n`, a bare BL number and case-insensitive legacy `OPX-n` and `CPX-n` references.
 

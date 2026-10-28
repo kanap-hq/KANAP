@@ -17,8 +17,22 @@ import {
   type BudgetLineRelationsContext,
 } from './budget-line-relations';
 import { CapexItemsService, SpendItemsService } from './spend-items.service';
+import { hiddenCategoryLineCounts } from '../data-access/hidden-links';
 
 type ReadOptions = { manager: EntityManager; access?: BudgetListAccess };
+
+/** The most values one hidden-count request names. */
+const MAX_HIDDEN_VALUES = 500;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A query string parameter the route requires once, trimmed; anything else is a 400. */
+function textParam(value: unknown, name: string): string {
+  if (typeof value !== 'string') throw new BadRequestException(`${name} is required.`);
+  const trimmed = value.trim();
+  if (trimmed === '') throw new BadRequestException(`${name} is required.`);
+  return trimmed;
+}
 
 /** The neutral list routes use the same SQL engine with its explicit all-natures scope. */
 @Injectable()
@@ -99,6 +113,32 @@ export class BudgetLinesService {
 
   summaryAggregateRequest(body: unknown, opts: ReadOptions) {
     return budgetList.budgetListAggregateRequest(SUMMARY_SCOPES.all, this.deps(opts.access), body, opts.manager);
+  }
+
+  /**
+   * Data-scoped access (spec §6.6): the lines of each dimension value that the person cannot read,
+   * for the analytics report. `axis` is the dimension, `values` its values (500 at most) and `from`
+   * the report's lifecycle window (`YYYY-MM-DD`); without a window every line is counted. An unscoped
+   * person gets an empty answer without a counting query (`hiddenCategoryLineCounts`).
+   */
+  async hiddenCategoryCounts(query: Record<string, unknown>, opts: { manager: EntityManager }) {
+    const axis = textParam(query.axis, 'axis');
+    if (!UUID.test(axis)) throw new BadRequestException('axis must be a dimension id.');
+    const rawValues = textParam(query.values, 'values');
+    const values = Array.from(new Set(rawValues.split(',').map((value) => value.trim()).filter(Boolean)));
+    if (values.length === 0) throw new BadRequestException('values must name at least one value id.');
+    if (values.length > MAX_HIDDEN_VALUES) throw new BadRequestException(`values holds ${MAX_HIDDEN_VALUES} values at most.`);
+    const invalid = values.find((value) => !UUID.test(value));
+    if (invalid) throw new BadRequestException(`values must be value ids (${invalid} is not one).`);
+    const from = query.from == null || query.from === '' ? null : textParam(query.from, 'from');
+    if (from !== null) {
+      const day = new Date(`${from}T00:00:00.000Z`);
+      if (!DAY.test(from) || Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== from) {
+        throw new BadRequestException('from must be a day (YYYY-MM-DD).');
+      }
+    }
+    const counts = await hiddenCategoryLineCounts(opts.manager, axis.toLowerCase(), values.map((value) => value.toLowerCase()), from);
+    return { counts: Object.fromEntries(counts) };
   }
 
   /** The lines of `ids` as the unified list draws them (the AI detail, which names its line by id). */

@@ -87,6 +87,22 @@ export class BudgetLinesController {
   }
 
   /**
+   * Data-scoped access (spec §6.6): the lines of each dimension value that a limited person cannot
+   * read, for the analytics report. `axis`, `values` (500 at most) and `from`, the report's lifecycle
+   * window; an unscoped person gets `{ counts: {} }` without a counting query.
+   */
+  @ReadOnlyRoute()
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'reader')
+  @Get('summary/hidden-by-value')
+  hiddenByValue(
+    @Query() query: Record<string, unknown>,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.svc.hiddenCategoryCounts(query, { manager: ctx.manager as EntityManager });
+  }
+
+  /**
    * The lines of a list state grouped and measured on the server (reports,
    * dashboard): body `{ query, spec }`, same read level as the list. A read:
    * a frozen tenant keeps it, like the GET routes.
