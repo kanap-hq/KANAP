@@ -30,11 +30,15 @@ import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { connectionDeleteMessage } from './connectionDeleteMessage';
-import RecordHistoryTab from '../../components/history/RecordHistoryTab';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 
 type TabKey = 'overview' | 'path' | typeof RECORD_HISTORY_TAB_KEY;
 const TAB_KEYS: TabKey[] = ['overview', 'path', RECORD_HISTORY_TAB_KEY];
+
+// The History tab loads with its tab; a failed chunk shows a retry button in its place.
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
 
 type LinkedInterfaceRow = {
   id: string;
@@ -1042,7 +1046,11 @@ export default function ConnectionWorkspacePage() {
             onChange={setLegs}
           />
         ) : validTab === RECORD_HISTORY_TAB_KEY ? (
-          <RecordHistoryTab table="connections" recordId={data.id} />
+          <WorkspaceTabBoundary resetKey={validTab} onRetry={historyTab.retry}>
+            <React.Suspense fallback={null}>
+              <HistoryTab table="connections" recordId={data.id} />
+            </React.Suspense>
+          </WorkspaceTabBoundary>
         ) : (
           <ConnectionOverviewTab
             connectionId={data.id}

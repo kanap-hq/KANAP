@@ -39,8 +39,8 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useInterfaceItemNav } from '../../hooks/useModuleItemNav';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
-import RecordHistoryTab from '../../components/history/RecordHistoryTab';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 
 type WorkspaceTabKey = 'overview' | 'flow' | 'environments' | 'data-mapping' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
 type LegacyTabKey = 'specification' | 'mapping' | 'technical' | 'functional' | 'ownership' | 'compliance';
@@ -54,6 +54,10 @@ const WORKSPACE_TABS = new Set<WorkspaceTabKey>([
   'relations',
   RECORD_HISTORY_TAB_KEY,
 ]);
+
+// The History tab loads with its tab; a failed chunk shows a retry button in its place.
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
 
 const LEGACY_ROUTE_MAP: Record<LegacyTabKey, WorkspaceTabKey> = {
   specification: 'overview',
@@ -792,7 +796,11 @@ export default function InterfaceWorkspacePage() {
         )}
 
         {routeTab === RECORD_HISTORY_TAB_KEY && !isCreate && current?.id && (
-          <RecordHistoryTab table="interfaces" recordId={current.id} />
+          <WorkspaceTabBoundary resetKey={routeTab} onRetry={historyTab.retry}>
+            <React.Suspense fallback={null}>
+              <HistoryTab table="interfaces" recordId={current.id} />
+            </React.Suspense>
+          </WorkspaceTabBoundary>
         )}
       </PortfolioDetailWorkspaceShell>
 

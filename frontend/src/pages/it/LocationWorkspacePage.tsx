@@ -30,8 +30,8 @@ import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessag
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
-import RecordHistoryTab from '../../components/history/RecordHistoryTab';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 
 type TabKey = 'overview' | 'contacts' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
 
@@ -51,6 +51,10 @@ type LocationRecord = {
 type HostingCategory = 'on_prem' | 'cloud';
 
 const TAB_KEYS: TabKey[] = ['overview', 'contacts', 'relations', RECORD_HISTORY_TAB_KEY];
+
+// The History tab loads with its tab; a failed chunk shows a retry button in its place.
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
 
 export default function LocationWorkspacePage() {
   const { t } = useTranslation(['it', 'common']);
@@ -570,7 +574,11 @@ export default function LocationWorkspacePage() {
               <LocationRelationsTab locationId={data.id} onRelationsChange={() => { void loadRelationCounts(); }} />
             )}
             {validTab === RECORD_HISTORY_TAB_KEY && (
-              <RecordHistoryTab table="locations" recordId={data.id} />
+              <WorkspaceTabBoundary resetKey={validTab} onRetry={historyTab.retry}>
+                <React.Suspense fallback={null}>
+                  <HistoryTab table="locations" recordId={data.id} />
+                </React.Suspense>
+              </WorkspaceTabBoundary>
             )}
           </>
         )}
