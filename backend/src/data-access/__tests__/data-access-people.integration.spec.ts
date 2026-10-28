@@ -108,6 +108,41 @@ async function run(): Promise<void> {
 
       assert.deepEqual(await peopleWithCostCenterAccess(manager, tree.tenantId, randomUUID()), [], 'an unknown centre answers nothing');
       console.log('  centre, parent group, company, all, other centre, budget right, disabled, Administrator: OK');
+
+      // A tenant without scoped access: every enabled person with the budget right is covered, so
+      // the group would hold them all and the pickers keep their plain lookup.
+      const tree2 = await seedTree(client);
+      const budgetRole2 = await seedRole(client, tree2.tenantId, 'Budget member');
+      await client.query(
+        `INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'budget', 'member')`,
+        [tree2.tenantId, budgetRole2],
+      );
+      const unscoped2 = await seedPerson(client, tree2.tenantId, 'all', budgetRole2);
+      assert.deepEqual(
+        await peopleWithCostCenterAccess(manager, tree2.tenantId, tree2.nodes.k1),
+        [],
+        'no limited person: the group would leave nobody out',
+      );
+
+      // One limited person covering everything: still nobody left out.
+      const limitedAll = await seedPerson(client, tree2.tenantId, 'limited', budgetRole2);
+      await seedNodes(client, tree2.tenantId, limitedAll, [{ type: 'all', access: 'read' }]);
+      assert.deepEqual(
+        await peopleWithCostCenterAccess(manager, tree2.tenantId, tree2.nodes.k1),
+        [],
+        'every limited person covered: the group would leave nobody out',
+      );
+
+      // One limited person without a node is left out: the group becomes useful and keeps the
+      // covered limited person and the unscoped one.
+      const limitedNone = await seedPerson(client, tree2.tenantId, 'limited', budgetRole2);
+      assert.deepEqual(
+        sorted(await peopleWithCostCenterAccess(manager, tree2.tenantId, tree2.nodes.k1)),
+        sorted([unscoped2, limitedAll]),
+        'a limited person left out makes the group a strict subset',
+      );
+      assert.ok(!(await peopleWithCostCenterAccess(manager, tree2.tenantId, tree2.nodes.k1)).includes(limitedNone));
+      console.log('  no limited person or all covered: empty; a left-out limited person: strict subset: OK');
     } finally {
       await runner.rollbackTransaction();
     }

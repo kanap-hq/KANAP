@@ -30,6 +30,7 @@ import { purgeTenantTables } from '../../admin/tenants/tenant-data-purge';
 import { TENANT_PURGE_TABLES } from '../../admin/tenants/tenant-purge.inventory';
 import { BudgetLinesController } from '../../spend/budget-lines.controller';
 import { UsersService } from '../../users/users.service';
+import { OWNER_SUGGESTIONS_MAX } from '../data-access-people';
 import { APP_URL, LIMITED_ROLE, PgClient, connect, roleExists, seedNodes, seedPerson, seedRole, seedTree } from './data-access-test-helpers';
 
 /**
@@ -39,7 +40,9 @@ import { APP_URL, LIMITED_ROLE, PgClient, connect, roleExists, seedNodes, seedPe
  * - an unscoped budget member and a limited budget member read the same names, in the `USER_LOOKUP`
  *   order, names only (no email for a unique name, no access level, no node or path);
  * - a budget reader is refused (403): the pickers belong to the people who edit lines;
- * - no page cap: 36 eligible people come back with `has_more: false`;
+ * - the response is capped at 500 with `has_more: true` beyond;
+ * - a limited caller asks only about a centre it reads or may place a line on, or about the centre
+ *   of a readable line (`line=`); outside that scope the answer is empty, and a hidden line is 404;
  * - the parameter is required and must be a uuid (400); a well-formed unknown centre is empty;
  * - the static route is not swallowed by `GET :ref`.
  *
@@ -53,13 +56,14 @@ let app: INestApplication | null = null;
 
 type Seed = {
   tenantId: string;
-  nodes: { k1: string; k4: string };
+  nodes: { k1: string; k4: string; k5: string };
   persons: {
     member: string;
     limitedMember: string;
     reader: string;
     administrator: string;
   };
+  lines: { visible: string; hidden: string };
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -199,7 +203,7 @@ async function call(path: string, userId: string): Promise<Answer> {
 // ---------------------------------------------------------------------------------------------
 // Seed.
 
-const EXTRA_COUNT = 32;
+const EXTRA_COUNT = OWNER_SUGGESTIONS_MAX + 1;
 
 async function seed(): Promise<Seed> {
   await client.query('BEGIN');
@@ -246,14 +250,27 @@ async function seed(): Promise<Seed> {
     await person('all', noBudgetRole, 'Otto', 'Outsider');
     await person('all', memberRole, 'Dan', 'Disabled', [], 'disabled');
     for (let i = 1; i <= EXTRA_COUNT; i += 1) {
-      await person('all', memberRole, `Extra ${String(i).padStart(2, '0')}`, 'Zeta');
+      await person('all', memberRole, `Extra ${String(i).padStart(3, '0')}`, 'Zeta');
     }
+
+    // Lines on K4, outside Lea's nodes: one she reads as IT owner, one she cannot read.
+    const line = async (name: string, ownerItId: string, itemNumber: number): Promise<string> => {
+      const { rows } = await client.query(
+        `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number, nature, paying_company_id, cost_center_id, owner_it_id)
+         VALUES ($1, $2, 'EUR', '2026-01-01', $3, 'opex', $4, $5, $6) RETURNING id`,
+        [tenantId, name, itemNumber, tree.companies.c1, tree.nodes.k4, ownerItId],
+      );
+      return rows[0].id as string;
+    };
+    const visibleLine = await line('Visible through ownership', limitedMember, 1_000_001);
+    const hiddenLine = await line('Hidden from Lea', member, 1_000_002);
 
     await client.query('COMMIT');
     return {
       tenantId,
-      nodes: { k1: tree.nodes.k1, k4: tree.nodes.k4 },
+      nodes: { k1: tree.nodes.k1, k4: tree.nodes.k4, k5: tree.nodes.k5 },
       persons: { member, limitedMember, reader, administrator },
+      lines: { visible: visibleLine, hidden: hiddenLine },
     };
   } catch (error) {
     await client.query('ROLLBACK');
@@ -264,25 +281,27 @@ async function seed(): Promise<Seed> {
 // ---------------------------------------------------------------------------------------------
 // Tests.
 
-const EXPECTED_NAMES = [
+const ALL_NAMES = [
   'Ada Administrator',
   'Lea Limited',
   'Mona Member',
   'Rita Reader',
-  ...Array.from({ length: EXTRA_COUNT }, (_, i) => `Extra ${String(i + 1).padStart(2, '0')} Zeta`),
+  ...Array.from({ length: EXTRA_COUNT }, (_, i) => `Extra ${String(i + 1).padStart(3, '0')} Zeta`),
 ];
+/** The response cap, in `USER_LOOKUP` order: the four base names, then 496 Extra rows. */
+const EXPECTED_NAMES = ALL_NAMES.slice(0, OWNER_SUGGESTIONS_MAX);
 
 function namesOf(answer: Answer): string[] {
   return answer.body.items.map((item: any) => [item.first_name, item.last_name].filter(Boolean).join(' '));
 }
 
 async function testSuggestions(): Promise<void> {
-  // `limit=1` is ignored: the whole finite set comes back, not a page that would hide people.
+  // `limit=1` is ignored: the route caps at its own 500, after the lookup order, and reports more.
   const member = await call(`budget-lines/owner-suggestions?cost_center_id=${s.nodes.k1}&limit=1`, s.persons.member);
   assert.equal(member.status, 200, member.text);
-  assert.equal(member.body.has_more, false, member.text);
-  assert.deepEqual(namesOf(member), EXPECTED_NAMES, `all eligible people, in the USER_LOOKUP order: ${member.text}`);
-  assert.equal(member.body.items.length, 36, member.text);
+  assert.equal(member.body.has_more, true, member.text);
+  assert.deepEqual(namesOf(member), EXPECTED_NAMES, `the first 500 people, in the USER_LOOKUP order: ${member.text}`);
+  assert.equal(member.body.items.length, OWNER_SUGGESTIONS_MAX, member.text);
   for (const item of member.body.items) {
     assert.deepEqual(
       Object.keys(item).sort(),
@@ -296,7 +315,7 @@ async function testSuggestions(): Promise<void> {
   assert.ok(!namesOf(member).includes('Noa Nobudget'), 'a limited person without the budget right stays out');
   assert.ok(!namesOf(member).includes('Otto Outsider'), 'a mode-all person without the budget right stays out');
   assert.ok(!namesOf(member).includes('Dan Disabled'), 'a disabled person stays out');
-  console.log('  unscoped budget member: names only, order, no page cap, exclusions: OK');
+  console.log('  unscoped budget member: names only, order, cap at 500 with has_more, exclusions: OK');
 
   const limited = await call(`budget-lines/owner-suggestions?cost_center_id=${s.nodes.k1}`, s.persons.limitedMember);
   assert.equal(limited.status, 200, limited.text);
@@ -316,6 +335,38 @@ async function testSuggestions(): Promise<void> {
   const invalid = await call('budget-lines/owner-suggestions?cost_center_id=not-a-uuid', s.persons.member);
   assert.equal(invalid.status, 400, invalid.text);
   console.log('  unknown centre empty, missing or invalid parameter 400: OK');
+
+  // A limited member does not read K4 through its nodes: the answer is empty, not a 403.
+  const outside = await call(`budget-lines/owner-suggestions?cost_center_id=${s.nodes.k4}`, s.persons.limitedMember);
+  assert.equal(outside.status, 200, outside.text);
+  assert.deepEqual(outside.body, { items: [], has_more: false }, 'a centre outside the limited caller\'s nodes is empty');
+  console.log('  limited caller, centre outside its nodes: empty: OK');
+
+  // The line she reads as owner accepts its centre, even though her nodes do not cover it.
+  const throughLine = await call(
+    `budget-lines/owner-suggestions?cost_center_id=${s.nodes.k4}&line=${s.lines.visible}`,
+    s.persons.limitedMember,
+  );
+  assert.equal(throughLine.status, 200, throughLine.text);
+  assert.equal(throughLine.body.items.length, OWNER_SUGGESTIONS_MAX, throughLine.text);
+  assert.equal(throughLine.body.has_more, true, throughLine.text);
+  assert.ok(namesOf(throughLine).includes('Nina Other'), 'the centre\'s own limited reader is suggested');
+  assert.ok(!namesOf(throughLine).includes('Lea Limited'), 'the owner of the line is not a reader of the centre');
+  console.log('  limited caller, readable line on that centre: the list: OK');
+
+  // The line only accepts its own centre: another centre stays out of scope.
+  const otherCentre = await call(
+    `budget-lines/owner-suggestions?cost_center_id=${s.nodes.k5}&line=${s.lines.visible}`,
+    s.persons.limitedMember,
+  );
+  assert.equal(otherCentre.status, 200, otherCentre.text);
+  assert.deepEqual(otherCentre.body, { items: [], has_more: false }, 'a line does not open another centre');
+  const hiddenLine = await call(
+    `budget-lines/owner-suggestions?cost_center_id=${s.nodes.k4}&line=${s.lines.hidden}`,
+    s.persons.limitedMember,
+  );
+  assert.equal(hiddenLine.status, 404, `a hidden line answers as a missing one: ${hiddenLine.text}`);
+  console.log('  line of another centre empty, hidden line 404: OK');
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -7,7 +7,7 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ReadOnlyRoute, RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { lookupUsersByIds, requiredUuid } from '../common/lookup/reference-lookups';
-import { peopleWithCostCenterAccess } from '../data-access/data-access-people';
+import { peopleWithCostCenterAccess, OWNER_SUGGESTIONS_MAX } from '../data-access/data-access-people';
 import { resolveBudgetLine } from '../common/resolve-item-id';
 import { buildRelationsAccess } from '../common/relations/relations-access';
 import {
@@ -184,6 +184,11 @@ export class BudgetLinesController {
    * The people to propose first as IT or business owner of a line placed on this cost centre: the
    * ones who read it and may open a line there (`peopleWithCostCenterAccess`), names only, in the
    * `USER_LOOKUP` order. The picker still offers every enabled person; this group only comes first.
+   *
+   * A limited caller asks about a centre it reads or may place a line on, or about the centre of a
+   * readable line passed as `line=` (an owner of a line outside its nodes). Out of its scope the
+   * answer is empty, like an unknown centre. The group is empty when it leaves nobody out, and the
+   * response is capped at `OWNER_SUGGESTIONS_MAX` with `has_more`.
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'member')
@@ -191,8 +196,27 @@ export class BudgetLinesController {
   async ownerSuggestions(@Query() query: any, @Tenant() ctx: TenantRequest) {
     const costCenterId = requiredUuid(query?.cost_center_id, 'cost_center_id');
     const manager = ctx.manager as EntityManager;
-    const ids = await peopleWithCostCenterAccess(manager, ctx.tenantId, costCenterId);
-    return lookupUsersByIds({ manager, tenantId: ctx.tenantId }, ids, query);
+    const lineRef = query?.line == null ? '' : String(query.line).trim();
+    let lineCostCenterId: string | null = null;
+    if (lineRef) {
+      // Under RLS: a line the caller cannot read answers 404, as a missing one.
+      const line = await resolveBudgetLine(lineRef, manager);
+      const [lineRow] = await manager.query(
+        `SELECT cost_center_id FROM spend_items WHERE tenant_id = app_current_tenant() AND id = $1`,
+        [line.id],
+      );
+      lineCostCenterId = lineRow?.cost_center_id ?? null;
+    }
+    const ids = await peopleWithCostCenterAccess(manager, ctx.tenantId, costCenterId, {
+      enforceCallerScope: true,
+      lineCostCenterId,
+    });
+    if (ids.length === 0) return { items: [], has_more: false };
+    const result = await lookupUsersByIds({ manager, tenantId: ctx.tenantId }, ids, query);
+    return {
+      items: result.items.slice(0, OWNER_SUGGESTIONS_MAX),
+      has_more: result.items.length > OWNER_SUGGESTIONS_MAX,
+    };
   }
 
   @UseGuards(PermissionGuard)

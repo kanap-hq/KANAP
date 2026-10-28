@@ -185,17 +185,18 @@ export async function lookupDepartments(call: LookupCall, query: any) {
 /**
  * The people of a precomputed id set, with the `USER_LOOKUP` columns and order (names only). The
  * owner suggestions of a budget line come that way: the ids are the people who read a cost centre,
- * and the response never says why a person is there. No page cap: the set is finite and dropping
- * its tail would hide a person from the picker.
+ * and the response never says why a person is there. The page holds the whole set; the route caps
+ * its own response and reports `has_more`.
  */
 export async function lookupUsersByIds(call: LookupCall, ids: string[], query: any) {
   if (ids.length === 0) return { items: [], has_more: false };
   const request = parseLookupRequest(query);
-  // The set comes from the caller's computation, never from the request's `ids`.
+  // The set comes from the caller's computation, never from the request's `ids` or a text search.
   request.ids = null;
-  request.unlimited = true;
+  request.q = null;
+  request.limit = ids.length;
   request.scope = [(bind: Bind) => `t.id = ANY(${bind(ids, 'uuid[]')})`];
-  return lookup(call, USER_LOOKUP, request);
+  return lookup(call, { ...USER_LOOKUP, maxLimit: Math.max(1, ids.length) }, request);
 }
 
 /** An optional line type (`opex`, `capex`) in the parameter `param`: absent is null, anything else a 400. */
