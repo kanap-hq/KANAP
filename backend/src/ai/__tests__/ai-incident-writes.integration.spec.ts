@@ -6,9 +6,10 @@ import { DataSource, QueryRunner } from 'typeorm';
 import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-document-seed';
 import { PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE } from '../ai-write-texts';
 
-// Incidents written through Plaid (L4 lot 2): creating one, changing its fields, moving its
-// status forward up to the closure, and setting the confidentiality. Every write goes through
-// `IncidentsService`, under a preview the person approves, at the screen's contributor level.
+// Incidents written through Plaid (L4 lots 2 to 4): creating one, changing its fields, moving its
+// status forward up to the closure, setting the confidentiality, then the administrator actions
+// (reopen, cancel, lift the confidentiality). Every write goes through `IncidentsService`, under
+// a preview the person approves, at the screen's level.
 //
 // - A contributor creates an incident: INC-n, the reporter, the review document, the audit
 //   `source: ai_chat` and the preview's reference; a reader is refused.
@@ -18,10 +19,16 @@ import { PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE } from '../ai-write-texts';
 // - `open -> closed` warns, stamps closed_at and resolved_at, and freezes the record.
 // - A backward status move and a change of a closed record are refused before the preview.
 // - A restricted incident that would disappear for the person warns; the write succeeds.
-// - Lifting the confidentiality is refused; a hidden incident reads as missing; a record that
-//   becomes hidden between the preview and the approval fails at execution.
+// - Lifting the confidentiality is refused on the field path; a hidden incident reads as missing;
+//   a record that becomes hidden between the preview and the approval fails at execution.
 // - A plan creates an incident then moves it to in progress through `{{create_incident.ref}}`.
 // - A field changed in the database between the preview and the approval gives a drift refusal.
+// - An administrator reopens a closed record (timestamps cleared, `reopen` journal, audit) and
+//   cancels an editable one (freeze warning, `status_change` journal); the state tool is hidden
+//   from contributors and members and refused if the right goes away before the approval.
+// - An administrator lifts the confidentiality of an open and of a closed record: `system`
+//   journal, audit, and the linked task search index is refreshed. The field path still refuses
+//   it and names the new tool.
 
 process.env.AI_CHAT_ENABLED = 'true';
 process.env.AI_SETTINGS_ENABLED = 'true';
@@ -58,6 +65,7 @@ type Seed = {
     hidden: string;
     ownConfidential: string;
     noReporter: string;
+    closedConfidential: string;
   };
   links: {
     applicationMail: string;
@@ -255,6 +263,8 @@ async function seedGraph(runner: QueryRunner): Promise<Seed> {
     // No reporter at all, and an owner who is somebody else: rendered confidential by the
     // contributor, the person loses access and the card must warn.
     noReporter: await incident(9, 'Nobody reported it', 'open', { reporter: null, owner: otherId }),
+    // A frozen restricted record: the confidentiality route accepts a closed incident.
+    closedConfidential: await incident(10, 'Closed restricted outage', 'closed', { confidential: true }),
   };
 
   // The records the incident links target: one application in the Business Contributor's
@@ -653,11 +663,12 @@ async function testConfidentialityWarnsOnLostAccess(harness: Harness) {
 async function testLiftingConfidentialityIsRefused(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'lift');
-    await expectRejects(
+    // The lot 2 refusal now names the administrator tool; it stays refused on the field path.
+    await expectRejectsExactly(
       () => executeToolPreview(harness, ctx, 'update_business_record', {
         entity_type: 'incidents', ref: 'INC-8', fields: { confidential: false },
       }),
-      /Lifting the confidentiality/,
+      'Lifting the confidentiality of an incident needs the register administrator right: use `set_incident_confidentiality`, reserved to register administrators.',
     );
   });
 }
@@ -947,6 +958,324 @@ async function testRoleDowngradedBetweenPreviewAndApprovalIsRefused(harness: Har
       [seed.tenantId, seed.incidents.open],
     );
     assert.notEqual(row.description, 'Written before the downgrade', 'the refused approval wrote nothing');
+  });
+}
+
+async function testAdminReopensAClosedIncident(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'reopen', seed.adminId);
+    await runner.query(
+      `UPDATE incidents SET resolved_at = now(), closed_at = now()
+        WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.incidents.closed],
+    );
+    const preview = await executeToolPreview(harness, ctx, 'change_incident_state', {
+      ref: 'INC-6',
+      action: 'reopen',
+      reason: 'Mail is down again.',
+    });
+    assert.equal(preview.summary, "Réouverture de l'incident « INC-6 - Old outage ».");
+    assert.equal(preview.changes.status.from, 'closed');
+    assert.equal(preview.changes.status.to, 'in_progress');
+    assert.equal(preview.changes.reason.to, 'Mail is down again.');
+    assert.equal(preview.changes.reason.label, 'Raison');
+    assert.equal(preview.changes.closure_warning, undefined);
+    const executed = await approvePreview(harness, ctx, preview);
+    assert.equal(executed.target.ref, 'INC-6');
+    assert.equal(executed.status, 'executed');
+
+    const [row] = await runner.query(
+      `SELECT status, resolved_at, closed_at FROM incidents WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.incidents.closed],
+    );
+    assert.deepEqual(row, { status: 'in_progress', resolved_at: null, closed_at: null });
+
+    const [entry] = await runner.query(
+      `SELECT kind, content, changed_fields, author_id FROM incident_entries
+        WHERE tenant_id = $1 AND incident_id = $2 AND kind = 'reopen'
+        ORDER BY created_at DESC LIMIT 1`,
+      [seed.tenantId, seed.incidents.closed],
+    );
+    assert.equal(entry.kind, 'reopen');
+    assert.equal(entry.content, 'Mail is down again.');
+    assert.equal(entry.author_id, seed.adminId);
+    assert.deepEqual(entry.changed_fields.status, { from: 'closed', to: 'in_progress' });
+
+    const [audit] = await runner.query(
+      `SELECT table_name, action, source, source_ref FROM audit_log
+        WHERE tenant_id = $1 AND record_id = $2 ORDER BY created_at DESC LIMIT 1`,
+      [seed.tenantId, seed.incidents.closed],
+    );
+    assert.deepEqual(
+      { table: audit.table_name, action: audit.action, source: audit.source, sourceRef: audit.source_ref },
+      { table: 'incidents', action: 'update', source: 'ai_chat', sourceRef: preview.preview_id },
+    );
+
+    // The state tool has no reversal preview.
+    await expectRejects(
+      () => harness.previews.createReversePreview(ctx, preview.preview_id),
+      /Undo is not supported for this preview type/,
+    );
+  });
+}
+
+async function testIncidentStateRightsAndRefusals(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const adminCtx = context(seed, runner, 'state-admin', seed.adminId);
+    const contributorCtx = context(seed, runner, 'state-contributor');
+    const memberCtx = context(seed, runner, 'state-member', seed.memberId);
+    const adminTools = (await harness.tools.listAvailableTools(adminCtx) as any[]).map((tool) => tool.name);
+    assert.ok(adminTools.includes('change_incident_state'), 'the admin is offered the state tool');
+    assert.ok(adminTools.includes('set_incident_confidentiality'), 'the admin is offered the confidentiality tool');
+    for (const [role, ctx] of [['contributor', contributorCtx], ['member', memberCtx]] as const) {
+      const tools = (await harness.tools.listAvailableTools(ctx) as any[]).map((tool) => tool.name);
+      assert.equal(tools.includes('change_incident_state'), false, `${role}: no state tool`);
+      assert.equal(tools.includes('set_incident_confidentiality'), false, `${role}: no confidentiality tool`);
+      await expectRejectsExactly(
+        () => harness.tools.execute(ctx, 'change_incident_state', { ref: 'INC-6', action: 'reopen', reason: 'Again' }),
+        'AI tool is not available.',
+      );
+      await expectRejectsExactly(
+        () => harness.previews.createPreview(ctx, 'change_incident_state', { ref: 'INC-6', action: 'reopen', reason: 'Again' }),
+        'You need the right to administer incidents, which your role does not give. An administrator can add it to your role.',
+      );
+    }
+
+    // Reopening an open incident is refused before the preview, with the service's sentence.
+    await expectRejectsExactly(
+      () => executeToolPreview(harness, adminCtx, 'change_incident_state', {
+        ref: 'INC-4', action: 'reopen', reason: 'Not needed',
+      }),
+      'Only resolved, closed or cancelled incidents can be reopened.',
+    );
+    // An empty reason never reaches a preview.
+    await expectRejects(
+      () => executeToolPreview(harness, adminCtx, 'change_incident_state', {
+        ref: 'INC-6', action: 'reopen', reason: '   ',
+      }),
+      /Invalid input for change_incident_state|Reason is required/,
+    );
+    // A reference that matches nothing reads as missing. A register administrator sees every
+    // restricted incident (the viewer's `isAdmin`), so a confidential record is not hidden here.
+    await expectRejectsExactly(
+      () => executeToolPreview(harness, adminCtx, 'change_incident_state', {
+        ref: 'INC-99', action: 'reopen', reason: 'Missing',
+      }),
+      'No incidents found matching "INC-99".',
+    );
+    // Cancelling a frozen record is refused before the preview.
+    await expectRejectsExactly(
+      () => executeToolPreview(harness, adminCtx, 'change_incident_state', {
+        ref: 'INC-6', action: 'cancel', reason: 'Frozen',
+      }),
+      'This incident is closed. Reopen it to make changes.',
+    );
+  });
+}
+
+async function testAdminCancelsAnIncident(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'cancel', seed.adminId);
+    const preview = await executeToolPreview(harness, ctx, 'change_incident_state', {
+      ref: 'INC-4',
+      action: 'cancel',
+      reason: 'Duplicate of INC-6.',
+    });
+    assert.equal(preview.summary, "Annulation de l'incident « INC-4 - Mail outage ».");
+    assert.equal(preview.changes.status.from, 'open');
+    assert.equal(preview.changes.status.to, 'cancelled');
+    assert.equal(preview.changes.reason.to, 'Duplicate of INC-6.');
+    assert.equal(
+      preview.changes.closure_warning.to,
+      "Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.",
+      'a cancellation carries the closure warning',
+    );
+    const executed = await approvePreview(harness, ctx, preview);
+    assert.equal(executed.status, 'executed');
+
+    const [row] = await runner.query(
+      `SELECT status FROM incidents WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.incidents.open],
+    );
+    assert.equal(row.status, 'cancelled');
+    const [entry] = await runner.query(
+      `SELECT kind, content, changed_fields, author_id FROM incident_entries
+        WHERE tenant_id = $1 AND incident_id = $2 AND kind = 'status_change'
+        ORDER BY created_at DESC LIMIT 1`,
+      [seed.tenantId, seed.incidents.open],
+    );
+    assert.equal(entry.content, 'Duplicate of INC-6.');
+    assert.equal(entry.author_id, seed.adminId);
+    assert.deepEqual(entry.changed_fields.status, { from: 'open', to: 'cancelled' });
+    const [audit] = await runner.query(
+      `SELECT source, source_ref FROM audit_log
+        WHERE tenant_id = $1 AND record_id = $2 ORDER BY created_at DESC LIMIT 1`,
+      [seed.tenantId, seed.incidents.open],
+    );
+    assert.deepEqual({ source: audit.source, sourceRef: audit.source_ref }, { source: 'ai_chat', sourceRef: preview.preview_id });
+  });
+}
+
+async function testIncidentStateDowngradeBetweenPreviewAndApprovalIsRefused(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'state-downgrade', seed.adminId);
+    const preview = await executeToolPreview(harness, ctx, 'change_incident_state', {
+      ref: 'INC-4', action: 'cancel', reason: 'Before the downgrade',
+    });
+    await runner.query(
+      `UPDATE role_permissions SET level = 'contributor'
+        WHERE tenant_id = $1 AND resource = 'incidents'
+          AND role_id = (SELECT role_id FROM users WHERE tenant_id = $1 AND id = $2)`,
+      [seed.tenantId, seed.adminId],
+    );
+    await expectRejectsExactly(
+      () => harness.previews.executePreview(ctx, preview.preview_id),
+      'You need the right to administer incidents, which your role does not give. An administrator can add it to your role.',
+    );
+    const [row] = await runner.query(
+      `SELECT status FROM incidents WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.incidents.open],
+    );
+    assert.equal(row.status, 'open', 'the refused approval wrote nothing');
+  });
+}
+
+async function testCancelReviewLockIsRelayed(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'cancel-lock', seed.adminId);
+    const creation = await executeToolPreview(harness, ctx, 'create_business_record', {
+      entity_type: 'incidents',
+      fields: { title: 'Incident with a locked review', severity: 'minor' },
+    });
+    const created = await approvePreview(harness, ctx, creation);
+    const [binding] = await runner.query(
+      `SELECT document_id FROM integrated_document_bindings
+        WHERE tenant_id = $1 AND source_entity_type = 'incidents' AND source_entity_id = $2 AND slot_key = 'review'`,
+      [seed.tenantId, created.target.entity_id],
+    );
+    await runner.query(
+      `INSERT INTO document_edit_locks (tenant_id, document_id, holder_user_id, lock_token_hash, expires_at)
+       VALUES ($1, $2, $3, 'another-user-token', now() + interval '1 hour')`,
+      [seed.tenantId, binding.document_id, seed.otherId],
+    );
+    const cancellation = await executeToolPreview(harness, ctx, 'change_incident_state', {
+      ref: String(created.target.ref), action: 'cancel', reason: 'Duplicate.',
+    });
+    const failed = await approveFailingPreview(harness, ctx, cancellation);
+    assert.equal(
+      failed.error_message,
+      'La revue de l\'incident est en cours de modification par une autre personne : rien n\'a été modifié. Réessayez quand cette modification sera enregistrée ou son verrou levé.',
+      'the 423 of the review lock is relayed as at the closure',
+    );
+    const [row] = await runner.query(
+      `SELECT status FROM incidents WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, created.target.entity_id],
+    );
+    assert.equal(row.status, 'open', 'the failed cancellation wrote nothing');
+  });
+}
+
+async function testAdminLiftsConfidentialityOnOpenAndClosed(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'confidentiality-admin', seed.adminId);
+    const linkedTask = async (itemNumber: number, title: string, incidentId: string) => {
+      const rows = await runner.query(
+        `INSERT INTO tasks (
+           tenant_id, item_number, title, status, labels, owner_ids, viewer_ids,
+           related_object_type, related_object_id, created_at, updated_at
+         )
+         VALUES ($1, $2, $3, 'open', '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, 'incident', $4, now(), now())
+         RETURNING id`,
+        [seed.tenantId, itemNumber, title, incidentId],
+      );
+      const id = String(rows[0].id);
+      // The refresh is what puts the task back in the search index.
+      await runner.query(
+        `DELETE FROM search_index WHERE tenant_id = $1 AND entity_type = 'tasks' AND entity_id = $2`,
+        [seed.tenantId, id],
+      );
+      return id;
+    };
+    const indexed = async (taskId: string) => (await runner.query(
+      `SELECT 1 FROM search_index WHERE tenant_id = $1 AND entity_type = 'tasks' AND entity_id = $2`,
+      [seed.tenantId, taskId],
+    )).length === 1;
+
+    // An open restricted incident.
+    const openTask = await linkedTask(2, 'Open restricted follow-up', seed.incidents.ownConfidential);
+    assert.equal(await indexed(openTask), false, 'the task starts outside the search index');
+    const openPreview = await executeToolPreview(harness, ctx, 'set_incident_confidentiality', {
+      ref: 'INC-8', confidential: false,
+    });
+    assert.equal(openPreview.summary, "Levée de la confidentialité de l'incident « INC-8 ».");
+    assert.equal(openPreview.changes.confidential.from, 'Yes');
+    assert.equal(openPreview.changes.confidential.to, 'No');
+    assert.equal(openPreview.changes.access_warning, undefined);
+    await approvePreview(harness, ctx, openPreview);
+    const [openRow] = await runner.query(
+      `SELECT confidential, status FROM incidents WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.incidents.ownConfidential],
+    );
+    assert.deepEqual(openRow, { confidential: false, status: 'open' });
+    const [openEntry] = await runner.query(
+      `SELECT kind, changed_fields FROM incident_entries
+        WHERE tenant_id = $1 AND incident_id = $2 AND kind = 'system'
+        ORDER BY created_at DESC LIMIT 1`,
+      [seed.tenantId, seed.incidents.ownConfidential],
+    );
+    assert.equal(openEntry.kind, 'system');
+    assert.deepEqual(openEntry.changed_fields.confidential, { from: true, to: false });
+    assert.equal(await indexed(openTask), true, 'lifting the confidentiality refreshed the linked task index');
+    const [openAudit] = await runner.query(
+      `SELECT source, source_ref FROM audit_log
+        WHERE tenant_id = $1 AND record_id = $2 ORDER BY created_at DESC LIMIT 1`,
+      [seed.tenantId, seed.incidents.ownConfidential],
+    );
+    assert.deepEqual(
+      { source: openAudit.source, sourceRef: openAudit.source_ref },
+      { source: 'ai_chat', sourceRef: openPreview.preview_id },
+    );
+
+    // A closed restricted incident: the confidence route accepts a frozen record.
+    const closedTask = await linkedTask(3, 'Closed restricted follow-up', seed.incidents.closedConfidential);
+    assert.equal(await indexed(closedTask), false);
+    const closedPreview = await executeToolPreview(harness, ctx, 'set_incident_confidentiality', {
+      ref: 'INC-10', confidential: false,
+    });
+    assert.equal(closedPreview.summary, "Levée de la confidentialité de l'incident « INC-10 ».");
+    await approvePreview(harness, ctx, closedPreview);
+    const [closedRow] = await runner.query(
+      `SELECT confidential, status FROM incidents WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.incidents.closedConfidential],
+    );
+    assert.deepEqual(closedRow, { confidential: false, status: 'closed' }, 'a closed record accepts the lift');
+    assert.equal(await indexed(closedTask), true, 'the closed record refreshed its linked task index');
+    const [closedEntry] = await runner.query(
+      `SELECT kind, changed_fields FROM incident_entries
+        WHERE tenant_id = $1 AND incident_id = $2 AND kind = 'system'
+        ORDER BY created_at DESC LIMIT 1`,
+      [seed.tenantId, seed.incidents.closedConfidential],
+    );
+    assert.equal(closedEntry.kind, 'system');
+    assert.deepEqual(closedEntry.changed_fields.confidential, { from: true, to: false });
+  });
+}
+
+async function testContributorIsRefusedConfidentiality(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'confidentiality-contributor');
+    await expectRejectsExactly(
+      () => harness.previews.createPreview(ctx, 'set_incident_confidentiality', {
+        ref: 'INC-8', confidential: false,
+      }),
+      'You need the right to administer incidents, which your role does not give. An administrator can add it to your role.',
+    );
+    await expectRejectsExactly(
+      () => harness.tools.execute(ctx, 'set_incident_confidentiality', {
+        ref: 'INC-8', confidential: false,
+      }),
+      'AI tool is not available.',
+    );
   });
 }
 
@@ -1404,6 +1733,13 @@ async function run() {
     await testDeprecatedIncidentCategory(harness);
     await testMemberAndAdminAreAccepted(harness);
     await testRoleDowngradedBetweenPreviewAndApprovalIsRefused(harness);
+    await testAdminReopensAClosedIncident(harness);
+    await testIncidentStateRightsAndRefusals(harness);
+    await testAdminCancelsAnIncident(harness);
+    await testIncidentStateDowngradeBetweenPreviewAndApprovalIsRefused(harness);
+    await testCancelReviewLockIsRelayed(harness);
+    await testAdminLiftsConfidentialityOnOpenAndClosed(harness);
+    await testContributorIsRefusedConfidentiality(harness);
     await testContributorAddsANote(harness);
     await testNoteRefusals(harness);
     await testLinksPreviewExecutionAndUndo(harness);
