@@ -1511,6 +1511,13 @@ export class AiBusinessRecordMutationSupportService {
   ): Promise<AiPreparedMutationPreview> {
     const entityType = requireEntityType(input.entity_type);
     const normalized = await this.normalizeFields(context, entityType, coerceRecord(input.fields, 'fields'), 'create');
+    // An incident is created open when the request names no status: the card says which step it
+    // starts at. The service applies the same default.
+    if (entityType === 'incidents' && normalized.fields.status === undefined) {
+      normalized.fields.status = 'open';
+      normalized.displayValues.status = 'open';
+      normalized.fieldLabels.status = ENTITY_CONFIG.incidents.fields.status.label;
+    }
     const classification = entityType === 'applications'
       ? this.applicationClassificationPreviewState(normalized.fields, null)
       : null;
