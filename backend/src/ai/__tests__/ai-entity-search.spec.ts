@@ -105,6 +105,30 @@ async function testNoLegacyBudgetSearch() {
   });
 }
 
+/** A failing legacy search is reported, not fatal: contracts still use the historical path. */
+async function testLegacySearchAllReportsPartialEntityFailures() {
+  await withFlag('false', async () => {
+    const service = createService();
+    const context = createContext(async (sql) => {
+      if (sql.includes('FROM contracts c')) {
+        throw new Error('invalid input value for enum status_state: ""');
+      }
+      return [];
+    });
+
+    const result = await service.searchAll(context as any, {
+      query: 'contract',
+      entity_types: ['contracts', 'applications'],
+      limit: 10,
+    });
+
+    assert.equal(result.complete, false);
+    assert.equal(result.truncated, false);
+    assert.deepEqual((result as any).failed_entity_types, ['contracts']);
+    assert.equal((result as any).warnings[0].entity_type, 'contracts');
+  });
+}
+
 async function testIndexedSearchAllAppliesParticipationScope() {
   const sqlStatements: string[] = [];
   const service = createService();
@@ -302,6 +326,7 @@ async function testIndexedBudgetLineReferences() {
 async function run() {
   await testIndexedSearchAllReadsBothBudgetNatureTypes();
   await testNoLegacyBudgetSearch();
+  await testLegacySearchAllReportsPartialEntityFailures();
   await testIndexedSearchAllAppliesParticipationScope();
   await testIndexedSearchAllAppliesDocumentLibraryAcl();
   await testIndexedRowsMapToTheBudgetLineFamily();

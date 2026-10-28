@@ -378,7 +378,7 @@ async function testSeveralLinkedProjects(kind: Kind) {
     const context = aiContext(runner, tenantId) as any;
     const query: any = await queryExecutor(svc).execute(context, { entity_type: entityType, filters: { project_stream: ['Infra'] } });
     assert.deepEqual(query.items.map((item: any) => item.label), ['Charlie line'], `${kind}: the AI stream filter keeps the line too`);
-    const grouped: any = await aggregateExecutor(svc).execute(context, { entity_type: entityType, group_by: 'project_stream', function: 'count' });
+    const grouped: any = await aggregateExecutor().execute(context, { entity_type: entityType, group_by: 'project_stream', function: 'count' });
     assert.ok(grouped.groups.some((group: any) => group.key === 'Digital, Infra' && group.count === 1), `${kind}: grouping keeps the combination`);
   });
 }
@@ -388,9 +388,9 @@ async function testAiAggregateSumsInCents(kind: Kind) {
     const entityType = 'budget_lines';
     const context = aiContext(runner, tenantId) as any;
     const enabled = (result: any) => result.groups.find((group: any) => group.key === 'enabled')?.value;
-    const sum = await aggregateExecutor(svc).execute(context, { entity_type: entityType, group_by: 'status', metric: 'y_review', function: 'sum' });
+    const sum = await aggregateExecutor().execute(context, { entity_type: entityType, group_by: 'status', metric: 'y_review', function: 'sum' });
     assert.strictEqual(enabled(sum), 0.3, `${kind}: three amounts of 0.10 sum to 0.30 exactly`);
-    const avg = await aggregateExecutor(svc).execute(context, { entity_type: entityType, group_by: 'status', metric: 'y_review', function: 'avg' });
+    const avg = await aggregateExecutor().execute(context, { entity_type: entityType, group_by: 'status', metric: 'y_review', function: 'avg' });
     assert.strictEqual(enabled(avg), 0.1, `${kind}: their average is 0.10`);
   });
 }
@@ -554,7 +554,7 @@ function queryExecutor(items?: unknown): AiQueryExecutor {
   return new (AiQueryExecutor as any)(...args);
 }
 
-function aggregateExecutor(items: unknown): AiAggregateExecutor {
+function aggregateExecutor(): AiAggregateExecutor {
   const args: any[] = Array.from({ length: 23 }, () => ({}));
   args[1] = budgetReadService();
   args[21] = { canReadEntityType: async () => true };
@@ -611,7 +611,7 @@ async function testAiCapexAggregateIsComplete() {
        SELECT $1, 'capex', 'Bulk line ' || n, 'hardware', 'replacement', 'medium', 'EUR', '2020-01-01', n, 'CPX-' || n FROM generate_series(1, 1001) AS n`,
       [tenantId],
     );
-    const result: any = await aggregateExecutor(itemService('capex')).execute(aiContext(runner, tenantId) as any, {
+    const result: any = await aggregateExecutor().execute(aiContext(runner, tenantId) as any, {
       entity_type: 'budget_lines',
       group_by: 'status',
       function: 'count',
