@@ -21,6 +21,24 @@ import { spendItemsRecord } from './record-history/records/spend_items';
  * - every table of the data-access families `follows_line` and `link_to_line`
  *   (`data-access/data-access-tables.inventory.ts`) is a child here or an exclusion with its reason.
  *   `__tests__/record-history-inventory.spec.ts` checks both ways, beside the catalog spec.
+ *
+ * A child label is normally read by its parent columns (`parent_table` / `parent_id`). `childReads`
+ * declares the two shapes that do not fit them: a link whose `record_id` is the record itself
+ * (`'record'`), and a link whose `record_id` is the link and whose payload names the record
+ * (`{ payloadKey }`, a separate branch). A family that declares a payload key adds its partial
+ * index in its own migration:
+ *
+ *   CREATE INDEX IF NOT EXISTS idx_audit_log_<key>_<family>
+ *     ON audit_log (tenant_id, (COALESCE(after_json, before_json) ->> '<key>'), created_at DESC, id DESC)
+ *     WHERE table_name = ANY (ARRAY['<label>', ...]);
+ *
+ * The expression is the one `payloadKeyExpression` builds and the page query reads; the WHERE names
+ * every label that carries the key. Without it the branch reads the tenant's whole audit log.
+ * `__tests__/record-history-payload-key.integration.spec.ts` fails when a declared key has no such
+ * index and measures the plan on a filled table. `audit_log` is under FORCE RLS and
+ * `jsonb ->> text` is not leakproof, so the application role cannot use this expression as an index
+ * condition: the spec lifts FORCE in its rolled-back transaction to measure the index shape, and a
+ * production plan that seeks by key needs a leakproof extraction or a policy/column change.
  */
 export type RecordHistoryChildKind =
   | 'version'
