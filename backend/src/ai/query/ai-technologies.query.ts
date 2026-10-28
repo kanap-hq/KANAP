@@ -37,9 +37,9 @@ import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
  * through `EXISTS`, never a column of `technologies`. The IT and business owners also group.
  *
  * `technology_versions` (`listAiTechnologyVersions`) reads one row per version of a technology,
- * its support dates and state by the same rule, its servers and the technology's application
- * count. It shares `technologyVersionFiguresColumns` with the technology detail, so the details
- * of a technology and that family cannot disagree.
+ * its support dates and state by the same rule, its servers and the applications that declare
+ * that version. It shares `technologyVersionFiguresColumns` with the technology detail, so the
+ * details of a technology and that family cannot disagree.
  *
  * Every statement carries the tenant on every table besides RLS.
  */
@@ -65,6 +65,19 @@ export function technologyApplicationCountSql(t: string, userRef: string | null)
              JOIN applications cap ON cap.tenant_id = cd.tenant_id AND cap.id = cd.application_id AND ${inServiceSql('cap')}
                   ${userRef ? `AND ${applicationParticipantCondition('cap', userRef)}` : ''}
             WHERE cd.tenant_id = ${t}.tenant_id AND cd.technology_id = ${t}.id)`;
+}
+
+/**
+ * The applications in service that declare the version `v` itself, within the same caller scope
+ * as `technologyApplicationCountSql`: a version of one technology only, never the technology's
+ * other versions.
+ */
+export function technologyVersionApplicationCountSql(v: string, userRef: string | null): string {
+  return `(SELECT count(DISTINCT cd.application_id)::int
+             FROM application_technologies cd
+             JOIN applications cap ON cap.tenant_id = cd.tenant_id AND cap.id = cd.application_id AND ${inServiceSql('cap')}
+                  ${userRef ? `AND ${applicationParticipantCondition('cap', userRef)}` : ''}
+            WHERE cd.tenant_id = ${v}.tenant_id AND cd.technology_version_id = ${v}.id)`;
 }
 
 /** The most severe first: the rank of a version's state (null, no date: 0). */
@@ -584,8 +597,9 @@ export type AiTechnologyVersionRow = {
 /**
  * A page of technology versions (`page`, `limit`, `sort` as `field:DIR`, `q` on the technology
  * reference and name and on the label, `filters` keyed by grid column), one row per version, or
- * their ids only (`idsOnly`, for the aggregates). `application_count` is the technology's count,
- * as the `technologies` family and its detail give it, within the caller's application scope.
+ * their ids only (`idsOnly`, for the aggregates). `application_count` is the count of the version
+ * itself: applications in service that declare this version, within the caller's application
+ * scope, null without that right.
  * `ids` narrows to those version rows.
  */
 export async function listAiTechnologyVersions(
@@ -599,7 +613,7 @@ export async function listAiTechnologyVersions(
   const bind = (value: unknown) => { params.push(value); return `$${params.length}`; };
   const idFilter = opts.ids ? `AND v.id = ANY(${bind(opts.ids)}::uuid[])` : '';
   const applicationCount = applications
-    ? technologyApplicationCountSql('t', applications.scope ? bind(applications.scope.userId) : null)
+    ? technologyVersionApplicationCountSql('v', applications.scope ? bind(applications.scope.userId) : null)
     : 'NULL::int';
   const figures = technologyVersionFiguresColumns('v', 'sf');
   const where: string[] = [];

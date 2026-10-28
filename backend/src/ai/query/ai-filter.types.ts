@@ -80,6 +80,11 @@ export type AiAggregateGroupDef = {
   expression: string;
   joins?: string[];
   /**
+   * Counts the distinct base rows of the group instead of every joined row: a many-to-many group
+   * whose links can repeat the same name (two IT owners named alike) counts the record once.
+   */
+  countDistinct?: boolean;
+  /**
    * A many-to-many group narrowed to the caller's participation on one linked family (a Business
    * Contributor's applications): the join that names `table` as `alias` also carries the
    * participant condition, so the group lists only the linked records the caller takes part in.

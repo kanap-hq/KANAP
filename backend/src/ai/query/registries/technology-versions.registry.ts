@@ -8,11 +8,11 @@ import { versionInUseSql } from '../../../technologies/reports/version-support';
  * (`ai-technologies.query.ts`), one item per version of a technology, as the technology detail
  * lists them. The support state and its date follow the End of support report
  * (`technologies/reports/version-support.ts`), the same SQL as the detail, so the figures of this
- * family and of `get_entity_detail` on a technology are the same. `application_count` is the
- * technology's count, within the user's application read scope, and is no metric: an aggregate
- * expression cannot carry that scope. A row has no reference of its own: it names its technology
- * by `TEC-n` (`technology`) and its label. There is no single-record detail for a version; the
- * detail of its technology gives every version.
+ * family and of `get_entity_detail` on a technology are the same. `application_count` counts the
+ * applications in service that declare the version itself, within the user's application read
+ * scope, and is no metric: an aggregate expression cannot carry that scope. A row has no
+ * reference of its own: it names its technology by `TEC-n` (`technology`) and its label. There is
+ * no single-record detail for a version; the detail of its technology gives every version.
  */
 export const technologyVersionsRegistry: AiEntityFilterRegistry = {
   entityType: 'technology_versions',
@@ -24,6 +24,8 @@ export const technologyVersionsRegistry: AiEntityFilterRegistry = {
       description: 'Version label, exact and without case: 16 keeps the versions labelled 16, never 16.4. Sortable; not groupable.',
       acceptedValueKind: 'exact version label',
       examples: ['16'],
+      dynamic: true,
+      discoverable: true,
       sortable: true,
       groupable: false,
     },
@@ -31,7 +33,7 @@ export const technologyVersionsRegistry: AiEntityFilterRegistry = {
       ai: 'technology',
       grid: 'technology',
       type: 'set',
-      description: 'The technology of the version: its reference (TEC-n) or its exact name, without case. Values come from get_filter_values (the names). Each item carries the reference (technology) and the name (technology_name). Grouping counts the versions of one technology under its name. A version has no detail of its own: get_entity_detail on its technology (that TEC-n) lists every version.',
+      description: 'The technology of the version: its reference (TEC-n) or its exact name, without case. Values come from get_filter_values (the names). Each item carries the reference (technology) and the name (technology_name). Grouping counts the versions of one technology under its name.',
       acceptedValueKind: 'TEC-n reference or technology name',
       examples: ['TEC-12'],
       lookupEntity: 'technologies',
@@ -125,7 +127,7 @@ export const technologyVersionsRegistry: AiEntityFilterRegistry = {
       ai: 'application_count',
       grid: 'application_count',
       type: 'number',
-      description: 'Number of applications in service that declare the technology, among the applications the user can read: the technology\'s count, as the technologies family and its detail give it, not a count per version. null when the user cannot read applications.',
+      description: 'Number of applications in service that declare this version itself, among the applications the user can read. A version nobody declares is 0, never its technology\'s other versions. null when the user cannot read applications.',
       sortable: true,
       groupable: false,
     },

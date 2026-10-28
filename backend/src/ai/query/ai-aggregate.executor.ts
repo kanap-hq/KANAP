@@ -1237,8 +1237,13 @@ export class AiAggregateExecutor {
     const idColumn = registry.aggregate.idColumn ?? 'id';
     const baseWhere = registry.aggregate.baseWhere ? ` AND ${registry.aggregate.baseWhere}` : '';
     if (fn === 'count' || !metric) {
+      // A many-to-many group whose links can repeat a name (`countDistinct`) counts its record
+      // once: two owners of the same name are one row for that technology.
+      const countExpression = groupField.countDistinct
+        ? `COUNT(DISTINCT ${alias}.${idColumn})::int`
+        : 'COUNT(*)::int';
       const rows = await context.manager.query(
-        `SELECT ${groupField.expression} AS key, COUNT(*)::int AS count
+        `SELECT ${groupField.expression} AS key, ${countExpression} AS count
          FROM ${registry.aggregate.baseTable} ${alias}
          ${joins}
          WHERE ${alias}.tenant_id = $1${baseWhere}

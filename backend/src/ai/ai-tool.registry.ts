@@ -29,8 +29,10 @@ import { AI_PAGE_URL_NOTE, withAiPageUrls } from './ai-page-urls';
 import { AI_UNREAD_FAMILIES_SENTENCE, readAiScreenLanguage, unreadFamilyLines } from './ai-unread-families';
 import {
   AI_CONTEXT_ENTITY_TYPES,
+  AI_DETAIL_ENTITY_TYPES,
   AI_QUERY_ENTITY_TYPES,
   AiContextEntityTypeSchema,
+  AiDetailEntityTypeSchema,
   AiDocumentDto,
   AiEntityDetailDto,
   AiEntitySummaryDto,
@@ -66,7 +68,7 @@ const GetEntityContextInputSchema = z.object({
 });
 
 const GetEntityDetailInputSchema = z.object({
-  entity_type: AiQueryEntityTypeSchema.describe('The entity family of the record.'),
+  entity_type: AiDetailEntityTypeSchema.describe(`The entity family of the record: one of ${AI_DETAIL_ENTITY_TYPES.join(', ')}.`),
   entity_id: z.string().trim().min(1)
     .describe('The UUID of the record, or its reference where the family has one, such as APP-4, AST-9, PRJ-12, REQ-7, T-42, DOC-3, INC-12, BL-5 or TEC-3, or a CVE id such as CVE-2024-3094 on vulnerabilities.'),
   year: z.number().int().min(1900).max(3000).optional()
@@ -430,7 +432,7 @@ export class AiToolRegistry {
         {
           name: 'get_entity_detail',
           category: 'inspection',
-          description: 'Returns one record with all its scalar fields and its attachment metadata, by UUID or reference (APP-4, PRJ-12, BL-5...). query_entities suits lists; this tool gives the full detail of one known record. A technology version has no detail of its own: read its technology (TEC-3), whose detail lists every version with its support dates and state. A vulnerability read by its CVE id is that CVE\'s first row (exploited, then most severe), and `rows` lists every technology version the CVE concerns in the workspace. On budget lines and contracts, `amounts_currency_note` says which amounts are in the reporting currency and which in the record\'s own currency. A contract comes with its current term (`term_state`, `next_due_date`, `cancellation_deadline`) and what it covers: `linked_applications` (a Business Contributor\'s: those they take part in), `linked_assets`, `linked_technologies`, its budget lines (`linked_budget_lines`, each with its `nature`) and `budget_lines_outside_access`, the linked lines outside the user\'s data access; a family the user cannot read is null, which is not "none".' + ` ${AI_PAGE_URL_NOTE}`,
+          description: 'Returns one record with all its scalar fields and its attachment metadata, by UUID or reference (APP-4, PRJ-12, BL-5...). query_entities suits lists; this tool gives the full detail of one known record. A vulnerability read by its CVE id is that CVE\'s first row (exploited, then most severe), and `rows` lists every technology version the CVE concerns in the workspace. On budget lines and contracts, `amounts_currency_note` says which amounts are in the reporting currency and which in the record\'s own currency. A contract comes with its current term (`term_state`, `next_due_date`, `cancellation_deadline`) and what it covers: `linked_applications` (a Business Contributor\'s: those they take part in), `linked_assets`, `linked_technologies`, its budget lines (`linked_budget_lines`, each with its `nature`) and `budget_lines_outside_access`, the linked lines outside the user\'s data access; a family the user cannot read is null, which is not "none".' + ` ${AI_PAGE_URL_NOTE}`,
           inputSchema: GetEntityDetailInputSchema,
           inputSummary: fieldDescriptions(GetEntityDetailInputSchema),
           surfaces: ['chat', 'mcp'],
@@ -772,7 +774,7 @@ export class AiToolRegistry {
       case 'get_entity_detail':
         return toolName === 'get_application_classification_catalog'
           ? avail.readableEntityTypes.includes('applications')
-          : avail.readableEntityTypes.length > 0;
+          : AI_DETAIL_ENTITY_TYPES.some((type) => avail.readableEntityTypes.includes(type));
       case 'get_entity_context':
         return AI_CONTEXT_ENTITY_TYPES.some((type) => avail.readableEntityTypes.includes(type));
       case 'get_entity_comments':

@@ -1238,14 +1238,15 @@ export class AiQueryExecutor {
 
   /**
    * A technology version as listed: the technology's reference and name, the label, the support
-   * dates and state, whether it is in use, and its servers and the technology's applications. It
-   * has no reference of its own: `ref` is its technology's (`TEC-n`).
+   * dates and state, whether it is in use, and its servers and the version's applications. Its
+   * line label is the technology and the version ("PostgreSQL 16"); it has no reference of its
+   * own: `ref` is its technology's (`TEC-n`).
    */
   private mapTechnologyVersion(row: AiTechnologyVersionRow): AiEntitySummaryDto {
     return toEntitySummary('technology_versions', {
       id: row.id,
       reference: row.technology,
-      label: row.label,
+      label: row.label ? `${row.technology_name} ${row.label}` : row.technology_name,
       status: row.support_status,
       created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
@@ -3147,22 +3148,28 @@ export class AiQueryExecutor {
    * `it_owner`, `business_owner`). Read from `technology_versions` and `technology_owners`, never
    * from the technology row, and only for the fields the caller asked (`grids`).
    */
+  /**
+   * The version labels of the tenant, the values of the `version` filter of the technologies and
+   * of the `label` filter of `technology_versions`: one query, never a label typed in.
+   */
+  private async technologyVersionLabels(context: AiExecutionContextWithManager): Promise<string[]> {
+    const rows: Array<{ value: string }> = await context.manager.query(
+      `SELECT DISTINCT v.label AS value
+         FROM technology_versions v
+        WHERE v.tenant_id = $1 AND btrim(v.label) <> ''
+        ORDER BY value ASC NULLS LAST
+        LIMIT 5000`,
+      [context.tenantId],
+    );
+    return (rows || []).map((row) => String(row.value));
+  }
+
   private async technologyFilterValues(
     context: AiExecutionContextWithManager,
     grids: ReadonlySet<string>,
   ): Promise<Record<string, Array<string | null>>> {
     const values: Record<string, Array<string | null>> = {};
-    if (grids.has('version')) {
-      const rows: Array<{ value: string }> = await context.manager.query(
-        `SELECT DISTINCT v.label AS value
-           FROM technology_versions v
-          WHERE v.tenant_id = $1 AND btrim(v.label) <> ''
-          ORDER BY value ASC NULLS LAST
-          LIMIT 5000`,
-        [context.tenantId],
-      );
-      values.version = (rows || []).map((row) => String(row.value));
-    }
+    if (grids.has('version')) values.version = await this.technologyVersionLabels(context);
     const ownerFields: Array<{ grid: string; type: 'it' | 'business' | null }> = [
       { grid: 'owner_name', type: null },
       { grid: 'it_owner_name', type: 'it' },
@@ -3401,6 +3408,10 @@ export class AiQueryExecutor {
       // The version labels and the owner names have no column on `technologies`: they are read
       // from their own tables. The other dynamic fields fall back to the registry below.
       raw = await this.technologyFilterValues(context, new Set(dynamicFieldMap.keys()));
+    } else if (input.entity_type === 'technology_versions') {
+      // The labels have no value list on the version row: they are read from the labels of the
+      // tenant's technology versions, one query (the `version` values of the technologies).
+      if (dynamicFieldMap.has('label')) raw.label = await this.technologyVersionLabels(context);
     } else if (input.entity_type === 'incidents') {
       const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
       const reads = this.readProbe(context);

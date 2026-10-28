@@ -316,17 +316,17 @@ recorded standard and extended ends), `support_status`, `support_date`, `in_use`
 family and the `versions` of `get_entity_detail` on a technology cannot
 disagree. `in_use` is true when the version is installed on a server in service
 or declared by an application in service; `server_count` counts the former
-(clusters excluded); `application_count` is the technology's count, within the
-user's application read scope, as the `technologies` family gives it, and no
-aggregate metric.
+(clusters excluded); `application_count` counts the applications in service that
+declare this version itself, within the user's application read scope, null
+without it, and no aggregate metric. A line is labelled by its technology and its
+version (`PostgreSQL 16`).
 
 Filters: `technology` (`TEC-n` or exact name, without case), `label` (exact,
 without case), `support_status`, `in_use` (`true` or `false`), the two dates
 (blank, ranges), `family`, `lifecycle` and `end_of_support_year` (the year of
 `support_date`). Groups: `technology` (by name), `support_status`, `in_use`,
-`family`, `lifecycle` and `end_of_support_year`, many-to-many for nothing here:
-each version is one row. Metrics: the count, the sum of `server_count`, and
-`MIN`/`MAX` of the two dates as `YYYY-MM-DD`.
+`family`, `lifecycle` and `end_of_support_year`. Metrics: the count, the sum of
+`server_count`, and `MIN`/`MAX` of the two dates as `YYYY-MM-DD`.
 
 A version has no reference of its own and no detail: an item's `ref` is its
 technology's `TEC-n`, and `get_entity_detail` refuses the family with the reason

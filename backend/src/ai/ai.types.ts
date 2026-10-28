@@ -72,13 +72,25 @@ export const AI_SEARCH_ENTITY_TYPES = [
 ] as const;
 
 /**
- * The families query_entities, aggregate_entities, get_filter_values and get_entity_detail read:
- * every searched family, and the ones with no search index. `vulnerabilities` (the CVE rows of the
- * technologies, `query/ai-vulnerabilities.query.ts`) is listed only: `search_all` does not search it.
+ * The families query_entities, aggregate_entities and get_filter_values read: every searched
+ * family, and the ones with no search index. `vulnerabilities` (the CVE rows of the technologies,
+ * `query/ai-vulnerabilities.query.ts`) is listed only: `search_all` does not search it.
  * `technology_versions` (the versions of the technologies, `query/ai-technologies.query.ts`) is
- * listed only too: it has no detail of its own.
+ * listed only too: it has no record detail of its own.
  */
 export const AI_QUERY_ENTITY_TYPES = [...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities', 'technology_versions'] as const;
+
+/**
+ * The families get_entity_detail reads: every queried family but the ones with no record detail.
+ * A version is a row of its technology's detail; the two report families are computed rows with
+ * no page of their own.
+ */
+export const AI_DETAIL_ENTITY_TYPES = AI_QUERY_ENTITY_TYPES.filter(
+  (type) => type !== 'technology_versions',
+) as [
+  Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions'>,
+  ...Array<Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions'>>,
+];
 
 export const AI_CONTEXT_ENTITY_TYPES = [
   'applications',
@@ -116,6 +128,7 @@ export function aiSearchEntityTypeOfIndexRow(indexEntityType: string): AiSearchE
 export const AiSearchEntityTypeSchema = z.enum(AI_SEARCH_ENTITY_TYPES);
 
 export const AiQueryEntityTypeSchema = z.enum(AI_QUERY_ENTITY_TYPES);
+export const AiDetailEntityTypeSchema = z.enum(AI_DETAIL_ENTITY_TYPES);
 export const AiQueryScopeSchema = z.enum(['me', 'my_team']);
 
 export const AiContextEntityTypeSchema = z.enum(AI_CONTEXT_ENTITY_TYPES);
@@ -123,6 +136,7 @@ export const AiContextEntityTypeSchema = z.enum(AI_CONTEXT_ENTITY_TYPES);
 export type AiSearchEntityType = z.infer<typeof AiSearchEntityTypeSchema>;
 export type AiContextEntityType = z.infer<typeof AiContextEntityTypeSchema>;
 export type AiQueryEntityType = z.infer<typeof AiQueryEntityTypeSchema>;
+export type AiDetailEntityType = z.infer<typeof AiDetailEntityTypeSchema>;
 export type AiQueryScope = z.infer<typeof AiQueryScopeSchema>;
 
 export type AiExecutionContext = {

@@ -230,9 +230,11 @@ export const technologiesRegistry: AiEntityFilterRegistry = {
       admin_zone: { expression: 't.admin_zone' },
       support_status: { expression: technologySupportStatusSql('t') },
       // A technology counts once per owner of that type: an inner join, so one without an owner of
-      // the type is in no group, and a nameless user adds no group.
+      // the type is in no group, and a nameless user adds no group. Two owners of the same name
+      // are one group, and the technology counts once in it.
       it_owner: {
         expression: `btrim(concat_ws(' ', u_it.first_name, u_it.last_name))`,
+        countDistinct: true,
         joins: [
           `JOIN technology_owners t_owner_it ON t_owner_it.technology_id = t.id AND t_owner_it.tenant_id = t.tenant_id AND t_owner_it.owner_type = 'it'`,
           `JOIN users u_it ON u_it.id = t_owner_it.user_id AND u_it.tenant_id = t_owner_it.tenant_id
@@ -241,6 +243,7 @@ export const technologiesRegistry: AiEntityFilterRegistry = {
       },
       business_owner: {
         expression: `btrim(concat_ws(' ', u_business.first_name, u_business.last_name))`,
+        countDistinct: true,
         joins: [
           `JOIN technology_owners t_owner_business ON t_owner_business.technology_id = t.id AND t_owner_business.tenant_id = t.tenant_id AND t_owner_business.owner_type = 'business'`,
           `JOIN users u_business ON u_business.id = t_owner_business.user_id AND u_business.tenant_id = t_owner_business.tenant_id
