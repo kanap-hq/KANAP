@@ -95,7 +95,7 @@ export class IncidentJournalImportService {
 
     let text: string;
     try {
-      text = readImportText(file.buffer).text;
+      text = (await readImportText(file.buffer)).text;
     } catch (error) {
       throw new BadRequestException(error instanceof Error ? error.message : 'The journal file could not be read.');
     }

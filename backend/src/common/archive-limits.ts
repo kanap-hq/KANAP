@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { readFileSync } from 'node:fs';
+import { crc32, createInflateRaw } from 'node:zlib';
 import AdmZip = require('adm-zip');
 
 /**
@@ -62,7 +63,11 @@ const ZIP64_LOCATOR_SIZE = 20;
 const ZIP64_END_SIGNATURE = 0x06064b50;
 const CENTRAL_HEADER_SIGNATURE = 0x02014b50;
 const CENTRAL_HEADER_SIZE = 46;
+const LOCAL_HEADER_SIGNATURE = 0x04034b50;
+const LOCAL_HEADER_SIZE = 30;
 const SLASH = 0x2f;
+/** Bytes handed to a streaming caller at a time. */
+const STREAM_CHUNK = 1024 * 1024;
 
 function readUInt64(buffer: Buffer, offset: number): number {
   return buffer.readUInt32LE(offset + 4) * 0x100000000 + buffer.readUInt32LE(offset);
@@ -169,7 +174,7 @@ function isOutputLimitError(error: unknown): boolean {
 export class BoundedArchive {
   private readBytes = 0;
 
-  constructor(readonly zip: AdmZip, readonly limits: ArchiveLimits) {}
+  constructor(readonly zip: AdmZip, readonly limits: ArchiveLimits, private readonly buffer: Buffer) {}
 
   entries(): AdmZip.IZipEntry[] {
     return this.zip.getEntries();
@@ -201,6 +206,94 @@ export class BoundedArchive {
         if (error instanceof ArchiveLimitError) throw error;
       }
     }
+  }
+
+  /**
+   * Streams one entry's decompressed bytes to `onChunk`: the declared size is checked against the
+   * limits left, every produced byte is counted against the total as it arrives, and the CRC-32 is
+   * verified at the end. The local header locates the bytes and carries the CRC adm-zip checks,
+   * unless a data descriptor (bit 3) defers it to the central directory. A stored entry must declare
+   * the same size twice. An error thrown by `onChunk` stops the inflater and is propagated.
+   */
+  async stream(entry: AdmZip.IZipEntry, onChunk: (chunk: Buffer) => void): Promise<void> {
+    const remaining = this.limits.maxTotalBytes - this.readBytes;
+    const declared = Number(entry.header.size) || 0;
+    if (declared > this.limits.maxEntryBytes || declared > remaining) throw new ArchiveLimitError();
+    const offset = Number(entry.header.offset) || 0;
+    if (offset < 0 || offset + LOCAL_HEADER_SIZE > this.buffer.length || this.buffer.readUInt32LE(offset) !== LOCAL_HEADER_SIGNATURE) {
+      throw new Error('archive: damaged local header');
+    }
+    if (entry.header.encrypted) throw new Error('archive: encrypted entry');
+    const method = Number(entry.header.method) || 0;
+    const localFlags = this.buffer.readUInt16LE(offset + 6);
+    const nameLength = this.buffer.readUInt16LE(offset + 26);
+    const extraLength = this.buffer.readUInt16LE(offset + 28);
+    const start = offset + LOCAL_HEADER_SIZE + nameLength + extraLength;
+    const compressed = Number(entry.header.compressedSize) || 0;
+    if (start + compressed > this.buffer.length) throw new Error('archive: damaged local header');
+    const data = this.buffer.subarray(start, start + compressed);
+    const descriptor = (Number(entry.header.flags) & 0x8) !== 0 || (localFlags & 0x8) !== 0;
+    const expectedCrc = descriptor ? (Number(entry.header.crc) || 0) >>> 0 : this.buffer.readUInt32LE(offset + 14);
+
+    let produced = 0;
+    let crc = 0;
+    const take = (chunk: Buffer): void => {
+      produced += chunk.length;
+      if (produced > declared) throw new Error('archive: entry larger than declared');
+      this.account(chunk.length);
+      crc = crc32(chunk, crc);
+      onChunk(chunk);
+    };
+    if (method === 0) {
+      if (data.length !== declared) throw new Error('archive: stored entry with two sizes');
+      for (let index = 0; index < data.length; index += STREAM_CHUNK) {
+        take(data.subarray(index, Math.min(index + STREAM_CHUNK, data.length)));
+      }
+    } else if (method === 8) {
+      await this.inflate(data, take);
+    } else {
+      throw new Error('archive: unsupported method');
+    }
+    if ((crc >>> 0) !== expectedCrc) throw new Error('archive: bad checksum');
+  }
+
+  /** Decompresses one entry, handing each chunk to `take`; an error from `take` stops the inflater. */
+  private inflate(data: Buffer, take: (chunk: Buffer) => void): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const inflater = createInflateRaw();
+      let settled = false;
+      const fail = (error: unknown): void => {
+        if (settled) return;
+        settled = true;
+        inflater.destroy();
+        reject(error);
+      };
+      inflater.on('data', (chunk: Buffer) => {
+        if (settled) return;
+        try {
+          take(chunk);
+        } catch (error) {
+          fail(error);
+        }
+      });
+      inflater.on('error', (error) => {
+        if (settled) return;
+        settled = true;
+        reject(isOutputLimitError(error) ? new ArchiveLimitError() : error);
+      });
+      inflater.on('end', () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      });
+      inflater.end(data);
+    });
+  }
+
+  /** Counts bytes a streamed entry produced against the total budget. */
+  private account(bytes: number): void {
+    this.readBytes += bytes;
+    if (this.readBytes > this.limits.maxTotalBytes) throw new ArchiveLimitError();
   }
 
   read(entry: AdmZip.IZipEntry): Buffer {
@@ -237,5 +330,5 @@ export function openBoundedArchive(source: Buffer | string, limits: Partial<Arch
   const declaredEntries = zip.getEntryCount();
   if (declaredEntries > effective.maxEntries) throw new ArchiveLimitError();
   assertEntryListWithinLimits(buffer, declaredEntries, effective);
-  return new BoundedArchive(zip, effective);
+  return new BoundedArchive(zip, effective, buffer);
 }

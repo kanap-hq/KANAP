@@ -51,6 +51,11 @@ export interface XlsxWriteRequest {
   language: CsvLanguage;
   sheets: readonly XlsxSheet[];
   appBaseUrl?: string | null;
+  /**
+   * The modification time written in the archive entries. The current time when omitted; a caller
+   * that compares files byte for byte passes it, as the DOS timestamp has a two-second resolution.
+   */
+  modifiedAt?: Date;
 }
 
 /** Excel's limit for the text of one cell. */
@@ -357,19 +362,15 @@ function longestLine(value: string): number {
   return value.split(/\r?\n/).reduce((max, line) => Math.max(max, line.length), 0);
 }
 
-/**
- * Writes a workbook: one sheet per entry, in order. Throws on no sheet, on a sheet over Excel's rows or columns,
- * and on a row whose length differs from the headers.
- */
-export function writeXlsx(request: XlsxWriteRequest): Buffer {
-  const { language, sheets } = request;
-  if (!sheets || sheets.length === 0) throw new Error('xlsx: a workbook needs at least one sheet');
-  const appBaseUrl = String(request.appBaseUrl || '').trim().replace(/\/$/, '');
-  const taken = new Set<string>();
-  const built = sheets.map((sheet) => buildSheet(sheet, sheetName(sheet.name, taken), appBaseUrl, language));
-  const extraStyles = built.some((sheet) => sheet.usesExtraStyles);
 
-  const sheetOverrides = built
+interface PackageSheet {
+  name: string;
+  filterRange: string | null;
+}
+
+/** The workbook-level parts `writeXlsx` and `writeTextXlsxStream` share: types, rels, sheets, styles. */
+function workbookPackage(sheets: readonly PackageSheet[], extraStyles: boolean, language: CsvLanguage) {
+  const sheetOverrides = sheets
     .map(
       (_, index) =>
         `<Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`,
@@ -390,12 +391,12 @@ export function writeXlsx(request: XlsxWriteRequest): Buffer {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
 </Relationships>`;
 
-  const workbookSheetsXml = built
+  const workbookSheetsXml = sheets
     .map((sheet, index) => `<sheet name="${xmlEscape(sheet.name)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`)
     .join('\n    ');
 
   // Excel keeps a sheet's filter in a hidden defined name as well; the filter works without it, but this is how Excel writes it.
-  const filterNames = built
+  const filterNames = sheets
     .map((sheet, index) =>
       sheet.filterRange
         ? `<definedName name="_xlnm._FilterDatabase" localSheetId="${index}" hidden="1">${xmlEscape(
@@ -412,7 +413,7 @@ export function writeXlsx(request: XlsxWriteRequest): Buffer {
   </sheets>${filterNames ? `\n  <definedNames>${filterNames}</definedNames>` : ''}
 </workbook>`;
 
-  const workbookRelationshipsXml = built
+  const workbookRelationshipsXml = sheets
     .map(
       (_, index) =>
         `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`,
@@ -422,7 +423,7 @@ export function writeXlsx(request: XlsxWriteRequest): Buffer {
   const workbookRelsXml = `${XML_HEAD}
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   ${workbookRelationshipsXml}
-  <Relationship Id="rId${built.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`;
 
   // Style 0 is the default, 1 the date cells; 2 (bold header), 3 (amount, `#,##0.00`), 4 (percent, `0.00%`), the
@@ -447,17 +448,199 @@ export function writeXlsx(request: XlsxWriteRequest): Buffer {
   <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
 
+  return { contentTypesXml, rootRelsXml, workbookXml, workbookRelsXml, stylesXml };
+}
+
+/**
+ * Writes a workbook: one sheet per entry, in order. Throws on no sheet, on a sheet over Excel's rows or columns,
+ * and on a row whose length differs from the headers.
+ */
+export function writeXlsx(request: XlsxWriteRequest): Buffer {
+  const { language, sheets } = request;
+  if (!sheets || sheets.length === 0) throw new Error('xlsx: a workbook needs at least one sheet');
+  const appBaseUrl = String(request.appBaseUrl || '').trim().replace(/\/$/, '');
+  const taken = new Set<string>();
+  const built = sheets.map((sheet) => buildSheet(sheet, sheetName(sheet.name, taken), appBaseUrl, language));
+  const extraStyles = built.some((sheet) => sheet.usesExtraStyles);
+
+  const packageXml = workbookPackage(built, extraStyles, language);
+
   const zip = new AdmZip();
-  zip.addFile('[Content_Types].xml', Buffer.from(contentTypesXml, 'utf8'));
-  zip.addFile('_rels/.rels', Buffer.from(rootRelsXml, 'utf8'));
-  zip.addFile('xl/workbook.xml', Buffer.from(workbookXml, 'utf8'));
-  zip.addFile('xl/_rels/workbook.xml.rels', Buffer.from(workbookRelsXml, 'utf8'));
-  zip.addFile('xl/styles.xml', Buffer.from(stylesXml, 'utf8'));
+  const addFile = (name: string, data: Buffer): void => {
+    const entry = zip.addFile(name, data);
+    if (request.modifiedAt) entry.header.time = request.modifiedAt;
+  };
+  addFile('[Content_Types].xml', Buffer.from(packageXml.contentTypesXml, 'utf8'));
+  addFile('_rels/.rels', Buffer.from(packageXml.rootRelsXml, 'utf8'));
+  addFile('xl/workbook.xml', Buffer.from(packageXml.workbookXml, 'utf8'));
+  addFile('xl/_rels/workbook.xml.rels', Buffer.from(packageXml.workbookRelsXml, 'utf8'));
+  addFile('xl/styles.xml', Buffer.from(packageXml.stylesXml, 'utf8'));
   built.forEach((sheet, index) => {
-    zip.addFile(`xl/worksheets/sheet${index + 1}.xml`, sheet.xml);
+    addFile(`xl/worksheets/sheet${index + 1}.xml`, sheet.xml);
   });
   built.forEach((sheet, index) => {
-    if (sheet.relsXml) zip.addFile(`xl/worksheets/_rels/sheet${index + 1}.xml.rels`, Buffer.from(sheet.relsXml, 'utf8'));
+    if (sheet.relsXml) addFile(`xl/worksheets/_rels/sheet${index + 1}.xml.rels`, Buffer.from(sheet.relsXml, 'utf8'));
   });
+  return zip.toBuffer();
+}
+
+/** A sheet of text rows read as they arrive, for exports too large to hold as an array of rows. */
+export interface XlsxTextStreamRequest {
+  language: CsvLanguage;
+  /** Sanitised like a written sheet name. */
+  sheetName: string;
+  headers: readonly string[];
+  /** The data rows, read once, in order. Only text cells: a string, or an empty cell. */
+  rows: AsyncIterable<readonly (string | null | undefined)[]>;
+  /** A size hint for the XML buffer (the rows about to be read); the filter uses the rows actually read. */
+  rowCountHint?: number;
+  /** The archive timestamp, for a reproducible file; now when omitted. */
+  modifiedAt?: Date;
+}
+
+/**
+ * A buffer whose bytes are written in order and that grows when it must. The sheet of a big export is
+ * written into one of these instead of an array of row buffers: the rows themselves are never held, and
+ * the memory is the XML of the sheet (about 450 bytes a row for the audit log), not three copies of it.
+ */
+class GrowingBuffer {
+  private data: Buffer;
+  private length = 0;
+
+  constructor(initial: number) {
+    this.data = Buffer.allocUnsafe(Math.max(64 * 1024, initial));
+  }
+
+  write(text: string): void {
+    const bytes = Buffer.byteLength(text);
+    if (this.length + bytes > this.data.length) {
+      let size = this.data.length;
+      while (size < this.length + bytes) size *= 2;
+      const next = Buffer.allocUnsafe(size);
+      this.data.copy(next, 0, 0, this.length);
+      this.data = next;
+    }
+    this.data.write(text, this.length, 'utf8');
+    this.length += bytes;
+  }
+
+  result(): Buffer {
+    return this.data.subarray(0, this.length);
+  }
+}
+
+/**
+ * The audit log workbook, and any other export of a sheet of text rows: the same file `writeXlsx` writes
+ * for one styled sheet of inline strings (bold frozen header, filter, the same widths), but the rows are
+ * read from an async iterator and turned into XML as they arrive. The output is byte for byte the one of
+ * `writeXlsx` with the same rows and `modifiedAt`, which the spec checks.
+ */
+export async function writeTextXlsxStream(request: XlsxTextStreamRequest): Promise<Buffer> {
+  const { language, headers } = request;
+  const columns = headers.length;
+  if (columns === 0) throw new Error('xlsx: a streamed sheet needs at least one column');
+  if (columns > XLSX_MAX_COLUMNS) throw new Error(`xlsx: streamed sheet has ${columns} columns, ${XLSX_MAX_COLUMNS} at most`);
+  if (request.rowCountHint !== undefined && (!Number.isInteger(request.rowCountHint) || request.rowCountHint < 0)) {
+    throw new Error('xlsx: streamed sheet rowCountHint must be a non-negative count');
+  }
+
+  const name = sheetName(request.sheetName, new Set());
+  const names: string[] = [];
+  for (let column = 1; column <= columns; column += 1) names.push(columnNumberToName(column));
+  const widths: number[] = headers.map((header) => longestLine(header));
+
+  const textCell = (ref: string, text: string, bold = false): string => {
+    const value = cellText(neutralizeCsvFormulaValue(text));
+    return `<c r="${ref}"${bold ? ` s="${STYLE_BOLD}"` : ''} t="inlineStr"><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`;
+  };
+  const headerCells: string[] = [];
+  headers.forEach((header, index) => {
+    if (header === '' || header === null || header === undefined) return;
+    const ref = `${names[index]}1`;
+    headerCells.push(`<c r="${ref}" s="${STYLE_BOLD}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(cellText(String(header)))}</t></is></c>`);
+  });
+
+  const rowXml = (row: readonly (string | null | undefined)[], rowIndex: number): string => {
+    if (row.length !== columns) {
+      throw new Error(`xlsx: streamed sheet "${name}" row ${rowIndex + 1} has ${row.length} cells for ${columns} headers`);
+    }
+    const rowNumber = rowIndex + 2;
+    const sample = rowIndex < WIDTH_SAMPLE_ROWS;
+    const cells: string[] = [];
+    for (let index = 0; index < columns; index += 1) {
+      const cell = row[index];
+      if (cell === null || cell === undefined || cell === '') continue;
+      if (typeof cell !== 'string') throw new Error(`xlsx: streamed sheet "${name}" ${names[index]}${rowNumber}: text only`);
+      cells.push(textCell(`${names[index]}${rowNumber}`, cell));
+      if (sample) widths[index] = Math.max(widths[index], longestLine(cell));
+    }
+    return `\n    <row r="${rowNumber}">${cells.join('')}</row>`;
+  };
+
+  const save = new GrowingBuffer(Math.min(128 * 1024 * 1024, Math.max(1024 * 1024, (request.rowCountHint ?? 0) * 600 + 65_536)));
+  const iterator = request.rows[Symbol.asyncIterator]();
+  // The column widths come from the header and the first 1,000 rows, and the header is written first:
+  // those rows are turned into XML now (a few hundred kilobytes) and written after the header.
+  const firstRows: string[] = [];
+  let written = 0;
+  try {
+    while (written < WIDTH_SAMPLE_ROWS) {
+      const next = await iterator.next();
+      if (next.done) break;
+      if (written >= XLSX_MAX_DATA_ROWS) throw new Error(`xlsx: streamed sheet "${name}" has more than ${XLSX_MAX_DATA_ROWS} rows`);
+      firstRows.push(rowXml(next.value, written));
+      written += 1;
+    }
+
+    const colsXml = widths
+      .map((measured, index) => {
+        const width = Math.min(WIDTH_MAX, Math.max(WIDTH_MIN, measured + 2));
+        return `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`;
+      })
+      .join('');
+    save.write(
+      [
+        XML_HEAD,
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
+        '  <sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>',
+        `  <cols>${colsXml}</cols>`,
+        '  <sheetData>',
+        '    ',
+      ].join('\n'),
+    );
+    save.write(`<row r="1">${headerCells.join('')}</row>`);
+    for (const row of firstRows) save.write(row);
+    for (;;) {
+      const next = await iterator.next();
+      if (next.done) break;
+      if (written >= XLSX_MAX_DATA_ROWS) throw new Error(`xlsx: streamed sheet "${name}" has more than ${XLSX_MAX_DATA_ROWS} rows`);
+      save.write(rowXml(next.value, written));
+      written += 1;
+    }
+  } catch (error) {
+    // Stop pulling rows, so a generator releases its database batch; keep the original error.
+    try {
+      await iterator.return?.();
+    } catch {
+      // The refusal that stopped the writer is the one to report.
+    }
+    throw error;
+  }
+  const filterRange = `A1:${names[columns - 1]}${written + 1}`;
+  save.write(['', '  </sheetData>', `  <autoFilter ref="${filterRange}"/>`, '</worksheet>'].join('\n'));
+
+  const packageXml = workbookPackage([{ name, filterRange }], true, language);
+
+  const zip = new AdmZip();
+  const addFile = (entryName: string, data: Buffer): void => {
+    const entry = zip.addFile(entryName, data);
+    if (request.modifiedAt) entry.header.time = request.modifiedAt;
+  };
+  addFile('[Content_Types].xml', Buffer.from(packageXml.contentTypesXml, 'utf8'));
+  addFile('_rels/.rels', Buffer.from(packageXml.rootRelsXml, 'utf8'));
+  addFile('xl/workbook.xml', Buffer.from(packageXml.workbookXml, 'utf8'));
+  addFile('xl/_rels/workbook.xml.rels', Buffer.from(packageXml.workbookRelsXml, 'utf8'));
+  addFile('xl/styles.xml', Buffer.from(packageXml.stylesXml, 'utf8'));
+  addFile('xl/worksheets/sheet1.xml', save.result());
   return zip.toBuffer();
 }

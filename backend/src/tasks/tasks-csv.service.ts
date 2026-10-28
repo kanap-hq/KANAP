@@ -228,7 +228,7 @@ export class TasksCsvService {
     const { csvSeparatorOf, readImportText } = await import('../common/csv-sheet/read');
 
     // The CSV text of the file, or of the first sheet of a workbook, as the main import read it.
-    const text = readImportText(file.buffer).text;
+    const text = (await readImportText(file.buffer)).text;
     const rows: Record<string, string>[] = [];
 
     await new Promise<void>((resolve, reject) => {

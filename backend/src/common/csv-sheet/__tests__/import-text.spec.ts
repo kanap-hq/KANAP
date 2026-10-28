@@ -37,8 +37,8 @@ const CSV = [
 ].join('\n');
 
 async function testWorkbookReadsAsItsCsv() {
-  const fromCsv = await rowsOf(readImportText(Buffer.from(`﻿${CSV}`, 'utf8')).text);
-  const read = readImportText(workbookOfCsv(CSV, 'fr'));
+  const fromCsv = await rowsOf((await readImportText(Buffer.from(`﻿${CSV}`, 'utf8'))).text);
+  const read = await readImportText(workbookOfCsv(CSV, 'fr'));
   assert.equal(read.format, 'xlsx');
   assert.equal(read.sheetName, 'Data');
   assert.equal(read.sheetCount, 1);
@@ -72,7 +72,7 @@ async function testDateTimeCells() {
       '<row r="3"><c r="A3" s="1"><v>46297</v></c><c r="B3" s="2"><v>46297.5</v></c><c r="C3" s="3"><v>46297.25</v></c></row>',
     ].join(''),
   });
-  const read = readImportText(workbook);
+  const read = await readImportText(workbook);
   assert.equal(read.text, 'detected_at;occurred_at;due_date\n2026-10-02 07:51:00;2024-10-02 14:30:00;2026-10-02\n2026-10-02 00:00:00;2026-10-02 12:00:00;2026-10-02 06:00:00');
   assert.deepEqual(await rowsOf(read.text), [
     { detected_at: '2026-10-02 07:51:00', occurred_at: '2024-10-02 14:30:00', due_date: '2026-10-02' },
@@ -81,12 +81,12 @@ async function testDateTimeCells() {
 }
 
 async function testSheetsAndRefusals() {
-  const twoSheets = readImportText(workbookOfCsv(CSV, 'fr', { extraSheet: true }));
+  const twoSheets = await readImportText(workbookOfCsv(CSV, 'fr', { extraSheet: true }));
   assert.deepEqual([twoSheets.sheetName, twoSheets.sheetCount], ['Data', 2]);
 
-  const refusal = (bytes: Buffer): { status?: number; code?: string; message?: string } => {
+  const refusal = async (bytes: Buffer): Promise<{ status?: number; code?: string; message?: string }> => {
     try {
-      readImportText(bytes);
+      await readImportText(bytes);
       return {};
     } catch (err: any) {
       if (err instanceof CsvDecodeError) return { code: err.code, message: err.message };
@@ -94,17 +94,17 @@ async function testSheetsAndRefusals() {
       return { status: err.getStatus(), code: body.code, message: typeof body === 'string' ? body : body.message };
     }
   };
-  assert.equal(refusal(minimalXls()).code, 'XLSX_OLD_FORMAT');
-  assert.equal(refusal(minimalXls()).status, 400);
-  assert.equal(refusal(Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00])).code, 'XLSX_NOT_WORKBOOK');
+  assert.equal((await refusal(minimalXls())).code, 'XLSX_OLD_FORMAT');
+  assert.equal((await refusal(minimalXls())).status, 400);
+  assert.equal((await refusal(Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00]))).code, 'XLSX_NOT_WORKBOOK');
   // Past the import's row cap: the CSV row-cap sentence.
   const many = writeXlsx({ language: 'en', sheets: [{ name: 'Rows', headers: ['name'], rows: Array.from({ length: CSV_ROW_CAP + 200 }, (_, i) => [`row ${i}`]) }] });
-  assert.equal(refusal(many).message, `This file has more than ${CSV_ROW_CAP.toLocaleString('en-US')} rows.`);
+  assert.equal((await refusal(many)).message, `This file has more than ${CSV_ROW_CAP.toLocaleString('en-US')} rows.`);
 
-  await withImportXlsx(false, () => {
-    assert.equal(refusal(workbookOfCsv(CSV, 'fr')).code, 'CSV_FILE_EXCEL');
-    assert.equal(refusal(minimalXls()).code, 'CSV_FILE_EXCEL');
-    assert.equal(readImportText(Buffer.from(CSV, 'utf8')).format, 'csv');
+  await withImportXlsx(false, async () => {
+    assert.equal((await refusal(workbookOfCsv(CSV, 'fr'))).code, 'CSV_FILE_EXCEL');
+    assert.equal((await refusal(minimalXls())).code, 'CSV_FILE_EXCEL');
+    assert.equal((await readImportText(Buffer.from(CSV, 'utf8'))).format, 'csv');
   });
 }
 

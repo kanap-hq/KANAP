@@ -161,8 +161,13 @@ export function hasOldExcelSignature(buffer: Buffer): boolean {
 }
 
 /**
- * Reads the first worksheet of an .xlsx file. Throws XlsxReadError, and nothing else, when the file
- * cannot be read or passes a limit.
+ * Reads the first worksheet of an .xlsx file whole. Throws XlsxReadError, and nothing else, when the
+ * file cannot be read or passes a limit.
+ *
+ * This is the specs' oracle, not a production entry point: it holds the decompressed sheet and the
+ * whole grid, which is what `readXlsxGridAsync` avoids. The imports call the streamed reader, and
+ * this one stays reachable from `read.ts` so a spec can compare both on the same bytes. It is not
+ * exported by `common/xlsx/index.ts`.
  */
 export function readXlsxGrid(buffer: Buffer, limits: Partial<XlsxReadLimits> = {}): XlsxGrid {
   const effective: XlsxReadLimits = { ...XLSX_READ_LIMITS, ...limits };
@@ -175,6 +180,27 @@ export function readXlsxGrid(buffer: Buffer, limits: Partial<XlsxReadLimits> = {
     if (error instanceof XlsxReadError) throw error;
     // adm-zip on a damaged archive, a bad checksum, an encrypted entry, a string too long for memory:
     // the file cannot be read, which is not a server error.
+    throw invalid();
+  }
+}
+
+/**
+ * `readXlsxGrid` with the worksheet decompressed and parsed as a stream: the same grid, the same
+ * limits and the same refusals, without holding the 200 MB part in memory. The small parts (workbook,
+ * relationships, styles, shared strings) are still read whole. The imports use it; the synchronous
+ * reader stays for callers that already hold the file and for the specs that compare both.
+ */
+export async function readXlsxGridAsync(buffer: Buffer, limits: Partial<XlsxReadLimits> = {}): Promise<XlsxGrid> {
+  const effective: XlsxReadLimits = { ...XLSX_READ_LIMITS, ...limits };
+  if (hasOldExcelSignature(buffer)) throw new XlsxReadError('XLSX_OLD_FORMAT', XLSX_OLD_FORMAT_MESSAGE);
+  if (!hasZipSignature(buffer)) throw new XlsxReadError('XLSX_NOT_WORKBOOK', NOT_WORKBOOK_MESSAGE);
+  if (buffer.length > effective.maxArchiveBytes) throw tooLarge('maxArchiveBytes', effective);
+  try {
+    return await readWorkbookAsync(buffer, effective);
+  } catch (error) {
+    if (error instanceof XlsxReadError) throw error;
+    // adm-zip on a damaged archive, a bad checksum, an encrypted entry, an inflater error: the file
+    // cannot be read, which is not a server error.
     throw invalid();
   }
 }
@@ -213,13 +239,18 @@ function readPart(archive: BoundedArchive, entry: AdmZip.IZipEntry, limits: Xlsx
   if (size > limits.compressionRatioFromBytes && size > limits.maxCompressionRatio * Math.max(compressed, 1)) {
     throw tooLarge('maxCompressionRatio', limits);
   }
+  let data: Buffer;
   try {
-    return archive.read(entry);
+    data = archive.read(entry);
   } catch (error) {
     // The inflater stops at the declared size: a part that unpacks to more lies about its size.
     if (error instanceof ArchiveLimitError) throw invalid();
     throw error;
   }
+  // A stored entry declares the same size twice. adm-zip returns the compressed bytes, which the
+  // streamed reader refuses; the whole reader refuses them too instead of parsing a short part.
+  if ((Number(entry.header.method) || 0) === 0 && data.length !== (Number(entry.header.size) || 0)) throw invalid();
+  return data;
 }
 
 function findEntry(archive: BoundedArchive, name: string): AdmZip.IZipEntry | null {
@@ -233,6 +264,40 @@ function partName(target: string): string | null {
   if (resolved === '' || resolved.startsWith('..')) return null;
   return resolved;
 }
+
+// ---------------------------------------------------------------------------------------------------
+// Concurrency
+
+/** Reads of one worksheet that may run at once: each one holds its grid until it returns. */
+const WORKBOOK_READ_SLOTS = 2;
+
+/** A fair counting semaphore: a released place is handed to the first waiter, never lost between them. */
+class Semaphore {
+  private used = 0;
+  private readonly waiters: Array<() => void> = [];
+
+  constructor(private readonly places: number) {}
+
+  async acquire(): Promise<void> {
+    if (this.used < this.places) {
+      this.used += 1;
+      return;
+    }
+    await new Promise<void>((resolve) => this.waiters.push(resolve));
+  }
+
+  release(): void {
+    const next = this.waiters.shift();
+    // The place is transferred as it is: a new caller cannot take it before the waiter resumes.
+    if (next) next();
+    else this.used -= 1;
+  }
+}
+
+const workbookReadSlots = new Semaphore(WORKBOOK_READ_SLOTS);
+
+/** What the specs observe: streamed reads in flight and the highest number seen, against the two places. */
+export const XLSX_READ_ACTIVITY = { active: 0, peak: 0, limit: WORKBOOK_READ_SLOTS };
 
 // ---------------------------------------------------------------------------------------------------
 // XML
@@ -264,52 +329,137 @@ function attribute(attributes: Record<string, string>, name: string, prefixed = 
 }
 
 /**
- * Parses one part with saxes, fed in chunks. A DOCTYPE or an ENTITY declaration refuses the part
- * before it is parsed: no entity is ever expanded; only the five predefined entities and numeric
- * character references are decoded. The attributes of an element are counted as saxes reads them,
- * before it builds the element, and the elements of the part as they open. An error thrown by a
- * handler leaves `parser.write` at once and ends the parse.
+ * Parses one part with saxes, fed in chunks. DOCTYPE and ENTITY declarations are searched on the bytes
+ * of each chunk, across the chunk boundary, before saxes sees them: no entity is ever expanded; only
+ * the five predefined entities and numeric character references are decoded. The attributes of an
+ * element are counted as saxes reads them, before it builds the element, and the elements of the part
+ * as they open. An error thrown by a handler leaves `parser.write` at once and ends the parse.
+ *
+ * The same parser reads a small part held in memory (`parsePart`) and the sheet inflated as it
+ * arrives (`streamPart`): the declarations and the byte order marks are checked on the bytes, across
+ * the chunks, and each chunk is decoded and parsed as soon as it is produced. Refusals follow that
+ * order: a size, ratio, element or attribute limit raised while the bytes arrive comes before the
+ * CRC-32 of the part, checked at its end. A file with both reports the limit, which is accepted.
  */
-function parsePart(data: Buffer, handlers: TagHandlers, limits: XlsxReadLimits): void {
-  if (data.indexOf(DOCTYPE) >= 0 || data.indexOf(ENTITY) >= 0) throw new XlsxReadError('XLSX_DOCTYPE', DOCTYPE_MESSAGE);
-  // A part in UTF-16 (byte order mark): Excel writes UTF-8 only.
-  if (data.length >= 2 && ((data[0] === 0xff && data[1] === 0xfe) || (data[0] === 0xfe && data[1] === 0xff))) throw invalid();
-  const start = data.length >= 3 && data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf ? 3 : 0;
+class PartParser {
+  private readonly parser: SaxesParser;
+  private readonly decoder = new StringDecoder('utf8');
+  private elements = 0;
+  private attributes = 0;
+  /** The last bytes already scanned for `<!DOCTYPE` and `<!ENTITY`, so a token split between two chunks is found. */
+  private scanTail: Buffer | null = null;
+  private prefix: Buffer[] = [];
+  private prefixLength = 0;
+  private started = false;
 
-  const parser = new SaxesParser({ xmlns: false, position: false });
-  parser.on('error', () => {
-    throw invalid();
-  });
-  parser.on('doctype', () => {
-    throw new XlsxReadError('XLSX_DOCTYPE', DOCTYPE_MESSAGE);
-  });
-  // saxes reports each attribute as it reads it, then the element once all are read: the attributes
-  // seen since the last element belong to the element being read. (An `opentagstart` handler next to
-  // the `attribute` one makes saxes about three times slower on large parts.)
-  let elements = 0;
-  let attributes = 0;
-  parser.on('attribute', () => {
-    attributes += 1;
-    if (attributes > limits.maxAttributesPerElement) throw tooLarge('maxAttributesPerElement', limits);
-  });
-  parser.on('opentag', (tag: SaxesTagPlain) => {
-    attributes = 0;
-    elements += 1;
-    if (elements > limits.maxElements) throw tooLarge('maxElements', limits);
-    handlers.open(localName(tag.name), tag.attributes as Record<string, string>);
-  });
-  parser.on('closetag', (tag: SaxesTagPlain) => handlers.close(localName(tag.name)));
-  parser.on('text', handlers.text);
-  parser.on('cdata', handlers.text);
-
-  const decoder = new StringDecoder('utf8');
-  for (let offset = start; offset < data.length; offset += PART_CHUNK) {
-    const text = decoder.write(data.subarray(offset, Math.min(offset + PART_CHUNK, data.length)));
-    if (text) parser.write(text);
+  constructor(handlers: TagHandlers, private readonly limits: XlsxReadLimits) {
+    const parser = new SaxesParser({ xmlns: false, position: false });
+    this.parser = parser;
+    parser.on('error', () => {
+      throw invalid();
+    });
+    parser.on('doctype', () => {
+      throw new XlsxReadError('XLSX_DOCTYPE', DOCTYPE_MESSAGE);
+    });
+    // saxes reports each attribute as it reads it, then the element once all are read: the attributes
+    // seen since the last element belong to the element being read. (An `opentagstart` handler next to
+    // the `attribute` one makes saxes about three times slower on large parts.)
+    parser.on('attribute', () => {
+      this.attributes += 1;
+      if (this.attributes > limits.maxAttributesPerElement) throw tooLarge('maxAttributesPerElement', limits);
+    });
+    parser.on('opentag', (tag: SaxesTagPlain) => {
+      this.attributes = 0;
+      this.elements += 1;
+      if (this.elements > limits.maxElements) throw tooLarge('maxElements', limits);
+      handlers.open(localName(tag.name), tag.attributes as Record<string, string>);
+    });
+    parser.on('closetag', (tag: SaxesTagPlain) => handlers.close(localName(tag.name)));
+    parser.on('text', handlers.text);
+    parser.on('cdata', handlers.text);
   }
-  const rest = decoder.end();
-  if (rest) parser.write(rest);
-  parser.close();
+
+  /** Feeds one chunk of the part; throws as soon as a limit is passed or the XML is refused. */
+  write(data: Buffer): void {
+    this.scan(data);
+    // A byte order mark is dropped once the first bytes are known: UTF-16 is refused, as Excel writes UTF-8.
+    if (!this.started) {
+      this.prefix.push(data);
+      this.prefixLength += data.length;
+      if (this.prefixLength < 3) return;
+      const head = this.prefix.length === 1 ? this.prefix[0] : Buffer.concat(this.prefix);
+      this.prefix = [];
+      this.prefixLength = 0;
+      this.started = true;
+      if (head.length >= 2 && ((head[0] === 0xff && head[1] === 0xfe) || (head[0] === 0xfe && head[1] === 0xff))) throw invalid();
+      const start = head.length >= 3 && head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf ? 3 : 0;
+      const text = this.decoder.write(head.subarray(start));
+      if (text) this.parser.write(text);
+      return;
+    }
+    const text = this.decoder.write(data);
+    if (text) this.parser.write(text);
+  }
+
+  /** Ends the part: the last decoded text, then saxes' own close. */
+  end(): void {
+    if (!this.started) {
+      const head = this.prefix.length === 0 ? Buffer.alloc(0) : this.prefix.length === 1 ? this.prefix[0] : Buffer.concat(this.prefix);
+      if (head.length >= 2 && ((head[0] === 0xff && head[1] === 0xfe) || (head[0] === 0xfe && head[1] === 0xff))) throw invalid();
+      const start = head.length >= 3 && head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf ? 3 : 0;
+      this.started = true;
+      const text = this.decoder.write(head.subarray(start));
+      if (text) this.parser.write(text);
+    }
+    const rest = this.decoder.end();
+    if (rest) this.parser.write(rest);
+    this.parser.close();
+  }
+
+  private scan(data: Buffer): void {
+    if (data.indexOf(DOCTYPE) >= 0 || data.indexOf(ENTITY) >= 0) throw new XlsxReadError('XLSX_DOCTYPE', DOCTYPE_MESSAGE);
+    // A token split between two chunks lies in the last bytes of one and the first bytes of the next:
+    // scanning that join (at most 16 bytes) is enough, and the chunk itself is never copied.
+    if (this.scanTail) {
+      const join = Buffer.concat([this.scanTail, data.subarray(0, Math.min(data.length, 8))]);
+      if (join.indexOf(DOCTYPE) >= 0 || join.indexOf(ENTITY) >= 0) throw new XlsxReadError('XLSX_DOCTYPE', DOCTYPE_MESSAGE);
+    }
+    if (data.length >= 8) this.scanTail = Buffer.from(data.subarray(data.length - 8));
+    else this.scanTail = Buffer.from(Buffer.concat([this.scanTail ?? Buffer.alloc(0), data]).subarray(-8));
+  }
+}
+
+/** Parses a part held whole in memory, in chunks (a 200 MB string would cost more than the part). */
+function parsePart(data: Buffer, handlers: TagHandlers, limits: XlsxReadLimits): void {
+  const parser = new PartParser(handlers, limits);
+  for (let offset = 0; offset < data.length; offset += PART_CHUNK) {
+    parser.write(data.subarray(offset, Math.min(offset + PART_CHUNK, data.length)));
+  }
+  parser.end();
+}
+
+/**
+ * Reads the worksheet part as a stream: its stored bytes (a view of the archive) are inflated chunk by
+ * chunk and parsed as they arrive, so the 200 MB part is never held whole. The ratio and declared size
+ * are checked before anything is inflated, the cumulative size and the CRC-32 at the end, and the
+ * element and attribute counts as saxes reads them. Refusals are the same XlsxReadError as `parsePart`.
+ */
+async function streamPart(archive: BoundedArchive, entry: AdmZip.IZipEntry, handlers: TagHandlers, limits: XlsxReadLimits): Promise<void> {
+  const size = Number(entry.header.size) || 0;
+  const compressed = Number(entry.header.compressedSize) || 0;
+  if (size > limits.compressionRatioFromBytes && size > limits.maxCompressionRatio * Math.max(compressed, 1)) {
+    throw tooLarge('maxCompressionRatio', limits);
+  }
+  const parser = new PartParser(handlers, limits);
+  try {
+    // The archive checks the declared size, the cumulative budget and the CRC-32; this layer only
+    // parses the bytes it is handed.
+    await archive.stream(entry, (chunk) => parser.write(chunk));
+    parser.end();
+  } catch (error) {
+    if (error instanceof ArchiveLimitError) throw invalid();
+    throw error;
+  }
 }
 
 /**
@@ -572,7 +722,8 @@ interface SheetContext {
   limits: XlsxReadLimits;
 }
 
-function parseSheet(data: Buffer, context: SheetContext): XlsxReadCell[][] {
+/** The handlers that build the grid of a worksheet, and the grid once the part has been parsed. */
+function sheetHandlers(context: SheetContext): { handlers: TagHandlers; rows: () => XlsxReadCell[][] } {
   const { sharedStrings, dateStyles, date1904, limits } = context;
   const rows: XlsxReadCell[][] = [];
   const valueText = new TextBuffer(limits);
@@ -661,7 +812,8 @@ function parseSheet(data: Buffer, context: SheetContext): XlsxReadCell[][] {
     }
   };
 
-  parsePart(data, {
+  return {
+    handlers: {
     open(name, attributes) {
       if (name === 'sheetData') {
         inSheetData = true;
@@ -739,16 +891,33 @@ function parseSheet(data: Buffer, context: SheetContext): XlsxReadCell[][] {
       if (inValue) valueText.add(value);
       else if (inInlineText) inlineText.add(value);
     },
-  }, limits);
-  return rows;
+    },
+    rows: () => rows,
+  };
+}
+
+/** Parses a worksheet part held whole in memory (the synchronous reader). */
+function parseSheet(data: Buffer, context: SheetContext): XlsxReadCell[][] {
+  const sheet = sheetHandlers(context);
+  parsePart(data, sheet.handlers, context.limits);
+  return sheet.rows();
 }
 
 // ---------------------------------------------------------------------------------------------------
 
 const RELATIONSHIP_TYPE = (type: string, name: string): boolean => type.endsWith(`/${name}`);
 
-function readWorkbook(buffer: Buffer, limits: XlsxReadLimits): XlsxGrid {
-  const archive = openArchive(buffer, limits);
+interface WorkbookParts {
+  workbook: WorkbookInfo;
+  relationships: Relationship[];
+  sheetEntry: AdmZip.IZipEntry;
+  sheetName: string;
+  stylesEntry: AdmZip.IZipEntry | null;
+  sharedStringsEntry: AdmZip.IZipEntry | null;
+}
+
+/** The parts the reader needs: the workbook, its relationships, the first worksheet, styles, shared strings. */
+function locateParts(archive: BoundedArchive, limits: XlsxReadLimits): WorkbookParts {
   const workbookEntry = findEntry(archive, 'xl/workbook.xml');
   const relsEntry = findEntry(archive, 'xl/_rels/workbook.xml.rels');
   if (!workbookEntry || !relsEntry) throw new XlsxReadError('XLSX_NOT_WORKBOOK', NOT_WORKBOOK_MESSAGE);
@@ -777,16 +946,54 @@ function readWorkbook(buffer: Buffer, limits: XlsxReadLimits): XlsxGrid {
     const name = rel ? partName(rel.target) : fallback;
     return name ? findEntry(archive, name) : null;
   };
-  const stylesEntry = relatedPart('styles', 'xl/styles.xml');
-  const sharedStringsEntry = relatedPart('sharedStrings', 'xl/sharedStrings.xml');
+  return {
+    workbook,
+    relationships,
+    sheetEntry,
+    sheetName,
+    stylesEntry: relatedPart('styles', 'xl/styles.xml'),
+    sharedStringsEntry: relatedPart('sharedStrings', 'xl/sharedStrings.xml'),
+  };
+}
 
-  const dateStyles = stylesEntry ? parseStyles(readPart(archive, stylesEntry, limits), limits) : [];
-  const sharedStrings = sharedStringsEntry ? parseSharedStrings(readPart(archive, sharedStringsEntry, limits), limits) : [];
-  const rows = parseSheet(readPart(archive, sheetEntry, limits), {
+function readWorkbook(buffer: Buffer, limits: XlsxReadLimits): XlsxGrid {
+  const archive = openArchive(buffer, limits);
+  const parts = locateParts(archive, limits);
+  const dateStyles = parts.stylesEntry ? parseStyles(readPart(archive, parts.stylesEntry, limits), limits) : [];
+  const sharedStrings = parts.sharedStringsEntry ? parseSharedStrings(readPart(archive, parts.sharedStringsEntry, limits), limits) : [];
+  const rows = parseSheet(readPart(archive, parts.sheetEntry, limits), {
     sharedStrings,
     dateStyles,
-    date1904: workbook.date1904,
+    date1904: parts.workbook.date1904,
     limits,
   });
-  return { sheetName, sheetCount: workbook.sheets.length, rows };
+  return { sheetName: parts.sheetName, sheetCount: parts.workbook.sheets.length, rows };
+}
+
+/**
+ * `readWorkbook` with the worksheet part read as a stream: the small parts are still held whole.
+ * A process has two places at most, because the stream returns before the caller has used its grid:
+ * without them, N parallel imports would hold N grids (about 200 MB each at the import row cap).
+ */
+async function readWorkbookAsync(buffer: Buffer, limits: XlsxReadLimits): Promise<XlsxGrid> {
+  await workbookReadSlots.acquire();
+  XLSX_READ_ACTIVITY.active += 1;
+  XLSX_READ_ACTIVITY.peak = Math.max(XLSX_READ_ACTIVITY.peak, XLSX_READ_ACTIVITY.active);
+  try {
+    const archive = openArchive(buffer, limits);
+    const parts = locateParts(archive, limits);
+    const dateStyles = parts.stylesEntry ? parseStyles(readPart(archive, parts.stylesEntry, limits), limits) : [];
+    const sharedStrings = parts.sharedStringsEntry ? parseSharedStrings(readPart(archive, parts.sharedStringsEntry, limits), limits) : [];
+    const sheet = sheetHandlers({
+      sharedStrings,
+      dateStyles,
+      date1904: parts.workbook.date1904,
+      limits,
+    });
+    await streamPart(archive, parts.sheetEntry, sheet.handlers, limits);
+    return { sheetName: parts.sheetName, sheetCount: parts.workbook.sheets.length, rows: sheet.rows() };
+  } finally {
+    XLSX_READ_ACTIVITY.active -= 1;
+    workbookReadSlots.release();
+  }
 }
