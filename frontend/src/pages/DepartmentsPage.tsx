@@ -25,7 +25,7 @@ export default function DepartmentsPage() {
   const { hasLevel } = useAuth();
 
   if (!hasLevel('departments', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="departments" level="reader" />;
   }
 
   const [refreshKey, setRefreshKey] = useState(0);

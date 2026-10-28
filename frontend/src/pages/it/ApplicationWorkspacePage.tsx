@@ -1622,7 +1622,7 @@ export default function ApplicationWorkspacePage() {
   }, [byField.lifecycleStatus, theme.palette.mode]);
 
   // Creating an application takes the member level, as the server does.
-  if (isCreate && !canManage) return <ForbiddenPage />;
+  if (isCreate && !canManage) return <ForbiddenPage resource="applications" level="member" />;
 
   if (!isCreate && appQuery.isLoading && !app) {
     return (

@@ -459,7 +459,7 @@ export default function RequestsPage() {
   }), [initialFilterModel]);
 
   if (!hasLevel('portfolio_requests', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="portfolio_requests" level="reader" />;
   }
 
   const openNewRequest = () => {

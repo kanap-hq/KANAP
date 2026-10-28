@@ -24,7 +24,7 @@ export default function ContactsPage() {
   const navigate = useNavigate();
 
   if (!hasLevel('contacts', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="contacts" level="reader" />;
   }
 
   const [refreshKey, setRefreshKey] = useState(0);

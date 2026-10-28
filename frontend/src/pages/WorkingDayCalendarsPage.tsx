@@ -41,7 +41,7 @@ const CODE_CELL_STYLE = {
 
 export default function WorkingDayCalendarsPage() {
   const { hasLevel } = useAuth();
-  if (!hasLevel('working_day_profiles', 'reader')) return <ForbiddenPage />;
+  if (!hasLevel('working_day_profiles', 'reader')) return <ForbiddenPage resource="working_day_profiles" level="reader" />;
   return <WorkingDayCalendarsList />;
 }
 

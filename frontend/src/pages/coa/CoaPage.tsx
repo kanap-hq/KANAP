@@ -386,7 +386,7 @@ export default function CoaPage() {
 
   // After every hook: the hook count stays the same whatever the access level.
   if (!canRead) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="accounts" level="reader" />;
   }
 
   const accountActions = (canCreateAccount || canAdmin) && (

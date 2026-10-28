@@ -109,6 +109,21 @@ function isNavItem(entry: NavEntry): entry is NavItem {
   return 'to' in entry;
 }
 
+/** The workspace of an address, which the top bar highlights. */
+function workspaceOfPath(p: string): WorkspaceKey | 'home' {
+  // A refusal of a section the person does not see belongs to none, as the home page.
+  if (p === '/' || p === '/403') return 'home';
+  if (p.startsWith('/admin')) return 'admin';
+  if (p.startsWith('/ai')) return 'ai';
+  if (p.startsWith('/agents')) return 'agents';
+  if (p.startsWith('/master-data')) return 'master-data';
+  if (p.startsWith('/portfolio')) return 'portfolio';
+  if (p.startsWith('/knowledge')) return 'knowledge';
+  if (p.startsWith('/it')) return 'it';
+  if (p.startsWith('/settings')) return 'home';
+  return 'ops';
+}
+
 /** The resources that grant an item: any one suffices. Empty for an item open to everyone. */
 const itemResources = (item: NavItem): string[] => item.anyResource ?? (item.resource ? [item.resource] : []);
 
@@ -336,21 +351,18 @@ export default function Layout() {
     return all.filter(ws => hasWorkspaceAccess(ws));
   }, [isPlatformHost, hasWorkspaceAccess]);
 
+  // The refusal page shows in the section of the address it refused, when the person sees that section.
+  const refusedFrom = location.pathname === '/403' ? (location.state as { from?: unknown } | null)?.from : undefined;
+  const shownPath = typeof refusedFrom === 'string' && refusedFrom.startsWith('/') && !refusedFrom.startsWith('//')
+    && (visibleWorkspaces as readonly string[]).includes(workspaceOfPath(refusedFrom))
+    ? refusedFrom
+    : location.pathname;
+
   // Derive active workspace from the current route to keep the top bar highlight in sync
-  const workspace: WorkspaceKey | 'home' = React.useMemo(() => {
-    if (isPlatformHost) return 'admin';
-    const p = location.pathname;
-    if (p === '/') return 'home';
-    if (p.startsWith('/admin')) return 'admin';
-    if (p.startsWith('/ai')) return 'ai';
-    if (p.startsWith('/agents')) return 'agents';
-    if (p.startsWith('/master-data')) return 'master-data';
-    if (p.startsWith('/portfolio')) return 'portfolio';
-    if (p.startsWith('/knowledge')) return 'knowledge';
-    if (p.startsWith('/it')) return 'it';
-    if (p.startsWith('/settings')) return 'home';
-    return 'ops';
-  }, [location.pathname, isPlatformHost]);
+  const workspace: WorkspaceKey | 'home' = React.useMemo(
+    () => (isPlatformHost ? 'admin' : workspaceOfPath(shownPath)),
+    [shownPath, isPlatformHost],
+  );
   const [navOpen, setNavOpen] = React.useState<boolean>(() => {
     // Default to open unless explicitly stored as 'false'
     try {
@@ -639,7 +651,7 @@ export default function Layout() {
             const returnTo = new URLSearchParams(location.search).get('returnTo');
             const navPath = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')
               ? returnTo.split(/[?#]/)[0]
-              : location.pathname;
+              : shownPath;
             const matches = (to: string) => navPath === to || navPath.startsWith(to + '/')
               || (to === '/ops/budget' && /^\/ops\/(opex|capex)(\/|$)/.test(navPath));
             const selectedTo = visible.filter(isNavItem).map((entry) => entry.to).filter(matches)

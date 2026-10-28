@@ -252,7 +252,7 @@ export default function TechnologiesPage() {
   ], [LinkCell, SupportEndCell, editorValues, familyValues, hostingTypeValues, labelFor, lifecycleValues, t, vulnerabilityFeed]);
 
   if (!hasLevel('infrastructure', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="infrastructure" level="reader" />;
   }
 
   const openLinkFile = (file: LinkFile) => {

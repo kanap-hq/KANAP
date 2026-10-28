@@ -39,7 +39,7 @@ export default function BusinessProcessesPage() {
   const { hasLevel } = useAuth();
 
   if (!hasLevel('business_processes', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="business_processes" level="reader" />;
   }
 
   const [refreshKey, setRefreshKey] = useState(0);

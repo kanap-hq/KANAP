@@ -281,6 +281,45 @@ describe('Layout master data sidebar', () => {
   });
 });
 
+describe('Layout on the refusal page', () => {
+  function renderRefusal(from: string) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[{ pathname: '/403', state: { from } }]}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/403" element={<div>refusal</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  it('shows the section of the refused address', () => {
+    renderRefusal('/master-data/contacts/new/overview');
+    expect(screen.getByRole('tab', { name: 'nav:workspaces.masterData' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.masterData.contacts' })).toHaveClass('Mui-selected');
+  });
+
+  it('ignores a refused address outside the app', () => {
+    renderRefusal('//example.com/master-data/contacts');
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.masterData.contacts' })).not.toBeInTheDocument();
+  });
+
+  it('highlights no section for a refused address in a section the person does not see', () => {
+    access.grants = { contacts: 'reader' };
+    try {
+      renderRefusal('/ops/budget');
+      expect(screen.getAllByRole('tab').filter((tab) => tab.getAttribute('aria-selected') === 'true')).toEqual([]);
+      expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.overview' })).not.toBeInTheDocument();
+    } finally {
+      access.grants = null;
+    }
+  });
+});
+
 describe('Layout administration sidebar: sample data', () => {
   afterEach(() => {
     access.isGlobalAdmin = false;

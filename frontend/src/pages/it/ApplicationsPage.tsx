@@ -453,7 +453,7 @@ export default function ApplicationsPage() {
   const formatYesNo = useCallback((b?: boolean) => (b ? t('enums.yesNo.yes') : t('enums.yesNo.no')), []);
 
   if (!hasLevel('applications', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="applications" level="reader" />;
   }
 
   const OwnersCell = useMemo(() => {

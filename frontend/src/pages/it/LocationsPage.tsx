@@ -39,7 +39,7 @@ export default function LocationsPage() {
   const { labelFor, settings, byField } = useItOpsEnumOptions();
 
   if (!hasLevel('locations', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="locations" level="reader" />;
   }
   const hostingTypeCategory = useCallback(
     (code?: string) => {

@@ -1537,7 +1537,7 @@ export default function VulnerabilitiesPage() {
   );
 
   if (!enabled) return null;
-  if (!allowed) return <ForbiddenPage />;
+  if (!allowed) return <ForbiddenPage resource="infrastructure" level="reader" />;
 
   const exportFile = async (format: ExportFormat) => {
     setExportError(false);

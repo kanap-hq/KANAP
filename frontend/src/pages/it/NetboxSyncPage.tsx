@@ -1555,7 +1555,7 @@ export function NetboxSyncPanel() {
   });
 
   if (!canManage) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="infrastructure" level="admin" />;
   }
 
   const items = recordsQuery.data?.items || [];
@@ -1745,7 +1745,7 @@ export function NetboxSyncPanel() {
 export default function NetboxSyncPage() {
   const { t } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
-  if (!hasLevel('infrastructure', 'admin')) return <ForbiddenPage />;
+  if (!hasLevel('infrastructure', 'admin')) return <ForbiddenPage resource="infrastructure" level="admin" />;
   return (
     <>
       <PageHeader title={t('pages.netbox.title')} />

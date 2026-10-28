@@ -50,7 +50,7 @@ async function valuesDeleteCheck(t: TFunction, ids: string[]): Promise<DeleteChe
 
 export default function AnalyticsCategoriesPage() {
   const { hasLevel } = useAuth();
-  if (!hasLevel('analytics', 'reader')) return <ForbiddenPage />;
+  if (!hasLevel('analytics', 'reader')) return <ForbiddenPage resource="analytics" level="reader" />;
   return <AnalyticsValuesList />;
 }
 

@@ -131,7 +131,7 @@ export default function TasksPage() {
   const theme = useTheme();
 
   if (!hasLevel('tasks', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="tasks" level="reader" />;
   }
 
   // Read filters from URL to restore state when returning from workspace: inline, or the saved

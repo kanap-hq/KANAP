@@ -24,7 +24,7 @@ export default function SuppliersPage() {
   const { hasLevel, dataAccess } = useAuth();
 
   if (!hasLevel('suppliers', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="suppliers" level="reader" />;
   }
 
   const [refreshKey, setRefreshKey] = useState(0);

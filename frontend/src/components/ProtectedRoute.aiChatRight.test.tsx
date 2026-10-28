@@ -62,6 +62,7 @@ function renderAt(path: string) {
         <Route element={<ProtectedRoute />}>
           <Route path="/ai" element={<div>assistant page</div>} />
           <Route path="/it/applications" element={<div>applications page</div>} />
+          <Route path="/master-data" element={<div>master data page</div>} />
         </Route>
         <Route path="/403" element={<ForbiddenPage />} />
       </Routes>
@@ -108,8 +109,8 @@ describe('403 page for the assistant', () => {
     expect(screen.getByText('forbidden.message')).toBeInTheDocument();
   });
 
-  it('keeps the generic text for other pages', () => {
-    renderAt('/it/applications');
+  it('keeps the generic text when no single right is known', () => {
+    renderAt('/master-data');
     expect(screen.getByText('forbidden.message')).toBeInTheDocument();
   });
 });

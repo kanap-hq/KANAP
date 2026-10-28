@@ -428,7 +428,7 @@ export default function AuditLogsPage() {
   }, [getFilterValues, locale, t]);
 
   if (!hasLevel('users', 'admin')) {
-      return <ForbiddenPage />;
+      return <ForbiddenPage resource="users" level="admin" />;
   }
 
   return (
