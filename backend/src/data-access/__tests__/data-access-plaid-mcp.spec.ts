@@ -698,6 +698,38 @@ async function testPlaidRelationWrites(): Promise<void> {
   assert.equal(removedReadOnly.status, 'failed', 'Plaid removes read-only L3 from the contract');
   assert.equal(removedReadOnly.error_message, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Plaid removes read-only L3 from the contract');
   assert.deepEqual(await linkedContractLines(), ['L1', 'L3'], 'the refusal left the links untouched');
+  // A hidden line linked to the visible contract: a replacement reads the stored links through
+  // `spend_items`, so it leaves the hidden link alone instead of deleting it (the link trigger
+  // would refuse that 42501). Rita adds an editable line and removes it again beside the hidden one.
+  await inTenant(() => client.query(
+    `INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`,
+    [s.tenantId, contractVisible, s.lines.L5],
+  ));
+  try {
+    // A fresh conversation: the same change asked after the record moved on is a new preview.
+    const previousConversation = conversations[rita];
+    conversations[rita] = randomUUID();
+    await inTenant(() => client.query(
+      `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at)
+       VALUES ($1, $2, $3, 'Data access 4D hidden link', 'custom', 'da-4d-model', 'custom', now(), now())`,
+      [conversations[rita], s.tenantId, rita],
+    ));
+    try {
+      const removeBesideHidden = await preview(rita, 'update_entity_relations', contractRelation({ remove: [s.lines.L1] }));
+      assert.equal((await approve(rita, removeBesideHidden.preview_id)).status, 'executed', 'removing L1 beside a hidden link executed');
+      assert.deepEqual(await linkedContractLines(), ['L3', 'L5'], 'the hidden link stays after the removal');
+      const addBesideHidden = await preview(rita, 'update_entity_relations', contractRelation({ add: [s.lines.L1] }));
+      assert.equal((await approve(rita, addBesideHidden.preview_id)).status, 'executed', 'adding L1 beside a hidden link executed');
+      assert.deepEqual(await linkedContractLines(), ['L1', 'L3', 'L5'], 'the hidden link stays after the addition');
+    } finally {
+      conversations[rita] = previousConversation;
+    }
+  } finally {
+    await inTenant(() => client.query(
+      `DELETE FROM contract_spend_items WHERE tenant_id = $1 AND contract_id = $2 AND spend_item_id = $3`,
+      [s.tenantId, contractVisible, s.lines.L5],
+    ));
+  }
   console.log('  Plaid relation writes: hidden line refused as missing, visible links replaced, hidden link kept, contract links only re-check new targets: OK');
 }
 

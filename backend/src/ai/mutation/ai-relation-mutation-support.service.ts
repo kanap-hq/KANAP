@@ -5,6 +5,7 @@ import { AuditService } from '../../audit/audit.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
 import { assertLinesEditable } from '../../data-access/line-write-checks';
 import { assertContractReadable, assertContractsEditable } from '../../data-access/contract-write-checks';
+import { budgetLineReferenceNumbers } from '../../common/resolve-item-id';
 import { AiPolicyService } from '../ai-policy.service';
 import { auditTableOf, BUDGET_LINE_PREFIX, BUDGET_NATURES, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
 import {
@@ -532,19 +533,66 @@ export class AiRelationMutationSupportService {
         { source: audit.source, sourceRef: audit.sourceRef },
       );
     }
-    await this.audit.log(
-      {
-        table: this.auditTableName(config, sourceNature),
-        recordId: preview.target_entity_id,
-        action: 'update',
-        before: expectedItems,
-        after: nextItems,
-        userId: context.userId,
-        source: audit.source,
-        sourceRef: audit.sourceRef,
-      },
-      { manager: context.manager },
+    await this.logRelationAudit(context, config, preview, sourceNature, expectedItems, nextItems, audit);
+  }
+
+  /**
+   * The audit row(s) of a relation update. The screens log a line's links under the table of the
+   * line's nature (`application_capex_items` for a CAPEX line, `application_spend_items` for an
+   * OPEX one): one row per nature the update changes, with the same before/after sets the screen
+   * writes. A budget line's own relation keeps its source nature (`auditTableName`).
+   */
+  private async logRelationAudit(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    preview: AiMutationPreview,
+    sourceNature: BudgetNature | null,
+    before: RelationItem[],
+    after: RelationItem[],
+    audit: AiMutationAuditOptions,
+  ): Promise<void> {
+    const tables = config.kind === 'simple' && config.target === 'budget_lines' && config.sourceEntity !== 'budget_lines'
+      ? await this.changedLineAuditTables(context, config.table, before, after)
+      : [this.auditTableName(config, sourceNature)];
+    for (const table of tables) {
+      await this.audit.log(
+        {
+          table,
+          recordId: preview.target_entity_id!,
+          action: 'update',
+          before,
+          after,
+          userId: context.userId,
+          source: audit.source,
+          sourceRef: audit.sourceRef,
+        },
+        { manager: context.manager },
+      );
+    }
+  }
+
+  /**
+   * The audit tables of the lines a relation adds or removes, one per nature (`auditTableOf`).
+   * Only the changed lines count: a line that stays linked is not a write on it.
+   */
+  private async changedLineAuditTables(
+    context: AiExecutionContextWithManager,
+    table: string,
+    before: RelationItem[],
+    after: RelationItem[],
+  ): Promise<string[]> {
+    const beforeKeys = new Set(before.map((item) => item.key.toLowerCase()));
+    const afterKeys = new Set(after.map((item) => item.key.toLowerCase()));
+    const changed = Array.from(new Set([...beforeKeys, ...afterKeys]))
+      .filter((key) => beforeKeys.has(key) !== afterKeys.has(key));
+    if (changed.length === 0) return [table];
+    const rows: Array<{ nature: BudgetNature }> = await context.manager.query(
+      `SELECT DISTINCT nature FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[])${naturesAnd(null, BUDGET_NATURES)}`,
+      [context.tenantId, changed],
     );
+    const natures = new Set(rows.map((row) => row.nature));
+    const tables = BUDGET_NATURES.filter((nature) => natures.has(nature)).map((nature) => auditTableOf(nature, table));
+    return tables.length > 0 ? tables : [table];
   }
 
   /**
@@ -1052,7 +1100,7 @@ export class AiRelationMutationSupportService {
       case 'applications': return { table: 'applications', labelSql: `COALESCE(NULLIF(CONCAT(COALESCE(t.sequential_id, ''), ' - ', t.name), ' - '), t.name, t.id::text)` };
       case 'assets': return { table: 'assets', labelSql: `COALESCE(NULLIF(CONCAT(COALESCE(t.asset_reference, ''), ' - ', t.name), ' - '), t.name, t.id::text)` };
       case 'business_processes': return { table: 'business_processes', labelSql: 'COALESCE(t.name, t.id::text)' };
-      case 'budget_lines': return { table: 'spend_items', labelSql: 'COALESCE(t.product_name, t.id::text)', where: naturesAnd('t', BUDGET_NATURES) };
+      case 'budget_lines': return { table: 'spend_items', labelSql: `COALESCE(NULLIF(CONCAT('${BUDGET_LINE_PREFIX}-', t.item_number::text, ' - ', t.product_name), ''), t.id::text)`, where: naturesAnd('t', BUDGET_NATURES) };
       case 'companies': return { table: 'companies', labelSql: 'COALESCE(t.name, t.id::text)' };
       case 'contacts': return { table: 'contacts', labelSql: `COALESCE(NULLIF(TRIM(CONCAT(COALESCE(t.first_name, ''), ' ', COALESCE(t.last_name, ''))), ''), t.email, t.id::text)` };
       case 'contracts': return { table: 'contracts', labelSql: 'COALESCE(t.name, t.id::text)' };
@@ -1088,7 +1136,8 @@ export class AiRelationMutationSupportService {
     if (config.sourceEntity === 'assets') return { table: 'asset_support_contacts', sourceColumn: 'asset_id', includeOrigin: false };
     if (config.sourceEntity === 'contracts') return { table: 'contract_contacts', sourceColumn: 'contract_id', includeOrigin: true };
     if (config.sourceEntity === 'budget_lines') return { table: 'spend_item_contacts', sourceColumn: 'spend_item_id', includeOrigin: true };
-    return { table: 'location_contacts', sourceColumn: 'location_id', includeOrigin: false };
+    // No silent fallback: another source would read and write `location_contacts` as its own.
+    throw new BadRequestException(`No contact relation table for ${config.sourceEntity}.${config.relation}.`);
   }
 
   private async loadContactRoles(context: AiExecutionContextWithManager, config: RelationConfig, sourceId: string): Promise<RelationItem[]> {
@@ -1325,6 +1374,7 @@ export class AiRelationMutationSupportService {
         if (lines.length !== targetIds.length) throw new NotFoundException('Budget line not found.');
         const existing: Array<{ id: string }> = await context.manager.query(
           `SELECT l.spend_item_id AS id FROM contract_spend_items l
+             JOIN spend_items i ON i.tenant_id = l.tenant_id AND i.id = l.spend_item_id${naturesAnd('i', BUDGET_NATURES)}
             WHERE l.tenant_id = $1 AND l.contract_id = $2`,
           [context.tenantId, sourceId],
         );
@@ -1336,8 +1386,9 @@ export class AiRelationMutationSupportService {
           existing.map((row) => row.id).filter((id) => !targetIds.includes(id)),
         );
         await context.manager.query(
-          `DELETE FROM contract_spend_items l
+          `DELETE FROM contract_spend_items l USING spend_items i
             WHERE l.tenant_id = $1 AND l.contract_id = $2
+              AND i.tenant_id = l.tenant_id AND i.id = l.spend_item_id${naturesAnd('i', BUDGET_NATURES)}
               AND NOT (l.spend_item_id = ANY($3::uuid[]))`,
           [context.tenantId, sourceId, targetIds],
         );
@@ -1677,13 +1728,12 @@ export class AiRelationMutationSupportService {
         return manager.query(`SELECT * FROM business_processes WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
       case 'budget_lines': {
         // Both natures in one family (`spend/budget-nature.ts`); a line keeps its own nature.
-        // A reference names `BL-n`, a legacy `OPX-n` or `CPX-n`; a name or a bare number stays a name.
-        const number = ref.toUpperCase().match(/^(BL|OPX|CPX)-(\d+)$/);
-        const itemNumber = number && number[1] !== 'CPX' ? Number(number[2]) : -1;
-        const legacyNumber = number ? `${number[1]}-${number[2]}` : null;
+        // A reference names `BL-n` or a bare number, or a legacy `OPX-n` / `CPX-n`
+        // (`budgetLineReferenceNumbers`); a name stays a name.
+        const number = budgetLineReferenceNumbers(ref);
         return manager.query(
           `SELECT * FROM spend_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text) OR item_number = $3 OR legacy_number = $4::text)${naturesAnd(null, BUDGET_NATURES)} ORDER BY product_name LIMIT 6`,
-          [tenantId, ref, itemNumber, legacyNumber],
+          [tenantId, ref, number.itemNumber, number.legacyNumber],
         );
       }
       case 'companies':
@@ -1740,7 +1790,7 @@ export class AiRelationMutationSupportService {
       }
       case 'projects': return [row.item_number == null ? null : `PRJ-${row.item_number}`, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled project';
       case 'requests': return [row.item_number == null ? null : `REQ-${row.item_number}`, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled request';
-      case 'budget_lines': return textOrNull(row.product_name) || 'Untitled budget line';
+      case 'budget_lines': return [row.item_number == null ? null : `${BUDGET_LINE_PREFIX}-${row.item_number}`, row.product_name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled budget line';
       case 'locations': return [row.location_reference, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled location';
       case 'users': {
         const name = [row.first_name, row.last_name].map(textOrNull).filter(Boolean).join(' ');
