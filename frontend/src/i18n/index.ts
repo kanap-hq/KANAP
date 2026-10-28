@@ -1,7 +1,7 @@
 import i18n, { type InitOptions, type Resource, type ResourceLanguage } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { z } from 'zod';
-import { formatCount } from './formatters';
+import { formatCount, frenchSpacing } from './formatters';
 import { mergeAbbreviationPeriods } from '../lib/dateFormat';
 import { bundledLocales, localeLoaders, type TranslationTree } from './localeSource';
 
@@ -197,6 +197,14 @@ i18n
     name: 'abbreviationPeriod',
     process: (value: string, _key: unknown, options: { lng?: string } | undefined, translator: { language?: string }) =>
       mergeAbbreviationPeriods(value, options?.lng ?? translator?.language ?? 'en'),
+  })
+  .use({
+    type: 'postProcessor',
+    name: 'frenchSpacing',
+    process: (value: string, _key: unknown, options: { lng?: string } | undefined, translator: { language?: string }) => {
+      const language = options?.lng ?? translator?.language ?? 'en';
+      return resolveSupportedLocale(language) === 'fr' ? frenchSpacing(value) : value;
+    },
   });
 
 /** `<html lang>` follows the interface language (screen readers, hyphenation, browser translation). */
@@ -224,7 +232,7 @@ i18n.on('languageChanged', (lng) => {
 function i18nOptions(lng: SupportedLocale, resources: Resource): InitOptions {
   return {
     lng,
-    postProcess: ['abbreviationPeriod'],
+    postProcess: ['abbreviationPeriod', 'frenchSpacing'],
     resources,
     fallbackLng: 'en',
     supportedLngs: [...SUPPORTED_LOCALE_CODES],
