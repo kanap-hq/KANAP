@@ -106,9 +106,11 @@ async function testLineIsFoundByItsReference() {
   assert.deepEqual(queries[0].params, ['tenant-1', 'BL-146', 146, null]);
   assert.match(queries[0].sql, /nature IN \('opex', 'capex'\)/);
   await (service as any).resolveItem(context, 'CPX-7');
-  assert.deepEqual(queries[1].params, ['tenant-1', 'CPX-7', -1, 'CPX-7']);
+  assert.deepEqual(queries[1].params, ['tenant-1', 'CPX-7', null, 'CPX-7']);
+  await (service as any).resolveItem(context, 'OPX-7');
+  assert.deepEqual(queries[2].params, ['tenant-1', 'OPX-7', null, 'OPX-7']);
   await (service as any).resolveItem(context, 'Monitoring');
-  assert.deepEqual(queries[2].params, ['tenant-1', 'Monitoring', -1, null]);
+  assert.deepEqual(queries[3].params, ['tenant-1', 'Monitoring', null, null]);
 }
 
 async function main() {

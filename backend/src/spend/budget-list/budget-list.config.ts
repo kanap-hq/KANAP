@@ -21,7 +21,7 @@ import {
 } from '../spend-summary.builder';
 import { fxKeyCurrency, fxSetKeySql, fxTableSql } from './budget-fx-table';
 import type { BudgetListRuntime, RuntimeNeeds } from './budget-list.runtime';
-import { lineNumberSql, natureAnd } from '../budget-nature';
+import { BUDGET_NATURES, lineNumberSql, natureAnd, naturesAnd } from '../budget-nature';
 
 /**
  * The OPEX and CAPEX lists as a list-engine config, built from the scope
@@ -795,7 +795,7 @@ export class BudgetListConfig implements ListConfig {
       (applies === 'opex' ? natureLists.opex : applies === 'capex' ? natureLists.capex : natureLists.both).push(id);
     });
     const axisNatures = s.allNatures
-      ? ` JOIN spend_items li ON li.tenant_id = a.tenant_id AND li.id = a.item_id
+      ? ` JOIN spend_items li ON li.tenant_id = a.tenant_id AND li.id = a.item_id${naturesAnd('li', BUDGET_NATURES)}
         AND (a.axis_id = ANY(${stmt.bind(natureLists.both, 'uuid[]')})
           OR (li.nature = 'opex' AND a.axis_id = ANY(${stmt.bind(natureLists.opex, 'uuid[]')}))
           OR (li.nature = 'capex' AND a.axis_id = ANY(${stmt.bind(natureLists.capex, 'uuid[]')})))`

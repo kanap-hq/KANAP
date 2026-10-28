@@ -4,8 +4,8 @@ import { ContactsService } from '../../contacts/contacts.service';
 import { InterfacesService } from '../../interfaces/services/interfaces.service';
 import { KnowledgeService } from '../../knowledge/knowledge.service';
 import { LocationsService } from '../../locations/locations.service';
-import { parseItemRef } from '../../common/resolve-item-id';
-import { BUDGET_LINE_PREFIX, LEGACY_PREFIX, natureAnd, type BudgetNature } from '../../spend/budget-nature';
+import { budgetLineReferenceNumbers, parseItemRef } from '../../common/resolve-item-id';
+import { BUDGET_LINE_PREFIX, natureAnd, type BudgetNature } from '../../spend/budget-nature';
 import { CapexItemsDeleteService, SpendItemsDeleteService } from '../../spend/spend-items-delete.service';
 import { assertTaskDeletable } from '../../tasks/task-data-access';
 import { originRefusals, TasksDeleteService } from '../../tasks/tasks-delete.service';
@@ -413,9 +413,9 @@ export class AiDeleteMutationSupportService {
   }
 
   /**
-   * The line a reference names, of either nature: `BL-n` its own number, `OPX-n` an OPEX line's
-   * number or legacy number, `CPX-n` a CAPEX line's legacy number, as `write_financial_plan` reads
-   * them; a UUID or an exact title also works.
+   * The line a reference names, of either nature: `BL-n` or a bare number its own number, `OPX-n`
+   * an OPEX line's legacy number, `CPX-n` a CAPEX line's, as `write_financial_plan` reads them; a
+   * UUID or an exact title also works.
    */
   private async resolveSpendLine(
     context: AiExecutionContextWithManager,
@@ -423,9 +423,8 @@ export class AiDeleteMutationSupportService {
   ): Promise<{ id: string; ref: string; title: string; nature: BudgetNature; updatedAt: string | null }> {
     const normalized = String(ref ?? '').trim();
     if (!normalized) throw new BadRequestException('Budget line reference is required.');
-    // A name, or a bare number, names no line number (as `write_financial_plan`): it matches the title.
+    // A name also works; a reference number follows the one rule (`budgetLineReferenceNumbers`).
     const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normalized);
-    const match = normalized.toUpperCase().match(/^(BL|OPX|CPX)-(\d+)$/);
     type Row = { id: string; nature: BudgetNature; product_name: string | null; item_number: number | null; updated_at: Date | string | null };
     let rows: Row[];
     if (uuid) {
@@ -437,9 +436,7 @@ export class AiDeleteMutationSupportService {
         [context.tenantId, normalized],
       );
     } else {
-      const numbers = match
-        ? this.budgetLineNumbers(match[1], Number(match[2]))
-        : { itemNumber: -1, legacyNumber: null };
+      const numbers = budgetLineReferenceNumbers(normalized);
       rows = await context.manager.query(
         `SELECT id, nature, product_name, item_number, updated_at
            FROM spend_items
@@ -466,17 +463,6 @@ export class AiDeleteMutationSupportService {
       nature: row.nature === 'capex' ? 'capex' : 'opex',
       updatedAt: isoTimestamp(row.updated_at),
     };
-  }
-
-  /** The numbers a budget line reference names, as `write_financial_plan` reads them. */
-  private budgetLineNumbers(
-    prefix: string,
-    value: number,
-  ): { itemNumber: number; legacyNumber: string | null } {
-    if (prefix === BUDGET_LINE_PREFIX) return { itemNumber: value, legacyNumber: null };
-    if (prefix === 'OPX') return { itemNumber: value, legacyNumber: `OPX-${value}` };
-    if (prefix === 'CPX') return { itemNumber: -1, legacyNumber: `CPX-${value}` };
-    return { itemNumber: -1, legacyNumber: null };
   }
 
   /**

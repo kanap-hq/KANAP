@@ -10,7 +10,8 @@ import {
   resolveAiParticipationAccessScope,
 } from '../query/ai-query-scope.util';
 import { taskIncidentVisibilitySql } from '../../incidents/incident-visibility';
-import { BUDGET_LINE_PREFIX, LEGACY_PREFIX } from '../../spend/budget-nature';
+import { budgetLineReferenceNumbers } from '../../common/resolve-item-id';
+import { BUDGET_LINE_PREFIX } from '../../spend/budget-nature';
 
 const TASK_REF_RE = /^T-(\d+)$/i;
 const PROJECT_REF_RE = /^(?:PRJ-|project\s+#?|prj\s+#?|#)?(\d+)$/i;
@@ -341,7 +342,8 @@ export class AiTaskMutationSupportService {
         );
       }
     } else if (mode === 'budget_line') {
-      const match = normalized.toUpperCase().match(/^(BL|OPX|CPX)-(\d+)$/);
+      const numbers = budgetLineReferenceNumbers(normalized);
+      const byNumber = numbers.itemNumber != null || numbers.legacyNumber != null;
       rows = await context.manager.query(
         `SELECT id,
                 target.${config.nameColumn} AS name,
@@ -350,9 +352,9 @@ export class AiTaskMutationSupportService {
                 target.updated_at
          FROM ${config.table} target
          WHERE target.tenant_id = $1${config.where ? ` AND ${config.where}` : ''}
-           AND (${match ? 'item_number = $2 OR legacy_number = $3' : 'FALSE'})
+           AND (${byNumber ? 'item_number = $2 OR legacy_number = $3' : 'FALSE'})
          LIMIT 1`,
-        [context.tenantId, match && match[1] !== 'CPX' ? Number(match[2]) : -1, match ? `${match[1]}-${match[2]}` : null],
+        [context.tenantId, numbers.itemNumber, numbers.legacyNumber],
       );
       if (!rows[0]) {
         // A title, as the task screen searches (the reference above names a number only).
@@ -411,9 +413,9 @@ export class AiTaskMutationSupportService {
         itemNumberSql = ` OR target.item_number = $${params.length}`;
       }
     } else if (mode === 'budget_line') {
-      const match = normalized.toUpperCase().match(/^(BL|OPX|CPX)-(\d+)$/);
-      if (match) {
-        params.push(match[1] !== 'CPX' ? Number(match[2]) : -1, `${match[1]}-${match[2]}`);
+      const numbers = budgetLineReferenceNumbers(normalized);
+      if (numbers.itemNumber != null || numbers.legacyNumber != null) {
+        params.push(numbers.itemNumber, numbers.legacyNumber);
         itemNumberSql = ` OR target.item_number = $${params.length - 1} OR target.legacy_number = $${params.length}::text`;
       }
     }

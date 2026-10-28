@@ -286,7 +286,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
       return versionId;
     });
 
-  const opexLine = await line(9001, 'opex', 'ERP licence');
+  const opexLine = await line(9001, 'opex', 'ERP licence', 'OPX-9001');
   const opexVersion = await version(opexLine, 2026, 1200);
   // A second month of the same version: the card still counts one version.
   await runner.query(

@@ -6,8 +6,8 @@ import { CapexAllocationsService, SpendAllocationsService } from '../../spend/sp
 import { lockBudgetLine, lockBudgetVersions } from '../../spend/budget-locks';
 import { CapexAmountsService, SpendAmountsService } from '../../spend/spend-amounts.service';
 import { CapexVersionsService, SpendVersionsService } from '../../spend/spend-versions.service';
-import { auditTableOf, BUDGET_LINE_PREFIX, BudgetNature, LEGACY_PREFIX, natureAnd } from '../../spend/budget-nature';
-import { parseItemRef } from '../../common/resolve-item-id';
+import { auditTableOf, BUDGET_LINE_PREFIX, BudgetNature, natureAnd } from '../../spend/budget-nature';
+import { budgetLineReferenceNumbers, parseItemRef } from '../../common/resolve-item-id';
 import { presentChild } from '../../spend/budget-line-presentation';
 import { AMOUNT_MEASURES, AmountMeasure, assertSpreadProfile, validateAmountValue } from '../../spend/amounts-write.util';
 import { formatAmount, formatCents } from '../../common/amount';
@@ -972,9 +972,9 @@ export class AiFinancialPlanMutationSupportService {
     const normalized = textOrNull(ref);
     if (!normalized) throw new BadRequestException('Budget line reference is required.');
     if (isUuid(normalized)) return this.resolveItemById(context, normalized);
-    // A line of either nature is one family: its title is `product_name`, its reference `BL-n`,
-    // or the legacy `OPX-n` / `CPX-n` the screens showed before.
-    const number = this.lineNumberOfReference(normalized);
+    // A line of either nature is one family: its title is `product_name`, its reference `BL-n` or
+    // a bare number, and the legacy `OPX-n` / `CPX-n` the screens showed before.
+    const number = budgetLineReferenceNumbers(normalized);
     const rows = await context.manager.query(
       `
       SELECT *
@@ -992,23 +992,6 @@ export class AiFinancialPlanMutationSupportService {
     const matches = exact.length > 0 ? exact : rows;
     if (matches.length > 1) throw new BadRequestException(`Multiple budget lines matched "${normalized}". Use a UUID.`);
     return this.itemRef(matches[0]);
-  }
-
-  /**
-   * The numbers a budget line reference names: `BL-n` its own number; `OPX-n` an OPEX line's
-   * number or the legacy number it kept; `CPX-n` a CAPEX line's legacy number. A name, or a bare
-   * number, names none.
-   */
-  private lineNumberOfReference(ref: string): { itemNumber: number; legacyNumber: string | null } {
-    const none = { itemNumber: -1, legacyNumber: null };
-    if (!ref.includes('-')) return none;
-    const match = ref.toUpperCase().match(/^(BL|OPX|CPX)-(\d+)$/);
-    if (!match) return none;
-    const number = Number(match[2]);
-    if (!Number.isSafeInteger(number)) return none;
-    if (match[1] === 'CPX') return { itemNumber: -1, legacyNumber: `${LEGACY_PREFIX.capex}-${number}` };
-    if (match[1] === 'OPX') return { itemNumber: number, legacyNumber: `${LEGACY_PREFIX.opex}-${number}` };
-    return { itemNumber: number, legacyNumber: null };
   }
 
   private async resolveItemById(

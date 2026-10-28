@@ -16,6 +16,7 @@ import {
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiTaskMutationSupportService, toDisplayStatus } from '../ai-task-mutation-support.service';
 import { resolveAiIncidentViewer } from '../../query/ai-query-scope.util';
+import { BUDGET_NATURES, naturesAnd } from '../../../spend/budget-nature';
 import { AiWriteLanguage, previewSummaryText, writeActionText } from '../../ai-write-texts';
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -660,7 +661,8 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
     const table = type === 'project' ? 'portfolio_projects' : type === 'spend_item' || type === 'capex_item' ? 'spend_items' : type === 'incident' ? 'incidents' : 'contracts';
     const labelColumn = type === 'project' ? "CONCAT('PRJ-', item_number::text, ' - ', name)" : type === 'spend_item' || type === 'capex_item' ? 'product_name' : type === 'incident' ? "CASE WHEN confidential THEN CONCAT('INC-', item_number::text) ELSE CONCAT('INC-', item_number::text, ' - ', title) END" : 'name';
     // A `spend_item` or a `capex_item` is a budget line of either nature (`spend/budget-nature.ts`).
-    const rows = await context.manager.query(`SELECT ${labelColumn} AS label FROM ${table} WHERE tenant_id = $1 AND id = $2 LIMIT 1`, [context.tenantId, id]);
+    const nature = table === 'spend_items' ? naturesAnd(null, BUDGET_NATURES) : '';
+    const rows = await context.manager.query(`SELECT ${labelColumn} AS label FROM ${table} WHERE tenant_id = $1 AND id = $2${nature} LIMIT 1`, [context.tenantId, id]);
     return textOrNull(rows[0]?.label) || id;
   }
 }

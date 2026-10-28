@@ -17,8 +17,8 @@ import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.ser
 import { PortfolioProjectsService } from '../../portfolio/services';
 import { BudgetLinesService } from '../../spend/budget-lines.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
-import { auditTableOf, BUDGET_LINE_PREFIX, BUDGET_NATURES, BudgetNature, LEGACY_PREFIX } from '../../spend/budget-nature';
-import { parseItemRef, resolveBudgetLine } from '../../common/resolve-item-id';
+import { auditTableOf, BUDGET_LINE_PREFIX, BUDGET_NATURES, BudgetNature, naturesAnd } from '../../spend/budget-nature';
+import { budgetLineReferenceNumbers, parseItemRef, resolveBudgetLine } from '../../common/resolve-item-id';
 import {
   DISABLED_VALUE_MESSAGE,
   dimensionPhrase,
@@ -1071,22 +1071,6 @@ export class AiBusinessRecordMutationSupportService {
     return this.referenceFromRow(entityType, rows[0]);
   }
 
-  /**
-   * The numbers a budget line reference names: `BL-n` or `OPX-n` its own number, `CPX-n` its
-   * CPX number (`legacy_number`); neither for a name or a bare number (a bare number stays a name).
-   */
-  private budgetLineNumberOfReference(ref: string): { itemNumber: number; legacyNumber: string | null } {
-    const none = { itemNumber: -1, legacyNumber: null };
-    if (!ref.includes('-')) return none;
-    const match = ref.toUpperCase().match(/^(BL|OPX|CPX)-(\d+)$/);
-    if (!match) return none;
-    const number = Number(match[2]);
-    if (!Number.isSafeInteger(number)) return none;
-    return match[1] === 'CPX'
-      ? { itemNumber: -1, legacyNumber: `${LEGACY_PREFIX.capex}-${number}` }
-      : { itemNumber: number, legacyNumber: `${match[1]}-${number}` };
-  }
-
   private async queryReferenceCandidates(
     context: AiExecutionContextWithManager,
     entityType: RelationTarget,
@@ -1164,10 +1148,10 @@ export class AiBusinessRecordMutationSupportService {
         );
       case 'budget_lines': {
         // Both natures in one family (`spend/budget-nature.ts`): by id, native title, own number
-        // (BL-n) or legacy number (OPX-n, CPX-n). Each row keeps its nature.
-        const number = this.budgetLineNumberOfReference(ref);
+        // (BL-n or a bare number) or legacy number (OPX-n, CPX-n). Each row keeps its nature.
+        const number = budgetLineReferenceNumbers(ref);
         const rows: Record<string, unknown>[] = await manager.query(
-          `SELECT * FROM spend_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text) OR item_number = $3 OR legacy_number = $4::text) ORDER BY product_name LIMIT 6`,
+          `SELECT * FROM spend_items WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text) OR item_number = $3 OR legacy_number = $4::text)${naturesAnd(null, BUDGET_NATURES)} ORDER BY product_name LIMIT 6`,
           [tenantId, ref, number.itemNumber, number.legacyNumber],
         );
         return this.withDefaultAnalyticsValue(context, rows);
