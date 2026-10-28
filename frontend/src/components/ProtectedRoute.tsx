@@ -10,6 +10,7 @@ import { useAiCapabilities } from '../ai/useAiCapabilities';
 import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
 import PendingAccessPage from '../pages/PendingAccessPage';
 import { canUseAnyOperation, canUseOperation } from '../pages/operations/operationAccess';
+import { createRouteRequirement } from './createRouteRequirements';
 
 /** Router state of a /403 redirect: where the refusal comes from, and the missing module right when known. */
 export type ForbiddenState = {
@@ -345,6 +346,11 @@ export default function ProtectedRoute() {
     } else {
       requirement = null; // dashboard and other root pages allowed
     }
+    // A creation address asks for the right of its POST, not the reader right of its list.
+    const createRequirement = createRouteRequirement(path);
+    if (createRequirement) {
+      requirement = createRequirement;
+    }
     if (isAdminAiRoute) {
       if (!hasLevel('ai_settings', 'admin')) {
         return refuse({ resource: 'ai_settings', level: 'admin' });
@@ -354,7 +360,11 @@ export default function ProtectedRoute() {
         return refuse();
       }
     } else if (requirement && !hasLevel(requirement.resource, requirement.level)) {
-      return requirement.resource === 'ai_chat' ? aiChatRightRefusal : refuse(requirement);
+      if (requirement.resource === 'ai_chat') {
+        return aiChatRightRefusal;
+      }
+      // A limited person's role may hold the level: their scope is what blocks, so the state names no module.
+      return createRequirement && dataAccessLimited ? refuse() : refuse(requirement);
     }
 
     // Redirect billing admins to billing page when subscription is unhealthy (only when billing is enabled)
