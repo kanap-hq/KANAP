@@ -54,7 +54,11 @@ export type FamilyKey =
   | 'calendar'
   | 'analytics_axis'
   | 'analytics_category'
-  | 'contributor';
+  | 'contributor'
+  | 'document'
+  | 'document_folder'
+  | 'document_library'
+  | 'document_type';
 
 type ParticipationResource = 'applications' | 'portfolio_projects' | 'portfolio_requests' | 'tasks';
 
@@ -67,12 +71,20 @@ type ParticipationResource = 'applications' | 'portfolio_projects' | 'portfolio_
  * own confidentiality rule applies. `natures`: the family's table holds both natures of a budget
  * line, which `AGENTS.md` asks every query to name.
  */
+export type FamilyCodeCheckKey = 'knowledge_document' | 'knowledge_folder' | 'knowledge_library';
+
 type FamilyVisibility = {
   scope?: ParticipationResource;
   closedToScope?: ParticipationResource;
   incident?: boolean;
   confidentialIncident?: boolean;
   natures?: boolean;
+  /**
+   * The family is read by code, not SQL: the screen's right does not fit a predicate on the row
+   * (the Knowledge library ACL, with its restricted libraries and member levels). `recordIsVisible`
+   * and `loadReferences` hand the ids to the check instead of filtering the rows themselves.
+   */
+  check?: FamilyCodeCheckKey;
 };
 
 type ReferenceFamily = {
@@ -237,6 +249,29 @@ export const REFERENCE_FAMILIES: Readonly<Record<FamilyKey, ReferenceFamily>> = 
     reference: `'CTR-' || r.item_number`,
     visibility: {},
   },
+  // Knowledge documents and their contexts: the library ACL decides, in code (a restricted
+  // library, a member level, or an incident review whose incident the person cannot see). The
+  // folder follows its library; a document type is tenant-wide configuration.
+  document: {
+    module: 'knowledge',
+    table: 'documents',
+    label: 'r.title',
+    reference: `'DOC-' || r.item_number`,
+    visibility: { check: 'knowledge_document' },
+  },
+  document_folder: {
+    module: 'knowledge',
+    table: 'document_folders',
+    label: 'r.name',
+    visibility: { check: 'knowledge_folder' },
+  },
+  document_library: {
+    module: 'knowledge',
+    table: 'document_libraries',
+    label: 'r.name',
+    visibility: { check: 'knowledge_library' },
+  },
+  document_type: { module: 'knowledge', table: 'document_types', label: 'r.name', visibility: {} },
 };
 
 export const FAMILY_KEYS = Object.keys(REFERENCE_FAMILIES) as FamilyKey[];
@@ -264,6 +299,9 @@ const PARTICIPATION_CONDITIONS: Readonly<Record<ParticipationResource, (alias: s
   tasks: taskParticipantCondition,
 };
 
+/** One family read by code: the ids the person may read, under the request transaction. */
+export type FamilyCodeCheck = (ids: readonly string[]) => Promise<ReadonlySet<string>>;
+
 /** Who the reference reads run for: the request transaction, the tenant and the person. */
 export type ReferenceReader = {
   manager: EntityManager;
@@ -271,6 +309,8 @@ export type ReferenceReader = {
   userId: string;
   isAdmin: boolean;
   viewer: IncidentViewer;
+  /** The code checks of the families whose screen right is not SQL. A missing check hides its family. */
+  checks?: Partial<Record<FamilyCodeCheckKey, FamilyCodeCheck>>;
 };
 
 /** The person's limited scope on a resource, resolved once per page and shared by the families. */
@@ -305,6 +345,9 @@ export async function familyVisibilitySql(
   params: unknown[],
 ): Promise<string> {
   const spec = REFERENCE_FAMILIES[family];
+  if (spec.visibility.check) {
+    throw new Error(`The reference family "${family}" is read by code (${spec.visibility.check}), not by SQL.`);
+  }
   let visibilitySql = '';
   const scopeResource = spec.visibility.scope;
   if (scopeResource) {
@@ -332,6 +375,11 @@ export async function familyVisibilitySql(
  */
 export async function recordIsVisible(reader: ReferenceReader, family: FamilyKey, id: string): Promise<boolean> {
   const spec = REFERENCE_FAMILIES[family];
+  const check = spec.visibility.check;
+  if (check) {
+    const readable = await runCodeCheck(reader, check, [id]);
+    return readable.has(id.toLowerCase());
+  }
   const params: unknown[] = [reader.tenantId, id];
   const visibilitySql = await familyVisibilitySql(reader, family, new Map(), params);
   const rows: Array<{ id: string }> = await reader.manager.query(
@@ -357,6 +405,14 @@ export async function recordIsVisible(reader: ReferenceReader, family: FamilyKey
  * A family with no row here is `{ hidden: true, kind }` in the answer. The scopes are read once per
  * page, and only for a family the page names and the person may read.
  */
+/** The ids a code check lets through, lower-cased; no check declared hides every id (fail closed). */
+async function runCodeCheck(reader: ReferenceReader, check: FamilyCodeCheckKey, ids: readonly string[]): Promise<Set<string>> {
+  const run = reader.checks?.[check];
+  if (!run) return new Set();
+  const readable = await run(ids);
+  return new Set(Array.from(readable, (id) => id.toLowerCase()));
+}
+
 export async function loadReferences(
   reader: ReferenceReader,
   ids: Map<FamilyKey, Set<string>>,
@@ -371,8 +427,20 @@ export async function loadReferences(
       continue;
     }
     const spec = REFERENCE_FAMILIES[family];
-    const params: unknown[] = [reader.tenantId, Array.from(wanted)];
-    const visibilitySql = await familyVisibilitySql(reader, family, scopes, params);
+    let readableIds = Array.from(wanted);
+    let visibilitySql = '';
+    if (spec.visibility.check) {
+      // The code check is the screen rule: only the ids it lets through are read for their label.
+      readableIds = Array.from(await runCodeCheck(reader, spec.visibility.check, readableIds));
+      if (readableIds.length === 0) {
+        out.set(family, new Map());
+        continue;
+      }
+    }
+    const params: unknown[] = [reader.tenantId, readableIds];
+    if (!spec.visibility.check) {
+      visibilitySql = await familyVisibilitySql(reader, family, scopes, params);
+    }
     const reference = spec.reference ? `, ${spec.reference} AS reference` : '';
     const rows: ReferenceRow[] = await reader.manager.query(
       `SELECT r.id::text AS id, ${spec.label} AS label${reference}

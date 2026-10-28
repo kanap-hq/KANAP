@@ -8,6 +8,7 @@ import { AuditLogsService } from './audit-logs.service';
 import { RecordHistoryController } from './record-history.controller';
 import { RecordHistoryService } from './record-history.service';
 import { SecurityEventsService } from './security-events.service';
+import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { UsersModule } from '../users/users.module';
 
@@ -16,6 +17,8 @@ import { UsersModule } from '../users/users.module';
     TypeOrmModule.forFeature([AuditLog, User]),
     forwardRef(() => PermissionsModule),
     forwardRef(() => UsersModule),
+    // The record history reads a document's library ACL through `KnowledgeService`.
+    forwardRef(() => KnowledgeModule),
   ],
   providers: [AuditService, AuditLogsService, SecurityEventsService, RecordHistoryService],
   controllers: [AuditLogsController, RecordHistoryController],
