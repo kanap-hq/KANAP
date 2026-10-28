@@ -29,7 +29,16 @@ function testEntries() {
     assert.ok(entry.explicitParentLabels.every((label) => recordHistoryChildKind(entry, label) !== null), `${key}: an explicit parent is a child label`);
   }
   assert.deepEqual(recordHistoryModules(), ['accounts', 'budget', 'cost_centers'], 'the modules of the route guard');
-  console.log(`  ${entries.length} record entries: OK`);
+  // Every reference family has a reader module (people are the only exception, `null`), and the
+  // module is a permission resource: a family declared ahead of its record page is already checked.
+  for (const family of FAMILY_KEYS) {
+    const module = FAMILY_MODULES[family];
+    assert.ok(
+      module === null || (RESOURCES as readonly string[]).includes(module),
+      `${family}: ${module} is a permission resource`,
+    );
+  }
+  console.log(`  ${entries.length} record entries, ${FAMILY_KEYS.length} families with a module: OK`);
 }
 
 /** The frontend declares the tables whose page shows a history; the two lists are one set. */

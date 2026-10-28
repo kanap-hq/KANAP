@@ -33,6 +33,14 @@ export type HistorySeed = {
   axis: string;
   categoryA: string;
   categoryB: string;
+  location: string;
+  connection: string;
+  interfaceRecord: string;
+  incident: string;
+  department: string;
+  businessProcess: string;
+  calendar: string;
+  contributor: string;
   opexLine: string;
   capexLine: string;
   hiddenLine: string;
@@ -222,7 +230,50 @@ export async function seedHistoryData(runner: QueryRunner, tenantId: string): Pr
     `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, 'On premise') RETURNING id`,
     [tenantId, axis],
   );
+  const location = await one(
+    runner,
+    `INSERT INTO locations (tenant_id, name, hosting_type) VALUES ($1, 'Paris DC', 'cloud') RETURNING id`,
+    [tenantId],
+  );
+  const connection = await one(
+    runner,
+    `INSERT INTO connections (tenant_id, name, topology) VALUES ($1, 'Core link', 'server_to_server') RETURNING id`,
+    [tenantId],
+  );
+  const interfaceRecord = await one(
+    runner,
+    `INSERT INTO interfaces (tenant_id, name, business_purpose, source_application_id, target_application_id,
+                             data_category, integration_route_type)
+     VALUES ($1, 'Orders sync', 'Orders', $2, $2, 'operational', 'direct') RETURNING id`,
+    [tenantId, application],
+  );
+  const incident = await one(
+    runner,
+    `INSERT INTO incidents (tenant_id, item_number, title, severity, confidential)
+     VALUES ($1, 4, 'Outage', 'major', false) RETURNING id`,
+    [tenantId],
+  );
+  const department = await one(
+    runner,
+    `INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, 'Finance') RETURNING id`,
+    [tenantId, companyA],
+  );
+  const businessProcess = await one(
+    runner,
+    `INSERT INTO business_processes (tenant_id, name) VALUES ($1, 'Order to cash') RETURNING id`,
+    [tenantId],
+  );
+  const calendar = await one(
+    runner,
+    `INSERT INTO working_day_profiles (tenant_id, code, name) VALUES ($1, 'FR', 'France') RETURNING id`,
+    [tenantId],
+  );
   const owner = await seedPerson(runner, tenantId, { first: 'Ava', last: 'Reader' }, { budget: 'reader' });
+  const contributor = await one(
+    runner,
+    `INSERT INTO portfolio_team_member_configs (tenant_id, user_id, item_number) VALUES ($1, $2, 1) RETURNING id`,
+    [tenantId, owner.id],
+  );
 
   const shared = { companyId: companyA, centerId: costCenterA, supplierId: supplier, accountId: account, ownerId: owner.id, projectId: project, contractId: contractA };
   const opexLine = await seedLine(runner, tenantId, { itemNumber: 1, nature: 'opex', name: 'Main line', ...shared });
@@ -244,7 +295,8 @@ export async function seedHistoryData(runner: QueryRunner, tenantId: string): Pr
 
   return {
     tenantId, companyA, companyB, costCenterA, costCenterB, coa, supplier, contractA, contractB, project, request, application,
-    technology, asset, contact, account, task, axis, categoryA, categoryB, opexLine, capexLine,
+    technology, asset, contact, account, task, axis, categoryA, categoryB, location, connection, interfaceRecord, incident,
+    department, businessProcess, calendar, contributor, opexLine, capexLine,
     hiddenLine, typeLine, pageLine, emptyPageLine, opexVersion, capexVersion, owner: owner.id,
   };
 }
