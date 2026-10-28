@@ -219,6 +219,19 @@ describe('formatAuditValue', () => {
     }
   });
 
+  it('names an analytics Used for from the screen list, in the four languages', () => {
+    for (const language of ['en', 'fr', 'de', 'es']) {
+      const langContext = context({
+        locale: language,
+        t: i18n.getFixedT(language, 'admin') as unknown as Translate,
+      });
+      expect(formatAuditValue('opex', 'applies_to', langContext).text, language)
+        .toBe(valueAt(ADMIN[language].auditLogs.values, 'lineTypeUsage.opex'));
+      expect(formatAuditValue('capex', 'applies_to', langContext).text, language)
+        .toBe(valueAt(ADMIN[language].auditLogs.values, 'lineTypeUsage.capex'));
+    }
+  });
+
   it('keeps an account number as stored, without a thousands separator', () => {
     expect(formatAuditValue('1300', 'account_number', context()).text).toBe('1300');
     expect(formatAuditValue(1300, 'consolidation_account_number', context()).text).toBe('1300');

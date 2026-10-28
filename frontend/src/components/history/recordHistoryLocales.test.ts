@@ -26,7 +26,7 @@ const LOCALES = { en, fr, de, es } as Record<string, any>;
 const OPS = { en: enOps, fr: frOps, de: deOps, es: esOps } as Record<string, any>;
 const LANGUAGE_NAMES = ['en', 'fr', 'de', 'es'] as const;
 const ID = '11111111-2222-4333-8444-555555555555';
-const EVENT_KINDS = ['link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line'];
+const EVENT_KINDS = ['link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line', 'value'];
 const ACTORS = ['assistant', 'assistantFor', 'unknown'];
 const ACTIONS = ['create', 'update', 'delete'];
 
@@ -111,12 +111,15 @@ describe('record history locales', () => {
 
   it('has the new field labels and the tab label in the four languages', () => {
     const fields = [
-      'account_id', 'account_name', 'account_number', 'accountNature', 'allocation_method', 'allocation_pct',
-      'as_of_date', 'budget_year', 'coa_id', 'code', 'consolidation_account_description',
+      'account_id', 'account_name', 'account_number', 'accountNature', 'address1', 'address2', 'allocation_method',
+      'allocation_pct', 'applies_to', 'application_id', 'as_of_date', 'axis_id', 'base_currency', 'budget_year',
+      'capex_lines', 'city', 'coa_id', 'code', 'company_id', 'consolidation_account_description',
       'consolidation_account_name', 'consolidation_account_number', 'contract_id', 'cost_center_id',
-      'costCenterOwner', 'effective_start', 'input_grain', 'kind', 'lines', 'measure', 'native_name', 'nature',
-      'owner_business_id', 'owner_it_id', 'parent_id', 'paying_company_id', 'product_name',
-      'project_id', 'run_build', 'successor_id', 'version_name',
+      'costCenterOwner', 'country_iso', 'disabled_at', 'effective_start', 'headcount', 'input_grain', 'is_default',
+      'is_frozen', 'it_owner_user_id', 'it_users', 'kind', 'lines', 'measure', 'name', 'native_name', 'nature',
+      'notes', 'open_values', 'opex_lines', 'owner_business_id', 'owner_it_id', 'parent_id', 'paying_company_id',
+      'postal_code', 'product_name', 'project_id', 'region_code', 'reg_number', 'required', 'run_build',
+      'sort_order', 'state', 'status', 'successor_id', 'turnover', 'values', 'vat_number', 'version_name',
     ];
     for (const language of LANGUAGE_NAMES) {
       for (const key of fields) {
@@ -231,7 +234,22 @@ describe('record history locales', () => {
     }), frCtx);
     expect(lineText(frHidden[0], frCtx)).toBe('Contrat\u00a0: — → un contrat');
 
+    const frValue = historyLines(item({
+      subject: { kind: 'value' },
+      changes: [{ field: 'value', event: 'added', after: 'Run' }],
+    }), frCtx);
+    expect(frValue[0].text).toBe('Valeur ajoutée\u00a0: Run');
+    expect(historySubjectText({ kind: 'value', label: 'Run' }, frCtx.t)).toBe('Valeur Run');
+    expect(historySubjectText({ kind: 'metrics', label: '2026' }, frCtx.t)).toBe('Indicateurs 2026');
+
     const enCtx = context('en');
+    const enValue = historyLines(item({
+      subject: { kind: 'value' },
+      changes: [{ field: 'value', event: 'removed', before: 'Run' }],
+    }), enCtx);
+    expect(enValue[0].text).toBe('Value removed: Run');
+    expect(historySubjectText({ kind: 'value', label: 'Run' }, enCtx.t)).toBe('Value Run');
+    expect(historySubjectText({ kind: 'metrics', label: '2026' }, enCtx.t)).toBe('Metrics 2026');
     const enHidden = historyLines(item({
       changes: [{ field: 'contract_id', before: null, after: { hidden: true, kind: 'contract' } }],
     }), enCtx);

@@ -7,6 +7,7 @@ import type { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { createRaceTenant, dropRaceTenant, seed } from '../../spend/__tests__/race-harness';
 import {
+  HISTORY_FIELDS,
   RecordHistoryService,
   type RecordHistoryChange,
   type RecordHistoryContext,
@@ -234,6 +235,46 @@ async function seedFamilyAAudits(runner: QueryRunner, data: HistorySeed) {
     before: axis,
     after: { forced: true, values: 2, lines: 5, opex_lines: 3, capex_lines: 2 },
   });
+  const forcedValue = await rowJson(runner, 'analytics_categories', data.categoryB);
+  await audit(runner, {
+    table: 'analytics_categories', recordId: data.categoryB, action: 'delete', userId: data.owner,
+    before: forcedValue,
+    after: { forced: true, lines: 5, opex_lines: 3, capex_lines: 2 },
+  });
+}
+
+async function testPayloadKeys(tenantId: string) {
+  const labels = [
+    'analytics_axes', 'analytics_categories', 'application_business_processes', 'business_processes',
+    'companies', 'company_metrics', 'department_metrics', 'departments', 'working_day_profiles',
+  ];
+  const runner = dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+    const rows: Array<{ table_name: string; key: string }> = await runner.query(
+      `SELECT DISTINCT a.table_name, jsonb_object_keys(
+         CASE WHEN jsonb_typeof(COALESCE(a.after_json, a.before_json)) = 'object'
+              THEN COALESCE(a.after_json, a.before_json) ELSE '{}'::jsonb END) AS key
+         FROM audit_log a
+        WHERE a.tenant_id = $1 AND a.table_name = ANY($2::text[])`,
+      [tenantId, labels],
+    );
+    for (const label of labels) {
+      const catalog = HISTORY_FIELDS[label];
+      assert.ok(catalog, `${label}: an allow-list`);
+      const unclassified = rows
+        .filter((row) => row.table_name === label)
+        .map((row) => row.key)
+        .filter((key) => !Object.prototype.hasOwnProperty.call(catalog, key));
+      assert.deepEqual(unclassified, [], `${label} payload keys neither shown nor hidden: ${unclassified.join(', ')}`);
+    }
+  } finally {
+    if (runner.isTransactionActive) await runner.rollbackTransaction().catch(() => undefined);
+    await runner.release();
+  }
+  console.log('  every family A payload key is classified shown or hidden: OK');
 }
 
 async function testCompanyAndDepartmentEntries(seeded: Seeded) {
@@ -395,6 +436,15 @@ async function testAnalyticsEntries(seeded: Seeded) {
   assert.equal(dimension.label, 'Cost pool');
   assert.equal(findChange(findItem(value, 'update'), 'description').after, 'Cloud spend');
   for (const field of ['id', 'tenant_id', 'created_at', 'updated_at']) assertNoField(value, field);
+
+  // A forced value deletion: its own record entry shows the line counts, not the marker nor the
+  // total the two natures repeat.
+  const forcedValue = await readPage(seeded.analyticsReader, data.tenantId, 'analytics_categories', data.categoryB, { analytics: 'reader' });
+  const forcedDelete = findItem(forcedValue, 'delete');
+  assert.equal(findChange(forcedDelete, 'opex_lines').after, 3);
+  assert.equal(findChange(forcedDelete, 'capex_lines').after, 2);
+  assertNoField(forcedValue, 'lines');
+  assertNoField(forcedValue, 'forced');
   console.log('  analytics dimension and value entries, value child events, forced counts: OK');
 }
 
@@ -514,6 +564,7 @@ async function run() {
     const foreign = await seed(foreignTenantId, (runner) => seedHistoryData(runner, foreignTenantId));
 
     await testAccess(seeded, foreign);
+    await testPayloadKeys(tenantId);
     await testCompanyAndDepartmentEntries(seeded);
     await testCalendarAndProcessEntries(seeded);
     await testAnalyticsEntries(seeded);
