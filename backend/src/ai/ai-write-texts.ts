@@ -296,31 +296,6 @@ const RECORD_NOUNS: Record<string, TranslatedTexts> = {
   default: { fr: "de l'élément", de: 'Element', es: 'del elemento' },
 };
 
-/** The incident statuses as the incident screen and the ITSM catalogs name them. */
-const INCIDENT_STATUS_LABELS: Record<AiWriteLanguage, Record<string, string>> = {
-  en: { open: 'Open', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed', cancelled: 'Cancelled' },
-  fr: { open: 'Ouvert', in_progress: 'En cours', resolved: 'Résolu', closed: 'Clôturé', cancelled: 'Annulé' },
-  de: { open: 'Offen', in_progress: 'In Bearbeitung', resolved: 'Behoben', closed: 'Geschlossen', cancelled: 'Abgebrochen' },
-  es: { open: 'Abierto', in_progress: 'En curso', resolved: 'Resuelto', closed: 'Cerrado', cancelled: 'Cancelado' },
-};
-
-/** The incident severities, as `it:enums.incidentSeverity` names them. */
-const INCIDENT_SEVERITY_LABELS: Record<AiWriteLanguage, Record<string, string>> = {
-  en: { critical: 'Critical', major: 'Major', minor: 'Minor', low: 'Low' },
-  fr: { critical: 'Critique', major: 'Majeure', minor: 'Mineure', low: 'Faible' },
-  de: { critical: 'Kritisch', major: 'Hoch', minor: 'Mittel', low: 'Niedrig' },
-  es: { critical: 'Crítica', major: 'Alta', minor: 'Media', low: 'Baja' },
-};
-
-/** A stored incident status or severity as the person's screen shows it; an unknown code as stored. */
-export function incidentStatusText(language: AiWriteLanguage, code: string): string {
-  return INCIDENT_STATUS_LABELS[language][code] ?? code;
-}
-
-export function incidentSeverityText(language: AiWriteLanguage, code: string): string {
-  return INCIDENT_SEVERITY_LABELS[language][code] ?? code;
-}
-
 /** The card's warning on a closure: the record freezes and only an administrator reopens it. */
 const INCIDENT_CLOSURE_WARNING: Texts = {
   en: 'This closes and freezes the incident: only an administrator can reopen it.',
@@ -395,9 +370,14 @@ export function incidentLinkCardText(language: AiWriteLanguage, group: IncidentL
   for (const key of ['add', 'remove', 'already', 'absent'] as const) {
     const items = group[key].filter((item) => item.trim().length > 0);
     if (items.length === 0) continue;
-    blocks.push([`**${headings[key]}**`, ...items.map((item) => `- ${item}`)].join('\n'));
+    blocks.push([`**${headings[key]}**`, ...items.map((item) => `- ${escapeMarkdownLabel(item)}`)].join('\n'));
   }
   return blocks.join('\n\n');
+}
+
+/** A record's label is data, not Markdown: escape the characters that would style the card. */
+function escapeMarkdownLabel(value: string): string {
+  return value.replace(/([*_\[\]()`#])/g, '\\$1');
 }
 
 /** The detail lines of a task preview: its assignee and its priority. */

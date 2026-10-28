@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
-import { AiWriteLanguage, aiWriteLanguage, deletionImpactText, personWriteLanguage } from '../ai-write-texts';
+import { AiWriteLanguage, aiWriteLanguage, deletionImpactText, incidentLinkCardText, personWriteLanguage } from '../ai-write-texts';
 import { AiBusinessRecordMutationSupportService } from '../mutation/ai-business-record-mutation-support.service';
 import { AiDocumentMutationSupportService } from '../mutation/ai-document-mutation-support.service';
 import { AiFinancialPlanMutationSupportService } from '../mutation/ai-financial-plan-mutation-support.service';
@@ -278,6 +278,16 @@ function testIncidentNoteAndLinkCards() {
   assert.equal(linkChanges.linked_applications.to, '**Retirés**\n- APP-2 - Mail');
   assert.equal(linkChanges.linked_technologies.to, '**Déjà liés**\n- TEC-3 - PostgreSQL');
   assert.equal(summary(links, { ...pendingLinks, status: 'executed' } as AiMutationPreview, 'fr'), "Appliqué : modification des liens de l'incident « INC-7 - Mail outage ».");
+  // A record's label is data: its Markdown characters never style the card.
+  assert.equal(
+    incidentLinkCardText('fr', {
+      add: ['AST-12 - srv_*prod*'],
+      remove: ['APP-2 - app_[old]'],
+      already: [],
+      absent: [],
+    }),
+    '**Ajoutés**\n- AST-12 - srv\\_\\*prod\\*\n\n**Retirés**\n- APP-2 - app\\_\\[old\\]',
+  );
 }
 
 /** What the card needs beyond the summary: classification codes, and fields in a stable order (quality pass 2026-10-27, A1 and A3). */

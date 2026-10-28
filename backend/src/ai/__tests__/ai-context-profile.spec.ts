@@ -180,6 +180,58 @@ function testIncidentWritesChooseTheBusinessRecordTools() {
   }
 }
 
+function testIncidentReadsAndLinkVerbsFromReview() {
+  // The French unlink verbs (and their infinitives) choose the incident link tool.
+  for (const prompt of [
+    'Délie APP-2 de INC-3',
+    'Retire APP-2 de INC-3',
+    'Enlève AST-12 de INC-3',
+    'Détache APP-2 de INC-3',
+    'Délier APP-2 de INC-3',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'write_business', prompt);
+    assert.ok(profile.toolNames.includes('update_incident_links'), `${prompt}: link tool`);
+  }
+
+  // Reading the journal, the notes or the record is not a write.
+  for (const prompt of [
+    'Montre le journal de INC-3',
+    'Show the log of INC-3',
+    'Quelles notes sur INC-3',
+    'Affiche les notes de INC-3',
+    'Ouvre la fiche de l’incident INC-3',
+    'Open the incident INC-3',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.notEqual(profile.promptMode, 'write', prompt);
+    assert.equal(profile.toolNames.includes('add_incident_note'), false, `${prompt}: no note write`);
+    assert.equal(profile.toolNames.includes('update_incident_links'), false, `${prompt}: no link write`);
+  }
+
+  // A creation followed by a link stays a business write.
+  const plan = selectAiContextProfile('Crée l’incident puis lie-le à AST-12 et APP-3');
+  assert.equal(plan.name, 'write_business');
+  assert.ok(plan.toolNames.includes('create_business_record'));
+  assert.ok(plan.toolNames.includes('update_incident_links'));
+
+  // "Résous INC-3" changes the incident status.
+  const resolved = selectAiContextProfile('Résous INC-3');
+  assert.equal(resolved.name, 'write_business');
+  assert.ok(resolved.toolNames.includes('update_business_record'));
+
+  // Closing a task reference goes to the task tools.
+  for (const prompt of ['Clos la tâche T-4', 'Clos le ticket T-4']) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'write_task', prompt);
+    assert.ok(profile.toolNames.includes('update_task_status'), `${prompt}: task status tool`);
+    assert.equal(profile.toolNames.includes('update_business_record'), false, `${prompt}: not an incident write`);
+  }
+
+  // No tool closes a GLPI ticket, so the message stays a read request.
+  assert.notEqual(selectAiContextProfile('Ferme le ticket GLPI 123').promptMode, 'write');
+}
+
 function testDeleteRecordFollowsTheFamilyWriteProfiles() {
   for (const prompt of [
     'Supprime la tâche T-42',
@@ -440,6 +492,7 @@ async function run() {
   await testNonWebProfilesExposeAllKanapToolsButPrioritizeProfileTools();
   testDeleteRecordFollowsTheFamilyWriteProfiles();
   testIncidentWritesChooseTheBusinessRecordTools();
+  testIncidentReadsAndLinkVerbsFromReview();
   await testContinuationInheritsOpenWriteRequestProfile();
   await testPreviewCorrectionInheritsWriteRequestProfile();
   await testTargetSetCorrectionInheritsWriteRequestProfile();

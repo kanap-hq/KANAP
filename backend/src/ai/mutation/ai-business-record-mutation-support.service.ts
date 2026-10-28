@@ -1580,6 +1580,17 @@ export class AiBusinessRecordMutationSupportService {
       }
     }
     const previousValues = coerceRecord(preview.current_values?.values, 'current_values.values');
+    if (entityType === 'incidents' && previousValues.category !== undefined) {
+      // The screen also refuses to go back to a retired category, but the sentence names the
+      // original value and the way out, never "Unknown incident category".
+      const settings = await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager });
+      const original = findCatalogOption(previousValues.category, settings.incidentCategories, null, false);
+      if (original?.deprecated) {
+        throw new BadRequestException(
+          `The incident's original category "${original.label || original.code}" was removed; choose an active category.`,
+        );
+      }
+    }
     const targetRow = this.withAnalyticsValueKeys(entityType, await this.getRecordSnapshot(context, entityType, preview.target_entity_id));
     const target = this.referenceFromRow(entityType, targetRow);
     return this.prepareUpdatePreviewForTarget(context, entityType, target, previousValues, {

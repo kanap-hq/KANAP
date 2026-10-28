@@ -148,8 +148,9 @@ function coerceApplied(value: unknown): StoredAppliedLinks | null {
  * Link and unlink assets, applications and technologies on one incident, one `setLink` call per
  * link so the incident services keep the closure lock, the `link_change` journal entry, the audit
  * row, the idempotence and the Business Contributor participation scope. A link that is already
- * there (or already absent) writes nothing and is not an error. The preview is reversible: undo
- * reverses the links that actually changed, while the record is open.
+ * there (or already absent) writes nothing and is not an error, but a preview that would change
+ * no link at all is refused with what it found. The preview is reversible: undo reverses the
+ * links that actually changed, while the record is open.
  */
 @Injectable()
 export class UpdateIncidentLinksAiMutationOperation implements AiMutationOperation<UpdateIncidentLinksInput> {
@@ -195,6 +196,15 @@ export class UpdateIncidentLinksAiMutationOperation implements AiMutationOperati
     this.support.assertEditable(incident);
     const options = await this.support.writeOptions(context);
     const changes = await this.prepareChanges(context, incident.id, input, options);
+    // A preview that would write nothing is refused at preparation, with what it found: an
+    // approval of an empty card promises a change the person would never see.
+    const linked = LINK_KINDS.flatMap((kind) => [
+      ...changes[kind].already.map((target) => `${target.label} is already linked`),
+      ...changes[kind].absent.map((target) => `${target.label} is not linked`),
+    ]);
+    if (!LINK_KINDS.some((kind) => changes[kind].add.length > 0 || changes[kind].remove.length > 0)) {
+      throw new BadRequestException(`Nothing to change: ${linked.join('; ')}.`);
+    }
     return {
       targetEntityType: 'incidents',
       targetEntityId: incident.id,

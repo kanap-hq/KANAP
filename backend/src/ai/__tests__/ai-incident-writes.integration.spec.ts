@@ -878,6 +878,25 @@ async function testDeprecatedIncidentCategory(harness: Harness) {
       [seed.tenantId, executed.target.entity_id],
     );
     assert.deepEqual(row, { title: 'Security incident kept', category: 'security' });
+
+    // Undoing a move away from the retired category would restore it: the screen refuses the
+    // same way, but the sentence names the original value instead of "Unknown category".
+    const moved = await executeToolPreview(harness, ctx, 'update_business_record', {
+      entity_type: 'incidents',
+      ref: String(executed.target.ref),
+      fields: { category: 'Infrastructure' },
+    });
+    assert.equal(moved.changes.category.to, 'infrastructure');
+    await approvePreview(harness, ctx, moved);
+    await expectRejectsExactly(
+      () => harness.tools.execute(ctx, 'undo_preview', { preview_id: moved.preview_id }),
+      'The incident\'s original category "Security" was removed; choose an active category.',
+    );
+    const [afterUndo] = await runner.query(
+      `SELECT category FROM incidents WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, executed.target.entity_id],
+    );
+    assert.equal(afterUndo.category, 'infrastructure', 'the refused undo restored the retired category');
   });
 }
 
@@ -1031,7 +1050,7 @@ async function testLinksPreviewExecutionAndUndo(harness: Harness) {
         ORDER BY created_at, id`,
       [seed.tenantId, seed.incidents.open],
     );
-    assert.equal(entries.length, 3, 'one link_change entry per link family');
+    assert.equal(entries.length, 3, 'one link_change entry per link');
     assert.deepEqual(
       entries.map((row: any) => Object.keys(row.changed_fields)[0]).sort(),
       ['applications', 'assets', 'technologies'],
@@ -1088,15 +1107,15 @@ async function testAlreadyLinkedAndAbsentLinksWriteNothing(harness: Harness) {
       [seed.tenantId, seed.incidents.resolved],
     );
     assert.equal(before.length, 1, 'the seed links AST-12 to INC-5');
-    const preview = await executeToolPreview(harness, ctx, 'update_incident_links', {
-      ref: 'INC-5',
-      assets: { add: ['AST-12'] },
-      applications: { remove: ['APP-2'] },
-    });
-    assert.equal(preview.changes.linked_assets.to, '**Déjà liés**\n- AST-12 - PAR-ESX-01');
-    assert.equal(preview.changes.linked_applications.to, '**Pas liés**\n- APP-2 - Mail');
-    const executed = await approvePreview(harness, ctx, preview);
-    assert.equal(executed.status, 'executed');
+    // All the requested links are already linked or already absent: no card is created.
+    await expectRejectsExactly(
+      () => executeToolPreview(harness, ctx, 'update_incident_links', {
+        ref: 'INC-5',
+        assets: { add: ['AST-12'] },
+        applications: { remove: ['APP-2'] },
+      }),
+      'Nothing to change: AST-12 - PAR-ESX-01 is already linked; APP-2 - Mail is not linked.',
+    );
 
     const after = await runner.query(
       `SELECT 1 FROM incident_assets WHERE tenant_id = $1 AND incident_id = $2`,
