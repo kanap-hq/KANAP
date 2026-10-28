@@ -659,7 +659,17 @@
         "contract": "un contrato",
         "cost_center": "un centro de coste",
         "budget_line": "una línea presupuestaria",
-        "chart_of_accounts": "un plan de cuentas"
+        "chart_of_accounts": "un plan de cuentas",
+        "location": "una ubicación",
+        "connection": "una conexión",
+        "interface": "una interfaz",
+        "incident": "un incidente",
+        "department": "un departamento",
+        "business_process": "un proceso de negocio",
+        "calendar": "un calendario de días laborables",
+        "analytics_axis": "una dimensión analítica",
+        "analytics_category": "un valor analítico",
+        "contributor": "un colaborador"
       },
       "title": "Historial"
     },

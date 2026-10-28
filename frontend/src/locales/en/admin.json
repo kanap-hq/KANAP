@@ -659,7 +659,17 @@
         "contract": "a contract",
         "cost_center": "a cost center",
         "budget_line": "a budget line",
-        "chart_of_accounts": "a chart of accounts"
+        "chart_of_accounts": "a chart of accounts",
+        "location": "a location",
+        "connection": "a connection",
+        "interface": "an interface",
+        "incident": "an incident",
+        "department": "a department",
+        "business_process": "a business process",
+        "calendar": "a working-day calendar",
+        "analytics_axis": "an analytics dimension",
+        "analytics_category": "an analytics value",
+        "contributor": "a contributor"
       },
       "title": "History"
     },

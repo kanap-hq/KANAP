@@ -87,7 +87,9 @@ const EVENT_KINDS = new Set([
 const UNNAMED_KINDS = [
   'record', 'version', 'amounts', 'allocations', 'round_input', 'link', 'attachment', 'contact',
   'application', 'technology', 'asset', 'task', 'user', 'company', 'supplier', 'account',
-  'chart_of_accounts', 'project', 'request', 'contract', 'cost_center', 'budget_line', 'line',
+  'chart_of_accounts', 'project', 'request', 'contract', 'cost_center', 'budget_line',
+  'location', 'connection', 'interface', 'incident', 'department', 'business_process', 'calendar',
+  'analytics_axis', 'analytics_category', 'contributor', 'line',
 ] as const;
 
 export function isHiddenReference(value: unknown): value is RecordHistoryHiddenReference {

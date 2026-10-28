@@ -659,7 +659,17 @@
         "contract": "ein Vertrag",
         "cost_center": "eine Kostenstelle",
         "budget_line": "eine Budgetzeile",
-        "chart_of_accounts": "ein Kontenplan"
+        "chart_of_accounts": "ein Kontenplan",
+        "location": "ein Standort",
+        "connection": "eine Verbindung",
+        "interface": "eine Schnittstelle",
+        "incident": "ein Vorfall",
+        "department": "eine Abteilung",
+        "business_process": "ein Geschäftsprozess",
+        "calendar": "ein Arbeitstagekalender",
+        "analytics_axis": "eine Analyse-Dimension",
+        "analytics_category": "ein Analysewert",
+        "contributor": "ein Mitwirkender"
       },
       "title": "Verlauf"
     },
