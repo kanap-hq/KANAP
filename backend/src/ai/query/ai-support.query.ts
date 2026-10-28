@@ -257,8 +257,3 @@ export function aggregateSupportRows(
     return a.key.localeCompare(b.key);
   });
 }
-
-/** The metrics the two families take: none on the gaps, the deadline date on the deadlines. */
-export function supportMetricType(entityType: SupportEntityType, metric: string): 'date' | null {
-  return entityType === 'support_deadlines' && metric === 'date' ? 'date' : null;
-}
