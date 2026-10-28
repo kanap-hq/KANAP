@@ -392,19 +392,6 @@ export async function recordIsVisible(reader: ReferenceReader, family: FamilyKey
   return rows.length > 0;
 }
 
-/**
- * The rows of each family the person may name, under the tenant predicate, RLS and data access,
- * plus the rule the family's own screen applies:
- * - applications, projects and requests: a Business Contributor only sees the records they take
- *   part in, as the line's Relations tab and their own lists do;
- * - interfaces: a Business Contributor whose applications access is limited names none;
- * - incidents: a confidential incident names only its registry admins, reporter and owner;
- * - tasks: the same participation, then a task on a confidential incident the viewer may not see
- *   is absent, as the task list applies it.
- *
- * A family with no row here is `{ hidden: true, kind }` in the answer. The scopes are read once per
- * page, and only for a family the page names and the person may read.
- */
 /** The ids a code check lets through, lower-cased; no check declared hides every id (fail closed). */
 async function runCodeCheck(reader: ReferenceReader, check: FamilyCodeCheckKey, ids: readonly string[]): Promise<Set<string>> {
   const run = reader.checks?.[check];
@@ -413,6 +400,20 @@ async function runCodeCheck(reader: ReferenceReader, check: FamilyCodeCheckKey, 
   return new Set(Array.from(readable, (id) => id.toLowerCase()));
 }
 
+/**
+ * The rows of each family the person may name, under the tenant predicate, RLS and data access,
+ * plus the rule the family's own screen applies:
+ * - applications, projects and requests: a Business Contributor only sees the records they take
+ *   part in, as the line's Relations tab and their own lists do;
+ * - interfaces: a Business Contributor whose applications access is limited names none;
+ * - incidents: a confidential incident names only its registry admins, reporter and owner;
+ * - tasks: the same participation, then a task on a confidential incident the viewer may not see
+ *   is absent, as the task list applies it;
+ * - documents, folders and libraries: the code check decides, as the Knowledge screen does.
+ *
+ * A family with no row here is `{ hidden: true, kind }` in the answer. The scopes are read once per
+ * page, and only for a family the page names and the person may read.
+ */
 export async function loadReferences(
   reader: ReferenceReader,
   ids: Map<FamilyKey, Set<string>>,
