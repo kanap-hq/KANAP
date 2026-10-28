@@ -430,7 +430,14 @@ export function incidentLinkCardText(language: AiWriteLanguage, group: IncidentL
 
 /** A record's label is data, not Markdown: escape the characters that would style the card. */
 function escapeMarkdownLabel(value: string): string {
-  return value.replace(/([*_\[\]()`#])/g, '\\$1');
+  return value
+    // The escape character itself first, so the backslashes added below stay single.
+    .replace(/\\/g, '\\\\')
+    .replace(/~/g, '\\~')
+    // A leading list marker, quote or ordered-list number would structure the line.
+    .replace(/^([>+-])/, '\\$1')
+    .replace(/^(\d+)\./, '$1\\.')
+    .replace(/([*_\[\]()`#])/g, '\\$1');
 }
 
 /** The detail lines of a task preview: its assignee and its priority. */

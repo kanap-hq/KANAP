@@ -290,6 +290,14 @@ function testIncidentNoteAndLinkCards() {
     }),
     '**Ajoutés**\n- AST-12 - srv\\_\\*prod\\*\n\n**Retirés**\n- APP-2 - app\\_\\[old\\]',
   );
+  // The backslash first, then the inline emphasis, then the characters that structure a line.
+  const escaped = (label: string) => incidentLinkCardText('fr', { add: [label], remove: [], already: [], absent: [] });
+  assert.equal(escaped('C:\\temp\\srv~old'), '**Ajoutés**\n- C:\\\\temp\\\\srv\\~old');
+  assert.equal(escaped('> quoted'), '**Ajoutés**\n- \\> quoted');
+  assert.equal(escaped('- nested'), '**Ajoutés**\n- \\- nested');
+  assert.equal(escaped('+ plus'), '**Ajoutés**\n- \\+ plus');
+  assert.equal(escaped('1. ordered'), '**Ajoutés**\n- 1\\. ordered');
+  assert.equal(escaped('version 1.2'), '**Ajoutés**\n- version 1.2');
 }
 
 function testIncidentStateAndConfidentialityCards() {
