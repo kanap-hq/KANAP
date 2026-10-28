@@ -681,7 +681,7 @@ async function testContactDelete(h: Harness, runner: QueryRunner, s: Seed) {
   assert.ok(impact.includes('- Links to suppliers: 1'), impact);
   assert.ok(impact.includes('- Links to projects: 1'), impact);
   assert.ok(impact.includes("- Other links: 1"), impact);
-  assert.ok(!impact.includes('Applications'), impact);
+  assert.ok(!impact.includes('Links to applications'), impact);
   assert.ok(impact.includes('The linked records stay.'), impact);
 
   const executed = await h.previews.executePreview(context, preview.preview_id);
@@ -737,7 +737,7 @@ async function testLocationDelete(h: Harness, runner: QueryRunner, s: Seed) {
   ]) {
     assert.ok(impact.includes(line), `${line} in:\n${impact}`);
   }
-  assert.ok(!impact.includes('documents'), impact);
+  assert.ok(!impact.includes('Links to documents'), impact);
 
   const executed = await h.previews.executePreview(context, preview.preview_id);
   assert.equal(executed.status, 'executed', executed.error_message ?? '');
@@ -1032,8 +1032,8 @@ async function testDocumentRefusals(h: Harness, runner: QueryRunner, s: Seed) {
   });
   const hiddenImpact = String(hidden.changes.deletion.to);
   assert.match(hiddenImpact, /Other links: 2/);
-  assert.ok(!hiddenImpact.includes('Applications'), hiddenImpact);
-  assert.ok(!hiddenImpact.includes('Assets'), hiddenImpact);
+  assert.ok(!hiddenImpact.includes('Links to applications'), hiddenImpact);
+  assert.ok(!hiddenImpact.includes('Links to assets'), hiddenImpact);
   await h.previews.rejectPreview(hiddenContext, hidden.preview_id);
   console.log('  document refused to a member, a managed document refused without a preview, a library out of reach reads as missing, unread families unnamed: OK');
 }
