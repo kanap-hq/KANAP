@@ -1271,8 +1271,6 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
       return contactChanges(row, ctx);
     case 'supplier':
       return linkRowChanges('supplier', row, ctx);
-    case 'budget_line':
-      return linkRowChanges('budget_line', row, ctx);
     case 'application':
       return row.table_name === 'application_technologies'
         ? applicationLinkChanges(row, ctx)
@@ -1284,7 +1282,9 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
     case 'asset':
       return row.table_name === 'asset_technologies' ? installedAsset(row, ctx) : assetChanges(row, ctx);
     case 'budget_line':
-      return budgetLineChanges(row, ctx);
+      // A contact's link row names its budget line in the payload; an asset or a technology writes
+      // the set of its budget lines.
+      return ctx.entry.table === 'contacts' ? linkRowChanges('budget_line', row, ctx) : budgetLineChanges(row, ctx);
     case 'relation':
       return relationChanges(row, ctx);
     case 'member':
@@ -1419,7 +1419,6 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
     case 'project':
     case 'request':
     case 'task':
-    case 'budget_line':
     case 'relation':
     case 'member':
     case 'owner': {
