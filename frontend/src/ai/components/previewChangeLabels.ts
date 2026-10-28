@@ -29,7 +29,9 @@ const RECORD_TOOLS = new Set([
   'create_master_data_record',
   'update_master_data_record',
   'write_financial_plan',
-  // The incident confidentiality card reads its Yes/No values as the record cards do.
+  // The incident administrator cards read their status codes and their Yes/No values as the
+  // record cards do (the status rule and the screen's incident field labels do the naming).
+  'change_incident_state',
   'set_incident_confidentiality',
 ]);
 
