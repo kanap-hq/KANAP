@@ -432,7 +432,7 @@
       "data_class": "Confidencialidad de los datos",
       "description": "Descripción",
       "detected_at": "Detectado el",
-      "disabled_at": "Desactivado el",
+      "disabled_at": "Fin de validez",
       "due_date": "Fecha de vencimiento",
       "editor": "Editor",
       "effective_start": "Inicio efectivo",
@@ -553,7 +553,20 @@
       "kind": "Tipo",
       "parent_id": "Grupo superior",
       "accountNature": "Usada para",
-      "costCenterOwner": "Responsable del presupuesto"
+      "costCenterOwner": "Responsable del presupuesto",
+      "country_iso": "País",
+      "city": "Ciudad",
+      "address1": "Dirección, línea 1",
+      "address2": "Dirección, línea 2",
+      "postal_code": "Código postal",
+      "state": "Provincia o región",
+      "reg_number": "Número de registro",
+      "vat_number": "Número de IVA",
+      "base_currency": "Moneda base",
+      "headcount": "Plantilla",
+      "it_users": "Usuarios IT",
+      "turnover": "Facturación",
+      "is_frozen": "Congelado"
     },
     "history": {
       "empty": "Todavía no hay historial",
@@ -671,7 +684,9 @@
         "analytics_category": "un valor analítico",
         "contributor": "un colaborador"
       },
-      "title": "Historial"
+      "title": "Historial",
+      "metricsYear": "Indicadores {{year}}",
+      "metricsNoYear": "Indicadores"
     },
     "messages": {
       "loadDetailsFailed": "No se pudieron cargar los detalles de la entrada de auditoría."

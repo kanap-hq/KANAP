@@ -432,7 +432,7 @@
       "data_class": "Confidentialité des données",
       "description": "Description",
       "detected_at": "Détecté le",
-      "disabled_at": "Désactivé le",
+      "disabled_at": "Fin de validité",
       "due_date": "Échéance",
       "editor": "Éditeur",
       "effective_start": "Début effectif",
@@ -553,7 +553,20 @@
       "kind": "Type",
       "parent_id": "Groupe parent",
       "accountNature": "Utilisé pour",
-      "costCenterOwner": "Responsable budgétaire"
+      "costCenterOwner": "Responsable budgétaire",
+      "country_iso": "Pays",
+      "city": "Ville",
+      "address1": "Adresse ligne 1",
+      "address2": "Adresse ligne 2",
+      "postal_code": "Code postal",
+      "state": "Région ou État",
+      "reg_number": "Numéro d'immatriculation",
+      "vat_number": "Numéro de TVA",
+      "base_currency": "Devise de base",
+      "headcount": "Effectif",
+      "it_users": "Utilisateurs IT",
+      "turnover": "Chiffre d'affaires",
+      "is_frozen": "Gelé"
     },
     "history": {
       "empty": "Aucun historique",
@@ -671,7 +684,9 @@
         "analytics_category": "une valeur analytique",
         "contributor": "un contributeur"
       },
-      "title": "Historique"
+      "title": "Historique",
+      "metricsYear": "Indicateurs {{year}}",
+      "metricsNoYear": "Indicateurs"
     },
     "messages": {
       "loadDetailsFailed": "Impossible de charger les détails de l'entrée d'audit."

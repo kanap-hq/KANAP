@@ -42,7 +42,7 @@ export type RecordHistoryChange = {
 };
 export type RecordHistorySubject = {
   kind: 'record' | 'version' | 'amounts' | 'allocations' | 'round_input' | 'link' | 'attachment'
-    | 'contact' | 'application' | 'technology' | 'asset' | 'contract' | 'project' | 'request' | 'task';
+    | 'contact' | 'application' | 'technology' | 'asset' | 'contract' | 'project' | 'request' | 'task' | 'metrics';
   label?: string | null;
 };
 export type RecordHistoryItem = {
@@ -209,6 +209,11 @@ export function historySubjectText(subject: RecordHistorySubject, t: Translate):
     return subject.label
       ? t('auditLogs.history.allocation', { name: subject.label })
       : t('auditLogs.history.allocationNoName');
+  }
+  if (subject.kind === 'metrics') {
+    return subject.label
+      ? t('auditLogs.history.metricsYear', { year: subject.label })
+      : t('auditLogs.history.metricsNoYear');
   }
   return null;
 }

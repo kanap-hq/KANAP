@@ -125,6 +125,7 @@ const CHILD_KIND_LABELS: Record<RecordHistoryChildKind, string> = {
   project: 'project',
   request: 'request',
   task: 'task',
+  metrics: 'metrics',
 };
 
 /** The children whose creation is a title only: a version, a budget input, an allocation. */
@@ -690,6 +691,8 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
       return linkedRecordChanges(kind, row, ctx);
     case 'task':
       return taskChanges(row, ctx);
+    case 'metrics':
+      return genericChanges(row, ctx, { label: row.table_name });
     case 'version':
       return genericChanges(row, ctx, { label: row.table_name });
     default:
@@ -725,6 +728,14 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
     }
     case 'attachment':
       return labelOf(row, ['original_filename']);
+    case 'metrics': {
+      for (const payload of [row.after_json, row.before_json]) {
+        if (!isPlainObject(payload)) continue;
+        if (typeof payload.fiscal_year === 'number') return String(payload.fiscal_year);
+        if (typeof payload.fiscal_year === 'string' && payload.fiscal_year.trim()) return payload.fiscal_year.trim();
+      }
+      return null;
+    }
     case 'contact':
     case 'application':
     case 'technology':

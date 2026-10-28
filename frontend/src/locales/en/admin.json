@@ -432,7 +432,7 @@
       "data_class": "Data confidentiality",
       "description": "Description",
       "detected_at": "Detected on",
-      "disabled_at": "Disabled on",
+      "disabled_at": "End of validity",
       "due_date": "Due date",
       "editor": "Publisher",
       "effective_start": "Effective start",
@@ -553,7 +553,20 @@
       "kind": "Type",
       "parent_id": "Parent group",
       "accountNature": "Used for",
-      "costCenterOwner": "Budget holder"
+      "costCenterOwner": "Budget holder",
+      "country_iso": "Country",
+      "city": "City",
+      "address1": "Address line 1",
+      "address2": "Address line 2",
+      "postal_code": "Postal code",
+      "state": "State or region",
+      "reg_number": "Registration number",
+      "vat_number": "VAT number",
+      "base_currency": "Base currency",
+      "headcount": "Headcount",
+      "it_users": "IT users",
+      "turnover": "Turnover",
+      "is_frozen": "Frozen"
     },
     "history": {
       "empty": "No history yet",
@@ -671,7 +684,9 @@
         "analytics_category": "an analytics value",
         "contributor": "a contributor"
       },
-      "title": "History"
+      "title": "History",
+      "metricsYear": "Metrics {{year}}",
+      "metricsNoYear": "Metrics"
     },
     "messages": {
       "loadDetailsFailed": "Failed to load audit entry details."

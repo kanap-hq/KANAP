@@ -16,9 +16,15 @@ import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import DepartmentHeadcountTab from './DepartmentHeadcountTab';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
-type TabKey = 'overview' | 'details';
-const TAB_KEYS: TabKey[] = ['overview', 'details'];
+type TabKey = 'overview' | 'details' | typeof RECORD_HISTORY_TAB_KEY;
+const TAB_KEYS: TabKey[] = ['overview', 'details', RECORD_HISTORY_TAB_KEY];
+
+// The History tab loads its code when opened; a failed load shows a retry in its place.
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
 const LIST_PATH = '/master-data/departments';
 
 type Department = {
@@ -154,6 +160,7 @@ export default function DepartmentWorkspacePage() {
   const tabs = [
     { key: 'overview', label: t('shared.labels.overview') },
     { key: 'details', label: t('shared.labels.details') },
+    { key: RECORD_HISTORY_TAB_KEY, label: t('shared.labels.history') },
   ];
 
   const properties = data ? (
@@ -254,6 +261,13 @@ export default function DepartmentWorkspacePage() {
             onYearChange={setYear}
             readOnly={!canEdit}
           />
+        )}
+        {data && tab === RECORD_HISTORY_TAB_KEY && (
+          <WorkspaceTabBoundary resetKey={tab} onRetry={() => historyTab.retry()}>
+            <React.Suspense fallback={null}>
+              <HistoryTab table="departments" recordId={data.id} />
+            </React.Suspense>
+          </WorkspaceTabBoundary>
         )}
       </PortfolioDetailWorkspaceShell>
     </Box>

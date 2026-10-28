@@ -54,7 +54,8 @@
       "prev": "Préc.",
       "next": "Suiv.",
       "enabled": "Activé",
-      "access": "Accès"
+      "access": "Accès",
+      "history": "Historique"
     },
     "workspace": {
       "itemCountOf": "{{entity}} {{current}} sur {{total}}"

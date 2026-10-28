@@ -432,7 +432,7 @@
       "data_class": "Datenvertraulichkeit",
       "description": "Beschreibung",
       "detected_at": "Erkannt am",
-      "disabled_at": "Deaktiviert am",
+      "disabled_at": "Gültigkeitsende",
       "due_date": "Fälligkeitsdatum",
       "editor": "Herausgeber",
       "effective_start": "Gültig ab",
@@ -553,7 +553,20 @@
       "kind": "Typ",
       "parent_id": "Übergeordnete Gruppe",
       "accountNature": "Verwendet für",
-      "costCenterOwner": "Budgetverantwortlicher"
+      "costCenterOwner": "Budgetverantwortlicher",
+      "country_iso": "Land",
+      "city": "Stadt",
+      "address1": "Adresszeile 1",
+      "address2": "Adresszeile 2",
+      "postal_code": "Postleitzahl",
+      "state": "Bundesland oder Region",
+      "reg_number": "Handelsregisternummer",
+      "vat_number": "USt-IdNr.",
+      "base_currency": "Basiswährung",
+      "headcount": "Mitarbeiterzahl",
+      "it_users": "IT-Benutzer",
+      "turnover": "Umsatz",
+      "is_frozen": "Eingefroren"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -671,7 +684,9 @@
         "analytics_category": "ein Analysewert",
         "contributor": "ein Mitwirkender"
       },
-      "title": "Verlauf"
+      "title": "Verlauf",
+      "metricsYear": "Kennzahlen {{year}}",
+      "metricsNoYear": "Kennzahlen"
     },
     "messages": {
       "loadDetailsFailed": "Details des Audit-Eintrags konnten nicht geladen werden."

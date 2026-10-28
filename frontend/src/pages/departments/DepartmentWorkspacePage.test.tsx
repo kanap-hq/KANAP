@@ -28,6 +28,9 @@ vi.mock('../../hooks/useDepartmentNav', () => ({
 vi.mock('../../hooks/useFreezeState', () => ({
   useFreezeState: () => ({ data: undefined, isLoading: false }),
 }));
+vi.mock('../../components/history/RecordHistory', () => ({
+  default: ({ table, recordId }: { table: string; recordId: string }) => <div>{`${table}:${recordId}`}</div>,
+}));
 vi.mock('../../components/fields/CompanySelect', () => ({
   default: (props: { onChange: (v: string | null) => void }) => (
     <button type="button" onClick={() => props.onChange('company-2')}>pick company</button>
@@ -97,6 +100,18 @@ describe('DepartmentWorkspacePage', () => {
     expect(screen.queryByRole('button', { name: 'common:buttons.reset' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'shared.labels.overview' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'shared.labels.details' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toBeInTheDocument();
+  });
+
+  it('opens the History tab with the department history, and never in creation', async () => {
+    const history = renderAt('/master-data/departments/dep-1/history');
+    expect(await screen.findByText('departments:dep-1')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toHaveAttribute('aria-selected', 'true');
+    history.unmount();
+
+    renderAt('/master-data/departments/new/overview');
+    expect(await screen.findByText('departments.newDepartment')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'shared.labels.history' })).toBeNull();
   });
 
   it('hides delete from someone who is not a departments admin', async () => {
