@@ -25,7 +25,7 @@ import {
 } from './record-history.inventory';
 
 /**
- * The history of one record, as its page shows it (lot 1B).
+ * The history of one record, as its page shows it (lot 1B, extended by lot 2).
  *
  * `GET /records/:table/:id/history` loads the record first, in the request's transaction
  * (`ctx.manager`: tenant context and the person's data access), then reads the audit rows by its id.

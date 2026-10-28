@@ -65,7 +65,7 @@ export type RecordHistoryRecord = {
   exclusions: readonly RecordHistoryExclusion[];
 };
 
-/** The inventory, by route key. Only the budget lines are declared in this run (lot 1B). */
+/** The inventory, by route key: the budget line (lot 1) and the account and cost center pilots (lot 2). */
 const RECORD_HISTORY_DEFINITION = {
   spend_items: {
     table: 'spend_items',
