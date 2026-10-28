@@ -331,6 +331,30 @@ export class IntegratedDocumentsService {
     };
   }
 
+  /**
+   * The grant a source record's own service carries when it writes that record's integrated
+   * document itself (`writeSourceSlotContent`, `syncTitles`: a changed purpose, a rename). The
+   * source edit permission is checked here, as `resolveManagedDocumentId` checks it for the
+   * integrated-document routes, never taken on the caller's word. No user, no source edit
+   * permission, or an incident review (its own `sourceContext`): no grant, and the Knowledge
+   * library ACL decides as before.
+   */
+  private async callerWriteGrant(
+    sourceEntityType: SourceScopedEntityType,
+    sourceEntityId: string,
+    slotKey: string,
+    documentId: string,
+    userId: string | null | undefined,
+    manager: EntityManager,
+    sourceContext: DocumentSourceAccessContext | null,
+  ): Promise<DocumentSourceGrant | null> {
+    const normalizedUserId = String(userId || '').trim();
+    if (!normalizedUserId || sourceContext) return null;
+    const outcome = await this.sourcePermissionOutcome(sourceEntityType, 'edit', normalizedUserId, manager);
+    if (outcome !== 'granted') return null;
+    return this.sourceGrant(sourceEntityType, sourceEntityId, slotKey, documentId, 'edit', sourceContext);
+  }
+
   private assertSupportedSlot(sourceEntityType: SourceScopedEntityType, slotKey: string): asserts slotKey is IntegratedDocumentSlotKey {
     if (!SUPPORTED_SLOT_KEYS[sourceEntityType]?.has(slotKey)) {
       throw new BadRequestException(`Unsupported integrated document slot: ${slotKey}`);
@@ -2000,6 +2024,24 @@ export class IntegratedDocumentsService {
   ): Promise<void> {
     const config = SOURCE_ENTITY_CONFIG[sourceEntityType];
     const requiredLevel = accessMode === 'edit' ? config.editLevel : config.readLevel;
+    const outcome = await this.sourcePermissionOutcome(sourceEntityType, accessMode, userId, manager);
+    if (outcome === 'unknown-user') {
+      throw new ForbiddenException('User not found');
+    }
+    if (outcome === 'denied') {
+      throw new ForbiddenException(`${config.permissionResource}:${requiredLevel} permission is required`);
+    }
+  }
+
+  /** The source permission check of `assertSourcePermission`, as an outcome instead of an exception. */
+  private async sourcePermissionOutcome(
+    sourceEntityType: SourceScopedEntityType,
+    accessMode: SourceAccessMode,
+    userId: string,
+    manager: EntityManager,
+  ): Promise<'granted' | 'denied' | 'unknown-user'> {
+    const config = SOURCE_ENTITY_CONFIG[sourceEntityType];
+    const requiredLevel = accessMode === 'edit' ? config.editLevel : config.readLevel;
 
     const userRows = await manager.query(
       `SELECT u.role_id,
@@ -2012,7 +2054,7 @@ export class IntegratedDocumentsService {
       [userId],
     ) as Array<{ role_id: string | null; primary_role_name: string }>;
     if (!userRows.length) {
-      throw new ForbiddenException('User not found');
+      return 'unknown-user';
     }
 
     const extraRoleRows = await manager.query(
@@ -2030,7 +2072,7 @@ export class IntegratedDocumentsService {
       ...extraRoleRows.map((row) => String(row.role_name || '')),
     ]);
     if (roleNames.has('administrator')) {
-      return;
+      return 'granted';
     }
 
     const roleIds = Array.from(new Set([
@@ -2041,8 +2083,9 @@ export class IntegratedDocumentsService {
     const effectivePermissions = await this.permissions.listForRoles(roleIds, { manager });
     const currentLevel = effectivePermissions.get(config.permissionResource);
     if (!currentLevel || (PERMISSION_RANK[currentLevel] ?? 0) < PERMISSION_RANK[requiredLevel]) {
-      throw new ForbiddenException(`${config.permissionResource}:${requiredLevel} permission is required`);
+      return 'denied';
     }
+    return 'granted';
   }
 
   /**
@@ -2512,6 +2555,7 @@ export class IntegratedDocumentsService {
       };
     }
 
+    const sourceContext = await this.buildSourceAccessContext(sourceEntityType, source.id, slotKey, userId, manager);
     await this.knowledge.updateManagedDocument(
       existingBinding.document_id,
       {
@@ -2522,7 +2566,10 @@ export class IntegratedDocumentsService {
       userId || null,
       {
         manager,
-        sourceContext: await this.buildSourceAccessContext(sourceEntityType, source.id, slotKey, userId, manager),
+        sourceContext,
+        sourceGrant: await this.callerWriteGrant(
+          sourceEntityType, source.id, slotKey, existingBinding.document_id, userId, manager, sourceContext,
+        ),
         systemOperation: !String(userId || '').trim(),
       },
     );
@@ -2572,6 +2619,10 @@ export class IntegratedDocumentsService {
       if (document.title === nextTitle) {
         continue;
       }
+      const sourceContext = await this.buildSourceAccessContext(
+        sourceEntityType, source.id, slotKey, userId, manager,
+        { allowFrozenIncident: opts?.allowFrozenIncident === true },
+      );
       await this.knowledge.updateManagedDocument(
         binding.document_id,
         {
@@ -2581,9 +2632,9 @@ export class IntegratedDocumentsService {
         userId || null,
         {
           manager,
-          sourceContext: await this.buildSourceAccessContext(
-            sourceEntityType, source.id, slotKey, userId, manager,
-            { allowFrozenIncident: opts?.allowFrozenIncident === true },
+          sourceContext,
+          sourceGrant: await this.callerWriteGrant(
+            sourceEntityType, source.id, slotKey, binding.document_id, userId, manager, sourceContext,
           ),
           systemOperation: !String(userId || '').trim(),
         },
