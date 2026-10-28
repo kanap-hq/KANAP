@@ -12,6 +12,8 @@ type ApiErrorPayload = {
   usages?: unknown;
   /** Values the refusal's sentence names besides the counts (a frozen column and its year). */
   params?: unknown;
+  /** Which sentence of `DATA_ACCESS_LIMITED` this is (`errors:dataAccess.*`, hidden links aside). */
+  reason?: unknown;
   /** The applications an asset delete refusal names. */
   applications?: unknown;
   /** The connections an asset delete refusal names (reference and name). */
@@ -64,6 +66,7 @@ export function isDuplicateError(error: unknown): boolean {
 const DATA_ACCESS_MESSAGE_KEYS: Record<string, string> = {
   'This item is outside your data access.': 'outside',
   'This line is read only in your access.': 'readOnlyLine',
+  'This contract is read only in your access.': 'readOnlyContract',
   'This company or cost center is not part of your access.': 'placement',
   'This action is reserved to people with access to all data.': 'reserved',
   'The chargeback of this company is outside your data access.': 'chargebackCompany',
@@ -88,6 +91,64 @@ const DATA_ACCESS_HIDDEN_LINKS = /^This (application|asset|technology) is linked
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
+const HIDDEN_LINK_OWNERS = new Set(['application', 'asset', 'technology', 'project', 'request']);
+
+/**
+ * The sentence of a delete refused for hidden links, by the owner and both counts:
+ * `errors:<OWNER>_HIDDEN_LINKS` when both are counted, else the noun alone. Null for an unknown
+ * owner or no count.
+ */
+function hiddenLinksSentence(owner: string, lines: number, contracts: number, message: string, t: Translate): string | null {
+  const noun = owner.toLowerCase();
+  if (!HIDDEN_LINK_OWNERS.has(noun)) return null;
+  const key = noun.toUpperCase();
+  if (lines > 0 && contracts > 0) {
+    return t(`errors:${key}_HIDDEN_LINKS`, {
+      lines: t('errors:hiddenLinks.line', { count: lines }),
+      contracts: t('errors:hiddenLinks.contract', { count: contracts }),
+      defaultValue: message,
+    });
+  }
+  if (contracts > 0) return t(`errors:${key}_HIDDEN_CONTRACTS`, { count: contracts, defaultValue: message });
+  if (lines > 0) return t(`errors:${key}_HIDDEN_LINES`, { count: lines, defaultValue: message });
+  return null;
+}
+
+/** The reasons whose sentence is a plain `errors:dataAccess.*` key. */
+const DATA_ACCESS_REASON_KEYS: Record<string, string> = {
+  outside: 'outside',
+  readOnlyLine: 'readOnlyLine',
+  readOnlyContract: 'readOnlyContract',
+  placement: 'placement',
+  reserved: 'reserved',
+  chargebackCompany: 'chargebackCompany',
+  readOnlyTask: 'readOnlyTask',
+  taskDelete: 'taskDelete',
+  leavesAccess: 'leavesAccess',
+};
+
+/**
+ * A refusal by its `reason` and `params`: null for an unknown reason or a missing value, so an
+ * older API (no reason) keeps the English sentence path below.
+ */
+function dataAccessReasonSentence(reason: string, params: Record<string, unknown>, message: string, t: Translate): string | null {
+  if (reason === 'hiddenLinks') {
+    return hiddenLinksSentence(
+      stringifyErrorValue(params.owner),
+      Number(params.lines ?? 0),
+      Number(params.contracts ?? 0),
+      message,
+      t,
+    );
+  }
+  if (reason === 'readOnlyRef') {
+    const ref = stringifyErrorValue(params.ref);
+    return ref ? t('errors:dataAccess.readOnlyRef', { ref, defaultValue: message }) : null;
+  }
+  const key = DATA_ACCESS_REASON_KEYS[reason];
+  return key ? t(`errors:dataAccess.${key}`, { ...params, defaultValue: message }) : null;
+}
+
 /**
  * A data access sentence of the server in the screen language: a refusal (`DATA_ACCESS_LIMITED`)
  * or a budget file row error of the same words. Null when the sentence is none of them.
@@ -100,18 +161,11 @@ export function dataAccessSentence(message: string, t: Translate): string | null
   const gone = DATA_ACCESS_NO_LONGER_AVAILABLE.exec(message);
   if (gone) return t('errors:dataAccess.noLongerAvailable', { ref: gone[1], defaultValue: message });
   const both = DATA_ACCESS_HIDDEN_LINKS.exec(message);
-  if (both) {
-    const owner = both[1].toUpperCase();
-    return t(`errors:${owner}_HIDDEN_LINKS`, {
-      lines: t('errors:hiddenLinks.line', { count: Number(both[2]) }),
-      contracts: t('errors:hiddenLinks.contract', { count: Number(both[3]) }),
-      defaultValue: message,
-    });
-  }
+  if (both) return hiddenLinksSentence(both[1], Number(both[2]), Number(both[3]), message, t);
   const contracts = DATA_ACCESS_HIDDEN_CONTRACTS.exec(message);
-  if (contracts) return t(`errors:${contracts[1].toUpperCase()}_HIDDEN_CONTRACTS`, { count: Number(contracts[2]), defaultValue: message });
+  if (contracts) return hiddenLinksSentence(contracts[1], 0, Number(contracts[2]), message, t);
   const hidden = DATA_ACCESS_HIDDEN_LINES.exec(message);
-  if (hidden) return t(`errors:${hidden[1].toUpperCase()}_HIDDEN_LINES`, { count: Number(hidden[2]), defaultValue: message });
+  if (hidden) return hiddenLinksSentence(hidden[1], Number(hidden[2]), 0, message, t);
   return null;
 }
 
@@ -151,7 +205,12 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
   }
 
   if (answerCode === 'DATA_ACCESS_LIMITED') {
-    const translated = dataAccessRefusalMessage(stringifyErrorValue(payload?.message), t);
+    const payloadParams = payload?.params && typeof payload.params === 'object'
+      ? (payload.params as Record<string, unknown>)
+      : {};
+    const reason = stringifyErrorValue(payload?.reason);
+    const translated = (reason ? dataAccessReasonSentence(reason, payloadParams, payloadMessage, t) : null)
+      || dataAccessRefusalMessage(payloadMessage, t);
     if (typeof translated === 'string' && translated.trim()) {
       return translated;
     }

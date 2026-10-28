@@ -21,7 +21,7 @@ describe('allocationWarningText', () => {
       expect(text).toContain('2026');
     }
     expect(allocationWarningText(i18n.getFixedT('fr'), warning)).toBe(
-      'New York est exclue de la répartition : pas de taux de change USD vers EUR pour 2026.',
+      'New York est exclue de la répartition\u00a0: pas de taux de change USD vers EUR pour 2026.',
     );
   });
 
@@ -34,8 +34,8 @@ describe('allocationWarningText', () => {
       ],
     });
     expect(text).toBe([
-      'New York est exclue de la répartition : pas de taux de change USD vers EUR pour 2026.',
-      'Tokyo est exclue de la répartition : pas de taux de change JPY vers EUR pour 2027.',
+      'New York est exclue de la répartition\u00a0: pas de taux de change USD vers EUR pour 2026.',
+      'Tokyo est exclue de la répartition\u00a0: pas de taux de change JPY vers EUR pour 2027.',
     ].join('\n'));
   });
 
@@ -60,7 +60,7 @@ describe('allocationWarningText', () => {
       expect(text).toContain('2026');
     }
     expect(allocationWarningText(i18n.getFixedT('fr'), missing)).toBe(
-      'Société payeuse manquante pour « Messagerie » (année 2026). Les totaux payés excluent cette ligne.',
+      'Société payeuse manquante pour «\u00a0Messagerie\u00a0» (année 2026). Les totaux payés excluent cette ligne.',
     );
     expect(allocationWarningKey(missing)).toBe('missing_paying_company:2026:Messagerie');
   });
@@ -73,7 +73,7 @@ describe('allocationWarningText', () => {
       reason: { code: 'provide_driver' as const, driver: 'headcount' as const },
     };
     expect(allocationWarningText(i18n.getFixedT('fr'), stored)).toBe(
-      'Ventilation enregistrée utilisée pour « Paie » (année 2026) : Fournissez Effectif pour les sociétés sélectionnées.',
+      'Ventilation enregistrée utilisée pour «\u00a0Paie\u00a0» (année 2026)\u00a0: Fournissez Effectif pour les sociétés sélectionnées.',
     );
     const skipped = {
       code: 'allocations_skipped' as const,

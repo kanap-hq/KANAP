@@ -22,7 +22,7 @@ describe('describeNvdMatch', () => {
       ],
     };
     expect(describeNvdMatch(match, en)).toBe('CPE identifier a:apache:tomcat: versions before 9.0.99; versions from 10.1.1 to 10.1.35 excluded');
-    expect(describeNvdMatch(match, fr)).toBe('Identifiant CPE a:apache:tomcat : versions antérieures à 9.0.99 ; versions de 10.1.1 à 10.1.35 exclue');
+    expect(describeNvdMatch(match, fr)).toBe('Identifiant CPE a:apache:tomcat\u00a0: versions antérieures à 9.0.99\u202f; versions de 10.1.1 à 10.1.35 exclue');
   });
 
   it('reads every other shape of bound', () => {
@@ -107,11 +107,11 @@ describe('describeCveOrgMatch', () => {
       versions_total: 2,
     });
     expect(describeCveOrgMatch(match, en)).toBe('Apache Software Foundation · Apache Tomcat: versions 9.0.0.M1 to 9.0.98 affected; versions 3 to 8.5.0 status unknown');
-    expect(describeCveOrgMatch(match, fr)).toBe('Apache Software Foundation · Apache Tomcat : versions 9.0.0.M1 à 9.0.98 concernées ; versions 3 à 8.5.0 statut inconnu');
+    expect(describeCveOrgMatch(match, fr)).toBe('Apache Software Foundation · Apache Tomcat\u00a0: versions 9.0.0.M1 à 9.0.98 concernées\u202f; versions 3 à 8.5.0 statut inconnu');
   });
 
   it('reads exact versions, open bounds, excluded ends and the three statuses', () => {
-    const one = (entry: Partial<CveOrgVersion>, t = en) => describeCveOrgMatch(block({ vendor: null, product: 'P', versions: [version(entry)], versions_total: 1 }), t).replace(/^P ?: /, '');
+    const one = (entry: Partial<CveOrgVersion>, t = en) => describeCveOrgMatch(block({ vendor: null, product: 'P', versions: [version(entry)], versions_total: 1 }), t).replace(/^P(?:\u00a0)?: /, '');
     expect(one({ version: '2.4.1', status: 'affected' })).toBe('version 2.4.1 affected');
     expect(one({ version: '2.4.1', status: 'affected' }, fr)).toBe('version 2.4.1 concernée');
     expect(one({ version: '2.4.1', status: 'unaffected' })).toBe('version 2.4.1 not affected');
@@ -133,7 +133,7 @@ describe('describeCveOrgMatch', () => {
       versions_total: 1,
     });
     expect(describeCveOrgMatch(match, en)).toBe('P: versions 1.0 to 2.0 (excluded) affected, from 1.5 not affected');
-    expect(describeCveOrgMatch(match, fr)).toBe('P : versions 1.0 à 2.0 (exclue) concernées, à partir de 1.5 non concernées');
+    expect(describeCveOrgMatch(match, fr)).toBe('P\u00a0: versions 1.0 à 2.0 (exclue) concernées, à partir de 1.5 non concernées');
   });
 
   it('adds the default status, the package, platforms and modules, and the versions past the 20 shown', () => {
@@ -150,7 +150,7 @@ describe('describeCveOrgMatch', () => {
     expect(text.startsWith('Apache Software Foundation · Apache Tomcat: version 1.0 affected; version 1.1 affected')).toBe(true);
     expect(text.endsWith('version 1.19 affected; and 3 more versions; all other versions: not affected; package flatpak; platforms x64; modules ABAP')).toBe(true);
     expect(describeCveOrgMatch(block({ versions: [], versions_total: 0, default_status: 'unaffected' }), fr))
-      .toBe('Apache Software Foundation · Apache Tomcat : toutes les autres versions : non concernées');
+      .toBe('Apache Software Foundation · Apache Tomcat\u00a0: toutes les autres versions\u00a0: non concernées');
     expect(describeCveOrgMatch(block({ versions: versions.slice(0, 1), versions_total: 2 }), en))
       .toBe('Apache Software Foundation · Apache Tomcat: version 1.0 affected; and 1 more version');
     // Neither publisher nor product: the record names itself.

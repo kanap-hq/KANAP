@@ -59,9 +59,10 @@ export function hiddenLinesMessage(owner: HiddenLineOwner, count: number): strin
 
 /**
  * The delete of an object linked to lines or contracts the person cannot read: 403
- * `DATA_ACCESS_LIMITED` with the sentence, and, for a delete check or a bulk delete, the refusal's
- * own `code` with the count (`params.count`, plus `params.contracts` when contracts are counted
- * too), as a `RecordInUseException` carries them (`common/record-in-use.ts`).
+ * `DATA_ACCESS_LIMITED` with the sentence, its reason (`hiddenLinks`, with the owner and both
+ * counts in the body's `params`), and, for a delete check or a bulk delete, the refusal's own
+ * `code` with the count (`params.count`, plus `params.contracts` when contracts are counted too),
+ * as a `RecordInUseException` carries them (`common/record-in-use.ts`).
  */
 export class DataAccessHiddenLinesException extends DataAccessLimitedException {
   readonly code: string;
@@ -72,7 +73,11 @@ export class DataAccessHiddenLinesException extends DataAccessLimitedException {
     const lines = count;
     const code = lines > 0 || !isContractOwner(owner) ? OWNERS[owner].code : CONTRACT_CODES[owner];
     const params = contracts > 0 ? { count: lines > 0 ? lines : contracts, contracts } : { count };
-    super(hiddenLinksMessage(owner, lines, contracts), { refusal: code, params });
+    super(hiddenLinksMessage(owner, lines, contracts), {
+      refusal: code,
+      reason: 'hiddenLinks',
+      params: { owner, lines, contracts },
+    });
     this.code = code;
     this.params = params;
   }

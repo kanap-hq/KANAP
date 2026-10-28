@@ -28,10 +28,13 @@ function build() {
 
 const ctx = (permissions: Record<string, string>): any => ({ manager: {}, tenantId: 't-1', userId: 'u-1', isAdmin: false, permissions });
 
-async function refused(call: () => Promise<unknown>, message: string, label: string) {
+async function refused(call: () => Promise<unknown>, message: string, resource: string, label: string) {
   const err = await call().then(() => null, (e) => e);
   assert.ok(err instanceof ForbiddenException, `${label}: 403`);
   assert.equal((err as ForbiddenException).message, message, label);
+  const body = (err as ForbiddenException).getResponse() as any;
+  assert.equal(body.code, 'MODULE_RIGHT_REQUIRED', label);
+  assert.deepEqual(body.params, { resource, level: 'reader' }, label);
 }
 
 async function run() {
@@ -39,10 +42,10 @@ async function run() {
   const noInfrastructure = ctx({ incidents: 'contributor', applications: 'reader' });
   const noApplications = ctx({ incidents: 'contributor', infrastructure: 'reader' });
 
-  await refused(() => controller.listAssets(INCIDENT_ID, noInfrastructure), 'You cannot read assets.', 'list assets');
-  await refused(() => controller.bulkReplaceAssets(INCIDENT_ID, { asset_ids: [] }, noInfrastructure), 'You cannot read assets.', 'replace assets');
-  await refused(() => controller.listApplications(INCIDENT_ID, noApplications), 'You cannot read applications.', 'list applications');
-  await refused(() => controller.bulkReplaceApplications(INCIDENT_ID, { application_ids: [] }, noApplications), 'You cannot read applications.', 'replace applications');
+  await refused(() => controller.listAssets(INCIDENT_ID, noInfrastructure), 'You cannot read assets.', 'infrastructure', 'list assets');
+  await refused(() => controller.bulkReplaceAssets(INCIDENT_ID, { asset_ids: [] }, noInfrastructure), 'You cannot read assets.', 'infrastructure', 'replace assets');
+  await refused(() => controller.listApplications(INCIDENT_ID, noApplications), 'You cannot read applications.', 'applications', 'list applications');
+  await refused(() => controller.bulkReplaceApplications(INCIDENT_ID, { application_ids: [] }, noApplications), 'You cannot read applications.', 'applications', 'replace applications');
   assert.deepEqual(calls, [], 'nothing read, nothing written');
 
   const both = ctx({ incidents: 'contributor', infrastructure: 'reader', applications: 'reader' });

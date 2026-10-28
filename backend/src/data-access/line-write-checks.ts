@@ -25,10 +25,55 @@ export const DATA_ACCESS_LEAVES_ACCESS_MESSAGE =
 /** A contract a limited person cannot read answers as a missing one: the key is no existence oracle. */
 export const DATA_ACCESS_CONTRACT_NOT_FOUND_MESSAGE = 'This contract does not exist.';
 
-/** 403 `DATA_ACCESS_LIMITED` with a message that says what is out of access (and `extra` fields of the body, if any). */
+/** The reason a 403 `DATA_ACCESS_LIMITED` carries, one key of `errors:dataAccess.*` (hidden links aside). */
+export type DataAccessReason =
+  | 'outside'
+  | 'readOnlyLine'
+  | 'readOnlyContract'
+  | 'placement'
+  | 'reserved'
+  | 'chargebackCompany'
+  | 'readOnlyTask'
+  | 'taskDelete'
+  | 'leavesAccess'
+  | 'readOnlyRef'
+  | 'hiddenLinks';
+
+/**
+ * The reason of each constant sentence, applied by the constructor when the caller gives none. The
+ * constants live with their checks, which import this module, so the table names their text rather
+ * than importing them; `data-access-reasons.spec.ts` checks every constant. A constructed sentence
+ * (`readOnlyRef`, hidden links) passes its reason and params itself.
+ */
+export const DATA_ACCESS_REASON_BY_MESSAGE: Record<string, DataAccessReason> = {
+  'This item is outside your data access.': 'outside',
+  'This line is read only in your access.': 'readOnlyLine',
+  'This contract is read only in your access.': 'readOnlyContract',
+  'This company or cost center is not part of your access.': 'placement',
+  'This action is reserved to people with access to all data.': 'reserved',
+  'The chargeback of this company is outside your data access.': 'chargebackCompany',
+  'This task is read only in your access.': 'readOnlyTask',
+  'Only someone who can modify the line or contract of this task can delete it.': 'taskDelete',
+  'This change would take the line out of your access. Keep yourself as an owner, or ask someone with access to its company.': 'leavesAccess',
+};
+
+type DataAccessLimitedExtra = Record<string, unknown> & { reason?: DataAccessReason };
+
+/**
+ * 403 `DATA_ACCESS_LIMITED` with a message that says what is out of access, its `reason` (a constant
+ * sentence gets it from the table) and `extra` fields of the body, if any.
+ */
 export class DataAccessLimitedException extends ForbiddenException {
-  constructor(message: string, extra?: Record<string, unknown>) {
-    super({ ...extra, statusCode: HttpStatus.FORBIDDEN, error: 'Forbidden', code: 'DATA_ACCESS_LIMITED', message });
+  constructor(message: string, extra?: DataAccessLimitedExtra) {
+    const reason = extra?.reason ?? DATA_ACCESS_REASON_BY_MESSAGE[message];
+    super({
+      ...extra,
+      statusCode: HttpStatus.FORBIDDEN,
+      error: 'Forbidden',
+      code: 'DATA_ACCESS_LIMITED',
+      message,
+      ...(reason ? { reason } : {}),
+    });
   }
 }
 

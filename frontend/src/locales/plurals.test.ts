@@ -36,8 +36,8 @@ describe('locale plurals', () => {
   it.each([
     ['en', 1, 1, 1, 'With this access: 1 budget line, 1 editable; 1 contract.'],
     ['en', 2, 1, 2, 'With this access: 2 budget lines, 1 editable; 2 contracts.'],
-    ['fr', 1, 1, 1, 'Avec cet accès : 1 ligne budgétaire, dont 1 modifiable ; 1 contrat.'],
-    ['fr', 2, 1, 2, 'Avec cet accès : 2 lignes budgétaires, dont 1 modifiable ; 2 contrats.'],
+    ['fr', 1, 1, 1, 'Avec cet accès\u00a0: 1 ligne budgétaire, dont 1 modifiable\u202f; 1 contrat.'],
+    ['fr', 2, 1, 2, 'Avec cet accès\u00a0: 2 lignes budgétaires, dont 1 modifiable\u202f; 2 contrats.'],
   ])('words the data access preview in %s for %i line(s)', (lng, lines, editable, contracts, expected) => {
     const t = i18n.getFixedT(lng);
     expect(previewText({ lines, editable_lines: editable, contracts }, t, lng)).toBe(expected);
@@ -53,8 +53,8 @@ describe('locale plurals', () => {
   });
 
   it.each([
-    ['fr', 1, 'Personne limitée : 1', 'Ligne budgétaire sans société : 1'],
-    ['fr', 2, 'Personnes limitées : 2', 'Lignes budgétaires sans société : 2'],
+    ['fr', 1, 'Personne limitée\u00a0: 1', 'Ligne budgétaire sans société\u00a0: 1'],
+    ['fr', 2, 'Personnes limitées\u00a0: 2', 'Lignes budgétaires sans société\u00a0: 2'],
     ['en', 1, 'Limited person: 1', 'Budget line without a company: 1'],
     ['en', 2, 'Limited people: 2', 'Budget lines without a company: 2'],
   ])('words the administration counters in %s for %i', (lng, count, limited, withoutCompany) => {

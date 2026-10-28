@@ -137,3 +137,20 @@ export function numberSeparators(locale: string): { thousand: string; decimal: s
 export function decimalMark(locale: string): '.' | ',' {
   return numberSeparators(locale).decimal === ',' ? ',' : '.';
 }
+
+const NO_BREAK_SPACE = '\u00a0';
+const NARROW_NO_BREAK_SPACE = '\u202f';
+
+/**
+ * French typography, applied to the text instead of the locale files: a no-break space inside
+ * guillemets and before a colon, a narrow no-break space before a semicolon, an exclamation mark
+ * and a question mark. Only an ordinary space changes, so a text that already follows the rule and
+ * a text without a space stay as they are.
+ */
+export function frenchSpacing(value: string): string {
+  return value
+    .replace(/« /g, `«${NO_BREAK_SPACE}`)
+    .replace(/ »/g, `${NO_BREAK_SPACE}»`)
+    .replace(/ :/g, `${NO_BREAK_SPACE}:`)
+    .replace(/ ([;!?])/g, `${NARROW_NO_BREAK_SPACE}$1`);
+}

@@ -10,6 +10,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { DataSource } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { Public } from '../auth/public.decorator';
@@ -110,10 +111,10 @@ export class PortfolioRequestsController {
   private assertProcessWrite(req: any): void {
     const accessCtx = { isAdmin: req?.isAdmin === true, permissions: req?.permissions };
     if (!hasLevel(accessCtx, 'business_processes', 'reader')) {
-      throw new ForbiddenException('You cannot read this module.');
+      throw moduleRightRequired('business_processes', 'reader', 'You cannot read this module.');
     }
     if (!hasLevel(accessCtx, 'business_processes', 'member')) {
-      throw new ForbiddenException('You cannot edit this module.');
+      throw moduleRightRequired('business_processes', 'member', 'You cannot edit this module.');
     }
   }
 
