@@ -161,13 +161,18 @@ function testIncidentWritesChooseTheBusinessRecordTools() {
     'Lève la confidentialité de INC-3',
     'Rends INC-3 public',
     'Rends INC-3 plus confidentiel',
-    'plus confidentiel',
-    'lève la confidentialité',
   ]) {
     const profile = selectAiContextProfile(prompt);
     assert.equal(profile.name, 'write_business', prompt);
     assert.ok(profile.toolNames.includes('change_incident_state'), `${prompt}: state tool`);
     assert.ok(profile.toolNames.includes('set_incident_confidentiality'), `${prompt}: confidentiality tool`);
+  }
+
+  // Without an INC reference, a confidentiality phrase is not a confirmed write.
+  for (const prompt of ['plus confidentiel', 'lève la confidentialité']) {
+    const profile = selectAiContextProfile(prompt);
+    assert.notEqual(profile.promptMode, 'write', prompt);
+    assert.equal(profile.toolNames.includes('set_incident_confidentiality'), false, prompt);
   }
 
   // A follow-up task on an incident goes to the task profile, before the incident intent.

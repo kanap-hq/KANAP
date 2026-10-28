@@ -260,6 +260,8 @@ const CANONICAL_REF_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEn
   { pattern: /\bT-\d+\b/i, entityType: 'tasks' },
   { pattern: /\bDOC-\d+\b/i, entityType: 'documents' },
   { pattern: /\bINC-\d+\b/i, entityType: 'incidents' },
+  // The budget line references the screens show, including the legacy OPEX wording of a request.
+  { pattern: /\b(?:BL|OPEX|OPX|CPX)-\d+\b/i, entityType: 'budget_lines' },
   // Read only for now: kept out of BUSINESS_ENTITY_TYPES until technologies have a write.
   { pattern: /\bTEC-\d+\b/i, entityType: 'technologies' },
   // Read only: a CVE id names the vulnerability rows of that CVE.
@@ -421,6 +423,40 @@ function createsIncidentRecord(text: string): boolean {
   ]);
 }
 
+/** The words that name an incident state, a status or its confidentiality. */
+const INCIDENT_STATE_WORD_RE = /\b(clos|closed|ferme|fermee|fermer|resolu|resolue|resolved|resous|resoudre|resolve|rouvert|reopened|rouvre|rouvrir|reopen|annule|annulee|annuler|cancel|cancelled|canceled|leve|levee|lever|lift|lifted|confidentialite|confidentiality|confidentiel|confidentielle|confidential|public|publique)\b/;
+
+/** The imperative verbs of an incident lifecycle change: "Rouvre INC-3", "Clos INC-7". */
+const INCIDENT_LIFECYCLE_IMPERATIVE_RE = /^(?:merci de |please |peux[- ]tu |pouvez[- ]vous |could you |can you )?(clos|close|ferme|fermer|passe|passer|mets|mettre|marque|marquer|resous|resoudre|resolve|rouvre|rouvrir|reopen|annule|annuler|cancel|leve|lever|lift|rends|rendre|make)\b/;
+
+/** These verbs only change the state they name: "Passe INC-3 en résolu", "Rends INC-3 public". */
+const INCIDENT_LIFECYCLE_VERBS_WITH_STATE = new Set([
+  'passe', 'passer', 'mets', 'mettre', 'marque', 'marquer', 'rends', 'rendre', 'make',
+]);
+
+/** A stated change without an imperative: "INC-3 ne doit plus être confidentiel". */
+const INCIDENT_STATE_DIRECTIVE_RE = /\b(?:ne )?(?:doit|devrait|should|must) (?:plus |moins )?(?:etre|be) (?:plus |moins )?(?:confidentiel|confidentielle|confidential|public|publique|closed|clos|resolu|resolved|ferme|fermee)\b/;
+
+/**
+ * A lifecycle write on one incident: an INC reference and an imperative verb, never a state word
+ * alone. A read verb or a question keeps the record read: "Show closed incidents", "Les incidents
+ * clos de APP-3", "INC-3 a-t-il été rouvert ?".
+ */
+function hasIncidentLifecycleWrite(
+  text: string,
+  hasIncidentReference: boolean,
+  question: boolean,
+  asksToReadIncident: boolean,
+): boolean {
+  if (!hasIncidentReference || question || asksToReadIncident) return false;
+  if (INCIDENT_STATE_DIRECTIVE_RE.test(text)) return true;
+  const imperative = text.match(INCIDENT_LIFECYCLE_IMPERATIVE_RE);
+  if (!imperative) return false;
+  return INCIDENT_LIFECYCLE_VERBS_WITH_STATE.has(imperative[1])
+    ? INCIDENT_STATE_WORD_RE.test(text)
+    : true;
+}
+
 function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile {
   const raw = String(userMessage || '');
   const text = normalizeText(raw);
@@ -462,10 +498,15 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   const hasIncidentIntent = hasIncidentReference || /\bincidents?\b/.test(text)
     || hasIncidentConfidentialityIntent;
   const question = isQuestion(raw, text);
+  // A polite request ends on a question mark: "tu peux passer la T-49 en cours ?".
+  const hasPoliteRequest = /^(?:tu peux|peux[- ]tu|pouvez[- ]vous|can you|could you|would you|please|merci de)\b/.test(text);
   const hasTaskReference = hasReferenceInGroup(referencedTypes, TASK_ENTITY_TYPES);
   // The names of a task, tested before the incident intent: "une tâche pour suivre l'incident".
   const hasTaskNameIntent = containsAny(text, [
     /\b(task|tasks|ticket|tickets|tache|taches|todo|to-do|assignee|echeance|due date)\b/,
+  ]);
+  const mentionsDocument = containsAny(text, [
+    /\b(document|documents|doc|docs|knowledge|article|page|library|folder|markdown)\b/,
   ]);
   // A read verb keeps the journal and the notes a read: "Montre le journal de INC-3".
   const asksToReadIncident = containsAny(text, [
@@ -474,37 +515,54 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   // "note", "journal" and "log" are a write on an incident unless the person asks a question.
   const hasIncidentNoteIntent = hasIncidentIntent && !question && !asksToReadIncident
     && containsAny(text, [/\b(note|notes|journal|log|logs)\b/]);
-  // Reopening, cancelling, resolving and changing the confidentiality need a write verb on an
-  // incident. A question asks about the fact: "INC-3 a-t-il été rouvert ?".
-  const hasIncidentLifecycleIntent = hasIncidentIntent && !question
-    && containsAny(text, [/\b(clos|closed|ferme|fermer|resolu|resolue|resolved|resous|resoudre|resolve|rouvre|rouvrir|reopen|annule|annuler|cancel|leve|lever|lift|confidentialite|confidentiel|confidentielle|public|publique)\b/]);
-  // A status word with a task reference closes the task: "Clos la tâche T-4".
-  const hasTaskStatusIntent = hasTaskReference && !question
-    && containsAny(text, [/\b(clos|closed|ferme|fermer|rouvre|rouvrir|reopen|open|done|termine|terminee|pending|in progress|en cours)\b/]);
+  // An incident state or a confidentiality change needs an INC reference and an imperative verb:
+  // "Les incidents clos de APP-3" and "Show closed incidents" stay reads. A question asks about
+  // the fact: "INC-3 a-t-il été rouvert ?".
+  const hasIncidentLifecycleIntent = hasIncidentIntent
+    && hasIncidentLifecycleWrite(text, hasIncidentReference, question, asksToReadIncident);
+  // A status word with a task reference closes the task only with a write verb: "Clos la tâche
+  // T-4" writes, "Show open tasks of T-4" and "T-4 est en cours" read.
+  const hasTaskStatusIntent = hasTaskReference && (!question || hasPoliteRequest) && !asksToReadIncident
+    && !containsAny(text, [/\b(is|are|was|were|est|sont|etait|etaient)\b/])
+    && containsAny(text, [/\b(clos|closed|ferme|fermer|rouvre|rouvrir|reopen|passe|passer|mets|mettre|marque|marquer|mark|close)\b/]);
+  // A status verb on a project reference is the project status change: "Passe PRJ-3 en cours",
+  // "Annule le projet PRJ-3". "Passe" alone is not a write: "INC-3 clos hier, que s'est-il passé".
+  const hasProjectStatusIntent = !hasIncidentReference && (!question || hasPoliteRequest) && !asksToReadIncident
+    && hasReferenceInGroup(referencedTypes, new Set<AiQueryEntityType>(['projects']))
+    && containsAny(text, [/\b(passe|passer|mets|mettre|marque|marquer|annule|annuler|cancel)\b/]);
   const isWrite = containsAny(text, [
-    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|publish|publier|mark|set|passer|passe)\b/,
+    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|publish|publier|mark|set)\b/,
     wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
     // A status or lifecycle word with an incident reference is an incident change: "clos INC-7",
     // "Résous INC-3", "Rouvre INC-3", "Annule INC-3", "Lève la confidentialité de INC-3".
     // In a question it names a fact to read: "INC-3 est-il clos ?", "INC-3 a-t-il été rouvert ?".
     ...(hasIncidentLifecycleIntent
-      ? [/\b(clos|closed|ferme|fermer|resolu|resolue|resolved|resous|resoudre|resolve|rouvre|rouvrir|reopen|annule|annuler|cancel|leve|lever|lift|confidentialite|confidentiel|confidentielle|public|publique)\b/]
+      ? [/\b(clos|closed|ferme|fermer|resolu|resolue|resolved|resous|resoudre|resolve|rouvre|rouvrir|reopen|annule|annuler|cancel|leve|lever|lift|confidentialite|confidentiality|confidentiel|confidentielle|confidential|public|publique)\b/]
       : []),
     ...(hasIncidentNoteIntent ? [/\b(note|notes|journal|log|logs)\b/] : []),
-    ...(hasTaskStatusIntent ? [/\b(clos|closed|ferme|fermer|rouvre|rouvrir|reopen|open|done|termine|terminee|pending|in progress|en cours)\b/] : []),
+    ...(hasTaskStatusIntent ? [/\b(clos|closed|ferme|fermer|rouvre|rouvrir|reopen|passe|passer|mets|mettre|marque|marquer|mark|close|done|termine|terminee|pending|in progress|en cours|attente|waiting)\b/] : []),
+    // A task status verb with a task reference is a write even in a proposal ("Voulez-vous que je
+    // passe T-4 en cours ?"), while "que s'est-il passé" names no task.
+    ...(hasTaskReference && containsAny(text, [/\b(passe|passer|mets|mettre|marque|marquer)\b/])
+      ? [/\b(passe|passer|mets|mettre|marque|marquer)\b/]
+      : []),
+    ...(hasProjectStatusIntent ? [/\b(passe|passer|mets|mettre|marque|marquer|annule|annuler|cancel)\b/] : []),
     ...(createsIncident(text, raw) ? [/\bincident\b/] : []),
   ]);
 
   if (isWrite) {
+    // The French unlink verbs only name a link with an INC reference or the word incident:
+    // "Retire le responsable de la tâche T-4" is a task field write.
     const isRelationWrite = containsAny(text, [
-      /\b(relation|relationship|link|linked|lier|lie|lies|relier|relie|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associer|associe|associes|rattacher|rattache|connect|connecter|unlink|delier)\b/,
+      /\b(relation|relationship|link|linked|lier|lie|lies|relier|relie|associer|associe|associes|rattacher|rattache|connect|connecter|unlink)\b/,
+      ...(hasIncidentIntent
+        ? [/\b(delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever)\b/]
+        : []),
     ]);
-    const hasDocumentIntent = containsAny(text, [
-      /\b(document|documents|doc|docs|knowledge|article|page|library|folder|markdown)\b/,
-    ]);
+    const hasDocumentIntent = mentionsDocument;
     const hasTaskIntent = containsAny(text, [
       /\b(task|tasks|ticket|tickets|tache|taches|todo|to-do|assignee|echeance|due date|priority|priorite|commentaire|comment)\b/,
-      /\b(en cours|in progress|open|done|termine|terminee|clos|closed|pending|a faire|to do)\b/,
+      /\b(en cours|in progress|done|termine|terminee|clos|closed|pending|a faire|to do)\b/,
     ]);
 
     // A plan that starts an incident and then links it stays a business write:
@@ -567,6 +625,19 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
 
   if (needsWeb) {
     return { profile: PROFILES.web, explicitIntent: true };
+  }
+
+  // A plural family is a list query even when it names a record: "Les incidents clos de APP-3",
+  // "Liste les tâches en cours du projet PRJ-3".
+  const mentionsIncidentList = /\bincidents\b/.test(text);
+  const mentionsTaskList = /\b(?:tasks|taches)\b/.test(text);
+  if ((mentionsIncidentList || mentionsTaskList) && !mentionsDocument) {
+    return { profile: PROFILES.read_query, explicitIntent: true };
+  }
+
+  // The public page of one incident is the record, not a knowledge document.
+  if (hasIncidentReference && asksToReadIncident) {
+    return { profile: PROFILES.entity_inspection, explicitIntent: true };
   }
 
   if (containsAny(text, [
