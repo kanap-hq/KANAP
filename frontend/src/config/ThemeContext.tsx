@@ -350,8 +350,9 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
       },
       // Compact pills for page-level action bars (list and admin page headers, chip bands,
       // workspace title rows): one `action-primary` at most, `action` for the rest,
-      // `action-danger` for a destructive action on a non-empty selection. Disabled, all three
-      // read as the same neutral pill.
+      // `action-danger` for a destructive action. Disabled, `action-primary` and `action` read as
+      // the same neutral pill; a disabled `action-danger` stays red, paler, so a delete always
+      // reads as a delete.
       variants: [
         {
           props: { variant: 'action-primary' },
@@ -398,7 +399,12 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
               backgroundColor: kanap.pillDanger.hoverBg,
               boxShadow: 'none',
             },
-            '&.Mui-disabled': actionPillDisabled,
+            '&.Mui-disabled': {
+              backgroundColor: kanap.pillDanger.bg,
+              borderColor: kanap.pillDanger.border,
+              color: kanap.danger,
+              opacity: 0.45,
+            },
           },
         },
       ],

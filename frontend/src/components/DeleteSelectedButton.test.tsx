@@ -89,12 +89,11 @@ describe('DeleteSelectedButton', () => {
     await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/spend-items/bulk', { data: { ids: ['a', 'b'] } }));
   });
 
-  it('is a disabled neutral pill with no selection', () => {
+  it('stays a danger pill, disabled, with no selection', () => {
     renderIdle([]);
     const button = screen.getByRole('button', { name: 'buttons.deleteSelected (0)' });
     expect(button).toBeDisabled();
-    expect(button).toHaveClass('MuiButton-action');
-    expect(button).not.toHaveClass('MuiButton-action-danger');
+    expect(button).toHaveClass('MuiButton-action-danger');
   });
 
   it('turns into the danger pill once rows are selected', () => {
