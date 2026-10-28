@@ -189,6 +189,11 @@ async function testRequestBulkReplaceNeedsTheLinkedFamily() {
     const error = await refusal(() => controller[method](PROJECT, body, req({ portfolio_requests: 'member' })));
     assert.ok(error instanceof ForbiddenException, method);
     assert.equal(error.message, message, method);
+    if (method === 'bulkReplaceBusinessProcesses') {
+      const refusalBody = (error as ForbiddenException).getResponse() as any;
+      assert.equal(refusalBody.code, 'MODULE_RIGHT_REQUIRED', method);
+      assert.deepEqual(refusalBody.params, { resource: 'business_processes', level: 'reader' }, method);
+    }
     assert.deepEqual(calls, [], `${method}: nothing read or written`);
     await controller[method](PROJECT, body, req({ portfolio_requests: 'member', ...grant }));
     assert.match(calls.join(' '), /bulkReplace/, method);
@@ -197,6 +202,9 @@ async function testRequestBulkReplaceNeedsTheLinkedFamily() {
   const { controller, calls, req } = requestController();
   const error = await refusal(() => controller.bulkReplaceBusinessProcesses(PROJECT, { business_process_ids: [] }, req({ portfolio_requests: 'member', business_processes: 'reader' })));
   assert.equal(error.message, 'You cannot edit this module.');
+  const editBody = (error as ForbiddenException).getResponse() as any;
+  assert.equal(editBody.code, 'MODULE_RIGHT_REQUIRED');
+  assert.deepEqual(editBody.params, { resource: 'business_processes', level: 'member' });
   assert.deepEqual(calls, []);
 }
 

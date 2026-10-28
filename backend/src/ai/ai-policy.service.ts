@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { throwFeatureDisabled } from '../common/feature-gates';
 import { StripeConfigService } from '../billing/stripe';
 import { Subscription } from '../billing/subscription.entity';
@@ -293,7 +294,7 @@ export class AiPolicyService {
 
     const current = state.permissions.get(resource);
     if (!current || (LEVEL_RANK[current] ?? 0) < (LEVEL_RANK[minimumLevel] ?? 0)) {
-      throw new ForbiddenException(missingRightMessage(resource, minimumLevel));
+      throw moduleRightRequired(resource, minimumLevel, missingRightMessage(resource, minimumLevel));
     }
   }
 
@@ -554,7 +555,7 @@ export class AiPolicyService {
       await this.assertSubscriptionAllowsAi(context.tenantId, manager);
       return 'assignment';
     }
-    throw new ForbiddenException('Missing required permission ai_settings:admin.');
+    throw moduleRightRequired('ai_settings', 'admin', 'Missing required permission ai_settings:admin.');
   }
 
   private async assertAgentAccess(
@@ -577,7 +578,7 @@ export class AiPolicyService {
     if (this.hasPermission(state, 'ai_agents', minimumLevel)) {
       return;
     }
-    throw new ForbiddenException(`Missing required permission ai_agents:${minimumLevel}.`);
+    throw moduleRightRequired('ai_agents', minimumLevel, `Missing required permission ai_agents:${minimumLevel}.`);
   }
 
   async assertAgentRead(

@@ -1,5 +1,6 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { moduleRightRequired } from '../auth/module-right-required';
 import type { FxRateService } from '../currency/fx-rate.service';
 import { centsNumber, jsRound } from '../common/list-engine/sql-fragments';
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
@@ -61,7 +62,7 @@ export function canReadContractBudget(req: { isAdmin?: boolean; permissions?: Re
  * picker was hidden. 403 with the permission guard's own refusal.
  */
 export function assertContractBudgetRead(req: { isAdmin?: boolean; permissions?: Record<string, string> } | null | undefined): void {
-  if (!canReadContractBudget(req)) throw new ForbiddenException('Forbidden resource');
+  if (!canReadContractBudget(req)) throw moduleRightRequired('budget', 'reader');
 }
 
 /** The current year of the budget figures (UTC, as the contract terms). */

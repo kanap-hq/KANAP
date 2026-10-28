@@ -33,6 +33,7 @@
   "edit_conflict": "Otra persona modificó este campo mientras usted lo editaba. Elija qué valor conservar.",
   "edit_conflict_unreadable": "Otra persona modificó lo que usted guardaba, y su respuesta no se pudo leer. Sus valores siguen en pantalla, aún sin guardar.",
   "administrator_required": "Solo un administrador de este espacio de trabajo puede hacerlo.",
+  "platform_admin_required": "Solo un administrador de la plataforma puede hacer esto.",
   "demo_status_conflict": "El estado de los datos de ejemplo ha cambiado mientras tanto. Recargue la página para ver en qué punto está.",
   "demo_load_capacity": "Otros espacios de trabajo están cargando datos de ejemplo en este momento. Inténtelo de nuevo en unos minutos.",
   "tenant_not_empty": "Los datos de ejemplo solo se pueden cargar en un espacio de trabajo vacío. Este espacio de trabajo ya contiene datos.",

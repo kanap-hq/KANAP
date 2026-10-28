@@ -33,6 +33,7 @@
   "edit_conflict": "Une autre personne a modifié ce champ pendant que vous le modifiiez. Choisissez la valeur à garder.",
   "edit_conflict_unreadable": "Une autre personne a modifié ce que vous enregistriez, et sa réponse n'a pas pu être lue. Vos valeurs restent à l'écran, pas encore enregistrées.",
   "administrator_required": "Seul un administrateur de cet espace de travail peut faire cela.",
+  "platform_admin_required": "Seul un administrateur de la plateforme peut faire cela.",
   "demo_status_conflict": "L'état des données d'exemple a changé entre-temps. Rechargez la page pour voir où il en est.",
   "demo_load_capacity": "D'autres espaces de travail chargent des données d'exemple en ce moment. Réessayez dans quelques minutes.",
   "tenant_not_empty": "Les données d'exemple ne se chargent que dans un espace de travail vide. Cet espace de travail contient déjà des données.",

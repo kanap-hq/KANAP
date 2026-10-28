@@ -33,6 +33,7 @@
   "edit_conflict": "Eine andere Person hat dieses Feld geändert, während Sie es bearbeitet haben. Wählen Sie, welchen Wert Sie behalten.",
   "edit_conflict_unreadable": "Eine andere Person hat geändert, was Sie gespeichert haben, und die Antwort konnte nicht gelesen werden. Ihre Werte bleiben auf dem Bildschirm, noch nicht gespeichert.",
   "administrator_required": "Nur ein Administrator dieses Arbeitsbereichs kann das tun.",
+  "platform_admin_required": "Nur ein Plattformadministrator kann dies tun.",
   "demo_status_conflict": "Der Status der Beispieldaten hat sich inzwischen geändert. Laden Sie die Seite neu, um den aktuellen Stand zu sehen.",
   "demo_load_capacity": "Andere Arbeitsbereiche laden gerade Beispieldaten. Versuchen Sie es in einigen Minuten erneut.",
   "tenant_not_empty": "Beispieldaten lassen sich nur in einen leeren Arbeitsbereich laden. Dieser Arbeitsbereich enthält bereits Daten.",

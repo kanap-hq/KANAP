@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Features } from '../../config/features';
 import { isPlatformAdmin } from '../../auth/platform-admin.util';
@@ -16,10 +16,20 @@ export class SystemAdminGuard implements CanActivate {
     // Multi-tenant mode: same checks as PlatformAdminGuard
     if (!Features.SINGLE_TENANT) {
       if (!req.isPlatformHost) {
-        throw new ForbiddenException('Platform admin host required');
+        throw new ForbiddenException({
+          statusCode: HttpStatus.FORBIDDEN,
+          error: 'Forbidden',
+          code: 'platform_admin_required',
+          message: 'Platform admin host required',
+        });
       }
       if (!isPlatformAdmin(user)) {
-        throw new ForbiddenException('Platform admin access required');
+        throw new ForbiddenException({
+          statusCode: HttpStatus.FORBIDDEN,
+          error: 'Forbidden',
+          code: 'platform_admin_required',
+          message: 'Platform admin access required',
+        });
       }
       return true;
     }
@@ -35,7 +45,12 @@ export class SystemAdminGuard implements CanActivate {
     if (user.role?.role_name) roleNames.push(user.role.role_name.toLowerCase());
 
     if (!roleNames.includes('administrator')) {
-      throw new ForbiddenException('Administrator access required');
+      throw new ForbiddenException({
+        statusCode: HttpStatus.FORBIDDEN,
+        error: 'Forbidden',
+        code: 'administrator_required',
+        message: 'Administrator access required',
+      });
     }
 
     return true;
