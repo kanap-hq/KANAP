@@ -17,9 +17,10 @@ import { nextItemNumber, seed, type Seed } from './data-access-line-seed';
  *
  * The cases: 0 per requested value outside limited mode, no answer when the limited role is taken
  * without `data_access_apply()`, the exact hidden count for a limited person, the lifecycle window
- * (a line ending before `p_active_from` is left out, one without an end stays), the dimension's own
- * nature (a CAPEX-only dimension never counts an OPEX line), another tenant's value never answered,
- * SECURITY DEFINER and grants, and the migration's replay and down/up.
+ * (a line ending before `p_active_from` is left out, one without an end stays, UTC whatever the
+ * session zone), the dimension's own nature (a CAPEX-only dimension never counts an OPEX line),
+ * the disclosure guard (a value no readable line holds answers no row), another tenant's value
+ * never answered, SECURITY DEFINER and grants, and the migration's replay and down/up.
  */
 
 const dataSource = new DataSource({ ...(appDataSource.options as any), poolSize: 2 });
@@ -40,12 +41,15 @@ async function as(runner: QueryRunner, person: string, fn: () => Promise<void>):
 }
 
 type Extra = {
-  /** A CAPEX-only dimension on L6 and L7 (both made CAPEX). */
+  /** A CAPEX-only dimension on L4 (readable) and L6/L7 (hidden), all made CAPEX. */
   capexAxis: string;
   capexValue: string;
+  /** A value held by L6 only: no line Rita may read. */
+  hiddenOnlyAxis: string;
+  hiddenOnlyValue: string;
 };
 
-/** A CAPEX-only dimension held by two CAPEX lines, to check the function's nature guard. */
+/** A CAPEX-only dimension held by L4 (readable) and L6/L7 (hidden), to check the nature guard. */
 async function seedScenario(runner: QueryRunner, s: Seed): Promise<Extra> {
   const q = async (sql: string, params?: unknown[]): Promise<any[]> => runner.query(sql, params as any[]);
   const axisId = (await q(
@@ -56,12 +60,25 @@ async function seedScenario(runner: QueryRunner, s: Seed): Promise<Extra> {
     `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, 'capex value') RETURNING id`,
     [s.tenantId, axisId],
   ))[0].id as string;
-  await q(`UPDATE spend_items SET nature = 'capex' WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [s.tenantId, [s.lines.L6, s.lines.L7]]);
+  await q(`UPDATE spend_items SET nature = 'capex' WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [s.tenantId, [s.lines.L4, s.lines.L6, s.lines.L7]]);
   await q(
-    `INSERT INTO spend_item_analytics_values (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4), ($1, $5, $3, $4)`,
-    [s.tenantId, s.lines.L6, axisId, valueId, s.lines.L7],
+    `INSERT INTO spend_item_analytics_values (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4), ($1, $5, $3, $4), ($1, $6, $3, $4)`,
+    [s.tenantId, s.lines.L4, axisId, valueId, s.lines.L6, s.lines.L7],
   );
-  return { capexAxis: axisId, capexValue: valueId };
+  // A value only a hidden line carries: the disclosure guard must not answer it.
+  const hiddenOnlyAxis = (await q(
+    `INSERT INTO analytics_axes (tenant_id, code, name) VALUES ($1, 'hidden-only', 'hidden-only') RETURNING id`,
+    [s.tenantId],
+  ))[0].id as string;
+  const hiddenOnlyValue = (await q(
+    `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, 'hidden only') RETURNING id`,
+    [s.tenantId, hiddenOnlyAxis],
+  ))[0].id as string;
+  await q(
+    `INSERT INTO spend_item_analytics_values (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`,
+    [s.tenantId, s.lines.L6, hiddenOnlyAxis, hiddenOnlyValue],
+  );
+  return { capexAxis: axisId, capexValue: valueId, hiddenOnlyAxis, hiddenOnlyValue };
 }
 
 async function hidden(runner: QueryRunner, axisId: string, values: string[], activeFrom: string | null): Promise<Array<{ category_id: string | null; n: number | null }>> {
@@ -103,13 +120,45 @@ async function testWindow(runner: QueryRunner, s: Seed, extra: Extra): Promise<v
     assert.deepEqual(await hidden(runner, s.axis1, [s.category2], `${YEAR}-01-01`), [], 'a value of another dimension is never counted');
   });
 
-  // The CAPEX-only dimension counts only the two CAPEX lines of its nature; Rita reads neither.
+  // The CAPEX-only dimension counts L6 and L7; its readable L4 makes the value answerable.
   await as(runner, s.persons.rita, async () => {
     assert.deepEqual(await hidden(runner, extra.capexAxis, [extra.capexValue], null), [{ category_id: extra.capexValue, n: 2 }]);
   });
   await as(runner, s.persons.ulla, async () => {
     assert.deepEqual(await hidden(runner, extra.capexAxis, [extra.capexValue], null), [{ category_id: extra.capexValue, n: 0 }]);
   });
+
+  // Disclosure guard: a value held by hidden lines only answers no row for Rita, even though
+  // master data lists it. Ulla (mode all) reads its line and gets 0.
+  await as(runner, s.persons.rita, async () => {
+    assert.deepEqual(await hidden(runner, extra.hiddenOnlyAxis, [extra.hiddenOnlyValue], null), [], 'no readable line holds the value');
+  });
+  await as(runner, s.persons.ulla, async () => {
+    assert.deepEqual(await hidden(runner, extra.hiddenOnlyAxis, [extra.hiddenOnlyValue], null), [{ category_id: extra.hiddenOnlyValue, n: 0 }]);
+  });
+
+  // The window is UTC, whatever the session zone: a line ending 31 December at 23:30 UTC is out
+  // of a 1 January UTC window, though a date cast in Europe/Paris would still keep it.
+  await runner.query('SAVEPOINT utc_window');
+  try {
+    await runner.query(`SET LOCAL TIME ZONE 'Europe/Paris'`);
+    const q = async (sql: string, params?: unknown[]): Promise<any[]> => runner.query(sql, params as any[]);
+    const lateLine = (await q(
+      `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, disabled_at, item_number)
+       VALUES ($1, 'Late UTC line', 'EUR', '2026-01-01', '2025-12-31T23:30:00Z', $2) RETURNING id`,
+      [s.tenantId, nextItemNumber()],
+    ))[0].id as string;
+    await q(
+      `INSERT INTO spend_item_analytics_values (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`,
+      [s.tenantId, lateLine, s.axis1, s.category1],
+    );
+    await as(runner, s.persons.rita, async () => {
+      assert.deepEqual(await hidden(runner, s.axis1, [s.category1], `${YEAR}-01-01`), [{ category_id: s.category1, n: 2 }], '23:30 UTC on 31 December is outside 1 January UTC');
+    });
+  } finally {
+    await runner.query('ROLLBACK TO SAVEPOINT utc_window');
+    await runner.query(`SET LOCAL TIME ZONE 'UTC'`);
+  }
 
   // Another tenant's value is never answered from this tenant, and its own hidden line counts there.
   await as(runner, s.persons.ulla, async () => {
@@ -120,15 +169,20 @@ async function testWindow(runner: QueryRunner, s: Seed, extra: Extra): Promise<v
       [`da-hidden-${s.tenantId.slice(0, 8)}`, `Other ${s.tenantId.slice(0, 8)}`],
     ))[0].id as string;
     await q(`SELECT set_config('app.current_tenant', $1, true)`, [otherTenant]);
-    const otherLine = (await q(
-      `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number)
-       VALUES ($1, 'Other tenant line', 'EUR', '2026-01-01', $2) RETURNING id`, [otherTenant, nextItemNumber()],
-    ))[0].id as string;
     const otherAxis = (await q(`INSERT INTO analytics_axes (tenant_id, code, name) VALUES ($1, 'b1', 'b1') RETURNING id`, [otherTenant]))[0].id as string;
     const otherValue = (await q(`INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, 'b1 value') RETURNING id`, [otherTenant, otherAxis]))[0].id as string;
-    await q(`INSERT INTO spend_item_analytics_values (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`, [otherTenant, otherLine, otherAxis, otherValue]);
     const otherRole = await seedRole(clientOf(runner), otherTenant, 'Other role');
     const otherPerson = await seedPerson(clientOf(runner), otherTenant, 'limited', otherRole);
+    // One hidden line and one the person owns: the disclosure guard has a readable line to accept.
+    const otherLine = (await q(
+      `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number)
+       VALUES ($1, 'Other tenant hidden line', 'EUR', '2026-01-01', $2) RETURNING id`, [otherTenant, nextItemNumber()],
+    ))[0].id as string;
+    const otherReadableLine = (await q(
+      `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number, owner_it_id)
+       VALUES ($1, 'Other tenant readable line', 'EUR', '2026-01-01', $2, $3) RETURNING id`, [otherTenant, nextItemNumber(), otherPerson],
+    ))[0].id as string;
+    await q(`INSERT INTO spend_item_analytics_values (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4), ($1, $5, $3, $4)`, [otherTenant, otherLine, otherAxis, otherValue, otherReadableLine]);
     await applyDataAccess(runner, otherPerson);
     assert.deepEqual(await hidden(runner, otherAxis, [otherValue], null), [{ category_id: otherValue, n: 1 }], 'the other tenant counts its own hidden line');
     assert.deepEqual(await hidden(runner, s.axis1, [s.category1], null), [], 'the first tenant\'s value is not counted from another tenant');

@@ -27,16 +27,22 @@ const LIMITED_ROLE = 'kanap_data_limited';
  * `p_active_from` is the report's lifecycle window, exactly as `windowScope`
  * reads it (`spend/budget-list/budget-list.service.ts`): a line with no end of
  * validity, or one ending on or after that day, is counted; NULL counts every
- * line. The previous two-argument signature is dropped first: a development
- * database still holds it, and `CREATE OR REPLACE` would add an overload the
- * two-argument calls could not resolve.
+ * line. It is read in UTC (`p_active_from::timestamp AT TIME ZONE 'UTC'`), as
+ * the engine binds `...T00:00:00.000Z::timestamptz`: the session time zone
+ * must not move the window. The previous signatures are dropped first: a
+ * development database still holds them, and `CREATE OR REPLACE` would add an
+ * overload the older calls could not resolve.
+ *
+ * Disclosure guard (review B1): a value is answered only when at least one
+ * line the reader may read holds it, in the same tenant, dimension, window and
+ * nature. Without it, a limited reader could ask for the hidden count of any
+ * value they can list in master data, including values none of their lines
+ * carry. The outer count stays the lines they cannot read.
  *
  * Defence in depth: only values that belong to the requested dimension and to
  * the current tenant are answered, in both modes (analytics_categories joined
  * on id, tenant and axis). A value id of another dimension, or of another
- * tenant, answers no row, which the caller reads as 0. The caller still owes
- * one thing the function cannot check: the values are the ones the report's
- * own aggregate answered, under RLS. A later caller must keep that contract.
+ * tenant, answers no row, which the caller reads as 0.
  */
 
 /** The settings of data_access_apply() (spec §6.3), read once per statement through an InitPlan. */
@@ -68,7 +74,11 @@ async function createFunction(queryRunner: QueryRunner): Promise<void> {
     AS $fn$
     DECLARE
       v_nature text;
+      v_active_from timestamptz;
     BEGIN
+      IF p_active_from IS NOT NULL THEN
+        v_active_from := (p_active_from::timestamp AT TIME ZONE 'UTC');
+      END IF;
       IF NOT (${MODE_LIMITED}) THEN
         IF ${ROLE_TAKEN} THEN
           RETURN QUERY SELECT NULL::uuid, NULL::integer;
@@ -80,7 +90,19 @@ async function createFunction(queryRunner: QueryRunner): Promise<void> {
           JOIN public.analytics_categories c
             ON c.id = req.id
            AND c.tenant_id = app_current_tenant()
-           AND c.axis_id = p_axis_id;
+           AND c.axis_id = p_axis_id
+           AND EXISTS (
+             SELECT 1
+             FROM public.spend_items i2
+             JOIN public.spend_item_analytics_values v2
+               ON v2.tenant_id = i2.tenant_id AND v2.item_id = i2.id
+             WHERE i2.tenant_id = app_current_tenant()
+               AND v2.tenant_id = app_current_tenant()
+               AND v2.axis_id = p_axis_id
+               AND v2.category_id = c.id
+               AND i2.nature IN ('opex', 'capex')
+               AND (v_active_from IS NULL OR i2.disabled_at IS NULL OR i2.disabled_at >= v_active_from)
+           );
         RETURN;
       END IF;
       SELECT ax.applies_to INTO v_nature
@@ -104,8 +126,22 @@ async function createFunction(queryRunner: QueryRunner): Promise<void> {
           AND v.category_id = ANY (p_category_ids)
           AND i.nature IN ('opex', 'capex')
           AND (v_nature IS NULL OR i.nature = v_nature)
-          AND (p_active_from IS NULL OR i.disabled_at IS NULL OR i.disabled_at >= p_active_from)
+          AND (v_active_from IS NULL OR i.disabled_at IS NULL OR i.disabled_at >= v_active_from)
           AND NOT coalesce(${readableLine('i.')}, false)
+          AND EXISTS (
+            SELECT 1
+            FROM public.spend_items i2
+            JOIN public.spend_item_analytics_values v2
+              ON v2.tenant_id = i2.tenant_id AND v2.item_id = i2.id
+            WHERE i2.tenant_id = app_current_tenant()
+              AND v2.tenant_id = app_current_tenant()
+              AND v2.axis_id = p_axis_id
+              AND v2.category_id = c.id
+              AND i2.nature IN ('opex', 'capex')
+              AND (v_nature IS NULL OR i2.nature = v_nature)
+              AND (v_active_from IS NULL OR i2.disabled_at IS NULL OR i2.disabled_at >= v_active_from)
+              AND coalesce(${readableLine('i2.')}, false)
+          )
         GROUP BY c.id;
     END
     $fn$
