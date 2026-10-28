@@ -107,7 +107,7 @@ Wenn Schwachstellen verfolgt werden, öffnet die Spalte **Hersteller** auch die 
 
 ## Der Technologie-Arbeitsbereich
 
-Der Arbeitsbereich hat eine Kopfzeile, ein Eigenschaftenfeld rechts und sechs Reiter: **Übersicht**, **Server**, **Anwendungen**, **Betrieb**, **Compliance** und **Beziehungen**. Die Reiter **Server**, **Anwendungen** und **Beziehungen** zeigen ihre Anzahl als Badge.
+Der Arbeitsbereich hat eine Kopfzeile, ein Eigenschaftenfeld rechts und sieben Reiter: **Übersicht**, **Server**, **Anwendungen**, **Betrieb**, **Compliance**, **Beziehungen** und **Verlauf** (die Änderungen an der Technologie, siehe [Verlauf der Datensätze](record-history.md)). Die Reiter **Server**, **Anwendungen** und **Beziehungen** zeigen ihre Anzahl als Badge.
 
 ### Kopfzeile
 

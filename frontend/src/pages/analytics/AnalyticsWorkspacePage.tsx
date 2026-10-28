@@ -236,6 +236,7 @@ export default function AnalyticsWorkspacePage() {
           nextLabel: t('analytics.nextValue'),
         } : undefined}
         actions={actions}
+        history={data ? { table: 'analytics_categories', recordId: data.id } : undefined}
         properties={data ? (
           <PropertyGroup>
             <PropertyRow label={t('analytics.fields.dimension')}>

@@ -45,6 +45,9 @@ vi.mock('../../services/workingDayProfiles', async (importOriginal) => ({
 vi.mock('../../hooks/useWorkingDayCalendarNav', () => ({
   useWorkingDayCalendarNav: () => ({ ids: [], index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
+vi.mock('../../components/history/RecordHistory', () => ({
+  default: ({ table, recordId }: { table: string; recordId: string }) => <div>{`${table}:${recordId}`}</div>,
+}));
 
 import * as service from '../../services/workingDayProfiles';
 import WorkingDayCalendarWorkspacePage from './WorkingDayCalendarWorkspacePage';
@@ -165,6 +168,17 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     expect(mocked.getWorkingDayProfileYear).not.toHaveBeenCalled();
     expect(screen.queryByTestId('working-day-calendar-source')).toBeNull();
     expect(screen.queryByTestId('working-days-holidays')).toBeNull();
+  });
+
+  it('opens the calendar history from the header, and never in creation', async () => {
+    const history = renderAt('/master-data/working-day-calendars/wd-1/overview');
+    await screen.findByLabelText('workingDayCalendars.fields.code');
+    fireEvent.click(screen.getByRole('button', { name: 'admin:auditLogs.history.title' }));
+    expect(await screen.findByText('working_day_profiles:wd-1')).toBeInTheDocument();
+    history.unmount();
+
+    renderAt('/master-data/working-day-calendars/new/overview');
+    expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
   });
 
   it('prefills code and name from a country and its region, and creates a standard calendar', async () => {

@@ -113,7 +113,7 @@ Toutes les cellules sont des liens cliquables vers l'espace de travail du compte
 
 ## L'espace de travail du compte
 
-Cliquez sur n'importe quelle ligne de la grille des comptes pour ouvrir l'espace de travail du compte.
+Cliquez sur n'importe quelle ligne de la grille des comptes pour ouvrir l'espace de travail du compte. Le bouton **Historique** de l'en-tête ouvre l'historique du compte dans un panneau latéral. Voir [Historique des fiches](record-history.md).
 
 ### Disposition
 

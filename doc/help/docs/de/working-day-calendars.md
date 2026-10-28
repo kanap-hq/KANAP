@@ -88,7 +88,7 @@ Land und Region werden einmal festgelegt, beim Anlegen. Um einem anderen Land zu
 
 ## Der Kalender-Arbeitsbereich
 
-Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen.
+Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen. Die Schaltfläche **Verlauf** in der Kopfzeile öffnet den Verlauf des Kalenders in einem Seitenbereich. Siehe [Verlauf der Datensätze](record-history.md).
 
 - **Kopfzeile**: der Code als Referenz, mit einer Kopierschaltfläche, und der Name. Klicken Sie auf den Namen, um ihn zu ändern. **Zurück** / **Weiter** bewegen sich durch die Liste in ihrer aktuellen Reihenfolge und mit ihren Filtern, und die Schließen-Schaltfläche führt zur Liste zurück
 - **Hauptbereich**: eine Zeile wie „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile.“, wenn Budgetzeilen den Kalender verwenden, dann die **Beschreibung** und der Abschnitt **Arbeitstage**

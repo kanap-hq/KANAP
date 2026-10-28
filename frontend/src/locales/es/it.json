@@ -2086,7 +2086,8 @@
         "network": "Red",
         "hardware": "Hardware",
         "dependencies": "Dependencias",
-        "relations": "Relaciones"
+        "relations": "Relaciones",
+        "history": "Historial"
       },
       "operations": {
         "hostedApplications": "Aplicaciones alojadas"
@@ -2382,7 +2383,8 @@
         "applications": "Aplicaciones",
         "operations": "Operaciones",
         "compliance": "Cumplimiento",
-        "relations": "Relaciones"
+        "relations": "Relaciones",
+        "history": "Historial"
       },
       "fields": {
         "name": "Nombre",
@@ -2598,7 +2600,8 @@
         "layers": "Capas",
         "compliance": "Criticidad y conformidad",
         "interfaces": "Interfaces relacionadas",
-        "path": "Ruta"
+        "path": "Ruta",
+        "history": "Historial"
       },
       "createFromBinding": "Creación desde el contexto de enlace de interfaz",
       "overview": {
@@ -2803,7 +2806,8 @@
         "compliance": "Datos y conformidad",
         "flow": "Flujo",
         "dataMapping": "Mapeo de datos",
-        "relations": "Relaciones"
+        "relations": "Relaciones",
+        "history": "Historial"
       },
       "selectSourceTarget": "Seleccione las aplicaciones de origen y destino para gestionar los enlaces.",
       "untitled": "Interfaz sin nombre",
@@ -3103,7 +3107,8 @@
       "tabs": {
         "overview": "Vista general",
         "contacts": "Contactos y soporte",
-        "relations": "Relaciones"
+        "relations": "Relaciones",
+        "history": "Historial"
       },
       "deleteTitle": "¿Eliminar ubicación?",
       "deleteMessage": "Esto eliminará permanentemente esta ubicación y desasignará automáticamente todos los activos vinculados.",

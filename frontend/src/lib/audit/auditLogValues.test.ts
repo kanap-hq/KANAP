@@ -18,6 +18,8 @@ import {
 
 const t = i18n.getFixedT('en', 'admin') as unknown as Translate;
 const tFr = i18n.getFixedT('fr', 'admin') as unknown as Translate;
+const tFrAll = i18n.getFixedT('fr') as unknown as Translate;
+const tEnAll = i18n.getFixedT('en') as unknown as Translate;
 const ADMIN = { en, fr, de, es } as Record<string, any>;
 const uuid = '11111111-1111-4111-8111-111111111111';
 const otherUuid = '22222222-2222-4222-8222-222222222222';
@@ -217,6 +219,46 @@ describe('formatAuditValue', () => {
           .toBe(expected);
       }
     }
+  });
+
+  it('names an analytics Used for from the screen list, in the four languages', () => {
+    for (const language of ['en', 'fr', 'de', 'es']) {
+      const langContext = context({
+        locale: language,
+        t: i18n.getFixedT(language, 'admin') as unknown as Translate,
+      });
+      expect(formatAuditValue('opex', 'applies_to', langContext).text, language)
+        .toBe(valueAt(ADMIN[language].auditLogs.values, 'lineTypeUsage.opex'));
+      expect(formatAuditValue('capex', 'applies_to', langContext).text, language)
+        .toBe(valueAt(ADMIN[language].auditLogs.values, 'lineTypeUsage.capex'));
+    }
+  });
+
+  it('names the IT values and the countries as their screens do', () => {
+    const fr = (table?: string) => context({ locale: 'fr', t: tFrAll, table });
+    expect(formatAuditValue('on_prem', 'provider', fr('assets')).text).toBe('Sur site');
+    expect(formatAuditValue('internal', 'data_class', fr('interfaces')).text).toBe('Interne');
+    expect(formatAuditValue('transactional', 'data_category', fr('interfaces')).text).toBe('Transactionnelles');
+    expect(formatAuditValue('internal_users', 'source_entity_code', fr('connections')).text).toBe('Utilisateurs internes');
+    expect(formatAuditValue('par_dc1', 'destination_entity_code', fr('connections')).text).toBe('par_dc1');
+    expect(formatAuditValue('FR', 'country_iso', fr()).text).toBe('France (FR)');
+    expect(formatAuditValue('FR', 'country', fr()).text).toBe('France (FR)');
+    expect(formatAuditValue('internal', 'data_class', context({ locale: 'en', t: tEnAll, table: 'interfaces' })).text).toBe('Internal');
+  });
+
+  it('keeps an account number as stored, without a thousands separator', () => {
+    expect(formatAuditValue('1300', 'account_number', context()).text).toBe('1300');
+    expect(formatAuditValue(1300, 'consolidation_account_number', context()).text).toBe('1300');
+    expect(formatAuditValue(1300, 'amount', context()).text).toBe('1,300');
+  });
+
+  it('names an account nature and a cost center kind as their screens do', () => {
+    expect(formatAuditValue('opex', 'nature', context({ table: 'accounts' })).text).toBe('OPEX only');
+    expect(formatAuditValue('capex', 'nature', context({ table: 'accounts' })).text).toBe('CAPEX only');
+    expect(formatAuditValue('opex', 'nature', context({ table: 'spend_items' })).text).toBe('OPEX');
+    expect(formatAuditValue('cost_center', 'kind', context({ table: 'cost_centers' })).text).toBe('Cost center');
+    expect(formatAuditValue('group', 'kind', context({ table: 'cost_centers' })).text).toBe('Group');
+    expect(formatAuditValue('shelf', 'kind', context({ table: 'cost_centers' })).text).toBe('shelf');
   });
 
   it('leaves an unknown budget enumeration code as stored', () => {

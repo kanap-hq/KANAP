@@ -60,6 +60,7 @@ import { analyticsValueOptions, itemReferences, matching, ownerName } from '../.
 import type { ItemAnalyticsValue } from '../../services/analytics';
 import type { CostCenterNode } from '../../services/costCenters';
 import { useCostCenterNode } from '../../hooks/useCostCenterTree';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
 /** The list this workspace belongs to (its saved list contexts). */
 
@@ -70,7 +71,7 @@ import { useCostCenterNode } from '../../hooks/useCostCenterTree';
 const budgetTab = retryableLazy(() => import('../../components/finance/BudgetTab'));
 const allocationsTab = retryableLazy(() => import('../../components/finance/AllocationsTab'));
 const relationsTab = retryableLazy(() => import('./workspace/BudgetLineRelationsTab'));
-const historyTab = retryableLazy(() => import('../../components/history/RecordHistory'));
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
 const BudgetTab = budgetTab.Component;
 const AllocationsTab = allocationsTab.Component;
 const RelationsTab = relationsTab.Component;
@@ -84,8 +85,8 @@ function retryTabs() {
 }
 
 
-type TabKey = 'overview' | 'budget' | 'allocations' | 'relations' | 'history';
-const TAB_KEYS: TabKey[] = ['overview', 'budget', 'allocations', 'relations', 'history'];
+type TabKey = 'overview' | 'budget' | 'allocations' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
+const TAB_KEYS: TabKey[] = ['overview', 'budget', 'allocations', 'relations', RECORD_HISTORY_TAB_KEY];
 
 type BudgetLineForm = {
   id?: string;
@@ -1013,7 +1014,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     { key: 'budget', label: t('opex.tabs.budget') },
     { key: 'allocations', label: t('opex.tabs.allocations') },
     { key: 'relations', label: t('opex.tabs.relations') },
-    { key: 'history', label: t('opex.tabs.history') },
+    { key: RECORD_HISTORY_TAB_KEY, label: t('opex.tabs.history') },
   ] as Array<{ key: TabKey; label: string }>), [t]);
 
   const savingHint = autosave.status === 'saving' || autosave.status === 'pending'
@@ -1288,7 +1289,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             {routeTab === 'relations' && !isCreate && !stale && uuid && (
               <RelationsTab key={uuid} lineId={uuid} nature={nature} lineEditable={lineEditable} onRelationsChange={() => { void relationsCountQuery.refetch(); }} />
             )}
-            {routeTab === 'history' && !isCreate && !stale && uuid && (
+            {routeTab === RECORD_HISTORY_TAB_KEY && !isCreate && !stale && uuid && (
               <HistoryTab key={uuid} table="spend_items" recordId={uuid} />
             )}
           </React.Suspense>

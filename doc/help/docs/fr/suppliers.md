@@ -50,7 +50,7 @@ Chaque cellule d'une ligne est cliquable et ouvre la fiche du fournisseur.
 
 Cliquez sur une ligne pour ouvrir la fiche du fournisseur. Utilisez les flèches en haut, ou les touches fléchées gauche et droite, pour passer d'un fournisseur à l'autre sans revenir à la liste. Chaque modification s'enregistre d'elle-même : il n'y a pas de bouton d'enregistrement.
 
-La fiche comporte deux onglets : **Vue d'ensemble** et **Contacts**.
+La fiche comporte trois onglets : **Vue d'ensemble**, **Contacts** et **Historique** (les modifications apportées au fournisseur, voir [Historique des fiches](record-history.md)).
 
 **Titre** : le nom du fournisseur. Cliquez dessus pour le modifier ; la modification s'enregistre quand vous quittez le champ ou appuyez sur Entrée, et Échap l'annule. Le nom est obligatoire et doit différer de celui de tous les autres fournisseurs, quelle que soit la casse (`SAP` et `sap` sont le même nom) : KANAP affiche le message sous le nom et garde le nom enregistré.
 

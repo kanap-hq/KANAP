@@ -144,7 +144,7 @@ Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich
 
 Eine Adresse, die kein Asset bezeichnet, öffnet eine Seite **Asset nicht gefunden** mit einem Link zurück zur Liste.
 
-Die Reiter sind **Übersicht**, **Betrieb**, **Netzwerk**, **Hardware** (nur physische Asset-Typen), **Abhängigkeiten** und **Beziehungen**. Wenn Sie ein Asset erstellen, sind **Übersicht** und **Netzwerk** geöffnet. Die anderen Reiter öffnen sich, sobald Sie auf **Erstellen** klicken.
+Die Reiter sind **Übersicht**, **Betrieb**, **Netzwerk**, **Hardware** (nur physische Asset-Typen), **Abhängigkeiten**, **Beziehungen** und **Verlauf** (die Änderungen am Asset, siehe [Verlauf der Datensätze](record-history.md)). Wenn Sie ein Asset erstellen, sind **Übersicht** und **Netzwerk** geöffnet. Die anderen Reiter öffnen sich, sobald Sie auf **Erstellen** klicken.
 
 ### Kopfzeile
 

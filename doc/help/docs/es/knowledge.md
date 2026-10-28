@@ -288,7 +288,7 @@ Esto hace que la revisión tenga sentido. Si los autores pudieran seguir editand
 
 ## La barra lateral del espacio de trabajo del documento
 
-La barra lateral tiene dos pestañas: **Propiedades** y **Comentarios**.
+La barra lateral tiene tres pestañas: **Propiedades**, **Comentarios** e **Historial** (los cambios hechos en el documento, vea [Historial de los registros](record-history.md)).
 
 ### Pestaña Propiedades
 

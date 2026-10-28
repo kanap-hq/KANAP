@@ -88,7 +88,7 @@ The country and region are set once, at creation. To follow another country, cre
 
 ## The calendar workspace
 
-Click any row in the list to open the workspace.
+Click any row in the list to open the workspace. The **History** button in the header opens the calendar's history in a side panel. See [Record history](record-history.md).
 
 - **Header**: the code as reference, with a copy button, and the name. Click the name to rename it. **Prev** / **Next** move through the list in its current order and filters, and the close button returns to the list
 - **Main area**: a line such as "Used by 3 OPEX lines and 1 CAPEX line." when budget lines use the calendar, the **Description**, then the **Working days** section

@@ -51,7 +51,7 @@ Das Kontakte-Grid bietet ein durchsuchbares Verzeichnis aller externen Kontakte.
 
 ## Die Kontaktseite
 
-Klicken Sie auf eine Zeile, um die Seite des Kontakts zu öffnen. Jede Änderung wird von selbst gespeichert: Es gibt keine Schaltfläche zum Speichern.
+Klicken Sie auf eine Zeile, um die Seite des Kontakts zu öffnen. Jede Änderung wird von selbst gespeichert: Es gibt keine Schaltfläche zum Speichern. Die Schaltfläche **Verlauf** in der Kopfzeile öffnet den Verlauf des Kontakts in einem Seitenbereich. Siehe [Verlauf der Datensätze](record-history.md).
 
 **Titel**: Der Name des Kontakts. Klicken Sie darauf, um Vorname und Nachname nebeneinander zu bearbeiten; die Änderung wird gespeichert, wenn Sie die beiden Felder verlassen oder Enter drücken, Escape verwirft sie. Ein Kontakt ohne Namen zeigt stattdessen seine E-Mail.
 

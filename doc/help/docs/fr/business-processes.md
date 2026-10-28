@@ -53,7 +53,7 @@ La liste affiche tous les processus métier de votre tenant.
 
 ## L'espace de travail Processus métier
 
-Cliquez sur n'importe quelle ligne de la liste (ou le bouton **Nouveau**) pour ouvrir l'espace de travail.
+Cliquez sur n'importe quelle ligne de la liste (ou le bouton **Nouveau**) pour ouvrir l'espace de travail. Le bouton **Historique** de l'en-tête ouvre l'historique du processus dans un panneau latéral. Voir [Historique des fiches](record-history.md).
 
 L'espace de travail comporte un seul onglet **Vue d'ensemble** à gauche, et une barre d'outils en haut :
 

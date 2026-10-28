@@ -51,7 +51,7 @@ La cuadrícula de Departamentos proporciona una visión general de todos los dep
 
 ## El espacio de trabajo de Departamentos
 
-Haga clic en cualquier fila para abrir el espacio de trabajo. Tiene dos pestañas: **Visión general** y **Detalles**.
+Haga clic en cualquier fila para abrir el espacio de trabajo. Tiene tres pestañas: **Visión general**, **Detalles** e **Historial** (los cambios hechos en el departamento, vea [Historial de los registros](record-history.md)).
 
 - **Encabezado**: el nombre del departamento. Haga clic en él para cambiar el nombre del departamento. **Ant.** / **Sig.** permiten moverse entre departamentos en el orden y con los filtros de la lista sin volver a ella, y el botón de cierre vuelve a la lista
 - **Panel Propiedades** a la derecha: **Empresa** y **Ciclo de vida**

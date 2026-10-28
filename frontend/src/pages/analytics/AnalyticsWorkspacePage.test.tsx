@@ -45,6 +45,9 @@ vi.mock('../../services/analytics', async (importOriginal) => ({
   updateAnalyticsValue: vi.fn(),
   deleteAnalyticsValue: vi.fn(),
 }));
+vi.mock('../../components/history/RecordHistory', () => ({
+  default: ({ table, recordId }: { table: string; recordId: string }) => <div>{`${table}:${recordId}`}</div>,
+}));
 vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../hooks/useAnalyticsAxes')>();
   return {
@@ -133,6 +136,17 @@ describe('AnalyticsWorkspacePage', () => {
     axesState.list = AXES;
     mocked.getAnalyticsValue.mockResolvedValue(VALUE);
     mocked.updateAnalyticsValue.mockImplementation(async (_id: string, patch: Partial<AnalyticsValueDetail>) => ({ ...VALUE, ...patch }));
+  });
+
+  it('opens the value history from the header, and never in creation', async () => {
+    const history = renderAt('/master-data/analytics/v-1/overview?axis=ax-nature');
+    await findTitle();
+    fireEvent.click(screen.getByRole('button', { name: 'admin:auditLogs.history.title' }));
+    expect(await screen.findByText('analytics_categories:v-1')).toBeInTheDocument();
+    history.unmount();
+
+    renderAt('/master-data/analytics/new/overview?axis=ax-nature');
+    expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
   });
 
   it('lets a member rename the value from the title, saved on blur, with no save button', async () => {

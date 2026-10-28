@@ -101,6 +101,7 @@ admin.md	frontend/src/pages/settings/NotificationsTab.tsx
 record-history.md	frontend/src/components/history/**/*.tsx
 record-history.md	frontend/src/components/history/**/*.ts
 record-history.md	backend/src/audit/record-history*.ts
+record-history.md	backend/src/audit/record-history/**/*.ts
 data-access.md	frontend/src/pages/admin/DataAccessPage.tsx
 data-access.md	frontend/src/components/dataAccess/**/*.tsx
 data-access.md	frontend/src/components/dataAccess/**/*.ts

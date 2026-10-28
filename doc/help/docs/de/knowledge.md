@@ -288,7 +288,7 @@ Dies macht den Review aussagekräftig. Wenn Autoren während der Genehmigung wei
 
 ## Die Seitenleiste des Dokumenten-Arbeitsbereichs
 
-Die Seitenleiste hat zwei Reiter: **Eigenschaften** und **Kommentare**.
+Die Seitenleiste hat drei Reiter: **Eigenschaften**, **Kommentare** und **Verlauf** (die Änderungen am Dokument, siehe [Verlauf der Datensätze](record-history.md)).
 
 ### Reiter Eigenschaften
 

@@ -13,6 +13,7 @@ import BusinessProcessCategoryManagerDialog from './BusinessProcessCategoryManag
 import BusinessProcessApplicationsSection from './BusinessProcessApplicationsSection';
 import { unsavedConfirm, useKanapDialogs } from '../../components/design';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
+import RecordHistoryButton from '../../components/history/RecordHistoryButton';
 
 type TabKey = 'overview';
 
@@ -182,6 +183,9 @@ export default function BusinessProcessWorkspacePage() {
           <Button onClick={handleNext} disabled={!hasNext}>
             {t('shared.labels.next')}
           </Button>
+          {!isCreate && data && (
+            <RecordHistoryButton table="business_processes" recordId={data.id} />
+          )}
           {!isCreate && data && canDelete && (
             <RecordDeleteButton
               base="/business-processes"

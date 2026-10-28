@@ -51,10 +51,12 @@
       "overview": "Vista general",
       "details": "Detalles",
       "contacts": "Contactos",
+      "history": "Historial",
       "prev": "Ant.",
       "next": "Sig.",
       "enabled": "Habilitado",
-      "access": "Acceso"
+      "access": "Acceso",
+      "history": "Historial"
     },
     "workspace": {
       "itemCountOf": "{{entity}} {{current}} de {{total}}"

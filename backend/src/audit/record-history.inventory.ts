@@ -1,21 +1,60 @@
 import type { PermissionLevel } from '../auth/require-level.decorator';
+import type { FamilyKey } from './record-history/families';
+import { accountsRecord } from './record-history/records/accounts';
+import { analyticsAxesRecord } from './record-history/records/analytics_axes';
+import { analyticsCategoriesRecord } from './record-history/records/analytics_categories';
+import { assetsRecord } from './record-history/records/assets';
+import { businessProcessesRecord } from './record-history/records/business_processes';
+import { companiesRecord } from './record-history/records/companies';
+import { connectionsRecord } from './record-history/records/connections';
+import { contactsRecord } from './record-history/records/contacts';
+import { costCentersRecord } from './record-history/records/cost_centers';
+import { departmentsRecord } from './record-history/records/departments';
+import { documentsRecord } from './record-history/records/documents';
+import { interfacesRecord } from './record-history/records/interfaces';
+import { locationsRecord } from './record-history/records/locations';
+import { spendItemsRecord } from './record-history/records/spend_items';
+import { suppliersRecord } from './record-history/records/suppliers';
+import { technologiesRecord } from './record-history/records/technologies';
+import { workingDayProfilesRecord } from './record-history/records/working_day_profiles';
 
 /**
  * The records whose history the API serves (`GET /records/:table/:id/history`), by route key.
  *
- * A record entry says how to read one record under the request's transaction (`ctx.manager`), the
- * permission module that opens its page, the audit labels its own rows carry, and the audit labels
- * of its children with the kind the history shows them as. The service (`record-history.service.ts`)
- * owns the presentation; a new record family only adds an entry here.
+ * A record entry names the reference family whose screen rule decides who may read the record (the
+ * same family the history resolves its references with), the permission module that opens its page,
+ * the audit labels its own rows carry, and the audit labels of its children with the kind the
+ * history shows them as. The service (`record-history.service.ts`) owns the presentation; a new
+ * record family only adds a file in `record-history/records/`.
  *
  * Two declarations keep the parent rules and the data-access inventory honest:
- * - every child label has a parent rule in `audit-parent-rules.ts`, except the labels listed in
- *   `explicitParentLabels`: their write hands the record to `writeAuditLog` (`parent`), because the
- *   payload names several records and no rule can choose one (an asset link holds the ids of every
- *   line linked to the asset);
+ * - every child label read through its parent columns has a parent rule in `audit-parent-rules.ts`,
+ *   except the labels listed in `explicitParentLabels`: their write hands the record to
+ *   `writeAuditLog` (`parent`), because the payload names several records and no rule can choose one
+ *   (an asset link holds the ids of every line linked to the asset). A label read by `childReads`
+ *   is not read through the parent columns, so it needs no parent rule of its own (`supplier_contacts`
+ *   still has one for the supplier's page);
  * - every table of the data-access families `follows_line` and `link_to_line`
  *   (`data-access/data-access-tables.inventory.ts`) is a child here or an exclusion with its reason.
  *   `__tests__/record-history-inventory.spec.ts` checks both ways, beside the catalog spec.
+ *
+ * A child label is normally read by its parent columns (`parent_table` / `parent_id`). `childReads`
+ * declares the two shapes that do not fit them: a link whose `record_id` is the record itself
+ * (`'record'`), and a link whose `record_id` is the link and whose payload names the record
+ * (`{ payloadKey }`, a separate branch). A family that declares a payload key adds its partial
+ * index in its own migration:
+ *
+ *   CREATE INDEX IF NOT EXISTS idx_audit_log_<key>_<family>
+ *     ON audit_log (tenant_id, (COALESCE(after_json, before_json) ->> '<key>'), created_at DESC, id DESC)
+ *     WHERE table_name = ANY (ARRAY['<label>', ...]);
+ *
+ * The expression is the one `payloadKeyExpression` builds and the page query reads; the WHERE names
+ * every label that carries the key. The partial predicate is what bounds the index to the label:
+ * `audit_log` is under FORCE RLS and `jsonb ->> text` is not leakproof, so PostgreSQL keeps the key
+ * as a filter after the tenant predicate, but the index only holds the label's rows and the read
+ * never scans the tenant's other audit rows. Without the index the branch scans the tenant's whole
+ * audit log. `__tests__/record-history-payload-key.integration.spec.ts` fails when a declared key
+ * has no such index and measures the plan on a table filled with other labels.
  */
 export type RecordHistoryChildKind =
   | 'version'
@@ -31,7 +70,23 @@ export type RecordHistoryChildKind =
   | 'contract'
   | 'project'
   | 'request'
-  | 'task';
+  | 'task'
+  | 'metrics'
+  | 'value'
+  | 'relation'
+  | 'member'
+  | 'hardware'
+  | 'support'
+  | 'technology_version'
+  | 'owner'
+  | 'vulnerability'
+  | 'supplier'
+  | 'budget_line'
+  | 'sub_item'
+  | 'leg'
+  | 'set'
+  | 'binding'
+  | 'person';
 
 export type RecordHistoryExclusion = {
   /** The physical table of the data-access inventory. */
@@ -39,6 +94,15 @@ export type RecordHistoryExclusion = {
   /** Why its writes are not a child of this record's history. */
   reason: string;
 };
+
+/**
+ * How a child label reaches its record when the parent columns do not name it.
+ * - `record`: the child's audit rows carry the record in `record_id` (a link whose record is the
+ *   record itself, not the object on the other side);
+ * - `{ payloadKey }`: the rows carry the link's own id in `record_id`, and the record in that key
+ *   of `before_json` or `after_json` (a contact link whose parent is another record).
+ */
+export type RecordHistoryChildRead = 'record' | { payloadKey: string };
 
 export type RecordHistoryRecord = {
   /** The physical table of the record, and its route key. */
@@ -50,99 +114,64 @@ export type RecordHistoryRecord = {
   /** The audit labels of the record's own rows, both natures where the family has two (`budget-nature.ts`). */
   auditLabels: readonly string[];
   /**
-   * The read that finds the record under `ctx.manager` (RLS, data access): `$1` the tenant, `$2`
-   * the record id. It returns the row, or nothing when the record does not exist or is outside the
-   * person's access. Never run it on `repo.manager` or `dataSource.manager`.
+   * The reference family whose visibility rule decides whether a person may read the record: the
+   * tenant predicate and RLS under `ctx.manager`, then the family's own screen rule (participation,
+   * incidents, natures). The family's module must be this entry's module.
    */
-  checkSql: string;
+  family: FamilyKey;
   /** Audit label → the kind the child shows as. */
   children: Readonly<Record<string, RecordHistoryChildKind>>;
+  /**
+   * Child label → how its rows are found. Absent, or a label absent here, means the parent columns
+   * (`parent_table` / `parent_id`), as before. A declaration is read by `readAuditPage`; the
+   * inventory spec checks that every key is a child label and that no label is both the record's
+   * own and a child.
+   */
+  childReads?: Readonly<Record<string, RecordHistoryChildRead>>;
   /** Child labels whose write declares the record as `parent`, with no label rule. */
   explicitParentLabels: readonly string[];
-  /** Data-access tables that follow the record or link to it, without a child history of their own. */
+  /** Tables whose writes are not a child of this record, with the reason a reader will not see them. */
   exclusions: readonly RecordHistoryExclusion[];
 };
 
-/** The inventory, by route key. Only the budget lines are declared in this run (lot 1B). */
-export const RECORD_HISTORY: Readonly<Record<string, RecordHistoryRecord>> = {
-  spend_items: {
-    table: 'spend_items',
-    module: 'budget',
-    level: 'reader',
-    // A CAPEX line keeps the CAPEX audit label of before lot Z1 (`budget-nature.ts`, `auditTableOf`);
-    // a line that changed nature keeps rows under both labels.
-    auditLabels: ['spend_items', 'capex_items'],
-    checkSql: 'SELECT id, item_number FROM spend_items WHERE tenant_id = $1 AND id = $2',
-    children: {
-      // Versions and their budget tables: both labels of the single physical family.
-      spend_versions: 'version',
-      capex_versions: 'version',
-      spend_amounts: 'amounts',
-      capex_amounts: 'amounts',
-      spend_allocations: 'allocations',
-      capex_allocations: 'allocations',
-      spend_round_inputs: 'round_input',
-      capex_round_inputs: 'round_input',
-      // Children of the line.
-      spend_links: 'link',
-      capex_links: 'link',
-      spend_attachments: 'attachment',
-      capex_attachments: 'attachment',
-      spend_item_contacts: 'contact',
-      capex_item_contacts: 'contact',
-      spend_tasks: 'task',
-      // Links to another object. Both sides write the same label: from the line, `record_id` is the
-      // line; from the application, technology, asset, contract, project or request, it is that
-      // object. Technologies keep one label for both natures.
-      application_spend_items: 'application',
-      application_capex_items: 'application',
-      technology_spend_items: 'technology',
-      asset_spend_items: 'asset',
-      asset_capex_items: 'asset',
-      // Contract, project and request links hold the line of either nature under the OPEX label
-      // from their own side, and under their nature's label from the line (`auditTableOf`).
-      contract_spend_items: 'contract',
-      contract_capex_items: 'contract',
-      portfolio_project_opex: 'project',
-      portfolio_project_capex: 'project',
-      portfolio_request_opex: 'request',
-      portfolio_request_capex: 'request',
-    },
-    // `record_id` names the line or the other object depending on the side that wrote, so no label
-    // rule can be exact: the writer gives the line as `parent`, and the other side only when a
-    // single line changed (`singleChangedId`). The line side always does
-    // (`item-applications.ts`, `item-technologies.ts`, `budget-line-relations.ts`); the asset,
-    // contract, project and request sides do it when their write adds or removes a single line;
-    // the application and technology sides never (`audit-parent-rules.ts`).
-    explicitParentLabels: [
-      'application_spend_items',
-      'application_capex_items',
-      'technology_spend_items',
-      'asset_spend_items',
-      'asset_capex_items',
-      'contract_spend_items',
-      'contract_capex_items',
-      'portfolio_project_opex',
-      'portfolio_project_capex',
-      'portfolio_request_opex',
-      'portfolio_request_capex',
-    ],
-    exclusions: [
-      {
-        table: 'spend_round_input_lines',
-        reason: 'the costed lines ride in the audit row of their round input (`lines`), with no audit row of their own',
-      },
-      {
-        table: 'spend_version_totals',
-        reason: 'derived by the version triggers, never audited: its changes are the amounts and allocation rows that caused them',
-      },
-      {
-        table: 'spend_item_analytics_values',
-        reason: 'the dimension values ride in the audit row of the line (`analytics_values`), with no audit row of their own',
-      },
-    ],
-  },
-};
+/**
+ * The inventory, one line per record file, sorted by table name: two record families add their own
+ * file and their own line, never the same line.
+ */
+const RECORD_HISTORY_DEFINITION = [
+  accountsRecord,
+  analyticsAxesRecord,
+  analyticsCategoriesRecord,
+  assetsRecord,
+  businessProcessesRecord,
+  companiesRecord,
+  connectionsRecord,
+  contactsRecord,
+  costCentersRecord,
+  departmentsRecord,
+  documentsRecord,
+  interfacesRecord,
+  locationsRecord,
+  spendItemsRecord,
+  suppliersRecord,
+  technologiesRecord,
+  workingDayProfilesRecord,
+] as const satisfies readonly RecordHistoryRecord[];
+
+/** A physical table the history serves: the route key of `GET /records/:table/:id/history`. */
+export type RecordHistoryTable = (typeof RECORD_HISTORY_DEFINITION)[number]['table'];
+
+/** The inventory, by route key. */
+export const RECORD_HISTORY = Object.fromEntries(
+  RECORD_HISTORY_DEFINITION.map((entry) => [entry.table, entry]),
+) as unknown as Readonly<Record<RecordHistoryTable, RecordHistoryRecord>>;
+
+/** The entry of a route key, or undefined when the table is outside the inventory (never a prototype key). */
+export function recordHistoryEntry(table: string): RecordHistoryRecord | undefined {
+  return Object.prototype.hasOwnProperty.call(RECORD_HISTORY, table)
+    ? RECORD_HISTORY[table as RecordHistoryTable]
+    : undefined;
+}
 
 /** The route keys of the inventory, sorted: the permission modules of `GET /records/:table/:id/history`. */
 export function recordHistoryModules(): string[] {
@@ -152,4 +181,48 @@ export function recordHistoryModules(): string[] {
 /** The child kind of an audit label of this record, or null for its own labels and unknown labels. */
 export function recordHistoryChildKind(entry: RecordHistoryRecord, label: string): RecordHistoryChildKind | null {
   return Object.prototype.hasOwnProperty.call(entry.children, label) ? entry.children[label] : null;
+}
+
+/** A payload key is a column name written by the family, never a value from a request. */
+const PAYLOAD_KEY_RE = /^[a-z_]+$/;
+
+export function assertPayloadKey(key: string): void {
+  if (!PAYLOAD_KEY_RE.test(key)) {
+    throw new Error(`Record history payload key "${key}" must match ${PAYLOAD_KEY_RE}.`);
+  }
+}
+
+/**
+ * The expression that reads a payload key, the one the family's partial index covers. A deletion
+ * has a NULL `after_json`, so `COALESCE` keeps the key the `before_json` held. The id is compared
+ * as text, and a writer may have stored either case: `lower` on both the expression and the id the
+ * service passes makes the read case-insensitive, and the index holds that same expression.
+ * `alias` is empty for the index definition (`pg_indexes` holds the bare columns); the query
+ * passes `a`.
+ */
+export function payloadKeyExpression(key: string, alias = 'a'): string {
+  assertPayloadKey(key);
+  const prefix = alias ? `${alias}.` : '';
+  return `lower((COALESCE(${prefix}after_json, ${prefix}before_json) ->> '${key}'))`;
+}
+
+/** One read by a payload key: the key and the child labels that carry it. */
+export type RecordHistoryPayloadKeyRead = { key: string; labels: string[] };
+
+/**
+ * The payload-key reads of an entry, one per distinct key: the labels of a key share one branch,
+ * and the branch order is stable, so a page's SQL depends only on the inventory.
+ */
+export function recordHistoryPayloadKeyReads(entry: RecordHistoryRecord): RecordHistoryPayloadKeyRead[] {
+  const byKey = new Map<string, string[]>();
+  for (const [label, mode] of Object.entries(entry.childReads ?? {})) {
+    if (mode === 'record') continue;
+    assertPayloadKey(mode.payloadKey);
+    const labels = byKey.get(mode.payloadKey) ?? [];
+    labels.push(label);
+    byKey.set(mode.payloadKey, labels);
+  }
+  return Array.from(byKey.entries())
+    .map(([key, labels]) => ({ key, labels: labels.sort() }))
+    .sort((a, b) => a.key.localeCompare(b.key));
 }

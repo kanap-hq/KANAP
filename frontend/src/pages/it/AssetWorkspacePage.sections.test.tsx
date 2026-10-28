@@ -78,6 +78,9 @@ vi.mock('../../components/fields/LocationSelect', () => ({
 }));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 vi.mock('../../components/MarkdownEditor', () => ({ default: () => null }));
+vi.mock('../../components/history/RecordHistoryTab', () => ({
+  default: (props: { table: string; recordId: string }) => <div data-testid="record-history">{`${props.table}:${props.recordId}`}</div>,
+}));
 
 const ASSET = {
   id: 'asset-1',
@@ -943,7 +946,7 @@ describe('Asset workspace: section placement', () => {
     const tabNames = () => screen.getAllByRole('tab').map((tab) => tab.textContent?.replace(/\d+$/, ''));
     const tab = (name: string) => screen.getByRole('tab', { name: new RegExp(`workspace.asset.tabs.${name}`) });
 
-    it('lists Overview, Operations, Network, Dependencies and Relations for a virtual asset, all open', async () => {
+    it('lists Overview, Operations, Network, Dependencies, Relations and History for a virtual asset, all open', async () => {
       renderAt('/it/assets/asset-1/overview');
       await screen.findByText('support-panel');
       expect(tabNames()).toEqual([
@@ -952,6 +955,7 @@ describe('Asset workspace: section placement', () => {
         'workspace.asset.tabs.network',
         'workspace.asset.tabs.dependencies',
         'workspace.asset.tabs.relations',
+        'workspace.asset.tabs.history',
       ]);
       screen.getAllByRole('tab').forEach((node) => expect(node).toBeEnabled());
     });
@@ -965,6 +969,7 @@ describe('Asset workspace: section placement', () => {
         'workspace.asset.tabs.hardware',
         'workspace.asset.tabs.dependencies',
         'workspace.asset.tabs.relations',
+        'workspace.asset.tabs.history',
       ]));
     });
 
@@ -977,12 +982,20 @@ describe('Asset workspace: section placement', () => {
         'workspace.asset.tabs.network',
         'workspace.asset.tabs.dependencies',
         'workspace.asset.tabs.relations',
+        'workspace.asset.tabs.history',
       ]);
       expect(tab('overview')).toBeEnabled();
       expect(tab('network')).toBeEnabled();
       expect(tab('operations')).toBeDisabled();
       expect(tab('dependencies')).toBeDisabled();
       expect(tab('relations')).toBeDisabled();
+      expect(tab('history')).toBeDisabled();
+    });
+
+    it('renders the asset history on the History tab', async () => {
+      renderAt('/it/assets/asset-1/history');
+      expect(await screen.findByTestId('record-history')).toHaveTextContent('assets:asset-1');
+      expect(tab('history')).toHaveAttribute('aria-selected', 'true');
     });
   });
 

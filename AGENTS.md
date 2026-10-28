@@ -328,6 +328,9 @@ or subscriptions must work in both modes.
 - User-facing lists show **names only** (no email sub-lines). Sentence case everywhere.
 - Show business references (`T-4`, `PRJ-3`, `DOC-12`), never raw UUIDs. Do not invent new
   references for tables that have no `item_number`.
+- Every record page has a History tab, or a History button in its header when it has no tab row,
+  served by the common record history route; a new record type declares its table, its family and
+  its child tables in the history inventory (`backend/src/audit/record-history.inventory.ts`).
 - The assistant and the MCP server follow every feature: a new or changed entity or operation
   ships with its read side in the assistant registry and MCP, and with its write side under
   approval in the assistant when the screen can do it. A PR that adds a screen without its

@@ -107,7 +107,7 @@ When vulnerabilities are followed, the **Publisher** column also opens the Vulne
 
 ## The technology workspace
 
-The workspace has a header, a properties drawer on the right, and six tabs: **Overview**, **Servers**, **Applications**, **Operations**, **Compliance** and **Relations**. The **Servers**, **Applications** and **Relations** tabs show a badge with their count.
+The workspace has a header, a properties drawer on the right, and seven tabs: **Overview**, **Servers**, **Applications**, **Operations**, **Compliance**, **Relations** and **History** (the changes made to the technology, see [Record history](record-history.md)). The **Servers**, **Applications** and **Relations** tabs show a badge with their count.
 
 ### Header
 

@@ -46,7 +46,7 @@ You can also show, hide, and reorder columns using the column chooser.
 
 ## The Locations workspace
 
-Click any row to open the workspace. It has three tabs: **Overview**, **Contacts & Support**, and **Relations**. The Contacts & Support and Relations tabs become available after the location is saved for the first time.
+Click any row to open the workspace. It has four tabs: **Overview**, **Contacts & Support**, **Relations** and **History** (the changes made to the location, see [Record history](record-history.md)). The Contacts & Support and Relations tabs become available after the location is saved for the first time.
 
 ### Overview
 

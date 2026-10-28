@@ -1,9 +1,12 @@
 # Record history
 
-The **History** tab of a record lists the changes made to it: who changed what, and when. It answers everyday questions such as "who raised this amount?" or "when was this contract unlinked?" without a visit to the audit log.
+The history of a record lists the changes made to it: who changed what, and when. It answers everyday questions such as "who raised this amount?" or "when was this contract unlinked?" without a visit to the audit log.
 
-!!! note "Where it is available"
-    Today the **History** tab is on budget lines (see [Budget lines](budget-lines.md#history)). Other records will get it later.
+## Where to find it
+
+- **History tab**, the last tab of the record: budget lines (see [Budget lines](budget-lines.md#history)), companies, departments, suppliers, locations, connections, interfaces, assets and technologies.
+- **History button** in the header, which opens the history in a side panel: accounts, cost centers, working-day calendars, business processes, analytics dimensions and values, and contacts.
+- **History tab** in the right panel of a knowledge document.
 
 ## Who can see it
 
@@ -12,7 +15,7 @@ The **History** tab of a record lists the changes made to it: who changed what, 
 
 ## What an entry shows
 
-The tab lists one entry per change, the most recent at the top. Each entry shows:
+The history lists one entry per change, the most recent at the top. Each entry shows:
 
 - the date and time of the change;
 - its author: a person, **System** for changes KANAP makes by itself, **Import** for changes loaded from a file, or **Plaid for** a person when the assistant made the change on their behalf;
@@ -25,7 +28,7 @@ Long histories load in pages: click **Load more** at the bottom of the list to s
 
 ## Changes to the parts of a record
 
-The history of a budget line also lists the changes made to its parts:
+The history also lists the changes made to the parts of a record. On a budget line, for example:
 
 - amounts, by year and budget column;
 - analytics dimensions;
@@ -37,7 +40,12 @@ The history of a budget line also lists the changes made to its parts:
 
 ## Records you cannot read
 
-An entry can name a record from another module, for example a contract linked to the line. If you cannot read that module, or the record has since been deleted, the entry names it by its kind only, for example "a contract".
+An entry can name another record, for example a contract linked to the line. If you cannot open that record, the entry names it by its kind only, for example "a contract". A record deleted since then shows as "a deleted contract".
+
+## Values the history does not show
+
+- The email address, phone numbers and notes of a contact never appear.
+- For long content, the entry says only that it changed: **Content changed** for the body of a knowledge document, **Working days changed** for the days of a working-day calendar.
 
 ## The full audit log
 

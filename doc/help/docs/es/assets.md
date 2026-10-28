@@ -144,7 +144,7 @@ Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trab
 
 Una dirección que no designa ningún activo abre una página **Activo no encontrado**, con un enlace para volver a la lista.
 
-Las pestañas son **Vista general**, **Operaciones**, **Red**, **Hardware** (solo para tipos de activos físicos), **Dependencias** y **Relaciones**. Al crear un activo, **Vista general** y **Red** están abiertas. Las demás pestañas se abren en cuanto hace clic en **Crear**.
+Las pestañas son **Vista general**, **Operaciones**, **Red**, **Hardware** (solo para tipos de activos físicos), **Dependencias**, **Relaciones** e **Historial** (los cambios hechos en el activo, vea [Historial de los registros](record-history.md)). Al crear un activo, **Vista general** y **Red** están abiertas. Las demás pestañas se abren en cuanto hace clic en **Crear**.
 
 ### Encabezado
 

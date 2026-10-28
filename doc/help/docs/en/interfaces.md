@@ -62,7 +62,7 @@ The Interfaces grid shows your integration registry at a glance.
 
 ## The Interfaces workspace
 
-Click any row to open the workspace. The workspace has a side panel with the interface properties on the left, and five tabs on the right.
+Click any row to open the workspace. The workspace has a side panel with the interface properties on the left, and six tabs on the right. The last one, **History**, lists the changes made to the interface (see [Record history](record-history.md)).
 
 ### Interface properties (side panel)
 

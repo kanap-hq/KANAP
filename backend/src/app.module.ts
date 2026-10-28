@@ -12,6 +12,7 @@ import { WorkingDayProfilesModule } from './working-day-profiles/working-day-pro
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { AccountsModule } from './accounts/accounts.module';
 import { AuditModule } from './audit/audit.module';
+import { RecordHistoryModule } from './audit/record-history.module';
 import { SpendModule } from './spend/spend.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { RolesModule } from './roles/roles.module';
@@ -132,6 +133,7 @@ import { readPoolMax } from './common/db-pool-budget';
     AuthModule,
     EmailModule,
     AuditModule,
+    RecordHistoryModule,
     CompaniesModule,
     DepartmentsModule,
     CostCentersModule,

@@ -338,6 +338,7 @@ export default function AccountWorkspacePage() {
           nextLabel: t('accounts.next'),
         } : undefined}
         properties={properties}
+        history={id ? { table: 'accounts', recordId: id } : undefined}
       >
         {data && (
           // Keyed by account: drafts start afresh on the next record.

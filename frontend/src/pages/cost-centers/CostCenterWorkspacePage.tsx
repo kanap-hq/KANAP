@@ -264,6 +264,7 @@ export default function CostCenterWorkspacePage() {
           nextLabel: t('costCenters.next'),
         } : undefined}
         actions={actions}
+        history={id ? { table: 'cost_centers', recordId: id } : undefined}
         properties={data && effectiveKind ? (
           <CostCenterPropertiesDrawer
             key={data.id}

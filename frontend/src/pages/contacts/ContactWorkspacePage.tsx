@@ -418,6 +418,9 @@ function ContactEditor({ id }: { id: string }) {
         ) : undefined}
         onSaveShortcut={() => { void autosave.flush(); }}
         metadata={metadata}
+        // One tab: the shell shows the History button in the header, never a tab, and mounts the
+        // shared history in its right panel on demand.
+        history={data ? { table: 'contacts', recordId: data.id } : undefined}
         actions={(
           <>
             {savingHint && (

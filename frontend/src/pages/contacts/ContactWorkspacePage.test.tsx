@@ -27,6 +27,12 @@ vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (_resource: string, level: string) => auth.canEdit && (level !== 'admin' || auth.canAdmin), profile: { id: 'user-1' } }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+// The shared history: the header button must hand it the contact's table and identifier.
+vi.mock('../../components/history/RecordHistory', () => ({
+  default: ({ table, recordId }: { table: string; recordId: string }) => (
+    <div data-testid="record-history">{`${table}:${recordId}`}</div>
+  ),
+}));
 // The supplier picker searches the API: a stub picks a supplier or clears it.
 vi.mock('../../components/fields/SupplierSelect', () => ({
   // One field in the tab order, as the real picker; the buttons only drive the tests.
@@ -118,6 +124,15 @@ describe('ContactWorkspacePage', () => {
     expect(screen.getByRole('link', { name: 'Supplier A' })).toHaveAttribute('href', '/master-data/suppliers/s-1/overview');
     expect(screen.queryByRole('button', { name: /save/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /reset/i })).toBeNull();
+  });
+
+  it('shows the History button in the header and opens the contact history', async () => {
+    renderAt('/master-data/contacts/c-1/overview');
+    await screen.findByText('Alex Martin');
+    // One tab: no History tab, a button beside the title instead.
+    expect(screen.queryByRole('tab', { name: 'admin:auditLogs.history.title' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'admin:auditLogs.history.title' }));
+    expect(await screen.findByTestId('record-history')).toHaveTextContent('contacts:c-1');
   });
 
   it('hides delete from someone who is not a contacts admin', async () => {
@@ -345,6 +360,11 @@ describe('ContactWorkspacePage create', () => {
     auth.canEdit = true;
     mocked.get.mockResolvedValue({ data: { items: [] } });
     mocked.post.mockResolvedValue({ data: { id: 'c-9' } });
+  });
+
+  it('shows no History button while creating', async () => {
+    renderAt('/master-data/contacts/new/overview');
+    expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
   });
 
   it('creates a contact from a supplier with its type, then goes back to the supplier', async () => {

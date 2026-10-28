@@ -46,7 +46,7 @@ Vous pouvez également afficher, masquer et réorganiser les colonnes en utilisa
 
 ## L'espace de travail Sites
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte trois onglets : **Vue d'ensemble**, **Contacts & Support** et **Relations**. Les onglets Contacts & Support et Relations deviennent disponibles après le premier enregistrement du site.
+Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte quatre onglets : **Vue d'ensemble**, **Contacts & Support**, **Relations** et **Historique** (les modifications apportées au site, voir [Historique des fiches](record-history.md)). Les onglets Contacts & Support et Relations deviennent disponibles après le premier enregistrement du site.
 
 ### Vue d'ensemble
 
