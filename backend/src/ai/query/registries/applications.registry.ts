@@ -150,7 +150,7 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
     },
     version: {
       ai: 'version', grid: 'version', type: 'text',
-      description: 'Version or release of the application, as its record holds it (free text). A text filter matches it without case. Grouping lists the recorded versions.',
+      description: 'Version or release of the application, as its record holds it (free text). A text filter contains, without case: 16 also keeps 16.4 and 2016. Grouping lists the recorded versions.',
       sortable: true, groupable: true,
       aliases: ['release', 'application_version'],
       examples: ['16.4'],
@@ -164,7 +164,7 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
     },
     end_of_support_date: {
       ai: 'end_of_support_date', grid: 'end_of_support_date', type: 'date',
-      description: 'Date the application reaches its end of support, or null when none is recorded. [null] matches applications without one; a before filter never matches them.',
+      description: 'Date the application reaches its end of support, or null when none is recorded. [null] matches applications without one; a before filter never matches them. This list keeps retired applications; the End of support report keeps only those in service.',
       sortable: true, groupable: false, aggregable: true, blankable: true,
       aliases: ['end_of_support', 'fin_de_support'],
       examples: ['{"op":"before","value":"2027-01-01"}', '[null]'],

@@ -4,7 +4,7 @@ import { FxRateService } from '../../currency/fx-rate.service';
 import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem, yearRateSetId } from '../../spend/allocation-distribution';
 import { listAiTechnologies, listAiTechnologyVersions, resolveAiApplicationsReach } from './ai-technologies.query';
 import { listAiVulnerabilities } from './ai-vulnerabilities.query';
-import { aggregateSupportRows, listAiSupportDeadlines, listAiSupportGaps } from './ai-support.query';
+import { aggregateSupportRows, APPLICATIONS_UNREAD_NOTE, listAiSupportDeadlines, listAiSupportGaps } from './ai-support.query';
 import { EndOfSupportService } from '../../technologies/reports/end-of-support.service';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
 import { aiDataAccessNote } from './ai-data-access-note.util';
@@ -1263,15 +1263,21 @@ export class AiAggregateExecutor {
       }));
     }
 
-    const aggregateExpression = buildMetricAggregateExpression(fn, metric.def.expression, metric.def.round);
+    // One row per (group, record): a many-to-many group whose links repeat a name (two IT owners
+    // named alike) must not count or sum the record twice. The metric is read once per record.
+    const aggregateExpression = buildMetricAggregateExpression(fn, 'd.metric', metric.def.round);
     const orderDirection = getMetricOrderDirection(fn);
     const rows = await context.manager.query(
-      `SELECT ${groupField.expression} AS key, ${aggregateExpression} AS value
-       FROM ${registry.aggregate.baseTable} ${alias}
-       ${joins}
-       WHERE ${alias}.tenant_id = $1${baseWhere}
-         AND ${alias}.${idColumn} = ANY($2::uuid[])
-       GROUP BY ${groupField.expression}
+      `SELECT d.key, ${aggregateExpression} AS value
+       FROM (
+         SELECT DISTINCT ${groupField.expression} AS key, ${alias}.${idColumn} AS record_id,
+                ${metric.def.expression} AS metric
+           FROM ${registry.aggregate.baseTable} ${alias}
+           ${joins}
+          WHERE ${alias}.tenant_id = $1${baseWhere}
+            AND ${alias}.${idColumn} = ANY($2::uuid[])
+       ) d
+       GROUP BY d.key
        ORDER BY value ${orderDirection} NULLS LAST, key ASC NULLS LAST`,
       queryParams,
     );
@@ -1617,15 +1623,40 @@ export class AiAggregateExecutor {
     if (input.entity_type === 'support_gaps' || input.entity_type === 'support_deadlines') {
       const service = this.endOfSupport;
       if (!service) throw new BadRequestException('The End of support report is not available.');
+      // The report rows are not participation-scoped: `scope` is applied as on query_entities,
+      // and a scope the family cannot take (`me`) is refused there too.
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: metric?.key ?? null,
+          function: fn,
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
       const applications = await resolveAiApplicationsReach(context, this.policy);
       const opts = { manager: context.manager, tenantId: context.tenantId, userId: context.userId };
-      const query = { q: input.q?.trim(), filters: adapted.filters };
-      const rows = input.entity_type === 'support_gaps'
-        ? (await listAiSupportGaps(service, opts, applications, query, true)).items
-        : (await listAiSupportDeadlines(service, opts, applications, query, true)).items;
+      const result = input.entity_type === 'support_gaps'
+        ? await listAiSupportGaps(service, opts, applications, scoped.query, true)
+        : await listAiSupportDeadlines(service, opts, applications, scoped.query, true);
+      const rows = result.items;
       const groups = aggregateSupportRows(input.entity_type, rows, input.group_by, fn, metric?.key ?? null);
       const total = rows.length;
       return {
+        applications_visible: result.applications_visible,
+        ...(result.applications_visible ? {} : { applications_visible_note: APPLICATIONS_UNREAD_NOTE }),
         group_by: input.group_by,
         metric: metric?.key ?? null,
         function: fn,
@@ -1633,10 +1664,10 @@ export class AiAggregateExecutor {
         total,
         returned: groups.length,
         truncated: false,
-        complete: isCompleteAggregateResult(null),
+        complete: isCompleteAggregateResult(scoped.scope),
         filters_applied: adapted.applied,
         filters_ignored: adapted.ignored,
-        scope: null,
+        scope: scoped.scope,
       };
     }
     if (input.entity_type === 'documents') {

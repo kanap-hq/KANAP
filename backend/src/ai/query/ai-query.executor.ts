@@ -28,7 +28,7 @@ import { describeAllocationWarning } from '../../spend/allocation-distribution';
 import type { SpendVersion } from '../../spend/spend-version.entity';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
-import { EndOfSupportService, type DeadlineRow, type GapRow } from '../../technologies/reports/end-of-support.service';
+import { EndOfSupportService, type DeadlineRow } from '../../technologies/reports/end-of-support.service';
 import { UsersService } from '../../users/users.service';
 import {
   AiEntityMetadata,
@@ -82,7 +82,7 @@ import {
   technologyVersionFigures,
 } from './ai-technologies.query';
 import { AiVulnerabilityDetailRow, AiVulnerabilityRow, listAiVulnerabilities } from './ai-vulnerabilities.query';
-import { listAiSupportDeadlines, listAiSupportGaps } from './ai-support.query';
+import { APPLICATIONS_UNREAD_NOTE, listAiSupportDeadlines, listAiSupportGaps, type AiSupportGapRow } from './ai-support.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
@@ -512,6 +512,8 @@ export const AI_QUERY_FAMILY_MAX_LIMIT: Partial<Record<AiQueryEntityType, number
   technologies: 30,
   // A CVE row carries its summary (clipped), note and page link: about 1,200 characters.
   vulnerabilities: 30,
+  // A deadline carries its servers and applications by name (at most ten then a count).
+  support_deadlines: 30,
 };
 
 export function aiQueryMaxLimit(entityType: AiQueryEntityType): number {
@@ -1277,7 +1279,7 @@ export class AiQueryExecutor {
    * where the record has one, its name otherwise) and the other end of a link. No identifier: the
    * subject is read through its own family, by `subject`.
    */
-  private mapSupportGap(row: GapRow): AiEntitySummaryDto {
+  private mapSupportGap(row: AiSupportGapRow): AiEntitySummaryDto {
     return toEntitySummary('support_gaps', {
       id: row.key,
       reference: row.subject_reference ?? null,
@@ -1290,12 +1292,23 @@ export class AiQueryExecutor {
         subject_type: row.subject_type,
         subject: row.subject_reference ?? row.subject_name,
         subject_name: row.subject_name,
-        related: row.related_name,
+        related: row.related_reference ?? row.related_name,
         related_name: row.related_name,
         related_type: row.related_type,
         version: scalar(row.version),
       },
     });
+  }
+
+  /**
+   * The names of at most ten servers or applications, then the rest counted: a card never carries
+   * an unbounded list, and an empty count is "not read", never "none".
+   */
+  private namesText(items: Array<{ name: string }> | null | undefined, noun: 'server' | 'application'): string | null {
+    if (!items?.length) return null;
+    const shown = items.slice(0, 10).map((item) => item.name);
+    const rest = items.length - shown.length;
+    return rest > 0 ? `${shown.join(', ')}, and ${rest} other ${noun}${rest === 1 ? '' : 's'}` : shown.join(', ');
   }
 
   /**
@@ -1322,9 +1335,9 @@ export class AiQueryExecutor {
         standard_support_end: scalar(row.standard_support_end),
         extended_support_end: scalar(row.extended_support_end),
         server_count: numericScalar(row.server_count),
-        servers: row.servers.map((server) => server.name).join(', ') || null,
+        servers: this.namesText(row.servers, 'server'),
         application_count: numericScalar(row.application_count),
-        applications: row.applications?.map((application) => application.name).join(', ') || null,
+        applications: this.namesText(row.applications, 'application'),
       },
     });
   }
@@ -2183,8 +2196,10 @@ export class AiQueryExecutor {
       const returned = result.items.length;
       const truncated = result.total > ((result.page - 1) * result.limit + returned);
       return {
+        applications_visible: result.applications_visible,
+        ...(result.applications_visible ? {} : { applications_visible_note: APPLICATIONS_UNREAD_NOTE }),
         items: result.items.map((row) => (input.entity_type === 'support_gaps'
-          ? this.mapSupportGap(row as GapRow)
+          ? this.mapSupportGap(row as AiSupportGapRow)
           : this.mapSupportDeadline(row as DeadlineRow))),
         total: result.total,
         page: result.page,
@@ -3235,12 +3250,6 @@ export class AiQueryExecutor {
   }
 
   /**
-   * The values of the technologies filters that no column carries: the tenant's version labels
-   * (`version`) and the display names of the owners of its technologies (`owner` of any type,
-   * `it_owner`, `business_owner`). Read from `technology_versions` and `technology_owners`, never
-   * from the technology row, and only for the fields the caller asked (`grids`).
-   */
-  /**
    * The version labels of the tenant, the values of the `version` filter of the technologies and
    * of the `label` filter of `technology_versions`: one query, never a label typed in.
    */
@@ -3256,6 +3265,12 @@ export class AiQueryExecutor {
     return (rows || []).map((row) => String(row.value));
   }
 
+  /**
+   * The values of the technologies filters that no column carries: the tenant's version labels
+   * (`version`) and the display names of the owners of its technologies (`owner` of any type,
+   * `it_owner`, `business_owner`). Read from `technology_versions` and `technology_owners`, never
+   * from the technology row, and only for the fields the caller asked (`grids`).
+   */
   private async technologyFilterValues(
     context: AiExecutionContextWithManager,
     grids: ReadonlySet<string>,

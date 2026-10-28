@@ -843,6 +843,32 @@ async function testVersionAndOwnerFilters(harness: Harness, runner: QueryRunner,
   assert.equal(byItOwner.total, 4, 'the four technologies; the no-owner one is in no group');
   const byBusinessOwner = await aggregate('business_owner');
   assert.deepEqual(byBusinessOwner.groups.map((g: any) => [g.key, g.count]), [['Paul Tester', 1]]);
+
+  // A metric on a many-to-many group counts the record once: two owners with the same name do
+  // not double the servers of their technology.
+  const serverAsset = async (name: string) => insertId(runner,
+    `INSERT INTO assets (tenant_id, name, kind, environment, status) VALUES ($1, $2, 'physical_server', 'prod', 'active')`,
+    [t, name]);
+  const serverOne = await serverAsset('owner-server-one');
+  const serverTwo = await serverAsset('owner-server-two');
+  for (const assetId of [serverOne, serverTwo]) {
+    await runner.query(
+      `INSERT INTO asset_technologies (tenant_id, asset_id, technology_id) VALUES ($1, $2, $3)`,
+      [t, assetId, ownedTwice],
+    );
+  }
+  const serversByOwner = await harness.aggregates.execute(ctx(runner, s, 'full'), {
+    entity_type: 'technologies',
+    group_by: 'it_owner',
+    filters: { publisher: ['Owner Test'] },
+    metric: 'server_count',
+    function: 'sum',
+  });
+  assert.equal(
+    serversByOwner.groups.find((group: any) => group.key === 'Paul Tester')?.value,
+    2,
+    'two owners with the same display name do not double the technology\'s servers',
+  );
 }
 
 /**

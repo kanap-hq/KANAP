@@ -1,4 +1,5 @@
 import { DEFAULT_HORIZON, HORIZONS } from '../../../technologies/reports/end-of-support.service';
+import { APPLICATIONS_UNREAD_NOTE } from '../ai-support.query';
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 
 /**
@@ -24,7 +25,7 @@ export const supportDeadlinesRegistry: AiEntityFilterRegistry = {
       ai: 'subject_type',
       grid: 'subject_type',
       type: 'set',
-      description: 'Type of the subject, as the screen names them: technology (a technology version), operating_system (an operating system version), application (an application date), hardware (a physical asset end of life or support contract). Grouping counts the deadlines of each type.',
+      description: `Type of the subject, as the screen names them: technology (a technology version), operating_system (an operating system version), application (an application date), hardware (a physical asset end of life or support contract). Grouping counts the deadlines of each type. ${APPLICATIONS_UNREAD_NOTE}`,
       values: ['technology', 'operating_system', 'application', 'hardware'],
       discoverable: true,
       sortable: true,
@@ -34,7 +35,7 @@ export const supportDeadlinesRegistry: AiEntityFilterRegistry = {
       ai: 'subject',
       grid: 'subject',
       type: 'text',
-      description: 'Business reference of the subject (APP-n, TEC-n), or its name when it has none.',
+      description: 'Business reference of the subject (APP-n, AST-n, TEC-n), or its name when it has none. A reference compares exactly; any other value matches the name.',
       sortable: true,
       groupable: false,
     },
@@ -87,11 +88,73 @@ export const supportDeadlinesRegistry: AiEntityFilterRegistry = {
       ai: 'horizon_months',
       grid: 'horizon_months',
       type: 'set',
-      description: `The horizon of the report, as the screen's selector: 6, 12, 24 or 36 months. ${DEFAULT_HORIZON} by default. It decides which deadlines are read, not which rows are kept after the read.`,
+      description: `The horizon of the report, as the screen's selector: 6, 12, 24 or 36 months. ${DEFAULT_HORIZON} by default. One value: several horizons cannot be read as one list and are refused.`,
       values: HORIZONS.map((months) => String(months)),
       discoverable: true,
       sortable: false,
       groupable: false,
+    },
+    // The row's metadata, readable and filterable: an empty count means the caller does not read
+    // the family (applications), never that the record has none.
+    server_count: {
+      ai: 'server_count',
+      grid: 'server_count',
+      type: 'number',
+      description: 'Number of servers the deadline reaches (in service, clusters excluded), as the report counts them.',
+      sortable: false,
+      groupable: false,
+    },
+    servers: {
+      ai: 'servers',
+      grid: 'servers',
+      type: 'text',
+      description: 'Names of the servers the deadline reaches, at most ten then "and N other servers". Null when none.',
+      sortable: false,
+      groupable: false,
+    },
+    application_count: {
+      ai: 'application_count',
+      grid: 'application_count',
+      type: 'number',
+      description: 'Number of applications the deadline reaches. Null when the caller does not read applications, which is not "none".',
+      sortable: false,
+      groupable: false,
+    },
+    applications: {
+      ai: 'applications',
+      grid: 'applications',
+      type: 'text',
+      description: 'Names of the applications the deadline reaches, at most ten then "and N other applications". Null when the caller does not read applications, which is not "none".',
+      sortable: false,
+      groupable: false,
+    },
+    milestone: {
+      ai: 'milestone',
+      grid: 'milestone',
+      type: 'set',
+      description: 'For hardware, the date that matters: end_of_life (the asset end of life) or support_contract (the end of its support contract). Null for every other type.',
+      values: ['end_of_life', 'support_contract'],
+      discoverable: true,
+      sortable: false,
+      groupable: false,
+    },
+    standard_support_end: {
+      ai: 'standard_support_end',
+      grid: 'standard_support_end',
+      type: 'date',
+      description: 'End of standard support of the technology version, or the application date for an application. YYYY-MM-DD; null when none is recorded.',
+      sortable: false,
+      groupable: false,
+      blankable: true,
+    },
+    extended_support_end: {
+      ai: 'extended_support_end',
+      grid: 'extended_support_end',
+      type: 'date',
+      description: 'End of extended support of the technology version. YYYY-MM-DD; null when none is recorded.',
+      sortable: false,
+      groupable: false,
+      blankable: true,
     },
   },
   sortFields: {

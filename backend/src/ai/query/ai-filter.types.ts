@@ -209,6 +209,12 @@ export type AiAmountTotals = {
 export type AiQueryResult = {
   /** `invalid_filter_value`: every filter not applied is a known field given values it does not take. */
   status?: 'ok' | 'invalid_filter' | 'invalid_filter_value';
+  /**
+   * `support_gaps` and `support_deadlines`: false when the caller does not read applications. The
+   * application rows are then left out and the application counts are null (`applications_visible_note`).
+   */
+  applications_visible?: boolean;
+  applications_visible_note?: string;
   items: AiEntitySummaryDto[];
   total: number;
   page: number;
@@ -246,6 +252,12 @@ export type AiQueryResult = {
 
 export type AiAggregateResult = {
   status?: 'ok' | 'invalid_filter' | 'invalid_filter_value';
+  /**
+   * `support_gaps` and `support_deadlines`: false when the caller does not read applications. The
+   * application rows are then left out and the application counts are null (`applications_visible_note`).
+   */
+  applications_visible?: boolean;
+  applications_visible_note?: string;
   amounts_currency?: string | null;
   amounts_currency_note?: string;
   /**

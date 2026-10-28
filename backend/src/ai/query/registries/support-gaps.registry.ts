@@ -1,4 +1,5 @@
 import { GAP_KINDS } from '../../../technologies/reports/end-of-support.service';
+import { APPLICATIONS_UNREAD_NOTE } from '../ai-support.query';
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 
 /**
@@ -31,7 +32,7 @@ export const supportGapsRegistry: AiEntityFilterRegistry = {
       ai: 'subject_type',
       grid: 'subject_type',
       type: 'set',
-      description: 'Family of the record to complete: application, asset or technology. Grouping counts the records of each family.',
+      description: `Family of the record to complete: application, asset or technology. Grouping counts the records of each family. ${APPLICATIONS_UNREAD_NOTE}`,
       values: ['application', 'asset', 'technology'],
       discoverable: true,
       sortable: true,
@@ -41,7 +42,7 @@ export const supportGapsRegistry: AiEntityFilterRegistry = {
       ai: 'subject',
       grid: 'subject',
       type: 'text',
-      description: 'Business reference of the record to complete (APP-n, TEC-n), or its name when it has none. The item carries it as `subject` too, with the record type in `subject_type`.',
+      description: 'Business reference of the record to complete (APP-n, AST-n, TEC-n), or its name when it has none. A reference compares exactly; any other value matches the name.',
       sortable: true,
       groupable: false,
     },
@@ -57,8 +58,18 @@ export const supportGapsRegistry: AiEntityFilterRegistry = {
       ai: 'related',
       grid: 'related',
       type: 'text',
-      description: 'The other end of a link without version (a server or an application), when the gap has one. Null otherwise.',
+      description: 'The other end of a link without version (a server or an application), by its business reference (AST-n, APP-n) or its name when it has none. Null otherwise. A reference compares exactly; any other value matches the name.',
       sortable: true,
+      groupable: false,
+    },
+    related_type: {
+      ai: 'related_type',
+      grid: 'related_type',
+      type: 'set',
+      description: 'Family of the other end of a link without version: asset or application. Null for every other gap.',
+      values: ['asset', 'application'],
+      discoverable: true,
+      sortable: false,
       groupable: false,
     },
     version: {
