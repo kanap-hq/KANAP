@@ -212,6 +212,58 @@ export const writeActionText = {
       case 'es': return `modificación de las relaciones de ${subject}`;
     }
   },
+  /** A journal note on an incident: the journal only takes additions. */
+  addIncidentNote(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `ajout d'une note à l'incident ${subject}`;
+      case 'de': return `Notiz zum Vorfall ${subject} hinzufügen`;
+      case 'es': return `adición de una nota al incidente ${subject}`;
+    }
+  },
+  /** The links of an incident, added and removed in one preview. */
+  updateIncidentLinks(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `modification des liens de l'incident ${subject}`;
+      case 'de': return `Verknüpfungen des Vorfalls ${subject} ändern`;
+      case 'es': return `modificación de los vínculos del incidente ${subject}`;
+    }
+  },
+  /** An administrator changes the state of an incident; the reason is mandatory. */
+  changeIncidentState(
+    language: AiTranslatedWriteLanguage,
+    action: 'reopen' | 'cancel',
+    subject: string,
+  ): string {
+    switch (language) {
+      case 'fr': return action === 'reopen'
+        ? `réouverture de l'incident ${subject}`
+        : `annulation de l'incident ${subject}`;
+      case 'de': return action === 'reopen'
+        ? `Vorfall ${subject} wieder öffnen`
+        : `Vorfall ${subject} abbrechen`;
+      case 'es': return action === 'reopen'
+        ? `reapertura del incidente ${subject}`
+        : `cancelación del incidente ${subject}`;
+    }
+  },
+  /** An administrator restricts an incident or lifts its confidentiality. */
+  setIncidentConfidentiality(
+    language: AiTranslatedWriteLanguage,
+    confidential: boolean,
+    subject: string,
+  ): string {
+    switch (language) {
+      case 'fr': return confidential
+        ? `passage de l'incident ${subject} en confidentiel`
+        : `levée de la confidentialité de l'incident ${subject}`;
+      case 'de': return confidential
+        ? `Vorfall ${subject} als vertraulich markieren`
+        : `Vertraulichkeit des Vorfalls ${subject} aufheben`;
+      case 'es': return confidential
+        ? `marcado del incidente ${subject} como confidencial`
+        : `levantamiento de la confidencialidad del incidente ${subject}`;
+    }
+  },
   /** The deletion of one record, the only irreversible write: one record at a time, under approval. */
   deleteRecord(language: AiTranslatedWriteLanguage, entityType: string, subject: string): string {
     const noun = RECORD_NOUNS[entityType] ?? RECORD_NOUNS.default;
@@ -265,6 +317,7 @@ const RECORD_NOUNS: Record<string, TranslatedTexts> = {
   interfaces: { fr: "de l'interface", de: 'Schnittstelle', es: 'de la interfaz' },
   connections: { fr: 'de la connexion', de: 'Verbindung', es: 'de la conexión' },
   budget_lines: { fr: 'de la ligne budgétaire', de: 'Budgetzeile', es: 'de la línea presupuestaria' },
+  incidents: { fr: "de l'incident", de: 'Vorfall', es: 'del incidente' },
   companies: { fr: 'de la société', de: 'Unternehmen', es: 'de la empresa' },
   departments: { fr: 'du département', de: 'Abteilung', es: 'del departamento' },
   suppliers: { fr: 'du fournisseur', de: 'Lieferant', es: 'del proveedor' },
@@ -278,6 +331,114 @@ const RECORD_NOUNS: Record<string, TranslatedTexts> = {
   documents: { fr: 'du document', de: 'Dokument', es: 'del documento' },
   default: { fr: "de l'élément", de: 'Element', es: 'del elemento' },
 };
+
+/** The card's warning on a closure: the record freezes and only an administrator reopens it. */
+const INCIDENT_CLOSURE_WARNING: Texts = {
+  en: 'This closes and freezes the incident: only an administrator can reopen it.',
+  fr: "Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.",
+  de: 'Dies schließt und sperrt den Vorfall: Nur ein Administrator kann ihn wieder öffnen.',
+  es: 'Esto cierra y bloquea el incidente: solo un administrador podrá reabrirlo.',
+};
+
+/** The card's warning on a cancellation: the record freezes until an administrator reopens it. */
+const INCIDENT_CANCEL_WARNING: Texts = {
+  en: 'This cancellation freezes the incident: only an administrator can reopen it.',
+  fr: "Cette annulation fige l'incident : seul un administrateur pourra le rouvrir.",
+  de: 'Diese Annullierung sperrt den Vorfall: Nur ein Administrator kann ihn wieder öffnen.',
+  es: 'Esta anulación bloquea el incidente: solo un administrador podrá reabrirlo.',
+};
+
+/** The card's warning when the change makes the restricted incident disappear for the person. */
+const INCIDENT_ACCESS_WARNING: Texts = {
+  en: 'After this change, only register administrators, the reporter and the owner can open it. You will be taken back to the register.',
+  fr: "Après cette modification, seuls les administrateurs du registre, le déclarant et le responsable pourront l'ouvrir. Vous serez renvoyé vers le registre.",
+  de: 'Nach dieser Änderung können nur noch Registeradministratoren, der Melder und der Verantwortliche ihn öffnen. Sie werden zum Register zurückgeführt.',
+  es: 'Tras este cambio, solo los administradores del registro, el notificante y el responsable podrán abrirlo. Volverá al registro.',
+};
+
+export function incidentClosureWarning(language: AiWriteLanguage): string {
+  return INCIDENT_CLOSURE_WARNING[language];
+}
+
+export function incidentCancelWarning(language: AiWriteLanguage): string {
+  return INCIDENT_CANCEL_WARNING[language];
+}
+
+export function incidentAccessWarning(language: AiWriteLanguage): string {
+  return INCIDENT_ACCESS_WARNING[language];
+}
+
+/** The three families of an incident's links, named as the Relations tab names them. */
+const INCIDENT_LINK_KIND_LABELS: Record<'assets' | 'applications' | 'technologies', Texts> = {
+  assets: { en: 'Linked assets', fr: 'Actifs liés', de: 'Verknüpfte Assets', es: 'Activos vinculados' },
+  applications: { en: 'Linked applications', fr: 'Applications liées', de: 'Verknüpfte Anwendungen', es: 'Aplicaciones vinculadas' },
+  technologies: { en: 'Linked technologies', fr: 'Technologies liées', de: 'Verknüpfte Technologien', es: 'Tecnologías vinculadas' },
+};
+
+export function incidentLinkKindText(
+  language: AiWriteLanguage,
+  kind: 'assets' | 'applications' | 'technologies',
+): string {
+  return INCIDENT_LINK_KIND_LABELS[kind][language];
+}
+
+/** The journal note card: its title and the optional event time. */
+export function incidentNoteLabel(language: AiWriteLanguage): string {
+  return { en: 'Note', fr: 'Note', de: 'Notiz', es: 'Nota' }[language];
+}
+
+export function incidentOccurredAtLabel(language: AiWriteLanguage): string {
+  return { en: 'Occurred at', fr: "Date de l'événement", de: 'Zeitpunkt', es: 'Fecha del evento' }[language];
+}
+
+/** The mandatory reason of a reopen or a cancellation, as the screen asks for it. */
+export function incidentReasonLabel(language: AiWriteLanguage): string {
+  return { en: 'Reason', fr: 'Raison', de: 'Grund', es: 'Motivo' }[language];
+}
+
+export type IncidentLinkCardGroup = {
+  /** The links the preview adds, as "AST-12 - name". */
+  add: string[];
+  /** The links it removes. */
+  remove: string[];
+  /** Links already present: nothing is written for them. */
+  already: string[];
+  /** Links already absent: nothing is written for them. */
+  absent: string[];
+};
+
+/**
+ * The markdown block of one link family on the card: what the approval adds and removes, then
+ * the links it leaves as they are. Empty blocks are left out, so a preview with nothing to write
+ * still says what it found.
+ */
+export function incidentLinkCardText(language: AiWriteLanguage, group: IncidentLinkCardGroup): string {
+  const headings = {
+    add: { en: 'Added', fr: 'Ajoutés', de: 'Hinzugefügt', es: 'Añadidos' }[language],
+    remove: { en: 'Removed', fr: 'Retirés', de: 'Entfernt', es: 'Retirados' }[language],
+    already: { en: 'Already linked', fr: 'Déjà liés', de: 'Bereits verknüpft', es: 'Ya vinculados' }[language],
+    absent: { en: 'Not linked', fr: 'Pas liés', de: 'Nicht verknüpft', es: 'No vinculados' }[language],
+  };
+  const blocks: string[] = [];
+  for (const key of ['add', 'remove', 'already', 'absent'] as const) {
+    const items = group[key].filter((item) => item.trim().length > 0);
+    if (items.length === 0) continue;
+    blocks.push([`**${headings[key]}**`, ...items.map((item) => `- ${escapeMarkdownLabel(item)}`)].join('\n'));
+  }
+  return blocks.join('\n\n');
+}
+
+/** A record's label is data, not Markdown: escape the characters that would style the card. */
+function escapeMarkdownLabel(value: string): string {
+  return value
+    // The escape character itself first, so the backslashes added below stay single.
+    .replace(/\\/g, '\\\\')
+    .replace(/~/g, '\\~')
+    // A leading list marker, quote or ordered-list number would structure the line.
+    .replace(/^([>+-])/, '\\$1')
+    .replace(/^(\d+)\./, '$1\\.')
+    .replace(/([*_\[\]()`#])/g, '\\$1');
+}
 
 /** The detail lines of a task preview: its assignee and its priority. */
 export const taskDetailText = {
@@ -585,6 +746,10 @@ export const PREVIEW_EXPIRED_MESSAGE = 'Preview expired before approval.';
 export const PREVIEW_DATA_BUSY_MESSAGE =
   'The data this change writes was busy with another operation, so nothing was changed. Approve it again in a moment.';
 
+/** A closure whose review is being edited by someone else (the 423 of the review lock). */
+export const PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE =
+  'The incident review is being edited by someone else, so nothing was changed. Try again once that edit is saved or its lock is released.';
+
 const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
   [PREVIEW_EXPIRED_MESSAGE]: {
     fr: "L'aperçu a expiré avant l'approbation.",
@@ -595,6 +760,11 @@ const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
     fr: "Les données que cette modification écrit étaient occupées par une autre opération : rien n'a été modifié. Approuvez-la de nouveau dans un instant.",
     de: 'Die Daten, die diese Änderung schreibt, waren durch einen anderen Vorgang belegt. Es wurde nichts geändert. Genehmigen Sie sie gleich noch einmal.',
     es: 'Los datos que escribe este cambio estaban ocupados por otra operación, así que no se ha modificado nada. Vuelva a aprobarlo en un momento.',
+  },
+  [PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE]: {
+    fr: "La revue de l'incident est en cours de modification par une autre personne : rien n'a été modifié. Réessayez quand cette modification sera enregistrée ou son verrou levé.",
+    de: 'Die Vorfallprüfung wird gerade von einer anderen Person bearbeitet, daher wurde nichts geändert. Versuchen Sie es erneut, sobald diese Bearbeitung gespeichert oder ihre Sperre aufgehoben ist.',
+    es: 'Otra persona está editando la revisión del incidente, así que no se ha modificado nada. Vuelva a intentarlo cuando se guarde esa edición o se libere su bloqueo.',
   },
 };
 

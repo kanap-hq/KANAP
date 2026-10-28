@@ -1,17 +1,21 @@
 import * as assert from 'node:assert/strict';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
-import { AiWriteLanguage, aiWriteLanguage, deletionImpactText, personWriteLanguage } from '../ai-write-texts';
+import { AiWriteLanguage, aiWriteLanguage, deletionImpactText, incidentLinkCardText, personWriteLanguage } from '../ai-write-texts';
 import { AiBusinessRecordMutationSupportService } from '../mutation/ai-business-record-mutation-support.service';
 import { AiDocumentMutationSupportService } from '../mutation/ai-document-mutation-support.service';
 import { AiFinancialPlanMutationSupportService } from '../mutation/ai-financial-plan-mutation-support.service';
 import { AiMasterDataMutationSupportService } from '../mutation/ai-master-data-mutation-support.service';
 import { AiRelationMutationSupportService } from '../mutation/ai-relation-mutation-support.service';
 import { AiTaskMutationSupportService } from '../mutation/ai-task-mutation-support.service';
+import { AddIncidentNoteAiMutationOperation } from '../mutation/operations/add-incident-note.ai-mutation-operation';
+import { ChangeIncidentStateAiMutationOperation } from '../mutation/operations/change-incident-state.ai-mutation-operation';
 import { CreateBusinessRecordAiMutationOperation } from '../mutation/operations/create-business-record.ai-mutation-operation';
 import { CreateDocumentAiMutationOperation } from '../mutation/operations/create-document.ai-mutation-operation';
 import { CreateTaskAiMutationOperation } from '../mutation/operations/create-task.ai-mutation-operation';
 import { DeleteRecordAiMutationOperation } from '../mutation/operations/delete-record.ai-mutation-operation';
 import { ImportGlpiTicketAiMutationOperation } from '../mutation/operations/import-glpi-ticket.ai-mutation-operation';
+import { SetIncidentConfidentialityAiMutationOperation } from '../mutation/operations/set-incident-confidentiality.ai-mutation-operation';
+import { UpdateIncidentLinksAiMutationOperation } from '../mutation/operations/update-incident-links.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from '../mutation/operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskStatusAiMutationOperation } from '../mutation/operations/update-task-status.ai-mutation-operation';
 
@@ -165,6 +169,222 @@ function testBusinessRecords() {
     mutation_input: { action: 'create', entity_type: 'suppliers', fields: { name: 'Acme' }, display_values: { name: 'Acme' } },
   });
   assert.equal(summary(masterData, supplier, 'fr'), 'Création du fournisseur « Acme ».');
+}
+
+function testIncidentPreviewsAndWarnings() {
+  const support = make(AiBusinessRecordMutationSupportService);
+  const createIncident = preview({
+    tool_name: 'create_business_record',
+    target_entity_type: 'incidents',
+    mutation_input: {
+      action: 'create',
+      entity_type: 'incidents',
+      fields: { title: 'Mail outage', severity: 'major', status: 'open' },
+      display_values: { title: 'Mail outage', severity: 'major', status: 'open' },
+      field_labels: { title: 'Title', severity: 'Severity', status: 'Status' },
+    },
+    current_values: { target_title: 'Mail outage' },
+  });
+  assert.equal(summary(support, createIncident, 'en'), 'Create incident "Mail outage".');
+  assert.equal(summary(support, createIncident, 'fr'), "Création de l'incident « Mail outage ».");
+  assert.equal(summary(support, createIncident, 'de'), 'Vorfall „Mail outage“ erstellen.');
+  assert.equal(summary(support, createIncident, 'es'), 'Creación del incidente «Mail outage».');
+  const created = support.presentPreview(createIncident, 'fr').changes;
+  assert.equal(created.status.to, 'open', 'the card carries the status code, the frontend names it');
+  assert.equal(created.severity.to, 'major', 'the card carries the severity code, the frontend names it');
+
+  const closure = preview({
+    tool_name: 'update_business_record',
+    target_entity_type: 'incidents',
+    target_entity_id: 'incident-1',
+    mutation_input: {
+      action: 'update',
+      entity_type: 'incidents',
+      fields: { status: 'closed' },
+      display_values: { status: 'closed' },
+      field_labels: { status: 'Status' },
+      warnings: { closure: true },
+    },
+    current_values: { target_ref: 'INC-7', target_title: 'INC-7 - Mail outage', values: { status: 'open' }, display_values: { status: 'open' } },
+  });
+  const closed = support.presentPreview(closure, 'fr').changes;
+  assert.equal(closed.status.from, 'open');
+  assert.equal(closed.status.to, 'closed');
+  assert.equal(closed.closure_warning.to, "Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.");
+  assert.equal(summary(support, closure, 'en'), 'Update incident "INC-7 - Mail outage": Status.');
+
+  const lost = support.presentPreview({ ...closure, mutation_input: { ...closure.mutation_input, fields: { confidential: true }, display_values: { confidential: 'true' }, warnings: { lose_access: true } } } as AiMutationPreview, 'es').changes;
+  assert.equal(lost.access_warning.to, 'Tras este cambio, solo los administradores del registro, el notificante y el responsable podrán abrirlo. Volverá al registro.');
+  assert.equal(lost.access_warning.label, 'Access');
+}
+
+function testIncidentNoteAndLinkCards() {
+  const note = make(AddIncidentNoteAiMutationOperation);
+  const pendingNote = preview({
+    tool_name: 'add_incident_note',
+    target_entity_type: 'incidents',
+    target_entity_id: 'incident-1',
+    mutation_input: {
+      content: 'Mail is back.\nFailover to the secondary site done.',
+      occurred_at: '2026-10-28T14:00:00.000Z',
+    },
+    current_values: { target_ref: 'INC-7', target_title: 'INC-7 - Mail outage', status: 'open' },
+  });
+  assert.equal(summary(note, pendingNote, 'en'), 'Add a note to INC-7 - Mail outage.');
+  assert.equal(summary(note, pendingNote, 'fr'), "Ajout d'une note à l'incident « INC-7 - Mail outage ».");
+  assert.equal(summary(note, pendingNote, 'de'), 'Notiz zum Vorfall „INC-7 - Mail outage“ hinzufügen.');
+  assert.equal(summary(note, pendingNote, 'es'), 'Adición de una nota al incidente «INC-7 - Mail outage».');
+  const noteChanges = note.presentPreview(pendingNote, 'fr').changes;
+  assert.equal(noteChanges.note.to, 'Mail is back.\nFailover to the secondary site done.');
+  assert.equal(noteChanges.note.label, 'Note');
+  assert.equal(noteChanges.occurred_at.to, '2026-10-28T14:00:00.000Z');
+  assert.equal(noteChanges.occurred_at.label, "Date de l'événement");
+  assert.equal(summary(note, { ...pendingNote, status: 'executed' } as AiMutationPreview, 'fr'), "Appliqué : ajout d'une note à l'incident « INC-7 - Mail outage ».");
+
+  const links = make(UpdateIncidentLinksAiMutationOperation);
+  const pendingLinks = preview({
+    tool_name: 'update_incident_links',
+    target_entity_type: 'incidents',
+    target_entity_id: 'incident-1',
+    mutation_input: {
+      changes: {
+        assets: {
+          add: [{ id: 'asset-12', ref: 'AST-12', name: 'PAR-ESX-01', label: 'AST-12 - PAR-ESX-01' }],
+          remove: [],
+          already: [],
+          absent: [],
+        },
+        applications: {
+          add: [],
+          remove: [{ id: 'app-2', ref: 'APP-2', name: 'Mail', label: 'APP-2 - Mail' }],
+          already: [],
+          absent: [],
+        },
+        technologies: {
+          add: [],
+          remove: [],
+          already: [{ id: 'tec-3', ref: 'TEC-3', name: 'PostgreSQL', label: 'TEC-3 - PostgreSQL' }],
+          absent: [],
+        },
+      },
+    },
+    current_values: { target_ref: 'INC-7', target_title: 'INC-7 - Mail outage', status: 'open' },
+  });
+  assert.equal(summary(links, pendingLinks, 'en'), 'Update the links of INC-7 - Mail outage.');
+  assert.equal(summary(links, pendingLinks, 'fr'), "Modification des liens de l'incident « INC-7 - Mail outage ».");
+  assert.equal(summary(links, pendingLinks, 'de'), 'Verknüpfungen des Vorfalls „INC-7 - Mail outage“ ändern.');
+  assert.equal(summary(links, pendingLinks, 'es'), 'Modificación de los vínculos del incidente «INC-7 - Mail outage».');
+  const linkChanges = links.presentPreview(pendingLinks, 'fr').changes;
+  assert.equal(linkChanges.linked_assets.label, 'Actifs liés');
+  assert.equal(linkChanges.linked_assets.to, '**Ajoutés**\n- AST-12 - PAR-ESX-01');
+  assert.equal(linkChanges.linked_applications.to, '**Retirés**\n- APP-2 - Mail');
+  assert.equal(linkChanges.linked_technologies.to, '**Déjà liés**\n- TEC-3 - PostgreSQL');
+  assert.equal(summary(links, { ...pendingLinks, status: 'executed' } as AiMutationPreview, 'fr'), "Appliqué : modification des liens de l'incident « INC-7 - Mail outage ».");
+  // A record's label is data: its Markdown characters never style the card.
+  assert.equal(
+    incidentLinkCardText('fr', {
+      add: ['AST-12 - srv_*prod*'],
+      remove: ['APP-2 - app_[old]'],
+      already: [],
+      absent: [],
+    }),
+    '**Ajoutés**\n- AST-12 - srv\\_\\*prod\\*\n\n**Retirés**\n- APP-2 - app\\_\\[old\\]',
+  );
+  // The backslash first, then the inline emphasis, then the characters that structure a line.
+  const escaped = (label: string) => incidentLinkCardText('fr', { add: [label], remove: [], already: [], absent: [] });
+  assert.equal(escaped('C:\\temp\\srv~old'), '**Ajoutés**\n- C:\\\\temp\\\\srv\\~old');
+  assert.equal(escaped('> quoted'), '**Ajoutés**\n- \\> quoted');
+  assert.equal(escaped('- nested'), '**Ajoutés**\n- \\- nested');
+  assert.equal(escaped('+ plus'), '**Ajoutés**\n- \\+ plus');
+  assert.equal(escaped('1. ordered'), '**Ajoutés**\n- 1\\. ordered');
+  assert.equal(escaped('version 1.2'), '**Ajoutés**\n- version 1.2');
+}
+
+function testIncidentStateAndConfidentialityCards() {
+  const state = make(ChangeIncidentStateAiMutationOperation);
+  const reopen = preview({
+    tool_name: 'change_incident_state',
+    target_entity_type: 'incidents',
+    target_entity_id: 'incident-1',
+    mutation_input: {
+      action: 'reopen',
+      reason: 'Back after the fix.',
+      from_status: 'closed',
+      to_status: 'in_progress',
+    },
+    current_values: { target_ref: 'INC-7', target_title: 'INC-7 - Mail outage', status: 'closed' },
+  });
+  assert.equal(summary(state, reopen, 'en'), 'Reopen INC-7 - Mail outage.');
+  assert.equal(summary(state, reopen, 'fr'), "Réouverture de l'incident « INC-7 - Mail outage ».");
+  assert.equal(summary(state, reopen, 'de'), 'Vorfall „INC-7 - Mail outage“ wieder öffnen.');
+  assert.equal(summary(state, reopen, 'es'), 'Reapertura del incidente «INC-7 - Mail outage».');
+  const reopened = state.presentPreview(reopen, 'fr').changes;
+  assert.equal(reopened.status.from, 'closed');
+  assert.equal(reopened.status.to, 'in_progress');
+  assert.equal(reopened.reason.to, 'Back after the fix.');
+  assert.equal(reopened.reason.label, 'Raison');
+  assert.equal(reopened.closure_warning, undefined, 'a reopen carries no freeze warning');
+  assert.equal(summary(state, { ...reopen, status: 'executed' } as AiMutationPreview, 'fr'), "Appliqué : réouverture de l'incident « INC-7 - Mail outage ».");
+
+  const cancel = preview({
+    tool_name: 'change_incident_state',
+    target_entity_type: 'incidents',
+    target_entity_id: 'incident-1',
+    mutation_input: {
+      action: 'cancel',
+      reason: 'Duplicate of INC-6.',
+      from_status: 'open',
+      to_status: 'cancelled',
+    },
+    current_values: { target_ref: 'INC-7', target_title: 'INC-7 - Mail outage', status: 'open' },
+  });
+  const cancelled = state.presentPreview(cancel, 'fr').changes;
+  assert.equal(cancelled.status.from, 'open');
+  assert.equal(cancelled.status.to, 'cancelled');
+  assert.equal(cancelled.reason.to, 'Duplicate of INC-6.');
+  assert.equal(cancelled.closure_warning, undefined, 'a cancellation carries its own warning');
+  for (const [language, text] of [
+    ['en', 'This cancellation freezes the incident: only an administrator can reopen it.'],
+    ['fr', "Cette annulation fige l'incident : seul un administrateur pourra le rouvrir."],
+    ['de', 'Diese Annullierung sperrt den Vorfall: Nur ein Administrator kann ihn wieder öffnen.'],
+    ['es', 'Esta anulación bloquea el incidente: solo un administrador podrá reabrirlo.'],
+  ] as const) {
+    assert.equal(state.presentPreview(cancel, language).changes.cancel_warning.to, text, language);
+  }
+  assert.equal(summary(state, cancel, 'fr'), "Annulation de l'incident « INC-7 - Mail outage ».");
+  assert.equal(summary(state, cancel, 'en'), 'Cancel INC-7 - Mail outage.');
+
+  const confidentiality = make(SetIncidentConfidentialityAiMutationOperation);
+  const lift = preview({
+    tool_name: 'set_incident_confidentiality',
+    target_entity_type: 'incidents',
+    target_entity_id: 'incident-1',
+    mutation_input: { confidential: false, from_confidential: true },
+    current_values: { target_ref: 'INC-7', target_title: 'INC-7 - Mail outage', status: 'closed', confidential: true },
+  });
+  assert.equal(summary(confidentiality, lift, 'fr'), "Levée de la confidentialité de l'incident « INC-7 - Mail outage ».");
+  assert.equal(summary(confidentiality, lift, 'en'), 'Lift the confidentiality of INC-7 - Mail outage.');
+  assert.deepEqual(confidentiality.presentPreview(lift, 'fr').changes.confidential, {
+    label: 'Confidential',
+    from: 'Yes',
+    to: 'No',
+    format: 'text',
+  });
+  assert.equal(confidentiality.presentPreview(lift, 'fr').changes.access_warning, undefined, 'lifting never loses access');
+
+  const restrict = preview({
+    tool_name: 'set_incident_confidentiality',
+    target_entity_type: 'incidents',
+    target_entity_id: 'incident-1',
+    mutation_input: { confidential: true, from_confidential: false },
+    current_values: { target_ref: 'INC-7', target_title: 'INC-7 - Mail outage', status: 'open', confidential: false },
+  });
+  const restricted = confidentiality.presentPreview(restrict, 'fr').changes;
+  assert.equal(restricted.confidential.from, 'No');
+  assert.equal(restricted.confidential.to, 'Yes');
+  // The tool is reserved to register administrators, who keep access: no warning on its card.
+  assert.equal(restricted.access_warning, undefined);
+  assert.equal(summary(confidentiality, restrict, 'fr'), "Passage de l'incident « INC-7 - Mail outage » en confidentiel.");
 }
 
 /** What the card needs beyond the summary: classification codes, and fields in a stable order (quality pass 2026-10-27, A1 and A3). */
@@ -669,6 +889,9 @@ async function main() {
   testRelationRolesForTheCard();
   testAmountsForTheCard();
   testCardCodesAndFieldOrder();
+  testIncidentPreviewsAndWarnings();
+  testIncidentNoteAndLinkCards();
+  testIncidentStateAndConfidentialityCards();
   testDeleteRecordSummaryAndCard();
   await testDefaultTaskType();
   await testPersonLanguage();

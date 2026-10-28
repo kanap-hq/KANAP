@@ -9,11 +9,25 @@ export type CatalogOptionLike = { code: string; label?: string | null; deprecate
  * entry when it equals its code or its name (trimmed, case-insensitive), else, for an import, a label
  * the app shows for a shipped value in any language (`withShippedLabels`). Exactly one entry must match;
  * several matches are an ambiguity and are refused rather than letting "the last alias win".
+ *
+ * A deprecated entry can only be named to keep the value a record already holds (`current`) when
+ * `excludeDeprecated` is set: it is then no longer offered to new records, as the screen hides it.
+ * Callers that accept a retired value (an administrator zone still assignable by a bulk action)
+ * keep the default.
  */
-export function findCatalogOption<T extends CatalogOptionLike>(input: unknown, options: T[]): T | null {
+export function findCatalogOption<T extends CatalogOptionLike>(
+  input: unknown,
+  options: T[],
+  current?: string | null,
+  excludeDeprecated = false,
+): T | null {
   const key = normalizeAlias(input);
   if (!key) return null;
-  const matches = matchCatalogAliases(options, key);
+  const currentKey = normalizeAlias(current);
+  const selectable = excludeDeprecated
+    ? options.filter((option) => !option.deprecated || normalizeAlias(option.code) === currentKey)
+    : options;
+  const matches = matchCatalogAliases(selectable, key);
   const distinct = [...new Map(matches.map((option) => [option.code, option])).values()];
   if (distinct.length > 1) throw new BadRequestException(`"${String(input)}" matches several values (${distinct.map((option) => option.label || option.code).join(', ')}); use the exact name of one of them`);
   return distinct[0] ?? null;

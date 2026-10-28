@@ -7,17 +7,33 @@ import { participantConditionForAiEntity, ParticipationScopedAiEntityType } from
 /**
  * The level each Plaid write needs: the level of the screen route that makes the same change
  * (lot D11). Every write needs `member` on its module, except the ones listed here, which the
- * screen opens to a contributor. `ai-write-levels.spec.ts` holds the table operation x family,
- * compares it with the guards of the routes and breaks when a route changes level.
+ * screen opens to a contributor or reserves to an administrator. `ai-write-levels.spec.ts` holds
+ * the table operation x family, compares it with the guards of the routes and breaks when a route
+ * changes level.
  * - `update_business_record` on a project: `PATCH /portfolio/projects/:id` (contributor), within
  *   the fields the project page lets a contributor change (`CONTRIBUTOR_WRITABLE_FIELDS`).
  * - `update_entity_relations` on a project or a request: the Relations tab of both pages,
  *   `POST|DELETE /portfolio/{projects,requests}/:id/relations/:kind` (contributor).
+ * - `change_incident_state` and `set_incident_confidentiality`: `POST /incidents/:id/reopen`,
+ *   `/cancel` and `/confidentiality` (admin).
  */
 const CONTRIBUTOR_WRITE_FAMILIES: Readonly<Record<string, readonly string[]>> = {
-  update_business_record: ['projects'],
+  create_business_record: ['incidents'],
+  update_business_record: ['projects', 'incidents'],
+  add_incident_note: ['incidents'],
+  update_incident_links: ['incidents'],
   update_entity_relations: ['projects', 'requests'],
 };
+
+/**
+ * The tools the screen reserves to an administrator, whatever the direction or the state of the
+ * record. One level per tool keeps the tool list simple: a member or a contributor is not offered
+ * it, and its approval is refused if the right went away in between.
+ */
+const ADMIN_WRITE_TOOLS: ReadonlySet<string> = new Set([
+  'change_incident_state',
+  'set_incident_confidentiality',
+]);
 
 /**
  * The level each family of `delete_record` needs, as its delete route: tasks and contacts are
@@ -46,6 +62,7 @@ export function aiDeleteBusinessResource(family: unknown): string {
 /** The level a write tool needs on its module for one family (`entity_type`). */
 export function aiWriteLevel(toolName: string, family: unknown): PermissionLevel {
   const normalized = String(family ?? '').trim();
+  if (ADMIN_WRITE_TOOLS.has(toolName)) return 'admin';
   if (toolName === 'delete_record') return DELETE_RECORD_FAMILIES[normalized]?.level ?? 'admin';
   return CONTRIBUTOR_WRITE_FAMILIES[toolName]?.includes(normalized) ? 'contributor' : 'member';
 }
@@ -59,7 +76,24 @@ export function aiWriteLevel(toolName: string, family: unknown): PermissionLevel
  * rule of the page is kept until a product decision opens more (lot D11, brief: strictest level).
  */
 export const CONTRIBUTOR_WRITABLE_FIELDS: Readonly<Record<string, Readonly<Record<string, readonly string[]>>>> = {
-  update_business_record: { projects: ['purpose'] },
+  create_business_record: {
+    incidents: [
+      'title', 'category', 'severity', 'status', 'started_at', 'detected_at', 'resolved_at', 'closed_at',
+      'reporter_user_id', 'owner_user_id', 'description', 'source_ref', 'personal_data_affected',
+      'authority_notification_required', 'confidential', 'authority_notified_at', 'notified_parties',
+    ],
+  },
+  update_business_record: {
+    projects: ['purpose'],
+    // The incident screen's PATCH accepts every field of the family at contributor level
+    // (`IncidentFieldsSchema`); the status rules and the confidentiality refusals are checked
+    // before the preview by the family itself.
+    incidents: [
+      'title', 'category', 'severity', 'status', 'started_at', 'detected_at', 'resolved_at', 'closed_at',
+      'reporter_user_id', 'owner_user_id', 'description', 'source_ref', 'personal_data_affected',
+      'authority_notification_required', 'confidential', 'authority_notified_at', 'notified_parties',
+    ],
+  },
 };
 
 /**
@@ -96,19 +130,30 @@ export function aiRelationTargetRequirement(
 
 /** The modules a contributor may change through Plaid, in plain words, for the refusals. */
 export const CONTRIBUTOR_PLAIN_SCOPES: Readonly<Record<string, string>> = {
+  incidents: 'incidents (their fields, their status up to closure, setting the confidentiality, the journal and the links)',
   portfolio_projects: 'projects (their purpose and their links to applications, assets and budget lines)',
   portfolio_requests: 'requests (their links to applications, assets, budget lines and business processes)',
+};
+
+/** A contributor family whose module is not a participation-scoped family (`WRITE_SCOPED_FAMILIES`). */
+const CONTRIBUTOR_FAMILY_RESOURCES: Readonly<Record<string, string>> = {
+  incidents: 'incidents',
 };
 
 /**
  * Every (module, level) a write tool may need, for the tools offered to the person: the modules
  * of the tool at `member`, and the modules of its contributor families at `contributor`.
  * `delete_record` names one family per resource, with the level of that family's delete route.
+ * An administrator-only tool has one requirement per resource at `admin`, so a member or a
+ * contributor is never offered it.
  */
 export function aiWriteRequirements(
   toolName: string,
   resources: readonly string[],
 ): Array<{ resource: string; level: PermissionLevel }> {
+  if (ADMIN_WRITE_TOOLS.has(toolName)) {
+    return resources.map((resource) => ({ resource, level: 'admin' as PermissionLevel }));
+  }
   if (toolName === 'delete_record') {
     return resources.map((resource) => DELETE_RECORD_FAMILIES[resource]
       ? { resource: DELETE_RECORD_FAMILIES[resource].resource, level: DELETE_RECORD_FAMILIES[resource].level }
@@ -119,6 +164,11 @@ export function aiWriteRequirements(
     const scoped = WRITE_SCOPED_FAMILIES[family as ParticipationScopedAiEntityType];
     if (scoped && resources.includes(scoped.resource)) {
       requirements.push({ resource: scoped.resource, level: 'contributor' });
+      continue;
+    }
+    const resource = CONTRIBUTOR_FAMILY_RESOURCES[family];
+    if (resource && resources.includes(resource)) {
+      requirements.push({ resource, level: 'contributor' });
     }
   }
   return requirements;

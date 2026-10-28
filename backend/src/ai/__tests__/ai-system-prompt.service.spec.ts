@@ -3,6 +3,11 @@ import { AiSystemPromptService } from '../ai-system-prompt.service';
 import { selectAiContextProfile } from '../ai-context-profile';
 import { AiChatOrchestratorService } from '../ai-chat-orchestrator.service';
 import { analyticsDimensionsAiContext } from '../ai-analytics-dimensions-context';
+import { AddIncidentNoteAiMutationOperation } from '../mutation/operations/add-incident-note.ai-mutation-operation';
+import { ChangeIncidentStateAiMutationOperation } from '../mutation/operations/change-incident-state.ai-mutation-operation';
+import { CreateBusinessRecordAiMutationOperation } from '../mutation/operations/create-business-record.ai-mutation-operation';
+import { SetIncidentConfidentialityAiMutationOperation } from '../mutation/operations/set-incident-confidentiality.ai-mutation-operation';
+import { UpdateBusinessRecordAiMutationOperation } from '../mutation/operations/update-business-record.ai-mutation-operation';
 
 async function testStructuredReadGuidancePrefersQueryLayerTools() {
   const service = new AiSystemPromptService();
@@ -506,7 +511,11 @@ async function testPromptRefusesUnsupportedWritesWithoutSubstitutePreview() {
   assert.doesNotMatch(prompt, /deleting a budget line, a contract, an interface, a connection/);
   assert.match(prompt, /deleting several records in one request, which Plaid prepares one at a time, never as one delete or one plan/);
   assert.match(prompt, /For a request to delete several records, prepare the first one and say the others are deleted one at a time, or ask which one comes first/);
-  assert.match(prompt, /creating or changing an incident; changing the state of a vulnerability; adding, changing or removing a technology/);
+  assert.doesNotMatch(prompt, /on an incident, reopening, cancelling and lifting the confidentiality stay on the incident screen/);
+  assert.doesNotMatch(prompt, /reopening, cancelling and lifting/);
+  assert.doesNotMatch(prompt, /the journal entry, the links to assets, applications and technologies, the follow-up task/);
+  assert.match(prompt, /changing the state of a vulnerability; adding, changing or removing a technology/);
+  assert.doesNotMatch(prompt, /creating or changing an incident/);
   assert.match(prompt, /refuse in the user's language in one or two sentences: say what Plaid cannot do and name the KANAP screen/);
   assert.match(prompt, /Prepare no preview in its place: no task recording the request, no status change, cancellation or deactivation standing in for a deletion/);
   assert.match(prompt, /prepare it only after the user says yes/);
@@ -527,10 +536,84 @@ async function testPromptKeepsTheUserLanguageBetweenToolCalls() {
   assert.match(minimalPrompt, /write in the language of the user's last message/);
 }
 
+
+/**
+ * The administrator tools exist: the prompt of a write_business administrator must send reopening,
+ * cancelling and lifting the confidentiality to `change_incident_state` and
+ * `set_incident_confidentiality`, never back to the incident screen.
+ */
+async function testAdminWriteBusinessPromptNamesTheIncidentAdministratorTools() {
+  const service = new AiSystemPromptService();
+  const support = { getWritableFieldDescriptions: () => [] } as any;
+  const operations = [
+    new UpdateBusinessRecordAiMutationOperation(support),
+    new CreateBusinessRecordAiMutationOperation(support, null as any),
+    new AddIncidentNoteAiMutationOperation(null as any, null as any),
+    new ChangeIncidentStateAiMutationOperation(null as any, null as any),
+    new SetIncidentConfidentialityAiMutationOperation(null as any, null as any),
+  ];
+  const tools = operations.map((operation) => ({
+    name: operation.toolName,
+    category: 'mutation' as const,
+    description: operation.description,
+    input_summary: operation.inputSummary,
+    read_only: false,
+    surfaces: ['chat' as const],
+    write_preview: operation.writePreview,
+  }));
+
+  const profile = selectAiContextProfile('Rouvre INC-3');
+  assert.equal(profile.name, 'write_business');
+  assert.ok(profile.toolNames.includes('change_incident_state'));
+  assert.ok(profile.toolNames.includes('set_incident_confidentiality'));
+
+  const prompt = service.build({
+    tenantName: 'Test Tenant',
+    availableTools: tools as any,
+    readableEntityTypes: ['incidents'],
+    currentUser: { displayName: 'Admin', email: null, roleNames: ['Administrator'], teamName: null },
+    contextProfile: profile,
+  });
+
+  assert.match(prompt, /need a register administrator \(`change_incident_state`, `set_incident_confidentiality`\)/);
+  assert.doesNotMatch(prompt, /stay on the incident screen/i);
+  assert.doesNotMatch(prompt, /(?:reopening|cancelling|lifting)[^.]*\bscreen\b/i);
+  assert.doesNotMatch(prompt, /do it from the incident screen/i);
+
+  // The tool schemas carry the same rule: their field descriptions are sent to the model too.
+  for (const operation of operations) {
+    const schema = operation.inputSchema as any;
+    const texts = [
+      operation.description,
+      ...Object.values(operation.inputSummary),
+      operation.writePreview.prompt_hint,
+      ...Object.values(schema?.shape ?? {}).map((field: any) => String(field?.description ?? '')),
+    ];
+    for (const text of texts) {
+      assert.doesNotMatch(
+        text,
+        /(?:reopen|reopening|cancel|cancelling|confidentiality|confidential)[^.]{0,200}\bscreen\b/i,
+        `${operation.toolName}: ${text}`,
+      );
+    }
+  }
+  const update = operations.find((operation) => operation.toolName === 'update_business_record');
+  const fieldsDescription = String(((update!.inputSchema as any).shape.fields).description);
+  assert.match(fieldsDescription, /needs? a register administrator through `change_incident_state`/);
+  assert.match(fieldsDescription, /needs? a register administrator through `set_incident_confidentiality`/);
+  const confidentiality = operations.find((operation) => operation.toolName === 'set_incident_confidentiality');
+  assert.doesNotMatch(
+    confidentiality!.writePreview.prompt_hint,
+    /keeps access|no lose-access warning/,
+    'the administrator keeps access, so the hint says nothing about a warning the card never carries',
+  );
+}
+
 async function run() {
   await testPromptKeepsTheUserLanguageBetweenToolCalls();
   await testPromptSaysItsLimitsAndRights();
   await testPromptRefusesUnsupportedWritesWithoutSubstitutePreview();
+  await testAdminWriteBusinessPromptNamesTheIncidentAdministratorTools();
   await testStructuredReadGuidancePrefersQueryLayerTools();
   await testWebSearchGuidanceIncludedWhenToolAvailable();
   await testWebSearchGuidanceAbsentWhenToolNotAvailable();

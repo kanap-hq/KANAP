@@ -120,6 +120,10 @@ const BUSINESS_WRITE_TOOLS: AiToolName[] = [
   'prepare_mutation_plan',
   'create_business_record',
   'update_business_record',
+  'add_incident_note',
+  'update_incident_links',
+  'change_incident_state',
+  'set_incident_confidentiality',
   'update_entity_relations',
   'delete_record',
   'undo_preview',
@@ -162,6 +166,7 @@ const RELATION_WRITE_TOOLS: AiToolName[] = [
   'prepare_mutation_plan',
   'update_entity_relations',
   'update_document_relations',
+  'update_incident_links',
   'undo_preview',
 ];
 
@@ -255,6 +260,9 @@ const CANONICAL_REF_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEn
   { pattern: /\bT-\d+\b/i, entityType: 'tasks' },
   { pattern: /\bDOC-\d+\b/i, entityType: 'documents' },
   { pattern: /\bINC-\d+\b/i, entityType: 'incidents' },
+  // The budget line references the screens show. `BL-n` alone is ambiguous ("bon de livraison"),
+  // so it is read as a budget line only with a budget word in the phrase (see below).
+  { pattern: /\b(?:OPEX|OPX|CPX)-\d+\b/i, entityType: 'budget_lines' },
   // Read only for now: kept out of BUSINESS_ENTITY_TYPES until technologies have a write.
   { pattern: /\bTEC-\d+\b/i, entityType: 'technologies' },
   // Read only: a CVE id names the vulnerability rows of that CVE.
@@ -310,12 +318,19 @@ const MASTER_DATA_ENTITY_TYPES = new Set<AiQueryEntityType>([
 ]);
 const FINANCIAL_ENTITY_TYPES = new Set<AiQueryEntityType>(['budget_lines']);
 
+/** The words that disambiguate a `BL-n` from a delivery note ("bon de livraison"). */
+const BUDGET_WORD_RE = /\b(?:budget|budgets|ligne|lignes|line|lines|opex|capex)\b/i;
+
 function extractReferencedEntityTypes(rawText: string): Set<AiQueryEntityType> {
   const referenced = new Set<AiQueryEntityType>();
   for (const entry of CANONICAL_REF_ENTITY_TYPES) {
     if (entry.pattern.test(rawText)) {
       referenced.add(entry.entityType);
     }
+  }
+  // A legacy BL reference names a budget line only when the phrase talks about the budget too.
+  if (/\bBL-\d+\b/i.test(rawText) && BUDGET_WORD_RE.test(rawText)) {
+    referenced.add('budget_lines');
   }
   for (const entry of URL_ENTITY_TYPES) {
     if (entry.pattern.test(rawText)) {
@@ -390,6 +405,99 @@ function isAdvisoryFeatureImprovementQuestion(rawText: string, text: string): bo
   ]);
 }
 
+/** A question asks for a fact: a status word in it stays a read ("INC-3 est-il clos ?"). */
+function isQuestion(rawText: string, text: string): boolean {
+  return rawText.includes('?') || containsAny(text, [
+    /\b(?:qui|quand|when|who|est-il|est-elle|is it)\b/,
+  ]);
+}
+
+/** "Ouvre / déclare / signale un incident", "open / report / log an incident": a creation. */
+function createsIncident(text: string, rawText: string): boolean {
+  const named = containsAny(text, [
+    /\b(?:ouvre|ouvrir|declare|declarer|signale|signaler)\b[\s\S]{0,40}\bincident\b/,
+    /\b(?:open|report|log)\s+(?:a|an|the)?\s*incident\b/,
+  ]);
+  if (!named) return false;
+  // "Ouvre un incident" creates one. "Ouvre la fiche de l'incident INC-3" reads an existing
+  // record: with an INC reference, only the indefinite article makes it a creation.
+  return /\b(?:un|une|a|an)\s+incident\b/.test(text) || !/\bINC-\d+\b/i.test(rawText);
+}
+
+/** "Crée l'incident puis lie-le à..." starts an incident: the creation wins over the link branch. */
+function createsIncidentRecord(text: string): boolean {
+  return containsAny(text, [
+    /\b(?:cree|creer|create|ouvre|ouvrir|open|declare|declarer|signale|signaler|report|log)\b(?:\s+\S+){0,3}\s+(?:un|une|an|a|the|l['’]|le|la)?\s*incident\b/,
+  ]);
+}
+
+/** The words that name an incident state, a status or its confidentiality. */
+const INCIDENT_STATE_WORD_RE = /\b(clos|closed|ferme|fermee|fermer|resolu|resolue|resolved|resous|resoudre|resolve|rouvert|reopened|rouvre|rouvrir|reopen|annule|annulee|annuler|cancel|cancelled|canceled|leve|levee|lever|lift|lifted|confidentialite|confidentiality|confidentiel|confidentielle|confidentiels|confidentielles|confidential|public|publique|publics|publiques|en cours|in progress|en attente|attente|waiting|pending|en analyse|analyse|analysis)\b/;
+
+/** The verbs of an incident lifecycle change, in the imperative or after "je veux" / "please". */
+const INCIDENT_LIFECYCLE_VERBS = 'clos|close|ferme|fermer|rouvre|rouvrir|reopen|annule|annuler|cancel|resous|resoudre|resolve|passe|passer|mets|mettre|marque|marquer|mark|set|move|change|leve|lever|lift|rends|rendre|make';
+
+/** A salutation or a polite/wish turn before the verb does not break the imperative. */
+const DIRECTIVE_PREFIX_RE = /^(?:(?:bonjour|bonsoir|salut|hello|hi|hey)[\s,!.]+)*(?:(?:je veux|je voudrais|il faut|tu peux|vous pouvez|peux[- ]tu|pouvez[- ]vous|i want to|i would like to|can you|could you|would you|please|merci de|merci|stp|svp)[\s,]+)*/;
+
+function directiveHeadVerb(text: string): string | null {
+  const head = text.replace(DIRECTIVE_PREFIX_RE, '');
+  return head.match(new RegExp(`^(${INCIDENT_LIFECYCLE_VERBS})\\b`))?.[1] ?? null;
+}
+
+/** These verbs only change the state they name: "Passe INC-3 en résolu", "Rends INC-3 public". */
+const INCIDENT_LIFECYCLE_VERBS_WITH_STATE = new Set([
+  'passe', 'passer', 'mets', 'mettre', 'marque', 'marquer', 'mark',
+  'rends', 'rendre', 'make', 'set', 'move', 'change',
+]);
+
+/** The state verbs that also cancel or close a task: "Annule T-4", "Close T-4". */
+const TASK_STATUS_VERBS = new Set([
+  'clos', 'close', 'ferme', 'fermer', 'rouvre', 'rouvrir', 'reopen',
+  'passe', 'passer', 'mets', 'mettre', 'marque', 'marquer', 'mark',
+  'annule', 'annuler', 'cancel', 'set', 'move',
+]);
+
+/** A stated change without an imperative: "INC-3 ne doit plus être confidentiel". */
+const INCIDENT_STATE_DIRECTIVE_RE = /\b(?:ne )?(?:doit|devrait|should|must) (?:plus |moins )?(?:etre|be) (?:plus |moins )?(?:confidentiel|confidentielle|confidentiels|confidentielles|confidential|public|publique|publics|publiques|closed|clos|resolu|resolue|resolved|ferme|fermee|rouvert|reopened|annule|annulee|cancelled|canceled)\b/;
+
+/** An explanation never changes the state: "Explique pourquoi INC-3 doit être confidentiel". */
+const INCIDENT_READ_EXPLANATION_RE = /\b(?:explique|expliquer|pourquoi|why|explain)\b/;
+
+/** The reflexive past is not the verb "passer": "Que s'est-il passé sur T-4 ?". */
+const REFLEXIVE_PAST_RE = /qu['’]est[- ]ce qui s['’]est passe|s['’]est[- ](?:il|elle|on) passe|s['’]est passe|se passe/g;
+
+function stripReflexivePast(text: string): string {
+  return text.replace(REFLEXIVE_PAST_RE, ' ');
+}
+
+/** Undoing the last mutation is a write, never a read: "Undo that", "Annule l'aperçu". */
+const UNDO_REQUEST_RE = /\bundo\b|\bannule (?:ce que|ceci|cela|la derniere|le dernier|la precedent|la precedente|les dernieres|l['’]apercu)\b|\bcancel (?:my |the )?(?:last|previous) (?:preview|change|modification|action)\b/;
+
+/**
+ * A lifecycle write on an incident: an imperative verb at the head (after a salutation or a polite
+ * turn) naming an incident, an INC reference or a confidentiality change. A read word later does
+ * not cancel the imperative; without one, a state word alone stays a read: "Show closed incidents",
+ * "Les incidents clos de APP-3", "INC-3 a-t-il été rouvert ?".
+ */
+function hasIncidentLifecycleWrite(
+  text: string,
+  hasIncidentReference: boolean,
+  hasIncidentConfidentialityIntent: boolean,
+): boolean {
+  const namesIncident = hasIncidentReference || /\bincidents?\b/.test(text)
+    || hasIncidentConfidentialityIntent;
+  if (!namesIncident) return false;
+  const directiveVerb = directiveHeadVerb(text);
+  if (directiveVerb) {
+    return INCIDENT_LIFECYCLE_VERBS_WITH_STATE.has(directiveVerb)
+      ? INCIDENT_STATE_WORD_RE.test(text) || hasIncidentConfidentialityIntent
+      : true;
+  }
+  if (INCIDENT_READ_EXPLANATION_RE.test(text)) return false;
+  return INCIDENT_STATE_DIRECTIVE_RE.test(text);
+}
+
 function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile {
   const raw = String(userMessage || '');
   const text = normalizeText(raw);
@@ -420,28 +528,126 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     return { profile: withWebCapability(PROFILES.read_query, needsWeb), explicitIntent: true };
   }
 
-  const isWrite = containsAny(text, [
-    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|unlink|delier|convert|convertir|import|publish|publier|mark|set|passer|passe)\b/,
+  // Undoing the last mutation is a write of its own: "Undo that", "Annule l'aperçu".
+  if (UNDO_REQUEST_RE.test(text)) {
+    return { profile: withWebCapability(PROFILES.write_general, needsWeb), explicitIntent: true };
+  }
+
+  const hasIncidentReference = referencedTypes.has('incidents');
+  // A confidentiality phrase names an incident change even when the person leaves the reference
+  // implicit ("plus confidentiel", "lève la confidentialité").
+  const hasIncidentConfidentialityIntent = containsAny(text, [
+    /\bplus confidentiel(?:le|les|s)?\b/,
+    /\bmoins confidentiel(?:le|les|s)?\b/,
+    wordsInOrder(/\b(?:leve|levee|lever|lift|lifted)\b/, /\b(?:confidentialite|confidentiality)\b/),
+  ]);
+  const hasIncidentIntent = hasIncidentReference || /\bincidents?\b/.test(text)
+    || hasIncidentConfidentialityIntent;
+  const question = isQuestion(raw, text);
+  const writeText = stripReflexivePast(text);
+  // A polite or wish turn before the verb still carries the request: "Peux-tu passer T-4 ?".
+  const hasPoliteRequest = /^(?:(?:bonjour|bonsoir|salut|hello|hi|hey)[\s,!.]+)*(?:je veux|je voudrais|il faut|tu peux|peux[- ]tu|pouvez[- ]vous|i want to|i would like to|can you|could you|would you|please|merci de|stp|svp)\b/.test(text);
+  const hasTaskReference = hasReferenceInGroup(referencedTypes, TASK_ENTITY_TYPES);
+  // The names of a task, tested before the incident intent: "une tâche pour suivre l'incident".
+  const hasTaskNameIntent = containsAny(text, [
+    /\b(task|tasks|ticket|tickets|tache|taches|todo|to-do|assignee|echeance|due date)\b/,
+  ]);
+  const mentionsDocument = containsAny(text, [
+    /\b(document|documents|doc|docs|knowledge|article|page|library|folder|markdown)\b/,
+  ]);
+  // A read verb keeps the journal and the notes a read: "Montre le journal de INC-3".
+  const asksToReadIncident = containsAny(text, [
+    /\b(montre|montrer|affiche|afficher|show|list|liste|quel|quelle|quels|quelles|what|which)\b/,
+  ]);
+  // "note", "journal" and "log" are a write on an incident unless the person asks a question.
+  const hasIncidentNoteIntent = hasIncidentIntent && !question && !asksToReadIncident
+    && containsAny(text, [/\b(note|notes|journal|log|logs)\b/]);
+  // An incident state or a confidentiality change is a write when an imperative verb opens the
+  // phrase; a state word alone stays a read: "Show closed incidents", "Les incidents clos de
+  // APP-3", "INC-3 a-t-il été rouvert ?".
+  const hasIncidentLifecycleIntent = hasIncidentIntent
+    && hasIncidentLifecycleWrite(text, hasIncidentReference, hasIncidentConfidentialityIntent);
+  // A task status write opens with its verb: "Clos T-4, c'est terminé" writes even though the
+  // sentence also says "est"; "T-4 est en cours" has no verb and reads.
+  const directiveVerb = directiveHeadVerb(text);
+  const namesTask = hasTaskReference || /\b(?:tasks|taches)\b/.test(text);
+  const hasTaskStatusIntent = namesTask && directiveVerb != null && TASK_STATUS_VERBS.has(directiveVerb);
+  // A proposal still carries the task write: "Voulez-vous que je passe T-4 en cours ?".
+  const hasTaskProposalIntent = hasTaskReference
+    && containsAny(writeText, [/\b(passe|passer|mets|mettre|marque|marquer)\b/]);
+  // A status verb on a project reference is the project status change: "Passe PRJ-3 en cours",
+  // "Annule le projet PRJ-3". "Passe" alone is not a write: "INC-3 clos hier, que s'est-il passé".
+  const hasProjectStatusIntent = !hasIncidentReference && (!question || hasPoliteRequest) && !asksToReadIncident
+    && hasReferenceInGroup(referencedTypes, new Set<AiQueryEntityType>(['projects']))
+    && containsAny(writeText, [/\b(passe|passer|mets|mettre|marque|marquer|annule|annuler|cancel)\b/]);
+  // Adding one record to another is a relation write: "Ajoute AST-12 à APP-3".
+  const hasAddLinkIntent = referencedTypes.size >= 2 && !hasIncidentIntent && !hasTaskNameIntent
+    && !mentionsDocument && containsAny(text, [/\b(?:ajoute|ajouter|add)\b/]);
+  // Publishing a document is a document write: "Publie le document DOC-4", "Publie DOC-4".
+  // The imperative or the infinitive only: "Liste les documents publiés" stays a read.
+  const hasDocumentPublishIntent = (mentionsDocument || referencedTypes.has('documents'))
+    && (containsAny(text, [/\bpublier\b/, /\bpublish\b/])
+      || /^(?:(?:bonjour|bonsoir|salut|hello|hi|hey|please|merci de|stp|svp)[\s,!.]+)*publie\b/.test(text));
+  // Making a document public is a document write: "Rends le document DOC-4 public".
+  const hasDocumentPublicationIntent = mentionsDocument && containsAny(text, [
+    /\b(?:rends|rendre|make)\b[\s\S]{0,40}\b(?:public|publique|publics|publiques)\b/,
+  ]);
+  const isWrite = containsAny(writeText, [
+    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|passe|passer|publish|publier|mark|set)\b/,
     wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
+    // A status or lifecycle word with an incident reference is an incident change: "clos INC-7",
+    // "Résous INC-3", "Rouvre INC-3", "Annule INC-3", "Lève la confidentialité de INC-3".
+    // The lifecycle function already decided the write; the reference or the incident word makes
+    // it true here ("Close INC-3", "INC-3 doit être rouvert").
+    ...(hasIncidentLifecycleIntent ? [/\b(?:inc-\d+|incidents?)\b/] : []),
+    ...(hasIncidentNoteIntent ? [/\b(note|notes|journal|log|logs)\b/] : []),
+    ...(hasTaskStatusIntent ? [/\b(clos|closed|ferme|fermer|rouvre|rouvrir|reopen|passe|passer|mets|mettre|marque|marquer|mark|close|annule|annuler|cancel|set|move|done|termine|terminee|pending|in progress|en cours|attente|waiting)\b/] : []),
+    ...(hasTaskProposalIntent ? [/\b(passe|passer|mets|mettre|marque|marquer)\b/] : []),
+    ...(hasProjectStatusIntent ? [/\b(passe|passer|mets|mettre|marque|marquer|annule|annuler|cancel)\b/] : []),
+    // A confidentiality change without an INC reference is still a write: "Lève la
+    // confidentialité", "plus confidentiel". A question about it stays a read.
+    ...(hasIncidentConfidentialityIntent && (!question || hasPoliteRequest)
+      ? [/\b(?:plus confidentiel(?:le|les|s)?|moins confidentiel(?:le|les|s)?|leve|levee|lever|lift|lifted)\b/]
+      : []),
+    ...(hasDocumentPublishIntent ? [/\b(?:publie|publier|publish)\b/] : []),
+    ...(hasDocumentPublicationIntent ? [/\b(?:public|publique|publics|publiques)\b/] : []),
+    ...(createsIncident(text, raw) ? [/\bincident\b/] : []),
   ]);
 
   if (isWrite) {
+    // The French unlink verbs only name a link with an INC reference or the word incident:
+    // "Retire le responsable de la tâche T-4" is a task field write.
     const isRelationWrite = containsAny(text, [
-      /\b(relation|relationship|link|linked|lier|relier|associer|rattacher|connect|connecter|unlink|delier)\b/,
+      /\b(relation|relationship|link|linked|lier|lie|lies|relier|relie|associer|associe|associes|rattacher|rattache|connect|connecter|unlink)\b/,
+      ...(hasIncidentIntent
+        ? [/\b(delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever)\b/]
+        : []),
+      ...(hasAddLinkIntent ? [/\b(?:ajoute|ajouter|add)\b/] : []),
     ]);
-    const hasDocumentIntent = containsAny(text, [
-      /\b(document|documents|doc|docs|knowledge|article|page|library|folder|markdown)\b/,
-    ]);
+    const hasDocumentIntent = mentionsDocument;
     const hasTaskIntent = containsAny(text, [
       /\b(task|tasks|ticket|tickets|tache|taches|todo|to-do|assignee|echeance|due date|priority|priorite|commentaire|comment)\b/,
-      /\b(en cours|in progress|open|done|termine|terminee|clos|closed|pending|a faire|to do)\b/,
+      /\b(en cours|in progress|done|termine|terminee|clos|closed|pending|a faire|to do)\b/,
     ]);
 
+    // A plan that starts an incident and then links it stays a business write:
+    // "Crée l'incident puis lie-le à AST-12 et APP-3".
+    if (hasIncidentIntent && !hasTaskNameIntent && createsIncidentRecord(text)) {
+      return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
+    }
+    // A link verb with an incident reference is the incident links tool: "lie APP-2 à INC-3".
+    if (hasIncidentReference && isRelationWrite) {
+      return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
+    }
     if (isRelationWrite) {
       return { profile: withWebCapability(PROFILES.write_relation, needsWeb), explicitIntent: true };
     }
     if (containsAny(text, [/\b(document|doc|knowledge|article|page|library|folder|markdown)\b/])) {
       return { profile: withWebCapability(PROFILES.write_document, needsWeb), explicitIntent: true };
+    }
+    // A task on an incident uses create_task, which the task profile carries.
+    if (hasTaskNameIntent) {
+      return { profile: withWebCapability(PROFILES.write_task, needsWeb), explicitIntent: true };
     }
     if (hasReferenceInGroup(referencedTypes, TASK_ENTITY_TYPES)) {
       return { profile: withWebCapability(PROFILES.write_task, needsWeb), explicitIntent: true };
@@ -464,16 +670,19 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     if (hasDocumentIntent) {
       return { profile: withWebCapability(PROFILES.write_document, needsWeb), explicitIntent: true };
     }
+    if (hasIncidentIntent) {
+      return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
+    }
     if (hasTaskIntent) {
       return { profile: withWebCapability(PROFILES.write_task, needsWeb), explicitIntent: true };
     }
     if (containsAny(text, [/\b(budget|opex|capex|spend|expense|financial|finance|forecast|plan)\b/])) {
       return { profile: withWebCapability(PROFILES.write_financial, needsWeb), explicitIntent: true };
     }
-    if (containsAny(text, [/\b(company|supplier|contact|department|location|account|master data|referentiel|referential)\b/])) {
+    if (containsAny(text, [/\b(company|companies|supplier|suppliers|fournisseur|fournisseurs|contact|contacts|department|departement|service|location|site|account|compte|master data|referentiel|referential)\b/])) {
       return { profile: withWebCapability(PROFILES.write_master_data, needsWeb), explicitIntent: true };
     }
-    if (containsAny(text, [/\b(application|applications|asset|assets|project|projects|request|requests|contract|contracts|interface|connection|location)\b/])) {
+    if (containsAny(text, [/\b(application|applications|asset|assets|actif|actifs|project|projects|projet|projets|request|requests|demande|demandes|contract|contracts|contrat|contrats|interface|connection|location|incident|incidents)\b/])) {
       return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
     }
     return { profile: withWebCapability(PROFILES.write_general, needsWeb), explicitIntent: true };
@@ -481,6 +690,19 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
 
   if (needsWeb) {
     return { profile: PROFILES.web, explicitIntent: true };
+  }
+
+  // A plural family is a list query even when it names a record: "Les incidents clos de APP-3",
+  // "Liste les tâches en cours du projet PRJ-3".
+  const mentionsIncidentList = /\bincidents\b/.test(text);
+  const mentionsTaskList = /\b(?:tasks|taches)\b/.test(text);
+  if ((mentionsIncidentList || mentionsTaskList) && !mentionsDocument) {
+    return { profile: PROFILES.read_query, explicitIntent: true };
+  }
+
+  // The public page of one incident is the record, not a knowledge document.
+  if (hasIncidentReference && asksToReadIncident) {
+    return { profile: PROFILES.entity_inspection, explicitIntent: true };
   }
 
   if (containsAny(text, [

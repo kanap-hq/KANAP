@@ -364,7 +364,12 @@ Live write-preview coverage includes:
   accounts, charts of accounts, analytics categories, business processes, and
   locations
 - business-record create/update for applications, assets, contracts, projects,
-  requests, interfaces, connections, and budget lines
+  requests, interfaces, connections, budget lines, and incidents
+- incident journal notes (`add_incident_note`) and incident links
+  (`update_incident_links`, reversible)
+- incident administrator actions (`change_incident_state` for reopen and cancel,
+  `set_incident_confidentiality` for restricting and lifting, both at
+  `incidents:admin`)
 - relation updates for supported application, asset, supplier, contract,
   budget line, project, request, document, and location links
 - financial plan writes for budget line versions, amounts, and allocations
@@ -376,6 +381,54 @@ Live write-preview coverage includes:
   counts the rest, and apply refuses a record changed since the preview
 - grouped mutation plans and undo previews where a reversible operation supports
   reversal
+
+Incident previews go through `IncidentsService`, never the tables. An incident
+is created `open` or `in_progress` only: a resolved or closed incident is
+created open and moved forward in a second preview, so the step stays visible.
+The status only moves forward (`open` → `in_progress` → `resolved` → `closed`);
+a backward move, `cancelled` and `confidential: false` are refused on the field
+path with a short message that names the administrator tool
+(`change_incident_state`, `set_incident_confidentiality`). The preview that closes an
+incident says the record freezes and only an administrator reopens it. A change
+of a closed or cancelled incident is refused at preparation. `category` is
+validated against the tenant's incident categories by code or exact label, with
+the allowed values in the refusal. Date-times are ISO 8601 with a time zone,
+converted into the person's `time_zone`; `detected_at` defaults to now.
+`confidential: true` is allowed; a preview warns when the change makes the
+restricted incident disappear for the person, as the screen's lose-access
+dialog does. A field change is undoable, a status or confidentiality change is
+not. The journal note goes
+through `IncidentEntriesService.createNote` (`add_incident_note`): the journal
+only takes additions, so the preview is not reversible. The links go through
+`IncidentRelationsService.setLink` once per link (`update_incident_links`), so
+the closure lock, the `link_change` journal entry, the audit row, the
+idempotence and a Business Contributor's application participation stay those
+of the Relations tab; a link already present, or already absent, writes nothing,
+a preview whose links would all stay as they are is refused with what it found,
+and undo reverses exactly the links that changed while the record is open. A
+follow-up task on an incident uses `create_task` (`relation_type: 'incident'`)
+through `TasksUnifiedService.createForTarget`, with the tasks member right, the
+incident's visibility and the closure lock.
+
+The administrator actions are separate tools, at `incidents:admin` for the
+whole tool, checked when the preview is prepared and again when it runs; a
+member or a contributor is not offered them. `change_incident_state` takes
+`reopen` or `cancel` and a mandatory reason, calls `IncidentsService.reopen` or
+`cancel`, and carries the before and after status and the reason on the card.
+Reopening refuses an open or in-progress incident before the preview with the
+service's sentence; cancelling refuses a frozen record. A cancellation carries
+its own `cancel_warning` (the record freezes until an administrator reopens
+it), writes a `status_change` journal entry and cannot be undone. The 423 of
+the review lock at cancellation is relayed as the readable closure message.
+`set_incident_confidentiality` takes the boolean
+directly, works on an open, closed or cancelled record as the screen's route
+does, and asks for the administrator right in both directions; a register
+administrator keeps access, so its card carries no lose-access warning. It
+writes the `system` journal entry and refreshes the search index of the linked
+tasks. At execution both compare the record with the preview (`from_status`,
+`from_confidential`) and answer 409 when another change moved it, rather than
+marking executed a preview that wrote nothing. Neither tool has a reversal
+preview.
 
 Application classification create/update previews use the normal application
 mutation service. They can set or clear business criticality, cyber,

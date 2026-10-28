@@ -62,6 +62,7 @@ const WRITE_RESOURCES = [
   'tasks',
   'knowledge',
   'users',
+  'incidents',
 ] as const;
 
 function shortTag() {

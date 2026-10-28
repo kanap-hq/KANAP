@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { EntityManager, Repository } from 'typeorm';
 import type { ParticipationAccessScope } from '../../auth/business-contributor-scope';
+import type { AuditSourceOptions } from '../../audit/audit.service';
 import { Incident } from '../incident.entity';
 import { incidentNotFound } from '../../common/resolve-item-id';
 import { IncidentChangedFields, IncidentEntry, IncidentEntryKind } from '../incident-entry.entity';
@@ -34,6 +35,11 @@ export interface ServiceOpts {
    * lists the incident's tasks; without it, the tasks section is absent from the record.
    */
   tasks?: boolean;
+  /**
+   * The audit entry's source: the screen leaves it out (`user`), Plaid names its preview
+   * (`{ source: 'ai_chat', sourceRef: preview.id }`), as `TasksUnifiedService` does.
+   */
+  audit?: AuditSourceOptions;
 }
 
 /** Re-exported for the existing import sites; the text lives in `incident-visibility.ts`. */

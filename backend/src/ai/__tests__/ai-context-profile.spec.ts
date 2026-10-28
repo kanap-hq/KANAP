@@ -111,6 +111,156 @@ async function testNonWebProfilesExposeAllKanapToolsButPrioritizeProfileTools() 
   );
 }
 
+function testIncidentWritesChooseTheBusinessRecordTools() {
+  for (const prompt of [
+    'Crée un incident sur la messagerie',
+    'Crée un incident INC-7 sur la messagerie',
+    'Mets à jour l’incident INC-7',
+    'Clos INC-7',
+    'Ferme INC-7',
+    'Passe INC-7 en résolu',
+    'Ouvre un incident sur la messagerie',
+    'Déclare un incident de messagerie',
+    'Signale un incident de messagerie',
+    'Open an incident on the mail server',
+    'Report an incident on the mail server',
+    'Log an incident on the mail server',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'write_business', prompt);
+    assert.ok(profile.toolNames.includes('create_business_record'), `${prompt}: create tool`);
+    assert.ok(profile.toolNames.includes('update_business_record'), `${prompt}: update tool`);
+    assert.equal(profile.toolNames.includes('update_task_status'), false, `${prompt}: never a task write`);
+  }
+
+  // The journal and the links have their own tools in the business profile.
+  for (const prompt of [
+    'Ajoute une note à INC-7',
+    'Note dans le journal de l’incident de messagerie : bascule effectuée',
+    'Ajoute une note sur l’incident mail',
+    'Log a note on the mail incident',
+    'Lie APP-2 à INC-3',
+    'lie l’incident INC-3 à l’application APP-2',
+    'Rattache APP-2 à INC-3',
+    'Associe APP-2 à INC-3',
+    'Ajoute l’incident INC-3 à l’actif AST-12',
+    'Link APP-2 to INC-3',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'write_business', prompt);
+    assert.ok(profile.toolNames.includes('add_incident_note'), `${prompt}: note tool`);
+    assert.ok(profile.toolNames.includes('update_incident_links'), `${prompt}: link tool`);
+  }
+
+  // The administrator's reopen, cancel and confidentiality actions live in the business profile.
+  for (const prompt of [
+    'Rouvre INC-3',
+    'Annule INC-3',
+    'Reopen INC-3',
+    'Cancel INC-3',
+    'Lève la confidentialité de INC-3',
+    'Rends INC-3 public',
+    'Rends INC-3 plus confidentiel',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'write_business', prompt);
+    assert.ok(profile.toolNames.includes('change_incident_state'), `${prompt}: state tool`);
+    assert.ok(profile.toolNames.includes('set_incident_confidentiality'), `${prompt}: confidentiality tool`);
+  }
+
+  // Without an INC reference, a confidentiality phrase is still a write: the person leaves the
+  // reference implicit, the tool resolves it.
+  for (const prompt of ['plus confidentiel', 'lève la confidentialité']) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'write_business', prompt);
+    assert.equal(profile.promptMode, 'write', prompt);
+    assert.ok(profile.toolNames.includes('set_incident_confidentiality'), `${prompt}: confidentiality tool`);
+  }
+
+  // A follow-up task on an incident goes to the task profile, before the incident intent.
+  for (const prompt of [
+    'Crée une tâche pour suivre l’incident de messagerie',
+    'Create a task to follow the mail incident',
+    'Crée une tâche sur INC-7',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'write_task', prompt);
+    assert.ok(profile.toolNames.includes('create_task'), `${prompt}: create task`);
+    assert.equal(profile.toolNames.includes('update_incident_links'), false, `${prompt}: not a link write`);
+  }
+
+  // A status word in a question is a read, never a write.
+  for (const prompt of [
+    'INC-3 est-il clos ?',
+    'Quand INC-3 a-t-il été résolu ?',
+    'Qui a fermé INC-3 ?',
+    'INC-3 a-t-il été rouvert ?',
+    'Is INC-3 closed?',
+    'When was INC-3 resolved?',
+    'Who closed INC-3?',
+    'Has INC-3 been reopened?',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'entity_inspection', prompt);
+    assert.equal(profile.toolNames.includes('update_business_record'), false, `${prompt}: no incident write`);
+    assert.equal(profile.toolNames.includes('update_incident_links'), false, `${prompt}: no link write`);
+    assert.equal(profile.toolNames.includes('change_incident_state'), false, `${prompt}: no state write`);
+    assert.equal(profile.toolNames.includes('set_incident_confidentiality'), false, `${prompt}: no confidentiality write`);
+  }
+}
+
+function testIncidentReadsAndLinkVerbsFromReview() {
+  // The French unlink verbs (and their infinitives) choose the incident link tool.
+  for (const prompt of [
+    'Délie APP-2 de INC-3',
+    'Retire APP-2 de INC-3',
+    'Enlève AST-12 de INC-3',
+    'Détache APP-2 de INC-3',
+    'Délier APP-2 de INC-3',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'write_business', prompt);
+    assert.ok(profile.toolNames.includes('update_incident_links'), `${prompt}: link tool`);
+  }
+
+  // Reading the journal, the notes or the record is not a write.
+  for (const prompt of [
+    'Montre le journal de INC-3',
+    'Show the log of INC-3',
+    'Quelles notes sur INC-3',
+    'Affiche les notes de INC-3',
+    'Ouvre la fiche de l’incident INC-3',
+    'Open the incident INC-3',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.notEqual(profile.promptMode, 'write', prompt);
+    assert.equal(profile.toolNames.includes('add_incident_note'), false, `${prompt}: no note write`);
+    assert.equal(profile.toolNames.includes('update_incident_links'), false, `${prompt}: no link write`);
+  }
+
+  // A creation followed by a link stays a business write.
+  const plan = selectAiContextProfile('Crée l’incident puis lie-le à AST-12 et APP-3');
+  assert.equal(plan.name, 'write_business');
+  assert.ok(plan.toolNames.includes('create_business_record'));
+  assert.ok(plan.toolNames.includes('update_incident_links'));
+
+  // "Résous INC-3" changes the incident status.
+  const resolved = selectAiContextProfile('Résous INC-3');
+  assert.equal(resolved.name, 'write_business');
+  assert.ok(resolved.toolNames.includes('update_business_record'));
+
+  // Closing a task reference goes to the task tools.
+  for (const prompt of ['Clos la tâche T-4', 'Clos le ticket T-4']) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'write_task', prompt);
+    assert.ok(profile.toolNames.includes('update_task_status'), `${prompt}: task status tool`);
+    assert.equal(profile.toolNames.includes('update_business_record'), false, `${prompt}: not an incident write`);
+  }
+
+  // No tool closes a GLPI ticket, so the message stays a read request.
+  assert.notEqual(selectAiContextProfile('Ferme le ticket GLPI 123').promptMode, 'write');
+}
+
 function testDeleteRecordFollowsTheFamilyWriteProfiles() {
   for (const prompt of [
     'Supprime la tâche T-42',
@@ -130,6 +280,16 @@ function testDeleteRecordFollowsTheFamilyWriteProfiles() {
   assert.equal(financial.name, 'write_financial');
   assert.ok(financial.toolNames.includes('delete_record'));
   console.log('  delete_record follows the task, contact, location, document, budget line, connection and interface write profiles: OK');
+}
+
+function testBlReferenceNeedsABudgetWord() {
+  // "BL" is also a delivery note ("bon de livraison"): without a budget word it names no line.
+  assert.equal(selectAiContextProfile('Supprime le BL-123').name, 'write_general');
+  assert.equal(selectAiContextProfile('Le bon de livraison BL-123 est arrivé').name, 'entity_inspection');
+  // A budget word keeps the line: "ligne", "budget", "OPEX", "CAPEX", "line".
+  assert.equal(selectAiContextProfile('Delete budget line OPEX BL-42').name, 'write_financial');
+  assert.equal(selectAiContextProfile('Supprime la ligne BL-42').name, 'write_financial');
+  console.log('  BL-n names a budget line only with a budget word: OK');
 }
 
 async function testContinuationInheritsOpenWriteRequestProfile() {
@@ -370,6 +530,9 @@ async function run() {
   await testFiltersProviderToolsForProfile();
   await testNonWebProfilesExposeAllKanapToolsButPrioritizeProfileTools();
   testDeleteRecordFollowsTheFamilyWriteProfiles();
+  testBlReferenceNeedsABudgetWord();
+  testIncidentWritesChooseTheBusinessRecordTools();
+  testIncidentReadsAndLinkVerbsFromReview();
   await testContinuationInheritsOpenWriteRequestProfile();
   await testPreviewCorrectionInheritsWriteRequestProfile();
   await testTargetSetCorrectionInheritsWriteRequestProfile();

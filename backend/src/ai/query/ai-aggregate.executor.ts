@@ -7,6 +7,7 @@ import { listAiVulnerabilities } from './ai-vulnerabilities.query';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
 import { aiDataAccessNote } from './ai-data-access-note.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
+import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
 import { bilingualDocumentTsQuerySql } from '../../common/document-search-tsquery';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
@@ -448,19 +449,24 @@ function aggregateConverted(fn: 'sum' | 'avg' | 'min' | 'max', values: number[])
   return total;
 }
 
-function buildMetricAggregateExpression(fn: AiAggregateFunction, expression: string): string {
-  switch (fn) {
-    case 'sum':
-      return `SUM(${expression})`;
-    case 'avg':
-      return `AVG(${expression})`;
-    case 'min':
-      return `MIN(${expression})`;
-    case 'max':
-      return `MAX(${expression})`;
-    default:
-      return 'COUNT(*)::int';
-  }
+function buildMetricAggregateExpression(fn: AiAggregateFunction, expression: string, round?: number): string {
+  const aggregate = (() => {
+    switch (fn) {
+      case 'sum':
+        return `SUM(${expression})`;
+      case 'avg':
+        return `AVG(${expression})`;
+      case 'min':
+        return `MIN(${expression})`;
+      case 'max':
+        return `MAX(${expression})`;
+      default:
+        return 'COUNT(*)::int';
+    }
+  })();
+  // A definition can carry more precision than the card reads (an exact delay): the group keeps
+  // the readable figure, the sum stays exact.
+  return round != null && fn !== 'sum' && fn !== 'count' ? `ROUND(${aggregate}, ${round})` : aggregate;
 }
 
 type BudgetValueGroup = { key: string | null; value: number | null; unknown?: number };
@@ -999,13 +1005,27 @@ export class AiAggregateExecutor {
 
     if (entityType === 'incidents') {
       const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
+      const reads = async (type: AiQueryEntityType) =>
+        !!(await this.policy?.canReadEntityType(context, type, context.manager));
+      const readsApplications = await reads('applications');
       const result = await this.incidents.listIds(
         {
           q,
           limit: AGGREGATE_ID_COLLECTION_LIMIT,
           filters: adaptedFilters,
         },
-        { manager: context.manager, tenantId: context.tenantId, viewer },
+        {
+          manager: context.manager,
+          tenantId: context.tenantId,
+          viewer,
+          // The linked filters follow the module reads, as the list does; the application filter
+          // and the group are narrowed to a Business Contributor's participation.
+          technologies: await reads('technologies'),
+          applications: readsApplications,
+          applicationScope: readsApplications
+            ? await resolveAiParticipationAccessScope(context, 'applications')
+            : undefined,
+        },
       );
       const ids = result.ids || [];
       return {
@@ -1181,7 +1201,23 @@ export class AiAggregateExecutor {
       throw new BadRequestException('Unsupported group_by field.');
     }
 
-    const joins = Array.from(new Set([...(groupField.joins || []), ...(metric?.def.joins || [])])).join('\n');
+    let joinList = Array.from(new Set([...(groupField.joins || []), ...(metric?.def.joins || [])]));
+    const queryParams: unknown[] = [context.tenantId, ids];
+    // A many-to-many group on a participation-scoped family lists only the linked records the
+    // caller takes part in (a Business Contributor's applications), as the incident detail does.
+    if (groupField.participation) {
+      const scope = await resolveAiParticipationAccessScope(context, groupField.participation.entityType);
+      if (scope) {
+        queryParams.push(scope.userId);
+        const condition = applicationParticipantCondition(
+          groupField.participation.alias,
+          `$${queryParams.length}`,
+        );
+        const target = `JOIN ${groupField.participation.table} ${groupField.participation.alias}`;
+        joinList = joinList.map((join) => (join.includes(target) ? `${join} AND ${condition}` : join));
+      }
+    }
+    const joins = joinList.join('\n');
     const alias = registry.aggregate.alias;
     const idColumn = registry.aggregate.idColumn ?? 'id';
     const baseWhere = registry.aggregate.baseWhere ? ` AND ${registry.aggregate.baseWhere}` : '';
@@ -1194,7 +1230,7 @@ export class AiAggregateExecutor {
            AND ${alias}.${idColumn} = ANY($2::uuid[])
          GROUP BY ${groupField.expression}
          ORDER BY count DESC, key ASC NULLS LAST`,
-        [context.tenantId, ids],
+        queryParams,
       );
 
       return (rows || []).map((row: any) => ({
@@ -1203,7 +1239,7 @@ export class AiAggregateExecutor {
       }));
     }
 
-    const aggregateExpression = buildMetricAggregateExpression(fn, metric.def.expression);
+    const aggregateExpression = buildMetricAggregateExpression(fn, metric.def.expression, metric.def.round);
     const orderDirection = getMetricOrderDirection(fn);
     const rows = await context.manager.query(
       `SELECT ${groupField.expression} AS key, ${aggregateExpression} AS value
@@ -1213,7 +1249,7 @@ export class AiAggregateExecutor {
          AND ${alias}.${idColumn} = ANY($2::uuid[])
        GROUP BY ${groupField.expression}
        ORDER BY value ${orderDirection} NULLS LAST, key ASC NULLS LAST`,
-      [context.tenantId, ids],
+      queryParams,
     );
 
     return (rows || []).map((row: any) => ({
@@ -1616,7 +1652,7 @@ export class AiAggregateExecutor {
           count: Number(row.count) || 0,
         }));
       } else {
-        const aggregateExpression = buildMetricAggregateExpression(fn, metric.def.expression);
+        const aggregateExpression = buildMetricAggregateExpression(fn, metric.def.expression, metric.def.round);
         const valueRows = await qb
           .clone()
           .select(groupExpression, 'key')

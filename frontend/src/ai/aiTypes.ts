@@ -8,6 +8,7 @@ export type AiMutationWriteToolName =
   | 'write_financial_plan'
   | 'update_master_data_record'
   | 'update_business_record'
+  | 'update_incident_links'
   | 'update_entity_relations'
   | 'update_document_content'
   | 'update_document_metadata'
@@ -15,6 +16,9 @@ export type AiMutationWriteToolName =
   | 'update_task_fields'
   | 'update_task_status'
   | 'update_task_assignee'
+  | 'add_incident_note'
+  | 'change_incident_state'
+  | 'set_incident_confidentiality'
   | 'add_task_comment'
   | 'delete_record';
 

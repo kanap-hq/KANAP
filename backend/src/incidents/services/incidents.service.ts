@@ -4,6 +4,12 @@ import { EntityManager, Repository } from 'typeorm';
 import { textSortKey, type TextSortKey } from '../../common/list-sort';
 import { Incident, INCIDENT_STATUS_RANK, IncidentStatus } from '../incident.entity';
 import { IncidentChangedFields } from '../incident-entry.entity';
+import {
+  INCIDENT_DETECTED_MONTH_SQL,
+  INCIDENT_RESOLUTION_HOURS_SQL,
+  INCIDENT_RESOLVED_MONTH_SQL,
+  incidentDaySql,
+} from '../incident-sql';
 import { AuditService } from '../../audit/audit.service';
 import { ItemNumberService } from '../../common/item-number.service';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
@@ -44,7 +50,56 @@ const ROW_COLUMNS = `
   i.owner_user_id, ${OWNER_NAME} AS owner_name,
   i.reporter_user_id, ${REPORTER_NAME} AS reporter_name,
   ${COUNT_COLUMNS},
+  ROUND(${INCIDENT_RESOLUTION_HOURS_SQL}, 1) AS resolution_hours,
   i.created_at, i.updated_at`;
+
+/**
+ * The linked asset, application and technology filters: a value is the target's business
+ * reference or its exact name, case-insensitive, on the link table (`EXISTS`). It is never a
+ * substring of an aggregated label, so `APP-1` does not match `APP-12`.
+ */
+type LinkFilterSpec = {
+  table: string;
+  column: string;
+  target: string;
+  alias: string;
+  /** The target's business reference and every field its exact name answers to (a host name, an fqdn). */
+  references: string[];
+  /** Applications are narrowed to a Business Contributor's participation, as the detail is. */
+  scoped: boolean;
+};
+
+const LINK_FILTERS: Record<string, LinkFilterSpec> = {
+  linked_assets: {
+    table: 'incident_assets',
+    column: 'asset_id',
+    target: 'assets',
+    alias: 'linked_asset',
+    references: [
+      'linked_asset.asset_reference',
+      'linked_asset.name',
+      'linked_asset.hostname',
+      'linked_asset.fqdn',
+    ],
+    scoped: false,
+  },
+  linked_applications: {
+    table: 'incident_applications',
+    column: 'application_id',
+    target: 'applications',
+    alias: 'linked_application',
+    references: ['linked_application.sequential_id', 'linked_application.name'],
+    scoped: true,
+  },
+  linked_technologies: {
+    table: 'incident_technologies',
+    column: 'technology_id',
+    target: 'technologies',
+    alias: 'linked_technology',
+    references: [`('TEC-' || linked_technology.item_number)`, 'linked_technology.name'],
+    scoped: false,
+  },
+};
 
 /** Frontend column → SQL expression, for filters and sorting. */
 const FIELD_EXPRESSIONS: Record<string, string> = {
@@ -71,18 +126,31 @@ const FIELD_EXPRESSIONS: Record<string, string> = {
     FROM incident_applications iap
     JOIN applications app ON app.id = iap.application_id AND app.tenant_id = iap.tenant_id
     WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id)`,
+  linked_technologies: `(SELECT string_agg(TRIM(CONCAT_WS(' ', 'TEC-' || t.item_number, t.name)), ', ' ORDER BY t.name)
+    FROM incident_technologies it
+    JOIN technologies t ON t.id = it.technology_id AND t.tenant_id = it.tenant_id
+    WHERE it.incident_id = i.id AND it.tenant_id = i.tenant_id)`,
+  detected_month: INCIDENT_DETECTED_MONTH_SQL,
+  resolved_month: INCIDENT_RESOLVED_MONTH_SQL,
+  resolution_hours: INCIDENT_RESOLUTION_HOURS_SQL,
   confidential: 'i.confidential',
   created_at: 'i.created_at',
   updated_at: 'i.updated_at',
   ...COUNT_EXPRESSIONS,
 };
 
-const INCIDENT_TEXT_SORTS = new Set(['title', 'owner_name', 'reporter_name', 'source_ref', 'linked_assets', 'linked_applications']);
+const INCIDENT_TEXT_SORTS = new Set([
+  'title', 'owner_name', 'reporter_name', 'source_ref', 'linked_assets', 'linked_applications', 'linked_technologies',
+]);
 const DATE_FIELDS = new Set(['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at', 'created_at', 'updated_at']);
-const NUMBER_FIELDS = new Set(Object.keys(COUNT_EXPRESSIONS));
+const NUMBER_FIELDS = new Set([...Object.keys(COUNT_EXPRESSIONS), 'resolution_hours']);
 const BOOLEAN_FILTER_FIELDS = new Set<string>(['personal_data_affected', 'authority_notification_required', 'confidential']);
 
-const FILTER_VALUE_FIELDS = new Set(['category', 'severity', 'status', 'owner_name', 'reporter_name']);
+const FILTER_VALUE_FIELDS = new Set([
+  'category', 'severity', 'status', 'owner_name', 'reporter_name',
+  'detected_month', 'resolved_month',
+  'linked_assets', 'linked_applications', 'linked_technologies',
+]);
 
 const NULLABLE_TEXT_FIELDS = [
   'category', 'description', 'source_ref', 'notified_parties',
@@ -133,11 +201,14 @@ type IncidentWhere = {
    */
   technologies?: boolean;
   applications?: boolean;
+  /** A Business Contributor's applications, for the application filter and its values. */
+  applicationScope?: ServiceOpts['applicationScope'];
 };
 
 /** The list fields that name or count another module's records, with the flag that reads it. */
 const LINKED_FIELD_READS: Record<string, 'technologies' | 'applications'> = {
   linked_assets: 'technologies',
+  linked_technologies: 'technologies',
   asset_count: 'technologies',
   linked_applications: 'applications',
   application_count: 'applications',
@@ -177,7 +248,7 @@ export class IncidentsService extends IncidentsBaseService {
     const { page, limit, skip, sort, q, filters } = parsePagination(query, DEFAULT_SORT);
     const { where, params } = this.buildWhere({
       filters, q, tenantId, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
-      technologies: opts?.technologies, applications: opts?.applications,
+      technologies: opts?.technologies, applications: opts?.applications, applicationScope: opts?.applicationScope,
     });
 
     const countRows: Array<{ count: number }> = await mg.query(`SELECT COUNT(*)::int AS count ${BASE_FROM} WHERE ${where}`, params);
@@ -186,12 +257,25 @@ export class IncidentsService extends IncidentsBaseService {
     const items = await mg.query(
       `SELECT ${ROW_COLUMNS} ${BASE_FROM}
        WHERE ${where}
-       ORDER BY ${this.orderBy(sort, await textSortKey(mg))}
+       ORDER BY ${this.orderBy(sort, await textSortKey(mg), params, opts?.applicationScope)}
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, skip],
     );
     // The linked counts of a module the reader does not read are null, never a number.
-    return { items: items.map((row: Record<string, unknown>) => withReadableCounts(row, opts)), total, page, limit };
+    const readable = items.map((row: Record<string, unknown>) => withReadableCounts(row, opts));
+    // A Business Contributor counts the applications they may see, as the detail does.
+    if (opts?.applications === true && opts.applicationScope) {
+      const counts = await this.applicationCountsInScope(
+        mg,
+        tenantId,
+        readable.map((row: Record<string, unknown>) => String(row.id)),
+        opts.applicationScope.userId,
+      );
+      for (const row of readable) {
+        row.application_count = counts.get(String(row.id)) ?? 0;
+      }
+    }
+    return { items: readable, total, page, limit };
   }
 
   /**
@@ -204,7 +288,7 @@ export class IncidentsService extends IncidentsBaseService {
     const { sort, q, filters } = parsePagination(query, DEFAULT_SORT);
     const { where, params } = this.buildWhere({
       filters, q, tenantId, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
-      technologies: opts?.technologies, applications: opts?.applications,
+      technologies: opts?.technologies, applications: opts?.applications, applicationScope: opts?.applicationScope,
     });
 
     const countRows: Array<{ count: number }> = await mg.query(`SELECT COUNT(*)::int AS count ${BASE_FROM} WHERE ${where}`, params);
@@ -214,7 +298,7 @@ export class IncidentsService extends IncidentsBaseService {
     const rows: Array<{ id: string; item_number: number }> = await mg.query(
       `SELECT i.id, i.item_number ${BASE_FROM}
        WHERE ${where}
-       ORDER BY ${this.orderBy(sort, await textSortKey(mg))}
+       ORDER BY ${this.orderBy(sort, await textSortKey(mg), params, opts?.applicationScope)}
        LIMIT $${params.length + 1}`,
       [...params, limit],
     );
@@ -233,9 +317,10 @@ export class IncidentsService extends IncidentsBaseService {
     const { sort, q, filters } = parsePagination(query, DEFAULT_SORT);
     const { where, params } = this.buildWhere({
       filters, q, tenantId, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
-      technologies: opts?.technologies, applications: opts?.applications,
+      technologies: opts?.technologies, applications: opts?.applications, applicationScope: opts?.applicationScope,
     });
-    return { where, params, orderBy: this.orderBy(sort, await textSortKey(mg)) };
+    const orderBy = this.orderBy(sort, await textSortKey(mg), params, opts?.applicationScope);
+    return { where, params, orderBy };
   }
 
   /**
@@ -254,10 +339,19 @@ export class IncidentsService extends IncidentsBaseService {
 
     const results: Record<string, Array<string | null>> = {};
     for (const field of fields) {
+      // A reader without the linked module gets no value for its field, as its column is empty.
+      if (LINKED_FIELD_READS[field] && opts?.[LINKED_FIELD_READS[field]] === false) {
+        results[field] = [];
+        continue;
+      }
       const { where, params } = this.buildWhere({
         filters, q, tenantId, skipField: field, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
-        technologies: opts?.technologies, applications: opts?.applications,
+        technologies: opts?.technologies, applications: opts?.applications, applicationScope: opts?.applicationScope,
       });
+      if (LINK_FILTERS[field]) {
+        results[field] = await this.listLinkedFilterValues(mg, field, where, params, opts);
+        continue;
+      }
       const rows: Array<{ value: string | null }> = await mg.query(
         `SELECT DISTINCT ${FIELD_EXPRESSIONS[field]} AS value ${BASE_FROM}
          WHERE ${where}
@@ -269,11 +363,57 @@ export class IncidentsService extends IncidentsBaseService {
     return results;
   }
 
+  /** The exact names of the records linked to the incidents the caller reads, one row each. */
+  private async listLinkedFilterValues(
+    mg: EntityManager,
+    field: string,
+    where: string,
+    params: any[],
+    opts?: ServiceOpts,
+  ): Promise<Array<string | null>> {
+    const spec = LINK_FILTERS[field];
+    const scope = spec.scoped && opts?.applicationScope
+      ? ` AND ${applicationParticipantCondition(spec.alias, binder(params)(opts.applicationScope.userId))}`
+      : '';
+    const rows: Array<{ value: string | null }> = await mg.query(
+      `SELECT DISTINCT ${spec.alias}.name AS value
+       FROM incidents i
+       JOIN ${spec.table} filter_value_link
+         ON filter_value_link.incident_id = i.id AND filter_value_link.tenant_id = i.tenant_id
+       JOIN ${spec.target} ${spec.alias}
+         ON ${spec.alias}.id = filter_value_link.${spec.column} AND ${spec.alias}.tenant_id = filter_value_link.tenant_id
+       LEFT JOIN users o ON o.id = i.owner_user_id AND o.tenant_id = i.tenant_id
+       LEFT JOIN users r ON r.id = i.reporter_user_id AND r.tenant_id = i.tenant_id
+       WHERE ${where}${scope}
+       ORDER BY value ASC NULLS LAST`,
+      params,
+    );
+    return rows.map((row) => row.value);
+  }
+
   /** Text columns sort alphabetically, case and accents ignored (`textSortKey`). */
-  private orderBy(sort: Sort, textKey: TextSortKey): string {
-    const raw = FIELD_EXPRESSIONS[sort.field] || FIELD_EXPRESSIONS.detected_at;
+  private orderBy(
+    sort: Sort,
+    textKey: TextSortKey,
+    params: unknown[] = [],
+    applicationScope?: { userId: string },
+  ): string {
+    let raw = FIELD_EXPRESSIONS[sort.field] || FIELD_EXPRESSIONS.detected_at;
+    // A Business Contributor sorts on the applications they take part in only.
+    if (sort.field === 'application_count' && applicationScope) {
+      raw = this.applicationCountExpression(params, applicationScope);
+    }
     const expression = INCIDENT_TEXT_SORTS.has(sort.field) ? textKey(raw) : raw;
     return `${expression} ${sort.direction} NULLS LAST, i.item_number ${sort.direction}`;
+  }
+
+  /** The scoped application count, with its user id pushed into `params`. */
+  private applicationCountExpression(params: unknown[], applicationScope: { userId: string }): string {
+    const userRef = binder(params)(applicationScope.userId);
+    return `(SELECT COUNT(*) FROM incident_applications iap
+      JOIN applications app ON app.id = iap.application_id AND app.tenant_id = iap.tenant_id
+      WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id
+        AND ${applicationParticipantCondition('app', userRef)})::int`;
   }
 
   private buildWhere(input: IncidentWhere): { where: string; params: any[] } {
@@ -286,8 +426,15 @@ export class IncidentsService extends IncidentsBaseService {
       if (field === input.skipField) continue;
       // A filter on a module the reader does not read is ignored, as the column is empty for them.
       if (LINKED_FIELD_READS[field] && input[LINKED_FIELD_READS[field]] === false) continue;
-      const expression = FIELD_EXPRESSIONS[field];
+      const expression = field === 'application_count' && input.applicationScope
+        ? this.applicationCountExpression(params, input.applicationScope)
+        : FIELD_EXPRESSIONS[field];
       if (!expression || !model || typeof model !== 'object') continue;
+
+      if (LINK_FILTERS[field]) {
+        where += this.linkFilterClause(field, model, params, input);
+        continue;
+      }
 
       if (model.filterType === 'set' && Array.isArray(model.values)) {
         if (model.values.length === 0) {
@@ -310,7 +457,8 @@ export class IncidentsService extends IncidentsBaseService {
         if (hasNull) clauses.push(`${expression} IS NULL`);
         where += clauses.length > 0 ? ` AND (${clauses.join(' OR ')})` : ' AND 1=0';
       } else if (DATE_FIELDS.has(field) && (model.filterType === 'date' || model.filterType === 'text')) {
-        where += this.dateClause(model, `${expression}::date`, params);
+        // The same UTC day as the metrics: a date-time stored at 23:30 UTC stays that day in Paris.
+        where += this.dateClause(model, incidentDaySql(expression), params);
       } else if (NUMBER_FIELDS.has(field) && (model.filterType === 'number' || model.filterType === 'text')) {
         where += this.numberClause(model, expression, params);
       } else if (model.filterType === 'text' && model.filter) {
@@ -339,6 +487,10 @@ export class IncidentsService extends IncidentsBaseService {
     if (input.q) {
       params.push(`%${input.q.trim()}%`);
       const idx = params.length;
+      // A Business Contributor searches the applications they take part in only, as the detail.
+      const applicationScope = input.applications !== false && input.applicationScope
+        ? ` AND ${applicationParticipantCondition('app', binder(params)(input.applicationScope.userId))}`
+        : '';
       where += ` AND (
         i.title ILIKE $${idx}
         OR i.description ILIKE $${idx}
@@ -358,6 +510,7 @@ export class IncidentsService extends IncidentsBaseService {
           SELECT 1 FROM incident_applications iap
           JOIN applications app ON app.id = iap.application_id AND app.tenant_id = iap.tenant_id
           WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id
+            ${applicationScope}
             AND (
               app.name ILIKE $${idx}
               OR COALESCE(app.sequential_id, '') ILIKE $${idx}
@@ -375,15 +528,84 @@ export class IncidentsService extends IncidentsBaseService {
     }
     if (input.applicationId) {
       params.push(input.applicationId);
+      const applicationParam = params.length;
+      const applicationScope = input.applicationScope
+        ? ` AND ${applicationParticipantCondition('app', binder(params)(input.applicationScope.userId))}`
+        : '';
       where += ` AND EXISTS (
         SELECT 1 FROM incident_applications iap
-        WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id AND iap.application_id = $${params.length}
+        JOIN applications app ON app.id = iap.application_id AND app.tenant_id = iap.tenant_id
+        WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id
+          AND iap.application_id = $${applicationParam}${applicationScope}
       )`;
     }
 
     where += incidentVisibilitySql('i', input.viewer, params);
 
     return { where, params };
+  }
+
+  /**
+   * Exact link filter: one of the target's business references or one of its exact names
+   * (a host name or an fqdn for an asset), case-insensitive, on the link table. A `null` value
+   * matches an incident without that link. A reader's applications scope is applied to the joined
+   * application, as the Relations tab does, so an incident linked only to an application outside
+   * their scope counts as having no application. Only `equals` and `contains` are accepted, both
+   * as an exact match; another text operator is refused rather than silently widened.
+   */
+  private linkFilterClause(field: string, model: any, params: any[], input: IncidentWhere): string {
+    const spec = LINK_FILTERS[field];
+    const normalized = (values: any[]): string[] => values
+      .filter((value) => value !== null && value !== undefined)
+      .map((value) => String(value).trim().toLowerCase())
+      .filter((value) => value.length > 0);
+    const scope = spec.scoped && input.applicationScope
+      ? ` AND ${applicationParticipantCondition(spec.alias, binder(params)(input.applicationScope.userId))}`
+      : '';
+    const exists = (values: string[]): string => {
+      params.push(values);
+      const placeholder = `$${params.length}::text[]`;
+      const matches = spec.references
+        .map((reference) => `LOWER(BTRIM(${reference})) = ANY(${placeholder})`)
+        .join('\n            OR ');
+      return `EXISTS (
+        SELECT 1 FROM ${spec.table} link
+        JOIN ${spec.target} ${spec.alias}
+          ON ${spec.alias}.id = link.${spec.column} AND ${spec.alias}.tenant_id = link.tenant_id
+        WHERE link.incident_id = i.id AND link.tenant_id = i.tenant_id
+          AND (${matches})${scope}
+      )`;
+    };
+    // The contribution scope narrows what counts as a link too: an incident linked only to an
+    // application outside the person's participation has no application for them, as its detail.
+    const hasLink = scope
+      ? `EXISTS (
+        SELECT 1 FROM ${spec.table} link
+        JOIN ${spec.target} ${spec.alias}
+          ON ${spec.alias}.id = link.${spec.column} AND ${spec.alias}.tenant_id = link.tenant_id
+        WHERE link.incident_id = i.id AND link.tenant_id = i.tenant_id${scope}
+      )`
+      : `EXISTS (
+        SELECT 1 FROM ${spec.table} link
+        WHERE link.incident_id = i.id AND link.tenant_id = i.tenant_id
+      )`;
+
+    if (model.filterType === 'set' && Array.isArray(model.values)) {
+      const hasNull = model.values.some((value: any) => value === null || value === undefined);
+      const values = normalized(model.values);
+      if (values.length === 0) return hasNull ? ` AND NOT ${hasLink}` : ' AND 1=0';
+      return ` AND (${exists(values)}${hasNull ? ` OR NOT ${hasLink}` : ''})`;
+    }
+
+    const type = String(model.type || (model.filterType === 'text' ? 'contains' : ''));
+    if (type === 'blank') return ` AND NOT ${hasLink}`;
+    if (type === 'notBlank') return ` AND ${hasLink}`;
+    if (type !== '' && type !== 'contains' && type !== 'equals') {
+      throw new BadRequestException(`Filter operator "${type}" is not supported on ${field}. Use equals or contains.`);
+    }
+    const values = normalized([model.filter ?? model.value]);
+    if (values.length === 0) return '';
+    return ` AND ${exists(values)}`;
   }
 
   /** AG Grid date filter model → SQL fragment (day granularity). */
@@ -396,7 +618,8 @@ export class IncidentsService extends IncidentsBaseService {
 
     const pushDate = (value: any) => {
       params.push(value);
-      return `$${params.length}::date`;
+      // The expression is a `YYYY-MM-DD` text: compare it with the day as text too.
+      return `to_char($${params.length}::date, 'YYYY-MM-DD')`;
     };
     if (type === 'inRange') {
       if (!fromRaw || !toRaw) return '';
@@ -464,6 +687,7 @@ export class IncidentsService extends IncidentsBaseService {
          ${OWNER_NAME} AS owner_name,
          ${REPORTER_NAME} AS reporter_name,
          ${COUNT_COLUMNS},
+         ROUND(${INCIDENT_RESOLUTION_HOURS_SQL}, 1) AS resolution_hours,
          -- The entries the journal shows: it leaves out a link change of an unread module.
          (SELECT COUNT(*) FROM incident_entries e
            WHERE e.incident_id = i.id AND e.tenant_id = i.tenant_id
@@ -523,6 +747,28 @@ export class IncidentsService extends IncidentsBaseService {
     return Number(row?.n ?? 0);
   }
 
+  /** The same count for a page of the list, in one query. */
+  private async applicationCountsInScope(
+    mg: EntityManager,
+    tenantId: string,
+    incidentIds: string[],
+    userId: string,
+  ): Promise<Map<string, number>> {
+    if (incidentIds.length === 0) return new Map();
+    const params: unknown[] = [tenantId, incidentIds];
+    const bind = binder(params);
+    const rows: Array<{ incident_id: string; n: number }> = await mg.query(
+      `SELECT l.incident_id::text AS incident_id, COUNT(*)::int AS n
+         FROM incident_applications l
+         JOIN applications a ON a.id = l.application_id AND a.tenant_id = l.tenant_id
+        WHERE l.tenant_id = $1 AND l.incident_id = ANY($2::uuid[])
+          AND ${applicationParticipantCondition('a', bind(userId))}
+        GROUP BY l.incident_id`,
+      params,
+    );
+    return new Map(rows.map((row) => [String(row.incident_id), Number(row.n)]));
+  }
+
   /**
    * The detail returned after a write. The viewer may be overridden (the author of a create sees
    * the row they just wrote); the relation counts stay those of the caller who asked.
@@ -535,6 +781,8 @@ export class IncidentsService extends IncidentsBaseService {
       technologies: opts?.technologies,
       applications: opts?.applications,
       applicationScope: opts?.applicationScope,
+      tasks: opts?.tasks,
+      audit: opts?.audit,
     };
   }
 
@@ -597,7 +845,8 @@ export class IncidentsService extends IncidentsBaseService {
       author_id: userId,
     });
     await this.audit.log(
-      { table: 'incidents', recordId: saved.id, action: 'create', before: null, after: saved, userId },
+      { table: 'incidents', recordId: saved.id, action: 'create', before: null, after: saved, userId,
+        source: opts?.audit?.source, sourceRef: opts?.audit?.sourceRef ?? null },
       { manager: mg },
     );
     return this.get(saved.id, this.viewed(opts, { userId, isAdmin: true }));
@@ -683,7 +932,8 @@ export class IncidentsService extends IncidentsBaseService {
       await this.refreshLinkedTaskSearchIndex(mg, tenantId, saved.id);
     }
     await this.audit.log(
-      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
+      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId,
+        source: opts?.audit?.source, sourceRef: opts?.audit?.sourceRef ?? null },
       { manager: mg },
     );
     return this.get(saved.id, this.viewed(opts, { userId, isAdmin: true }));
@@ -714,7 +964,8 @@ export class IncidentsService extends IncidentsBaseService {
     const changed: IncidentChangedFields = { status: { from: before.status, to: saved.status } };
     await this.addEntry(mg, saved, { kind: 'reopen', content: reason, changed_fields: changed, occurred_at: now, author_id: userId });
     await this.audit.log(
-      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
+      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId,
+        source: opts?.audit?.source, sourceRef: opts?.audit?.sourceRef ?? null },
       { manager: mg },
     );
     return this.get(saved.id, this.viewed(opts, opts?.viewer ?? { userId, isAdmin: true }));
@@ -746,7 +997,8 @@ export class IncidentsService extends IncidentsBaseService {
     };
     await this.addEntry(mg, saved, { kind: 'status_change', content: reason, changed_fields: changed, occurred_at: now, author_id: userId });
     await this.audit.log(
-      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
+      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId,
+        source: opts?.audit?.source, sourceRef: opts?.audit?.sourceRef ?? null },
       { manager: mg },
     );
     return this.get(saved.id, this.viewed(opts, opts?.viewer ?? { userId, isAdmin: true }));
@@ -787,7 +1039,8 @@ export class IncidentsService extends IncidentsBaseService {
       author_id: userId,
     });
     await this.audit.log(
-      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
+      { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId,
+        source: opts?.audit?.source, sourceRef: opts?.audit?.sourceRef ?? null },
       { manager: mg },
     );
     await this.refreshLinkedTaskSearchIndex(mg, tenantId, saved.id);
