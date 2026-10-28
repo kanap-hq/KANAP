@@ -17,6 +17,7 @@ import { RECORD_HISTORY_TABLES } from '../../../../frontend/src/components/histo
 function testEntries() {
   const entries = Object.values(RECORD_HISTORY);
   assert.ok(entries.length > 0, 'the inventory declares a record');
+  let childReads = 0;
   for (const [key, entry] of Object.entries(RECORD_HISTORY)) {
     assert.equal(key, entry.table, `${key}: the route key is the record table`);
     assert.ok((RESOURCES as readonly string[]).includes(entry.module), `${key}: ${entry.module} is a permission resource`);
@@ -27,6 +28,17 @@ function testEntries() {
     assert.equal(entry.module, FAMILY_MODULES[entry.family], `${key}: the record module reads its reference family`);
     assert.ok(entry.exclusions.every((exclusion) => exclusion.reason.trim().length > 0), `${key}: an exclusion has its reason`);
     assert.ok(entry.explicitParentLabels.every((label) => recordHistoryChildKind(entry, label) !== null), `${key}: an explicit parent is a child label`);
+    for (const label of Object.keys(entry.children)) {
+      assert.ok(!entry.auditLabels.includes(label), `${key}: ${label} is not both the record's own label and a child`);
+    }
+    for (const [label, mode] of Object.entries(entry.childReads ?? {})) {
+      assert.ok(recordHistoryChildKind(entry, label) !== null, `${key}: childReads.${label} is a child label`);
+      if (mode !== 'record') {
+        assert.equal(typeof mode.payloadKey, 'string', `${key}: childReads.${label} names a payload key`);
+        assert.match(mode.payloadKey, /^[a-z_]+$/, `${key}: childReads.${label} payload key is a plain identifier`);
+      }
+      childReads += 1;
+    }
   }
   assert.deepEqual(recordHistoryModules(), ['accounts', 'budget', 'cost_centers'], 'the modules of the route guard');
   // Every reference family has a reader module (people are the only exception, `null`), and the
@@ -38,7 +50,7 @@ function testEntries() {
       `${family}: ${module} is a permission resource`,
     );
   }
-  console.log(`  ${entries.length} record entries, ${FAMILY_KEYS.length} families with a module: OK`);
+  console.log(`  ${entries.length} record entries, ${childReads} child read modes, ${FAMILY_KEYS.length} families with a module: OK`);
 }
 
 /** The frontend declares the tables whose page shows a history; the two lists are one set. */

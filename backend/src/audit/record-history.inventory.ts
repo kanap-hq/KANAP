@@ -45,6 +45,15 @@ export type RecordHistoryExclusion = {
   reason: string;
 };
 
+/**
+ * How a child label reaches its record when the parent columns do not name it.
+ * - `record`: the child's audit rows carry the record in `record_id` (a link whose record is the
+ *   record itself, not the object on the other side);
+ * - `{ payloadKey }`: the rows carry the link's own id in `record_id`, and the record in that key
+ *   of `before_json` or `after_json` (a contact link whose parent is another record).
+ */
+export type RecordHistoryChildRead = 'record' | { payloadKey: string };
+
 export type RecordHistoryRecord = {
   /** The physical table of the record, and its route key. */
   table: string;
@@ -62,6 +71,13 @@ export type RecordHistoryRecord = {
   family: FamilyKey;
   /** Audit label → the kind the child shows as. */
   children: Readonly<Record<string, RecordHistoryChildKind>>;
+  /**
+   * Child label → how its rows are found. Absent, or a label absent here, means the parent columns
+   * (`parent_table` / `parent_id`), as before. A declaration is read by `readAuditPage`; the
+   * inventory spec checks that every key is a child label and that no label is both the record's
+   * own and a child.
+   */
+  childReads?: Readonly<Record<string, RecordHistoryChildRead>>;
   /** Child labels whose write declares the record as `parent`, with no label rule. */
   explicitParentLabels: readonly string[];
   /** Data-access tables that follow the record or link to it, without a child history of their own. */
