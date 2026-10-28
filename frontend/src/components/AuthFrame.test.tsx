@@ -19,6 +19,6 @@ describe('AuthFrame', () => {
   it('names the theme switch and its mode in the reader\'s language', async () => {
     await i18n.changeLanguage('fr');
     render(<AuthFrame><div /></AuthFrame>);
-    expect(screen.getByRole('button', { name: 'Thème : Système' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Thème\u00a0: Système' })).toBeInTheDocument();
   });
 });

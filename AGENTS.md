@@ -215,6 +215,7 @@ Tool-specific or private notes live in each tool's local files, never here.
 - Frontend test traps: jsdom has no `localStorage` here (stub it); a `useTranslation` mock that
   returns a new `t` on each render loops effects (hoist a stable `t`); MUI `Select` hides an
   empty-value `MenuItem` without `displayEmpty`, and its `aria-label` goes through `SelectDisplayProps`.
+  French texts are shown with non-breaking spaces (`frenchSpacing`, `frontend/src/i18n/index.ts`): write French expectations with `\u00a0` before `:` and inside guillemets, and `\u202f` before `;`, `!`, `?`.
 - Browser automation in a hidden tab: CSS transitions do not advance, so colours read stale after a
   theme toggle. Finish them first: `el.getAnimations().forEach(a => a.finish())`.
 - UI changes are also verified in a browser, in light **and** dark mode.
