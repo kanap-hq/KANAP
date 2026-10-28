@@ -25,9 +25,9 @@ type SystemPromptParams = {
   readableEntityTypes: string[];
   currentUser: CurrentUserPromptContext;
   contextProfile?: AiContextProfile;
-  /** The tenant's budget columns, only for users who can read OPEX or CAPEX items. */
+  /** The tenant's budget columns, only for users who can read the budget lines. */
   budgetColumns?: ReturnType<typeof budgetColumnsAiContext>;
-  /** The analytics dimensions OPEX and CAPEX lines may be given a value on, only for users who can read those lines. */
+  /** The analytics dimensions budget lines may be given a value on, only for users who can read them. */
   analyticsDimensions?: AnalyticsDimensionsPromptContext;
   /** The user's IANA zone. Absent or unknown reads as UTC. */
   timeZone?: string | null;
@@ -75,11 +75,9 @@ function defaultContextProfile(): AiContextProfile {
 function compactDomainVocabulary(mode: AiContextProfile['promptMode']): string {
   const base = [
     'Domain vocabulary: users may use synonyms. Translate user wording to KANAP entity families before searching.',
-    '- Tasks: tickets, to-dos, work items. They can be standalone or linked to projects, requests, spend items, capex items, contracts, or incidents.',
+    '- Tasks: tickets, to-dos, work items. They can be standalone or linked to projects, requests, budget lines, contracts, or incidents.',
     '- Documents: docs, articles, pages, knowledge base entries.',
-    '- Spend items: budget lines, expenses, recurring costs, subscriptions, OpEx.',
-    '- Capex items: investments, capital expenditure, CapEx, purchases.',
-    '- Budget lines of both families are cited as BL-n. Accept OPX-n and CPX-n as legacy input references; search for them to resolve the native BL-n reference.',
+    '- Budget lines: one family (`budget_lines`) for expenses, recurring costs, subscriptions and OpEx, and for investments, capital expenditure, CapEx and purchases. `nature` says which one (`opex` or `capex`). Cite them as BL-n. Accept OPX-n and CPX-n as legacy input references; search for them to resolve the native BL-n reference.',
     '- Applications/assets/projects/requests/contracts/suppliers/users/companies/departments/locations/incidents are standard KANAP families. Company/department year-backed metrics use headcount_year, it_users_year, turnover_year, and metrics_frozen; pass `year` on query_entities or get_entity_detail when the user names a year.',
     '- "me/my/mine" means the current user scope. "my team" means the current user team scope.',
   ];
@@ -127,8 +125,7 @@ function toolUsageGuidelines(mode: AiContextProfile['promptMode']): string {
     '- A tool error you repair with another call is part of your work: write nothing about it, neither the failed attempt nor the retry ("I will try again with the name"). Report only the outcome.',
     '- When the user says "me", "my", "mine", or "myself", use scope: "me". When they say "my team", use scope: "my_team".',
     '- Cross-entity examples: tasks for projects in a stream use project_stream; applications linked to a project use linked_project; documents linked to an entity use the relevant linked_* filter.',
-    '- Spend-item reads and spend-item aggregations are summary-backed and should mirror the OPEX summary view.',
-    '- OPEX lines (spend_items) and CAPEX lines (capex_items) are two families. A budget question that names neither (a budget, FTE, staff, a cost per FTE, a day rate) covers both: make the same call on each and give each family\'s figures with its own total, or say that the answer covers OPEX only.',
+    '- Budget-line reads and aggregations are summary-backed: one family, `budget_lines`, with both natures. A question that names no nature (a budget, FTE, staff, a cost per FTE, a day rate) covers both natures; filter or group by `nature` (opex, capex) when the question names one.',
     '- A cost per FTE or an average day rate (TJM) comes from aggregate_entities with the metric `<year>_<column>_cost_per_fte` or `<year>_<column>_day_rate` (for example `y_budget_cost_per_fte`): the server divides, per group and overall, as the Cost per FTE report does, and returns the FTE, the staff cost, the days and the day cost with it. The cost per FTE metric keeps every group with staff and gives its day rate too: use it for FTE and day rate per group; the day rate metric keeps only the groups with days bought. Never divide an amount by FTE or assume a number of working days yourself.',
     '- Discovery tools are ranked and incomplete. Authoritative query/aggregate tools can support exact answers when complete is true.',
     '- Prefer completeness over speed. Use generous limits and paginate when total exceeds returned or truncated is true before claiming "all".',
@@ -322,13 +319,13 @@ export class AiSystemPromptService {
       `${JSON.stringify(currentUserContext, null, 2)}\n` +
       '```' +
       (params.budgetColumns?.length
-        ? '\n`budget_columns` lists the five amount columns of OPEX and CAPEX items as this tenant names them. ' +
+        ? '\n`budget_columns` lists the five amount columns of the budget lines as this tenant names them. ' +
           'Amount fields are `<year slot>_<ai_field_suffix>`, year slots y_minus2, y_minus1, y, y_plus1 and y_plus2; ' +
           'financial-plan amounts use `measure`. Match a column the user names to `name`, answer with that name, and use the `default` column when the user names none. ' +
           'Hidden columns (`shown: false`) still hold amounts.'
         : '') +
       (analyticsDimensions
-        ? '\n`analytics_dimensions` lists the analytics dimensions an OPEX or CAPEX line can hold a value on, with the line types each is `used_for`. ' +
+        ? '\n`analytics_dimensions` lists the analytics dimensions a budget line can hold a value on, with the line types each is `used_for`. ' +
           'To set a line\'s value on a dimension, put its `key` in the `fields` of `create_business_record` or `update_business_record` with the value\'s name (null clears it); ' +
           'a value missing from the dimension must be created first (`create_master_data_record`, analytics_categories with `dimension`) or asked for. ' +
           'A `required` dimension must be given a value when creating a line.'

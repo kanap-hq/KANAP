@@ -76,7 +76,7 @@ export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
   {
     family: 'cost centers',
     screen: ['masterData', 'costCenters'],
-    hint: 'A budget line names its cost center: the cost_center field and filter of query_entities on spend_items and capex_items.',
+    hint: 'A budget line names its cost center: the cost_center field and filter of query_entities on budget_lines.',
     terms: /cost[\s_-]*cent|centres?\s+de\s+co[uû]ts?|kostenstelle|centros?\s+de\s+costes?/i,
   },
   {
