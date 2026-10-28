@@ -407,7 +407,7 @@ function testDeleteRecordSummaryAndCard() {
   assert.equal(summary(operation, contact, 'fr'), 'Suppression du contact « Camille Roux ».');
   assert.equal(
     operation.presentPreview(contact, 'fr').changes.deletion.to,
-    "- Fournisseurs : 1\n- D'autres rattachements : 2\n\nLes fiches liées restent.",
+    "- Liens aux fournisseurs : 1\n- D'autres rattachements : 2\n\nLes fiches liées restent.",
   );
   // A task's applications, assets and documents follow the same rule as a contact's families.
   const taskWithHiddenLinks: AiMutationPreview = {
@@ -422,7 +422,7 @@ function testDeleteRecordSummaryAndCard() {
   };
   assert.equal(
     operation.presentPreview(taskWithHiddenLinks, 'fr').changes.deletion.to,
-    "- Commentaires et changements : 1\n- D'autres rattachements : 3",
+    "- Commentaires et changements : 1\n- D'autres rattachements : 3\n\nLes fiches liées restent.",
   );
 
   // A budget line names its versions, amounts, tasks, requests losing their origin, links and files.
@@ -460,16 +460,37 @@ function testDeleteRecordSummaryAndCard() {
     [
       '- Versions avec des montants : 1',
       '- Années avec des montants : 2',
-      '- Tâches : 1',
+      '- Tâches supprimées : 1',
       "- Demandes qui perdent leur tâche d'origine : 1",
       '- Pièces jointes : 1',
-      '- Contrats : 1',
-      '- Projets : 1',
-      '- Demandes : 1',
-      '- Applications : 1',
-      '- Contacts : 1',
+      '- Liens aux contrats : 1',
+      '- Liens aux projets : 1',
+      '- Liens aux demandes : 1',
+      '- Liens aux applications : 1',
+      '- Liens aux contacts : 1',
       '- Liens : 1',
       '- Valeurs de dimensions : 1',
+      '',
+      'Les fiches liées restent.',
+    ].join('\n'),
+  );
+  // The card of a line with one task, one contract and one application says which goes and which
+  // only loses its link.
+  const lineLinks: AiMutationPreview = {
+    ...line,
+    current_values: {
+      ...line.current_values,
+      counts: { tasks: 1, contracts: 1, applications: 1 },
+    },
+  };
+  assert.equal(
+    operation.presentPreview(lineLinks, 'fr').changes.deletion.to,
+    [
+      '- Tâches supprimées : 1',
+      '- Liens aux contrats : 1',
+      '- Liens aux applications : 1',
+      '',
+      'Les fiches liées restent.',
     ].join('\n'),
   );
 
@@ -490,10 +511,10 @@ function testDeleteRecordSummaryAndCard() {
     operation.presentPreview(connection, 'fr').changes.deletion.to,
     [
       '- Sauts : 2',
-      '- Serveurs : 1',
+      '- Liens aux serveurs : 1',
       '- Protocoles : 1',
       '- Interfaces qui perdront cette connexion : 1',
-      '- Documents liés : 1',
+      '- Liens aux documents : 1',
       '',
       'Les interfaces elles-mêmes ne sont pas supprimées.',
     ].join('\n'),
@@ -526,10 +547,10 @@ function testDeleteRecordSummaryAndCard() {
       '- Liaisons : 2',
       '- Liens aux connexions : 2',
       '- Documents intégrés : 1',
-      '- Documents liés : 1',
-      '- Interfaces dépendantes : 1',
+      '- Liens aux documents : 1',
+      '- Liens aux interfaces dépendantes : 1',
       '- Pièces jointes : 1',
-      '- Applications liées : 2',
+      '- Liens aux applications : 2',
       '',
       'Les connexions sont conservées.',
     ].join('\n'),
@@ -585,18 +606,20 @@ function testDeleteRecordSummaryAndCard() {
       '- Pièces jointes : 1',
       '- Documents qui le citent : 1',
       "- Documents qu'il cite : 1",
-      '- Applications : 1',
-      '- Actifs : 1',
-      '- Projets : 1',
-      '- Demandes : 1',
-      '- Tâches : 1',
-      '- Sites : 1',
-      '- Connexions : 1',
-      '- Interfaces : 1',
-      '- Incidents : 1',
+      '- Liens aux applications : 1',
+      '- Liens aux actifs : 1',
+      '- Liens aux projets : 1',
+      '- Liens aux demandes : 1',
+      '- Liens aux tâches : 1',
+      '- Liens aux sites : 1',
+      '- Liens aux connexions : 1',
+      '- Liens aux interfaces : 1',
+      '- Liens aux incidents : 1',
       '- Documents créés depuis ce modèle : 1',
       '- En cours de relecture. La suppression reste possible.',
       '- Verrouillé pour édition par Camille Roux. La suppression reste possible.',
+      '',
+      'Les fiches liées restent.',
     ].join('\n'),
   );
   // A linked family the person does not read is counted among the other links, unnamed.
@@ -612,7 +635,7 @@ function testDeleteRecordSummaryAndCard() {
   };
   assert.equal(
     operation.presentPreview(hiddenDocument, 'fr').changes.deletion.to,
-    "- Versions : 1\n- D'autres rattachements : 3",
+    "- Versions : 1\n- D'autres rattachements : 3\n\nLes fiches liées restent.",
   );
   console.log('  delete_record summary and card: OK');
 }

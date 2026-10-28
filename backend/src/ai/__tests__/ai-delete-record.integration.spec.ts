@@ -610,7 +610,7 @@ async function testTaskDelete(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(preview.target.title, 'Migration');
   assert.equal(preview.changes.deletion.format, 'markdown');
   const impact = String(preview.changes.deletion.to);
-  for (const line of ['Comments and changes: 2', 'Time entries: 1', 'Attachments: 1', 'Applications: 1']) {
+  for (const line of ['Comments and changes: 2', 'Time entries: 1', 'Attachments: 1', 'Links to applications: 1']) {
     assert.ok(impact.includes(line), `${line} in:\n${impact}`);
   }
   assert.match(preview.summary, /^Delete task "Migration"\.$/);
@@ -678,8 +678,8 @@ async function testContactDelete(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(preview.target.ref, null);
   assert.equal(preview.target.title, 'Camille Roux');
   const impact = String(preview.changes.deletion.to);
-  assert.ok(impact.includes('- Suppliers: 1'), impact);
-  assert.ok(impact.includes('- Projects: 1'), impact);
+  assert.ok(impact.includes('- Links to suppliers: 1'), impact);
+  assert.ok(impact.includes('- Links to projects: 1'), impact);
   assert.ok(impact.includes("- Other links: 1"), impact);
   assert.ok(!impact.includes('Applications'), impact);
   assert.ok(impact.includes('The linked records stay.'), impact);
@@ -729,7 +729,7 @@ async function testLocationDelete(h: Harness, runner: QueryRunner, s: Seed) {
   const impact = String(preview.changes.deletion.to);
   for (const line of [
     'Assets that will lose their location: 1',
-    'Contacts: 2',
+    'Links to contacts: 2',
     'Links: 1',
     'Sub-items: 1',
     // The member does not read the documents: their link is counted, not named.
@@ -767,21 +767,22 @@ async function testOpexLineDelete(h: Harness, runner: QueryRunner, s: Seed) {
   for (const line of [
     'Versions with amounts: 2',
     'Years with amounts: 2',
-    'Tasks: 1',
+    'Deleted tasks: 1',
     'Requests that lose their origin task: 1',
     'Attachments: 1',
-    'Contracts: 1',
-    'Projects: 1',
-    'Requests: 1',
-    'Applications: 1',
-    'Assets: 1',
-    'Technologies: 1',
-    'Contacts: 1',
+    'Links to contracts: 1',
+    'Links to projects: 1',
+    'Links to requests: 1',
+    'Links to applications: 1',
+    'Links to assets: 1',
+    'Links to technologies: 1',
+    'Links to contacts: 1',
     'Links: 1',
     'Dimension values: 1',
   ]) {
     assert.ok(impact.includes(line), `${line} in:\n${impact}`);
   }
+  assert.ok(impact.includes('The linked records stay.'), impact);
 
   // A task added after the preview does not move the line's updated_at: the recount refuses the
   // run, and the line stays.
@@ -845,7 +846,7 @@ async function testCapexLineDelete(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(preview.target.ref, 'BL-9002');
   assert.equal(preview.target.title, 'Server refresh');
   const impact = String(preview.changes.deletion.to);
-  for (const line of ['Versions with amounts: 1', 'Years with amounts: 1', 'Tasks: 1', 'Projects: 1']) {
+  for (const line of ['Versions with amounts: 1', 'Years with amounts: 1', 'Deleted tasks: 1', 'Links to projects: 1']) {
     assert.ok(impact.includes(line), `${line} in:\n${impact}`);
   }
   const executed = await h.previews.executePreview(context, preview.preview_id);
@@ -919,10 +920,10 @@ async function testConnectionDelete(h: Harness, runner: QueryRunner, s: Seed) {
   const impact = String(preview.changes.deletion.to);
   for (const line of [
     'Hops: 1',
-    'Servers: 1',
+    'Links to servers: 1',
     'Protocols: 1',
     'Interfaces that will lose this connection: 1',
-    'Linked documents: 1',
+    'Links to documents: 1',
   ]) {
     assert.ok(impact.includes(line), `${line} in:\n${impact}`);
   }
@@ -973,9 +974,9 @@ async function testInterfaceDelete(h: Harness, runner: QueryRunner, s: Seed) {
   for (const line of [
     'Bindings: 1',
     'Links to connections: 1',
-    'Dependent interfaces: 1',
+    'Links to dependent interfaces: 1',
     'Attachments: 1',
-    'Linked applications: 2',
+    'Links to applications: 2',
     // The applications administrator has no right on the Knowledge library: its two documents
     // are counted without being named.
     'Other links: 2',
@@ -983,7 +984,7 @@ async function testInterfaceDelete(h: Harness, runner: QueryRunner, s: Seed) {
     assert.ok(impact.includes(line), `${line} in:\n${impact}`);
   }
   assert.ok(!impact.includes('Integrated documents'), impact);
-  assert.ok(!impact.includes('Linked documents'), impact);
+  assert.ok(!impact.includes('Links to documents'), impact);
 
   const executed = await h.previews.executePreview(context, preview.preview_id);
   assert.equal(executed.status, 'executed', executed.error_message ?? '');
@@ -1053,21 +1054,22 @@ async function testDocumentDelete(h: Harness, runner: QueryRunner, s: Seed) {
     'Attachments: 2',
     'Documents that cite it: 1',
     'Documents it cites: 1',
-    'Applications: 1',
-    'Assets: 1',
-    'Projects: 1',
-    'Requests: 1',
-    'Tasks: 1',
-    'Locations: 1',
-    'Connections: 1',
-    'Interfaces: 1',
-    'Incidents: 1',
+    'Links to applications: 1',
+    'Links to assets: 1',
+    'Links to projects: 1',
+    'Links to requests: 1',
+    'Links to tasks: 1',
+    'Links to locations: 1',
+    'Links to connections: 1',
+    'Links to interfaces: 1',
+    'Links to incidents: 1',
     'Documents created from it: 1',
     'In review. The delete remains possible.',
     'Locked for editing by Member Tester. The delete remains possible.',
   ]) {
     assert.ok(impact.includes(line), `${line} in:\n${impact}`);
   }
+  assert.ok(impact.includes('The linked records stay.'), impact);
 
   // The delete waits, as every delete: another document cannot be prepared meanwhile.
   assert.match(

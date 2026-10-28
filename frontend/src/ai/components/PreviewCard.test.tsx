@@ -95,14 +95,14 @@ describe('PreviewCard in French', () => {
         deletion: {
           label: 'What goes with it',
           from: null,
-          to: '- Commentaires et changements : 2\n- Temps saisis : 1\n- Pièces jointes : 1\n- Liens : 1',
+          to: '- Commentaires et changements : 2\n- Temps saisis : 1\n- Pièces jointes : 1\n- Liens aux applications : 1\n\nLes fiches liées restent.',
           format: 'markdown',
         },
       },
     }));
 
     expect(screen.getByText('Ce qui part avec la fiche')).toBeInTheDocument();
-    for (const text of ['Commentaires et changements : 2', 'Temps saisis : 1', 'Pièces jointes : 1', 'Liens : 1']) {
+    for (const text of ['Commentaires et changements : 2', 'Temps saisis : 1', 'Pièces jointes : 1', 'Liens aux applications : 1', 'Les fiches liées restent.']) {
       expect(screen.getByText(text)).toBeInTheDocument();
     }
     expect(screen.getByText('Suppression de la tâche « Migration ».')).toBeInTheDocument();
@@ -121,18 +121,20 @@ describe('PreviewCard in French', () => {
           to: [
             '- Versions avec des montants : 2',
             '- Années avec des montants : 2',
-            '- Tâches : 1',
+            '- Tâches supprimées : 1',
             "- Demandes qui perdent leur tâche d'origine : 1",
             '- Pièces jointes : 1',
-            '- Contrats : 1',
-            '- Projets : 1',
-            '- Demandes : 1',
-            '- Applications : 1',
-            '- Actifs : 1',
-            '- Technologies : 1',
-            '- Contacts : 1',
+            '- Liens aux contrats : 1',
+            '- Liens aux projets : 1',
+            '- Liens aux demandes : 1',
+            '- Liens aux applications : 1',
+            '- Liens aux actifs : 1',
+            '- Liens aux technologies : 1',
+            '- Liens aux contacts : 1',
             '- Liens : 1',
             '- Valeurs de dimensions : 1',
+            '',
+            'Les fiches liées restent.',
           ].join('\n'),
           format: 'markdown',
         },
@@ -143,18 +145,19 @@ describe('PreviewCard in French', () => {
     for (const text of [
       'Versions avec des montants : 2',
       'Années avec des montants : 2',
-      'Tâches : 1',
+      'Tâches supprimées : 1',
       "Demandes qui perdent leur tâche d'origine : 1",
       'Pièces jointes : 1',
-      'Contrats : 1',
-      'Projets : 1',
-      'Demandes : 1',
-      'Applications : 1',
-      'Actifs : 1',
-      'Technologies : 1',
-      'Contacts : 1',
+      'Liens aux contrats : 1',
+      'Liens aux projets : 1',
+      'Liens aux demandes : 1',
+      'Liens aux applications : 1',
+      'Liens aux actifs : 1',
+      'Liens aux technologies : 1',
+      'Liens aux contacts : 1',
       'Liens : 1',
       'Valeurs de dimensions : 1',
+      'Les fiches liées restent.',
     ]) {
       expect(screen.getByText(text)).toBeInTheDocument();
     }
@@ -174,10 +177,10 @@ describe('PreviewCard in French', () => {
             '- Liaisons : 2',
             '- Liens aux connexions : 2',
             '- Documents intégrés : 1',
-            '- Documents liés : 1',
-            '- Interfaces dépendantes : 1',
+            '- Liens aux documents : 1',
+            '- Liens aux interfaces dépendantes : 1',
             '- Pièces jointes : 1',
-            '- Applications liées : 2',
+            '- Liens aux applications : 2',
             '',
             'Les connexions sont conservées.',
           ].join('\n'),
@@ -191,10 +194,10 @@ describe('PreviewCard in French', () => {
       'Liaisons : 2',
       'Liens aux connexions : 2',
       'Documents intégrés : 1',
-      'Documents liés : 1',
-      'Interfaces dépendantes : 1',
+      'Liens aux documents : 1',
+      'Liens aux interfaces dépendantes : 1',
       'Pièces jointes : 1',
-      'Applications liées : 2',
+      'Liens aux applications : 2',
       'Les connexions sont conservées.',
     ]) {
       expect(screen.getByText(text)).toBeInTheDocument();
@@ -216,10 +219,12 @@ describe('PreviewCard in French', () => {
             '- Pièces jointes : 1',
             "- Documents qui le citent : 1",
             "- Documents qu'il cite : 1",
-            '- Applications : 1',
+            '- Liens aux applications : 1',
             '- Documents créés depuis ce modèle : 1',
             '- En cours de relecture. La suppression reste possible.',
             '- Verrouillé pour édition par Camille Roux. La suppression reste possible.',
+            '',
+            'Les fiches liées restent.',
           ].join('\n'),
           format: 'markdown',
         },
@@ -232,10 +237,11 @@ describe('PreviewCard in French', () => {
       'Pièces jointes : 1',
       'Documents qui le citent : 1',
       "Documents qu'il cite : 1",
-      'Applications : 1',
+      'Liens aux applications : 1',
       'Documents créés depuis ce modèle : 1',
       'En cours de relecture. La suppression reste possible.',
       'Verrouillé pour édition par Camille Roux. La suppression reste possible.',
+      'Les fiches liées restent.',
     ]) {
       expect(screen.getByText(text)).toBeInTheDocument();
     }

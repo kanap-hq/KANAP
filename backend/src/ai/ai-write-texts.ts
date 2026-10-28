@@ -308,84 +308,91 @@ export type AiDeleteImpact = {
   lockHolder?: string | null;
 };
 
-const DELETE_IMPACT_ROWS: Record<string, ReadonlyArray<{ key: string; labels: Texts }>> = {
+type DeleteImpactRow = {
+  key: string;
+  labels: Texts;
+  /** The row counts links: the records stay, only their link to the deleted record goes. */
+  link?: boolean;
+};
+
+const DELETE_IMPACT_ROWS: Record<string, ReadonlyArray<DeleteImpactRow>> = {
   tasks: [
     { key: 'activities', labels: { en: 'Comments and changes', fr: 'Commentaires et changements', de: 'Kommentare und Änderungen', es: 'Comentarios y cambios' } },
     { key: 'time_entries', labels: { en: 'Time entries', fr: 'Temps saisis', de: 'Erfasste Zeiten', es: 'Tiempos registrados' } },
     { key: 'attachments', labels: { en: 'Attachments', fr: 'Pièces jointes', de: 'Anhänge', es: 'Archivos adjuntos' } },
-    { key: 'applications', labels: { en: 'Applications', fr: 'Applications', de: 'Anwendungen', es: 'Aplicaciones' } },
-    { key: 'assets', labels: { en: 'Assets', fr: 'Actifs', de: 'Assets', es: 'Activos' } },
-    { key: 'documents', labels: { en: 'Linked documents', fr: 'Documents liés', de: 'Verknüpfte Dokumente', es: 'Documentos vinculados' } },
+    { key: 'applications', link: true, labels: { en: 'Links to applications', fr: 'Liens aux applications', de: 'Verknüpfungen mit Anwendungen', es: 'Vínculos con aplicaciones' } },
+    { key: 'assets', link: true, labels: { en: 'Links to assets', fr: 'Liens aux actifs', de: 'Verknüpfungen mit Assets', es: 'Vínculos con activos' } },
+    { key: 'documents', link: true, labels: { en: 'Links to documents', fr: 'Liens aux documents', de: 'Verknüpfungen mit Dokumenten', es: 'Vínculos con documentos' } },
   ],
   contacts: [
-    { key: 'suppliers', labels: { en: 'Suppliers', fr: 'Fournisseurs', de: 'Lieferanten', es: 'Proveedores' } },
-    { key: 'budget_lines', labels: { en: 'Budget lines', fr: 'Lignes budgétaires', de: 'Budgetzeilen', es: 'Líneas presupuestarias' } },
-    { key: 'contracts', labels: { en: 'Contracts', fr: 'Contrats', de: 'Verträge', es: 'Contratos' } },
-    { key: 'applications', labels: { en: 'Applications', fr: 'Applications', de: 'Anwendungen', es: 'Aplicaciones' } },
-    { key: 'assets', labels: { en: 'Assets', fr: 'Actifs', de: 'Assets', es: 'Activos' } },
-    { key: 'technologies', labels: { en: 'Technologies', fr: 'Technologies', de: 'Technologien', es: 'Tecnologías' } },
-    { key: 'locations', labels: { en: 'Locations', fr: 'Sites', de: 'Standorte', es: 'Ubicaciones' } },
-    { key: 'projects', labels: { en: 'Projects', fr: 'Projets', de: 'Projekte', es: 'Proyectos' } },
-    { key: 'requests', labels: { en: 'Requests', fr: 'Demandes', de: 'Anfragen', es: 'Solicitudes' } },
+    { key: 'suppliers', link: true, labels: { en: 'Links to suppliers', fr: 'Liens aux fournisseurs', de: 'Verknüpfungen mit Lieferanten', es: 'Vínculos con proveedores' } },
+    { key: 'budget_lines', link: true, labels: { en: 'Links to budget lines', fr: 'Liens aux lignes budgétaires', de: 'Verknüpfungen mit Budgetzeilen', es: 'Vínculos con líneas presupuestarias' } },
+    { key: 'contracts', link: true, labels: { en: 'Links to contracts', fr: 'Liens aux contrats', de: 'Verknüpfungen mit Verträgen', es: 'Vínculos con contratos' } },
+    { key: 'applications', link: true, labels: { en: 'Links to applications', fr: 'Liens aux applications', de: 'Verknüpfungen mit Anwendungen', es: 'Vínculos con aplicaciones' } },
+    { key: 'assets', link: true, labels: { en: 'Links to assets', fr: 'Liens aux actifs', de: 'Verknüpfungen mit Assets', es: 'Vínculos con activos' } },
+    { key: 'technologies', link: true, labels: { en: 'Links to technologies', fr: 'Liens aux technologies', de: 'Verknüpfungen mit Technologien', es: 'Vínculos con tecnologías' } },
+    { key: 'locations', link: true, labels: { en: 'Links to locations', fr: 'Liens aux sites', de: 'Verknüpfungen mit Standorten', es: 'Vínculos con ubicaciones' } },
+    { key: 'projects', link: true, labels: { en: 'Links to projects', fr: 'Liens aux projets', de: 'Verknüpfungen mit Projekten', es: 'Vínculos con proyectos' } },
+    { key: 'requests', link: true, labels: { en: 'Links to requests', fr: 'Liens aux demandes', de: 'Verknüpfungen mit Anfragen', es: 'Vínculos con solicitudes' } },
   ],
   locations: [
-    { key: 'assets', labels: { en: 'Assets that will lose their location', fr: 'Actifs qui perdront leur site', de: 'Assets, die ihren Standort verlieren', es: 'Activos que perderán su ubicación' } },
-    { key: 'contacts', labels: { en: 'Contacts', fr: 'Contacts', de: 'Kontakte', es: 'Contactos' } },
+    { key: 'assets', link: true, labels: { en: 'Assets that will lose their location', fr: 'Actifs qui perdront leur site', de: 'Assets, die ihren Standort verlieren', es: 'Activos que perderán su ubicación' } },
+    { key: 'contacts', link: true, labels: { en: 'Links to contacts', fr: 'Liens aux contacts', de: 'Verknüpfungen mit Kontakten', es: 'Vínculos con contactos' } },
     { key: 'links', labels: { en: 'Links', fr: 'Liens', de: 'Verknüpfungen', es: 'Vínculos' } },
     { key: 'sub_items', labels: { en: 'Sub-items', fr: 'Sous-éléments', de: 'Unterelemente', es: 'Subelementos' } },
-    { key: 'documents', labels: { en: 'Linked documents', fr: 'Documents liés', de: 'Verknüpfte Dokumente', es: 'Documentos vinculados' } },
+    { key: 'documents', link: true, labels: { en: 'Links to documents', fr: 'Liens aux documents', de: 'Verknüpfungen mit Dokumenten', es: 'Vínculos con documentos' } },
   ],
   spend_items: spendDeleteRows(),
   capex_items: spendDeleteRows(),
   connections: [
     { key: 'hops', labels: { en: 'Hops', fr: 'Sauts', de: 'Hops', es: 'Saltos' } },
-    { key: 'servers', labels: { en: 'Servers', fr: 'Serveurs', de: 'Server', es: 'Servidores' } },
+    { key: 'servers', link: true, labels: { en: 'Links to servers', fr: 'Liens aux serveurs', de: 'Verknüpfungen mit Servern', es: 'Vínculos con servidores' } },
     { key: 'protocols', labels: { en: 'Protocols', fr: 'Protocoles', de: 'Protokolle', es: 'Protocolos' } },
-    { key: 'interfaces', labels: { en: 'Interfaces that will lose this connection', fr: 'Interfaces qui perdront cette connexion', de: 'Schnittstellen, die diese Verbindung verlieren', es: 'Interfaces que perderán esta conexión' } },
-    { key: 'documents', labels: { en: 'Linked documents', fr: 'Documents liés', de: 'Verknüpfte Dokumente', es: 'Documentos vinculados' } },
+    { key: 'interfaces', link: true, labels: { en: 'Interfaces that will lose this connection', fr: 'Interfaces qui perdront cette connexion', de: 'Schnittstellen, die diese Verbindung verlieren', es: 'Interfaces que perderán esta conexión' } },
+    { key: 'documents', link: true, labels: { en: 'Links to documents', fr: 'Liens aux documents', de: 'Verknüpfungen mit Dokumenten', es: 'Vínculos con documentos' } },
   ],
   documents: [
     { key: 'versions', labels: { en: 'Versions', fr: 'Versions', de: 'Versionen', es: 'Versiones' } },
     { key: 'attachments', labels: { en: 'Attachments', fr: 'Pièces jointes', de: 'Anhänge', es: 'Archivos adjuntos' } },
-    { key: 'citing_documents', labels: { en: 'Documents that cite it', fr: 'Documents qui le citent', de: 'Dokumente, die es zitieren', es: 'Documentos que lo citan' } },
-    { key: 'cited_documents', labels: { en: 'Documents it cites', fr: "Documents qu'il cite", de: 'Dokumente, die es zitiert', es: 'Documentos que cita' } },
-    { key: 'applications', labels: { en: 'Applications', fr: 'Applications', de: 'Anwendungen', es: 'Aplicaciones' } },
-    { key: 'assets', labels: { en: 'Assets', fr: 'Actifs', de: 'Assets', es: 'Activos' } },
-    { key: 'projects', labels: { en: 'Projects', fr: 'Projets', de: 'Projekte', es: 'Proyectos' } },
-    { key: 'requests', labels: { en: 'Requests', fr: 'Demandes', de: 'Anfragen', es: 'Solicitudes' } },
-    { key: 'tasks', labels: { en: 'Tasks', fr: 'Tâches', de: 'Aufgaben', es: 'Tareas' } },
-    { key: 'locations', labels: { en: 'Locations', fr: 'Sites', de: 'Standorte', es: 'Ubicaciones' } },
-    { key: 'connections', labels: { en: 'Connections', fr: 'Connexions', de: 'Verbindungen', es: 'Conexiones' } },
-    { key: 'interfaces', labels: { en: 'Interfaces', fr: 'Interfaces', de: 'Schnittstellen', es: 'Interfaces' } },
-    { key: 'incidents', labels: { en: 'Incidents', fr: 'Incidents', de: 'Vorfälle', es: 'Incidentes' } },
-    { key: 'derived_documents', labels: { en: 'Documents created from it', fr: 'Documents créés depuis ce modèle', de: 'Aus dieser Vorlage erstellte Dokumente', es: 'Documentos creados a partir de esta plantilla' } },
+    { key: 'citing_documents', link: true, labels: { en: 'Documents that cite it', fr: 'Documents qui le citent', de: 'Dokumente, die es zitieren', es: 'Documentos que lo citan' } },
+    { key: 'cited_documents', link: true, labels: { en: 'Documents it cites', fr: "Documents qu'il cite", de: 'Dokumente, die es zitiert', es: 'Documentos que cita' } },
+    { key: 'applications', link: true, labels: { en: 'Links to applications', fr: 'Liens aux applications', de: 'Verknüpfungen mit Anwendungen', es: 'Vínculos con aplicaciones' } },
+    { key: 'assets', link: true, labels: { en: 'Links to assets', fr: 'Liens aux actifs', de: 'Verknüpfungen mit Assets', es: 'Vínculos con activos' } },
+    { key: 'projects', link: true, labels: { en: 'Links to projects', fr: 'Liens aux projets', de: 'Verknüpfungen mit Projekten', es: 'Vínculos con proyectos' } },
+    { key: 'requests', link: true, labels: { en: 'Links to requests', fr: 'Liens aux demandes', de: 'Verknüpfungen mit Anfragen', es: 'Vínculos con solicitudes' } },
+    { key: 'tasks', link: true, labels: { en: 'Links to tasks', fr: 'Liens aux tâches', de: 'Verknüpfungen mit Aufgaben', es: 'Vínculos con tareas' } },
+    { key: 'locations', link: true, labels: { en: 'Links to locations', fr: 'Liens aux sites', de: 'Verknüpfungen mit Standorten', es: 'Vínculos con ubicaciones' } },
+    { key: 'connections', link: true, labels: { en: 'Links to connections', fr: 'Liens aux connexions', de: 'Verknüpfungen mit Verbindungen', es: 'Vínculos con conexiones' } },
+    { key: 'interfaces', link: true, labels: { en: 'Links to interfaces', fr: 'Liens aux interfaces', de: 'Verknüpfungen mit Schnittstellen', es: 'Vínculos con interfaces' } },
+    { key: 'incidents', link: true, labels: { en: 'Links to incidents', fr: 'Liens aux incidents', de: 'Verknüpfungen mit Vorfällen', es: 'Vínculos con incidentes' } },
+    { key: 'derived_documents', link: true, labels: { en: 'Documents created from it', fr: 'Documents créés depuis ce modèle', de: 'Aus dieser Vorlage erstellte Dokumente', es: 'Documentos creados a partir de esta plantilla' } },
   ],
   interfaces: [
     { key: 'bindings', labels: { en: 'Bindings', fr: 'Liaisons', de: 'Bindungen', es: 'Enlaces' } },
-    { key: 'connection_links', labels: { en: 'Links to connections', fr: 'Liens aux connexions', de: 'Verknüpfungen mit Verbindungen', es: 'Vínculos con conexiones' } },
+    { key: 'connection_links', link: true, labels: { en: 'Links to connections', fr: 'Liens aux connexions', de: 'Verknüpfungen mit Verbindungen', es: 'Vínculos con conexiones' } },
     { key: 'integrated_documents', labels: { en: 'Integrated documents', fr: 'Documents intégrés', de: 'Integrierte Dokumente', es: 'Documentos integrados' } },
-    { key: 'documents', labels: { en: 'Linked documents', fr: 'Documents liés', de: 'Verknüpfte Dokumente', es: 'Documentos vinculados' } },
-    { key: 'dependencies', labels: { en: 'Dependent interfaces', fr: 'Interfaces dépendantes', de: 'Abhängige Schnittstellen', es: 'Interfaces dependientes' } },
+    { key: 'documents', link: true, labels: { en: 'Links to documents', fr: 'Liens aux documents', de: 'Verknüpfungen mit Dokumenten', es: 'Vínculos con documentos' } },
+    { key: 'dependencies', link: true, labels: { en: 'Links to dependent interfaces', fr: 'Liens aux interfaces dépendantes', de: 'Verknüpfungen mit abhängigen Schnittstellen', es: 'Vínculos con interfaces dependientes' } },
     { key: 'attachments', labels: { en: 'Attachments', fr: 'Pièces jointes', de: 'Anhänge', es: 'Archivos adjuntos' } },
-    { key: 'applications', labels: { en: 'Linked applications', fr: 'Applications liées', de: 'Verknüpfte Anwendungen', es: 'Aplicaciones vinculadas' } },
+    { key: 'applications', link: true, labels: { en: 'Links to applications', fr: 'Liens aux applications', de: 'Verknüpfungen mit Anwendungen', es: 'Vínculos con aplicaciones' } },
   ],
 };
 
 /** The rows of a budget line's delete, both natures: one family, the same card. */
-function spendDeleteRows(): ReadonlyArray<{ key: string; labels: Texts }> {
+function spendDeleteRows(): ReadonlyArray<DeleteImpactRow> {
   return [
     { key: 'amount_versions', labels: { en: 'Versions with amounts', fr: 'Versions avec des montants', de: 'Versionen mit Beträgen', es: 'Versiones con importes' } },
     { key: 'amount_years', labels: { en: 'Years with amounts', fr: 'Années avec des montants', de: 'Jahre mit Beträgen', es: 'Años con importes' } },
-    { key: 'tasks', labels: { en: 'Tasks', fr: 'Tâches', de: 'Aufgaben', es: 'Tareas' } },
-    { key: 'request_origins', labels: { en: 'Requests that lose their origin task', fr: "Demandes qui perdent leur tâche d'origine", de: 'Anfragen, die ihre Ursprungsaufgabe verlieren', es: 'Solicitudes que pierden su tarea de origen' } },
+    { key: 'tasks', labels: { en: 'Deleted tasks', fr: 'Tâches supprimées', de: 'Gelöschte Aufgaben', es: 'Tareas eliminadas' } },
+    { key: 'request_origins', link: true, labels: { en: 'Requests that lose their origin task', fr: "Demandes qui perdent leur tâche d'origine", de: 'Anfragen, die ihre Ursprungsaufgabe verlieren', es: 'Solicitudes que pierden su tarea de origen' } },
     { key: 'attachments', labels: { en: 'Attachments', fr: 'Pièces jointes', de: 'Anhänge', es: 'Archivos adjuntos' } },
-    { key: 'contracts', labels: { en: 'Contracts', fr: 'Contrats', de: 'Verträge', es: 'Contratos' } },
-    { key: 'projects', labels: { en: 'Projects', fr: 'Projets', de: 'Projekte', es: 'Proyectos' } },
-    { key: 'requests', labels: { en: 'Requests', fr: 'Demandes', de: 'Anfragen', es: 'Solicitudes' } },
-    { key: 'applications', labels: { en: 'Applications', fr: 'Applications', de: 'Anwendungen', es: 'Aplicaciones' } },
-    { key: 'assets', labels: { en: 'Assets', fr: 'Actifs', de: 'Assets', es: 'Activos' } },
-    { key: 'technologies', labels: { en: 'Technologies', fr: 'Technologies', de: 'Technologien', es: 'Tecnologías' } },
-    { key: 'contacts', labels: { en: 'Contacts', fr: 'Contacts', de: 'Kontakte', es: 'Contactos' } },
+    { key: 'contracts', link: true, labels: { en: 'Links to contracts', fr: 'Liens aux contrats', de: 'Verknüpfungen mit Verträgen', es: 'Vínculos con contratos' } },
+    { key: 'projects', link: true, labels: { en: 'Links to projects', fr: 'Liens aux projets', de: 'Verknüpfungen mit Projekten', es: 'Vínculos con proyectos' } },
+    { key: 'requests', link: true, labels: { en: 'Links to requests', fr: 'Liens aux demandes', de: 'Verknüpfungen mit Anfragen', es: 'Vínculos con solicitudes' } },
+    { key: 'applications', link: true, labels: { en: 'Links to applications', fr: 'Liens aux applications', de: 'Verknüpfungen mit Anwendungen', es: 'Vínculos con aplicaciones' } },
+    { key: 'assets', link: true, labels: { en: 'Links to assets', fr: 'Liens aux actifs', de: 'Verknüpfungen mit Assets', es: 'Vínculos con activos' } },
+    { key: 'technologies', link: true, labels: { en: 'Links to technologies', fr: 'Liens aux technologies', de: 'Verknüpfungen mit Technologien', es: 'Vínculos con tecnologías' } },
+    { key: 'contacts', link: true, labels: { en: 'Links to contacts', fr: 'Liens aux contacts', de: 'Verknüpfungen mit Kontakten', es: 'Vínculos con contactos' } },
     { key: 'links', labels: { en: 'Links', fr: 'Liens', de: 'Verknüpfungen', es: 'Vínculos' } },
     { key: 'dimension_values', labels: { en: 'Dimension values', fr: 'Valeurs de dimensions', de: 'Dimensionswerte', es: 'Valores de dimensiones' } },
   ];
@@ -444,11 +451,13 @@ export function documentDeleteNoticeText(
 /** The markdown list of what goes with a deleted record, in the person's language. */
 export function deletionImpactText(language: AiWriteLanguage, entityType: string, impact: AiDeleteImpact): string {
   const colon = language === 'fr' ? ' : ' : ': ';
-  const lines = (DELETE_IMPACT_ROWS[entityType] ?? [])
-    .filter((row) => Number(impact.counts?.[row.key] ?? 0) > 0)
-    .map((row) => `- ${row.labels[language]}${colon}${Number(impact.counts[row.key])}`);
+  const shownRows = (DELETE_IMPACT_ROWS[entityType] ?? [])
+    .filter((row) => Number(impact.counts?.[row.key] ?? 0) > 0);
+  const lines = shownRows.map((row) => `- ${row.labels[language]}${colon}${Number(impact.counts[row.key])}`);
+  let showsLink = shownRows.some((row) => row.link === true);
   if (Number(impact.hidden ?? 0) > 0) {
     lines.push(`- ${DELETE_IMPACT_OTHER[language]}${colon}${Number(impact.hidden)}`);
+    showsLink = true;
   }
   for (const notice of impact.notices ?? []) {
     if (notice.trim()) lines.push(`- ${notice.trim()}`);
@@ -456,7 +465,10 @@ export function deletionImpactText(language: AiWriteLanguage, entityType: string
   if (lines.length === 0) {
     return DELETE_IMPACT_NONE[entityType]?.[language] ?? DELETE_IMPACT_NONE.tasks[language];
   }
-  const closing = DELETE_IMPACT_CLOSING[entityType]?.[language];
+  // A family whose card shows a link to records that stay says so, as a contact's card does;
+  // a connection and an interface keep the closing that names what stays for them.
+  const closing = DELETE_IMPACT_CLOSING[entityType]?.[language]
+    ?? (showsLink ? DELETE_IMPACT_CLOSING.contacts[language] : null);
   return closing ? `${lines.join('\n')}\n\n${closing}` : lines.join('\n');
 }
 
