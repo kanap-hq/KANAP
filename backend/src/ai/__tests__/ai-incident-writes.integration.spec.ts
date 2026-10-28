@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
 import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-document-seed';
+import { PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE } from '../ai-write-texts';
 
 // Incidents written through Plaid (L4 lot 2): creating one, changing its fields, moving its
 // status forward up to the closure, and setting the confidentiality. Every write goes through
@@ -616,6 +617,40 @@ async function testPlanCreatesThenMovesTheIncident(harness: Harness) {
   });
 }
 
+async function testReviewLockIsRelayed(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'review-lock');
+    // The incident needs its review document to lock: create one through the tool.
+    const creation = await executeToolPreview(harness, ctx, 'create_business_record', {
+      entity_type: 'incidents',
+      fields: { title: 'Incident with a locked review', severity: 'minor' },
+    });
+    const created = await approvePreview(harness, ctx, creation);
+    const [binding] = await runner.query(
+      `SELECT document_id FROM integrated_document_bindings
+        WHERE tenant_id = $1 AND source_entity_type = 'incidents' AND source_entity_id = $2 AND slot_key = 'review'`,
+      [seed.tenantId, created.target.entity_id],
+    );
+    await runner.query(
+      `INSERT INTO document_edit_locks (tenant_id, document_id, holder_user_id, lock_token_hash, expires_at)
+       VALUES ($1, $2, $3, 'another-user-token', now() + interval '1 hour')`,
+      [seed.tenantId, binding.document_id, seed.otherId],
+    );
+    const closure = await executeToolPreview(harness, ctx, 'update_business_record', {
+      entity_type: 'incidents', ref: String(created.target.ref), fields: { status: 'closed' },
+    });
+    const failed = await approveFailingPreview(harness, ctx, closure);
+    assert.equal(
+      failed.error_message,
+      'La revue de l\'incident est en cours de modification par une autre personne : rien n\'a été modifié. Réessayez quand cette modification sera enregistrée ou son verrou levé.',
+      'the 423 is relayed as a readable sentence in the person\'s language',
+    );
+    assert.ok(PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE.startsWith('The incident review is being edited'));
+    const [row] = await runner.query(`SELECT status FROM incidents WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, created.target.entity_id]);
+    assert.equal(row.status, 'open', 'the failed closure wrote nothing');
+  });
+}
+
 async function testDriftIsRefused(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'drift');
@@ -645,6 +680,7 @@ async function run() {
     await testIncidentHiddenBetweenPreviewAndApprovalFails(harness);
     await testPlanCreatesThenMovesTheIncident(harness);
     await testDriftIsRefused(harness);
+    await testReviewLockIsRelayed(harness);
   } finally {
     await harness.app.close();
   }
