@@ -299,7 +299,7 @@ function linkedNotes(changes: StoredChanges): string[] {
 @Injectable()
 export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOperation<UpdateTechnologyLinksInput> {
   readonly toolName = 'update_technology_links' as const;
-  readonly description = 'Create a preview to declare a technology on applications (with its version and, optionally, its deployment servers) or install it on servers, and to remove those links. Requires explicit user approval before execution.';
+  readonly description = 'Create a preview to declare a technology on applications (with its version and, optionally, its deployment servers) or install it on servers, and to remove those links. A request from the other side ("add PostgreSQL 16 to CheeseTrack", "install nginx 1.26 on AST-12") puts the technology in `technology` and the application or server in its list. Requires explicit user approval before execution.';
   readonly inputSchema = UpdateTechnologyLinksInputSchema;
   readonly inputSummary = {
     technology: 'Technology to link: TEC-n, the UUID, or its exact name.',
