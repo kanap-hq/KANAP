@@ -144,7 +144,7 @@ const LINKED_COUNT_FIELDS: Partial<Record<AiQueryEntityType, Record<string, AiQu
   applications: { budget_lines_count: 'budget_lines', contracts_count: 'contracts' },
   contracts: { application: 'applications' },
   tasks: { application: 'applications', asset: 'assets', project_name: 'projects' },
-  incidents: { asset: 'assets', application: 'applications', asset_count: 'assets' },
+  incidents: { asset: 'assets', application: 'applications', technology: 'technologies', asset_count: 'assets' },
   documents: {
     linked_application: 'applications',
     linked_asset: 'assets',
@@ -165,7 +165,7 @@ const ADMIN_ONLY_FIELDS: Partial<Record<AiQueryEntityType, string[]>> = {
   ],
 };
 
-/** The registry without the linked counts of the modules the caller does not read. */
+/** The registry without the linked counts, filters and groups of the modules the caller does not read. */
 export async function withoutUnreadableLinkedCounts(
   registry: AiEntityFilterRegistry,
   canRead: AiReadProbe,
@@ -188,6 +188,7 @@ export async function withoutUnreadableLinkedCounts(
     sortFields: kept(registry.sortFields),
     aggregate: {
       ...registry.aggregate,
+      groupFields: kept(registry.aggregate.groupFields),
       ...(registry.aggregate.metricFields ? { metricFields: kept(registry.aggregate.metricFields) } : {}),
     },
   };

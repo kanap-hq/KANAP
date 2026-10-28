@@ -1375,6 +1375,7 @@ export class AiQueryExecutor {
         owner: scalar(row.owner_name),
         asset_count: numericScalar(row.asset_count ?? row.counts?.assets),
         task_count: numericScalar(row.task_count ?? row.counts?.tasks),
+        resolution_hours: numericScalar(row.resolution_hours),
       },
     });
   }
@@ -1779,13 +1780,19 @@ export class AiQueryExecutor {
 
     if (input.entity_type === 'incidents') {
       const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
+      const reads = this.readProbe(context);
+      const readsApplications = await reads('applications');
       const result = await this.incidents.list(scoped.query, {
         manager: context.manager,
         tenantId: context.tenantId,
         viewer,
-        // The linked counts, each on its module's read (null otherwise), as on the incidents list.
-        technologies: await this.readProbe(context)('technologies'),
-        applications: await this.readProbe(context)('applications'),
+        // The linked counts and filters, each on its module's read (null otherwise), as on the
+        // incidents list; the application filter and values follow a Business Contributor's scope.
+        technologies: await reads('technologies'),
+        applications: readsApplications,
+        applicationScope: readsApplications
+          ? await resolveAiParticipationAccessScope(context, 'applications')
+          : undefined,
       });
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
@@ -3294,10 +3301,18 @@ export class AiQueryExecutor {
       }) as any;
     } else if (input.entity_type === 'incidents') {
       const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
+      const reads = this.readProbe(context);
+      const readsApplications = await reads('applications');
       raw = await this.incidents.listFilterValues(query, {
         manager: context.manager,
         tenantId: context.tenantId,
         viewer,
+        // The linked values follow the module reads; applications follow the participation scope.
+        technologies: await reads('technologies'),
+        applications: readsApplications,
+        applicationScope: readsApplications
+          ? await resolveAiParticipationAccessScope(context, 'applications')
+          : undefined,
       }) as any;
     }
 

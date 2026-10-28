@@ -1,4 +1,5 @@
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES } from '../../../incidents/incident.entity';
+import { INCIDENT_RESOLUTION_HOURS_SQL } from '../../../incidents/incident-sql';
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 
 export const incidentsRegistry: AiEntityFilterRegistry = {
@@ -57,22 +58,44 @@ export const incidentsRegistry: AiEntityFilterRegistry = {
     asset: {
       ai: 'asset',
       grid: 'linked_assets',
-      type: 'text',
-      description: 'Linked asset reference or name.',
+      type: 'set',
+      description: 'Linked asset reference or exact name. Grouping counts an incident once per linked asset.',
+      dynamic: true,
       discoverable: true,
       sortable: false,
-      groupable: false,
+      groupable: true,
+      acceptedValueKind: 'exact asset reference (AST-12) or exact asset name; names come from get_filter_values',
+      lookupEntity: 'assets',
       aliases: ['asset_id', 'server', 'linked_asset', 'hostname'],
+      examples: ['AST-12', 'prod-db-01'],
     },
     application: {
       ai: 'application',
       grid: 'linked_applications',
-      type: 'text',
-      description: 'Linked application reference or name.',
+      type: 'set',
+      description: 'Linked application reference or exact name. Grouping counts an incident once per linked application.',
+      dynamic: true,
       discoverable: true,
       sortable: false,
-      groupable: false,
+      groupable: true,
+      acceptedValueKind: 'exact application reference (APP-3) or exact application name; names come from get_filter_values',
+      lookupEntity: 'applications',
       aliases: ['application_id', 'app', 'linked_application'],
+      examples: ['APP-3', 'Salesforce'],
+    },
+    technology: {
+      ai: 'technology',
+      grid: 'linked_technologies',
+      type: 'set',
+      description: 'Linked technology reference or exact name. Grouping counts an incident once per linked technology.',
+      dynamic: true,
+      discoverable: true,
+      sortable: false,
+      groupable: true,
+      acceptedValueKind: 'exact technology reference (TEC-1) or exact technology name; names come from get_filter_values',
+      lookupEntity: 'technologies',
+      aliases: ['technology_id', 'tech', 'linked_technology'],
+      examples: ['TEC-1', 'PostgreSQL'],
     },
     started_at: {
       ai: 'started_at',
@@ -106,6 +129,36 @@ export const incidentsRegistry: AiEntityFilterRegistry = {
       grid: 'closed_at',
       type: 'date',
       description: 'When the incident record was closed.',
+      sortable: true,
+      groupable: false,
+      aggregable: true,
+    },
+    detected_month: {
+      ai: 'detected_month',
+      grid: 'detected_month',
+      type: 'text',
+      description: 'Month the incident was detected, as YYYY-MM in UTC. Grouping counts an incident once, in its detection month.',
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+      examples: ['2026-10'],
+    },
+    resolved_month: {
+      ai: 'resolved_month',
+      grid: 'resolved_month',
+      type: 'text',
+      description: 'Month service was restored, as YYYY-MM in UTC; empty for an incident that is not resolved. Grouping counts an incident once, in its resolution month.',
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+      examples: ['2026-10'],
+    },
+    resolution_hours: {
+      ai: 'resolution_hours',
+      grid: 'resolution_hours',
+      type: 'number',
+      description: 'Hours from detection to resolution, one decimal; null for a cancelled or unresolved incident, or a negative delay.',
+      discoverable: true,
       sortable: true,
       groupable: false,
       aggregable: true,
@@ -167,6 +220,9 @@ export const incidentsRegistry: AiEntityFilterRegistry = {
     detected_at: 'detected_at',
     resolved_at: 'resolved_at',
     closed_at: 'closed_at',
+    detected_month: 'detected_month',
+    resolved_month: 'resolved_month',
+    resolution_hours: 'resolution_hours',
     personal_data_affected: 'personal_data_affected',
     authority_notification_required: 'authority_notification_required',
     asset_count: 'asset_count',
@@ -191,23 +247,65 @@ export const incidentsRegistry: AiEntityFilterRegistry = {
           `LEFT JOIN users o ON o.id = i.owner_user_id AND o.tenant_id = i.tenant_id`,
         ],
       },
+      // A linked record is a many-to-many group: the incident counts once per linked record,
+      // and an incident without one appears in no group (an inner join, as the tasks do).
+      asset: {
+        expression: 'incident_asset.name',
+        joins: [
+          `JOIN incident_assets incident_asset_link
+             ON incident_asset_link.incident_id = i.id AND incident_asset_link.tenant_id = i.tenant_id`,
+          `JOIN assets incident_asset
+             ON incident_asset.id = incident_asset_link.asset_id
+            AND incident_asset.tenant_id = incident_asset_link.tenant_id`,
+        ],
+      },
+      application: {
+        expression: 'incident_application.name',
+        joins: [
+          `JOIN incident_applications incident_application_link
+             ON incident_application_link.incident_id = i.id AND incident_application_link.tenant_id = i.tenant_id`,
+          `JOIN applications incident_application
+             ON incident_application.id = incident_application_link.application_id
+            AND incident_application.tenant_id = incident_application_link.tenant_id`,
+        ],
+        // A Business Contributor groups only the applications they take part in, as the detail does.
+        participation: { entityType: 'applications', table: 'applications', alias: 'incident_application' },
+      },
+      technology: {
+        expression: 'incident_technology.name',
+        joins: [
+          `JOIN incident_technologies incident_technology_link
+             ON incident_technology_link.incident_id = i.id AND incident_technology_link.tenant_id = i.tenant_id`,
+          `JOIN technologies incident_technology
+             ON incident_technology.id = incident_technology_link.technology_id
+            AND incident_technology.tenant_id = incident_technology_link.tenant_id`,
+        ],
+      },
+      detected_month: { expression: `to_char(i.detected_at, 'YYYY-MM')` },
+      resolved_month: { expression: `to_char(i.resolved_at, 'YYYY-MM')` },
     },
     metricFields: {
+      // Date metrics keep the day only, as the other registries do: a raw timestamptz would
+      // reach the model as `String(Date)`.
       started_at: {
-        expression: 'i.started_at',
+        expression: `to_char(i.started_at, 'YYYY-MM-DD')`,
         type: 'date',
       },
       detected_at: {
-        expression: 'i.detected_at',
+        expression: `to_char(i.detected_at, 'YYYY-MM-DD')`,
         type: 'date',
       },
       resolved_at: {
-        expression: 'i.resolved_at',
+        expression: `to_char(i.resolved_at, 'YYYY-MM-DD')`,
         type: 'date',
       },
       closed_at: {
-        expression: 'i.closed_at',
+        expression: `to_char(i.closed_at, 'YYYY-MM-DD')`,
         type: 'date',
+      },
+      resolution_hours: {
+        expression: INCIDENT_RESOLUTION_HOURS_SQL,
+        type: 'number',
       },
     },
   },
