@@ -90,7 +90,7 @@ const portfolioRecordFields = (kind: 'project' | 'request'): Record<string, stri
 });
 
 const BUDGET_LINE_FIELDS: Record<string, string> = {
-  nature: 'ops:opex.scope.label',
+  nature: 'ops:operations.scope.label',
   product_name: 'ops:opex.columns.productName',
   description: 'ops:opex.fields.description',
   supplier_id: 'ops:opex.fields.supplier',
