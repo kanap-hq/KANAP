@@ -56,8 +56,12 @@ import {
 } from './ai-mutation-operation.types';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, INCIDENT_STATUS_RANK } from '../../incidents/incident.entity';
-import { INCIDENT_LOCKED_MESSAGE, isFrozenIncidentStatus, resolveIncidentViewer } from '../../incidents/incident-visibility';
-import { incidentVisibilitySql } from '../../incidents/incident-visibility';
+import {
+  INCIDENT_LOCKED_MESSAGE,
+  incidentVisibilitySql,
+  isFrozenIncidentStatus,
+  resolveIncidentViewer,
+} from '../../incidents/incident-visibility';
 import { IncidentsService } from '../../incidents/services/incidents.service';
 import {
   AiWriteLanguage,
@@ -860,7 +864,9 @@ export class AiBusinessRecordMutationSupportService {
         }
       } else {
         const current = String(existing?.status ?? '');
-        if (current && INCIDENT_STATUS_RANK[status as keyof typeof INCIDENT_STATUS_RANK] < INCIDENT_STATUS_RANK[current as keyof typeof INCIDENT_STATUS_RANK]) {
+        if (current
+          && INCIDENT_STATUS_RANK[status as keyof typeof INCIDENT_STATUS_RANK]
+            < INCIDENT_STATUS_RANK[current as keyof typeof INCIDENT_STATUS_RANK]) {
           throw new BadRequestException('Status cannot move backwards. Use Reopen instead.');
         }
       }
