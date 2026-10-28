@@ -45,7 +45,8 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
   bodyHost = null,
 }, ref) {
   const { t } = useTranslation(['it', 'common']);
-  const [serverError, setServerError] = React.useState<string | null>(null);
+  /** The banner's text, and the check that named it so a later change can drop only that one. */
+  const [serverError, setServerError] = React.useState<{ message: string; code?: 'nameRequired' } | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [dirty, setDirty] = React.useState(false);
 
@@ -99,8 +100,8 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
   const markDirty = React.useCallback(() => setDirty(true), []);
 
   const dismissNameError = React.useCallback(() => {
-    setServerError((current) => (current === t('validation.nameRequired') ? null : current));
-  }, [t]);
+    setServerError((current) => (current?.code === 'nameRequired' ? null : current));
+  }, []);
 
   const setNameValue = React.useCallback((next: string) => {
     nameRef.current = next;
@@ -138,7 +139,7 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
     const currentName = nameRef.current;
     try {
       if (!String(currentName || '').trim()) {
-        setServerError(t('validation.nameRequired'));
+        setServerError({ message: t('validation.nameRequired'), code: 'nameRequired' });
         return null;
       }
       const payload = {
@@ -169,7 +170,7 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
       setDirty(false);
       return (res.data?.id as string) || null;
     } catch (e: any) {
-      setServerError(getApiErrorMessage(e, t, t('messages.createApplicationFailed')));
+      setServerError({ message: getApiErrorMessage(e, t, t('messages.createApplicationFailed')) });
       throw e;
     } finally {
       setSaving(false);
@@ -261,7 +262,7 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
 
   const body = (
     <Box>
-      {!!serverError && <Alert severity="error" sx={{ mb: 2 }}>{serverError}</Alert>}
+      {!!serverError && <Alert severity="error" sx={{ mb: 2 }}>{serverError.message}</Alert>}
       <Box sx={{ mb: 1 }}>
         <Typography
           component="h2"

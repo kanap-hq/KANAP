@@ -5,6 +5,7 @@ import { CreateDocumentAiMutationOperation } from './operations/create-document.
 import { CreateBusinessRecordAiMutationOperation } from './operations/create-business-record.ai-mutation-operation';
 import { CreateMasterDataRecordAiMutationOperation } from './operations/create-master-data-record.ai-mutation-operation';
 import { CreateTaskAiMutationOperation } from './operations/create-task.ai-mutation-operation';
+import { DeleteRecordAiMutationOperation } from './operations/delete-record.ai-mutation-operation';
 import { ImportGlpiTicketAiMutationOperation, ImportTicketAiMutationOperation } from './operations/import-glpi-ticket.ai-mutation-operation';
 import { UpdateDocumentContentAiMutationOperation } from './operations/update-document-content.ai-mutation-operation';
 import { UpdateDocumentMetadataAiMutationOperation } from './operations/update-document-metadata.ai-mutation-operation';
@@ -39,6 +40,7 @@ export class AiMutationOperationRegistry {
     updateTaskStatus: UpdateTaskStatusAiMutationOperation,
     updateTaskAssignee: UpdateTaskAssigneeAiMutationOperation,
     addTaskComment: AddTaskCommentAiMutationOperation,
+    deleteRecord: DeleteRecordAiMutationOperation,
     @Optional()
     importTicket?: ImportTicketAiMutationOperation,
   ) {
@@ -60,6 +62,7 @@ export class AiMutationOperationRegistry {
       updateTaskStatus,
       updateTaskAssignee,
       addTaskComment,
+      deleteRecord,
     ]) {
       this.operations.set(operation.toolName, operation);
     }

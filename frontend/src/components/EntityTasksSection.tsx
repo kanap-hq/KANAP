@@ -4,6 +4,7 @@ import { Box, Button, Stack, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../config/ThemeContext';
+import { useAuth } from '../auth/AuthContext';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDate } from '../lib/dateFormat';
 import { TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '../pages/tasks/task.constants';
@@ -70,9 +71,11 @@ const linkButtonSx = { p: 0, minWidth: 0, fontSize: 12, alignSelf: 'flex-start' 
  */
 export default function EntityTasksSection({ entityType, entityId, disabled = false }: Props) {
   const { t } = useTranslation(['portfolio', 'common']);
+  const { hasLevel } = useAuth();
   const theme = useTheme();
   const locale = useLocale();
   const { tasks, isLoading, openTask, createTask } = useEntityTasks(entityType, entityId);
+  const canCreateTask = hasLevel('tasks', 'member');
   const [showClosed, setShowClosed] = React.useState(false);
 
   const open = tasks.filter((task) => !CLOSED_TASK_STATUSES.has(task.status));
@@ -99,7 +102,7 @@ export default function EntityTasksSection({ entityType, entityId, disabled = fa
     <Stack spacing={1.25}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
         <RelationsSectionTitle>{t('portfolio:shared.entityTasksSection.title')}</RelationsSectionTitle>
-        {!disabled && (
+        {!disabled && canCreateTask && (
           <Button variant="action" onClick={() => createTask()}>
             {t('portfolio:shared.entityTasksSection.newTask')}
           </Button>

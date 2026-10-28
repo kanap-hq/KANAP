@@ -23,9 +23,12 @@ const navigate = vi.hoisted(() => vi.fn());
 vi.mock('react-router-dom', async (importOriginal) => ({ ...(await importOriginal<typeof import('react-router-dom')>()), useNavigate: () => navigate }));
 vi.mock('../../utils/downloadBlob', () => ({ downloadBlob: download, extractFilenameFromDisposition: () => null }));
 const KINDS = vi.hoisted(() => [{ code: 'vm', label: 'Virtual machine' }, { code: 'physical', label: 'Physical server' }]);
+const zoneOptions = vi.hoisted(() => ({
+  adminZone: [{ code: 'tier_0', label: 'Niveau 0' }] as Array<{ code: string; label: string }>,
+}));
 vi.mock('../../hooks/useItOpsEnumOptions', () => {
   // The tenant translated a zone and a domain: the page shows the translated names.
-  const byField = { adminZone: [{ code: 'tier_0', label: 'Niveau 0' }], domain: [{ code: 'lab', label: 'Labo' }], serverKind: KINDS };
+  const byField = { adminZone: zoneOptions.adminZone, domain: [{ code: 'lab', label: 'Labo' }], serverKind: KINDS };
   const labelFor = (_field: string, code: string) => KINDS.find((kind) => kind.code === code)?.label ?? code;
   const value = { settings: null, byField, labelFor };
   return { default: () => value };
@@ -173,6 +176,7 @@ describe('AdministrationViewPage', () => {
   beforeEach(() => {
     grid.props = null;
     grid.rows = [ROW, ROW_BARE];
+    zoneOptions.adminZone.splice(0, zoneOptions.adminZone.length, { code: 'tier_0', label: 'Niveau 0' });
     getMock.mockReset();
     postMock.mockReset();
     download.mockReset();
@@ -314,6 +318,16 @@ describe('AdministrationViewPage', () => {
     await screen.findByRole('group', { name: 'Administration zones' });
     await waitFor(() => expect(grid.props).not.toBeNull());
     expect(grid.props!.initialState).toEqual({ filter: { filterModel: { zone: { filterType: 'set', values: ['tier_1'] } } } });
+  });
+
+  it('reads a shared zone name whatever the no-break spaces of the language', async () => {
+    zoneOptions.adminZone.push({ code: 'tier_1', label: 'Tier\u00a01 : Production' });
+    const filters = JSON.stringify({ zone: { filterType: 'set', values: ['Tier 1 : Production'] } });
+    renderPage(`/it/administration?filters=${encodeURIComponent(filters)}`);
+    await screen.findByRole('group', { name: 'Administration zones' });
+    await waitFor(() => expect(grid.props!.initialState).toEqual({
+      filter: { filterModel: { zone: { filterType: 'set', values: ['tier_1'] } } },
+    }));
   });
 
   it('shows one toggle per control with its count; one filters the list at a time, again to clear', async () => {

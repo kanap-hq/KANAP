@@ -326,6 +326,12 @@ type AssetLoadResult =
   | { ok: true; data: AssetRecord }
   | { ok: false; status: number; error: unknown };
 
+/** A banner message, and the validation that can clear it once the field it names is filled. */
+type AssetBannerError = {
+  message: string;
+  kind?: 'locationRequired' | 'assetTypeRequired' | 'providerRequired';
+};
+
 // One read in flight per address. A 404 is kept until the fiche leaves that address, so a second
 // mount (the tab in the address, or a new translation function) does not ask again.
 const assetLoadInflight = new Map<string, Promise<AssetLoadResult>>();
@@ -434,7 +440,17 @@ function AssetWorkspaceRoute() {
     if (hours < 24) return t('pages.netbox.time.hoursAgo', { count: hours });
     return t('pages.netbox.time.daysAgo', { count: Math.floor(hours / 24) });
   }, [netboxLink?.last_synced_at, t]);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setErrorState] = React.useState<AssetBannerError | null>(null);
+  // Every banner message keeps its text, and a validation also keeps the code of the field it names.
+  const setError = React.useCallback((next: React.SetStateAction<string | null>) => {
+    setErrorState((current) => {
+      const message = typeof next === 'function' ? next(current?.message ?? null) : next;
+      return message ? { message } : null;
+    });
+  }, []);
+  const setValidationError = React.useCallback((kind: AssetBannerError['kind'], message: string) => {
+    setErrorState({ message, kind });
+  }, []);
   // The HTTP status of the last failed read of the asset (0 without a response), null once read.
   const [loadFailure, setLoadFailure] = React.useState<number | null>(null);
   // A support or hardware save that runs after the panel has left reports here. While the panel
@@ -811,13 +827,13 @@ function AssetWorkspaceRoute() {
   // A creation banner names the problem that blocked the last attempt. Once that problem is gone, the
   // banner goes with it. A host name problem stays under the field, so it never uses this banner.
   React.useEffect(() => {
-    if (!error) return;
+    if (!error?.kind) return;
     const gone =
-      (error === t('messages.locationRequired') && !!locationId)
-      || (error === t('messages.assetTypeRequired') && !!kind)
-      || (error === t('messages.providerRequired') && !!provider);
-    if (gone) setError(null);
-  }, [error, kind, locationId, provider, t]);
+      (error.kind === 'locationRequired' && !!locationId)
+      || (error.kind === 'assetTypeRequired' && !!kind)
+      || (error.kind === 'providerRequired' && !!provider);
+    if (gone) setErrorState(null);
+  }, [error, kind, locationId, provider]);
 
   const networkSegmentOptions = React.useMemo(
     () => (byField.networkSegment || []).map((o) => ({
@@ -989,15 +1005,15 @@ function AssetWorkspaceRoute() {
 
   const handleSave = async () => {
     if (!locationId) {
-      setError(t('messages.locationRequired'));
+      setValidationError('locationRequired', t('messages.locationRequired'));
       return;
     }
     if (!kind) {
-      setError(t('messages.assetTypeRequired'));
+      setValidationError('assetTypeRequired', t('messages.assetTypeRequired'));
       return;
     }
     if (!provider) {
-      setError(t('messages.providerRequired'));
+      setValidationError('providerRequired', t('messages.providerRequired'));
       return;
     }
     if (hostnameMalformed || (hostnameRequired && !hostname.trim())) {
@@ -1662,7 +1678,7 @@ function AssetWorkspaceRoute() {
 
   const updateLocation = (nextValue: string | null) => {
     if (!nextValue && !isCreate) {
-      setError(t('messages.locationRequired'));
+      setValidationError('locationRequired', t('messages.locationRequired'));
       return;
     }
     if (nextValue !== locationId) {
@@ -2073,7 +2089,7 @@ function AssetWorkspaceRoute() {
             severity="error"
             action={<Button color="inherit" size="small" onClick={() => { void load(true); }}>{t('common:buttons.retry')}</Button>}
           >
-            {error || t('messages.loadAssetFailed')}
+            {error?.message || t('messages.loadAssetFailed')}
           </Alert>
         )}
         <MuiLink
@@ -2090,7 +2106,7 @@ function AssetWorkspaceRoute() {
   return (
     <ApplicationFeedbackProvider onError={setError} capture={feedbackRef}>
     <Box sx={{ height: '100%', minHeight: 0, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      {error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{error.message}</Alert>}
       <PortfolioDetailWorkspaceShell
         activeTab={validTab}
         tabs={workspaceTabs}

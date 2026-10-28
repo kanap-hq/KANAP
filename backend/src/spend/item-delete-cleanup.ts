@@ -1,6 +1,6 @@
 import { HttpException, Logger } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { budgetColumnName, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { AmountMeasure, AMOUNT_MEASURES, MEASURE_FREEZE_COLUMN } from './amounts-write.util';
 import { RecordInUseException } from '../common/record-in-use';
@@ -118,6 +118,8 @@ export type ItemDependentsDeps = {
   audit: AuditService;
   timeAggregates: UserTimeAggregateService | null | undefined;
   userId: string | null;
+  /** Who asked besides the user: Plaid's preview (`ai_chat` and its id), on every audit row here. */
+  auditSource?: AuditSourceOptions;
 };
 
 /**
@@ -209,6 +211,7 @@ export async function deleteItemTasks(
           before: { origin_task: labelOf(request), __origin_task_id: request.origin_task_id },
           after: { origin_task: null, __origin_task_id: null },
           userId: deps.userId,
+          ...(deps.auditSource ? { source: deps.auditSource.source, sourceRef: deps.auditSource.sourceRef ?? null } : {}),
         },
         { manager },
       );

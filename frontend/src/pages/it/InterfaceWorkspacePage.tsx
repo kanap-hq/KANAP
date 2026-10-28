@@ -150,6 +150,7 @@ export default function InterfaceWorkspacePage() {
   const { addToRecent } = useRecentlyViewed();
 
   const canManage = hasLevel('applications', 'member');
+  const canCreateConnection = hasLevel('infrastructure', 'member');
   const idParam = String(params.id || '');
   const isCreate = idParam === 'new';
   const id = idParam;
@@ -747,6 +748,8 @@ export default function InterfaceWorkspacePage() {
           !isCreate && current?.source_application_id && current?.target_application_id ? (
             <InterfaceBindingsMatrix
               interfaceId={current.id}
+              canManage={canManage}
+              canCreateConnection={canCreateConnection}
               interfaceName={current.name}
               sourceApplicationId={current.source_application_id}
               targetApplicationId={current.target_application_id}
