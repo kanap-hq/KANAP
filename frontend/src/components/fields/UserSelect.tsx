@@ -67,6 +67,7 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
   const { t } = useTranslation('common');
   const label = labelProp ?? t('selects.user');
   const naked = hideLabel || label === '';
+  const ariaLabel = naked && label ? label : undefined;
   const me = useMeOption();
   const myId = me?.id ?? null;
   const picker = useLookupPicker<User>({
@@ -155,6 +156,7 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
           size={size}
           variant="standard"
           sx={textFieldSx}
+          inputProps={ariaLabel ? { ...params.inputProps, 'aria-label': ariaLabel } : params.inputProps}
           inputRef={(node) => {
             assignRef((params.inputProps as any)?.ref, node);
             assignRef(ref, node ?? null);
