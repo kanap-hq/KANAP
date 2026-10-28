@@ -265,8 +265,8 @@
       "applications": "Applications",
       "asset_assignments": "Affectations d'actifs",
       "assets": "Actifs",
+      "budget_lines": "Lignes budgétaires",
       "business_processes": "Processus métier",
-      "capex_items": "Lignes CAPEX",
       "cluster_members": "Membres du cluster",
       "companies": "Sociétés",
       "contacts": "Contacts",
@@ -278,7 +278,6 @@
       "owners": "Responsables",
       "projects": "Projets",
       "relations": "Relations entre actifs",
-      "spend_items": "Lignes OPEX",
       "sub_locations": "Sous-sites",
       "support_contacts": "Contacts de support"
     },

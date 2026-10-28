@@ -90,6 +90,7 @@ const portfolioRecordFields = (kind: 'project' | 'request'): Record<string, stri
 });
 
 const BUDGET_LINE_FIELDS: Record<string, string> = {
+  nature: 'ops:opex.scope.label',
   product_name: 'ops:opex.columns.productName',
   description: 'ops:opex.fields.description',
   supplier_id: 'ops:opex.fields.supplier',
@@ -243,8 +244,7 @@ const SCREEN_FIELD_KEYS: Record<string, Record<string, string>> = {
     status: 'ops:contracts.fields.status',
     notes: 'ops:contracts.fields.notes',
   },
-  spend_items: BUDGET_LINE_FIELDS,
-  capex_items: BUDGET_LINE_FIELDS,
+  budget_lines: BUDGET_LINE_FIELDS,
   projects: {
     ...portfolioRecordFields('project'),
     origin: 'portfolio:workspace.project.fields.origin',
