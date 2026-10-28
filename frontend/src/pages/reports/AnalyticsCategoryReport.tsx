@@ -527,6 +527,7 @@ export default function AnalyticsCategoryReport() {
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>{t("reports.shared.summaryTable")}</Typography>
           <ReportGrid
+            key={hierarchicalRows ? 'hierarchy' : 'flat'}
             wrapperSx={{ height: 520 }}
             rowData={printing ? table.rows : screenRows}
             columnDefs={columns}
