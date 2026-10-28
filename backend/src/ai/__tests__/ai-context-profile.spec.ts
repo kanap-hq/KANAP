@@ -161,6 +161,8 @@ function testIncidentWritesChooseTheBusinessRecordTools() {
     'Lève la confidentialité de INC-3',
     'Rends INC-3 public',
     'Rends INC-3 plus confidentiel',
+    'plus confidentiel',
+    'lève la confidentialité',
   ]) {
     const profile = selectAiContextProfile(prompt);
     assert.equal(profile.name, 'write_business', prompt);

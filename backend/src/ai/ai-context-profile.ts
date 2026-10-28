@@ -452,7 +452,15 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   }
 
   const hasIncidentReference = referencedTypes.has('incidents');
-  const hasIncidentIntent = hasIncidentReference || /\bincidents?\b/.test(text);
+  // A confidentiality phrase names an incident change even when the person leaves the reference
+  // implicit ("plus confidentiel", "lève la confidentialité").
+  const hasIncidentConfidentialityIntent = containsAny(text, [
+    /\bplus confidentiel\b/,
+    /\bmoins confidentiel\b/,
+    wordsInOrder(/\b(?:leve|lever|lift)\b/, /\b(?:confidentialite|confidentiality)\b/),
+  ]);
+  const hasIncidentIntent = hasIncidentReference || /\bincidents?\b/.test(text)
+    || hasIncidentConfidentialityIntent;
   const question = isQuestion(raw, text);
   const hasTaskReference = hasReferenceInGroup(referencedTypes, TASK_ENTITY_TYPES);
   // The names of a task, tested before the incident intent: "une tâche pour suivre l'incident".
