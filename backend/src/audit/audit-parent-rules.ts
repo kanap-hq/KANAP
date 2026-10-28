@@ -1,10 +1,12 @@
 import type { EntityManager } from 'typeorm';
 import type { RecordHistoryTable } from './record-history.inventory';
 import { analyticsAxesParentRules } from './record-history/records/analytics_axes';
+import { assetsParentRules } from './record-history/records/assets';
 import { companiesParentRules } from './record-history/records/companies';
 import { departmentsParentRules } from './record-history/records/departments';
 import { documentsParentRules } from './record-history/records/documents';
 import { spendItemsParentRules } from './record-history/records/spend_items';
+import { technologiesParentRules } from './record-history/records/technologies';
 
 /**
  * How an audit row finds the record it belongs to, by its audit label (`audit_log.table_name`).
@@ -46,10 +48,12 @@ export type AuditParentRule =
  */
 const PARENT_RULE_SETS = [
   analyticsAxesParentRules,
+  assetsParentRules,
   companiesParentRules,
   departmentsParentRules,
   documentsParentRules,
   spendItemsParentRules,
+  technologiesParentRules,
 ] as const;
 
 /** The audit labels that carry a record, and how to find it. */

@@ -44,7 +44,7 @@ function testEntries() {
     recordHistoryModules(),
     [
       'accounts', 'analytics', 'budget', 'business_processes', 'companies', 'cost_centers', 'departments',
-      'knowledge', 'working_day_profiles',
+      'infrastructure', 'knowledge', 'working_day_profiles',
     ],
     'the modules of the route guard',
   );
@@ -119,9 +119,18 @@ function testDataAccessTablesAreDeclared() {
   }
   const missing = followed.filter((table) => !declared.has(table));
   assert.deepEqual(missing, [], 'every follows_line and link_to_line table is a child or an exclusion');
+  const dataAccess = new Map(DATA_ACCESS_TABLES.map((table) => [table.table, table]));
   for (const entry of Object.values(RECORD_HISTORY)) {
     for (const exclusion of entry.exclusions) {
-      assert.ok(followed.includes(exclusion.table), `${exclusion.table}: an exclusion is a follows_line or link_to_line table`);
+      const table = dataAccess.get(exclusion.table);
+      // A family may also exclude a table it follows outside the data-access inventory (an asset's
+      // application assignments, an incident's links). A scoped table may only be excluded when it
+      // follows or links to a line.
+      if (!table) continue;
+      assert.ok(
+        table.cls === 'follows_line' || table.cls === 'link_to_line',
+        `${exclusion.table}: an exclusion of a scoped table is a follows_line or link_to_line table`,
+      );
     }
   }
   console.log(`  ${followed.length} follows_line/link_to_line tables declared: OK`);

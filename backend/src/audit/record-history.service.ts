@@ -190,9 +190,58 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
         if (isPlainObject(payload)) addFamilyId({ ids }, 'contact', payload.contact_id);
         else for (const contactId of contactIds(payload)) addFamilyId({ ids }, 'contact', contactId);
       }
-      if (kind === 'application' || kind === 'technology') {
-        for (const value of Array.isArray(payload) ? payload : []) addFamilyId({ ids }, kind, value);
-        if (isPlainObject(payload)) addFamilyId({ ids }, kind, payload[`${kind}_id`]);
+      const addList = (family: FamilyKey, list: unknown) => {
+        if (Array.isArray(list)) for (const value of list) addFamilyId({ ids }, family, value);
+      };
+      if (kind === 'application') {
+        if (Array.isArray(payload)) addList('application', payload);
+        else if (isPlainObject(payload)) {
+          addList('application', payload.added);
+          addList('application', payload.removed);
+          addList('application', payload.ids);
+          addFamilyId({ ids }, 'application', payload.application_id);
+        }
+      }
+      if (kind === 'technology') {
+        if (Array.isArray(payload)) addList('technology', payload);
+        else if (isPlainObject(payload)) {
+          addList('technology', payload.added);
+          addList('technology', payload.removed);
+          addList('technology', payload.ids);
+          addFamilyId({ ids }, 'technology', payload.technology_id);
+        }
+        // An installed technology names the technology in `record_id` from the asset's side.
+        if (entry.table === 'assets' && isUuid(row.record_id)) addFamilyId({ ids }, 'technology', row.record_id);
+      }
+      if (kind === 'asset') {
+        // On a budget line, the link payload holds line ids and `record_id` is the asset; on a
+        // technology, the payload names the asset. Each side then gets the reference it shows.
+        if (entry.table === 'spend_items') {
+          if (isUuid(row.record_id)) addFamilyId({ ids }, 'asset', row.record_id);
+        } else if (Array.isArray(payload)) {
+          addList('asset', payload);
+        } else if (isPlainObject(payload)) {
+          addList('asset', payload.ids);
+          addList('asset', payload.added);
+          addList('asset', payload.removed);
+          addFamilyId({ ids }, 'asset', payload.asset_id);
+        }
+      }
+      if (kind === 'budget_line') {
+        for (const value of linkSetIds(payload)) addFamilyId({ ids }, 'budget_line', value);
+      }
+      if (kind === 'relation' && isPlainObject(payload) && Array.isArray(payload.relations)) {
+        for (const relation of payload.relations) {
+          if (isPlainObject(relation)) addFamilyId({ ids }, 'asset', relation.related_asset_id);
+        }
+      }
+      if (kind === 'member' && isPlainObject(payload)) addList('asset', payload.members);
+      if (kind === 'owner' && Array.isArray(payload)) {
+        for (const state of payload) {
+          if (typeof state !== 'string') continue;
+          const [role, userId] = state.split(':');
+          if ((role === 'it' || role === 'business') && isUuid(userId)) addFamilyId({ ids }, 'user', userId);
+        }
       }
       if ((kind === 'contract' || kind === 'project' || kind === 'request')
         && String(row.record_id ?? '').toLowerCase() === recordId.toLowerCase()) {
@@ -212,7 +261,6 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
       addVersionId({ versions }, payload.version_id);
     }
     if (kind === 'version' && row.record_id) addVersionId({ versions }, row.record_id);
-    if (kind === 'asset' && row.record_id) addFamilyId({ ids }, 'asset', row.record_id);
     if ((kind === 'contract' || kind === 'project' || kind === 'request') && row.record_id
       && String(row.record_id).toLowerCase() !== recordId.toLowerCase()) {
       // Written from the contract, project or request: the record is the other object.

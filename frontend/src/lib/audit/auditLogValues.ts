@@ -119,6 +119,9 @@ const ENUM_GROUPS: Record<string, string> = {
   role: 'auditLogs.values.contactRole',
   origin: 'auditLogs.values.origin',
   applies_to: 'auditLogs.values.lineTypeUsage',
+  vulnerability_state: 'auditLogs.values.vulnerabilityState',
+  cyber_criticality: 'auditLogs.values.cyberCriticality',
+  recovery_wave: 'auditLogs.values.recoveryWave',
 };
 
 /** `spread_profile_name` holds `flat` and `4-4-5`; its keys cannot use the stored code as is. */
@@ -298,7 +301,7 @@ function screenLabel(context: AuditValueContext, key: string): string | null {
 
 /** Snake case as stored, camelCase as the IT enum keys name it. Status keys stay snake case. */
 function enumerationCode(field: string, code: string): string {
-  if (field === 'status' || field === 'lifecycle') return code;
+  if (field === 'status' || field === 'lifecycle' || field === 'vulnerability_state') return code;
   return code.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
@@ -316,6 +319,15 @@ function enumerationLabel(field: string, code: string, context: AuditValueContex
   // the cost-center kind is its "Type", with the stored snake-case code as the locale key.
   if (field === 'kind' && context.table === 'cost_centers') {
     return screenLabel(context, `auditLogs.values.costCenterKind.${code}`);
+  }
+  if (field === 'kind' && context.table === 'assets') {
+    return screenLabel(context, `auditLogs.values.assetKind.${code}`);
+  }
+  if (field === 'family') {
+    return screenLabel(context, `auditLogs.values.technologyFamily.${code}`);
+  }
+  if (field === 'hosting_type') {
+    return screenLabel(context, `auditLogs.values.hostingType.${code}`);
   }
   const group = field === 'status'
     ? (context.table === 'incidents'

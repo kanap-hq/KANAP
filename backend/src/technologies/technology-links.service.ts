@@ -429,7 +429,8 @@ export class TechnologyLinksService {
     if (removed.length) {
       await this.audit.log({
         table: 'application_technologies', recordId: tech.id, action: 'update',
-        before: { removed }, after: null, userId: opts.userId ?? null,
+        // The application, not the link ids: the history names what it loses.
+        before: { removed: [appId] }, after: null, userId: opts.userId ?? null,
       }, { manager: mg });
     }
     return { ok: true, removed: removed.length };
@@ -476,7 +477,7 @@ export class TechnologyLinksService {
       if (removed.length) {
         await this.audit.log({
           table: 'application_technologies', recordId: tech.id, action: 'update',
-          before: { removed }, after: null, userId: opts.userId ?? null,
+          before: { removed: [appId] }, after: null, userId: opts.userId ?? null,
         }, { manager: mg });
       }
       return { ok: true, changed: removed.length > 0 };
@@ -718,12 +719,13 @@ export class TechnologyLinksService {
     const tech = await readTechnology(mg, tenantId, idOrRef, true);
     const id = uuidOrThrow(linkId, 'Link not found.');
     const table = `${side}_technologies`;
-    const rows: Array<{ id: string; technology_version_id: string | null; notes: string | null; source: string }> = await mg.query(
-      `SELECT id, technology_version_id, notes, source FROM ${table} WHERE tenant_id = $1 AND technology_id = $2 AND id = $3`,
+    const rows: Array<{ id: string; [key: string]: unknown }> = await mg.query(
+      `SELECT id, ${side}_id, technology_version_id, notes, source FROM ${table} WHERE tenant_id = $1 AND technology_id = $2 AND id = $3`,
       [tenantId, tech.id, id],
     );
     if (!rows[0]) throw new NotFoundException('Link not found');
     const before = rows[0];
+    const subjectId = before[`${side}_id`] as string;
     const versionGiven = body && ('technology_version_id' in body || 'version_label' in body);
     const versionId = versionGiven ? await versionOfInput(mg, tenantId, tech.id, body) : before.technology_version_id;
     const notes = body && 'notes' in body ? notesOf(body.notes) : before.notes;
@@ -738,7 +740,9 @@ export class TechnologyLinksService {
       throw error;
     }
     await this.audit.log({
-      table, recordId: tech.id, action: 'update', before, after: { id, technology_version_id: versionId, notes, source: 'manual' }, userId: opts.userId ?? null,
+      table, recordId: tech.id, action: 'update', before,
+      after: { id, [`${side}_id`]: subjectId, technology_version_id: versionId, notes, source: 'manual' },
+      userId: opts.userId ?? null,
     }, { manager: mg });
     if (versionId !== before.technology_version_id) await this.linksChanged(mg, tenantId, tech.id);
     return { ok: true };

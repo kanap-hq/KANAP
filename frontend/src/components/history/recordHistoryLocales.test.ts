@@ -31,7 +31,8 @@ const OPS = { en: enOps, fr: frOps, de: deOps, es: esOps } as Record<string, any
 const KNOWLEDGE = { en: enKnowledge, fr: frKnowledge, de: deKnowledge, es: esKnowledge } as Record<string, any>;
 const LANGUAGE_NAMES = ['en', 'fr', 'de', 'es'] as const;
 const ID = '11111111-2222-4333-8444-555555555555';
-const EVENT_KINDS = ['link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line', 'value'];
+const EVENT_KINDS = ['link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line', 'value',
+  'budget_line', 'relation_contains', 'relation_depends_on', 'member', 'owner_it', 'owner_business', 'operating_system'];
 const ACTORS = ['assistant', 'assistantFor', 'unknown'];
 const ACTIONS = ['create', 'update', 'delete'];
 
@@ -128,6 +129,18 @@ describe('record history locales', () => {
       'sort_order', 'state', 'status', 'successor_id', 'turnover', 'values', 'vat_number', 'version_name',
       'summary', 'folder_id', 'library_id', 'document_type_id', 'template_document_id',
       'review_due_at', 'last_reviewed_at', 'published_at', 'current_version_number', 'revision',
+      // Family D: assets and technologies, and their children.
+      'asset_reference', 'provider', 'region', 'zone', 'hostname', 'domain', 'fqdn', 'aliases', 'admin_zone',
+      'is_cluster', 'end_of_life_date', 'location_id', 'sub_location_id', 'operating_system', 'members', 'relations',
+      'external_links', 'ip_addresses', 'cluster', 'serial_number', 'manufacturer', 'model', 'purchase_date',
+      'rack_location', 'rack_unit', 'vendor_id', 'support_contract_id', 'support_tier', 'support_expiry',
+      'spend_item_id', 'family', 'hosting_type', 'cpe_products', 'replaced_by_id', 'vulnerability_alerts',
+      'catalog_sync', 'versions_added', 'versions_updated', 'versions_attached', 'cpe_products_added',
+      'cpe_products_removed', 'cve_names_added', 'cve_names_removed', 'description_filled', 'description_updated',
+      'converted_from_application', 'moved', 'catalog_key', 'catalog_state', 'cve_names', 'cpe_version',
+      'build_prefixes', 'standard_support_end', 'extended_support_end', 'vulnerability_alerts_effective',
+      'owner_type', 'application_id', 'technology_version_id', 'is_operating_system', 'cve_id', 'state', 'note',
+      'vulnerability_state',
     ];
     for (const language of LANGUAGE_NAMES) {
       for (const key of fields) {

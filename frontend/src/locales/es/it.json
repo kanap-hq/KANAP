@@ -2083,7 +2083,8 @@
         "network": "Red",
         "hardware": "Hardware",
         "dependencies": "Dependencias",
-        "relations": "Relaciones"
+        "relations": "Relaciones",
+        "history": "Historial"
       },
       "operations": {
         "hostedApplications": "Aplicaciones alojadas"
@@ -2379,7 +2380,8 @@
         "applications": "Aplicaciones",
         "operations": "Operaciones",
         "compliance": "Cumplimiento",
-        "relations": "Relaciones"
+        "relations": "Relaciones",
+        "history": "Historial"
       },
       "fields": {
         "name": "Nombre",

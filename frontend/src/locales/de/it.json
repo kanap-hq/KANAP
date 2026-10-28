@@ -2083,7 +2083,8 @@
         "network": "Netzwerk",
         "hardware": "Hardware",
         "dependencies": "Abhängigkeiten",
-        "relations": "Beziehungen"
+        "relations": "Beziehungen",
+        "history": "Verlauf"
       },
       "operations": {
         "hostedApplications": "Gehostete Anwendungen"
@@ -2379,7 +2380,8 @@
         "applications": "Anwendungen",
         "operations": "Betrieb",
         "compliance": "Compliance",
-        "relations": "Beziehungen"
+        "relations": "Beziehungen",
+        "history": "Verlauf"
       },
       "fields": {
         "name": "Name",

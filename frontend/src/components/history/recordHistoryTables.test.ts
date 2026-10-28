@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { RECORD_HISTORY_TABLES } from './recordHistoryTables';
 
 // The record tables whose page has a history: the budget line in lot 1C, the account and cost
-// center in lot 2, the Knowledge document in lot 2 family E, the first masters of family A.
+// center in lot 2, the Knowledge document in lot 2 family E, the first masters of family A, the
+// asset and the technology of family D.
 describe('record history tables', () => {
   it('declares the budget line and the record pages of the families, unique and readable', () => {
     expect(RECORD_HISTORY_TABLES).toEqual([
@@ -10,11 +11,13 @@ describe('record history tables', () => {
       'accounts',
       'analytics_axes',
       'analytics_categories',
+      'assets',
       'business_processes',
       'companies',
       'cost_centers',
       'departments',
       'documents',
+      'technologies',
       'working_day_profiles',
     ]);
     expect(new Set(RECORD_HISTORY_TABLES).size).toBe(RECORD_HISTORY_TABLES.length);

@@ -588,7 +588,71 @@
       "values": "Valores eliminados",
       "opex_lines": "Líneas OPEX actualizadas",
       "capex_lines": "Líneas CAPEX actualizadas",
-      "axis_id": "Dimensión"
+      "axis_id": "Dimensión",
+      "asset_reference": "Referencia del activo",
+      "provider": "Proveedor",
+      "region": "Región",
+      "zone": "Zona",
+      "hostname": "Nombre de host",
+      "domain": "Dominio",
+      "fqdn": "FQDN",
+      "aliases": "Alias",
+      "admin_zone": "Zona de administración",
+      "is_cluster": "Clúster",
+      "end_of_life_date": "Fecha de fin de vida",
+      "location_id": "Ubicación",
+      "sub_location_id": "Sububicación",
+      "operating_system": "Sistema operativo",
+      "members": "Miembros",
+      "relations": "Relaciones",
+      "external_links": "Vínculos de inventario externo",
+      "ip_addresses": "Direcciones IP",
+      "cluster": "Clúster (texto histórico)",
+      "serial_number": "Número de serie",
+      "manufacturer": "Fabricante",
+      "model": "Modelo",
+      "purchase_date": "Fecha de compra",
+      "rack_location": "Ubicación en rack",
+      "rack_unit": "Unidad de rack",
+      "vendor_id": "Proveedor",
+      "support_contract_id": "Contrato de soporte",
+      "support_tier": "Nivel de soporte",
+      "support_expiry": "Fin del soporte",
+      "spend_item_id": "Línea presupuestaria",
+      "family": "Familia",
+      "hosting_type": "Tipo de alojamiento",
+      "cpe_products": "Productos CPE",
+      "replaced_by_id": "Reemplazada por",
+      "vulnerability_alerts": "Alertas de vulnerabilidad",
+      "catalog_sync": "Sincronización del catálogo",
+      "versions_added": "Versiones añadidas",
+      "versions_updated": "Versiones actualizadas",
+      "versions_attached": "Versiones vinculadas",
+      "cpe_products_added": "Productos CPE añadidos",
+      "cpe_products_removed": "Productos CPE eliminados",
+      "cve_names_added": "Nombres de CVE añadidos",
+      "cve_names_removed": "Nombres de CVE eliminados",
+      "description_filled": "Descripción completada",
+      "description_updated": "Descripción actualizada",
+      "converted_from_application": "Convertida desde una aplicación",
+      "moved": "Elementos movidos",
+      "catalog_key": "Clave de catálogo",
+      "catalog_state": "Estado del catálogo",
+      "cve_names": "Nombres de CVE",
+      "cpe_version": "Versión CPE",
+      "build_prefixes": "Prefijos de compilación",
+      "standard_support_end": "Fin del soporte estándar",
+      "extended_support_end": "Fin del soporte extendido",
+      "vulnerability_alerts_effective": "Alertas de vulnerabilidad efectivas",
+      "owner_type": "Tipo de responsable",
+      "technology_version_id": "Versión",
+      "is_operating_system": "Sistema operativo",
+      "cve_id": "CVE",
+      "note": "Nota",
+      "vulnerability_state": "Estado",
+      "asset_id": "Activo",
+      "related_asset_id": "Activo relacionado",
+      "relation_type": "Tipo de relación"
     },
     "history": {
       "empty": "Todavía no hay historial",
@@ -678,6 +742,34 @@
         "value": {
           "added": "Valor añadido: {{label}}",
           "removed": "Valor eliminado: {{label}}"
+        },
+        "budget_line": {
+          "added": "Línea presupuestaria añadida: {{label}}",
+          "removed": "Línea presupuestaria eliminada: {{label}}"
+        },
+        "relation_contains": {
+          "added": "Componente añadido: {{label}}",
+          "removed": "Componente eliminado: {{label}}"
+        },
+        "relation_depends_on": {
+          "added": "Dependencia añadida: {{label}}",
+          "removed": "Dependencia eliminada: {{label}}"
+        },
+        "member": {
+          "added": "Miembro añadido: {{label}}",
+          "removed": "Miembro eliminado: {{label}}"
+        },
+        "owner_it": {
+          "added": "Responsable de TI añadido: {{label}}",
+          "removed": "Responsable de TI eliminado: {{label}}"
+        },
+        "owner_business": {
+          "added": "Responsable de negocio añadido: {{label}}",
+          "removed": "Responsable de negocio eliminado: {{label}}"
+        },
+        "operating_system": {
+          "added": "Sistema operativo añadido: {{label}}",
+          "removed": "Sistema operativo eliminado: {{label}}"
         }
       },
       "unnamed": {
@@ -717,12 +809,27 @@
         "document": "un documento",
         "document_folder": "una carpeta",
         "document_library": "una biblioteca",
-        "document_type": "un tipo de documento"
+        "document_type": "un tipo de documento",
+        "relation": "una relación",
+        "member": "un miembro",
+        "hardware": "una ficha de hardware",
+        "support": "una ficha de soporte",
+        "technology_version": "una versión",
+        "owner": "un responsable",
+        "vulnerability": "una vulnerabilidad"
       },
       "title": "Historial",
       "metricsYear": "Indicadores {{year}}",
       "metricsNoYear": "Indicadores",
-      "value": "Valor {{name}}"
+      "value": "Valor {{name}}",
+      "hardware": "Hardware",
+      "support": "Soporte",
+      "vulnerability": "Vulnerabilidad {{cve}}",
+      "vulnerabilityNoName": "Vulnerabilidad",
+      "hardwareCreated": "Hardware añadido",
+      "hardwareDeleted": "Hardware eliminado",
+      "supportCreated": "Soporte añadido",
+      "supportDeleted": "Soporte eliminado"
     },
     "messages": {
       "loadDetailsFailed": "No se pudieron cargar los detalles de la entrada de auditoría."
@@ -1006,6 +1113,68 @@
       "lineTypeUsage": {
         "opex": "Solo OPEX",
         "capex": "Solo CAPEX"
+      },
+      "assetKind": {
+        "physical_server": "Servidor físico",
+        "virtual_machine": "Máquina virtual",
+        "container": "Contenedor",
+        "serverless": "Serverless",
+        "appliance": "Appliance",
+        "saas": "SaaS",
+        "other": "Otro",
+        "switch": "Switch",
+        "firewall": "Cortafuegos",
+        "load_balancer": "Balanceador de carga",
+        "access_point": "Punto de acceso",
+        "san": "SAN",
+        "nas": "NAS",
+        "backup_appliance": "Appliance de copia de seguridad",
+        "tape_library": "Librería de cintas",
+        "industrial_robot": "Robot industrial",
+        "industrial_machine": "Máquina industrial",
+        "rack": "Rack"
+      },
+      "technologyFamily": {
+        "operating_system": "Sistema operativo",
+        "database": "Base de datos",
+        "application_server": "Servidor de aplicaciones",
+        "web_server": "Servidor web",
+        "hypervisor": "Hipervisor",
+        "container": "Contenedores",
+        "directory": "Directorio e identidad",
+        "messaging": "Mensajería",
+        "integration": "Integración",
+        "backup": "Copia de seguridad",
+        "monitoring": "Monitorización",
+        "runtime": "Entorno de ejecución y framework",
+        "storage": "Almacenamiento",
+        "network": "Red",
+        "network_security": "Seguridad",
+        "administration": "Administración",
+        "other": "Otro"
+      },
+      "hostingType": {
+        "on_prem": "Local",
+        "colocation": "Colocation",
+        "public_cloud": "Cloud público",
+        "private_cloud": "Cloud privado"
+      },
+      "vulnerabilityState": {
+        "to_review": "Por revisar",
+        "handled": "Tratada",
+        "not_affected": "No afectada"
+      },
+      "cyberCriticality": {
+        "critical": "Crítica",
+        "high": "Alta",
+        "moderate": "Moderada",
+        "low": "Baja"
+      },
+      "recoveryWave": {
+        "foundation": "V0 Fundamentos",
+        "vital": "V1 Actividades vitales",
+        "priority": "V2 Actividades prioritarias",
+        "normal": "V3 Funcionamiento normal"
       }
     },
     "dataAccess": {

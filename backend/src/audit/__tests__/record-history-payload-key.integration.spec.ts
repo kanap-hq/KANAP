@@ -121,8 +121,8 @@ function walkPlan(node: PlanNode, visit: (node: PlanNode) => void): void {
 
 async function testInventoryIndexes() {
   const before = await auditIndexes();
-  // No real family declares a payload key yet: the check is green, and the fictional family below
-  // proves it fails without its index.
+  // The real families that declare a payload key (the assets and technologies of family D) have
+  // their indexes; the fictional family below proves the check fails without one.
   assert.deepEqual(missingPayloadKeyIndexes(Object.values(RECORD_HISTORY), before), [], 'every declared payload key has its index');
   assert.deepEqual(
     missingPayloadKeyIndexes([FICTIONAL], before),

@@ -222,7 +222,7 @@ export class OperatingSystemService {
     }
     const provenance = linkProvenance(source);
     const [marked]: Array<LinkRow> = await mg.query(
-      `SELECT id, technology_id, technology_version_id, source, source_ref, notes
+      `SELECT id, asset_id, technology_id, technology_version_id, source, source_ref, notes
          FROM asset_technologies
         WHERE tenant_id = $1 AND asset_id = $2 AND is_operating_system`,
       [tenantId, id],
@@ -246,7 +246,7 @@ export class OperatingSystemService {
     }
 
     const [same]: Array<LinkRow> = await mg.query(
-      `SELECT id, technology_id, technology_version_id, source, source_ref, notes
+      `SELECT id, asset_id, technology_id, technology_version_id, source, source_ref, notes
          FROM asset_technologies
         WHERE tenant_id = $1 AND asset_id = $2 AND technology_id = $3
           AND technology_version_id IS NOT DISTINCT FROM $4`,
@@ -255,7 +255,7 @@ export class OperatingSystemService {
     let blank: LinkRow | undefined;
     if (!same && versionId) {
       [blank] = await mg.query(
-        `SELECT id, technology_id, technology_version_id, source, source_ref, notes
+        `SELECT id, asset_id, technology_id, technology_version_id, source, source_ref, notes
            FROM asset_technologies
           WHERE tenant_id = $1 AND asset_id = $2 AND technology_id = $3 AND technology_version_id IS NULL
           ORDER BY is_operating_system DESC, created_at, id
@@ -340,7 +340,7 @@ export class OperatingSystemService {
     const result = await remove();
     if (!result.changed || !wasMarked || is_cluster) return result;
     const [next]: Array<LinkRow> = await mg.query(
-      `SELECT at.id, at.technology_id, at.technology_version_id, at.source, at.source_ref, at.notes
+      `SELECT at.id, at.asset_id, at.technology_id, at.technology_version_id, at.source, at.source_ref, at.notes
          FROM asset_technologies at
          JOIN technologies t ON t.tenant_id = at.tenant_id AND t.id = at.technology_id
         WHERE at.tenant_id = $1 AND at.asset_id = $2 AND t.family = 'operating_system'
@@ -624,7 +624,7 @@ export class OperatingSystemService {
     );
     if (marked) return { ok: true, link_id: marked.id, changed: false };
     const [row]: Array<LinkRow & { family: string }> = await mg.query(
-      `SELECT at.id, at.technology_id, at.technology_version_id, at.source, at.source_ref, at.notes, t.family
+      `SELECT at.id, at.asset_id, at.technology_id, at.technology_version_id, at.source, at.source_ref, at.notes, t.family
          FROM asset_technologies at
          JOIN technologies t ON t.tenant_id = at.tenant_id AND t.id = at.technology_id
         WHERE at.tenant_id = $1 AND at.asset_id = $2 AND at.id = $3`,
@@ -648,8 +648,8 @@ export class OperatingSystemService {
     );
     await this.audit.log({
       table: 'asset_technologies', recordId: row.technology_id, action: 'update',
-      before: { id: row.id, is_operating_system: !marked },
-      after: { id: row.id, is_operating_system: marked },
+      before: { id: row.id, asset_id: row.asset_id, is_operating_system: !marked },
+      after: { id: row.id, asset_id: row.asset_id, is_operating_system: marked },
       userId: userId ?? null,
     }, { manager: mg });
   }
@@ -671,8 +671,8 @@ export class OperatingSystemService {
     );
     await this.audit.log({
       table: 'asset_technologies', recordId: row.technology_id, action: 'update',
-      before: { id: row.id, technology_version_id: row.technology_version_id, source: row.source, is_operating_system: false },
-      after: { id: row.id, technology_version_id: versionId, source: provenance.source, is_operating_system: true },
+      before: { id: row.id, asset_id: row.asset_id, technology_version_id: row.technology_version_id, source: row.source, is_operating_system: false },
+      after: { id: row.id, asset_id: row.asset_id, technology_version_id: versionId, source: provenance.source, is_operating_system: true },
       userId: userId ?? null,
     }, { manager: mg });
   }
@@ -696,6 +696,7 @@ export class OperatingSystemService {
 
 type LinkRow = {
   id: string;
+  asset_id: string;
   technology_id: string;
   technology_version_id: string | null;
   source: string;
