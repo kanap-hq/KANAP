@@ -850,8 +850,9 @@ export class AiBusinessRecordMutationSupportService {
 
   /**
    * The status rules of the incident screen, checked before any preview: an incident is created
-   * open or in progress, it only moves forward, `cancelled` is the screen's administrator action,
-   * and lifting the confidentiality is not offered here yet. The service checks again at apply.
+   * open or in progress and it only moves forward. Cancelling and lifting the confidentiality are
+   * separate administrator actions, so the field path points to the incident screen. The service
+   * checks again at apply.
    */
   private assertIncidentTransition(
     fields: Record<string, unknown>,
@@ -861,7 +862,7 @@ export class AiBusinessRecordMutationSupportService {
     const status = fields.status as string | undefined;
     if (status !== undefined) {
       if (status === 'cancelled') {
-        throw new BadRequestException('Cancelling an incident is not available in Plaid: use the incident screen.');
+        throw new BadRequestException('Cancelling an incident is a separate action: use the incident screen.');
       }
       if (mode === 'create') {
         if (status !== 'open' && status !== 'in_progress') {
@@ -872,12 +873,12 @@ export class AiBusinessRecordMutationSupportService {
         if (current
           && INCIDENT_STATUS_RANK[status as keyof typeof INCIDENT_STATUS_RANK]
             < INCIDENT_STATUS_RANK[current as keyof typeof INCIDENT_STATUS_RANK]) {
-          throw new BadRequestException('Status cannot move backwards. Use Reopen instead.');
+          throw new BadRequestException('Status cannot move backwards: use the incident screen to reopen it.');
         }
       }
     }
     if (mode === 'update' && fields.confidential === false && existing?.confidential === true) {
-      throw new BadRequestException('Lifting the confidentiality of an incident needs the register administrator right: use `set_incident_confidentiality`, reserved to register administrators.');
+      throw new BadRequestException('Lifting the confidentiality needs a register administrator: use the incident screen.');
     }
   }
 
@@ -1573,10 +1574,10 @@ export class AiBusinessRecordMutationSupportService {
       // Going back would reopen the incident (administrator) or lift its confidentiality (lot 4):
       // neither is a field to restore.
       if (changed.status !== undefined) {
-        throw new BadRequestException('A status change cannot be undone: reopening an incident needs an administrator. Do it from the incident screen.');
+        throw new BadRequestException('A status change cannot be undone: reopen the incident from the incident screen.');
       }
       if (changed.confidential === true) {
-        throw new BadRequestException('Setting the confidentiality cannot be undone here: lifting it needs an administrator, from the incident screen.');
+        throw new BadRequestException('Setting the confidentiality cannot be undone here: lift it from the incident screen.');
       }
     }
     const previousValues = coerceRecord(preview.current_values?.values, 'current_values.values');

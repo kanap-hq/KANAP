@@ -386,8 +386,9 @@ Incident previews go through `IncidentsService`, never the tables. An incident
 is created `open` or `in_progress` only: a resolved or closed incident is
 created open and moved forward in a second preview, so the step stays visible.
 The status only moves forward (`open` → `in_progress` → `resolved` → `closed`);
-a backward move is refused with the screen's Reopen message, and `cancelled` is
-refused (an administrator action on the screen). The preview that closes an
+a backward move, `cancelled` and `confidential: false` are refused on the field
+path with a short message that points to the incident screen, where the
+administrator actions live. The preview that closes an
 incident says the record freezes and only an administrator reopens it. A change
 of a closed or cancelled incident is refused at preparation. `category` is
 validated against the tenant's incident categories by code or exact label, with
@@ -395,9 +396,8 @@ the allowed values in the refusal. Date-times are ISO 8601 with a time zone,
 converted into the person's `time_zone`; `detected_at` defaults to now.
 `confidential: true` is allowed; a preview warns when the change makes the
 restricted incident disappear for the person, as the screen's lose-access
-dialog does. `confidential: false` is refused on the field path, and the refusal
-names `set_incident_confidentiality`. A field change is undoable, a status or
-confidentiality change is not. The journal note goes
+dialog does. `confidential: false` is refused on the field path. A field change
+is undoable, a status or confidentiality change is not. The journal note goes
 through `IncidentEntriesService.createNote` (`add_incident_note`): the journal
 only takes additions, so the preview is not reversible. The links go through
 `IncidentRelationsService.setLink` once per link (`update_incident_links`), so

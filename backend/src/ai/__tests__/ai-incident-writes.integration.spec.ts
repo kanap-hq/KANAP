@@ -558,7 +558,7 @@ async function testCreationStatusesAreOpenOrInProgress(harness: Harness) {
       () => executeToolPreview(harness, ctx, 'create_business_record', {
         entity_type: 'incidents', fields: { title: 'Cancelled', severity: 'minor', status: 'cancelled' },
       }),
-      /Cancelling an incident is not available/,
+      /Cancelling an incident is a separate action/,
     );
     // In progress is accepted at creation, without inventing a resolution step.
     const preview = await executeToolPreview(harness, ctx, 'create_business_record', {
@@ -663,12 +663,12 @@ async function testConfidentialityWarnsOnLostAccess(harness: Harness) {
 async function testLiftingConfidentialityIsRefused(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'lift');
-    // The lot 2 refusal now names the administrator tool; it stays refused on the field path.
+    // The field path refuses it and points to the incident screen, where the administrator acts.
     await expectRejectsExactly(
       () => executeToolPreview(harness, ctx, 'update_business_record', {
         entity_type: 'incidents', ref: 'INC-8', fields: { confidential: false },
       }),
-      'Lifting the confidentiality of an incident needs the register administrator right: use `set_incident_confidentiality`, reserved to register administrators.',
+      'Lifting the confidentiality needs a register administrator: use the incident screen.',
     );
   });
 }
