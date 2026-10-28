@@ -411,6 +411,7 @@ function ContactEditor({ id }: { id: string }) {
             firstName={data.first_name}
             lastName={data.last_name}
             fallback={data.email || t('contacts.contactFallback')}
+            fallbackIsPlaceholder={!data.email}
             canEdit={!disabled}
             onSave={(next) => saveNow(next, 'name', next)}
           />
