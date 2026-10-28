@@ -7,6 +7,7 @@ import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { refusalCounts } from '../../utils/deleteRefusal';
+import { RESOURCE_LABELS } from '../../utils/permissionLabels';
 import { roleDescription, roleLabel } from '../../utils/roleLabel';
 
 type Role = { id: string; role_name: string; role_description: string; is_system?: boolean; is_built_in?: boolean; user_count?: number };
@@ -27,41 +28,6 @@ const PERMISSION_GROUPS = {
 
 // Flat list of all resources for API compatibility
 const RESOURCES = Object.values(PERMISSION_GROUPS).flat();
-
-// Friendly display names for resources
-const RESOURCE_LABELS: Record<string, string> = {
-  ai_chat: 'AI Chat',
-  ai_mcp: 'AI MCP',
-  ai_agents: 'AI Agents',
-  ai_settings: 'AI Settings',
-  budget: 'Budget',
-  budget_ops: 'Budget Administration',
-  contracts: 'Contracts',
-  analytics: 'Analytics Dimensions',
-  billing: 'Billing',
-  portfolio_requests: 'Requests',
-  portfolio_projects: 'Projects',
-  portfolio_planning: 'Planning',
-  portfolio_reports: 'Reports',
-  portfolio_settings: 'Settings',
-  applications: 'Applications',
-  infrastructure: 'Infrastructure',
-  settings: 'Settings',
-  companies: 'Companies',
-  departments: 'Departments',
-  cost_centers: 'Cost Centers',
-  working_day_profiles: 'Working-day calendars',
-  suppliers: 'Suppliers',
-  contacts: 'Contacts',
-  accounts: 'Accounts',
-  business_processes: 'Business Processes',
-  locations: 'Locations',
-  incidents: 'Incidents',
-  tasks: 'Tasks',
-  knowledge: 'Knowledge',
-  reporting: 'Reporting',
-  users: 'Users',
-};
 
 const ALL_LEVEL_OPTIONS: Array<{ value: ConcretePermissionLevel; label: string }> = [
   { value: 'reader', label: 'roles.levels.reader' },

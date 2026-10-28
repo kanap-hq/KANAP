@@ -1,5 +1,6 @@
 import i18next, { type TFunction } from 'i18next';
 import { refusalUsages, usageTotal, type DeleteFailure } from './deleteRefusal';
+import { moduleRightLabel, rightLevelLabel } from './permissionLabels';
 
 type ApiErrorPayload = {
   message?: unknown;
@@ -181,6 +182,15 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
     // An environment the sentence names (`pre_prod`) is shown by its name (Pre-production).
     if (typeof params.environment === 'string' && params.environment) {
       params.environment = t(`it:pages.applications.environments.${params.environment}.name`, { defaultValue: params.environment });
+    }
+    // A missing module right names its module and level as the roles screen shows them.
+    if (code === 'MODULE_RIGHT_REQUIRED') {
+      if (typeof params.resource === 'string' && params.resource) {
+        params.resource = moduleRightLabel(t, params.resource);
+      }
+      if (typeof params.level === 'string' && params.level) {
+        params.level = rightLevelLabel(t, params.level);
+      }
     }
     const translated = t(`errors:${code}`, {
       ...params,
