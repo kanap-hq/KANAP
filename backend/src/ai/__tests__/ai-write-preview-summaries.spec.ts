@@ -360,13 +360,14 @@ function testIncidentStateAndConfidentialityCards() {
     tool_name: 'set_incident_confidentiality',
     target_entity_type: 'incidents',
     target_entity_id: 'incident-1',
-    mutation_input: { confidential: true, from_confidential: false, warnings: { lose_access: true } },
+    mutation_input: { confidential: true, from_confidential: false },
     current_values: { target_ref: 'INC-7', target_title: 'INC-7 - Mail outage', status: 'open', confidential: false },
   });
   const restricted = confidentiality.presentPreview(restrict, 'fr').changes;
   assert.equal(restricted.confidential.from, 'No');
   assert.equal(restricted.confidential.to, 'Yes');
-  assert.equal(restricted.access_warning.to, "Après cette modification, seuls les administrateurs du registre, le déclarant et le responsable pourront l'ouvrir. Vous serez renvoyé vers le registre.");
+  // The tool is reserved to register administrators, who keep access: no warning on its card.
+  assert.equal(restricted.access_warning, undefined);
   assert.equal(summary(confidentiality, restrict, 'fr'), "Passage de l'incident « INC-7 - Mail outage » en confidentiel.");
 }
 

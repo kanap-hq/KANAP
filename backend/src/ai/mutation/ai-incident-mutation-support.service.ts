@@ -101,24 +101,6 @@ export class AiIncidentMutationSupportService {
     }
   }
 
-  /**
-   * The screen's lose-access rule on an existing incident (`viewerLosesAccess`): a register
-   * administrator, the reporter or the owner keeps access. A missing reporter stays missing; on a
-   * change the person is never the reporter by default, as the lot 2 review asked.
-   */
-  async viewerLosesAccess(
-    context: AiExecutionContextWithManager,
-    incident: AiIncidentSnapshot,
-  ): Promise<boolean> {
-    const viewer = await resolveAiIncidentViewer(context);
-    if (viewer.isAdmin) return false;
-    const userId = String(viewer.userId ?? '');
-    if (!userId) return true;
-    const reporter = incident.reporterUserId;
-    const owner = incident.ownerUserId;
-    return !(reporter && reporter === userId) && !(owner && owner === userId);
-  }
-
   /** The service options of an incident write: the viewer, the module reads and the application scope. */
   async writeOptions(context: AiExecutionContextWithManager): Promise<AiIncidentWriteOptions> {
     const viewer = await resolveAiIncidentViewer(context);

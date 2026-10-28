@@ -421,8 +421,8 @@ the same freeze warning as a closure, writes a `status_change` journal entry and
 cannot be undone. The 423 of the review lock at cancellation is relayed as the
 readable closure message. `set_incident_confidentiality` takes the boolean
 directly, works on an open, closed or cancelled record as the screen's route
-does, and asks for the administrator right in both directions; setting it warns
-when the person would lose access, with a missing reporter staying missing. It
+does, and asks for the administrator right in both directions; a register
+administrator keeps access, so its card carries no lose-access warning. It
 writes the `system` journal entry and refreshes the search index of the linked
 tasks. Neither tool has a reversal preview.
 

@@ -4,7 +4,6 @@ import { IncidentsService } from '../../../incidents/services/incidents.service'
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import {
   AiWriteLanguage,
-  incidentAccessWarning,
   previewSummaryText,
   quoted,
   writeActionText,
@@ -36,10 +35,9 @@ function buildTarget(preview: AiMutationPreview): AiMutationPreviewPresentation[
 /**
  * A register administrator sets or lifts the confidentiality of one incident, through
  * `IncidentsService.setConfidentiality`: the route of the screen also works on a closed record,
- * so this tool is not gated by the closure lock. Setting it warns when the restricted incident
- * would disappear for the person (the screen's lose-access message, with a missing reporter
- * staying missing). Lifting it by `update_business_record` stays refused; this tool is the way,
- * and it needs the administrator right for both directions.
+ * so this tool is not gated by the closure lock. It needs the administrator right in both
+ * directions, and a register administrator keeps access, so the card carries no lose-access
+ * warning. Lifting it by `update_business_record` stays refused; this tool is the way.
  */
 @Injectable()
 export class SetIncidentConfidentialityAiMutationOperation implements AiMutationOperation<SetIncidentConfidentialityInput> {
@@ -60,7 +58,7 @@ export class SetIncidentConfidentialityAiMutationOperation implements AiMutation
     entity_type: 'incidents',
     fields: ['confidential'],
     reversible: false,
-    prompt_hint: 'For the confidentiality of an incident, use `set_incident_confidentiality` with an INC reference and `confidential` (`true` restricts, `false` lifts). It needs the register administrator right, for both directions, and works on an open or a frozen record. Setting it warns when the person would lose access. The preview cannot be undone; setting the confidentiality stays possible through `update_business_record`, lifting it does not.',
+    prompt_hint: 'For the confidentiality of an incident, use `set_incident_confidentiality` with an INC reference and `confidential` (`true` restricts, `false` lifts). It needs the register administrator right, for both directions, and works on an open or a frozen record. A register administrator keeps access, so the card carries no lose-access warning. The preview cannot be undone; setting the confidentiality stays possible through `update_business_record`, lifting it does not.',
   };
 
   constructor(
@@ -83,15 +81,12 @@ export class SetIncidentConfidentialityAiMutationOperation implements AiMutation
         confidential ? 'This incident is already confidential.' : 'This incident is already public.',
       );
     }
-    const losesAccess = confidential && await this.support.viewerLosesAccess(context, incident);
-
     return {
       targetEntityType: 'incidents',
       targetEntityId: incident.id,
       mutationInput: {
         confidential,
         from_confidential: incident.confidential,
-        ...(losesAccess ? { warnings: { lose_access: true } } : {}),
       },
       currentValues: {
         target_ref: incident.ref,
@@ -112,8 +107,6 @@ export class SetIncidentConfidentialityAiMutationOperation implements AiMutation
     const confidential = mutation.confidential === true;
     const from = confidential ? 'No' : 'Yes';
     const to = confidential ? 'Yes' : 'No';
-    const losesAccess = (mutation.warnings as { lose_access?: unknown } | undefined)?.lose_access === true;
-
     let summary = `Preview ${preview.id} ${preview.status}.`;
     switch (preview.status) {
       case 'pending':
@@ -151,14 +144,6 @@ export class SetIncidentConfidentialityAiMutationOperation implements AiMutation
           to,
           format: 'text',
         },
-        ...(confidential && losesAccess ? {
-          access_warning: {
-            label: 'Access',
-            from: null,
-            to: incidentAccessWarning(language),
-            format: 'text' as const,
-          },
-        } : {}),
       },
       summary,
     };
