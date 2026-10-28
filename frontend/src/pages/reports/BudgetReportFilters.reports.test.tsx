@@ -518,6 +518,8 @@ describe('Analytics report dimensions', () => {
     renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat');
     await waitFor(() => expect(gridRows()).toHaveLength(3));
     expect(gridRows().every((row) => row.level === 0)).toBe(true);
+    expect(grid.columns.map((column) => column.headerName).slice(0, 2)).toEqual(['Nature', 'reports.analyticsCategory.lines']);
+    expect(gridRows().map((row) => row.count)).toEqual([2, 2, 1]);
     expect(post.mock.calls.filter(([, body]) => (body as any).spec.groupBy.length > 2)).toEqual([]);
     expect(screen.getByRole('checkbox', { name: 'reports.analyticsCategory.detail' })).not.toBeChecked();
   });

@@ -3,6 +3,7 @@ import { AMOUNT_COLUMNS } from '../../components/finance/amountColumns';
 import {
   accountLabelOptions,
   amountField,
+  analyticsLinesRequest,
   analyticsRequest,
   columnsCompareRequest,
   consolidationAccountsRequest,
@@ -28,6 +29,7 @@ import {
   NO_LINE,
   readAccountIdOptions,
   readAnalytics,
+  readAnalyticsLines,
   readAxisValues,
   readColumnsCompare,
   readConsolidation,
@@ -182,6 +184,32 @@ describe('per year groups', () => {
       { key: 'cat_v1', label: 'N', name: ' ', id: 'v1', count: 1, values: { 2026: 3 } },
       { key: 'uncategorized', label: 'U', name: null, id: null, count: 1, values: { 2026: 2 } },
     ]);
+  });
+
+  it('Analytics detail: one request by value then line, the nature on the all-natures scope only', () => {
+    const base = { axisId: 'ax', years: [2026, 2027], metric: 'budget' as const, excludedIds: [NO_ANALYTICS_VALUE], filters: { run_build: keepValues(['run']) }, measure: 'amount' as const };
+    const all = analyticsLinesRequest({ ...base, scope: 'all' });
+    expect(all.spec.groupBy).toEqual(['analytics_id_ax', 'id', 'product_name', 'item_number', 'nature']);
+    expect(all.spec.measures.map((measure) => measure.id)).toEqual(['y2026', 'y2027']);
+    expect(all.spec.order).toEqual([{ by: 'measure', id: 'y2026', dir: 'DESC' }]);
+    expect(all.query.filters).toEqual({ run_build: keepValues(['run']), analytics_id_ax: dropValues([null]) });
+    expect(analyticsLinesRequest({ ...base, scope: 'opex' }).spec.groupBy).toEqual(['analytics_id_ax', 'id', 'product_name', 'line_number']);
+    expect(analyticsLinesRequest({ ...base, scope: 'capex' }).spec.groupBy).toEqual(['analytics_id_ax', 'id', 'description', 'line_number']);
+    expect(analyticsLinesRequest({ ...base, scope: 'all', axisId: null }).spec.groupBy[0]).toBe('analytics_category_id');
+  });
+
+  it('Analytics detail: the lines are grouped by value, in the server order, with their nature', () => {
+    const lines = readAnalyticsLines('all', [2026], result([
+      row(['v1', 'L2', 'Zeta', '7', 'capex'], { y2026: 20 }),
+      row(['v1', 'L1', 'Alpha', '6', 'opex'], { y2026: 10 }),
+      row([null, 'L3', 'Solo', '5', 'opex'], { y2026: 5 }),
+    ], row([], { y2026: 35 })));
+    expect([...lines.keys()]).toEqual(['v1', '']);
+    expect(lines.get('v1')!.map((line) => [line.id, line.name, line.itemNumber, line.nature, line.values[2026]])).toEqual([
+      ['L2', 'Zeta', 7, 'capex', 20],
+      ['L1', 'Alpha', 6, 'opex', 10],
+    ]);
+    expect(lines.get('')!.map((line) => [line.id, line.nature])).toEqual([['L3', 'opex']]);
   });
 
   it('Consolidation accounts: the same filters and exclusions as the report, the accounts of each line', () => {
