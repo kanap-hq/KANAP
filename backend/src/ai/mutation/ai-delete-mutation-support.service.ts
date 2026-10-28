@@ -25,8 +25,7 @@ export const AI_DELETE_ENTITY_TYPES = [
   'tasks',
   'contacts',
   'locations',
-  'spend_items',
-  'capex_items',
+  'budget_lines',
   'connections',
   'interfaces',
   'documents',
@@ -55,17 +54,16 @@ const LABELS: Record<AiDeleteEntityType, string> = {
   tasks: 'Task',
   contacts: 'Contact',
   locations: 'Location',
-  spend_items: 'Budget line',
-  capex_items: 'CAPEX line',
+  budget_lines: 'Budget line',
   connections: 'Connection',
   interfaces: 'Interface',
   documents: 'Document',
 };
 
 /** The object type a task of a line carries (`spend/item-delete-cleanup.ts`). */
-const TASK_OBJECT_TYPE: Record<'spend_items' | 'capex_items', string> = {
-  spend_items: 'spend_item',
-  capex_items: 'capex_item',
+const TASK_OBJECT_TYPE: Record<BudgetNature, string> = {
+  opex: 'spend_item',
+  capex: 'capex_item',
 };
 
 /** The families a document's links name, with the module that reads them. */
@@ -182,11 +180,10 @@ export class AiDeleteMutationSupportService {
           impact: await this.locationImpact(context, found.id),
         };
       }
-      case 'spend_items':
-      case 'capex_items': {
-        const found = await this.resolveSpendLine(context, entityType, ref);
+      case 'budget_lines': {
+        const found = await this.resolveSpendLine(context, ref);
         // The screen's check before the confirmation, and its refusal before any preview.
-        const checker = entityType === 'spend_items' ? this.opexDelete : this.capexDelete;
+        const checker = found.nature === 'opex' ? this.opexDelete : this.capexDelete;
         const refusal = (await checker.deleteCheck([found.id], { manager: context.manager })).refused[0];
         if (refusal) {
           const column = String(refusal.params?.column ?? 'a frozen column');
@@ -208,7 +205,7 @@ export class AiDeleteMutationSupportService {
             title: found.title,
             updatedAt: found.updatedAt,
           },
-          impact: await this.spendImpact(context, entityType, found.id),
+          impact: await this.spendImpact(context, found.nature, found.id),
         };
       }
       case 'connections': {
@@ -416,52 +413,45 @@ export class AiDeleteMutationSupportService {
   }
 
   /**
-   * The line a reference names, in the nature of the entity type: `BL-n` its own number,
-   * `OPX-n` an OPEX line's number or legacy number, `CPX-n` a CAPEX line's legacy number, as
-   * `write_financial_plan` reads them; a UUID or an exact title also works. A line of the other
-   * nature reads as missing.
+   * The line a reference names, of either nature: `BL-n` its own number, `OPX-n` an OPEX line's
+   * number or legacy number, `CPX-n` a CAPEX line's legacy number, as `write_financial_plan` reads
+   * them; a UUID or an exact title also works.
    */
   private async resolveSpendLine(
     context: AiExecutionContextWithManager,
-    entityType: 'spend_items' | 'capex_items',
     ref: string,
-  ): Promise<{ id: string; ref: string; title: string; updatedAt: string | null }> {
-    const nature: BudgetNature = entityType === 'spend_items' ? 'opex' : 'capex';
+  ): Promise<{ id: string; ref: string; title: string; nature: BudgetNature; updatedAt: string | null }> {
     const normalized = String(ref ?? '').trim();
     if (!normalized) throw new BadRequestException('Budget line reference is required.');
     // A name, or a bare number, names no line number (as `write_financial_plan`): it matches the title.
-    let parsed: ReturnType<typeof parseItemRef> | null = null;
-    try {
-      parsed = parseItemRef(normalized, nature === 'opex' ? 'spend' : 'capex');
-    } catch {
-      parsed = null;
-    }
-    type Row = { id: string; product_name: string | null; item_number: number | null; updated_at: Date | string | null };
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normalized);
+    const match = normalized.toUpperCase().match(/^(BL|OPX|CPX)-(\d+)$/);
+    type Row = { id: string; nature: BudgetNature; product_name: string | null; item_number: number | null; updated_at: Date | string | null };
     let rows: Row[];
-    if (parsed?.type === 'uuid') {
+    if (uuid) {
       rows = await context.manager.query(
-        `SELECT id, product_name, item_number, updated_at
+        `SELECT id, nature, product_name, item_number, updated_at
            FROM spend_items
-          WHERE tenant_id = $1${natureAnd(null, nature)} AND id = $2
+          WHERE tenant_id = $1 AND nature IN ('opex', 'capex') AND id = $2
           LIMIT 1`,
-        [context.tenantId, parsed.value],
+        [context.tenantId, normalized],
       );
     } else {
-      const numbers = parsed?.type === 'item_number' && parsed.prefix
-        ? this.spendLineNumbers(nature, parsed.prefix, parsed.value)
+      const numbers = match
+        ? this.budgetLineNumbers(match[1], Number(match[2]))
         : { itemNumber: -1, legacyNumber: null };
       rows = await context.manager.query(
-        `SELECT id, product_name, item_number, updated_at
+        `SELECT id, nature, product_name, item_number, updated_at
            FROM spend_items
-          WHERE tenant_id = $1${natureAnd(null, nature)}
+          WHERE tenant_id = $1 AND nature IN ('opex', 'capex')
             AND (LOWER(product_name) = LOWER($2::text) OR item_number = $3 OR legacy_number = $4::text)
           ORDER BY (LOWER(product_name) = LOWER($2::text)) DESC, product_name
           LIMIT 6`,
         [context.tenantId, normalized, numbers.itemNumber, numbers.legacyNumber],
       );
     }
-    if (rows.length === 0) throw new NotFoundException(`No ${entityType === 'spend_items' ? 'OPEX' : 'CAPEX'} line found matching "${normalized}".`);
-    const exact = parsed?.type === 'uuid'
+    if (rows.length === 0) throw new NotFoundException(`No budget line found matching "${normalized}".`);
+    const exact = uuid
       ? rows
       : rows.filter((row) => String(row.product_name ?? '').toLowerCase() === normalized.toLowerCase());
     const matches = exact.length > 0 ? exact : rows;
@@ -472,24 +462,20 @@ export class AiDeleteMutationSupportService {
     return {
       id: row.id,
       ref: `${BUDGET_LINE_PREFIX}-${row.item_number}`,
-      title: String(row.product_name || `Untitled ${entityType === 'spend_items' ? 'spend' : 'CAPEX'} item`),
+      title: String(row.product_name || 'Untitled budget line'),
+      nature: row.nature === 'capex' ? 'capex' : 'opex',
       updatedAt: isoTimestamp(row.updated_at),
     };
   }
 
-  /** The numbers a line reference names, as `write_financial_plan` reads them. */
-  private spendLineNumbers(
-    nature: BudgetNature,
-    prefix: string | undefined,
+  /** The numbers a budget line reference names, as `write_financial_plan` reads them. */
+  private budgetLineNumbers(
+    prefix: string,
     value: number,
   ): { itemNumber: number; legacyNumber: string | null } {
-    if (!prefix || prefix === BUDGET_LINE_PREFIX) return { itemNumber: value, legacyNumber: null };
-    if (prefix === LEGACY_PREFIX[nature]) {
-      return {
-        itemNumber: nature === 'opex' ? value : -1,
-        legacyNumber: `${LEGACY_PREFIX[nature]}-${value}`,
-      };
-    }
+    if (prefix === BUDGET_LINE_PREFIX) return { itemNumber: value, legacyNumber: null };
+    if (prefix === 'OPX') return { itemNumber: value, legacyNumber: `OPX-${value}` };
+    if (prefix === 'CPX') return { itemNumber: -1, legacyNumber: `CPX-${value}` };
     return { itemNumber: -1, legacyNumber: null };
   }
 
@@ -500,10 +486,10 @@ export class AiDeleteMutationSupportService {
    */
   private async spendImpact(
     context: AiExecutionContextWithManager,
-    entityType: 'spend_items' | 'capex_items',
+    nature: BudgetNature,
     lineId: string,
   ): Promise<AiDeleteImpact> {
-    const objectType = TASK_OBJECT_TYPE[entityType];
+    const objectType = TASK_OBJECT_TYPE[nature];
     const [row] = await context.manager.query(
       `SELECT
          (SELECT count(DISTINCT v.id)::int
@@ -793,12 +779,11 @@ export class AiDeleteMutationSupportService {
         await this.locations.delete(found.id, context.userId, { manager: context.manager, audit });
         return;
       }
-      case 'spend_items':
-      case 'capex_items': {
-        const found = await this.resolveSpendLine(context, entityType, targetId);
+      case 'budget_lines': {
+        const found = await this.resolveSpendLine(context, targetId);
         this.assertNotChanged(entityType, expectedUpdatedAt, found.updatedAt);
-        this.assertImpactUnchanged(entityType, preview, await this.spendImpact(context, entityType, found.id));
-        const deleter = entityType === 'spend_items' ? this.opexDelete : this.capexDelete;
+        this.assertImpactUnchanged(entityType, preview, await this.spendImpact(context, found.nature, found.id));
+        const deleter = found.nature === 'opex' ? this.opexDelete : this.capexDelete;
         await deleter.delete(found.id, {
           manager: context.manager,
           userId: context.userId,

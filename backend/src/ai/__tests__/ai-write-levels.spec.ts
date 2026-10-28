@@ -61,8 +61,7 @@ const BUSINESS_RECORD_ROUTES: Record<string, Controller> = {
   requests: PortfolioRequestsController,
   interfaces: InterfacesController,
   connections: ConnectionsController,
-  spend_items: BudgetLinesController,
-  capex_items: BudgetLinesController,
+  budget_lines: BudgetLinesController,
 };
 
 const MASTER_DATA_ROUTES: Record<string, Controller> = {
@@ -82,9 +81,8 @@ const RELATION_ROUTES: Record<string, { route: [Controller, string]; relation: s
   applications: { route: [ApplicationsController, 'linkRelation'], relation: 'projects' },
   assets: { route: [AssetsController, 'linkRelation'], relation: 'projects' },
   suppliers: { route: [SuppliersController, 'attachContact'], relation: 'contacts' },
-  contracts: { route: [ContractsController, 'linkRelation'], relation: 'spend_items' },
-  spend_items: { route: [BudgetLinesController, 'linkRelation'], relation: 'projects' },
-  capex_items: { route: [BudgetLinesController, 'linkRelation'], relation: 'projects' },
+  contracts: { route: [ContractsController, 'linkRelation'], relation: 'budget_lines' },
+  budget_lines: { route: [BudgetLinesController, 'linkRelation'], relation: 'projects' },
   projects: { route: [PortfolioProjectsController, 'linkRelation'], relation: 'applications' },
   requests: { route: [PortfolioRequestsController, 'linkRelation'], relation: 'applications' },
   locations: { route: [LocationsController, 'addInternalContact'], relation: 'internal_contacts' },
@@ -120,8 +118,7 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
     route: RELATION_ROUTES[family].route,
   } satisfies Row])),
   write_financial_plan: {
-    spend_items: { resource: 'budget', level: 'member', route: [SpendVersionsController, 'upsertAmounts'] },
-    capex_items: { resource: 'budget', level: 'member', route: [CapexVersionsController, 'upsertAmounts'] },
+    budget_lines: { resource: 'budget', level: 'member', route: [SpendVersionsController, 'upsertAmounts'] },
   },
   create_document: one('knowledge', [KnowledgeController, 'create']),
   update_document_content: one('knowledge', [KnowledgeController, 'update']),
@@ -138,8 +135,7 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
     tasks: { resource: 'tasks', level: 'admin', route: [TasksController, 'bulkDelete'] },
     contacts: { resource: 'contacts', level: 'admin', route: [ContactsController, 'remove'] },
     locations: { resource: 'locations', level: 'member', route: [LocationsController, 'remove'] },
-    spend_items: { resource: 'budget', level: 'admin', route: [BudgetLinesController, 'bulkDelete'] },
-    capex_items: { resource: 'budget', level: 'admin', route: [BudgetLinesController, 'bulkDelete'] },
+    budget_lines: { resource: 'budget', level: 'admin', route: [BudgetLinesController, 'bulkDelete'] },
     connections: { resource: 'infrastructure', level: 'member', route: [ConnectionsController, 'delete'] },
     interfaces: { resource: 'applications', level: 'admin', route: [InterfacesController, 'bulkDelete'] },
     documents: { resource: 'knowledge', level: 'admin', route: [KnowledgeController, 'remove'] },
@@ -203,12 +199,11 @@ function testToolRequirements() {
   assert.ok(relations.some((r) => r.resource === 'portfolio_requests' && r.level === 'contributor'));
   assert.deepEqual(aiWriteRequirements('create_business_record', ['portfolio_projects']), [{ resource: 'portfolio_projects', level: 'member' }]);
   assert.deepEqual(aiWriteRequirements('delete_record', [
-    'tasks', 'contacts', 'locations', 'spend_items', 'capex_items', 'connections', 'interfaces', 'documents',
+    'tasks', 'contacts', 'locations', 'budget_lines', 'connections', 'interfaces', 'documents',
   ]), [
     { resource: 'tasks', level: 'admin' },
     { resource: 'contacts', level: 'admin' },
     { resource: 'locations', level: 'member' },
-    { resource: 'budget', level: 'admin' },
     { resource: 'budget', level: 'admin' },
     { resource: 'infrastructure', level: 'member' },
     { resource: 'applications', level: 'admin' },
@@ -241,8 +236,7 @@ function testRelationTargetsMatchTheRelationsTab() {
   const section: Record<string, string> = {
     applications: 'applications',
     assets: 'assets',
-    spend_items: 'budget_lines',
-    capex_items: 'budget_lines',
+    budget_lines: 'budget_lines',
     business_processes: 'processes',
   };
   const reads: Record<string, Record<string, string>> = { projects: PROJECT_RELATION_READS, requests: REQUEST_RELATION_READS };
@@ -259,11 +253,11 @@ function testRelationTargetsMatchTheRelationsTab() {
       rows += 1;
     }
   }
-  assert.equal(rows, 9);
+  assert.equal(rows, 7);
   // The relation is read as the relation writes read it; other tools and families need nothing more.
-  assert.deepEqual(aiRelationTargetRequirement('update_entity_relations', 'projects', 'Spend Items'), { resource: 'budget', level: 'reader' });
+  assert.deepEqual(aiRelationTargetRequirement('update_entity_relations', 'projects', 'Budget Lines'), { resource: 'budget', level: 'reader' });
   assert.equal(aiRelationTargetRequirement('update_entity_relations', 'applications', 'projects'), null);
-  assert.equal(aiRelationTargetRequirement('update_business_record', 'projects', 'spend_items'), null);
+  assert.equal(aiRelationTargetRequirement('update_business_record', 'projects', 'budget_lines'), null);
   console.log('  relation targets match the Relations tab: OK');
 }
 
