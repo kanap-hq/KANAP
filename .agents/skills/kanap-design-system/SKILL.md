@@ -88,6 +88,7 @@ Expected structure:
 - Full-width neutral topbar with breadcrumb and sequential navigation chip.
 - Full-width title block with mono ID, click-to-edit title, metadata bar, and action pills.
 - Main work area with content column, permanent drawer-tab gutter, zero-width tab anchor, and right-side contained properties drawer.
+- Every record page has a History tab, or a History button in its header when it has no tab row, served by the common record history route; a new record type declares its table, its family and its child tables in the history inventory.
 - Drawer state persisted in `localStorage` with `kanap.{pageName}.{setting}` keys.
 - Rich text description editor hides toolbar until focus.
 - Autosave is the default for every in-place edit on existing workspace entities, including child tab panels, drawer fields, metadata controls, relations, links, and supporting detail sections. Use save-on-change for selects/dates/autocompletes/toggles and short relation changes, blur-to-save or short debounced autosave for one-line text, and debounced autosave for long-form text.
