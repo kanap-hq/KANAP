@@ -70,6 +70,8 @@ let contractTaskId: string;
 let technologyId: string;
 /** A CAPEX budget line of the same family, visible to Rita (her company and centre). */
 let capexLineId: string;
+/** A CAPEX budget line outside Rita's access: the Spanish company and centre. */
+let hiddenCapexLineId: string;
 const itemNumbers = {} as Record<Label, number>;
 const conversations: Record<string, string> = {};
 const HIDDEN: Label[] = ['L5', 'L6', 'L7'];
@@ -123,6 +125,12 @@ async function seedPlaid(): Promise<void> {
       `INSERT INTO spend_items (tenant_id, nature, product_name, currency, effective_start, item_number, paying_company_id, cost_center_id)
        VALUES ($1, 'capex', $2, 'EUR', '2026-01-01', 9001, $3, $4) RETURNING id`,
       [s.tenantId, `DA line C1 ${tag}`, s.fr, s.infFr],
+    ))[0].id;
+    // The same family, out of Rita's access (the Spanish company, no centre: as L5).
+    hiddenCapexLineId = (await q(
+      `INSERT INTO spend_items (tenant_id, nature, product_name, currency, effective_start, item_number, paying_company_id)
+       VALUES ($1, 'capex', $2, 'EUR', '2026-01-01', 9002, $3) RETURNING id`,
+      [s.tenantId, `DA line C2 ${tag}`, s.es],
     ))[0].id;
     applicationId = (await q(`INSERT INTO applications (tenant_id, name) VALUES ($1, $2) RETURNING id`, [s.tenantId, `DA 4D application ${tag}`]))[0].id;
     for (const line of [s.lines.L1, s.lines.L5]) {
@@ -215,6 +223,15 @@ function tracesOf(label: Label): Array<string | RegExp> {
   return [`DA line ${label} ${tag}`, s.lines[label], new RegExp(`BL-${itemNumbers[label]}(?!\\d)`)];
 }
 
+/** The CAPEX line out of Rita's access leaves no name, id or BL reference. */
+function assertNoCapexTrace(value: unknown, what: string): void {
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  for (const trace of [`DA line C2 ${tag}`, hiddenCapexLineId, /BL-9002(?!\d)/]) {
+    const found = typeof trace === 'string' ? text.includes(trace) : trace.test(text);
+    assert.ok(!found, `${what}: shows the CAPEX line out of access (${String(trace)})`);
+  }
+}
+
 function assertNoTrace(value: unknown, what: string, labels: Label[] = HIDDEN): void {
   const text = typeof value === 'string' ? value : JSON.stringify(value);
   for (const label of labels) {
@@ -286,8 +303,9 @@ async function testPlaidReads(): Promise<void> {
   assert.equal(ritaLines.total, 5, 'query_entities: Rita counts her 5 lines, both natures');
   assert.equal((ritaLines.items ?? []).find((item: any) => item.id === capexLineId)?.metadata?.nature, 'capex', 'query_entities: the CAPEX line is in the same family');
   assertNoTrace(ritaLines, 'query_entities spend_items (Rita)');
+  assertNoCapexTrace(ritaLines, 'query_entities (Rita)');
   const ullaLines = await tool(ulla, 'query_entities', query);
-  assert.equal(ullaLines.total, 8, 'query_entities: Ulla counts 8 lines, both natures');
+  assert.equal(ullaLines.total, 9, 'query_entities: Ulla counts 9 lines, both natures');
 
   const ritaTasks = await tool(rita, 'query_entities', { entity_type: 'tasks', q: `DA 4D task ${tag}` });
   const ritaTask = (ritaTasks.items ?? []).find((item: any) => item.id === hiddenTaskId);
@@ -300,7 +318,10 @@ async function testPlaidReads(): Promise<void> {
   const ritaSearch = await tool(rita, 'search_all', { query: 'DA line', limit: 100 });
   assert.deepEqual(linesIn(ritaSearch), VISIBLE, 'search_all: Rita finds L1 to L4');
   assertNoTrace(ritaSearch, 'search_all (Rita)');
-  assert.deepEqual(linesIn(await tool(ulla, 'search_all', { query: 'DA line', limit: 100 })), [...VISIBLE, ...HIDDEN].sort(), 'search_all: Ulla finds all');
+  assertNoCapexTrace(ritaSearch, 'search_all (Rita)');
+  const ullaSearch = await tool(ulla, 'search_all', { query: 'DA line', limit: 100 });
+  assert.deepEqual(linesIn(ullaSearch), [...VISIBLE, ...HIDDEN].sort(), 'search_all: Ulla finds all');
+  assert.ok((ullaSearch.items ?? []).some((item: any) => item.id === hiddenCapexLineId), 'search_all: Ulla finds the CAPEX line outside Rita\'s access');
   // The name of a hidden line finds neither the line nor Rita's task of that line (its search entry
   // carries the line's name); the words it shares with visible records find those.
   const byName = await tool(rita, 'search_all', { query: `DA line L5 ${tag}` });
@@ -310,14 +331,16 @@ async function testPlaidReads(): Promise<void> {
   assert.ok((ullaByName.items ?? []).some((item: any) => item.id === s.lines.L5), 'search_all by name: Ulla finds L5');
   const byRef = await tool(rita, 'search_all', { query: `BL-${itemNumbers.L5}` });
   assertNoTrace(byRef, 'search_all by the hidden reference (Rita)');
+  assertNoCapexTrace(await tool(rita, 'search_all', { query: 'BL-9002' }), 'search_all by the CAPEX reference out of access (Rita)');
 
   const aggregate = { entity_type: 'budget_lines', group_by: 'currency', q: 'DA line' };
   const ritaCount = await tool(rita, 'aggregate_entities', aggregate);
   const ullaCount = await tool(ulla, 'aggregate_entities', aggregate);
   assertNoTrace(ritaCount, 'aggregate_entities (Rita)');
+  assertNoCapexTrace(ritaCount, 'aggregate_entities (Rita)');
   const countOf = (result: any) => (result.groups ?? []).reduce((sum: number, g: any) => sum + Number(g.count ?? g.value ?? 0), 0);
   assert.equal(countOf(ritaCount), 5, `aggregate_entities: Rita counts 5, both natures (${JSON.stringify(ritaCount)})`);
-  assert.equal(countOf(ullaCount), 8, `aggregate_entities: Ulla counts 8, both natures (${JSON.stringify(ullaCount)})`);
+  assert.equal(countOf(ullaCount), 9, `aggregate_entities: Ulla counts 9, both natures (${JSON.stringify(ullaCount)})`);
 
   const detail = await tool(rita, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: s.lines.L1 });
   assertShows(detail, 'L1', 'get_entity_detail L1 (Rita)');
@@ -336,6 +359,19 @@ async function testPlaidReads(): Promise<void> {
   assertShows(await tool(ulla, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: `BL-${itemNumbers.L5}` }), 'L5', 'get_entity_detail L5 (Ulla)');
   const capexDetail = await tool(rita, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: capexLineId });
   assert.equal(capexDetail.entity.metadata.nature, 'capex', 'get_entity_detail: the CAPEX line says its nature');
+  // A CAPEX line out of her access answers as a missing one, by id and by reference.
+  const hiddenCapex = await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: hiddenCapexLineId }));
+  sameRefusal(hiddenCapex, missing, hiddenCapexLineId, missingId, 'get_entity_detail of the CAPEX line out of access (Rita)');
+  sameRefusal(
+    await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: 'BL-9002' })),
+    missingRef, 'BL-9002', 'BL-999999', 'get_entity_detail of the CAPEX reference out of access (Rita)',
+  );
+  assertNoCapexTrace(hiddenCapex, 'get_entity_detail of the CAPEX line out of access (Rita)');
+  assert.equal(
+    (await tool(ulla, 'get_entity_detail', { entity_type: 'budget_lines', entity_id: hiddenCapexLineId })).entity.metadata.nature,
+    'capex',
+    'get_entity_detail: Ulla reads the CAPEX line out of Rita\'s access',
+  );
   assertNoTrace(await tool(rita, 'get_entity_detail', { entity_type: 'tasks', entity_id: hiddenTaskId }), 'get_entity_detail of the task of L5 (Rita)');
 
   const appContext = await tool(rita, 'get_entity_context', { entity_type: 'applications', entity_id: applicationId });
@@ -446,21 +482,27 @@ async function testGlobalSearch(): Promise<void> {
   const ritaPicked = await picker.searchEntities(req(rita), 'DA line');
   assert.deepEqual(linesIn(ritaPicked), VISIBLE, `mention picker: Rita gets L1 to L4 (${JSON.stringify(ritaPicked)})`);
   assertNoTrace(ritaPicked, 'mention picker (Rita)');
-  assert.deepEqual(linesIn(await picker.searchEntities(req(ulla), 'DA line')), [...VISIBLE, ...HIDDEN].sort(), 'mention picker: Ulla gets all');
+  assertNoCapexTrace(ritaPicked, 'mention picker (Rita)');
+  const ullaPicked = await picker.searchEntities(req(ulla), 'DA line');
+  assert.deepEqual(linesIn(ullaPicked), [...VISIBLE, ...HIDDEN].sort(), 'mention picker: Ulla gets all');
+  assert.ok(ullaPicked.items.some((item: any) => item.id === hiddenCapexLineId), 'mention picker: Ulla gets the CAPEX line outside Rita\'s access');
   const recent = await picker.searchEntities(req(rita), '', '50', 'budget_lines,tasks');
   assertNoTrace(recent, 'mention picker, recent lines and tasks (Rita)');
+  assertNoCapexTrace(recent, 'mention picker, recent lines and tasks (Rita)');
   const pickedByName = await picker.searchEntities(req(rita), `DA line L5 ${tag}`);
   assertNoTrace(pickedByName, 'mention picker by the hidden name (Rita)');
   assert.ok(!pickedByName.items.some((item: any) => item.id === hiddenTaskId), 'mention picker by the hidden name: not the task of L5');
   assertNoTrace(await picker.searchEntities(req(rita), `BL-${itemNumbers.L5}`), 'mention picker by the hidden reference (Rita)');
+  assertNoCapexTrace(await picker.searchEntities(req(rita), 'BL-9002'), 'mention picker by the CAPEX reference out of access (Rita)');
 
   const entries = (person: string) => asPerson<any[]>(person, (ctx) => ctx.manager.query(
     `SELECT entity_type, entity_id::text AS id FROM search_index WHERE tenant_id = $1 AND entity_id = ANY($2::uuid[]) ORDER BY 1, 2`,
-    [s.tenantId, [...HIDDEN.map((l) => s.lines[l]), hiddenTaskId, contractHidden, contractTaskId]],
+    [s.tenantId, [...HIDDEN.map((l) => s.lines[l]), hiddenTaskId, hiddenCapexLineId, contractHidden, contractTaskId]],
   ));
-  assert.deepEqual(await entries(rita), [], 'search index: no entry of L5 to L7, of the task of L5, of CH or of its task for Rita');
+  assert.deepEqual(await entries(rita), [], 'search index: no entry of L5 to L7, of the task of L5, of the CAPEX line out of access, of CH or of its task for Rita');
   const ullaEntries = await entries(ulla);
   assert.ok(ullaEntries.some((row: any) => row.id === hiddenTaskId) && ullaEntries.some((row: any) => row.id === s.lines.L5), 'search index: Ulla has the hidden line and its task');
+  assert.ok(ullaEntries.some((row: any) => row.id === hiddenCapexLineId), 'search index: Ulla has the CAPEX line out of Rita\'s access');
   assert.ok(ullaEntries.some((row: any) => row.id === contractHidden) && ullaEntries.some((row: any) => row.id === contractTaskId), 'search index: Ulla has the hidden contract and its task');
 
   const ritaPickedContracts = await picker.searchEntities(req(rita), 'DA 4D contract');
