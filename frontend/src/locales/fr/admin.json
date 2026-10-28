@@ -555,7 +555,13 @@
       "accountNature": "Utilisé pour",
       "costCenterOwner": "Responsable budgétaire",
       "erp_supplier_id": "ID fournisseur ERP",
-      "is_primary": "Principal"
+      "is_primary": "Principal",
+      "job_title": "Fonction",
+      "supplier_role": "Type de contact",
+      "active": "Actif",
+      "phone": "Téléphone",
+      "mobile": "Mobile",
+      "country": "Pays"
     },
     "history": {
       "empty": "Aucun historique",
@@ -636,6 +642,14 @@
         "request": {
           "added": "Demande ajoutée : {{label}}",
           "removed": "Demande retirée : {{label}}"
+        },
+        "supplier": {
+          "added": "Fournisseur ajouté : {{label}}",
+          "removed": "Fournisseur retiré : {{label}}"
+        },
+        "budget_line": {
+          "added": "Ligne budgétaire ajoutée : {{label}}",
+          "removed": "Ligne budgétaire retirée : {{label}}"
         }
       },
       "unnamed": {

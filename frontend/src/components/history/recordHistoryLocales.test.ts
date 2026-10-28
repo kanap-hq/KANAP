@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '../../i18n';
 import de from '../../locales/de/admin.json';
+import deMasterData from '../../locales/de/master-data.json';
 import deOps from '../../locales/de/ops.json';
 import en from '../../locales/en/admin.json';
+import enMasterData from '../../locales/en/master-data.json';
 import enOps from '../../locales/en/ops.json';
 import es from '../../locales/es/admin.json';
+import esMasterData from '../../locales/es/master-data.json';
 import esOps from '../../locales/es/ops.json';
 import fr from '../../locales/fr/admin.json';
+import frMasterData from '../../locales/fr/master-data.json';
 import frOps from '../../locales/fr/ops.json';
 import type { Translate } from '../../lib/audit/auditLogLabels';
 import {
@@ -24,9 +28,10 @@ import {
 
 const LOCALES = { en, fr, de, es } as Record<string, any>;
 const OPS = { en: enOps, fr: frOps, de: deOps, es: esOps } as Record<string, any>;
+const MASTER_DATA = { en: enMasterData, fr: frMasterData, de: deMasterData, es: esMasterData } as Record<string, any>;
 const LANGUAGE_NAMES = ['en', 'fr', 'de', 'es'] as const;
 const ID = '11111111-2222-4333-8444-555555555555';
-const EVENT_KINDS = ['link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line'];
+const EVENT_KINDS = ['link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line', 'supplier', 'budget_line'];
 const ACTORS = ['assistant', 'assistantFor', 'unknown'];
 const ACTIONS = ['create', 'update', 'delete'];
 
@@ -117,12 +122,15 @@ describe('record history locales', () => {
       'costCenterOwner', 'effective_start', 'input_grain', 'kind', 'lines', 'measure', 'native_name', 'nature',
       'owner_business_id', 'owner_it_id', 'parent_id', 'paying_company_id', 'product_name',
       'project_id', 'run_build', 'successor_id', 'version_name',
+      // The supplier and contact fields of lot 2 family B.
+      'erp_supplier_id', 'is_primary', 'job_title', 'supplier_role', 'active', 'phone', 'mobile', 'country',
     ];
     for (const language of LANGUAGE_NAMES) {
       for (const key of fields) {
         expect(LOCALES[language].auditLogs.fields[key], `${language} ${key}`).toBeTruthy();
       }
       expect(OPS[language].opex.tabs.history, `${language} tab`).toBeTruthy();
+      expect(MASTER_DATA[language].shared.labels.history, `${language} supplier tab`).toBeTruthy();
     }
   });
 

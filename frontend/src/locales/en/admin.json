@@ -555,7 +555,13 @@
       "accountNature": "Used for",
       "costCenterOwner": "Budget holder",
       "erp_supplier_id": "ERP supplier ID",
-      "is_primary": "Primary"
+      "is_primary": "Primary",
+      "job_title": "Job title",
+      "supplier_role": "Contact type",
+      "active": "Active",
+      "phone": "Phone",
+      "mobile": "Mobile",
+      "country": "Country"
     },
     "history": {
       "empty": "No history yet",
@@ -636,6 +642,14 @@
         "request": {
           "added": "Request added: {{label}}",
           "removed": "Request removed: {{label}}"
+        },
+        "supplier": {
+          "added": "Supplier added: {{label}}",
+          "removed": "Supplier removed: {{label}}"
+        },
+        "budget_line": {
+          "added": "Budget line added: {{label}}",
+          "removed": "Budget line removed: {{label}}"
         }
       },
       "unnamed": {

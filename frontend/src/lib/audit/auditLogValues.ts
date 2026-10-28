@@ -117,6 +117,8 @@ const ENUM_GROUPS: Record<string, string> = {
   nature: 'auditLogs.values.nature',
   run_build: 'auditLogs.values.runBuild',
   role: 'auditLogs.values.contactRole',
+  // The contact's own field: the same roles as a link's `role`, under the screen's "Contact type".
+  supplier_role: 'auditLogs.values.contactRole',
   origin: 'auditLogs.values.origin',
 };
 

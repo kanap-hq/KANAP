@@ -42,7 +42,8 @@ export type RecordHistoryChange = {
 };
 export type RecordHistorySubject = {
   kind: 'record' | 'version' | 'amounts' | 'allocations' | 'round_input' | 'link' | 'attachment'
-    | 'contact' | 'application' | 'technology' | 'asset' | 'contract' | 'project' | 'request' | 'task';
+    | 'contact' | 'application' | 'technology' | 'asset' | 'contract' | 'project' | 'request' | 'task'
+    | 'supplier' | 'budget_line';
   label?: string | null;
 };
 export type RecordHistoryItem = {
@@ -81,6 +82,7 @@ const MEASURE_LABEL_KEYS: Readonly<Record<string, string>> = {
 /** Child fields the service writes as an added or removed reference. */
 const EVENT_KINDS = new Set([
   'link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line',
+  'supplier', 'budget_line',
 ]);
 
 /** The noun a nameless record reads as, by the kind the service gives it. */

@@ -1,6 +1,7 @@
 import type { PermissionLevel } from '../auth/require-level.decorator';
 import type { FamilyKey } from './record-history/families';
 import { accountsRecord } from './record-history/records/accounts';
+import { contactsRecord } from './record-history/records/contacts';
 import { costCentersRecord } from './record-history/records/cost_centers';
 import { spendItemsRecord } from './record-history/records/spend_items';
 import { suppliersRecord } from './record-history/records/suppliers';
@@ -111,6 +112,7 @@ export type RecordHistoryRecord = {
  */
 const RECORD_HISTORY_DEFINITION = [
   accountsRecord,
+  contactsRecord,
   costCentersRecord,
   spendItemsRecord,
   suppliersRecord,

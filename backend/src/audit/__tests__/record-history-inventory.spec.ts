@@ -40,7 +40,7 @@ function testEntries() {
       childReads += 1;
     }
   }
-  assert.deepEqual(recordHistoryModules(), ['accounts', 'budget', 'cost_centers', 'suppliers'], 'the modules of the route guard');
+  assert.deepEqual(recordHistoryModules(), ['accounts', 'budget', 'contacts', 'cost_centers', 'suppliers'], 'the modules of the route guard');
   // Every reference family has a reader module (people are the only exception, `null`), and the
   // module is a permission resource: a family declared ahead of its record page is already checked.
   for (const family of FAMILY_KEYS) {
@@ -65,19 +65,21 @@ function testFrontendTables() {
 
 function testParentRulesAgree() {
   const children = new Set<string>();
-  const explicit = new Set<string>();
   for (const entry of Object.values(RECORD_HISTORY)) {
-    for (const label of Object.keys(entry.children)) children.add(label);
-    for (const label of entry.explicitParentLabels) explicit.add(label);
-  }
-
-  // Every child has a rule, or its write hands the record as an explicit parent.
-  for (const label of children) {
-    if (explicit.has(label)) {
-      assert.equal(AUDIT_PARENT_RULES[label], undefined, `${label}: an explicit parent carries no label rule`);
-      continue;
+    for (const label of Object.keys(entry.children)) {
+      children.add(label);
+      const rule = AUDIT_PARENT_RULES[label];
+      if (entry.explicitParentLabels.includes(label)) {
+        // The writer hands the record as an explicit parent; a label rule would be dead.
+        assert.equal(rule, undefined, `${label}: an explicit parent carries no label rule`);
+      } else if (entry.childReads?.[label] === undefined) {
+        // Read through `parent_table` / `parent_id`: the label needs its rule.
+        assert.ok(rule, `${label}: a child label read by its parent needs a parent rule (or explicitParentLabels)`);
+      }
+      // A child read by `childReads` (its own `record_id`, or a payload key) is not read through
+      // the parent columns here: `contract_contacts` has no parent rule until the contract family
+      // declares one, while the supplier's own rule still serves the supplier's page.
     }
-    assert.ok(AUDIT_PARENT_RULES[label], `${label}: a child label needs a parent rule (or explicitParentLabels)`);
   }
   // Every rule is a child of a declared record: a rule whose rows no history reads would be dead.
   for (const [label, rule] of Object.entries(AUDIT_PARENT_RULES)) {

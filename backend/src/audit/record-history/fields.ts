@@ -1,5 +1,6 @@
 import type { HistoryFields } from './field-rules';
 import { accountsFields } from './records/accounts';
+import { contactsFields } from './records/contacts';
 import { costCentersFields } from './records/cost_centers';
 import { spendItemsFields } from './records/spend_items';
 import { suppliersFields } from './records/suppliers';
@@ -11,6 +12,7 @@ import { suppliersFields } from './records/suppliers';
  */
 const FIELD_SETS = [
   accountsFields,
+  contactsFields,
   costCentersFields,
   spendItemsFields,
   suppliersFields,
