@@ -191,6 +191,8 @@ export async function lookupDepartments(call: LookupCall, query: any) {
 export async function lookupUsersByIds(call: LookupCall, ids: string[], query: any) {
   if (ids.length === 0) return { items: [], has_more: false };
   const request = parseLookupRequest(query);
+  // The set comes from the caller's computation, never from the request's `ids`.
+  request.ids = null;
   request.unlimited = true;
   request.scope = [(bind: Bind) => `t.id = ANY(${bind(ids, 'uuid[]')})`];
   return lookup(call, USER_LOOKUP, request);
