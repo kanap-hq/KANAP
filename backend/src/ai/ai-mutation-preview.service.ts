@@ -391,18 +391,31 @@ export class AiMutationPreviewService {
       ?? (params.input as { relation?: unknown } | null | undefined)?.relation
       ?? params.preview?.mutation_input?.relation
       // A technology link touches applications when either side of the request names one: the
-      // preparation input, or the stored changes of a preview being run or undone.
+      // preparation input (`applications`), or the stored changes of a preview being run or
+      // undone (`mutation_input.changes.applications`).
       ?? (operation.toolName === 'update_technology_links'
-        && [(params.input as { applications?: unknown } | null | undefined)?.applications, mutationInput?.applications, params.preview?.mutation_input?.applications]
-          .some((group) => group && typeof group === 'object'
-            && ((Array.isArray((group as any).add) && (group as any).add.length > 0)
-              || (Array.isArray((group as any).remove) && (group as any).remove.length > 0)))
+        && [
+          (params.input as { applications?: unknown } | null | undefined)?.applications,
+          mutationInput?.applications,
+          (mutationInput?.changes as Record<string, unknown> | null | undefined)?.applications,
+          params.preview?.mutation_input?.applications,
+          (params.preview?.mutation_input?.changes as Record<string, unknown> | null | undefined)?.applications,
+        ].some((group) => this.applicationGroupHasEntries(group))
         ? 'applications'
         : undefined);
     const requirement = aiRelationTargetRequirement(operation.toolName, family, relation);
     if (requirement) {
       await this.policy.assertBusinessPermission(context, requirement.resource, requirement.level, context.manager);
     }
+  }
+
+  /** Whether a technology link's application group adds, removes or names an application. */
+  private applicationGroupHasEntries(group: unknown): boolean {
+    if (!group || typeof group !== 'object') return false;
+    return ['add', 'remove', 'already', 'absent'].some((key) => {
+      const entries = (group as Record<string, unknown>)[key];
+      return Array.isArray(entries) && entries.length > 0;
+    });
   }
 
   /** The rights of a stored preview, before it runs or is undone. */

@@ -55,6 +55,8 @@ export type AiTechnologyLinkRow = {
   version_id: string | null;
   version_label: string | null;
   notes: string | null;
+  /** The preview that wrote the row (`ai`), null for a manual row: the undo requires its own. */
+  source_ref: string | null;
 };
 
 /** The service options an assistant technology write passes to the link service. */
@@ -182,6 +184,26 @@ export class AiTechnologyMutationSupportService {
     };
   }
 
+  /**
+   * The application a stored preview names is still one the caller reads, in their participation
+   * scope: checked again under the technology lock before a declaration is written.
+   */
+  async assertApplicationInScope(
+    context: AiExecutionContextWithManager,
+    options: AiTechnologyWriteOptions,
+    applicationId: string,
+  ): Promise<void> {
+    const params: unknown[] = [context.tenantId, applicationId];
+    const scope = options.applicationScope
+      ? (params.push(options.applicationScope.userId), ` AND ${applicationParticipantCondition('a', `$${params.length}`)}`)
+      : '';
+    const rows: Array<{ id: string }> = await context.manager.query(
+      `SELECT a.id FROM applications a WHERE a.tenant_id = $1 AND a.id = $2 ${scope}`,
+      params,
+    );
+    if (rows.length === 0) throw new NotFoundException('Application not found.');
+  }
+
   /** The server by AST-n, UUID, exact name, hostname or fqdn, as the incident links read an asset. */
   async resolveServer(context: AiExecutionContextWithManager, reference: string): Promise<AiServerTarget> {
     const raw = text(reference);
@@ -280,9 +302,9 @@ export class AiTechnologyMutationSupportService {
   async applicationLinks(context: AiExecutionContextWithManager, technologyId: string, applicationId?: string): Promise<AiTechnologyLinkRow[]> {
     const params: unknown[] = [context.tenantId, technologyId];
     if (applicationId) params.push(applicationId);
-    const rows: Array<{ link_id: string; subject_id: string; version_id: string | null; version_label: string | null; notes: string | null }> = await context.manager.query(
+    const rows: Array<{ link_id: string; subject_id: string; version_id: string | null; version_label: string | null; notes: string | null; source_ref: string | null }> = await context.manager.query(
       `SELECT l.id AS link_id, l.application_id AS subject_id, l.technology_version_id AS version_id,
-              v.label AS version_label, l.notes
+              v.label AS version_label, l.notes, l.source_ref
          FROM application_technologies l
          LEFT JOIN technology_versions v ON v.tenant_id = l.tenant_id AND v.id = l.technology_version_id
         WHERE l.tenant_id = $1 AND l.technology_id = $2
@@ -296,6 +318,7 @@ export class AiTechnologyMutationSupportService {
       version_id: row.version_id ? String(row.version_id) : null,
       version_label: row.version_label ? String(row.version_label) : null,
       notes: row.notes ?? null,
+      source_ref: row.source_ref ?? null,
     }));
   }
 
@@ -303,9 +326,9 @@ export class AiTechnologyMutationSupportService {
   async assetLinks(context: AiExecutionContextWithManager, technologyId: string, assetId?: string): Promise<AiTechnologyLinkRow[]> {
     const params: unknown[] = [context.tenantId, technologyId];
     if (assetId) params.push(assetId);
-    const rows: Array<{ link_id: string; subject_id: string; version_id: string | null; version_label: string | null; notes: string | null }> = await context.manager.query(
+    const rows: Array<{ link_id: string; subject_id: string; version_id: string | null; version_label: string | null; notes: string | null; source_ref: string | null }> = await context.manager.query(
       `SELECT l.id AS link_id, l.asset_id AS subject_id, l.technology_version_id AS version_id,
-              v.label AS version_label, l.notes
+              v.label AS version_label, l.notes, l.source_ref
          FROM asset_technologies l
          LEFT JOIN technology_versions v ON v.tenant_id = l.tenant_id AND v.id = l.technology_version_id
         WHERE l.tenant_id = $1 AND l.technology_id = $2
@@ -319,6 +342,7 @@ export class AiTechnologyMutationSupportService {
       version_id: row.version_id ? String(row.version_id) : null,
       version_label: row.version_label ? String(row.version_label) : null,
       notes: row.notes ?? null,
+      source_ref: row.source_ref ?? null,
     }));
   }
 

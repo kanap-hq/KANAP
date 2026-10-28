@@ -473,6 +473,62 @@ function stripReflexivePast(text: string): string {
   return text.replace(REFLEXIVE_PAST_RE, ' ');
 }
 
+/**
+ * "Installer", "déclarer" and "install", "declare" name a technology write only in the
+ * imperative: "Installe nginx sur AST-12" writes, "nginx est installé sur AST-12 ?" reads. The
+ * test runs on the raw text, before the accents go, so "installé" and "déclaré" never pass for
+ * the imperative; a question never writes, whatever its verb ("Comment installer nginx ?").
+ */
+const TECHNOLOGY_WRITE_VERBS = new Set([
+  'installe', 'installez', 'installer', 'install',
+  'déclare', 'déclarez', 'déclarer', 'declare',
+  'désinstalle', 'désinstallez', 'désinstaller', 'desinstalle', 'uninstall',
+  'retire', 'retirez', 'retirer', 'remove',
+  'enlève', 'enlevez', 'enlever',
+  'détache', 'détachez', 'détacher', 'detach',
+  'remplace', 'remplacez', 'remplacer', 'replace',
+  'lie', 'liez', 'lier', 'link', 'unlink',
+  'associe', 'associez', 'associer', 'attach',
+  'rattache', 'rattachez', 'rattacher',
+  'ajoute', 'ajoutez', 'ajouter', 'add',
+  'mets', 'mettez', 'mettre',
+  'enregistre', 'enregistrez', 'enregistrer', 'record',
+  'change', 'changez', 'changer',
+  'upgrade', 'passe', 'passez', 'passer',
+  'marque', 'marquez', 'marquer', 'mark', 'set',
+]);
+
+/** The head word of the request, after a salutation or a polite turn, raw and lower-case. */
+function directiveFirstWord(rawText: string): string | null {
+  const head = rawText.trim().replace(
+    /^(?:(?:bonjour|bonsoir|salut|hello|hi|hey)[\s,!.]+)*(?:(?:je veux|je voudrais|il faut|tu peux|vous pouvez|peux[- ]tu|pouvez[- ]vous|i want to|i would like to|can you|could you|would you|please|merci de|merci|stp|svp)[\s,]+)*/i,
+    '',
+  );
+  return head.match(/^([\p{L}'’-]+)/u)?.[1]?.toLowerCase() ?? null;
+}
+
+/** A question asks for a fact, whatever verb it quotes: "Comment installer nginx ?" reads. */
+function isTechnologyQuestion(rawText: string): boolean {
+  const raw = rawText.toLowerCase();
+  return raw.includes('?') || /\b(?:comment|how|où|where|quel|quelle|quels|quelles|which|quand|when|qui|who)\b/.test(raw);
+}
+
+/** An imperative technology verb at the head: "Désinstalle nginx de AST-13", "Remove Java 8 from APP-3". */
+function hasTechnologyWriteIntent(rawText: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  const first = directiveFirstWord(rawText);
+  return first != null && TECHNOLOGY_WRITE_VERBS.has(first);
+}
+
+/** A stated change with "now": "CheeseTrack utilise maintenant Java 21", "CheeseTrack now uses Java 21". */
+function hasTechnologyChangeStatement(rawText: string, text: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  return containsAny(text, [
+    /\b(?:utilise|uses|runs|tourne)\b[\s\S]{0,40}\b(?:maintenant|now)\b/,
+    /\b(?:maintenant|now)\b[\s\S]{0,40}\b(?:utilise|uses|runs|tourne)\b/,
+  ]);
+}
+
 /** Undoing the last mutation is a write, never a read: "Undo that", "Annule l'aperçu". */
 const UNDO_REQUEST_RE = /\bundo\b|\bannule (?:ce que|ceci|cela|la derniere|le dernier|la precedent|la precedente|les dernieres|l['’]apercu)\b|\bcancel (?:my |the )?(?:last|previous) (?:preview|change|modification|action)\b/;
 
@@ -594,8 +650,13 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   const hasDocumentPublicationIntent = mentionsDocument && containsAny(text, [
     /\b(?:rends|rendre|make)\b[\s\S]{0,40}\b(?:public|publique|publics|publiques)\b/,
   ]);
+  // A technology link or a version written in the imperative ("Désinstalle nginx de AST-13",
+  // "Declare Redis on AST-12") or stated with "now" ("CheeseTrack now uses Java 21"). The
+  // imperative is read on the raw text, so "installé" stays a read.
+  const hasTechnologyWrite = hasTechnologyWriteIntent(raw);
+  const hasTechnologyChange = hasTechnologyChangeStatement(raw, text);
   const isWrite = containsAny(writeText, [
-    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|passe|passer|publish|publier|mark|set|installe|installer|install|declare|declarer|declares)\b/,
+    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|passe|passer|publish|publier|mark|set)\b/,
     wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
     // A status or lifecycle word with an incident reference is an incident change: "clos INC-7",
     // "Résous INC-3", "Rouvre INC-3", "Annule INC-3", "Lève la confidentialité de INC-3".
@@ -613,6 +674,9 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
       : []),
     ...(hasDocumentPublishIntent ? [/\b(?:publie|publier|publish)\b/] : []),
     ...(hasDocumentPublicationIntent ? [/\b(?:public|publique|publics|publiques)\b/] : []),
+    ...(hasTechnologyWrite || hasTechnologyChange
+      ? [/\b(?:installe|installer|install|declare|declarer|desinstalle|uninstall|remove|detach|replace|remplace|enregistre|upgrade|mets|mettez|mettre|utilise|uses|runs|tourne|maintenant|now)\b/]
+      : []),
     ...(createsIncident(text, raw) ? [/\bincident\b/] : []),
   ]);
 

@@ -2768,21 +2768,21 @@ function sentInstructions(recordedRequests: any[]): string[] {
  */
 async function testSingleTargetWriteIsNotTurnedIntoABulkWrite() {
   const preview = {
-    preview_id: 'preview-tec-1',
+    preview_id: 'preview-tec-3',
     tool_name: 'update_technology_links',
     status: 'pending',
-    target: { entity_type: 'technologies', entity_id: 'tec-1', ref: 'TEC-1', title: 'TEC-1 - PostgreSQL' },
+    target: { entity_type: 'technologies', entity_id: 'tec-3', ref: 'TEC-3', title: 'TEC-3 - PostgreSQL' },
     changes: {
       technology_applications: {
         label: 'Applications',
         from: null,
-        to: '**Ajoutés**\n- APP-36 - CheeseTrack: PostgreSQL 16 (existante, fin de support 2028-11-09)',
+        to: '**Ajoutées**\n- APP-36 - CheeseTrack: PostgreSQL 16 (existante, fin de support 2028-11-09)',
         format: 'markdown',
       },
     },
     requires_confirmation: true,
     actions: ['approve', 'reject'],
-    summary: 'Modification des liens de « TEC-1 - PostgreSQL ».',
+    summary: 'Modification des liens de « TEC-3 - PostgreSQL ».',
     error_message: null,
     conversation_id: 'conv-1',
     created_at: '2026-03-24T10:00:00.000Z',
@@ -2791,9 +2791,11 @@ async function testSingleTargetWriteIsNotTurnedIntoABulkWrite() {
     rejected_at: null,
     executed_at: null,
   };
-  const answer = "J'ai préparé l'aperçu : il ajoute PostgreSQL 16 à CheeseTrack. Approuvez-le pour l'appliquer.";
+  const answer = "J'ai préparé l'aperçu : il ajoute PostgreSQL 16 à CheeseTrack (APP-36) sur TEC-3. Approuvez-le pour l'appliquer.";
   const { orchestrator, executedToolCalls, recordedRequests } = createOrchestrator({
-    historyMessages: [{ role: 'user', content: "Ajoute la technologie PostgreSQL version 16 sur l'application CheeseTrack." }],
+    // Both references are in the person's words: the bulk guard sees a two-family target set and
+    // must still keep this single-target write a single preview.
+    historyMessages: [{ role: 'user', content: "Ajoute la technologie PostgreSQL version 16 sur l'application CheeseTrack (APP-36) sur TEC-3." }],
     availableTools: [
       { name: 'query_entities', category: 'authoritative', description: 'Query entities', input_summary: {}, read_only: true, surfaces: ['chat'] },
       PLAN_TOOL,
@@ -2834,7 +2836,7 @@ async function testSingleTargetWriteIsNotTurnedIntoABulkWrite() {
   const events = await collectEvents(orchestrator.stream({
     context: STREAM_CONTEXT,
     conversationId: 'conv-1',
-    userMessage: "Ajoute la technologie PostgreSQL version 16 sur l'application CheeseTrack.",
+    userMessage: "Ajoute la technologie PostgreSQL version 16 sur l'application CheeseTrack (APP-36) sur TEC-3.",
   }));
 
   // One target, one tool, one preview: the phrase never becomes a bulk plan or a substitute write.

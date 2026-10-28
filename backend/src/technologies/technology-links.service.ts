@@ -481,6 +481,8 @@ export class TechnologyLinksService {
     }
     const removed = await this.deleteDeclarations(mg, tenantId, tech.id, appId, versionId);
     if (removed.length) {
+      // The audit keeps the shape the screen has always written: the ids of the removed rows.
+      // The caller gets the full rows (version, notes, provenance) for its undo.
       await this.audit.log(this.auditEntry({
         table: 'application_technologies', recordId: tech.id, action: 'update',
         // The application, not the link ids: the history names what it loses.
@@ -530,6 +532,7 @@ export class TechnologyLinksService {
     if (!add) {
       const removed = await this.deleteDeclarations(mg, tenantId, tech.id, appId);
       if (removed.length) {
+        // The screen's audit shape: the ids removed, as before the one-row declaration write.
         await this.audit.log(this.auditEntry({
           table: 'application_technologies', recordId: tech.id, action: 'update',
           before: { removed: [appId] }, after: null, userId: opts.userId ?? null,
@@ -561,7 +564,7 @@ export class TechnologyLinksService {
     opts: LinkOpts,
     provenance: LinkProvenance = MANUAL_PROVENANCE,
     write: LinkWriteOptions = {},
-  ): Promise<{ ok: true; changed: boolean; link_id: string | null; servers?: { added: number; skipped: number } }> {
+  ): Promise<{ ok: true; changed: boolean; created: boolean; link_id: string | null; servers?: { added: number; skipped: number } }> {
     const { manager: mg, tenantId } = opts;
     const appId = await this.readApplicationId(mg, tenantId, applicationId);
     const tech = await readTechnology(mg, tenantId, technologyIdOrRef, true);
@@ -571,9 +574,9 @@ export class TechnologyLinksService {
     }
     const versionId = await versionOfInput(mg, tenantId, tech.id, body ?? {}, this.versionAudit(opts));
     const res = await this.upsertLink('application', tech.id, appId, versionId, notesOf(body?.notes), provenance, opts, write);
-    if (serverIds.length === 0) return { ok: true, changed: res.changed, link_id: res.link_id };
+    if (serverIds.length === 0) return { ok: true, changed: res.changed, created: res.created, link_id: res.link_id };
     const servers = await this.installOnServers(tech.id, versionId, serverIds, opts, provenance);
-    return { ok: true, changed: res.changed || servers.added > 0, link_id: res.link_id, servers };
+    return { ok: true, changed: res.changed || servers.added > 0, created: res.created, link_id: res.link_id, servers };
   }
 
   /** The deployment servers of an application, in service, by name (`DeploymentServer`). */

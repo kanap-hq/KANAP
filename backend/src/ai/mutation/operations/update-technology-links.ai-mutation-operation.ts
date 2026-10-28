@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { z } from 'zod';
 import { linkProvenance } from '../../../common/link-provenance';
 import { TechnologyLinksService } from '../../../technologies/technology-links.service';
+import type { LinkWriteOptions } from '../../../technologies/technology-links.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import {
   AiWriteLanguage,
@@ -107,11 +108,12 @@ type StoredChanges = {
 };
 type Applied = {
   applications: {
-    added: Array<{ application: AiApplicationTarget; version: AiTechnologyVersion | null }>;
+    /** The row added, with the provenance and notes the undo requires back. */
+    added: Array<{ application: AiApplicationTarget; version: AiTechnologyVersion | null; link_id: string; notes: string | null; source_ref: string | null }>;
     removed: Array<{ application: AiApplicationTarget; declarations: Declaration[] }>;
   };
   servers: {
-    added: Array<{ server: AiServerTarget; version: AiTechnologyVersion | null; link_id: string }>;
+    added: Array<{ server: AiServerTarget; version: AiTechnologyVersion | null; link_id: string; notes: string | null; source_ref: string | null }>;
     removed: Array<{ server: AiServerTarget; version: AiTechnologyVersion | null; notes: string | null }>;
   };
   versions_created: Array<{ id: string; label: string }>;
@@ -250,7 +252,15 @@ function coerceApplied(value: unknown): Applied | null {
   };
   for (const row of (Array.isArray(appRaw.added) ? appRaw.added as Array<Record<string, unknown>> : [])) {
     const application = asApplication(row.application);
-    if (application) applied.applications.added.push({ application, version: asVersion(row.version) });
+    if (application) {
+      applied.applications.added.push({
+        application,
+        version: asVersion(row.version),
+        link_id: textOrNull(row.link_id) ?? '',
+        notes: textOrNull(row.notes),
+        source_ref: textOrNull(row.source_ref),
+      });
+    }
   }
   for (const row of (Array.isArray(appRaw.removed) ? appRaw.removed as Array<Record<string, unknown>> : [])) {
     const application = asApplication(row.application);
@@ -262,8 +272,15 @@ function coerceApplied(value: unknown): Applied | null {
   }
   for (const row of (Array.isArray(serverRaw.added) ? serverRaw.added as Array<Record<string, unknown>> : [])) {
     const server = asServer(row.server);
-    const linkId = textOrNull(row.link_id);
-    if (server && linkId) applied.servers.added.push({ server, version: asVersion(row.version), link_id: linkId });
+    if (server) {
+      applied.servers.added.push({
+        server,
+        version: asVersion(row.version),
+        link_id: textOrNull(row.link_id) ?? '',
+        notes: textOrNull(row.notes),
+        source_ref: textOrNull(row.source_ref),
+      });
+    }
   }
   for (const row of (Array.isArray(serverRaw.removed) ? serverRaw.removed as Array<Record<string, unknown>> : [])) {
     const server = asServer(row.server);
@@ -334,8 +351,11 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
     const asksApplications = (input.applications?.add?.length ?? 0) > 0 || (input.applications?.remove?.length ?? 0) > 0;
     if (asksApplications) await this.support.assertApplicationRead(context);
     const changes = await this.prepareChanges(context, technology, options, input);
+    // Declaring an application whose declaration already exists still changes something when the
+    // request equips servers: those installations are the change, and the card lists them.
+    const equipsServers = changes.applications.already.some((entry) => entry.servers.some((server) => server.install));
     if (changes.applications.add.length === 0 && changes.applications.remove.length === 0
-      && changes.servers.add.length === 0 && changes.servers.remove.length === 0) {
+      && !equipsServers && changes.servers.add.length === 0 && changes.servers.remove.length === 0) {
       throw new BadRequestException(`Nothing to change: ${linkedNotes(changes).join('; ')}.`);
     }
     return {
@@ -410,16 +430,16 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
       remove: changes.servers.remove.map((entry) => `${entry.server.label}: ${technologyVersionCardText(language, technologyName, entry.version)}`),
       already: [
         ...changes.applications.add.flatMap((entry) => entry.servers.filter((server) => !server.install)
-          .map((server) => `${server.server.label} (already equipped)`)),
+          .map((server) => `${server.server.label}`)),
         ...changes.applications.already.flatMap((entry) => entry.servers.filter((server) => !server.install)
-          .map((server) => `${server.server.label} (already equipped)`)),
-        ...changes.servers.already.map((entry) => `${entry.server.label} (already linked)`),
+          .map((server) => `${server.server.label}`)),
+        ...changes.servers.already.map((entry) => `${entry.server.label}`),
       ],
-      absent: changes.servers.absent.map((entry) => `${entry.server.label} (not linked at this version)`),
+      absent: changes.servers.absent.map((entry) => `${entry.server.label}`),
     };
 
     const cardChanges: Record<string, AiMutationPreviewPresentation['changes'][string]> = {};
-    const applicationText = technologyLinkCardText(language, applications);
+    const applicationText = technologyLinkCardText(language, applications, 'linked', 'applications');
     if (applicationText) {
       cardChanges.technology_applications = {
         label: { en: 'Applications', fr: 'Applications', de: 'Anwendungen', es: 'Aplicaciones' }[language],
@@ -428,7 +448,7 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
         format: 'markdown',
       };
     }
-    const serverText = technologyLinkCardText(language, servers, 'equipped');
+    const serverText = technologyLinkCardText(language, servers, 'equipped', 'servers');
     if (serverText) {
       cardChanges.technology_servers = {
         label: { en: 'Servers', fr: 'Serveurs', de: 'Server', es: 'Servidores' }[language],
@@ -480,18 +500,43 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
     };
 
     for (const entry of changes.applications.add) {
+      // The Business Contributor scope is checked again under the lock, as the screen resolves
+      // the application with it: a participation withdrawn since the preview refuses the add.
+      await this.support.assertApplicationInScope(context, options, entry.application.id);
       const version = await resolveVersion(entry.version);
       const installIds = entry.servers.filter((server) => server.install).map((server) => server.server.id);
       const result = await this.supportLinkDeclaration(context, preview, technology, entry.application, version, installIds, entry.notes);
-      if (!result) throw new ConflictException(`Links of ${technology.label} changed after the preview was created.`);
-      applied.applications.added.push({ application: entry.application, version });
+      // The service creates the declaration: a row it did not create means someone else wrote
+      // the same link since the preview, and nothing more is written.
+      if (!result?.created || !result.link_id) {
+        throw new ConflictException(`Links of ${technology.label} changed after the preview was created.`);
+      }
+      applied.applications.added.push({
+        application: entry.application,
+        version,
+        link_id: result.link_id,
+        notes: entry.notes ?? null,
+        source_ref: preview.id,
+      });
       await this.recordInstalledServers(context, technology, entry.servers, version, applied);
     }
     for (const entry of changes.applications.already) {
       const version = await resolveVersion(entry.version);
       const installIds = entry.servers.filter((server) => server.install).map((server) => server.server.id);
       if (installIds.length > 0) {
-        await this.supportLinkDeclaration(context, preview, technology, entry.application, version, installIds);
+        await this.support.assertApplicationInScope(context, options, entry.application.id);
+        // The declaration was there at the preview: it must still be the same row. The write
+        // keeps its provenance (a manual declaration stays manual) and only equips the servers.
+        const declarations = await this.support.applicationLinks(context, technology.id, entry.application.id);
+        if (!declarations.some((link) => this.linkMatchesVersion(link, version))) {
+          throw new ConflictException(`Links of ${technology.label} changed after the preview was created.`);
+        }
+        const result = await this.supportLinkDeclaration(
+          context, preview, technology, entry.application, version, installIds, undefined, { keepExistingProvenance: true },
+        );
+        if (!result || result.servers_added !== installIds.length) {
+          throw new ConflictException(`Links of ${technology.label} changed after the preview was created.`);
+        }
         await this.recordInstalledServers(context, technology, entry.servers, version, applied);
       }
     }
@@ -511,7 +556,7 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
     }
     for (const entry of changes.servers.add) {
       const version = await resolveVersion(entry.version);
-      await this.links.addAssetLink(
+      const result = await this.links.addAssetLink(
         technology.id,
         entry.server.id,
         { technology_version_id: version?.id ?? null, notes: entry.notes ?? undefined },
@@ -519,9 +564,17 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
         provenance,
         {},
       );
-      const link = await this.findAssetLink(context, technology.id, entry.server.id, version);
-      if (!link) throw new ConflictException(`Links of ${technology.label} changed after the preview was created.`);
-      applied.servers.added.push({ server: entry.server, version, link_id: link.link_id });
+      // Only a row this execution created is undone: an existing one belongs to whoever wrote it.
+      if (!result.created || !result.link_id) {
+        throw new ConflictException(`Links of ${technology.label} changed after the preview was created.`);
+      }
+      applied.servers.added.push({
+        server: entry.server,
+        version,
+        link_id: result.link_id,
+        notes: entry.notes ?? null,
+        source_ref: preview.id,
+      });
     }
     for (const entry of changes.servers.remove) {
       const result = await this.links.removeAssetLink(technology.id, entry.link.id, linkOptions);
@@ -548,9 +601,15 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
     const assetLinks = await this.support.assetLinks(context, technology.id);
 
     for (const entry of applied.applications.added) {
-      const current = applicationLinks.find((link) => link.subject_id === entry.application.id
-        && this.linkMatchesVersion(link, entry.version));
-      if (!current) throw new ConflictException(`Links of ${technology.label} changed after the preview was created.`);
+      // The undo removes the exact row this preview added: another row on the same application
+      // and version (the screen re-declared it, with a note) is not ours to delete.
+      const current = applicationLinks.find((link) => link.link_id === entry.link_id);
+      if (!current
+        || !this.linkMatchesVersion(current, entry.version)
+        || (current.notes ?? null) !== (entry.notes ?? null)
+        || (current.source_ref ?? null) !== (entry.source_ref ?? null)) {
+        throw new ConflictException(`Links of ${technology.label} changed after the preview was created.`);
+      }
       changes.applications.remove.push({
         application: entry.application,
         version: entry.version,
@@ -573,7 +632,12 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
     }
     for (const entry of applied.servers.added) {
       const current = assetLinks.find((link) => link.link_id === entry.link_id);
-      if (!current || !this.linkMatchesVersion(current, entry.version)) {
+      // The same row, with the same provenance and notes: an equipped server rewritten on the
+      // screen since the preview is not the row this undo may remove.
+      if (!current
+        || !this.linkMatchesVersion(current, entry.version)
+        || (current.notes ?? null) !== (entry.notes ?? null)
+        || (current.source_ref ?? null) !== (entry.source_ref ?? null)) {
         throw new ConflictException(`Links of ${technology.label} changed after the preview was created.`);
       }
       changes.servers.remove.push({
@@ -823,7 +887,8 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
   private linkMatchesVersion(link: { version_id: string | null; version_label: string | null }, version: AiTechnologyVersion | null): boolean {
     if (!version) return link.version_id == null;
     if (version.id) return link.version_id === version.id;
-    return link.version_id == null && (link.version_label ?? '').toLowerCase() === version.label.toLowerCase();
+    // The version did not exist at the preview: the link that appeared since carries its label.
+    return (link.version_label ?? '').toLowerCase() === version.label.toLowerCase();
   }
 
   private async supportLinkDeclaration(
@@ -834,15 +899,18 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
     version: AiTechnologyVersion | null,
     serverIds: string[],
     notes?: string | null,
-  ): Promise<boolean> {
+    write: LinkWriteOptions = {},
+  ): Promise<{ link_id: string | null; created: boolean; servers_added: number } | null> {
     const result = await this.links.declareApplicationTechnology(
       application.id,
       technology.id,
       { technology_version_id: version?.id ?? null, asset_ids: serverIds, notes: notes ?? undefined },
       this.support.linkOptions(context, preview),
       linkProvenance('ai', preview.id),
+      write,
     );
-    return result.ok;
+    if (!result.ok) return null;
+    return { link_id: result.link_id ?? null, created: result.created === true, servers_added: result.servers?.added ?? 0 };
   }
 
   private async recordInstalledServers(
@@ -855,7 +923,13 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
     for (const entry of servers.filter((server) => server.install)) {
       const link = await this.findAssetLink(context, technology.id, entry.server.id, version);
       if (!link) throw new ConflictException(`Links of ${technology.label} changed after the preview was created.`);
-      applied.servers.added.push({ server: entry.server, version, link_id: link.link_id });
+      applied.servers.added.push({
+        server: entry.server,
+        version,
+        link_id: link.link_id,
+        notes: link.notes,
+        source_ref: link.source_ref,
+      });
     }
   }
 

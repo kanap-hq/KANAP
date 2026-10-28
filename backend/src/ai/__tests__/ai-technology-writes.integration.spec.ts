@@ -439,7 +439,7 @@ async function testDeploymentServers(harness: Harness) {
     assert.equal(
       preview.changes.technology_servers.to,
       '**Added**\n- AST-12 - srv-db-01: PostgreSQL 16 (existing, end of support 2028-11-09)'
-      + '\n\n**Already equipped**\n- AST-13 - srv-web-01 (already equipped)',
+      + '\n\n**Already equipped**\n- AST-13 - srv-web-01',
     );
     await approvePreview(harness, ctx, preview);
     const installed = await runner.query(
@@ -596,7 +596,7 @@ async function testCardListsAlreadyAndAbsentBesideAChange(harness: Harness) {
     assert.match(applications, /\*\*Not linked\*\*\n- APP-2 - Mail: PostgreSQL 14/);
     const servers = preview.changes.technology_servers.to;
     assert.match(servers, /\*\*Added\*\*\n- AST-12 - srv-db-01: PostgreSQL 16/);
-    assert.match(servers, /\*\*Already equipped\*\*\n- AST-13 - srv-web-01 \(already equipped\)/);
+    assert.match(servers, /\*\*Already equipped\*\*\n- AST-13 - srv-web-01/);
     await approvePreview(harness, ctx, preview);
     const [added] = await runner.query(
       `SELECT source FROM application_technologies
@@ -767,7 +767,236 @@ async function testCardInFrenchEscapesLabels(harness: Harness) {
     const operation = harness.app.get(AiMutationOperationRegistry).getOperation('update_technology_links');
     const fr = operation.presentPreview(stored, 'fr');
     assert.equal(fr.summary, 'Modification des liens de « TEC-1 - PostgreSQL ».');
-    assert.match(fr.changes.technology_applications.to, /^\*\*Ajoutés\*\*/);
+    assert.match(fr.changes.technology_applications.to, /^\*\*Ajoutées\*\*/);
+  });
+}
+
+async function testNewVersionAppearingBetweenPreviewAndApproval(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'new-version-app-drift');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_links', {
+      technology: 'PostgreSQL',
+      applications: { add: [{ application: 'CheeseTrack', version: '17' }] },
+    });
+    // The screen creates version 17 and declares it with a note before the approval.
+    const [version] = await runner.query(
+      `INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, '17') RETURNING id`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    await runner.query(
+      `INSERT INTO application_technologies (tenant_id, application_id, technology_id, technology_version_id, notes, source)
+       VALUES ($1, $2, $3, $4, 'Screen note', 'manual')`,
+      [seed.tenantId, seed.apps.cheeseTrack, seed.technologies.postgres, version.id],
+    );
+    const failed = await approveFailingPreview(harness, ctx, preview);
+    assert.equal(failed.error_message, 'Links of TEC-1 - PostgreSQL changed after the preview was created.');
+    const [link] = await runner.query(
+      `SELECT l.source, l.notes FROM application_technologies l
+         JOIN technology_versions v ON v.id = l.technology_version_id AND v.tenant_id = l.tenant_id
+        WHERE l.tenant_id = $1 AND l.application_id = $2 AND v.label = '17'`,
+      [seed.tenantId, seed.apps.cheeseTrack],
+    );
+    assert.deepEqual({ source: link.source, notes: link.notes }, { source: 'manual', notes: 'Screen note' },
+      'the screen link keeps its provenance and its note');
+    const versions = await runner.query(
+      `SELECT 1 FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND lower(label) = '17'`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    assert.equal(versions.length, 1, 'the preview created no second version 17');
+  });
+}
+
+async function testNewVersionServerBetweenPreviewAndApproval(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'new-version-server-drift');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_links', {
+      technology: 'nginx',
+      servers: { add: [{ server: 'AST-12', version: '2.0' }] },
+    });
+    const [version] = await runner.query(
+      `INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, '2.0') RETURNING id`,
+      [seed.tenantId, seed.technologies.nginx],
+    );
+    await runner.query(
+      `INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id, notes, source)
+       VALUES ($1, $2, $3, $4, 'Screen server note', 'manual')`,
+      [seed.tenantId, seed.servers.db, seed.technologies.nginx, version.id],
+    );
+    const failed = await approveFailingPreview(harness, ctx, preview);
+    assert.equal(failed.error_message, 'Links of TEC-2 - nginx changed after the preview was created.');
+    const [link] = await runner.query(
+      `SELECT source, notes FROM asset_technologies
+        WHERE tenant_id = $1 AND asset_id = $2 AND technology_id = $3`,
+      [seed.tenantId, seed.servers.db, seed.technologies.nginx],
+    );
+    assert.deepEqual({ source: link.source, notes: link.notes }, { source: 'manual', notes: 'Screen server note' });
+  });
+}
+
+async function testAlreadyDeclaredWithServersKeepsItsProvenance(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'already-with-servers');
+    // CheeseTrack already declares PostgreSQL 14; AST-12 has no PostgreSQL. Equipping the server
+    // is the change, and it must not rewrite the manual declaration above it.
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_links', {
+      technology: 'PostgreSQL',
+      applications: { add: [{ application: 'CheeseTrack', version: '14', servers: ['AST-12'] }] },
+    });
+    assert.equal(
+      preview.changes.technology_servers.to,
+      '**Added**\n- AST-12 - srv-db-01: PostgreSQL 14 (existing, end of support 2027-06-30)',
+    );
+    await approvePreview(harness, ctx, preview);
+    const [declaration] = await runner.query(
+      `SELECT l.source, l.notes FROM application_technologies l
+         JOIN technology_versions v ON v.id = l.technology_version_id AND v.tenant_id = l.tenant_id
+        WHERE l.tenant_id = $1 AND l.application_id = $2 AND v.label = '14'`,
+      [seed.tenantId, seed.apps.cheeseTrack],
+    );
+    assert.deepEqual({ source: declaration.source, notes: declaration.notes },
+      { source: 'manual', notes: 'Database of the orders' }, 'the existing declaration stays manual');
+    const [installed] = await runner.query(
+      `SELECT l.source, v.label FROM asset_technologies l
+         JOIN technology_versions v ON v.id = l.technology_version_id AND v.tenant_id = l.tenant_id
+        WHERE l.tenant_id = $1 AND l.asset_id = $2 AND l.technology_id = $3`,
+      [seed.tenantId, seed.servers.db, seed.technologies.postgres],
+    );
+    assert.deepEqual({ source: installed.source, label: installed.label }, { source: 'ai', label: '14' });
+    const appAudits = await runner.query(
+      `SELECT 1 FROM audit_log WHERE tenant_id = $1 AND record_id = $2 AND table_name = 'application_technologies' AND source = 'ai_chat'`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    assert.equal(appAudits.length, 0, 'the existing declaration was not rewritten or audited');
+  });
+}
+
+async function testParticipationIsReverifiedAtExecution(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'bc-scope-execution', seed.users.bc);
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_links', {
+      technology: 'nginx',
+      applications: { add: [{ application: 'CheeseTrack', version: '1.26' }] },
+    });
+    // The Business Contributor is taken off the application after the preview.
+    await runner.query(
+      `DELETE FROM application_owners WHERE tenant_id = $1 AND application_id = $2 AND user_id = $3`,
+      [seed.tenantId, seed.apps.cheeseTrack, seed.users.bc],
+    );
+    const failed = await approveFailingPreview(harness, ctx, preview);
+    assert.equal(failed.error_message, 'Application not found.');
+    const links = await runner.query(
+      `SELECT 1 FROM application_technologies WHERE tenant_id = $1 AND application_id = $2 AND technology_id = $3`,
+      [seed.tenantId, seed.apps.cheeseTrack, seed.technologies.nginx],
+    );
+    assert.equal(links.length, 0, 'the withdrawn participation wrote nothing');
+  });
+}
+
+async function testUndoRequiresTheExactLinkItAdded(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'undo-exact-app');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_links', {
+      technology: 'nginx',
+      applications: { add: [{ application: 'CheeseTrack', version: '1.26' }] },
+    });
+    await approvePreview(harness, ctx, preview);
+    const [added] = await runner.query(
+      `SELECT id FROM application_technologies
+        WHERE tenant_id = $1 AND application_id = $2 AND technology_id = $3`,
+      [seed.tenantId, seed.apps.cheeseTrack, seed.technologies.nginx],
+    );
+    // The screen removes the row, then declares it again with a note: the undo must not delete it.
+    await runner.query(`DELETE FROM application_technologies WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, added.id]);
+    await runner.query(
+      `INSERT INTO application_technologies (tenant_id, application_id, technology_id, technology_version_id, notes, source)
+       VALUES ($1, $2, $3, $4, 'Screen note', 'manual')`,
+      [seed.tenantId, seed.apps.cheeseTrack, seed.technologies.nginx, seed.versions.nginx126],
+    );
+    await expectRejects(
+      () => harness.tools.execute(ctx, 'undo_preview', { preview_id: preview.preview_id }),
+      'Links of TEC-2 - nginx changed after the preview was created.',
+    );
+    const [screen] = await runner.query(
+      `SELECT source, notes FROM application_technologies
+        WHERE tenant_id = $1 AND application_id = $2 AND technology_id = $3`,
+      [seed.tenantId, seed.apps.cheeseTrack, seed.technologies.nginx],
+    );
+    assert.deepEqual({ source: screen.source, notes: screen.notes }, { source: 'manual', notes: 'Screen note' },
+      'the screen link stays after the refused undo');
+  });
+}
+
+async function testUndoRequiresTheExactServerLinkItAdded(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'undo-exact-server');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_links', {
+      technology: 'nginx',
+      servers: { add: [{ server: 'AST-12', version: '1.26' }] },
+    });
+    await approvePreview(harness, ctx, preview);
+    const [added] = await runner.query(
+      `SELECT id FROM asset_technologies WHERE tenant_id = $1 AND asset_id = $2 AND technology_id = $3`,
+      [seed.tenantId, seed.servers.db, seed.technologies.nginx],
+    );
+    await runner.query(`DELETE FROM asset_technologies WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, added.id]);
+    await runner.query(
+      `INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id, notes, source)
+       VALUES ($1, $2, $3, $4, 'Screen server note', 'manual')`,
+      [seed.tenantId, seed.servers.db, seed.technologies.nginx, seed.versions.nginx126],
+    );
+    await expectRejects(
+      () => harness.tools.execute(ctx, 'undo_preview', { preview_id: preview.preview_id }),
+      'Links of TEC-2 - nginx changed after the preview was created.',
+    );
+    const [screen] = await runner.query(
+      `SELECT source, notes FROM asset_technologies WHERE tenant_id = $1 AND asset_id = $2 AND technology_id = $3`,
+      [seed.tenantId, seed.servers.db, seed.technologies.nginx],
+    );
+    assert.deepEqual({ source: screen.source, notes: screen.notes }, { source: 'manual', notes: 'Screen server note' });
+  });
+}
+
+async function testApplicationsRightIsReverifiedAtExecutionAndUndo(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'app-right-execution');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_links', {
+      technology: 'nginx',
+      applications: { add: [{ application: 'CheeseTrack', version: '1.26' }] },
+    });
+    await runner.query(
+      `DELETE FROM role_permissions WHERE tenant_id = $1 AND role_id = $2 AND resource = 'applications'`,
+      [seed.tenantId, seed.roles.member],
+    );
+    const message = 'You need the right to read applications and interfaces, which your role does not give. An administrator can add it to your role.';
+    await expectRejects(() => harness.previews.executePreview(ctx, preview.preview_id), message);
+    const untouched = await runner.query(
+      `SELECT 1 FROM application_technologies WHERE tenant_id = $1 AND application_id = $2 AND technology_id = $3`,
+      [seed.tenantId, seed.apps.cheeseTrack, seed.technologies.nginx],
+    );
+    assert.equal(untouched.length, 0, 'the refused approval wrote nothing');
+  });
+
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'app-right-undo');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_links', {
+      technology: 'nginx',
+      applications: { add: [{ application: 'CheeseTrack', version: '1.26' }] },
+    });
+    await approvePreview(harness, ctx, preview);
+    const undo = await harness.tools.execute(ctx, 'undo_preview', { preview_id: preview.preview_id }) as any;
+    await runner.query(
+      `DELETE FROM role_permissions WHERE tenant_id = $1 AND role_id = $2 AND resource = 'applications'`,
+      [seed.tenantId, seed.roles.member],
+    );
+    await expectRejects(
+      () => harness.previews.executePreview(ctx, undo.preview_id),
+      'You need the right to read applications and interfaces, which your role does not give. An administrator can add it to your role.',
+    );
+    const left = await runner.query(
+      `SELECT 1 FROM application_technologies WHERE tenant_id = $1 AND application_id = $2 AND technology_id = $3`,
+      [seed.tenantId, seed.apps.cheeseTrack, seed.technologies.nginx],
+    );
+    assert.equal(left.length, 1, 'the refused undo kept the link');
   });
 }
 
@@ -789,6 +1018,13 @@ async function run() {
     await testOperatingSystemIsRefused(harness);
     await testUnknownTechnologyNamesTheScreen(harness);
     await testCardInFrenchEscapesLabels(harness);
+    await testNewVersionAppearingBetweenPreviewAndApproval(harness);
+    await testNewVersionServerBetweenPreviewAndApproval(harness);
+    await testAlreadyDeclaredWithServersKeepsItsProvenance(harness);
+    await testParticipationIsReverifiedAtExecution(harness);
+    await testUndoRequiresTheExactLinkItAdded(harness);
+    await testUndoRequiresTheExactServerLinkItAdded(harness);
+    await testApplicationsRightIsReverifiedAtExecutionAndUndo(harness);
   } finally {
     await harness.app.close();
   }

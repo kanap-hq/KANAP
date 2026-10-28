@@ -216,6 +216,36 @@ const FIXTURE_ROWS: Row[] = [
   // The technology record is a business write now; the tool that changes its fields arrives in lot 4.
   { prompt: 'Update the lifecycle of TEC-3', profile: 'write_business', mode: 'write' },
 
+  // Lot 4 review: "installé" and "déclaré" are past participles, not imperatives, and a question
+  // never writes; every one of these words stays a read.
+  { prompt: 'Sur quels serveurs nginx est-il installé ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'PostgreSQL est-il déclaré sur CheeseTrack ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Où nginx est-il installé ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Sur quel serveur Java 8 est-il installé ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Quel est le dernier serveur installé ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Java 21 est installé sur combien de serveurs ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Liste ce qui est déclaré sur CheeseTrack', profile: 'read_query', mode: 'read' },
+  { prompt: 'Comment installer nginx sur un serveur ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'How do I install PostgreSQL on a server?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Which applications declare PostgreSQL 14?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Le serveur AST-12 est installé dans quelle salle ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'CheeseTrack est déclaré sur quels serveurs ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Show the install base of Java 8', profile: 'read_query', mode: 'read' },
+  { prompt: 'Quand Java 21 a-t-il été installé sur AST-12 ?', profile: 'entity_inspection', mode: 'entity' },
+
+  // Lot 4 review: a technology link verb at the head writes; the link tool is in every write profile.
+  { prompt: 'Remove Java 8 from APP-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Remove nginx from AST-13', profile: 'write_business', mode: 'write' },
+  { prompt: 'Detach Java 8 from APP-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Désinstalle nginx de AST-13', profile: 'write_business', mode: 'write' },
+  { prompt: 'Uninstall nginx from srv-web-01', profile: 'write_general', mode: 'write' },
+  { prompt: 'Remplace Java 8 par Java 21 sur APP-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Replace Java 8 with Java 21 on APP-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Mets PostgreSQL 16 sur CheeseTrack', profile: 'write_general', mode: 'write' },
+  { prompt: 'Enregistre Tomcat 9 sur le serveur srv-app-01', profile: 'write_business', mode: 'write' },
+  { prompt: 'Upgrade CheeseTrack from PostgreSQL 14 to 16', profile: 'write_general', mode: 'write' },
+  { prompt: 'CheeseTrack utilise maintenant Java 21', profile: 'write_general', mode: 'write' },
+
   // Other probes from the existing profile spec.
   { prompt: 'Show me my overdue tasks', profile: 'read_query', mode: 'read' },
   { prompt: 'Show current tasks', profile: 'read_query', mode: 'read' },
@@ -340,6 +370,31 @@ function testTheTable() {
   }
 }
 
+/**
+ * The technology link phrases of the lot 4 review, in English and in French: the write mode is the
+ * point (a read loses the preview guidance), and the tool that carries the link must be in it.
+ */
+function testTheTechnologyLinkPhrasesCarryTheTool() {
+  const prompts = [
+    'Remove Java 8 from APP-3',
+    'Remove nginx from AST-13',
+    'Detach Java 8 from APP-3',
+    'Désinstalle nginx de AST-13',
+    'Uninstall nginx from srv-web-01',
+    'Remplace Java 8 par Java 21 sur APP-3',
+    'Replace Java 8 with Java 21 on APP-3',
+    'Mets PostgreSQL 16 sur CheeseTrack',
+    'Enregistre Tomcat 9 sur le serveur srv-app-01',
+    'Upgrade CheeseTrack from PostgreSQL 14 to 16',
+    'CheeseTrack utilise maintenant Java 21',
+  ];
+  for (const prompt of prompts) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.promptMode, 'write', `${prompt}: expected the write mode`);
+    assert.ok(profile.toolNames.includes('update_technology_links'), `${prompt}: expected update_technology_links`);
+  }
+}
+
 function testTheFixturePhrasesAreAllPresent() {
   // The 120 phrases of phrases.txt and the 19 of p2.txt, as reviewed at lot 4.
   const expectedFixtureCount = 139;
@@ -417,6 +472,7 @@ function testTheFixturePhrasesAreAllPresent() {
 
 function run() {
   testTheTable();
+  testTheTechnologyLinkPhrasesCarryTheTool();
   testTheFixturePhrasesAreAllPresent();
   console.log(`  context profile table: ${FIXTURE_ROWS.length} lines, OK`);
 }

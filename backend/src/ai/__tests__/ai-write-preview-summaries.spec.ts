@@ -346,7 +346,7 @@ function testTechnologyLinkCards() {
   assert.equal(
     changes.technology_servers.to,
     '**Added**\n- AST-12 - srv-db-01: PostgreSQL 16 (existing, end of support 2028-11-09)'
-    + '\n\n**Already equipped**\n- AST-13 - srv-web-01 (already linked)',
+    + '\n\n**Already equipped**\n- AST-13 - srv-web-01',
     'the server card',
   );
   assert.equal(summary(operation, { ...pending, status: 'executed' } as AiMutationPreview, 'fr'),

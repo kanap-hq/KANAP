@@ -459,21 +459,30 @@ export type TechnologyLinkCardGroup = {
 /**
  * The markdown block of the applications or the servers of a technology: what the approval adds
  * and removes, then what it leaves as it is. A server that already has the technology is listed as
- * equipped, not as linked. Labels are data: they are escaped as the incident card escapes them.
+ * equipped, not as linked. French and Spanish headings agree with the subject (`applications`
+ * is feminine). Labels are data: they are escaped as the incident card escapes them.
  */
 export function technologyLinkCardText(
   language: AiWriteLanguage,
   group: TechnologyLinkCardGroup,
   alreadyHeading: 'linked' | 'equipped' = 'linked',
+  subject: 'applications' | 'servers' = 'servers',
 ): string {
-  const headings = {
-    add: { en: 'Added', fr: 'Ajoutés', de: 'Hinzugefügt', es: 'Añadidos' }[language],
-    remove: { en: 'Removed', fr: 'Retirés', de: 'Entfernt', es: 'Retirados' }[language],
-    already: alreadyHeading === 'equipped'
-      ? { en: 'Already equipped', fr: 'Déjà équipés', de: 'Bereits ausgestattet', es: 'Ya equipados' }[language]
-      : { en: 'Already linked', fr: 'Déjà liés', de: 'Bereits verknüpft', es: 'Ya vinculados' }[language],
-    absent: { en: 'Not linked', fr: 'Pas liés', de: 'Nicht verknüpft', es: 'No vinculados' }[language],
-  };
+  const headings = subject === 'applications'
+    ? {
+      add: { en: 'Added', fr: 'Ajoutées', de: 'Hinzugefügt', es: 'Añadidas' }[language],
+      remove: { en: 'Removed', fr: 'Retirées', de: 'Entfernt', es: 'Retiradas' }[language],
+      already: { en: 'Already linked', fr: 'Déjà liées', de: 'Bereits verknüpft', es: 'Ya vinculadas' }[language],
+      absent: { en: 'Not linked', fr: 'Non liées', de: 'Nicht verknüpft', es: 'No vinculadas' }[language],
+    }
+    : {
+      add: { en: 'Added', fr: 'Ajoutés', de: 'Hinzugefügt', es: 'Añadidos' }[language],
+      remove: { en: 'Removed', fr: 'Retirés', de: 'Entfernt', es: 'Retirados' }[language],
+      already: alreadyHeading === 'equipped'
+        ? { en: 'Already equipped', fr: 'Déjà équipés', de: 'Bereits ausgestattet', es: 'Ya equipados' }[language]
+        : { en: 'Already linked', fr: 'Déjà liés', de: 'Bereits verknüpft', es: 'Ya vinculados' }[language],
+      absent: { en: 'Not linked', fr: 'Non liés', de: 'Nicht verknüpft', es: 'No vinculados' }[language],
+    };
   const blocks: string[] = [];
   for (const key of ['add', 'remove', 'already', 'absent'] as const) {
     const items = group[key].filter((item) => item.trim().length > 0);
