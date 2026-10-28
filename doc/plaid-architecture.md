@@ -387,8 +387,8 @@ is created `open` or `in_progress` only: a resolved or closed incident is
 created open and moved forward in a second preview, so the step stays visible.
 The status only moves forward (`open` → `in_progress` → `resolved` → `closed`);
 a backward move, `cancelled` and `confidential: false` are refused on the field
-path with a short message that points to the incident screen, where the
-administrator actions live. The preview that closes an
+path with a short message that names the administrator tool
+(`change_incident_state`, `set_incident_confidentiality`). The preview that closes an
 incident says the record freezes and only an administrator reopens it. A change
 of a closed or cancelled incident is refused at preparation. `category` is
 validated against the tenant's incident categories by code or exact label, with
