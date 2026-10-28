@@ -553,7 +553,60 @@
       "kind": "Type",
       "parent_id": "Parent group",
       "accountNature": "Used for",
-      "costCenterOwner": "Budget holder"
+      "costCenterOwner": "Budget holder",
+      "location_reference": "Location reference",
+      "hosting_type": "Hosting type",
+      "operating_company_id": "Operating company",
+      "country_iso": "Country",
+      "city": "City",
+      "provider": "Provider",
+      "region": "Region",
+      "additional_info": "Additional information",
+      "connection_reference": "Connection reference",
+      "topology": "Topology",
+      "source_asset_id": "Source asset",
+      "source_entity_code": "Source entity",
+      "destination_asset_id": "Destination asset",
+      "destination_entity_code": "Destination entity",
+      "risk_mode": "Risk mode",
+      "order_index": "Position",
+      "function_code": "Function",
+      "equipment_asset_id": "Equipment asset",
+      "equipment_entity_code": "Equipment entity",
+      "protocol_codes": "Protocols",
+      "port_override": "Port override",
+      "interface_reference": "Interface reference",
+      "interface_id": "Interface ID",
+      "business_process_id": "Business process",
+      "business_purpose": "Business purpose",
+      "source_application_id": "Source application",
+      "target_application_id": "Target application",
+      "data_category": "Data category",
+      "integration_route_type": "Route type",
+      "classification_incomplete": "Classification incomplete",
+      "middleware_application_ids": "Middleware applications",
+      "leg_type": "Leg type",
+      "from_role": "From role",
+      "to_role": "To role",
+      "trigger_type": "Trigger type",
+      "integration_pattern": "Integration pattern",
+      "data_format": "Data format",
+      "job_name": "Job name",
+      "owner_type": "Owner type",
+      "related_interface_id": "Related interface",
+      "direction": "Direction",
+      "source_identifier": "Source identifier",
+      "destination_identifier": "Destination identifier",
+      "identifier_notes": "Identifier notes",
+      "source_endpoint": "Source endpoint",
+      "target_endpoint": "Target endpoint",
+      "trigger_details": "Trigger details",
+      "env_job_name": "Job name",
+      "authentication_mode": "Authentication",
+      "monitoring_url": "Monitoring URL",
+      "env_notes": "Environment notes",
+      "integration_tool_application_id": "Integration tool",
+      "is_default": "Default"
     },
     "history": {
       "empty": "No history yet",
@@ -634,6 +687,46 @@
         "request": {
           "added": "Request added: {{label}}",
           "removed": "Request removed: {{label}}"
+        },
+        "sub_item": {
+          "added": "Sub-location added: {{label}}",
+          "removed": "Sub-location removed: {{label}}"
+        },
+        "person": {
+          "added": "Person added: {{label}}",
+          "removed": "Person removed: {{label}}"
+        },
+        "owner": {
+          "added": "Owner added: {{label}}",
+          "removed": "Owner removed: {{label}}"
+        },
+        "company": {
+          "added": "Company added: {{label}}",
+          "removed": "Company removed: {{label}}"
+        },
+        "dependency": {
+          "added": "Dependency added: {{label}}",
+          "removed": "Dependency removed: {{label}}"
+        },
+        "country": {
+          "added": "Country added: {{label}}",
+          "removed": "Country removed: {{label}}"
+        },
+        "key_identifier": {
+          "added": "Key identifier added: {{label}}",
+          "removed": "Key identifier removed: {{label}}"
+        },
+        "interface_leg": {
+          "added": "Segment added: {{label}}",
+          "removed": "Segment removed: {{label}}"
+        },
+        "mapping_set": {
+          "added": "Mapping set added: {{label}}",
+          "removed": "Mapping set removed: {{label}}"
+        },
+        "middleware": {
+          "added": "Middleware added: {{label}}",
+          "removed": "Middleware removed: {{label}}"
         }
       },
       "unnamed": {
@@ -669,9 +762,21 @@
         "calendar": "a working-day calendar",
         "analytics_axis": "an analytics dimension",
         "analytics_category": "an analytics value",
-        "contributor": "a contributor"
+        "contributor": "a contributor",
+        "sub_item": "a sub-location",
+        "leg": "a segment",
+        "set": "a set",
+        "binding": "a binding",
+        "person": "a person"
       },
-      "title": "History"
+      "title": "History",
+      "segment": "Segment {{index}}",
+      "subItem": "Sub-location {{name}}",
+      "binding": "Binding {{environment}}",
+      "legCreated": "Segment {{index}} added",
+      "legDeleted": "Segment {{index}} removed",
+      "bindingCreated": "Binding {{environment}} added",
+      "bindingDeleted": "Binding {{environment}} removed"
     },
     "messages": {
       "loadDetailsFailed": "Failed to load audit entry details."
@@ -951,6 +1056,14 @@
       "costCenterKind": {
         "group": "Group",
         "cost_center": "Cost center"
+      },
+      "direction": {
+        "upstream": "Upstream",
+        "downstream": "Downstream"
+      },
+      "ownerType": {
+        "business": "Business",
+        "it": "IT"
       }
     },
     "dataAccess": {

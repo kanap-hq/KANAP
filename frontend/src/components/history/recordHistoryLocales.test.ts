@@ -11,6 +11,7 @@ import frOps from '../../locales/fr/ops.json';
 import type { Translate } from '../../lib/audit/auditLogLabels';
 import {
   historyActorText,
+  historyChildTitle,
   historyLines,
   historySubjectText,
   RECORD_HISTORY_UNNAMED_KINDS,
@@ -26,7 +27,11 @@ const LOCALES = { en, fr, de, es } as Record<string, any>;
 const OPS = { en: enOps, fr: frOps, de: deOps, es: esOps } as Record<string, any>;
 const LANGUAGE_NAMES = ['en', 'fr', 'de', 'es'] as const;
 const ID = '11111111-2222-4333-8444-555555555555';
-const EVENT_KINDS = ['link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line'];
+const EVENT_KINDS = [
+  'link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project',
+  'request', 'task', 'line', 'sub_item', 'person', 'owner', 'company', 'dependency', 'country',
+  'key_identifier', 'interface_leg', 'mapping_set', 'middleware',
+];
 const ACTORS = ['assistant', 'assistantFor', 'unknown'];
 const ACTIONS = ['create', 'update', 'delete'];
 
@@ -162,6 +167,52 @@ describe('record history locales', () => {
       expect(subject).not.toContain('{{');
       expect(subject).not.toContain('auditLogs.');
     }
+  });
+
+  it('reads a site, a connection and an interface entry in French and English', () => {
+    const enCtx = context('en');
+    const frCtx = context('fr');
+
+    const subFr = historyLines(item({
+      subject: { kind: 'sub_item' },
+      action: 'create',
+      changes: [{ field: 'sub_item', event: 'added', after: 'Rack 5' }],
+    }), frCtx);
+    expect(subFr[0].text).toBe('Sous-site ajouté\u00a0: Rack 5');
+
+    const legFr = historyChildTitle(item({ subject: { kind: 'leg', label: '2' }, action: 'create' }), frCtx.t);
+    expect(legFr).toBe('Segment 2 ajouté');
+    const legEn = historyChildTitle(item({ subject: { kind: 'leg', label: '2' }, action: 'delete' }), enCtx.t);
+    expect(legEn).toBe('Segment 2 removed');
+
+    const bindingFr = historyChildTitle(item({ subject: { kind: 'binding', label: 'PROD' }, action: 'create' }), frCtx.t);
+    expect(bindingFr).toBe('Liaison PROD ajoutée');
+    expect(historySubjectText({ kind: 'binding', label: 'PROD' }, enCtx.t)).toBe('Binding PROD');
+
+    const ownerFr = historyLines(item({
+      subject: { kind: 'set' },
+      changes: [{ field: 'owner', event: 'added', after: { kind: 'user', id: ID, label: 'Ava Reader' } }],
+    }), frCtx);
+    expect(ownerFr[0].text).toBe('Propriétaire ajouté\u00a0: Ava Reader');
+
+    const legEventFr = historyLines(item({
+      subject: { kind: 'set' },
+      changes: [{ field: 'interface_leg', event: 'added', after: { kind: 'leg', id: ID, label: '2' } }],
+    }), frCtx);
+    expect(legEventFr[0].text).toBe('Segment ajouté\u00a0: Segment 2');
+
+    const personEn = historyLines(item({
+      subject: { kind: 'person' },
+      action: 'create',
+      changes: [{ field: 'person', event: 'added', after: { kind: 'user', id: ID, label: 'Ava Reader' } }],
+    }), enCtx);
+    expect(personEn[0].text).toBe('Person added: Ava Reader');
+
+    const middlewareEn = historyLines(item({
+      subject: { kind: 'record' },
+      changes: [{ field: 'middleware', event: 'added', after: { kind: 'application', id: ID, label: 'Hub' } }],
+    }), enCtx);
+    expect(middlewareEn[0].text).toBe('Middleware added: Hub');
   });
 
   it('reads an account and a cost center entry in French and English', () => {

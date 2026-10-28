@@ -553,7 +553,60 @@
       "kind": "Type",
       "parent_id": "Groupe parent",
       "accountNature": "Utilisé pour",
-      "costCenterOwner": "Responsable budgétaire"
+      "costCenterOwner": "Responsable budgétaire",
+      "location_reference": "Référence du site",
+      "hosting_type": "Type d'hébergement",
+      "operating_company_id": "Société d'exploitation",
+      "country_iso": "Pays",
+      "city": "Ville",
+      "provider": "Fournisseur",
+      "region": "Région",
+      "additional_info": "Informations complémentaires",
+      "connection_reference": "Référence de la connexion",
+      "topology": "Topologie",
+      "source_asset_id": "Actif source",
+      "source_entity_code": "Entité source",
+      "destination_asset_id": "Actif cible",
+      "destination_entity_code": "Entité cible",
+      "risk_mode": "Mode de risque",
+      "order_index": "Position",
+      "function_code": "Fonction",
+      "equipment_asset_id": "Actif équipement",
+      "equipment_entity_code": "Entité équipement",
+      "protocol_codes": "Protocoles",
+      "port_override": "Port personnalisé",
+      "interface_reference": "Référence de l'interface",
+      "interface_id": "Identifiant d'interface",
+      "business_process_id": "Processus métier",
+      "business_purpose": "Objectif métier",
+      "source_application_id": "Application source",
+      "target_application_id": "Application cible",
+      "data_category": "Catégorie de données",
+      "integration_route_type": "Type de route",
+      "classification_incomplete": "Classification incomplète",
+      "middleware_application_ids": "Applications middleware",
+      "leg_type": "Type de segment",
+      "from_role": "Rôle source",
+      "to_role": "Rôle cible",
+      "trigger_type": "Type de déclenchement",
+      "integration_pattern": "Modèle d'intégration",
+      "data_format": "Format de données",
+      "job_name": "Nom du job",
+      "owner_type": "Type de propriétaire",
+      "related_interface_id": "Interface liée",
+      "direction": "Sens",
+      "source_identifier": "Identifiant source",
+      "destination_identifier": "Identifiant cible",
+      "identifier_notes": "Notes sur l'identifiant",
+      "source_endpoint": "Point de terminaison source",
+      "target_endpoint": "Point de terminaison cible",
+      "trigger_details": "Détails du déclenchement",
+      "env_job_name": "Nom du job",
+      "authentication_mode": "Authentification",
+      "monitoring_url": "URL de supervision",
+      "env_notes": "Notes d'environnement",
+      "integration_tool_application_id": "Outil d'intégration",
+      "is_default": "Par défaut"
     },
     "history": {
       "empty": "Aucun historique",
@@ -634,6 +687,46 @@
         "request": {
           "added": "Demande ajoutée : {{label}}",
           "removed": "Demande retirée : {{label}}"
+        },
+        "sub_item": {
+          "added": "Sous-site ajouté : {{label}}",
+          "removed": "Sous-site retiré : {{label}}"
+        },
+        "person": {
+          "added": "Personne ajoutée : {{label}}",
+          "removed": "Personne retirée : {{label}}"
+        },
+        "owner": {
+          "added": "Propriétaire ajouté : {{label}}",
+          "removed": "Propriétaire retiré : {{label}}"
+        },
+        "company": {
+          "added": "Société ajoutée : {{label}}",
+          "removed": "Société retirée : {{label}}"
+        },
+        "dependency": {
+          "added": "Dépendance ajoutée : {{label}}",
+          "removed": "Dépendance retirée : {{label}}"
+        },
+        "country": {
+          "added": "Pays ajouté : {{label}}",
+          "removed": "Pays retiré : {{label}}"
+        },
+        "key_identifier": {
+          "added": "Identifiant clé ajouté : {{label}}",
+          "removed": "Identifiant clé retiré : {{label}}"
+        },
+        "interface_leg": {
+          "added": "Segment ajouté : {{label}}",
+          "removed": "Segment retiré : {{label}}"
+        },
+        "mapping_set": {
+          "added": "Jeu de mappage ajouté : {{label}}",
+          "removed": "Jeu de mappage retiré : {{label}}"
+        },
+        "middleware": {
+          "added": "Middleware ajouté : {{label}}",
+          "removed": "Middleware retiré : {{label}}"
         }
       },
       "unnamed": {
@@ -669,9 +762,21 @@
         "calendar": "un calendrier de jours ouvrés",
         "analytics_axis": "une dimension analytique",
         "analytics_category": "une valeur analytique",
-        "contributor": "un contributeur"
+        "contributor": "un contributeur",
+        "sub_item": "un sous-site",
+        "leg": "un segment",
+        "set": "un ensemble",
+        "binding": "une liaison",
+        "person": "une personne"
       },
-      "title": "Historique"
+      "title": "Historique",
+      "segment": "Segment {{index}}",
+      "subItem": "Sous-site {{name}}",
+      "binding": "Liaison {{environment}}",
+      "legCreated": "Segment {{index}} ajouté",
+      "legDeleted": "Segment {{index}} retiré",
+      "bindingCreated": "Liaison {{environment}} ajoutée",
+      "bindingDeleted": "Liaison {{environment}} retirée"
     },
     "messages": {
       "loadDetailsFailed": "Impossible de charger les détails de l'entrée d'audit."
@@ -951,6 +1056,14 @@
       "costCenterKind": {
         "group": "Groupe",
         "cost_center": "Centre de coûts"
+      },
+      "direction": {
+        "upstream": "Amont",
+        "downstream": "Aval"
+      },
+      "ownerType": {
+        "business": "Métier",
+        "it": "IT"
       }
     },
     "dataAccess": {

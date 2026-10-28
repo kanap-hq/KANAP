@@ -2595,7 +2595,8 @@
         "layers": "Couches",
         "compliance": "Criticité et conformité",
         "interfaces": "Interfaces associées",
-        "path": "Chemin"
+        "path": "Chemin",
+        "history": "Historique"
       },
       "createFromBinding": "Création depuis le contexte de liaison d'interface",
       "overview": {
@@ -2800,7 +2801,8 @@
         "compliance": "Données et conformité",
         "flow": "Flux",
         "dataMapping": "Mappage des données",
-        "relations": "Relations"
+        "relations": "Relations",
+        "history": "Historique"
       },
       "selectSourceTarget": "Sélectionnez les applications source et cible pour gérer les liaisons.",
       "untitled": "Interface sans nom",
@@ -3100,7 +3102,8 @@
       "tabs": {
         "overview": "Vue d'ensemble",
         "contacts": "Contacts et support",
-        "relations": "Relations"
+        "relations": "Relations",
+        "history": "Historique"
       },
       "deleteTitle": "Supprimer le site ?",
       "deleteMessage": "Cette action supprimera définitivement ce site et désaffectera automatiquement tous les actifs liés.",

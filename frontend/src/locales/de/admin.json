@@ -553,7 +553,60 @@
       "kind": "Typ",
       "parent_id": "Übergeordnete Gruppe",
       "accountNature": "Verwendet für",
-      "costCenterOwner": "Budgetverantwortlicher"
+      "costCenterOwner": "Budgetverantwortlicher",
+      "location_reference": "Standortreferenz",
+      "hosting_type": "Hosting-Typ",
+      "operating_company_id": "Betriebsgesellschaft",
+      "country_iso": "Land",
+      "city": "Stadt",
+      "provider": "Anbieter",
+      "region": "Region",
+      "additional_info": "Zusätzliche Informationen",
+      "connection_reference": "Verbindungsreferenz",
+      "topology": "Topologie",
+      "source_asset_id": "Quell-Asset",
+      "source_entity_code": "Quellentität",
+      "destination_asset_id": "Ziel-Asset",
+      "destination_entity_code": "Zielentität",
+      "risk_mode": "Risikomodus",
+      "order_index": "Position",
+      "function_code": "Funktion",
+      "equipment_asset_id": "Geräte-Asset",
+      "equipment_entity_code": "Geräteentität",
+      "protocol_codes": "Protokolle",
+      "port_override": "Port-Überschreibung",
+      "interface_reference": "Schnittstellenreferenz",
+      "interface_id": "Schnittstellen-ID",
+      "business_process_id": "Geschäftsprozess",
+      "business_purpose": "Geschäftszweck",
+      "source_application_id": "Quellanwendung",
+      "target_application_id": "Zielanwendung",
+      "data_category": "Datenkategorie",
+      "integration_route_type": "Routentyp",
+      "classification_incomplete": "Klassifizierung unvollständig",
+      "middleware_application_ids": "Middleware-Anwendungen",
+      "leg_type": "Segmenttyp",
+      "from_role": "Quellrolle",
+      "to_role": "Zielrolle",
+      "trigger_type": "Auslösertyp",
+      "integration_pattern": "Integrationsmuster",
+      "data_format": "Datenformat",
+      "job_name": "Jobname",
+      "owner_type": "Eigentümertyp",
+      "related_interface_id": "Zugehörige Schnittstelle",
+      "direction": "Richtung",
+      "source_identifier": "Quellbezeichner",
+      "destination_identifier": "Zielbezeichner",
+      "identifier_notes": "Bezeichner-Notizen",
+      "source_endpoint": "Quellendpunkt",
+      "target_endpoint": "Zielendpunkt",
+      "trigger_details": "Auslöserdetails",
+      "env_job_name": "Jobname",
+      "authentication_mode": "Authentifizierung",
+      "monitoring_url": "Monitoring-URL",
+      "env_notes": "Umgebungsnotizen",
+      "integration_tool_application_id": "Integrationswerkzeug",
+      "is_default": "Standard"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -634,6 +687,46 @@
         "request": {
           "added": "Anfrage hinzugefügt: {{label}}",
           "removed": "Anfrage entfernt: {{label}}"
+        },
+        "sub_item": {
+          "added": "Unterstandort hinzugefügt: {{label}}",
+          "removed": "Unterstandort entfernt: {{label}}"
+        },
+        "person": {
+          "added": "Person hinzugefügt: {{label}}",
+          "removed": "Person entfernt: {{label}}"
+        },
+        "owner": {
+          "added": "Eigentümer hinzugefügt: {{label}}",
+          "removed": "Eigentümer entfernt: {{label}}"
+        },
+        "company": {
+          "added": "Unternehmen hinzugefügt: {{label}}",
+          "removed": "Unternehmen entfernt: {{label}}"
+        },
+        "dependency": {
+          "added": "Abhängigkeit hinzugefügt: {{label}}",
+          "removed": "Abhängigkeit entfernt: {{label}}"
+        },
+        "country": {
+          "added": "Land hinzugefügt: {{label}}",
+          "removed": "Land entfernt: {{label}}"
+        },
+        "key_identifier": {
+          "added": "Schlüsselbezeichner hinzugefügt: {{label}}",
+          "removed": "Schlüsselbezeichner entfernt: {{label}}"
+        },
+        "interface_leg": {
+          "added": "Segment hinzugefügt: {{label}}",
+          "removed": "Segment entfernt: {{label}}"
+        },
+        "mapping_set": {
+          "added": "Zuordnungssatz hinzugefügt: {{label}}",
+          "removed": "Zuordnungssatz entfernt: {{label}}"
+        },
+        "middleware": {
+          "added": "Middleware hinzugefügt: {{label}}",
+          "removed": "Middleware entfernt: {{label}}"
         }
       },
       "unnamed": {
@@ -669,9 +762,21 @@
         "calendar": "ein Arbeitstagekalender",
         "analytics_axis": "eine Analyse-Dimension",
         "analytics_category": "ein Analysewert",
-        "contributor": "ein Mitwirkender"
+        "contributor": "ein Mitwirkender",
+        "sub_item": "ein Unterstandort",
+        "leg": "ein Segment",
+        "set": "ein Satz",
+        "binding": "eine Bindung",
+        "person": "eine Person"
       },
-      "title": "Verlauf"
+      "title": "Verlauf",
+      "segment": "Segment {{index}}",
+      "subItem": "Unterstandort {{name}}",
+      "binding": "Bindung {{environment}}",
+      "legCreated": "Segment {{index}} hinzugefügt",
+      "legDeleted": "Segment {{index}} entfernt",
+      "bindingCreated": "Bindung {{environment}} hinzugefügt",
+      "bindingDeleted": "Bindung {{environment}} entfernt"
     },
     "messages": {
       "loadDetailsFailed": "Details des Audit-Eintrags konnten nicht geladen werden."
@@ -951,6 +1056,14 @@
       "costCenterKind": {
         "group": "Gruppe",
         "cost_center": "Kostenstelle"
+      },
+      "direction": {
+        "upstream": "Vorgelagert",
+        "downstream": "Nachgelagert"
+      },
+      "ownerType": {
+        "business": "Fachbereich",
+        "it": "IT"
       }
     },
     "dataAccess": {
