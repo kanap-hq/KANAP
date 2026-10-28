@@ -4,7 +4,7 @@ import { tasksRegistry } from '../query/registries/tasks.registry';
 import { projectsRegistry } from '../query/registries/projects.registry';
 import { requestsRegistry } from '../query/registries/requests.registry';
 import { incidentsRegistry } from '../query/registries/incidents.registry';
-import { spendItemsRegistry } from '../query/registries/spend-items.registry';
+import { budgetLinesRegistry } from '../query/registries/budget-lines.registry';
 import { companiesRegistry } from '../query/registries/companies.registry';
 import { applicationsRegistry } from '../query/registries/applications.registry';
 
@@ -93,7 +93,7 @@ function testIncidentUnknownFieldIgnored() {
 }
 
 function testEndOfValidityAndAliasBothApply() {
-  const adapted = adaptFilters(spendItemsRegistry, {
+  const adapted = adaptFilters(budgetLinesRegistry, {
     end_of_validity: { op: 'after', value: '2026-01-01' },
     effective_end: { op: 'before', value: '2027-01-01' },
   });
@@ -110,7 +110,7 @@ function testEndOfValidityAndAliasBothApply() {
   assert.deepEqual(adapted.applied, ['end_of_validity', 'effective_end']);
   assert.deepEqual(adapted.ignored, []);
 
-  const same = adaptFilters(spendItemsRegistry, {
+  const same = adaptFilters(budgetLinesRegistry, {
     end_of_validity: { op: 'before', value: '2027-01-01' },
     effective_end: { op: 'before', value: '2027-01-01' },
   });
@@ -126,19 +126,19 @@ function testSameColumnConflictIsReported() {
 }
 
 function testExcludeSetFilter() {
-  const adapted = adaptFilters(spendItemsRegistry, { supplier: { not: ['Acme', null] }, status: { not: ['disabled'] } } as any);
+  const adapted = adaptFilters(budgetLinesRegistry, { supplier: { not: ['Acme', null] }, status: { not: ['disabled'] } } as any);
   assert.deepEqual(adapted.filters, {
     supplier_name: { filterType: 'set', mode: 'exclude', values: ['Acme', null] },
     status: { filterType: 'set', mode: 'exclude', values: ['disabled'] },
   }, 'OPEX: every value but these');
   assert.deepEqual(adapted.applied, ['supplier', 'status']);
   // A value outside the declared ones is refused with the accepted values, in both modes (P3-7).
-  const bogus = adaptFilters(spendItemsRegistry, { status: { not: ['disabled', 'bogus'] } } as any);
+  const bogus = adaptFilters(budgetLinesRegistry, { status: { not: ['disabled', 'bogus'] } } as any);
   assert.deepEqual(bogus.ignored, ['status']);
-  assert.deepEqual(bogus.invalid_values, [{ field: 'status', rejected: ['bogus'], accepted: spendItemsRegistry.fields.status.values }]);
-  const included = adaptFilters(spendItemsRegistry, { status: ['enabled', 'active'] } as any);
+  assert.deepEqual(bogus.invalid_values, [{ field: 'status', rejected: ['bogus'], accepted: budgetLinesRegistry.fields.status.values }]);
+  const included = adaptFilters(budgetLinesRegistry, { status: ['enabled', 'active'] } as any);
   assert.deepEqual(included.filters, {}, 'one unknown value refuses the filter, never drops the value');
-  assert.deepEqual(included.invalid_values, [{ field: 'status', rejected: ['active'], accepted: spendItemsRegistry.fields.status.values }]);
+  assert.deepEqual(included.invalid_values, [{ field: 'status', rejected: ['active'], accepted: budgetLinesRegistry.fields.status.values }]);
   // A list that does not know the exclude mode reports the filter as not applied.
   const tasks = adaptFilters(tasksRegistry, { status: { not: ['done'] } } as any);
   assert.deepEqual(tasks.filters, {});

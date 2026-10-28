@@ -1,5 +1,5 @@
 import { classificationSqlExpressions } from '../../../it-ops-settings/classification-sql';
-import { linkedLineOf } from '../../../spend/budget-nature';
+import { linkedLineOf, linkedLineOfAnyNature } from '../../../spend/budget-nature';
 import { effectiveAssignmentsSql } from '../../../app-asset-assignments/effective-assignments';
 const classificationSql = classificationSqlExpressions('a');
 import { AiEntityFilterRegistry } from '../ai-filter.types';
@@ -284,20 +284,11 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
       sortable: false,
       groupable: true,
     },
-    spend_count: {
-      ai: 'spend_count',
-      grid: 'spend_count',
+    budget_lines_count: {
+      ai: 'budget_lines_count',
+      grid: 'budget_lines_count',
       type: 'number',
-      description: 'Number of linked spend items.',
-      sortable: true,
-      groupable: false,
-      aggregable: true,
-    },
-    capex_count: {
-      ai: 'capex_count',
-      grid: 'capex_count',
-      type: 'number',
-      description: 'Number of linked CAPEX items.',
+      description: 'Number of linked budget lines, of both natures (OPEX and CAPEX).',
       sortable: true,
       groupable: false,
       aggregable: true,
@@ -400,8 +391,7 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
     users_mode: 'users_mode',
     users_year: 'users_year',
     users_override: 'users_override',
-    spend_count: 'spend_count',
-    capex_count: 'capex_count',
+    budget_lines_count: 'budget_lines_count',
     contracts_count: 'contracts_count',
     suites_count: 'suites_count',
     components_count: 'components_count',
@@ -490,14 +480,10 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
       classification_reviewed_at: { expression: classificationSql.classification_reviewed_at, type: 'date' },
       // ISO text: min and max order the same as the date and read back as YYYY-MM-DD.
       last_dr_test: { expression: `to_char(a.last_dr_test, 'YYYY-MM-DD')`, type: 'date' },
-      spend_count: {
-        // The links to OPEX lines (`spend/budget-nature.ts`).
-        expression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')})`,
-        type: 'number',
-      },
-      capex_count: {
-        // The links to CAPEX lines (`spend/budget-nature.ts`).
-        expression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')})`,
+      budget_lines_count: {
+        // The links to the budget lines of both natures (`spend/budget-nature.ts`): the link
+        // rows name a line of `spend_items`, and every such line is a budget line.
+        expression: `(SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id${linkedLineOfAnyNature('l.tenant_id', 'l.spend_item_id')})`,
         type: 'number',
       },
       contracts_count: {

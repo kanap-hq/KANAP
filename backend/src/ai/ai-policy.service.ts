@@ -38,19 +38,18 @@ const SURFACE_RESOURCE: Record<AiSurface, 'ai_chat' | 'ai_mcp'> = {
 };
 
 /**
- * The right each entity type needs. `spend_items` and `capex_items` both need `budget`, the one
- * right on every budget line (lot R). Each type still reads the lines of its own nature only, both
- * in the table `spend_items` (`spend/budget-nature.ts`): every AI read of either type, by id,
- * reference or name, names the nature (the item service's `get` and summary, the reference and
- * relation resolvers, the task targets, the registry's `baseWhere`).
+ * The right each entity type needs. `budget_lines` needs `budget`, the one right on every budget
+ * line (lot R), for both natures. The reads that address one line by id or reference resolve its
+ * nature (`resolveBudgetLine`, `spend/budget-nature.ts`); the list reads name both natures
+ * explicitly (`SUMMARY_SCOPES.all`).
  */
 const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> = {
   accounts: 'accounts',
   analytics_categories: 'analytics',
   applications: 'applications',
   assets: 'infrastructure',
+  budget_lines: 'budget',
   business_processes: 'business_processes',
-  capex_items: 'budget',
   chart_of_accounts: 'accounts',
   companies: 'companies',
   connections: 'infrastructure',
@@ -62,7 +61,6 @@ const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> =
   locations: 'locations',
   projects: 'portfolio_projects',
   requests: 'portfolio_requests',
-  spend_items: 'budget',
   suppliers: 'suppliers',
   tasks: 'tasks',
   technologies: 'infrastructure',
