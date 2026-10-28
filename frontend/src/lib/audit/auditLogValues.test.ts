@@ -219,6 +219,15 @@ describe('formatAuditValue', () => {
     }
   });
 
+  it('names an account nature and a cost center kind as their screens do', () => {
+    expect(formatAuditValue('opex', 'nature', context({ table: 'accounts' })).text).toBe('OPEX only');
+    expect(formatAuditValue('capex', 'nature', context({ table: 'accounts' })).text).toBe('CAPEX only');
+    expect(formatAuditValue('opex', 'nature', context({ table: 'spend_items' })).text).toBe('OPEX');
+    expect(formatAuditValue('cost_center', 'kind', context({ table: 'cost_centers' })).text).toBe('Cost center');
+    expect(formatAuditValue('group', 'kind', context({ table: 'cost_centers' })).text).toBe('Group');
+    expect(formatAuditValue('shelf', 'kind', context({ table: 'cost_centers' })).text).toBe('shelf');
+  });
+
   it('leaves an unknown budget enumeration code as stored', () => {
     expect(formatAuditValue('not_a_profile', 'spread_profile_name', context()).text).toBe('not_a_profile');
     expect(formatAuditValue('not_a_method', 'method', context()).text).toBe('not_a_method');

@@ -111,9 +111,11 @@ describe('record history locales', () => {
 
   it('has the new field labels and the tab label in the four languages', () => {
     const fields = [
-      'account_id', 'allocation_method', 'allocation_pct', 'as_of_date', 'budget_year',
-      'contract_id', 'cost_center_id', 'effective_start', 'input_grain', 'lines', 'measure',
-      'nature', 'owner_business_id', 'owner_it_id', 'paying_company_id', 'product_name',
+      'account_id', 'account_name', 'account_number', 'allocation_method', 'allocation_pct',
+      'as_of_date', 'budget_year', 'coa_id', 'code', 'consolidation_account_description',
+      'consolidation_account_name', 'consolidation_account_number', 'contract_id', 'cost_center_id',
+      'effective_start', 'input_grain', 'kind', 'lines', 'measure', 'native_name', 'nature',
+      'owner_business_id', 'owner_it_id', 'parent_id', 'paying_company_id', 'product_name',
       'project_id', 'run_build', 'successor_id', 'version_name',
     ];
     for (const language of LANGUAGE_NAMES) {
@@ -160,6 +162,42 @@ describe('record history locales', () => {
       expect(subject).not.toContain('{{');
       expect(subject).not.toContain('auditLogs.');
     }
+  });
+
+  it('reads an account and a cost center entry in French and English', () => {
+    const accountChanges = [
+      { field: 'account_name', before: 'Software', after: 'Software and services' },
+      { field: 'coa_id', after: { kind: 'chart_of_accounts', id: ID, label: 'FR · Local chart' } },
+      { field: 'nature', before: null, after: 'opex' },
+    ];
+    const enAccount = { ...context('en'), table: 'accounts' };
+    const accountEn = historyLines(item({ changes: accountChanges }), enAccount);
+    expect(lineText(accountEn[0], enAccount)).toBe('Account name: Software → Software and services');
+    expect(lineText(accountEn[1], enAccount)).toBe('Chart of accounts: FR · Local chart');
+    expect(lineText(accountEn[2], enAccount)).toBe('Nature: — → OPEX only');
+
+    const frAccount = { ...context('fr'), table: 'accounts' };
+    const accountFr = historyLines(item({ changes: accountChanges }), frAccount);
+    expect(lineText(accountFr[0], frAccount)).toBe('Nom du compte\u00a0: Software → Software and services');
+    expect(lineText(accountFr[1], frAccount)).toBe('Plan comptable\u00a0: FR · Local chart');
+    expect(lineText(accountFr[2], frAccount)).toBe('Nature\u00a0: — → OPEX uniquement');
+
+    const costChanges = [
+      { field: 'kind', before: 'cost_center', after: 'group' },
+      { field: 'parent_id', after: { kind: 'cost_center', id: ID, label: 'CC-B · Centre B' } },
+      { field: 'company_id', after: { hidden: true, kind: 'company' } },
+    ];
+    const enCost = { ...context('en'), table: 'cost_centers' };
+    const costEn = historyLines(item({ changes: costChanges }), enCost);
+    expect(lineText(costEn[0], enCost)).toBe('Type: Cost center → Group');
+    expect(lineText(costEn[1], enCost)).toBe('Parent group: CC-B · Centre B');
+    expect(lineText(costEn[2], enCost)).toBe('Company: a company');
+
+    const frCost = { ...context('fr'), table: 'cost_centers' };
+    const costFr = historyLines(item({ changes: costChanges }), frCost);
+    expect(lineText(costFr[0], frCost)).toBe('Type\u00a0: Centre de coûts → Groupe');
+    expect(lineText(costFr[1], frCost)).toBe('Groupe parent\u00a0: CC-B · Centre B');
+    expect(lineText(costFr[2], frCost)).toBe('Société\u00a0: une société');
   });
 
   it('reads the brief examples in French and English', () => {

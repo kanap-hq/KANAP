@@ -541,7 +541,17 @@
       "reporting_currency": "Devise de reporting",
       "role": "Rôle",
       "size": "Taille",
-      "spread_profile_name": "Profil de répartition"
+      "spread_profile_name": "Profil de répartition",
+      "account_number": "Numéro de compte",
+      "account_name": "Nom du compte",
+      "native_name": "Nom local",
+      "coa_id": "Plan comptable",
+      "consolidation_account_number": "Numéro de compte de consolidation",
+      "consolidation_account_name": "Nom du compte de consolidation",
+      "consolidation_account_description": "Description du compte de consolidation",
+      "code": "Code",
+      "kind": "Type",
+      "parent_id": "Groupe parent"
     },
     "history": {
       "empty": "Aucun historique",
@@ -646,8 +656,10 @@
         "request": "une demande",
         "contract": "un contrat",
         "cost_center": "un centre de coûts",
-        "budget_line": "une ligne budgétaire"
-      }
+        "budget_line": "une ligne budgétaire",
+        "chart_of_accounts": "un plan comptable"
+      },
+      "title": "Historique"
     },
     "messages": {
       "loadDetailsFailed": "Impossible de charger les détails de l'entrée d'audit."
@@ -919,6 +931,14 @@
       "origin": {
         "manual": "Manuel",
         "supplier": "Fournisseur"
+      },
+      "accountNature": {
+        "opex": "OPEX uniquement",
+        "capex": "CAPEX uniquement"
+      },
+      "costCenterKind": {
+        "group": "Groupe",
+        "cost_center": "Centre de coûts"
       }
     },
     "dataAccess": {

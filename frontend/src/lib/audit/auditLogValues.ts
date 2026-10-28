@@ -308,9 +308,18 @@ function enumerationLabel(field: string, code: string, context: AuditValueContex
     const key = MODE_LABEL_KEYS[context.table ?? '']?.[code];
     return key ? screenLabel(context, key) : null;
   }
+  // The account "nature" is its "Used for" (OPEX only, CAPEX only), not the line's own nature;
+  // the cost-center kind is its "Type", with the stored snake-case code as the locale key.
+  if (field === 'kind' && context.table === 'cost_centers') {
+    return screenLabel(context, `auditLogs.values.costCenterKind.${code}`);
+  }
   const group = field === 'status'
     ? (context.table === 'incidents' ? 'it:enums.incidentStatus' : 'common:statuses')
-    : (field === 'lifecycle' ? 'common:statuses' : ENUM_GROUPS[field]);
+    : field === 'lifecycle'
+      ? 'common:statuses'
+      : field === 'nature' && context.table === 'accounts'
+        ? 'auditLogs.values.accountNature'
+        : ENUM_GROUPS[field];
   if (!group) return null;
   return screenLabel(context, `${group}.${enumerationCode(field, code)}`);
 }

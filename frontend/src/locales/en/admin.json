@@ -541,7 +541,17 @@
       "reporting_currency": "Reporting currency",
       "role": "Role",
       "size": "Size",
-      "spread_profile_name": "Spread profile"
+      "spread_profile_name": "Spread profile",
+      "account_number": "Account number",
+      "account_name": "Account name",
+      "native_name": "Native name",
+      "coa_id": "Chart of accounts",
+      "consolidation_account_number": "Consolidation account number",
+      "consolidation_account_name": "Consolidation account name",
+      "consolidation_account_description": "Consolidation account description",
+      "code": "Code",
+      "kind": "Type",
+      "parent_id": "Parent group"
     },
     "history": {
       "empty": "No history yet",
@@ -646,8 +656,10 @@
         "request": "a request",
         "contract": "a contract",
         "cost_center": "a cost center",
-        "budget_line": "a budget line"
-      }
+        "budget_line": "a budget line",
+        "chart_of_accounts": "a chart of accounts"
+      },
+      "title": "History"
     },
     "messages": {
       "loadDetailsFailed": "Failed to load audit entry details."
@@ -919,6 +931,14 @@
       "origin": {
         "manual": "Manual",
         "supplier": "Supplier"
+      },
+      "accountNature": {
+        "opex": "OPEX only",
+        "capex": "CAPEX only"
+      },
+      "costCenterKind": {
+        "group": "Group",
+        "cost_center": "Cost center"
       }
     },
     "dataAccess": {
