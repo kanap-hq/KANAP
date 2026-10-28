@@ -658,6 +658,7 @@ export class UpdateTechnologyLinksAiMutationOperation implements AiMutationOpera
               existing.servers.push({ server, install: !equipped.has(server.id) });
             }
           }
+          await this.support.assertDeploymentServers(context, application.id, existing.servers.map((entry) => entry.server.id));
         }
         continue;
       }
