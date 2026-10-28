@@ -194,7 +194,14 @@ export function mapDatabaseError(error: unknown): MappedDatabaseError | null {
   if (!code) return null;
   const { status, error: reason } = STATUS[code];
   const exception = new HttpException(
-    { statusCode: status, error: reason, code, message: MESSAGES[code] },
+    {
+      statusCode: status,
+      error: reason,
+      code,
+      message: MESSAGES[code],
+      // A policy refusal (42501) is the "outside your access" sentence (`errors:dataAccess.outside`).
+      ...(code === 'DATA_ACCESS_LIMITED' ? { reason: 'outside' } : {}),
+    },
     status,
     { cause: error },
   );

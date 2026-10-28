@@ -194,7 +194,13 @@ export class ApplicationConversionService {
     // application below would drop the others. The count of hidden lines is a disclosure (spec §6.6).
     if (await isLimitedTransaction(mg)) {
       const [hidden] = await mg.query(`SELECT data_access_hidden_count('application', $1::uuid) AS n`, [app.id]);
-      if (Number(hidden?.n ?? 0) > 0) throw new DataAccessLimitedException(CONVERSION_HIDDEN_LINES_MESSAGE);
+      const hiddenLines = Number(hidden?.n ?? 0);
+      if (hiddenLines > 0) {
+        throw new DataAccessLimitedException(CONVERSION_HIDDEN_LINES_MESSAGE, {
+          reason: 'hiddenLinks',
+          params: { owner: 'application', lines: hiddenLines, contracts: 0 },
+        });
+      }
     }
     const reference = app.sequential_id || null;
     const files: ConversionFiles = { copies: [], originals: [] };
