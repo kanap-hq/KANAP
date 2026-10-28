@@ -17,6 +17,8 @@ export type HistorySeed = {
   companyA: string;
   companyB: string;
   costCenterA: string;
+  costCenterB: string;
+  coa: string;
   supplier: string;
   contractA: string;
   contractB: string;
@@ -241,7 +243,7 @@ export async function seedHistoryData(runner: QueryRunner, tenantId: string): Pr
   );
 
   return {
-    tenantId, companyA, companyB, costCenterA, supplier, contractA, contractB, project, request, application,
+    tenantId, companyA, companyB, costCenterA, costCenterB, coa, supplier, contractA, contractB, project, request, application,
     technology, asset, contact, account, task, axis, categoryA, categoryB, opexLine, capexLine,
     hiddenLine, typeLine, pageLine, emptyPageLine, opexVersion, capexVersion, owner: owner.id,
   };
@@ -252,6 +254,70 @@ export async function audit(runner: QueryRunner, entry: AuditEntry): Promise<str
   const id = await writeAuditLog(runner.manager, entry);
   if (!id) throw new Error('the audit writer returned no id');
   return id;
+}
+
+/** The stored row of a pilot record as its writer audits it (`RETURNING *`, `to_jsonb(row)`). */
+export async function storedRow(runner: QueryRunner, table: 'accounts' | 'cost_centers', id: string): Promise<Record<string, unknown>> {
+  const [row] = await runner.query(`SELECT to_jsonb(t) AS row FROM ${table} t WHERE t.id = $1`, [id]);
+  if (!row?.row) throw new Error(`no ${table} row ${id}`);
+  return row.row as Record<string, unknown>;
+}
+
+/**
+ * The audit rows of the two pilot records (lot 2): one creation and one modification each, from
+ * the stored rows, through the real writer. The records are read back before the write, so every
+ * key the account and cost-center writers put in a payload is in the fixtures too.
+ */
+export async function seedPilotAudits(runner: QueryRunner, seed: HistorySeed) {
+  // A parent cost center and an owner, as the screen shows them.
+  await runner.query(
+    `UPDATE cost_centers SET parent_id = $3, owner_user_id = $4 WHERE tenant_id = $1 AND id = $2`,
+    [seed.tenantId, seed.costCenterA, seed.costCenterB, seed.owner],
+  );
+  const storedAccount = await storedRow(runner, 'accounts', seed.account);
+  // The account writer saves its entity, which keeps the bigint account number as a string.
+  const account = {
+    ...storedAccount,
+    account_number: String(storedAccount.account_number),
+    consolidation_account_number: storedAccount.consolidation_account_number == null
+      ? null
+      : Number(storedAccount.consolidation_account_number),
+  };
+  const accountAfter = {
+    ...account,
+    account_name: 'Software and services',
+    nature: 'opex',
+    consolidation_account_number: 1300,
+    consolidation_account_name: 'Group software',
+    consolidation_account_description: 'Group-wide software account',
+    status: 'disabled',
+    disabled_at: '2026-06-30T00:00:00.000Z',
+    updated_at: '2026-06-30T00:00:00.000Z',
+  };
+  await audit(runner, {
+    table: 'accounts', recordId: seed.account, action: 'create', userId: seed.owner, after: account,
+  });
+  await audit(runner, {
+    table: 'accounts', recordId: seed.account, action: 'update', userId: seed.owner, before: account, after: accountAfter,
+  });
+
+  const costCenter = await storedRow(runner, 'cost_centers', seed.costCenterA);
+  const costCenterAfter = {
+    ...costCenter,
+    kind: 'group',
+    name: 'Centre A group',
+    description: 'Shared costs',
+    parent_id: null,
+    status: 'disabled',
+    disabled_at: '2026-07-31T00:00:00.000Z',
+    updated_at: '2026-07-31T00:00:00.000Z',
+  };
+  await audit(runner, {
+    table: 'cost_centers', recordId: seed.costCenterA, action: 'create', userId: seed.owner, after: costCenter,
+  });
+  await audit(runner, {
+    table: 'cost_centers', recordId: seed.costCenterA, action: 'update', userId: seed.owner, before: costCenter, after: costCenterAfter,
+  });
 }
 
 /** The line's own snapshot, with the fields its page shows and neighbouring labels a payload may carry. */

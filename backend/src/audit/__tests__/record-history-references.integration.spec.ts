@@ -113,6 +113,7 @@ async function testEveryFamily(seeded: Seeded) {
     { family: 'user', home: home.owner, away: away.owner, label: 'user' },
     { family: 'company', home: home.companyA, away: away.companyA, label: 'company' },
     { family: 'supplier', home: home.supplier, away: away.supplier, label: 'supplier' },
+    { family: 'chart_of_accounts', home: home.coa, away: away.coa, label: 'chart of accounts' },
     { family: 'account', home: home.account, away: away.account, label: 'account' },
     { family: 'project', home: home.project, away: away.project, label: 'project' },
     { family: 'request', home: home.request, away: away.request, label: 'request' },

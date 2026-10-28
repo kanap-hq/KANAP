@@ -121,6 +121,7 @@ export type FamilyKey =
   | 'user'
   | 'company'
   | 'supplier'
+  | 'chart_of_accounts'
   | 'account'
   | 'project'
   | 'request'
@@ -174,6 +175,12 @@ const REFERENCE_FAMILIES: Readonly<Record<FamilyKey, ReferenceFamily>> = {
   },
   company: { module: 'companies', table: 'companies', label: 'r.name', visibility: {} },
   supplier: { module: 'suppliers', table: 'suppliers', label: 'r.name', visibility: {} },
+  chart_of_accounts: {
+    module: 'accounts',
+    table: 'chart_of_accounts',
+    label: `r.code || ' · ' || r.name`,
+    visibility: {},
+  },
   account: {
     module: 'accounts',
     table: 'accounts',
@@ -427,6 +434,43 @@ const TASK_FIELDS: HistoryFields = {
   updated_at: hidden('timestamp'),
 };
 
+/** A chart of accounts, named as its screen names it (`accounts.fields.chartOfAccounts`). */
+const ACCOUNT_FIELDS: HistoryFields = {
+  account_number: shown(),
+  account_name: shown(),
+  native_name: shown(),
+  description: shown(),
+  status: shown(),
+  disabled_at: shown(),
+  nature: shown(),
+  consolidation_account_number: shown(),
+  consolidation_account_name: shown(),
+  consolidation_account_description: shown(),
+  coa_id: shown('chart_of_accounts'),
+  id: hidden('identity'),
+  tenant_id: hidden('tenancy'),
+  created_at: hidden('timestamp'),
+  updated_at: hidden('timestamp'),
+};
+
+/** A cost center, named as its screen names it. */
+const COST_CENTER_FIELDS: HistoryFields = {
+  code: shown(),
+  kind: shown(),
+  name: shown(),
+  description: shown(),
+  parent_id: shown('cost_center'),
+  company_id: shown('company'),
+  owner_user_id: shown('user'),
+  status: shown(),
+  disabled_at: shown(),
+  id: hidden('identity'),
+  tenant_id: hidden('tenancy'),
+  sort_order: hidden('display order'),
+  created_at: hidden('timestamp'),
+  updated_at: hidden('timestamp'),
+};
+
 const AMOUNT_FIELDS: HistoryFields = {
   period: shown(),
   planned: shown(),
@@ -482,6 +526,8 @@ export const HISTORY_FIELDS: Readonly<Record<string, HistoryFields>> = {
   capex_amounts: AMOUNT_FIELDS,
   spend_allocations: ALLOCATION_FIELDS,
   capex_allocations: ALLOCATION_FIELDS,
+  accounts: ACCOUNT_FIELDS,
+  cost_centers: COST_CENTER_FIELDS,
 };
 
 /** A label's allow-list, or an empty one: an undeclared label shows no field. */

@@ -144,6 +144,29 @@ const RECORD_HISTORY_DEFINITION = {
       },
     ],
   },
+  // The master-data pilots of lot 2: no child table writes under another audit label, so their
+  // entries have no children and no exclusions. Their references (chart, company, parent cost
+  // center, owner) resolve through the families in `record-history.service.ts`.
+  accounts: {
+    table: 'accounts',
+    module: 'accounts',
+    level: 'reader',
+    auditLabels: ['accounts'],
+    family: 'account',
+    children: {},
+    explicitParentLabels: [],
+    exclusions: [],
+  },
+  cost_centers: {
+    table: 'cost_centers',
+    module: 'cost_centers',
+    level: 'reader',
+    auditLabels: ['cost_centers'],
+    family: 'cost_center',
+    children: {},
+    explicitParentLabels: [],
+    exclusions: [],
+  },
 } as const satisfies Readonly<Record<string, RecordHistoryRecord>>;
 
 /** A physical table the history serves: the route key of `GET /records/:table/:id/history`. */

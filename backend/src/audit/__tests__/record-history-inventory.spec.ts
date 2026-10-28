@@ -27,7 +27,7 @@ function testEntries() {
     assert.ok(entry.exclusions.every((exclusion) => exclusion.reason.trim().length > 0), `${key}: an exclusion has its reason`);
     assert.ok(entry.explicitParentLabels.every((label) => recordHistoryChildKind(entry, label) !== null), `${key}: an explicit parent is a child label`);
   }
-  assert.deepEqual(recordHistoryModules(), ['budget'], 'the modules of the route guard');
+  assert.deepEqual(recordHistoryModules(), ['accounts', 'budget', 'cost_centers'], 'the modules of the route guard');
   console.log(`  ${entries.length} record entries: OK`);
 }
 
