@@ -211,12 +211,19 @@ export class AiMutationPreviewService {
   }
 
   private toPreviewDto(preview: AiMutationPreview, language: AiWriteLanguage): AiMutationPreviewDto {
-    const operation = this.operations.getOperation(preview.tool_name);
-    // An old budget line preview keeps its card in the conversation: the one family's operation
-    // cannot present the stored `spend_items` / `capex_items` target, so the card says what it is.
-    const presentation = this.isLegacyBudgetLinePreview(preview)
-      ? this.legacyBudgetLinePresentation(preview)
-      : operation.presentPreview(preview, language);
+    // An old budget line or relation preview keeps its card in the conversation: the one family's
+    // operation cannot present the stored `spend_items` / `capex_items` type or relation. A card
+    // that cannot present at all falls back to the same neutral one instead of failing the list.
+    let presentation: AiMutationPreviewPresentation;
+    if (this.isLegacyBudgetLinePreview(preview)) {
+      presentation = this.legacyPreviewPresentation(preview);
+    } else {
+      try {
+        presentation = this.operations.getOperation(preview.tool_name).presentPreview(preview, language);
+      } catch {
+        presentation = this.legacyPreviewPresentation(preview);
+      }
+    }
 
     return {
       preview_id: preview.id,
@@ -259,19 +266,24 @@ export class AiMutationPreviewService {
     await assertUnscopedDataAccess({ manager: context.manager, userId: context.userId });
   }
 
-  /** A preview stored before the budget lines became one AI family (`spend_items` / `capex_items`). */
+  /**
+   * A preview stored before the budget lines became one AI family: its target type was
+   * `spend_items` / `capex_items`, or its relation named one of those types.
+   */
   private isLegacyBudgetLinePreview(preview: AiMutationPreview): boolean {
     const type = preview.target_entity_type ?? preview.mutation_input?.entity_type;
-    return LEGACY_BUDGET_LINE_TYPES.has(String(type ?? '').trim());
+    if (LEGACY_BUDGET_LINE_TYPES.has(String(type ?? '').trim())) return true;
+    return preview.tool_name === 'update_entity_relations'
+      && LEGACY_BUDGET_LINE_TYPES.has(String(preview.mutation_input?.relation ?? '').trim());
   }
 
   /**
-   * The card of an old budget line preview: no field labels, no link (the frontend has no alias
-   * for the old types), and a summary that says it predates the change. The list keeps loading.
+   * The card of an old preview: no field labels, the stored target only, and a summary that says
+   * it predates the change. The list keeps loading and its undo is refused (`createReversePreview`).
    */
-  private legacyBudgetLinePresentation(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  private legacyPreviewPresentation(preview: AiMutationPreview): AiMutationPreviewPresentation {
     const current = preview.current_values ?? {};
-    const title = String(current.target_title ?? current.target_ref ?? 'Budget line');
+    const title = String(current.target_title ?? current.target_ref ?? 'Record');
     const action = String(preview.mutation_input?.action ?? 'change');
     return {
       target: {
