@@ -20,7 +20,7 @@ import { AiWriteLanguage, previewSummaryText, writeActionText } from '../../ai-w
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const PRIORITIES = ['blocker', 'high', 'normal', 'low', 'optional'] as const;
-const RELATION_TYPES = ['standalone', 'project', 'spend_item', 'capex_item', 'contract', 'incident'] as const;
+const RELATION_TYPES = ['standalone', 'project', 'budget_line', 'contract', 'incident'] as const;
 
 type UpdateTaskFieldsInput = {
   ref: string;
@@ -104,8 +104,6 @@ function normalizeKey(value: string): string {
 
 function normalizeRelationType(value: unknown): typeof RELATION_TYPES[number] {
   const normalized = normalizeKey(String(value || 'standalone'));
-  if (normalized === 'opex' || normalized === 'budget' || normalized === 'budget_entry') return 'spend_item';
-  if (normalized === 'capex') return 'capex_item';
   if (!RELATION_TYPES.includes(normalized as any)) {
     throw new BadRequestException(`relation_type must be one of ${RELATION_TYPES.join(', ')}.`);
   }
@@ -155,6 +153,8 @@ function taskRef(row: TaskSnapshot): string | null {
 }
 
 function relationMode(type: RelatedType): typeof RELATION_TYPES[number] {
+  // A budget line of either nature is the one `budget_line` family on the AI surface.
+  if (type === 'spend_item' || type === 'capex_item') return 'budget_line';
   return type ?? 'standalone';
 }
 
@@ -659,9 +659,8 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
     if (!type || !id) return 'Standalone';
     const table = type === 'project' ? 'portfolio_projects' : type === 'spend_item' || type === 'capex_item' ? 'spend_items' : type === 'incident' ? 'incidents' : 'contracts';
     const labelColumn = type === 'project' ? "CONCAT('PRJ-', item_number::text, ' - ', name)" : type === 'spend_item' || type === 'capex_item' ? 'product_name' : type === 'incident' ? "CASE WHEN confidential THEN CONCAT('INC-', item_number::text) ELSE CONCAT('INC-', item_number::text, ' - ', title) END" : 'name';
-    // A `spend_item` names an OPEX line, a `capex_item` a CAPEX line (`spend/budget-nature.ts`).
-    const nature = type === 'spend_item' ? ` AND nature = 'opex'` : type === 'capex_item' ? ` AND nature = 'capex'` : '';
-    const rows = await context.manager.query(`SELECT ${labelColumn} AS label FROM ${table} WHERE tenant_id = $1 AND id = $2${nature} LIMIT 1`, [context.tenantId, id]);
+    // A `spend_item` or a `capex_item` is a budget line of either nature (`spend/budget-nature.ts`).
+    const rows = await context.manager.query(`SELECT ${labelColumn} AS label FROM ${table} WHERE tenant_id = $1 AND id = $2 LIMIT 1`, [context.tenantId, id]);
     return textOrNull(rows[0]?.label) || id;
   }
 }
