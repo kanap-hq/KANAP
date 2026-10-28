@@ -87,6 +87,7 @@ function mutationHarness() {
     {} as any, {} as any, {} as any, {} as any,
     { getClassificationCatalog: async () => catalog } as any,
     {} as any, {} as any, {} as any,
+    {} as any,
   );
   const executionContext = context('chat', async (sql) => sql.includes('FROM applications') ? [{ ...live }] : []);
   return { service, calls, context: executionContext, setLive: (value: Record<string, unknown>) => { live = value; } };

@@ -506,7 +506,9 @@ async function testPromptRefusesUnsupportedWritesWithoutSubstitutePreview() {
   assert.doesNotMatch(prompt, /deleting a budget line, a contract, an interface, a connection/);
   assert.match(prompt, /deleting several records in one request, which Plaid prepares one at a time, never as one delete or one plan/);
   assert.match(prompt, /For a request to delete several records, prepare the first one and say the others are deleted one at a time, or ask which one comes first/);
-  assert.match(prompt, /creating or changing an incident; changing the state of a vulnerability; adding, changing or removing a technology/);
+  assert.match(prompt, /on an incident, the journal entry, the links to assets, applications and technologies, the follow-up task, reopening, cancelling and lifting the confidentiality stay on the incident screen/);
+  assert.match(prompt, /changing the state of a vulnerability; adding, changing or removing a technology/);
+  assert.doesNotMatch(prompt, /creating or changing an incident/);
   assert.match(prompt, /refuse in the user's language in one or two sentences: say what Plaid cannot do and name the KANAP screen/);
   assert.match(prompt, /Prepare no preview in its place: no task recording the request, no status change, cancellation or deactivation standing in for a deletion/);
   assert.match(prompt, /prepare it only after the user says yes/);

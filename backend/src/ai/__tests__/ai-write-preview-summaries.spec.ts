@@ -167,6 +167,53 @@ function testBusinessRecords() {
   assert.equal(summary(masterData, supplier, 'fr'), 'Création du fournisseur « Acme ».');
 }
 
+function testIncidentPreviewsAndWarnings() {
+  const support = make(AiBusinessRecordMutationSupportService);
+  const createIncident = preview({
+    tool_name: 'create_business_record',
+    target_entity_type: 'incidents',
+    mutation_input: {
+      action: 'create',
+      entity_type: 'incidents',
+      fields: { title: 'Mail outage', severity: 'major', status: 'open' },
+      display_values: { title: 'Mail outage', severity: 'major', status: 'open' },
+      field_labels: { title: 'Title', severity: 'Severity', status: 'Status' },
+    },
+    current_values: { target_title: 'Mail outage' },
+  });
+  assert.equal(summary(support, createIncident, 'en'), 'Create incident "Mail outage".');
+  assert.equal(summary(support, createIncident, 'fr'), "Création de l'incident « Mail outage ».");
+  assert.equal(summary(support, createIncident, 'de'), 'Vorfall „Mail outage“ erstellen.');
+  assert.equal(summary(support, createIncident, 'es'), 'Creación del incidente «Mail outage».');
+  const created = support.presentPreview(createIncident, 'fr').changes;
+  assert.equal(created.status.to, 'Ouvert', 'the status reads in French');
+  assert.equal(created.severity.to, 'Majeure', 'the severity reads in French');
+
+  const closure = preview({
+    tool_name: 'update_business_record',
+    target_entity_type: 'incidents',
+    target_entity_id: 'incident-1',
+    mutation_input: {
+      action: 'update',
+      entity_type: 'incidents',
+      fields: { status: 'closed' },
+      display_values: { status: 'closed' },
+      field_labels: { status: 'Status' },
+      warnings: { closure: true },
+    },
+    current_values: { target_ref: 'INC-7', target_title: 'INC-7 - Mail outage', values: { status: 'open' }, display_values: { status: 'open' } },
+  });
+  const closed = support.presentPreview(closure, 'fr').changes;
+  assert.equal(closed.status.from, 'Ouvert');
+  assert.equal(closed.status.to, 'Clôturé');
+  assert.equal(closed.closure_warning.to, "Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.");
+  assert.equal(summary(support, closure, 'en'), 'Update incident "INC-7 - Mail outage": Status.');
+
+  const lost = support.presentPreview({ ...closure, mutation_input: { ...closure.mutation_input, fields: { confidential: true }, display_values: { confidential: 'true' }, warnings: { lose_access: true } } } as AiMutationPreview, 'es').changes;
+  assert.equal(lost.access_warning.to, 'Tras este cambio, solo los administradores del registro, el notificante y el responsable podrán abrirlo. Volverá al registro.');
+  assert.equal(lost.access_warning.label, 'Access');
+}
+
 /** What the card needs beyond the summary: classification codes, and fields in a stable order (quality pass 2026-10-27, A1 and A3). */
 function testCardCodesAndFieldOrder() {
   const support = make(AiBusinessRecordMutationSupportService);
@@ -669,6 +716,7 @@ async function main() {
   testRelationRolesForTheCard();
   testAmountsForTheCard();
   testCardCodesAndFieldOrder();
+  testIncidentPreviewsAndWarnings();
   testDeleteRecordSummaryAndCard();
   await testDefaultTaskType();
   await testPersonLanguage();

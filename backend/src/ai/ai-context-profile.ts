@@ -420,10 +420,16 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     return { profile: withWebCapability(PROFILES.read_query, needsWeb), explicitIntent: true };
   }
 
+  const hasIncidentReference = referencedTypes.has('incidents');
   const isWrite = containsAny(text, [
-    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|unlink|delier|convert|convertir|import|publish|publier|mark|set|passer|passe)\b/,
+    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|unlink|delier|convert|convertir|import|publish|publier|mark|set|passer|passe)\b/,
     wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
+    // A status word with an incident reference is a status change: "clos INC-7", "ferme INC-7".
+    ...(hasIncidentReference
+      ? [/\b(clos|closed|ferme|fermer|resolu|resolue|resolved|rouvre|rouvrir|reopen)\b/]
+      : []),
   ]);
+  const hasIncidentIntent = hasIncidentReference || /\bincidents?\b/.test(text);
 
   if (isWrite) {
     const isRelationWrite = containsAny(text, [
@@ -464,6 +470,9 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     if (hasDocumentIntent) {
       return { profile: withWebCapability(PROFILES.write_document, needsWeb), explicitIntent: true };
     }
+    if (hasIncidentIntent) {
+      return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
+    }
     if (hasTaskIntent) {
       return { profile: withWebCapability(PROFILES.write_task, needsWeb), explicitIntent: true };
     }
@@ -473,7 +482,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     if (containsAny(text, [/\b(company|supplier|contact|department|location|account|master data|referentiel|referential)\b/])) {
       return { profile: withWebCapability(PROFILES.write_master_data, needsWeb), explicitIntent: true };
     }
-    if (containsAny(text, [/\b(application|applications|asset|assets|project|projects|request|requests|contract|contracts|interface|connection|location)\b/])) {
+    if (containsAny(text, [/\b(application|applications|asset|assets|project|projects|request|requests|contract|contracts|interface|connection|location|incident|incidents)\b/])) {
       return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
     }
     return { profile: withWebCapability(PROFILES.write_general, needsWeb), explicitIntent: true };

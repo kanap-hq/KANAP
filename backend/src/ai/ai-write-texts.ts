@@ -265,6 +265,7 @@ const RECORD_NOUNS: Record<string, TranslatedTexts> = {
   interfaces: { fr: "de l'interface", de: 'Schnittstelle', es: 'de la interfaz' },
   connections: { fr: 'de la connexion', de: 'Verbindung', es: 'de la conexión' },
   budget_lines: { fr: 'de la ligne budgétaire', de: 'Budgetzeile', es: 'de la línea presupuestaria' },
+  incidents: { fr: "de l'incident", de: 'Vorfall', es: 'del incidente' },
   companies: { fr: 'de la société', de: 'Unternehmen', es: 'de la empresa' },
   departments: { fr: 'du département', de: 'Abteilung', es: 'del departamento' },
   suppliers: { fr: 'du fournisseur', de: 'Lieferant', es: 'del proveedor' },
@@ -278,6 +279,55 @@ const RECORD_NOUNS: Record<string, TranslatedTexts> = {
   documents: { fr: 'du document', de: 'Dokument', es: 'del documento' },
   default: { fr: "de l'élément", de: 'Element', es: 'del elemento' },
 };
+
+/** The incident statuses as the incident screen and the ITSM catalogs name them. */
+const INCIDENT_STATUS_LABELS: Record<AiWriteLanguage, Record<string, string>> = {
+  en: { open: 'Open', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed', cancelled: 'Cancelled' },
+  fr: { open: 'Ouvert', in_progress: 'En cours', resolved: 'Résolu', closed: 'Clôturé', cancelled: 'Annulé' },
+  de: { open: 'Offen', in_progress: 'In Bearbeitung', resolved: 'Behoben', closed: 'Geschlossen', cancelled: 'Abgebrochen' },
+  es: { open: 'Abierto', in_progress: 'En curso', resolved: 'Resuelto', closed: 'Cerrado', cancelled: 'Cancelado' },
+};
+
+/** The incident severities, as `it:enums.incidentSeverity` names them. */
+const INCIDENT_SEVERITY_LABELS: Record<AiWriteLanguage, Record<string, string>> = {
+  en: { critical: 'Critical', major: 'Major', minor: 'Minor', low: 'Low' },
+  fr: { critical: 'Critique', major: 'Majeure', minor: 'Mineure', low: 'Faible' },
+  de: { critical: 'Kritisch', major: 'Hoch', minor: 'Mittel', low: 'Niedrig' },
+  es: { critical: 'Crítica', major: 'Alta', minor: 'Media', low: 'Baja' },
+};
+
+/** A stored incident status or severity as the person's screen shows it; an unknown code as stored. */
+export function incidentStatusText(language: AiWriteLanguage, code: string): string {
+  return INCIDENT_STATUS_LABELS[language][code] ?? code;
+}
+
+export function incidentSeverityText(language: AiWriteLanguage, code: string): string {
+  return INCIDENT_SEVERITY_LABELS[language][code] ?? code;
+}
+
+/** The card's warning on a closure: the record freezes and only an administrator reopens it. */
+const INCIDENT_CLOSURE_WARNING: Texts = {
+  en: 'This closes and freezes the incident: only an administrator can reopen it.',
+  fr: "Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.",
+  de: 'Dies schließt und sperrt den Vorfall: Nur ein Administrator kann ihn wieder öffnen.',
+  es: 'Esto cierra y bloquea el incidente: solo un administrador podrá reabrirlo.',
+};
+
+/** The card's warning when the change makes the restricted incident disappear for the person. */
+const INCIDENT_ACCESS_WARNING: Texts = {
+  en: 'After this change, only register administrators, the reporter and the owner can open it. You will be taken back to the register.',
+  fr: "Après cette modification, seuls les administrateurs du registre, le déclarant et le responsable pourront l'ouvrir. Vous serez renvoyé vers le registre.",
+  de: 'Nach dieser Änderung können nur noch Registeradministratoren, der Melder und der Verantwortliche ihn öffnen. Sie werden zum Register zurückgeführt.',
+  es: 'Tras este cambio, solo los administradores del registro, el notificante y el responsable podrán abrirlo. Volverá al registro.',
+};
+
+export function incidentClosureWarning(language: AiWriteLanguage): string {
+  return INCIDENT_CLOSURE_WARNING[language];
+}
+
+export function incidentAccessWarning(language: AiWriteLanguage): string {
+  return INCIDENT_ACCESS_WARNING[language];
+}
 
 /** The detail lines of a task preview: its assignee and its priority. */
 export const taskDetailText = {
@@ -585,6 +635,10 @@ export const PREVIEW_EXPIRED_MESSAGE = 'Preview expired before approval.';
 export const PREVIEW_DATA_BUSY_MESSAGE =
   'The data this change writes was busy with another operation, so nothing was changed. Approve it again in a moment.';
 
+/** A closure whose review is being edited by someone else (the 423 of the review lock). */
+export const PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE =
+  'The incident review is being edited by someone else, so nothing was changed. Try again once that edit is saved or its lock is released.';
+
 const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
   [PREVIEW_EXPIRED_MESSAGE]: {
     fr: "L'aperçu a expiré avant l'approbation.",
@@ -595,6 +649,11 @@ const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
     fr: "Les données que cette modification écrit étaient occupées par une autre opération : rien n'a été modifié. Approuvez-la de nouveau dans un instant.",
     de: 'Die Daten, die diese Änderung schreibt, waren durch einen anderen Vorgang belegt. Es wurde nichts geändert. Genehmigen Sie sie gleich noch einmal.',
     es: 'Los datos que escribe este cambio estaban ocupados por otra operación, así que no se ha modificado nada. Vuelva a aprobarlo en un momento.',
+  },
+  [PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE]: {
+    fr: "La revue de l'incident est en cours de modification par une autre personne : rien n'a été modifié. Réessayez quand cette modification sera enregistrée ou son verrou levé.",
+    de: 'Die Vorfallprüfung wird gerade von einer anderen Person bearbeitet, daher wurde nichts geändert. Versuchen Sie es erneut, sobald diese Bearbeitung gespeichert oder ihre Sperre aufgehoben ist.',
+    es: 'Otra persona está editando la revisión del incidente, así que no se ha modificado nada. Vuelva a intentarlo cuando se guarde esa edición o se libere su bloqueo.',
   },
 };
 

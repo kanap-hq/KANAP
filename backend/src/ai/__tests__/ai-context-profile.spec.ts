@@ -111,6 +111,23 @@ async function testNonWebProfilesExposeAllKanapToolsButPrioritizeProfileTools() 
   );
 }
 
+function testIncidentWritesChooseTheBusinessRecordTools() {
+  for (const prompt of [
+    'Crée un incident sur la messagerie',
+    'Crée un incident INC-7 sur la messagerie',
+    'Mets à jour l’incident INC-7',
+    'Clos INC-7',
+    'Ferme INC-7',
+    'Passe INC-7 en résolu',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'write_business', prompt);
+    assert.ok(profile.toolNames.includes('create_business_record'), `${prompt}: create tool`);
+    assert.ok(profile.toolNames.includes('update_business_record'), `${prompt}: update tool`);
+    assert.equal(profile.toolNames.includes('update_task_status'), false, `${prompt}: never a task write`);
+  }
+}
+
 function testDeleteRecordFollowsTheFamilyWriteProfiles() {
   for (const prompt of [
     'Supprime la tâche T-42',
@@ -370,6 +387,7 @@ async function run() {
   await testFiltersProviderToolsForProfile();
   await testNonWebProfilesExposeAllKanapToolsButPrioritizeProfileTools();
   testDeleteRecordFollowsTheFamilyWriteProfiles();
+  testIncidentWritesChooseTheBusinessRecordTools();
   await testContinuationInheritsOpenWriteRequestProfile();
   await testPreviewCorrectionInheritsWriteRequestProfile();
   await testTargetSetCorrectionInheritsWriteRequestProfile();

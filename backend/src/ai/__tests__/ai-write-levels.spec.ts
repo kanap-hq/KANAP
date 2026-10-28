@@ -7,6 +7,7 @@ import { aiRelationTargetRequirement, aiWriteLevel, aiWriteRequirements, CONTRIB
 import { PROJECT_RELATION_READS, REQUEST_RELATION_READS } from '../../portfolio/portfolio-relations.service';
 import {
   AI_BUSINESS_RECORD_ENTITY_TYPES,
+  AI_INCIDENT_WRITABLE_FIELDS,
   getAiBusinessRecordBusinessResource,
 } from '../mutation/ai-business-record-mutation-support.service';
 import {
@@ -26,6 +27,7 @@ import { ContactsController } from '../../contacts/contacts.controller';
 import { ContractsController } from '../../contracts/contracts.controller';
 import { DepartmentsController } from '../../departments/departments.controller';
 import { InterfacesController } from '../../interfaces/interfaces.controller';
+import { IncidentsController } from '../../incidents/incidents.controller';
 import { KnowledgeController } from '../../knowledge/knowledge.controller';
 import { LocationsController } from '../../locations/locations.controller';
 import { PortfolioProjectsController } from '../../portfolio/portfolio-projects.controller';
@@ -62,6 +64,7 @@ const BUSINESS_RECORD_ROUTES: Record<string, Controller> = {
   interfaces: InterfacesController,
   connections: ConnectionsController,
   budget_lines: BudgetLinesController,
+  incidents: IncidentsController,
 };
 
 const MASTER_DATA_ROUTES: Record<string, Controller> = {
@@ -91,7 +94,7 @@ const RELATION_ROUTES: Record<string, { route: [Controller, string]; relation: s
 function recordRows(action: 'create' | 'update'): Record<string, Row> {
   return Object.fromEntries(AI_BUSINESS_RECORD_ENTITY_TYPES.map((family) => [family, {
     resource: getAiBusinessRecordBusinessResource(family),
-    level: action === 'update' && family === 'projects' ? 'contributor' : 'member',
+    level: family === 'incidents' || (action === 'update' && family === 'projects') ? 'contributor' : 'member',
     route: [BUSINESS_RECORD_ROUTES[family], action],
   } satisfies Row]));
 }
@@ -172,6 +175,8 @@ function testOnlyTheContributorRowsAreBelowMember() {
   const contributorRows = Object.entries(TABLE).flatMap(([toolName, families]) =>
     Object.entries(families).filter(([, row]) => row.level === 'contributor').map(([family]) => `${toolName}:${family}`));
   assert.deepEqual(contributorRows.sort(), [
+    'create_business_record:incidents',
+    'update_business_record:incidents',
     'update_business_record:projects',
     'update_entity_relations:projects',
     'update_entity_relations:requests',
@@ -179,11 +184,16 @@ function testOnlyTheContributorRowsAreBelowMember() {
   // Never below contributor, and an unknown family stays at member.
   assert.equal(aiWriteLevel('update_business_record', 'applications'), 'member');
   assert.equal(aiWriteLevel('create_business_record', 'projects'), 'member');
+  assert.equal(aiWriteLevel('create_business_record', 'incidents'), 'contributor');
+  assert.equal(aiWriteLevel('update_business_record', 'incidents'), 'contributor');
   assert.equal(aiWriteLevel('update_business_record', 'unknown'), 'member');
   // A delete family without its row keeps the strictest level.
   assert.equal(aiWriteLevel('delete_record', 'unknown'), 'admin');
   // A contributor writes the purpose of a project, nothing else through its fields.
   assert.deepEqual(CONTRIBUTOR_WRITABLE_FIELDS.update_business_record.projects, ['purpose']);
+  // The incident screen accepts every field of the family at contributor level, on create and update.
+  assert.deepEqual(CONTRIBUTOR_WRITABLE_FIELDS.create_business_record.incidents, AI_INCIDENT_WRITABLE_FIELDS);
+  assert.deepEqual(CONTRIBUTOR_WRITABLE_FIELDS.update_business_record.incidents, AI_INCIDENT_WRITABLE_FIELDS);
   console.log('  contributor rows: OK');
 }
 
@@ -198,6 +208,10 @@ function testToolRequirements() {
   const relations = aiWriteRequirements('update_entity_relations', ['portfolio_projects', 'portfolio_requests']);
   assert.ok(relations.some((r) => r.resource === 'portfolio_requests' && r.level === 'contributor'));
   assert.deepEqual(aiWriteRequirements('create_business_record', ['portfolio_projects']), [{ resource: 'portfolio_projects', level: 'member' }]);
+  assert.deepEqual(aiWriteRequirements('create_business_record', ['incidents']), [
+    { resource: 'incidents', level: 'member' },
+    { resource: 'incidents', level: 'contributor' },
+  ]);
   assert.deepEqual(aiWriteRequirements('delete_record', [
     'tasks', 'contacts', 'locations', 'budget_lines', 'connections', 'interfaces', 'documents',
   ]), [

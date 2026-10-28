@@ -15,7 +15,8 @@ import { participantConditionForAiEntity, ParticipationScopedAiEntityType } from
  *   `POST|DELETE /portfolio/{projects,requests}/:id/relations/:kind` (contributor).
  */
 const CONTRIBUTOR_WRITE_FAMILIES: Readonly<Record<string, readonly string[]>> = {
-  update_business_record: ['projects'],
+  create_business_record: ['incidents'],
+  update_business_record: ['projects', 'incidents'],
   update_entity_relations: ['projects', 'requests'],
 };
 
@@ -59,7 +60,24 @@ export function aiWriteLevel(toolName: string, family: unknown): PermissionLevel
  * rule of the page is kept until a product decision opens more (lot D11, brief: strictest level).
  */
 export const CONTRIBUTOR_WRITABLE_FIELDS: Readonly<Record<string, Readonly<Record<string, readonly string[]>>>> = {
-  update_business_record: { projects: ['purpose'] },
+  create_business_record: {
+    incidents: [
+      'title', 'category', 'severity', 'status', 'started_at', 'detected_at', 'resolved_at', 'closed_at',
+      'reporter_user_id', 'owner_user_id', 'description', 'source_ref', 'personal_data_affected',
+      'authority_notification_required', 'confidential', 'authority_notified_at', 'notified_parties',
+    ],
+  },
+  update_business_record: {
+    projects: ['purpose'],
+    // The incident screen's PATCH accepts every field of the family at contributor level
+    // (`IncidentFieldsSchema`); the status rules and the confidentiality refusals are checked
+    // before the preview by the family itself.
+    incidents: [
+      'title', 'category', 'severity', 'status', 'started_at', 'detected_at', 'resolved_at', 'closed_at',
+      'reporter_user_id', 'owner_user_id', 'description', 'source_ref', 'personal_data_affected',
+      'authority_notification_required', 'confidential', 'authority_notified_at', 'notified_parties',
+    ],
+  },
 };
 
 /**
@@ -96,8 +114,14 @@ export function aiRelationTargetRequirement(
 
 /** The modules a contributor may change through Plaid, in plain words, for the refusals. */
 export const CONTRIBUTOR_PLAIN_SCOPES: Readonly<Record<string, string>> = {
+  incidents: 'incidents (their fields, their status up to closure, and setting the confidentiality)',
   portfolio_projects: 'projects (their purpose and their links to applications, assets and budget lines)',
   portfolio_requests: 'requests (their links to applications, assets, budget lines and business processes)',
+};
+
+/** A contributor family whose module is not a participation-scoped family (`WRITE_SCOPED_FAMILIES`). */
+const CONTRIBUTOR_FAMILY_RESOURCES: Readonly<Record<string, string>> = {
+  incidents: 'incidents',
 };
 
 /**
@@ -119,6 +143,11 @@ export function aiWriteRequirements(
     const scoped = WRITE_SCOPED_FAMILIES[family as ParticipationScopedAiEntityType];
     if (scoped && resources.includes(scoped.resource)) {
       requirements.push({ resource: scoped.resource, level: 'contributor' });
+      continue;
+    }
+    const resource = CONTRIBUTOR_FAMILY_RESOURCES[family];
+    if (resource && resources.includes(resource)) {
+      requirements.push({ resource, level: 'contributor' });
     }
   }
   return requirements;

@@ -91,6 +91,7 @@ function createHarness() {
     {} as any,
     {} as any,
     {} as any,
+    {} as any,
   );
   const context: AiExecutionContextWithManager = {
     tenantId: TENANT_ID,

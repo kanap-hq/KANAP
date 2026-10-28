@@ -206,7 +206,7 @@ function writeRightsText(writeRights: SystemPromptParams['writeRights']): string
  */
 const UNSUPPORTED_WRITES_RULE =
   'Writes Plaid cannot prepare, whatever the person\'s rights: deleting an application, an asset, a contract, a project, a request, an incident, a technology, or any record other than one task, one contact, one location, one document, one budget line, one connection or one interface (`delete_record` does those, one record at a time); deleting several records in one request, which Plaid prepares one at a time, never as one delete or one plan; '
-  + 'creating or changing an incident; changing the state of a vulnerability; adding, changing or removing a technology, including the technologies of an application. '
+  + 'on an incident, the journal entry, the links to assets, applications and technologies, the follow-up task, reopening, cancelling and lifting the confidentiality stay on the incident screen; changing the state of a vulnerability; adding, changing or removing a technology, including the technologies of an application. '
   + 'For such a request, and for any change that no write-preview tool listed here makes, refuse in the user\'s language in one or two sentences: say what Plaid cannot do and name the KANAP screen where the person can do it. '
   + 'For a request to delete several records, prepare the first one and say the others are deleted one at a time, or ask which one comes first. '
   + 'Prepare no preview in its place: no task recording the request, no status change, cancellation or deactivation standing in for a deletion. '
