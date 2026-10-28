@@ -943,6 +943,16 @@ async function testTechnologyVersions(harness: Harness, runner: QueryRunner, s: 
     inUseGroups.groups.map((g: any) => [g.key, g.count]).sort(),
     [['false', 2], ['true', 1]],
   );
+  const filterValues = await harness.executor.executeFilterValues(ctx(runner, s, 'full'), {
+    entity_type: 'technology_versions',
+    fields: ['technology', 'family', 'lifecycle', 'end_of_support_year', 'support_status', 'in_use', 'label'],
+  });
+  assert.ok(filterValues.values.technology.includes('Version Family'), 'the technologies of the tenant');
+  assert.ok(filterValues.values.family.includes('database') && filterValues.values.lifecycle.includes('active'));
+  assert.ok(filterValues.values.end_of_support_year.includes('2027'), 'the years of the support dates');
+  assert.deepEqual(filterValues.values.support_status.sort(), ['extended_support', 'out_of_support', 'supported', 'unknown']);
+  assert.deepEqual(filterValues.values.in_use, ['true', 'false']);
+  assert.deepEqual(filterValues.fields_ignored, ['label'], 'a label has no value list');
 
   // The application count follows the caller's application scope, as the technologies family.
   const pgForBc = await versions({ filters: { technology: ['TEC-1'] } }, 'bc');
