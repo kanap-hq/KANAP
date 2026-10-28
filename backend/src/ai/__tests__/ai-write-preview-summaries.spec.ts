@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
-import { AiWriteLanguage, aiWriteLanguage, personWriteLanguage } from '../ai-write-texts';
+import { AiWriteLanguage, aiWriteLanguage, deletionImpactText, personWriteLanguage } from '../ai-write-texts';
 import { AiBusinessRecordMutationSupportService } from '../mutation/ai-business-record-mutation-support.service';
 import { AiDocumentMutationSupportService } from '../mutation/ai-document-mutation-support.service';
 import { AiFinancialPlanMutationSupportService } from '../mutation/ai-financial-plan-mutation-support.service';
@@ -10,6 +10,7 @@ import { AiTaskMutationSupportService } from '../mutation/ai-task-mutation-suppo
 import { CreateBusinessRecordAiMutationOperation } from '../mutation/operations/create-business-record.ai-mutation-operation';
 import { CreateDocumentAiMutationOperation } from '../mutation/operations/create-document.ai-mutation-operation';
 import { CreateTaskAiMutationOperation } from '../mutation/operations/create-task.ai-mutation-operation';
+import { DeleteRecordAiMutationOperation } from '../mutation/operations/delete-record.ai-mutation-operation';
 import { ImportGlpiTicketAiMutationOperation } from '../mutation/operations/import-glpi-ticket.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from '../mutation/operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskStatusAiMutationOperation } from '../mutation/operations/update-task-status.ai-mutation-operation';
@@ -357,6 +358,297 @@ function testAmountsForTheCard() {
   }
 }
 
+function testDeleteRecordSummaryAndCard() {
+  const operation = make(DeleteRecordAiMutationOperation);
+  const pending = preview({
+    tool_name: 'delete_record',
+    target_entity_type: 'tasks',
+    target_entity_id: 'task-1',
+    current_values: {
+      target_ref: 'T-42',
+      target_title: 'T-42 - Migration',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: { activities: 2, time_entries: 1, attachments: 0, applications: 0, assets: 0, documents: 0 },
+    },
+  });
+  assert.equal(summary(operation, pending, 'en'), 'Delete task "Migration".');
+  assert.equal(summary(operation, pending, 'fr'), 'Suppression de la tâche « Migration ».');
+  assert.equal(summary(operation, pending, 'de'), 'Aufgabe „Migration“ löschen.');
+  assert.equal(summary(operation, pending, 'es'), 'Eliminación de la tarea «Migration».');
+  assert.equal(summary(operation, { ...pending, status: 'executed' }, 'en'), 'Task "Migration" deleted.');
+  assert.equal(summary(operation, { ...pending, status: 'executed' }, 'fr'), 'Appliqué : suppression de la tâche « Migration ».');
+  assert.equal(summary(operation, { ...pending, status: 'rejected' }, 'fr'), 'Rejeté : suppression de la tâche « Migration ».');
+  assert.equal(
+    summary(operation, { ...pending, status: 'failed', error_message: 'Task no longer exists.' }, 'fr'),
+    'Task no longer exists.',
+  );
+  // The card lists what goes with the record, in the person's language.
+  const card = operation.presentPreview(pending, 'fr');
+  assert.equal(card.target.ref, 'T-42');
+  assert.equal(card.target.title, 'T-42 - Migration');
+  assert.equal(card.changes.deletion.label, 'What goes with it');
+  assert.equal(card.changes.deletion.format, 'markdown');
+  assert.equal(card.changes.deletion.from, null);
+  assert.equal(card.changes.deletion.to, '- Commentaires et changements : 2\n- Temps saisis : 1');
+  assert.equal(operation.presentPreview(pending, 'de').changes.deletion.to, '- Kommentare und Änderungen: 2\n- Erfasste Zeiten: 1');
+  assert.equal(operation.presentPreview(pending, 'es').changes.deletion.to, '- Comentarios y cambios: 2\n- Tiempos registrados: 1');
+  // A contact's links stay unnamed in a family the person does not read.
+  const contact: AiMutationPreview = {
+    ...pending,
+    target_entity_type: 'contacts',
+    current_values: {
+      target_ref: null,
+      target_title: 'Camille Roux',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: { suppliers: 1 },
+      hidden: 2,
+    },
+  };
+  assert.equal(summary(operation, contact, 'fr'), 'Suppression du contact « Camille Roux ».');
+  assert.equal(
+    operation.presentPreview(contact, 'fr').changes.deletion.to,
+    "- Liens aux fournisseurs : 1\n- D'autres rattachements : 2\n\nLes fiches liées restent.",
+  );
+  // A task's applications, assets and documents follow the same rule as a contact's families.
+  const taskWithHiddenLinks: AiMutationPreview = {
+    ...pending,
+    current_values: {
+      target_ref: 'T-43',
+      target_title: 'T-43 - Import',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: { activities: 1 },
+      hidden: 3,
+    },
+  };
+  assert.equal(
+    operation.presentPreview(taskWithHiddenLinks, 'fr').changes.deletion.to,
+    "- Commentaires et changements : 1\n- D'autres rattachements : 3\n\nLes fiches liées restent.",
+  );
+
+  // A budget line names its versions, amounts, tasks, requests losing their origin, links and files.
+  const line: AiMutationPreview = {
+    ...pending,
+    target_entity_type: 'spend_items',
+    current_values: {
+      target_ref: 'BL-12',
+      target_title: 'ERP licence',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: {
+        amount_versions: 1,
+        amount_years: 2,
+        tasks: 1,
+        request_origins: 1,
+        attachments: 1,
+        contracts: 1,
+        projects: 1,
+        requests: 1,
+        applications: 1,
+        assets: 0,
+        technologies: 0,
+        contacts: 1,
+        links: 1,
+        dimension_values: 1,
+      },
+    },
+  };
+  assert.equal(summary(operation, line, 'en'), 'Delete budget line "ERP licence".');
+  assert.equal(summary(operation, line, 'fr'), 'Suppression de la ligne OPEX « ERP licence ».');
+  assert.equal(summary(operation, line, 'de'), 'OPEX-Zeile „ERP licence“ löschen.');
+  assert.equal(summary(operation, line, 'es'), 'Eliminación de la línea OPEX «ERP licence».');
+  assert.equal(
+    operation.presentPreview(line, 'fr').changes.deletion.to,
+    [
+      '- Versions avec des montants : 1',
+      '- Années avec des montants : 2',
+      '- Tâches supprimées : 1',
+      "- Demandes qui perdent leur tâche d'origine : 1",
+      '- Pièces jointes : 1',
+      '- Liens aux contrats : 1',
+      '- Liens aux projets : 1',
+      '- Liens aux demandes : 1',
+      '- Liens aux applications : 1',
+      '- Liens aux contacts : 1',
+      '- Liens : 1',
+      '- Valeurs de dimensions : 1',
+      '',
+      'Les fiches liées restent.',
+    ].join('\n'),
+  );
+  // The card of a line with one task, one contract and one application says which goes and which
+  // only loses its link.
+  const lineLinks: AiMutationPreview = {
+    ...line,
+    current_values: {
+      ...line.current_values,
+      counts: { tasks: 1, contracts: 1, applications: 1 },
+    },
+  };
+  assert.equal(
+    operation.presentPreview(lineLinks, 'fr').changes.deletion.to,
+    [
+      '- Tâches supprimées : 1',
+      '- Liens aux contrats : 1',
+      '- Liens aux applications : 1',
+      '',
+      'Les fiches liées restent.',
+    ].join('\n'),
+  );
+
+  // A connection names its hops, servers, protocols, the interfaces that lose it and its documents.
+  const connection: AiMutationPreview = {
+    ...pending,
+    target_entity_type: 'connections',
+    current_values: {
+      target_ref: 'CON-4',
+      target_title: 'CON-4 - DB link',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: { hops: 2, servers: 1, protocols: 1, interfaces: 1, documents: 1 },
+    },
+  };
+  assert.equal(summary(operation, connection, 'en'), 'Delete connection "DB link".');
+  assert.equal(summary(operation, connection, 'fr'), 'Suppression de la connexion « DB link ».');
+  assert.equal(
+    operation.presentPreview(connection, 'fr').changes.deletion.to,
+    [
+      '- Sauts : 2',
+      '- Liens aux serveurs : 1',
+      '- Protocoles : 1',
+      '- Interfaces qui perdront cette connexion : 1',
+      '- Liens aux documents : 1',
+      '',
+      'Les interfaces elles-mêmes ne sont pas supprimées.',
+    ].join('\n'),
+  );
+
+  // An interface names its bindings, links, documents, dependencies, files and applications.
+  const iface: AiMutationPreview = {
+    ...pending,
+    target_entity_type: 'interfaces',
+    current_values: {
+      target_ref: 'INT-7',
+      target_title: 'INT-7 - Orders',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: {
+        bindings: 2,
+        connection_links: 2,
+        integrated_documents: 1,
+        documents: 1,
+        dependencies: 1,
+        attachments: 1,
+        applications: 2,
+      },
+    },
+  };
+  assert.equal(summary(operation, iface, 'en'), 'Delete interface "Orders".');
+  assert.equal(summary(operation, iface, 'fr'), "Suppression de l'interface « Orders ».");
+  assert.equal(
+    operation.presentPreview(iface, 'fr').changes.deletion.to,
+    [
+      '- Liaisons : 2',
+      '- Liens aux connexions : 2',
+      '- Documents intégrés : 1',
+      '- Liens aux documents : 1',
+      '- Liens aux interfaces dépendantes : 1',
+      '- Pièces jointes : 1',
+      '- Liens aux applications : 2',
+      '',
+      'Les connexions sont conservées.',
+    ].join('\n'),
+  );
+  // A document names its versions, files, citations, linked records, derived documents, and the
+  // review or edit lock that does not stop the delete.
+  const document: AiMutationPreview = {
+    ...pending,
+    target_entity_type: 'documents',
+    current_values: {
+      target_ref: 'DOC-12',
+      target_title: 'Runbook',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: {
+        versions: 2,
+        attachments: 1,
+        citing_documents: 1,
+        cited_documents: 1,
+        applications: 1,
+        assets: 1,
+        projects: 1,
+        requests: 1,
+        tasks: 1,
+        locations: 1,
+        connections: 1,
+        interfaces: 1,
+        incidents: 1,
+        derived_documents: 1,
+      },
+      in_review: true,
+      lock_holder: 'Camille Roux',
+    },
+  };
+  assert.equal(summary(operation, document, 'en'), 'Delete document "Runbook".');
+  assert.equal(summary(operation, document, 'fr'), 'Suppression du document « Runbook ».');
+  assert.equal(summary(operation, document, 'de'), 'Dokument „Runbook“ löschen.');
+  assert.equal(summary(operation, document, 'es'), 'Eliminación del documento «Runbook».');
+  // A title that starts with a longer reference keeps it whole: DOC-1 is not DOC-12.
+  const prefixed: AiMutationPreview = {
+    ...document,
+    current_values: { ...document.current_values, target_ref: 'DOC-1', target_title: 'DOC-12 review' },
+  };
+  assert.equal(summary(operation, prefixed, 'fr'), 'Suppression du document « DOC-12 review ».');
+  const named: AiMutationPreview = {
+    ...document,
+    current_values: { ...document.current_values, target_ref: 'DOC-1', target_title: 'DOC-1 Runbook' },
+  };
+  assert.equal(summary(operation, named, 'fr'), 'Suppression du document « Runbook ».');
+  assert.equal(
+    operation.presentPreview(document, 'fr').changes.deletion.to,
+    [
+      '- Versions : 2',
+      '- Pièces jointes : 1',
+      '- Documents qui le citent : 1',
+      "- Documents qu'il cite : 1",
+      '- Liens aux applications : 1',
+      '- Liens aux actifs : 1',
+      '- Liens aux projets : 1',
+      '- Liens aux demandes : 1',
+      '- Liens aux tâches : 1',
+      '- Liens aux sites : 1',
+      '- Liens aux connexions : 1',
+      '- Liens aux interfaces : 1',
+      '- Liens aux incidents : 1',
+      '- Documents créés depuis ce modèle : 1',
+      '- En cours de relecture. La suppression reste possible.',
+      '- Verrouillé pour édition par Camille Roux. La suppression reste possible.',
+      '',
+      'Les fiches liées restent.',
+    ].join('\n'),
+  );
+  // A linked family the person does not read is counted among the other links, unnamed.
+  const hiddenDocument: AiMutationPreview = {
+    ...document,
+    current_values: {
+      ...document.current_values,
+      counts: { versions: 1 },
+      hidden: 3,
+      in_review: false,
+      lock_holder: null,
+    },
+  };
+  assert.equal(
+    operation.presentPreview(hiddenDocument, 'fr').changes.deletion.to,
+    "- Versions : 1\n- D'autres rattachements : 3\n\nLes fiches liées restent.",
+  );
+  // A budget line's unnamed count may hold its tasks, which are deleted: no closing that says they stay.
+  assert.equal(
+    deletionImpactText('fr', 'spend_items', { counts: { amount_versions: 1 }, hidden: 1 }),
+    "- Versions avec des montants : 1\n- D'autres rattachements : 1",
+  );
+  assert.equal(
+    deletionImpactText('fr', 'spend_items', { counts: { contracts: 1 }, hidden: 1 }),
+    "- Liens aux contrats : 1\n- D'autres rattachements : 1\n\nLes fiches liées restent.",
+  );
+  console.log('  delete_record summary and card: OK');
+}
+
 async function testPersonLanguage() {
   assert.equal(aiWriteLanguage('fr-FR'), 'fr');
   assert.equal(aiWriteLanguage('pt'), 'en');
@@ -377,6 +669,7 @@ async function main() {
   testRelationRolesForTheCard();
   testAmountsForTheCard();
   testCardCodesAndFieldOrder();
+  testDeleteRecordSummaryAndCard();
   await testDefaultTaskType();
   await testPersonLanguage();
   console.log('ai-write-preview-summaries.spec: ok');

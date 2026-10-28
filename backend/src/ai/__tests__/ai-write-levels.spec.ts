@@ -134,6 +134,16 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
   update_task_status: one('tasks', [TasksController, 'updateTask']),
   update_task_assignee: one('tasks', [TasksController, 'updateTask']),
   add_task_comment: one('tasks', [TasksController, 'createActivity']),
+  delete_record: {
+    tasks: { resource: 'tasks', level: 'admin', route: [TasksController, 'bulkDelete'] },
+    contacts: { resource: 'contacts', level: 'admin', route: [ContactsController, 'remove'] },
+    locations: { resource: 'locations', level: 'member', route: [LocationsController, 'remove'] },
+    spend_items: { resource: 'budget', level: 'admin', route: [BudgetLinesController, 'bulkDelete'] },
+    capex_items: { resource: 'budget', level: 'admin', route: [BudgetLinesController, 'bulkDelete'] },
+    connections: { resource: 'infrastructure', level: 'member', route: [ConnectionsController, 'delete'] },
+    interfaces: { resource: 'applications', level: 'admin', route: [InterfacesController, 'bulkDelete'] },
+    documents: { resource: 'knowledge', level: 'admin', route: [KnowledgeController, 'remove'] },
+  },
 };
 
 function routeGuard([controller, method]: [Controller, string]): RequireLevelMeta {
@@ -174,6 +184,8 @@ function testOnlyTheContributorRowsAreBelowMember() {
   assert.equal(aiWriteLevel('update_business_record', 'applications'), 'member');
   assert.equal(aiWriteLevel('create_business_record', 'projects'), 'member');
   assert.equal(aiWriteLevel('update_business_record', 'unknown'), 'member');
+  // A delete family without its row keeps the strictest level.
+  assert.equal(aiWriteLevel('delete_record', 'unknown'), 'admin');
   // A contributor writes the purpose of a project, nothing else through its fields.
   assert.deepEqual(CONTRIBUTOR_WRITABLE_FIELDS.update_business_record.projects, ['purpose']);
   console.log('  contributor rows: OK');
@@ -190,6 +202,20 @@ function testToolRequirements() {
   const relations = aiWriteRequirements('update_entity_relations', ['portfolio_projects', 'portfolio_requests']);
   assert.ok(relations.some((r) => r.resource === 'portfolio_requests' && r.level === 'contributor'));
   assert.deepEqual(aiWriteRequirements('create_business_record', ['portfolio_projects']), [{ resource: 'portfolio_projects', level: 'member' }]);
+  assert.deepEqual(aiWriteRequirements('delete_record', [
+    'tasks', 'contacts', 'locations', 'spend_items', 'capex_items', 'connections', 'interfaces', 'documents',
+  ]), [
+    { resource: 'tasks', level: 'admin' },
+    { resource: 'contacts', level: 'admin' },
+    { resource: 'locations', level: 'member' },
+    { resource: 'budget', level: 'admin' },
+    { resource: 'budget', level: 'admin' },
+    { resource: 'infrastructure', level: 'member' },
+    { resource: 'applications', level: 'admin' },
+    { resource: 'knowledge', level: 'admin' },
+  ]);
+  // The unit interface delete takes the integrated documents too: no lower than the list's bulk.
+  assert.deepEqual(routeGuard([InterfacesController, 'delete']), { resource: 'applications', level: 'admin' });
   console.log('  tool requirements: OK');
 }
 

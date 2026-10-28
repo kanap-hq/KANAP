@@ -61,6 +61,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../../api';
+import { useAuth } from '../../../../auth/AuthContext';
 import { KanapDialog, StatusDot } from '../../../../components/design';
 import { useTheme } from '@mui/material/styles';
 import DateEUField from '../../../../components/fields/DateEUField';
@@ -584,8 +585,10 @@ function SortablePhaseRow({
   onLinkExistingTask,
 }: SortablePhaseRowProps) {
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
+  const { hasLevel } = useAuth();
   const locale = useLocale();
   const [addMenuAnchor, setAddMenuAnchor] = React.useState<null | HTMLElement>(null);
+  const canCreateTask = hasLevel('tasks', 'member');
   const {
     attributes,
     listeners,
@@ -811,15 +814,17 @@ function SortablePhaseRow({
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           >
-            <MenuItem
-              onClick={() => {
-                setAddMenuAnchor(null);
-                onNavigateToTask(`/portfolio/tasks/new/overview?projectId=${projectId}&phaseId=${phase.id}`);
-              }}
-            >
-              <ListItemIcon><NoteAddIcon fontSize="small" /></ListItemIcon>
-              <ListItemText>{t('workspace.project.timeline.actions.newTaskInPhase', { defaultValue: 'New task' })}</ListItemText>
-            </MenuItem>
+            {canCreateTask && (
+              <MenuItem
+                onClick={() => {
+                  setAddMenuAnchor(null);
+                  onNavigateToTask(`/portfolio/tasks/new/overview?projectId=${projectId}&phaseId=${phase.id}`);
+                }}
+              >
+                <ListItemIcon><NoteAddIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>{t('workspace.project.timeline.actions.newTaskInPhase', { defaultValue: 'New task' })}</ListItemText>
+              </MenuItem>
+            )}
             <MenuItem
               onClick={() => {
                 setAddMenuAnchor(null);

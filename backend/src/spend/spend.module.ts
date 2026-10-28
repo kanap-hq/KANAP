@@ -118,6 +118,9 @@ import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
     SpendVersionsService,
     SpendAmountsService,
     SpendAllocationsService,
+    // Plaid deletes a line through the screen's own deleter, with its freeze refusal and audit.
+    SpendItemsDeleteService,
+    CapexItemsDeleteService,
     TasksService,
     CapexItemsService,
     CapexVersionsService,

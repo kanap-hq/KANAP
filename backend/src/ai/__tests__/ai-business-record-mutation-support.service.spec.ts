@@ -67,6 +67,12 @@ function createHarness() {
           status: 'enabled',
         }];
       }
+      if (sql.includes('FROM connections') && String(params[1]).toLowerCase() === 'con-1') {
+        return [{ id: '33333333-3333-4333-8333-333333333333', connection_reference: 'CON-1', name: 'CON-1 - DB link' }];
+      }
+      if (sql.includes('FROM interfaces') && String(params[1]).toLowerCase() === 'int-7') {
+        return [{ id: '44444444-4444-4444-8444-444444444444', interface_reference: 'INT-7', name: 'INT-7 - Orders' }];
+      }
       return [];
     },
   };
@@ -206,6 +212,18 @@ async function testEffectiveEndIsAnAliasOfTheEndOfValidity() {
   await assert.rejects(() => updateHosting({ effective_end: '2031-02-30' }), /End of validity must be a valid date/);
 }
 
+async function testRecordLabelNamesTheReferenceOnce() {
+  const { service, context } = createHarness();
+  // The name already carries its reference: the label does not add it a second time.
+  const connection = await service.resolveRecordReference(context, 'connections', 'CON-1');
+  assert.equal(connection.ref, 'CON-1');
+  assert.equal(connection.label, 'CON-1 - DB link');
+  const iface = await service.resolveRecordReference(context, 'interfaces', 'INT-7');
+  assert.equal(iface.ref, 'INT-7');
+  assert.equal(iface.label, 'INT-7 - Orders');
+  console.log('  reference label: OK');
+}
+
 async function main() {
   await testCreateAcceptsConfiguredCategoryCode();
   await testCreateResolvesConfiguredCategoryLabel();
@@ -213,6 +231,7 @@ async function main() {
   await testCreateRejectsCategoryOutsideTenantSettings();
   await testCreateDoesNotUseObservedApplicationValuesAsAllowedValues();
   await testEffectiveEndIsAnAliasOfTheEndOfValidity();
+  await testRecordLabelNamesTheReferenceOnce();
 }
 
 main().catch((error) => {

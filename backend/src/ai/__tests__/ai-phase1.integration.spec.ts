@@ -2151,6 +2151,7 @@ function buildToolIsolationCases(
     case 'update_task_assignee':
     case 'update_task_assignees':
     case 'add_task_comment':
+    case 'delete_record':
     case 'create_document':
     case 'update_document_content':
     case 'update_document_metadata':

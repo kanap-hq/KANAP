@@ -136,6 +136,37 @@ Wenn Sie eine Änderung verlangen, die Ihre Rolle nicht erlaubt, nennt Plaid das
 
 Plaid nimmt nur die Änderungen vor, die Ihre Bildschirme Ihnen erlauben, an den Datensätzen, die Sie dort erreichen. Mit dem Recht, an Projekten mitzuwirken, können Sie Plaid den Zweck eines Projekts und seine Verknüpfungen mit Anwendungen, Assets und Budgetzeilen ändern lassen. Das Recht, an Anträgen mitzuwirken, deckt dieselben Verknüpfungen bei Anträgen ab. Ein Business Contributor nimmt diese Änderungen nur an den Projekten und Anträgen vor, an denen er beteiligt ist. Um einen Datensatz zu verknüpfen, brauchen Sie das Recht, sein Modul zu lesen. Um ein Projekt umzubenennen oder seine anderen Felder zu ändern, brauchen Sie das Recht, Projekte zu ändern, wie auf der Projektseite.
 
+### Einen Datensatz löschen { #deleting-a-record }
+
+Plaid löscht einen Datensatz nach dem anderen: eine Aufgabe, einen Kontakt, einen Standort, ein Dokument, eine Budgetzeile (OPEX oder CAPEX), eine Verbindung oder eine Schnittstelle. Jede Löschung kommt als Vorschau, die Sie genehmigen. Eine Löschung lässt sich nicht rückgängig machen.
+
+Die Vorschau listet, was mit dem Datensatz gelöscht wird, etwa Kommentare, Zeiteinträge, Anhänge, Versionen und Verknüpfungen. Sie nennt nur, was Sie lesen dürfen, und zählt den Rest zu den anderen Verknüpfungen. Ändert sich der Datensatz zwischen der Vorschau und Ihrer Genehmigung, lehnt KANAP die Löschung ab. Bitten Sie Plaid erneut darum, um eine neue Vorschau zu erhalten.
+
+In einer Unterhaltung wartet immer nur eine Löschung auf Genehmigung. Wenn Sie mehrere Datensätze löschen lassen, bereitet Plaid sie nacheinander vor.
+
+Plaid braucht die Stufe, die der Bildschirm verlangt:
+
+| Datensatz | Stufe |
+|---|---|
+| Aufgabe | Administrator der Aufgaben |
+| Kontakt | Administrator der Kontakte |
+| Standort | Mitglied der Standorte |
+| Dokument | Administrator der Wissensdatenbank, mit dem Recht, in seine Bibliothek zu schreiben |
+| Budgetzeile | Administrator des Budgets |
+| Verbindung | Mitglied der Infrastruktur |
+| Schnittstelle | Administrator der Anwendungen |
+
+Wenn Ihr Datenzugriff auf bestimmte Unternehmen oder Kostenstellen beschränkt ist, löscht Plaid weder Kontakte noch Budgetzeilen, wie die Bildschirme.
+
+Plaid lehnt ab, was die Bildschirme ablehnen:
+
+- Eine Aufgabe, die eine Anfrage als ihren Ursprung nennt
+- Eine Budgetzeile mit Beträgen in einer eingefrorenen Spalte
+- Eine Schnittstelle mit Bindungen, außer Sie verlangen, ihre Bindungen mit ihr zu löschen
+- Ein Dokument, das in einen Datensatz eingebettet ist. Es wird mit seinem Datensatz gelöscht.
+
+Andere Datensätze, etwa Anwendungen, Assets, Verträge, Projekte, Anfragen, Vorfälle und Technologien, werden auf ihren Bildschirmen gelöscht. Plaid sagt das und nennt den Bildschirm. Über MCP verbundene Assistenten lesen nur.
+
 ### Was Plaid nicht liest { #what-plaid-does-not-read }
 
 Plaid liest nicht:
@@ -175,7 +206,7 @@ Bei ausstehenden Änderungsvorschauen bietet das Panel zwei Schaltflächen:
 
 Eine Vorschau und die Nachricht, die Plaid nach Ihrer Genehmigung oder Ablehnung schreibt, sind in der Sprache Ihres Profils, mit den Feldnamen und Werten der Bildschirme. Eine Budgetzeile, die mit einem Betrag angefragt wird, kommt als eine einzige Vorschau: Eine Genehmigung legt die Zeile, ihre Budgetversion für das Jahr und den Betrag an.
 
-Wenn Sie eine Änderung anfragen, die Plaid nicht vornehmen kann, etwa einen Datensatz löschen oder den Status einer Schwachstelle ändern, sagt es das und nennt den Bildschirm, auf dem Sie sie vornehmen können. Es bereitet keine andere Änderung an ihrer Stelle vor.
+Wenn Sie eine Änderung anfragen, die Plaid nicht vornehmen kann, etwa ein Projekt löschen oder den Status einer Schwachstelle ändern, sagt es das und nennt den Bildschirm, auf dem Sie sie vornehmen können. Es bereitet keine andere Änderung an ihrer Stelle vor.
 
 Nichts, was KANAP-Daten verändert, wird stillschweigend angewendet. Die Vorschau ist die Kontrollinstanz.
 
