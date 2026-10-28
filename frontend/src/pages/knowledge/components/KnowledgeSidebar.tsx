@@ -24,6 +24,7 @@ import { getDotColor } from '../../../utils/statusColors';
 import { PropertyRow, StatusDot } from '../../../components/design';
 import { formatShortDateTime } from '../../../lib/dateFormat';
 import { drawerAutocompleteListboxSx, drawerMenuItemSx, drawerSelectSx, drawerFieldValueSx, longFormSurfaceFieldSx } from '../../../theme/formSx';
+import RecordHistory from '../../../components/history/RecordHistory';
 
 // Flat section styling (charter: no accordions/chevrons in property panels).
 const sectionHeaderSx = {
@@ -219,7 +220,7 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
   const { t } = useTranslation(['knowledge', 'common']);
   const locale = useLocale();
   const mode = useTheme().palette.mode;
-  const [activeTab, setActiveTab] = React.useState<'properties' | 'comments'>('properties');
+  const [activeTab, setActiveTab] = React.useState<'properties' | 'comments' | 'history'>('properties');
   const [workflowComment, setWorkflowComment] = React.useState('');
 
   const disabled = !editMode && !isCreate;
@@ -451,6 +452,7 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
       >
         <Tab value="properties" label={t('sidebar.tabs.properties')} />
         <Tab value="comments" label={t('sidebar.tabs.comments')} />
+        {!isCreate && <Tab value="history" label={t('sidebar.tabs.history')} />}
       </Tabs>
 
       <Box sx={{ flex: 1, overflow: 'auto', p: 1.5 }}>
@@ -1153,6 +1155,11 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
               </>
             )}
           </Stack>
+        )}
+
+        {activeTab === 'history' && !isCreate && doc?.id && (
+          // Mounted only while the tab is open: the history reads on demand, as the page does.
+          <RecordHistory table="documents" recordId={String(doc.id)} />
         )}
 
         {activeTab === 'comments' && (
