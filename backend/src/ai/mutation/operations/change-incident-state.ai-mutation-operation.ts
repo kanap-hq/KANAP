@@ -202,17 +202,27 @@ export class ChangeIncidentStateAiMutationOperation implements AiMutationOperati
     const reason = textOrNull(mutation.reason);
     if (!reason) throw new BadRequestException('Preview is missing the reason.');
     if (!preview.target_entity_id) throw new BadRequestException('Preview is missing the incident.');
-    // The visibility and the state are checked again when the preview runs.
+    // The visibility is checked again when the preview runs, then the row is locked and its state
+    // read under the lock: a change committed between the read and the service's own lock would
+    // otherwise be written from a stale preview.
     const incident = await this.support.resolveIncident(context, preview.target_entity_id);
-    const expectedStatus = textOrNull(mutation.from_status);
-    // Another change moved the status since the preview: refuse rather than act on another state.
-    if (expectedStatus && incident.status !== expectedStatus) {
+    const locked: Array<{ status: string; confidential: boolean }> = await context.manager.query(
+      `SELECT status, confidential FROM incidents WHERE id = $1 AND tenant_id = $2 FOR UPDATE`,
+      [incident.id, context.tenantId],
+    );
+    if (!locked.length) {
       throw new ConflictException(`${incident.ref} changed after the preview was created.`);
     }
-    if (action === 'reopen' && (incident.status === 'open' || incident.status === 'in_progress')) {
+    const currentStatus = String(locked[0].status ?? '');
+    const expectedStatus = textOrNull(mutation.from_status);
+    // Another change moved the status since the preview: refuse rather than act on another state.
+    if (expectedStatus && currentStatus !== expectedStatus) {
+      throw new ConflictException(`${incident.ref} changed after the preview was created.`);
+    }
+    if (action === 'reopen' && (currentStatus === 'open' || currentStatus === 'in_progress')) {
       throw new BadRequestException('Only resolved, closed or cancelled incidents can be reopened.');
     }
-    if (action === 'cancel') this.support.assertEditable(incident);
+    if (action === 'cancel') this.support.assertEditable({ ...incident, status: currentStatus });
     const options = await this.support.writeOptions(context);
     const serviceOptions = {
       manager: options.manager,

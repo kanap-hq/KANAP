@@ -58,7 +58,7 @@ export class SetIncidentConfidentialityAiMutationOperation implements AiMutation
     entity_type: 'incidents',
     fields: ['confidential'],
     reversible: false,
-    prompt_hint: 'For the confidentiality of an incident, use `set_incident_confidentiality` with an INC reference and `confidential` (`true` restricts, `false` lifts). It needs the register administrator right, for both directions, and works on an open or a frozen record. A register administrator keeps access, so the card carries no lose-access warning. The preview cannot be undone; setting the confidentiality stays possible through `update_business_record`, lifting it does not.',
+    prompt_hint: 'For the confidentiality of an incident, use `set_incident_confidentiality` with an INC reference and `confidential` (`true` restricts, `false` lifts). It needs the register administrator right, for both directions, and works on an open or a frozen record. The preview cannot be undone; setting the confidentiality stays possible through `update_business_record`, lifting it does not.',
   };
 
   constructor(
@@ -157,14 +157,23 @@ export class SetIncidentConfidentialityAiMutationOperation implements AiMutation
     const confidential = mutation.confidential === true;
     if (!preview.target_entity_id) throw new BadRequestException('Preview is missing the incident.');
     // The visibility is checked again when the preview runs; the state may be frozen, as the
-    // screen's confidentiality route accepts a closed record.
+    // screen's confidentiality route accepts a closed record. The row is then locked and the flag
+    // read under the lock, so a change committed in between cannot be overwritten from stale data.
     const incident = await this.support.resolveIncident(context, preview.target_entity_id);
+    const locked: Array<{ status: string; confidential: boolean }> = await context.manager.query(
+      `SELECT status, confidential FROM incidents WHERE id = $1 AND tenant_id = $2 FOR UPDATE`,
+      [incident.id, context.tenantId],
+    );
+    if (!locked.length) {
+      throw new ConflictException(`${incident.ref} changed after the preview was created.`);
+    }
+    const currentConfidential = locked[0].confidential === true;
     const expectedConfidential = mutation.from_confidential;
     // The flag moved since the preview, or a preview without the stored value would write nothing:
     // refuse instead of marking it executed.
     if (typeof expectedConfidential === 'boolean'
-      ? incident.confidential !== expectedConfidential
-      : incident.confidential === confidential) {
+      ? currentConfidential !== expectedConfidential
+      : currentConfidential === confidential) {
       throw new ConflictException(`${incident.ref} changed after the preview was created.`);
     }
     const options = await this.support.writeOptions(context);

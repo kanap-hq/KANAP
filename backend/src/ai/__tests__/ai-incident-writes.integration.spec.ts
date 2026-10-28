@@ -4,6 +4,9 @@ import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
 import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-document-seed';
+import { purgeTenantTables } from '../../admin/tenants/tenant-data-purge';
+import { TENANT_PURGE_TABLES } from '../../admin/tenants/tenant-purge.inventory';
+import { withTenantExecution } from '../../common/tenant-runner';
 import { PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE } from '../ai-write-texts';
 
 // Incidents written through Plaid (L4 lots 2 to 4): creating one, changing its fields, moving its
@@ -432,6 +435,63 @@ async function withSeededTransaction(
   }
 }
 
+/**
+ * Seeds a tenant that other connections can see, for the lock tests, then purges it. The usual
+ * transaction rolls the seed back, which hides every seeded row from a second connection.
+ */
+async function withCommittedGraph(harness: Harness, test: (seed: Seed) => Promise<void>) {
+  const setup = harness.dataSource.createQueryRunner();
+  await setup.connect();
+  await setup.startTransaction();
+  let seed: Seed;
+  try {
+    seed = await seedGraph(setup);
+    await setup.commitTransaction();
+  } catch (error) {
+    if (setup.isTransactionActive) await setup.rollbackTransaction();
+    throw error;
+  } finally {
+    await setup.release();
+  }
+  try {
+    await test(seed);
+  } finally {
+    await withTenantExecution(harness.dataSource, seed.tenantId, (manager) => (
+      purgeTenantTables(manager, TENANT_PURGE_TABLES)
+    )).catch((error) => console.error(`could not purge ${seed.tenantId}:`, error));
+    await harness.dataSource.query(`DELETE FROM tenants WHERE id = $1`, [seed.tenantId])
+      .catch((error) => console.error(`could not delete ${seed.tenantId}:`, error));
+  }
+}
+
+
+function settledWithin<T>(promise: Promise<T>, milliseconds: number): Promise<T | null> {
+  return Promise.race([
+    promise,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), milliseconds)),
+  ]);
+}
+
+/** Waits until the execution is blocked on the incident row lock the holder owns. */
+async function waitForIncidentLockWait(holder: QueryRunner) {
+  // The preview service checks the rights and the visibility before the operation: on a cold
+  // database that can take a few seconds.
+  const deadline = Date.now() + 60000;
+  while (Date.now() < deadline) {
+    const waiting = await holder.query(
+      `SELECT 1
+         FROM pg_stat_activity
+        WHERE datname = current_database()
+          AND wait_event_type = 'Lock'
+          AND query ILIKE '%from incidents%for update%'
+        LIMIT 1`,
+    );
+    if (waiting.length > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error('the execution never waited for the incident row lock');
+}
+
 async function createHarness(): Promise<Harness> {
   if (!process.env.DATABASE_URL) {
     throw new Error('DATABASE_URL is required for ai-incident-writes.integration.spec.ts.');
@@ -850,6 +910,111 @@ async function testConfidentialityDriftIsRefused(harness: Harness) {
       [seed.tenantId, seed.incidents.ownConfidential, preview.preview_id],
     );
     assert.equal(audits.length, 0, 'the refused execution wrote no audit row');
+  });
+}
+
+/**
+ * The drift checks read the row under its lock. A second connection holds the lock, changes the
+ * row and commits while the execution waits: the execution must find the new value, answer 409,
+ * write nothing and leave the preview not executed.
+ */
+async function testDriftWaitsForTheIncidentRowLock(harness: Harness) {
+  await withCommittedGraph(harness, async (seed) => {
+    const execution = harness.dataSource.createQueryRunner();
+    const holder = harness.dataSource.createQueryRunner();
+    await execution.connect();
+    await holder.connect();
+    try {
+      await execution.startTransaction();
+      await setCurrentTenant(execution, seed.tenantId);
+      const ctx = context(seed, execution, 'row-lock-drift', seed.adminId);
+
+      // State: the holder changes INC-4 and keeps the row locked.
+      const statePreview = await executeToolPreview(harness, ctx, 'change_incident_state', {
+        ref: 'INC-4', action: 'cancel', reason: 'Lock drift',
+      });
+      await holder.startTransaction();
+      await setCurrentTenant(holder, seed.tenantId);
+      await holder.query(
+        `SELECT id FROM incidents WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+        [seed.tenantId, seed.incidents.open],
+      );
+      await holder.query(
+        `UPDATE incidents SET status = 'in_progress' WHERE tenant_id = $1 AND id = $2`,
+        [seed.tenantId, seed.incidents.open],
+      );
+      const stateRun = harness.previews.executePreview(ctx, statePreview.preview_id);
+      stateRun.catch(() => undefined);
+      const stateEarly = await settledWithin(stateRun, 2000);
+      assert.equal(stateEarly, null, `the state execution settled before the lock: ${JSON.stringify(stateEarly)}`);
+      await waitForIncidentLockWait(holder);
+      await holder.commitTransaction();
+      const stateFailed = await stateRun;
+      assert.equal(stateFailed.status, 'failed', 'the refused state write is not executed');
+      assert.match(
+        String(stateFailed.error_message),
+        /INC-4 changed after the preview was created/,
+        'the locked read sees the status the other connection committed',
+      );
+      const stateAudits = await execution.query(
+        `SELECT 1 FROM audit_log
+          WHERE tenant_id = $1 AND record_id = $2 AND source = 'ai_chat' AND source_ref = $3`,
+        [seed.tenantId, seed.incidents.open, statePreview.preview_id],
+      );
+      assert.equal(stateAudits.length, 0, 'the refused cancellation wrote no audit row');
+      const [stateRow] = await execution.query(
+        `SELECT status FROM incidents WHERE tenant_id = $1 AND id = $2`,
+        [seed.tenantId, seed.incidents.open],
+      );
+      assert.equal(stateRow.status, 'in_progress', 'the holder change is the only write');
+
+      // Confidentiality: same race on INC-8.
+      const confidentialityPreview = await executeToolPreview(harness, ctx, 'set_incident_confidentiality', {
+        ref: 'INC-8', confidential: false,
+      });
+      await holder.startTransaction();
+      await setCurrentTenant(holder, seed.tenantId);
+      await holder.query(
+        `SELECT id FROM incidents WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+        [seed.tenantId, seed.incidents.ownConfidential],
+      );
+      await holder.query(
+        `UPDATE incidents SET confidential = false WHERE tenant_id = $1 AND id = $2`,
+        [seed.tenantId, seed.incidents.ownConfidential],
+      );
+      const confidentialityRun = harness.previews.executePreview(ctx, confidentialityPreview.preview_id);
+      confidentialityRun.catch(() => undefined);
+      const confidentialityEarly = await settledWithin(confidentialityRun, 2000);
+      assert.equal(confidentialityEarly, null, `the confidentiality execution settled before the lock: ${JSON.stringify(confidentialityEarly)}`);
+      await waitForIncidentLockWait(holder);
+      await holder.commitTransaction();
+      const confidentialityFailed = await confidentialityRun;
+      assert.equal(confidentialityFailed.status, 'failed', 'the refused confidentiality write is not executed');
+      assert.match(
+        String(confidentialityFailed.error_message),
+        /INC-8 changed after the preview was created/,
+        'the locked read sees the flag the other connection committed',
+      );
+      const confidentialityAudits = await execution.query(
+        `SELECT 1 FROM audit_log
+          WHERE tenant_id = $1 AND record_id = $2 AND source = 'ai_chat' AND source_ref = $3`,
+        [seed.tenantId, seed.incidents.ownConfidential, confidentialityPreview.preview_id],
+      );
+      assert.equal(confidentialityAudits.length, 0, 'the refused confidentiality write wrote no audit row');
+      const [confidentialityRow] = await execution.query(
+        `SELECT confidential FROM incidents WHERE tenant_id = $1 AND id = $2`,
+        [seed.tenantId, seed.incidents.ownConfidential],
+      );
+      assert.equal(confidentialityRow.confidential, false, 'the holder change is the only write');
+
+      await execution.commitTransaction();
+    } finally {
+      // Release the holder first: a blocked execution must not make the rollback wait forever.
+      if (holder.isTransactionActive) await holder.rollbackTransaction();
+      if (execution.isTransactionActive) await execution.rollbackTransaction();
+      await execution.release();
+      await holder.release();
+    }
   });
 }
 
@@ -1778,6 +1943,7 @@ async function run() {
     await testDriftIsRefused(harness);
     await testIncidentStateDriftIsRefused(harness);
     await testConfidentialityDriftIsRefused(harness);
+    await testDriftWaitsForTheIncidentRowLock(harness);
     await testReviewLockIsRelayed(harness);
     await testReporterFallbackOnlyOnCreate(harness);
     await testDetectedAtCannotBeCleared(harness);
