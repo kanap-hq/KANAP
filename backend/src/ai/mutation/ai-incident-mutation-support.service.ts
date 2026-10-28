@@ -20,6 +20,9 @@ export type AiIncidentSnapshot = {
   label: string;
   status: string;
   confidential: boolean;
+  /** The reporter as stored; null stays null, as on a change, where only a creation defaults it. */
+  reporterUserId: string | null;
+  ownerUserId: string | null;
 };
 
 /** The service options an incident write passes to the incident services. */
@@ -60,8 +63,11 @@ export class AiIncidentMutationSupportService {
       title: string;
       status: string;
       confidential: boolean;
+      reporter_user_id: string | null;
+      owner_user_id: string | null;
     }> = await context.manager.query(
-      `SELECT i.id, i.item_number, i.title, i.status, i.confidential
+      `SELECT i.id, i.item_number, i.title, i.status, i.confidential,
+              i.reporter_user_id, i.owner_user_id
          FROM incidents i
         WHERE i.tenant_id = $1
           AND (${uuid ? 'i.id = $2 OR ' : ''}(($3::int IS NOT NULL AND i.item_number = $3::int) OR LOWER(i.title) = LOWER($2::text)))
@@ -81,6 +87,8 @@ export class AiIncidentMutationSupportService {
       label: row.confidential ? ref : `${ref} - ${String(row.title ?? '').trim()}`,
       status: String(row.status ?? ''),
       confidential: row.confidential === true,
+      reporterUserId: row.reporter_user_id ? String(row.reporter_user_id) : null,
+      ownerUserId: row.owner_user_id ? String(row.owner_user_id) : null,
     };
   }
 
@@ -89,6 +97,24 @@ export class AiIncidentMutationSupportService {
     if (isFrozenIncidentStatus(incident.status)) {
       throw new ForbiddenException(INCIDENT_LOCKED_MESSAGE);
     }
+  }
+
+  /**
+   * The screen's lose-access rule on an existing incident (`viewerLosesAccess`): a register
+   * administrator, the reporter or the owner keeps access. A missing reporter stays missing; on a
+   * change the person is never the reporter by default, as the lot 2 review asked.
+   */
+  async viewerLosesAccess(
+    context: AiExecutionContextWithManager,
+    incident: AiIncidentSnapshot,
+  ): Promise<boolean> {
+    const viewer = await resolveAiIncidentViewer(context);
+    if (viewer.isAdmin) return false;
+    const userId = String(viewer.userId ?? '');
+    if (!userId) return true;
+    const reporter = incident.reporterUserId;
+    const owner = incident.ownerUserId;
+    return !(reporter && reporter === userId) && !(owner && owner === userId);
   }
 
   /** The service options of an incident write: the viewer, the module reads and the application scope. */

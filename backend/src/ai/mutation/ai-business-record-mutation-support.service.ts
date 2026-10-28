@@ -877,7 +877,7 @@ export class AiBusinessRecordMutationSupportService {
       }
     }
     if (mode === 'update' && fields.confidential === false && existing?.confidential === true) {
-      throw new BadRequestException('Lifting the confidentiality of an incident is not available in Plaid: use the incident screen.');
+      throw new BadRequestException('Lifting the confidentiality of an incident needs the register administrator right: use `set_incident_confidentiality`, reserved to register administrators.');
     }
   }
 

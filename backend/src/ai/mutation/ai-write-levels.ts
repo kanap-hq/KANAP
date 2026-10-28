@@ -7,12 +7,15 @@ import { participantConditionForAiEntity, ParticipationScopedAiEntityType } from
 /**
  * The level each Plaid write needs: the level of the screen route that makes the same change
  * (lot D11). Every write needs `member` on its module, except the ones listed here, which the
- * screen opens to a contributor. `ai-write-levels.spec.ts` holds the table operation x family,
- * compares it with the guards of the routes and breaks when a route changes level.
+ * screen opens to a contributor or reserves to an administrator. `ai-write-levels.spec.ts` holds
+ * the table operation x family, compares it with the guards of the routes and breaks when a route
+ * changes level.
  * - `update_business_record` on a project: `PATCH /portfolio/projects/:id` (contributor), within
  *   the fields the project page lets a contributor change (`CONTRIBUTOR_WRITABLE_FIELDS`).
  * - `update_entity_relations` on a project or a request: the Relations tab of both pages,
  *   `POST|DELETE /portfolio/{projects,requests}/:id/relations/:kind` (contributor).
+ * - `change_incident_state` and `set_incident_confidentiality`: `POST /incidents/:id/reopen`,
+ *   `/cancel` and `/confidentiality` (admin).
  */
 const CONTRIBUTOR_WRITE_FAMILIES: Readonly<Record<string, readonly string[]>> = {
   create_business_record: ['incidents'],
@@ -21,6 +24,16 @@ const CONTRIBUTOR_WRITE_FAMILIES: Readonly<Record<string, readonly string[]>> = 
   update_incident_links: ['incidents'],
   update_entity_relations: ['projects', 'requests'],
 };
+
+/**
+ * The tools the screen reserves to an administrator, whatever the direction or the state of the
+ * record. One level per tool keeps the tool list simple: a member or a contributor is not offered
+ * it, and its approval is refused if the right went away in between.
+ */
+const ADMIN_WRITE_TOOLS: ReadonlySet<string> = new Set([
+  'change_incident_state',
+  'set_incident_confidentiality',
+]);
 
 /**
  * The level each family of `delete_record` needs, as its delete route: tasks and contacts are
@@ -49,6 +62,7 @@ export function aiDeleteBusinessResource(family: unknown): string {
 /** The level a write tool needs on its module for one family (`entity_type`). */
 export function aiWriteLevel(toolName: string, family: unknown): PermissionLevel {
   const normalized = String(family ?? '').trim();
+  if (ADMIN_WRITE_TOOLS.has(toolName)) return 'admin';
   if (toolName === 'delete_record') return DELETE_RECORD_FAMILIES[normalized]?.level ?? 'admin';
   return CONTRIBUTOR_WRITE_FAMILIES[toolName]?.includes(normalized) ? 'contributor' : 'member';
 }
@@ -130,11 +144,16 @@ const CONTRIBUTOR_FAMILY_RESOURCES: Readonly<Record<string, string>> = {
  * Every (module, level) a write tool may need, for the tools offered to the person: the modules
  * of the tool at `member`, and the modules of its contributor families at `contributor`.
  * `delete_record` names one family per resource, with the level of that family's delete route.
+ * An administrator-only tool has one requirement per resource at `admin`, so a member or a
+ * contributor is never offered it.
  */
 export function aiWriteRequirements(
   toolName: string,
   resources: readonly string[],
 ): Array<{ resource: string; level: PermissionLevel }> {
+  if (ADMIN_WRITE_TOOLS.has(toolName)) {
+    return resources.map((resource) => ({ resource, level: 'admin' as PermissionLevel }));
+  }
   if (toolName === 'delete_record') {
     return resources.map((resource) => DELETE_RECORD_FAMILIES[resource]
       ? { resource: DELETE_RECORD_FAMILIES[resource].resource, level: DELETE_RECORD_FAMILIES[resource].level }

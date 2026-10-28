@@ -8,11 +8,13 @@ import { AiMasterDataMutationSupportService } from '../mutation/ai-master-data-m
 import { AiRelationMutationSupportService } from '../mutation/ai-relation-mutation-support.service';
 import { AiTaskMutationSupportService } from '../mutation/ai-task-mutation-support.service';
 import { AddIncidentNoteAiMutationOperation } from '../mutation/operations/add-incident-note.ai-mutation-operation';
+import { ChangeIncidentStateAiMutationOperation } from '../mutation/operations/change-incident-state.ai-mutation-operation';
 import { CreateBusinessRecordAiMutationOperation } from '../mutation/operations/create-business-record.ai-mutation-operation';
 import { CreateDocumentAiMutationOperation } from '../mutation/operations/create-document.ai-mutation-operation';
 import { CreateTaskAiMutationOperation } from '../mutation/operations/create-task.ai-mutation-operation';
 import { DeleteRecordAiMutationOperation } from '../mutation/operations/delete-record.ai-mutation-operation';
 import { ImportGlpiTicketAiMutationOperation } from '../mutation/operations/import-glpi-ticket.ai-mutation-operation';
+import { SetIncidentConfidentialityAiMutationOperation } from '../mutation/operations/set-incident-confidentiality.ai-mutation-operation';
 import { UpdateIncidentLinksAiMutationOperation } from '../mutation/operations/update-incident-links.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from '../mutation/operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskStatusAiMutationOperation } from '../mutation/operations/update-task-status.ai-mutation-operation';
@@ -288,6 +290,84 @@ function testIncidentNoteAndLinkCards() {
     }),
     '**Ajoutés**\n- AST-12 - srv\\_\\*prod\\*\n\n**Retirés**\n- APP-2 - app\\_\\[old\\]',
   );
+}
+
+function testIncidentStateAndConfidentialityCards() {
+  const state = make(ChangeIncidentStateAiMutationOperation);
+  const reopen = preview({
+    tool_name: 'change_incident_state',
+    target_entity_type: 'incidents',
+    target_entity_id: 'incident-1',
+    mutation_input: {
+      action: 'reopen',
+      reason: 'Back after the fix.',
+      from_status: 'closed',
+      to_status: 'in_progress',
+    },
+    current_values: { target_ref: 'INC-7', target_title: 'INC-7 - Mail outage', status: 'closed' },
+  });
+  assert.equal(summary(state, reopen, 'en'), 'Reopen INC-7 - Mail outage.');
+  assert.equal(summary(state, reopen, 'fr'), "Réouverture de l'incident « INC-7 - Mail outage ».");
+  assert.equal(summary(state, reopen, 'de'), 'Vorfall „INC-7 - Mail outage“ wieder öffnen.');
+  assert.equal(summary(state, reopen, 'es'), 'Reapertura del incidente «INC-7 - Mail outage».');
+  const reopened = state.presentPreview(reopen, 'fr').changes;
+  assert.equal(reopened.status.from, 'closed');
+  assert.equal(reopened.status.to, 'in_progress');
+  assert.equal(reopened.reason.to, 'Back after the fix.');
+  assert.equal(reopened.reason.label, 'Raison');
+  assert.equal(reopened.closure_warning, undefined, 'a reopen carries no freeze warning');
+  assert.equal(summary(state, { ...reopen, status: 'executed' } as AiMutationPreview, 'fr'), "Appliqué : réouverture de l'incident « INC-7 - Mail outage ».");
+
+  const cancel = preview({
+    tool_name: 'change_incident_state',
+    target_entity_type: 'incidents',
+    target_entity_id: 'incident-1',
+    mutation_input: {
+      action: 'cancel',
+      reason: 'Duplicate of INC-6.',
+      from_status: 'open',
+      to_status: 'cancelled',
+    },
+    current_values: { target_ref: 'INC-7', target_title: 'INC-7 - Mail outage', status: 'open' },
+  });
+  const cancelled = state.presentPreview(cancel, 'fr').changes;
+  assert.equal(cancelled.status.from, 'open');
+  assert.equal(cancelled.status.to, 'cancelled');
+  assert.equal(cancelled.reason.to, 'Duplicate of INC-6.');
+  assert.equal(cancelled.closure_warning.to, "Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.");
+  assert.equal(summary(state, cancel, 'fr'), "Annulation de l'incident « INC-7 - Mail outage ».");
+  assert.equal(summary(state, cancel, 'en'), 'Cancel INC-7 - Mail outage.');
+
+  const confidentiality = make(SetIncidentConfidentialityAiMutationOperation);
+  const lift = preview({
+    tool_name: 'set_incident_confidentiality',
+    target_entity_type: 'incidents',
+    target_entity_id: 'incident-1',
+    mutation_input: { confidential: false, from_confidential: true },
+    current_values: { target_ref: 'INC-7', target_title: 'INC-7 - Mail outage', status: 'closed', confidential: true },
+  });
+  assert.equal(summary(confidentiality, lift, 'fr'), "Levée de la confidentialité de l'incident « INC-7 - Mail outage ».");
+  assert.equal(summary(confidentiality, lift, 'en'), 'Lift the confidentiality of INC-7 - Mail outage.');
+  assert.deepEqual(confidentiality.presentPreview(lift, 'fr').changes.confidential, {
+    label: 'Confidential',
+    from: 'Yes',
+    to: 'No',
+    format: 'text',
+  });
+  assert.equal(confidentiality.presentPreview(lift, 'fr').changes.access_warning, undefined, 'lifting never loses access');
+
+  const restrict = preview({
+    tool_name: 'set_incident_confidentiality',
+    target_entity_type: 'incidents',
+    target_entity_id: 'incident-1',
+    mutation_input: { confidential: true, from_confidential: false, warnings: { lose_access: true } },
+    current_values: { target_ref: 'INC-7', target_title: 'INC-7 - Mail outage', status: 'open', confidential: false },
+  });
+  const restricted = confidentiality.presentPreview(restrict, 'fr').changes;
+  assert.equal(restricted.confidential.from, 'No');
+  assert.equal(restricted.confidential.to, 'Yes');
+  assert.equal(restricted.access_warning.to, "Après cette modification, seuls les administrateurs du registre, le déclarant et le responsable pourront l'ouvrir. Vous serez renvoyé vers le registre.");
+  assert.equal(summary(confidentiality, restrict, 'fr'), "Passage de l'incident « INC-7 - Mail outage » en confidentiel.");
 }
 
 /** What the card needs beyond the summary: classification codes, and fields in a stable order (quality pass 2026-10-27, A1 and A3). */
@@ -794,6 +874,7 @@ async function main() {
   testCardCodesAndFieldOrder();
   testIncidentPreviewsAndWarnings();
   testIncidentNoteAndLinkCards();
+  testIncidentStateAndConfidentialityCards();
   testDeleteRecordSummaryAndCard();
   await testDefaultTaskType();
   await testPersonLanguage();

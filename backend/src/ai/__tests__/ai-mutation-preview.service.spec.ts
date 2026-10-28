@@ -575,6 +575,26 @@ function createService(options?: {
       summary: 'Add incident note.',
     }),
   };
+  const changeIncidentStateOperation = {
+    toolName: 'change_incident_state',
+    businessResource: 'incidents',
+    writePreview: { reversible: false },
+    presentPreview: () => ({
+      target: { entity_type: 'incidents', entity_id: null, ref: null, title: null },
+      changes: {},
+      summary: 'Change incident state.',
+    }),
+  };
+  const setIncidentConfidentialityOperation = {
+    toolName: 'set_incident_confidentiality',
+    businessResource: 'incidents',
+    writePreview: { reversible: false },
+    presentPreview: () => ({
+      target: { entity_type: 'incidents', entity_id: null, ref: null, title: null },
+      changes: {},
+      summary: 'Set incident confidentiality.',
+    }),
+  };
   const updateIncidentLinksOperation = {
     toolName: 'update_incident_links',
     businessResource: 'incidents',
@@ -642,6 +662,8 @@ function createService(options?: {
       tasks as any,
     ),
     addIncidentNoteOperation as any,
+    changeIncidentStateOperation as any,
+    setIncidentConfidentialityOperation as any,
     new AddTaskCommentAiMutationOperation(
       support,
       {

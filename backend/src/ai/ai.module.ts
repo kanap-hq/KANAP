@@ -154,12 +154,14 @@ import { AiRelationMutationSupportService } from './mutation/ai-relation-mutatio
 import { AiTaskMutationSupportService } from './mutation/ai-task-mutation-support.service';
 import { AddIncidentNoteAiMutationOperation } from './mutation/operations/add-incident-note.ai-mutation-operation';
 import { AddTaskCommentAiMutationOperation } from './mutation/operations/add-task-comment.ai-mutation-operation';
+import { ChangeIncidentStateAiMutationOperation } from './mutation/operations/change-incident-state.ai-mutation-operation';
 import { CreateBusinessRecordAiMutationOperation } from './mutation/operations/create-business-record.ai-mutation-operation';
 import { CreateDocumentAiMutationOperation } from './mutation/operations/create-document.ai-mutation-operation';
 import { CreateMasterDataRecordAiMutationOperation } from './mutation/operations/create-master-data-record.ai-mutation-operation';
 import { CreateTaskAiMutationOperation } from './mutation/operations/create-task.ai-mutation-operation';
 import { DeleteRecordAiMutationOperation } from './mutation/operations/delete-record.ai-mutation-operation';
 import { ImportGlpiTicketAiMutationOperation, ImportTicketAiMutationOperation } from './mutation/operations/import-glpi-ticket.ai-mutation-operation';
+import { SetIncidentConfidentialityAiMutationOperation } from './mutation/operations/set-incident-confidentiality.ai-mutation-operation';
 import { UpdateDocumentContentAiMutationOperation } from './mutation/operations/update-document-content.ai-mutation-operation';
 import { UpdateDocumentMetadataAiMutationOperation } from './mutation/operations/update-document-metadata.ai-mutation-operation';
 import { UpdateDocumentRelationsAiMutationOperation } from './mutation/operations/update-document-relations.ai-mutation-operation';
@@ -290,6 +292,8 @@ import { BraveSearchService } from './web-search/brave-search.service';
     ImportGlpiTicketAiMutationOperation,
     CreateBusinessRecordAiMutationOperation,
     AddIncidentNoteAiMutationOperation,
+    ChangeIncidentStateAiMutationOperation,
+    SetIncidentConfidentialityAiMutationOperation,
     CreateDocumentAiMutationOperation,
     CreateTaskAiMutationOperation,
     DeleteRecordAiMutationOperation,

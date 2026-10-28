@@ -2,12 +2,14 @@ import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { AiMutationWriteToolName } from '../ai.types';
 import { AddIncidentNoteAiMutationOperation } from './operations/add-incident-note.ai-mutation-operation';
 import { AddTaskCommentAiMutationOperation } from './operations/add-task-comment.ai-mutation-operation';
+import { ChangeIncidentStateAiMutationOperation } from './operations/change-incident-state.ai-mutation-operation';
 import { CreateDocumentAiMutationOperation } from './operations/create-document.ai-mutation-operation';
 import { CreateBusinessRecordAiMutationOperation } from './operations/create-business-record.ai-mutation-operation';
 import { CreateMasterDataRecordAiMutationOperation } from './operations/create-master-data-record.ai-mutation-operation';
 import { CreateTaskAiMutationOperation } from './operations/create-task.ai-mutation-operation';
 import { DeleteRecordAiMutationOperation } from './operations/delete-record.ai-mutation-operation';
 import { ImportGlpiTicketAiMutationOperation, ImportTicketAiMutationOperation } from './operations/import-glpi-ticket.ai-mutation-operation';
+import { SetIncidentConfidentialityAiMutationOperation } from './operations/set-incident-confidentiality.ai-mutation-operation';
 import { UpdateDocumentContentAiMutationOperation } from './operations/update-document-content.ai-mutation-operation';
 import { UpdateDocumentMetadataAiMutationOperation } from './operations/update-document-metadata.ai-mutation-operation';
 import { UpdateDocumentRelationsAiMutationOperation } from './operations/update-document-relations.ai-mutation-operation';
@@ -43,6 +45,8 @@ export class AiMutationOperationRegistry {
     updateTaskStatus: UpdateTaskStatusAiMutationOperation,
     updateTaskAssignee: UpdateTaskAssigneeAiMutationOperation,
     addIncidentNote: AddIncidentNoteAiMutationOperation,
+    changeIncidentState: ChangeIncidentStateAiMutationOperation,
+    setIncidentConfidentiality: SetIncidentConfidentialityAiMutationOperation,
     addTaskComment: AddTaskCommentAiMutationOperation,
     deleteRecord: DeleteRecordAiMutationOperation,
     @Optional()
@@ -67,6 +71,8 @@ export class AiMutationOperationRegistry {
       updateTaskStatus,
       updateTaskAssignee,
       addIncidentNote,
+      changeIncidentState,
+      setIncidentConfidentiality,
       addTaskComment,
       deleteRecord,
     ]) {

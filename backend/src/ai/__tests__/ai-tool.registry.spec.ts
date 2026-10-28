@@ -397,6 +397,43 @@ function createRegistry(overrides?: {
             prompt_hint: 'For the links of an incident, use `update_incident_links`.',
           },
         },
+        {
+          toolName: 'change_incident_state',
+          description: 'Create a preview to reopen or cancel one incident.',
+          inputSchema: {
+            safeParse: (value: any) => ({ success: true, data: value }),
+          },
+          inputSummary: {
+            ref: 'Incident reference: INC-n, uuid or exact title.',
+            action: '`reopen` or `cancel`.',
+            reason: 'The mandatory reason.',
+          },
+          businessResource: 'incidents',
+          writePreview: {
+            entity_type: 'incidents',
+            fields: ['status', 'reason'],
+            reversible: false,
+            prompt_hint: 'For an incident reopen or cancellation, use `change_incident_state`.',
+          },
+        },
+        {
+          toolName: 'set_incident_confidentiality',
+          description: 'Create a preview to set or lift the confidentiality of one incident.',
+          inputSchema: {
+            safeParse: (value: any) => ({ success: true, data: value }),
+          },
+          inputSummary: {
+            ref: 'Incident reference: INC-n, uuid or exact title.',
+            confidential: '`true` to restrict, `false` to lift.',
+          },
+          businessResource: 'incidents',
+          writePreview: {
+            entity_type: 'incidents',
+            fields: ['confidential'],
+            reversible: false,
+            prompt_hint: 'For the confidentiality of an incident, use `set_incident_confidentiality`.',
+          },
+        },
       ]),
       getOperationOrNull: (toolName: string) => {
         const operation = ({
@@ -412,6 +449,8 @@ function createRegistry(overrides?: {
           add_task_comment: { toolName: 'add_task_comment' },
           add_incident_note: { toolName: 'add_incident_note' },
           update_incident_links: { toolName: 'update_incident_links' },
+          change_incident_state: { toolName: 'change_incident_state' },
+          set_incident_confidentiality: { toolName: 'set_incident_confidentiality' },
         } as Record<string, any>)[toolName];
         return operation ?? null;
       },
@@ -589,6 +628,8 @@ async function testListRegisteredToolsExposesRuntimeRegistry() {
       'add_task_comment',
       'add_incident_note',
       'update_incident_links',
+      'change_incident_state',
+      'set_incident_confidentiality',
     ],
   );
 }
@@ -689,7 +730,25 @@ async function testChatSurfaceIncludesWritePreviewToolsWhenWriteAllowed() {
   assert.ok(tools.some((tool) => tool.name === 'add_task_comment'));
   assert.ok(tools.some((tool) => tool.name === 'add_incident_note'));
   assert.ok(tools.some((tool) => tool.name === 'update_incident_links'));
+  assert.ok(tools.some((tool) => tool.name === 'change_incident_state'));
+  assert.ok(tools.some((tool) => tool.name === 'set_incident_confidentiality'));
   assert.ok(tools.some((tool) => tool.name === 'undo_preview'));
+}
+
+/** The administrator incident tools are never offered to a person without the admin right. */
+async function testAdministratorOnlyIncidentToolsNeedTheAdminLevel() {
+  const registry = createRegistry({
+    policy: {
+      // A member or a contributor everywhere, never an administrator.
+      assertWriteAccess: async (_context: any, _resource: string, _manager: any, options: { level: string }) => {
+        if (options.level === 'admin') throw new Error('missing admin');
+      },
+      listReadableEntityTypes: async () => ['incidents'],
+    },
+  });
+  const tools = await registry.listAvailableTools(createChatContext());
+  assert.ok(!tools.some((tool) => tool.name === 'change_incident_state'), 'no reopen or cancel');
+  assert.ok(!tools.some((tool) => tool.name === 'set_incident_confidentiality'), 'no confidentiality change');
 }
 
 async function testWritePreviewToolsStayHiddenWithoutWriteAccess() {
@@ -710,6 +769,8 @@ async function testWritePreviewToolsStayHiddenWithoutWriteAccess() {
   assert.ok(!tools.some((tool) => tool.name === 'add_task_comment'));
   assert.ok(!tools.some((tool) => tool.name === 'add_incident_note'));
   assert.ok(!tools.some((tool) => tool.name === 'update_incident_links'));
+  assert.ok(!tools.some((tool) => tool.name === 'change_incident_state'));
+  assert.ok(!tools.some((tool) => tool.name === 'set_incident_confidentiality'));
   assert.ok(!tools.some((tool) => tool.name === 'undo_preview'));
 }
 
@@ -1983,6 +2044,7 @@ async function run() {
   await testSearchAllDelegatesToEntityTools();
   await testSearchAllAppliesTokenLeanDefaultLimit();
   await testChatSurfaceIncludesWritePreviewToolsWhenWriteAllowed();
+  await testAdministratorOnlyIncidentToolsNeedTheAdminLevel();
   await testWritePreviewToolsStayHiddenWithoutWriteAccess();
   await testDeleteRecordIsOfferedOnChatOnly();
   await testUpdateTaskAssigneesCreatesOnePreviewPerTaskAndReturnsPartialErrors();

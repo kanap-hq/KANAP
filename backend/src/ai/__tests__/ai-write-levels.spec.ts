@@ -120,6 +120,12 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
   update_incident_links: {
     incidents: { resource: 'incidents', level: 'contributor', route: [IncidentsController, 'linkRelation'] },
   },
+  change_incident_state: {
+    incidents: { resource: 'incidents', level: 'admin', route: [IncidentsController, 'reopen'] },
+  },
+  set_incident_confidentiality: {
+    incidents: { resource: 'incidents', level: 'admin', route: [IncidentsController, 'setConfidentiality'] },
+  },
   create_master_data_record: masterDataRows('create'),
   update_master_data_record: masterDataRows('update'),
   update_entity_relations: Object.fromEntries(AI_RELATION_ENTITY_TYPES.map((family) => [family, {
@@ -178,6 +184,8 @@ function testTableMatchesRoutesAndPlaid() {
   }
   // Every family of the multi-family tools has its row (the record builders map every family).
   assert.equal(Object.keys(TABLE.update_entity_relations).length, AI_RELATION_ENTITY_TYPES.length);
+  // The state tool makes two changes: cancelling needs the same administrator right as reopening.
+  assert.deepEqual(routeGuard([IncidentsController, 'cancel']), { resource: 'incidents', level: 'admin' });
   assert.ok(rows >= 50, `${rows} rows`);
   console.log(`  ${rows} operation x family rows match their screen routes: OK`);
 }
@@ -201,6 +209,11 @@ function testOnlyTheContributorRowsAreBelowMember() {
   assert.equal(aiWriteLevel('update_business_record', 'incidents'), 'contributor');
   assert.equal(aiWriteLevel('add_incident_note', 'incidents'), 'contributor');
   assert.equal(aiWriteLevel('update_incident_links', 'incidents'), 'contributor');
+  // The administrator actions know one level per tool, and an unknown family stays at admin.
+  assert.equal(aiWriteLevel('change_incident_state', 'incidents'), 'admin');
+  assert.equal(aiWriteLevel('set_incident_confidentiality', 'incidents'), 'admin');
+  assert.equal(aiWriteLevel('change_incident_state', 'unknown'), 'admin');
+  assert.equal(aiWriteLevel('set_incident_confidentiality', 'unknown'), 'admin');
   // A follow-up task on an incident stays at the tasks module's member level.
   assert.equal(aiWriteLevel('create_task', 'incident'), 'member');
   assert.equal(aiWriteLevel('update_business_record', 'unknown'), 'member');
@@ -238,6 +251,13 @@ function testToolRequirements() {
   assert.deepEqual(aiWriteRequirements('update_incident_links', ['incidents']), [
     { resource: 'incidents', level: 'member' },
     { resource: 'incidents', level: 'contributor' },
+  ]);
+  // The administrator tools ask for admin only: no member or contributor row opens them.
+  assert.deepEqual(aiWriteRequirements('change_incident_state', ['incidents']), [
+    { resource: 'incidents', level: 'admin' },
+  ]);
+  assert.deepEqual(aiWriteRequirements('set_incident_confidentiality', ['incidents']), [
+    { resource: 'incidents', level: 'admin' },
   ]);
   // A follow-up task on an incident takes the tasks module at member, as its screen route.
   assert.deepEqual(aiWriteRequirements('create_task', ['tasks']), [{ resource: 'tasks', level: 'member' }]);

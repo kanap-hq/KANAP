@@ -228,6 +228,42 @@ export const writeActionText = {
       case 'es': return `modificación de los vínculos del incidente ${subject}`;
     }
   },
+  /** An administrator changes the state of an incident; the reason is mandatory. */
+  changeIncidentState(
+    language: AiTranslatedWriteLanguage,
+    action: 'reopen' | 'cancel',
+    subject: string,
+  ): string {
+    switch (language) {
+      case 'fr': return action === 'reopen'
+        ? `réouverture de l'incident ${subject}`
+        : `annulation de l'incident ${subject}`;
+      case 'de': return action === 'reopen'
+        ? `Vorfall ${subject} wieder öffnen`
+        : `Vorfall ${subject} abbrechen`;
+      case 'es': return action === 'reopen'
+        ? `reapertura del incidente ${subject}`
+        : `cancelación del incidente ${subject}`;
+    }
+  },
+  /** An administrator restricts an incident or lifts its confidentiality. */
+  setIncidentConfidentiality(
+    language: AiTranslatedWriteLanguage,
+    confidential: boolean,
+    subject: string,
+  ): string {
+    switch (language) {
+      case 'fr': return confidential
+        ? `passage de l'incident ${subject} en confidentiel`
+        : `levée de la confidentialité de l'incident ${subject}`;
+      case 'de': return confidential
+        ? `Vorfall ${subject} als vertraulich markieren`
+        : `Vertraulichkeit des Vorfalls ${subject} aufheben`;
+      case 'es': return confidential
+        ? `marcado del incidente ${subject} como confidencial`
+        : `levantamiento de la confidencialidad del incidente ${subject}`;
+    }
+  },
   /** The deletion of one record, the only irreversible write: one record at a time, under approval. */
   deleteRecord(language: AiTranslatedWriteLanguage, entityType: string, subject: string): string {
     const noun = RECORD_NOUNS[entityType] ?? RECORD_NOUNS.default;
@@ -341,6 +377,11 @@ export function incidentNoteLabel(language: AiWriteLanguage): string {
 
 export function incidentOccurredAtLabel(language: AiWriteLanguage): string {
   return { en: 'Occurred at', fr: "Date de l'événement", de: 'Zeitpunkt', es: 'Fecha del evento' }[language];
+}
+
+/** The mandatory reason of a reopen or a cancellation, as the screen asks for it. */
+export function incidentReasonLabel(language: AiWriteLanguage): string {
+  return { en: 'Reason', fr: 'Raison', de: 'Grund', es: 'Motivo' }[language];
 }
 
 export type IncidentLinkCardGroup = {
