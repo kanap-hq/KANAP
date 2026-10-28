@@ -98,6 +98,8 @@ export class IncidentsCsvService {
     /** The reader's infrastructure and applications reads: the list's search follows them. */
     technologies?: boolean;
     applications?: boolean;
+    /** A Business Contributor's applications, for the application filter and its values. */
+    applicationScope?: { userId: string };
     scope?: 'template' | 'data';
     fields?: string[];
     /**
@@ -114,6 +116,7 @@ export class IncidentsCsvService {
     if (scope !== 'template') {
       const listQuery = await this.incidents.exportQuery(opts.query ?? {}, {
         manager, tenantId, viewer, technologies: opts.technologies, applications: opts.applications,
+        applicationScope: opts.applicationScope,
       });
       rows = await manager.query(
         `SELECT ${EXPORT_COLUMNS} ${INCIDENT_LIST_FROM} WHERE ${listQuery.where} ORDER BY ${listQuery.orderBy}`,

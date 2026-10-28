@@ -296,7 +296,19 @@ Keep the list short. Categories are what you will group a year of incidents by, 
 
 ## Ask the assistant
 
-Plaid can query the register in chat, with the same permissions as the rest of the application. Ask it for a count ("How many critical incidents this quarter?"), a filtered list ("List of open incidents on PAR-ESX-01"), or a full record ("Summary of INC-2"). The last one includes the journal and the incident review, so a question can be answered from the root cause or the lessons learned. Times are given in your own time zone. When Plaid reads an incident, the linked records follow the same permissions as the PDF report. A restricted incident stays out of the answers, of the counts and of the sources, review included.
+Plaid reads and writes the register in chat, with the same permissions as the rest of the application. Every change comes as a preview that you approve.
+
+**Reading**: ask Plaid for a count ("How many critical incidents this quarter?"), a filtered list ("List of open incidents on PAR-ESX-01"), or a full record ("Summary of INC-2"). The full record includes the journal and the incident review, so a question can be answered from the root cause or the lessons learned. Times are given in your own time zone. When Plaid reads an incident, the linked records follow the same permissions as the PDF report. A restricted incident you cannot see stays out of the answers, the counts, the groups, the averages and the sources, review included.
+
+Plaid filters incidents by asset, application or technology, named by reference or exact name: `APP-1` does not bring the incidents of `APP-12`. Grouped by asset, application or technology, an incident counts in each of its linked records, so the groups can add up to more than the total. An incident with no link appears in no group. Plaid also groups incidents by month of detection or of resolution. Months follow UTC (Coordinated Universal Time): an incident detected at 00:30 on 1 November in Paris counts in October. Plaid reads the time to resolution, from detection to resolution in hours, for each incident or as an average, a minimum or a maximum. Cancelled and unresolved incidents are left out. Ask, for example: "Average time to resolution of major incidents per month this year".
+
+**Writing** (Contributor level on Incidents): Plaid logs an incident, changes its fields and moves its status forward up to Closed. It logs an incident Open or In progress. An incident that is already resolved is logged open, then moved forward in a second preview, so the step shows in the journal. Plaid can turn on **Restrict to register administrators**. The preview warns you when that would hide the incident from you. Plaid also adds notes to the journal, with the time the note refers to if you give one, and links or unlinks assets, applications and technologies, named by reference or exact name, or by hostname or FQDN for an asset. With the Member level on Tasks, it creates a follow-up task on the incident. Ask, for example: "Log a major incident: mail unavailable at the Lyon office since 08:40, linked to PAR-MAIL-01".
+
+Closing freezes the record, and the closing preview says so. Only an administrator can reopen the incident.
+
+**Administrator actions** (Administrator level on Incidents): Plaid reopens a resolved, closed or cancelled incident, cancels an incident, and turns **Restrict to register administrators** on or off, on a closed or cancelled incident too. Reopening and cancelling need a reason, written into the journal, for example: "Reopen INC-14: the issue came back after the fix".
+
+Deleting an incident and adding attachments stay on the incident page (see [Deleting an incident](#deleting-an-incident)). Assistants connected over MCP read only.
 
 ---
 

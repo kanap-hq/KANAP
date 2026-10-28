@@ -60,6 +60,7 @@ function testRegistries() {
 function mutationSupport(runner: QueryRunner, contracts: any = {}): any {
   return new AiBusinessRecordMutationSupportService(
     {} as any, {} as any, {} as any, budgetService(runner), {} as any, contracts, {} as any, {} as any, {} as any, {} as any, {} as any,
+    {} as any,
   );
 }
 

@@ -78,6 +78,16 @@ export type AiFilterFieldDef = {
 export type AiAggregateGroupDef = {
   expression: string;
   joins?: string[];
+  /**
+   * A many-to-many group narrowed to the caller's participation on one linked family (a Business
+   * Contributor's applications): the join that names `table` as `alias` also carries the
+   * participant condition, so the group lists only the linked records the caller takes part in.
+   */
+  participation?: {
+    entityType: 'applications';
+    table: string;
+    alias: string;
+  };
 };
 
 export type AiAggregateMetricType = 'number' | 'date';
@@ -86,6 +96,8 @@ export type AiAggregateMetricDef = {
   expression: string;
   joins?: string[];
   type: AiAggregateMetricType;
+  /** The decimal places the server keeps in a group's value (an exact definition, a readable figure). */
+  round?: number;
 };
 
 export type AiAggregateConfig = {

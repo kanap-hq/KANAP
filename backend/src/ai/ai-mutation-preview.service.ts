@@ -324,8 +324,16 @@ export class AiMutationPreviewService {
     return operation.resolveBusinessResource?.(params as any) ?? operation.businessResource;
   }
 
-  /** The family a write acts on: the `entity_type` it was asked with, else the preview's target type. */
-  private writeFamily(params: { input?: unknown; preview?: AiMutationPreview }): string {
+  /**
+   * The family a write acts on: the one the operation names (an incident note or link has no
+   * `entity_type` in its input), else the `entity_type` it was asked with, else its target type.
+   */
+  private writeFamily(
+    params: { input?: unknown; preview?: AiMutationPreview },
+    operation: ReturnType<AiMutationOperationRegistry['getOperation']>,
+  ): string {
+    const named = operation.resolveWriteFamily?.(params as any);
+    if (named) return String(named).trim();
     const input = params.input as { entity_type?: unknown } | null | undefined;
     return String(input?.entity_type ?? params.preview?.target_entity_type ?? params.preview?.mutation_input?.entity_type ?? '').trim();
   }
@@ -352,7 +360,7 @@ export class AiMutationPreviewService {
     params: { input?: unknown; preview?: AiMutationPreview },
     change?: { targetEntityType: string | null; targetId: string | null; mutationInput: Record<string, unknown> | null },
   ): Promise<void> {
-    const family = this.writeFamily(params);
+    const family = this.writeFamily(params, operation);
     const level = aiWriteLevel(operation.toolName, family);
     const resource = this.getOperationBusinessResource(operation, params as any);
     if (!change) {

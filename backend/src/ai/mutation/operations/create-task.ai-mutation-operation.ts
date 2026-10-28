@@ -17,7 +17,7 @@ import { AiWriteLanguage, previewSummaryText, quoted, taskDetailText, taskPriori
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-const RELATION_TYPE_VALUES = ['standalone', 'project', 'budget_line'] as const;
+const RELATION_TYPE_VALUES = ['standalone', 'project', 'budget_line', 'incident'] as const;
 const PRIORITY_LEVEL_VALUES = ['blocker', 'high', 'normal', 'low', 'optional'] as const;
 
 type CreateTaskRelationType = typeof RELATION_TYPE_VALUES[number];
@@ -107,9 +107,9 @@ const CreateTaskInputSchema = z.object({
   relation_type: z.preprocess(
     normalizeRelationType,
     z.enum(RELATION_TYPE_VALUES).optional(),
-  ).describe('Optional relation type. Use `project`, `budget_line`, or `standalone`. Omit this to create a standalone task.'),
+  ).describe('Optional relation type. Use `project`, `budget_line`, `incident`, or `standalone`. Omit this to create a standalone task.'),
   relation_ref: z.union([z.string(), z.null()]).optional()
-    .describe('Optional relation target reference. For project tasks, prefer a PRJ reference such as `PRJ-33`. For budget line tasks, use a BL-n reference, an exact title or a UUID. Required when relation_type is not standalone.'),
+    .describe('Optional relation target reference. For project tasks, prefer a PRJ reference such as `PRJ-33`. For budget line tasks, use a BL-n reference, an exact title or a UUID. For incident tasks, use an INC-n reference, the incident UUID or its exact title. Required when relation_type is not standalone.'),
   assignee: z.union([z.string(), z.null()]).optional()
     .describe('Optional assignee email, full name, or unique user label in the current tenant.'),
   priority_level: z.union([z.enum(PRIORITY_LEVEL_VALUES), z.null()]).optional()
@@ -194,13 +194,13 @@ const CreateTaskInputSchema = z.object({
 @Injectable()
 export class CreateTaskAiMutationOperation implements AiMutationOperation<CreateTaskInput> {
   readonly toolName = 'create_task' as const;
-  readonly description = 'Create a preview to create one task. Tasks can be standalone or linked to one project or budget line. The requestor is always the current Plaid user. Requires explicit user approval before execution.';
+  readonly description = 'Create a preview to create one task. Tasks can be standalone or linked to one project, budget line or incident. The requestor is always the current Plaid user. Requires explicit user approval before execution.';
   readonly inputSchema = CreateTaskInputSchema;
   readonly inputSummary = {
     title: 'Task title.',
     description: 'Optional task description with the full instructions, specifications, and implementation notes.',
-    relation_type: 'Optional relation type: project, budget_line, or standalone. Omit this to create a standalone task.',
-    relation_ref: 'Optional relation target reference. Required when relation_type is project or budget_line. Use a PRJ reference for projects and a BL-n reference, an exact title or a UUID for budget lines.',
+    relation_type: 'Optional relation type: project, budget_line, incident, or standalone. Omit this to create a standalone task.',
+    relation_ref: 'Optional relation target reference. Required when relation_type is project, budget_line or incident. Use a PRJ reference for projects, a BL-n reference or exact title for budget lines, and an INC-n reference or exact title for incidents.',
     assignee: 'Optional assignee email, full name, or unique user label in the current tenant.',
     priority_level: 'Optional task priority. Defaults to normal.',
     priority: 'Alias for priority_level.',
@@ -217,7 +217,7 @@ export class CreateTaskAiMutationOperation implements AiMutationOperation<Create
     entity_type: 'tasks',
     fields: ['relation', 'title', 'description', 'assignee', 'priority_level', 'start_date', 'due_date', 'task_type', 'phase', 'applications', 'assets'],
     reversible: false,
-    prompt_hint: 'For task creation, use `create_task` with a title. Use `relation_type` plus `relation_ref` for project or budget line tasks. Omit the relation fields to create a standalone task. The requestor is always the current user. If the assignee, relation target, task type, or phase is ambiguous, ask the user to confirm before retrying.',
+    prompt_hint: 'For task creation, use `create_task` with a title. Use `relation_type` plus `relation_ref` for project, budget line or incident tasks. Omit the relation fields to create a standalone task. The requestor is always the current user. On an incident, the task follows the incident visibility and is refused on a closed or cancelled incident. If the assignee, relation target, task type, or phase is ambiguous, ask the user to confirm before retrying.',
   };
 
   constructor(

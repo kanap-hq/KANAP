@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { assertLinesEditable } from '../../data-access/line-write-checks';
 import { validate as isUuid } from 'uuid';
 import { RelatedType } from '../../tasks/tasks-unified.service';
@@ -9,7 +9,12 @@ import {
   resolveAiIncidentViewer,
   resolveAiParticipationAccessScope,
 } from '../query/ai-query-scope.util';
-import { taskIncidentVisibilitySql } from '../../incidents/incident-visibility';
+import {
+  INCIDENT_LOCKED_MESSAGE,
+  incidentVisibilitySql,
+  isFrozenIncidentStatus,
+  taskIncidentVisibilitySql,
+} from '../../incidents/incident-visibility';
 import { budgetLineReferenceNumbers } from '../../common/resolve-item-id';
 import { BUDGET_LINE_PREFIX } from '../../spend/budget-nature';
 
@@ -22,7 +27,7 @@ type AiTaskUserCandidate = {
   label: string;
 };
 
-type AiTaskCreateTargetMode = 'standalone' | 'project' | 'budget_line';
+type AiTaskCreateTargetMode = 'standalone' | 'project' | 'budget_line' | 'incident';
 
 type AiTaskCreateTargetCandidate = {
   id: string;
@@ -67,6 +72,15 @@ const TARGET_QUERY_CONFIG: Record<Exclude<AiTaskCreateTargetMode, 'standalone'>,
     itemPrefix: 'BL',
     // Both natures in one family (`spend/budget-nature.ts`); the line's nature gives the stored type.
     where: `target.nature IN ('opex', 'capex')`,
+  },
+  incident: {
+    mode: 'incident',
+    type: 'incident',
+    table: 'incidents',
+    nameColumn: 'title',
+    subject: 'incident',
+    displayPrefix: 'Incident',
+    itemPrefix: 'INC',
   },
 };
 
@@ -269,6 +283,54 @@ export class AiTaskMutationSupportService {
   private parseProjectItemNumber(input: string): number | null {
     const match = String(input || '').trim().match(PROJECT_REF_RE);
     return match ? Number.parseInt(match[1], 10) : null;
+  }
+
+  /**
+   * The incident a follow-up task is created on or moved to, as the incident sub-route reads it:
+   * an INC-n, a uuid or an exact title, with the caller's confidentiality. A hidden incident reads
+   * as missing; a closed or cancelled one refuses the write (`ensureEditable` on the screen).
+   */
+  async resolveIncidentTarget(
+    context: AiExecutionContextWithManager,
+    reference: string | null | undefined,
+  ): Promise<AiTaskCreateTarget> {
+    const raw = textOrNull(reference);
+    if (!raw) throw new BadRequestException('relation_ref is required when relation_type is incident.');
+    const uuid = isUuid(raw);
+    const itemNumber = raw.match(/^INC-(\d+)$/i)?.[1] ?? null;
+    const viewer = await resolveAiIncidentViewer(context);
+    const params: unknown[] = [context.tenantId, raw, itemNumber];
+    const visibility = incidentVisibilitySql('target', viewer, params);
+    const rows: Array<{
+      id: string;
+      item_number: number | null;
+      title: string | null;
+      status: string | null;
+      confidential: boolean;
+    }> = await context.manager.query(
+      `SELECT target.id, target.item_number, target.title, target.status, target.confidential
+         FROM incidents target
+        WHERE target.tenant_id = $1
+          AND (${uuid ? 'target.id = $2 OR ' : ''}(($3::int IS NOT NULL AND target.item_number = $3::int) OR LOWER(target.title) = LOWER($2::text)))
+          ${visibility}
+        ORDER BY target.item_number
+        LIMIT 6`,
+      params,
+    );
+    if (rows.length === 0) throw new NotFoundException(`No incident found matching "${raw}".`);
+    if (rows.length > 1) throw new BadRequestException(`Multiple incidents matched "${raw}". Use an INC reference.`);
+    const row = rows[0];
+    if (isFrozenIncidentStatus(row.status)) throw new ForbiddenException(INCIDENT_LOCKED_MESSAGE);
+    const ref = row.item_number == null ? raw : `INC-${row.item_number}`;
+    return {
+      mode: 'incident',
+      type: 'incident',
+      id: String(row.id),
+      ref,
+      label: row.confidential
+        ? ref
+        : [ref, String(row.title ?? '').trim()].filter(Boolean).join(' - '),
+    };
   }
 
   private toTaskSnapshot(row: any): AiTaskSnapshot {
@@ -751,6 +813,10 @@ export class AiTaskMutationSupportService {
       throw new BadRequestException(`relation_ref is required when relation_type is ${mode}.`);
     }
 
+    if (mode === 'incident') {
+      return this.resolveIncidentTarget(context, normalizedRef);
+    }
+
     if (isUuid(normalizedRef) || (mode === 'project' && this.parseProjectItemNumber(normalizedRef) != null)) {
       return this.getExactTarget(context, mode, normalizedRef);
     }
@@ -810,6 +876,10 @@ export class AiTaskMutationSupportService {
 
     if (!relationId) {
       throw new BadRequestException('Stored relation is missing its target identifier.');
+    }
+
+    if (relationType === 'incident') {
+      return this.resolveIncidentTarget(context, relationId);
     }
 
     return this.getExactTarget(context, relationType, relationId);
