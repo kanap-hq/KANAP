@@ -70,6 +70,7 @@ export default function BudgetMetadataBar({
           searchPlaceholder={t('opex.metadata.itOwner')}
           disabled={disabled}
           onChange={onOwnerItChange}
+          suggestedFirst={{ costCenterId: costCenterId || null }}
         />
       </PortfolioMetadataItem>
 
@@ -81,6 +82,7 @@ export default function BudgetMetadataBar({
           searchPlaceholder={t('opex.metadata.businessOwner')}
           disabled={disabled}
           onChange={onOwnerBizChange}
+          suggestedFirst={{ costCenterId: costCenterId || null }}
         />
       </PortfolioMetadataItem>
 
