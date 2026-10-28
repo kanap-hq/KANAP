@@ -6,10 +6,13 @@ import { analyticsCategoriesRecord } from './record-history/records/analytics_ca
 import { assetsRecord } from './record-history/records/assets';
 import { businessProcessesRecord } from './record-history/records/business_processes';
 import { companiesRecord } from './record-history/records/companies';
+import { connectionsRecord } from './record-history/records/connections';
 import { contactsRecord } from './record-history/records/contacts';
 import { costCentersRecord } from './record-history/records/cost_centers';
 import { departmentsRecord } from './record-history/records/departments';
 import { documentsRecord } from './record-history/records/documents';
+import { interfacesRecord } from './record-history/records/interfaces';
+import { locationsRecord } from './record-history/records/locations';
 import { spendItemsRecord } from './record-history/records/spend_items';
 import { suppliersRecord } from './record-history/records/suppliers';
 import { technologiesRecord } from './record-history/records/technologies';
@@ -78,7 +81,12 @@ export type RecordHistoryChildKind =
   | 'owner'
   | 'vulnerability'
   | 'supplier'
-  | 'budget_line';
+  | 'budget_line'
+  | 'sub_item'
+  | 'leg'
+  | 'set'
+  | 'binding'
+  | 'person';
 
 export type RecordHistoryExclusion = {
   /** The physical table of the data-access inventory. */
@@ -137,10 +145,13 @@ const RECORD_HISTORY_DEFINITION = [
   assetsRecord,
   businessProcessesRecord,
   companiesRecord,
+  connectionsRecord,
   contactsRecord,
   costCentersRecord,
   departmentsRecord,
   documentsRecord,
+  interfacesRecord,
+  locationsRecord,
   spendItemsRecord,
   suppliersRecord,
   technologiesRecord,

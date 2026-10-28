@@ -5,10 +5,13 @@ import { analyticsCategoriesFields } from './records/analytics_categories';
 import { assetsFields } from './records/assets';
 import { businessProcessesFields } from './records/business_processes';
 import { companiesFields } from './records/companies';
+import { connectionsFields } from './records/connections';
 import { contactsFields } from './records/contacts';
 import { costCentersFields } from './records/cost_centers';
 import { departmentsFields } from './records/departments';
 import { documentsFields } from './records/documents';
+import { interfacesFields } from './records/interfaces';
+import { locationsFields } from './records/locations';
 import { spendItemsFields } from './records/spend_items';
 import { suppliersFields } from './records/suppliers';
 import { technologiesFields } from './records/technologies';
@@ -26,10 +29,13 @@ const FIELD_SETS = [
   assetsFields,
   businessProcessesFields,
   companiesFields,
+  connectionsFields,
   contactsFields,
   costCentersFields,
   departmentsFields,
   documentsFields,
+  interfacesFields,
+  locationsFields,
   spendItemsFields,
   suppliersFields,
   technologiesFields,

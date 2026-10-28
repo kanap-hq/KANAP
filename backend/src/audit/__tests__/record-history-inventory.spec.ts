@@ -43,8 +43,9 @@ function testEntries() {
   assert.deepEqual(
     recordHistoryModules(),
     [
-      'accounts', 'analytics', 'budget', 'business_processes', 'companies', 'contacts', 'cost_centers',
-      'departments', 'infrastructure', 'knowledge', 'suppliers', 'working_day_profiles',
+      'accounts', 'analytics', 'applications', 'budget', 'business_processes', 'companies', 'contacts',
+      'cost_centers', 'departments', 'infrastructure', 'knowledge', 'locations', 'suppliers',
+      'working_day_profiles',
     ],
     'the modules of the route guard',
   );

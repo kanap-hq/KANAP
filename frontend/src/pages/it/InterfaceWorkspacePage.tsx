@@ -39,8 +39,10 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useInterfaceItemNav } from '../../hooks/useModuleItemNav';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 
-type WorkspaceTabKey = 'overview' | 'flow' | 'environments' | 'data-mapping' | 'relations';
+type WorkspaceTabKey = 'overview' | 'flow' | 'environments' | 'data-mapping' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
 type LegacyTabKey = 'specification' | 'mapping' | 'technical' | 'functional' | 'ownership' | 'compliance';
 type RouteTabKey = WorkspaceTabKey | LegacyTabKey;
 
@@ -50,7 +52,12 @@ const WORKSPACE_TABS = new Set<WorkspaceTabKey>([
   'environments',
   'data-mapping',
   'relations',
+  RECORD_HISTORY_TAB_KEY,
 ]);
+
+// The History tab loads with its tab; a failed chunk shows a retry button in its place.
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
 
 const LEGACY_ROUTE_MAP: Record<LegacyTabKey, WorkspaceTabKey> = {
   specification: 'overview',
@@ -594,6 +601,7 @@ export default function InterfaceWorkspacePage() {
     { key: 'environments', label: t('workspace.interface.tabs.environments'), disabled: isCreate },
     { key: 'data-mapping', label: t('workspace.interface.tabs.dataMapping'), disabled: isCreate },
     { key: 'relations', label: t('workspace.interface.tabs.relations'), badge: relationCount || undefined, disabled: isCreate },
+    { key: RECORD_HISTORY_TAB_KEY, label: t('workspace.interface.tabs.history'), disabled: isCreate },
   ], [isCreate, relationCount, t]);
 
   const handleTitleSave = React.useCallback((next: string) => {
@@ -785,6 +793,14 @@ export default function InterfaceWorkspacePage() {
 
         {routeTab === 'relations' && !isCreate && current?.id && (
           <InterfaceRelationsTab key={current.id} interfaceId={current.id} onCountChange={handleRelationCount} />
+        )}
+
+        {routeTab === RECORD_HISTORY_TAB_KEY && !isCreate && current?.id && (
+          <WorkspaceTabBoundary resetKey={routeTab} onRetry={historyTab.retry}>
+            <React.Suspense fallback={null}>
+              <HistoryTab table="interfaces" recordId={current.id} />
+            </React.Suspense>
+          </WorkspaceTabBoundary>
         )}
       </PortfolioDetailWorkspaceShell>
 

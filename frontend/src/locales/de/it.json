@@ -2597,7 +2597,8 @@
         "layers": "Schichten",
         "compliance": "Kritikalität und Compliance",
         "interfaces": "Zugehörige Schnittstellen",
-        "path": "Pfad"
+        "path": "Pfad",
+        "history": "Verlauf"
       },
       "createFromBinding": "Erstellung aus Schnittstellen-Bindungskontext",
       "overview": {
@@ -2802,7 +2803,8 @@
         "compliance": "Daten und Compliance",
         "flow": "Fluss",
         "dataMapping": "Datenzuordnung",
-        "relations": "Beziehungen"
+        "relations": "Beziehungen",
+        "history": "Verlauf"
       },
       "selectSourceTarget": "Wählen Sie Quell- und Zielanwendungen, um Bindungen zu verwalten.",
       "untitled": "Unbenannte Schnittstelle",
@@ -3102,7 +3104,8 @@
       "tabs": {
         "overview": "Übersicht",
         "contacts": "Kontakte und Support",
-        "relations": "Beziehungen"
+        "relations": "Beziehungen",
+        "history": "Verlauf"
       },
       "deleteTitle": "Standort löschen?",
       "deleteMessage": "Dies löscht den Standort dauerhaft und hebt automatisch die Zuordnung aller verknüpften Assets auf.",

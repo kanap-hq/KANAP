@@ -660,7 +660,53 @@
       "active": "Activo",
       "phone": "Teléfono",
       "mobile": "Móvil",
-      "country": "País"
+      "country": "País",
+      "location_reference": "Referencia de la ubicación",
+      "operating_company_id": "Empresa operadora",
+      "additional_info": "Información adicional",
+      "connection_reference": "Referencia de la conexión",
+      "topology": "Topología",
+      "source_asset_id": "Activo de origen",
+      "source_entity_code": "Entidad de origen",
+      "destination_asset_id": "Activo de destino",
+      "destination_entity_code": "Entidad de destino",
+      "risk_mode": "Modo de riesgo",
+      "order_index": "Posición",
+      "function_code": "Función",
+      "equipment_asset_id": "Activo de equipo",
+      "equipment_entity_code": "Entidad de equipo",
+      "protocol_codes": "Protocolos",
+      "port_override": "Puerto personalizado",
+      "interface_reference": "Referencia de la interfaz",
+      "interface_id": "ID de interfaz",
+      "business_process_id": "Proceso de negocio",
+      "business_purpose": "Objetivo de negocio",
+      "source_application_id": "Aplicación de origen",
+      "target_application_id": "Aplicación de destino",
+      "data_category": "Categoría de datos",
+      "integration_route_type": "Tipo de ruta",
+      "classification_incomplete": "Clasificación incompleta",
+      "middleware_application_ids": "Aplicaciones middleware",
+      "leg_type": "Tipo de segmento",
+      "from_role": "Rol de origen",
+      "to_role": "Rol de destino",
+      "trigger_type": "Tipo de desencadenante",
+      "integration_pattern": "Patrón de integración",
+      "data_format": "Formato de datos",
+      "job_name": "Nombre del trabajo",
+      "related_interface_id": "Interfaz relacionada",
+      "direction": "Dirección",
+      "source_identifier": "Identificador de origen",
+      "destination_identifier": "Identificador de destino",
+      "identifier_notes": "Notas del identificador",
+      "source_endpoint": "Punto de conexión de origen",
+      "target_endpoint": "Punto de conexión de destino",
+      "trigger_details": "Detalles del desencadenante",
+      "env_job_name": "Nombre del trabajo",
+      "authentication_mode": "Autenticación",
+      "monitoring_url": "URL de supervisión",
+      "env_notes": "Notas del entorno",
+      "integration_tool_application_id": "Herramienta de integración"
     },
     "history": {
       "empty": "Todavía no hay historial",
@@ -782,6 +828,46 @@
         "operating_system": {
           "added": "Sistema operativo añadido: {{label}}",
           "removed": "Sistema operativo eliminado: {{label}}"
+        },
+        "sub_item": {
+          "added": "Sububicación añadida: {{label}}",
+          "removed": "Sububicación eliminada: {{label}}"
+        },
+        "person": {
+          "added": "Persona añadida: {{label}}",
+          "removed": "Persona eliminada: {{label}}"
+        },
+        "owner": {
+          "added": "Propietario añadido: {{label}}",
+          "removed": "Propietario eliminado: {{label}}"
+        },
+        "company": {
+          "added": "Empresa añadida: {{label}}",
+          "removed": "Empresa eliminada: {{label}}"
+        },
+        "dependency": {
+          "added": "Dependencia añadida: {{label}}",
+          "removed": "Dependencia eliminada: {{label}}"
+        },
+        "country": {
+          "added": "País añadido: {{label}}",
+          "removed": "País eliminado: {{label}}"
+        },
+        "key_identifier": {
+          "added": "Identificador clave añadido: {{label}}",
+          "removed": "Identificador clave eliminado: {{label}}"
+        },
+        "interface_leg": {
+          "added": "Segmento añadido: {{label}}",
+          "removed": "Segmento eliminado: {{label}}"
+        },
+        "mapping_set": {
+          "added": "Conjunto de mapeo añadido: {{label}}",
+          "removed": "Conjunto de mapeo eliminado: {{label}}"
+        },
+        "middleware": {
+          "added": "Middleware añadido: {{label}}",
+          "removed": "Middleware eliminado: {{label}}"
         }
       },
       "unnamed": {
@@ -828,7 +914,12 @@
         "support": "una ficha de soporte",
         "technology_version": "una versión",
         "owner": "un responsable",
-        "vulnerability": "una vulnerabilidad"
+        "vulnerability": "una vulnerabilidad",
+        "sub_item": "una sububicación",
+        "leg": "un segmento",
+        "set": "un conjunto",
+        "binding": "un enlace",
+        "person": "una persona"
       },
       "title": "Historial",
       "metricsYear": "Indicadores {{year}}",
@@ -841,7 +932,14 @@
       "hardwareCreated": "Hardware añadido",
       "hardwareDeleted": "Hardware eliminado",
       "supportCreated": "Soporte añadido",
-      "supportDeleted": "Soporte eliminado"
+      "supportDeleted": "Soporte eliminado",
+      "segment": "Segmento {{index}}",
+      "subItem": "Sububicación {{name}}",
+      "binding": "Enlace {{environment}}",
+      "legCreated": "Segmento {{index}} añadido",
+      "legDeleted": "Segmento {{index}} eliminado",
+      "bindingCreated": "Enlace {{environment}} añadido",
+      "bindingDeleted": "Enlace {{environment}} eliminado"
     },
     "messages": {
       "loadDetailsFailed": "No se pudieron cargar los detalles de la entrada de auditoría."
@@ -1187,6 +1285,14 @@
         "vital": "V1 Actividades vitales",
         "priority": "V2 Actividades prioritarias",
         "normal": "V3 Funcionamiento normal"
+      },
+      "direction": {
+        "upstream": "Anterior",
+        "downstream": "Posterior"
+      },
+      "ownerType": {
+        "business": "Negocio",
+        "it": "IT"
       }
     },
     "dataAccess": {

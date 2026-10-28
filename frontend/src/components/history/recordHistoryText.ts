@@ -46,7 +46,8 @@ export type RecordHistorySubject = {
   kind: 'record' | 'version' | 'amounts' | 'allocations' | 'round_input' | 'link' | 'attachment'
     | 'contact' | 'application' | 'technology' | 'asset' | 'contract' | 'project' | 'request' | 'task' | 'metrics' | 'value'
     | 'relation' | 'member' | 'hardware' | 'support' | 'technology_version' | 'owner' | 'vulnerability'
-    | 'supplier' | 'budget_line';
+    | 'supplier' | 'budget_line'
+    | 'sub_item' | 'leg' | 'set' | 'binding' | 'person';
   label?: string | null;
 };
 export type RecordHistoryItem = {
@@ -86,6 +87,8 @@ const MEASURE_LABEL_KEYS: Readonly<Record<string, string>> = {
 const EVENT_KINDS = new Set([
   'link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line', 'value',
   'supplier', 'budget_line', 'relation_contains', 'relation_depends_on', 'member', 'owner_it', 'owner_business', 'operating_system',
+  'sub_item', 'person', 'owner', 'company', 'dependency', 'country', 'key_identifier', 'interface_leg',
+  'mapping_set', 'middleware',
 ]);
 
 /** The noun a nameless record reads as, by the kind the service gives it. */
@@ -97,6 +100,7 @@ const UNNAMED_KINDS = [
   'analytics_axis', 'analytics_category', 'contributor', 'line',
   'document', 'document_folder', 'document_library', 'document_type',
   'relation', 'member', 'hardware', 'support', 'technology_version', 'owner', 'vulnerability',
+  'sub_item', 'leg', 'set', 'binding', 'person',
 ] as const;
 
 export function isHiddenReference(value: unknown): value is RecordHistoryHiddenReference {
@@ -119,6 +123,10 @@ export function unnamedRecord(kind: string | null | undefined, t: Translate): st
 }
 
 function referenceText(reference: RecordHistoryReference, t: Translate): string {
+  // A flow leg has no name of its own: its order is its label ("Segment 2").
+  if (reference.kind === 'leg' && reference.label) {
+    return t('auditLogs.history.segment', { index: reference.label });
+  }
   if (reference.label && reference.reference) return `${reference.label} (${reference.reference})`;
   if (reference.label) return reference.label;
   if (reference.reference) return reference.reference;
@@ -237,6 +245,21 @@ export function historySubjectText(subject: RecordHistorySubject, t: Translate):
       ? t('auditLogs.history.vulnerability', { cve: subject.label })
       : t('auditLogs.history.vulnerabilityNoName');
   }
+  if (subject.kind === 'sub_item') {
+    return subject.label ? t('auditLogs.history.subItem', { name: subject.label }) : null;
+  }
+  if (subject.kind === 'leg') {
+    return subject.label ? t('auditLogs.history.segment', { index: subject.label }) : null;
+  }
+  if (subject.kind === 'set') {
+    return subject.label ? t('auditLogs.history.segment', { index: subject.label }) : null;
+  }
+  if (subject.kind === 'binding') {
+    return subject.label ? t('auditLogs.history.binding', { environment: subject.label }) : null;
+  }
+  if (subject.kind === 'person') {
+    return subject.label || null;
+  }
   return null;
 }
 
@@ -254,6 +277,18 @@ export function historyChildTitle(item: RecordHistoryItem, t: Translate): string
     return t(item.action === 'create' ? `auditLogs.history.${kind}Created` : `auditLogs.history.${kind}Deleted`);
   }
   if ((item.changes ?? []).length > 0) return null;
+  // A segment and a binding name their own gender in each language: the generic "{{title}} added"
+  // would read "Segment 2 ajoutée" in French.
+  if (item.subject.kind === 'leg' && item.subject.label) {
+    return t(item.action === 'create' ? 'auditLogs.history.legCreated' : 'auditLogs.history.legDeleted', {
+      index: item.subject.label,
+    });
+  }
+  if (item.subject.kind === 'binding' && item.subject.label) {
+    return t(item.action === 'create' ? 'auditLogs.history.bindingCreated' : 'auditLogs.history.bindingDeleted', {
+      environment: item.subject.label,
+    });
+  }
   const title = historySubjectText(item.subject, t);
   if (!title) return null;
   return t(item.action === 'create' ? 'auditLogs.history.childCreated' : 'auditLogs.history.childDeleted', { title });

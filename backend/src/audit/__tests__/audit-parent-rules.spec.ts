@@ -13,7 +13,8 @@ import { RECORD_HISTORY } from '../record-history.inventory';
 // The rules that give an audit row its budget line (`audit-parent-rules.ts`): the payload key of
 // a child, or the line of a version. The links both sides write (application, technology, asset)
 // have no rule: their writers hand the parent. The same labels are copied in the migration's SQL;
-// the last test reads that file and checks that both lists agree.
+// the last test reads that file and checks that both lists agree. The other families have their
+// own migration and their own comparison spec (`record-history-family-c-migration.spec.ts`).
 
 const LINE = '11111111-1111-4111-8111-111111111111';
 const VERSION = '22222222-2222-4222-8222-222222222222';

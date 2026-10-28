@@ -3,8 +3,11 @@ import type { RecordHistoryTable } from './record-history.inventory';
 import { analyticsAxesParentRules } from './record-history/records/analytics_axes';
 import { assetsParentRules } from './record-history/records/assets';
 import { companiesParentRules } from './record-history/records/companies';
+import { connectionsParentRules } from './record-history/records/connections';
 import { departmentsParentRules } from './record-history/records/departments';
 import { documentsParentRules } from './record-history/records/documents';
+import { interfacesParentRules } from './record-history/records/interfaces';
+import { locationsParentRules } from './record-history/records/locations';
 import { spendItemsParentRules } from './record-history/records/spend_items';
 import { suppliersParentRules } from './record-history/records/suppliers';
 import { technologiesParentRules } from './record-history/records/technologies';
@@ -51,8 +54,11 @@ const PARENT_RULE_SETS = [
   analyticsAxesParentRules,
   assetsParentRules,
   companiesParentRules,
+  connectionsParentRules,
   departmentsParentRules,
   documentsParentRules,
+  interfacesParentRules,
+  locationsParentRules,
   spendItemsParentRules,
   suppliersParentRules,
   technologiesParentRules,

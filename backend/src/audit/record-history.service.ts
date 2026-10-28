@@ -172,6 +172,34 @@ function addVersionId(ctx: { versions: Set<string> }, value: unknown) {
   if (isUuid(value)) ctx.versions.add(value.toLowerCase());
 }
 
+/** The string states of a whole-set write (`["business:<id>"]`). */
+function stateStrings(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '');
+}
+
+/** The id a `type:id` or `direction:id` state carries. */
+function stateId(state: string): string | null {
+  const index = state.indexOf(':');
+  const id = index >= 0 ? state.slice(index + 1) : state;
+  return isUuid(id) ? id : null;
+}
+
+/** The ids a set write may name: a person, a company, or another interface. */
+function collectSetIds(ctx: { ids: Map<FamilyKey, Set<string>> }, label: string, row: AuditRow) {
+  const family: FamilyKey | null = label === 'interface_owners'
+    ? 'user'
+    : label === 'interface_companies'
+      ? 'company'
+      : label === 'interface_dependencies'
+        ? 'interface'
+        : null;
+  if (!family) return;
+  for (const payload of [row.before_json, row.after_json]) {
+    for (const state of stateStrings(payload)) addFamilyId(ctx, family, stateId(state));
+  }
+}
+
 /** The ids the page's references, versions and dimensions name, read before any row is presented. */
 function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: string) {
   const ids = new Map<FamilyKey, Set<string>>();
@@ -258,7 +286,12 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
           if (isUuid(categoryId)) categories.add(categoryId.toLowerCase());
         }
       }
+      if (entry.auditLabels.includes(label) && isPlainObject(payload) && Array.isArray(payload.middleware_application_ids)) {
+        // An older interface writer kept the middleware applications as an id list in the payload.
+        for (const applicationId of payload.middleware_application_ids) addFamilyId({ ids }, 'application', applicationId);
+      }
     }
+    if (kind === 'set') collectSetIds({ ids }, label, row);
     if ((kind === 'amounts' || kind === 'allocations') && row.record_id) addVersionId({ versions }, row.record_id);
     if (kind === 'round_input' && isPlainObject(row.after_json ?? row.before_json)) {
       const payload = (row.after_json ?? row.before_json) as Record<string, unknown>;

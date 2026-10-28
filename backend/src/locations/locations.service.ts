@@ -1201,7 +1201,16 @@ export class LocationsService {
     }
 
     await this.audit.log(
-      { table: 'location_sub_items', recordId: locationId, action: 'update', before: null, after: { ordered_ids: orderedIds }, userId },
+      {
+        table: 'location_sub_items',
+        recordId: locationId,
+        action: 'update',
+        before: null,
+        after: { ordered_ids: orderedIds },
+        userId,
+        // The reorder names the site in `record_id` and has no `location_id` key: hand the parent.
+        parent: { table: 'locations', id: locationId },
+      },
       { manager: mg },
     );
     return { ok: true };
