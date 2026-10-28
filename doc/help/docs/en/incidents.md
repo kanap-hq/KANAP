@@ -304,7 +304,7 @@ Plaid filters incidents by asset, application or technology, named by reference 
 
 **Writing** (Contributor level on Incidents): Plaid logs an incident, changes its fields and moves its status forward up to Closed. It logs an incident Open or In progress. An incident that is already resolved is logged open, then moved forward in a second preview, so the step shows in the journal. Plaid can turn on **Restrict to register administrators**. The preview warns you when that would hide the incident from you. Plaid also adds notes to the journal, with the time the note refers to if you give one, and links or unlinks assets, applications and technologies, named by reference or exact name, or by hostname or FQDN for an asset. With the Member level on Tasks, it creates a follow-up task on the incident. Ask, for example: "Log a major incident: mail unavailable at the Lyon office since 08:40, linked to PAR-MAIL-01".
 
-Closing freezes the record, and the closing preview says so. Plaid then changes nothing more, and only an administrator can reopen the incident.
+Closing freezes the record, and the closing preview says so. Only an administrator can reopen the incident.
 
 **Administrator actions** (Administrator level on Incidents): Plaid reopens a resolved, closed or cancelled incident, cancels an incident, and turns **Restrict to register administrators** on or off, on a closed or cancelled incident too. Reopening and cancelling need a reason, written into the journal, for example: "Reopen INC-14: the issue came back after the fix".
 

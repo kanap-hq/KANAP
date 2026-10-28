@@ -304,7 +304,7 @@ Plaid filtra los incidentes por activo, aplicación o tecnología, indicados por
 
 **Escritura** (nivel Colaborador en Incidentes): Plaid registra un incidente, cambia sus campos y hace avanzar su estado hasta Cerrado. Registra un incidente como Abierto o En curso. Un incidente ya resuelto se registra abierto y luego se hace avanzar en una segunda vista previa, para que el paso aparezca en el diario. Plaid puede activar **Restringir a los administradores del registro**. La vista previa le avisa cuando eso le ocultaría el incidente. Plaid también añade notas al diario, con la hora a la que se refiere la nota si usted la indica, y vincula o desvincula activos, aplicaciones y tecnologías, indicados por su referencia o su nombre exacto, o por el nombre de host o el FQDN en el caso de un activo. Con el nivel Miembro en Tareas, crea una tarea de seguimiento en el incidente. Pregunte, por ejemplo: « Registra un incidente de gravedad Alta: correo no disponible en la oficina de Lyon desde las 08:40, vinculado a PAR-MAIL-01 ».
 
-El cierre congela la ficha, y la vista previa del cierre lo indica. Después Plaid ya no cambia nada, y solo un administrador puede reabrir el incidente.
+El cierre congela la ficha, y la vista previa del cierre lo indica. Solo un administrador puede reabrir el incidente.
 
 **Acciones de administrador** (nivel Administrador en Incidentes): Plaid reabre un incidente resuelto, cerrado o cancelado, cancela un incidente y activa o desactiva **Restringir a los administradores del registro**, también en un incidente cerrado o cancelado. Reabrir y cancelar requieren un motivo, que se escribe en el diario, por ejemplo: « Reabre INC-14: el problema volvió después de la corrección ».
 

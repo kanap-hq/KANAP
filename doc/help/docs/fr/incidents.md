@@ -304,7 +304,7 @@ Plaid filtre les incidents par actif, application ou technologie, désignés par
 
 **Écriture** (niveau Contributeur sur Incidents) : Plaid enregistre un incident, modifie ses champs et fait avancer son statut jusqu'à Clôturé. Il enregistre un incident Ouvert ou En cours. Un incident déjà résolu est enregistré ouvert, puis avancé dans un second aperçu, pour que l'étape apparaisse dans le journal. Plaid peut activer **Restreindre aux administrateurs du registre**. L'aperçu vous avertit quand cela vous masquerait l'incident. Plaid ajoute aussi des notes au journal, avec l'heure à laquelle la note se rapporte si vous la donnez, et lie ou délie des actifs, des applications et des technologies, désignés par leur référence ou leur nom exact, ou par le nom d'hôte ou le FQDN pour un actif. Avec le niveau Membre sur Tâches, il crée une tâche de suivi sur l'incident. Demandez par exemple : « Enregistre un incident majeur : messagerie indisponible au bureau de Lyon depuis 08:40, lié à PAR-MAIL-01 ».
 
-La clôture fige la fiche, et l'aperçu de clôture le signale. Plaid n'y change ensuite plus rien, et seul un administrateur peut rouvrir l'incident.
+La clôture fige la fiche, et l'aperçu de clôture le signale. Seul un administrateur peut rouvrir l'incident.
 
 **Actions d'administrateur** (niveau Administrateur sur Incidents) : Plaid rouvre un incident résolu, clôturé ou annulé, annule un incident, et active ou désactive **Restreindre aux administrateurs du registre**, y compris sur un incident clôturé ou annulé. Rouvrir et annuler demandent une raison, inscrite au journal, par exemple : « Rouvre INC-14 : le problème est revenu après le correctif ».
 
