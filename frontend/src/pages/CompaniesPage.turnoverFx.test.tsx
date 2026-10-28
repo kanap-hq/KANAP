@@ -45,8 +45,8 @@ describe('CompaniesPage turnover without a rate', () => {
     );
 
     const notice = await screen.findByRole('status');
-    expect(notice).toHaveTextContent(
-      "Chiffre d'affaires sans taux de change exclu du total : ZAR 2026 (1 société).",
+    expect(notice.textContent).toBe(
+      "Chiffre d'affaires sans taux de change exclu du total\u00a0: ZAR 2026 (1 société).Saisir un taux",
     );
     expect(screen.getByRole('link', { name: 'Saisir un taux' })).toHaveAttribute(
       'href',
@@ -70,6 +70,6 @@ describe('CompaniesPage turnover without a rate', () => {
       </MemoryRouter>,
     );
     expect(container).toHaveTextContent('12,5 M EUR');
-    expect(screen.getByRole('img', { name: 'Pas de taux de change ZAR pour 2026 : exclu des totaux.' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Pas de taux de change ZAR pour 2026\u00a0: exclu des totaux.' })).toBeInTheDocument();
   });
 });

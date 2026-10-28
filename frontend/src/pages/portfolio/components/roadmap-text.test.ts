@@ -90,7 +90,7 @@ describe('roadmap texts', () => {
   it('formats dates, days and lists in the reader\'s language', () => {
     const fr = tFor('fr');
     expect(formatRoadmapText(fr, 'fr', text('no_free_slot_for', samples.no_free_slot_for)))
-      .toBe('Aucun créneau parallèle libre pour : Alice (4,62 j/semaine)');
+      .toBe('Aucun créneau parallèle libre pour\u00a0: Alice (4,62 j/semaine)');
     expect(formatRoadmapText(fr, 'fr', text('waiting_for_until', samples.waiting_for_until)))
       .toBe(`En attente de CRM jusqu'à la semaine du ${formatShortDate('2026-10-19', 'fr')}`);
     expect(formatRoadmapText(tFor('de'), 'de', text('waiting_on_blockers', samples.waiting_on_blockers)))
@@ -104,9 +104,9 @@ describe('roadmap texts', () => {
   it('nests the reason of an unschedulable project and the conflict of a warning', () => {
     const fr = tFor('fr');
     expect(formatRoadmapText(fr, 'fr', text('summary_unschedulable', samples.summary_unschedulable)))
-      .toBe("ERP n'a pas pu être planifié : Alice (4,62 j/semaine)");
+      .toBe("ERP n'a pas pu être planifié\u00a0: Alice (4,62 j/semaine)");
     expect(formatRoadmapText(fr, 'fr', text('warning_constraint_conflict', samples.warning_constraint_conflict)))
-      .toBe(`ERP : Le début épinglé au ${formatShortDate('2026-10-19', 'fr')} a glissé à la semaine du ${formatShortDate('2026-11-02', 'fr')}`);
+      .toBe(`ERP\u00a0: Le début épinglé au ${formatShortDate('2026-10-19', 'fr')} a glissé à la semaine du ${formatShortDate('2026-11-02', 'fr')}`);
     expect(formatRoadmapText(fr, 'fr', text('summary_schedulable', { project: 'ERP', week: null })))
       .toBe("ERP n'a pas de semaine de début.");
   });

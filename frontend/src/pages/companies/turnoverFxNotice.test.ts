@@ -5,13 +5,13 @@ import { companyTurnoverFxMissing, companyTurnoverFxNotice } from './turnoverFxN
 describe('companyTurnoverFxNotice', () => {
   it('says the turnover is left out of the total, with a plural for several companies', () => {
     const one = companyTurnoverFxNotice(i18n.getFixedT('fr'), [{ currency: 'ZAR', year: 2026, companies: 1 }]);
-    expect(one).toBe("Chiffre d'affaires sans taux de change exclu du total : ZAR 2026 (1 société).");
+    expect(one).toBe("Chiffre d'affaires sans taux de change exclu du total\u00a0: ZAR 2026 (1 société).");
     const several = companyTurnoverFxNotice(i18n.getFixedT('fr'), [
       { currency: 'ZAR', year: 2026, companies: 2 },
       { currency: 'USD', year: 2027, companies: 1 },
     ]);
     expect(several).toBe(
-      "Chiffre d'affaires sans taux de change exclu du total : ZAR 2026 (2 sociétés), USD 2027 (1 société).",
+      "Chiffre d'affaires sans taux de change exclu du total\u00a0: ZAR 2026 (2 sociétés), USD 2027 (1 société).",
     );
   });
 
