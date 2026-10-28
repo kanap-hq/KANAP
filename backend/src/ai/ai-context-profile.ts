@@ -122,6 +122,8 @@ const BUSINESS_WRITE_TOOLS: AiToolName[] = [
   'update_business_record',
   'add_incident_note',
   'update_incident_links',
+  'change_incident_state',
+  'set_incident_confidentiality',
   'update_entity_relations',
   'delete_record',
   'undo_preview',

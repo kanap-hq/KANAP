@@ -152,6 +152,22 @@ function testIncidentWritesChooseTheBusinessRecordTools() {
     assert.ok(profile.toolNames.includes('update_incident_links'), `${prompt}: link tool`);
   }
 
+  // The administrator's reopen, cancel and confidentiality actions live in the business profile.
+  for (const prompt of [
+    'Rouvre INC-3',
+    'Annule INC-3',
+    'Reopen INC-3',
+    'Cancel INC-3',
+    'Lève la confidentialité de INC-3',
+    'Rends INC-3 public',
+    'Rends INC-3 plus confidentiel',
+  ]) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'write_business', prompt);
+    assert.ok(profile.toolNames.includes('change_incident_state'), `${prompt}: state tool`);
+    assert.ok(profile.toolNames.includes('set_incident_confidentiality'), `${prompt}: confidentiality tool`);
+  }
+
   // A follow-up task on an incident goes to the task profile, before the incident intent.
   for (const prompt of [
     'Crée une tâche pour suivre l’incident de messagerie',
@@ -169,14 +185,18 @@ function testIncidentWritesChooseTheBusinessRecordTools() {
     'INC-3 est-il clos ?',
     'Quand INC-3 a-t-il été résolu ?',
     'Qui a fermé INC-3 ?',
+    'INC-3 a-t-il été rouvert ?',
     'Is INC-3 closed?',
     'When was INC-3 resolved?',
     'Who closed INC-3?',
+    'Has INC-3 been reopened?',
   ]) {
     const profile = selectAiContextProfile(prompt);
     assert.equal(profile.name, 'entity_inspection', prompt);
     assert.equal(profile.toolNames.includes('update_business_record'), false, `${prompt}: no incident write`);
     assert.equal(profile.toolNames.includes('update_incident_links'), false, `${prompt}: no link write`);
+    assert.equal(profile.toolNames.includes('change_incident_state'), false, `${prompt}: no state write`);
+    assert.equal(profile.toolNames.includes('set_incident_confidentiality'), false, `${prompt}: no confidentiality write`);
   }
 }
 
