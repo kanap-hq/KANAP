@@ -59,6 +59,8 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
   const locale = useLocale();
   const isProject = entityType === 'project';
   const canCreateTask = hasLevel('tasks', 'member');
+  // Deleting a task is the tasks module's admin action, whatever the host record allows.
+  const canDeleteTask = hasLevel('tasks', 'admin');
   const { tasks, isLoading, refetch, taskPath: buildTaskWorkspacePath, createTask: handleCreateTask } = useEntityTasks(entityType, entityId);
 
   const listFilters = React.useMemo(
@@ -268,7 +270,7 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
                   >
                     <OpenInNewIcon fontSize="small" />
                   </IconButton>
-                  {!disabled && (
+                  {!disabled && canDeleteTask && (
                     <IconButton
                       size="small"
                       title={t('portfolio:shared.entityTasksPanel.actions.deleteTask')}

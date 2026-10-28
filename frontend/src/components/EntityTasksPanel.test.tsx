@@ -8,10 +8,12 @@ import { createAppTheme } from '../config/ThemeContext';
 import i18n from '../i18n';
 import EntityTasksPanel from './EntityTasksPanel';
 
-const auth = vi.hoisted(() => ({ tasksMember: false }));
+const auth = vi.hoisted(() => ({ tasksMember: false, tasksAdmin: false }));
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({
-    hasLevel: (resource: string, level: string) => auth.tasksMember && resource === 'tasks' && level === 'member',
+    hasLevel: (resource: string, level: string) => resource === 'tasks' && (
+      (level === 'member' && auth.tasksMember) || (level === 'admin' && auth.tasksAdmin)
+    ),
   }),
 }));
 
@@ -52,6 +54,8 @@ function renderPanel() {
 describe('EntityTasksPanel task creation', () => {
   beforeEach(async () => {
     get.mockReset();
+    auth.tasksMember = false;
+    auth.tasksAdmin = false;
     await i18n.changeLanguage('en');
   });
 
@@ -74,5 +78,23 @@ describe('EntityTasksPanel task creation', () => {
 
     expect(await screen.findByText('Relire le contrat')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add task' })).toBeInTheDocument();
+  });
+
+  it('hides task deletion without the tasks admin right', async () => {
+    auth.tasksMember = true;
+    auth.tasksAdmin = false;
+    renderPanel();
+
+    expect(await screen.findByText('Relire le contrat')).toBeInTheDocument();
+    expect(screen.queryByTitle('Delete task')).toBeNull();
+  });
+
+  it('offers task deletion with the tasks admin right', async () => {
+    auth.tasksMember = true;
+    auth.tasksAdmin = true;
+    renderPanel();
+
+    expect(await screen.findByText('Relire le contrat')).toBeInTheDocument();
+    expect(screen.getByTitle('Delete task')).toBeInTheDocument();
   });
 });
