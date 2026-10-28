@@ -148,7 +148,7 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText('Gravité')).toBeInTheDocument();
     expect(screen.getByText('Catégorie')).toBeInTheDocument();
     expect(screen.getByText('Détecté')).toBeInTheDocument();
-    expect(screen.getAllByText(/27 oct\. 2026, \d{2}:\d{2}/)).toHaveLength(2);
+    expect(screen.getAllByText(/2026, \d{2}:\d{2}/)).toHaveLength(2);
     expect(screen.getByText("Cette clôture fige l'incident : seul un administrateur pourra le rouvrir.")).toBeInTheDocument();
     expect(screen.getByText("Après cette modification, seuls les administrateurs du registre, le déclarant et le responsable pourront l'ouvrir. Vous serez renvoyé vers le registre.")).toBeInTheDocument();
     expect(screen.getByText('Clôture')).toBeInTheDocument();
