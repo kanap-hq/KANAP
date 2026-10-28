@@ -882,7 +882,9 @@ function columnOperationChanges(row: AuditRow): RecordHistoryChange[] | null {
 function recordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   const columnOperation = columnOperationChanges(row);
   if (columnOperation) return columnOperation;
-  const changes = genericChanges(row, ctx, { label: row.table_name });
+  const changes = genericChanges(row, ctx, { label: row.table_name })
+    // The middleware list has its own events below; the id-list itself is never a field line.
+    .filter((change) => change.field !== 'middleware_application_ids');
   // An id list has no field line: each middleware application added or removed is one event.
   if (row.table_name === 'interfaces') return [...middlewareChanges(row, ctx), ...changes];
   return changes;

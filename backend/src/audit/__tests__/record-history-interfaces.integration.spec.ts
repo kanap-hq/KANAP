@@ -309,7 +309,8 @@ async function testInterfaceEntries(seeded: Seeded) {
   assert.ok(middlewareRemoved, 'the middleware application is a removed event');
 
   for (const field of ['functional_rules', 'typical_data', 'overview_notes', 'pii_description',
-    'source_application_name', 'target_application_name', 'business_process_name', 'middleware_application_names']) {
+    'source_application_name', 'target_application_name', 'business_process_name', 'middleware_application_names',
+    'middleware_application_ids']) {
     assertNoField(page, field);
   }
   assert.ok(!JSON.stringify(page).includes('A copied neighbour name'), 'a neighbour name never comes out');
