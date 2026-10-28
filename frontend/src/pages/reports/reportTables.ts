@@ -371,21 +371,17 @@ function yearGroupsTable(
   p: YearGroupsTableParams,
   read: FteYearGroups,
   group: { header: string; total: string },
-  options: { countHeader?: string } = {},
 ): ReportTableData {
   const kind = measureKind(p.measure);
   const footer: ReportTableRow = { group: group.total };
-  if (options.countHeader) footer.count = read.lineCount ?? null;
   for (const year of p.years) footer[String(year)] = measureCell(read.totals[year], p.measure);
   return {
     columns: [
       { key: 'group', header: group.header, kind: 'text' },
-      ...(options.countHeader ? [{ key: 'count', header: options.countHeader, kind: 'count' as const }] : []),
       ...p.years.map((year): ReportTableColumn => ({ key: String(year), header: String(year), kind })),
     ],
     rows: read.groups.map((g) => {
       const row: ReportTableRow = { group: g.label, groupKey: g.key, groupName: g.name ?? null };
-      if (options.countHeader) row.count = g.count ?? null;
       for (const year of p.years) row[String(year)] = measureCell(g.values[year], p.measure);
       return row;
     }),

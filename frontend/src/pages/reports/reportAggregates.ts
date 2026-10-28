@@ -862,7 +862,7 @@ export function readAnalytics(years: readonly number[], result: AggregateResult 
       values: yearValues(group, years, measure),
     };
   });
-  return { groups, totals: yearValues(result?.total, years, measure), lineCount: result?.total.count ?? 0 };
+  return { groups, totals: yearValues(result?.total, years, measure), lineCount: groups.reduce((count, group) => count + (group.count ?? 0), 0) };
 }
 
 /** A line of one dimension value, as the detail table lists it: its id, name, number, nature and amounts. */
