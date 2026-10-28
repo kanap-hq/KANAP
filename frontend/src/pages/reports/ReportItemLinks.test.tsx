@@ -34,10 +34,12 @@ vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
   ),
 }));
 vi.mock('../../components/reports/ChartCard', () => ({ default: React.forwardRef(() => null) }));
-// The grid's first column, drawn through its own renderer, for the data rows and the pinned rows.
+// The grid's item column (`name`), drawn through its own renderer, for the data rows and the pinned rows.
 vi.mock('../../components/reports/ReportGrid', () => ({
   default: ({ rowData, pinnedBottomRowData, columnDefs }: { rowData?: any[]; pinnedBottomRowData?: any[]; columnDefs?: ColDef[] }) => {
-    const col = (columnDefs ?? [])[0] as ColDef;
+    // Reports with an item column: its `name` field, else the report's own first column (chargeback).
+    const columns = columnDefs ?? [];
+    const col = (columns.find((column) => column.field === 'name') ?? columns[0]) as ColDef;
     const cell = (row: any, i: number) => {
       const value = row[col.field as string];
       const Renderer = col.cellRenderer as React.FC<any> | undefined;

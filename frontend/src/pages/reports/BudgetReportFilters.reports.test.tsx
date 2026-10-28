@@ -528,9 +528,9 @@ describe('Reports with the FTE measure', () => {
     ]));
     expect(gridRows()[0].pct_of_total).toBe(2.5 / 4.25);
     expect(chart.options.footnote.text).toMatch(/: 4\.25$/);
-    expect(grid.columns[1].headerName).toContain('reports.measure.columnFte');
-    expect(format(1, 1.5)).toBe('1.50');
-    expect(format(1, null)).toBe('');
+    expect(grid.columns[2].headerName).toContain('reports.measure.columnFte');
+    expect(format(2, 1.5)).toBe('1.50');
+    expect(format(2, null)).toBe('');
     expect(chart.options.title.text).toContain('reports.measure.columnFte');
     // b's FTE is declared, but its amount was spread since.
     await waitFor(() => expect(note()).toContain('reports.measure.detachedSingle'));

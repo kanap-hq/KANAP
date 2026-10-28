@@ -165,6 +165,13 @@ describe('Top items report', () => {
     await waitFor(() => expect(screen.getByTestId('grid').textContent).toBe('Opex line: 150'));
   });
 
+  it('heads the table with the line reference, then the line', async () => {
+    renamedColumns();
+    renderReport(<TopOpexReport />);
+    await waitFor(() => expect((chart.columns ?? []).slice(0, 3).map((column) => column.field)).toEqual(['reference', 'name', 'value']));
+    expect(chart.columns?.[0]?.headerName).toBe('opex.columns.reference');
+  });
+
   it('falls back to the default column when the picked one gets hidden', async () => {
     renamedColumns();
     const { rerenderReport } = renderReport(<TopOpexReport />);

@@ -116,6 +116,7 @@ export class BudgetReportExportService {
       total: labels.total,
       totalFte: labels.totalFte,
       item: labels.item,
+      reference: labels.reference,
       shareOfTotal: labels.shareOfTotal,
       delta: labels.delta,
       pctIncrease: labels.pctIncrease,

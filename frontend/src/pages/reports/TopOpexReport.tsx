@@ -78,6 +78,19 @@ export default function TopOpexReport() {
   // The key table (`reportTables.ts`, the same code as the export): the share of the total is a fraction.
   const table = useMemo(() => topLinesTable({ year, metric, measure }, report.data, tableLabels), [year, metric, measure, report.data, tableLabels]);
   const columns = useMemo<ColDef[]>(() => table.columns.map((column): ColDef => {
+    if (column.key === 'reference') {
+      return {
+        field: column.key,
+        headerName: column.header,
+        width: 110,
+        cellStyle: {
+          color: 'var(--kanap-text-secondary)',
+          fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
+          fontVariantNumeric: 'tabular-nums',
+          fontSize: '12px',
+        },
+      };
+    }
     if (column.key === 'name') {
       return {
         field: column.key,

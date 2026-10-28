@@ -26,6 +26,7 @@ const labels: ReportTableLabels = {
   total: 'Total',
   totalFte: 'Total FTE',
   item: 'Line',
+  reference: 'Ref',
   shareOfTotal: 'Share of total',
   delta: 'Δ',
   pctIncrease: '% increase',
@@ -140,21 +141,22 @@ describe('topLinesTable', () => {
     const groups = [row({ value: 60 }, ['a', 'Alpha', '7']), row({ value: 15 }, ['b', 'Beta', null])];
     const table = topLinesTable({ year: 2026, metric: 'budget', measure: 'amount' }, answer({ value: 120 }, groups), labels);
     expect(table.columns).toEqual([
+      { key: 'reference', header: 'Ref', kind: 'text' },
       { key: 'name', header: 'Line', kind: 'text' },
       { key: 'value', header: 'Budget (2026)', kind: 'amount' },
       { key: 'pct_of_total', header: 'Share of total', kind: 'percent' },
     ]);
     expect(table.rows).toEqual([
-      { id: 'a', itemNumber: 7, name: 'Alpha', value: 60, pct_of_total: 0.5 },
-      { id: 'b', itemNumber: undefined, name: 'Beta', value: 15, pct_of_total: 0.125 },
+      { id: 'a', itemNumber: 7, reference: 'BL-7', name: 'Alpha', value: 60, pct_of_total: 0.5 },
+      { id: 'b', itemNumber: undefined, reference: null, name: 'Beta', value: 15, pct_of_total: 0.125 },
     ]);
   });
 
   it('leaves out the lines without declared FTE, and a share of nothing is 0', () => {
     const groups = [row({ value: 2 }, ['a', 'Alpha', '1']), row({ value: null }, ['b', 'Beta', '2'])];
     const table = topLinesTable({ year: 2026, metric: 'landing', measure: 'fte' }, answer({ value: null }, groups), labels);
-    expect(table.columns[1]).toEqual({ key: 'value', header: 'Landing FTE (2026)', kind: 'number' });
-    expect(table.rows).toEqual([{ id: 'a', itemNumber: 1, name: 'Alpha', value: 2, pct_of_total: 0 }]);
+    expect(table.columns[2]).toEqual({ key: 'value', header: 'Landing FTE (2026)', kind: 'number' });
+    expect(table.rows).toEqual([{ id: 'a', itemNumber: 1, reference: 'BL-1', name: 'Alpha', value: 2, pct_of_total: 0 }]);
   });
 });
 

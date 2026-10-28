@@ -59,6 +59,9 @@ describe('MasterDataCopyPage header', () => {
     expect(container.querySelector('nav[aria-label="breadcrumb"]')).toBeNull();
     expect(screen.getByText('admin.copy.title')).toBeTruthy();
     expect(screen.getByText('admin.copy.subtitle')).toBeTruthy();
+    // The charte's `TextField select`: each picker keeps its label as its accessible name.
+    expect(screen.getByRole('combobox', { name: 'admin.copy.dataSources' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'admin.copy.companyMetrics' })).toBeTruthy();
   });
 });
 
