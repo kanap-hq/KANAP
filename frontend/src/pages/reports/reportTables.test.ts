@@ -231,7 +231,7 @@ describe('analyticsTable', () => {
       { group: 'Unnamed value', groupKey: 'cat_v2', groupName: '  ', valueId: 'v2', count: 1, level: 0, 2026: 20 },
       { group: 'No value', groupKey: 'uncategorized', groupName: null, valueId: null, count: 1, level: 0, 2026: 10 },
     ]);
-    expect(table.footer).toEqual([{ group: 'All Budget', count: 1, 2026: 60 }]);
+    expect(table.footer).toEqual([{ group: 'All Budget', count: 3, 2026: 60 }]);
   });
 
   it('lists the lines of each value, indented, with their reference, nature and share of the value', () => {

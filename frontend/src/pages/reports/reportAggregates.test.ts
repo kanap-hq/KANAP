@@ -420,7 +420,7 @@ describe('the FTE measure', () => {
     ]);
     expect(read.totals).toEqual({ 2026: 3, 2027: 0.5 });
     expect(readAnalytics([2026], result([fteRow(['v', 'V'], { y2026: null })], fteRow([], { y2026: null })), { unassigned: 'U', unnamed: 'N' }, 'fte'))
-      .toEqual({ groups: [], totals: { 2026: null }, lineCount: 1 });
+      .toEqual({ groups: [], totals: { 2026: null }, lineCount: 0 });
   });
 
   it('asks the notice on its own, over the same lines, when it does not fit in a grouped request', () => {
