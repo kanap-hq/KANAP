@@ -1,5 +1,18 @@
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 
+/**
+ * The task's related object family as the model sees it: a budget line of either nature is the
+ * one `budget_line` family. `tasks.related_object_type` keeps its stored values (`spend_item`,
+ * `capex_item`), which the AI surface never shows.
+ */
+export function taskRelatedFamily(value: string | null | undefined): string | null {
+  if (value == null || value === '') return null;
+  return value === 'spend_item' || value === 'capex_item' ? 'budget_line' : value;
+}
+
+/** `taskRelatedFamily` in SQL, for the aggregate's group by. */
+export const TASK_RELATED_FAMILY_SQL = `CASE WHEN t.related_object_type IN ('spend_item', 'capex_item') THEN 'budget_line' ELSE t.related_object_type END`;
+
 export const tasksRegistry: AiEntityFilterRegistry = {
   entityType: 'tasks',
   fields: {
@@ -94,8 +107,8 @@ export const tasksRegistry: AiEntityFilterRegistry = {
       ai: 'related',
       grid: 'related_object_type',
       type: 'set',
-      description: 'Related object family.',
-      values: ['project', 'spend_item', 'contract', 'capex_item', 'incident'],
+      description: 'Related object family (`budget_line` for a budget line of either nature).',
+      values: ['project', 'budget_line', 'contract', 'incident'],
       discoverable: true,
       sortable: true,
       groupable: true,
@@ -262,7 +275,7 @@ export const tasksRegistry: AiEntityFilterRegistry = {
           `LEFT JOIN companies comp ON comp.id = COALESCE(t.company_id, pp.company_id) AND comp.tenant_id = t.tenant_id`,
         ],
       },
-      related: { expression: 't.related_object_type' },
+      related: { expression: TASK_RELATED_FAMILY_SQL },
       application: {
         expression: 'task_app.name',
         joins: [
