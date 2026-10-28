@@ -129,21 +129,21 @@ export class IncidentsController {
   @RequireLevel('incidents', 'reader')
   @Get()
   list(@Query() query: ListIncidentsQueryInput, @Tenant() ctx: TenantRequest) {
-    return this.svc.list(query, this.opts(ctx));
+    return this.viewOpts(ctx).then((opts) => this.svc.list(query, opts));
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('incidents', 'reader')
   @Get('ids')
   listIds(@Query() query: ListIncidentsQueryInput, @Tenant() ctx: TenantRequest) {
-    return this.svc.listIds(query, this.opts(ctx));
+    return this.viewOpts(ctx).then((opts) => this.svc.listIds(query, opts));
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('incidents', 'reader')
   @Get('filter-values')
   listFilterValues(@Query() query: any, @Tenant() ctx: TenantRequest) {
-    return this.svc.listFilterValues(query, this.opts(ctx));
+    return this.viewOpts(ctx).then((opts) => this.svc.listFilterValues(query, opts));
   }
 
   @UseGuards(PermissionGuard)
@@ -192,11 +192,8 @@ export class IncidentsController {
     const result = await this.csvSvc.export({
       language,
       timeZone,
+      ...await this.viewOpts(ctx),
       manager: ctx.manager as EntityManager,
-      tenantId: ctx.tenantId,
-      viewer: incidentViewerFromContext(ctx),
-      technologies: canReadResource(ctx, 'infrastructure'),
-      applications: canReadResource(ctx, 'applications'),
       scope,
       fields: fields ? fields.split(',').map((f) => f.trim()) : undefined,
       query,

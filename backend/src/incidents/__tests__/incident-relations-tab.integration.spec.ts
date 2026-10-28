@@ -508,6 +508,20 @@ async function testTenantIsolation() {
   });
 }
 
+async function testFilterValuesFollowTheApplicationScope() {
+  await inRolledBackTransaction(async (runner) => {
+    const s = await seedRich(runner, 'incr-scope');
+    const { http } = harness(runner);
+    // A Business Contributor who reads applications: the list routes now receive the same
+    // participation scope as the detail, so filter-values never names an application outside it.
+    const values = await http.listFilterValues(
+      { fields: 'linked_applications' },
+      ctx(runner, s.tenantId, { incidents: 'reader', applications: 'reader' }, s.contributorId),
+    );
+    assert.deepEqual(values.linked_applications, ['Owned app'], 'only the application they take part in');
+  });
+}
+
 async function testRouteLevels() {
   const proto = IncidentsController.prototype as any;
   assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto.getRelations), { resource: 'incidents', level: 'reader' });
@@ -529,4 +543,5 @@ void runSpecs('incident-relations-tab', [
   ['one link writes the journal and the audit, and the refusals write nothing', testWrites],
   ['a confidential incident stays hidden', testConfidentialIncidentStaysHidden],
   ['another tenant cannot read or link the incident', testTenantIsolation],
+  ['the filter values follow the business contributor application scope', testFilterValuesFollowTheApplicationScope],
 ]);
