@@ -139,7 +139,7 @@ export default function ConnectionsPage() {
   }, []);
 
   if (!hasLevel('infrastructure', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="infrastructure" level="reader" />;
   }
 
   const columns: EnhancedColDef<ConnectionRow>[] = [

@@ -44,7 +44,7 @@ function uniqueSorted(values: Array<string | null | undefined>): CheckboxSetFilt
 
 export default function CostCentersPage() {
   const { hasLevel } = useAuth();
-  if (!hasLevel('cost_centers', 'reader')) return <ForbiddenPage />;
+  if (!hasLevel('cost_centers', 'reader')) return <ForbiddenPage resource="cost_centers" level="reader" />;
   return <CostCentersList />;
 }
 

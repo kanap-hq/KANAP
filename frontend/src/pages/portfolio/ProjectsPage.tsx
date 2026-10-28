@@ -494,7 +494,7 @@ export default function ProjectsPage() {
   }), [initialFilterModel]);
 
   if (!hasLevel('portfolio_projects', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="portfolio_projects" level="reader" />;
   }
 
   const openNewProject = () => {

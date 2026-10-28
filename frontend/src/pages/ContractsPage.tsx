@@ -587,7 +587,7 @@ export default function ContractsPage() {
 
   // After every hook, so the hook order never depends on the permission.
   if (!hasLevel('contracts', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="contracts" level="reader" />;
   }
 
   const canCreate = hasLevel('contracts','manager');

@@ -243,7 +243,7 @@ export default function AssetsPage() {
   }, [isPlainLeftClick, navigate]);
 
   if (!hasLevel('infrastructure', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="infrastructure" level="reader" />;
   }
 
   const ClickToWorkspace = useMemo(() => {

@@ -387,7 +387,7 @@ export default function IncidentsPage() {
   ], [ClickToWorkspace, SeverityCell, StatusCell, categoryLabel, getIncidentFilterValues, locale, severityLabel, statusLabel, t]);
 
   if (!hasLevel('incidents', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="incidents" level="reader" />;
   }
 
   // Deleting incidents is for incident administrators only (the server refuses everyone else).

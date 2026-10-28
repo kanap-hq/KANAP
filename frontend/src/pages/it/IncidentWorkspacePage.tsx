@@ -554,7 +554,7 @@ export function IncidentWorkspacePage() {
     }
   }, [data, dialogs, exportingPdf, flushAll, isCreate, locale, routeId, t]);
 
-  if (!canView) return <ForbiddenPage />;
+  if (!canView) return <ForbiddenPage resource="incidents" level="reader" />;
 
   const { total, index, hasPrev, hasNext, prevId, nextId } = navState;
   const counts = data?.counts;

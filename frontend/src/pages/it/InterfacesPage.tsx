@@ -223,7 +223,7 @@ export default function InterfacesPage() {
   }, []);
 
   if (!hasLevel('applications', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="applications" level="reader" />;
   }
 
   // Set filters send codes; the options show the same labels as the cells.

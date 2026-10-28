@@ -990,7 +990,7 @@ function BudgetListPageView() {
   ], [Y, analyticsAxes, budgetColumns, defaultAnalyticsLabel, getBudgetFilterValues, getBudgetHref, RUN_BUILD_LABELS, FTE_DECLARED_LABELS, locale, navigate, queryClient, t]);
 
   if (!hasLevel('budget', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="budget" level="reader" />;
   }
 
   return (

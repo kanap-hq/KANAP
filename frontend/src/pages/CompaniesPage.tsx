@@ -62,7 +62,7 @@ export default function CompaniesPage() {
   const { hasLevel } = useAuth();
 
   if (!hasLevel('companies', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="companies" level="reader" />;
   }
 
   const currentYear = new Date().getFullYear();

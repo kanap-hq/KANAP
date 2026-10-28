@@ -334,7 +334,7 @@ export default function UsersPage() {
   ], [ClickableCell, ClickableCellGeneric, UserStatusCell, RowActionsCell, canAdminDataAccess, canManageUsers, dataAccessAnyLimited, dateFilterParams, getRoleFilterValues, locale, t]);
 
   if (!hasLevel('users', 'reader')) {
-    return <ForbiddenPage />;
+    return <ForbiddenPage resource="users" level="reader" />;
   }
 
   const handleInviteSelected = async () => {

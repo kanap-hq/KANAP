@@ -354,7 +354,7 @@ export default function EndOfSupportReportPage() {
     [deadlines.data, type],
   );
 
-  if (!allowed) return <ForbiddenPage />;
+  if (!allowed) return <ForbiddenPage resource="infrastructure" level="reader" />;
 
   const active = view === 'deadlines' ? deadlines : gaps;
 
