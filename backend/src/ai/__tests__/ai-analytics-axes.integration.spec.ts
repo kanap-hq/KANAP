@@ -253,6 +253,11 @@ async function testDimensionsFollowLineType(kind: Kind) {
     assert.equal('analytics:recurrence' in detail.entity.metadata, false, `${kind}: nor in its metadata`);
     const held = (detail.data.analytics_values ?? []).map((value: any) => value.axis_code).sort();
     assert.deepEqual(held, ['archive', 'default', 'nature'], `${kind}: the hidden value stays out of the detail's values`);
+
+    // The list reads the same link as the detail: the stale value of the other nature's
+    // dimension keeps the line out of a query on that dimension.
+    const filtered: any = await queryExecutor(kind).execute(ctx, { entity_type: ENTITY[kind], filters: { 'analytics:recurrence': ['Monthly'] } });
+    assert.deepEqual(filtered.items.map((item: any) => item.label), [], `${kind}: no line answers on the other nature's dimension`);
   });
 }
 

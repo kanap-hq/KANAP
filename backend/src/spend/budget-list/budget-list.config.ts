@@ -787,9 +787,22 @@ export class BudgetListConfig implements ListConfig {
     this.latestContract(stmt);
     const axes = this.rt.axes;
     if (!axes) throw new Error('Analytics dimensions were not loaded for this statement');
+    // A dimension that applies to one nature only links the lines of that nature (`axisLink`): the
+    // quick search reads the same link, so a stale value of the other nature never matches its line.
+    const natureLists = { opex: [] as string[], capex: [] as string[], both: [] as string[] };
+    axes.ids.forEach((id, index) => {
+      const applies = axes.appliesTo[index];
+      (applies === 'opex' ? natureLists.opex : applies === 'capex' ? natureLists.capex : natureLists.both).push(id);
+    });
+    const axisNatures = s.allNatures
+      ? ` JOIN spend_items li ON li.tenant_id = a.tenant_id AND li.id = a.item_id
+        AND (a.axis_id = ANY(${stmt.bind(natureLists.both, 'uuid[]')})
+          OR (li.nature = 'opex' AND a.axis_id = ANY(${stmt.bind(natureLists.opex, 'uuid[]')}))
+          OR (li.nature = 'capex' AND a.axis_id = ANY(${stmt.bind(natureLists.capex, 'uuid[]')})))`
+      : '';
     stmt.cte('qs_items', () => `SELECT x.item_id FROM proj x WHERE ${matchAny(['x.project_name', 'x.project_stream_name', 'x.project_category_name'])}
       UNION SELECT x.item_id FROM lc x WHERE ${match('x.contract_name')}
-      UNION SELECT a.item_id FROM ${s.analyticsLink.table} a
+      UNION SELECT a.item_id FROM ${s.analyticsLink.table} a${axisNatures}
         WHERE a.tenant_id = ${t} AND a.axis_id = ANY(${stmt.bind(axes.ids, 'uuid[]')})
           AND a.category_id IN (SELECT c.id FROM analytics_categories c WHERE c.tenant_id = ${t} AND ${match('c.name')})`);
     stmt.cte('qs_alloc', () => `SELECT v.${s.versionItemFk} AS item_id FROM ${s.versionTable} v

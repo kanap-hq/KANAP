@@ -802,12 +802,15 @@ async function loadAnalyticsForRows(
   const rows: Array<{ axis_id: string; is_default: boolean; active: boolean; item_id: string | null; category_id: string | null; category_name: string | null }> =
     await manager.query(
       // `active`: enabled now, as the list builds its dimension columns (isAnalyticsActive in the web app).
+      // The all-natures scope reads a link only on a line of the dimension's own nature: a stale
+      // value a line holds on the other nature's dimension is not read (the field is blank there).
       `SELECT ax.id AS axis_id, ax.is_default,
               (ax.status <> 'disabled' AND (ax.disabled_at IS NULL OR ax.disabled_at > now())) AS active,
               v.item_id, v.category_id, c.name AS category_name
        FROM analytics_axes ax
        LEFT JOIN ${config.analyticsLink.table} v
          ON v.tenant_id = $1 AND v.axis_id = ax.id AND v.item_id = ANY($2::uuid[])
+         ${config.allNatures ? 'AND (ax.applies_to IS NULL OR EXISTS (SELECT 1 FROM spend_items li WHERE li.tenant_id = $1 AND li.id = v.item_id AND li.nature = ax.applies_to))' : ''}
        LEFT JOIN analytics_categories c ON c.id = v.category_id AND c.tenant_id = $1
        WHERE ax.tenant_id = $1 AND (ax.applies_to IS NULL OR ax.applies_to = ANY($3::text[]))
        ORDER BY ax.sort_order, lower(coalesce(ax.name, '')), ax.code, ax.id`, // the dimensions' order, whatever the plan: the rows' keys come in it
