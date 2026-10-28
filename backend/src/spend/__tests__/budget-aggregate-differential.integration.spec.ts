@@ -589,6 +589,38 @@ async function runAiCase(env: Env, c: Extract<Case, { kind: 'ai' }>): Promise<vo
     return { status: undefined, groups, total: scoped.total, returned: groups.length, truncated: scoped.ids.length < scoped.total, complete: true, filters_applied: adapted.applied };
   });
   if (failed(label, e, o)) return;
+  // The unified scope plus the `nature` filter must select and total the same lines as the
+  // nature's own list scope (the per-nature engine the AI read before): same ids, same count,
+  // same common amounts, with the case's quick search and without it (`qs_items`).
+  const adapted = adaptFilters(env.registry, input.filters);
+  // The CAPEX list's grid draws the title under `description` (`fieldColumns`), while the unified
+  // grid has a title column (`product_name`) and the real description (`description`): a filter on
+  // the real description has no CAPEX list column, so that case compares no filter.
+  const capexGrid = env.scope.scope === 'capex';
+  const comparable = !(capexGrid && Object.prototype.hasOwnProperty.call(adapted.filters, 'description'));
+  if (adapted.ignored.length === 0 && comparable) {
+    const ownFilters = Object.fromEntries(Object.entries(adapted.filters).map(([key, value]) => [
+      capexGrid && key === 'product_name' ? 'description' : key,
+      value,
+    ]));
+    delete ownFilters.nature;
+    const compare = async (q: string | undefined) => {
+      const unified = await budgetReadService().summaryIds({ q, limit: 10_000, filters: adapted.filters, includeDisabled: true }, { manager: m });
+      const own = await env.svc.summaryIds({ q, limit: 10_000, filters: ownFilters, includeDisabled: true }, { manager: m });
+      same(`${label} nature scope: ids${q ? ` q=${q}` : ''}`, [...unified.ids].sort(), [...own.ids].sort());
+      same(`${label} nature scope: total${q ? ` q=${q}` : ''}`, unified.total, own.total);
+      const all = await budgetReadService().summaryTotals({ q, filters: adapted.filters }, { manager: m });
+      const scopedTotals = await env.svc.summaryTotals({ q, filters: ownFilters }, { manager: m });
+      const common = Object.keys(all).filter((key) => typeof all[key] !== 'object' && Object.prototype.hasOwnProperty.call(scopedTotals, key));
+      same(
+        `${label} nature scope: amounts${q ? ` q=${q}` : ''}`,
+        Object.fromEntries(common.map((key) => [key, all[key]])),
+        Object.fromEntries(common.map((key) => [key, scopedTotals[key]])),
+      );
+    };
+    await compare(input.q?.trim());
+    if (input.q) await compare(undefined);
+  }
   const refused = e.value.status === 'invalid_filter' || e.value.status === 'invalid_filter_value';
   const actual = refused
     ? { status: e.value.status, groups: e.value.groups, total: e.value.total }
