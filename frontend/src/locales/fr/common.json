@@ -950,6 +950,7 @@
     "roles": "Rôles",
     "server": "Serveur",
     "costCenter": "Centre de coûts",
+    "costCenterAccess": "Accès au centre de coûts",
     "noCostCenterYet": "Aucun centre de coûts pour l'instant.",
     "noCostCenterForCompany": "Aucun centre de coûts pour cette société.",
     "createCostCenter": "En créer un",
