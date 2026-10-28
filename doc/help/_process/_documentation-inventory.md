@@ -1,6 +1,6 @@
 # User Manual Documentation Inventory
 
-_Generated: 2026-10-26_
+_Generated: 2026-10-28_
 
 This document tracks documentation coverage for the KANAP user manual.
 
@@ -28,6 +28,7 @@ _Note: Supplemental Fast Track guides are excluded from these route-based counts
 
 | Date | Doc File | Changes |
 |------|----------|---------|
+| 2026-10-28 | `record-history.md` (en/fr/de/es) | New page for the **History** tab of a record, on budget lines today: who can read it (anyone who can open the record, limited to their data access), one entry per change with date, author (person, **System**, **Import**, **Plaid for**) and fields before and after, changes to the parts of the line, records from modules the reader cannot read named by their kind, link to the audit log. `budget-lines.md`: five tabs and a **History** section. mkdocs nav with fr/de/es labels, `index.md`, `doc-update-map.tsv`. The Help button opens the page from `/ops/budget/:ref/history` (`docUrls.ts`). |
 | 2026-10-27 | _Excel export and import (35 pages, en/fr/de/es)_ | Every list, report and operations export offers CSV or Excel and is recorded in the audit log; imports read `.xlsx` workbooks (first sheet). `csv-files.md` becomes **CSV and Excel files** (same URL). Reports: export menu, Parameters sheet, values and default order; chargeback flows buttons replaced by the table choice. List pages: **Export** / **Import** labels, list order, `id` and `reference` columns. On-premise: `IMPORT_XLSX`. |
 | 2026-10-26 | `sample-data.md` (en/fr/de/es) | Loading takes about two minutes. The step example is now "Step 4 of 21: charts of accounts". |
 | 2026-10-26 | `data-access.md` (en/fr/de/es) | New page for data-scoped access: the two modes and the nodes (company, cost center group, cost center, **Everything**), Read and Edit, creating and moving, lines without a company, roles and nodes, participations, Administrators, the **Data access** tab of the user window and its preview, **Admin > Data access**, the **Access** tab of companies and cost centers, CSV import and export, the audit table, what a limited person sees, the operations reserved to people with all data, the unavailable state. `on-premise/installation.md`: optional step with `infra/scripts/data-access-role.sql`, restart, removal. `on-premise/operations.md`: restore without the role. Short notes in `admin.md`, `companies.md`, `cost-centers.md`, `budget-lines.md`, `budget-file.md` (new section **Limited data access**), `contracts.md` (**Cost center or group**, **Without cost center**, coverage), `reports.md`, `analytics.md` (new section **Open values**, the line field now creates values on open dimensions). mkdocs nav with fr/de/es labels, `index.md`, `doc-update-map.tsv`. The Help button mapping is in `docUrls.ts`. |

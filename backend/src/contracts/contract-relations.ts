@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
+import { singleChangedId } from '../audit/audit-parent-rules';
 import { applicationParticipantCondition, resolveBusinessContributorScope, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { moduleRightRequired } from '../auth/module-right-required';
 import { LINKED_MODULE_RESOURCES } from '../common/relations/linked-reads';
@@ -31,6 +32,12 @@ export type ContractRelationsDeps = {
 
 /** The contract, as read under the current tenant (its `tenant_id` scopes every statement). */
 export type RelationsContract = { id: string; tenant_id: string };
+
+/** The line a link-set write adds or removes, when exactly one changed: the line's history reads it. */
+function singleLineParent(before: unknown, after: unknown): { table: 'spend_items'; id: string } | null {
+  const id = singleChangedId(before, after);
+  return id ? { table: 'spend_items', id } : null;
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -274,6 +281,9 @@ export async function replaceContractRelations(
         before: auditedLinkSet({ ids: beforeIds }, hidden),
         after: auditedLinkSet({ ids: nextIds }, hidden),
         userId,
+        // The line the set gained or lost, when the write changes exactly one: the line's history
+        // reads this row. A replacement of two lines names no parent.
+        ...(set === 'budget_lines' ? { parent: singleLineParent(beforeIds, nextIds) } : {}),
       },
       { manager },
     );

@@ -102,7 +102,17 @@ export async function replaceItemApplications(
 
   if (JSON.stringify(beforeIds) !== JSON.stringify(nextIds)) {
     await deps.audit.log(
-      { table: auditTableOf(scope, t.links), recordId: item.id, action: 'update', before: beforeIds, after: nextIds, userId },
+      {
+        table: auditTableOf(scope, t.links),
+        recordId: item.id,
+        action: 'update',
+        before: beforeIds,
+        after: nextIds,
+        userId,
+        // The label is shared with the application side, whose record is the application: the
+        // line names itself (`audit-parent-rules.ts`).
+        parent: { table: 'spend_items', id: item.id },
+      },
       { manager },
     );
   }

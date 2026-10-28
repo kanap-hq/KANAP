@@ -404,7 +404,12 @@
     },
     "fields": {
       "access_methods": "Modos de acceso",
+      "account_id": "Cuenta",
+      "allocation_method": "Método de asignación",
+      "allocation_pct": "Asignación",
       "amount": "Importe",
+      "as_of_date": "Fecha de referencia",
+      "budget_year": "Año presupuestario",
       "business_lead_id": "Responsable de negocio",
       "category": "Categoría",
       "classification_justification": "Justificación de la clasificación",
@@ -415,6 +420,8 @@
       "confidential": "Confidencial",
       "contains_pii": "Contiene datos personales",
       "content_markdown": "Contenido",
+      "contract_id": "Contrato",
+      "cost_center_id": "Centro de coste",
       "created_at": "Fecha de creación",
       "created_by": "Creado por",
       "created_by_user_id": "Creado por",
@@ -428,6 +435,7 @@
       "disabled_at": "Desactivado el",
       "due_date": "Fecha de vencimiento",
       "editor": "Editor",
+      "effective_start": "Inicio efectivo",
       "email": "Correo",
       "end_date": "Fecha de fin",
       "end_of_support_date": "Fecha de fin de soporte",
@@ -440,6 +448,7 @@
       "fte": "ETC",
       "go_live_date": "Fecha de puesta en servicio",
       "hosting_model": "Alojamiento",
+      "input_grain": "Granularidad de entrada",
       "ip": "Dirección IP",
       "is_suite": "Puede incluir otras aplicaciones",
       "it_lead_id": "Responsable IT",
@@ -449,15 +458,21 @@
       "last_name": "Apellido",
       "licensing": "Licencias",
       "lifecycle": "Ciclo de vida",
+      "lines": "Líneas valoradas",
+      "measure": "Indicador",
       "method": "Método",
       "mfa_supported": "MFA compatible",
       "mode": "Modo",
       "name": "Nombre",
+      "nature": "Naturaleza",
       "nodes": "Nodos",
       "notes": "Notas",
       "operation": "Operación",
+      "owner_business_id": "Responsable de negocio",
+      "owner_it_id": "Responsable IT",
       "owner_user_id": "Responsable",
       "path": "Ruta",
+      "paying_company_id": "Empresa pagadora",
       "period_end": "Fin del periodo",
       "period_start": "Inicio del periodo",
       "personal_data_affected": "Datos personales afectados",
@@ -465,6 +480,8 @@
       "planned_start": "Inicio planificado",
       "predecessor_id": "Predecesor",
       "priority": "Prioridad",
+      "product_name": "Nombre del producto",
+      "project_id": "Proyecto",
       "purpose": "Objetivo",
       "query": "Parámetros",
       "recovery_wave": "Ola de recuperación",
@@ -478,6 +495,7 @@
       "rows": "Filas",
       "rpo_minutes": "Objetivo de punto de recuperación (minutos)",
       "rto_minutes": "Objetivo de tiempo de recuperación (minutos)",
+      "run_build": "Run o build",
       "sequential_id": "Referencia",
       "severity": "Gravedad",
       "source": "Origen",
@@ -485,6 +503,7 @@
       "start_date": "Fecha de inicio",
       "started_at": "Iniciado el",
       "status": "Estado",
+      "successor_id": "Sucesor",
       "supplier_id": "Proveedor",
       "support_notes": "Notas de soporte",
       "title": "Título",
@@ -498,7 +517,137 @@
       "users_year": "Año de los usuarios",
       "version": "Versión",
       "version_id": "Versión",
-      "year": "Año"
+      "version_name": "Nombre de la versión",
+      "year": "Año",
+      "actual": "Realizado",
+      "allocation_driver": "Criterio de asignación",
+      "analytics_values": "Dimensiones",
+      "assignee_user_id": "Asignado a",
+      "committed": "Revisión",
+      "contact_id": "Contacto",
+      "expected_landing": "Aterrizaje previsto",
+      "forecast": "Previsión",
+      "investment_type": "Tipo de inversión",
+      "is_approved": "Aprobado",
+      "legacy_effective_end": "Fin de validez",
+      "legacy_number": "Referencia histórica",
+      "mime_type": "Tipo de archivo",
+      "origin": "Origen",
+      "original_filename": "Nombre del archivo",
+      "period": "Periodo",
+      "planned": "Presupuesto",
+      "ppe_type": "Tipo de PPE",
+      "reason": "Motivo",
+      "reporting_currency": "Moneda de reporting",
+      "role": "Rol",
+      "size": "Tamaño",
+      "spread_profile_name": "Perfil de distribución"
+    },
+    "history": {
+      "empty": "Todavía no hay historial",
+      "error": "No se pudo cargar el historial",
+      "loadMore": "Cargar más",
+      "separator": ": ",
+      "actions": {
+        "create": "Creado",
+        "update": "Actualizado",
+        "delete": "Eliminado"
+      },
+      "dimension": "Dimensión {{name}}",
+      "dimensionNoName": "Dimensión",
+      "amount": "Importe {{column}}",
+      "amountYear": "Importe {{year}}, {{column}}",
+      "amountMonthly": "{{label}}: distribución mensual modificada",
+      "amountMonths": "meses {{months}}",
+      "amountWholeYear": "año completo",
+      "allocations": "Asignaciones",
+      "allocationsYear": "Asignaciones {{year}}",
+      "distributionChanged": "{{label}}: distribución modificada",
+      "copiedFrom": "copiado de {{source}}",
+      "overwriteManual": "filas manuales reemplazadas",
+      "roundInput": "Entrada {{column}}",
+      "roundInputNoColumn": "Entrada",
+      "allocation": "Asignación {{name}}",
+      "allocationNoName": "Asignación",
+      "childCreated": "{{title}} añadida",
+      "childDeleted": "{{title}} eliminada",
+      "version": "Versión {{name}}",
+      "versionNoName": "Versión",
+      "actors": {
+        "assistant": "Plaid",
+        "assistantFor": "Plaid para {{name}}",
+        "unknown": "Persona desconocida"
+      },
+      "events": {
+        "link": {
+          "added": "Enlace añadido: {{label}}",
+          "removed": "Enlace eliminado: {{label}}"
+        },
+        "attachment": {
+          "added": "Archivo adjunto añadido: {{label}}",
+          "removed": "Archivo adjunto eliminado: {{label}}"
+        },
+        "contact": {
+          "added": "Contacto añadido: {{label}}",
+          "removed": "Contacto eliminado: {{label}}"
+        },
+        "application": {
+          "added": "Aplicación añadida: {{label}}",
+          "removed": "Aplicación eliminada: {{label}}"
+        },
+        "technology": {
+          "added": "Tecnología añadida: {{label}}",
+          "removed": "Tecnología eliminada: {{label}}"
+        },
+        "asset": {
+          "added": "Activo añadido: {{label}}",
+          "removed": "Activo eliminado: {{label}}"
+        },
+        "task": {
+          "added": "Tarea añadida: {{label}}",
+          "removed": "Tarea eliminada: {{label}}"
+        },
+        "line": {
+          "added": "Línea valorada añadida: {{label}}",
+          "removed": "Línea valorada eliminada: {{label}}"
+        },
+        "contract": {
+          "added": "Contrato añadido: {{label}}",
+          "removed": "Contrato eliminado: {{label}}"
+        },
+        "project": {
+          "added": "Proyecto añadido: {{label}}",
+          "removed": "Proyecto eliminado: {{label}}"
+        },
+        "request": {
+          "added": "Solicitud añadida: {{label}}",
+          "removed": "Solicitud eliminada: {{label}}"
+        }
+      },
+      "unnamed": {
+        "record": "un registro",
+        "version": "una versión",
+        "amounts": "un importe",
+        "allocations": "una asignación",
+        "round_input": "una entrada",
+        "link": "un enlace",
+        "attachment": "un archivo adjunto",
+        "contact": "un contacto",
+        "application": "una aplicación",
+        "technology": "una tecnología",
+        "asset": "un activo",
+        "task": "una tarea",
+        "line": "una línea valorada",
+        "user": "un usuario",
+        "company": "una empresa",
+        "supplier": "un proveedor",
+        "account": "una cuenta",
+        "project": "un proyecto",
+        "request": "una solicitud",
+        "contract": "un contrato",
+        "cost_center": "un centro de coste",
+        "budget_line": "una línea presupuestaria"
+      }
     },
     "messages": {
       "loadDetailsFailed": "No se pudieron cargar los detalles de la entrada de auditoría."
@@ -724,7 +873,53 @@
       "no": "No",
       "unknownAccount": "Cuenta desconocida",
       "unknownUser": "Desconocido ({{id}}…)",
-      "yes": "Sí"
+      "yes": "Sí",
+      "inputGrain": {
+        "annual": "Anual",
+        "quarterly": "Trimestral",
+        "monthly": "Mensual"
+      },
+      "allocationMethod": {
+        "default": "Predeterminado",
+        "headcount": "Plantilla",
+        "itUsers": "Usuarios IT",
+        "turnover": "Facturación",
+        "manualCompany": "Manual por empresa",
+        "manualDepartment": "Manual por departamento",
+        "manualPct": "Porcentajes manuales"
+      },
+      "allocationDriver": {
+        "headcount": "Plantilla",
+        "itUsers": "Usuarios IT",
+        "turnover": "Facturación"
+      },
+      "spreadProfile": {
+        "flat": "Uniforme",
+        "p445": "4-4-5"
+      },
+      "roundInputMethod": {
+        "spread": "Distribuido",
+        "manual": "Manual (mensual)",
+        "computed": "Líneas calculadas"
+      },
+      "nature": {
+        "opex": "OPEX",
+        "capex": "CAPEX"
+      },
+      "runBuild": {
+        "run": "Run",
+        "build": "Build"
+      },
+      "contactRole": {
+        "commercial": "Comercial",
+        "technical": "Técnico",
+        "support": "Soporte",
+        "other": "Otro"
+      },
+      "origin": {
+        "manual": "Manual",
+        "supplier": "Proveedor"
+      }
     },
     "dataAccess": {
       "allData": "Todos los datos",

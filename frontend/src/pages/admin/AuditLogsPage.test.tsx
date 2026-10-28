@@ -19,7 +19,7 @@ import {
   auditTableLabel,
   auditTablesMatchingSearch,
   auditUserLabel,
-} from './auditLogLabels';
+} from '../../lib/audit/auditLogLabels';
 import AuditLogsPage from './AuditLogsPage';
 
 const auth = vi.hoisted(() => ({ admin: true }));

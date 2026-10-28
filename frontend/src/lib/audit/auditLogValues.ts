@@ -106,6 +106,21 @@ const ENUM_GROUPS: Record<string, string> = {
   criticality: 'it:enums.criticality',
   hosting_model: 'it:enums.hostingModel',
   severity: 'it:enums.incidentSeverity',
+  // The budget history's own enumerations, named as the line screens name them.
+  input_grain: 'auditLogs.values.inputGrain',
+  allocation_method: 'auditLogs.values.allocationMethod',
+  allocation_driver: 'auditLogs.values.allocationDriver',
+  method: 'auditLogs.values.roundInputMethod',
+  nature: 'auditLogs.values.nature',
+  run_build: 'auditLogs.values.runBuild',
+  role: 'auditLogs.values.contactRole',
+  origin: 'auditLogs.values.origin',
+};
+
+/** `spread_profile_name` holds `flat` and `4-4-5`; its keys cannot use the stored code as is. */
+const SPREAD_PROFILE_KEYS: Record<string, string> = {
+  flat: 'flat',
+  '4-4-5': 'p445',
 };
 
 /**
@@ -285,6 +300,10 @@ function enumerationCode(field: string, code: string): string {
 
 /** The screen label of a known enumeration, or null so an unknown code stays as stored. */
 function enumerationLabel(field: string, code: string, context: AuditValueContext): string | null {
+  if (field === 'spread_profile_name') {
+    const key = SPREAD_PROFILE_KEYS[code];
+    return key ? screenLabel(context, `auditLogs.values.spreadProfile.${key}`) : null;
+  }
   if (field === 'mode') {
     const key = MODE_LABEL_KEYS[context.table ?? '']?.[code];
     return key ? screenLabel(context, key) : null;

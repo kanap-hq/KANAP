@@ -196,7 +196,7 @@ Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen
 
 - **Kopfzeile**: die Referenz der Zeile (z. B. `BL-12`) mit einer Kopierschaltfläche, der Titel der Zeile (anklicken, um die Zeile umzubenennen), **Zurück** / **Weiter**, **Teilen** und die Schaltfläche zum Schließen
 - **Metadatenleiste** unter dem Titel: **Status**, **IT-Verantwortlicher** und **Fachbereichsverantwortlicher**, direkt bearbeitbar. Hat die Kostenstelle der Zeile einen Budgetverantwortlichen, folgt **Budgetverantwortlicher** danach. Er ist schreibgeschützt und aus der Kostenstelle abgeleitet, nicht auf der Zeile gespeichert: Fahren Sie mit der Maus darüber, um zu sehen, aus welcher Kostenstelle er stammt, und ändern Sie ihn auf der Kostenstelle (siehe [Kostenstellen](cost-centers.md#budgetverantwortlicher-auf-budgetzeilen))
-- **Vier Tabs**: **Übersicht**, **Budget**, **Zuordnungen** und **Verknüpfungen** (der Tab Verknüpfungen zeigt die Anzahl der Verknüpfungen der Zeile)
+- **Fünf Tabs**: **Übersicht**, **Budget**, **Zuordnungen**, **Verknüpfungen** (der Tab Verknüpfungen zeigt die Anzahl der Verknüpfungen der Zeile) und **Verlauf**
 - **Bereich Eigenschaften** rechts: die Hauptfelder der Zeile, beginnend mit **Typ** (bei einer bestehenden Zeile mit **Typ ändern…** daneben, siehe [Typ ändern](#typ-andern)). Öffnen oder schließen Sie ihn mit der Eigenschaften-Schaltfläche; der Arbeitsbereich merkt sich Ihre Wahl
 
 **Automatisches Speichern**:
@@ -590,6 +590,16 @@ Der Abschnitt fehlt, wenn die Zeile keinen Lieferanten hat oder es nichts vorzus
 - Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
 
 **Tipp**: Verknüpfen Sie Verträge, um Verlängerungen über mehrere Zeilen hinweg zu verfolgen. Hängen Sie Angebote und Rechnungen an, um alle Dokumente einer Zeile an einem Ort zu haben.
+
+---
+
+### Verlauf
+
+Der Tab Verlauf listet die Änderungen an der Zeile, die neueste oben. Jeder Eintrag zeigt Datum und Uhrzeit, den Urheber (eine Person, **System**, **Import** oder **Plaid für** eine Person) und jedes geänderte Feld mit seinem Wert vorher und nachher. Eine Betragsänderung nennt das Jahr, die Spalte und die Werte vorher und nachher.
+
+Auch die Änderungen an den Bestandteilen der Zeile erscheinen hier: Beträge, Dimensionen, Zuordnungen, Links, Anhänge, Kontakte, Anwendungen, Technologien, Assets und Aufgaben. Wer die Zeile öffnen kann, kann auch ihren Verlauf lesen. Ein Datensatz aus einem Modul, das Sie nicht lesen können, erscheint nur mit seiner Art, zum Beispiel „ein Vertrag“.
+
+Details finden Sie unter [Verlauf der Datensätze](record-history.md).
 
 ---
 

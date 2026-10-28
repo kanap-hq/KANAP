@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
+import { singleChangedId } from '../audit/audit-parent-rules';
 import { taskParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { moduleRightRequired } from '../auth/module-right-required';
 import { setOwnedLink, type OwnedLinkAudit, type OwnedRelationLink } from '../common/relations/owned-link';
@@ -201,6 +202,16 @@ async function lockAsset(mg: EntityManager, asset: AssetRow): Promise<void> {
   if (locked.length === 0) throw new NotFoundException(ASSET_NOT_FOUND);
 }
 
+/** The asset's line link labels, both natures (`auditTableOf`). */
+function isLineLabel(table: string): boolean {
+  return table === auditTableOf('opex', LINES.links) || table === auditTableOf('capex', LINES.links);
+}
+
+function lineParent(before: unknown, after: unknown): { table: 'spend_items'; id: string } | null {
+  const id = singleChangedId(before, after);
+  return id ? { table: 'spend_items', id } : null;
+}
+
 @Injectable()
 export class AssetRelationsTabService {
   constructor(
@@ -369,6 +380,8 @@ export class AssetRelationsTabService {
           before: { ids: entry.before },
           after: { ids: entry.after },
           userId: entry.userId,
+          // A budget line link names the line it added or removed (`setOwnedLink` changes one).
+          ...(isLineLabel(entry.table) ? { parent: lineParent(entry.before, entry.after) } : {}),
         },
         opts,
       ),

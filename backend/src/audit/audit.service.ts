@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AuditLog } from './audit.entity';
+import { resolveAuditParent, type AuditParent } from './audit-parent-rules';
 
 export type AuditSourceOptions = {
   source?: 'user' | 'system' | 'webhook' | string;
@@ -64,6 +65,8 @@ export type AuditEntry = {
   userId?: string | null;
   source?: 'user' | 'system' | 'webhook' | string;
   sourceRef?: string | null;
+  /** The record this row belongs to, when the caller knows it (the label rules otherwise). */
+  parent?: AuditParent | null;
 };
 
 /**
@@ -73,6 +76,9 @@ export type AuditEntry = {
  * the new row's id.
  */
 export async function writeAuditLog(manager: EntityManager, params: AuditEntry): Promise<string | null> {
+  // One rule per audit label (`audit-parent-rules.ts`); an explicit `parent` wins. A label without
+  // a rule (a line, a contract, a security event) keeps both columns NULL.
+  const parent = await resolveAuditParent(manager, params);
   const result = await manager.getRepository(AuditLog).insert({
     table_name: params.table,
     record_id: params.recordId ?? null,
@@ -82,6 +88,8 @@ export async function writeAuditLog(manager: EntityManager, params: AuditEntry):
     user_id: params.userId ?? null,
     source: params.source ?? (params.userId ? 'user' : 'system'),
     source_ref: params.sourceRef ?? null,
+    parent_table: parent?.table ?? null,
+    parent_id: parent?.id ?? null,
     // The moment of the write, not the start of its transaction (`now()`): a write that waited
     // for a row lock is stamped after the one it waited for, so a record's history follows the
     // order its changes were committed in (plan planning/perf-scale, lot 3B).
@@ -95,7 +103,11 @@ export async function writeAuditLog(manager: EntityManager, params: AuditEntry):
 export class AuditService {
   constructor(@InjectRepository(AuditLog) private readonly repo: Repository<AuditLog>) {}
 
-  /** `restored`: a budget column put back to the values its screen opened with (`spend/budget-column-restore.ts`). */
+  /**
+   * `restored`: a budget column put back to the values its screen opened with (`spend/budget-column-restore.ts`).
+   * Pass the request's `manager`: without it the row is written on the pool, outside the tenant's
+   * transaction, where a version label finds no line (parent NULL) and `tenant_id` has no default.
+   */
   async log(params: AuditEntry & { action: 'create' | 'update' | 'disable' | 'delete' | 'restored' }, opts?: { manager?: EntityManager }) {
     await writeAuditLog(opts?.manager ?? this.repo.manager, params);
   }

@@ -8,7 +8,7 @@ import {
   AUDIT_EVENT_ACTIONS as SCREEN_ACTIONS,
   AUTH_EVENT_REASONS as SCREEN_REASONS,
   EXPORT_RESOURCE_KEYS,
-} from '../../../../frontend/src/pages/admin/auditLogLabels';
+} from '../../../../frontend/src/lib/audit/auditLogLabels';
 import {
   AUTH_EVENT_ACTIONS,
   AUTH_EVENT_REASONS,
@@ -548,7 +548,7 @@ async function testEventWriterNeverRejects() {
   assert.equal(runners, 1);
 }
 
-// The audit log page (frontend/src/pages/admin/auditLogLabels.ts, imported here) has a plain label
+// The audit log page (frontend/src/lib/audit/auditLogLabels.ts, imported here) has a plain label
 // for every action, reason and exported resource the API writes.
 function testTheAuditLogPageLabelsEveryEvent() {
   assert.deepEqual([...SCREEN_ACTIONS].sort(), [...AUTH_EVENT_ACTIONS, 'export'].sort(), 'actions');

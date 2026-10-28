@@ -57,6 +57,7 @@ export const UNKEYED_REFERENCE_COLUMNS: Readonly<Record<string, string>> = {
 
   // Records kept as written.
   'audit_log.record_id': 'Audit trail: names the row and the user as they were, and is never rewritten.',
+  'audit_log.parent_id': 'Audit trail: names the budget line the row belongs to, kept as written when the line or the child is gone.',
   'audit_log.user_id': 'Audit trail: names the row and the user as they were, and is never rewritten.',
   'search_index.entity_id': 'Search index (entity_type, entity_id): the row triggers of each source table write and remove its entry.',
   'platform_ai_config.updated_by': 'Platform administrator who changed a platform setting: platform scope, outside any tenant.',

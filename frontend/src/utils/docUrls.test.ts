@@ -7,6 +7,11 @@ describe('getDocUrl', () => {
     expect(getDocUrl('/ops/budget/BL-12/overview', 'fr')).toBe('https://doc.kanap.net/fr/budget-lines/');
   });
 
+  it('opens the record history manual from the History tab of a line', () => {
+    expect(getDocUrl('/ops/budget/BL-12/history')).toBe('https://doc.kanap.net/record-history/');
+    expect(getDocUrl('/ops/budget/BL-12/history', 'de')).toBe('https://doc.kanap.net/de/record-history/');
+  });
+
   it('opens the technologies manual, and the report its own page', () => {
     expect(getDocUrl('/it/technologies')).toBe('https://doc.kanap.net/technologies/');
     expect(getDocUrl('/it/technologies/TEC-4/overview', 'de')).toBe('https://doc.kanap.net/de/technologies/');

@@ -115,6 +115,7 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 
 - [Benutzer](admin.md): Benutzer, Rollen, Authentifizierung und Audit-Protokolle verwalten
 - [Datenzugriff](data-access.md): Eine Person auf Budget und Verträge bestimmter Unternehmen oder Kostenstellen begrenzen
+- [Verlauf der Datensätze](record-history.md): Wer einen Datensatz wann und wie geändert hat, im Tab Verlauf
 - [Branding](branding.md): Ihr Mandanten-Logo und die Primärfarben für hell/dunkel anpassen
 - [Beispieldaten](sample-data.md): KANAP mit einem fiktiven Unternehmen erkunden, dann alles löschen und neu beginnen
 - [Audit-Protokoll](admin.md#audit-protokoll): Datenänderungen, Anmeldungen und Exporte mit Filtern, Detailansicht und Export als CSV oder Excel prüfen

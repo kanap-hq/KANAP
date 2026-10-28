@@ -63,16 +63,19 @@ import { useCostCenterNode } from '../../hooks/useCostCenterTree';
 
 /** The list this workspace belongs to (its saved list contexts). */
 
-// The Budget, Allocations and Relations tabs load with their tab (the Budget tab brings the charts):
-// opening a line reads the overview's code only. `preloadTabs` fetches them once the line is shown;
-// a tab whose code fails to load shows a retry button in its place (WorkspaceTabBoundary).
+// The Budget, Allocations, Relations and History tabs load with their tab (the Budget tab brings
+// the charts): opening a line reads the overview's code only. `preloadTabs` fetches them once the
+// line is shown; a tab whose code fails to load shows a retry button in its place
+// (WorkspaceTabBoundary).
 const budgetTab = retryableLazy(() => import('../../components/finance/BudgetTab'));
 const allocationsTab = retryableLazy(() => import('../../components/finance/AllocationsTab'));
 const relationsTab = retryableLazy(() => import('./workspace/BudgetLineRelationsTab'));
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistory'));
 const BudgetTab = budgetTab.Component;
 const AllocationsTab = allocationsTab.Component;
 const RelationsTab = relationsTab.Component;
-const LAZY_TABS = [budgetTab, allocationsTab, relationsTab];
+const HistoryTab = historyTab.Component;
+const LAZY_TABS = [budgetTab, allocationsTab, relationsTab, historyTab];
 function preloadTabs() {
   LAZY_TABS.forEach((tab) => tab.preload());
 }
@@ -81,8 +84,8 @@ function retryTabs() {
 }
 
 
-type TabKey = 'overview' | 'budget' | 'allocations' | 'relations';
-const TAB_KEYS: TabKey[] = ['overview', 'budget', 'allocations', 'relations'];
+type TabKey = 'overview' | 'budget' | 'allocations' | 'relations' | 'history';
+const TAB_KEYS: TabKey[] = ['overview', 'budget', 'allocations', 'relations', 'history'];
 
 type BudgetLineForm = {
   id?: string;
@@ -1010,6 +1013,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     { key: 'budget', label: t('opex.tabs.budget') },
     { key: 'allocations', label: t('opex.tabs.allocations') },
     { key: 'relations', label: t('opex.tabs.relations') },
+    { key: 'history', label: t('opex.tabs.history') },
   ] as Array<{ key: TabKey; label: string }>), [t]);
 
   const savingHint = autosave.status === 'saving' || autosave.status === 'pending'
@@ -1282,6 +1286,9 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             )}
             {routeTab === 'relations' && !isCreate && !stale && uuid && (
               <RelationsTab key={uuid} lineId={uuid} nature={nature} lineEditable={lineEditable} onRelationsChange={() => { void relationsCountQuery.refetch(); }} />
+            )}
+            {routeTab === 'history' && !isCreate && !stale && uuid && (
+              <HistoryTab key={uuid} table="spend_items" recordId={uuid} />
             )}
           </React.Suspense>
         </WorkspaceTabBoundary>

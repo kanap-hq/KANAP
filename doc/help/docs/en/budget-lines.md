@@ -196,7 +196,7 @@ Click any row in the list to open the workspace. Its address names the line by i
 
 - **Header**: the line reference (e.g., `BL-12`) with a copy button, the line's title (click it to rename the line), **Prev** / **Next**, **Share**, and the close button
 - **Metadata bar** under the title: **Status**, **IT owner**, and **Business owner**, each editable in place. When the line's cost center has a budget holder, **Budget holder** follows them. It is read only and derived from the cost center, not stored on the line: hover it to see which cost center it comes from, and change it on the cost center (see [Cost centers](cost-centers.md#budget-holder-on-budget-lines))
-- **Four tabs**: **Overview**, **Budget**, **Allocations**, and **Relations** (the Relations tab shows how many links the line has)
+- **Five tabs**: **Overview**, **Budget**, **Allocations**, **Relations** (the Relations tab shows how many links the line has), and **History**
 - **Properties panel** on the right: the line's main fields, starting with **Type** (with **Change type...** next to it on an existing line, see [Changing the type](#changing-the-type)). Open or close it with the properties button; the workspace remembers your choice
 
 **Autosave**:
@@ -590,6 +590,16 @@ The section is absent when the line has no supplier or there is nothing to sugge
 - To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
 
 **Tip**: Link contracts to track renewals across several lines. Attach quotes and invoices to keep all the documents of a line in one place.
+
+---
+
+### History
+
+The History tab lists the changes made to the line, the most recent at the top. Each entry shows the date and time, the author (a person, **System**, **Import**, or **Plaid for** a person), and each changed field with its value before and after. A change of amount names the year, the column and the values before and after.
+
+The changes to the parts of the line appear here too: amounts, dimensions, allocations, links, attachments, contacts, applications, technologies, assets and tasks. Anyone who can open the line can read its history. A record from a module you cannot read appears by its kind only, for example "a contract".
+
+See [Record history](record-history.md) for the details.
 
 ---
 

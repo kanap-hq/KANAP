@@ -404,7 +404,12 @@
     },
     "fields": {
       "access_methods": "Modes d’accès",
+      "account_id": "Compte",
+      "allocation_method": "Méthode de ventilation",
+      "allocation_pct": "Ventilation",
       "amount": "Montant",
+      "as_of_date": "Date d'arrêté",
+      "budget_year": "Année budgétaire",
       "business_lead_id": "Responsable métier",
       "category": "Catégorie",
       "classification_justification": "Justification de la classification",
@@ -415,6 +420,8 @@
       "confidential": "Confidentiel",
       "contains_pii": "Contient des données personnelles",
       "content_markdown": "Contenu",
+      "contract_id": "Contrat",
+      "cost_center_id": "Centre de coûts",
       "created_at": "Date de création",
       "created_by": "Créé par",
       "created_by_user_id": "Créé par",
@@ -428,6 +435,7 @@
       "disabled_at": "Désactivé le",
       "due_date": "Échéance",
       "editor": "Éditeur",
+      "effective_start": "Début effectif",
       "email": "E-mail",
       "end_date": "Date de fin",
       "end_of_support_date": "Date de fin de support",
@@ -440,6 +448,7 @@
       "fte": "ETP",
       "go_live_date": "Date de mise en service",
       "hosting_model": "Hébergement",
+      "input_grain": "Granularité de saisie",
       "ip": "Adresse IP",
       "is_suite": "Peut inclure d’autres applications",
       "it_lead_id": "Responsable IT",
@@ -449,15 +458,21 @@
       "last_name": "Nom",
       "licensing": "Licences",
       "lifecycle": "Cycle de vie",
+      "lines": "Lignes chiffrées",
+      "measure": "Indicateur",
       "method": "Méthode",
       "mfa_supported": "MFA pris en charge",
       "mode": "Mode",
       "name": "Nom",
+      "nature": "Nature",
       "nodes": "Nœuds",
       "notes": "Notes",
       "operation": "Opération",
+      "owner_business_id": "Responsable métier",
+      "owner_it_id": "Responsable IT",
       "owner_user_id": "Responsable",
       "path": "Route",
+      "paying_company_id": "Société payeuse",
       "period_end": "Fin de période",
       "period_start": "Début de période",
       "personal_data_affected": "Données personnelles concernées",
@@ -465,6 +480,8 @@
       "planned_start": "Début prévu",
       "predecessor_id": "Prédécesseur",
       "priority": "Priorité",
+      "product_name": "Nom du produit",
+      "project_id": "Projet",
       "purpose": "Objectif",
       "query": "Paramètres",
       "recovery_wave": "Vague de reprise",
@@ -478,6 +495,7 @@
       "rows": "Lignes",
       "rpo_minutes": "Objectif de perte de données (minutes)",
       "rto_minutes": "Objectif de délai de reprise (minutes)",
+      "run_build": "Run ou build",
       "sequential_id": "Référence",
       "severity": "Gravité",
       "source": "Source",
@@ -485,6 +503,7 @@
       "start_date": "Date de début",
       "started_at": "Démarré le",
       "status": "Statut",
+      "successor_id": "Successeur",
       "supplier_id": "Fournisseur",
       "support_notes": "Notes de support",
       "title": "Titre",
@@ -498,7 +517,137 @@
       "users_year": "Année des utilisateurs",
       "version": "Version",
       "version_id": "Version",
-      "year": "Année"
+      "version_name": "Nom de la version",
+      "year": "Année",
+      "actual": "Réalisé",
+      "allocation_driver": "Clé de ventilation",
+      "analytics_values": "Dimensions",
+      "assignee_user_id": "Assigné à",
+      "committed": "Révision",
+      "contact_id": "Contact",
+      "expected_landing": "Atterrissage prévu",
+      "forecast": "Prévision",
+      "investment_type": "Type d'investissement",
+      "is_approved": "Approuvé",
+      "legacy_effective_end": "Fin de validité",
+      "legacy_number": "Référence historique",
+      "mime_type": "Type de fichier",
+      "origin": "Origine",
+      "original_filename": "Nom du fichier",
+      "period": "Période",
+      "planned": "Budget",
+      "ppe_type": "Type PPE",
+      "reason": "Motif",
+      "reporting_currency": "Devise de reporting",
+      "role": "Rôle",
+      "size": "Taille",
+      "spread_profile_name": "Profil de répartition"
+    },
+    "history": {
+      "empty": "Aucun historique",
+      "error": "L'historique n'a pas pu être chargé",
+      "loadMore": "Charger plus",
+      "separator": " : ",
+      "actions": {
+        "create": "Création",
+        "update": "Modification",
+        "delete": "Suppression"
+      },
+      "dimension": "Dimension {{name}}",
+      "dimensionNoName": "Dimension",
+      "amount": "Montant {{column}}",
+      "amountYear": "Montant {{year}}, {{column}}",
+      "amountMonthly": "{{label}} : répartition mensuelle modifiée",
+      "amountMonths": "mois {{months}}",
+      "amountWholeYear": "année entière",
+      "allocations": "Ventilations",
+      "allocationsYear": "Ventilations {{year}}",
+      "distributionChanged": "{{label}} : répartition modifiée",
+      "copiedFrom": "copié depuis {{source}}",
+      "overwriteManual": "lignes manuelles remplacées",
+      "roundInput": "Saisie {{column}}",
+      "roundInputNoColumn": "Saisie",
+      "allocation": "Ventilation {{name}}",
+      "allocationNoName": "Ventilation",
+      "childCreated": "{{title}} ajoutée",
+      "childDeleted": "{{title}} supprimée",
+      "version": "Version {{name}}",
+      "versionNoName": "Version",
+      "actors": {
+        "assistant": "Plaid",
+        "assistantFor": "Plaid pour {{name}}",
+        "unknown": "Personne inconnue"
+      },
+      "events": {
+        "link": {
+          "added": "Lien ajouté : {{label}}",
+          "removed": "Lien retiré : {{label}}"
+        },
+        "attachment": {
+          "added": "Pièce jointe ajoutée : {{label}}",
+          "removed": "Pièce jointe retirée : {{label}}"
+        },
+        "contact": {
+          "added": "Contact ajouté : {{label}}",
+          "removed": "Contact retiré : {{label}}"
+        },
+        "application": {
+          "added": "Application ajoutée : {{label}}",
+          "removed": "Application retirée : {{label}}"
+        },
+        "technology": {
+          "added": "Technologie ajoutée : {{label}}",
+          "removed": "Technologie retirée : {{label}}"
+        },
+        "asset": {
+          "added": "Actif ajouté : {{label}}",
+          "removed": "Actif retiré : {{label}}"
+        },
+        "task": {
+          "added": "Tâche ajoutée : {{label}}",
+          "removed": "Tâche retirée : {{label}}"
+        },
+        "line": {
+          "added": "Ligne chiffrée ajoutée : {{label}}",
+          "removed": "Ligne chiffrée retirée : {{label}}"
+        },
+        "contract": {
+          "added": "Contrat ajouté : {{label}}",
+          "removed": "Contrat retiré : {{label}}"
+        },
+        "project": {
+          "added": "Projet ajouté : {{label}}",
+          "removed": "Projet retiré : {{label}}"
+        },
+        "request": {
+          "added": "Demande ajoutée : {{label}}",
+          "removed": "Demande retirée : {{label}}"
+        }
+      },
+      "unnamed": {
+        "record": "un enregistrement",
+        "version": "une version",
+        "amounts": "un montant",
+        "allocations": "une ventilation",
+        "round_input": "une saisie",
+        "link": "un lien",
+        "attachment": "une pièce jointe",
+        "contact": "un contact",
+        "application": "une application",
+        "technology": "une technologie",
+        "asset": "un actif",
+        "task": "une tâche",
+        "line": "une ligne chiffrée",
+        "user": "un utilisateur",
+        "company": "une société",
+        "supplier": "un fournisseur",
+        "account": "un compte",
+        "project": "un projet",
+        "request": "une demande",
+        "contract": "un contrat",
+        "cost_center": "un centre de coûts",
+        "budget_line": "une ligne budgétaire"
+      }
     },
     "messages": {
       "loadDetailsFailed": "Impossible de charger les détails de l'entrée d'audit."
@@ -724,7 +873,53 @@
       "no": "Non",
       "unknownAccount": "Compte inconnu",
       "unknownUser": "Inconnu ({{id}}…)",
-      "yes": "Oui"
+      "yes": "Oui",
+      "inputGrain": {
+        "annual": "Annuel",
+        "quarterly": "Trimestriel",
+        "monthly": "Mensuel"
+      },
+      "allocationMethod": {
+        "default": "Par défaut",
+        "headcount": "Effectif",
+        "itUsers": "Utilisateurs IT",
+        "turnover": "Chiffre d'affaires",
+        "manualCompany": "Manuel par société",
+        "manualDepartment": "Manuel par département",
+        "manualPct": "Pourcentages manuels"
+      },
+      "allocationDriver": {
+        "headcount": "Effectif",
+        "itUsers": "Utilisateurs IT",
+        "turnover": "Chiffre d'affaires"
+      },
+      "spreadProfile": {
+        "flat": "Linéaire",
+        "p445": "4-4-5"
+      },
+      "roundInputMethod": {
+        "spread": "Réparti",
+        "manual": "Manuel (mensuel)",
+        "computed": "Lignes chiffrées"
+      },
+      "nature": {
+        "opex": "OPEX",
+        "capex": "CAPEX"
+      },
+      "runBuild": {
+        "run": "Run",
+        "build": "Build"
+      },
+      "contactRole": {
+        "commercial": "Commercial",
+        "technical": "Technique",
+        "support": "Support",
+        "other": "Autre"
+      },
+      "origin": {
+        "manual": "Manuel",
+        "supplier": "Fournisseur"
+      }
     },
     "dataAccess": {
       "allData": "Toutes les données",

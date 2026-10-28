@@ -7,6 +7,7 @@ import { AssetRelation } from '../asset-relation.entity';
 import { AssetSpendItemLink } from '../asset-spend-item.entity';
 import { AssetContractLink } from '../asset-contract.entity';
 import { AuditService } from '../../audit/audit.service';
+import { singleChangedId } from '../../audit/audit-parent-rules';
 import { lockAssignmentClusters } from '../../app-asset-assignments/cluster-assignment-rules';
 import {
   assertNotPlacedByCluster,
@@ -24,6 +25,12 @@ export type RelationWriteResult = {
   replaced: ReplacedHostLink[];
   doubles: DoubleContainer[];
 };
+
+/** The line a replacement of the asset's lines added or removed, when it touched a single one. */
+function lineParent(before: string[], after: string[]): { table: 'spend_items'; id: string } | null {
+  const id = singleChangedId(before, after);
+  return id ? { table: 'spend_items', id } : null;
+}
 
 /**
  * Service for managing asset relations and financial links (spend, capex, contracts).
@@ -475,6 +482,8 @@ export class AssetsRelationsService extends AssetsBaseService {
         before: auditedLinkSet({ ids: before }, hidden),
         after: auditedLinkSet({ ids: normalizedIds }, hidden),
         userId,
+        // The line's history shows the change only when it touched a single line.
+        parent: lineParent(before, normalizedIds),
       },
       { manager: opts?.manager },
     );
@@ -560,6 +569,8 @@ export class AssetsRelationsService extends AssetsBaseService {
         before: auditedLinkSet({ ids: before }, hidden),
         after: auditedLinkSet({ ids: normalizedIds }, hidden),
         userId,
+        // The line's history shows the change only when it touched a single line.
+        parent: lineParent(before, normalizedIds),
       },
       { manager: opts?.manager },
     );

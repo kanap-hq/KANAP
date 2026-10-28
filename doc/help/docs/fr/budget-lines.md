@@ -196,7 +196,7 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. 
 
 - **En-tête** : la référence de la ligne (ex. : `BL-12`) avec un bouton de copie, le titre de la ligne (cliquez dessus pour la renommer), **Préc.** / **Suiv.**, **Partager** et le bouton de fermeture
 - **Barre de métadonnées** sous le titre : **Statut**, **Responsable IT** et **Responsable métier**, modifiables sur place. Lorsque le centre de coûts de la ligne a un responsable budgétaire, **Responsable budgétaire** vient ensuite. Il est en lecture seule. Il vient du centre de coûts, et la ligne ne l'enregistre pas : survolez-le pour voir de quel centre de coûts il provient, et modifiez-le sur le centre de coûts (voir [Centres de coûts](cost-centers.md#responsable-budgetaire-sur-les-lignes-budgetaires))
-- **Quatre onglets** : **Vue d'ensemble**, **Budget**, **Ventilations** et **Relations** (l'onglet Relations indique le nombre de liens de la ligne)
+- **Cinq onglets** : **Vue d'ensemble**, **Budget**, **Ventilations**, **Relations** (l'onglet Relations indique le nombre de liens de la ligne) et **Historique**
 - **Panneau Propriétés** à droite : les champs principaux de la ligne, en commençant par **Type** (avec **Changer le type...** à côté sur une ligne existante, voir [Changer le type](#changer-le-type)). Ouvrez-le ou fermez-le avec le bouton des propriétés ; l'espace de travail mémorise votre choix
 
 **Enregistrement automatique** :
@@ -590,6 +590,16 @@ La section est absente quand la ligne n'a pas de fournisseur ou qu'il n'y a rien
 - Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
 
 **Conseil** : Liez les contrats pour suivre les renouvellements sur plusieurs lignes. Joignez les devis et les factures pour garder tous les documents d'une ligne au même endroit.
+
+---
+
+### Historique
+
+L'onglet Historique liste les modifications apportées à la ligne, la plus récente en haut. Chaque entrée indique la date et l'heure, l'auteur (une personne, **Système**, **Import** ou **Plaid pour** une personne) et chaque champ modifié avec sa valeur avant et après. Une modification de montant indique l'année, la colonne et les valeurs avant et après.
+
+Les modifications des éléments de la ligne y figurent aussi : montants, dimensions, ventilations, liens, pièces jointes, contacts, applications, technologies, actifs et tâches. Toute personne qui peut ouvrir la ligne peut lire son historique. Une fiche d'un module que vous ne pouvez pas lire apparaît seulement par son type, par exemple « un contrat ».
+
+Voir [Historique des fiches](record-history.md) pour le détail.
 
 ---
 
