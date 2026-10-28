@@ -20,19 +20,25 @@ function build() {
 const ctx = (permissions: Record<string, string>): any => ({ tenantId: 't-1', userId: 'u-1', isAdmin: false, permissions });
 const req: any = { queryRunner: { manager: {} } };
 
-async function refused(call: () => unknown, message: string, label: string) {
+async function refused(call: () => unknown, resource: string, message: string, label: string) {
   const err = await Promise.resolve().then(call).then(() => null, (e) => e);
   assert.ok(err instanceof ForbiddenException, `${label}: 403`);
-  assert.equal((err as ForbiddenException).message, message, label);
+  assert.deepEqual((err as ForbiddenException).getResponse(), {
+    statusCode: 403,
+    error: 'Forbidden',
+    code: 'MODULE_RIGHT_REQUIRED',
+    message,
+    params: { resource, level: 'reader' },
+  }, label);
 }
 
 async function run() {
   const { controller, calls } = build();
   const locationsOnly = ctx({ locations: 'reader' });
 
-  await refused(() => controller.listServers('loc-1', req, ctx({ locations: 'reader', applications: 'reader' })), 'You cannot read assets.', 'servers');
-  await refused(() => controller.listApplications('loc-1', req, ctx({ locations: 'reader', infrastructure: 'reader' })), 'You cannot read applications.', 'applications');
-  await refused(() => controller.listServers('loc-1', req, locationsOnly), 'You cannot read assets.', 'servers, locations only');
+  await refused(() => controller.listServers('loc-1', req, ctx({ locations: 'reader', applications: 'reader' })), 'infrastructure', 'You cannot read assets.', 'servers');
+  await refused(() => controller.listApplications('loc-1', req, ctx({ locations: 'reader', infrastructure: 'reader' })), 'applications', 'You cannot read applications.', 'applications');
+  await refused(() => controller.listServers('loc-1', req, locationsOnly), 'infrastructure', 'You cannot read assets.', 'servers, locations only');
   assert.deepEqual(calls, [], 'nothing read');
 
   const both = ctx({ locations: 'reader', infrastructure: 'reader', applications: 'reader' });

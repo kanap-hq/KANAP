@@ -1,7 +1,8 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { setOwnedLink } from '../common/relations/owned-link';
 import { binder, type RelationLinkTable } from '../common/relations/related-objects';
 import { parseTargetId } from '../common/relations/relation-target';
@@ -214,7 +215,11 @@ export class PortfolioRelationsService {
     loadOwner: () => Promise<{ id: string; tenantId: string }>,
   ): Promise<{ ok: true; changed: boolean }> {
     if (!ctx.access[kind]) {
-      throw new ForbiddenException(kind === 'technologies' ? 'You cannot read technologies.' : 'You cannot read this module.');
+      throw moduleRightRequired(
+        PROJECT_RELATION_READS[kind],
+        'reader',
+        kind === 'technologies' ? 'You cannot read technologies.' : 'You cannot read this module.',
+      );
     }
     if (kind === 'technologies') {
       return setOwnedLink({
@@ -378,9 +383,9 @@ export class PortfolioRelationsService {
     ctx: RequestRelationsContext,
     loadOwner: () => Promise<{ id: string; tenantId: string }>,
   ): Promise<{ ok: true; changed: boolean }> {
-    if (!ctx.access[kind]) throw new ForbiddenException('You cannot read this module.');
+    if (!ctx.access[kind]) throw moduleRightRequired(REQUEST_RELATION_READS[kind], 'reader', 'You cannot read this module.');
     if (kind === 'processes') {
-      if (!ctx.writes.processes) throw new ForbiddenException('You cannot edit this module.');
+      if (!ctx.writes.processes) throw moduleRightRequired('business_processes', 'member', 'You cannot edit this module.');
       return setOwnedLink({
         manager: ctx.manager,
         userId: ctx.userId,

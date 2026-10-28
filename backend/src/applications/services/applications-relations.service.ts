@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Application } from '../application.entity';
@@ -38,6 +38,7 @@ import { technologyReference } from '../../technologies/technology-rows';
 import { type IncidentViewer, taskIncidentVisibilitySql } from '../../incidents/incident-visibility';
 import { IncidentRelationsService } from '../../incidents/services/incident-relations.service';
 import { hiddenContractCount } from '../../data-access/hidden-links';
+import { moduleRightRequired } from '../../auth/module-right-required';
 
 /** At most this many suggestions per rule. */
 export const SUGGESTIONS_PER_RULE = 20;
@@ -45,6 +46,18 @@ export const SUGGESTIONS_PER_RULE = 20;
 /** The kinds of objects the Relations tab links to an application. */
 export const RELATION_KINDS = ['budget_lines', 'contracts', 'incidents', 'processes', 'projects', 'requests', 'tasks', 'technologies'] as const;
 export type RelationKind = (typeof RELATION_KINDS)[number];
+
+/** The module each Relations section needs read access to (the tab and its badge). */
+export const RELATION_READ_RESOURCES = {
+  budget_lines: 'budget',
+  contracts: 'contracts',
+  incidents: 'incidents',
+  processes: 'business_processes',
+  projects: 'portfolio_projects',
+  requests: 'portfolio_requests',
+  tasks: 'tasks',
+  technologies: 'infrastructure',
+} as const;
 
 /** Which modules the caller may read: a section the caller cannot read is `null`. */
 export type RelationsAccess = Record<RelationKind, boolean>;
@@ -56,6 +69,13 @@ export type RelationsAccess = Record<RelationKind, boolean>;
  * is written in the incident's journal.
  */
 export type RelationsWrites = { technologies: boolean; processes: boolean; incidents: boolean };
+
+/** The right the link of a section also needs in the module it writes (`RelationsWrites`). */
+const RELATION_WRITE_RIGHTS: Record<keyof RelationsWrites, { resource: string; level: string }> = {
+  technologies: { resource: 'infrastructure', level: 'member' },
+  processes: { resource: 'business_processes', level: 'member' },
+  incidents: { resource: 'incidents', level: 'contributor' },
+};
 
 /** The participation scopes of a Business Contributor (none for everyone else). */
 export type RelationsScopes = {
@@ -486,8 +506,11 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     ctx: RelationsContext,
     body: LinkInput & { asset_ids?: unknown } = {},
   ): Promise<{ ok: true; changed: boolean; servers?: { added: number; skipped: number } }> {
-    if (!ctx.access[kind]) throw new ForbiddenException('You cannot read this module.');
-    if ((kind === 'technologies' || kind === 'processes' || kind === 'incidents') && !ctx.writes[kind]) throw new ForbiddenException('You cannot edit this module.');
+    if (!ctx.access[kind]) throw moduleRightRequired(RELATION_READ_RESOURCES[kind], 'reader', 'You cannot read this module.');
+    if ((kind === 'technologies' || kind === 'processes' || kind === 'incidents') && !ctx.writes[kind]) {
+      const right = RELATION_WRITE_RIGHTS[kind];
+      throw moduleRightRequired(right.resource, right.level, 'You cannot edit this module.');
+    }
     const mg = ctx.manager;
     if (kind === 'budget_lines' || kind === 'projects') {
       return setOwnedLink({
@@ -571,7 +594,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
    * the ids and records the change in the request's activity.
    */
   async bulkReplaceRequests(appId: string, requestIds: string[], ctx: RelationsContext): Promise<{ ok: true; added: number; removed: number }> {
-    if (!ctx.access.requests) throw new ForbiddenException('You cannot read requests.');
+    if (!ctx.access.requests) throw moduleRightRequired('portfolio_requests', 'reader', 'You cannot read requests.');
     const mg = ctx.manager;
     const app = await this.ensureApp(appId, mg, ctx.scopes.application);
     await mg.query(`SELECT 1 FROM applications WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [app.tenant_id, app.id]);

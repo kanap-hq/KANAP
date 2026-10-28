@@ -1,7 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { ParticipationAccessScope } from '../auth/business-contributor-scope';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { readRelationsBudgetColumn } from '../common/relations/relations-budget-column';
 import { setOwnedLink } from '../common/relations/owned-link';
 import { parseTargetId } from '../common/relations/relation-target';
@@ -130,13 +131,13 @@ export class TechnologiesRelationsService {
   async setLink(kind: TechnologyRelationKind, idOrRef: string, targetId: string, add: boolean, ctx: TechnologyRelationsContext): Promise<{ ok: true; changed: boolean }> {
     const mg = ctx.manager;
     if (kind === 'incidents') {
-      if (!ctx.access.incidents) throw new ForbiddenException('You cannot read this module.');
+      if (!ctx.access.incidents) throw moduleRightRequired('incidents', 'reader', 'You cannot read this module.');
       const id = parseTargetId(targetId);
       // The technology row is locked first (FOR NO KEY UPDATE): two links on one technology wait
       // on this row. The incident service then checks visibility, the open state, and records the
       // change in the journal.
       const tech = await readTechnology(mg, ctx.tenantId, idOrRef, true);
-      if (!ctx.writeIncidents) throw new ForbiddenException('You cannot edit incidents.');
+      if (!ctx.writeIncidents) throw moduleRightRequired('incidents', 'contributor', 'You cannot edit incidents.');
       const res = await this.incidents.setTechnologyLink(id, tech.id, add, ctx.userId, { manager: mg, tenantId: tech.tenant_id, viewer: ctx.incidentViewer });
       return { ok: true, changed: res.changed };
     }

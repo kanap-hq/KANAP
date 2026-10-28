@@ -23,6 +23,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'crypto';
 import * as path from 'path';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { AuditService } from '../audit/audit.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { displayName } from '../common/display-name';
@@ -5452,7 +5453,7 @@ export class KnowledgeService {
         opts?.tenantId ?? binding.tenant_id,
       );
       if (!viewer.isAdmin) {
-        throw new ForbiddenException('incidents:admin permission is required');
+        throw moduleRightRequired('incidents', 'admin', 'incidents:admin permission is required');
       }
     }
     await manager.getRepository(DocumentEditLock).delete({ document_id: documentId } as any);

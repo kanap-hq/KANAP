@@ -1,9 +1,10 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { FreezeService, FreezeTarget } from './freeze.service';
 import { attachFrozenByNames } from './freeze-actor';
 import { FreezeState } from './freeze-state.entity';
 import { EntityManager } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { ALL_KEY } from './freeze.service';
@@ -25,7 +26,7 @@ function assertCanManageTargets(targets: FreezeTarget[], req: any) {
     if (scope === 'companies' || scope === 'departments') {
       assertCanManageMasterDataScope(access, scope, `change the ${scope} freeze`);
     } else if (!access.isAdmin && access.permissions?.budget_ops !== 'admin') {
-      throw new ForbiddenException('You need Budget administration admin permissions to change this freeze');
+      throw moduleRightRequired('budget_ops', 'admin', 'You need Budget administration admin permissions to change this freeze');
     }
   }
 }

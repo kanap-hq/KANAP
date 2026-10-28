@@ -89,6 +89,17 @@ async function rejection(fn: () => Promise<unknown>): Promise<Error> {
   throw new Error('expected a refusal');
 }
 
+function assertModuleRight(err: Error, resource: string, level: string, message: string): void {
+  assert.ok(err instanceof ForbiddenException, 'a ForbiddenException');
+  assert.deepEqual(err.getResponse(), {
+    statusCode: 403,
+    error: 'Forbidden',
+    code: 'MODULE_RIGHT_REQUIRED',
+    message,
+    params: { resource, level },
+  });
+}
+
 async function ids(runner: QueryRunner, sql: string, params: unknown[]): Promise<string[]> {
   const rows: Array<{ id: string }> = await runner.query(sql, params);
   return rows.map((row) => row.id).sort();
@@ -451,8 +462,7 @@ async function testIncidents() {
 
     // Reading the incidents is not enough: linking one needs the incident edit right.
     const reader = await rejection(() => http.linkRelation(seed.asset.id, 'incidents', { id: seed.incidents.free }, ctx(runner, seed, { ...WRITE, incidents: 'reader' })));
-    assert.ok(reader instanceof ForbiddenException);
-    assert.equal(reader.message, 'You cannot edit this module.');
+    assertModuleRight(reader, 'incidents', 'contributor', 'You cannot edit this module.');
     assert.deepEqual(
       await ids(runner, `SELECT incident_id AS id FROM incident_assets WHERE asset_id = $1`, [seed.asset.id]),
       [seed.incidents.open, seed.incidents.closed].sort(),
@@ -500,8 +510,7 @@ async function testRefusals() {
       ['incidents', 'incidents'],
     ] as const) {
       const refused = await rejection(() => http.unlinkRelation(seed.asset.id, kind, 'nope', ctx(runner, seed, { ...WRITE, [resource]: 'none' })));
-      assert.ok(refused instanceof ForbiddenException, kind);
-      assert.equal(refused.message, 'You cannot read this module.', kind);
+      assertModuleRight(refused, resource, 'reader', 'You cannot read this module.');
     }
     const badRef = await rejection(() => http.relationsTabRead('not a reference', ctx(runner, seed, ALL)));
     assert.ok(badRef instanceof NotFoundException);
