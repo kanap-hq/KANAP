@@ -118,3 +118,44 @@ export function recordHistoryModules(): string[] {
 export function recordHistoryChildKind(entry: RecordHistoryRecord, label: string): RecordHistoryChildKind | null {
   return Object.prototype.hasOwnProperty.call(entry.children, label) ? entry.children[label] : null;
 }
+
+/** A payload key is a column name written by the family, never a value from a request. */
+const PAYLOAD_KEY_RE = /^[a-z_]+$/;
+
+export function assertPayloadKey(key: string): void {
+  if (!PAYLOAD_KEY_RE.test(key)) {
+    throw new Error(`Record history payload key "${key}" must match ${PAYLOAD_KEY_RE}.`);
+  }
+}
+
+/**
+ * The expression that reads a payload key, the one the family's partial index covers. A deletion
+ * has a NULL `after_json`, so `COALESCE` keeps the key the `before_json` held. `alias` is empty for
+ * the index definition (`pg_indexes` holds the bare columns); the query passes `a`.
+ */
+export function payloadKeyExpression(key: string, alias = 'a'): string {
+  assertPayloadKey(key);
+  const prefix = alias ? `${alias}.` : '';
+  return `COALESCE(${prefix}after_json, ${prefix}before_json) ->> '${key}'`;
+}
+
+/** One read by a payload key: the key and the child labels that carry it. */
+export type RecordHistoryPayloadKeyRead = { key: string; labels: string[] };
+
+/**
+ * The payload-key reads of an entry, one per distinct key: the labels of a key share one branch,
+ * and the branch order is stable, so a page's SQL depends only on the inventory.
+ */
+export function recordHistoryPayloadKeyReads(entry: RecordHistoryRecord): RecordHistoryPayloadKeyRead[] {
+  const byKey = new Map<string, string[]>();
+  for (const [label, mode] of Object.entries(entry.childReads ?? {})) {
+    if (mode === 'record') continue;
+    assertPayloadKey(mode.payloadKey);
+    const labels = byKey.get(mode.payloadKey) ?? [];
+    labels.push(label);
+    byKey.set(mode.payloadKey, labels);
+  }
+  return Array.from(byKey.entries())
+    .map(([key, labels]) => ({ key, labels: labels.sort() }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+}

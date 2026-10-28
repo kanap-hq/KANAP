@@ -22,6 +22,7 @@ import {
 } from './record-history/families';
 import { HISTORY_FIELDS, historyFields } from './record-history/fields';
 import type { HistoryFieldRule, HistoryFields } from './record-history/field-rules';
+import { auditPageQuery, type AuditCursor } from './record-history/query';
 import {
   presentItem,
   type AuditRow,
@@ -95,7 +96,7 @@ function parseLimit(value: unknown): number {
   return Math.min(Math.floor(parsed), MAX_LIMIT);
 }
 
-type Cursor = { at: string; id: string };
+type Cursor = AuditCursor;
 
 const TIMESTAMP_RE = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(?:Z|[+-]\d{2}(?::?\d{2})?)$/;
 
@@ -134,9 +135,12 @@ function encodeCursor(row: AuditRow): string {
 }
 
 /**
- * The page of audit rows: each branch uses its own index (`(tenant_id, record_id, created_at)` and
- * `(tenant_id, parent_table, parent_id, created_at DESC)`), both bounded by the cursor, then the
- * union is sorted and cut. `limit + 1` rows tell whether another page exists without reading one.
+ * The page of audit rows, read by `record-history/query.ts`: the record's labels and its `record`
+ * child reads on `(tenant_id, record_id, created_at)`, the other children on
+ * `(tenant_id, parent_table, parent_id, created_at DESC)`, and one branch per payload key on the
+ * family's partial index. Every branch is bounded by the cursor; `UNION` drops a row two branches
+ * both find; the outer sort and cut return `limit + 1` rows, which tells whether another page
+ * exists without reading one.
  */
 async function readAuditPage(
   manager: EntityManager,
@@ -146,37 +150,8 @@ async function readAuditPage(
   cursor: Cursor | null,
   fetch: number,
 ): Promise<AuditRow[]> {
-  const labels = Array.from(new Set(entry.auditLabels)).sort();
-  const childLabels = Object.keys(entry.children).sort();
-  return manager.query(
-    `SELECT h.id, h.table_name, h.record_id, h.action, h.before_json, h.after_json,
-            h.user_id, h.source, h.created_at, h.created_at_text
-       FROM (
-         (SELECT a.id, a.table_name, a.record_id, a.action, a.before_json, a.after_json,
-                 a.user_id, a.source, a.created_at, a.created_at::text AS created_at_text
-            FROM audit_log a
-           WHERE a.tenant_id = $1
-             AND a.table_name = ANY($2::text[])
-             AND a.record_id = $3::uuid
-             AND ($4::timestamptz IS NULL OR (a.created_at, a.id) < ($4::timestamptz, $5::uuid))
-           ORDER BY a.created_at DESC, a.id DESC
-           LIMIT $6)
-         UNION ALL
-         (SELECT a.id, a.table_name, a.record_id, a.action, a.before_json, a.after_json,
-                 a.user_id, a.source, a.created_at, a.created_at::text AS created_at_text
-            FROM audit_log a
-           WHERE a.tenant_id = $1
-             AND a.parent_table = $7
-             AND a.parent_id = $3::uuid
-             AND a.table_name = ANY($8::text[])
-             AND ($4::timestamptz IS NULL OR (a.created_at, a.id) < ($4::timestamptz, $5::uuid))
-           ORDER BY a.created_at DESC, a.id DESC
-           LIMIT $6)
-       ) h
-      ORDER BY h.created_at DESC, h.id DESC
-      LIMIT $6`,
-    [tenantId, labels, id, cursor?.at ?? null, cursor?.id ?? null, fetch, entry.table, childLabels],
-  );
+  const query = auditPageQuery(entry, tenantId, id, cursor, fetch);
+  return manager.query(query.sql, query.params);
 }
 
 function payloads(row: AuditRow): unknown[] {
