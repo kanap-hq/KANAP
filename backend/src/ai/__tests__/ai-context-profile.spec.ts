@@ -168,11 +168,13 @@ function testIncidentWritesChooseTheBusinessRecordTools() {
     assert.ok(profile.toolNames.includes('set_incident_confidentiality'), `${prompt}: confidentiality tool`);
   }
 
-  // Without an INC reference, a confidentiality phrase is not a confirmed write.
+  // Without an INC reference, a confidentiality phrase is still a write: the person leaves the
+  // reference implicit, the tool resolves it.
   for (const prompt of ['plus confidentiel', 'lève la confidentialité']) {
     const profile = selectAiContextProfile(prompt);
-    assert.notEqual(profile.promptMode, 'write', prompt);
-    assert.equal(profile.toolNames.includes('set_incident_confidentiality'), false, prompt);
+    assert.equal(profile.name, 'write_business', prompt);
+    assert.equal(profile.promptMode, 'write', prompt);
+    assert.ok(profile.toolNames.includes('set_incident_confidentiality'), `${prompt}: confidentiality tool`);
   }
 
   // A follow-up task on an incident goes to the task profile, before the incident intent.
@@ -278,6 +280,16 @@ function testDeleteRecordFollowsTheFamilyWriteProfiles() {
   assert.equal(financial.name, 'write_financial');
   assert.ok(financial.toolNames.includes('delete_record'));
   console.log('  delete_record follows the task, contact, location, document, budget line, connection and interface write profiles: OK');
+}
+
+function testBlReferenceNeedsABudgetWord() {
+  // "BL" is also a delivery note ("bon de livraison"): without a budget word it names no line.
+  assert.equal(selectAiContextProfile('Supprime le BL-123').name, 'write_general');
+  assert.equal(selectAiContextProfile('Le bon de livraison BL-123 est arrivé').name, 'entity_inspection');
+  // A budget word keeps the line: "ligne", "budget", "OPEX", "CAPEX", "line".
+  assert.equal(selectAiContextProfile('Delete budget line OPEX BL-42').name, 'write_financial');
+  assert.equal(selectAiContextProfile('Supprime la ligne BL-42').name, 'write_financial');
+  console.log('  BL-n names a budget line only with a budget word: OK');
 }
 
 async function testContinuationInheritsOpenWriteRequestProfile() {
@@ -518,6 +530,7 @@ async function run() {
   await testFiltersProviderToolsForProfile();
   await testNonWebProfilesExposeAllKanapToolsButPrioritizeProfileTools();
   testDeleteRecordFollowsTheFamilyWriteProfiles();
+  testBlReferenceNeedsABudgetWord();
   testIncidentWritesChooseTheBusinessRecordTools();
   testIncidentReadsAndLinkVerbsFromReview();
   await testContinuationInheritsOpenWriteRequestProfile();
