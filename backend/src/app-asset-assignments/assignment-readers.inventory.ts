@@ -76,4 +76,8 @@ export const ASSIGNMENT_READERS: Readonly<Record<string, AssignmentReader>> = {
   'src/it-ops-settings/catalog-usage.ts': { status: 'direct', reason: 'Usage of a server role: the stored rows name it.' },
   'src/common/tenant-isolation.inventory.ts': { status: 'direct', reason: 'Tenant isolation inventory.' },
   'src/admin/tenants/tenant-purge.inventory.ts': { status: 'direct', reason: 'Tenant purge inventory.' },
+  'src/audit/record-history/records/assets.ts': {
+    status: 'direct',
+    reason: 'The asset history excludes the assignments from this run (the applications run reads them); the file reads no assignment row.',
+  },
 };

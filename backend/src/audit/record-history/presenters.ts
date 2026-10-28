@@ -125,10 +125,20 @@ const CHILD_KIND_LABELS: Record<RecordHistoryChildKind, string> = {
   project: 'project',
   request: 'request',
   task: 'task',
+  relation: 'relation',
+  member: 'member',
+  hardware: 'hardware',
+  support: 'support',
+  technology_version: 'technology_version',
+  owner: 'owner',
+  vulnerability: 'vulnerability',
+  budget_line: 'budget_line',
 };
 
 /** The children whose creation is a title only: a version, a budget input, an allocation. */
-const TECHNICAL_CHILD_KINDS: ReadonlySet<RecordHistoryChildKind> = new Set(['version', 'round_input', 'allocations']);
+const TECHNICAL_CHILD_KINDS: ReadonlySet<RecordHistoryChildKind> = new Set([
+  'version', 'round_input', 'allocations', 'technology_version',
+]);
 
 /**
  * A technical child's creation: the entry reads as its title, with no field list. A version and a
@@ -489,6 +499,239 @@ function setLinkChanges(kind: 'application' | 'technology', row: AuditRow, ctx: 
   return changes;
 }
 
+/** The ids an owner set holds: the writers list `"<type>:<user_id>"` strings. */
+function ownerStates(value: unknown): Map<string, { userId: string; role: 'business' | 'it' }> {
+  const out = new Map<string, { userId: string; role: 'business' | 'it' }>();
+  if (!Array.isArray(value)) return out;
+  for (const entry of value) {
+    if (typeof entry !== 'string') continue;
+    const [role, userId] = entry.split(':');
+    if ((role !== 'business' && role !== 'it') || !isUuid(userId)) continue;
+    out.set(entry.toLowerCase(), { userId: userId.toLowerCase(), role });
+  }
+  return out;
+}
+
+/** A relation set: `{ relations: [{ related_asset_id, relation_type }] }` to the source asset. */
+function relationStates(value: unknown): Map<string, { assetId: string; type: 'contains' | 'depends_on' }> {
+  const out = new Map<string, { assetId: string; type: 'contains' | 'depends_on' }>();
+  if (!isPlainObject(value) || !Array.isArray(value.relations)) return out;
+  for (const entry of value.relations) {
+    if (!isPlainObject(entry) || !isUuid(entry.related_asset_id)) continue;
+    const type = entry.relation_type === 'contains' ? 'contains' : entry.relation_type === 'depends_on' ? 'depends_on' : null;
+    if (!type) continue;
+    const assetId = String(entry.related_asset_id).toLowerCase();
+    out.set(`${type}:${assetId}`, { assetId, type });
+  }
+  return out;
+}
+
+/** A cluster's member set: `{ members: [assetId] }`. */
+function memberIds(value: unknown): string[] {
+  if (!isPlainObject(value) || !Array.isArray(value.members)) return [];
+  return value.members.filter(isUuid).map((id) => id.toLowerCase());
+}
+
+/** A relation added or removed on the source asset, named by the other asset. */
+function relationChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = relationStates(row.before_json);
+  const after = relationStates(row.after_json);
+  const changes: RecordHistoryChange[] = [];
+  for (const [key, relation] of after) {
+    if (before.has(key)) continue;
+    changes.push({
+      field: `relation_${relation.type}`,
+      event: 'added',
+      after: referenceValue(ctx, 'asset', relation.assetId),
+    });
+  }
+  for (const [key, relation] of before) {
+    if (after.has(key)) continue;
+    changes.push({
+      field: `relation_${relation.type}`,
+      event: 'removed',
+      before: referenceValue(ctx, 'asset', relation.assetId),
+    });
+  }
+  return changes;
+}
+
+/** A cluster member added or removed, named by the member asset. */
+function memberChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = new Set(memberIds(row.before_json));
+  const after = new Set(memberIds(row.after_json));
+  const changes: RecordHistoryChange[] = [];
+  for (const id of after) {
+    if (!before.has(id)) changes.push({ field: 'member', event: 'added', after: referenceValue(ctx, 'asset', id) });
+  }
+  for (const id of before) {
+    if (!after.has(id)) changes.push({ field: 'member', event: 'removed', before: referenceValue(ctx, 'asset', id) });
+  }
+  return changes;
+}
+
+/** An owner added or removed, with the owner type as the field ("IT" or "business"). */
+function ownerChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = ownerStates(row.before_json);
+  const after = ownerStates(row.after_json);
+  const changes: RecordHistoryChange[] = [];
+  for (const [key, owner] of after) {
+    if (before.has(key)) continue;
+    changes.push({
+      field: owner.role === 'it' ? 'owner_it' : 'owner_business',
+      event: 'added',
+      after: userValue(ctx, owner.userId),
+    });
+  }
+  for (const [key, owner] of before) {
+    if (after.has(key)) continue;
+    changes.push({
+      field: owner.role === 'it' ? 'owner_it' : 'owner_business',
+      event: 'removed',
+      before: userValue(ctx, owner.userId),
+    });
+  }
+  return changes;
+}
+
+/** The technology an `asset_technologies` row installs on this asset, from `record_id`. */
+function installedTechnology(row: AuditRow, ctx: PageContext, payload: Record<string, unknown> | null): RecordHistoryChange[] {
+  const technologyId = isUuid(row.record_id) ? row.record_id : payload && isUuid(payload.technology_id) ? payload.technology_id : null;
+  if (!technologyId) return [];
+  const before = isPlainObject(row.before_json) ? row.before_json : null;
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  const operatingSystem = (after?.is_operating_system === true) || (before?.is_operating_system === true);
+  const field = operatingSystem ? 'operating_system' : 'technology';
+  const event = (added: boolean): RecordHistoryChange => ({
+    field,
+    event: added ? 'added' : 'removed',
+    ...(added ? { after: referenceValue(ctx, 'technology', technologyId) } : { before: referenceValue(ctx, 'technology', technologyId) }),
+  });
+  if (row.before_json === null || row.before_json === undefined) return [event(true)];
+  if (row.after_json === null || row.after_json === undefined) return [event(false)];
+  const changes: RecordHistoryChange[] = [];
+  if (before && after && before.is_operating_system !== after.is_operating_system) {
+    changes.push({
+      field: 'operating_system',
+      before: before.is_operating_system === true,
+      after: after.is_operating_system === true,
+    });
+  }
+  if (before && after && !deepEqual(before.notes, after.notes)) {
+    changes.push({ field: 'notes', before: before.notes ?? null, after: after.notes ?? null });
+  }
+  return changes;
+}
+
+/** The asset an `asset_technologies` row installs the technology on, from the payload. */
+function installedAsset(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) ? row.before_json : null;
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  const assetId = after && isUuid(after.asset_id)
+    ? after.asset_id
+    : before && isUuid(before.asset_id) ? before.asset_id : null;
+  if (!assetId) return [];
+  const event = (added: boolean): RecordHistoryChange => ({
+    field: 'asset',
+    event: added ? 'added' : 'removed',
+    ...(added ? { after: referenceValue(ctx, 'asset', assetId) } : { before: referenceValue(ctx, 'asset', assetId) }),
+  });
+  if (row.before_json === null || row.before_json === undefined) return [event(true)];
+  if (row.after_json === null || row.after_json === undefined) return [event(false)];
+  const changes: RecordHistoryChange[] = [];
+  if (before && after && before.is_operating_system !== after.is_operating_system) {
+    changes.push({
+      field: 'operating_system',
+      before: before.is_operating_system === true,
+      after: after.is_operating_system === true,
+    });
+  }
+  if (before && after && !deepEqual(before.notes, after.notes)) {
+    changes.push({ field: 'notes', before: before.notes ?? null, after: after.notes ?? null });
+  }
+  return changes;
+}
+
+/** An application link: a bulk `added`/`removed` set, a single link, or an old array. */
+function applicationLinkChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) ? row.before_json : null;
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  const added = after && Array.isArray(after.added) ? after.added.filter(isUuid).map((id) => id.toLowerCase()) : [];
+  const removed = before && Array.isArray(before.removed) ? before.removed.filter(isUuid).map((id) => id.toLowerCase()) : [];
+  if (added.length > 0 || removed.length > 0) {
+    return [
+      ...added.map((id): RecordHistoryChange => ({ field: 'application', event: 'added', after: referenceValue(ctx, 'application', id) })),
+      ...removed.map((id): RecordHistoryChange => ({ field: 'application', event: 'removed', before: referenceValue(ctx, 'application', id) })),
+    ];
+  }
+  if (Array.isArray(row.before_json) || Array.isArray(row.after_json)
+    || (before && Array.isArray(before.ids)) || (after && Array.isArray(after.ids))) {
+    return setLinkChanges('application', row, ctx);
+  }
+  const applicationId = after && isUuid(after.application_id)
+    ? after.application_id
+    : before && isUuid(before.application_id) ? before.application_id : null;
+  if (!applicationId) return [];
+  if (row.before_json === null || row.before_json === undefined) {
+    return [{ field: 'application', event: 'added', after: referenceValue(ctx, 'application', applicationId) }];
+  }
+  if (row.after_json === null || row.after_json === undefined) {
+    return [{ field: 'application', event: 'removed', before: referenceValue(ctx, 'application', applicationId) }];
+  }
+  if (before && after && !deepEqual(before.notes, after.notes)) {
+    return [{ field: 'notes', before: before.notes ?? null, after: after.notes ?? null }];
+  }
+  return [];
+}
+
+/** A budget line added or removed by an asset or a technology, from its id set. */
+function budgetLineChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = new Set(linkSetIds(row.before_json));
+  const after = new Set(linkSetIds(row.after_json));
+  const changes: RecordHistoryChange[] = [];
+  for (const id of after) {
+    if (!before.has(id)) changes.push({ field: 'budget_line', event: 'added', after: referenceValue(ctx, 'budget_line', id) });
+  }
+  for (const id of before) {
+    if (!after.has(id)) changes.push({ field: 'budget_line', event: 'removed', before: referenceValue(ctx, 'budget_line', id) });
+  }
+  return changes;
+}
+
+/** A vulnerability row: its CVE, its state and its note, in words. */
+function vulnerabilityChanges(row: AuditRow): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) ? row.before_json : {};
+  const after = isPlainObject(row.after_json) ? row.after_json : {};
+  const changes: RecordHistoryChange[] = [];
+  if (!deepEqual(before.cve_id, after.cve_id)) {
+    changes.push({ field: 'cve_id', before: before.cve_id ?? null, after: after.cve_id ?? null });
+  }
+  if (!deepEqual(before.state, after.state)) {
+    changes.push({ field: 'vulnerability_state', before: before.state ?? null, after: after.state ?? null });
+  }
+  if (!deepEqual(before.note, after.note)) {
+    changes.push({ field: 'note', before: before.note ?? null, after: after.note ?? null });
+  }
+  return changes;
+}
+
+/** A catalogue synchronization row: its counts and description flags, as changes. */
+function catalogSyncChanges(row: AuditRow): RecordHistoryChange[] | null {
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  const sync = after && isPlainObject(after.catalog_sync) ? after.catalog_sync : null;
+  if (!sync) return null;
+  const changes: RecordHistoryChange[] = [];
+  for (const field of ['versions_added', 'versions_updated', 'versions_attached', 'cpe_products_added',
+    'cpe_products_removed', 'cve_names_added', 'cve_names_removed']) {
+    const value = sync[field];
+    if (Array.isArray(value) && value.length > 0) changes.push({ field, after: value });
+  }
+  for (const field of ['description_filled', 'description_updated']) {
+    if (sync[field] === true) changes.push({ field, after: true });
+  }
+  return changes;
+}
+
 function assetIds(value: unknown): string[] {
   if (!isPlainObject(value) || !Array.isArray(value.ids)) return [];
   return value.ids.filter(isUuid).map((id) => id.toLowerCase());
@@ -659,6 +902,10 @@ function columnOperationChanges(row: AuditRow): RecordHistoryChange[] | null {
 function recordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   const columnOperation = columnOperationChanges(row);
   if (columnOperation) return columnOperation;
+  if (row.table_name === 'technologies') {
+    const sync = catalogSyncChanges(row);
+    if (sync) return sync;
+  }
   return genericChanges(row, ctx, { label: row.table_name });
 }
 
@@ -680,10 +927,29 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
     case 'contact':
       return contactChanges(row, ctx);
     case 'application':
+      return row.table_name === 'application_technologies'
+        ? applicationLinkChanges(row, ctx)
+        : setLinkChanges('application', row, ctx);
     case 'technology':
-      return setLinkChanges(kind, row, ctx);
+      return row.table_name === 'asset_technologies'
+        ? installedTechnology(row, ctx, isPlainObject(row.after_json) ? row.after_json : isPlainObject(row.before_json) ? row.before_json : null)
+        : setLinkChanges('technology', row, ctx);
     case 'asset':
-      return assetChanges(row, ctx);
+      return row.table_name === 'asset_technologies' ? installedAsset(row, ctx) : assetChanges(row, ctx);
+    case 'budget_line':
+      return budgetLineChanges(row, ctx);
+    case 'relation':
+      return relationChanges(row, ctx);
+    case 'member':
+      return memberChanges(row, ctx);
+    case 'owner':
+      return ownerChanges(row, ctx);
+    case 'vulnerability':
+      return vulnerabilityChanges(row);
+    case 'hardware':
+    case 'support':
+    case 'technology_version':
+      return genericChanges(row, ctx, { label: row.table_name });
     case 'contract':
     case 'project':
     case 'request':
@@ -732,7 +998,11 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
     case 'contract':
     case 'project':
     case 'request':
-    case 'task': {
+    case 'task':
+    case 'budget_line':
+    case 'relation':
+    case 'member':
+    case 'owner': {
       const events = changes.filter((change) => change.event);
       const labels = new Set<string>();
       for (const change of events) {
@@ -747,6 +1017,14 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
         return ctx.references.get('task')?.get(row.record_id.toLowerCase())?.label ?? null;
       }
       return null;
+    }
+    case 'technology_version': {
+      const payload = isPlainObject(row.after_json) ? row.after_json : isPlainObject(row.before_json) ? row.before_json : null;
+      return payload && typeof payload.label === 'string' ? payload.label.trim() || null : null;
+    }
+    case 'vulnerability': {
+      const payload = isPlainObject(row.after_json) ? row.after_json : isPlainObject(row.before_json) ? row.before_json : null;
+      return payload && typeof payload.cve_id === 'string' ? payload.cve_id.trim() || null : null;
     }
     default:
       return null;

@@ -42,7 +42,9 @@ export type RecordHistoryChange = {
 };
 export type RecordHistorySubject = {
   kind: 'record' | 'version' | 'amounts' | 'allocations' | 'round_input' | 'link' | 'attachment'
-    | 'contact' | 'application' | 'technology' | 'asset' | 'contract' | 'project' | 'request' | 'task';
+    | 'contact' | 'application' | 'technology' | 'asset' | 'contract' | 'project' | 'request' | 'task'
+    | 'relation' | 'member' | 'hardware' | 'support' | 'technology_version' | 'owner' | 'vulnerability'
+    | 'budget_line';
   label?: string | null;
 };
 export type RecordHistoryItem = {
@@ -81,6 +83,7 @@ const MEASURE_LABEL_KEYS: Readonly<Record<string, string>> = {
 /** Child fields the service writes as an added or removed reference. */
 const EVENT_KINDS = new Set([
   'link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line',
+  'budget_line', 'relation_contains', 'relation_depends_on', 'member', 'owner_it', 'owner_business', 'operating_system',
 ]);
 
 /** The noun a nameless record reads as, by the kind the service gives it. */
@@ -90,6 +93,7 @@ const UNNAMED_KINDS = [
   'chart_of_accounts', 'project', 'request', 'contract', 'cost_center', 'budget_line',
   'location', 'connection', 'interface', 'incident', 'department', 'business_process', 'calendar',
   'analytics_axis', 'analytics_category', 'contributor', 'line',
+  'relation', 'member', 'hardware', 'support', 'technology_version', 'owner', 'vulnerability',
 ] as const;
 
 export function isHiddenReference(value: unknown): value is RecordHistoryHiddenReference {
@@ -210,6 +214,18 @@ export function historySubjectText(subject: RecordHistorySubject, t: Translate):
       ? t('auditLogs.history.allocation', { name: subject.label })
       : t('auditLogs.history.allocationNoName');
   }
+  if (subject.kind === 'technology_version') {
+    return subject.label
+      ? t('auditLogs.history.version', { name: subject.label })
+      : t('auditLogs.history.versionNoName');
+  }
+  if (subject.kind === 'hardware') return t('auditLogs.history.hardware');
+  if (subject.kind === 'support') return t('auditLogs.history.support');
+  if (subject.kind === 'vulnerability') {
+    return subject.label
+      ? t('auditLogs.history.vulnerability', { cve: subject.label })
+      : t('auditLogs.history.vulnerabilityNoName');
+  }
   return null;
 }
 
@@ -221,6 +237,11 @@ export function historySubjectText(subject: RecordHistorySubject, t: Translate):
 export function historyChildTitle(item: RecordHistoryItem, t: Translate): string | null {
   if (item.subject.kind === 'record') return null;
   if (item.action !== 'create' && item.action !== 'delete') return null;
+  // A hardware or support sheet is masculine in French: its title has its own words.
+  if (item.subject.kind === 'hardware' || item.subject.kind === 'support') {
+    const kind = item.subject.kind === 'hardware' ? 'hardware' : 'support';
+    return t(item.action === 'create' ? `auditLogs.history.${kind}Created` : `auditLogs.history.${kind}Deleted`);
+  }
   if ((item.changes ?? []).length > 0) return null;
   const title = historySubjectText(item.subject, t);
   if (!title) return null;

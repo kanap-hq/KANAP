@@ -1,6 +1,7 @@
 import type { PermissionLevel } from '../auth/require-level.decorator';
 import type { FamilyKey } from './record-history/families';
 import { accountsRecord } from './record-history/records/accounts';
+import { assetsRecord } from './record-history/records/assets';
 import { costCentersRecord } from './record-history/records/cost_centers';
 import { spendItemsRecord } from './record-history/records/spend_items';
 
@@ -14,7 +15,8 @@ import { spendItemsRecord } from './record-history/records/spend_items';
  * record family only adds a file in `record-history/records/`.
  *
  * Two declarations keep the parent rules and the data-access inventory honest:
- * - every child label has a parent rule in `audit-parent-rules.ts`, except the labels listed in
+ * - every child label has a parent rule in `audit-parent-rules.ts`, except the labels read by
+ *   `record_id` (`childReads: 'record'`, where `parent_*` is not needed) and the labels listed in
  *   `explicitParentLabels`: their write hands the record to `writeAuditLog` (`parent`), because the
  *   payload names several records and no rule can choose one (an asset link holds the ids of every
  *   line linked to the asset);
@@ -54,7 +56,15 @@ export type RecordHistoryChildKind =
   | 'contract'
   | 'project'
   | 'request'
-  | 'task';
+  | 'task'
+  | 'relation'
+  | 'member'
+  | 'hardware'
+  | 'support'
+  | 'technology_version'
+  | 'owner'
+  | 'vulnerability'
+  | 'budget_line';
 
 export type RecordHistoryExclusion = {
   /** The physical table of the data-access inventory. */
@@ -98,7 +108,7 @@ export type RecordHistoryRecord = {
   childReads?: Readonly<Record<string, RecordHistoryChildRead>>;
   /** Child labels whose write declares the record as `parent`, with no label rule. */
   explicitParentLabels: readonly string[];
-  /** Data-access tables that follow the record or link to it, without a child history of their own. */
+  /** Tables whose writes are not a child of this record, with the reason a reader will not see them. */
   exclusions: readonly RecordHistoryExclusion[];
 };
 
@@ -108,6 +118,7 @@ export type RecordHistoryRecord = {
  */
 const RECORD_HISTORY_DEFINITION = [
   accountsRecord,
+  assetsRecord,
   costCentersRecord,
   spendItemsRecord,
 ] as const satisfies readonly RecordHistoryRecord[];

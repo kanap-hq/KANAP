@@ -75,6 +75,8 @@ import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, draw
 import { getEnvDotColor } from '../../components/grid/renderers/StatusCellRenderer';
 import { getDotColor, LIFECYCLE_COLORS } from '../../utils/statusColors';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import { RelationsEmpty } from '../../components/workspace/RelationsTable';
@@ -184,9 +186,11 @@ type ClusterSummary = {
   status: string;
 };
 
-type TabKey = 'overview' | 'operations' | 'network' | 'hardware' | 'dependencies' | 'relations';
+type TabKey = 'overview' | 'operations' | 'network' | 'hardware' | 'dependencies' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
 
-const VALID_ASSET_TABS = new Set<TabKey>(['overview', 'operations', 'network', 'hardware', 'dependencies', 'relations']);
+const VALID_ASSET_TABS = new Set<TabKey>(['overview', 'operations', 'network', 'hardware', 'dependencies', 'relations', RECORD_HISTORY_TAB_KEY]);
 /** Former tab keys, and the tab that holds their sections now. Old links land there. */
 const LEGACY_TAB_TARGETS: Record<string, TabKey> = {
   technical: 'operations',
@@ -201,7 +205,7 @@ const legacyTabTarget = (key: string | undefined): TabKey | null => (
 /** Tabs shown for physical assets only. */
 const PHYSICAL_ONLY_TABS: ReadonlySet<string> = new Set<TabKey>(['hardware']);
 /** Tabs that need a saved asset: a creation falls back to the overview. */
-const CREATE_DISABLED_TABS: ReadonlySet<string> = new Set<TabKey>(['operations', 'hardware', 'dependencies', 'relations']);
+const CREATE_DISABLED_TABS: ReadonlySet<string> = new Set<TabKey>(['operations', 'hardware', 'dependencies', 'relations', RECORD_HISTORY_TAB_KEY]);
 /** A name longer than this wraps the title over the tabs. The column itself is unbounded. */
 const ASSET_NAME_MAX = 200;
 
@@ -1655,6 +1659,7 @@ function AssetWorkspaceRoute() {
       disabled: isCreate,
     },
     { key: 'relations', label: t('workspace.asset.tabs.relations'), badge: assetRelationsBadge(assetRelationsQuery.data) ?? 0, disabled: isCreate },
+    { key: RECORD_HISTORY_TAB_KEY, label: t('workspace.asset.tabs.history'), disabled: isCreate },
   ];
 
   const canonicalPathFor = (targetId: string, nextTab: TabKey = validTab) => {
@@ -2778,6 +2783,15 @@ function AssetWorkspaceRoute() {
           {validTab === 'relations' && !isCreate && !!id && (
             <Box sx={tabContentSx}>
               <AssetRelationsTab assetId={id} />
+            </Box>
+          )}
+          {validTab === RECORD_HISTORY_TAB_KEY && !isCreate && !!id && (
+            <Box sx={tabContentSx}>
+              <WorkspaceTabBoundary resetKey={validTab} onRetry={historyTab.retry}>
+                <React.Suspense fallback={null}>
+                  <HistoryTab key={id} table="assets" recordId={id} />
+                </React.Suspense>
+              </WorkspaceTabBoundary>
             </Box>
           )}
       </PortfolioDetailWorkspaceShell>
