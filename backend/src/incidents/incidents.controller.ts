@@ -92,8 +92,9 @@ export class IncidentsController {
   }
 
   /**
-   * The detail and the Relations tab. A Business Contributor who reads applications is limited
-   * to the applications they take part in. List, journal and attachment routes stay on `opts`.
+   * The detail, the list routes (list, ids, filter-values, export) and the Relations tab. A
+   * Business Contributor who reads applications is limited to the applications they take part
+   * in. The journal and attachment routes stay on `opts`.
    */
   private async viewOpts(ctx: TenantRequest) {
     const base = this.opts(ctx);
