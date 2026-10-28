@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import type { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { UUID_RE } from '../common/relations/relation-target';
 import { vulnerabilityAlertsSql } from '../vulnerabilities/vulnerability-alerts';
 
@@ -140,17 +141,29 @@ export const CPE_PRODUCT_RE = /^[aoh]:(?:[a-z0-9._\-~%!]|\\[^a-z0-9\s]){1,100}:(
 export const BUILD_PREFIX_RE = /^[0-9a-z][0-9a-z._\-]{0,49}$/;
 
 /**
+ * The audit of a version created on the way by a link write: the service that writes the audit
+ * row, whose user it belongs to, and the source (the screen leaves it out, Plaid names its
+ * preview). A version created by a screen is audited as before.
+ */
+export type VersionAuditOptions = {
+  service: AuditService;
+  userId?: string | null;
+  audit?: AuditSourceOptions;
+};
+
+/**
  * The version of `technologyId` labelled `label` (compared without case, trimmed): its id, created
  * when missing and `create` is set (null otherwise). Shared by the pickers, the CSV, the assistant
  * and an agent: they all write a label. The unique index on lower(label) makes a concurrent
- * creation of the same label land once (the second insert does nothing and reads the first).
+ * creation of the same label land once (the second insert does nothing and reads the first). A
+ * creation writes its own audit row, `recordId` the technology, as the Versions tab does.
  */
 export async function resolveVersionLabel(
   mg: EntityManager,
   tenantId: string,
   technologyId: string,
   label: string,
-  opts: { create: boolean },
+  opts: { create: boolean; audit?: VersionAuditOptions },
 ): Promise<{ id: string; created: boolean } | null> {
   const text = optionalText(label, 'Version', 100);
   if (!text) return null;
@@ -165,7 +178,20 @@ export async function resolveVersionLabel(
      ON CONFLICT (tenant_id, technology_id, lower(label)) DO NOTHING RETURNING id`,
     [tenantId, technologyId, text],
   );
-  if (inserted[0]) return { id: inserted[0].id, created: true };
+  if (inserted[0]) {
+    if (opts.audit) {
+      await opts.audit.service.log({
+        table: 'technology_versions',
+        recordId: technologyId,
+        action: 'create',
+        before: null,
+        after: { id: inserted[0].id, technology_id: technologyId, label: text },
+        userId: opts.audit.userId ?? null,
+        ...(opts.audit.audit ? { source: opts.audit.audit.source, sourceRef: opts.audit.audit.sourceRef ?? null } : {}),
+      }, { manager: mg });
+    }
+    return { id: inserted[0].id, created: true };
+  }
   const again: Array<{ id: string }> = await mg.query(
     `SELECT id FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND lower(label) = lower($3)`,
     [tenantId, technologyId, text],
@@ -182,6 +208,7 @@ export async function versionOfInput(
   tenantId: string,
   technologyId: string,
   body: { technology_version_id?: unknown; version_label?: unknown },
+  audit?: VersionAuditOptions,
 ): Promise<string | null> {
   const rawId = body.technology_version_id;
   if (rawId !== undefined && rawId !== null && String(rawId).trim() !== '') {
@@ -195,7 +222,7 @@ export async function versionOfInput(
     return id;
   }
   if (body.version_label !== undefined && body.version_label !== null && String(body.version_label).trim() !== '') {
-    return (await resolveVersionLabel(mg, tenantId, technologyId, String(body.version_label), { create: true }))?.id ?? null;
+    return (await resolveVersionLabel(mg, tenantId, technologyId, String(body.version_label), { create: true, audit }))?.id ?? null;
   }
   return null;
 }
