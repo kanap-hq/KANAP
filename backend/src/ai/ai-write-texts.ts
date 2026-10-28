@@ -448,6 +448,9 @@ export function documentDeleteNoticeText(
   return notices;
 }
 
+/** Families whose unnamed count may include records deleted with the line (a budget line's tasks). */
+const HIDDEN_INCLUDES_DELETED = new Set(['spend_items', 'capex_items']);
+
 /** The markdown list of what goes with a deleted record, in the person's language. */
 export function deletionImpactText(language: AiWriteLanguage, entityType: string, impact: AiDeleteImpact): string {
   const colon = language === 'fr' ? ' : ' : ': ';
@@ -457,7 +460,8 @@ export function deletionImpactText(language: AiWriteLanguage, entityType: string
   let showsLink = shownRows.some((row) => row.link === true);
   if (Number(impact.hidden ?? 0) > 0) {
     lines.push(`- ${DELETE_IMPACT_OTHER[language]}${colon}${Number(impact.hidden)}`);
-    showsLink = true;
+    // A budget line's hidden count may hold its tasks, which are deleted: the card must not say they stay.
+    if (!HIDDEN_INCLUDES_DELETED.has(entityType)) showsLink = true;
   }
   for (const notice of impact.notices ?? []) {
     if (notice.trim()) lines.push(`- ${notice.trim()}`);

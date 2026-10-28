@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
-import { AiWriteLanguage, aiWriteLanguage, personWriteLanguage } from '../ai-write-texts';
+import { AiWriteLanguage, aiWriteLanguage, deletionImpactText, personWriteLanguage } from '../ai-write-texts';
 import { AiBusinessRecordMutationSupportService } from '../mutation/ai-business-record-mutation-support.service';
 import { AiDocumentMutationSupportService } from '../mutation/ai-document-mutation-support.service';
 import { AiFinancialPlanMutationSupportService } from '../mutation/ai-financial-plan-mutation-support.service';
@@ -636,6 +636,15 @@ function testDeleteRecordSummaryAndCard() {
   assert.equal(
     operation.presentPreview(hiddenDocument, 'fr').changes.deletion.to,
     "- Versions : 1\n- D'autres rattachements : 3\n\nLes fiches liées restent.",
+  );
+  // A budget line's unnamed count may hold its tasks, which are deleted: no closing that says they stay.
+  assert.equal(
+    deletionImpactText('fr', 'spend_items', { counts: { amount_versions: 1 }, hidden: 1 }),
+    "- Versions avec des montants : 1\n- D'autres rattachements : 1",
+  );
+  assert.equal(
+    deletionImpactText('fr', 'spend_items', { counts: { contracts: 1 }, hidden: 1 }),
+    "- Liens aux contrats : 1\n- D'autres rattachements : 1\n\nLes fiches liées restent.",
   );
   console.log('  delete_record summary and card: OK');
 }
