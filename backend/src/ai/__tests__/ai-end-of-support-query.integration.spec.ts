@@ -271,6 +271,17 @@ async function testSupportDeadlinesMatchTheRoute(harness: Harness, runner: Query
   assert.equal(Number(byYear.groups.find((group: any) => group.key === year)?.count ?? 0), ai.items.filter((item: any) => item.metadata.date.startsWith(year)).length);
 }
 
+async function testReportWithoutApplicationRead(harness: Harness, runner: QueryRunner, s: Seed) {
+  const context = ctx(runner, s, 'infra');
+  const gaps = await harness.executor.execute(context, { entity_type: 'support_gaps', limit: 100 });
+  assert.ok(gaps.items.every((item: any) => item.metadata.subject_type !== 'application'),
+    'a user who does not read applications sees no application gap');
+  const deadlines = await harness.executor.execute(context, { entity_type: 'support_deadlines', limit: 100 });
+  assert.ok(deadlines.items.every((item: any) => item.metadata.subject_type !== 'application'),
+    'nor an application deadline');
+  assert.ok(deadlines.items.some((item: any) => item.metadata.subject_type === 'technology'), 'the infrastructure deadlines stay');
+}
+
 async function testReportRights(harness: Harness, runner: QueryRunner, s: Seed) {
   const call = (tool: string, input: Record<string, unknown>) => harness.tools.execute(ctx(runner, s, 'apps'), tool, input);
   await rejects(runner, () => call('query_entities', { entity_type: 'support_gaps' }), /infrastructure/, 'query_entities support_gaps');
@@ -349,6 +360,7 @@ async function run() {
       await testSupportGapsMatchTheRoute(harness, runner, seedData);
       await testSupportGapsFollowTheBusinessContributor(harness, runner, seedData);
       await testSupportDeadlinesMatchTheRoute(harness, runner, seedData);
+      await testReportWithoutApplicationRead(harness, runner, seedData);
       await testReportRights(harness, runner, seedData);
       await testApplicationDates(harness, runner, seedData);
     } finally {
