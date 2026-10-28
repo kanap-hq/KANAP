@@ -71,6 +71,9 @@ const OMITTED_FIELDS = new Set(['id', 'tenant_id', 'updated_at']);
 /** Derived or internal columns the table never shows; the raw JSON keeps them. */
 const NOISE_FIELDS = new Set(['search_vector', 'content_plain']);
 
+/** Numeric identifiers a thousands separator would misread (an account number is not a quantity). */
+const NUMBER_IDENTIFIER_FIELDS = new Set(['account_number', 'consolidation_account_number']);
+
 /** Tables whose record is named by `item_number`, and the reference prefix of each. */
 const RECORD_ITEM_TYPES: Record<string, Parameters<typeof formatItemRef>[0]> = {
   documents: 'document',
@@ -409,8 +412,12 @@ export function formatAuditValue(value: unknown, field: string, context: AuditVa
   if (typeof value === 'boolean') return { text: context.t(value ? 'auditLogs.values.yes' : 'auditLogs.values.no') };
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) return { text: String(value) };
-    // A year is a label, not a quantity: 2026, never 2,026.
-    return { text: isYearField(field) ? String(value) : value.toLocaleString(context.locale) };
+    // A year or an account number is a label, not a quantity: 2026 and 1300, never 2,026 or 1,300.
+    return {
+      text: isYearField(field) || NUMBER_IDENTIFIER_FIELDS.has(field)
+        ? String(value)
+        : value.toLocaleString(context.locale),
+    };
   }
   if (typeof value === 'string') {
     const text = value.trim();

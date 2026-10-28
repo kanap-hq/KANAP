@@ -219,6 +219,12 @@ describe('formatAuditValue', () => {
     }
   });
 
+  it('keeps an account number as stored, without a thousands separator', () => {
+    expect(formatAuditValue('1300', 'account_number', context()).text).toBe('1300');
+    expect(formatAuditValue(1300, 'consolidation_account_number', context()).text).toBe('1300');
+    expect(formatAuditValue(1300, 'amount', context()).text).toBe('1,300');
+  });
+
   it('names an account nature and a cost center kind as their screens do', () => {
     expect(formatAuditValue('opex', 'nature', context({ table: 'accounts' })).text).toBe('OPEX only');
     expect(formatAuditValue('capex', 'nature', context({ table: 'accounts' })).text).toBe('CAPEX only');
