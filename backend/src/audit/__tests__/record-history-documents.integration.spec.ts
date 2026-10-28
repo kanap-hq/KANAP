@@ -29,6 +29,8 @@ import { RolePermission } from '../../permissions/role-permission.entity';
 import { UserPageRole } from '../../permissions/user-page-role.entity';
 import { User } from '../../users/user.entity';
 import { resolveIncidentViewer } from '../../incidents/incident-visibility';
+import { writeAuditLog } from '../audit.service';
+import { RecordHistoryService, type RecordHistoryContext, type RecordHistoryPage } from '../record-history.service';
 import {
   loadReferences,
   readableFamilies,
@@ -238,6 +240,24 @@ async function bindReview(runner: QueryRunner, tenantId: string, incidentId: str
   );
 }
 
+/** The stored row an audit entry carries, as the writers log it. */
+async function storedRow(runner: QueryRunner, table: string, id: string): Promise<Record<string, unknown>> {
+  const rows: Array<Record<string, unknown>> = await runner.query(`SELECT * FROM ${table} WHERE id = $1`, [id]);
+  return rows[0];
+}
+
+async function auditRow(
+  runner: QueryRunner,
+  table: string,
+  recordId: string,
+  action: 'create' | 'update' | 'delete',
+  before: unknown,
+  after: unknown,
+  userId: string | null,
+) {
+  await writeAuditLog(runner.manager, { table, recordId, action, before, after, userId });
+}
+
 async function seedFixture(runner: QueryRunner, tenantId: string) {
   const tag = randomUUID().slice(0, 8);
 
@@ -282,9 +302,59 @@ async function seedFixture(runner: QueryRunner, tenantId: string) {
   await bindReview(runner, tenantId, incidents.confidential, docs.confidentialReview);
   await bindReview(runner, tenantId, incidents.open, docs.openReview);
 
+  // The open document cites the restricted one as its template: the history names the template
+  // only to a member of its library.
+  await runner.query(`UPDATE documents SET template_document_id = $1 WHERE id = $2`, [docs.restricted, docs.open]);
+
+  // Real audit rows, through the writer, so the attachment's parent rule fills `parent_*`.
+  const restrictedCreate = await storedRow(runner, 'documents', docs.restricted);
+  await auditRow(runner, 'documents', docs.restricted, 'create', null, restrictedCreate, users.member);
+  const restrictedBefore = { ...restrictedCreate };
+  const restrictedAfter = {
+    ...restrictedCreate,
+    title: `Restricted doc ${tag} renamed`,
+    content_markdown: `new body ${tag}`,
+    content_plain: `new body ${tag}`,
+    revision: 2,
+    current_version_number: 2,
+  };
+  await runner.query(
+    `UPDATE documents SET title = $1, content_markdown = $2, content_plain = $2, revision = 2, current_version_number = 2, updated_at = now() WHERE id = $3`,
+    [restrictedAfter.title, restrictedAfter.content_markdown, docs.restricted],
+  );
+  await auditRow(runner, 'documents', docs.restricted, 'update', restrictedBefore, restrictedAfter, users.member);
+
+  const openCreate = await storedRow(runner, 'documents', docs.open);
+  await auditRow(runner, 'documents', docs.open, 'create', null, openCreate, users.member);
+
+  const attachmentId = randomUUID();
+  await runner.query(
+    `INSERT INTO document_attachments (
+       id, tenant_id, document_id, original_filename, stored_filename, mime_type, size,
+       storage_path, source_field, uploaded_by_id, uploaded_at
+     )
+     VALUES ($1, $2, $3, 'spec.pdf', 'spec.pdf', 'application/pdf', 1024, $4, null, $5, now())`,
+    [attachmentId, tenantId, docs.open, `files/${attachmentId}.pdf`, users.member],
+  );
+  const attachment = await storedRow(runner, 'document_attachments', attachmentId);
+  await auditRow(runner, 'document_attachments', attachmentId, 'create', null, attachment, users.member);
+
+  const removedAttachmentId = randomUUID();
+  await runner.query(
+    `INSERT INTO document_attachments (
+       id, tenant_id, document_id, original_filename, stored_filename, mime_type, size,
+       storage_path, source_field, uploaded_by_id, uploaded_at
+     )
+     VALUES ($1, $2, $3, 'old.txt', 'old.txt', 'text/plain', 12, $4, null, $5, now())`,
+    [removedAttachmentId, tenantId, docs.open, `files/${removedAttachmentId}.txt`, users.member],
+  );
+  const removedAttachment = await storedRow(runner, 'document_attachments', removedAttachmentId);
+  await runner.query(`DELETE FROM document_attachments WHERE id = $1`, [removedAttachmentId]);
+  await auditRow(runner, 'document_attachments', removedAttachmentId, 'delete', removedAttachment, null, users.member);
+
   return {
     tag, tenantId, roles, users, restrictedLibrary, openLibrary, restrictedFolder, openFolder,
-    documentType, docs, incidents,
+    documentType, docs, incidents, attachmentId, removedAttachmentId,
   };
 }
 
@@ -349,7 +419,7 @@ async function testRestrictedLibrary(f: Fixture) {
     const memberRefs = await loadReferences(member, ids, readableFamilies({ isAdmin: false, permissions: { knowledge: 'member' } }));
     const memberDocs = memberRefs.get('document')!;
     assert.equal(memberDocs.size, 2, 'the member names both documents');
-    assert.equal(memberDocs.get(f.docs.restricted)?.label, `Restricted doc ${f.tag}`);
+    assert.equal(memberDocs.get(f.docs.restricted)?.label, `Restricted doc ${f.tag} renamed`);
     assert.match(String(memberDocs.get(f.docs.restricted)?.reference), /^DOC-\d+$/, 'the business reference is DOC-n');
 
     const nonMemberRefs = await loadReferences(nonMember, ids, readableFamilies({ isAdmin: false, permissions: { knowledge: 'reader' } }));
@@ -396,6 +466,143 @@ async function testCrossTenant(f: Fixture, foreign: { tenantId: string; document
   console.log('  cross-tenant document: hidden: OK');
 }
 
+function historyContext(f: Fixture, userId: string, permissions: Record<string, string>, runner: QueryRunner): RecordHistoryContext {
+  return {
+    tenantId: f.tenantId,
+    userId,
+    isAdmin: false,
+    permissions,
+    manager: runner.manager,
+  };
+}
+
+function findItem(page: RecordHistoryPage, action: string, subject: 'record' | 'attachment') {
+  const item = page.items.find((candidate) => candidate.action === action && candidate.subject.kind === subject);
+  assert.ok(item, `a ${action} entry of kind ${subject}`);
+  return item;
+}
+
+function findChange(page: RecordHistoryPage, field: string, action?: string) {
+  for (const item of page.items) {
+    if (action && item.action !== action) continue;
+    const change = item.changes.find((candidate) => candidate.field === field);
+    if (change) return { item, change };
+  }
+  return null;
+}
+
+async function testDocumentEntries(f: Fixture) {
+  await withTenantRunner(f.tenantId, async (runner) => {
+    const service = new RecordHistoryService(createKnowledgeService(runner.manager));
+    const member = historyContext(f, f.users.member, { knowledge: 'member' }, runner);
+
+    const page = await service.list(member, 'documents', f.docs.restricted, { limit: '100' });
+    const create = findItem(page, 'create', 'record');
+    assert.equal(findChange(page, 'title', 'create')?.change.after, `Restricted doc ${f.tag}`);
+    const folder = findChange(page, 'folder_id', 'create')?.change.after as any;
+    assert.equal(folder.kind, 'document_folder');
+    assert.equal(folder.label, `Restricted folder ${f.tag}`);
+    const library = findChange(page, 'library_id', 'create')?.change.after as any;
+    assert.equal(library.kind, 'document_library');
+    assert.equal(library.label, `Library restricted-${f.tag}`);
+    const documentType = findChange(page, 'document_type_id', 'create')?.change.after as any;
+    assert.equal(documentType.kind, 'document_type');
+    assert.equal(documentType.label, `Type ${f.tag}`);
+    assert.equal(findChange(page, 'content_markdown', 'create'), null, 'a creation is not a content change');
+
+    const update = findItem(page, 'update', 'record');
+    const content = update.changes.find((change) => change.field === 'content_markdown');
+    assert.deepEqual(content, { field: 'content_markdown', text: 'contentChanged' }, 'the body is a word, never its text');
+    assert.equal(update.changes.find((change) => change.field === 'title')?.before, `Restricted doc ${f.tag}`);
+    assert.equal(update.changes.find((change) => change.field === 'title')?.after, `Restricted doc ${f.tag} renamed`);
+    assert.equal(update.changes.find((change) => change.field === 'revision')?.after, 2);
+    const serialized = JSON.stringify(page);
+    for (const raw of ['new body', 'body', 'content_plain', 'search_vector', 'integrated_binding', 'item_number', 'created_by', 'updated_by', f.tenantId]) {
+      assert.ok(!serialized.includes(raw), `${raw}: never presented`);
+    }
+    console.log('  document creation and modification in words, hidden body, folder, library and type named: OK');
+  });
+}
+
+async function testAttachmentEntries(f: Fixture) {
+  await withTenantRunner(f.tenantId, async (runner) => {
+    const service = new RecordHistoryService(createKnowledgeService(runner.manager));
+    const nonMember = historyContext(f, f.users.nonMember, { knowledge: 'reader' }, runner);
+    const page = await service.list(nonMember, 'documents', f.docs.open, { limit: '100' });
+
+    const added = findItem(page, 'create', 'attachment');
+    assert.ok(added.changes.some((change) => change.field === 'attachment' && change.event === 'added'));
+    const addedValue = added.changes.find((change) => change.field === 'attachment')?.after as any;
+    assert.equal(addedValue.kind, 'attachment');
+    assert.equal(addedValue.label, 'spec.pdf');
+
+    const removed = findItem(page, 'delete', 'attachment');
+    const removedValue = removed.changes.find((change) => change.field === 'attachment')?.before as any;
+    assert.equal(removedValue.label, 'old.txt');
+
+    const serialized = JSON.stringify(page);
+    for (const raw of ['"storage_path"', '"stored_filename"', '"document_id"', '"uploaded_by_id"', `files/`]) {
+      assert.ok(!serialized.includes(raw), `${raw}: never presented`);
+    }
+
+    // The open document cites the restricted one as its template: unnamed for the non-member,
+    // named by its label and DOC reference for a member of that library.
+    const template = findChange(page, 'template_document_id', 'create')?.change.after;
+    assert.deepEqual(template, { hidden: true, kind: 'document' }, 'a cited document the reader cannot open stays unnamed');
+
+    const member = historyContext(f, f.users.member, { knowledge: 'member' }, runner);
+    const memberPage = await service.list(member, 'documents', f.docs.open, { limit: '100' });
+    const namedTemplate = findChange(memberPage, 'template_document_id', 'create')?.change.after as any;
+    assert.equal(namedTemplate.kind, 'document');
+    assert.equal(namedTemplate.label, `Restricted doc ${f.tag} renamed`);
+    assert.match(String(namedTemplate.reference), /^DOC-\d+$/);
+    assert.ok(!JSON.stringify(page).includes(`Restricted doc ${f.tag}`), 'the hidden template title never leaks');
+    console.log('  attachment added and removed, cited document named with access or hidden: OK');
+  });
+}
+
+async function testHistoryAccess(f: Fixture, foreign: { tenantId: string; documentId: string }) {
+  await withTenantRunner(f.tenantId, async (runner) => {
+    const service = new RecordHistoryService(createKnowledgeService(runner.manager));
+    const status = (error: any) => error?.status ?? error?.getStatus?.();
+
+    await assert.rejects(
+      () => service.list(historyContext(f, f.users.nonMember, { knowledge: 'reader' }, runner), 'documents', f.docs.restricted),
+      (error: any) => status(error) === 404,
+      'a non-member of a restricted library gets 404, even with knowledge:reader',
+    );
+    await assert.rejects(
+      () => service.list(historyContext(f, f.users.incidentReader, { knowledge: 'member', incidents: 'reader' }, runner), 'documents', f.docs.confidentialReview),
+      (error: any) => status(error) === 404,
+      'a reader who cannot see the incident gets 404 for its review',
+    );
+    const ownerPage = await service.list(
+      historyContext(f, f.users.incidentOwner, { knowledge: 'member', incidents: 'contributor' }, runner),
+      'documents',
+      f.docs.confidentialReview,
+    );
+    assert.deepEqual(ownerPage.items, [], 'the incident owner opens the review history (no audit row seeded)');
+
+    await assert.rejects(
+      () => service.list(historyContext(f, f.users.member, {}, runner), 'documents', f.docs.open),
+      (error: any) => status(error) === 403 && error?.response?.code === 'MODULE_RIGHT_REQUIRED',
+      'without knowledge:reader the route is refused with 403',
+    );
+    for (const [label, id] of [
+      ['unknown', randomUUID()],
+      ['malformed', 'not-a-uuid'],
+      ['foreign', foreign.documentId],
+    ] as const) {
+      await assert.rejects(
+        () => service.list(historyContext(f, f.users.member, { knowledge: 'member' }, runner), 'documents', id),
+        (error: any) => status(error) === 404,
+        `${label} document gets 404`,
+      );
+    }
+    console.log('  history access: member 200, non-member 404, invisible incident 404, no module 403: OK');
+  });
+}
+
 async function run() {
   await dataSource.initialize();
   const tenantId = await createRaceTenant('record-history-documents');
@@ -414,6 +621,9 @@ async function run() {
     await testRestrictedLibrary(fixture);
     await testIncidentReview(fixture);
     await testCrossTenant(fixture, foreign);
+    await testDocumentEntries(fixture);
+    await testAttachmentEntries(fixture);
+    await testHistoryAccess(fixture, foreign);
     console.log('record-history-documents.integration.spec: ok');
   } finally {
     await dropRaceTenant(tenantId);

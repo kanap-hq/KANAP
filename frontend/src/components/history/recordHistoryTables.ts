@@ -4,6 +4,6 @@
  * declared in `backend/src/audit/record-history.inventory.ts`; the backend inventory spec keeps
  * both lists equal.
  */
-export const RECORD_HISTORY_TABLES = ['spend_items', 'accounts', 'cost_centers'] as const;
+export const RECORD_HISTORY_TABLES = ['spend_items', 'accounts', 'cost_centers', 'documents'] as const;
 
 export type RecordHistoryTable = (typeof RECORD_HISTORY_TABLES)[number];
