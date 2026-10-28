@@ -43,17 +43,17 @@ async function testPromptBlockFollowsOpexOrCapexRead() {
   const ctx = { tenantId: 'tenant-1', userId: 'user-1', manager } as any;
   const load = (AiChatOrchestratorService.prototype as any).loadBudgetColumnsPromptContext;
 
-  const forReader = await load.call({}, ctx, ['tasks', 'spend_items']);
-  assert.equal(forReader[0].name, 'A0', 'an OPEX reader gets the tenant names');
-  assert.ok((await load.call({}, ctx, ['capex_items'])).length === 5, 'a CAPEX reader too');
-  assert.equal(await load.call({}, ctx, ['tasks', 'projects']), undefined, 'no OPEX or CAPEX read: no block');
-  assert.equal(queries.length, 2, 'settings are read only for OPEX or CAPEX readers');
+  const forReader = await load.call({}, ctx, ['tasks', 'budget_lines']);
+  assert.equal(forReader[0].name, 'A0', 'a budget line reader gets the tenant names');
+  assert.ok((await load.call({}, ctx, ['budget_lines'])).length === 5, 'the one family covers both natures');
+  assert.equal(await load.call({}, ctx, ['tasks', 'projects']), undefined, 'no budget line read: no block');
+  assert.equal(queries.length, 2, 'settings are read only for budget line readers');
 
   const service = new AiSystemPromptService();
   const base = {
     tenantName: 'Test Tenant',
     availableTools: [],
-    readableEntityTypes: ['spend_items'],
+    readableEntityTypes: ['budget_lines'],
     currentUser: { displayName: 'Alex', email: null, roleNames: [], teamName: null },
   };
   const withColumns = service.build({ ...base, budgetColumns: budgetColumnsAiContext(SETTINGS) });
@@ -95,7 +95,7 @@ async function testDescribeEntityFiltersCarriesColumns() {
     },
   };
 
-  for (const entityType of ['spend_items', 'capex_items']) {
+  for (const entityType of ['budget_lines']) {
     const result = await describe.execute(context, { entity_type: entityType });
     assert.ok(result.fields.some((field: any) => field.field === 'y_plus1_review'), `${entityType}: fields kept`);
     assert.ok(result.fields.some((field: any) => field.field === 'analytics:nature' && field.groupable), `${entityType}: the tenant's dimension listed`);
@@ -103,13 +103,13 @@ async function testDescribeEntityFiltersCarriesColumns() {
     assert.equal(result.budget_columns.length, 5);
     assert.ok(result.families_not_read.includes('cost centers (Données de référence › Centres de coûts)'), `${entityType}: screens in the profile's language`);
   }
-  assert.deepEqual(queries.map((q) => q[1]), [['tenant-1'], ['tenant-1']], 'settings read for the context tenant');
-  assert.deepEqual(axisQueries.map((q) => q[1]), [['tenant-1'], ['tenant-1']], 'dimensions read for the context tenant');
+  assert.deepEqual(queries.map((q) => q[1]), [['tenant-1']], 'settings read for the context tenant');
+  assert.deepEqual(axisQueries.map((q) => q[1]), [['tenant-1']], 'dimensions read for the context tenant');
   const tasks = await describe.execute(context, { entity_type: 'tasks' });
   assert.equal(tasks.budget_columns, undefined, 'other entity types carry no columns');
-  assert.equal(queries.length, 2);
-  assert.equal(axisQueries.length, 2, 'no dimension read for other entity types');
-  assert.deepEqual(checked, ['spend_items', 'capex_items', 'tasks'], 'read access checked first');
+  assert.equal(queries.length, 1);
+  assert.equal(axisQueries.length, 1, 'no dimension read for other entity types');
+  assert.deepEqual(checked, ['budget_lines', 'tasks'], 'read access checked first');
 }
 
 function testApprovalCardUsesNames() {

@@ -448,8 +448,7 @@ const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
   interfaces: (id) => `/it/interfaces/${id}`,
   locations: (id) => `/it/locations/${id}`,
   contracts: (id) => `/ops/contracts/${id}`,
-  spend_items: (id) => `/ops/budget/${id}`,
-  capex_items: (id) => `/ops/budget/${id}`,
+  budget_lines: (id) => `/ops/budget/${id}`,
   companies: (id) => `/master-data/companies/${id}`,
   contacts: (id) => `/master-data/contacts/${id}`,
   departments: (id) => `/master-data/departments/${id}`,
@@ -502,25 +501,25 @@ export async function extractMentionContextItems(text: string, manager: EntityMa
   const budgetRefs = Array.from(new Set(links.map((link) =>
     budgetLineRefFromUrl(link.path),
   ).filter((ref): ref is string => !!ref)));
-  // One tenant-scoped, explicitly all-natures read for every budget link in this message.
-  const lines: Array<{ id: string; nature: 'opex' | 'capex'; item_number: number; legacy_number: string | null }> = budgetRefs.length
-    ? await manager.query(`SELECT id, nature, item_number, legacy_number FROM spend_items
+  // One tenant-scoped, explicitly all-natures read for every budget link in this message: a link
+  // resolves only when it names a line of the tenant. The family is the same for both natures.
+  const lines: Array<{ id: string; item_number: number; legacy_number: string | null }> = budgetRefs.length
+    ? await manager.query(`SELECT id, item_number, legacy_number FROM spend_items
         WHERE tenant_id = app_current_tenant() AND nature IN ('opex', 'capex')
           AND (id::text = ANY($1::text[]) OR ('BL-' || item_number::text) = ANY($1::text[])
             OR item_number::text = ANY($1::text[]) OR legacy_number = ANY($1::text[]))`, [budgetRefs])
     : [];
-  const budgetTypes = new Map<string, string>();
+  const resolvedBudgetRefs = new Set<string>();
   for (const line of lines) {
-    const type = line.nature === 'capex' ? 'capex_items' : 'spend_items';
     for (const ref of [line.id, `BL-${line.item_number}`, String(line.item_number), line.legacy_number]) {
-      if (ref) budgetTypes.set(ref, type);
+      if (ref) resolvedBudgetRefs.add(ref);
     }
   }
   for (const { label: rawLabel, path: rawUrl } of links) {
     const budgetRef = budgetLineRefFromUrl(rawUrl);
     let entityType = inferEntityTypeFromUrl(rawUrl);
     if (budgetRef) {
-      entityType = budgetTypes.get(budgetRef) ?? null;
+      entityType = resolvedBudgetRefs.has(budgetRef) ? 'budget_lines' : null;
     }
     if (!entityType) {
       continue;
@@ -1694,7 +1693,7 @@ export class AiChatOrchestratorService {
     if (previews.length === 1) {
       const preview = previews[0];
       let budgetReference: string | undefined;
-      if (preview.target?.entity_id && ['spend_items', 'capex_items'].includes(preview.target.entity_type ?? '')) {
+      if (preview.target?.entity_id && preview.target.entity_type === 'budget_lines') {
         try {
           budgetReference = (await resolveBudgetLine(preview.target.entity_id, manager)).reference;
         } catch {
@@ -1743,7 +1742,7 @@ export class AiChatOrchestratorService {
     const builder = ENTITY_URL_BUILDERS[targetEntityType];
     if (!builder) return text;
 
-    const url = builder(budgetReference ?? ((targetEntityType === 'spend_items' || targetEntityType === 'capex_items') && /^BL-\d+$/.test(targetRef) ? targetRef : targetEntityId));
+    const url = builder(budgetReference ?? (targetEntityType === 'budget_lines' && /^BL-\d+$/.test(targetRef) ? targetRef : targetEntityId));
     // Replace every standalone occurrence of the ref with a markdown link, but skip refs
     // already inside `[ ]( )`. A negative lookbehind for `[`/`-`/word and a negative
     // lookahead for word/dash prevents partial matches like T-87 inside T-879 or
@@ -1928,7 +1927,7 @@ export class AiChatOrchestratorService {
     ctx: AiExecutionContext & { manager: any },
     readableTypes: readonly string[],
   ): Promise<ReturnType<typeof budgetColumnsAiContext> | undefined> {
-    if (!readableTypes.includes('spend_items') && !readableTypes.includes('capex_items')) return undefined;
+    if (!readableTypes.includes('budget_lines')) return undefined;
     return budgetColumnsAiContext(await readBudgetColumns(ctx.manager, ctx.tenantId));
   }
 
@@ -1937,7 +1936,7 @@ export class AiChatOrchestratorService {
     ctx: AiExecutionContext & { manager: any },
     readableTypes: readonly string[],
   ): Promise<AnalyticsDimensionsPromptContext | undefined> {
-    if (!readableTypes.includes('spend_items') && !readableTypes.includes('capex_items')) return undefined;
+    if (!readableTypes.includes('budget_lines')) return undefined;
     return analyticsDimensionsAiContext(await loadAnalyticsAxes(ctx.manager, ctx.tenantId), readableTypes);
   }
 

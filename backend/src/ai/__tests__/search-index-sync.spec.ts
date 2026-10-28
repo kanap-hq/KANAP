@@ -388,11 +388,12 @@ async function testBudgetLineRefMatchesAndIsReturned() {
 
     const search = await service.searchAll(context as any, {
       query: 'OPX-4205',
-      entity_types: ['spend_items', 'tasks'],
+      entity_types: ['budget_lines', 'tasks'],
       limit: 10,
     });
     assert.equal(search.items[0]?.id, spendItemId);
     // The result names the line by its reference, so the model can quote it.
+    assert.equal(search.items[0]?.type, 'budget_lines');
     assert.equal(search.items[0]?.ref, 'BL-4205');
     assert.equal((search.items[0] as any)?.metadata?.supplier ?? null, null);
 
@@ -407,11 +408,13 @@ async function testBudgetLineRefMatchesAndIsReturned() {
     );
     const capexSearch = await service.searchAll(context as any, {
       query: 'CPX-4206',
-      entity_types: ['capex_items', 'spend_items'],
+      entity_types: ['budget_lines'],
       limit: 10,
     });
     assert.equal(capexSearch.items[0]?.id, capexItemId);
+    assert.equal(capexSearch.items[0]?.type, 'budget_lines');
     assert.equal(capexSearch.items[0]?.ref, 'BL-504206');
+    assert.equal((capexSearch.items[0] as any)?.metadata?.nature, 'capex');
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
