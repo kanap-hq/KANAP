@@ -128,8 +128,8 @@ Plaid can currently read these entity families:
 `budget_lines`, `business_processes`, `chart_of_accounts`, `companies`,
 `connections`, `contacts`, `contracts`, `departments`, `documents`,
 `incidents`, `interfaces`, `locations`, `projects`, `requests`,
-`suppliers`, `tasks`, `technologies`, `technology_versions`, `users`, and
-`vulnerabilities`.
+`suppliers`, `support_deadlines`, `support_gaps`, `tasks`, `technologies`,
+`technology_versions`, `users`, and `vulnerabilities`.
 
 `budget_lines` is one family for the OPEX and CAPEX lines of `spend_items`
 (`nature`, `opex` or `capex`). A question without a nature covers both;
@@ -138,7 +138,8 @@ the line is. The references are `BL-n`; a typed `OPX-n` or `CPX-n` is accepted
 as an input reference and resolves to the same line.
 
 `search_all` searches every family but the ones without a search index:
-`vulnerabilities` and `technology_versions`. `AI_SEARCH_ENTITY_TYPES` (the
+`vulnerabilities`, `technology_versions`, `support_gaps` and
+`support_deadlines`. `AI_SEARCH_ENTITY_TYPES` (the
 searched families) and `AI_QUERY_ENTITY_TYPES` (the listed ones) are two lists
 in `ai.types.ts`; the listed-only families have no detail of their own.
 
@@ -198,8 +199,9 @@ review state.
 one registry per family (`backend/src/ai/query/registries/`) and call the
 family's list service, the one behind its grid. A registry advertises its filter
 fields (`fields`) and its sort fields (`sortFields`, which also holds `label`,
-`created_at` and `updated_at` on every family). `describe_entity_filters`
-returns both, with `sort_fields` and `default_sort`.
+`created_at` and `updated_at` on every family with its own record; the two End
+of support report families are computed rows and carry no `created_at`).
+`describe_entity_filters` returns both, with `sort_fields` and `default_sort`.
 
 Nothing the model asks for is dropped silently:
 
@@ -221,13 +223,17 @@ list services in step: for every family it runs each advertised sort (asc and
 desc) and each filter on a seeded tenant, records the SQL each call sends, and
 fails when a sort sends the same statements in both directions or the same as
 an unknown column, when a filter sends the same statements as no filter, or
-when either fails. It also checks the created_at order on seeded rows, the
-`sort_ignored` result and the page sizes. A field that cannot be filtered or
-sorted in SQL (a value computed per page, such as an application's derived user
-count) stays out of the registry and only appears in the items' metadata.
+when either fails. The two report families are read in memory through the
+report service: for them the same spec checks the applied filter and the order
+the result names, not the statements. It also checks the created_at order on
+seeded rows, the `sort_ignored` result and the page sizes. A field that cannot
+be filtered or sorted in SQL (a value computed per page, such as an
+application's derived user count) stays out of the registry and only appears in
+the items' metadata.
 
-Each item carries `created_at` and `updated_at`. Its `summary` is clipped to 300
-characters; `get_entity_detail` has the full text.
+Each item carries `created_at` and `updated_at` (null on the two report rows).
+Its `summary` is clipped to 300 characters; `get_entity_detail` has the full
+text.
 
 ### Technologies
 
@@ -331,6 +337,38 @@ without case), `support_status`, `in_use` (`true` or `false`), the two dates
 A version has no reference of its own and no detail: an item's `ref` is its
 technology's `TEC-n`, and `get_entity_detail` refuses the family with the reason
 (its technology's detail lists every version).
+
+### End of support report
+
+The two lists of the End of support report are families of their own, read
+through `EndOfSupportService` (exported by `TechnologiesModule`), the service
+behind the report's two tabs: never a second formula, no new SQL in the report
+service. `support_gaps` is one item per record to complete, from
+`EndOfSupportService.gaps`: `gap` (the eight kinds of `GAP_KINDS`),
+`subject_type` (application, asset, technology), `subject` (the record's
+business reference, or its name when it has none), `subject_name`, `related_name`
+and `version` for the gaps that name them. `support_deadlines` is one item per
+deadline, from `deadlines`: `subject_type` (technology, operating_system,
+application, hardware), `subject`, `subject_name`, `version`, `date`, `state`,
+the recorded standard and extended ends, and the servers and applications by
+name. `horizon_months` filters the deadlines (6, 12, 24 or 36; 12 by default);
+`subject_type`, `state` and `end_of_support_year` filter and group them;
+`date` is a `MIN`/`MAX` metric as `YYYY-MM-DD`. `gap` and `subject_type` filter
+and group the gaps; the gaps take no metric but the count.
+
+Both follow the report's rights: `infrastructure:reader`, and the application
+rows only within the caller's application read scope (a Business Contributor's
+own), as `resolveAiApplicationsReach` gives it. The service returns complete,
+small lists: the families filter, group, sort and page them in memory. An item
+names a subject, never an identifier (`subject_id` stays in the item's `id`).
+There is no record detail: read the subject's own family by `subject`.
+
+On applications (right `applications`), `version` (text), `go_live_date`,
+`end_of_support_date` and `retired_date` (dates, blank, ranges) filter and sort;
+`version` and `end_of_support_year` group; the three dates are `MIN`/`MAX`
+metrics as `YYYY-MM-DD`. The Applications list service
+(`applications/services/applications-list.service.ts`) carries the same filters
+and sorts for the screen, so Plaid and the grid read one path.
 
 ### Vulnerabilities
 
