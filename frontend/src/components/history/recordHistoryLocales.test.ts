@@ -168,30 +168,30 @@ describe('record history locales', () => {
       subject: { kind: 'amounts' },
       changes: [{ field: 'planned', before: '10000.00', after: '12000.00', year: 2026, column: 'planned' }],
     }), frCtx);
-    expect(lineText(frAmount[0], frCtx)).toBe('Montant 2026, Budget : 10 000 → 12 000');
+    expect(lineText(frAmount[0], frCtx)).toBe('Montant 2026, Budget\u00a0: 10 000 → 12 000');
 
     const frDimension = historyLines(item({
       changes: [{ field: 'dimension', dimension: 'Référence budget', before: 'REF-12', after: 'REF-13' }],
     }), frCtx);
-    expect(lineText(frDimension[0], frCtx)).toBe('Dimension Référence budget : REF-12 → REF-13');
+    expect(lineText(frDimension[0], frCtx)).toBe('Dimension Référence budget\u00a0: REF-12 → REF-13');
 
     expect(historyLines(item({
       subject: { kind: 'link', label: 'Spec link' },
       changes: [{ field: 'link', event: 'added', after: { kind: 'link', id: ID, label: 'Spec link' } }],
-    }), frCtx)[0].text).toBe('Lien ajouté : Spec link');
+    }), frCtx)[0].text).toBe('Lien ajouté\u00a0: Spec link');
     expect(historyLines(item({
       subject: { kind: 'attachment', label: 'note.txt' },
       changes: [{ field: 'attachment', event: 'removed', before: { kind: 'attachment', id: ID, label: 'note.txt' } }],
-    }), frCtx)[0].text).toBe('Pièce jointe retirée : note.txt');
+    }), frCtx)[0].text).toBe('Pièce jointe retirée\u00a0: note.txt');
     expect(historyLines(item({
       subject: { kind: 'contact', label: 'Cora Contact' },
       changes: [{ field: 'contact', event: 'added', after: { kind: 'contact', id: ID, label: 'Cora Contact' } }],
-    }), frCtx)[0].text).toBe('Contact ajouté : Cora Contact');
+    }), frCtx)[0].text).toBe('Contact ajouté\u00a0: Cora Contact');
 
     const frHidden = historyLines(item({
       changes: [{ field: 'contract_id', before: null, after: { hidden: true, kind: 'contract' } }],
     }), frCtx);
-    expect(lineText(frHidden[0], frCtx)).toBe('Contrat : — → un contrat');
+    expect(lineText(frHidden[0], frCtx)).toBe('Contrat\u00a0: — → un contrat');
 
     const enCtx = context('en');
     const enHidden = historyLines(item({
