@@ -152,6 +152,7 @@ describe('AccountWorkspacePage', () => {
     expect(screen.getByTestId('consolidation-description')).toHaveTextContent('Write-downs of assets');
     expect(screen.queryByRole('button', { name: 'common:buttons.saveChanges' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'common:buttons.reset' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'admin:auditLogs.history.title' })).toBeInTheDocument();
   });
 
   it('saves a name change on blur', async () => {
@@ -511,6 +512,7 @@ describe('AccountWorkspacePage', () => {
   it('validates and creates with an explicit action, the chart preselected from the list', async () => {
     mocked.post.mockResolvedValue({ data: { ...ACCOUNT, id: 'acc-new' } });
     renderAt('/master-data/accounts/new/overview?selected=coa-fr&coaId=coa-fr&consolidation=unmapped');
+    expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
     expect(screen.queryByRole('complementary')).toBeNull();
     const chart = screen.getByRole('combobox', { name: 'accounts.fields.chartOfAccounts' });
     await waitFor(() => expect(chart).toHaveTextContent('PCG · French chart'));

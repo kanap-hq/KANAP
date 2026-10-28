@@ -1,8 +1,10 @@
 import React from 'react';
 import {
   Box,
+  Drawer,
   IconButton,
   Stack,
+  Tooltip,
   Typography,
   useMediaQuery,
 } from '@mui/material';
@@ -11,10 +13,13 @@ import { useTheme } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import CloseIcon from '@mui/icons-material/Close';
+import HistoryIcon from '@mui/icons-material/History';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import EditableTitle from '../../../components/workspace/EditableTitle';
+import RecordHistory from '../../../components/history/RecordHistory';
 import { taskDetailTokens, taskDetailTypography } from '../../tasks/theme/taskDetailTokens';
 import WorkspaceTabs, { type WorkspaceTab } from './WorkspaceTabs';
 
@@ -44,6 +49,8 @@ type PortfolioDetailWorkspaceShellProps = {
   /** Opens the drawer each time this number changes (the page must show one of its fields). */
   drawerOpenRequest?: number;
   isCreate?: boolean;
+  /** The record's history: a History button beside the title opens it in a right panel. */
+  history?: { table: string; recordId: string };
   itemReference?: string | null;
   metadata?: React.ReactNode;
   nav?: PortfolioDetailWorkspaceNav;
@@ -175,6 +182,7 @@ export default function PortfolioDetailWorkspaceShell({
   initialDrawerOpen,
   drawerOpenRequest = 0,
   isCreate = false,
+  history,
   itemReference,
   metadata,
   nav,
@@ -195,12 +203,21 @@ export default function PortfolioDetailWorkspaceShell({
   titleFallback,
 }: PortfolioDetailWorkspaceShellProps) {
   const theme = useTheme();
-  const { t } = useTranslation('portfolio');
+  const { t } = useTranslation(['portfolio', 'admin']);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isCompact = useMediaQuery(theme.breakpoints.down('sm'));
   const [drawerOpen, setDrawerOpen] = React.useState(
     () => initialDrawerOpen ?? getStoredDrawerState(drawerStorageKey),
   );
+  const [historyOpen, setHistoryOpen] = React.useState(false);
+  const historyButtonRef = React.useRef<HTMLButtonElement>(null);
+  const historyTitle = t('admin:auditLogs.history.title');
+  // The panel is closed from its button, its own close button or Escape: the button takes the
+  // focus back every time, so the keyboard continues where the panel opened.
+  const closeHistory = React.useCallback(() => {
+    setHistoryOpen(false);
+    historyButtonRef.current?.focus();
+  }, []);
   // The classeur toggle only renders on desktop: on mobile the properties
   // always stack under the content, otherwise a stored "closed" state would
   // hide them with no visible way back.
@@ -253,6 +270,12 @@ export default function PortfolioDetailWorkspaceShell({
         return;
       }
 
+      if (event.key === 'Escape' && historyOpen) {
+        event.preventDefault();
+        closeHistory();
+        return;
+      }
+
       if (isTypingTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
 
       // Escape belongs to the field, list, menu or dialog it comes from, to one still open, and to
@@ -297,7 +320,7 @@ export default function PortfolioDetailWorkspaceShell({
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [forceDrawerOpen, isCreate, nav, onBack, onSaveShortcut]);
+  }, [closeHistory, forceDrawerOpen, historyOpen, isCreate, nav, onBack, onSaveShortcut]);
 
   return (
     <Box sx={{ height: '100%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -428,7 +451,7 @@ export default function PortfolioDetailWorkspaceShell({
               )}
             </Box>
 
-            {actions && (
+            {(actions || history) && (
               <Box
                 sx={{
                   display: 'flex',
@@ -441,6 +464,22 @@ export default function PortfolioDetailWorkspaceShell({
                 }}
               >
                 {actions}
+                {history && (
+                  <Tooltip title={historyTitle}>
+                    <IconButton
+                      ref={historyButtonRef}
+                      size="small"
+                      aria-label={historyTitle}
+                      onClick={() => setHistoryOpen(true)}
+                      sx={(theme) => ({
+                        color: theme.palette.kanap.text.secondary,
+                        '&:hover': { color: theme.palette.kanap.text.primary, bgcolor: theme.palette.kanap.tab.bgHover },
+                      })}
+                    >
+                      <HistoryIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
               </Box>
             )}
           </Box>
@@ -566,6 +605,53 @@ export default function PortfolioDetailWorkspaceShell({
           </Box>
         )}
       </Box>
+
+      {history && (
+        <Drawer
+          anchor="right"
+          open={historyOpen}
+          onClose={closeHistory}
+          ModalProps={{ keepMounted: false }}
+          PaperProps={{
+            sx: (theme) => ({
+              width: { xs: '100%', sm: 480 },
+              maxWidth: '100vw',
+              bgcolor: theme.palette.kanap.bg.drawer,
+              borderLeft: `1px solid ${theme.palette.kanap.border.default}`,
+              display: 'flex',
+              flexDirection: 'column',
+            }),
+          }}
+        >
+          <Box
+            sx={(theme) => ({
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 1,
+              px: 2,
+              py: '10px',
+              borderBottom: `1px solid ${theme.palette.kanap.border.default}`,
+              flexShrink: 0,
+            })}
+          >
+            <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary' }}>
+              {historyTitle}
+            </Typography>
+            <IconButton
+              size="small"
+              aria-label={t('common:buttons.close')}
+              onClick={closeHistory}
+              sx={{ color: 'kanap.text.secondary' }}
+            >
+              <CloseIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Box>
+          <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: 2, py: 1 }}>
+            {historyOpen && <RecordHistory table={history.table} recordId={history.recordId} />}
+          </Box>
+        </Drawer>
+      )}
     </Box>
   );
 }

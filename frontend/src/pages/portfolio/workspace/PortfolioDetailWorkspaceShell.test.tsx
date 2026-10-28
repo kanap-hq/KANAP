@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
@@ -8,6 +8,13 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
 }));
 vi.mock('../../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+const historyMounts = vi.hoisted(() => ({ count: 0 }));
+vi.mock('../../../components/history/RecordHistory', () => ({
+  default: ({ table, recordId }: { table: string; recordId: string }) => {
+    historyMounts.count += 1;
+    return `${table}:${recordId}:${historyMounts.count}`;
+  },
+}));
 
 import PortfolioDetailWorkspaceShell from './PortfolioDetailWorkspaceShell';
 import DateEUField from '../../../components/fields/DateEUField';
@@ -309,5 +316,49 @@ describe('PortfolioDetailWorkspaceShell Ctrl+S', () => {
     fireEvent(input, press);
     expect(saved).toEqual(['2026-04-15']);
     expect(press.defaultPrevented).toBe(true);
+  });
+});
+
+
+describe('PortfolioDetailWorkspaceShell history', () => {
+  it('draws the History button only when the page gives a history', () => {
+    const { unmount } = renderShell({ history: { table: 'accounts', recordId: 'acc-1' } });
+    expect(screen.getByRole('button', { name: 'admin:auditLogs.history.title' })).toBeInTheDocument();
+    unmount();
+    renderShell();
+    expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
+  });
+
+  it('opens the panel on the button and mounts the history only then', () => {
+    historyMounts.count = 0;
+    renderShell({ history: { table: 'accounts', recordId: 'acc-1' } });
+    expect(screen.queryByText('accounts:acc-1:1')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'admin:auditLogs.history.title' }));
+    expect(screen.getByText('accounts:acc-1:1')).toBeInTheDocument();
+    expect(screen.getByText('admin:auditLogs.history.title')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'common:buttons.close' })).toBeInTheDocument();
+  });
+
+  it('closes with Escape and gives the focus back to the button', async () => {
+    historyMounts.count = 0;
+    renderShell({ history: { table: 'accounts', recordId: 'acc-1' } });
+    const button = screen.getByRole('button', { name: 'admin:auditLogs.history.title' });
+    fireEvent.click(button);
+    expect(screen.getByText('accounts:acc-1:1')).toBeInTheDocument();
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(screen.queryByText('accounts:acc-1:1')).toBeNull();
+    await waitFor(() => expect(button).toHaveFocus());
+  });
+
+  it('closes on its close button and mounts a fresh history on each opening', () => {
+    historyMounts.count = 0;
+    renderShell({ history: { table: 'cost_centers', recordId: 'cc-1' } });
+    const button = screen.getByRole('button', { name: 'admin:auditLogs.history.title' });
+    fireEvent.click(button);
+    expect(screen.getByText('cost_centers:cc-1:1')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    expect(screen.queryByText('cost_centers:cc-1:1')).toBeNull();
+    fireEvent.click(button);
+    expect(screen.getByText('cost_centers:cc-1:2')).toBeInTheDocument();
   });
 });
