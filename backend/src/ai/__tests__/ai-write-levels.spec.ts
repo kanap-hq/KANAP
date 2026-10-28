@@ -38,6 +38,7 @@ import { CapexVersionsController } from '../../spend/capex-versions.controller';
 import { SpendVersionsController } from '../../spend/spend-versions.controller';
 import { TasksController } from '../../spend/tasks.controller';
 import { SuppliersController } from '../../suppliers/suppliers.controller';
+import { TechnologiesController } from '../../technologies/technologies.controller';
 
 /**
  * Lot D11: each Plaid write needs the level of the screen route that makes the same change.
@@ -119,6 +120,9 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
   },
   update_incident_links: {
     incidents: { resource: 'incidents', level: 'contributor', route: [IncidentsController, 'linkRelation'] },
+  },
+  update_technology_links: {
+    technologies: { resource: 'infrastructure', level: 'member', route: [TechnologiesController, 'addAsset'] },
   },
   change_incident_state: {
     incidents: { resource: 'incidents', level: 'admin', route: [IncidentsController, 'reopen'] },
@@ -209,6 +213,13 @@ function testOnlyTheContributorRowsAreBelowMember() {
   assert.equal(aiWriteLevel('update_business_record', 'incidents'), 'contributor');
   assert.equal(aiWriteLevel('add_incident_note', 'incidents'), 'contributor');
   assert.equal(aiWriteLevel('update_incident_links', 'incidents'), 'contributor');
+  assert.equal(aiWriteLevel('update_technology_links', 'technologies'), 'member');
+  // The link to an application needs the application read, as the Applications tab of a technology.
+  assert.deepEqual(
+    aiRelationTargetRequirement('update_technology_links', 'technologies', 'applications'),
+    { resource: 'applications', level: 'reader' },
+  );
+  assert.equal(aiRelationTargetRequirement('update_technology_links', 'technologies', 'servers'), null);
   // The administrator actions know one level per tool, and an unknown family stays at admin.
   assert.equal(aiWriteLevel('change_incident_state', 'incidents'), 'admin');
   assert.equal(aiWriteLevel('set_incident_confidentiality', 'incidents'), 'admin');

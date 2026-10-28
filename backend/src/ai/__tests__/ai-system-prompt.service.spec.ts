@@ -514,7 +514,9 @@ async function testPromptRefusesUnsupportedWritesWithoutSubstitutePreview() {
   assert.doesNotMatch(prompt, /on an incident, reopening, cancelling and lifting the confidentiality stay on the incident screen/);
   assert.doesNotMatch(prompt, /reopening, cancelling and lifting/);
   assert.doesNotMatch(prompt, /the journal entry, the links to assets, applications and technologies, the follow-up task/);
-  assert.match(prompt, /changing the state of a vulnerability; adding, changing or removing a technology/);
+  assert.match(prompt, /changing the state of a vulnerability; creating or changing a technology's record or its versions/);
+  assert.doesNotMatch(prompt, /including the technologies of an application/);
+  assert.match(prompt, /and deleting a technology or one of its versions/);
   assert.doesNotMatch(prompt, /creating or changing an incident/);
   assert.match(prompt, /refuse in the user's language in one or two sentences: say what Plaid cannot do and name the KANAP screen/);
   assert.match(prompt, /Prepare no preview in its place: no task recording the request, no status change, cancellation or deactivation standing in for a deletion/);

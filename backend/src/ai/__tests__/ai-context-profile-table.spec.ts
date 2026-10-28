@@ -213,7 +213,8 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Publish DOC-151.', profile: 'write_document', mode: 'write' },
   { prompt: 'Update the content of DOC-12', profile: 'write_document', mode: 'write' },
   { prompt: 'Add a document about backups', profile: 'write_document', mode: 'write' },
-  { prompt: 'Update the lifecycle of TEC-3', profile: 'write_general', mode: 'write' },
+  // The technology record is a business write now; the tool that changes its fields arrives in lot 4.
+  { prompt: 'Update the lifecycle of TEC-3', profile: 'write_business', mode: 'write' },
 
   // Other probes from the existing profile spec.
   { prompt: 'Show me my overdue tasks', profile: 'read_query', mode: 'read' },
@@ -250,6 +251,13 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Technologies dont Paul est responsable IT', profile: 'read_query', mode: 'read' },
   { prompt: 'Liste les technologies en version 16', profile: 'read_query', mode: 'read' },
   { prompt: 'Nombre de versions par état de support', profile: 'read_query', mode: 'read' },
+  // The technology links (lot L5 lot 3): the flagship phrase, both sides, a version, a removal.
+  { prompt: "Ajoute la technologie PostgreSQL en version 16 sur l'application CheeseTrack", profile: 'write_business', mode: 'write' },
+  { prompt: 'Ajoute TEC-3 à APP-36', profile: 'write_relation', mode: 'write' },
+  { prompt: 'Installe nginx 1.26 sur AST-12', profile: 'write_relation', mode: 'write' },
+  { prompt: 'Retire PostgreSQL 14 de CheeseTrack', profile: 'write_general', mode: 'write' },
+  { prompt: 'Add PostgreSQL 16 to CheeseTrack and its servers', profile: 'write_business', mode: 'write' },
+  { prompt: 'Déclare Java 21 sur APP-36', profile: 'write_relation', mode: 'write' },
   // The End of support report and the application dates (lot L5 lot 2).
   { prompt: 'Quelles applications ont une fin de support dans les six mois ?', profile: 'read_query', mode: 'read' },
   { prompt: 'Quelles fiches faut-il compléter pour le rapport de fin de support ?', profile: 'read_query', mode: 'read' },

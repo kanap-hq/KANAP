@@ -122,6 +122,7 @@ const BUSINESS_WRITE_TOOLS: AiToolName[] = [
   'update_business_record',
   'add_incident_note',
   'update_incident_links',
+  'update_technology_links',
   'change_incident_state',
   'set_incident_confidentiality',
   'update_entity_relations',
@@ -167,6 +168,7 @@ const RELATION_WRITE_TOOLS: AiToolName[] = [
   'update_entity_relations',
   'update_document_relations',
   'update_incident_links',
+  'update_technology_links',
   'undo_preview',
 ];
 
@@ -263,7 +265,6 @@ const CANONICAL_REF_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEn
   // The budget line references the screens show. `BL-n` alone is ambiguous ("bon de livraison"),
   // so it is read as a budget line only with a budget word in the phrase (see below).
   { pattern: /\b(?:OPEX|OPX|CPX)-\d+\b/i, entityType: 'budget_lines' },
-  // Read only for now: kept out of BUSINESS_ENTITY_TYPES until technologies have a write.
   { pattern: /\bTEC-\d+\b/i, entityType: 'technologies' },
   // Read only: a CVE id names the vulnerability rows of that CVE.
   { pattern: /\bCVE-\d{4}-\d{4,}\b/i, entityType: 'vulnerabilities' },
@@ -301,6 +302,7 @@ const BUSINESS_ENTITY_TYPES = new Set<AiQueryEntityType>([
   'connections',
   'contracts',
   'interfaces',
+  'technologies',
   'locations',
   'projects',
   'requests',
@@ -593,7 +595,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     /\b(?:rends|rendre|make)\b[\s\S]{0,40}\b(?:public|publique|publics|publiques)\b/,
   ]);
   const isWrite = containsAny(writeText, [
-    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|passe|passer|publish|publier|mark|set)\b/,
+    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|passe|passer|publish|publier|mark|set|installe|installer|install|declare|declarer|declares)\b/,
     wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
     // A status or lifecycle word with an incident reference is an incident change: "clos INC-7",
     // "Résous INC-3", "Rouvre INC-3", "Annule INC-3", "Lève la confidentialité de INC-3".
@@ -618,7 +620,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     // The French unlink verbs only name a link with an INC reference or the word incident:
     // "Retire le responsable de la tâche T-4" is a task field write.
     const isRelationWrite = containsAny(text, [
-      /\b(relation|relationship|link|linked|lier|lie|lies|relier|relie|associer|associe|associes|rattacher|rattache|connect|connecter|unlink)\b/,
+      /\b(relation|relationship|link|linked|lier|lie|lies|relier|relie|associer|associe|associes|rattacher|rattache|connect|connecter|unlink|installe|installer|install|declare|declarer|declares)\b/,
       ...(hasIncidentIntent
         ? [/\b(delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever)\b/]
         : []),
@@ -682,7 +684,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     if (containsAny(text, [/\b(company|companies|supplier|suppliers|fournisseur|fournisseurs|contact|contacts|department|departement|service|location|site|account|compte|master data|referentiel|referential)\b/])) {
       return { profile: withWebCapability(PROFILES.write_master_data, needsWeb), explicitIntent: true };
     }
-    if (containsAny(text, [/\b(application|applications|asset|assets|actif|actifs|project|projects|projet|projets|request|requests|demande|demandes|contract|contracts|contrat|contrats|interface|connection|location|incident|incidents)\b/])) {
+    if (containsAny(text, [/\b(application|applications|asset|assets|actif|actifs|server|servers|serveur|serveurs|project|projects|projet|projets|request|requests|demande|demandes|contract|contracts|contrat|contrats|interface|connection|location|incident|incidents|technologie|technologies|technology|version)\b/])) {
       return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
     }
     return { profile: withWebCapability(PROFILES.write_general, needsWeb), explicitIntent: true };
