@@ -1486,6 +1486,7 @@ export class AiChatOrchestratorService {
   private shouldRepairUnstructuredPlanPreview(params: {
     assistantText: string;
     mutationPreviewCountThisTurn: number;
+    deletePreviewCountThisTurn: number;
     usedMutationPlanToolThisTurn: boolean;
     repairAttempts: number;
   }): boolean {
@@ -1496,6 +1497,11 @@ export class AiChatOrchestratorService {
       return false;
     }
     if (params.mutationPreviewCountThisTurn !== 1) {
+      return false;
+    }
+    // A delete never enters a plan: its one preview is the whole answer, and the words that
+    // describe what goes with the record are not a multi-step workflow to repair.
+    if (params.deletePreviewCountThisTurn > 0) {
       return false;
     }
     return hasMultiStepWriteSignals(params.assistantText);
@@ -2657,6 +2663,7 @@ export class AiChatOrchestratorService {
     let bulkCompletenessRepairRetries = 0;
     let repeatedToolCallRepairRetries = 0;
     let mutationPreviewCountThisTurn = 0;
+    let deletePreviewCountThisTurn = 0;
     let toolCallCountThisTurn = 0;
     let controlPlaneRunId: string | null = null;
     const searchAllProgress: SearchAllProgressState = {
@@ -3170,6 +3177,9 @@ export class AiChatOrchestratorService {
 
             const mutationPreviews = shownPreviews ?? mutationPreviewDtosFromResult(result);
             mutationPreviewCountThisTurn += mutationPreviews.length;
+            deletePreviewCountThisTurn += mutationPreviews
+              .filter((preview) => preview.tool_name === 'delete_record')
+              .length;
             const queryTargetSet = extractQueryBulkTargetSet(tc.name, parsedArgs, result);
             if (queryTargetSet) {
               bulkTargetSetsThisTurn.push(queryTargetSet);
@@ -3297,6 +3307,9 @@ export class AiChatOrchestratorService {
         : null;
       if (
         bulkCoverageIssue
+        // A delete is never a bulk target set: its one preview closes the turn, whatever an
+        // earlier query left to cover.
+        && deletePreviewCountThisTurn === 0
         && !textExplicitlyAddressesMissingRefs(accumulatedText, bulkCoverageIssue.missingRefs)
       ) {
         if (bulkCompletenessRepairRetries < MAX_UNSAFE_WRITE_RESPONSE_RETRIES) {
@@ -3361,6 +3374,7 @@ export class AiChatOrchestratorService {
         && this.shouldRepairUnstructuredPlanPreview({
           assistantText: accumulatedText,
           mutationPreviewCountThisTurn,
+          deletePreviewCountThisTurn,
           usedMutationPlanToolThisTurn,
           repairAttempts: unstructuredPlanRepairRetries,
         })
