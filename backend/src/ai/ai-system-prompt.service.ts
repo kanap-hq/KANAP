@@ -79,6 +79,7 @@ function compactDomainVocabulary(mode: AiContextProfile['promptMode']): string {
     '- Documents: docs, articles, pages, knowledge base entries.',
     '- Budget lines: one family (`budget_lines`) for expenses, recurring costs, subscriptions and OpEx, and for investments, capital expenditure, CapEx and purchases. `nature` says which one (`opex` or `capex`). Cite them as BL-n. Accept OPX-n and CPX-n as legacy input references; search for them to resolve the native BL-n reference. A creation sets `nature`; a change of nature and a `contract_id` on a CAPEX line are refused: the budget screen changes the type, and a CAPEX line reaches contracts through its links.',
     '- Applications/assets/projects/requests/contracts/suppliers/users/companies/departments/locations/incidents are standard KANAP families. Company/department year-backed metrics use headcount_year, it_users_year, turnover_year, and metrics_frozen; pass `year` on query_entities or get_entity_detail when the user names a year.',
+    '- Technology versions: every version of a technology, with its support dates and state and whether it is in use, is a row of the family `technology_versions`. A question about versions no longer used filters `in_use` false; one about versions ending in a year filters or groups `end_of_support_year`. A version has no detail of its own: read its technology, whose detail lists every version.',
     '- "me/my/mine" means the current user scope. "my team" means the current user team scope.',
   ];
 

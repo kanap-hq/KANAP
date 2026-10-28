@@ -244,6 +244,13 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Combien de contrats arrivent à échéance cette année ?', profile: 'read_query', mode: 'read' },
   { prompt: 'Liste les applications du fournisseur Microsoft', profile: 'read_query', mode: 'read' },
 
+  // Technologies: versions, owners and support are read queries (lot L5 technologies).
+  { prompt: 'Quelles versions de PostgreSQL ne sont plus utilisées ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Which technology versions reach end of support in 2027?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Technologies dont Paul est responsable IT', profile: 'read_query', mode: 'read' },
+  { prompt: 'Liste les technologies en version 16', profile: 'read_query', mode: 'read' },
+  { prompt: 'Nombre de versions par état de support', profile: 'read_query', mode: 'read' },
+
   // Lot 6: the general "passe/passer" writes, without losing the reflexive past reads.
   { prompt: 'Passe APP-3 en production', profile: 'write_business', mode: 'write' },
   { prompt: 'Passe REQ-4 en validation', profile: 'write_business', mode: 'write' },
