@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { addedCpeProducts, TechnologyCpeEvents } from '../technology-cpe-events';
 import type { EntityManager } from 'typeorm';
-import { AuditService } from '../../audit/audit.service';
+import { AuditService, type AuditSourceOptions } from '../../audit/audit.service';
 import { Features } from '../../config/features';
 import { languageOf } from '../../common/csv-sheet/request-options';
 import { allocateItemNumbers } from '../../common/item-number.service';
@@ -66,7 +66,13 @@ export type CatalogProduct = {
   versions: CatalogVersion[];
 };
 
-type Opts = { manager: EntityManager; tenantId: string; userId?: string | null };
+type Opts = {
+  manager: EntityManager;
+  tenantId: string;
+  userId?: string | null;
+  /** The audit row's source: the screen leaves it out (`user`), Plaid names its preview. */
+  audit?: AuditSourceOptions;
+};
 
 /** A cached product read longer ago than this (a product that keeps failing) gives way to the shipped file. */
 export const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -306,7 +312,7 @@ export class TechnologyCatalogService {
           defaultVulnerabilityAlerts({ catalogKey: product.key })],
       );
       const after = await readTechnology(mg, tenantId, technologyId);
-      await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'update', before, after, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
       await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId, products: addedCpeProducts(before.cpe_products, after.cpe_products) });
     } else {
       const settings = await this.itOps.getSettings(tenantId, { manager: mg });
@@ -326,7 +332,7 @@ export class TechnologyCatalogService {
       technologyId = row.id;
       created = true;
       const after = await readTechnology(mg, tenantId, technologyId);
-      await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'create', before: null, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'create', before: null, after, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
       await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId, products: addedCpeProducts([], after.cpe_products) });
     }
 
@@ -345,7 +351,7 @@ export class TechnologyCatalogService {
     if (inserted.length) {
       await this.audit.log({
         table: 'technology_versions', recordId: technologyId, action: 'create', before: null,
-        after: { catalog_key: product.key, versions_added: inserted.length }, userId: opts.userId ?? null,
+        after: { catalog_key: product.key, versions_added: inserted.length }, userId: opts.userId ?? null, ...opts.audit,
       }, { manager: mg });
     }
     const tech = await readTechnology(mg, tenantId, technologyId);

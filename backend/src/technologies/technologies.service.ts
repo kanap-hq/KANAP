@@ -3,7 +3,7 @@ import { addedCpeProducts, lockTechnologyMatching, TechnologyCpeEvents } from '.
 import type { EntityManager } from 'typeorm';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditSourceOptions } from '../audit/audit.service';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { duplicateNameException } from '../common/duplicate-name';
 import { StorageService } from '../common/storage/storage.service';
@@ -33,7 +33,13 @@ import {
   type TechnologyVersionRow,
 } from './technology-rows';
 
-export type Opts = { manager: EntityManager; tenantId: string; userId?: string | null };
+export type Opts = {
+  manager: EntityManager;
+  tenantId: string;
+  userId?: string | null;
+  /** The audit row's source: the screen leaves it out (`user`), Plaid names its preview. */
+  audit?: AuditSourceOptions;
+};
 
 const SORTS: Record<string, string> = {
   name: 'lower(t.name)',
@@ -353,7 +359,7 @@ export class TechnologiesService {
       params,
     );
     const row = await readTechnology(mg, tenantId, created.id);
-    await this.audit.log({ table: 'technologies', recordId: row.id, action: 'create', before: null, after: row, userId: opts.userId ?? null }, { manager: mg });
+    await this.audit.log({ table: 'technologies', recordId: row.id, action: 'create', before: null, after: row, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
     await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: row.id, products: addedCpeProducts([], row.cpe_products) });
     return this.get(row.id, opts);
   }
@@ -374,7 +380,7 @@ export class TechnologiesService {
         [tenantId, before.id, ...Object.values(values)],
       );
       const after = await readTechnology(mg, tenantId, before.id);
-      await this.audit.log({ table: 'technologies', recordId: before.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.audit.log({ table: 'technologies', recordId: before.id, action: 'update', before, after, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
       await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: before.id, products: addedCpeProducts(before.cpe_products, after.cpe_products) });
     }
     return this.get(before.id, opts);
@@ -416,7 +422,7 @@ export class TechnologiesService {
       );
       const after = await readTechnology(mg, tenantId, before.id);
       await this.audit.log(
-        { table: 'technologies', recordId: before.id, action: 'update', before, after, userId: opts.userId ?? null },
+        { table: 'technologies', recordId: before.id, action: 'update', before, after, userId: opts.userId ?? null, ...opts.audit },
         { manager: mg },
       );
     }
@@ -437,7 +443,7 @@ export class TechnologiesService {
       // One entry per version, as a PATCH of the version writes it.
       for (const row of exceptions) {
         await this.audit.log(
-          { table: 'technology_versions', recordId: before.id, action: 'update', before: row, after: afterById.get(row.id) ?? null, userId: opts.userId ?? null },
+          { table: 'technology_versions', recordId: before.id, action: 'update', before: row, after: afterById.get(row.id) ?? null, userId: opts.userId ?? null, ...opts.audit },
           { manager: mg },
         );
       }
@@ -622,7 +628,7 @@ export class TechnologiesService {
       [tenantId, tech.id, ...Object.values(values)],
     );
     const version = await this.readVersion(mg, tenantId, tech.id, created.id);
-    await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'create', before: null, after: version, userId: opts.userId ?? null }, { manager: mg });
+    await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'create', before: null, after: version, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
     await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
     return version;
   }
@@ -653,11 +659,11 @@ export class TechnologiesService {
         [tenantId, tech.id, before.id, ...Object.values(values)],
       );
       const after = await this.readVersion(mg, tenantId, tech.id, before.id);
-      await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
       // A base release carries its service packs. The alert column is read when the page and the
       // counts run: a change of it alone matches nothing again, on the base release and on each pack.
       const propagated = 'vulnerability_alerts' in values
-        ? await this.propagateServicePackAlerts(mg, tenantId, tech, before.id, merged.label, values.vulnerability_alerts as boolean | null, opts.userId ?? null)
+        ? await this.propagateServicePackAlerts(mg, tenantId, tech, before.id, merged.label, values.vulnerability_alerts as boolean | null, opts.userId ?? null, opts.audit)
         : [];
       if (keys.some((key) => key !== 'vulnerability_alerts')) {
         await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
@@ -682,6 +688,7 @@ export class TechnologiesService {
     rootLabel: string,
     value: boolean | null,
     userId: string | null,
+    audit?: AuditSourceOptions,
   ): Promise<TechnologyVersionRow[]> {
     const products = Array.isArray(tech.cpe_products) ? tech.cpe_products : [];
     if (!products.some((product) => SERVICE_PACK_PRODUCTS.has(String(product).toLowerCase()))) return [];
@@ -714,7 +721,7 @@ export class TechnologiesService {
       const after = afterById.get(row.id);
       if (!after) continue;
       await this.audit.log(
-        { table: 'technology_versions', recordId: tech.id, action: 'update', before: row, after, userId },
+        { table: 'technology_versions', recordId: tech.id, action: 'update', before: row, after, userId, ...audit },
         { manager: mg },
       );
       updated.push(after);
@@ -761,7 +768,7 @@ export class TechnologiesService {
       }
     }
     await mg.query(`DELETE FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND id = $3`, [tenantId, tech.id, before.id]);
-    await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'delete', before, after: null, userId: opts.userId ?? null }, { manager: mg });
+    await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'delete', before, after: null, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
     await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
     return { ok: true, merged_links: merged };
   }
@@ -868,7 +875,7 @@ export class TechnologiesService {
           [tenantId, tech.id, wanted.map((o) => o.user_id), wanted.map((o) => o.owner_type)],
         );
       }
-      await this.audit.log({ table: 'technology_owners', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.audit.log({ table: 'technology_owners', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
     }
     return this.listOwnersOf(mg, tenantId, tech.id);
   }
@@ -938,7 +945,7 @@ export class TechnologiesService {
           [tenantId, tech.id, wanted.map((c) => c.contact_id), wanted.map((c) => c.role)],
         );
       }
-      await this.audit.log({ table: 'technology_support_contacts', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.audit.log({ table: 'technology_support_contacts', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
     }
     return this.listSupportContactsOf(mg, tenantId, tech.id);
   }
@@ -963,7 +970,7 @@ export class TechnologiesService {
        RETURNING id, technology_id, description, url, created_at`,
       [tenantId, tech.id, optionalText(body?.description, 'Description', 2000), url],
     );
-    await this.audit.log({ table: 'technology_links', recordId: saved.id, action: 'create', before: null, after: saved, userId: opts.userId ?? null }, { manager: mg });
+    await this.audit.log({ table: 'technology_links', recordId: saved.id, action: 'create', before: null, after: saved, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
     return saved;
   }
 
@@ -981,7 +988,7 @@ export class TechnologiesService {
        SELECT * FROM u`,
       [tenantId, tech.id, before.id, url, description],
     );
-    await this.audit.log({ table: 'technology_links', recordId: before.id, action: 'update', before, after: saved, userId: opts.userId ?? null }, { manager: mg });
+    await this.audit.log({ table: 'technology_links', recordId: before.id, action: 'update', before, after: saved, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
     return saved;
   }
 
@@ -991,7 +998,7 @@ export class TechnologiesService {
     const before = await this.readLink(mg, tenantId, tech.id, linkId).catch(() => null);
     if (!before) return { ok: true };
     await mg.query(`DELETE FROM technology_links WHERE tenant_id = $1 AND technology_id = $2 AND id = $3`, [tenantId, tech.id, before.id]);
-    await this.audit.log({ table: 'technology_links', recordId: before.id, action: 'delete', before, after: null, userId: opts.userId ?? null }, { manager: mg });
+    await this.audit.log({ table: 'technology_links', recordId: before.id, action: 'delete', before, after: null, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
     return { ok: true };
   }
 
@@ -1036,7 +1043,7 @@ export class TechnologiesService {
        RETURNING id, technology_id, original_filename, stored_filename, mime_type, size, storage_path, uploaded_at`,
       [tenantId, tech.id, originalName, stored, validated.mimeType || null, validated.size, key],
     );
-    await this.audit.log({ table: 'technology_attachments', recordId: saved.id, action: 'create', before: null, after: saved, userId: opts.userId ?? null }, { manager: mg });
+    await this.audit.log({ table: 'technology_attachments', recordId: saved.id, action: 'create', before: null, after: saved, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
     return saved;
   }
 
@@ -1056,7 +1063,7 @@ export class TechnologiesService {
     if (!found) return { ok: true };
     await opts.manager.query(`DELETE FROM technology_attachments WHERE tenant_id = $1 AND id = $2`, [opts.tenantId, found.id]);
     try { await this.storage.deleteObject(found.storage_path); } catch { /* best effort, as the applications */ }
-    await this.audit.log({ table: 'technology_attachments', recordId: found.id, action: 'delete', before: found, after: null, userId: opts.userId ?? null }, { manager: opts.manager });
+    await this.audit.log({ table: 'technology_attachments', recordId: found.id, action: 'delete', before: found, after: null, userId: opts.userId ?? null, ...opts.audit }, { manager: opts.manager });
     return { ok: true };
   }
 }
