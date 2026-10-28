@@ -20,6 +20,8 @@ type Props = {
   costCenterId?: string | null;
   /** That cost center from the detail (`references.cost_center`): its budget holder without the tree. */
   costCenter?: CostCenterRef | null;
+  /** The line shown: a limited owner may read a centre outside its nodes through this line. */
+  lineRef?: string | null;
   disabled?: boolean;
   onStatusChange: (next: StatusValue) => void;
   onOwnerItChange: (next: string | null) => void;
@@ -34,6 +36,7 @@ export default function BudgetMetadataBar({
   ownerBizName = null,
   costCenterId = null,
   costCenter = null,
+  lineRef = null,
   disabled = false,
   onStatusChange,
   onOwnerItChange,
@@ -70,7 +73,7 @@ export default function BudgetMetadataBar({
           searchPlaceholder={t('opex.metadata.itOwner')}
           disabled={disabled}
           onChange={onOwnerItChange}
-          suggestedFirst={{ costCenterId: costCenterId || null }}
+          suggestedFirst={{ costCenterId: costCenterId || null, lineRef: lineRef || null }}
         />
       </PortfolioMetadataItem>
 
@@ -82,7 +85,7 @@ export default function BudgetMetadataBar({
           searchPlaceholder={t('opex.metadata.businessOwner')}
           disabled={disabled}
           onChange={onOwnerBizChange}
-          suggestedFirst={{ costCenterId: costCenterId || null }}
+          suggestedFirst={{ costCenterId: costCenterId || null, lineRef: lineRef || null }}
         />
       </PortfolioMetadataItem>
 

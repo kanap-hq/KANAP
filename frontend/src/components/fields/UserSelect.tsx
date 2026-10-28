@@ -30,9 +30,10 @@ type UserSelectProps = {
   /**
    * Propose the people who read this cost centre first while the field is empty, under their own
    * header and above a divider. The rest of the lookup follows, without duplicates; a text typed
-   * searches as before. Absent or without a centre: the plain user lookup.
+   * searches as before. Absent or without a centre: the plain user lookup. `lineRef` is the line
+   * shown in edit mode, so a limited owner reads a centre outside its nodes.
    */
-  suggestedFirst?: { costCenterId: string | null } | null;
+  suggestedFirst?: { costCenterId: string | null; lineRef?: string | null } | null;
 };
 
 function assignRef<T>(target: React.Ref<T | null> | undefined, value: T | null) {
@@ -73,8 +74,11 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
     value: value ? [value] : [],
     given: [selectedOption],
   });
-  // The cost centre group is read when the list opens, and re-read when the centre changes.
-  const suggested = useOwnerSuggestions(suggestedFirst?.costCenterId ?? null, picker.open);
+  // The cost centre group is read when the list opens, and re-read when the centre or line changes.
+  const suggested = useOwnerSuggestions(suggestedFirst?.costCenterId ?? null, {
+    lineRef: suggestedFirst?.lineRef ?? null,
+    enabled: picker.open,
+  });
   const suggestedIds = React.useMemo(() => new Set(suggested.map((u) => u.id)), [suggested]);
   const suggestedVisible = React.useMemo(
     () => suggested.filter((u) => u.id !== excludeUserId),

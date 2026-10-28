@@ -1091,6 +1091,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             ownerBizId={form.owner_business_id || null}
             costCenterId={shownCostCenterId || null}
             costCenter={matching(references.cost_center, shownCostCenterId)}
+            lineRef={uuid || null}
             disabled={!canEdit}
             onStatusChange={handleStatusChange}
             onOwnerItChange={(v) => void patchNow({ owner_it_id: (v || '') as string })}

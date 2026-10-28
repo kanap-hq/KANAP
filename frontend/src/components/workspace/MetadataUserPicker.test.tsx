@@ -82,7 +82,7 @@ describe('person pickers on the user lookup', () => {
   });
 
   it('puts the cost centre people first, under their header, then the rest without duplicates', async () => {
-    wrap(<MetadataUserPicker value={null} placeholder="Owner missing" onChange={() => undefined} suggestedFirst={{ costCenterId: 'cc-1' }} />);
+    wrap(<MetadataUserPicker value={null} placeholder="Owner missing" onChange={() => undefined} suggestedFirst={{ costCenterId: 'cc-1', lineRef: 'line-1' }} />);
     fireEvent.click(screen.getByRole('button', { name: /Owner missing/ }));
     await waitFor(() => expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
       'Zoe Zulu',
@@ -93,6 +93,10 @@ describe('person pickers on the user lookup', () => {
     expect(within(listbox).getByText('selects.costCenterAccess')).toBeInTheDocument();
     expect(within(listbox).getAllByRole('separator')).toHaveLength(1);
     expect(screen.getAllByRole('menuitem').filter((item) => item.textContent === 'Marc Zola')).toHaveLength(1);
+    // The line shown in edit mode travels with the request, for an owner outside its nodes.
+    expect(apiGet).toHaveBeenCalledWith(OWNER_SUGGESTIONS_ENDPOINT, expect.objectContaining({
+      params: { cost_center_id: 'cc-1', line: 'line-1' },
+    }));
   });
 
   it('searches the usual lookup once a text is typed, without the group', async () => {
@@ -120,6 +124,22 @@ describe('person pickers on the user lookup', () => {
     ]));
     expect(within(screen.getByRole('listbox')).getAllByRole('separator')).toHaveLength(1);
     expect(apiGet.mock.calls.some(([url]) => url === OWNER_SUGGESTIONS_ENDPOINT)).toBe(false);
+  });
+
+  it('keeps the usual lookup when the group would leave nobody out', async () => {
+    wrap(<MetadataUserPicker value={null} placeholder="Owner missing" onChange={() => undefined} suggestedFirst={{ costCenterId: 'cc-empty' }} />);
+    fireEvent.click(screen.getByRole('button', { name: /Owner missing/ }));
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith(
+      OWNER_SUGGESTIONS_ENDPOINT,
+      expect.objectContaining({ params: { cost_center_id: 'cc-empty' } }),
+    ));
+    await waitFor(() => expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Ada Lovelace selects.meSuffix',
+      'Hélène Dupré',
+      'Marc Zola',
+    ]));
+    expect(screen.queryByText('selects.costCenterAccess')).toBeNull();
+    expect(within(screen.getByRole('listbox')).getAllByRole('separator')).toHaveLength(1);
   });
 
   it('while the next search runs, lists only the people that still match, and hints at more results', async () => {

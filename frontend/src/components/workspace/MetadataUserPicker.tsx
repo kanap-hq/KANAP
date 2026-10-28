@@ -44,9 +44,10 @@ type MetadataUserPickerProps = {
   /**
    * Propose the people who read this cost centre first while nothing is typed, under their own
    * header and above a divider. The rest of the lookup follows, without duplicates; a text typed
-   * searches as before. Absent or without a centre: the plain user lookup.
+   * searches as before. Absent or without a centre: the plain user lookup. `lineRef` is the line
+   * shown in edit mode, so a limited owner reads a centre outside its nodes.
    */
-  suggestedFirst?: { costCenterId: string | null } | null;
+  suggestedFirst?: { costCenterId: string | null; lineRef?: string | null } | null;
 };
 
 export function formatMetadataUserName(user: MetadataUserOption | null | undefined): string | null {
@@ -91,8 +92,11 @@ export default function MetadataUserPicker({
 
   // People searched as the user types, once the popover is open (names only, server side).
   const search = useLookupSearch<MetadataUserOption>({ endpoint: USERS_LOOKUP_ENDPOINT, open: !!anchorEl, text: searchText });
-  // The cost centre group is read when the popover opens, and re-read when the centre changes.
-  const suggested = useOwnerSuggestions(suggestedFirst?.costCenterId ?? null, !!anchorEl);
+  // The cost centre group is read when the popover opens, and re-read when the centre or line changes.
+  const suggested = useOwnerSuggestions(suggestedFirst?.costCenterId ?? null, {
+    lineRef: suggestedFirst?.lineRef ?? null,
+    enabled: !!anchorEl,
+  });
   const { items: selectedUsers, isLoading: isLoadingSelected, unavailable } = useLookupHydration<MetadataUserOption>({
     endpoint: USERS_LOOKUP_ENDPOINT,
     ids: selectedUserId ? [selectedUserId] : [],

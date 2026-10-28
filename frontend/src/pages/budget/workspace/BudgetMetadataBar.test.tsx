@@ -10,10 +10,14 @@ vi.mock('react-i18next', () => {
 });
 // The pickers read their group from the API; here they only report the props this file checks.
 vi.mock('../../../components/workspace/MetadataUserPicker', () => ({
-  default: (p: { searchPlaceholder?: string; suggestedFirst?: { costCenterId: string | null } | null }) => (
+  default: (p: {
+    searchPlaceholder?: string;
+    suggestedFirst?: { costCenterId: string | null; lineRef?: string | null } | null;
+  }) => (
     <div
       data-testid={`metadata-user-picker-${p.searchPlaceholder ?? ''}`}
       data-suggested-center={p.suggestedFirst?.costCenterId ?? 'none'}
+      data-line-ref={p.suggestedFirst?.lineRef ?? 'none'}
     />
   ),
 }));
@@ -38,15 +42,19 @@ function renderBar(overrides: Partial<React.ComponentProps<typeof BudgetMetadata
 }
 
 describe('BudgetMetadataBar owner suggestions', () => {
-  it('gives both owner pickers the line cost centre', () => {
-    renderBar({ costCenterId: 'cc-1' });
-    expect(screen.getByTestId('metadata-user-picker-opex.metadata.itOwner')).toHaveAttribute('data-suggested-center', 'cc-1');
-    expect(screen.getByTestId('metadata-user-picker-opex.metadata.businessOwner')).toHaveAttribute('data-suggested-center', 'cc-1');
+  it('gives both owner pickers the line cost centre and the line', () => {
+    renderBar({ costCenterId: 'cc-1', lineRef: 'line-1' });
+    for (const testId of ['metadata-user-picker-opex.metadata.itOwner', 'metadata-user-picker-opex.metadata.businessOwner']) {
+      expect(screen.getByTestId(testId)).toHaveAttribute('data-suggested-center', 'cc-1');
+      expect(screen.getByTestId(testId)).toHaveAttribute('data-line-ref', 'line-1');
+    }
   });
 
-  it('gives them no cost centre when the line has none', () => {
+  it('gives them no cost centre and no line when the line has none', () => {
     renderBar({ costCenterId: null });
-    expect(screen.getByTestId('metadata-user-picker-opex.metadata.itOwner')).toHaveAttribute('data-suggested-center', 'none');
-    expect(screen.getByTestId('metadata-user-picker-opex.metadata.businessOwner')).toHaveAttribute('data-suggested-center', 'none');
+    for (const testId of ['metadata-user-picker-opex.metadata.itOwner', 'metadata-user-picker-opex.metadata.businessOwner']) {
+      expect(screen.getByTestId(testId)).toHaveAttribute('data-suggested-center', 'none');
+      expect(screen.getByTestId(testId)).toHaveAttribute('data-line-ref', 'none');
+    }
   });
 });

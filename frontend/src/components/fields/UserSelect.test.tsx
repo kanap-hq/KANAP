@@ -152,7 +152,7 @@ describe('UserSelect owner suggestions', () => {
   });
 
   it('puts the cost centre people first, under their header, then the usual list without duplicates', async () => {
-    wrap(<UserSelect value={null} onChange={() => undefined} suggestedFirst={{ costCenterId: 'cc-1' }} />);
+    wrap(<UserSelect value={null} onChange={() => undefined} suggestedFirst={{ costCenterId: 'cc-1', lineRef: 'line-1' }} />);
     open(screen.getByRole('combobox'));
     const listbox = await screen.findByRole('listbox');
     await waitFor(() => expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual([
@@ -165,6 +165,10 @@ describe('UserSelect owner suggestions', () => {
     // One separator between the suggested group and the rest; me is not moved first any more.
     expect(within(listbox).getAllByRole('separator')).toHaveLength(1);
     expect(within(listbox).getAllByRole('option').filter((o) => o.textContent === 'Ana Diaz')).toHaveLength(1);
+    // The line shown in edit mode travels with the request, for an owner outside its nodes.
+    expect(apiGet).toHaveBeenCalledWith(OWNER_SUGGESTIONS_ENDPOINT, expect.objectContaining({
+      params: { cost_center_id: 'cc-1', line: 'line-1' },
+    }));
   });
 
   it('searches the usual lookup once a text is typed, without the group', async () => {
@@ -194,6 +198,22 @@ describe('UserSelect owner suggestions', () => {
     ]));
     expect(screen.getByRole('separator')).toBeInTheDocument();
     expect(apiGet.mock.calls.some(([url]) => url === OWNER_SUGGESTIONS_ENDPOINT)).toBe(false);
+  });
+
+  it('keeps the usual lookup when the group would leave nobody out', async () => {
+    wrap(<UserSelect value={null} onChange={() => undefined} suggestedFirst={{ costCenterId: 'cc-empty' }} />);
+    open(screen.getByRole('combobox'));
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith(
+      OWNER_SUGGESTIONS_ENDPOINT,
+      expect.objectContaining({ params: { cost_center_id: 'cc-empty' } }),
+    ));
+    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'fried@kanap.net selects.meSuffix',
+      'Ana Diaz',
+      'admin@kanap.net',
+    ]));
+    expect(screen.queryByText('selects.costCenterAccess')).toBeNull();
+    expect(screen.getByRole('separator')).toBeInTheDocument();
   });
 
   it('reads the new group when the cost centre changes', async () => {

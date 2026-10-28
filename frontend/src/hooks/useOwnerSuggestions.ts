@@ -9,26 +9,44 @@ import type { UserOption } from '../components/fields/userLookup';
  */
 export const OWNER_SUGGESTIONS_ENDPOINT = '/budget-lines/owner-suggestions';
 
-/** One key per centre: changing the line's cost centre reads the new group. */
-export function ownerSuggestionsKey(costCenterId: string | null | undefined) {
-  return ['budget-lines', 'owner-suggestions', costCenterId || null] as const;
+/**
+ * One key per centre and line: changing the line's cost centre reads the new group, and another
+ * line may open a centre outside the person's nodes when it is read as its owner.
+ */
+export function ownerSuggestionsKey(costCenterId: string | null | undefined, lineRef?: string | null) {
+  return ['budget-lines', 'owner-suggestions', costCenterId || null, lineRef || null] as const;
 }
 
 type OwnerSuggestionsPage = { items?: UserOption[]; has_more?: boolean };
 
 const NO_SUGGESTIONS: UserOption[] = [];
 
+type OwnerSuggestionsOptions = {
+  /**
+   * The line shown in edit mode. A limited caller may ask about a centre outside its nodes when it
+   * reads this line as its owner; the route resolves the line under RLS.
+   */
+  lineRef?: string | null;
+  /** Read only once the picker's list opens. */
+  enabled?: boolean;
+};
+
 /**
  * The suggested people of this cost centre. Disabled without a centre (the picker is the plain
  * lookup then); `enabled` lets a caller wait for its list to open before reading.
  */
-export function useOwnerSuggestions(costCenterId: string | null | undefined, enabled = true): UserOption[] {
+export function useOwnerSuggestions(
+  costCenterId: string | null | undefined,
+  options: OwnerSuggestionsOptions = {},
+): UserOption[] {
   const center = costCenterId || null;
+  const lineRef = options.lineRef || null;
+  const enabled = options.enabled ?? true;
   const query = useQuery({
-    queryKey: ownerSuggestionsKey(center),
+    queryKey: ownerSuggestionsKey(center, lineRef),
     queryFn: async ({ signal }) => {
       const res = await api.get<OwnerSuggestionsPage>(OWNER_SUGGESTIONS_ENDPOINT, {
-        params: { cost_center_id: center },
+        params: { cost_center_id: center, ...(lineRef ? { line: lineRef } : {}) },
         signal,
       });
       return res.data?.items ?? NO_SUGGESTIONS;
