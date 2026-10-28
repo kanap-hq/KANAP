@@ -566,7 +566,11 @@
       "headcount": "Headcount",
       "it_users": "IT users",
       "turnover": "Turnover",
-      "is_frozen": "Frozen"
+      "is_frozen": "Frozen",
+      "region_code": "Region",
+      "is_default": "Default",
+      "it_owner_user_id": "IT owner",
+      "application_id": "Application"
     },
     "history": {
       "empty": "No history yet",

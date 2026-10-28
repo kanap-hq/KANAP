@@ -8,6 +8,7 @@ import dataSource from '../../data-source';
 import { createRaceTenant, dropRaceTenant, seed } from '../../spend/__tests__/race-harness';
 import {
   RecordHistoryService,
+  type RecordHistoryChange,
   type RecordHistoryContext,
   type RecordHistoryItem,
   type RecordHistoryPage,
@@ -108,6 +109,9 @@ type Seeded = {
   data: HistorySeed;
   companyReader: Person;
   departmentReader: Person;
+  calendarReader: Person;
+  processReader: Person;
+  applicationReader: Person;
   allReader: Person;
   noModule: Person;
 };
@@ -155,6 +159,45 @@ async function seedFamilyAAudits(runner: QueryRunner, data: HistorySeed) {
   await audit(runner, {
     table: 'department_metrics', recordId: departmentMetric, action: 'update', userId: data.owner,
     before: departmentMetricRow, after: { ...departmentMetricRow, headcount: 12 },
+  });
+
+  // The calendar's own rows; its long year content must never come out.
+  const calendar = await rowJson(runner, 'working_day_profiles', data.calendar);
+  await audit(runner, { table: 'working_day_profiles', recordId: data.calendar, action: 'create', userId: data.owner, after: calendar });
+  await audit(runner, {
+    table: 'working_day_profiles', recordId: data.calendar, action: 'update', userId: data.owner,
+    before: calendar,
+    after: { ...calendar, name: 'France (metropolitan)', region_code: '75', days_by_year: { 2026: ['01', '02'] } },
+  });
+
+  // The process's owners as the screen shows them, then its own rows.
+  await runner.query(
+    `UPDATE business_processes SET owner_user_id = $3, it_owner_user_id = $3, is_default = true
+      WHERE tenant_id = $1 AND id = $2`,
+    [data.tenantId, data.businessProcess, data.owner],
+  );
+  const process = await rowJson(runner, 'business_processes', data.businessProcess);
+  await audit(runner, { table: 'business_processes', recordId: data.businessProcess, action: 'create', userId: data.owner, after: process });
+  await audit(runner, {
+    table: 'business_processes', recordId: data.businessProcess, action: 'update', userId: data.owner,
+    before: process,
+    after: { ...process, description: 'Order to cash end to end', notes: 'SOP linked', is_default: false },
+  });
+
+  // The application link: the process is the record, the application the payload value.
+  await audit(runner, {
+    table: 'application_business_processes', recordId: data.businessProcess, action: 'update', userId: data.owner,
+    before: null, after: { application_id: data.application },
+  });
+  await audit(runner, {
+    table: 'application_business_processes', recordId: data.businessProcess, action: 'update', userId: data.owner,
+    before: { application_id: data.application }, after: null,
+  });
+
+  // The request side names the request, not the process: no process history may read it.
+  await audit(runner, {
+    table: 'portfolio_request_business_processes', recordId: data.request, action: 'update', userId: data.owner,
+    before: [], after: [data.businessProcess],
   });
 }
 
@@ -216,10 +259,72 @@ async function testCompanyAndDepartmentEntries(seeded: Seeded) {
   console.log('  company and department own entries and metrics children read in words: OK');
 }
 
+function findEvent(page: RecordHistoryPage, field: string, event: 'added' | 'removed'): RecordHistoryChange {
+  const found = page.items.flatMap((item) => item.changes).find((change) => change.field === field && change.event === event);
+  assert.ok(found, `${field}: a ${event} event`);
+  return found;
+}
+
+async function testCalendarAndProcessEntries(seeded: Seeded) {
+  const { data } = seeded;
+
+  const calendar = await readPage(seeded.calendarReader, data.tenantId, 'working_day_profiles', data.calendar, {
+    working_day_profiles: 'reader',
+  });
+  assertPresentable(calendar);
+  const calendarCreate = findItem(calendar, 'create');
+  assert.equal(findChange(calendarCreate, 'code').after, 'FR');
+  assert.equal(findChange(calendarCreate, 'name').after, 'France');
+  const calendarUpdate = findItem(calendar, 'update');
+  assert.equal(findChange(calendarUpdate, 'name').after, 'France (metropolitan)');
+  assert.equal(findChange(calendarUpdate, 'region_code').after, '75');
+  assertNoField(calendar, 'days_by_year');
+  assert.ok(!JSON.stringify(calendar).includes('2026-01-02'), 'the year content never comes out');
+
+  const process = await readPage(seeded.allReader, data.tenantId, 'business_processes', data.businessProcess, {
+    business_processes: 'reader',
+    applications: 'reader',
+  });
+  assertPresentable(process);
+  const processCreate = findItem(process, 'create');
+  assert.equal(findChange(processCreate, 'is_default').after, true);
+  assert.equal((findChange(processCreate, 'owner_user_id').after as any).label, 'Ava Reader');
+  assert.equal((findChange(processCreate, 'it_owner_user_id').after as any).label, 'Ava Reader');
+  const processUpdate = findItem(process, 'update');
+  assert.equal(findChange(processUpdate, 'description').after, 'Order to cash end to end');
+  assert.equal(findChange(processUpdate, 'notes').after, 'SOP linked');
+  assert.equal(findChange(processUpdate, 'is_default').after, false);
+  assertNoField(process, 'categories');
+
+  // The application link, added then removed, named for an applications reader.
+  const added = findEvent(process, 'application', 'added');
+  assert.equal((added.after as any).kind, 'application');
+  assert.equal((added.after as any).label, 'Ledger App');
+  const removed = findEvent(process, 'application', 'removed');
+  assert.equal((removed.before as any).label, 'Ledger App');
+
+  // Without the applications module the link is a nameless application, never its name.
+  const processOnly = await readPage(seeded.processReader, data.tenantId, 'business_processes', data.businessProcess, {
+    business_processes: 'reader',
+  });
+  assert.deepEqual(findEvent(processOnly, 'application', 'added').after, { hidden: true, kind: 'application' });
+  assert.ok(!JSON.stringify(processOnly).includes('Ledger App'), 'the application is not named without its module');
+
+  // The request-side link row names the request; it is not an entry of the process history.
+  assert.equal(
+    process.items.some((item) => item.changes.some((change) => change.field === 'request')),
+    false,
+    'the request link is not read from the process',
+  );
+  console.log('  calendar and process own entries, hidden year content, named and hidden application link: OK');
+}
+
 async function testAccess(seeded: Seeded, foreign: HistorySeed) {
   const { data } = seeded;
   assert.ok((await readPage(seeded.companyReader, data.tenantId, 'companies', data.companyA, { companies: 'reader' })).items.length > 0);
   assert.ok((await readPage(seeded.departmentReader, data.tenantId, 'departments', data.department, { departments: 'reader' })).items.length > 0);
+  assert.ok((await readPage(seeded.calendarReader, data.tenantId, 'working_day_profiles', data.calendar, { working_day_profiles: 'reader' })).items.length > 0);
+  assert.ok((await readPage(seeded.processReader, data.tenantId, 'business_processes', data.businessProcess, { business_processes: 'reader' })).items.length > 0);
 
   await assert.rejects(
     () => readPage(seeded.noModule, data.tenantId, 'companies', data.companyA, { tasks: 'reader' }),
@@ -230,6 +335,16 @@ async function testAccess(seeded: Seeded, foreign: HistorySeed) {
     () => readPage(seeded.noModule, data.tenantId, 'departments', data.department, { tasks: 'reader' }),
     (error: any) => error?.status === 403 && error?.response?.code === 'MODULE_RIGHT_REQUIRED',
     'a person without the departments module gets 403',
+  );
+  await assert.rejects(
+    () => readPage(seeded.noModule, data.tenantId, 'working_day_profiles', data.calendar, { tasks: 'reader' }),
+    (error: any) => error?.status === 403 && error?.response?.code === 'MODULE_RIGHT_REQUIRED',
+    'a person without the working_day_profiles module gets 403',
+  );
+  await assert.rejects(
+    () => readPage(seeded.noModule, data.tenantId, 'business_processes', data.businessProcess, { tasks: 'reader' }),
+    (error: any) => error?.status === 403 && error?.response?.code === 'MODULE_RIGHT_REQUIRED',
+    'a person without the business_processes module gets 403',
   );
   await assert.rejects(
     () => readPage(seeded.companyReader, data.tenantId, 'unknown_table', data.companyA, { companies: 'reader' }),
@@ -256,6 +371,16 @@ async function testAccess(seeded: Seeded, foreign: HistorySeed) {
     (error: any) => error?.status === 404,
     'a department of another tenant gets 404',
   );
+  await assert.rejects(
+    () => readPage(seeded.allReader, data.tenantId, 'working_day_profiles', foreign.calendar, { working_day_profiles: 'reader' }),
+    (error: any) => error?.status === 404,
+    'a calendar of another tenant gets 404',
+  );
+  await assert.rejects(
+    () => readPage(seeded.allReader, data.tenantId, 'business_processes', foreign.businessProcess, { business_processes: 'reader' }),
+    (error: any) => error?.status === 404,
+    'a process of another tenant gets 404',
+  );
   console.log('  200 with the module, 403 without it, 404 for unknown, missing and foreign records: OK');
 }
 
@@ -269,19 +394,26 @@ async function run() {
       await seedFamilyAAudits(runner, data);
       const companyReader = await seedPerson(runner, tenantId, { first: 'Cora', last: 'Company' }, { companies: 'reader' });
       const departmentReader = await seedPerson(runner, tenantId, { first: 'Dora', last: 'Department' }, { departments: 'reader' });
+      const calendarReader = await seedPerson(runner, tenantId, { first: 'Cal', last: 'Calendar' }, { working_day_profiles: 'reader' });
+      const processReader = await seedPerson(runner, tenantId, { first: 'Pia', last: 'Process' }, { business_processes: 'reader' });
+      const applicationReader = await seedPerson(runner, tenantId, { first: 'Ari', last: 'Application' }, { applications: 'reader' });
       const allReader = await seedPerson(
         runner,
         tenantId,
         { first: 'Alba', last: 'All' },
-        { companies: 'reader', departments: 'reader', accounts: 'reader' },
+        {
+          companies: 'reader', departments: 'reader', accounts: 'reader',
+          working_day_profiles: 'reader', business_processes: 'reader', applications: 'reader',
+        },
       );
       const noModule = await seedPerson(runner, tenantId, { first: 'Nino', last: 'NoModule' }, { tasks: 'reader' });
-      return { data, companyReader, departmentReader, allReader, noModule };
+      return { data, companyReader, departmentReader, calendarReader, processReader, applicationReader, allReader, noModule };
     });
     const foreign = await seed(foreignTenantId, (runner) => seedHistoryData(runner, foreignTenantId));
 
     await testAccess(seeded, foreign);
     await testCompanyAndDepartmentEntries(seeded);
+    await testCalendarAndProcessEntries(seeded);
     console.log('record-history-family-a.integration.spec: ok');
   } finally {
     await dropRaceTenant(tenantId);

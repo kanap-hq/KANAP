@@ -190,6 +190,7 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
       }
       if (kind === 'application' || kind === 'technology') {
         for (const value of Array.isArray(payload) ? payload : []) addFamilyId({ ids }, kind, value);
+        if (isPlainObject(payload)) addFamilyId({ ids }, kind, payload[`${kind}_id`]);
       }
       if ((kind === 'contract' || kind === 'project' || kind === 'request')
         && String(row.record_id ?? '').toLowerCase() === recordId.toLowerCase()) {

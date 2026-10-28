@@ -566,7 +566,11 @@
       "headcount": "Effectif",
       "it_users": "Utilisateurs IT",
       "turnover": "Chiffre d'affaires",
-      "is_frozen": "Gelé"
+      "is_frozen": "Gelé",
+      "region_code": "Région",
+      "is_default": "Par défaut",
+      "it_owner_user_id": "Responsable IT",
+      "application_id": "Application"
     },
     "history": {
       "empty": "Aucun historique",

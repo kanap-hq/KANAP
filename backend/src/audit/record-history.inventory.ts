@@ -1,10 +1,12 @@
 import type { PermissionLevel } from '../auth/require-level.decorator';
 import type { FamilyKey } from './record-history/families';
 import { accountsRecord } from './record-history/records/accounts';
+import { businessProcessesRecord } from './record-history/records/business_processes';
 import { companiesRecord } from './record-history/records/companies';
 import { costCentersRecord } from './record-history/records/cost_centers';
 import { departmentsRecord } from './record-history/records/departments';
 import { spendItemsRecord } from './record-history/records/spend_items';
+import { workingDayProfilesRecord } from './record-history/records/working_day_profiles';
 
 /**
  * The records whose history the API serves (`GET /records/:table/:id/history`), by route key.
@@ -111,10 +113,12 @@ export type RecordHistoryRecord = {
  */
 const RECORD_HISTORY_DEFINITION = [
   accountsRecord,
+  businessProcessesRecord,
   companiesRecord,
   costCentersRecord,
   departmentsRecord,
   spendItemsRecord,
+  workingDayProfilesRecord,
 ] as const satisfies readonly RecordHistoryRecord[];
 
 /** A physical table the history serves: the route key of `GET /records/:table/:id/history`. */

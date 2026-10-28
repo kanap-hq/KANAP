@@ -566,7 +566,11 @@
       "headcount": "Mitarbeiterzahl",
       "it_users": "IT-Benutzer",
       "turnover": "Umsatz",
-      "is_frozen": "Eingefroren"
+      "is_frozen": "Eingefroren",
+      "region_code": "Region",
+      "is_default": "Standard",
+      "it_owner_user_id": "IT-Verantwortlicher",
+      "application_id": "Anwendung"
     },
     "history": {
       "empty": "Noch kein Verlauf",

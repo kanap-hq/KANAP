@@ -476,8 +476,15 @@ function contactChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] 
 }
 
 function setLinkChanges(kind: 'application' | 'technology', row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
-  const before = Array.isArray(row.before_json) ? row.before_json : [];
-  const after = Array.isArray(row.after_json) ? row.after_json : [];
+  // A line's link set is an array of ids. A process's application link is one row with the
+  // application id in its payload (`application_business_processes`, read by `record_id`).
+  const single = (value: unknown): string[] => {
+    if (!isPlainObject(value)) return [];
+    const id = value[`${kind}_id`];
+    return isUuid(id) ? [id] : [];
+  };
+  const before = Array.isArray(row.before_json) ? row.before_json : single(row.before_json);
+  const after = Array.isArray(row.after_json) ? row.after_json : single(row.after_json);
   const beforeSet = new Set(before.filter(isUuid).map((id) => id.toLowerCase()));
   const afterSet = new Set(after.filter(isUuid).map((id) => id.toLowerCase()));
   const changes: RecordHistoryChange[] = [];

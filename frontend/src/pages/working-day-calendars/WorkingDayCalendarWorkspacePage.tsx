@@ -221,6 +221,7 @@ export default function WorkingDayCalendarWorkspacePage() {
           nextLabel: t('workingDayCalendars.next'),
         } : undefined}
         actions={actions}
+        history={data ? { table: 'working_day_profiles', recordId: data.id } : undefined}
         properties={data ? (
           <WorkingDayCalendarPropertiesDrawer
             key={data.id}

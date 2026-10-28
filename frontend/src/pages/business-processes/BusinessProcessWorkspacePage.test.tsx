@@ -58,6 +58,9 @@ vi.mock('./editors/BusinessProcessOverviewEditor', () => ({
 vi.mock('./editors/BusinessProcessCreateEditor', () => ({ default: React.forwardRef(() => null) }));
 vi.mock('./BusinessProcessApplicationsSection', () => ({ default: () => null }));
 vi.mock('./BusinessProcessCategoryManagerDialog', () => ({ default: () => null }));
+vi.mock('../../components/history/RecordHistory', () => ({
+  default: ({ table, recordId }: { table: string; recordId: string }) => <div>{`${table}:${recordId}`}</div>,
+}));
 
 import api from '../../api';
 import BusinessProcessWorkspacePage from './BusinessProcessWorkspacePage';
@@ -100,6 +103,17 @@ describe('BusinessProcessWorkspacePage', () => {
       if (url === '/business-processes/bp-1') return { data: { id: 'bp-1', name: 'Order to cash' } };
       return { data: {} };
     });
+  });
+
+  it('opens the process history from the header, and never in creation', async () => {
+    const history = renderAt('/master-data/business-processes/bp-1/overview');
+    await screen.findByText('Order to cash');
+    fireEvent.click(screen.getByRole('button', { name: 'admin:auditLogs.history.title' }));
+    expect(await screen.findByText('business_processes:bp-1')).toBeInTheDocument();
+    history.unmount();
+
+    renderAt('/master-data/business-processes/new/overview');
+    expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
   });
 
   it('hides delete from someone who is not a business processes admin, and on a new process', async () => {

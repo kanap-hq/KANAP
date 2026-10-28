@@ -566,7 +566,11 @@
       "headcount": "Plantilla",
       "it_users": "Usuarios IT",
       "turnover": "Facturación",
-      "is_frozen": "Congelado"
+      "is_frozen": "Congelado",
+      "region_code": "Región",
+      "is_default": "Predeterminada",
+      "it_owner_user_id": "Responsable IT",
+      "application_id": "Aplicación"
     },
     "history": {
       "empty": "Todavía no hay historial",
