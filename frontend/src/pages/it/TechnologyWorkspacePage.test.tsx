@@ -55,6 +55,9 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
     </div>
   ),
 }));
+vi.mock('../../components/history/RecordHistoryTab', () => ({
+  default: (props: { table: string; recordId: string }) => <div data-testid="record-history">{`${props.table}:${props.recordId}`}</div>,
+}));
 vi.mock('../../components/fields/TeamMemberMultiSelect', () => ({
   default: (props: any) => {
     owners.onChange[props.label] = props.onChange;
@@ -165,12 +168,19 @@ describe('TechnologyWorkspacePage', () => {
       ['workspace.technology.tabs.operations', false],
       ['workspace.technology.tabs.compliance', false],
       ['workspace.technology.tabs.relations', false],
+      ['workspace.technology.tabs.history', false],
     ]);
     // The Relations badge counts the rows of the sections the caller sees.
     await waitFor(() => expect(tabs[5].getAttribute('data-badge')).toBe('3'));
     expect(screen.getByTestId('owners-workspace.technology.fields.itOwners').textContent).toBe('Ada Lovelace');
     expect(screen.queryByTestId('owners-workspace.technology.fields.businessOwners')).toBeNull();
     expect(screen.queryByText(/Grace Hopper/)).toBeNull();
+  });
+
+  it('renders the technology history on the History tab', async () => {
+    renderPage('/it/technologies/TEC-3/history');
+    expect(await screen.findByTestId('record-history')).toHaveTextContent('technologies:tech-1');
+    expect(screen.getByRole('tab', { name: 'workspace.technology.tabs.history' })).toBeInTheDocument();
   });
 
   it('counts the distinct servers in service it is installed on and the distinct applications in the tab badges', async () => {

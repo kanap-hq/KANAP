@@ -4,6 +4,7 @@ import { accountsRecord } from './record-history/records/accounts';
 import { assetsRecord } from './record-history/records/assets';
 import { costCentersRecord } from './record-history/records/cost_centers';
 import { spendItemsRecord } from './record-history/records/spend_items';
+import { technologiesRecord } from './record-history/records/technologies';
 
 /**
  * The records whose history the API serves (`GET /records/:table/:id/history`), by route key.
@@ -121,6 +122,7 @@ const RECORD_HISTORY_DEFINITION = [
   assetsRecord,
   costCentersRecord,
   spendItemsRecord,
+  technologiesRecord,
 ] as const satisfies readonly RecordHistoryRecord[];
 
 /** A physical table the history serves: the route key of `GET /records/:table/:id/history`. */

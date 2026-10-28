@@ -3,6 +3,7 @@ import { accountsFields } from './records/accounts';
 import { assetsFields } from './records/assets';
 import { costCentersFields } from './records/cost_centers';
 import { spendItemsFields } from './records/spend_items';
+import { technologiesFields } from './records/technologies';
 
 /**
  * The allow-list of every audit label the history presents: one line per record file, sorted by
@@ -14,6 +15,7 @@ const FIELD_SETS = [
   assetsFields,
   costCentersFields,
   spendItemsFields,
+  technologiesFields,
 ] as const;
 
 export const HISTORY_FIELDS: Readonly<Record<string, HistoryFields>> = Object.freeze(
