@@ -367,6 +367,9 @@ Live write-preview coverage includes:
   requests, interfaces, connections, budget lines, and incidents
 - incident journal notes (`add_incident_note`) and incident links
   (`update_incident_links`, reversible)
+- incident administrator actions (`change_incident_state` for reopen and cancel,
+  `set_incident_confidentiality` for restricting and lifting, both at
+  `incidents:admin`)
 - relation updates for supported application, asset, supplier, contract,
   budget line, project, request, document, and location links
 - financial plan writes for budget line versions, amounts, and allocations
@@ -392,19 +395,36 @@ the allowed values in the refusal. Date-times are ISO 8601 with a time zone,
 converted into the person's `time_zone`; `detected_at` defaults to now.
 `confidential: true` is allowed; a preview warns when the change makes the
 restricted incident disappear for the person, as the screen's lose-access
-dialog does. `confidential: false` is refused (lot 4). A field change is
-undoable, a status or confidentiality change is not. The journal note goes
+dialog does. `confidential: false` is refused on the field path, and the refusal
+names `set_incident_confidentiality`. A field change is undoable, a status or
+confidentiality change is not. The journal note goes
 through `IncidentEntriesService.createNote` (`add_incident_note`): the journal
 only takes additions, so the preview is not reversible. The links go through
 `IncidentRelationsService.setLink` once per link (`update_incident_links`), so
 the closure lock, the `link_change` journal entry, the audit row, the
 idempotence and a Business Contributor's application participation stay those
 of the Relations tab; a link already present, or already absent, writes nothing,
+a preview whose links would all stay as they are is refused with what it found,
 and undo reverses exactly the links that changed while the record is open. A
 follow-up task on an incident uses `create_task` (`relation_type: 'incident'`)
 through `TasksUnifiedService.createForTarget`, with the tasks member right, the
-incident's visibility and the closure lock. Reopening, cancelling and lifting
-the confidentiality stay on the incident screen for lot 4.
+incident's visibility and the closure lock.
+
+The administrator actions are separate tools, at `incidents:admin` for the
+whole tool, checked when the preview is prepared and again when it runs; a
+member or a contributor is not offered them. `change_incident_state` takes
+`reopen` or `cancel` and a mandatory reason, calls `IncidentsService.reopen` or
+`cancel`, and carries the before and after status and the reason on the card.
+Reopening refuses an open or in-progress incident before the preview with the
+service's sentence; cancelling refuses a frozen record. A cancellation carries
+the same freeze warning as a closure, writes a `status_change` journal entry and
+cannot be undone. The 423 of the review lock at cancellation is relayed as the
+readable closure message. `set_incident_confidentiality` takes the boolean
+directly, works on an open, closed or cancelled record as the screen's route
+does, and asks for the administrator right in both directions; setting it warns
+when the person would lose access, with a missing reporter staying missing. It
+writes the `system` journal entry and refreshes the search index of the linked
+tasks. Neither tool has a reversal preview.
 
 Application classification create/update previews use the normal application
 mutation service. They can set or clear business criticality, cyber,
