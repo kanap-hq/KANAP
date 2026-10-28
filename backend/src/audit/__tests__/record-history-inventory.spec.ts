@@ -8,6 +8,7 @@ import {
   recordHistoryModules,
 } from '../record-history.inventory';
 import { FAMILY_KEYS, FAMILY_MODULES } from '../record-history.service';
+import { RECORD_HISTORY_TABLES } from '../../../../frontend/src/components/history/recordHistoryTables';
 
 // The inventory of record histories (lot 1B): the entries, the parent rules and the data-access
 // tables of the line family agree both ways. A record family added later without its child rules,
@@ -29,6 +30,16 @@ function testEntries() {
   }
   assert.deepEqual(recordHistoryModules(), ['accounts', 'budget', 'cost_centers'], 'the modules of the route guard');
   console.log(`  ${entries.length} record entries: OK`);
+}
+
+/** The frontend declares the tables whose page shows a history; the two lists are one set. */
+function testFrontendTables() {
+  assert.deepEqual(
+    [...RECORD_HISTORY_TABLES].sort(),
+    Object.keys(RECORD_HISTORY).sort(),
+    'the frontend record tables and the backend inventory are the same set',
+  );
+  console.log(`  ${RECORD_HISTORY_TABLES.length} frontend tables match the inventory: OK`);
 }
 
 function testParentRulesAgree() {
@@ -86,6 +97,7 @@ function testDataAccessTablesAreDeclared() {
 function run() {
   console.log('record history inventory');
   testEntries();
+  testFrontendTables();
   testParentRulesAgree();
   testDataAccessTablesAreDeclared();
   console.log('record-history-inventory.spec: ok');

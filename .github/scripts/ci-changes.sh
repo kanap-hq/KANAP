@@ -14,7 +14,7 @@
 #     reads the demo fixture) and for tenants.service.ts (roleLabel.test.ts reads the seeded
 #     role names);
 #   - frontend/: frontend, builds, and backend full for the modules the backend specs import
-#     (auditLogLabels, contractTerms, reportAggregates) and the Dockerfiles (container-images
+#     (auditLogLabels, recordHistoryTables, contractTerms, reportAggregates) and the Dockerfiles (container-images
 #     spec);
 #   - infra/, any Dockerfile: backend full (container-images, admin-password-policy and
 #     data-access-role-script specs);
@@ -58,7 +58,8 @@ while IFS= read -r f; do
       need_backend full; frontend=true ;;
     backend/*)
       need_backend full ;;
-    frontend/src/pages/admin/auditLogLabels.* | frontend/src/pages/contracts/contractTerms.* | \
+    frontend/src/lib/audit/auditLogLabels.* | frontend/src/components/history/recordHistoryTables.* | \
+      frontend/src/pages/contracts/contractTerms.* | \
       frontend/src/pages/reports/reportAggregates.* | frontend/src/pages/reports/reportTables.* | frontend/Dockerfile* | \
       frontend/src/pages/operations/copyBudgetRows.* | frontend/src/pages/admin/master-data/masterDataCopyRows.* | \
       frontend/src/pages/portfolio/contributorsOrdering.* | frontend/src/pages/portfolio/skillsMatrix.* | \
