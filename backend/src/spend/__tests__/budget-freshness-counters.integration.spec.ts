@@ -369,7 +369,7 @@ async function aiFinancialPlan(kind: Kind) {
       undefined as any, amountsService('opex') as any, versionsService('opex'),
     );
     const context: any = { tenantId, userId: null, manager: runner.manager };
-    const entityType = kind === 'opex' ? 'spend_items' : 'capex_items';
+    const entityType = 'budget_lines';
     const run = async (input: Record<string, unknown>) => {
       const prepared = await ai.prepareCreatePreview(context, { entity_type: entityType, ref: itemId, version_ref: versionId, ...input } as any);
       await ai.executePreview(context, {

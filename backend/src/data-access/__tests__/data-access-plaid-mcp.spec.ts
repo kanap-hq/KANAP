@@ -548,40 +548,40 @@ async function testPlaidWrites(): Promise<void> {
   const { rita } = s.persons;
   // A read-only line (L3): refused when the preview is asked, its fields and its relations.
   assertReadOnlyRefusal(
-    await rejection(() => tool(rita, 'update_business_record', { entity_type: 'spend_items', ref: s.lines.L3, fields: { notes: 'Never written' } })),
+    await rejection(() => tool(rita, 'update_business_record', { entity_type: 'budget_lines', ref: s.lines.L3, fields: { notes: 'Never written' } })),
     'update_business_record on read-only L3',
   );
   assertReadOnlyRefusal(
-    await rejection(() => tool(rita, 'update_entity_relations', { entity_type: 'spend_items', ref: s.lines.L3, relation: 'applications', add: [applicationId] })),
+    await rejection(() => tool(rita, 'update_entity_relations', { entity_type: 'budget_lines', ref: s.lines.L3, relation: 'applications', add: [applicationId] })),
     'update_entity_relations from read-only L3',
   );
   // A task written on the read-only line: refused when the preview is asked too, whether created
   // there or moved there (the write's trigger would refuse it at the approval).
   assertReadOnlyRefusal(
-    await rejection(() => tool(rita, 'create_task', { title: 'Never created', relation_type: 'spend_item', relation_ref: s.lines.L3 })),
+    await rejection(() => tool(rita, 'create_task', { title: 'Never created', relation_type: 'budget_line', relation_ref: s.lines.L3 })),
     'create_task on read-only L3',
   );
   assertReadOnlyRefusal(
-    await rejection(() => tool(rita, 'update_task_fields', { ref: hiddenTaskId, fields: { relation_type: 'spend_item', relation_ref: s.lines.L3 } })),
+    await rejection(() => tool(rita, 'update_task_fields', { ref: hiddenTaskId, fields: { relation_type: 'budget_line', relation_ref: s.lines.L3 } })),
     'update_task_fields moving a task to read-only L3',
   );
-  await preview(rita, 'create_task', { title: `Task on L1 ${tag}`, relation_type: 'spend_item', relation_ref: s.lines.L1 });
+  await preview(rita, 'create_task', { title: `Task on L1 ${tag}`, relation_type: 'budget_line', relation_ref: s.lines.L1 });
   // A hidden line answers as a missing one.
   const missingId = randomUUID();
   sameRefusal(
-    await rejection(() => tool(rita, 'update_business_record', { entity_type: 'spend_items', ref: s.lines.L5, fields: { notes: 'Never written' } })),
-    await rejection(() => tool(rita, 'update_business_record', { entity_type: 'spend_items', ref: missingId, fields: { notes: 'Never written' } })),
+    await rejection(() => tool(rita, 'update_business_record', { entity_type: 'budget_lines', ref: s.lines.L5, fields: { notes: 'Never written' } })),
+    await rejection(() => tool(rita, 'update_business_record', { entity_type: 'budget_lines', ref: missingId, fields: { notes: 'Never written' } })),
     s.lines.L5, missingId, 'update_business_record on hidden L5',
   );
 
   // An editable line (L1): previewed, approved, written.
-  const notes = await preview(rita, 'update_business_record', { entity_type: 'spend_items', ref: s.lines.L1, fields: { notes: `Rita ${tag}` } });
+  const notes = await preview(rita, 'update_business_record', { entity_type: 'budget_lines', ref: s.lines.L1, fields: { notes: `Rita ${tag}` } });
   assert.equal((await approve(rita, notes.preview_id)).status, 'executed', 'update of L1 executed');
   const written = await inTenant(() => client.query(`SELECT notes FROM spend_items WHERE id = $1`, [s.lines.L1]));
   assert.equal(written.rows[0].notes, `Rita ${tag}`, 'L1 written');
 
   // The approval runs in the approver's access at that time: her edit node removed, refused.
-  const later = await preview(rita, 'update_business_record', { entity_type: 'spend_items', ref: s.lines.L1, fields: { notes: `Later ${tag}` } });
+  const later = await preview(rita, 'update_business_record', { entity_type: 'budget_lines', ref: s.lines.L1, fields: { notes: `Later ${tag}` } });
   await inTenant(() => client.query(
     `DELETE FROM user_data_access_nodes WHERE tenant_id = $1 AND user_id = $2 AND cost_center_id = $3 AND access = 'edit'`,
     [s.tenantId, rita, s.infFr],
@@ -621,7 +621,7 @@ async function testPlaidLineDeleteReserved(): Promise<void> {
     [s.tenantId, roleId],
   ));
   try {
-    const refused = await rejection(() => tool(rita, 'delete_record', { entity_type: 'spend_items', ref: s.lines.L1 }));
+    const refused = await rejection(() => tool(rita, 'delete_record', { entity_type: 'budget_lines', ref: s.lines.L1 }));
     assert.ok(refused instanceof HttpException, `delete_record: ${refused?.stack ?? refused}`);
     assert.equal(refused.getStatus(), 403, 'delete_record on a line (limited person)');
     assert.equal((refused.getResponse() as any)?.code, 'DATA_ACCESS_LIMITED', 'delete_record on a line (limited person)');
@@ -644,7 +644,7 @@ async function testPlaidLineDeleteReserved(): Promise<void> {
 
 async function testPlaidRelationWrites(): Promise<void> {
   const { rita, ulla } = s.persons;
-  const relation = (extra: Record<string, unknown>) => ({ entity_type: 'applications', ref: applicationId, relation: 'spend_items', ...extra });
+  const relation = (extra: Record<string, unknown>) => ({ entity_type: 'applications', ref: applicationId, relation: 'budget_lines', ...extra });
   // A hidden line cannot be linked: refused as a missing one.
   const missingId = randomUUID();
   sameRefusal(
@@ -676,7 +676,7 @@ async function testPlaidRelationWrites(): Promise<void> {
   // A contract carries L1 (modifiable) and L3 (read-only): a replacement checks only the targets
   // added and removes only the links asked, so the read-only link that stays is never rewritten.
   const contractRelation = (extra: Record<string, unknown>) => ({
-    entity_type: 'contracts', ref: contractVisible, relation: 'spend_items', ...extra,
+    entity_type: 'contracts', ref: contractVisible, relation: 'budget_lines', ...extra,
   });
   assert.deepEqual(await linkedContractLines(), ['L1', 'L3'], 'the contract links L1 and the read-only L3');
   const keepReadOnly = await preview(rita, 'update_entity_relations', contractRelation({ remove: [s.lines.L1] }));

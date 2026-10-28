@@ -644,7 +644,7 @@ async function testBulkReplacements() {
   });
 }
 
-/** The AI's readers and writers of OPEX lines: none sees the CAPEX line; each sees it once it is OPEX. */
+/** The AI's budget line surface is one family: its readers find the CAPEX line as itself, both natures. */
 async function testAi() {
   await inRolledBackTransaction(async (runner) => {
     const w = await seedWorld(runner);
@@ -655,41 +655,42 @@ async function testAi() {
     const task: any = new AiTaskMutationSupportService();
     const rel: any = new AiRelationMutationSupportService(audit, none, task, undefined as any);
     const biz: any = new (AiBusinessRecordMutationSupportService as any)(...Array.from({ length: 20 }, (_, i) => (i === 2 ? audit : undefined)));
-    const appSpendItems = {
-      sourceEntity: 'applications', relation: 'spend_items', label: 'Spend Items', table: 'application_spend_items',
-      sourceColumn: 'application_id', targetColumn: 'spend_item_id', target: 'spend_items', businessResource: 'applications', kind: 'simple',
+    const appBudgetLines = {
+      sourceEntity: 'applications', relation: 'budget_lines', label: 'Budget Lines', table: 'application_spend_items',
+      sourceColumn: 'application_id', targetColumn: 'spend_item_id', target: 'budget_lines', businessResource: 'applications', kind: 'simple',
     };
     const F = w.foreign.id;
     const has = (ids: string[]) => ids.includes(F);
-    // [label, probe, does the answer contain the foreign line?]
+    // The AI's budget line surface is one family: every reader finds the CAPEX line as itself.
     const probes: Array<[string, () => Promise<unknown>, (answer: { status: number; body?: any }) => boolean]> = [
-      ['financial plan: line by id', () => fin.resolveItem(context, 'spend_items', F), (a) => a.status === 200 && a.body.id === F],
-      ['financial plan: line by name', () => fin.resolveItem(context, 'spend_items', `capex line ${FOREIGN_NUMBER}`), (a) => a.status === 200 && a.body.id === F],
-      ['relations: reference candidates', async () => (await rel.queryReferenceCandidates(context, 'spend_items', F)).map((r: any) => r.id), (a) => has(a.body)],
-      ['relations: an application\'s OPEX lines', async () => (await rel.loadRelationItems(context, appSpendItems, w.applicationId)).map((i: any) => i.key), (a) => has(a.body)],
-      ['tasks: exact target', () => task.getExactTarget(context, 'spend_item', F), (a) => a.status === 200 && a.body.id === F],
-      ['tasks: target search', async () => (await task.searchTargetCandidates(context, 'spend_item', 'line', 10)).map((c: any) => c.id), (a) => has(a.body)],
-      ['business records: reference by id', async () => (await biz.queryReferenceCandidates(context, 'spend_items', F)).map((r: any) => r.id), (a) => has(a.body)],
-      ['business records: reference by BL-n', async () => (await biz.queryReferenceCandidates(context, 'spend_items', `BL-${FOREIGN_NUMBER}`)).map((r: any) => r.id), (a) => has(a.body)],
+      ['financial plan: line by id', () => fin.resolveItem(context, F), (a) => a.status === 200 && a.body.id === F],
+      ['financial plan: line by name', () => fin.resolveItem(context, `capex line ${FOREIGN_NUMBER}`), (a) => a.status === 200 && a.body.id === F],
+      ['relations: reference candidates', async () => (await rel.queryReferenceCandidates(context, 'budget_lines', F)).map((r: any) => r.id), (a) => has(a.body)],
+      ['relations: an application\'s budget lines', async () => (await rel.loadRelationItems(context, appBudgetLines, w.applicationId)).map((i: any) => i.key), (a) => has(a.body)],
+      ['tasks: exact target', () => task.getExactTarget(context, 'budget_line', F), (a) => a.status === 200 && a.body.id === F],
+      ['tasks: target search', async () => (await task.searchTargetCandidates(context, 'budget_line', 'line', 10)).map((c: any) => c.id), (a) => has(a.body)],
+      ['business records: reference by id', async () => (await biz.queryReferenceCandidates(context, 'budget_lines', F)).map((r: any) => r.id), (a) => has(a.body)],
+      ['business records: reference by BL-n', async () => (await biz.queryReferenceCandidates(context, 'budget_lines', `BL-${FOREIGN_NUMBER}`)).map((r: any) => r.id), (a) => has(a.body)],
     ];
     for (const [label, probe, seesForeign] of probes) {
-      const asCapex = await statusOf(runner, probe);
-      assert.ok(asCapex.status === 404 || (asCapex.status === 200 && !seesForeign(asCapex)), `AI ${label}: the CAPEX line is not found (${JSON.stringify(asCapex)})`);
-      const asOpex = await asOpexLine(runner, w, () => statusOf(runner, probe));
-      assert.ok(seesForeign(asOpex), `AI ${label}: found once the line is OPEX (${JSON.stringify(asOpex)})`);
+      const answer = await statusOf(runner, probe);
+      assert.ok(seesForeign(answer), `AI ${label}: the CAPEX line is found as a budget line (${JSON.stringify(answer)})`);
     }
     // The unified registry names the two natures in its `baseWhere`: the aggregate by ids reads the
     // OPEX and the CAPEX lines, and no other value the column's CHECK keeps out.
     const aggregate: any = new (AiAggregateExecutor as any)();
     const keys = (await aggregate.aggregateByIds(context, budgetLinesRegistry, 'supplier', [w.opex.id, F], 'count', null)).map((row: any) => row.key);
     assert.deepEqual(keys.sort(), ['CAPEX line supplier', 'OPEX line supplier'], 'the unified registry aggregate reads both natures');
-    // Replacing an application's OPEX lines through the AI keeps its link to the CAPEX line.
+    // Replacing an application's budget lines is one relation now: a line left out of the set goes,
+    // whichever nature it has.
     const kept = await inSavepoint(runner, async () => {
-      await rel.replaceSimpleRelation(context, appSpendItems, w.applicationId, []);
+      await rel.replaceSimpleRelation(context, appBudgetLines, w.applicationId, [
+        { key: w.opex.id, label: 'OPEX line', payload: { spend_item_id: w.opex.id } },
+      ]);
       return (await runner.query(`SELECT spend_item_id FROM application_spend_items WHERE tenant_id = $1 AND application_id = $2`, [w.tenantId, w.applicationId]))
         .map((row: any) => row.spend_item_id);
     });
-    assert.deepEqual(kept, [F], 'the AI relation replace removes the OPEX link and keeps the CAPEX one');
+    assert.deepEqual(kept, [w.opex.id], 'the unified relation replaces both natures');
   });
 }
 

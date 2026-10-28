@@ -688,8 +688,9 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const businessCtx = context(seed, runner, 'business-record');
     const spendPreview = await executeToolPreview(harness, businessCtx, 'create_business_record', {
-      entity_type: 'spend_items',
+      entity_type: 'budget_lines',
       fields: {
+        nature: 'opex',
         product_name: `PLAID Created Spend ${seed.tag}`,
         paying_company_id: seed.companyId,
         supplier_id: seed.supplierId,
@@ -774,7 +775,7 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
 
     const financialCtx = context(seed, runner, 'financial');
     const versionPreview = await executeToolPreview(harness, financialCtx, 'write_financial_plan', {
-      entity_type: 'spend_items',
+      entity_type: 'budget_lines',
       ref: createdSpendId,
       action: 'create_version',
       fields: {
@@ -800,7 +801,7 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
     // A version holds one year: amounts for another year are refused before approval.
     await assert.rejects(
       () => executeToolPreview(harness, financialCtx, 'write_financial_plan', {
-        entity_type: 'spend_items',
+        entity_type: 'budget_lines',
         ref: createdSpendId,
         action: 'upsert_amounts',
         version_ref: versionRow.id,
@@ -811,7 +812,7 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
 
     // An unknown spread profile is refused at the preview, with the message the write gives.
     const profilePreview = (amounts: Record<string, unknown>) => executeToolPreview(harness, financialCtx, 'write_financial_plan', {
-      entity_type: 'spend_items',
+      entity_type: 'budget_lines',
       ref: createdSpendId,
       action: 'upsert_amounts',
       version_ref: versionRow.id,
@@ -831,7 +832,7 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
     assert.ok(knownQuarterly.preview_id, 'a known quarterly profile gets a preview');
 
     const amountPreview = await executeToolPreview(harness, financialCtx, 'write_financial_plan', {
-      entity_type: 'spend_items',
+      entity_type: 'budget_lines',
       ref: createdSpendId,
       action: 'upsert_amounts',
       version_ref: versionRow.id,
@@ -891,7 +892,7 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
       [seed.tenantId, versionRow.id],
     ))[0]?.planned;
     const januaryPreview = (planned: unknown) => executeToolPreview(harness, financialCtx, 'write_financial_plan', {
-      entity_type: 'spend_items',
+      entity_type: 'budget_lines',
       ref: createdSpendId,
       action: 'upsert_amounts',
       version_ref: versionRow.id,
@@ -914,7 +915,7 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
     assert.equal(await january(), '0.00');
 
     const allocationPreview = await executeToolPreview(harness, financialCtx, 'write_financial_plan', {
-      entity_type: 'spend_items',
+      entity_type: 'budget_lines',
       ref: createdSpendId,
       action: 'replace_allocations',
       version_ref: versionRow.id,
@@ -934,9 +935,10 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
     const limitedCtx = context(seed, runner, 'rbac', seed.limitedUserId);
     await expectRejects(
       () => harness.tools.execute(limitedCtx, 'create_business_record', {
-        entity_type: 'capex_items',
+        entity_type: 'budget_lines',
         fields: {
-          description: `Forbidden CAPEX ${seed.tag}`,
+          nature: 'capex',
+          product_name: `Forbidden CAPEX ${seed.tag}`,
           paying_company_id: seed.companyId,
           currency: 'EUR',
           effective_start: '2026-01-01',
@@ -967,7 +969,7 @@ async function testCapexOwnersAnalyticsAndApplications(harness: Harness) {
     const ctx = context(seed, runner, 'capex-fields');
     await expectRejects(
       () => harness.tools.execute(ctx, 'update_business_record', {
-        entity_type: 'capex_items',
+        entity_type: 'budget_lines',
         ref: seed.capexItemId,
         fields: { analytics_category_id: foreignCategory.id },
       }),
@@ -975,7 +977,7 @@ async function testCapexOwnersAnalyticsAndApplications(harness: Harness) {
     );
     await expectRejects(
       () => harness.tools.execute(ctx, 'update_business_record', {
-        entity_type: 'capex_items',
+        entity_type: 'budget_lines',
         ref: seed.capexItemId,
         fields: { owner_it_id: foreignUser.id },
       }),
@@ -983,7 +985,7 @@ async function testCapexOwnersAnalyticsAndApplications(harness: Harness) {
     );
 
     const preview = await executeToolPreview(harness, ctx, 'update_business_record', {
-      entity_type: 'capex_items',
+      entity_type: 'budget_lines',
       ref: seed.capexItemId,
       fields: {
         it_owner: seed.userId,
@@ -1007,7 +1009,7 @@ async function testCapexOwnersAnalyticsAndApplications(harness: Harness) {
 
     const relationCtx = context(seed, runner, 'capex-applications');
     const relationPreview = await executeToolPreview(harness, relationCtx, 'update_entity_relations', {
-      entity_type: 'capex_items',
+      entity_type: 'budget_lines',
       ref: seed.capexItemId,
       relation: 'applications',
       add: [seed.applicationId],
@@ -1063,9 +1065,9 @@ async function testItemAnalyticsCategoryThroughTheLinks(harness: Harness) {
     await setCurrentTenant(runner, seed.tenantId);
     const ctx = context(seed, runner, 'item-analytics');
 
-    for (const [entityType, itemId, itemTable, linkTable] of [
-      ['spend_items', seed.spendItemId, 'spend_items', 'spend_item_analytics_values'],
-      ['capex_items', seed.capexItemId, 'spend_items', 'spend_item_analytics_values'], // a CAPEX line's storage since lot Z1
+    for (const [entityType, lineNature, itemId, itemTable, linkTable] of [
+      ['budget_lines', 'opex', seed.spendItemId, 'spend_items', 'spend_item_analytics_values'],
+      ['budget_lines', 'capex', seed.capexItemId, 'spend_items', 'spend_item_analytics_values'],
     ] as const) {
       await runner.query(
         `INSERT INTO ${linkTable} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`,
@@ -1100,7 +1102,7 @@ async function testItemAnalyticsCategoryThroughTheLinks(harness: Harness) {
         /This value is disabled/,
       );
       // A value restricted to the other line type is refused, with the write gate's message.
-      const [lineType, otherType] = entityType === 'spend_items' ? ['OPEX', 'CAPEX'] : ['CAPEX', 'OPEX'];
+      const [lineType, otherType] = lineNature === 'opex' ? ['OPEX', 'CAPEX'] : ['CAPEX', 'OPEX'];
       await expectRejects(
         () => harness.tools.execute(ctx, 'update_business_record', { entity_type: entityType, ref: itemId, fields: { analytics_category: `${otherType} only ${seed.tag}` } }),
         new RegExp(`^${otherType} only ${seed.tag} is for ${otherType} lines only\\. Choose a value for ${lineType} lines\\.$`),
@@ -1154,22 +1156,22 @@ async function testItemAnalyticsDimensions(harness: Harness) {
 
     for (const line of [
       {
-        entityType: 'spend_items', itemId: seed.spendItemId, linkTable: 'spend_item_analytics_values', labelPlural: 'spend items',
+        entityType: 'budget_lines', nature: 'opex', itemId: seed.spendItemId, linkTable: 'spend_item_analytics_values', labelPlural: 'budget lines',
         lineType: 'OPEX', otherType: 'CAPEX', ownAxis: recurrence, ownCode: 'recurrence', ownValue: monthly, ownName: 'Monthly',
         otherCode: 'asset-class', otherName: 'Asset class', otherValueName: 'Servers',
-        createFields: { product_name: `Dimensions ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' },
+        createFields: { nature: 'opex', product_name: `Dimensions ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' },
       },
       {
-        entityType: 'capex_items', itemId: seed.capexItemId, linkTable: 'spend_item_analytics_values', labelPlural: 'CAPEX items',
+        entityType: 'budget_lines', nature: 'capex', itemId: seed.capexItemId, linkTable: 'spend_item_analytics_values', labelPlural: 'budget lines',
         lineType: 'CAPEX', otherType: 'OPEX', ownAxis: assetClass, ownCode: 'asset-class', ownValue: servers, ownName: 'Servers',
         otherCode: 'recurrence', otherName: 'Recurrence', otherValueName: 'Monthly',
         createFields: {
-          description: `Dimensions ${seed.tag}`,
+          nature: 'capex', product_name: `Dimensions ${seed.tag}`,
           paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01',
         },
       },
     ]) {
-      const { entityType, itemId, linkTable } = line;
+      const { entityType, nature: lineNature, itemId, linkTable } = line;
       const links = async (id = itemId): Promise<Record<string, string>> => Object.fromEntries(
         (await runner.query(`SELECT axis_id, category_id FROM ${linkTable} WHERE tenant_id = $1 AND item_id = $2`, [seed.tenantId, id]))
           .map((row: any) => [row.axis_id, row.category_id]),
@@ -1215,7 +1217,7 @@ async function testItemAnalyticsDimensions(harness: Harness) {
       const [{ count }] = await runner.query(
         // Both natures in spend_items since lot Z1, the CAPEX title in product_name.
         `SELECT count(*)::int AS count FROM spend_items WHERE tenant_id = $1 AND nature = $3 AND product_name = $2`,
-        [seed.tenantId, `Dimensions ${seed.tag}`, entityType === 'spend_items' ? 'opex' : 'capex'],
+        [seed.tenantId, `Dimensions ${seed.tag}`, lineNature],
       );
       assert.equal(count, 1, `${entityType}: one line created`);
 
@@ -1351,18 +1353,18 @@ async function testCapexCriteriaAreDimensions(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     await ensureCapexDimensions(runner.manager, seed.tenantId);
     const ctx = context(seed, runner, 'capex-criteria');
-    const fields = { description: `Criteria ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' };
+    const fields = { nature: 'capex', product_name: `Criteria ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' };
     const create = (extra: Record<string, unknown>) =>
-      harness.tools.execute(ctx, 'create_business_record', { entity_type: 'capex_items', fields: { ...fields, ...extra } });
+      harness.tools.execute(ctx, 'create_business_record', { entity_type: 'budget_lines', fields: { ...fields, ...extra } });
 
-    await expectRejects(() => create({}), /^PP&E type is required for CAPEX item creation\.$/);
-    await expectRejects(() => create({ ppe_type: 'hardware' }), /^"?ppe_type"? is not writable for CAPEX items\./);
+    await expectRejects(() => create({}), /^PP&E type is required for budget line creation\.$/);
+    await expectRejects(() => create({ ppe_type: 'hardware' }), /^"?ppe_type"? is not writable for budget lines\./);
     await expectRejects(
       () => create({ 'analytics:ppe_type': 'Hardware', 'analytics:investment_type': 'Capacity' }),
-      /^Priority is required for CAPEX item creation\.$/,
+      /^Priority is required for budget line creation\.$/,
     );
     const created = await executeToolPreview(harness, ctx, 'create_business_record', {
-      entity_type: 'capex_items',
+      entity_type: 'budget_lines',
       fields: { ...fields, 'analytics:ppe_type': 'Hardware', 'analytics:investment_type': 'Capacity', 'analytics:priority': 'High' },
     });
     const createdId = (await approvePreview(harness, ctx, created)).target.entity_id;
@@ -1405,13 +1407,13 @@ async function testItemRequiredDimensions(harness: Harness) {
 
     for (const line of [
       {
-        entityType: 'spend_items', itemId: seed.spendItemId, linkTable: 'spend_item_analytics_values', label: 'spend item', other: 'capex',
-        createFields: { product_name: `Required ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' },
+        entityType: 'budget_lines', nature: 'opex', itemId: seed.spendItemId, linkTable: 'spend_item_analytics_values', label: 'budget line', other: 'capex',
+        createFields: { nature: 'opex', product_name: `Required ${seed.tag}`, paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' },
       },
       {
-        entityType: 'capex_items', itemId: seed.capexItemId, linkTable: 'spend_item_analytics_values', label: 'CAPEX item', other: 'opex',
+        entityType: 'budget_lines', nature: 'capex', itemId: seed.capexItemId, linkTable: 'spend_item_analytics_values', label: 'budget line', other: 'opex',
         createFields: {
-          description: `Required ${seed.tag}`,
+          nature: 'capex', product_name: `Required ${seed.tag}`,
           paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01',
         },
       },
@@ -1552,42 +1554,33 @@ async function createHarness(): Promise<Harness> {
 }
 
 /**
- * A budget line is named by its business reference: OPX-<n> for a spend item,
- * CPX-<n> for a CAPEX item (case-insensitive). A reference of the other line
- * type matches nothing.
+ * A budget line is named by its business references, whatever its nature: BL-n its own
+ * number, OPX-n a spend line's legacy number, CPX-n a CAPEX line's (case-insensitive).
  */
 async function testBudgetLinesByBusinessReference(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const [spend] = await runner.query(`SELECT item_number FROM spend_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.spendItemId]);
-    // A CAPEX line's CPX number is its legacy number since lot Z1.
     const [capex] = await runner.query(
-      `SELECT substring(legacy_number FROM '^CPX-([0-9]+)$')::int AS item_number FROM spend_items WHERE tenant_id = $1 AND id = $2 AND nature = 'capex'`,
+      `SELECT item_number, substring(legacy_number FROM '^CPX-([0-9]+)$')::int AS cpx_number FROM spend_items WHERE tenant_id = $1 AND id = $2 AND nature = 'capex'`,
       [seed.tenantId, seed.capexItemId],
     );
     const cases = [
-      { entityType: 'spend_items', itemId: seed.spendItemId, ref: `OPX-${spend.item_number}`, otherRef: `CPX-${capex.item_number}`, labelPlural: 'spend items' },
-      { entityType: 'capex_items', itemId: seed.capexItemId, ref: `cpx-${capex.item_number}`, otherRef: `OPX-${spend.item_number}`, labelPlural: 'CAPEX items' },
+      { itemId: seed.spendItemId, refs: [`OPX-${spend.item_number}`, `BL-${spend.item_number}`] },
+      { itemId: seed.capexItemId, refs: [`cpx-${capex.cpx_number}`, `BL-${capex.item_number}`] },
     ];
-    for (const { entityType, itemId, ref, otherRef, labelPlural } of cases) {
-      const ctx = context(seed, runner, `by-reference-${entityType}`);
-      const preview = await executeToolPreview(harness, ctx, 'update_business_record', {
-        entity_type: entityType,
-        ref,
-        fields: { notes: `Notes by reference ${seed.tag}` },
-      });
-      assert.equal(preview.target.entity_id, itemId, `${ref} targets the seeded line`);
-      await approvePreview(harness, ctx, preview);
-      const [row] = await runner.query(`SELECT notes FROM spend_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, itemId]);
-      assert.equal(row.notes, `Notes by reference ${seed.tag}`, `${ref} updates the line`);
-
-      await expectRejects(
-        () => harness.tools.execute(ctx, 'update_business_record', {
-          entity_type: entityType,
-          ref: otherRef,
-          fields: { notes: 'Never written' },
-        }),
-        new RegExp(`^No ${labelPlural} found matching "${otherRef}"\\.$`),
-      );
+    for (const { itemId, refs } of cases) {
+      for (const ref of refs) {
+        const ctx = context(seed, runner, `by-reference-${ref}`);
+        const preview = await executeToolPreview(harness, ctx, 'update_business_record', {
+          entity_type: 'budget_lines',
+          ref,
+          fields: { notes: `Notes by ${ref}` },
+        });
+        assert.equal(preview.target.entity_id, itemId, `${ref} targets the seeded line`);
+        await approvePreview(harness, ctx, preview);
+        const [row] = await runner.query(`SELECT notes FROM spend_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, itemId]);
+        assert.equal(row.notes, `Notes by ${ref}`, `${ref} updates the line`);
+      }
     }
   });
 }
@@ -1601,6 +1594,7 @@ async function testLineCreatedWithItsAmountInOneApproval(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'line-with-amount');
     const fields = {
+      nature: 'opex',
       product_name: `QA Test ${seed.tag}`,
       paying_company_id: seed.companyId,
       currency: 'EUR',
@@ -1610,16 +1604,16 @@ async function testLineCreatedWithItsAmountInOneApproval(harness: Harness) {
       () => harness.tools.execute(ctx, 'create_business_record', {
         entity_type: 'applications', fields: { name: `No amounts ${seed.tag}` }, amounts: { kind: 'annual', year: 2026, totals: { planned: 1 } },
       }),
-      /amounts is only accepted when creating a spend item or a CAPEX item/,
+      /amounts is only accepted when creating a budget line/,
     );
     await expectRejects(
       () => harness.tools.execute(ctx, 'create_business_record', {
-        entity_type: 'spend_items', fields, amounts: { kind: 'annual', year: 2026, totals: { planned: 'twelve' } },
+        entity_type: 'budget_lines', fields, amounts: { kind: 'annual', year: 2026, totals: { planned: 'twelve' } },
       }),
       /amounts\.totals\.planned must be a number/,
     );
     const preview = await executeToolPreview(harness, ctx, 'create_business_record', {
-      entity_type: 'spend_items',
+      entity_type: 'budget_lines',
       fields,
       amounts: { kind: 'annual', year: 2026, totals: { planned: 12000 } },
     });
@@ -1647,13 +1641,153 @@ async function testLineCreatedWithItsAmountInOneApproval(harness: Harness) {
 
     const [line] = await runner.query(`SELECT item_number FROM spend_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, lineId]);
     const byReference = await executeToolPreview(harness, ctx, 'write_financial_plan', {
-      entity_type: 'spend_items',
+      entity_type: 'budget_lines',
       ref: `BL-${line.item_number}`,
       action: 'upsert_amounts',
       version_ref: '2026',
       amounts: { kind: 'annual', year: 2026, totals: { planned: 13000 } },
     });
     assert.equal(byReference.target.entity_id, lineId, 'BL-n names the new line');
+  });
+}
+
+/**
+ * One budget line family on the write surface: `nature` is required on creation and refused on
+ * update, `contract_id` is refused on a CAPEX line, old entity types do not pass the schema, a
+ * task on either nature stores its own `related_object_type`, relations accept both natures, and
+ * the financial plan writes the OPEX and the CAPEX line through the one family.
+ */
+async function testBudgetLineSingleFamilyWrites(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'budget-family');
+    const base = { paying_company_id: seed.companyId, currency: 'EUR', effective_start: '2026-01-01' };
+
+    await expectRejects(
+      () => harness.tools.execute(ctx, 'create_business_record', {
+        entity_type: 'budget_lines',
+        fields: { product_name: `No nature ${seed.tag}`, ...base },
+      }),
+      /nature is required to create a budget line: opex or capex/,
+    );
+
+    for (const nature of ['capex', 'opex'] as const) {
+      const preview = await executeToolPreview(harness, ctx, 'create_business_record', {
+        entity_type: 'budget_lines',
+        fields: { nature, product_name: `Family ${nature} ${seed.tag}`, ...base },
+      });
+      const created = await approvePreview(harness, ctx, preview);
+      const [row] = await runner.query(
+        `SELECT nature FROM spend_items WHERE tenant_id = $1 AND id = $2`,
+        [seed.tenantId, created.target.entity_id],
+      );
+      assert.equal(row.nature, nature, `the created line is ${nature}`);
+    }
+
+    const before = await runner.query(`SELECT count(*)::int AS n FROM ai_mutation_previews WHERE tenant_id = $1`, [seed.tenantId]);
+    await expectRejects(
+      () => harness.tools.execute(ctx, 'update_business_record', {
+        entity_type: 'budget_lines', ref: seed.spendItemId, fields: { nature: 'capex', notes: 'Never written' },
+      }),
+      /The nature of a budget line cannot be changed here: change the line type in the budget screen\./,
+    );
+    await expectRejects(
+      () => harness.tools.execute(ctx, 'update_business_record', {
+        entity_type: 'budget_lines', ref: seed.capexItemId, fields: { contract_id: seed.contractId },
+      }),
+      /A contract cannot be written on a CAPEX line/,
+    );
+    const [after] = await runner.query(`SELECT count(*)::int AS n FROM ai_mutation_previews WHERE tenant_id = $1`, [seed.tenantId]);
+    assert.equal(after.n, before[0].n, 'both refusals happen before any preview');
+
+    await expectRejects(
+      () => harness.tools.execute(ctx, 'create_business_record', {
+        entity_type: 'spend_items', fields: { product_name: `Old type ${seed.tag}` },
+      }),
+      /must be one of/,
+    );
+
+    const task = await executeToolPreview(harness, ctx, 'create_task', {
+      title: `CAPEX task ${seed.tag}`,
+      relation_type: 'budget_line',
+      relation_ref: seed.capexItemId,
+    });
+    await approvePreview(harness, ctx, task);
+    const [taskRow] = await runner.query(
+      `SELECT related_object_type FROM tasks WHERE tenant_id = $1 AND title = $2`,
+      [seed.tenantId, `CAPEX task ${seed.tag}`],
+    );
+    assert.equal(taskRow.related_object_type, 'capex_item', 'the stored task type comes from the line nature');
+
+    const relation = await executeToolPreview(harness, ctx, 'update_entity_relations', {
+      entity_type: 'applications',
+      ref: seed.applicationId,
+      relation: 'budget_lines',
+      add: [seed.spendItemId, seed.capexItemId],
+    });
+    await approvePreview(harness, ctx, relation);
+    const links = await runner.query(
+      `SELECT spend_item_id FROM application_spend_items WHERE tenant_id = $1 AND application_id = $2`,
+      [seed.tenantId, seed.applicationId],
+    );
+    assert.deepEqual(links.map((row: any) => row.spend_item_id).sort(), [seed.spendItemId, seed.capexItemId].sort(), 'one relation, both natures');
+
+    for (const ref of [seed.spendItemId, seed.capexItemId]) {
+      const version = await executeToolPreview(harness, ctx, 'write_financial_plan', {
+        entity_type: 'budget_lines',
+        ref,
+        action: 'create_version',
+        fields: { version_name: `Plan ${seed.tag}`, input_grain: 'annual', budget_year: 2027, as_of_date: '2027-01-01' },
+      });
+      await approvePreview(harness, ctx, version);
+      const [row] = await runner.query(
+        `SELECT count(*)::int AS n FROM spend_versions WHERE tenant_id = $1 AND spend_item_id = $2 AND budget_year = 2027`,
+        [seed.tenantId, ref],
+      );
+      assert.equal(row.n, 1, 'the financial plan writes the line through its nature');
+    }
+  });
+}
+
+/**
+ * A preview executed before the one budget line family (`spend_items` / `capex_items`): its card
+ * still loads in the conversation, and its undo is refused with a readable 400, not a 500.
+ */
+async function testLegacyBudgetLinePreviewUndoRefused(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'legacy-preview');
+    await runner.query(
+      `INSERT INTO ai_conversations (
+         id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at
+       )
+       VALUES ($1, $2, $3, 'AI capabilities integration', 'custom', 'capability-test-model', 'custom', now(), now())`,
+      [ctx.conversationId, ctx.tenantId, ctx.userId],
+    );
+    const [legacy] = await runner.query(
+      `INSERT INTO ai_mutation_previews (
+         tenant_id, conversation_id, user_id, tool_name, target_entity_type, target_entity_id,
+         mutation_input, current_values, status, executed_at, expires_at, created_at
+       )
+       VALUES ($1, $2, $3, 'update_business_record', 'spend_items', $4,
+               '{"action":"update","entity_type":"spend_items","fields":{"notes":"Legacy"}}'::jsonb,
+               '{"target_ref":"BL-1","target_title":"Legacy line","values":{"notes":"Before"}}'::jsonb,
+               'executed', now(), now() + interval '1 hour', now()) RETURNING id`,
+      [seed.tenantId, ctx.conversationId, ctx.userId, seed.spendItemId],
+    );
+    const listed = await harness.previews.listConversationPreviews(ctx, ctx.conversationId);
+    const card = listed.find((preview: any) => preview.preview_id === legacy.id);
+    assert.ok(card, 'the old preview still lists');
+    assert.equal(card.target.entity_type, 'spend_items', 'its card keeps the stored type: no link, no error');
+    assert.deepEqual(card.changes, {}, 'no field labels for an old type');
+
+    let refusal: any = null;
+    try {
+      await harness.previews.createReversePreview(ctx, legacy.id);
+    } catch (error) {
+      refusal = error;
+    }
+    assert.ok(refusal, 'the undo is refused');
+    assert.equal(refusal.getStatus?.(), 400, 'a clean 4xx, not a 500');
+    assert.match(String(refusal.message), /before a Plaid update and can no longer be undone here: use the screen\./);
   });
 }
 
@@ -1672,6 +1806,8 @@ async function run() {
     await testAnalyticsValueInANamedDimension(harness);
     await testBudgetLinesByBusinessReference(harness);
     await testLineCreatedWithItsAmountInOneApproval(harness);
+    await testBudgetLineSingleFamilyWrites(harness);
+    await testLegacyBudgetLinePreviewUndoRefused(harness);
   } finally {
     await harness.app.close();
   }

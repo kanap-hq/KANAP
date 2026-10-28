@@ -72,7 +72,7 @@ function writers(race: Race, s: Seeded, round: number): Array<[string, (manager:
     ['AI amounts', async (manager) => {
       const context: any = { tenantId: race.tenantId, userId: null, manager };
       const prepared = await ai.prepareCreatePreview(context, {
-        entity_type: 'spend_items', action: 'upsert_amounts', ref: s.itemId, version_ref: s.versionId,
+        entity_type: 'budget_lines', action: 'upsert_amounts', ref: s.itemId, version_ref: s.versionId,
         amounts: { kind: 'monthly', year: YEAR, months: [{ period: `${YEAR}-06-01`, planned: 600 + round }] },
       } as any);
       await ai.executePreview(context, {

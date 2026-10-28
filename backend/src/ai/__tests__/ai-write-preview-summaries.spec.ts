@@ -202,10 +202,10 @@ function testCardCodesAndFieldOrder() {
   // jsonb gives the keys back by length: the card follows the order of the line's fields instead.
   const line = preview({
     tool_name: 'create_business_record',
-    target_entity_type: 'spend_items',
+    target_entity_type: 'budget_lines',
     mutation_input: {
       action: 'create',
-      entity_type: 'spend_items',
+      entity_type: 'budget_lines',
       fields: { currency: 'EUR', account_id: 'a-1', product_name: 'QA-PL montant', effective_start: '2026-01-01', paying_company_id: 'c-1', 'analytics_axis:b': 'v-2', 'analytics_axis:a': 'v-1' },
       display_values: {},
     },
@@ -242,8 +242,8 @@ function testFinancialPlanAndRelations() {
   const financial = make(AiFinancialPlanMutationSupportService);
   const amounts = preview({
     tool_name: 'write_financial_plan',
-    target_entity_type: 'spend_items',
-    mutation_input: { action: 'upsert_amounts', entity_type: 'spend_items' },
+    target_entity_type: 'budget_lines',
+    mutation_input: { action: 'upsert_amounts', entity_type: 'budget_lines' },
     current_values: { target_title: 'Licences', display_values: { from: '0', to: '12 000' } },
   });
   assert.equal(summary(financial, amounts, 'en'), 'Update financial amounts for "Licences".');
@@ -321,8 +321,8 @@ function testAmountsForTheCard() {
   const financial = make(AiFinancialPlanMutationSupportService);
   const upsert = preview({
     tool_name: 'write_financial_plan',
-    target_entity_type: 'spend_items',
-    mutation_input: { action: 'upsert_amounts', entity_type: 'spend_items' },
+    target_entity_type: 'budget_lines',
+    mutation_input: { action: 'upsert_amounts', entity_type: 'budget_lines' },
     current_values: {
       target_title: 'Licences',
       display_values: { from: '2026 totals (Budget: 0)', to: '2026 annual totals (Budget: 12000)', from_amounts: before, to_amounts: amounts12000 },
@@ -339,10 +339,10 @@ function testAmountsForTheCard() {
   const create = new CreateBusinessRecordAiMutationOperation(make(AiBusinessRecordMutationSupportService), financial);
   const line = preview({
     tool_name: 'create_business_record',
-    target_entity_type: 'spend_items',
+    target_entity_type: 'budget_lines',
     mutation_input: {
       action: 'create',
-      entity_type: 'spend_items',
+      entity_type: 'budget_lines',
       fields: { product_name: 'Licences', currency: 'EUR' },
       display_values: { product_name: 'Licences', currency: 'EUR' },
       field_labels: { product_name: 'Product Name', currency: 'Currency' },
@@ -428,7 +428,7 @@ function testDeleteRecordSummaryAndCard() {
   // A budget line names its versions, amounts, tasks, requests losing their origin, links and files.
   const line: AiMutationPreview = {
     ...pending,
-    target_entity_type: 'spend_items',
+    target_entity_type: 'budget_lines',
     current_values: {
       target_ref: 'BL-12',
       target_title: 'ERP licence',
@@ -452,9 +452,9 @@ function testDeleteRecordSummaryAndCard() {
     },
   };
   assert.equal(summary(operation, line, 'en'), 'Delete budget line "ERP licence".');
-  assert.equal(summary(operation, line, 'fr'), 'Suppression de la ligne OPEX « ERP licence ».');
-  assert.equal(summary(operation, line, 'de'), 'OPEX-Zeile „ERP licence“ löschen.');
-  assert.equal(summary(operation, line, 'es'), 'Eliminación de la línea OPEX «ERP licence».');
+  assert.equal(summary(operation, line, 'fr'), 'Suppression de la ligne budgétaire « ERP licence ».');
+  assert.equal(summary(operation, line, 'de'), 'Budgetzeile „ERP licence“ löschen.');
+  assert.equal(summary(operation, line, 'es'), 'Eliminación de la línea presupuestaria «ERP licence».');
   assert.equal(
     operation.presentPreview(line, 'fr').changes.deletion.to,
     [
@@ -639,11 +639,11 @@ function testDeleteRecordSummaryAndCard() {
   );
   // A budget line's unnamed count may hold its tasks, which are deleted: no closing that says they stay.
   assert.equal(
-    deletionImpactText('fr', 'spend_items', { counts: { amount_versions: 1 }, hidden: 1 }),
+    deletionImpactText('fr', 'budget_lines', { counts: { amount_versions: 1 }, hidden: 1 }),
     "- Versions avec des montants : 1\n- D'autres rattachements : 1",
   );
   assert.equal(
-    deletionImpactText('fr', 'spend_items', { counts: { contracts: 1 }, hidden: 1 }),
+    deletionImpactText('fr', 'budget_lines', { counts: { contracts: 1 }, hidden: 1 }),
     "- Liens aux contrats : 1\n- D'autres rattachements : 1\n\nLes fiches liées restent.",
   );
   console.log('  delete_record summary and card: OK');
