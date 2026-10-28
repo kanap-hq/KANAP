@@ -3,6 +3,7 @@ import { Autocomplete, Box, Divider, TextField, CircularProgress } from '@mui/ma
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
+import { useOwnerSuggestions } from '../../hooks/useOwnerSuggestions';
 import { formatUserOption, USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst, type UserOption } from './userLookup';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
@@ -26,6 +27,12 @@ type UserSelectProps = {
   textFieldSx?: SxProps<Theme>;
   /** The chosen person's label when the caller holds it: no request to show it. */
   selectedOption?: UserOption | null;
+  /**
+   * Propose the people who read this cost centre first while the field is empty, under their own
+   * header and above a divider. The rest of the lookup follows, without duplicates; a text typed
+   * searches as before. Absent or without a centre: the plain user lookup.
+   */
+  suggestedFirst?: { costCenterId: string | null } | null;
 };
 
 function assignRef<T>(target: React.Ref<T | null> | undefined, value: T | null) {
@@ -52,6 +59,7 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
     hideLabel = false,
     textFieldSx,
     selectedOption,
+    suggestedFirst,
   },
   ref,
 ) {
@@ -65,11 +73,27 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
     value: value ? [value] : [],
     given: [selectedOption],
   });
-  const options = React.useMemo(
-    () => withMeFirst(picker.options, me, picker.searching, (u) => u.id === excludeUserId)
-      .filter((u) => u.id !== excludeUserId),
-    [picker.options, me, picker.searching, excludeUserId],
+  // The cost centre group is read when the list opens, and re-read when the centre changes.
+  const suggested = useOwnerSuggestions(suggestedFirst?.costCenterId ?? null, picker.open);
+  const suggestedIds = React.useMemo(() => new Set(suggested.map((u) => u.id)), [suggested]);
+  const suggestedVisible = React.useMemo(
+    () => suggested.filter((u) => u.id !== excludeUserId),
+    [suggested, excludeUserId],
   );
+  // A typed text searches exactly as before; the group only leads an empty field.
+  const showSuggestions = picker.text.trim() === '' && !picker.searching && suggestedVisible.length > 0;
+  const options = React.useMemo(() => {
+    if (!showSuggestions) {
+      return withMeFirst(picker.options, me, picker.searching, (u) => u.id === excludeUserId)
+        .filter((u) => u.id !== excludeUserId);
+    }
+    return [
+      ...suggestedVisible,
+      ...picker.options.filter((u) => u.id !== excludeUserId && !suggestedIds.has(u.id)),
+    ];
+  }, [showSuggestions, suggestedVisible, suggestedIds, picker.options, me, picker.searching, excludeUserId]);
+  const firstSuggestedId = showSuggestions ? suggestedVisible[0]?.id ?? null : null;
+  const lastSuggestedId = showSuggestions ? suggestedVisible[suggestedVisible.length - 1]?.id ?? null : null;
   const selected = value ? picker.selected[0] ?? null : null;
 
   const formatName = formatUserOption;
@@ -88,14 +112,34 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
       renderOption={(props, option) => {
         // React wants the key passed on its own, not spread with the other props.
         const { key, ...optionProps } = props;
+        const inGroup = showSuggestions && suggestedIds.has(option.id);
         return (
           <React.Fragment key={option.id}>
+            {inGroup && option.id === firstSuggestedId && (
+              <Box
+                component="li"
+                role="presentation"
+                sx={{
+                  px: '14px',
+                  pt: '6px',
+                  pb: '2px',
+                  fontSize: 11,
+                  fontWeight: 500,
+                  lineHeight: 1.5,
+                  color: 'kanap.text.tertiary',
+                  listStyle: 'none',
+                }}
+              >
+                {t('selects.costCenterAccess')}
+              </Box>
+            )}
             <li {...optionProps}>
               <div className="kanap-autocomplete-option-primary">
                 {formatName(option)}{option.id === myId ? ` ${t('selects.meSuffix')}` : ''}
               </div>
             </li>
-            {option.id === myId && !picker.searching && <Divider />}
+            {inGroup && option.id === lastSuggestedId && <Divider />}
+            {!showSuggestions && option.id === myId && !picker.searching && <Divider />}
           </React.Fragment>
         );
       }}

@@ -307,6 +307,7 @@ export default function BudgetPropertiesDrawer({
                 onChange={(v) => onOwnerItChange?.(v ?? '')}
                 disabled={disabled}
                 placeholder={t('opex.metadata.itOwnerMissing')}
+                suggestedFirst={{ costCenterId: costCenterId || null }}
               />
             </Box>
           </PropertyRow>
@@ -319,6 +320,7 @@ export default function BudgetPropertiesDrawer({
                 onChange={(v) => onOwnerBusinessChange?.(v ?? '')}
                 disabled={disabled}
                 placeholder={t('opex.metadata.businessOwnerMissing')}
+                suggestedFirst={{ costCenterId: costCenterId || null }}
               />
             </Box>
           </PropertyRow>
