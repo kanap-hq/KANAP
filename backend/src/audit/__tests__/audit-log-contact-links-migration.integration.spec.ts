@@ -139,7 +139,11 @@ type Seed = {
 };
 
 async function seedRows(runner: QueryRunner, tenantId: string): Promise<Seed> {
-  const supplierId = randomUUID();
+  const [supplier] = await runner.query(
+    `INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Acme Supplies') RETURNING id`,
+    [tenantId],
+  );
+  const supplierId = supplier.id as string;
   const filled: Record<string, string> = {};
   const nullRows: Record<string, string> = {};
   filled.create = await insertAudit(runner, tenantId, 'supplier_contacts', randomUUID(), 'create', null, { supplier_id: supplierId, contact_id: randomUUID(), role: 'commercial' });
@@ -148,6 +152,8 @@ async function seedRows(runner: QueryRunner, tenantId: string): Promise<Seed> {
   filled.createAgain = await insertAudit(runner, tenantId, 'supplier_contacts', randomUUID(), 'create', null, { supplier_id: supplierId, contact_id: randomUUID() });
   nullRows.invalid = await insertAudit(runner, tenantId, 'supplier_contacts', randomUUID(), 'create', null, { supplier_id: 'not-a-uuid' });
   nullRows.noSupplier = await insertAudit(runner, tenantId, 'supplier_contacts', randomUUID(), 'create', null, { contact_id: randomUUID() });
+  // A well-formed id absent from the suppliers table: no parent.
+  nullRows.missingSupplier = await insertAudit(runner, tenantId, 'supplier_contacts', randomUUID(), 'create', null, { supplier_id: randomUUID(), contact_id: randomUUID() });
   // A row of another label with the same key value is not a link of this family.
   nullRows.contact = await insertAudit(runner, tenantId, 'contacts', randomUUID(), 'create', null, { supplier_id: supplierId });
   // A row already parented to another record is never rewritten.
@@ -293,8 +299,8 @@ async function testBackfillRerunAndDown() {
       assert.notEqual(parented.parent_id, tenantSeed.supplierId, 'a row already parented is not rewritten');
     }
 
-    assert.ok(firstLog.includes(`${PREFIX} 8 audit row(s) given a supplier, 4 left without one`), firstLog);
-    assert.ok(firstLog.includes('supplier_contacts: 8 filled, 4 without a parent'), firstLog);
+    assert.ok(firstLog.includes(`${PREFIX} 8 audit row(s) given a supplier, 6 left without one`), firstLog);
+    assert.ok(firstLog.includes('supplier_contacts: 8 filled, 6 without a parent'), firstLog);
     assert.ok(firstLog.includes(`index ${index}: `), firstLog);
     assert.ok(firstLog.includes('supplier_contacts, contract_contacts, spend_item_contacts, capex_item_contacts'), firstLog);
 
@@ -310,8 +316,11 @@ async function testBackfillRerunAndDown() {
       'the second run rewrites no row',
     );
 
-    // down() drops the index and clears the parents this family filled; up() restores both.
+    // A real revert has no tenant positioned; down() drops the index and clears the parents this
+    // family filled, tenant by tenant; up() restores both.
+    await clearTenant(runner);
     await migration.down(runner);
+    assert.equal(await currentTenantSetting(runner), '', 'down() restores the tenant setting');
     assert.equal(await indexDefinition(runner), null, 'down() drops the index');
     const afterDown = new Map<string, any>((await rowsOf(runner, tenantId)).map((row: any) => [row.id, row]));
     for (const id of Object.values(seed.filled)) assert.equal(afterDown.get(id).parent_id, null, 'down() clears the parent');

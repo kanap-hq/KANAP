@@ -442,16 +442,20 @@ export class RecordHistoryService {
     const manager = ctx.manager;
     if (!manager) throw new Error('RecordHistoryService.list needs the request transaction (ctx.manager).');
 
+    // One spelling of the id for every read: a payload key is compared as text, so an upper-case
+    // URL id must not miss the lower-case uuid a writer stored there.
+    const recordId = id.toLowerCase();
+
     // The record is read first, under the person's access and the entry family's own screen rule:
     // a hidden or missing record is not found (404), never served with a partial history.
     const reader = this.referenceReader(ctx, manager);
-    if (!(await recordIsVisible(reader, entry.family, id))) throw new NotFoundException('Record not found');
+    if (!(await recordIsVisible(reader, entry.family, recordId))) throw new NotFoundException('Record not found');
 
     const limit = parseLimit(options.limit);
     const cursor = decodeCursor(options.cursor);
-    const rows = await readAuditPage(manager, ctx.tenantId, entry, id, cursor, limit + 1);
+    const rows = await readAuditPage(manager, ctx.tenantId, entry, recordId, cursor, limit + 1);
     const page = rows.slice(0, limit);
-    const pageContext = await loadPageContext(ctx, entry, id, page, reader);
+    const pageContext = await loadPageContext(ctx, entry, recordId, page, reader);
     const items = page.map((row) => presentItem(row, entry, pageContext))
       // A write the reader cannot see as a change is not an entry: an update that presents nothing
       // (an import marker, a copied method that did not move) stays out. A creation and a deletion

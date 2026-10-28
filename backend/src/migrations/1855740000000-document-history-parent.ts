@@ -52,6 +52,7 @@ function batchSql(after: boolean): string {
        WHERE a.id = b.id
          AND a.parent_id IS NULL
          AND b.document_id IS NOT NULL
+         AND EXISTS (SELECT 1 FROM documents p WHERE p.tenant_id = a.tenant_id AND p.id = b.document_id)
       RETURNING a.table_name
     ), last AS (
       SELECT c.created_at::text AS at, c.id::text AS id FROM candidates c ORDER BY c.created_at ASC, c.id ASC LIMIT 1
@@ -81,9 +82,10 @@ type BatchResult = { scanned: number; last_created_at: string | null; last_id: s
  * finds: one pass over each tenant's rows. No index is added: the generic
  * `idx_audit_log_tenant_parent_created` of `1855500000000` serves the read.
  *
- * Only rows whose `parent_id` is still NULL are touched, and a row whose payload names no uuid is
- * left untouched (not rewritten to NULL), so a second run changes nothing. The attachment of a
- * document deleted since still names its document in the payload, as the write rule does.
+ * Only rows whose `parent_id` is still NULL are touched, and a row whose payload names no uuid or
+ * names a document absent from the tenant is left untouched (not rewritten to NULL), so a second
+ * run changes nothing. The attachment of a document deleted since keeps its payload but gains no
+ * parent.
  *
  * The label counts are logged, filled and left without a parent. The updated rows leave dead
  * versions behind: `VACUUM (ANALYZE) audit_log` after the deploy gives the space back to the table.
@@ -139,13 +141,29 @@ export class DocumentHistoryParent1855740000000 implements MigrationInterface {
     logCounts(filled, withoutParent, documentRows);
   }
 
+  /**
+   * Revert the rule: the attachment labels lose their document parent, tenant by tenant with
+   * `app.current_tenant` set. A revert runs with no tenant positioned, and `audit_log` is under
+   * FORCE RLS, so a single update would touch nothing. A parent another family set stays, and RLS
+   * is never disabled.
+   */
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Undo this rule's writes: an attachment's parent is always this migration's document.
-    await queryRunner.query(
-      `UPDATE audit_log SET parent_table = NULL, parent_id = NULL
-        WHERE table_name = ANY($1::text[]) AND parent_table = 'documents'`,
-      [LABELS],
+    const [{ found }]: Array<{ found: string | null }> = await queryRunner.query(
+      `SELECT current_setting('app.current_tenant', true) AS found`,
     );
+    const tenants: Array<{ id: string }> = await queryRunner.query(`SELECT id FROM tenants ORDER BY created_at ASC, id ASC`);
+    try {
+      for (const tenant of tenants) {
+        await queryRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
+        await queryRunner.query(
+          `UPDATE audit_log SET parent_table = NULL, parent_id = NULL
+            WHERE tenant_id = $1 AND table_name = ANY($2::text[]) AND parent_table = 'documents'`,
+          [tenant.id, LABELS],
+        );
+      }
+    } finally {
+      await queryRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [found ?? '']);
+    }
   }
 }
 

@@ -96,6 +96,8 @@ async function seedTenant(runner: QueryRunner, tag: string): Promise<{ tenantId:
   rows.category = await insertAudit(runner, tenantId, 'analytics_categories', { axis_id: axis.id, name: 'Cloud' }, { axis_id: axis.id, name: 'Cloud spend' });
   rows.invalidUuid = await insertAudit(runner, tenantId, 'company_metrics', null, { company_id: 'not-a-uuid' });
   rows.missingKey = await insertAudit(runner, tenantId, 'department_metrics', null, { fiscal_year: 2026 });
+  // A uuid no row of the parent table carries: the backfill must not set it as a parent.
+  rows.missingParent = await insertAudit(runner, tenantId, 'company_metrics', null, { company_id: randomUUID() });
   rows.ownRecord = await insertAudit(runner, tenantId, 'companies', null, { id: company.id, name: 'Alpha Co' });
   const already = await insertAudit(
     runner, tenantId, 'company_metrics', null, { company_id: company.id },
@@ -167,6 +169,7 @@ async function testBackfill(tenants: Array<{ tenantId: string; seeded: Seeded }>
       assert.equal(rows.get(seeded.rows.category).parent_id, seeded.axis);
       assert.equal(rows.get(seeded.rows.invalidUuid).parent_id, null, 'an invalid uuid stays without a parent');
       assert.equal(rows.get(seeded.rows.missingKey).parent_id, null, 'an absent key stays without a parent');
+      assert.equal(rows.get(seeded.rows.missingParent).parent_id, null, 'a parent absent from the tenant stays unset');
       assert.equal(rows.get(seeded.rows.ownRecord).parent_id, null, 'a record own row keeps parent NULL');
       assert.equal(rows.get(seeded.already.id).parent_table, 'companies', 'a filled row is not rewritten');
       assert.equal(rows.get(seeded.already.id).parent_id, seeded.already.parent);
@@ -177,6 +180,19 @@ async function testBackfill(tenants: Array<{ tenantId: string; seeded: Seeded }>
 
     for (const table of ['audit_log', 'companies', 'departments', 'analytics_axes', 'company_metrics', 'department_metrics', 'analytics_categories']) {
       assert.deepEqual(await rowSecurity(runner, table), { enabled: true, forced: true }, `${table}: RLS stayed ENABLE + FORCE`);
+    }
+
+    // A revert has no tenant positioned (a real `migration:revert`): its down still clears the
+    // family's parents, tenant by tenant, without touching another family's parent.
+    await runner.query(`SELECT set_config('app.current_tenant', '', true)`);
+    await migration.down(runner);
+    assert.equal(await currentTenantSetting(runner), '', 'down restores the tenant setting');
+    for (const { tenantId, seeded } of tenants) {
+      const rows = new Map<string, any>((await rowsOf(runner, tenantId)).map((row: any) => [row.id, row]));
+      for (const id of [seeded.rows.companyMetric, seeded.rows.departmentMetric, seeded.rows.category]) {
+        assert.equal(rows.get(id).parent_id, null, 'down clears the family parent');
+      }
+      assert.equal(rows.get(seeded.already.id).parent_id, null, 'down clears a parent of the family label');
     }
     console.log('  family A parent backfill: two tenants, both sides of the payload, idempotent, RLS untouched: OK');
   });

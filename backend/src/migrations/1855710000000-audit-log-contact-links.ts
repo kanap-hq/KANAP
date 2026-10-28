@@ -8,7 +8,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * 1. It gives every `supplier_contacts` row its supplier as `parent_table` / `parent_id`, the
  *    parent rule of `audit-parent-rules.ts` (`suppliersParentRules`). The supplier's history reads
  *    those rows by parent; the contact's history reads the same rows by `contact_id`. Only rows
- *    whose `parent_id` is still NULL are touched, so a second run changes nothing.
+ *    whose `parent_id` is still NULL are touched, and only when that supplier still exists in the
+ *    tenant (`EXISTS`), so a payload naming a deleted record never becomes a parent.
  * 2. It creates the partial index that bounds the `contact_id` branch of the contact's page to
  *    the four labels. Without it the branch scans the tenant's whole journal.
  *
@@ -20,8 +21,9 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * The backfill loops over the tenants with `app.current_tenant` set (transaction-local), so
  * `audit_log` stays under FORCE RLS. Each statement reads at most `BATCH_SIZE` rows of one tenant,
  * newest first, after the last row of the previous batch (keyset on `(created_at, id)`), and fills
- * those whose supplier id is a uuid. A link whose supplier was deleted since the write keeps a
- * parent id no page can open (the supplier's history answers 404); the row stays as it is.
+ * those whose supplier id is a uuid and whose supplier row exists in the same tenant. A link whose
+ * supplier was deleted since the write keeps no parent; its history stays readable by the
+ * `contact_id` branch.
  */
 const CONTACT_LINK_LABEL = 'supplier_contacts';
 const PARENT_TABLE = 'suppliers';
@@ -77,6 +79,7 @@ function batchSql(after: boolean): string {
        WHERE a.id = b.id
          AND a.parent_id IS NULL
          AND b.supplier_id IS NOT NULL
+         AND EXISTS (SELECT 1 FROM suppliers p WHERE p.tenant_id = a.tenant_id AND p.id = b.supplier_id)
       RETURNING 1
     ), last AS (
       SELECT c.created_at::text AS at, c.id::text AS id FROM candidates c ORDER BY c.created_at ASC, c.id ASC LIMIT 1
@@ -96,7 +99,7 @@ function indexLabels(): string {
 
 function indexSql(): string {
   return `CREATE INDEX IF NOT EXISTS ${INDEX_NAME}
-            ON audit_log (tenant_id, (COALESCE(after_json, before_json) ->> '${CONTACT_KEY}'), created_at DESC, id DESC)
+            ON audit_log (tenant_id, (lower(COALESCE(after_json, before_json) ->> '${CONTACT_KEY}')), created_at DESC, id DESC)
             WHERE table_name = ANY (ARRAY[${indexLabels()}])`;
 }
 

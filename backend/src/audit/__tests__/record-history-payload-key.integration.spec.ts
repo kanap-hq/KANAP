@@ -60,7 +60,8 @@ function indexCovers(row: IndexRow, read: RecordHistoryPayloadKeyRead, family: s
   if (!row.indexname.startsWith(`idx_audit_log_${read.key}_${family}`)) return false;
   if (!/ ON (?:[a-z_"]+\.)?audit_log USING /.test(row.indexdef)) return false;
   if (!row.indexdef.includes('tenant_id')) return false;
-  if (!row.indexdef.includes(payloadKeyExpression(read.key, ''))) return false;
+  // `pg_get_indexdef` adds a `::text` cast to the `->>` result; the expression is the same.
+  if (!row.indexdef.replace(/::text/g, '').includes(payloadKeyExpression(read.key, ''))) return false;
   const whereAt = row.indexdef.indexOf(' WHERE ');
   if (whereAt < 0) return false;
   const where = row.indexdef.slice(whereAt);

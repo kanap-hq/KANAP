@@ -79,6 +79,12 @@ function batchSql(after: boolean): string {
        WHERE a.id = c.id
          AND a.parent_id IS NULL
          AND c.candidate_parent_id IS NOT NULL
+         AND (
+           (a.table_name = ANY($2::text[])
+             AND EXISTS (SELECT 1 FROM assets p WHERE p.tenant_id = a.tenant_id AND p.id = c.candidate_parent_id))
+           OR (a.table_name = ANY($3::text[])
+             AND EXISTS (SELECT 1 FROM technologies p WHERE p.tenant_id = a.tenant_id AND p.id = c.candidate_parent_id))
+         )
       RETURNING a.table_name
     ), last AS (
       SELECT c.created_at::text AS at, c.id::text AS id FROM candidates c ORDER BY c.created_at ASC, c.id ASC LIMIT 1
@@ -101,11 +107,11 @@ const ASSET_INDEX = 'idx_audit_log_asset_id_assets';
 const TECHNOLOGY_INDEX = 'idx_audit_log_technology_id_technologies';
 
 const ASSET_INDEX_SQL = `CREATE INDEX IF NOT EXISTS ${ASSET_INDEX}
-  ON audit_log (tenant_id, (COALESCE(after_json, before_json) ->> 'asset_id'), created_at DESC, id DESC)
+  ON audit_log (tenant_id, (lower(COALESCE(after_json, before_json) ->> 'asset_id')), created_at DESC, id DESC)
   WHERE table_name = ANY (${labelsArray(ASSET_LABELS)})`;
 
 const TECHNOLOGY_INDEX_SQL = `CREATE INDEX IF NOT EXISTS ${TECHNOLOGY_INDEX}
-  ON audit_log (tenant_id, (COALESCE(after_json, before_json) ->> 'technology_id'), created_at DESC, id DESC)
+  ON audit_log (tenant_id, (lower(COALESCE(after_json, before_json) ->> 'technology_id')), created_at DESC, id DESC)
   WHERE table_name = ANY (${labelsArray(TECHNOLOGY_LABELS)})`;
 
 /**
@@ -188,7 +194,8 @@ export class AuditLogParentRecordFamilyD1855730000000 implements MigrationInterf
         await queryRunner.query(
           `UPDATE audit_log
               SET parent_table = NULL, parent_id = NULL
-            WHERE tenant_id = $1 AND table_name = ANY($2::text[])`,
+            WHERE tenant_id = $1 AND table_name = ANY($2::text[])
+              AND parent_table IN ('assets', 'technologies')`,
           [tenant.id, ALL_LABELS],
         );
       }

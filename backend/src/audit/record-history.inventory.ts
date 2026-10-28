@@ -194,13 +194,16 @@ export function assertPayloadKey(key: string): void {
 
 /**
  * The expression that reads a payload key, the one the family's partial index covers. A deletion
- * has a NULL `after_json`, so `COALESCE` keeps the key the `before_json` held. `alias` is empty for
- * the index definition (`pg_indexes` holds the bare columns); the query passes `a`.
+ * has a NULL `after_json`, so `COALESCE` keeps the key the `before_json` held. The id is compared
+ * as text, and a writer may have stored either case: `lower` on both the expression and the id the
+ * service passes makes the read case-insensitive, and the index holds that same expression.
+ * `alias` is empty for the index definition (`pg_indexes` holds the bare columns); the query
+ * passes `a`.
  */
 export function payloadKeyExpression(key: string, alias = 'a'): string {
   assertPayloadKey(key);
   const prefix = alias ? `${alias}.` : '';
-  return `COALESCE(${prefix}after_json, ${prefix}before_json) ->> '${key}'`;
+  return `lower((COALESCE(${prefix}after_json, ${prefix}before_json) ->> '${key}'))`;
 }
 
 /** One read by a payload key: the key and the child labels that carry it. */

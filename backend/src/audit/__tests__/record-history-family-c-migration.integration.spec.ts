@@ -179,6 +179,10 @@ async function seedRows(runner: QueryRunner, tenantId: string, other: { location
   nullRows.interfaceSet = await insertAudit(runner, tenantId, 'interface_legs', parents.interfaceId, 'update', [], []);
   // A payload key that is not a uuid, or names another family's record, gives no parent.
   nullRows.invalid = await insertAudit(runner, tenantId, 'location_links', randomUUID(), 'create', null, { location_id: 'not-a-uuid' });
+  // A well-formed id absent from the site, connection and interface tables: no parent.
+  nullRows.missingParent = await insertAudit(runner, tenantId, 'location_links', randomUUID(), 'create', null, { location_id: randomUUID() });
+  nullRows.missingConnection = await insertAudit(runner, tenantId, 'connection_legs', randomUUID(), 'create', null, { connection_id: randomUUID() });
+  nullRows.missingInterface = await insertAudit(runner, tenantId, 'interface_bindings', randomUUID(), 'create', null, { interface_id: randomUUID() });
   nullRows.otherFamily = await insertAudit(runner, tenantId, 'connection_legs', randomUUID(), 'create', null, { location_id: parents.location });
   nullRows.otherTenant = await insertAudit(runner, tenantId, 'location_links', randomUUID(), 'create', null, { location_id: other.location });
   nullRows.otherTenantConnection = await insertAudit(runner, tenantId, 'connection_legs', randomUUID(), 'create', null, { connection_id: other.connection });
@@ -264,24 +268,23 @@ async function testBackfillRerunAndDown() {
         assert.equal(row.parent_id, name === 'leg' ? tenantSeed.connection
           : name === 'subItem' || name === 'contact' || name === 'link' || name === 'userContact' ? tenantSeed.location : tenantSeed.interfaceId, `${name}: the parent id`);
       }
-      // The two cross-tenant rows are filled with the *same* tenant's parent: the payload is read
-      // as a value, never as a row of another tenant, and the history query still filters by tenant.
+      // A payload naming a record absent from this tenant (another tenant's id included) gives no
+      // parent: the backfill reads the parent row with its `tenant_id`, it does not trust the id.
       for (const [name, id] of Object.entries(tenantSeed.nullRows)) {
-        if (name === 'otherTenant' || name === 'otherTenantConnection' || name === 'otherTenantInterface') continue;
         const row = byId.get(id);
         assert.equal(row.parent_table, null, `${name}: no parent table`);
         assert.equal(row.parent_id, null, `${name}: no parent id`);
       }
     }
-    assert.ok(firstLog.includes(`${PREFIX} 24 audit row(s) given a parent, 4 left without one`), firstLog);
+    assert.ok(firstLog.includes(`${PREFIX} 18 audit row(s) given a parent, 16 left without one`), firstLog);
     for (const expected of [
       'location_user_contacts: 2 filled, 0 without a parent',
       'location_contacts: 2 filled, 0 without a parent',
-      'location_links: 4 filled, 2 without a parent',
+      'location_links: 2 filled, 6 without a parent',
       'location_sub_items: 2 filled, 0 without a parent',
-      'connection_legs: 4 filled, 2 without a parent',
+      'connection_legs: 2 filled, 6 without a parent',
       'interface_links: 2 filled, 0 without a parent',
-      'interface_bindings: 4 filled, 0 without a parent',
+      'interface_bindings: 2 filled, 4 without a parent',
       'interface_mapping_sets: 2 filled, 0 without a parent',
       'interface_attachments: 2 filled, 0 without a parent',
     ]) {
@@ -302,7 +305,10 @@ async function testBackfillRerunAndDown() {
       'the second run rewrites no row',
     );
 
+    // A real revert has no tenant positioned: down() still clears the family's parents per tenant.
+    await clearTenant(runner);
     await migration.down(runner);
+    assert.equal(await currentTenantSetting(runner), '', 'down() restores the tenant setting');
     const afterDown = await rowsOf(runner, tenantId);
     for (const [name, id] of Object.entries(seed.filled)) {
       const row = afterDown.find((candidate: any) => candidate.id === id);

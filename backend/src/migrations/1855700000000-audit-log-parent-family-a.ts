@@ -41,7 +41,7 @@ function ruleValues(): string {
  * those that have no parent yet and whose payload names one. The selection does not test
  * `parent_id`: it has no statistics and `IS NULL` would turn the walk into a sequential scan. The
  * update tests it, so a filled row is never rewritten. The payload value is cast only when it is a
- * uuid; the parent row is not read, as the write rule does not read it either.
+ * uuid, and the parent row must exist in the same tenant (`EXISTS`).
  */
 function batchSql(after: boolean): string {
   const keyset = after ? `AND a.created_at <= $3::timestamptz AND (a.created_at < $3::timestamptz OR a.id < $4::uuid)` : '';
@@ -63,7 +63,17 @@ function batchSql(after: boolean): string {
         ) AS r(label, parent_table, payload_key) ON r.label = a.table_name
        WHERE a.parent_id IS NULL
     ), batch AS MATERIALIZED (
-      SELECT id, parent_table, parent_id FROM payloads WHERE parent_id IS NOT NULL
+      SELECT p.id, p.parent_table, p.parent_id
+        FROM payloads p
+       WHERE p.parent_id IS NOT NULL
+         AND (
+           (p.parent_table = 'companies'
+             AND EXISTS (SELECT 1 FROM companies x WHERE x.tenant_id = $1 AND x.id = p.parent_id))
+           OR (p.parent_table = 'departments'
+             AND EXISTS (SELECT 1 FROM departments x WHERE x.tenant_id = $1 AND x.id = p.parent_id))
+           OR (p.parent_table = 'analytics_axes'
+             AND EXISTS (SELECT 1 FROM analytics_axes x WHERE x.tenant_id = $1 AND x.id = p.parent_id))
+         )
     ), changed AS (
       UPDATE audit_log a
          SET parent_table = b.parent_table,
@@ -98,9 +108,9 @@ type BatchResult = { scanned: number; last_created_at: string | null; last_id: s
  * over each tenant's rows.
  *
  * Only rows whose `parent_id` is still NULL are touched, and a row whose parent cannot be found (an
- * absent key, a value that is not a uuid) is left untouched, so a second run changes nothing. The
- * label counts are logged, filled and left without a parent. The parent index
- * `idx_audit_log_tenant_parent_created` was built by `1855500000000`.
+ * absent key, a value that is not a uuid, or a record absent from the tenant) is left untouched, so
+ * a second run changes nothing. The label counts are logged, filled and left without a parent. The
+ * parent index `idx_audit_log_tenant_parent_created` was built by `1855500000000`.
  */
 export class AuditLogParentFamilyA1855700000000 implements MigrationInterface {
   name = 'AuditLogParentFamilyA1855700000000';
@@ -146,12 +156,30 @@ export class AuditLogParentFamilyA1855700000000 implements MigrationInterface {
   }
 
   /**
-   * The backfill has no inverse: the rows it filled may have been written after the migration too,
-   * and clearing their parent would lose what their writer set. The next migration of a family
-   * fills its own labels; this one stays.
+   * Revert the rule the migration applied: its three labels lose the parent tables it owns, tenant
+   * by tenant with `app.current_tenant` set, as every family migration does. A parent another
+   * family set on one of these labels stays, and RLS is never disabled.
    */
-  public async down(): Promise<void> {
-    // Nothing to undo.
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    const [{ found }]: Array<{ found: string | null }> = await queryRunner.query(
+      `SELECT current_setting('app.current_tenant', true) AS found`,
+    );
+    const tenants: Array<{ id: string }> = await queryRunner.query(`SELECT id FROM tenants ORDER BY created_at ASC, id ASC`);
+    try {
+      for (const tenant of tenants) {
+        await queryRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
+        await queryRunner.query(
+          `UPDATE audit_log
+              SET parent_table = NULL, parent_id = NULL
+            WHERE tenant_id = $1
+              AND table_name = ANY($2::text[])
+              AND parent_table IN ('companies', 'departments', 'analytics_axes')`,
+          [tenant.id, ALL_LABELS],
+        );
+      }
+    } finally {
+      await queryRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [found ?? '']);
+    }
   }
 }
 

@@ -118,8 +118,17 @@ type Seed = {
 };
 
 async function seedRows(runner: QueryRunner, tenantId: string): Promise<Seed> {
-  const assetId = randomUUID();
-  const technologyId = randomUUID();
+  // The parent rows exist: the backfill only sets a parent that is in the same tenant.
+  const [asset] = await runner.query(
+    `INSERT INTO assets (tenant_id, name, asset_reference, kind, environment) VALUES ($1, 'Server One', 'AST-1', 'server', 'prod') RETURNING id`,
+    [tenantId],
+  );
+  const [technology] = await runner.query(
+    `INSERT INTO technologies (tenant_id, item_number, name, family) VALUES ($1, 9, 'Postgres', 'database') RETURNING id`,
+    [tenantId],
+  );
+  const assetId = asset.id as string;
+  const technologyId = technology.id as string;
   const filled: Record<string, string> = {};
   const kept: Record<string, string> = {};
 
@@ -133,6 +142,8 @@ async function seedRows(runner: QueryRunner, tenantId: string): Promise<Seed> {
   filled.vulnerability = await insertAudit(runner, tenantId, 'technology_vulnerabilities', randomUUID(), 'update', { technology_id: technologyId, cve_id: 'CVE-2026-1234', state: 'to_review' }, { technology_id: technologyId, cve_id: 'CVE-2026-1234', state: 'handled' });
 
   kept.invalid = await insertAudit(runner, tenantId, 'asset_links', randomUUID(), 'create', null, { asset_id: 'not-a-uuid' });
+  // A well-formed id absent from the assets table: no parent.
+  kept.missingParent = await insertAudit(runner, tenantId, 'asset_links', randomUUID(), 'create', null, { asset_id: randomUUID() });
   kept.noKey = await insertAudit(runner, tenantId, 'asset_support_info', randomUUID(), 'update', {}, {});
   kept.otherLabel = await insertAudit(runner, tenantId, 'assets', randomUUID(), 'update', { name: 'before' }, { name: 'after' });
   kept.recordMode = await insertAudit(runner, tenantId, 'technology_versions', technologyId, 'update', { label: '2.0' }, { label: '2.1' });
@@ -212,8 +223,8 @@ async function testBackfillRerunAndDown() {
     const technologyIndex = await indexDefinition(runner, TECHNOLOGY_INDEX);
     assert.ok(assetIndex, 'the asset index exists');
     assert.ok(technologyIndex, 'the technology index exists');
-    assert.match(assetIndex, /\(tenant_id, \(\(COALESCE\(after_json, before_json\) ->> 'asset_id'::text\)\), created_at DESC, id DESC\)/);
-    assert.match(technologyIndex, /\(tenant_id, \(\(COALESCE\(after_json, before_json\) ->> 'technology_id'::text\)\), created_at DESC, id DESC\)/);
+    assert.match(assetIndex, /\(tenant_id, lower\(\(COALESCE\(after_json, before_json\) ->> 'asset_id'::text\)\), created_at DESC, id DESC\)/);
+    assert.match(technologyIndex, /\(tenant_id, lower\(\(COALESCE\(after_json, before_json\) ->> 'technology_id'::text\)\), created_at DESC, id DESC\)/);
     for (const label of ASSET_LABELS) assert.ok(assetIndex.includes(`'${label}'`), `asset index names ${label}`);
     for (const label of TECHNOLOGY_LABELS) assert.ok(technologyIndex.includes(`'${label}'`), `technology index names ${label}`);
     for (const table of ['audit_log', 'assets', 'technologies', 'tenants']) {
@@ -233,13 +244,16 @@ async function testBackfillRerunAndDown() {
       'the second run rewrites no row',
     );
 
-    // down() drops the indexes and clears the family's parents; up() restores them.
+    // A real revert has no tenant positioned; down() drops the indexes and clears the family's
+    // parents (leaving another family's parent alone); up() restores them.
+    await clearTenant(runner);
     await migration.down(runner);
+    assert.equal(await currentTenantSetting(runner), '', 'down() restores the tenant setting');
     assert.equal(await indexDefinition(runner, ASSET_INDEX), null, 'down() drops the asset index');
     assert.equal(await indexDefinition(runner, TECHNOLOGY_INDEX), null, 'down() drops the technology index');
     const afterDown = new Map<string, any>((await rowsOf(runner, tenantId)).map((row: any) => [row.id, row]));
     for (const id of Object.values(seed.filled)) assert.equal(afterDown.get(id).parent_id, null, 'down() clears the family parent');
-    assert.equal(afterDown.get(seed.kept.alreadyParented).parent_id, null, 'down() clears a parent of the family label');
+    assert.equal(afterDown.get(seed.kept.alreadyParented).parent_table, 'cost_centers', 'down() leaves another family parent');
     assert.equal(afterDown.get(seed.kept.outsideFamily).parent_table, 'cost_centers', 'down() leaves another family parent');
 
     await clearTenant(runner);

@@ -91,6 +91,14 @@ function batchSql(after: boolean): string {
          AND a.parent_id IS NULL
          AND b.parent_id IS NOT NULL
          AND b.parent_table IS NOT NULL
+         AND (
+           (b.parent_table = 'locations'
+             AND EXISTS (SELECT 1 FROM locations p WHERE p.tenant_id = a.tenant_id AND p.id = b.parent_id))
+           OR (b.parent_table = 'connections'
+             AND EXISTS (SELECT 1 FROM connections p WHERE p.tenant_id = a.tenant_id AND p.id = b.parent_id))
+           OR (b.parent_table = 'interfaces'
+             AND EXISTS (SELECT 1 FROM interfaces p WHERE p.tenant_id = a.tenant_id AND p.id = b.parent_id))
+         )
       RETURNING a.table_name
     ), last AS (
       SELECT c.created_at::text AS at, c.id::text AS id FROM candidates c ORDER BY c.created_at ASC, c.id ASC LIMIT 1
@@ -116,9 +124,9 @@ type BatchResult = { scanned: number; last_created_at: string | null; last_id: s
  * The backfill runs tenant by tenant with `app.current_tenant` set (transaction-local), so RLS
  * stays ENABLE + FORCE on every table it reads. Each statement reads at most `BATCH_SIZE` rows of
  * the tenant, newest first, after the last row of the previous batch, and fills those whose parent
- * it finds: one pass over each tenant's rows. Rows whose payload key is absent, is not a uuid, or
- * belongs to another family stay NULL, and the label counts are logged (filled and left without a
- * parent). Only rows whose `parent_id` is still NULL are touched, so a second run changes nothing.
+ * it finds: one pass over each tenant's rows. Rows whose payload key is absent, is not a uuid,
+ * belongs to another family, or names a record absent from the tenant stay NULL, and the label
+ * counts are logged (filled and left without a parent). Only rows whose `parent_id` is still NULL are touched, so a second run changes nothing.
  *
  * The interface sets (`interface_legs`, `interface_owners`, `interface_companies`,
  * `interface_dependencies`, `interface_key_identifiers`, `interface_data_residency`) and the

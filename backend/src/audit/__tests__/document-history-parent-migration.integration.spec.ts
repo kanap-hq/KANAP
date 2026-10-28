@@ -132,8 +132,21 @@ type Seed = {
 };
 
 async function seedRows(runner: QueryRunner, tenantId: string): Promise<Seed> {
-  const documentId = randomUUID();
-  const otherDocumentId = randomUUID();
+  // The documents exist: the backfill only sets a parent that is in the same tenant.
+  const [library] = await runner.query(
+    `INSERT INTO document_libraries (tenant_id, name, slug) VALUES ($1, 'Spec library', $2) RETURNING id`,
+    [tenantId, `spec-${randomUUID().slice(0, 8)}`],
+  );
+  const [document] = await runner.query(
+    `INSERT INTO documents (tenant_id, item_number, title, library_id) VALUES ($1, 1, 'Doc', $2) RETURNING id`,
+    [tenantId, library.id],
+  );
+  const [otherDocument] = await runner.query(
+    `INSERT INTO documents (tenant_id, item_number, title, library_id) VALUES ($1, 2, 'Other doc', $2) RETURNING id`,
+    [tenantId, library.id],
+  );
+  const documentId = document.id as string;
+  const otherDocumentId = otherDocument.id as string;
   const filled: Record<string, { id: string; parentId: string }> = {};
   const nullRows: Record<string, string> = {};
 
@@ -147,6 +160,8 @@ async function seedRows(runner: QueryRunner, tenantId: string): Promise<Seed> {
   };
   nullRows.invalid = await insertAudit(runner, tenantId, 'document_attachments', randomUUID(), 'create', null, { document_id: 'not-a-uuid' });
   nullRows.missing = await insertAudit(runner, tenantId, 'document_attachments', randomUUID(), 'create', null, { original_filename: 'x.pdf' });
+  // A well-formed id absent from the documents table: no parent.
+  nullRows.missingParent = await insertAudit(runner, tenantId, 'document_attachments', randomUUID(), 'create', null, { document_id: randomUUID() });
 
   // A row the write rule already parented: the migration must not rewrite it.
   const explicitId = await insertAudit(
@@ -273,8 +288,11 @@ async function testBackfillRerunAndDown() {
       'the second run rewrites no row',
     );
 
-    // down() clears the attachment parents; up() fills them again.
+    // A real revert has no tenant positioned: down() clears the attachment parents per tenant;
+    // up() fills them again.
+    await clearTenant(runner);
     await migration.down(runner);
+    assert.equal(await currentTenantSetting(runner), '', 'down restores the tenant setting');
     const afterDown = new Map<string, any>((await rowsOf(runner, tenantId)).map((row: any) => [row.id, row]));
     for (const [name, entry] of Object.entries(seed.filled)) {
       assert.equal(afterDown.get(entry.id).parent_id, null, `${name}: down clears the parent`);
