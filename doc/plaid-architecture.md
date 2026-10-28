@@ -418,13 +418,17 @@ member or a contributor is not offered them. `change_incident_state` takes
 Reopening refuses an open or in-progress incident before the preview with the
 service's sentence; cancelling refuses a frozen record. A cancellation carries
 its own `cancel_warning` (the record freezes until an administrator reopens
-it), writes a `status_change` journal entry and cannot be undone. The 423 of the review lock at cancellation is relayed as the
-readable closure message. `set_incident_confidentiality` takes the boolean
+it), writes a `status_change` journal entry and cannot be undone. The 423 of
+the review lock at cancellation is relayed as the readable closure message.
+`set_incident_confidentiality` takes the boolean
 directly, works on an open, closed or cancelled record as the screen's route
 does, and asks for the administrator right in both directions; a register
 administrator keeps access, so its card carries no lose-access warning. It
 writes the `system` journal entry and refreshes the search index of the linked
-tasks. Neither tool has a reversal preview.
+tasks. At execution both compare the record with the preview (`from_status`,
+`from_confidential`) and answer 409 when another change moved it, rather than
+marking executed a preview that wrote nothing. Neither tool has a reversal
+preview.
 
 Application classification create/update previews use the normal application
 mutation service. They can set or clear business criticality, cyber,
