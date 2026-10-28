@@ -307,6 +307,17 @@ describe('Layout on the refusal page', () => {
     renderRefusal('//example.com/master-data/contacts');
     expect(screen.queryByRole('link', { name: 'nav:sidebar.masterData.contacts' })).not.toBeInTheDocument();
   });
+
+  it('highlights no section for a refused address in a section the person does not see', () => {
+    access.grants = { contacts: 'reader' };
+    try {
+      renderRefusal('/ops/budget');
+      expect(screen.getAllByRole('tab').filter((tab) => tab.getAttribute('aria-selected') === 'true')).toEqual([]);
+      expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.overview' })).not.toBeInTheDocument();
+    } finally {
+      access.grants = null;
+    }
+  });
 });
 
 describe('Layout administration sidebar: sample data', () => {

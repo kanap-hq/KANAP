@@ -111,7 +111,8 @@ function isNavItem(entry: NavEntry): entry is NavItem {
 
 /** The workspace of an address, which the top bar highlights. */
 function workspaceOfPath(p: string): WorkspaceKey | 'home' {
-  if (p === '/') return 'home';
+  // A refusal of a section the person does not see belongs to none, as the home page.
+  if (p === '/' || p === '/403') return 'home';
   if (p.startsWith('/admin')) return 'admin';
   if (p.startsWith('/ai')) return 'ai';
   if (p.startsWith('/agents')) return 'agents';
