@@ -1,10 +1,8 @@
 import React from 'react';
 import {
   Box,
-  Drawer,
   IconButton,
   Stack,
-  Tooltip,
   Typography,
   useMediaQuery,
 } from '@mui/material';
@@ -13,13 +11,11 @@ import { useTheme } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import CloseIcon from '@mui/icons-material/Close';
-import HistoryIcon from '@mui/icons-material/History';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import EditableTitle from '../../../components/workspace/EditableTitle';
-import RecordHistory from '../../../components/history/RecordHistory';
+import RecordHistoryButton from '../../../components/history/RecordHistoryButton';
 import { taskDetailTokens, taskDetailTypography } from '../../tasks/theme/taskDetailTokens';
 import WorkspaceTabs, { type WorkspaceTab } from './WorkspaceTabs';
 
@@ -209,14 +205,6 @@ export default function PortfolioDetailWorkspaceShell({
   const [drawerOpen, setDrawerOpen] = React.useState(
     () => initialDrawerOpen ?? getStoredDrawerState(drawerStorageKey),
   );
-  const [historyOpen, setHistoryOpen] = React.useState(false);
-  const historyButtonRef = React.useRef<HTMLButtonElement>(null);
-  const historyTitle = t('admin:auditLogs.history.title');
-  // The panel is closed from its button, its own close button or Escape: the button takes the
-  // focus back once the panel has slid out (the modal would otherwise put it on the page body),
-  // so the keyboard continues where the panel opened.
-  const closeHistory = React.useCallback(() => setHistoryOpen(false), []);
-  const focusHistoryButton = React.useCallback(() => historyButtonRef.current?.focus(), []);
   // The classeur toggle only renders on desktop: on mobile the properties
   // always stack under the content, otherwise a stored "closed" state would
   // hide them with no visible way back.
@@ -269,12 +257,6 @@ export default function PortfolioDetailWorkspaceShell({
         return;
       }
 
-      if (event.key === 'Escape' && historyOpen) {
-        event.preventDefault();
-        closeHistory();
-        return;
-      }
-
       if (isTypingTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
 
       // Escape belongs to the field, list, menu or dialog it comes from, to one still open, and to
@@ -319,7 +301,7 @@ export default function PortfolioDetailWorkspaceShell({
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [closeHistory, forceDrawerOpen, historyOpen, isCreate, nav, onBack, onSaveShortcut]);
+  }, [forceDrawerOpen, isCreate, nav, onBack, onSaveShortcut]);
 
   return (
     <Box sx={{ height: '100%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -463,22 +445,7 @@ export default function PortfolioDetailWorkspaceShell({
                 }}
               >
                 {actions}
-                {history && (
-                  <Tooltip title={historyTitle}>
-                    <IconButton
-                      ref={historyButtonRef}
-                      size="small"
-                      aria-label={historyTitle}
-                      onClick={() => setHistoryOpen(true)}
-                      sx={(theme) => ({
-                        color: theme.palette.kanap.text.secondary,
-                        '&:hover': { color: theme.palette.kanap.text.primary, bgcolor: theme.palette.kanap.tab.bgHover },
-                      })}
-                    >
-                      <HistoryIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-                  </Tooltip>
-                )}
+                {history && <RecordHistoryButton table={history.table} recordId={history.recordId} />}
               </Box>
             )}
           </Box>
@@ -604,57 +571,6 @@ export default function PortfolioDetailWorkspaceShell({
           </Box>
         )}
       </Box>
-
-      {history && (
-        <Drawer
-          anchor="right"
-          open={historyOpen}
-          onClose={closeHistory}
-          ModalProps={{ keepMounted: false, disableRestoreFocus: true }}
-          SlideProps={{ onExited: focusHistoryButton }}
-          PaperProps={{
-            // Under the 48px application bar, as the other right panels of the app.
-            sx: (theme) => ({
-              top: 48,
-              height: 'calc(100dvh - 48px)',
-              width: { xs: '100%', sm: 480 },
-              maxWidth: '100vw',
-              bgcolor: theme.palette.kanap.bg.drawer,
-              borderLeft: `1px solid ${theme.palette.kanap.border.default}`,
-              display: 'flex',
-              flexDirection: 'column',
-            }),
-          }}
-        >
-          <Box
-            sx={(theme) => ({
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 1,
-              px: 2,
-              py: '10px',
-              borderBottom: `1px solid ${theme.palette.kanap.border.default}`,
-              flexShrink: 0,
-            })}
-          >
-            <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary' }}>
-              {historyTitle}
-            </Typography>
-            <IconButton
-              size="small"
-              aria-label={t('common:buttons.close')}
-              onClick={closeHistory}
-              sx={{ color: 'kanap.text.secondary' }}
-            >
-              <CloseIcon sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Box>
-          <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: 2, py: 1 }}>
-            {historyOpen && <RecordHistory table={history.table} recordId={history.recordId} />}
-          </Box>
-        </Drawer>
-      )}
     </Box>
   );
 }

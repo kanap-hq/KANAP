@@ -13,6 +13,7 @@ import BusinessProcessCategoryManagerDialog from './BusinessProcessCategoryManag
 import BusinessProcessApplicationsSection from './BusinessProcessApplicationsSection';
 import { unsavedConfirm, useKanapDialogs } from '../../components/design';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
+import RecordHistoryButton from '../../components/history/RecordHistoryButton';
 
 type TabKey = 'overview';
 
@@ -191,6 +192,9 @@ export default function BusinessProcessWorkspacePage() {
               confirmMessage={t('businessProcesses.deleteWarning', { count: 1 })}
               onDeleted={() => { setDeletedId(data.id); closeToList(); }}
             />
+          )}
+          {!isCreate && data && (
+            <RecordHistoryButton table="business_processes" recordId={data.id} />
           )}
           <IconButton
             aria-label={t('common:buttons.close')}

@@ -46,6 +46,9 @@ vi.mock('../../services/analytics', async (importOriginal) => ({
   updateAnalyticsAxis: vi.fn(),
   deleteAnalyticsAxis: vi.fn(),
 }));
+vi.mock('../../components/history/RecordHistory', () => ({
+  default: ({ table, recordId }: { table: string; recordId: string }) => <div>{`${table}:${recordId}`}</div>,
+}));
 vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../hooks/useAnalyticsAxes')>();
   return {
@@ -137,6 +140,17 @@ describe('AnalyticsDimensionWorkspacePage', () => {
       stored[id] = { ...stored[id], ...patch };
       return stored[id];
     });
+  });
+
+  it('opens the dimension history from the header, and never in creation', async () => {
+    const history = renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    await screen.findByText('Nature');
+    fireEvent.click(screen.getByRole('button', { name: 'admin:auditLogs.history.title' }));
+    expect(await screen.findByText('analytics_axes:ax-nature')).toBeInTheDocument();
+    history.unmount();
+
+    renderAt('/master-data/analytics/dimensions/new/overview');
+    expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
   });
 
   it('saves name, code and description when each field loses focus, with no save button', async () => {

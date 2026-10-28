@@ -432,7 +432,7 @@
       "data_class": "Confidentialité des données",
       "description": "Description",
       "detected_at": "Détecté le",
-      "disabled_at": "Désactivé le",
+      "disabled_at": "Fin de validité",
       "due_date": "Échéance",
       "editor": "Éditeur",
       "effective_start": "Début effectif",
@@ -563,7 +563,32 @@
       "last_reviewed_at": "Dernière revue",
       "published_at": "Publié le",
       "current_version_number": "Version",
-      "revision": "Révision"
+      "revision": "Révision",
+      "country_iso": "Pays",
+      "city": "Ville",
+      "address1": "Adresse ligne 1",
+      "address2": "Adresse ligne 2",
+      "postal_code": "Code postal",
+      "state": "Région ou État",
+      "reg_number": "Numéro d'immatriculation",
+      "vat_number": "Numéro de TVA",
+      "base_currency": "Devise de base",
+      "headcount": "Effectif",
+      "it_users": "Utilisateurs IT",
+      "turnover": "Chiffre d'affaires",
+      "is_frozen": "Gelé",
+      "region_code": "Région",
+      "is_default": "Par défaut",
+      "it_owner_user_id": "Responsable IT",
+      "application_id": "Application",
+      "sort_order": "Ordre",
+      "applies_to": "Utilisé pour",
+      "required": "Obligatoire",
+      "open_values": "Valeurs ouvertes",
+      "values": "Valeurs supprimées",
+      "opex_lines": "Lignes OPEX mises à jour",
+      "capex_lines": "Lignes CAPEX mises à jour",
+      "axis_id": "Dimension"
     },
     "history": {
       "empty": "Aucun historique",
@@ -649,6 +674,10 @@
         "request": {
           "added": "Demande ajoutée : {{label}}",
           "removed": "Demande retirée : {{label}}"
+        },
+        "value": {
+          "added": "Valeur ajoutée : {{label}}",
+          "removed": "Valeur retirée : {{label}}"
         }
       },
       "unnamed": {
@@ -690,7 +719,10 @@
         "document_library": "une bibliothèque",
         "document_type": "un type de document"
       },
-      "title": "Historique"
+      "title": "Historique",
+      "metricsYear": "Indicateurs {{year}}",
+      "metricsNoYear": "Indicateurs",
+      "value": "Valeur {{name}}"
     },
     "messages": {
       "loadDetailsFailed": "Impossible de charger les détails de l'entrée d'audit."
@@ -970,6 +1002,10 @@
       "costCenterKind": {
         "group": "Groupe",
         "cost_center": "Centre de coûts"
+      },
+      "lineTypeUsage": {
+        "opex": "OPEX uniquement",
+        "capex": "CAPEX uniquement"
       }
     },
     "dataAccess": {

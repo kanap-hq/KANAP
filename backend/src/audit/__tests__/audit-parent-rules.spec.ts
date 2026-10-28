@@ -181,8 +181,8 @@ function testMigrationLabelsMatchRules() {
   for (const label of ['contract_spend_items', 'contract_capex_items', 'portfolio_project_opex', 'portfolio_project_capex', 'portfolio_request_opex', 'portfolio_request_capex']) {
     assert.ok(!migrationLineRecordLabels().includes(label), `${label}: no backfill of existing rows`);
   }
-  for (const [label, rule] of Object.entries(AUDIT_PARENT_RULES).filter(([, rule]) => rule.parentTable === 'spend_items')) {
-    assert.equal(rule.parentTable, 'spend_items', `${label}: the physical line table`);
+  for (const [label, rule] of Object.entries(AUDIT_PARENT_RULES)) {
+    assert.ok(Object.prototype.hasOwnProperty.call(RECORD_HISTORY, rule.parentTable), `${label}: a record table of the inventory`);
   }
   assert.equal(AUDIT_PARENT_RULES.spend_items, undefined);
   assert.equal(AUDIT_PARENT_RULES.capex_items, undefined);

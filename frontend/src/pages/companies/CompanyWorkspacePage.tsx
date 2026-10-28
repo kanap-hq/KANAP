@@ -28,12 +28,18 @@ import { getDotColor } from '../../utils/statusColors';
 import { useCoaList } from '../coa/useCoaList';
 import { CoaField, CountryField, CurrencyField, defaultCoaFor } from './CompanyFields';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import CompanyMetricsTab from './CompanyMetricsTab';
 import CompanyAccessTab from './CompanyAccessTab';
 import { displayedCompanyCity } from './companyCity';
 
-type TabKey = 'overview' | 'details' | 'access';
-const TAB_KEYS: TabKey[] = ['overview', 'details', 'access'];
+type TabKey = 'overview' | 'details' | 'access' | typeof RECORD_HISTORY_TAB_KEY;
+const TAB_KEYS: TabKey[] = ['overview', 'details', 'access', RECORD_HISTORY_TAB_KEY];
+
+// The History tab loads its code when opened; a failed load shows a retry in its place.
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
 const LIST_PATH = '/master-data/companies';
 /** How long Saved stays after a field is saved. */
 const SAVED_LINGER_MS = 1500;
@@ -289,6 +295,7 @@ export default function CompanyWorkspacePage() {
     { key: 'overview', label: t('shared.labels.overview') },
     { key: 'details', label: t('shared.labels.details') },
     ...(canAdminDataAccess ? [{ key: 'access', label: t('shared.labels.access') }] : []),
+    { key: RECORD_HISTORY_TAB_KEY, label: t('shared.labels.history') },
   ];
 
   // The header shows the status as the supplier's does: the menu disables at once (end of
@@ -475,6 +482,13 @@ export default function CompanyWorkspacePage() {
         )}
         {data && tab === 'access' && canAdminDataAccess && (
           <CompanyAccessTab companyId={data.id} nodeLabel={data.name} />
+        )}
+        {data && tab === RECORD_HISTORY_TAB_KEY && (
+          <WorkspaceTabBoundary resetKey={tab} onRetry={() => historyTab.retry()}>
+            <React.Suspense fallback={null}>
+              <HistoryTab table="companies" recordId={data.id} />
+            </React.Suspense>
+          </WorkspaceTabBoundary>
         )}
       </PortfolioDetailWorkspaceShell>
     </Box>

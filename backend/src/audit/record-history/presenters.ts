@@ -127,6 +127,8 @@ const CHILD_KIND_LABELS: Record<RecordHistoryChildKind, string> = {
   project: 'project',
   request: 'request',
   task: 'task',
+  metrics: 'metrics',
+  value: 'value',
 };
 
 /** The children whose creation is a title only: a version, a budget input, an allocation. */
@@ -477,8 +479,15 @@ function contactChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] 
 }
 
 function setLinkChanges(kind: 'application' | 'technology', row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
-  const before = Array.isArray(row.before_json) ? row.before_json : [];
-  const after = Array.isArray(row.after_json) ? row.after_json : [];
+  // A line's link set is an array of ids. A process's application link is one row with the
+  // application id in its payload (`application_business_processes`, read by `record_id`).
+  const single = (value: unknown): string[] => {
+    if (!isPlainObject(value)) return [];
+    const id = value[`${kind}_id`];
+    return isUuid(id) ? [id] : [];
+  };
+  const before = Array.isArray(row.before_json) ? row.before_json : single(row.before_json);
+  const after = Array.isArray(row.after_json) ? row.after_json : single(row.after_json);
   const beforeSet = new Set(before.filter(isUuid).map((id) => id.toLowerCase()));
   const afterSet = new Set(after.filter(isUuid).map((id) => id.toLowerCase()));
   const changes: RecordHistoryChange[] = [];
@@ -669,6 +678,25 @@ function recordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   return genericChanges(row, ctx, { label: row.table_name });
 }
 
+function valueName(row: AuditRow): string | null {
+  for (const payload of [row.after_json, row.before_json]) {
+    if (isPlainObject(payload) && typeof payload.name === 'string' && payload.name.trim()) return payload.name.trim();
+  }
+  return null;
+}
+
+/**
+ * A value of a dimension: its addition and removal read as the event, its modification as the
+ * fields that changed. A forced deletion keeps its removal title; the counts stay on the value's
+ * own record entry.
+ */
+function valueChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const name = valueName(row);
+  if (row.action === 'create') return name ? [{ field: 'value', event: 'added', after: name }] : [];
+  if (row.action === 'delete') return name ? [{ field: 'value', event: 'removed', before: name }] : [];
+  return genericChanges(row, ctx, { label: 'analytics_categories' });
+}
+
 function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: PageContext): RecordHistoryChange[] {
   if (kind === null) return recordChanges(row, ctx);
   // A technical child's birth or removal is its title: its fields are not a change the reader reads.
@@ -697,6 +725,10 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
       return linkedRecordChanges(kind, row, ctx);
     case 'task':
       return taskChanges(row, ctx);
+    case 'metrics':
+      return genericChanges(row, ctx, { label: row.table_name });
+    case 'value':
+      return valueChanges(row, ctx);
     case 'version':
       return genericChanges(row, ctx, { label: row.table_name });
     default:
@@ -732,6 +764,16 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
     }
     case 'attachment':
       return labelOf(row, ['original_filename']);
+    case 'value':
+      return row.action === 'update' ? valueName(row) : null;
+    case 'metrics': {
+      for (const payload of [row.after_json, row.before_json]) {
+        if (!isPlainObject(payload)) continue;
+        if (typeof payload.fiscal_year === 'number') return String(payload.fiscal_year);
+        if (typeof payload.fiscal_year === 'string' && payload.fiscal_year.trim()) return payload.fiscal_year.trim();
+      }
+      return null;
+    }
     case 'contact':
     case 'application':
     case 'technology':

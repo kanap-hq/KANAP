@@ -43,6 +43,9 @@ vi.mock('../../hooks/useCompanyNav', () => ({
 vi.mock('../../hooks/useFreezeState', () => ({
   useFreezeState: () => ({ data: undefined, isLoading: false }),
 }));
+vi.mock('../../components/history/RecordHistory', () => ({
+  default: ({ table, recordId }: { table: string; recordId: string }) => <div>{`${table}:${recordId}`}</div>,
+}));
 
 import api from '../../api';
 import frMasterData from '../../locales/fr/master-data.json';
@@ -140,6 +143,18 @@ describe('CompanyWorkspacePage', () => {
     expect(screen.queryByRole('button', { name: 'common:buttons.reset' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'shared.labels.overview' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'shared.labels.details' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toBeInTheDocument();
+  });
+
+  it('opens the History tab with the company history, and never in creation', async () => {
+    const history = renderAt('/master-data/companies/co-1/history');
+    expect(await screen.findByText('companies:co-1')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toHaveAttribute('aria-selected', 'true');
+    history.unmount();
+
+    renderAt('/master-data/companies/new/overview');
+    expect(await screen.findByText('companies.newCompany')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'shared.labels.history' })).toBeNull();
   });
 
   it('opens the Access tab for an unscoped user administrator', async () => {

@@ -432,7 +432,7 @@
       "data_class": "Datenvertraulichkeit",
       "description": "Beschreibung",
       "detected_at": "Erkannt am",
-      "disabled_at": "Deaktiviert am",
+      "disabled_at": "Gültigkeitsende",
       "due_date": "Fälligkeitsdatum",
       "editor": "Herausgeber",
       "effective_start": "Gültig ab",
@@ -563,7 +563,32 @@
       "last_reviewed_at": "Zuletzt geprüft",
       "published_at": "Veröffentlicht am",
       "current_version_number": "Version",
-      "revision": "Revision"
+      "revision": "Revision",
+      "country_iso": "Land",
+      "city": "Stadt",
+      "address1": "Adresszeile 1",
+      "address2": "Adresszeile 2",
+      "postal_code": "Postleitzahl",
+      "state": "Bundesland oder Region",
+      "reg_number": "Handelsregisternummer",
+      "vat_number": "USt-IdNr.",
+      "base_currency": "Basiswährung",
+      "headcount": "Mitarbeiterzahl",
+      "it_users": "IT-Benutzer",
+      "turnover": "Umsatz",
+      "is_frozen": "Eingefroren",
+      "region_code": "Region",
+      "is_default": "Standard",
+      "it_owner_user_id": "IT-Verantwortlicher",
+      "application_id": "Anwendung",
+      "sort_order": "Reihenfolge",
+      "applies_to": "Verwendet für",
+      "required": "Erforderlich",
+      "open_values": "Offene Werte",
+      "values": "Gelöschte Werte",
+      "opex_lines": "Aktualisierte OPEX-Zeilen",
+      "capex_lines": "Aktualisierte CAPEX-Zeilen",
+      "axis_id": "Dimension"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -649,6 +674,10 @@
         "request": {
           "added": "Anfrage hinzugefügt: {{label}}",
           "removed": "Anfrage entfernt: {{label}}"
+        },
+        "value": {
+          "added": "Wert hinzugefügt: {{label}}",
+          "removed": "Wert entfernt: {{label}}"
         }
       },
       "unnamed": {
@@ -690,7 +719,10 @@
         "document_library": "eine Bibliothek",
         "document_type": "ein Dokumenttyp"
       },
-      "title": "Verlauf"
+      "title": "Verlauf",
+      "metricsYear": "Kennzahlen {{year}}",
+      "metricsNoYear": "Kennzahlen",
+      "value": "Wert {{name}}"
     },
     "messages": {
       "loadDetailsFailed": "Details des Audit-Eintrags konnten nicht geladen werden."
@@ -970,6 +1002,10 @@
       "costCenterKind": {
         "group": "Gruppe",
         "cost_center": "Kostenstelle"
+      },
+      "lineTypeUsage": {
+        "opex": "Nur OPEX",
+        "capex": "Nur CAPEX"
       }
     },
     "dataAccess": {

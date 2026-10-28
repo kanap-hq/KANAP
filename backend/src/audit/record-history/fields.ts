@@ -1,8 +1,14 @@
 import type { HistoryFields } from './field-rules';
 import { accountsFields } from './records/accounts';
+import { analyticsAxesFields } from './records/analytics_axes';
+import { analyticsCategoriesFields } from './records/analytics_categories';
+import { businessProcessesFields } from './records/business_processes';
+import { companiesFields } from './records/companies';
 import { costCentersFields } from './records/cost_centers';
+import { departmentsFields } from './records/departments';
 import { documentsFields } from './records/documents';
 import { spendItemsFields } from './records/spend_items';
+import { workingDayProfilesFields } from './records/working_day_profiles';
 
 /**
  * The allow-list of every audit label the history presents: one line per record file, sorted by
@@ -11,9 +17,15 @@ import { spendItemsFields } from './records/spend_items';
  */
 const FIELD_SETS = [
   accountsFields,
+  analyticsAxesFields,
+  analyticsCategoriesFields,
+  businessProcessesFields,
+  companiesFields,
   costCentersFields,
+  departmentsFields,
   documentsFields,
   spendItemsFields,
+  workingDayProfilesFields,
 ] as const;
 
 export const HISTORY_FIELDS: Readonly<Record<string, HistoryFields>> = Object.freeze(
