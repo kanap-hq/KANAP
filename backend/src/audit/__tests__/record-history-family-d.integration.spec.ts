@@ -210,6 +210,17 @@ async function seedFamily(runner: QueryRunner, data: HistorySeed): Promise<Seede
     table: 'asset_support_info', recordId: supportId, action: 'delete', userId: allReader.id,
     before: supportRow, after: null,
   });
+  // The assistant's relation writer: relation items, the asset in `record_id`. The support contact
+  // becomes one entry of the asset's history, named under the reader's contacts right.
+  await audit(runner, {
+    table: 'asset_support_contacts', recordId: data.asset, action: 'update', userId: allReader.id,
+    before: [],
+    after: [{
+      key: `${data.contact}:support`,
+      label: 'Cora Contact - support',
+      payload: { contact_id: data.contact, role: 'support' },
+    }],
+  });
   const linkId = randomUUID();
   const assetLink = { id: linkId, tenant_id: data.tenantId, asset_id: data.asset, url: 'https://example.invalid/asset', description: 'Asset docs' };
   await audit(runner, {
@@ -465,7 +476,7 @@ async function testAssetEntries(seeded: Seeded) {
   const page = await readPage(seeded.allReader, data.tenantId, 'assets', data.asset, ALL_MODULES);
   assertPresentable(page);
   const found = new Set(kinds(page));
-  for (const kind of ['record', 'relation', 'hardware', 'support', 'link', 'attachment', 'technology', 'contract', 'project', 'budget_line']) {
+  for (const kind of ['record', 'relation', 'hardware', 'support', 'contact', 'link', 'attachment', 'technology', 'contract', 'project', 'budget_line']) {
     assert.ok(found.has(kind), `${kind}: an entry of that subject kind`);
   }
 
@@ -513,6 +524,10 @@ async function testAssetEntries(seeded: Seeded) {
   const contract = support!.changes.find((change) => change.field === 'support_contract_id');
   assert.equal((contract?.after as any).kind, 'contract');
   assert.ok(page.items.some((item) => item.subject.kind === 'support' && item.action === 'delete'), 'the support deletion is an entry');
+  const supportContact = findChange(page, 'contact', 'added');
+  assert.ok(supportContact, 'the assistant support contact is an entry');
+  assert.equal((supportContact!.change.after as any).kind, 'contact');
+  assert.equal((supportContact!.change.after as any).label, 'Cora Contact');
 
   const link = findChange(page, 'link', 'added');
   assert.ok(link, 'the web link is added');
@@ -593,10 +608,10 @@ async function testTechnologyEntries(seeded: Seeded) {
   assert.equal((businessOwner.change.after as any).label, 'Alba All');
   assert.ok(findChange(page, 'owner_it', 'removed'), 'the IT owner is removed');
 
-  const contact = findChange(page, 'added');
+  const contact = findChange(page, 'contact', 'added');
   assert.ok(contact, 'the support contact is added');
   assert.equal((contact.change.after as any).label, 'Cora Contact');
-  assert.ok(findChange(page, 'removed'), 'the support contact is removed');
+  assert.ok(findChange(page, 'contact', 'removed'), 'the support contact is removed');
 
   const application = findChange(page, 'application', 'added');
   assert.ok(application, 'the application link is added');
@@ -652,7 +667,7 @@ async function testTechnologyEntries(seeded: Seeded) {
   // An infrastructure-only reader names the assets and technologies, and hides the other modules.
   const narrow = await readPage(seeded.technologyReader, data.tenantId, 'technologies', data.technology, ASSET_MODULES);
   assert.deepEqual(findChange(narrow, 'application', 'added')?.change.after, { hidden: true, kind: 'application' }, 'an application is hidden without its module');
-  assert.deepEqual(findChange(narrow, 'added')?.change.after, { hidden: true, kind: 'contact' }, 'a contact is hidden without its module');
+  assert.deepEqual(findChange(narrow, 'contact', 'added')?.change.after, { hidden: true, kind: 'contact' }, 'a contact is hidden without its module');
   assert.equal((findChange(narrow, 'asset', 'added')?.change.after as any).label, 'Server One', 'the asset is named with infrastructure');
   assertNoRawId(page, data.tenantId);
   console.log('  technology creation, update, version, owners, contact, application, asset, contract, project, line, link, attachment and vulnerability in words: OK');

@@ -35,6 +35,8 @@ export const assetsRecord = {
     // The children whose audit row names the asset in `asset_id`.
     asset_hardware_info: 'hardware',
     asset_support_info: 'support',
+    // Written only by the assistant's relation writer; its rows name the asset in `record_id`.
+    asset_support_contacts: 'contact',
     asset_links: 'link',
     asset_attachments: 'attachment',
     // Installed technologies: `record_id` is the technology, the payload names the asset. The
@@ -50,6 +52,7 @@ export const assetsRecord = {
     asset_capex_items: 'record',
     asset_hardware_info: { payloadKey: 'asset_id' },
     asset_support_info: { payloadKey: 'asset_id' },
+    asset_support_contacts: 'record',
     asset_links: { payloadKey: 'asset_id' },
     asset_attachments: { payloadKey: 'asset_id' },
     asset_technologies: { payloadKey: 'asset_id' },
@@ -154,6 +157,17 @@ const ASSET_SUPPORT_FIELDS: HistoryFields = {
   updated_at: hidden('timestamp'),
 };
 
+/** A support contact of an asset, written by the assistant's relation writer. */
+const ASSET_SUPPORT_CONTACT_FIELDS: HistoryFields = {
+  contact_id: shown('contact'),
+  role: shown(),
+  asset_id: hidden('the asset, the record itself'),
+  id: hidden('identity'),
+  tenant_id: hidden('tenancy'),
+  created_at: hidden('timestamp'),
+  updated_at: hidden('timestamp'),
+};
+
 /** A web link of an asset. */
 const ASSET_LINK_FIELDS: HistoryFields = {
   url: shown(),
@@ -211,6 +225,7 @@ export const assetsFields: Readonly<Record<string, HistoryFields>> = {
   asset_cluster_members: ASSET_CLUSTER_MEMBER_FIELDS,
   asset_hardware_info: ASSET_HARDWARE_FIELDS,
   asset_support_info: ASSET_SUPPORT_FIELDS,
+  asset_support_contacts: ASSET_SUPPORT_CONTACT_FIELDS,
   asset_links: ASSET_LINK_FIELDS,
   asset_attachments: ASSET_ATTACHMENT_FIELDS,
   asset_contracts: ASSET_CONTRACT_FIELDS,

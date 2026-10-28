@@ -24,12 +24,22 @@ export function linkSetIds(value: unknown): string[] {
   return list.filter(isUuid).map((id) => id.toLowerCase());
 }
 
-/** The contact ids of a payload that writes them as `"<contact_id>:<role>"` strings or as bare ids. */
+/**
+ * The contact ids of a payload that writes them as `"<contact_id>:<role>"` strings, as bare ids,
+ * or as the assistant's relation items (`{ key, label, payload: { contact_id, role } }`).
+ */
 export function contactIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  return value
-    .filter((entry): entry is string => typeof entry === 'string')
-    .map((entry) => entry.split(':')[0])
-    .filter(isUuid)
-    .map((entry) => entry.toLowerCase());
+  const ids: string[] = [];
+  for (const entry of value) {
+    if (typeof entry === 'string') {
+      ids.push(entry.split(':')[0]);
+      continue;
+    }
+    if (!isPlainObject(entry)) continue;
+    const payload = isPlainObject(entry.payload) ? entry.payload : entry;
+    if (isUuid(payload.contact_id)) ids.push(payload.contact_id);
+    else if (isUuid(entry.key)) ids.push(entry.key);
+  }
+  return Array.from(new Set(ids.filter(isUuid).map((id) => id.toLowerCase())));
 }
