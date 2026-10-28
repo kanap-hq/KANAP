@@ -7,6 +7,7 @@ import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-docum
 import { purgeTenantTables } from '../../admin/tenants/tenant-data-purge';
 import { TENANT_PURGE_TABLES } from '../../admin/tenants/tenant-purge.inventory';
 import { withTenantExecution } from '../../common/tenant-runner';
+import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE } from '../ai-write-texts';
 
 // Incidents written through Plaid (L4 lots 2 to 4): creating one, changing its fields, moving its
@@ -395,6 +396,11 @@ async function approveFailingPreview(harness: Harness, ctx: any, preview: any) {
   const executed = await harness.previews.executePreview(ctx, preview.preview_id) as any;
   assert.equal(executed.status, 'failed', 'the preview must fail at execution');
   return executed;
+}
+
+function mutationOperation(harness: Harness, toolName: string): any {
+  const { AiMutationOperationRegistry } = require('../mutation/ai-mutation-operation.registry');
+  return harness.app.get(AiMutationOperationRegistry).getOperationOrNull(toolName);
 }
 
 async function expectRejects(fn: () => Promise<unknown>, pattern: RegExp) {
@@ -968,6 +974,16 @@ async function testDriftWaitsForTheIncidentRowLock(harness: Harness) {
       );
       assert.equal(stateRow.status, 'in_progress', 'the holder change is the only write');
 
+      // The operation itself answers 409; the preview service relays it as a failed preview.
+      const statePreviewEntity = await execution.manager.getRepository(AiMutationPreview)
+        .findOneBy({ id: statePreview.preview_id });
+      assert.ok(statePreviewEntity);
+      await assert.rejects(
+        () => mutationOperation(harness, 'change_incident_state').executePreview(ctx, statePreviewEntity),
+        (error: any) => error?.getStatus?.() === 409,
+        'the state write answers 409 on the locked drift',
+      );
+
       // Confidentiality: same race on INC-8.
       const confidentialityPreview = await executeToolPreview(harness, ctx, 'set_incident_confidentiality', {
         ref: 'INC-8', confidential: false,
@@ -1006,6 +1022,14 @@ async function testDriftWaitsForTheIncidentRowLock(harness: Harness) {
         [seed.tenantId, seed.incidents.ownConfidential],
       );
       assert.equal(confidentialityRow.confidential, false, 'the holder change is the only write');
+      const confidentialityPreviewEntity = await execution.manager.getRepository(AiMutationPreview)
+        .findOneBy({ id: confidentialityPreview.preview_id });
+      assert.ok(confidentialityPreviewEntity);
+      await assert.rejects(
+        () => mutationOperation(harness, 'set_incident_confidentiality').executePreview(ctx, confidentialityPreviewEntity),
+        (error: any) => error?.getStatus?.() === 409,
+        'the confidentiality write answers 409 on the locked drift',
+      );
 
       await execution.commitTransaction();
     } finally {
