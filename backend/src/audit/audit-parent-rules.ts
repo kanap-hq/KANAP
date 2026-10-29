@@ -13,6 +13,7 @@ import { interfacesParentRules } from './record-history/records/interfaces';
 import { locationsParentRules } from './record-history/records/locations';
 import { spendItemsParentRules } from './record-history/records/spend_items';
 import { suppliersParentRules } from './record-history/records/suppliers';
+import { tasksParentRules } from './record-history/records/tasks';
 import { technologiesParentRules } from './record-history/records/technologies';
 
 /**
@@ -108,6 +109,7 @@ const PARENT_RULE_SETS = [
   locationsParentRules,
   spendItemsParentRules,
   suppliersParentRules,
+  tasksParentRules,
   technologiesParentRules,
 ] as const;
 

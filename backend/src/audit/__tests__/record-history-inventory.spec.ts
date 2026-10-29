@@ -45,6 +45,7 @@ function testEntries() {
     [
       'accounts', 'analytics', 'applications', 'budget', 'business_processes', 'companies', 'contacts',
       'contracts', 'cost_centers', 'departments', 'incidents', 'infrastructure', 'knowledge', 'locations', 'suppliers',
+      'tasks',
       'working_day_profiles',
     ],
     'the modules of the route guard',
@@ -142,8 +143,9 @@ function testDataAccessTablesAreDeclared() {
       const table = dataAccess.get(exclusion.table);
       // A family may also exclude a table it follows outside the data-access inventory (an asset's
       // application assignments, an incident's links). A scoped table may only be excluded when it
-      // follows or links to a line or a contract.
-      if (!table) continue;
+      // follows or links to a line or a contract. A table the data-access inventory leaves unscoped
+      // (`excluded`, a task's feed) is outside the rule.
+      if (!table || table.cls === 'excluded') continue;
       assert.ok(
         FOLLOWING_CLASSES.has(table.cls),
         `${exclusion.table}: an exclusion of a scoped table follows or links to a line or a contract`,
