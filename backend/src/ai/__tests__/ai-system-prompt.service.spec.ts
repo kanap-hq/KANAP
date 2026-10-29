@@ -83,6 +83,9 @@ async function testStructuredReadGuidancePrefersQueryLayerTools() {
   assert.match(prompt, /headcount_year/);
   assert.match(prompt, /pass `year` on query_entities or get_entity_detail/i);
   assert.match(prompt, /Budget-line reads and aggregations are summary-backed/i);
+  // Plaid L8: the report figures come from aggregate_entities, never recomputed (one sentence).
+  assert.match(prompt, /A change between two columns, FTE by month, a table crossing two fields or several columns, and the chargeback by company or department \(families `chargeback` and `chargeback_lines`\) come from aggregate_entities: their totals, changes and averages are those of KANAP's reports, quoted as given and never recomputed\./);
+  assert.equal(prompt.match(/never recomputed/g)?.length, 1, 'said once');
   assert.match(prompt, /Prefer completeness over speed/i);
   assert.match(prompt, /`q` on query_entities and aggregate_entities is literal text quick-search only/i);
   assert.match(prompt, /Treat `filters_ignored` and `sort_ignored` from query_entities or aggregate_entities, and `fields_ignored` from get_filter_values, as blocking validation failures/i);
