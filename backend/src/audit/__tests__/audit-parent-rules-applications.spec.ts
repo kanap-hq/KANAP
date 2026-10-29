@@ -1,9 +1,15 @@
 import * as assert from 'node:assert/strict';
-import { resolveRuleParent, type AuditParentRule } from '../audit-parent-rules';
+import * as fs from 'node:fs';
+import { backendPath } from '../../common/__tests__/backend-root';
+import { AUDIT_PARENT_RULES, resolveAuditParent, resolveRuleParent, type AuditParentRule } from '../audit-parent-rules';
+import { RECORD_HISTORY, recordHistoryPayloadKeyReads } from '../record-history.inventory';
+import { applicationsParentRules } from '../record-history/records/applications';
 
 // The deployment rule (`from: 'instance'`): an audit row names a deployment of an application in its
 // payload, and its parent is that deployment's application, read at write time in the writer's
-// tenant. A deployment that no longer exists gives no parent.
+// tenant. A deployment that no longer exists gives no parent. The application's rules and their
+// SQL copy in `1855910000000-audit-log-parent-applications.ts` agree: labels, keys, the deployment
+// join in the row's tenant, and the partial index of the payload-key reads.
 // This spec does not open the data source: it runs in the parallel (non-database) lane.
 
 const APPLICATION = '11111111-1111-4111-8111-111111111111';
@@ -60,8 +66,61 @@ async function testResolve() {
   assert.equal(queries.length, before, 'no lookup without a deployment id');
 }
 
+const MIGRATION_PATH = backendPath('src', 'migrations', '1855910000000-audit-log-parent-applications.ts');
+const MIGRATION_TEXT = () => fs.readFileSync(MIGRATION_PATH, 'utf8');
+
+function quotedLabels(name: string): string[] {
+  const block = new RegExp(`const ${name} = \\[([\\s\\S]*?)\\] as const;`).exec(MIGRATION_TEXT())?.[1];
+  assert.ok(block, `the migration declares ${name}`);
+  return Array.from(new Set(Array.from(block.matchAll(/'([a-z_]+)'/g), (match) => match[1]))).sort();
+}
+
+async function testApplicationRulesAndMigration() {
+  const payload = Object.entries(applicationsParentRules).filter(([, rule]) => rule.from === 'payload');
+  const instance = Object.entries(applicationsParentRules).filter(([, rule]) => rule.from === 'instance');
+  assert.deepEqual(payload.map(([label]) => label).sort(), quotedLabels('PAYLOAD_LABELS'), 'the payload rules and the migration agree');
+  assert.deepEqual(instance.map(([label]) => label).sort(), quotedLabels('INSTANCE_LABELS'), 'the deployment rules and the migration agree');
+  assert.deepEqual(instance.map(([label]) => label), ['app_asset_assignments']);
+  for (const [label, rule] of Object.entries(applicationsParentRules)) {
+    assert.equal(rule.parentTable, 'applications', `${label}: the application table`);
+    assert.deepEqual(rule.from === 'version' ? [] : rule.keys, rule.from === 'instance' ? ['app_instance_id'] : ['application_id'], `${label}: its key`);
+    assert.equal(AUDIT_PARENT_RULES[label], rule, `${label}: aggregated`);
+  }
+  const text = MIGRATION_TEXT();
+  assert.match(text, /after_json->>'application_id', \$\{a\}\.before_json->>'application_id'/, 'the payload key, after then before');
+  assert.match(text, /FROM app_instances i\s+WHERE i\.tenant_id = \$\{a\}\.tenant_id\s+AND i\.id = /, 'the deployment is read in the row tenant');
+  assert.match(text, /after_json->>'app_instance_id', \$\{a\}\.before_json->>'app_instance_id'/, 'the deployment key, after then before');
+  assert.match(text, /EXISTS \(SELECT 1 FROM applications p WHERE p\.tenant_id = a\.tenant_id AND p\.id = c\.candidate_parent_id\)/, 'only an application of the tenant');
+  for (const read of recordHistoryPayloadKeyReads(RECORD_HISTORY.applications)) {
+    const name = `idx_audit_log_${read.key}_applications`;
+    assert.ok(text.includes(name), `${name}: the migration creates the index`);
+    assert.ok(text.includes(`->> '${read.key}'`), `${name}: the key expression`);
+    assert.deepEqual(read.labels, quotedLabels('PAYLOAD_KEY_LABELS'), `${name}: the index names the labels read by the key`);
+  }
+  assert.doesNotMatch(text, /ROW LEVEL SECURITY|row_security/i, 'the migration never touches RLS');
+
+  const { manager, queries } = fakeManager({ [INSTANCE]: APPLICATION });
+  assert.deepEqual(
+    await resolveAuditParent(manager, { table: 'app_asset_assignments', recordId: ASSIGNMENT, before: null, after: { app_instance_id: INSTANCE } }),
+    { table: 'applications', id: APPLICATION },
+    'an assignment write names its application',
+  );
+  assert.deepEqual(
+    await resolveAuditParent(manager, { table: 'app_instances', recordId: INSTANCE, before: { application_id: APPLICATION }, after: null }),
+    { table: 'applications', id: APPLICATION },
+    'a deleted deployment names its application',
+  );
+  assert.equal(
+    await resolveAuditParent(manager, { table: 'application_owners', recordId: APPLICATION, before: [], after: [] }),
+    null,
+    'a set read by record_id has no rule',
+  );
+  assert.equal(queries.length, 1, 'only the assignment reads its deployment');
+}
+
 async function run() {
   await testResolve();
+  await testApplicationRulesAndMigration();
   console.log('audit-parent-rules-applications.spec: ok');
 }
 
