@@ -696,6 +696,40 @@ async function testMissingRightIsSaidInPlainWords() {
 }
 
 /**
+ * Plaid L9, lot D: the exchange rates are read with the budget right at reader level, as their
+ * routes, limited access included; the refusal names the budget right and the exchange rates.
+ */
+async function testExchangeRatesNeedBudgetReader() {
+  const originalFeature = Features.AI_CHAT_ENABLED;
+  Features.AI_CHAT_ENABLED = true;
+  const context = { tenantId: 'tenant-1', userId: 'user-1', isPlatformHost: false, surface: 'chat' as const, authMethod: 'jwt' as const };
+  try {
+    assert.equal(
+      missingRightMessage('budget', 'reader', undefined, 'the exchange rates and the currency settings'),
+      'You need the right to read budget lines to read the exchange rates and the currency settings, which your role does not give. An administrator can add it to your role.',
+    );
+    const withoutBudget = createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['budget_ops', 'admin']]) });
+    await assert.rejects(
+      () => withoutBudget.assertEntityTypeReadAccess(context, 'exchange_rates', createManager()),
+      (error: any) => {
+        assert.equal(error.message, missingRightMessage('budget', 'reader', undefined, 'the exchange rates and the currency settings'));
+        assert.equal(error.getResponse().code, 'MODULE_RIGHT_REQUIRED');
+        return true;
+      },
+    );
+    const reader = createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['budget', 'reader']]) });
+    await reader.assertEntityTypeReadAccess(context, 'exchange_rates', createManager());
+    // Not reserved: a person in limited access reads them, their access is never read for it.
+    const noQuery = { ...createManager({ limited: true }), query: async () => { throw new Error('the access is read for the reserved families only'); } } as any;
+    assert.equal(await reader.canReadEntityType(context, 'exchange_rates', noQuery), true, 'budget:reader reads them, limited access included');
+    assert.deepEqual(await reader.listReadableEntityTypes(context, ['exchange_rates'] as any[], createManager({ limited: true })), ['exchange_rates']);
+    assert.deepEqual(await withoutBudget.listReadableEntityTypes(context, ['exchange_rates'] as any[], createManager()), []);
+  } finally {
+    Features.AI_CHAT_ENABLED = originalFeature;
+  }
+}
+
+/**
  * Lot D11: a write needs the module at the level of the screen route (`contributor` for a
  * project's fields and relations); a contributor changes only the fields the screen opens to them.
  */
@@ -861,6 +895,7 @@ async function testCostCentersNeedTheirPageRight() {
 async function run() {
   await testRolesNeedUsersAdminAndUnlimitedAccess();
   await testCostCentersNeedTheirPageRight();
+  await testExchangeRatesNeedBudgetReader();
   await testContributorWritesAtTheScreenLevel();
   await testMissingRightIsSaidInPlainWords();
   await testListReadableEntityTypesFiltersUnreadableFamilies();

@@ -1734,7 +1734,7 @@ async function testQueryEntitiesLeavesThePageSizeToTheExecutor() {
 async function testInvalidInputNamesTheFieldAndWhy() {
   const { AiCapabilityDispatcherService } = require('../control-plane/dispatcher/ai-capability-dispatcher.service');
   const registry = createRegistry();
-  const schemas = new Map(registry.toToolJsonSchemas([{ name: 'get_entity_detail' }, { name: 'query_entities' }]).map((schema) => [schema.name, schema.parameters]));
+  const schemas = new Map(registry.toToolJsonSchemas([{ name: 'get_entity_detail' }, { name: 'query_entities' }, { name: 'aggregate_entities' }]).map((schema) => [schema.name, schema.parameters]));
   const dispatcher = new AiCapabilityDispatcherService(...Array.from({ length: 9 }, () => ({}) as any));
   const refusal = (name: string, input: unknown): string => {
     try {
@@ -1780,6 +1780,10 @@ async function testInvalidInputNamesTheFieldAndWhy() {
     assert.ok(queried.includes(family), `${family} is listed`);
     assert.match(enumValue, new RegExp(`"${family}"`), enumValue);
   }
+  // The exchange rates (Plaid L9, lot D): cells of the rate matrix, listed and grouped, with no detail.
+  assert.ok(queried.includes('exchange_rates'), 'the exchange rates are listed');
+  assert.ok((schemas.get('aggregate_entities') as any).properties.entity_type.enum.includes('exchange_rates'), 'and grouped');
+  assert.doesNotMatch(enumValue, /"exchange_rates"/, enumValue);
 
   const nested = refusal('query_entities', { entity_type: 'budget_lines', sort: { field: 'y_budget', direction: 'down' }, page: 'two' });
   assert.match(nested, /"sort.direction" must be one of: "asc", "desc"/, nested);

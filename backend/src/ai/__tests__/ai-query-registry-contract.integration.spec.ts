@@ -36,6 +36,9 @@ import { seedMonths, seedVersion } from '../../spend/__tests__/round-inputs.fixt
 //   company: every call names them (`REQUIRED_FILTERS`); their year takes `eq` only, any other
 //   operator refused in words. The working-day calendars' year takes `eq` only too, within the
 //   calendars' years (2000 to 2100).
+// - The exchange rates (`exchange_rates`) read a year from 1900 to 3000 (`YEAR_FIELDS`): any
+//   operator, a year out of that range refused in words. The amounts note of the budget lines
+//   points to them.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -54,7 +57,7 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
  */
 const IN_MEMORY_FAMILIES = new Set([
   'support_gaps', 'support_deadlines', 'roles', 'role_permissions', 'data_access', 'chargeback', 'chargeback_lines',
-  'cost_centers', 'working_day_calendars', 'analytics_axes',
+  'cost_centers', 'working_day_calendars', 'analytics_axes', 'exchange_rates',
 ]);
 
 /** The year of the seeded chargeback: outside the window of the budget line fields (y-2 to y+2). */
@@ -78,6 +81,9 @@ const EQ_ONLY_FIELDS: Record<string, Set<string>> = {
 
 /** The year an eq-only field is probed with: one its family reads (a calendar reads 2000 to 2100). */
 const EQ_ONLY_PROBE_YEAR: Record<string, number> = { working_day_calendars: CHARGEBACK_YEAR };
+
+/** Number fields that take any operator on a year of 1900 to 3000; a value out of it is refused in words. */
+const YEAR_FIELDS: Record<string, Set<string>> = { exchange_rates: new Set(['year']) };
 
 function withRequired(input: Record<string, unknown>): Record<string, unknown> {
   const required = REQUIRED_FILTERS[String(input.entity_type)];
@@ -253,6 +259,13 @@ async function seedTenant(runner: QueryRunner): Promise<Seed> {
     `INSERT INTO analytics_axes (tenant_id, code, name, sort_order, status, disabled_at, created_at, updated_at)
      VALUES ($1, $2, $3, $4, 'disabled', '2020-01-01T12:00:00Z', $5, $5)`,
     [tenantId, `contract${n}`, `Contract dimension ${n}`, n, at]));
+  // The exchange rates: two years of rates in EUR, two rows of the matrix.
+  for (const year of [2030, 2031]) {
+    await runner.query(
+      `INSERT INTO currency_rate_sets (tenant_id, fiscal_year, base_currency, rates, rate_sources) VALUES ($1, $2, 'EUR', '{"EUR":1}'::jsonb, '{"EUR":"identity"}'::jsonb)`,
+      [tenantId, year],
+    );
+  }
   await pair('projects', (n, at) => insertId(runner,
     `INSERT INTO portfolio_projects (tenant_id, name, item_number, created_at, updated_at) VALUES ($1, $2, $3, $4, $4)`,
     [tenantId, `Project ${n}`, n, at]));
@@ -324,6 +337,7 @@ async function runQuery(runner: QueryRunner, executor: any, ctx: any, requested:
 
 function probeValue(entityType: string, name: string, field: any): unknown {
   if (EQ_ONLY_FIELDS[entityType]?.has(name)) return { op: 'eq', value: EQ_ONLY_PROBE_YEAR[entityType] ?? 2999 };
+  if (YEAR_FIELDS[entityType]?.has(name)) return { op: 'gt', value: 2999 };
   if (field.type === 'set') return [field.values?.find((value: unknown) => value !== null) ?? '__contract_probe__'];
   if (field.type === 'text') return '__contract_probe__';
   if (field.type === 'number') return { op: 'gt', value: 123456789 };
@@ -490,6 +504,7 @@ async function testAmountsCurrency(harness: Harness, runner: QueryRunner, seed: 
     assert.equal(error, null, `${entityType}: runs (${error})`);
     assert.equal(result.amounts_currency, 'CHF', `${entityType}: the amounts are in the reporting currency`);
     assert.match(result.amounts_currency_note, /CHF is the reporting currency/, `${entityType}: the note says so`);
+    assert.match(result.amounts_currency_note, /The exchange rates themselves are read through query_entities on the family exchange_rates\./, `${entityType}: the note points to the rates`);
     assert.equal(result.items[0].metadata.currency, 'EUR', `${entityType}: the item keeps its own currency`);
     assert.equal(result.items[0].metadata.amounts_fx_missing_years, null, `${entityType}: no year without a rate`);
 
@@ -525,6 +540,7 @@ async function testAmountsCurrency(harness: Harness, runner: QueryRunner, seed: 
   assert.equal(Number(leftOut.groups.find((group: any) => group.key === 'EUR')?.value), 0, 'the 1,200 EUR are left out, never counted at 1');
   assert.match(leftOut.amounts_currency_note, new RegExp(`EUR ${year} \\(1 line\\)`), 'the note names the pair');
   assert.match(leftOut.amounts_currency_note, /Tell the user that those amounts are not included/, 'and asks to say so');
+  assert.match(leftOut.amounts_currency_note, /The rates missing in the workspace are in missing_rates of the family exchange_rates\./, 'and where the missing rates are read');
 
   const { budgetFxMissingYears } = require('../query/ai-query.executor');
   const reporting = (currency: string, fx_source: string) => ({ reporting: { currency, reporting_currency: 'EUR', fx_source } });
@@ -535,6 +551,9 @@ async function testAmountsCurrency(harness: Harness, runner: QueryRunner, seed: 
 /** Every filter value the AI may send for a field, one per shape the adapter turns it into. */
 function filterShapes(entityType: string, name: string, field: any): Array<[string, unknown]> {
   if (EQ_ONLY_FIELDS[entityType]?.has(name)) return [['eq', { op: 'eq', value: CHARGEBACK_YEAR }]];
+  if (YEAR_FIELDS[entityType]?.has(name)) {
+    return [...['eq', 'gt', 'gte', 'lt', 'lte'].map((op): [string, unknown] => [op, { op, value: 2026 }]), ['between', { op: 'between', value: 2025, valueTo: 2027 }]];
+  }
   if (field.type === 'set') {
     const value = field.values?.find((entry: unknown) => entry !== null) ?? '__contract_probe__';
     return [['set', [value]], ['set with blank', [value, null]], ['set to exclude', { not: [value] }]];
@@ -589,6 +608,15 @@ async function testEveryFilterShapeIsAccepted(harness: Harness, runner: QueryRun
       for (const op of ['gt', 'gte', 'lt', 'lte']) {
         const refused = await runQuery(runner, harness.executor, ctx, { entity_type: entityType, filters: { [name]: { op, value: 2026 } } });
         if (!/reads one year/.test(refused.error ?? '')) failures.push(`${entityType} filter ${name} ${op}: not refused in words (${refused.error})`);
+      }
+    }
+  }
+  // A year of the exchange rates out of 1900-3000: refused in words, whatever the operator.
+  for (const [entityType, fields] of Object.entries(YEAR_FIELDS)) {
+    for (const name of fields) {
+      for (const value of [{ op: 'eq', value: 3 }, { op: 'between', value: 2026, valueTo: 9999 }]) {
+        const refused = await runQuery(runner, harness.executor, ctx, { entity_type: entityType, filters: { [name]: value } });
+        if (!/year is a year from 1900 to 3000/.test(refused.error ?? '')) failures.push(`${entityType} filter ${name} ${JSON.stringify(value)}: not refused in words (${refused.error})`);
       }
     }
   }
