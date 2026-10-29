@@ -597,8 +597,13 @@ carries the screen's words in the person's language (`resource_label`,
 `level_label`, and `label` on the groups of `aggregate_entities` by right or
 level), copied from `frontend/src/locales/*/admin.json` into
 `backend/src/ai/ai-role-labels.ts` and compared by `ai-role-labels.spec.ts`;
-without a profile language they come in the four languages. `projects`, a right
-the screen does not show, has no label.
+without a profile language they come in the four languages. Plaid reads the
+rights the screen shows and no other (`AI_SCREEN_RESOURCES`, compared with the
+screen's `frontend/src/pages/admin/rolePermissionGroups.ts`): `projects`, a
+server right the screen does not show, is in no row, detail or group.
+`user_count` is the screen's count (the rows of `user_roles`); the users list
+filtered on `roles` also reads the primary role kept on a person's record and
+can find more people, which the field's description says.
 
 `data_access` reads Admin › Data access (`ai-data-access.query.ts`, through
 `DataAccessAdminService`): one row per limited person and node, one row with

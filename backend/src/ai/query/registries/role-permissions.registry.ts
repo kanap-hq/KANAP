@@ -1,4 +1,4 @@
-import { RESOURCES } from '../../../permissions/permissions.service';
+import { AI_SCREEN_RESOURCES } from '../../ai-role-labels';
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 import { AI_PERMISSION_LEVELS, AI_ROLE_TYPES } from '../ai-roles.query';
 
@@ -37,7 +37,7 @@ export const rolePermissionsRegistry: AiEntityFilterRegistry = {
       grid: 'resource',
       type: 'set',
       description: 'The right, by its code on the Roles screen. Each row\'s `resource_label` is the name the screen gives it, in the person\'s language: the name to quote, not the code.',
-      values: [...RESOURCES],
+      values: [...AI_SCREEN_RESOURCES],
       discoverable: true,
       sortable: true,
       groupable: true,

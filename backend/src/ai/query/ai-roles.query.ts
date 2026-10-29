@@ -1,5 +1,6 @@
 import type { EntityManager } from 'typeorm';
-import { PermissionLevel, PermissionsService, RESOURCES, type Resource } from '../../permissions/permissions.service';
+import { PermissionLevel, PermissionsService } from '../../permissions/permissions.service';
+import { AI_SCREEN_RESOURCES, type AiScreenResource } from '../ai-role-labels';
 import type { Role } from '../../roles/role.entity';
 import type { RolesService } from '../../roles/roles.service';
 import { compareText, numberMatch, paged, setMatch, textMatch } from './ai-support.query';
@@ -41,7 +42,7 @@ export type AiRolePermissionRow = {
   role_id: string;
   role: string;
   role_type: AiRoleType;
-  resource: Resource;
+  resource: AiScreenResource;
   level: PermissionLevel;
 };
 
@@ -93,7 +94,7 @@ function sortValue(row: AiRoleRow | AiRolePermissionRow, field: string): string 
     switch (field) {
       case 'role': return row.role;
       case 'role_type': return AI_ROLE_TYPES.indexOf(row.role_type);
-      case 'resource': return (RESOURCES as readonly string[]).indexOf(row.resource);
+      case 'resource': return AI_SCREEN_RESOURCES.indexOf(row.resource);
       case 'level': return AI_PERMISSION_LEVELS.indexOf(row.level);
       default: return null;
     }
@@ -136,8 +137,9 @@ export async function listAiRoles(
 }
 
 /**
- * One row per role and right it gives, at the level the screen shows. The role filters apply
- * first, so the rights of the roles left out are not read.
+ * One row per role and right it gives, at the level the screen shows, for the rights the screen
+ * shows (`AI_SCREEN_RESOURCES`). The role filters apply first, so the rights of the roles left out
+ * are not read.
  */
 export async function listAiRolePermissions(
   services: AiRolesServices,
@@ -152,7 +154,7 @@ export async function listAiRolePermissions(
   // One role after the other: the reads share the caller's connection.
   for (const role of roles) {
     const matrix = await services.permissions.getRolePermissionMatrix(role.id, { manager });
-    for (const resource of RESOURCES) {
+    for (const resource of AI_SCREEN_RESOURCES) {
       const level = matrix[resource];
       if (!level) continue;
       rows.push({ key: `${role.id}:${resource}`, role_id: role.id, role: role.name, role_type: role.type, resource, level });

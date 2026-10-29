@@ -1,4 +1,4 @@
-import type { PermissionLevel, Resource } from '../permissions/permissions.service';
+import { RESOURCES, type PermissionLevel, type Resource } from '../permissions/permissions.service';
 import { AI_SCREEN_LANGUAGES, type AiScreenLanguage } from './ai-unread-families';
 
 /**
@@ -13,6 +13,15 @@ import { AI_SCREEN_LANGUAGES, type AiScreenLanguage } from './ai-unread-families
  * the screen and no word: its label is null.
  */
 export type AiScreenResource = Exclude<Resource, 'projects'>;
+
+/**
+ * The rights the Roles screen shows (`frontend/src/pages/admin/rolePermissionGroups.ts`, compared by
+ * `ai-role-labels.spec.ts`), in `RESOURCES` order: the only ones `roles` and `role_permissions`
+ * read, in their rows, details and groups.
+ */
+export const AI_SCREEN_RESOURCES: readonly AiScreenResource[] = RESOURCES.filter(
+  (resource): resource is AiScreenResource => resource !== 'projects',
+);
 
 /** Each right as the Roles screen names it (`roles.resources.<code>`). */
 export const AI_RESOURCE_LABELS: Record<AiScreenLanguage, Record<AiScreenResource, string>> = {

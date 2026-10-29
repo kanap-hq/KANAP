@@ -108,7 +108,7 @@ import { applicationVulnerabilityCounts, assetVulnerabilityCounts, Vulnerability
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
 import { readClassificationCatalog } from '../ai-classification-catalog.util';
-import { aiPermissionLevelLabel, aiResourceLabel } from '../ai-role-labels';
+import { AI_SCREEN_RESOURCES, aiPermissionLevelLabel, aiResourceLabel } from '../ai-role-labels';
 import { readAiScreenLanguage, type AiScreenLanguage } from '../ai-unread-families';
 
 function toIso(value: Date | string | null | undefined): string | null {
@@ -3585,7 +3585,9 @@ export class AiQueryExecutor {
     const value = String(entityId ?? '').trim();
     const role = await findAiRole(services, context.manager, value);
     if (!role) throw entityNotFound('roles', value);
-    const permissions = await services.permissions.getRolePermissionMatrix(role.id, { manager: context.manager });
+    const matrix = await services.permissions.getRolePermissionMatrix(role.id, { manager: context.manager });
+    // The rights the Roles screen shows, and no other (`AI_SCREEN_RESOURCES`).
+    const permissions = Object.fromEntries(AI_SCREEN_RESOURCES.map((resource) => [resource, matrix[resource] ?? null]));
     const language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
     const rights = (Object.entries(permissions) as Array<[AiRolePermissionRow['resource'], AiRolePermissionRow['level'] | null]>)
       .filter((entry): entry is [AiRolePermissionRow['resource'], AiRolePermissionRow['level']] => entry[1] != null)
@@ -3604,7 +3606,7 @@ export class AiQueryExecutor {
       updated_at: role.updated_at,
       permissions,
       rights,
-      permissions_note: '`permissions` gives every right with the level the role gives (null: none); `rights` lists the rights it gives with the words of the Roles screen (`resource_label`, `level_label`), the ones to quote, never the codes.',
+      permissions_note: '`permissions` gives every right of the Roles screen with the level the role gives (null: none); `rights` lists the rights it gives with the words of the Roles screen (`resource_label`, `level_label`), the ones to quote, never the codes.',
     });
   }
 

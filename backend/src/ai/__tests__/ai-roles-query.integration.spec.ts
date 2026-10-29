@@ -100,7 +100,8 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     return id;
   };
   const roles = {
-    admin: await role('Administrator', { system: true }, [['budget', 'admin'], ['users', 'admin']]),
+    // `projects`, a right the Roles screen does not show: read nowhere.
+    admin: await role('Administrator', { system: true }, [['budget', 'admin'], ['users', 'admin'], ['projects', 'admin']]),
     // Stored under the former names: read as budget, at the higher of the two levels. A suppliers
     // contributor reads the contacts without a row of its own.
     finance: await role('Finance custom', {}, [['opex', 'member'], ['capex', 'admin'], ['suppliers', 'contributor']]),
@@ -180,12 +181,16 @@ async function testRoleDetailIsTheMatrix(h: Harness, runner: QueryRunner, s: See
   const route = await h.rolesRoute.getRolePermissions(s.roles.finance, routeRequest(runner));
   const detail = await h.tools.execute(ctx(runner, s, 'unlimited'), 'get_entity_detail', { entity_type: 'roles', entity_id: 'finance custom' });
   assert.equal(detail.entity.id, s.roles.finance, 'found by its name, without case');
-  assert.deepEqual(detail.data.permissions, route, 'the matrix of GET /roles/:id/permissions');
+  const { projects: _projects, ...screenRoute } = route;
+  assert.deepEqual(detail.data.permissions, screenRoute, 'the matrix of GET /roles/:id/permissions, for the rights the screen shows');
   assert.equal(detail.data.permissions.budget, 'admin', 'opex and capex read as budget, at the higher level');
   assert.equal(detail.data.permissions.contacts, 'reader', 'a suppliers contributor reads the contacts');
-  assert.equal(detail.data.permissions.projects, null, 'a right the role does not give is null');
+  assert.equal(detail.data.permissions.knowledge, null, 'a right the role does not give is null');
   assert.equal('opex' in detail.data.permissions || 'capex' in detail.data.permissions, false, 'no former name');
-  assert.equal(Object.keys(detail.data.permissions).length, 32, 'every right of the screen');
+  assert.equal(Object.keys(detail.data.permissions).length, 31, 'every right of the screen');
+  const administrator = await h.tools.execute(ctx(runner, s, 'unlimited'), 'get_entity_detail', { entity_type: 'roles', entity_id: 'Administrator' });
+  assert.equal('projects' in administrator.data.permissions, false, 'a right the screen does not show is not read');
+  assert.deepEqual(administrator.data.rights.map((right: any) => right.resource), ['budget', 'users']);
   assert.equal(detail.data.user_count, 1);
   assert.match(detail.data.permissions_note, /never the codes/);
   // The rights it gives, with the screen's words: no profile language, so the four of the menus.
@@ -229,6 +234,7 @@ async function testRolePermissionsRows(h: Harness, runner: QueryRunner, s: Seed)
   const all = await h.tools.execute(ctx(runner, s, 'unlimited'), 'query_entities', { entity_type: 'role_permissions', limit: 50 });
   assert.equal(all.total, 2 + 3 + 2 + 3, 'one row per right given, none for Contact');
   assert.equal(JSON.stringify(all).includes('Other tenant role'), false, 'another tenant stays out');
+  assert.equal(all.items.some((item: any) => item.metadata.resource === 'projects'), false, 'no row for a right the screen does not show');
 
   const byLevel = await h.tools.execute(ctx(runner, s, 'unlimited'), 'aggregate_entities', { entity_type: 'role_permissions', group_by: 'level' });
   const level = (key: 'reader' | 'contributor' | 'member' | 'admin', count: number) => ({ key, count, label: aiPermissionLevelLabel(key, null) });
