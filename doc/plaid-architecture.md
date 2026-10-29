@@ -593,7 +593,7 @@ every row. The item's `ref` and label are the CVE id. Fields: `cve_id`, `summary
 CVE.org), `exploited` (CISA KEV or EU KEV), `epss`, `state`, `note`,
 `technology` (`TEC-n`, also filtered by name) and `technology_name`, `version`
 (`null`: no version recorded), `sources` (`nvd`, `cve_org`), `alerts`,
-`published_at`, `detected_at`, and the reach by direct links only
+`estate`, `matching`, `published_at`, `detected_at`, and the reach by direct links only
 (`backend/src/vulnerabilities/vulnerability-reach-counts.ts`), as the page's
 columns:
 
@@ -613,9 +613,42 @@ in those direct links; an unknown asset, or an application unknown or outside
 the user's scope, matches nothing. Each item carries `page_url`, the
 vulnerabilities page filtered on it. `get_entity_detail` takes a row id or a CVE
 id (then the CVE's first row) and adds the CVE's signals and `rows`, every
-technology version the CVE concerns. The aggregates count rows. With the
+technology version the CVE concerns. With the
 vulnerability feed off, the family is left out of the readable families and its
 tools answer `vulnerabilityFeed is not available` (`ai-policy.service.ts`).
+
+Rows and CVE (L6): `total` counts rows, so a CVE on two versions counts twice.
+Beside it, as the page's total ("117 rows (112 CVE)"), the list returns
+`distinct_total`, the distinct CVE among every row the filters keep (a CTE of
+the filtered rows; the order, the paging and the 10,000 id cap of the
+aggregates do not change), and `distinct_label` `cve`. The aggregates read it
+from the registry's `distinctRecord` (`{ name: 'cve', expression: 'tv.cve_id' }`,
+`AiAggregateConfig`): a count gives each group `distinct_count`, and the result
+`distinct_total` over the aggregated ids, which is not the sum of the groups. The
+groups of the CVE's own fields (`severity`, `score_source`, `exploited`) add up
+to it; a CVE whose rows differ in state, technology, version, alert setting or
+estate counts in each of its groups. A family without `distinctRecord` returns
+neither field.
+
+- `estate`: the technology is in use in the estate, the page's "In use in the
+  estate" filter (`technologyInEstateSql`, `vulnerability-reach-counts.ts`):
+  installed on an asset in service, or declared by an application in service,
+  whatever the version. A boolean on the technology, over every application as
+  on the page; it names none. It filters and groups; with `severity`,
+  `published_at` and `exploited` it gives the home tile's figures (no tool of its
+  own).
+- `matching`: false when the matching no longer finds the row and keeps it for
+  its review state (never `to_review`, so it needs a `state` filter). It filters
+  and is in the item, the detail and each of the detail's `rows`.
+- `version` groups by technology and version (`PostgreSQL 14`), and
+  `PostgreSQL (no version recorded)` for a row without a version (the page's
+  `version=none`).
+- `feeds`, on the list and the aggregates of this family only: each feed that
+  is on (`vulnerabilityFeedSources`, shared with `GET /vulnerabilities/sources`),
+  its displayed name, `last_success_at` (ISO text: the dispatcher's redaction
+  would empty a `Date`) and `failing` (the page's rule: an error kept from an
+  attempt newer than the last success). Never the error text.
+  `vulnerability_feed_sources` is a platform table, with no tenant column.
 
 Assets and applications carry `open_vulnerabilities` and
 `severe_vulnerabilities` (`backend/src/ai/query/ai-vulnerability-counts.util.ts`):
