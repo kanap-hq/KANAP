@@ -69,6 +69,7 @@ async function testDescribeEntityFiltersCarriesColumns() {
   const checked: string[] = [];
   const policy = {
     assertEntityTypeReadAccess: async (_ctx: unknown, type: string) => { checked.push(type); },
+    adminFamiliesGap: async () => 'right',
     // The linked fields of tasks follow the caller's reads: this caller reads everything.
     canReadEntityType: async () => true,
   };

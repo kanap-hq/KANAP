@@ -199,7 +199,7 @@ async function testUnreadFamilies(h: Harness, runner: QueryRunner, s: Seed) {
     const chargeback = await h.tools.execute(full, 'search_all', { query: 'refacturation 2026 par société bénéficiaire' });
     assert.ok(chargeback.not_read_here.some((entry: any) => entry.where === 'Gestion budgétaire › Rapports › Refacturation globale'), 'chargeback');
     const frenchFilters = await h.tools.execute(full, 'describe_entity_filters', { entity_type: 'applications' });
-    assert.ok(frenchFilters.families_not_read.includes('data access (which companies or cost centers a person is limited to) (Administration › Accès aux données)'));
+    assert.ok(frenchFilters.families_not_read.some((line: string) => line.startsWith('data access (which companies or cost centers a person is limited to) (Administration › Accès aux données): ')));
   } finally {
     await runner.query(`UPDATE users SET locale = NULL WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.users.full]);
   }

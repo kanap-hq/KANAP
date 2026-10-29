@@ -1467,6 +1467,7 @@ function createPermissivePolicyStub() {
     canReadEntityType: async () => true,
     assertKnowledgeReadAccess: async () => undefined,
     assertEntityTypeReadAccess: async () => undefined,
+    adminFamiliesGap: async () => 'right',
   } as any;
 }
 
@@ -2330,6 +2331,7 @@ async function testAiEntityServicePhase1TenantDefenseInDepth() {
         canReadKnowledge: async () => true,
         canReadEntityType: async () => true,
         assertEntityTypeReadAccess: async () => undefined,
+        adminFamiliesGap: async () => 'right',
       } as any,
     );
     const entityServiceWithoutKnowledge = new AiEntityService(
@@ -2347,6 +2349,7 @@ async function testAiEntityServicePhase1TenantDefenseInDepth() {
         canReadKnowledge: async () => false,
         canReadEntityType: async () => true,
         assertEntityTypeReadAccess: async () => undefined,
+        adminFamiliesGap: async () => 'right',
       } as any,
     );
 
@@ -2717,6 +2720,7 @@ async function testAiEntityCommentsReturnsPaginatedCommentFeedsAndStaysTenantSco
         canReadKnowledge: async () => true,
         canReadEntityType: async () => true,
         assertEntityTypeReadAccess: async () => undefined,
+        adminFamiliesGap: async () => 'right',
       } as any,
     );
 
@@ -2827,6 +2831,7 @@ async function testAiEntityContextMarksRecentActivityAsTruncatedWhenCapped() {
         canReadKnowledge: async () => true,
         canReadEntityType: async () => true,
         assertEntityTypeReadAccess: async () => undefined,
+        adminFamiliesGap: async () => 'right',
       } as any,
     );
 
