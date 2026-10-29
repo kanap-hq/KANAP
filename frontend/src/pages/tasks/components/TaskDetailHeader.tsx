@@ -16,6 +16,7 @@ import TaskMetadataBar from './TaskMetadataBar';
 import SendLinkButton from '../../../components/workspace/SendLinkButton';
 import type { TaskCrumb } from '../taskWorkspaceOrigin';
 import DeleteIconButton from '../../../components/workspace/DeleteIconButton';
+import RecordHistoryButton from '../../../components/history/RecordHistoryButton';
 import EditableTitle from '../../../components/workspace/EditableTitle';
 
 function isModifiedClick(event: React.MouseEvent) {
@@ -258,6 +259,9 @@ export default function TaskDetailHeader({
               itemName={title || t('portfolio:workspace.task.title.untitled')}
               itemNumber={itemNumber}
             />
+
+            {/* The task has no tab row: its history opens from the header. The header only draws a saved task. */}
+            {taskId && taskId !== 'new' && <RecordHistoryButton table="tasks" recordId={taskId} />}
 
             <Button
               variant="action"

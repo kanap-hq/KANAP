@@ -723,7 +723,13 @@
       "department_id": "Departamento",
       "server_role": "Rol del servidor",
       "since_date": "Desde",
-      "suite_id": "Suite"
+      "suite_id": "Suite",
+      "priority_level": "Prioridad",
+      "labels": "Etiquetas",
+      "hours": "Tiempo",
+      "logged_at": "Fecha",
+      "related_object": "Relacionado con",
+      "converted_to_request": "Convertida en solicitud"
     },
     "history": {
       "empty": "Todavía no hay historial",
@@ -767,7 +773,12 @@
         "renewalResumed": "Renovación reanudada",
         "descriptionChanged": "Descripción modificada",
         "supportNotesChanged": "Notas de soporte modificadas",
-        "classificationReviewed": "Clasificación revisada"
+        "classificationReviewed": "Clasificación revisada",
+        "taskTypeChanged": "Tipo de tarea modificado",
+        "phaseChanged": "Fase modificada",
+        "sourceChanged": "Origen modificado",
+        "categoryChanged": "Categoría modificada",
+        "streamChanged": "Línea modificada"
       },
       "actors": {
         "assistant": "Plaid",
@@ -918,6 +929,14 @@
         "business_process": {
           "added": "Proceso de negocio añadido: {{label}}",
           "removed": "Proceso de negocio eliminado: {{label}}"
+        },
+        "task_owner": {
+          "added": "Responsable añadido: {{label}}",
+          "removed": "Responsable retirado: {{label}}"
+        },
+        "task_viewer": {
+          "added": "Observador añadido: {{label}}",
+          "removed": "Observador retirado: {{label}}"
         }
       },
       "unnamed": {
@@ -1060,7 +1079,10 @@
         "removed_one": "{{count}} línea presupuestaria fuera de su acceso retirada",
         "removed_other": "{{count}} líneas presupuestarias fuera de su acceso retiradas"
       },
-      "instance": "Entorno {{environment}}"
+      "instance": "Entorno {{environment}}",
+      "timeEntry": "Tiempo registrado",
+      "timeEntryCreated": "Tiempo registrado",
+      "timeEntryDeleted": "Tiempo registrado eliminado"
     },
     "messages": {
       "loadDetailsFailed": "No se pudieron cargar los detalles de la entrada de auditoría."

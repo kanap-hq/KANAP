@@ -34,7 +34,9 @@ export const spendItemsRecord = {
     capex_attachments: 'attachment',
     spend_item_contacts: 'contact',
     capex_item_contacts: 'contact',
-    spend_tasks: 'task',
+    // The line's tasks: the saved task names it (`related_object_type` = 'spend_item' or
+    // 'capex_item', shared rule in `audit-parent-rules.ts`).
+    tasks: 'task',
     // Links to another object. Both sides write the same label: from the line, `record_id` is the
     // line; from the application, technology, asset, contract, project or request, it is that
     // object. Technologies keep one label for both natures.
@@ -72,6 +74,10 @@ export const spendItemsRecord = {
     'portfolio_request_capex',
   ],
   exclusions: [
+    {
+      table: 'spend_tasks',
+      reason: 'duplicate of the `tasks` row the same call writes for the line task (`createForTarget`, `updateForTarget`)',
+    },
     {
       table: 'spend_round_input_lines',
       reason: 'the costed lines ride in the audit row of their round input (`lines`), with no audit row of their own',
@@ -235,22 +241,6 @@ const CONTACT_FIELDS: HistoryFields = {
   updated_at: hidden('timestamp'),
 };
 
-const TASK_FIELDS: HistoryFields = {
-  title: shown(),
-  description: shown(),
-  status: shown(),
-  due_date: shown(),
-  item_number: shown(),
-  assignee_user_id: shown('user'),
-  id: hidden('identity'),
-  tenant_id: hidden('tenancy'),
-  item_id: hidden('line link'),
-  related_object_id: hidden('polymorphic link'),
-  related_object_type: hidden('polymorphic link'),
-  created_at: hidden('timestamp'),
-  updated_at: hidden('timestamp'),
-};
-
 const AMOUNT_FIELDS: HistoryFields = {
   period: shown(),
   planned: shown(),
@@ -296,7 +286,6 @@ export const spendItemsFields: Readonly<Record<string, HistoryFields>> = {
   capex_attachments: ATTACHMENT_FIELDS,
   spend_item_contacts: CONTACT_FIELDS,
   capex_item_contacts: CONTACT_FIELDS,
-  spend_tasks: TASK_FIELDS,
   spend_amounts: AMOUNT_FIELDS,
   capex_amounts: AMOUNT_FIELDS,
   spend_allocations: ALLOCATION_FIELDS,
@@ -329,8 +318,8 @@ export const spendItemsParentRules: Readonly<Record<string, AuditParentRule>> = 
   // A contact link carries its line in the payload; the supplier sync writes the line in record_id.
   spend_item_contacts: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS, fallback: 'record_id' },
   capex_item_contacts: { parentTable: 'spend_items', from: 'payload', keys: LINE_KEYS, fallback: 'record_id' },
-  // A budget task names its line in the saved task (`related_object_id`).
-  spend_tasks: { parentTable: 'spend_items', from: 'payload', keys: ['related_object_id'] },
+  // No rule for the legacy task label (`spend_tasks`): the line history reads the `tasks` row the
+  // same call writes. The rows `1855500000000` gave a parent keep it, and are not read.
   // No rule for the application, technology, asset, contract, project and request links
   // (`application_spend_items`, `application_capex_items`, `technology_spend_items`,
   // `asset_*_items`, `contract_*_items`, `portfolio_project_*`, `portfolio_request_*`): both sides

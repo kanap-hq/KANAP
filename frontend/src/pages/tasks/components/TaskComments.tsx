@@ -19,7 +19,7 @@ import { useLocale } from '../../../i18n/useLocale';
 import { useTenant } from '../../../tenant/TenantContext';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { buildInlineImageUrl, resolveInlineImageTenantSlug } from '../../../utils/inlineImageUrls';
-import { formatRelativeTime } from '../../../utils/portfolioI18n';
+import { formatRelativeTime, getTaskStatusLabel } from '../../../utils/portfolioI18n';
 import { formatUserName, getUserInitials } from '../../../utils/userDisplay';
 import UnifiedActivityForm from './UnifiedActivityForm';
 import type { TaskStatus } from '../task.constants';
@@ -266,6 +266,15 @@ export default function TaskComments({
                   <Box sx={{ mt: '4px' }}>
                     <MarkdownContent content={comment.content || ''} variant="compact" />
                   </Box>
+                )}
+                {/* The status changed with the comment, as a project's decision shows it. */}
+                {Array.isArray(comment.changed_fields?.status) && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: '4px' }}>
+                    {t('portfolio:activity.labels.statusChange', {
+                      from: getTaskStatusLabel(t, String(comment.changed_fields.status[0])),
+                      to: getTaskStatusLabel(t, String(comment.changed_fields.status[1])),
+                    })}
+                  </Typography>
                 )}
             </Box>
           </Box>

@@ -349,8 +349,8 @@ async function testLineHistory(seedRow: HistorySeed, bc: Person, data: Participa
     });
     for (const task of [data.taskOut, data.taskIn, data.taskIncident]) {
       await audit(runner, {
-        table: 'spend_tasks', recordId: task, action: 'create', userId: bc.id,
-        after: { related_object_id: seedRow.opexLine },
+        table: 'tasks', recordId: task, action: 'create', userId: bc.id,
+        after: { related_object_type: 'spend_item', related_object_id: seedRow.opexLine },
       });
     }
   });

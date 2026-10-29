@@ -723,7 +723,13 @@
       "department_id": "Direction",
       "server_role": "Rôle du serveur",
       "since_date": "Depuis",
-      "suite_id": "Suite"
+      "suite_id": "Suite",
+      "priority_level": "Priorité",
+      "labels": "Étiquettes",
+      "hours": "Temps",
+      "logged_at": "Date",
+      "related_object": "Lié à",
+      "converted_to_request": "Convertie en demande"
     },
     "history": {
       "empty": "Aucun historique",
@@ -767,7 +773,12 @@
         "renewalResumed": "Renouvellement repris",
         "descriptionChanged": "Description modifiée",
         "supportNotesChanged": "Notes de support modifiées",
-        "classificationReviewed": "Classification revue"
+        "classificationReviewed": "Classification revue",
+        "taskTypeChanged": "Type de tâche modifié",
+        "phaseChanged": "Phase modifiée",
+        "sourceChanged": "Source modifiée",
+        "categoryChanged": "Catégorie modifiée",
+        "streamChanged": "Filière modifiée"
       },
       "actors": {
         "assistant": "Plaid",
@@ -918,6 +929,14 @@
         "business_process": {
           "added": "Processus métier ajouté : {{label}}",
           "removed": "Processus métier retiré : {{label}}"
+        },
+        "task_owner": {
+          "added": "Responsable ajouté : {{label}}",
+          "removed": "Responsable retiré : {{label}}"
+        },
+        "task_viewer": {
+          "added": "Observateur ajouté : {{label}}",
+          "removed": "Observateur retiré : {{label}}"
         }
       },
       "unnamed": {
@@ -1060,7 +1079,10 @@
         "removed_one": "{{count}} ligne budgétaire hors de votre accès retirée",
         "removed_other": "{{count}} lignes budgétaires hors de votre accès retirées"
       },
-      "instance": "Environnement {{environment}}"
+      "instance": "Environnement {{environment}}",
+      "timeEntry": "Temps enregistré",
+      "timeEntryCreated": "Temps enregistré",
+      "timeEntryDeleted": "Temps enregistré supprimé"
     },
     "messages": {
       "loadDetailsFailed": "Impossible de charger les détails de l'entrée d'audit."

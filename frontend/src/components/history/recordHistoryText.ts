@@ -47,7 +47,7 @@ export type RecordHistorySubject = {
     | 'contact' | 'application' | 'technology' | 'asset' | 'contract' | 'project' | 'request' | 'task' | 'metrics' | 'value'
     | 'relation' | 'member' | 'hardware' | 'support' | 'technology_version' | 'owner' | 'vulnerability'
     | 'supplier' | 'budget_line'
-    | 'sub_item' | 'leg' | 'set' | 'binding' | 'person' | 'compliance_item' | 'instance' | 'assignment' | 'business_process';
+    | 'sub_item' | 'leg' | 'set' | 'binding' | 'person' | 'compliance_item' | 'instance' | 'assignment' | 'business_process' | 'time_entry';
   label?: string | null;
 };
 export type RecordHistoryItem = {
@@ -96,6 +96,7 @@ const EVENT_KINDS = new Set([
   'supplier', 'budget_line', 'relation_contains', 'relation_depends_on', 'member', 'owner_it', 'owner_business', 'operating_system',
   'sub_item', 'person', 'owner', 'company', 'dependency', 'country', 'key_identifier', 'interface_leg',
   'mapping_set', 'middleware', 'renewal_task', 'instance', 'assignment', 'department', 'suite', 'business_process',
+  'task_owner', 'task_viewer',
 ]);
 
 /** A contract's renewal decision, named by the label of its button on the contract screen. */
@@ -220,6 +221,10 @@ export function historyFieldLabel(field: string, t: Translate, table?: string): 
   if (field === 'owner_user_id' && table === 'cost_centers') {
     return t('auditLogs.fields.costCenterOwner', { defaultValue: 'Budget holder' });
   }
+  // The task screen names its creator the requestor.
+  if (field === 'creator_id' && table === 'tasks') {
+    return t('portfolio:workspace.task.sidebar.fields.requestor', { defaultValue: 'Requestor' });
+  }
   return t(`auditLogs.fields.${field}`, { defaultValue: field });
 }
 
@@ -283,6 +288,7 @@ export function historySubjectText(subject: RecordHistorySubject, t: Translate, 
       : t('auditLogs.history.versionNoName');
   }
   if (subject.kind === 'hardware') return t('auditLogs.history.hardware');
+  if (subject.kind === 'time_entry') return t('auditLogs.history.timeEntry');
   if (subject.kind === 'support') return t('auditLogs.history.support');
   if (subject.kind === 'vulnerability') {
     return subject.label
@@ -326,9 +332,9 @@ export function historySubjectText(subject: RecordHistorySubject, t: Translate, 
 export function historyChildTitle(item: RecordHistoryItem, t: Translate, table?: string): string | null {
   if (item.subject.kind === 'record') return null;
   if (item.action !== 'create' && item.action !== 'delete') return null;
-  // A hardware or support sheet is masculine in French: its title has its own words.
-  if (item.subject.kind === 'hardware' || item.subject.kind === 'support') {
-    const kind = item.subject.kind === 'hardware' ? 'hardware' : 'support';
+  // A hardware or support sheet and a time entry have their own words (gender in French).
+  if (item.subject.kind === 'hardware' || item.subject.kind === 'support' || item.subject.kind === 'time_entry') {
+    const kind = item.subject.kind === 'time_entry' ? 'timeEntry' : item.subject.kind;
     return t(item.action === 'create' ? `auditLogs.history.${kind}Created` : `auditLogs.history.${kind}Deleted`);
   }
   if ((item.changes ?? []).length > 0) return null;

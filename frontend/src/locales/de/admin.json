@@ -723,7 +723,13 @@
       "department_id": "Abteilung",
       "server_role": "Serverrolle",
       "since_date": "Seit",
-      "suite_id": "Suite"
+      "suite_id": "Suite",
+      "priority_level": "Priorität",
+      "labels": "Labels",
+      "hours": "Zeit",
+      "logged_at": "Datum",
+      "related_object": "Verknüpft mit",
+      "converted_to_request": "In Anfrage konvertiert"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -767,7 +773,12 @@
         "renewalResumed": "Verlängerung wieder aufgenommen",
         "descriptionChanged": "Beschreibung geändert",
         "supportNotesChanged": "Support-Notizen geändert",
-        "classificationReviewed": "Klassifizierung geprüft"
+        "classificationReviewed": "Klassifizierung geprüft",
+        "taskTypeChanged": "Aufgabentyp geändert",
+        "phaseChanged": "Phase geändert",
+        "sourceChanged": "Quelle geändert",
+        "categoryChanged": "Kategorie geändert",
+        "streamChanged": "Stream geändert"
       },
       "actors": {
         "assistant": "Plaid",
@@ -918,6 +929,14 @@
         "business_process": {
           "added": "Geschäftsprozess hinzugefügt: {{label}}",
           "removed": "Geschäftsprozess entfernt: {{label}}"
+        },
+        "task_owner": {
+          "added": "Verantwortliche Person hinzugefügt: {{label}}",
+          "removed": "Verantwortliche Person entfernt: {{label}}"
+        },
+        "task_viewer": {
+          "added": "Beobachter hinzugefügt: {{label}}",
+          "removed": "Beobachter entfernt: {{label}}"
         }
       },
       "unnamed": {
@@ -1060,7 +1079,10 @@
         "removed_one": "{{count}} Budgetposition außerhalb Ihres Zugriffs entfernt",
         "removed_other": "{{count}} Budgetpositionen außerhalb Ihres Zugriffs entfernt"
       },
-      "instance": "Umgebung {{environment}}"
+      "instance": "Umgebung {{environment}}",
+      "timeEntry": "Zeiteintrag",
+      "timeEntryCreated": "Zeit erfasst",
+      "timeEntryDeleted": "Zeiteintrag gelöscht"
     },
     "messages": {
       "loadDetailsFailed": "Details des Audit-Eintrags konnten nicht geladen werden."

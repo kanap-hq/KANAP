@@ -1995,8 +1995,6 @@ export default function TaskWorkspacePage() {
           <TaskActivity
             taskId={task.id}
             projectId={isProjectTask && effectiveTask.related_object_id ? effectiveTask.related_object_id : undefined}
-            createdAt={task.created_at ?? null}
-            createdByName={task.created_by_name ?? null}
             readOnly={!canManageCurrentTask}
             relatedObjectType={effectiveTask.related_object_type ?? undefined}
             currentStatus={effectiveTask.status}

@@ -17,6 +17,7 @@ import { interfacesFields } from './records/interfaces';
 import { locationsFields } from './records/locations';
 import { spendItemsFields } from './records/spend_items';
 import { suppliersFields } from './records/suppliers';
+import { tasksFields } from './records/tasks';
 import { technologiesFields } from './records/technologies';
 import { workingDayProfilesFields } from './records/working_day_profiles';
 
@@ -44,6 +45,7 @@ const FIELD_SETS = [
   locationsFields,
   spendItemsFields,
   suppliersFields,
+  tasksFields,
   technologiesFields,
   workingDayProfilesFields,
 ] as const;

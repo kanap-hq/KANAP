@@ -26,6 +26,7 @@ describe('record history tables', () => {
       'interfaces',
       'locations',
       'suppliers',
+      'tasks',
       'technologies',
       'working_day_profiles',
     ]);

@@ -160,6 +160,8 @@ const ENUM_GROUPS: Record<string, string> = {
   // The contract's own lists, named as its screens name them.
   billing_frequency: 'ops:contracts.billing',
   compliance_state: 'ops:contracts.compliance.states',
+  // A task's priority, named as the task screen names it.
+  priority_level: 'portfolio:priority',
   // The IT landscape's enum values the record history reaches: the data class uses the
   // classification catalog's own labels, the interface data categories and the endpoint entity
   // codes the IT settings' shipped labels.
@@ -404,10 +406,16 @@ function enumerationLabel(field: string, code: string, context: AuditValueContex
   if (field === 'hosting_type') {
     return screenLabel(context, `auditLogs.values.hostingType.${code}`);
   }
+  // A task's time entry: IT or business time, named as the work log names it.
+  if (field === 'category' && context.table === 'tasks') {
+    return screenLabel(context, `portfolio:dialogs.logTime.categories.${code}`);
+  }
   const group = field === 'status'
     ? (context.table === 'incidents'
       ? 'it:enums.incidentStatus'
-      : context.table === 'documents' ? 'knowledge:statuses' : 'common:statuses')
+      : context.table === 'documents'
+        ? 'knowledge:statuses'
+        : context.table === 'tasks' ? 'portfolio:statuses.task' : 'common:statuses')
     : field === 'lifecycle'
       ? 'common:statuses'
       : field === 'nature' && context.table === 'accounts'

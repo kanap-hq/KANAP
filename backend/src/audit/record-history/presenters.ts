@@ -6,6 +6,7 @@ import {
   type RecordHistoryChildKind,
   type RecordHistoryRecord,
 } from '../record-history.inventory';
+import { taskRelatedFamily } from './records/tasks';
 import { deepEqual, isPlainObject, isUuid, linkSetIds } from './values';
 
 /**
@@ -153,6 +154,7 @@ const CHILD_KIND_LABELS: Record<RecordHistoryChildKind, string> = {
   instance: 'instance',
   assignment: 'assignment',
   business_process: 'business_process',
+  time_entry: 'time_entry',
 };
 
 /** The kinds whose row is one link to another record, named by a key of its payload. */
@@ -1460,6 +1462,58 @@ function columnOperationChanges(row: AuditRow): RecordHistoryChange[] | null {
   return null;
 }
 
+function taskPeople(value: unknown): string[] {
+  return Array.isArray(value) ? Array.from(new Set(value.filter(isUuid).map((id) => id.toLowerCase()))) : [];
+}
+
+/**
+ * A task's own row, beyond its allow-listed fields: the record it belongs to, read from its type and
+ * its id together ("Belongs to: PRJ-3"), the request it was converted into, and each owner or viewer
+ * added or removed. Every record is named with the reader's rights, or withheld by its kind.
+ */
+function taskRecordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) ? row.before_json : null;
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  const changes: RecordHistoryChange[] = [];
+  const relatedKey = (payload: Record<string, unknown> | null) => (payload
+    ? `${String(payload.related_object_type ?? '')}:${String(payload.related_object_id ?? '').toLowerCase()}`
+    : null);
+  const related = (payload: Record<string, unknown> | null) => {
+    const family = payload ? taskRelatedFamily(payload.related_object_type) : null;
+    return family && payload ? referenceValue(ctx, family, payload.related_object_id) : null;
+  };
+  if (relatedKey(before) !== relatedKey(after)) {
+    const beforeValue = related(before);
+    const afterValue = related(after);
+    if (beforeValue || afterValue) {
+      changes.push({
+        field: 'related_object',
+        ...(before ? { before: beforeValue } : {}),
+        ...(after ? { after: afterValue } : {}),
+      });
+    }
+  }
+  const requestId = after?.converted_to_request_id;
+  if (isUuid(requestId) && !deepEqual(before?.converted_to_request_id, requestId)) {
+    changes.push({ field: 'converted_to_request', after: referenceValue(ctx, 'request', requestId) });
+  }
+  changes.push(...genericChanges(row, ctx, { label: row.table_name }));
+  // A deletion is the entry itself: its people are not removed one by one.
+  if (after) {
+    for (const [field, kind] of [['owner_ids', 'task_owner'], ['viewer_ids', 'task_viewer']] as const) {
+      const beforeSet = new Set(taskPeople(before?.[field]));
+      const afterSet = new Set(taskPeople(after[field]));
+      for (const id of afterSet) {
+        if (!beforeSet.has(id)) changes.push({ field: kind, event: 'added', after: userValue(ctx, id) });
+      }
+      for (const id of beforeSet) {
+        if (!afterSet.has(id)) changes.push({ field: kind, event: 'removed', before: userValue(ctx, id) });
+      }
+    }
+  }
+  return changes;
+}
+
 function recordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   const columnOperation = columnOperationChanges(row);
   if (columnOperation) return columnOperation;
@@ -1467,6 +1521,7 @@ function recordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
     const sync = catalogSyncChanges(row);
     if (sync) return sync;
   }
+  if (row.table_name === 'tasks' && ctx.entry.table === 'tasks') return taskRecordChanges(row, ctx);
   if (row.table_name === 'contracts') return [...renewalChanges(row, ctx), ...genericChanges(row, ctx, { label: row.table_name })];
   const changes = genericChanges(row, ctx, { label: row.table_name })
     // The middleware list has its own events below; the id-list itself is never a field line.
@@ -1580,6 +1635,8 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
       return genericChanges(row, ctx, { label: row.table_name });
     case 'compliance_item':
       return complianceChanges(row);
+    case 'time_entry':
+      return genericChanges(row, ctx, { label: row.table_name, numeric: ['hours'] });
     default:
       return [];
   }

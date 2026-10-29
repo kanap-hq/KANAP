@@ -26,6 +26,7 @@ import { KnowledgeService } from '../knowledge/knowledge.service';
 import { HISTORY_FIELDS, historyFields } from './record-history/fields';
 import type { HistoryFieldRule, HistoryFields } from './record-history/field-rules';
 import { auditPageQuery, type AuditCursor } from './record-history/query';
+import { taskRelatedFamily } from './record-history/records/tasks';
 import {
   linkReference,
   presentItem,
@@ -296,6 +297,15 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
           if (isUuid(axisId)) axes.add(axisId.toLowerCase());
           if (isUuid(categoryId)) categories.add(categoryId.toLowerCase());
         }
+      }
+      if (entry.table === 'tasks' && label === 'tasks' && isPlainObject(payload)) {
+        // A task names the record it belongs to by its type and id, the request it was converted
+        // into, and its owners and viewers as id lists.
+        const family = taskRelatedFamily(payload.related_object_type);
+        if (family) addFamilyId({ ids }, family, payload.related_object_id);
+        addFamilyId({ ids }, 'request', payload.converted_to_request_id);
+        addList('user', payload.owner_ids);
+        addList('user', payload.viewer_ids);
       }
       if (entry.auditLabels.includes(label) && isPlainObject(payload) && isPlainObject(payload.renewal_task)) {
         // A contract's renewal marker names the decision task it created.

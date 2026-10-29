@@ -723,7 +723,13 @@
       "department_id": "Department",
       "server_role": "Server role",
       "since_date": "Since",
-      "suite_id": "Suite"
+      "suite_id": "Suite",
+      "priority_level": "Priority",
+      "labels": "Labels",
+      "hours": "Time",
+      "logged_at": "Date",
+      "related_object": "Related to",
+      "converted_to_request": "Converted to request"
     },
     "history": {
       "empty": "No history yet",
@@ -767,7 +773,12 @@
         "renewalResumed": "Renewal resumed",
         "descriptionChanged": "Description changed",
         "supportNotesChanged": "Support notes changed",
-        "classificationReviewed": "Classification reviewed"
+        "classificationReviewed": "Classification reviewed",
+        "taskTypeChanged": "Task type changed",
+        "phaseChanged": "Phase changed",
+        "sourceChanged": "Source changed",
+        "categoryChanged": "Category changed",
+        "streamChanged": "Stream changed"
       },
       "actors": {
         "assistant": "Plaid",
@@ -918,6 +929,14 @@
         "business_process": {
           "added": "Business process added: {{label}}",
           "removed": "Business process removed: {{label}}"
+        },
+        "task_owner": {
+          "added": "Owner added: {{label}}",
+          "removed": "Owner removed: {{label}}"
+        },
+        "task_viewer": {
+          "added": "Viewer added: {{label}}",
+          "removed": "Viewer removed: {{label}}"
         }
       },
       "unnamed": {
@@ -1060,7 +1079,10 @@
         "removed_one": "{{count}} budget line outside your access removed",
         "removed_other": "{{count}} budget lines outside your access removed"
       },
-      "instance": "{{environment}} environment"
+      "instance": "{{environment}} environment",
+      "timeEntry": "Time entry",
+      "timeEntryCreated": "Time logged",
+      "timeEntryDeleted": "Time entry deleted"
     },
     "messages": {
       "loadDetailsFailed": "Failed to load audit entry details."
