@@ -1,10 +1,13 @@
 import '../../../i18n';
 import { describe, expect, it } from 'vitest';
 import i18n from '../../../i18n';
-import { describeCveOrgMatch, describeMatch, describeNvdMatch, feedAges, groupMatchesByCpe, nvdState, type CveOrgMatch, type CveOrgVersion } from './feedText';
+import { formatShortDate } from '../../../lib/dateFormat';
+import { describeCveOrgMatch, describeFeedAges, describeMatch, describeNvdMatch, feedAges, groupMatchesByCpe, nvdState, type CveOrgMatch, type CveOrgVersion, type FeedSourceStatus } from './feedText';
 
 const en = i18n.getFixedT('en', 'it');
 const fr = i18n.getFixedT('fr', 'it');
+const de = i18n.getFixedT('de', 'it');
+const es = i18n.getFixedT('es', 'it');
 
 const version = (entry: Partial<CveOrgVersion>): CveOrgVersion => ({ version: null, status: null, lessThan: null, lessThanOrEqual: null, changes: [], ...entry });
 const block = (entry: Partial<CveOrgMatch>): CveOrgMatch => ({
@@ -182,7 +185,7 @@ describe('feedAges', () => {
       item({ last_success_at: '2026-10-21T02:20:00.000Z' }),
       item({ source: 'cve_org', enabled: false, last_success_at: '2026-10-21T02:21:00.000Z' }),
     ], now);
-    expect(ages).toEqual([{ source: 'nvd', readAt: new Date('2026-10-21T02:20:00.000Z'), warning: null }]);
+    expect(ages).toEqual([{ source: 'nvd', readAt: new Date('2026-10-21T02:20:00.000Z'), scoreDate: null, warning: null }]);
   });
 
   it('warns past three days and on a failed last read', () => {
@@ -190,7 +193,80 @@ describe('feedAges', () => {
     expect(feedAges([item({ last_success_at: '2026-10-16T07:00:00.000Z' })], now)[0].warning).toEqual({ kind: 'stale', days: 5 });
     expect(feedAges([item({ last_success_at: '2026-10-21T02:00:00.000Z', failing: true })], now)[0].warning).toEqual({ kind: 'failing' });
     // Never read: no date, and no warning unless the read failed.
-    expect(feedAges([item({})], now)[0]).toEqual({ source: 'nvd', readAt: null, warning: null });
+    expect(feedAges([item({})], now)[0]).toEqual({ source: 'nvd', readAt: null, scoreDate: null, warning: null });
     expect(feedAges(undefined, now)).toEqual([]);
+  });
+
+  it('keeps the exploitation catalogues, and the day of the EPSS scores', () => {
+    const ages = feedAges([
+      item({ source: 'cisa_kev', last_success_at: '2026-10-16T07:00:00.000Z', failing: true }),
+      item({ source: 'eu_kev', enabled: false, last_success_at: '2026-10-16T07:00:00.000Z' }),
+      item({ source: 'epss', last_success_at: '2026-10-21T03:00:00.000Z', score_date: '2026-10-19' }),
+      item({ source: 'euvd' }),
+      item({ source: 'other' }),
+    ], now);
+    expect(ages.map((age) => age.source)).toEqual(['cisa_kev', 'epss', 'euvd']);
+    expect(ages[0].warning).toEqual({ kind: 'failing' });
+    expect(ages[1]).toMatchObject({ scoreDate: '2026-10-19', warning: null });
+    expect(ages[2]).toEqual({ source: 'euvd', readAt: null, scoreDate: null, warning: null });
+    // A failure wins over a reading older than three days.
+    expect(feedAges([item({ source: 'eu_kev', last_success_at: '2026-10-16T07:00:00.000Z' })], now)[0].warning).toEqual({ kind: 'stale', days: 5 });
+  });
+});
+
+describe('describeFeedAges', () => {
+  const now = new Date('2026-10-21T08:00:00.000Z');
+  const NVD = '2026-10-21T02:20:00.000Z';
+  const CISA = '2026-10-21T02:22:00.000Z';
+  const EU = '2026-10-16T07:00:00.000Z';
+  const row = (entry: Partial<FeedSourceStatus> & { source: FeedSourceStatus['source'] }): FeedSourceStatus => ({
+    last_success_at: null, last_attempt_at: null, failing: false, enabled: true, ...entry,
+  });
+  const items: FeedSourceStatus[] = [
+    row({ source: 'nvd', last_success_at: NVD }),
+    row({ source: 'cve_org' }),
+    row({ source: 'cisa_kev', last_success_at: CISA, failing: true }),
+    row({ source: 'eu_kev', last_success_at: EU }),
+    row({ source: 'epss', last_success_at: '2026-10-21T03:00:00.000Z', score_date: '2026-10-19' }),
+    row({ source: 'euvd' }),
+    row({ source: 'eu_kev', enabled: false, last_success_at: EU }),
+  ];
+
+  function clock(locale: string, iso: string) {
+    const date = new Date(iso);
+    return {
+      date: formatShortDate(date, locale),
+      time: new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date),
+    };
+  }
+
+  it('names each catalogue, and warns in English, French, German and Spanish', () => {
+    const languages = [
+      ['en', en, 'EPSS scores of', 'CISA KEV on', 'EUVD not read yet', 'The last read of CISA KEV failed', 'EU KEV has not been read for 5 days'],
+      ['fr', fr, 'scores EPSS du', 'CISA KEV le', 'EUVD pas encore lue', 'La dernière lecture de CISA KEV a échoué', 'EU KEV n\'a pas été lu depuis 5 jours'],
+      ['de', de, 'EPSS-Scores vom', 'CISA KEV am', 'EUVD noch nicht gelesen', 'Das letzte Lesen von CISA KEV ist fehlgeschlagen', 'EU KEV wurde seit 5 Tagen nicht gelesen'],
+      ['es', es, 'puntuaciones EPSS del', 'CISA KEV el', 'EUVD aún no leída', 'La última lectura de CISA KEV falló', 'EU KEV no se ha leído desde hace 5 días'],
+    ] as const;
+    for (const [locale, t, scores, cisa, never, failing, stale] of languages) {
+      const described = describeFeedAges(items, t, locale, now);
+      const nvd = clock(locale, NVD);
+      const cisaAt = clock(locale, CISA);
+      const eu = clock(locale, EU);
+      const scoreDay = formatShortDate('2026-10-19', locale);
+      const list = [
+        t('pages.vulnerabilities.feeds.age.item', { source: t('pages.vulnerabilities.feeds.age.nvd'), date: nvd.date, time: nvd.time }),
+        t('pages.vulnerabilities.feeds.age.never', { source: t('pages.vulnerabilities.feeds.age.cve_org') }),
+        t('pages.vulnerabilities.feeds.age.item', { source: t('pages.vulnerabilities.feeds.age.cisa_kev'), date: cisaAt.date, time: cisaAt.time }),
+        t('pages.vulnerabilities.feeds.age.item', { source: t('pages.vulnerabilities.feeds.age.eu_kev'), date: eu.date, time: eu.time }),
+        t('pages.vulnerabilities.feeds.age.scores', { source: t('pages.vulnerabilities.feeds.age.epss'), date: scoreDay }),
+        t('pages.vulnerabilities.feeds.age.never', { source: t('pages.vulnerabilities.feeds.age.euvd') }),
+      ].join(' · ');
+      expect(described!.text).toBe(t('pages.vulnerabilities.feeds.age.line', { list }));
+      expect(described!.text).toContain(scores);
+      expect(described!.text).toContain(cisa);
+      expect(described!.text).toContain(never);
+      expect(described!.warnings).toEqual([failing, stale]);
+    }
+    expect(describeFeedAges([row({ source: 'nvd', enabled: false })], en, 'en', now)).toBeNull();
   });
 });

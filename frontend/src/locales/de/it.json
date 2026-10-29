@@ -678,15 +678,32 @@
         "age": {
           "line": "Gelesene Daten: {{list}}",
           "item": "{{source}} am {{date}} um {{time}}",
+          "scores": "{{source}}-Scores vom {{date}}",
           "never": "{{source}} noch nicht gelesen",
           "nvd": "NVD",
           "cve_org": "Hersteller (CVE.org)",
+          "cisa_kev": "CISA KEV",
+          "eu_kev": "EU KEV",
+          "epss": "EPSS",
+          "euvd": "EUVD",
           "failingNvd": "Das letzte Lesen der NVD ist fehlgeschlagen",
           "failingCveOrg": "Das letzte Lesen von CVE.org ist fehlgeschlagen",
+          "failingCisaKev": "Das letzte Lesen von CISA KEV ist fehlgeschlagen",
+          "failingEuKev": "Das letzte Lesen von EU KEV ist fehlgeschlagen",
+          "failingEpss": "Das letzte Lesen von EPSS ist fehlgeschlagen",
+          "failingEuvd": "Das letzte Lesen von EUVD ist fehlgeschlagen",
           "staleNvd_one": "Die NVD wurde seit {{count}} Tag nicht gelesen",
           "staleNvd_other": "Die NVD wurde seit {{count}} Tagen nicht gelesen",
           "staleCveOrg_one": "CVE.org wurde seit {{count}} Tag nicht gelesen",
-          "staleCveOrg_other": "CVE.org wurde seit {{count}} Tagen nicht gelesen"
+          "staleCveOrg_other": "CVE.org wurde seit {{count}} Tagen nicht gelesen",
+          "staleCisaKev_one": "CISA KEV wurde seit {{count}} Tag nicht gelesen",
+          "staleCisaKev_other": "CISA KEV wurde seit {{count}} Tagen nicht gelesen",
+          "staleEuKev_one": "EU KEV wurde seit {{count}} Tag nicht gelesen",
+          "staleEuKev_other": "EU KEV wurde seit {{count}} Tagen nicht gelesen",
+          "staleEpss_one": "EPSS wurde seit {{count}} Tag nicht gelesen",
+          "staleEpss_other": "EPSS wurde seit {{count}} Tagen nicht gelesen",
+          "staleEuvd_one": "EUVD wurde seit {{count}} Tag nicht gelesen",
+          "staleEuvd_other": "EUVD wurde seit {{count}} Tagen nicht gelesen"
         }
       },
       "reach": {

@@ -54,7 +54,7 @@ import {
   type VulnerabilityState,
   type VulnerabilityVersion,
 } from './vulnerabilities/vulnerabilityTypes';
-import { describeMatch, feedAges, groupMatchesByCpe, nvdState, type FeedAge, type FeedSourceStatus } from './vulnerabilities/feedText';
+import { describeFeedAges, describeMatch, groupMatchesByCpe, nvdState, type FeedSourceStatus } from './vulnerabilities/feedText';
 
 const ENDPOINT = '/vulnerabilities';
 
@@ -556,29 +556,25 @@ function FeedSourcesBlock({ detail }: { detail: VulnerabilityDetail }) {
 }
 
 /**
+ * The NVD, CVE.org and the exploitation catalogues, in that order. A missing answer shows no line.
+ */
+function feedAgeItems(data: { items?: FeedSourceStatus[]; signals?: FeedSourceStatus[] } | undefined): FeedSourceStatus[] | null {
+  if (!data || !Array.isArray(data.items)) return null;
+  return [...data.items, ...(Array.isArray(data.signals) ? data.signals : [])];
+}
+
+/**
  * How fresh the data of each feed is, in one tertiary line above the grid. A feed that is off is
  * left out. A failed last read, or no success for more than three days, turns that feed's part
- * into a warning on the same line.
+ * into a warning on the same line. EPSS names the day of its scores.
  */
 export function FeedAgeLine({ items, now }: { items: FeedSourceStatus[] | null | undefined; now?: Date }) {
   const { t } = useTranslation('it');
   const locale = useLocale();
   const mode = useTheme().palette.mode;
-  const ages = feedAges(items, now);
-  if (ages.length === 0) return null;
-  const time = (date: Date) => new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date);
-  const name = (age: FeedAge) => t(`pages.vulnerabilities.feeds.age.${age.source}`);
-  const read = ages.map((age) => (age.readAt
-    ? t('pages.vulnerabilities.feeds.age.item', { source: name(age), date: formatShortDate(age.readAt, locale), time: time(age.readAt) })
-    : t('pages.vulnerabilities.feeds.age.never', { source: name(age) })));
-  const warnings = ages.flatMap((age) => {
-    if (!age.warning) return [];
-    const suffix = age.source === 'nvd' ? 'Nvd' : 'CveOrg';
-    return [age.warning.kind === 'failing'
-      ? t(`pages.vulnerabilities.feeds.age.failing${suffix}`)
-      : t(`pages.vulnerabilities.feeds.age.stale${suffix}`, { count: age.warning.days })];
-  });
-  const text = t('pages.vulnerabilities.feeds.age.line', { list: read.join(' · ') });
+  const described = describeFeedAges(items, t, locale, now);
+  if (!described) return null;
+  const { text, warnings } = described;
   return (
     <Box
       data-testid="vulnerability-feed-age"
@@ -1487,7 +1483,7 @@ export default function VulnerabilitiesPage() {
   // How fresh each feed is, for the line above the grid. A failed read shows no line.
   const feedSources = useQuery({
     queryKey: ['vulnerabilities', 'sources'],
-    queryFn: async () => (await api.get<{ items: FeedSourceStatus[] }>(`${ENDPOINT}/sources`)).data,
+    queryFn: async () => (await api.get<{ items: FeedSourceStatus[]; signals?: FeedSourceStatus[] }>(`${ENDPOINT}/sources`)).data,
     enabled: enabled && allowed,
     retry: false,
     staleTime: 5 * 60 * 1000,
@@ -1581,7 +1577,7 @@ export default function VulnerabilitiesPage() {
       {exportError && (
         <Typography role="alert" sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>{t('pages.vulnerabilities.exportFailed')}</Typography>
       )}
-      <FeedAgeLine items={Array.isArray(feedSources.data?.items) ? feedSources.data!.items : null} />
+      <FeedAgeLine items={feedAgeItems(feedSources.data)} />
       <AddressFilterLine
         estate={estate}
         onRemoveEstate={() => writeSearch({ estate: false })}
