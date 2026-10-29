@@ -728,6 +728,8 @@
     "history": {
       "empty": "No history yet",
       "error": "The history could not be loaded",
+      "incidentEmpty": "No history yet",
+      "incidentError": "The history could not be loaded",
       "loadMore": "Load more",
       "separator": ": ",
       "actions": {

@@ -298,6 +298,21 @@ describe('RecordHistory', () => {
     expect(document.querySelector('ol')).toBeNull();
   });
 
+  it('says "Historie" in German on an incident, whose Journal tab is the "Verlauf"', async () => {
+    mocked.get.mockResolvedValue({ data: page([]) } as never);
+    await i18n.changeLanguage('de');
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <RecordHistory table="incidents" recordId={ID} />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText('Noch keine Historie')).toBeInTheDocument();
+    expect(bodyText()).not.toContain('Verlauf');
+  });
+
   it('offers a retry when the history could not be read', async () => {
     mocked.get
       .mockRejectedValueOnce(new Error('network'))

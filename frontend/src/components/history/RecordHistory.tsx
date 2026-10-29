@@ -38,6 +38,16 @@ export type RecordHistoryProps = {
 const PAGE_SIZE = 50;
 const QUERY_ROOT = 'record-history';
 
+/**
+ * The words of the empty and error states. The incident keeps its Journal tab beside the History
+ * tab, and German names them "Verlauf" and "Historie": its states say "Historie".
+ */
+function stateKeys(table: string): { empty: string; error: string } {
+  return table === 'incidents'
+    ? { empty: 'auditLogs.history.incidentEmpty', error: 'auditLogs.history.incidentError' }
+    : { empty: 'auditLogs.history.empty', error: 'auditLogs.history.error' };
+}
+
 /** The records whose history names IT catalog codes (categories, access methods, server roles). */
 const CATALOG_TABLES = new Set(['applications', 'incidents']);
 
@@ -185,7 +195,7 @@ export default function RecordHistory({ table, recordId }: RecordHistoryProps) {
   if (history.isError || history.isFetchNextPageError) {
     return (
       <Stack direction="row" spacing={1} alignItems="center" sx={{ pt: 1, flexWrap: 'wrap' }}>
-        <Typography variant="body2" color="text.secondary">{t('auditLogs.history.error')}</Typography>
+        <Typography variant="body2" color="text.secondary">{t(stateKeys(table).error)}</Typography>
         <Button
           size="small"
           variant="text"
@@ -210,7 +220,7 @@ export default function RecordHistory({ table, recordId }: RecordHistoryProps) {
     }
     return (
       <Typography variant="body2" color="text.secondary" sx={{ pt: 1 }}>
-        {t('auditLogs.history.empty')}
+        {t(stateKeys(table).empty)}
       </Typography>
     );
   }

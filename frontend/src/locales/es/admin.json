@@ -728,6 +728,8 @@
     "history": {
       "empty": "Todavía no hay historial",
       "error": "No se pudo cargar el historial",
+      "incidentEmpty": "Todavía no hay historial",
+      "incidentError": "No se pudo cargar el historial",
       "loadMore": "Cargar más",
       "separator": ": ",
       "actions": {

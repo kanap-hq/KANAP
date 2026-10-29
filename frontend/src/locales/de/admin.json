@@ -728,6 +728,8 @@
     "history": {
       "empty": "Noch kein Verlauf",
       "error": "Der Verlauf konnte nicht geladen werden",
+      "incidentEmpty": "Noch keine Historie",
+      "incidentError": "Die Historie konnte nicht geladen werden",
       "loadMore": "Mehr laden",
       "separator": ": ",
       "actions": {

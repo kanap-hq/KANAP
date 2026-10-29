@@ -728,6 +728,8 @@
     "history": {
       "empty": "Aucun historique",
       "error": "L'historique n'a pas pu être chargé",
+      "incidentEmpty": "Aucun historique",
+      "incidentError": "L'historique n'a pas pu être chargé",
       "loadMore": "Charger plus",
       "separator": " : ",
       "actions": {
