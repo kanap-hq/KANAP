@@ -102,6 +102,13 @@ its own: load the current dataset on a new tenant instead.
    chosen by hand stays; the runner names those whose choice differs from the
    file. A supplier or contact the file names and the tenant lacks stops the
    runner.
+   **Demand scores**: after the requests import, the runner fills the default
+   English criteria of three demands. On the demand list, Cave Climate
+   Digital Twin scores 64, AI Cheese Grading scores 44 and Smart Packaging
+   Automation scores 26. Automated Warehouse Inventory stays unscored. A
+   re-run writes the same choices and leaves the scores as they are. When
+   the tenant's criteria differ from that default English set, the runner
+   leaves the scores as they are and continues.
 5. **Demo user passwords**: all 18 imported users get the required
    `--demo-password` so you can log in as e.g.
    `thomas.berger@fromage-co.example` during a demo. Pass `--demo-password ''`
@@ -121,11 +128,16 @@ its own: load the current dataset on a new tenant instead.
    applications on their servers (on a cluster, the row is on the cluster and
    its members inherit it), technologies, business processes and incidents.
    The incidents come from `31-incidents.csv`, with their reviews. After them,
-   `19b-incident-tasks.csv` links the three corrective tasks and
-   `32-incident-journal.csv` writes the human timeline of the B2B portal, the
-   SAP close and the LIMS, signed by the incident people and dated at the
-   facts. Both files are idempotent: a re-run updates the tasks and skips the
-   journal rows already there.
+   the runner links the three corrective tasks of `19b-incident-tasks.csv`.
+   A task names its incident as `INC-N`. The runner attaches it to the
+   incident whose title is row N of `31-incidents.csv`, so the link follows
+   the title, whatever number the tenant assigned. A title the register does
+   not hold is reported, and the other tasks are still imported. The CSV file
+   keeps `INC-N`: a load that resets the counters can still import the file
+   as it is. `32-incident-journal.csv` writes the human timeline of the B2B
+   portal, the SAP close and the LIMS, signed by the incident people and
+   dated at the facts. Both files are idempotent: a re-run updates the tasks
+   and skips the journal rows already there.
    On a tenant built by an earlier version of the fixture, the runner adds
    `PAR-ESX-05`, replaces the old notes of the cluster and the array, brings
    the VM links back to the cluster, removes double containers, replaces the
