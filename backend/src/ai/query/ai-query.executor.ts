@@ -108,6 +108,8 @@ import { applicationVulnerabilityCounts, assetVulnerabilityCounts, Vulnerability
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
 import { readClassificationCatalog } from '../ai-classification-catalog.util';
+import { aiPermissionLevelLabel, aiResourceLabel } from '../ai-role-labels';
+import { readAiScreenLanguage, type AiScreenLanguage } from '../ai-unread-families';
 
 function toIso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -1345,11 +1347,15 @@ export class AiQueryExecutor {
     });
   }
 
-  /** A right a role gives, at the level the Roles screen shows. */
-  private mapRolePermission(row: AiRolePermissionRow): AiEntitySummaryDto {
+  /**
+   * A right a role gives, at the level the Roles screen shows, with the screen's words for the right
+   * and the level in the person's language (`language`; null: the four languages).
+   */
+  private mapRolePermission(row: AiRolePermissionRow, language: AiScreenLanguage | null): AiEntitySummaryDto {
+    const resourceLabel = aiResourceLabel(row.resource, language);
     return toEntitySummary('role_permissions', {
       id: row.key,
-      label: `${row.role}: ${row.resource}`,
+      label: `${row.role}: ${resourceLabel ?? row.resource}`,
       status: row.level,
       created_at: null,
       updated_at: null,
@@ -1357,7 +1363,9 @@ export class AiQueryExecutor {
         role: row.role,
         role_type: row.role_type,
         resource: row.resource,
+        resource_label: resourceLabel,
         level: row.level,
+        level_label: aiPermissionLevelLabel(row.level, language),
       },
     });
   }
@@ -2394,10 +2402,14 @@ export class AiQueryExecutor {
         : await listAiRolePermissions(services, context.manager, scoped.query);
       const returned = result.items.length;
       const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      // The words of the rights follow the person's menus; a list of roles names none.
+      const language = input.entity_type === 'role_permissions'
+        ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId)
+        : null;
       return {
         items: result.items.map((row) => (input.entity_type === 'roles'
           ? this.mapRole(row as AiRoleRow)
-          : this.mapRolePermission(row as AiRolePermissionRow))),
+          : this.mapRolePermission(row as AiRolePermissionRow, language))),
         total: result.total,
         page: result.page,
         limit: result.limit,
@@ -3539,8 +3551,9 @@ export class AiQueryExecutor {
 
   /**
    * A role by its name or id, with its rights as the Roles screen's matrix: every right, in the
-   * screen's order, at the level the role gives, null where it gives none. The people it is given
-   * to are counted, never named.
+   * screen's order, at the level the role gives, null where it gives none, and `rights`, the rights
+   * it gives with the screen's words in the person's language. The people it is given to are
+   * counted, never named.
    */
   private async roleDetail(context: AiExecutionContextWithManager, entityId: string): Promise<AiEntityDetailDto> {
     const services = this.rolesServices();
@@ -3548,6 +3561,15 @@ export class AiQueryExecutor {
     const role = await findAiRole(services, context.manager, value);
     if (!role) throw entityNotFound('roles', value);
     const permissions = await services.permissions.getRolePermissionMatrix(role.id, { manager: context.manager });
+    const language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    const rights = (Object.entries(permissions) as Array<[AiRolePermissionRow['resource'], AiRolePermissionRow['level'] | null]>)
+      .filter((entry): entry is [AiRolePermissionRow['resource'], AiRolePermissionRow['level']] => entry[1] != null)
+      .map(([resource, level]) => ({
+        resource,
+        resource_label: aiResourceLabel(resource, language),
+        level,
+        level_label: aiPermissionLevelLabel(level, language),
+      }));
     return this.toDetailResult(this.mapRole(role), {
       name: role.name,
       description: role.description,
@@ -3556,7 +3578,8 @@ export class AiQueryExecutor {
       created_at: role.created_at,
       updated_at: role.updated_at,
       permissions,
-      permissions_note: 'Every right of the Roles screen with the level the role gives (null: none). Tell the user each right in plain words, as the screen names it, and the level in words (Reader, Contributor, Member, Admin), never as codes.',
+      rights,
+      permissions_note: '`permissions` gives every right with the level the role gives (null: none); `rights` lists the rights it gives with the words of the Roles screen (`resource_label`, `level_label`), the ones to quote, never the codes.',
     });
   }
 

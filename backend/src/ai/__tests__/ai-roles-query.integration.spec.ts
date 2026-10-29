@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
+import { aiPermissionLevelLabel } from '../ai-role-labels';
 
 // Plaid L7 lot A: the roles and their rights of Admin › Roles (`roles`, `role_permissions`), read
 // through the assistant's and the MCP server's tools.
@@ -14,7 +15,8 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   into `budget`, the higher level), the contacts right a suppliers contributor gets. No person
 //   is named.
 // - `role_permissions` lists one row per role and right it gives, filters on the right and the
-//   level, and groups by level.
+//   level, and groups by level. A right and a level carry the Roles screen's words, in the
+//   language of the person's profile, or in the four languages when it sets none.
 // - The gate on a real transaction: users at admin level with access to all data reads, the same
 //   right in limited access is refused with the reserved message.
 // The AI surface checks (tenant settings, provider) are not under test: stubbed open.
@@ -181,7 +183,14 @@ async function testRoleDetailIsTheMatrix(h: Harness, runner: QueryRunner, s: See
   assert.equal('opex' in detail.data.permissions || 'capex' in detail.data.permissions, false, 'no former name');
   assert.equal(Object.keys(detail.data.permissions).length, 32, 'every right of the screen');
   assert.equal(detail.data.user_count, 1);
-  assert.match(detail.data.permissions_note, /never as codes/);
+  assert.match(detail.data.permissions_note, /never the codes/);
+  // The rights it gives, with the screen's words: no profile language, so the four of the menus.
+  assert.deepEqual(
+    detail.data.rights.map((right: any) => [right.resource, right.level]),
+    [['budget', 'admin'], ['suppliers', 'contributor'], ['contacts', 'reader']],
+  );
+  assert.equal(detail.data.rights[0].resource_label, 'en: Budget; fr: Budget; de: Budget; es: Presupuesto');
+  assert.equal(detail.data.rights[0].level_label, 'en: Admin; fr: Administrateur; de: Administrator; es: Administrador');
   assert.equal(JSON.stringify(detail).includes('Unlimited'), false, 'no person is named');
 
   const byId = await h.tools.execute(ctx(runner, s, 'unlimited'), 'get_entity_detail', { entity_type: 'roles', entity_id: s.roles.reader });
@@ -218,14 +227,15 @@ async function testRolePermissionsRows(h: Harness, runner: QueryRunner, s: Seed)
   assert.equal(JSON.stringify(all).includes('Other tenant role'), false, 'another tenant stays out');
 
   const byLevel = await h.tools.execute(ctx(runner, s, 'unlimited'), 'aggregate_entities', { entity_type: 'role_permissions', group_by: 'level' });
-  assert.deepEqual(byLevel.groups, [{ key: 'admin', count: 4 }, { key: 'reader', count: 5 }, { key: 'contributor', count: 1 }].sort((a, b) => b.count - a.count || a.key.localeCompare(b.key)), 'rights by level');
+  const level = (key: 'reader' | 'contributor' | 'member' | 'admin', count: number) => ({ key, count, label: aiPermissionLevelLabel(key, null) });
+  assert.deepEqual(byLevel.groups, [level('admin', 4), level('reader', 5), level('contributor', 1)].sort((a, b) => b.count - a.count || a.key.localeCompare(b.key)), 'rights by level, named as the screen');
   assert.equal(byLevel.total, 10);
   const budgetByLevel = await h.tools.execute(ctx(runner, s, 'unlimited'), 'aggregate_entities', {
     entity_type: 'role_permissions',
     group_by: 'level',
     filters: { resource: ['budget'] },
   });
-  assert.deepEqual(budgetByLevel.groups, [{ key: 'admin', count: 2 }, { key: 'reader', count: 1 }], 'the budget right by level');
+  assert.deepEqual(budgetByLevel.groups, [level('admin', 2), level('reader', 1)], 'the budget right by level');
 }
 
 async function testGateOnARealTransaction(h: Harness, runner: QueryRunner, s: Seed) {
@@ -247,6 +257,26 @@ async function testGateOnARealTransaction(h: Harness, runner: QueryRunner, s: Se
   }
 }
 
+/** A French profile: the French words of the Roles screen (Plaid L7, lot D). */
+async function testTheWordsFollowTheProfile(h: Harness, runner: QueryRunner, s: Seed) {
+  await runner.query(`UPDATE users SET locale = 'fr' WHERE id = $1`, [s.users.unlimited]);
+  const rows = await h.tools.execute(ctx(runner, s, 'unlimited'), 'query_entities', { entity_type: 'role_permissions', filters: { role: 'Finance' } });
+  assert.deepEqual(
+    rows.items.map((item: any) => [item.label, item.metadata.resource, item.metadata.resource_label, item.metadata.level, item.metadata.level_label]),
+    [
+      ['Finance custom: Budget', 'budget', 'Budget', 'admin', 'Administrateur'],
+      ['Finance custom: Fournisseurs', 'suppliers', 'Fournisseurs', 'contributor', 'Contributeur'],
+      ['Finance custom: Contacts', 'contacts', 'Contacts', 'reader', 'Lecteur'],
+    ],
+  );
+  const detail = await h.tools.execute(ctx(runner, s, 'unlimited'), 'get_entity_detail', { entity_type: 'roles', entity_id: 'Finance custom' });
+  assert.deepEqual(detail.data.rights[1], { resource: 'suppliers', resource_label: 'Fournisseurs', level: 'contributor', level_label: 'Contributeur' });
+  const byResource = await h.tools.execute(ctx(runner, s, 'unlimited'), 'aggregate_entities', { entity_type: 'role_permissions', group_by: 'resource', filters: { role: 'Budget Reader' } });
+  assert.deepEqual(byResource.groups, [{ key: 'budget', count: 1, label: 'Budget' }, { key: 'contracts', count: 1, label: 'Contrats' }]);
+  const roles = await h.tools.execute(ctx(runner, s, 'unlimited'), 'aggregate_entities', { entity_type: 'roles', group_by: 'type' });
+  assert.equal('label' in roles.groups[0], false, 'a kind of role keeps its code');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -259,6 +289,7 @@ async function run() {
       await testRoleDetailIsTheMatrix(harness, runner, s);
       await testRolePermissionsRows(harness, runner, s);
       await testGateOnARealTransaction(harness, runner, s);
+      await testTheWordsFollowTheProfile(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

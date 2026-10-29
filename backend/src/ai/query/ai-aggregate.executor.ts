@@ -6,9 +6,11 @@ import { listAiTechnologies, listAiTechnologyVersions, resolveAiApplicationsReac
 import { listAiVulnerabilities, readAiVulnerabilityFeeds } from './ai-vulnerabilities.query';
 import { aggregateSupportRows, APPLICATIONS_UNREAD_NOTE, listAiSupportDeadlines, listAiSupportGaps } from './ai-support.query';
 import { EndOfSupportService } from '../../technologies/reports/end-of-support.service';
-import { PermissionsService } from '../../permissions/permissions.service';
+import { PermissionsService, type PermissionLevel, type Resource } from '../../permissions/permissions.service';
 import { RolesService } from '../../roles/roles.service';
 import { aggregateRolesRows, listAiRolePermissions, listAiRoles } from './ai-roles.query';
+import { aiPermissionLevelLabel, aiResourceLabel } from '../ai-role-labels';
+import { readAiScreenLanguage } from '../ai-unread-families';
 import { DataAccessAdminService } from '../../data-access/data-access-admin.service';
 import { DataAccessReservedException } from '../../data-access/reserved-operations';
 import {
@@ -1739,7 +1741,21 @@ export class AiAggregateExecutor {
       const result = input.entity_type === 'roles'
         ? await listAiRoles(services, context.manager, scoped.query, true)
         : await listAiRolePermissions(services, context.manager, scoped.query, true);
-      const groups = aggregateRolesRows(result.items, input.group_by);
+      const counted = aggregateRolesRows(result.items, input.group_by);
+      // A right or a level is named with the Roles screen's words, in the person's language.
+      const labelOf = input.entity_type === 'role_permissions' && (input.group_by === 'resource' || input.group_by === 'level')
+        ? { language: await readAiScreenLanguage(context.manager, context.tenantId, context.userId), field: input.group_by }
+        : null;
+      const groups = labelOf
+        ? counted.map((group) => ({
+          ...group,
+          label: group.key == null
+            ? null
+            : labelOf.field === 'resource'
+              ? aiResourceLabel(group.key as Resource, labelOf.language)
+              : aiPermissionLevelLabel(group.key as PermissionLevel, labelOf.language),
+        }))
+        : counted;
       return {
         group_by: input.group_by,
         metric: null,

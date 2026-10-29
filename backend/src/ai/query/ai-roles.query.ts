@@ -14,8 +14,8 @@ import { compareText, numberMatch, paged, setMatch, textMatch } from './ai-suppo
  * and paging happen in memory, here. The policy reads both families with users at admin level and
  * for people whose access is not limited only (`ai-policy.service.ts`), as the screen.
  *
- * A right is named by its resource code; no label of the screen exists on the server. No person is
- * named: a role carries the count of the people it is given to, as the screen.
+ * A right is read by its resource code; the executors add the screen's words (`ai-role-labels.ts`).
+ * No person is named: a role carries the count of the people it is given to, as the screen.
  */
 
 export type AiRolesEntityType = 'roles' | 'role_permissions';
