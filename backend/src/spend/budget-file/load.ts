@@ -4,7 +4,7 @@ import { toCents } from '../../common/amount';
 import { budgetColumnName, readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { ItemAnalyticsValue, loadItemAnalyticsValues } from '../item-analytics.util';
 import { BUDGET_NATURES, natureAnd, naturesAnd, type BudgetNature } from '../budget-nature';
-import { AMOUNT_MEASURES } from '../amounts-write.util';
+import { AMOUNT_MEASURES, type AmountMeasure } from '../amounts-write.util';
 import { buildCostCenterTree, CostCenterTreeRow } from '../../cost-centers/cost-center-tree.util';
 import { columnOfMeasure } from './columns';
 import { ItemNumberCell } from './interpret';
@@ -16,6 +16,7 @@ import {
   CatalogDimension,
   LineHint,
   StoredLine,
+  StoredRound,
   emptyMonths,
 } from './types';
 
@@ -316,6 +317,7 @@ async function loadVersions(
       months.set(versionId, entry);
     }
   }
+  const rounds = await loadRounds(manager, tenantId, versionRows.map((row) => row.id));
   const byItem = new Map<string, StoredLine['versions']>();
   for (const row of versionRows) {
     const list = byItem.get(row.item_id) ?? [];
@@ -324,10 +326,47 @@ async function loadVersions(
       year: Number(row.budget_year),
       budgetRev: Number(row.budget_rev),
       months: months.get(row.id) ?? emptyMonths(),
+      rounds: rounds.get(row.id) ?? {},
     });
     byItem.set(row.item_id, list);
   }
   return byItem;
+}
+
+/**
+ * Per version and column, the round-input record's method and its calculation lines: how many, and
+ * what they give (the computed total, or `lines_result` once they are a reference). One query for
+ * every version.
+ */
+async function loadRounds(
+  manager: EntityManager,
+  tenantId: string,
+  versionIds: string[],
+): Promise<Map<string, Partial<Record<AmountMeasure, StoredRound>>>> {
+  const byVersion = new Map<string, Partial<Record<AmountMeasure, StoredRound>>>();
+  if (versionIds.length === 0) return byVersion;
+  const rows: Array<{ version_id: string; measure: string; method: StoredRound['method']; line_count: number; lines_total: string | null }> = await manager.query(
+    `SELECT r.version_id::text AS version_id, r.measure, r.method,
+            (SELECT count(*)::int FROM spend_round_input_lines l
+              WHERE l.tenant_id = r.tenant_id AND l.round_input_id = r.id) AS line_count,
+            CASE WHEN r.last_calculation->>'kind' = 'computed' THEN r.last_calculation->>'total'
+                 ELSE r.last_calculation->'lines_result'->>'total' END AS lines_total
+       FROM spend_round_inputs r
+      WHERE r.tenant_id = $1 AND r.version_id = ANY($2::uuid[])`,
+    [tenantId, versionIds],
+  );
+  for (const row of rows) {
+    if (!(AMOUNT_MEASURES as readonly string[]).includes(row.measure)) continue;
+    const lineCount = Number(row.line_count);
+    const entry = byVersion.get(row.version_id) ?? {};
+    entry[row.measure as AmountMeasure] = {
+      method: row.method,
+      lineCount,
+      linesTotal: lineCount > 0 && row.lines_total != null ? toCents(row.lines_total) : null,
+    };
+    byVersion.set(row.version_id, entry);
+  }
+  return byVersion;
 }
 
 async function loadCatalog(

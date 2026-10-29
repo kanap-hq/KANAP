@@ -27,11 +27,29 @@ export interface MonthCell {
   cents: bigint | null;
 }
 
+/**
+ * A column's calculation lines (quantity × price, written by the Budget tab), as the file reads
+ * them: it neither writes nor exports them, it only says when a total stops their driving the column.
+ */
+export interface StoredRound {
+  /** `computed`: the column follows its lines; any other method keeps them as a reference. */
+  method: 'spread' | 'copied' | 'manual' | 'computed';
+  /** How many calculation lines the column holds. */
+  lineCount: number;
+  /**
+   * What the lines give over the year, in cents: the computed total, or the `lines_result` kept
+   * once they are a reference. Null without lines.
+   */
+  linesTotal: bigint | null;
+}
+
 export interface StoredVersion {
   id: string;
   year: number;
   budgetRev: number;
   months: Record<AmountMeasure, MonthCell[]>;
+  /** The columns that have a round-input record; a column without one is absent. Unset reads as none. */
+  rounds?: Partial<Record<AmountMeasure, StoredRound>>;
 }
 
 /** One line as the preflight compares it and as the export writes it. */
