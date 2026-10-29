@@ -151,7 +151,7 @@ async function loadLinesByNumber(
              OR (i.nature = 'capex' AND i.item_number = ANY($5::int[])))`,
     [tenantId, [...own], [...legacy], [...opx], [...cpx]],
   );
-  return hydrate(manager, tenantId, rows);
+  return hydrate(manager, tenantId, rows, { withRounds: true });
 }
 
 async function loadLinesById(
@@ -204,11 +204,19 @@ function costCenterPaths(rows: CostCenterTreeRow[]): Map<string, string> {
   return paths;
 }
 
-/** The rows' details, values and versions. The rows were read with their nature predicate. */
-async function hydrate(manager: EntityManager, tenantId: string, rows: ItemSql[]): Promise<StoredLine[]> {
+/**
+ * The rows' details, values and versions. The rows were read with their nature predicate.
+ * `withRounds` also reads each column's calculation lines: the check needs them, the export does not.
+ */
+async function hydrate(
+  manager: EntityManager,
+  tenantId: string,
+  rows: ItemSql[],
+  options: { withRounds?: boolean } = {},
+): Promise<StoredLine[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((row) => row.id);
-  const versions = await loadVersions(manager, tenantId, ids);
+  const versions = await loadVersions(manager, tenantId, ids, options.withRounds ?? false);
   const analytics = new Map<string, ItemAnalyticsValue[]>();
   for (const nature of BUDGET_NATURES) {
     const natureIds = rows.filter((row) => row.nature === nature).map((row) => row.id);
@@ -286,6 +294,7 @@ async function loadVersions(
   manager: EntityManager,
   tenantId: string,
   itemIds: string[],
+  withRounds: boolean,
 ): Promise<Map<string, StoredLine['versions']>> {
   const t = LINES;
   const versionRows: Array<{ id: string; item_id: string; budget_year: number; budget_rev: number }> = await manager.query(
@@ -317,7 +326,7 @@ async function loadVersions(
       months.set(versionId, entry);
     }
   }
-  const rounds = await loadRounds(manager, tenantId, versionRows.map((row) => row.id));
+  const rounds = withRounds ? await loadRounds(manager, tenantId, versionRows.map((row) => row.id)) : null;
   const byItem = new Map<string, StoredLine['versions']>();
   for (const row of versionRows) {
     const list = byItem.get(row.item_id) ?? [];
@@ -326,7 +335,7 @@ async function loadVersions(
       year: Number(row.budget_year),
       budgetRev: Number(row.budget_rev),
       months: months.get(row.id) ?? emptyMonths(),
-      rounds: rounds.get(row.id) ?? {},
+      ...(rounds ? { rounds: rounds.get(row.id) ?? {} } : {}),
     });
     byItem.set(row.item_id, list);
   }
