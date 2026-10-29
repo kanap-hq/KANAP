@@ -1,4 +1,5 @@
 import { AiEntityFilterRegistry } from '../ai-filter.types';
+import { userDataAccessModeJoinSql, userRoleNamesJoinSql } from '../../../users/user-access-sql';
 
 const contributorProfileExpression = `CASE WHEN tmc.id IS NULL THEN 'not_configured' ELSE 'configured' END`;
 
@@ -71,10 +72,30 @@ export const usersRegistry: AiEntityFilterRegistry = {
       ai: 'primary_role',
       grid: 'primary_role_name',
       type: 'set',
-      description: 'User primary role name.',
+      description: 'User primary role name only: the other roles of the person are in `roles`.',
       dynamic: true,
       discoverable: true,
       sortable: true,
+      groupable: true,
+    },
+    roles: {
+      ai: 'roles',
+      grid: 'roles',
+      type: 'set',
+      description: 'Every role of the person, primary or additional, primary first. A filter on a role finds the people who hold it, whichever of their roles it is. Grouping counts a person in each of their roles, so the groups add up to more than the people.',
+      dynamic: true,
+      discoverable: true,
+      sortable: false,
+      groupable: true,
+    },
+    data_access: {
+      ai: 'data_access',
+      grid: 'data_access',
+      type: 'set',
+      description: 'Which budget and contract data the person sees, as the Access column of the users list: all (all data, always for a person holding the Administrator role) or limited (limited to companies or cost centers; the data_access family lists their nodes).',
+      values: ['all', 'limited'],
+      discoverable: true,
+      sortable: false,
       groupable: true,
     },
     locale: {
@@ -170,6 +191,15 @@ export const usersRegistry: AiEntityFilterRegistry = {
         joins: [
           `LEFT JOIN roles r ON r.id = u.role_id AND r.tenant_id = u.tenant_id`,
         ],
+      },
+      roles: {
+        expression: 'held_roles.role_name',
+        joins: [userRoleNamesJoinSql('u', 'held_roles')],
+        countDistinct: true,
+      },
+      data_access: {
+        expression: 'held_mode.mode',
+        joins: [userDataAccessModeJoinSql('u', 'held_mode')],
       },
       locale: { expression: 'u.locale' },
       team: {

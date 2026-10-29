@@ -98,9 +98,9 @@ import {
 } from './ai-roles.query';
 import {
   AI_DATA_ACCESS_COVERAGE_NOTE,
+  AI_DATA_ACCESS_DELETED_NODE,
   AI_DATA_ACCESS_NO_NODE_NOTE,
   AI_DATA_ACCESS_UNAVAILABLE_NOTE,
-  dataAccessMissingWords,
   listAiDataAccess,
   type AiDataAccessRow,
 } from './ai-data-access.query';
@@ -1402,6 +1402,64 @@ export class AiQueryExecutor {
     return (await this.policy?.canReadEntityType(context, 'data_access', context.manager)) === true;
   }
 
+  /**
+   * A person's access as the Data access tab of their dialog shows it (`GET /users/:id/data-access`):
+   * the mode, the nodes with their level, who changed it last, the cost centers they own. Missing
+   * parts of the function in the screen's words.
+   */
+  private personAccessBlock(access: Awaited<ReturnType<DataAccessAdminService['personAccess']>>): Record<string, unknown> {
+    const nodes = access.nodes.map((node) => {
+      if (node.type === 'all') return { type: 'all', access: node.access };
+      if (node.type === 'company') return { type: 'company', name: node.name ?? AI_DATA_ACCESS_DELETED_NODE, access: node.access };
+      const name = [node.code, node.name].filter((part) => !!part && String(part).trim()).join(' ');
+      return { type: 'cost_center', kind: node.kind, code: node.code, name: name || AI_DATA_ACCESS_DELETED_NODE, access: node.access };
+    });
+    const note = access.is_administrator
+      ? 'Administrator: sees all data, whatever is stored.'
+      : access.mode === 'all'
+        ? 'Sees all budget and contract data.'
+        : nodes.length === 0
+          ? AI_DATA_ACCESS_NO_NODE_NOTE
+          : 'Limited to these nodes: a company node covers the company and the cost centers of that company; a group node covers the group, its sub-groups and their cost centers, whatever their company; a cost center node covers that cost center only; all covers everything. Edit includes read. The person also always sees what they are named on.';
+    return {
+      mode: access.mode,
+      is_administrator: access.is_administrator,
+      nodes,
+      updated_at: access.updated_at,
+      updated_by_name: access.updated_by_name,
+      budget_owner_centers: access.budget_owner_centers.map((center) => ({ code: center.code, name: center.name })),
+      available: access.available,
+      ...(access.available ? {} : { unavailable_note: AI_DATA_ACCESS_UNAVAILABLE_NOTE }),
+      note,
+      coverage_note: AI_DATA_ACCESS_COVERAGE_NOTE,
+    };
+  }
+
+  /**
+   * Who sees a company, as its Access tab (`GET /companies/:id/data-access`): `full`, the people in
+   * limited access with an `all` node or a node on the company (by the most direct one), and
+   * `partial`, those whose cost center or group node covers a part of it. People whose access is
+   * not limited see it whole and are not listed.
+   */
+  private companyAccessBlock(access: Awaited<ReturnType<DataAccessAdminService['companyAccess']>>): Record<string, unknown> {
+    return {
+      full: access.full.map((entry) => ({
+        person: entry.person.name,
+        via: entry.via.type === 'all' ? 'all data' : entry.via.name ?? AI_DATA_ACCESS_DELETED_NODE,
+        via_type: entry.via.type,
+        access: entry.access,
+      })),
+      partial: access.partial.map((entry) => ({
+        person: entry.person.name,
+        via: [entry.via.code, entry.via.name].filter((part) => !!part && String(part).trim()).join(' ') || AI_DATA_ACCESS_DELETED_NODE,
+        via_type: entry.via.type,
+        access: entry.access,
+      })),
+      note: 'Only people in limited access are listed: everyone else sees the whole company. full: a node on all data or on this company; partial: a node on a cost center or group that covers a part of it. Who has a node on one cost center: query_entities on data_access filtered on node_code; what a cost center inherits is on its Access tab in KANAP.',
+      coverage_note: AI_DATA_ACCESS_COVERAGE_NOTE,
+    };
+  }
+
   /** The services the two role families read; refused without them, never an empty list. */
   private rolesServices(): AiRolesServices {
     if (!this.roles || !this.permissions) throw new BadRequestException('The roles are not available.');
@@ -1527,9 +1585,11 @@ export class AiQueryExecutor {
 
   /**
    * A user as the users list shows them: every column to an administrator of users, name, email and
-   * status to a reader (`adminView` false), as the screen does.
+   * status to a reader (`adminView` false), as the screen does. The roles and the data-access mode
+   * (`accessView`) only to an administrator of users whose own access is not limited, as the
+   * list's Access column.
    */
-  private mapUser(row: any, adminView: boolean): AiEntitySummaryDto {
+  private mapUser(row: any, adminView: boolean, accessView = false): AiEntitySummaryDto {
     const label = displayName(row) ?? row.email ?? 'Unknown user';
     if (!adminView) {
       return toEntitySummary('users', {
@@ -1569,6 +1629,12 @@ export class AiQueryExecutor {
         contributor_profile: scalar(row.contributor_profile),
         project_availability: numericScalar(row.project_availability),
         areas_of_expertise: scalar(row.areas_of_expertise),
+        ...(accessView
+          ? {
+            roles: Array.isArray(row.roles) ? row.roles.join(', ') : null,
+            data_access: scalar(row.data_access),
+          }
+          : {}),
       },
     });
   }
@@ -2436,16 +2502,18 @@ export class AiQueryExecutor {
 
     if (input.entity_type === 'users') {
       const adminView = await this.usersAdminView(context);
+      const accessView = adminView && await this.dataAccessView(context);
       const result = await this.users.listForAi(scoped.query, {
         manager: context.manager,
         tenantId: context.tenantId,
+        accessView,
       });
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
       const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
-        items: (result.items || []).map((row: any) => this.mapUser(row, adminView)),
+        items: (result.items || []).map((row: any) => this.mapUser(row, adminView, accessView)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -3189,6 +3257,10 @@ export class AiQueryExecutor {
         row.turnover_year = selectedMetric.turnover;
         row.metrics_frozen = selectedMetric.is_frozen;
       }
+      // The company's Access tab, to an administrator of users whose own access is not limited only.
+      if (this.dataAccess && await this.dataAccessView(context)) {
+        row.data_access = this.companyAccessBlock(await this.dataAccess.companyAccess(context.manager, entityId));
+      }
       return this.toDetailResult(this.mapCompany(row), row);
     }
 
@@ -3276,7 +3348,18 @@ export class AiQueryExecutor {
         const lookup = { id: row.id, email: row.email, first_name: row.first_name, last_name: row.last_name, status: row.status };
         return this.toDetailResult(this.mapUser(lookup, false), lookup);
       }
-      return this.toDetailResult(this.mapUser(row, true), row);
+      // The Data access tab of the person's dialog, to an administrator of users whose own access
+      // is not limited only (the database does not guard the nodes: the gate is here).
+      if (!this.dataAccess || !(await this.dataAccessView(context))) {
+        return this.toDetailResult(this.mapUser(row, true), row);
+      }
+      const roles = await this.users.rolesOf(row, { manager: context.manager });
+      const access = await this.dataAccess.personAccess(context.manager, row.id);
+      const detail = { ...row, roles, data_access: access.mode };
+      return this.toDetailResult(this.mapUser(detail, true, true), {
+        ...detail,
+        data_access: this.personAccessBlock(access),
+      });
     }
 
     if (entityType === 'documents') {

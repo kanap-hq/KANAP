@@ -177,6 +177,15 @@ const ADMIN_ONLY_FIELDS: Partial<Record<AiQueryEntityType, string[]>> = {
   ],
 };
 
+/**
+ * The fields of a family its own screen shows only to an administrator of it whose own access is
+ * not limited: the Access column of the users list (`dataAccessView`) and the roles beside it. They
+ * follow the read of Admin › Data access (`data_access`: users at admin level, access not limited).
+ */
+const UNSCOPED_ADMIN_FIELDS: Partial<Record<AiQueryEntityType, string[]>> = {
+  users: ['roles', 'data_access'],
+};
+
 /** The registry without the linked counts, filters and groups of the modules the caller does not read. */
 export async function withoutUnreadableLinkedCounts(
   registry: AiEntityFilterRegistry,
@@ -184,13 +193,17 @@ export async function withoutUnreadableLinkedCounts(
 ): Promise<AiEntityFilterRegistry> {
   const gated = LINKED_COUNT_FIELDS[registry.entityType];
   const adminOnly = ADMIN_ONLY_FIELDS[registry.entityType];
-  if (!gated && !adminOnly) return registry;
+  const unscopedAdminOnly = UNSCOPED_ADMIN_FIELDS[registry.entityType];
+  if (!gated && !adminOnly && !unscopedAdminOnly) return registry;
   const hidden = new Set<string>();
   for (const [field, entityType] of Object.entries(gated ?? {})) {
     if (!(await canRead(entityType))) hidden.add(field);
   }
   if (adminOnly && !(await canRead(registry.entityType, 'admin'))) {
     for (const field of adminOnly) hidden.add(field);
+  }
+  if (unscopedAdminOnly && !(await canRead('data_access'))) {
+    for (const field of unscopedAdminOnly) hidden.add(field);
   }
   if (!hidden.size) return registry;
   const kept = <T>(record: Record<string, T>) => Object.fromEntries(Object.entries(record).filter(([key]) => !hidden.has(key)));

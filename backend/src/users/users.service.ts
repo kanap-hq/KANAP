@@ -19,8 +19,11 @@ import {
   compileAgFilterCondition,
   createParamNameGenerator,
   FilterTargetConfig,
+  isExcludeSetModel,
+  normalizeAgFilterModel,
 } from '../common/ag-grid-filtering';
 import { compileUserListFilters } from './users-list-filters';
+import { userAssignedRolesSql, userDataAccessModeSql } from './user-access-sql';
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 // import { PermissionsService, PermissionLevel } from '../permissions/permissions.service';
@@ -66,7 +69,33 @@ type UpdateUserActor =
 type AiUserQueryOpts = {
   manager?: EntityManager;
   tenantId?: string;
+  /**
+   * The caller administers users and their own access is not limited, as the users list's access
+   * column: each row then carries every role of the user and their effective data-access mode.
+   */
+  accessView?: boolean;
 };
+
+/**
+ * A filter on every role a user holds (primary or additional): the user matches when one of their
+ * roles does; in exclude mode, when none does.
+ */
+function compileAiUserRolesFilter(rawModel: any, nextParam: () => string): { sql: string; params: Record<string, any> } | null {
+  const model = normalizeAgFilterModel(rawModel);
+  const exclude = isExcludeSetModel(model);
+  // In exclude mode the condition is the include one, negated around the whole set of roles.
+  const { mode: _mode, ...stripped } = model ?? {};
+  const include = exclude ? stripped : model;
+  const condition = compileAgFilterCondition(include, { expression: 'held_role.role_name', dataType: 'string' }, nextParam);
+  if (!condition) return null;
+  const held = `EXISTS (
+    SELECT 1
+      FROM ${userAssignedRolesSql('u')} held_assigned
+      JOIN roles held_role ON held_role.id = held_assigned.role_id AND held_role.tenant_id = u.tenant_id
+     WHERE ${condition.sql}
+  )`;
+  return { sql: exclude ? `NOT ${held}` : held, params: condition.params };
+}
 
 const buildAiUserDisplayNameSql = (alias: string): string =>
   `COALESCE(NULLIF(TRIM(CONCAT(${alias}.first_name, ' ', ${alias}.last_name)), ''), ${alias}.email)`;
@@ -165,6 +194,11 @@ export class UsersService {
         textExpression: expertiseSql,
         dataType: 'string',
       },
+      // The effective mode: a user holding the Administrator role reads `all` whatever is stored.
+      data_access: {
+        expression: userDataAccessModeSql('u'),
+        dataType: 'string',
+      },
     };
 
     const qb = repo.createQueryBuilder('u')
@@ -184,6 +218,11 @@ export class UsersService {
 
     if (fm) {
       for (const [field, model] of Object.entries(fm)) {
+        if (field === 'roles') {
+          const held = compileAiUserRolesFilter(model, nextParam);
+          if (held) qb.andWhere(new Brackets((sub) => sub.where(held.sql, held.params)));
+          continue;
+        }
         const target = targets[field];
         if (!target) continue;
         const condition = compileAgFilterCondition(model, target, nextParam);
@@ -258,6 +297,7 @@ export class UsersService {
       .addSelect('c.name', 'company_name')
       .addSelect('d.name', 'department_name')
       .addSelect('r.role_name', 'primary_role_name')
+      .addSelect('u.role_id', 'role_id')
       .addSelect('pt.name', 'team_name')
       .addSelect('tmc.project_availability', 'project_availability')
       .addSelect(AI_USER_CONTRIBUTOR_PROFILE_SQL, 'contributor_profile')
@@ -269,6 +309,18 @@ export class UsersService {
       .offset(skip)
       .limit(limit)
       .getRawMany();
+
+    // Every role and the effective mode, read as the users list reads them for its access column.
+    if (opts?.accessView && items.length > 0) {
+      const mg = opts?.manager ?? this.repo.manager;
+      const pageUsers = items.map((row: any) => ({ id: row.id, role_id: row.role_id ?? null, role_name: row.primary_role_name ?? null }));
+      const { rolesByUser, adminRoleIds } = await this.readUsersRoles(mg, pageUsers);
+      const modes = await this.readDataAccessModes(mg, pageUsers, rolesByUser, adminRoleIds);
+      for (const row of items) {
+        row.roles = (rolesByUser.get(row.id) ?? []).map((role) => role.name).filter((name): name is string => !!name);
+        row.data_access = modes.get(row.id)?.mode ?? 'all';
+      }
+    }
 
     return { items, total, page, limit };
   }
@@ -327,6 +379,20 @@ export class UsersService {
         result[field] = rows.map((row: any) => row.value ?? null);
         continue;
       }
+      if (field === 'roles') {
+        // Every role held by a user of the tenant, primary or additional.
+        const rows = await mg.query(
+          `SELECT DISTINCT held_role.role_name AS value
+           FROM users u
+           CROSS JOIN LATERAL ${userAssignedRolesSql('u')} held_assigned
+           JOIN roles held_role ON held_role.id = held_assigned.role_id AND held_role.tenant_id = u.tenant_id
+           WHERE u.tenant_id = COALESCE($1, app_current_tenant())
+           ORDER BY value ASC NULLS LAST`,
+          [tenantId],
+        );
+        result[field] = rows.map((row: any) => row.value ?? null);
+        continue;
+      }
       if (field === 'locale') {
         const rows = await mg.query(
           `SELECT DISTINCT u.locale AS value
@@ -368,6 +434,101 @@ export class UsersService {
     }
 
     return result;
+  }
+
+  /**
+   * Every role of these users, primary first, then the others in the order they were given; a user
+   * without a row in `user_roles` holds their primary role alone. Also the ids of the Administrator
+   * roles among them, and every role id seen. One query for the whole page: the users list's admin
+   * columns, and the assistant's users family.
+   */
+  private async readUsersRoles(
+    mg: EntityManager,
+    users: Array<{ id: string; role_id: string | null; role_name: string | null }>,
+  ): Promise<{
+    rolesByUser: Map<string, Array<{ id: string; name: string | null }>>;
+    adminRoleIds: Set<string>;
+    allRoleIds: Set<string>;
+  }> {
+    const userRoles = await mg.getRepository(UserRole).find({
+      where: { user_id: In(users.map((u) => u.id)) },
+      relations: ['role'],
+      order: { is_primary: 'DESC', created_at: 'ASC' },
+    });
+    const rolesByUser = new Map<string, Array<{ id: string; name: string | null }>>();
+    const adminRoleIds = new Set<string>();
+    const allRoleIds = new Set<string>();
+    for (const u of users) {
+      if (u.role_id) allRoleIds.add(u.role_id);
+      if (u.role_id && (u.role_name ?? '').toLowerCase() === 'administrator') adminRoleIds.add(u.role_id);
+    }
+    for (const ur of userRoles) {
+      allRoleIds.add(ur.role_id);
+      const list = rolesByUser.get(ur.user_id) ?? [];
+      list.push({ id: ur.role_id, name: ur.role?.role_name ?? null });
+      rolesByUser.set(ur.user_id, list);
+      if ((ur.role?.role_name ?? '').toLowerCase() === 'administrator') adminRoleIds.add(ur.role_id);
+    }
+    for (const u of users) {
+      if (!rolesByUser.has(u.id)) rolesByUser.set(u.id, u.role_id ? [{ id: u.role_id, name: u.role_name }] : []);
+    }
+    return { rolesByUser, adminRoleIds, allRoleIds };
+  }
+
+  /**
+   * The effective data-access mode of these users and, for a limited one, their node names (spec
+   * §7.4): a user holding the Administrator role sees all data whatever the stored mode. Two
+   * queries for the whole page. The users list's access column, and the assistant's users family.
+   */
+  private async readDataAccessModes(
+    mg: EntityManager,
+    users: Array<{ id: string; role_id: string | null }>,
+    rolesByUser: Map<string, Array<{ id: string; name: string | null }>>,
+    adminRoleIds: Set<string>,
+  ): Promise<Map<string, { mode: 'all' | 'limited'; nodes: Array<{ type: 'all' | 'company' | 'cost_center'; name: string | null }> }>> {
+    const pageIds = users.map((u) => u.id);
+    const modes: Array<{ id: string; data_access_mode: string }> = await mg.query(
+      `SELECT id, data_access_mode FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
+      [pageIds],
+    );
+    const modeById = new Map(modes.map((row) => [row.id, row.data_access_mode]));
+    const nodeRows: Array<{
+      user_id: string;
+      node_type: string;
+      company_name: string | null;
+      cost_center_code: string | null;
+      cost_center_name: string | null;
+    }> = await mg.query(
+      `SELECT n.user_id, n.node_type, co.name AS company_name,
+              cc.code AS cost_center_code, cc.name AS cost_center_name
+         FROM user_data_access_nodes n
+         LEFT JOIN companies co ON co.tenant_id = n.tenant_id AND co.id = n.company_id
+         LEFT JOIN cost_centers cc ON cc.tenant_id = n.tenant_id AND cc.id = n.cost_center_id
+        WHERE n.tenant_id = app_current_tenant() AND n.user_id = ANY($1::uuid[])
+        ORDER BY CASE n.node_type WHEN 'all' THEN 0 WHEN 'company' THEN 1 ELSE 2 END,
+                 lower(co.name), lower(cc.code), n.id`,
+      [pageIds],
+    );
+    const names = new Map<string, Array<{ type: 'all' | 'company' | 'cost_center'; name: string | null }>>();
+    for (const row of nodeRows) {
+      const list = names.get(row.user_id) ?? [];
+      // The server sends the node type and its name, never a label: the screen writes
+      // "Everything" for an `all` node (spec §7.4). `name` is null for `all`.
+      if (row.node_type === 'company') list.push({ type: 'company', name: row.company_name ?? null });
+      else if (row.node_type === 'cost_center') list.push({ type: 'cost_center', name: row.cost_center_name ?? row.cost_center_code ?? null });
+      else list.push({ type: 'all', name: null });
+      names.set(row.user_id, list);
+    }
+    const out = new Map<string, { mode: 'all' | 'limited'; nodes: Array<{ type: 'all' | 'company' | 'cost_center'; name: string | null }> }>();
+    for (const u of users) {
+      const roles = rolesByUser.get(u.id) ?? [];
+      const isAdministrator = (!!u.role_id && adminRoleIds.has(u.role_id))
+        || roles.some((role) => adminRoleIds.has(role.id)
+          || (role.name ?? '').trim().toLowerCase() === 'administrator');
+      const limited = modeById.get(u.id) === 'limited' && !isAdministrator;
+      out.set(u.id, { mode: limited ? 'limited' : 'all', nodes: limited ? names.get(u.id) ?? [] : [] });
+    }
+    return out;
   }
 
   async list(query: any, opts?: { manager?: EntityManager; adminView?: boolean; exportAll?: boolean; dataAccessView?: boolean }) {
@@ -437,70 +598,13 @@ export class UsersService {
     let dataAccessAnyLimited: boolean | undefined;
     if (opts?.adminView && items.length > 0) {
       const mg = opts?.manager ?? repo.manager;
-      const userRoles = await mg.getRepository(UserRole).find({
-        where: { user_id: In(items.map((u) => u.id)) },
-        relations: ['role'],
-        order: { is_primary: 'DESC', created_at: 'ASC' },
-      });
-      rolesByUser = new Map();
-      adminRoleIds = new Set();
-      const allRoleIds = new Set<string>();
-      for (const u of items) {
-        if (u.role_id) allRoleIds.add(u.role_id);
-        if (u.role_id && (u.role?.role_name ?? '').toLowerCase() === 'administrator') adminRoleIds.add(u.role_id);
-      }
-      for (const ur of userRoles) {
-        allRoleIds.add(ur.role_id);
-        const list = rolesByUser.get(ur.user_id) ?? [];
-        list.push({ id: ur.role_id, name: ur.role?.role_name ?? null });
-        rolesByUser.set(ur.user_id, list);
-        if ((ur.role?.role_name ?? '').toLowerCase() === 'administrator') adminRoleIds.add(ur.role_id);
-      }
+      const pageUsers = items.map((u) => ({ id: u.id, role_id: u.role_id, role_name: u.role?.role_name ?? null }));
+      const read = await this.readUsersRoles(mg, pageUsers);
+      rolesByUser = read.rolesByUser;
+      adminRoleIds = read.adminRoleIds;
+      const allRoleIds = read.allRoleIds;
       if (opts?.dataAccessView) {
-        // The access column (spec §7.4): modes and node names for the page, in two queries.
-        const pageIds = items.map((u) => u.id);
-        const modes: Array<{ id: string; data_access_mode: string }> = await mg.query(
-          `SELECT id, data_access_mode FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
-          [pageIds],
-        );
-        const modeById = new Map(modes.map((row) => [row.id, row.data_access_mode]));
-        const nodeRows: Array<{
-          user_id: string;
-          node_type: string;
-          company_name: string | null;
-          cost_center_code: string | null;
-          cost_center_name: string | null;
-        }> = await mg.query(
-          `SELECT n.user_id, n.node_type, co.name AS company_name,
-                  cc.code AS cost_center_code, cc.name AS cost_center_name
-             FROM user_data_access_nodes n
-             LEFT JOIN companies co ON co.tenant_id = n.tenant_id AND co.id = n.company_id
-             LEFT JOIN cost_centers cc ON cc.tenant_id = n.tenant_id AND cc.id = n.cost_center_id
-            WHERE n.tenant_id = app_current_tenant() AND n.user_id = ANY($1::uuid[])
-            ORDER BY CASE n.node_type WHEN 'all' THEN 0 WHEN 'company' THEN 1 ELSE 2 END,
-                     lower(co.name), lower(cc.code), n.id`,
-          [pageIds],
-        );
-        const names = new Map<string, Array<{ type: 'all' | 'company' | 'cost_center'; name: string | null }>>();
-        for (const row of nodeRows) {
-          const list = names.get(row.user_id) ?? [];
-          // The server sends the node type and its name, never a label: the screen writes
-          // "Everything" for an `all` node (spec §7.4). `name` is null for `all`.
-          if (row.node_type === 'company') list.push({ type: 'company', name: row.company_name ?? null });
-          else if (row.node_type === 'cost_center') list.push({ type: 'cost_center', name: row.cost_center_name ?? row.cost_center_code ?? null });
-          else list.push({ type: 'all', name: null });
-          names.set(row.user_id, list);
-        }
-        dataAccessByUser = new Map();
-        for (const u of items) {
-          const roles = rolesByUser?.get(u.id)
-            ?? (u.role_id ? [{ id: u.role_id, name: u.role?.role_name ?? null }] : []);
-          const isAdministrator = adminRoleIds?.has(u.role_id)
-            || roles.some((role) => adminRoleIds?.has(role.id)
-              || (role.name ?? '').trim().toLowerCase() === 'administrator');
-          const limited = modeById.get(u.id) === 'limited' && !isAdministrator;
-          dataAccessByUser.set(u.id, { mode: limited ? 'limited' : 'all', nodes: limited ? names.get(u.id) ?? [] : [] });
-        }
+        dataAccessByUser = await this.readDataAccessModes(mg, pageUsers, rolesByUser, adminRoleIds);
       }
       const permRows: Array<{ role_id: string }> = allRoleIds.size > 0
         ? await mg.getRepository(RolePermission)
@@ -535,8 +639,7 @@ export class UsersService {
     }
     const safe = items.map(u => {
       if (opts?.adminView) {
-        const roles = rolesByUser?.get(u.id)
-          ?? (u.role_id ? [{ id: u.role_id, name: u.role?.role_name ?? null }] : []);
+        const roles = rolesByUser?.get(u.id) ?? [];
         const accessRoleIds = new Set(roles.map((r) => r.id));
         if (u.role_id) accessRoleIds.add(u.role_id);
         const hasAccess = Array.from(accessRoleIds).some(
@@ -581,6 +684,16 @@ export class UsersService {
       .leftJoinAndSelect('u.role', 'role')
       .where('u.email = :email', { email })
       .getOne();
+  }
+
+  /** Every role name of a user, primary first, as the users list's admin columns read them. */
+  async rolesOf(
+    user: { id: string; role_id: string | null; role?: { role_name?: string | null } | null },
+    opts?: { manager?: EntityManager },
+  ): Promise<string[]> {
+    const mg = opts?.manager ?? this.repo.manager;
+    const { rolesByUser } = await this.readUsersRoles(mg, [{ id: user.id, role_id: user.role_id, role_name: user.role?.role_name ?? null }]);
+    return (rolesByUser.get(user.id) ?? []).map((role) => role.name).filter((name): name is string => !!name);
   }
 
   async findById(id: string, opts?: { manager?: EntityManager }) {
