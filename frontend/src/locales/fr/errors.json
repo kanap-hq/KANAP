@@ -343,5 +343,11 @@
   "DATA_ACCESS_NODE_ID_FORBIDDEN": "Tout couvre déjà toutes les données et ne prend ni société ni centre de coûts.",
   "DATA_ACCESS_NODE_ID_REQUIRED": "Choisissez une société ou un centre de coûts.",
   "DATA_ACCESS_NODE_TYPE_INVALID": "Choisissez une société, un centre de coûts ou tout.",
-  "DATA_ACCESS_ACCESS_INVALID": "Choisissez l'accès lecture ou saisie."
+  "DATA_ACCESS_ACCESS_INVALID": "Choisissez l'accès lecture ou saisie.",
+  "DATA_ACCESS_MODE_INVALID": "Choisissez toutes les données ou un accès limité.",
+  "DATA_ACCESS_ALL_WITH_NODES": "Toutes les données ne prennent ni société ni centre de coûts.",
+  "DATA_ACCESS_NODES_INVALID": "La liste des sociétés et des centres de coûts n'est pas valide.",
+  "DATA_ACCESS_NODE_ID_INVALID": "Choisissez une société ou un centre de coûts valide.",
+  "DATA_ACCESS_NODE_DUPLICATE": "La même société, le même centre de coûts ou tout apparaît deux fois.",
+  "DATA_ACCESS_QUERY_REPEATED": "Indiquez {{parameter}} une seule fois."
 }

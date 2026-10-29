@@ -343,5 +343,11 @@
   "DATA_ACCESS_NODE_ID_FORBIDDEN": "Everything covers all data and takes no company or cost center.",
   "DATA_ACCESS_NODE_ID_REQUIRED": "Choose a company or a cost center.",
   "DATA_ACCESS_NODE_TYPE_INVALID": "Choose a company, a cost center or everything.",
-  "DATA_ACCESS_ACCESS_INVALID": "Choose read or edit access."
+  "DATA_ACCESS_ACCESS_INVALID": "Choose read or edit access.",
+  "DATA_ACCESS_MODE_INVALID": "Choose all data or a limited access.",
+  "DATA_ACCESS_ALL_WITH_NODES": "All data takes no company or cost center.",
+  "DATA_ACCESS_NODES_INVALID": "The list of companies and cost centers is not valid.",
+  "DATA_ACCESS_NODE_ID_INVALID": "Choose a valid company or cost center.",
+  "DATA_ACCESS_NODE_DUPLICATE": "The same company, cost center or everything appears twice.",
+  "DATA_ACCESS_QUERY_REPEATED": "Give {{parameter}} only once."
 }
