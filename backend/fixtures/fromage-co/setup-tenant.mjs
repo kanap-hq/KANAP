@@ -47,6 +47,7 @@ import { buildLinesFile, buildMonthlyFile, loadBudgetFile } from '../../scripts/
 import { DATASET_YEAR, parseCsv, shiftCsvText, shiftIsoDate } from '../../scripts/lib/fixture-csv.mjs';
 import { createHttpClient } from '../../scripts/lib/http-client.mjs';
 import { analyticsValuesText, fixtureDimensions, resolveFixtureLanguage, withFixtureDimensionValues } from './fixture-dimensions.mjs';
+import { rewriteIncidentTaskLinks } from './incident-task-links.mjs';
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -2312,9 +2313,10 @@ async function ensureTechnologies() {
 // database (PostgreSQL 13), the backup SAN near its end of life, the SQL Server cluster, the LIMS
 // on SQL Server Express. One confidential incident, one with personal data notified to the
 // authority, six with an incident review (five closed, the LIMS still in progress).
-// 32-incident-journal.csv adds the human timeline of the B2B portal, the SAP close and the LIMS;
-// 19b-incident-tasks.csv links the corrective tasks of the B2B portal, the phishing campaign and
-// the SAP close.
+// 32-incident-journal.csv adds the human timeline of the B2B portal, the SAP close and the LIMS.
+// 19b-incident-tasks.csv names those corrective tasks as INC-N. The import resolves that name as
+// the tenant's own item number, which is a different incident once numbering has moved on, so the
+// runner rewrites each row with the id of the incident whose title is row N of this register.
 
 /** The incidents of 31-incidents.csv (by title) and what they affected. */
 const INCIDENT_LINKS = {
@@ -2440,6 +2442,37 @@ async function ensureIncidents() {
 }
 
 /**
+ * Imports 19b-incident-tasks.csv with each INC-N replaced by the id of the incident whose title
+ * is row N of 31-incidents.csv. The file on disk stays as INC-N. A title the tenant does not
+ * hold is a warning, and the other tasks are still imported. A re-run sends the same ids: the
+ * task import matches on the title and leaves an unchanged task as it is.
+ */
+async function importIncidentTasks() {
+  const name = '19b-incident-tasks.csv';
+  info(`Importing ${name}`);
+  const tasks = readCsv(name);
+  const titles = readCsv('31-incidents.csv').map((row) => row.title);
+  const incidents = await getAll('/incidents?limit=1000');
+  const linked = rewriteIncidentTaskLinks(tasks, titles, incidents);
+  for (const message of linked.warnings) warn(message);
+  if (linked.rows.length === 0) {
+    if (linked.warnings.length === 0) warn(`${name}: no task to import`);
+    return;
+  }
+  const headers = Object.keys(linked.rows[0]).filter((header) => header !== 'related_object_id');
+  const nameAt = headers.indexOf('related_object_name');
+  headers.splice(nameAt >= 0 ? nameAt : headers.length, 0, 'related_object_id');
+  const table = [headers, ...linked.rows.map((row) => headers.map((header) => row[header] ?? ''))];
+  const text = table.map((cells) => cells.map((cell) => csvCell(String(cell ?? ''))).join(';')).join('\n');
+  const result = await request('POST', '/tasks/import?dryRun=false', undefined, {
+    uploadBytes: Buffer.from(text, 'utf8'),
+    uploadName: name,
+  });
+  if (result?.ok === false) throw new Error(`${name} import returned ok=false:\n${JSON.stringify(result, null, 2)}`);
+  ok(`Imported ${name}`);
+}
+
+/**
  * Imports the human timeline of 32-incident-journal.csv. The server route takes the author and
  * the event time from each row, so the entries are signed by the incident people and backdated
  * to the facts; `created_at` stays the load time. A row already there is skipped, so a re-run
@@ -2499,7 +2532,7 @@ async function runRelations() {
   await linkProcessesToApplications();
   await ensureIncidents();
   step('incident-tasks');
-  await importCsv('19b-incident-tasks.csv', '/tasks/import');
+  await importIncidentTasks();
   step('incident-journal');
   await importIncidentJournal();
   step('budget-links');
