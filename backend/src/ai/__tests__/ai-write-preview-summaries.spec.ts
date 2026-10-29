@@ -621,6 +621,33 @@ function testVulnerabilityStateCards() {
     + '\n\n1 ya no coincide y desaparecerá en el próximo cotejo',
   );
 
+  // Lot E review: the note alone changes: the state once, then the note.
+  const noteOnly = (note: string | null) => preview({
+    tool_name: 'change_vulnerability_state',
+    target_entity_type: 'vulnerabilities',
+    mutation_input: { state: 'handled', note },
+    current_values: {
+      values: { rows: 2, cves: 1, changes: 2, from_states: ['handled'], outside_alerts: 0, no_longer_matching: 0, examples: [example('CVE-2024-5555', '14')] },
+    },
+  });
+  const noteRow = { en: 'on', fr: 'sur', de: 'auf', es: 'en' } as const;
+  for (const [language, head, note] of [
+    ['en', '2 rows (1 CVE): Handled, note changed', 'Note: "risk accepted"'],
+    ['fr', '2 lignes (1 CVE) : Traitée, note modifiée', 'Note : « risk accepted »'],
+    ['de', '2 Zeilen (1 CVE): Behandelt, Notiz geändert', 'Notiz: „risk accepted“'],
+    ['es', '2 filas (1 CVE): Tratada, nota modificada', 'Nota: «risk accepted»'],
+  ] as const) {
+    assert.equal(card(noteOnly('risk accepted'), language), `${head}\n\n${note}\n\n- CVE-2024-5555 ${noteRow[language]} TEC-3 PostgreSQL 14\n- ${{ en: 'and 1 more', fr: 'et 1 autre', de: 'und 1 weitere', es: 'y 1 más' }[language]}`);
+  }
+  for (const [language, head] of [
+    ['en', '2 rows (1 CVE): Handled, note cleared'],
+    ['fr', '2 lignes (1 CVE) : Traitée, note effacée'],
+    ['de', '2 Zeilen (1 CVE): Behandelt, Notiz gelöscht'],
+    ['es', '2 filas (1 CVE): Tratada, nota borrada'],
+  ] as const) {
+    assert.ok(card(noteOnly(null), language).startsWith(`${head}\n\n- CVE-2024-5555 `), `${language}: the note cleared, said once`);
+  }
+
   // Executed, rejected, failed.
   const executed = { ...handled, status: 'executed', current_values: { ...handled.current_values, applied: { changed: 3 } } } as AiMutationPreview;
   assert.equal(summary(operation, executed, 'en'), 'Vulnerability state set to Handled on 3 vulnerability rows.');
@@ -668,6 +695,20 @@ function testVulnerabilityStateCards() {
     card(undo, 'es'),
     '3 filas (2 CVE): Tratada → vuelta a su estado anterior'
     + '\n\n- 2 filas volverán al estado Por revisar, nota borrada\n- 1 fila volverá al estado No afectada, nota «Old note»',
+  );
+  // Lot E review: back to review, the rows that no longer match are said as on the change's card.
+  const undoMatching = { ...undo, current_values: { values: { rows: 3, cves: 2, cve_id: null, no_longer_matching: 2 } } } as AiMutationPreview;
+  assert.equal(
+    card(undoMatching, 'en'),
+    '3 rows (2 CVEs): Handled → back to their previous state'
+    + '\n\n- 2 will go back to To review, note cleared\n- 1 will go back to Not affected, note "Old note"'
+    + '\n\n2 no longer match and will disappear at the next matching',
+  );
+  assert.equal(
+    card(undoMatching, 'fr'),
+    '3 lignes (2 CVE) : Traitée → retour à leur état précédent'
+    + "\n\n- 2 lignes reviendront à l'état À traiter, note effacée\n- 1 ligne reviendra à l'état Non concernée, note « Old note »"
+    + '\n\n2 ne correspondent plus et disparaîtront au prochain rapprochement',
   );
   const undone = { ...undo, status: 'executed', current_values: { ...undo.current_values, applied: { changed: 3 } } } as AiMutationPreview;
   assert.equal(

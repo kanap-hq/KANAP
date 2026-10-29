@@ -1002,6 +1002,25 @@ export function vulnerabilityStateRowText(row: VulnerabilityStateCardRow, langua
   return `${row.cve_id} ${on} ${row.technology} ${row.technology_name}${version}`;
 }
 
+/** Rows back to review that no longer match: the matching deletes them next time. */
+function vulnerabilityNoLongerMatchingText(language: AiWriteLanguage, n: number): string {
+  const one = n === 1;
+  return {
+    en: one
+      ? '1 no longer matches and will disappear at the next matching'
+      : `${n} no longer match and will disappear at the next matching`,
+    fr: one
+      ? '1 ne correspond plus et disparaîtra au prochain rapprochement'
+      : `${n} ne correspondent plus et disparaîtront au prochain rapprochement`,
+    de: one
+      ? '1 trifft nicht mehr zu und verschwindet beim nächsten Abgleich'
+      : `${n} treffen nicht mehr zu und verschwinden beim nächsten Abgleich`,
+    es: one
+      ? '1 ya no coincide y desaparecerá en el próximo cotejo'
+      : `${n} ya no coinciden y desaparecerán en el próximo cotejo`,
+  }[language];
+}
+
 /**
  * The card of a change of vulnerability state, as sober as the page's bulk dialog: the rows and
  * CVE, the states before and after, the note when one is given, up to five rows, and a line only
@@ -1021,12 +1040,24 @@ export function vulnerabilityStateCardText(card: VulnerabilityStateCard, languag
   const from = card.from.length
     ? card.from.map((state) => vulnerabilityStateLabel(state, language)).join(', ')
     : vulnerabilityStateLabel(card.to, language);
+  const to = vulnerabilityStateLabel(card.to, language);
+  const head = `${rows} (${vulnerabilityCvesText(language, card.cves)})${colon}`;
+  const noteWord = { en: 'Note', fr: 'Note', de: 'Notiz', es: 'Nota' }[language];
+  const noteText = card.note ? `${noteWord}${colon}${escapeMarkdownLabel(quoted(language, card.note))}` : null;
   // One block per line of meaning: a line right after a list item would join the item.
-  const blocks = [`${rows} (${vulnerabilityCvesText(language, card.cves)})${colon}${from} → ${vulnerabilityStateLabel(card.to, language)}`];
-  if (card.note !== undefined) {
-    const noteWord = { en: 'Note', fr: 'Note', de: 'Notiz', es: 'Nota' }[language];
-    const cleared = { en: 'Note cleared', fr: 'Note effacée', de: 'Notiz gelöscht', es: 'Nota borrada' }[language];
-    blocks.push(card.note ? `${noteWord}${colon}${escapeMarkdownLabel(quoted(language, card.note))}` : cleared);
+  const blocks: string[] = [];
+  if (card.note !== undefined && card.from.every((state) => state === card.to)) {
+    // The note alone changes: the state once, then the note ("Handled, note changed").
+    const what = card.note
+      ? { en: 'note changed', fr: 'note modifiée', de: 'Notiz geändert', es: 'nota modificada' }[language]
+      : { en: 'note cleared', fr: 'note effacée', de: 'Notiz gelöscht', es: 'nota borrada' }[language];
+    blocks.push(`${head}${to}, ${what}`);
+    if (noteText) blocks.push(noteText);
+  } else {
+    blocks.push(`${head}${from} → ${to}`);
+    if (card.note !== undefined) {
+      blocks.push(noteText ?? { en: 'Note cleared', fr: 'Note effacée', de: 'Notiz gelöscht', es: 'Nota borrada' }[language]);
+    }
   }
   const examples = card.examples.slice(0, 5);
   const more = card.changes - examples.length;
@@ -1052,24 +1083,7 @@ export function vulnerabilityStateCardText(card: VulnerabilityStateCard, languag
       es: one ? '1 está fuera de las alertas de vulnerabilidad' : `${n} están fuera de las alertas de vulnerabilidad`,
     }[language]);
   }
-  if (card.noLongerMatching > 0) {
-    const one = card.noLongerMatching === 1;
-    const n = card.noLongerMatching;
-    blocks.push({
-      en: one
-        ? '1 no longer matches and will disappear at the next matching'
-        : `${n} no longer match and will disappear at the next matching`,
-      fr: one
-        ? '1 ne correspond plus et disparaîtra au prochain rapprochement'
-        : `${n} ne correspondent plus et disparaîtront au prochain rapprochement`,
-      de: one
-        ? '1 trifft nicht mehr zu und verschwindet beim nächsten Abgleich'
-        : `${n} treffen nicht mehr zu und verschwinden beim nächsten Abgleich`,
-      es: one
-        ? '1 ya no coincide y desaparecerá en el próximo cotejo'
-        : `${n} ya no coinciden y desaparecerán en el próximo cotejo`,
-    }[language]);
-  }
+  if (card.noLongerMatching > 0) blocks.push(vulnerabilityNoLongerMatchingText(language, card.noLongerMatching));
   return blocks.join('\n\n');
 }
 
@@ -1082,6 +1096,8 @@ export type VulnerabilityStateUndoCard = {
   notes: boolean;
   /** The rows by the state and note they go back to. */
   groups: Array<{ state: string; note: string | null; rows: number }>;
+  /** Rows going back to review that no longer match (deleted at the next matching). */
+  noLongerMatching?: number;
 };
 
 /**
@@ -1122,7 +1138,9 @@ export function vulnerabilityStateUndoCardText(card: VulnerabilityStateUndoCard,
         : `, ${{ en: 'note cleared', fr: 'note effacée', de: 'Notiz gelöscht', es: 'nota borrada' }[language]}`;
     return `- ${escapeMarkdownLabel(`${goes}${note}`)}`;
   });
-  return lines.length ? `${head}\n\n${lines.join('\n')}` : head;
+  const blocks = lines.length ? [head, lines.join('\n')] : [head];
+  if (card.noLongerMatching) blocks.push(vulnerabilityNoLongerMatchingText(language, card.noLongerMatching));
+  return blocks.join('\n\n');
 }
 
 /** The detail lines of a task preview: its assignee and its priority. */
