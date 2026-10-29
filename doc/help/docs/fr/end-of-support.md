@@ -62,6 +62,14 @@ Les lignes qui concernent des applications demandent le droit de lire les applic
 
 **Exporter le tableau** télécharge la liste à l'écran dans un fichier CSV ou Excel : les échéances avec l'horizon et le type en cours, ou les données manquantes. Les en-têtes suivent la langue de votre écran, et les dates sont de vraies dates dans le fichier Excel, qui ajoute une feuille **Paramètres**. Voir [Rapports](reports.md#export-options). **Imprimer / Enregistrer en PDF** imprime le rapport.
 
+## Demander à l'assistant
+
+[Plaid](ai-assistant.md) lit les deux vues, **Échéances** et **Données manquantes**, avec les mêmes droits que le rapport. Il nomme chaque élément par sa référence (`APP-4`, `AST-12`, `TEC-3`) et lit un horizon à la fois : 6, 12, 24 ou 36 mois. Quand vous ne pouvez pas lire les applications, Plaid dit qu'il a laissé de côté les lignes des applications.
+
+Plaid peut aussi ajouter des versions de technologie et corriger leurs dates de support, avec votre approbation. La fin de support d'une application est un champ de l'application : Plaid la modifie comme il modifie l'application, avec les droits de la page [Applications](applications.md).
+
+Demandez par exemple : « Quelles applications arrivent en fin de support dans les six mois ? », « Échéances de fin de support des douze prochains mois par type », « Quelles fiches faut-il compléter pour le rapport de fin de support ? », « La version 16 de PostgreSQL finit son support le 31/12/2028 » ou « Efface la date de fin de support étendu de la version 14 de TEC-3 ».
+
 ## Conseils
 
 - **Commencez par les données manquantes** : un serveur sans ses technologies, ou une version sans date, n'apparaît jamais dans les échéances.

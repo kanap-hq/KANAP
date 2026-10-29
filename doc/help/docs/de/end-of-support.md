@@ -62,6 +62,14 @@ Die Zeilen zu Anwendungen erfordern das Recht, Anwendungen zu lesen.
 
 **Tabelle exportieren** lädt die angezeigte Liste als CSV- oder Excel-Datei herunter: die Fristen mit dem aktuellen Zeitraum und Typ oder die fehlenden Daten. Die Spaltenköpfe folgen der Sprache Ihres Bildschirms, und Datumsangaben sind in der Excel-Datei echte Datumswerte; sie fügt ein Blatt **Parameter** hinzu. Siehe [Berichte](reports.md#export-options). **Drucken / Als PDF speichern** druckt den Bericht.
 
+## Den Assistenten fragen
+
+[Plaid](ai-assistant.md) liest beide Ansichten, **Fristen** und **Fehlende Daten**, mit denselben Rechten wie der Bericht. Es nennt jedes Element mit seiner Referenz (`APP-4`, `AST-12`, `TEC-3`) und liest einen Zeitraum auf einmal: 6, 12, 24 oder 36 Monate. Wenn Sie keine Anwendungen lesen dürfen, sagt Plaid, dass es die Zeilen der Anwendungen ausgelassen hat.
+
+Plaid kann auch Versionen von Technologien hinzufügen und ihre Supportdaten korrigieren, mit Ihrer Genehmigung. Das Supportende einer Anwendung ist ein Feld der Anwendung: Plaid ändert es, wie es die Anwendung ändert, mit den Rechten der Seite [Anwendungen](applications.md).
+
+Fragen Sie zum Beispiel: „Welche Anwendungen erreichen in den nächsten sechs Monaten ihr Supportende?“, „Fristen zum Supportende der nächsten zwölf Monate nach Typ“, „Welche Datensätze muss ich für den Bericht zum Supportende vervollständigen?“, „Die Version 16 von PostgreSQL endet im Support am 31.12.2028“ oder „Lösche das Ende des erweiterten Supports der Version 14 von TEC-3“.
+
 ## Tipps
 
 - **Zuerst die fehlenden Daten klären**: Ein Server ohne seine Technologien oder eine Version ohne Datum erscheint nie in den Fristen.

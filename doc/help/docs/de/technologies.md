@@ -377,6 +377,23 @@ Eine große Datei braucht Zeit zum Laden und hält die Verknüpfungen ihrer Tech
 
 Ein als Anwendung angelegter Eintrag kann in Wirklichkeit eine Technologie sein, etwa eine Datenbank-Engine oder ein Verzeichnisdienst. Öffnen Sie die Anwendung und verwenden Sie **In Technologie umwandeln**. Siehe [Anwendungen](applications.md#eine-anwendung-in-eine-technologie-umwandeln).
 
+## Den Assistenten fragen
+
+[Plaid](ai-assistant.md) liest die Technologien mit denselben Rechten wie diese Seite. Fragen Sie zum Beispiel: „Wer ist für TEC-3 verantwortlich?“, „Welche Weblinks hat PostgreSQL?“, „Sind die Schwachstellenwarnungen für TEC-3 eingeschaltet?“ oder „Welche Technologien haben keinen Support mehr?“
+
+Mit der Stufe Mitglied für die Infrastruktur schreibt Plaid auch, und jede Änderung kommt als Vorschau, die Sie genehmigen:
+
+- Einen Katalogeintrag übernehmen, eine von Hand erfasste Technologie gleichen Namens vervollständigen oder eine Technologie anlegen, die der Katalog nicht kennt.
+- Die Felder der Technologie ändern.
+- Versionen hinzufügen und ihre Bezeichnungen, Daten und Notizen ändern.
+- IT-Verantwortliche, Business-Verantwortliche und Support-Kontakte hinzufügen oder entfernen.
+- Weblinks hinzufügen, ändern oder entfernen.
+- Schwachstellenwarnungen ein- oder ausschalten, für die Technologie oder für eine Version.
+
+Plaid nennt die Familie, den Lebenszyklus und die anderen Listenwerte in Ihrer Sprache und lehnt einen Wert ab, der auf mehrere passt. Es lehnt einen Namen ab, den zwei Benutzer oder zwei Kontakte tragen, und zwei Links mit derselben Adresse. Fragen Sie zum Beispiel: „Übernimm PostgreSQL aus dem KANAP-Katalog“, „Füge TEC-3 die Version 17 hinzu“, „Füge Camille Roux als Business-Verantwortliche von PostgreSQL hinzu“, „Füge den Kontakt Oracle Support zum Support von TEC-3 hinzu“, „Füge PostgreSQL den Link zu den Versionshinweisen https://www.postgresql.org/docs/release/ hinzu“ oder „Nimm die Version 14 von TEC-3 aus den Warnungen“.
+
+Das Löschen einer Technologie oder einer Version, Anhänge, CPE-Kennungen und CVE.org-Namen sowie der Abgleich der Schwachstellen bleiben auf dieser Seite.
+
 ## Tipps
 
 - **Vom Katalog ausgehen**: Sie erhalten die Versionen und ihre Supportende-Daten, ohne sie einzutippen.

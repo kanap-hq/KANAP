@@ -62,6 +62,14 @@ Las filas sobre aplicaciones requieren el derecho de leer las aplicaciones.
 
 **Exportar la tabla** descarga la lista en pantalla como archivo CSV o Excel: los vencimientos con el horizonte y el tipo actuales, o los datos que faltan. Los encabezados siguen el idioma de su pantalla, y en el archivo Excel las fechas son fechas reales y se añade una hoja **Parámetros**. Consulte [Informes](reports.md#export-options). **Imprimir / Guardar como PDF** imprime el informe.
 
+## Preguntar al asistente
+
+[Plaid](ai-assistant.md) lee las dos vistas, **Vencimientos** y **Datos que faltan**, con los mismos derechos que el informe. Nombra cada elemento por su referencia (`APP-4`, `AST-12`, `TEC-3`) y lee un horizonte a la vez: 6, 12, 24 o 36 meses. Cuando usted no puede leer las aplicaciones, Plaid dice que dejó fuera las filas de las aplicaciones.
+
+Plaid también puede añadir versiones de tecnología y corregir sus fechas de soporte, con su aprobación. El fin de soporte de una aplicación es un campo de la aplicación: Plaid lo cambia como cambia la aplicación, con los derechos de la página [Aplicaciones](applications.md).
+
+Pregunte, por ejemplo: «¿Qué aplicaciones llegan al fin de soporte en los próximos seis meses?», «Vencimientos de fin de soporte de los próximos doce meses por tipo», «¿Qué fichas hay que completar para el informe de fin de soporte?», «La versión 16 de PostgreSQL termina su soporte el 31/12/2028» o «Borra la fecha de fin del soporte extendido de la versión 14 de TEC-3».
+
 ## Consejos
 
 - **Resuelva primero los datos que faltan**: un servidor sin sus tecnologías, o una versión sin fecha, nunca aparece en los vencimientos.
