@@ -432,3 +432,44 @@ describe('project history entries', () => {
     expect(lines('specification', en, 'en')).toEqual(['Document modified']);
   });
 });
+
+describe('request history entries', () => {
+  const fr = i18n.getFixedT('fr', ['admin', 'ops', 'common', 'portfolio']) as unknown as Translate;
+  const en = i18n.getFixedT('en', ['admin', 'ops', 'common', 'portfolio']) as unknown as Translate;
+  const task = { kind: 'task', id: ID, label: 'Follow up', reference: 'T-4' };
+
+  it('reads the request fields with its screen labels, the rich texts as changed only', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'origin_task_id', after: task },
+      { field: 'origin_task_id', before: { hidden: true, kind: 'task', deleted: true }, after: null },
+      { field: 'status', before: 'pending_review', after: 'candidate' },
+      { field: 'current_situation', text: 'currentSituationChanged' },
+      { field: 'feasibility_review', text: 'feasibilityReviewChanged' },
+    ];
+    const read = (t: Translate, locale: string) => historyLines(item({ kind: 'record' }, changes), { t, locale, table: 'portfolio_requests' });
+    expect(read(en, 'en')).toEqual([
+      { label: 'Created from task', after: 'Follow up (T-4)' },
+      { label: 'Created from task', before: 'a deleted task', after: '—' },
+      { label: 'Status', before: 'Pending review', after: 'Candidate' },
+      { text: 'Current situation changed' },
+      { text: 'Feasibility review changed' },
+    ]);
+    const frLines = read(fr, 'fr');
+    expect(frLines[0]).toEqual({ label: 'Créée depuis la tâche', after: 'Follow up (T-4)' });
+    expect(frLines[2]).toEqual({ label: 'Statut', before: 'En attente de revue', after: 'Candidat' });
+    expect(frLines[3]).toEqual({ text: 'Situation actuelle modifiée' });
+  });
+
+  it('names a business process and a request dependency as the request adds them', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'business_process', event: 'added', after: { kind: 'business_process', id: ID, label: 'Order to cash' } },
+      { field: 'dependency', event: 'added', after: { kind: 'request', id: ID, label: 'Request Beta', reference: 'REQ-12' } },
+    ];
+    expect(historyLines(item({ kind: 'business_process' }, changes), { t: en, locale: 'en' }).map((line) => line.text)).toEqual([
+      'Business process added: Order to cash',
+      'Dependency added: Request Beta (REQ-12)',
+    ]);
+    expect(historyLines(item({ kind: 'business_process' }, changes.slice(0, 1)), { t: fr, locale: 'fr' })[0].text)
+      .toMatch(/ : Order to cash$/);
+  });
+});
