@@ -54,7 +54,29 @@ type Seeded = {
   foreign: HistorySeed;
   documentType: string;
   foreignDocumentType: string;
+  classification: Classification;
+  foreignClassification: Classification;
 };
+
+/** A source, a category and a stream of the portfolio classification. */
+type Classification = { source: string; category: string; stream: string };
+
+/** The tenant's portfolio classification: names every reader of a project or a request sees. */
+async function seedClassification(runner: QueryRunner, tenantId: string): Promise<Classification> {
+  const [source] = await runner.query(
+    `INSERT INTO portfolio_sources (tenant_id, name) VALUES ($1, 'Spec source') RETURNING id`,
+    [tenantId],
+  );
+  const [category] = await runner.query(
+    `INSERT INTO portfolio_categories (tenant_id, name) VALUES ($1, 'Spec category') RETURNING id`,
+    [tenantId],
+  );
+  const [stream] = await runner.query(
+    `INSERT INTO portfolio_streams (tenant_id, category_id, name) VALUES ($1, $2, 'Spec stream') RETURNING id`,
+    [tenantId, category.id],
+  );
+  return { source: source.id, category: category.id, stream: stream.id };
+}
 
 /** A tenant-wide Knowledge document type: the one document family whose rule is plain SQL. */
 async function seedDocumentType(runner: QueryRunner, tenantId: string): Promise<string> {
@@ -168,6 +190,9 @@ function familyCases(seeded: Seeded): FamilyCase[] {
     { family: 'analytics_category', home: home.categoryA, away: away.categoryA, label: 'analytics value' },
     { family: 'contributor', home: home.contributor, away: away.contributor, label: 'contributor' },
     { family: 'document_type', home: seeded.documentType, away: seeded.foreignDocumentType, label: 'document type' },
+    { family: 'portfolio_source', home: seeded.classification.source, away: seeded.foreignClassification.source, label: 'portfolio source' },
+    { family: 'portfolio_category', home: seeded.classification.category, away: seeded.foreignClassification.category, label: 'portfolio category' },
+    { family: 'portfolio_stream', home: seeded.classification.stream, away: seeded.foreignClassification.stream, label: 'portfolio stream' },
   ];
 }
 
@@ -402,13 +427,22 @@ async function run() {
         { exactRoleName: 'Business Contributor' },
       );
       const documentType = await seedDocumentType(runner, tenantId);
-      return { seed: seedData, reader, bc, documentType };
+      return { seed: seedData, reader, bc, documentType, classification: await seedClassification(runner, tenantId) };
     });
     const foreign = await seed(foreignTenantId, async (runner) => {
       const seedRow = await seedHistoryData(runner, foreignTenantId);
-      return { seed: seedRow, documentType: await seedDocumentType(runner, foreignTenantId) };
+      return {
+        seed: seedRow,
+        documentType: await seedDocumentType(runner, foreignTenantId),
+        classification: await seedClassification(runner, foreignTenantId),
+      };
     });
-    const full = { ...seeded, foreign: foreign.seed, foreignDocumentType: foreign.documentType };
+    const full = {
+      ...seeded,
+      foreign: foreign.seed,
+      foreignDocumentType: foreign.documentType,
+      foreignClassification: foreign.classification,
+    };
 
     const participation = await seed(tenantId, (runner) => createParticipationFixtures(full.seed, full.bc, runner));
     await testEveryFamily(full);

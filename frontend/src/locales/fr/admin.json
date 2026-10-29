@@ -723,7 +723,36 @@
       "department_id": "Direction",
       "server_role": "Rôle du serveur",
       "since_date": "Depuis",
-      "suite_id": "Suite"
+      "suite_id": "Suite",
+      "actual_effort_business": "Charge métier réelle",
+      "actual_effort_it": "Charge IT réelle",
+      "actual_start": "Début réel",
+      "actual_end": "Fin réelle",
+      "baseline_effort_business": "Charge métier de référence",
+      "baseline_effort_it": "Charge IT de référence",
+      "baseline_start_date": "Début de référence",
+      "baseline_end_date": "Fin de référence",
+      "business_effort_allocation_mode": "Mode de ventilation de la charge métier",
+      "it_effort_allocation_mode": "Mode de ventilation de la charge IT",
+      "business_sponsor_id": "Sponsor métier",
+      "it_sponsor_id": "Sponsor IT",
+      "category_id": "Catégorie",
+      "source_id": "Source",
+      "stream_id": "Filière",
+      "estimated_effort_business": "Charge métier",
+      "estimated_effort_it": "Charge IT",
+      "execution_progress": "Avancement",
+      "hours": "Heures",
+      "logged_at": "Date",
+      "override_justification": "Justification de la surcharge",
+      "override_value": "Valeur de surcharge",
+      "priority_override": "Surcharge de priorité",
+      "priority_score": "Score de priorité",
+      "scheduling_mode": "Mode de planification",
+      "source_request_id": "Créé à partir de la demande",
+      "target_date": "Date cible",
+      "phase_status": "Statut",
+      "milestone_status": "Statut"
     },
     "history": {
       "empty": "Aucun historique",
@@ -764,7 +793,8 @@
         "renewalStopped": "Renouvellement arrêté",
         "renewalResumed": "Renouvellement repris",
         "descriptionChanged": "Description modifiée",
-        "classificationReviewed": "Classification revue"
+        "classificationReviewed": "Classification revue",
+        "purposeChanged": "Objectif modifié"
       },
       "actors": {
         "assistant": "Plaid",
@@ -915,6 +945,26 @@
         "business_process": {
           "added": "Processus métier ajouté : {{label}}",
           "removed": "Processus métier retiré : {{label}}"
+        },
+        "phase": {
+          "added": "Phase ajoutée : {{label}}",
+          "removed": "Phase retirée : {{label}}"
+        },
+        "milestone": {
+          "added": "Jalon ajouté : {{label}}",
+          "removed": "Jalon retiré : {{label}}"
+        },
+        "time_entry": {
+          "added": "Temps saisi ajouté : {{label}}",
+          "removed": "Temps saisi retiré : {{label}}"
+        },
+        "it_team": {
+          "added": "Membre de l'équipe IT ajouté : {{label}}",
+          "removed": "Membre de l'équipe IT retiré : {{label}}"
+        },
+        "business_team": {
+          "added": "Membre de l'équipe métier ajouté : {{label}}",
+          "removed": "Membre de l'équipe métier retiré : {{label}}"
         }
       },
       "unnamed": {
@@ -969,7 +1019,16 @@
         "binding": "une liaison",
         "person": "une personne",
         "instance": "un environnement",
-        "assignment": "un serveur"
+        "assignment": "un serveur",
+        "phase": "une phase",
+        "milestone": "un jalon",
+        "time_entry": "un temps saisi",
+        "team": "une équipe",
+        "dependency": "une dépendance",
+        "criterion_value": "une option",
+        "portfolio_source": "une source",
+        "portfolio_category": "une catégorie",
+        "portfolio_stream": "une filière"
       },
       "deleted": {
         "record": "un enregistrement supprimé",
@@ -1023,7 +1082,8 @@
         "binding": "une liaison supprimée",
         "person": "une personne supprimée",
         "instance": "un environnement supprimé",
-        "assignment": "un serveur supprimé"
+        "assignment": "un serveur supprimé",
+        "criterion_value": "une option supprimée"
       },
       "title": "Historique",
       "metricsYear": "Indicateurs {{year}}",
@@ -1057,7 +1117,13 @@
         "removed_one": "{{count}} ligne budgétaire hors de votre accès retirée",
         "removed_other": "{{count}} lignes budgétaires hors de votre accès retirées"
       },
-      "instance": "Environnement {{environment}}"
+      "instance": "Environnement {{environment}}",
+      "criterion": "Critère {{name}}",
+      "criterionNoName": "Un critère",
+      "effortAllocationIt": "Part de la charge IT, {{name}}",
+      "effortAllocationBusiness": "Part de la charge métier, {{name}}",
+      "documentUpdated": "Document modifié : {{label}}",
+      "documentUpdatedNoName": "Document modifié"
     },
     "messages": {
       "loadDetailsFailed": "Impossible de charger les détails de l'entrée d'audit."
@@ -1411,6 +1477,14 @@
       "ownerType": {
         "business": "Métier",
         "it": "IT"
+      },
+      "allocationMode": {
+        "auto": "Automatique",
+        "manual": "Manuel"
+      },
+      "effortType": {
+        "it": "IT",
+        "business": "Métier"
       }
     },
     "dataAccess": {

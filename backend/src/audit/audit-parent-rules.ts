@@ -11,6 +11,7 @@ import { documentsParentRules } from './record-history/records/documents';
 import { incidentsParentRules } from './record-history/records/incidents';
 import { interfacesParentRules } from './record-history/records/interfaces';
 import { locationsParentRules } from './record-history/records/locations';
+import { portfolioProjectsParentRules } from './record-history/records/portfolio_projects';
 import { spendItemsParentRules } from './record-history/records/spend_items';
 import { suppliersParentRules } from './record-history/records/suppliers';
 import { technologiesParentRules } from './record-history/records/technologies';
@@ -78,13 +79,15 @@ export type AuditParentRule =
 export const TASK_PARENT_TABLES = {
   contract: 'contracts',
   incident: 'incidents',
+  project: 'portfolio_projects',
 } as const satisfies Readonly<Record<string, RecordHistoryTable>>;
 
 /**
  * A task names its record in the saved task (`related_object_id`), and the record's type beside it.
  * The task's own history reads its rows by `record_id`; the parent is the record it belongs to.
  * `1855900000000-audit-log-parent-contracts-incidents.ts` copies the contract and incident entries
- * in SQL (`__tests__/audit-parent-rules-contracts-incidents.spec.ts` compares them).
+ * in SQL (`__tests__/audit-parent-rules-contracts-incidents.spec.ts` compares them), and
+ * `1855930000000-audit-log-parent-projects.ts` the project entry (`audit-parent-rules-projects.spec.ts`).
  */
 const TASK_PARENT_RULES: Readonly<Record<string, AuditParentRule>> = {
   tasks: { from: 'payload_typed', keys: ['related_object_id'], typeKey: 'related_object_type', tables: TASK_PARENT_TABLES },
@@ -106,6 +109,7 @@ const PARENT_RULE_SETS = [
   incidentsParentRules,
   interfacesParentRules,
   locationsParentRules,
+  portfolioProjectsParentRules,
   spendItemsParentRules,
   suppliersParentRules,
   technologiesParentRules,

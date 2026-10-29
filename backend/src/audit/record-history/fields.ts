@@ -15,6 +15,7 @@ import { documentsFields } from './records/documents';
 import { incidentsFields } from './records/incidents';
 import { interfacesFields } from './records/interfaces';
 import { locationsFields } from './records/locations';
+import { portfolioProjectsFields } from './records/portfolio_projects';
 import { spendItemsFields } from './records/spend_items';
 import { suppliersFields } from './records/suppliers';
 import { technologiesFields } from './records/technologies';
@@ -42,6 +43,7 @@ const FIELD_SETS = [
   incidentsFields,
   interfacesFields,
   locationsFields,
+  portfolioProjectsFields,
   spendItemsFields,
   suppliersFields,
   technologiesFields,

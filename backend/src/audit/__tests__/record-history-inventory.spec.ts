@@ -44,7 +44,7 @@ function testEntries() {
     recordHistoryModules(),
     [
       'accounts', 'analytics', 'applications', 'budget', 'business_processes', 'companies', 'contacts',
-      'contracts', 'cost_centers', 'departments', 'incidents', 'infrastructure', 'knowledge', 'locations', 'suppliers',
+      'contracts', 'cost_centers', 'departments', 'incidents', 'infrastructure', 'knowledge', 'locations', 'portfolio_projects', 'suppliers',
       'working_day_profiles',
     ],
     'the modules of the route guard',

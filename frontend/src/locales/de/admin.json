@@ -723,7 +723,36 @@
       "department_id": "Abteilung",
       "server_role": "Serverrolle",
       "since_date": "Seit",
-      "suite_id": "Suite"
+      "suite_id": "Suite",
+      "actual_effort_business": "Tatsächlicher Fachbereichs-Aufwand",
+      "actual_effort_it": "Tatsächlicher IT-Aufwand",
+      "actual_start": "Tatsächlicher Beginn",
+      "actual_end": "Tatsächliches Ende",
+      "baseline_effort_business": "Fachbereichs-Aufwand (Baseline)",
+      "baseline_effort_it": "IT-Aufwand (Baseline)",
+      "baseline_start_date": "Beginn (Baseline)",
+      "baseline_end_date": "Ende (Baseline)",
+      "business_effort_allocation_mode": "Zuordnungsmodus Fachbereichs-Aufwand",
+      "it_effort_allocation_mode": "Zuordnungsmodus IT-Aufwand",
+      "business_sponsor_id": "Fachbereichssponsor",
+      "it_sponsor_id": "IT-Sponsor",
+      "category_id": "Kategorie",
+      "source_id": "Quelle",
+      "stream_id": "Stream",
+      "estimated_effort_business": "Fachbereichs-Aufwand",
+      "estimated_effort_it": "IT-Aufwand",
+      "execution_progress": "Fortschritt",
+      "hours": "Stunden",
+      "logged_at": "Datum",
+      "override_justification": "Begründung der Überschreibung",
+      "override_value": "Überschreibungswert",
+      "priority_override": "Prioritätsüberschreibung",
+      "priority_score": "Prioritätsscore",
+      "scheduling_mode": "Planungsmodus",
+      "source_request_id": "Erstellt aus Anfrage",
+      "target_date": "Zieldatum",
+      "phase_status": "Status",
+      "milestone_status": "Status"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -764,7 +793,8 @@
         "renewalStopped": "Verlängerung beendet",
         "renewalResumed": "Verlängerung wieder aufgenommen",
         "descriptionChanged": "Beschreibung geändert",
-        "classificationReviewed": "Klassifizierung geprüft"
+        "classificationReviewed": "Klassifizierung geprüft",
+        "purposeChanged": "Zweck geändert"
       },
       "actors": {
         "assistant": "Plaid",
@@ -915,6 +945,26 @@
         "business_process": {
           "added": "Geschäftsprozess hinzugefügt: {{label}}",
           "removed": "Geschäftsprozess entfernt: {{label}}"
+        },
+        "phase": {
+          "added": "Phase hinzugefügt: {{label}}",
+          "removed": "Phase entfernt: {{label}}"
+        },
+        "milestone": {
+          "added": "Meilenstein hinzugefügt: {{label}}",
+          "removed": "Meilenstein entfernt: {{label}}"
+        },
+        "time_entry": {
+          "added": "Zeiteintrag hinzugefügt: {{label}}",
+          "removed": "Zeiteintrag entfernt: {{label}}"
+        },
+        "it_team": {
+          "added": "IT-Teammitglied hinzugefügt: {{label}}",
+          "removed": "IT-Teammitglied entfernt: {{label}}"
+        },
+        "business_team": {
+          "added": "Fachbereichs-Teammitglied hinzugefügt: {{label}}",
+          "removed": "Fachbereichs-Teammitglied entfernt: {{label}}"
         }
       },
       "unnamed": {
@@ -969,7 +1019,16 @@
         "binding": "eine Bindung",
         "person": "eine Person",
         "instance": "eine Umgebung",
-        "assignment": "ein Server"
+        "assignment": "ein Server",
+        "phase": "eine Phase",
+        "milestone": "ein Meilenstein",
+        "time_entry": "ein Zeiteintrag",
+        "team": "ein Team",
+        "dependency": "eine Abhängigkeit",
+        "criterion_value": "eine Option",
+        "portfolio_source": "eine Quelle",
+        "portfolio_category": "eine Kategorie",
+        "portfolio_stream": "ein Stream"
       },
       "deleted": {
         "record": "ein gelöschter Datensatz",
@@ -1023,7 +1082,8 @@
         "binding": "eine gelöschte Bindung",
         "person": "eine gelöschte Person",
         "instance": "eine gelöschte Umgebung",
-        "assignment": "ein gelöschter Server"
+        "assignment": "ein gelöschter Server",
+        "criterion_value": "eine gelöschte Option"
       },
       "title": "Verlauf",
       "metricsYear": "Kennzahlen {{year}}",
@@ -1057,7 +1117,13 @@
         "removed_one": "{{count}} Budgetposition außerhalb Ihres Zugriffs entfernt",
         "removed_other": "{{count}} Budgetpositionen außerhalb Ihres Zugriffs entfernt"
       },
-      "instance": "Umgebung {{environment}}"
+      "instance": "Umgebung {{environment}}",
+      "criterion": "Kriterium {{name}}",
+      "criterionNoName": "Ein Kriterium",
+      "effortAllocationIt": "Anteil IT-Aufwand, {{name}}",
+      "effortAllocationBusiness": "Anteil Fachbereichs-Aufwand, {{name}}",
+      "documentUpdated": "Dokument geändert: {{label}}",
+      "documentUpdatedNoName": "Dokument geändert"
     },
     "messages": {
       "loadDetailsFailed": "Details des Audit-Eintrags konnten nicht geladen werden."
@@ -1411,6 +1477,14 @@
       "ownerType": {
         "business": "Fachbereich",
         "it": "IT"
+      },
+      "allocationMode": {
+        "auto": "Automatisch",
+        "manual": "Manuell"
+      },
+      "effortType": {
+        "it": "IT",
+        "business": "Fachbereich"
       }
     },
     "dataAccess": {

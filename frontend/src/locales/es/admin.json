@@ -723,7 +723,36 @@
       "department_id": "Departamento",
       "server_role": "Rol del servidor",
       "since_date": "Desde",
-      "suite_id": "Suite"
+      "suite_id": "Suite",
+      "actual_effort_business": "Esfuerzo de negocio real",
+      "actual_effort_it": "Esfuerzo IT real",
+      "actual_start": "Inicio real",
+      "actual_end": "Fin real",
+      "baseline_effort_business": "Esfuerzo de negocio de referencia",
+      "baseline_effort_it": "Esfuerzo IT de referencia",
+      "baseline_start_date": "Inicio de referencia",
+      "baseline_end_date": "Fin de referencia",
+      "business_effort_allocation_mode": "Modo de asignación de esfuerzo de negocio",
+      "it_effort_allocation_mode": "Modo de asignación de esfuerzo IT",
+      "business_sponsor_id": "Patrocinador de negocio",
+      "it_sponsor_id": "Patrocinador IT",
+      "category_id": "Categoría",
+      "source_id": "Origen",
+      "stream_id": "Línea",
+      "estimated_effort_business": "Esfuerzo de negocio",
+      "estimated_effort_it": "Esfuerzo IT",
+      "execution_progress": "Avance",
+      "hours": "Horas",
+      "logged_at": "Fecha",
+      "override_justification": "Justificación de la sobrescritura",
+      "override_value": "Valor de sobrescritura",
+      "priority_override": "Sobrescritura de prioridad",
+      "priority_score": "Puntuación de prioridad",
+      "scheduling_mode": "Modo de planificación",
+      "source_request_id": "Creado a partir de solicitud",
+      "target_date": "Fecha objetivo",
+      "phase_status": "Estado",
+      "milestone_status": "Estado"
     },
     "history": {
       "empty": "Todavía no hay historial",
@@ -764,7 +793,8 @@
         "renewalStopped": "Renovación detenida",
         "renewalResumed": "Renovación reanudada",
         "descriptionChanged": "Descripción modificada",
-        "classificationReviewed": "Clasificación revisada"
+        "classificationReviewed": "Clasificación revisada",
+        "purposeChanged": "Objetivo modificado"
       },
       "actors": {
         "assistant": "Plaid",
@@ -915,6 +945,26 @@
         "business_process": {
           "added": "Proceso de negocio añadido: {{label}}",
           "removed": "Proceso de negocio eliminado: {{label}}"
+        },
+        "phase": {
+          "added": "Fase añadida: {{label}}",
+          "removed": "Fase eliminada: {{label}}"
+        },
+        "milestone": {
+          "added": "Hito añadido: {{label}}",
+          "removed": "Hito eliminado: {{label}}"
+        },
+        "time_entry": {
+          "added": "Registro de tiempo añadido: {{label}}",
+          "removed": "Registro de tiempo eliminado: {{label}}"
+        },
+        "it_team": {
+          "added": "Miembro del equipo IT añadido: {{label}}",
+          "removed": "Miembro del equipo IT eliminado: {{label}}"
+        },
+        "business_team": {
+          "added": "Miembro del equipo de negocio añadido: {{label}}",
+          "removed": "Miembro del equipo de negocio eliminado: {{label}}"
         }
       },
       "unnamed": {
@@ -969,7 +1019,16 @@
         "binding": "un enlace",
         "person": "una persona",
         "instance": "un entorno",
-        "assignment": "un servidor"
+        "assignment": "un servidor",
+        "phase": "una fase",
+        "milestone": "un hito",
+        "time_entry": "un registro de tiempo",
+        "team": "un equipo",
+        "dependency": "una dependencia",
+        "criterion_value": "una opción",
+        "portfolio_source": "un origen",
+        "portfolio_category": "una categoría",
+        "portfolio_stream": "una línea"
       },
       "deleted": {
         "record": "un registro eliminado",
@@ -1023,7 +1082,8 @@
         "binding": "un enlace eliminado",
         "person": "una persona eliminada",
         "instance": "un entorno eliminado",
-        "assignment": "un servidor eliminado"
+        "assignment": "un servidor eliminado",
+        "criterion_value": "una opción eliminada"
       },
       "title": "Historial",
       "metricsYear": "Indicadores {{year}}",
@@ -1057,7 +1117,13 @@
         "removed_one": "{{count}} línea presupuestaria fuera de su acceso retirada",
         "removed_other": "{{count}} líneas presupuestarias fuera de su acceso retiradas"
       },
-      "instance": "Entorno {{environment}}"
+      "instance": "Entorno {{environment}}",
+      "criterion": "Criterio {{name}}",
+      "criterionNoName": "Un criterio",
+      "effortAllocationIt": "Parte del esfuerzo IT, {{name}}",
+      "effortAllocationBusiness": "Parte del esfuerzo de negocio, {{name}}",
+      "documentUpdated": "Documento modificado: {{label}}",
+      "documentUpdatedNoName": "Documento modificado"
     },
     "messages": {
       "loadDetailsFailed": "No se pudieron cargar los detalles de la entrada de auditoría."
@@ -1411,6 +1477,14 @@
       "ownerType": {
         "business": "Negocio",
         "it": "IT"
+      },
+      "allocationMode": {
+        "auto": "Automático",
+        "manual": "Manual"
+      },
+      "effortType": {
+        "it": "IT",
+        "business": "Negocio"
       }
     },
     "dataAccess": {
