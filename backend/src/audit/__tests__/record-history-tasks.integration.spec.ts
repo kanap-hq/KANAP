@@ -122,10 +122,24 @@ async function seedAudits(runner: QueryRunner, data: HistorySeed): Promise<Seede
   const by = { userId: allReader.id };
 
   await audit(runner, { table: 'tasks', recordId: task, action: 'create', after: { ...row, description: 'Private first plan' }, ...by });
+  // The portfolio classification, named as on the project.
+  const [{ id: sourceId }] = await runner.query(
+    `INSERT INTO portfolio_sources (tenant_id, name) VALUES ($1, 'Task source') RETURNING id`, [data.tenantId],
+  );
+  const [{ id: categoryId }] = await runner.query(
+    `INSERT INTO portfolio_categories (tenant_id, name) VALUES ($1, 'Task category') RETURNING id`, [data.tenantId],
+  );
+  const [{ id: streamId }] = await runner.query(
+    `INSERT INTO portfolio_streams (tenant_id, category_id, name) VALUES ($1, $2, 'Task stream') RETURNING id`,
+    [data.tenantId, categoryId],
+  );
   await audit(runner, {
     table: 'tasks', recordId: task, action: 'update', ...by,
     before: { ...row, description: 'Private first plan' },
-    after: { ...row, title: 'Follow up now', status: 'in_progress', description: 'Private second plan' },
+    after: {
+      ...row, title: 'Follow up now', status: 'in_progress', description: 'Private second plan',
+      source_id: sourceId, category_id: categoryId, stream_id: streamId,
+    },
   });
 
   const attachment = {
@@ -241,6 +255,9 @@ async function testRecordEntries(seeded: Seeded) {
   assert.deepEqual([title.change.before, title.change.after], ['Follow up', 'Follow up now']);
   assert.deepEqual(one(updated, 'description').change, { field: 'description', text: 'descriptionChanged' }, 'the description says changed, never its text');
   assert.equal(changes(updated, 'related_object').length, 0, 'an update that keeps the record names no record');
+  for (const [field, name] of [['source_id', 'Task source'], ['category_id', 'Task category'], ['stream_id', 'Task stream']] as const) {
+    assert.equal(labelOf(one(updated, field).change.after), name, `${field} is named as on the project`);
+  }
 
   const converted = one(page, 'converted_to_request');
   assert.equal(labelOf(converted.change.after), 'Request Alpha', 'the request it became is named');
@@ -280,6 +297,8 @@ async function testReferencesWithoutModules(seeded: Seeded) {
   assert.deepEqual(one(page, 'converted_to_request').change.after, { hidden: true, kind: 'request' });
   assert.deepEqual(one(page, 'application', 'added').change.after, { hidden: true, kind: 'application' });
   assert.deepEqual(one(page, 'asset', 'added').change.after, { hidden: true, kind: 'asset' });
+  const updated = page.items.find((item) => item.subject.kind === 'record' && item.action === 'update' && item.changes.some((change) => change.field === 'source_id'));
+  assert.equal(labelOf(updated?.changes.find((change) => change.field === 'source_id')?.after), 'Task source', 'the classification is named for every reader of the task');
   const serialized = JSON.stringify(page);
   for (const name of ['Main line', 'BL-1', 'Request Alpha', 'REQ-11', 'Ledger App', 'APP-42', 'Server One', 'AST-1']) {
     assert.ok(!serialized.includes(name), `not named without its module: ${name}`);

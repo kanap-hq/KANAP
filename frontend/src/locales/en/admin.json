@@ -803,9 +803,6 @@
         "classificationReviewed": "Classification reviewed",
         "taskTypeChanged": "Task type changed",
         "phaseChanged": "Phase changed",
-        "sourceChanged": "Source changed",
-        "categoryChanged": "Category changed",
-        "streamChanged": "Stream changed",
         "purposeChanged": "Purpose changed"
       },
       "actors": {

@@ -79,6 +79,10 @@ const TASK_FIELDS: HistoryFields = {
   assignee_user_id: shown('user'),
   creator_id: shown('user'),
   company_id: shown('company'),
+  // The portfolio classification, named as on the project.
+  source_id: shown('portfolio_source'),
+  category_id: shown('portfolio_category'),
+  stream_id: shown('portfolio_stream'),
   // Rich text: the entry says that the description changed, never its content.
   description: hiddenChanged('task description: rich text, long content', 'descriptionChanged'),
   // The record the task belongs to: the presenter reads the type and the id together, as one line.
@@ -90,9 +94,6 @@ const TASK_FIELDS: HistoryFields = {
   // Settings of the task screen with no reference family: the entry says that they changed.
   task_type_id: hiddenChanged('task type setting: no reference family', 'taskTypeChanged'),
   phase_id: hiddenChanged('project phase: no reference family', 'phaseChanged'),
-  source_id: hiddenChanged('portfolio source setting: no reference family', 'sourceChanged'),
-  category_id: hiddenChanged('portfolio category setting: no reference family', 'categoryChanged'),
-  stream_id: hiddenChanged('portfolio stream setting: no reference family', 'streamChanged'),
   // Written beside the saved row by the conversion into a request: the presenter names the request.
   converted_to_request_id: hidden('conversion marker, presented as its own sentence'),
   item_number: hidden('business reference, never a change'),
