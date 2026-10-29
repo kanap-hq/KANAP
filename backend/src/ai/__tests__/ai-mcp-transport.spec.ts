@@ -151,9 +151,13 @@ async function testInitializeAdvertisesTools(url: string) {
   assert.match(instructions, /rights of the person/);
   assert.match(instructions, /start with search_all/);
   assert.match(instructions, /describe_entity_filters[^.]*before|Before query_entities[^.]*describe_entity_filters/);
-  for (const family of ['cost centers', 'calendars', 'exchange rates', 'audit log', 'AI agents']) {
+  for (const family of ['audit log', 'AI agents']) {
     assert.ok(instructions.includes(family), family);
   }
+  // The reference data are read (Plaid L9): searched by search_all, the rates by query_entities only.
+  assert.match(instructions, /start with search_all \(names, codes and references such as APP-4; cost centers, calendars and dimensions included\)/);
+  assert.match(instructions, /Exchange rates: query_entities on exchange_rates\./);
+  assert.doesNotMatch(instructions, /does not read cost centers|does not read[^.]*(calendars|exchange rates)/);
   // Roles and data access are read only for an administrator of users with access to all data.
   assert.match(instructions, /reads roles and data access settings only for a person who administers users with access to all data/);
   assert.ok(instructions.length < 1200, `instructions stay short (${instructions.length})`);
