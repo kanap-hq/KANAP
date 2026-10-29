@@ -537,7 +537,7 @@ async function testEstateAndMatching(harness: Harness, runner: QueryRunner, s: S
     assert.deepEqual([inEstateCritical.total, inEstateCritical.distinct_total], [2, 1], 'the home tile\'s recipe: estate, severity, published_at');
 
     assert.deepEqual(await ids({ matching: ['false'] }), [s.rows.r3], 'no longer matching');
-    assert.deepEqual((await list(harness, runner, s, { filters: { matching: ['false'] } })).total, 0, 'never to review: out of the default rows');
+    assert.deepEqual((await list(harness, runner, s, { filters: { matching: ['false'] } })).total, 0, 'r3 is handled: out of the default rows');
     assert.equal(byId.get(s.rows.r3).metadata.matching, false);
     assert.equal(byId.get(s.rows.r1).metadata.matching, true);
     const detail = await harness.executor.executeDetail(ctx(runner, s, 'full'), { entity_type: 'vulnerabilities', entity_id: s.rows.r3 });
@@ -627,10 +627,22 @@ async function testFeedOff(harness: Harness, runner: QueryRunner, s: Seed) {
       ['get_filter_values', { entity_type: 'vulnerabilities', fields: ['state'] }],
       ['get_entity_detail', { entity_type: 'vulnerabilities', entity_id: s.cve.c1 }],
     ] as const) {
-      await rejects(runner, () => harness.tools.execute(ctx(runner, s, 'admin'), tool, input), /vulnerabilityFeed is not available/, `${tool}, feed off`);
+      await rejects(runner, () => harness.tools.execute(ctx(runner, s, 'admin'), tool, input), /^Vulnerability tracking is turned off in this deployment\./, `${tool}, feed off`);
     }
-    await rejects(runner, () => harness.executor.execute(ctx(runner, s, 'admin'), { entity_type: 'vulnerabilities' }), /vulnerabilityFeed/,
+    await rejects(runner, () => harness.executor.execute(ctx(runner, s, 'admin'), { entity_type: 'vulnerabilities' }), /^Vulnerability tracking is turned off in this deployment\./,
       'the list itself refuses, whatever the caller');
+    // The family rule of the policy: the same plain sentence; the feature's code stays internal.
+    await runner.query('SAVEPOINT family_rule');
+    try {
+      await harness.policy.assertEntityTypeReadAccess(ctx(runner, s, 'admin'), 'vulnerabilities', runner.manager);
+      assert.fail('the family rule should refuse');
+    } catch (error: any) {
+      if (error?.code === 'ERR_ASSERTION') throw error;
+      assert.equal(error.message, 'Vulnerability tracking is turned off in this deployment.');
+      assert.deepEqual([error.getResponse().code, error.getResponse().feature], ['FEATURE_DISABLED', 'vulnerabilityFeed'], 'the code, for the program only');
+    } finally {
+      await runner.query('ROLLBACK TO SAVEPOINT family_rule');
+    }
     const readable = await harness.policy.listReadableEntityTypes(ctx(runner, s, 'admin'), ['technologies', 'vulnerabilities'], runner.manager);
     assert.deepEqual(readable, ['technologies'], 'left out of the readable families');
     assert.equal(await harness.policy.canReadEntityType(ctx(runner, s, 'admin'), 'vulnerabilities', runner.manager), false);

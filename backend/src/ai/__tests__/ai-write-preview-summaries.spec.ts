@@ -478,7 +478,7 @@ function testTechnologyPeopleLinksAndAlertsCards() {
     current_values: target,
   });
   assert.equal(summary(alerts, alertsPreview, 'en'), 'Set the vulnerability alerts of TEC-1 - PostgreSQL.');
-  assert.equal(summary(alerts, alertsPreview, 'fr'), 'Modification des alertes de failles de « TEC-1 - PostgreSQL ».');
+  assert.equal(summary(alerts, alertsPreview, 'fr'), 'Modification des alertes de vulnérabilité de « TEC-1 - PostgreSQL ».');
   assert.equal(
     alerts.presentPreview(alertsPreview, 'en').changes.technology_vulnerability_alerts.to,
     '- off'

@@ -255,7 +255,7 @@ export const writeActionText = {
   /** The vulnerability alert setting and the version exceptions of a technology. */
   setTechnologyVulnerabilityAlerts(language: AiTranslatedWriteLanguage, subject: string): string {
     switch (language) {
-      case 'fr': return `modification des alertes de failles de ${subject}`;
+      case 'fr': return `modification des alertes de vulnérabilité de ${subject}`;
       case 'de': return `Sicherheitswarnungen von ${subject} ändern`;
       case 'es': return `modificación de las alertas de vulnerabilidades de ${subject}`;
     }

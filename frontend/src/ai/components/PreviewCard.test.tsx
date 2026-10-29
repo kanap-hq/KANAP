@@ -379,7 +379,7 @@ describe('PreviewCard in French', () => {
     renderCard(preview({
       tool_name: 'set_technology_vulnerability_alerts',
       target: { entity_type: 'technologies', entity_id: 'tec-1', ref: 'TEC-1', title: 'TEC-1 - PostgreSQL' },
-      summary: 'Modification des alertes de failles de « TEC-1 - PostgreSQL ».',
+      summary: 'Modification des alertes de vulnérabilité de « TEC-1 - PostgreSQL ».',
       changes: {
         technology_vulnerability_alerts: {
           label: 'Vulnerability alerts',
@@ -389,7 +389,7 @@ describe('PreviewCard in French', () => {
         },
       },
     }));
-    expect(screen.getAllByText('Alertes de failles').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Alertes de vulnérabilité').length).toBeGreaterThan(0);
     expect(screen.getByText('désactivées')).toBeInTheDocument();
     expect(screen.getByText('2 exceptions de version seront effacées : 14, 16')).toBeInTheDocument();
   });

@@ -167,7 +167,7 @@ export const vulnerabilitiesRegistry: AiEntityFilterRegistry = {
       ai: 'matching',
       grid: 'matching',
       type: 'set',
-      description: 'Whether the matching still finds the row. false: the CVE no longer matches the technology version; the row was kept for its review state (handled or not_affected), and the page marks it as no longer matching. Such a row is never to review: matching false needs a state filter (all, handled or not_affected).',
+      description: 'Whether the matching still finds the row. false: the CVE no longer matches the technology version; the row was kept for its review state (handled or not_affected), and the page marks it as no longer matching. A row that no longer matches and is to review (put back there since) disappears at the next matching; the others stay with matching false. To list them, add a state filter (all, handled or not_affected): the default keeps the rows to review only.',
       values: ['true', 'false'],
       discoverable: true,
       sortable: false,
