@@ -1705,6 +1705,21 @@ async function testTechnologyPeopleContactsRight(harness: Harness) {
       'You need the right to read contacts, which your role does not give. An administrator can add it to your role.',
     );
   });
+  // A removal names a contact the Operations tab already shows: it needs no contacts read.
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-people-contacts-right-removal', seed.users.serverOnly);
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_people', {
+      technology: 'TEC-1',
+      support_contacts: { remove: [{ contact: 'Oracle Support' }] },
+    });
+    assert.equal(preview.changes.technology_support_contacts.to, '**Removed**\n- Oracle Support (role: Support)');
+    await approvePreview(harness, ctx, preview);
+    const rows = await runner.query(
+      `SELECT 1 FROM technology_support_contacts WHERE tenant_id = $1 AND technology_id = $2 AND contact_id = $3`,
+      [seed.tenantId, seed.technologies.postgres, seed.contacts.oracle],
+    );
+    assert.equal(rows.length, 0, 'the removal passes without the contacts read');
+  });
   await withSeededTransaction(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'technology-people-contacts-right-execution');
     await runner.query(
@@ -1723,6 +1738,41 @@ async function testTechnologyPeopleContactsRight(harness: Harness) {
       () => harness.previews.executePreview(ctx, preview.preview_id),
       'You need the right to read contacts, which your role does not give. An administrator can add it to your role.',
     );
+  });
+  // The undo of a contact addition is a removal: it passes without the contacts read, and the
+  // addition itself stays refused once the right is gone.
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-people-contacts-right-undo');
+    const [sage] = await runner.query(
+      `INSERT INTO contacts (tenant_id, first_name, last_name, email)
+       VALUES ($1, 'Sage', 'Support', 'sage-undo-right@example.test') RETURNING id`,
+      [seed.tenantId],
+    );
+    const add = await executeToolPreview(harness, ctx, 'update_technology_people', {
+      technology: 'TEC-1',
+      support_contacts: { add: [{ contact: 'Sage Support' }] },
+    });
+    await approvePreview(harness, ctx, add);
+    await runner.query(
+      `DELETE FROM role_permissions WHERE tenant_id = $1 AND role_id = $2 AND resource = 'contacts'`,
+      [seed.tenantId, seed.roles.member],
+    );
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'update_technology_people', {
+        technology: 'TEC-1',
+        support_contacts: { add: [{ contact: 'Oracle Support' }] },
+      }),
+      'You need the right to read contacts, which your role does not give. An administrator can add it to your role.',
+    );
+    const undo = await harness.tools.execute(ctx, 'undo_preview', { preview_id: add.preview_id }) as any;
+    assert.equal(undo.status, 'pending', undo.error_message);
+    assert.match(undo.changes.technology_support_contacts.to, /^\*\*Support contacts restored\*\*/);
+    await approvePreview(harness, ctx, undo);
+    const rows = await runner.query(
+      `SELECT 1 FROM technology_support_contacts WHERE tenant_id = $1 AND technology_id = $2 AND contact_id = $3`,
+      [seed.tenantId, seed.technologies.postgres, String(sage.id)],
+    );
+    assert.equal(rows.length, 0, 'the undo of the add removes the contact without the contacts read');
   });
 }
 

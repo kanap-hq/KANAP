@@ -384,19 +384,18 @@ export class AiMutationPreviewService {
     context: AiExecutionContextWithManager,
     operation: ReturnType<AiMutationOperationRegistry['getOperation']>,
     family: string,
-    params: { input?: unknown; preview?: AiMutationPreview },
+    params: { input?: unknown },
     mutationInput?: Record<string, unknown> | null,
   ): Promise<void> {
     // A technology link touches applications when either side of the request names one: the
-    // preparation input (`applications`), or the stored changes of a preview being run or
-    // undone (`mutation_input.changes.applications`).
+    // preparation input (`applications`), or the change being run or undone
+    // (`mutationInput.changes.applications`). A stored preview is read through the change its
+    // caller passes, never through the preview's own input: an undo is its reverse change.
     const linkNamesApplications = operation.toolName === 'update_technology_links'
       && [
         (params.input as { applications?: unknown } | null | undefined)?.applications,
         mutationInput?.applications,
         (mutationInput?.changes as Record<string, unknown> | null | undefined)?.applications,
-        params.preview?.mutation_input?.applications,
-        (params.preview?.mutation_input?.changes as Record<string, unknown> | null | undefined)?.applications,
       ].some((group) => this.applicationGroupHasEntries(group));
     // A technology people write adds support contacts when the request does: choosing a contact
     // needs the contacts read, as the Operations tab's picker. Removing one names a contact the
@@ -405,11 +404,9 @@ export class AiMutationPreviewService {
       && [
         (params.input as { support_contacts?: unknown } | null | undefined)?.support_contacts,
         mutationInput?.support_contacts,
-        params.preview?.mutation_input?.support_contacts,
       ].some((group) => this.applicationGroupAdds(group));
     const relation = mutationInput?.relation
       ?? (params.input as { relation?: unknown } | null | undefined)?.relation
-      ?? params.preview?.mutation_input?.relation
       ?? (linkNamesApplications ? 'applications' : undefined)
       ?? (peopleAddContacts ? 'support_contacts' : undefined);
     const requirement = aiRelationTargetRequirement(operation.toolName, family, relation);
