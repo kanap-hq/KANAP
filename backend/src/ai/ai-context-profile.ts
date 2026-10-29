@@ -300,6 +300,11 @@ const URL_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEntityType }
   { pattern: /\/master-data\/departments\//i, entityType: 'departments' },
   { pattern: /\/master-data\/suppliers\//i, entityType: 'suppliers' },
   { pattern: /\/master-data\/business-processes\//i, entityType: 'business_processes' },
+  // The reference data pages (Plaid L9). Their families have no write tool: they stay out of
+  // MASTER_DATA_ENTITY_TYPES, which routes the writes.
+  { pattern: /\/master-data\/cost-centers\//i, entityType: 'cost_centers' },
+  { pattern: /\/master-data\/working-day-calendars\//i, entityType: 'working_day_calendars' },
+  { pattern: /\/master-data\/analytics\/dimensions\//i, entityType: 'analytics_axes' },
 ];
 
 const TASK_ENTITY_TYPES = new Set<AiQueryEntityType>(['tasks']);

@@ -36,6 +36,43 @@ const L8_REPORT_PHRASES = [
   'Budget by supplier over three years',
 ];
 
+/**
+ * The reference data questions of Plaid L9 (carte §5), in French and in English: each is a read,
+ * with the tool that answers it and the family it reads, listed among the readable families.
+ * "Qui est responsable de FR-TRV-600 ?" holds a reference (TRV-600) and reads as an inspection,
+ * whose tools give the node's detail and a list; a count of the lines of a cost center is the
+ * `total` of query_entities on budget_lines.
+ */
+const L9_REFERENCE_DATA_PHRASES: Array<{ prompt: string; profile: AiContextProfileName; tool: string; family: string }> = [
+  { prompt: 'Qui est responsable du centre DSI-GRP ?', profile: 'read_query', tool: 'get_entity_detail', family: 'cost_centers' },
+  { prompt: 'Who is the budget holder of DSI-GRP?', profile: 'read_query', tool: 'get_entity_detail', family: 'cost_centers' },
+  { prompt: 'Qui est responsable de FR-TRV-600 ?', profile: 'entity_inspection', tool: 'get_entity_detail', family: 'cost_centers' },
+  { prompt: 'Quels centres de coûts dépendent de Group IT ?', profile: 'read_query', tool: 'query_entities', family: 'cost_centers' },
+  { prompt: 'Which cost centers sit under Group IT?', profile: 'read_query', tool: 'query_entities', family: 'cost_centers' },
+  { prompt: 'Cherche le centre de coûts Group IT', profile: 'read_query', tool: 'search_all', family: 'cost_centers' },
+  { prompt: 'Find the cost center Group IT', profile: 'read_query', tool: 'search_all', family: 'cost_centers' },
+  { prompt: 'Quels centres n\'ont pas de responsable ?', profile: 'read_query', tool: 'query_entities', family: 'cost_centers' },
+  { prompt: 'Quelles dimensions sont obligatoires ?', profile: 'read_query', tool: 'query_entities', family: 'analytics_axes' },
+  { prompt: 'Which dimensions are mandatory?', profile: 'read_query', tool: 'query_entities', family: 'analytics_axes' },
+  { prompt: 'Quelles dimensions ne concernent que le CAPEX ?', profile: 'read_query', tool: 'query_entities', family: 'analytics_axes' },
+  { prompt: 'Combien de valeurs a la dimension IT tower ?', profile: 'read_query', tool: 'get_entity_detail', family: 'analytics_axes' },
+  { prompt: 'Quel taux EUR/USD pour 2026 ?', profile: 'read_query', tool: 'query_entities', family: 'exchange_rates' },
+  { prompt: 'What\'s the EUR/USD rate for 2026?', profile: 'read_query', tool: 'query_entities', family: 'exchange_rates' },
+  { prompt: 'Quelle est la devise de reporting ?', profile: 'read_query', tool: 'query_entities', family: 'exchange_rates' },
+  { prompt: 'Quels taux manquent ?', profile: 'read_query', tool: 'query_entities', family: 'exchange_rates' },
+  { prompt: 'Which exchange rates are missing?', profile: 'read_query', tool: 'query_entities', family: 'exchange_rates' },
+  { prompt: 'Quels taux sont saisis à la main ?', profile: 'read_query', tool: 'query_entities', family: 'exchange_rates' },
+  { prompt: 'Combien de jours ouvrés en 2026 en France ?', profile: 'read_query', tool: 'get_entity_detail', family: 'working_day_calendars' },
+  { prompt: 'How many working days in 2026 in France?', profile: 'read_query', tool: 'get_entity_detail', family: 'working_day_calendars' },
+  { prompt: 'Quels calendriers existent ?', profile: 'read_query', tool: 'query_entities', family: 'working_day_calendars' },
+  { prompt: 'Qui a modifié le centre FR-TRV-600 ?', profile: 'read_query', tool: 'get_record_history', family: 'cost_centers' },
+  { prompt: 'Combien de lignes sur FR-TRV-400 ?', profile: 'entity_inspection', tool: 'query_entities', family: 'budget_lines' },
+  // The pages of the reference data: an inspection of the record the address names.
+  { prompt: 'Qui est responsable de /master-data/cost-centers/0b0e7c4e-1111-4222-8333-944455556666 ?', profile: 'entity_inspection', tool: 'get_entity_detail', family: 'cost_centers' },
+  { prompt: 'Combien de jours ouvrés en 2026 sur /master-data/working-day-calendars/0b0e7c4e-1111-4222-8333-944455556666 ?', profile: 'entity_inspection', tool: 'get_entity_detail', family: 'working_day_calendars' },
+  { prompt: 'Is /master-data/analytics/dimensions/0b0e7c4e-1111-4222-8333-944455556666 mandatory?', profile: 'entity_inspection', tool: 'get_entity_detail', family: 'analytics_axes' },
+];
+
 const FIXTURE_ROWS: Row[] = [
   // Incident administrator writes: an INC reference and an imperative verb.
   { prompt: 'Rouvre INC-3', profile: 'write_business', mode: 'write' },
@@ -542,6 +579,9 @@ const FIXTURE_ROWS: Row[] = [
   // by month, the consolidation account, a crossing of two fields, several columns or years) and
   // of the chargeback families, through the common read tools.
   ...L8_REPORT_PHRASES.map((prompt) => ({ prompt, profile: 'read_query' as const, mode: 'read' as const, tools: ['aggregate_entities', 'query_entities', 'describe_entity_filters'] })),
+
+  // Plaid L9: the reference data questions are reads, with the tool that answers them.
+  ...L9_REFERENCE_DATA_PHRASES.map(({ prompt, profile, tool }) => ({ prompt, profile, mode: profile === 'entity_inspection' ? 'entity' as const : 'read' as const, tools: [tool] })),
 ];
 
 function testTheTable() {
@@ -677,8 +717,20 @@ function testTheReportPhrasesListTheReadableFamilies() {
   }
 }
 
+/** The reference data phrases read their family: a family of the read tools, listed among the readable ones. */
+function testTheReferenceDataPhrasesReadTheirFamily() {
+  const { AI_QUERY_ENTITY_TYPES } = require('../ai.types');
+  for (const { prompt, family } of L9_REFERENCE_DATA_PHRASES) {
+    assert.ok((AI_QUERY_ENTITY_TYPES as readonly string[]).includes(family), `${prompt}: ${family} is a family of the read tools`);
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.includeReadableEntityTypes, true, `${prompt}: the readable families are listed`);
+    assert.equal(profile.toolNames.some((tool) => /^(create|update|delete|prepare)_/.test(tool)), false, `${prompt}: no write tool`);
+  }
+}
+
 function run() {
   testTheTable();
+  testTheReferenceDataPhrasesReadTheirFamily();
   testTheReportPhrasesListTheReadableFamilies();
   testTheAccessWritesCarryNoAccessTool();
   testTheTechnologyLinkPhrasesCarryTheTool();
