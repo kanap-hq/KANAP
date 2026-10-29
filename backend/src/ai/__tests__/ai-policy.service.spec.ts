@@ -151,6 +151,15 @@ async function testListReadableEntityTypesFiltersUnreadableFamilies() {
   );
 
   assert.deepEqual(readable, ['applications', 'tasks']);
+
+  // Master data (Plaid L9): each family with the right of its page, the budget right alone reads neither.
+  const chat = { tenantId: 'tenant-1', userId: 'user-1', isPlatformHost: false, surface: 'chat' as const, authMethod: 'jwt' as const };
+  const families = ['working_day_calendars', 'analytics_axes'] as any[];
+  const readableWith = (rights: Array<[string, string]>) =>
+    createPolicy({ permissions: new Map([['ai_chat', 'reader'], ...rights]) as any }).listReadableEntityTypes(chat, families, createManager());
+  assert.deepEqual(await readableWith([['working_day_profiles', 'reader']]), ['working_day_calendars']);
+  assert.deepEqual(await readableWith([['analytics', 'reader']]), ['analytics_axes']);
+  assert.deepEqual(await readableWith([['budget', 'admin'], ['reporting', 'admin']]), []);
   Features.AI_CHAT_ENABLED = originalFeature;
 }
 
@@ -672,7 +681,16 @@ async function testMissingRightIsSaidInPlainWords() {
   assert.equal(missingRightMessage('portfolio_projects', 'member'), 'You need the right to modify projects, which your role does not give. An administrator can add it to your role.');
   assert.equal(missingRightMessage('budget', 'reader'), 'You need the right to read budget lines, which your role does not give. An administrator can add it to your role.');
   assert.match(missingRightMessage('ai_chat', 'member'), /^Your role lets you ask Plaid questions but not prepare changes with it/);
-  for (const [resource, level] of [['budget', 'reader'], ['infrastructure', 'reader'], ['applications', 'member'], ['knowledge', 'reader']] as const) {
+  // Master data (Plaid L9): the right of each page, named in words with its screen.
+  assert.equal(
+    missingRightMessage('working_day_profiles', 'reader', 'Master data › Working-day calendars'),
+    'You need the right to read working-day calendars (the right the Master data › Working-day calendars screen asks for), which your role does not give. An administrator can add it to your role.',
+  );
+  assert.equal(
+    missingRightMessage('analytics', 'reader', 'Master data › Analytics dimensions'),
+    'You need the right to read analytics dimensions (the right the Master data › Analytics dimensions screen asks for), which your role does not give. An administrator can add it to your role.',
+  );
+  for (const [resource, level] of [['budget', 'reader'], ['infrastructure', 'reader'], ['applications', 'member'], ['knowledge', 'reader'], ['working_day_profiles', 'reader']] as const) {
     assert.doesNotMatch(missingRightMessage(resource, level), /:|reader|member/, `${resource}: no permission code`);
   }
 }

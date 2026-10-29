@@ -34,7 +34,8 @@ import { seedMonths, seedVersion } from '../../spend/__tests__/round-inputs.fixt
 //   person's access, without which the field reads null for everyone.
 // - The chargeback reports (`chargeback`, `chargeback_lines`) read one year and, for the lines, one
 //   company: every call names them (`REQUIRED_FILTERS`); their year takes `eq` only, any other
-//   operator refused in words.
+//   operator refused in words. The working-day calendars' year takes `eq` only too, within the
+//   calendars' years (2000 to 2100).
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -51,7 +52,10 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
  * statements they send. Their behaviour is asserted on `filters_applied` and the result, and by
  * their own spec.
  */
-const IN_MEMORY_FAMILIES = new Set(['support_gaps', 'support_deadlines', 'roles', 'role_permissions', 'data_access', 'chargeback', 'chargeback_lines', 'cost_centers']);
+const IN_MEMORY_FAMILIES = new Set([
+  'support_gaps', 'support_deadlines', 'roles', 'role_permissions', 'data_access', 'chargeback', 'chargeback_lines',
+  'cost_centers', 'working_day_calendars', 'analytics_axes',
+]);
 
 /** The year of the seeded chargeback: outside the window of the budget line fields (y-2 to y+2). */
 const CHARGEBACK_YEAR = 2031;
@@ -66,7 +70,14 @@ const REQUIRED_FILTERS: Record<string, Record<string, unknown>> = {
 };
 
 /** Number fields that take one value (`eq`): a report reads one year, the other operators are refused. */
-const EQ_ONLY_FIELDS: Record<string, Set<string>> = { chargeback: new Set(['year']), chargeback_lines: new Set(['year']) };
+const EQ_ONLY_FIELDS: Record<string, Set<string>> = {
+  chargeback: new Set(['year']),
+  chargeback_lines: new Set(['year']),
+  working_day_calendars: new Set(['year']),
+};
+
+/** The year an eq-only field is probed with: one its family reads (a calendar reads 2000 to 2100). */
+const EQ_ONLY_PROBE_YEAR: Record<string, number> = { working_day_calendars: CHARGEBACK_YEAR };
 
 function withRequired(input: Record<string, unknown>): Record<string, unknown> {
   const required = REQUIRED_FILTERS[String(input.entity_type)];
@@ -234,6 +245,14 @@ async function seedTenant(runner: QueryRunner): Promise<Seed> {
     const versionId = await seedVersion(runner, 'opex', tenantId, itemId, CHARGEBACK_YEAR);
     await seedMonths(runner, 'opex', tenantId, versionId, CHARGEBACK_YEAR, { planned: [1200, ...Array(11).fill(0)] });
   }
+  // Two custom calendars and two disabled dimensions (no budget_lines field), besides the default one.
+  await pair('working_day_calendars', (n, at) => insertId(runner,
+    `INSERT INTO working_day_profiles (tenant_id, code, name, days_by_year, created_at, updated_at) VALUES ($1, $2, $3, '{}'::jsonb, $4, $4)`,
+    [tenantId, `CAL${n}`, `Calendar ${n}`, at]));
+  await pair('analytics_axes', (n, at) => insertId(runner,
+    `INSERT INTO analytics_axes (tenant_id, code, name, sort_order, status, disabled_at, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, 'disabled', '2020-01-01T12:00:00Z', $5, $5)`,
+    [tenantId, `contract${n}`, `Contract dimension ${n}`, n, at]));
   await pair('projects', (n, at) => insertId(runner,
     `INSERT INTO portfolio_projects (tenant_id, name, item_number, created_at, updated_at) VALUES ($1, $2, $3, $4, $4)`,
     [tenantId, `Project ${n}`, n, at]));
@@ -304,7 +323,7 @@ async function runQuery(runner: QueryRunner, executor: any, ctx: any, requested:
 }
 
 function probeValue(entityType: string, name: string, field: any): unknown {
-  if (EQ_ONLY_FIELDS[entityType]?.has(name)) return { op: 'eq', value: 2999 };
+  if (EQ_ONLY_FIELDS[entityType]?.has(name)) return { op: 'eq', value: EQ_ONLY_PROBE_YEAR[entityType] ?? 2999 };
   if (field.type === 'set') return [field.values?.find((value: unknown) => value !== null) ?? '__contract_probe__'];
   if (field.type === 'text') return '__contract_probe__';
   if (field.type === 'number') return { op: 'gt', value: 123456789 };

@@ -722,6 +722,9 @@ async function testRecordHistoryOfferFollowsTheFamilyRights() {
   assert.equal(await offered(['budget_lines']), true, 'a reader of the budget');
   assert.equal(await offered(['projects']), true, 'a reader of projects');
   assert.equal(await offered(['users', 'vulnerabilities', 'roles']), false, 'no family with a history');
+  // Master data (Plaid L9): a calendar's History tab is its table working_day_profiles, a dimension's analytics_axes.
+  assert.equal(await offered(['working_day_calendars']), true, 'a reader of working-day calendars');
+  assert.equal(await offered(['analytics_axes']), true, 'a reader of analytics dimensions');
   assert.equal(await offered(['technologies'], null), false, 'a registry without the history service');
 
   const calls: any[] = [];
@@ -736,6 +739,9 @@ async function testRecordHistoryOfferFollowsTheFamilyRights() {
   );
   const schema = registry.toToolJsonSchemas([{ name: 'get_record_history' }])[0];
   assert.ok((schema.parameters as any).properties.entity_type.enum.includes('applications'), 'an application is accepted, to be refused in words');
+  for (const family of ['working_day_calendars', 'analytics_axes']) {
+    assert.ok((schema.parameters as any).properties.entity_type.enum.includes(family), `${family}: its History tab is read`);
+  }
   assert.match(schema.description, /budget lines, business processes/);
   assert.equal(registry.listRegisteredTools().find((tool) => tool.name === 'get_record_history')?.category, 'inspection');
 }
@@ -1769,6 +1775,11 @@ async function testInvalidInputNamesTheFieldAndWhy() {
   const more = new Map(registry.toToolJsonSchemas([{ name: 'aggregate_entities' }, { name: 'get_record_history' }]).map((schema) => [schema.name, schema.parameters]));
   assert.ok((more.get('aggregate_entities') as any).properties.entity_type.enum.includes('cost_centers'), 'the cost centers are grouped');
   assert.ok((more.get('get_record_history') as any).properties.entity_type.enum.includes('cost_centers'), 'a cost center has its history');
+  // Master data › Working-day calendars and Analytics dimensions (Plaid L9): listed, grouped, and a detail by code.
+  for (const family of ['working_day_calendars', 'analytics_axes']) {
+    assert.ok(queried.includes(family), `${family} is listed`);
+    assert.match(enumValue, new RegExp(`"${family}"`), enumValue);
+  }
 
   const nested = refusal('query_entities', { entity_type: 'budget_lines', sort: { field: 'y_budget', direction: 'down' }, page: 'two' });
   assert.match(nested, /"sort.direction" must be one of: "asc", "desc"/, nested);

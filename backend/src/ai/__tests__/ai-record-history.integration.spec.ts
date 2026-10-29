@@ -163,9 +163,10 @@ async function testFamilyWithoutHistory(seeded: Seeded) {
       assert.match(error.message, /^This record has no history in KANAP: users have no History tab\./);
       assert.match(error.message, /budget lines/);
       assert.match(error.message, /technologies/);
-      // Cost centers have their family since Plaid L9, lot A.
+      // Cost centers, working-day calendars and analytics dimensions have their History tab (Plaid L9).
       assert.match(error.message, /cost centers/);
-      assert.doesNotMatch(error.message, /working day/);
+      assert.match(error.message, /working day calendars/);
+      assert.match(error.message, /analytics axes/);
       console.log(`  refusal: ${error.message}`);
       return true;
     },
@@ -183,6 +184,9 @@ async function testFamilyWithoutHistory(seeded: Seeded) {
   for (const entityType of ['contracts', 'applications', 'tasks', 'incidents'] as const) {
     assert.equal(AI_RECORD_HISTORY_TABLES.get(entityType), entityType, `${entityType} has a history`);
   }
+  // A working-day calendar reads the table of its page, a dimension its own name.
+  assert.equal(AI_RECORD_HISTORY_TABLES.get('working_day_calendars'), 'working_day_profiles');
+  assert.equal(AI_RECORD_HISTORY_TABLES.get('analytics_axes'), 'analytics_axes');
   console.log('  a family without a History tab is refused in words, the six linked records have one: OK');
 }
 
