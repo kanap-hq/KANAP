@@ -38,6 +38,7 @@ const MCP_CORE_READ_CAPABILITIES = [
   'get_entity_detail',
   'get_entity_context',
   'get_entity_comments',
+  'get_record_history',
   'search_knowledge',
   'get_document',
   'web_search',
