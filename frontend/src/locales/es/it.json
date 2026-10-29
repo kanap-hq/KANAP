@@ -296,6 +296,7 @@
         "searchLabel": "Buscar en el catálogo",
         "searchPlaceholder": "p. ej., SQL Server",
         "noMatch": "Ninguna entrada del catálogo coincide.",
+        "alreadyHeading": "Ya en sus tecnologías",
         "manualLink": "Introducir una tecnología que no está en el catálogo",
         "backToCatalog": "Volver al catálogo",
         "completes": "Completa {{reference}}"

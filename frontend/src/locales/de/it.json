@@ -296,6 +296,7 @@
         "searchLabel": "Im Katalog suchen",
         "searchPlaceholder": "z. B. SQL Server",
         "noMatch": "Kein Katalogeintrag passt.",
+        "alreadyHeading": "Bereits in Ihren Technologien",
         "manualLink": "Eine Technologie erfassen, die nicht im Katalog steht",
         "backToCatalog": "Zurück zum Katalog",
         "completes": "Ergänzt {{reference}}"
