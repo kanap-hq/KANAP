@@ -929,6 +929,56 @@ export function readAnalyticsLines(
   return byValue;
 }
 
+/** The OPEX and CAPEX sums of one value (or of the total), per year. FTE: a year neither nature declares is null. */
+export type AnalyticsNatureSplit = { opex: Record<number, number | null>; capex: Record<number, number | null> };
+
+/**
+ * The OPEX and CAPEX sums of every value on the dimension, in one aggregate of the all-natures lines:
+ * grouped by value, then by nature. Same filters, exclusions and window as the value request.
+ */
+export function analyticsNatureRequest(p: AnalyticsParams): AggregateRequest {
+  const excluded = p.excludedIds.map((id) => (id === NO_ANALYTICS_VALUE ? null : id));
+  const filters = excluded.length ? withFilter(p.filters, analyticsIdField(p.axisId), dropValues(excluded)) : p.filters;
+  return {
+    query: { filters },
+    spec: { groupBy: [analyticsIdField(p.axisId), 'nature'], measures: yearMeasures(p.years, p.metric, p.measure) },
+  };
+}
+
+/**
+ * The OPEX and CAPEX sums of each value, keyed by the raw value id (an empty key for the lines without
+ * a value), and of all of them together (`total`).
+ */
+export function readAnalyticsNatures(
+  years: readonly number[],
+  result: AggregateResult | undefined,
+  measure: ReportMeasure = 'amount',
+): { byValue: Map<string, AnalyticsNatureSplit>; total: AnalyticsNatureSplit } {
+  const empty = (): AnalyticsNatureSplit => ({
+    opex: Object.fromEntries(years.map((year) => [year, null])),
+    capex: Object.fromEntries(years.map((year) => [year, null])),
+  });
+  const add = (into: Record<number, number | null>, values: Record<number, number | null>) => {
+    for (const year of years) {
+      const value = values[year];
+      if (value != null) into[year] = (into[year] ?? 0) + value;
+    }
+  };
+  const byValue = new Map<string, AnalyticsNatureSplit>();
+  const total = empty();
+  for (const group of result?.groups ?? []) {
+    const nature = group.keys[1];
+    if (nature !== 'opex' && nature !== 'capex') continue;
+    const key = group.keys[0] ?? '';
+    const split = byValue.get(key) ?? empty();
+    const values = yearValues(group, years, measure);
+    add(split[nature], values);
+    add(total[nature], values);
+    byValue.set(key, split);
+  }
+  return { byValue, total };
+}
+
 // ----- staffing by month (StaffingByMonthReport) -----
 
 /** What the staffing report groups on: a cost center, an item, a supplier or the value on a dimension. */

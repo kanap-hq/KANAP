@@ -15,7 +15,9 @@ import {
   MONTHS,
   readAnalytics,
   readAnalyticsLines,
+  readAnalyticsNatures,
   type AnalyticsLine,
+  type AnalyticsNatureSplit,
   readColumnsCompare,
   readConsolidation,
   readCostPerFte,
@@ -103,6 +105,9 @@ export interface ReportTableLabels {
   analyticsLines: string;
   /** `reports.analyticsCategory.nature`: the nature of a line (OPEX or CAPEX). */
   analyticsNature: string;
+  /** `reports.analyticsCategory.opexShare` and `.capexShare`: the split columns (with the year). */
+  analyticsOpexShare: string;
+  analyticsCapexShare: string;
   /** `reports.analyticsCategory.level`, `.levelValue` and `.levelLine`: the row type (value or line). */
   analyticsLevel: string;
   analyticsLevelValue: string;
@@ -412,6 +417,20 @@ export interface AnalyticsTableParams extends YearGroupsTableParams {
   dimension: string;
   /** List the lines of every value under it (the detail request's answer is the fourth argument). */
   detail?: boolean;
+  /**
+   * The all-natures scope only: the OPEX and CAPEX shares of every row and of the total, per year
+   * (the nature request's answer is the fifth argument).
+   */
+  split?: boolean;
+}
+
+/** The OPEX and CAPEX shares of a split for one year (fractions), null without a total to divide by. */
+function natureShares(split: AnalyticsNatureSplit | undefined, year: number): { opex: number | null; capex: number | null } {
+  const opex = split?.opex[year] ?? null;
+  const capex = split?.capex[year] ?? null;
+  const total = (opex ?? 0) + (capex ?? 0);
+  if ((opex == null && capex == null) || total === 0) return { opex: null, capex: null };
+  return { opex: (opex ?? 0) / total, capex: (capex ?? 0) / total };
 }
 
 /**
@@ -419,6 +438,9 @@ export interface AnalyticsTableParams extends YearGroupsTableParams {
  * With `detail`, the lines of each value follow it, indented by the row's `level` (1), with their
  * reference, nature, amounts and share of their value's total for each year (a fraction). The rows
  * stay flat, so the print view and the export write the same table without a tree.
+ * With `split` (all natures), each year also gets the OPEX and CAPEX shares of the row (`opex_<year>`,
+ * `capex_<year>`, fractions): a value's from the nature answer, a line's from its nature, the total's
+ * from all values together.
  */
 export function analyticsTable(
   p: AnalyticsTableParams,
@@ -427,13 +449,23 @@ export function analyticsTable(
     ReportTableLabels,
     'columnNames' | 'columnFte' | 'analyticsUnassigned' | 'analyticsUnnamed' | 'analyticsTotal' | 'analyticsLines'
     | 'analyticsNature' | 'analyticsLevel' | 'analyticsLevelValue' | 'analyticsLevelLine'
-    | 'natureOpex' | 'natureCapex' | 'reference' | 'shareOfTotal'
+    | 'natureOpex' | 'natureCapex' | 'reference' | 'shareOfTotal' | 'analyticsOpexShare' | 'analyticsCapexShare'
   >,
   lines?: AggregateResult | undefined,
+  natures?: AggregateResult | undefined,
 ): ReportTableData {
   const read = readAnalytics(p.years, result, { unassigned: labels.analyticsUnassigned, unnamed: labels.analyticsUnnamed }, p.measure);
   const detail = p.detail === true;
   const byValue = detail ? readAnalyticsLines(p.scope, p.years, lines, p.measure) : new Map<string, AnalyticsLine[]>();
+  const split = p.split === true && p.scope === 'all';
+  const splits = split ? readAnalyticsNatures(p.years, natures, p.measure) : null;
+  const writeShares = (row: ReportTableRow, nature: AnalyticsNatureSplit | undefined) => {
+    for (const year of p.years) {
+      const shares = natureShares(nature, year);
+      row[`opex_${year}`] = shares.opex;
+      row[`capex_${year}`] = shares.capex;
+    }
+  };
   const kind = measureKind(p.measure);
   const columns: ReportTableColumn[] = [
     { key: 'group', header: p.dimension, kind: 'text' },
@@ -445,13 +477,19 @@ export function analyticsTable(
     ] : []),
     ...p.years.map((year): ReportTableColumn => ({ key: String(year), header: String(year), kind })),
     ...(detail ? p.years.map((year): ReportTableColumn => ({ key: `share_${year}`, header: `${labels.shareOfTotal} ${year}`, kind: 'percent' as const })) : []),
+    ...(split ? p.years.flatMap((year): ReportTableColumn[] => [
+      { key: `opex_${year}`, header: `${labels.analyticsOpexShare} ${year}`, kind: 'percent' },
+      { key: `capex_${year}`, header: `${labels.analyticsCapexShare} ${year}`, kind: 'percent' },
+    ]) : []),
   ];
   const footer: ReportTableRow = { group: labels.analyticsTotal(measureColumnName(labels, p.metric, p.measure)), count: read.lineCount ?? null };
   for (const year of p.years) footer[String(year)] = measureCell(read.totals[year], p.measure);
+  if (splits) writeShares(footer, splits.total);
   const rows: ReportTableRow[] = [];
   for (const group of read.groups) {
     const row: ReportTableRow = { group: group.label, groupKey: group.key, groupName: group.name ?? null, valueId: group.id ?? null, count: group.count ?? null, level: 0, ...(detail ? { levelLabel: labels.analyticsLevelValue } : {}) };
     for (const year of p.years) row[String(year)] = measureCell(group.values[year], p.measure);
+    if (splits) writeShares(row, splits.byValue.get(group.id ?? ''));
     rows.push(row);
     if (!detail) continue;
     for (const line of byValue.get(group.id ?? '') ?? []) {
@@ -469,6 +507,12 @@ export function analyticsTable(
         const total = group.values[year];
         const value = line.values[year];
         lineRow[`share_${year}`] = total == null || total === 0 || value == null ? null : value / total;
+        // A line is all OPEX or all CAPEX: its shares are 1 and 0 for the years it carries an amount.
+        if (split) {
+          const known = value != null && value !== 0 && line.nature != null;
+          lineRow[`opex_${year}`] = known ? (line.nature === 'opex' ? 1 : 0) : null;
+          lineRow[`capex_${year}`] = known ? (line.nature === 'capex' ? 1 : 0) : null;
+        }
       }
       rows.push(lineRow);
     }

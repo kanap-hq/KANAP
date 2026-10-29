@@ -31,6 +31,7 @@ import {
   accountIdOptionsRequest,
   accountLabelOptions,
   analyticsLinesRequest,
+  analyticsNatureRequest,
   analyticsRequest,
   columnsCompareRequest,
   consolidationRequest,
@@ -129,6 +130,8 @@ export class BudgetReportExportService {
       analyticsTotal: (metric) => fillLabel(labels.analyticsTotal, 'metric', metric),
       analyticsLines: labels.analyticsLines,
       analyticsNature: labels.analyticsNature,
+      analyticsOpexShare: labels.analyticsOpexShare,
+      analyticsCapexShare: labels.analyticsCapexShare,
       analyticsLevel: labels.analyticsLevel,
       analyticsLevelValue: labels.analyticsLevelValue,
       analyticsLevelLine: labels.analyticsLevelLine,
@@ -294,13 +297,16 @@ export class BudgetReportExportService {
         answer = await run(analyticsRequest(analytics));
         const lineAnswer = params.detail ? await run(analyticsLinesRequest({ ...analytics, scope: params.scope })) : undefined;
         if (lineAnswer?.dataAccessLimited === true) limited = true;
+        const natureAnswer = params.split ? await run(analyticsNatureRequest(analytics)) : undefined;
+        if (natureAnswer?.dataAccessLimited === true) limited = true;
         // The screen's header: the dimension's name, the product name of the default one.
         const dimension = params.axis ? axisLabel(params.axis, language) : labels.analyticsDimension;
-        table = analyticsTable({ scope: params.scope, years, metric: params.metric, measure: params.measure, dimension, detail: params.detail }, answer, tableLabels, lineAnswer);
+        table = analyticsTable({ scope: params.scope, years, metric: params.metric, measure: params.measure, dimension, detail: params.detail, split: params.split }, answer, tableLabels, lineAnswer, natureAnswer);
         sheet = labels.analyticsSheet;
         fileBase = `analytics-${params.scope}-${params.startYear}-${params.endYear}`;
         own = [
           ...(params.detail ? [[labels.analyticsDetail, labels.yes] as [string, string]] : []),
+          ...(params.split ? [[labels.analyticsSplit, labels.yes] as [string, string]] : []),
           [labels.dimension, dimension],
           ...range,
           ...(excluded.length ? [[labels.excludeValues, excluded.join(', ')] as [string, string]] : []),

@@ -1833,6 +1833,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - GET `/reports/budget/increases-decreases/export?sourceYear=&sourceMetric=&destinationYear=&destinationMetric=&direction=increase|decrease|both&top=&excludeIds=&excludeAccounts=`
 - GET `/reports/budget/consolidation/export?startYear=&endYear=&metric=&excludeAccounts=<account id or none>,…`
 - GET `/reports/budget/analytics/export?axis=<dimension id>&startYear=&endYear=&metric=&excludeValues=<value id or none>,…`
+  - `detail=values|lines` (default `values`): with `lines`, the lines of every value follow it (level, reference, nature, amounts, share of the value per year). `split=none|nature` (default `none`): with `nature` and `scope=all`, every row and the total get their OPEX and CAPEX shares per year (a line's are 1 and 0); ignored on the OPEX or CAPEX lines alone
 - GET `/reports/budget/staffing/export?group=costCenter|item|supplier|axis:<dimension id>&year=&metric=`
 - GET `/reports/budget/cost-per-fte/export?group=&view=fte|rate&pairs=2025:budget,2026:budget`
   - Every route also takes the screen's address: `scope=all|opex|capex` (default `all`), `measure=amount|fte` (default `amount`; not on the staffing and cost per FTE routes), `costCenter=<id>` (the node and every node below it), `runBuild=run|build|none`, `fte=with`, `analytics=<dimension id>:<value id or none>,…`, plus `format=csv|xlsx`, `language`, `tz`

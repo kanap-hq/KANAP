@@ -24,7 +24,8 @@ import * as T from '../../../../frontend/src/pages/reports/reportTables';
  * The cases: one value row (count 7, 700 EUR) with its OPEX and CAPEX lines under it, each a
  * seventh of the value; Rita's value row counts and sums her four lines, and the hidden count is 3;
  * the export with the detail carries the reference, nature and share columns, the export without it
- * does not.
+ * does not; the split gives the value 6/7 OPEX and 1/7 CAPEX, on screen and in the export, and Rita's
+ * split covers her four OPEX lines only.
  */
 
 const dataSource = new DataSource({ ...(appDataSource.options as any), poolSize: 2 });
@@ -52,6 +53,8 @@ const LABELS: T.ReportTableLabels = {
   analyticsTotal: (metric) => `Total ${metric}`,
   analyticsLines: 'Lines',
   analyticsNature: 'Nature',
+  analyticsOpexShare: 'OPEX share',
+  analyticsCapexShare: 'CAPEX share',
   analyticsLevel: 'Level',
   analyticsLevelValue: 'Value',
   analyticsLevelLine: 'Line',
@@ -131,6 +134,20 @@ async function testUnscoped(runner: QueryRunner, s: Seed): Promise<void> {
     assert.ok(lines.every((line) => line.share === 1 / 7), 'each line is a seventh of the value');
     assert.deepEqual(lines.map((line) => line.year), [100, 100, 100, 100, 100, 100, 100]);
     console.log('  unscoped: one value row (7 lines, 700) and its OPEX and CAPEX lines, shares exact: OK');
+
+    const natureAnswer = await svc.lines.summaryAggregateRequest(R.analyticsNatureRequest({
+      axisId: s.axis1, years: [YEAR], metric: 'budget', excludedIds: [], filters: {}, measure: 'amount',
+    }), { manager: m, access: budgetListAccess(ctxOf(s, s.persons.ulla, m)) });
+    const split = T.analyticsTable(
+      { scope: 'all', years: [YEAR], metric: 'budget', measure: 'amount', dimension: 'Dimension', split: true },
+      valueAnswer as any,
+      LABELS,
+      undefined,
+      natureAnswer as any,
+    );
+    assert.deepEqual([split.rows[0][`opex_${YEAR}`], split.rows[0][`capex_${YEAR}`]], [600 / 700, 100 / 700], 'six OPEX lines, one CAPEX');
+    assert.deepEqual([split.footer[0][`opex_${YEAR}`], split.footer[0][`capex_${YEAR}`]], [600 / 700, 100 / 700], 'the total, from the values together');
+    console.log('  unscoped: split of the value and the total: OK');
   });
 }
 
@@ -156,6 +173,11 @@ async function testLimited(runner: QueryRunner, s: Seed): Promise<void> {
     assert.ok(rows.slice(1).every((line) => line.share === 1 / 4));
     const hidden = await hiddenCategoryLineCounts(m, s.axis1, [s.category1], `${YEAR}-01-01`);
     assert.equal(hidden.get(s.category1.toLowerCase()), 3, 'L5 to L7');
+    const natureAnswer = await svc.lines.summaryAggregateRequest(R.analyticsNatureRequest({
+      axisId: s.axis1, years: [YEAR], metric: 'budget', excludedIds: [], filters: {}, measure: 'amount',
+    }), { manager: m, access: budgetListAccess(ctxOf(s, s.persons.rita, m)) });
+    const { byValue } = R.readAnalyticsNatures([YEAR], natureAnswer as any);
+    assert.deepEqual(byValue.get(s.category1), { opex: { [YEAR]: 400 }, capex: { [YEAR]: null } }, 'her four OPEX lines, the CAPEX L5 hidden');
     console.log('  limited: totals and count on her four lines, 3 hidden lines: OK');
   });
 }
@@ -186,6 +208,14 @@ async function testExport(runner: QueryRunner, s: Seed): Promise<void> {
     assert.deepEqual(withRows.slice(2, 9).map((row) => row[4]).sort(), ['CAPEX', 'OPEX', 'OPEX', 'OPEX', 'OPEX', 'OPEX', 'OPEX']);
     assert.ok(withRows.slice(2, 9).every((row) => row[6] === '14.29%'), 'a seventh, as the CSV writes a percent');
     console.log('  export: without detail the value row only, with detail its lines, references, natures and shares: OK');
+
+    const withSplit = await svc.export.export('analytics', { ...base, detail: 'values', split: 'nature' }, ctx);
+    const splitRows = csvRows(withSplit.body);
+    assert.deepEqual(splitRows[0], [axisName, 'Lines', String(YEAR), `OPEX share ${YEAR}`, `CAPEX share ${YEAR}`]);
+    assert.deepEqual(splitRows[1].slice(3), ['85.71%', '14.29%'], 'the value: six sevenths OPEX');
+    assert.deepEqual(splitRows[2].slice(3), ['85.71%', '14.29%'], 'the total');
+    await assert.rejects(svc.export.export('analytics', { ...base, split: 'yes' }, ctx), /split must be none or nature/);
+    console.log('  export: the split columns, an unknown split refused: OK');
   });
 }
 

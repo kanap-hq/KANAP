@@ -38,6 +38,8 @@ const labels: ReportTableLabels = {
   analyticsTotal: (metric) => `All ${metric}`,
   analyticsLines: 'Lines',
   analyticsNature: 'Nature',
+  analyticsOpexShare: 'OPEX share',
+  analyticsCapexShare: 'CAPEX share',
   analyticsLevel: 'Level',
   analyticsLevelValue: 'Value',
   analyticsLevelLine: 'Line',
@@ -281,6 +283,52 @@ describe('analyticsTable', () => {
       answer({ y2026: 0 }, lines),
     );
     expect(table.rows[1].share_2026).toBeNull();
+  });
+
+  it('adds the OPEX and CAPEX shares of every value, line and the total with the split', () => {
+    const groups = [{ ...row({ y2026: 100 }, ['v1', 'Cloud']), count: 2 }, row({ y2026: 50 }, ['v2', 'Network'])];
+    const natures = [
+      row({ y2026: 75 }, ['v1', 'opex']),
+      row({ y2026: 25 }, ['v1', 'capex']),
+      row({ y2026: 50 }, ['v2', 'capex']),
+    ];
+    const lines = [
+      row({ y2026: 75 }, ['v1', 'L1', 'Run', '12', 'opex']),
+      row({ y2026: 25 }, ['v1', 'L2', 'Build', '13', 'capex']),
+      row({ y2026: 50 }, ['v2', 'L3', 'Switches', '14', 'capex']),
+    ];
+    const table = analyticsTable(
+      { scope: 'all', years: [2026], metric: 'budget', measure: 'amount', dimension: 'Domain', detail: true, split: true },
+      answer({ y2026: 150 }, groups),
+      labels,
+      answer({ y2026: 150 }, lines),
+      answer({ y2026: 150 }, natures),
+    );
+    expect(table.columns.slice(-2).map((column) => [column.key, column.header, column.kind])).toEqual([
+      ['opex_2026', 'OPEX share 2026', 'percent'],
+      ['capex_2026', 'CAPEX share 2026', 'percent'],
+    ]);
+    expect(table.rows.map((r) => [r.group, r.opex_2026, r.capex_2026])).toEqual([
+      ['Cloud', 0.75, 0.25],
+      ['Run', 1, 0],
+      ['Build', 0, 1],
+      ['Network', 0, 1],
+      ['Switches', 0, 1],
+    ]);
+    expect([table.footer[0].opex_2026, table.footer[0].capex_2026]).toEqual([0.5, 0.5]);
+  });
+
+  it('leaves the split out on an OPEX or CAPEX report', () => {
+    const groups = [row({ y2026: 100 }, ['v1', 'Cloud'])];
+    const table = analyticsTable(
+      { scope: 'opex', years: [2026], metric: 'budget', measure: 'amount', dimension: 'Domain', split: true },
+      answer({ y2026: 100 }, groups),
+      labels,
+      undefined,
+      answer({ y2026: 100 }, [row({ y2026: 100 }, ['v1', 'opex'])]),
+    );
+    expect(table.columns.map((column) => column.key)).toEqual(['group', 'count', '2026']);
+    expect(table.rows[0].opex_2026).toBeUndefined();
   });
 });
 

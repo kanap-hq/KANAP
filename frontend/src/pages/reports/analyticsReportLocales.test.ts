@@ -10,7 +10,7 @@ import es from '../../locales/es/ops.json';
  * plural forms; the screen renders them through `t`, never in code.
  */
 const LOCALES = { en, fr, de, es } as const;
-const KEYS = ['lines', 'nature', 'detail', 'hidden_one', 'hidden_other'] as const;
+const KEYS = ['lines', 'nature', 'detail', 'hidden_one', 'hidden_other', 'split', 'opexShare', 'capexShare', 'splitChartTitle'] as const;
 
 describe('the analytics report locale keys', () => {
   it.each(Object.entries(LOCALES))('%s carries every new key', (_language, locale) => {

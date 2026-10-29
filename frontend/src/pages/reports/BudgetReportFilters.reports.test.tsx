@@ -58,10 +58,11 @@ vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
   ),
 }));
 const access = vi.hoisted(() => ({ limited: false, counts: {} as Record<string, number> }));
-const chart = vi.hoisted(() => ({ options: null as any }));
+const chart = vi.hoisted(() => ({ options: null as any, height: null as number | null }));
 vi.mock('../../components/reports/ChartCard', () => ({
-  default: React.forwardRef(({ options }: { options: unknown }, _ref) => {
+  default: React.forwardRef(({ options, height }: { options: unknown; height?: number }, _ref) => {
     chart.options = options;
+    chart.height = height ?? null;
     return null;
   }),
 }));
@@ -83,6 +84,7 @@ import ComparisonReport from './ComparisonReport';
 import BudgetColumnsCompareReport from './BudgetColumnsCompareReport';
 import ConsolidationReport from './ConsolidationReport';
 import AnalyticsCategoryReport from './AnalyticsCategoryReport';
+import { horizontalBarChartHeight } from './reportMetrics';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
@@ -476,6 +478,51 @@ describe('Analytics report dimensions', () => {
     expect(share.valueFormatter({ value: 1000 / 1100 })).toBe('90.9%');
     expect(rows.find((row) => row.group === 'Line a')!.share_2026).toBeCloseTo(100 / 1100, 10);
     expect(grid.defaultColDef?.sortable).toBe(false);
+  });
+
+  it('draws the lines in the chart with the detail, and fits the bars to their count', async () => {
+    serverRows = ROWS.map((row, index) => ({ ...row, item_number: index + 1, nature: index === 4 ? 'capex' : 'opex' })) as typeof ROWS;
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat&detail=lines');
+    await waitFor(() => expect(chart.options.data).toHaveLength(5));
+    expect(chart.options.data.map((datum: { label: string }) => datum.label)).toEqual([
+      'BL-5 · Line e', 'BL-2 · Line b', 'BL-4 · Line d', 'BL-1 · Line a', 'BL-3 · Line c',
+    ]);
+    // The pie keeps its height; bars take one row each.
+    expect(chart.height).toBe(520);
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.filters.chartType' }));
+    fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'reports.filters.horizontalBarChart' }));
+    await waitFor(() => expect(chart.height).toBe(horizontalBarChartHeight(5)));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'reports.analyticsCategory.detail' }));
+    await waitFor(() => expect(chart.options.data).toHaveLength(3));
+    expect(chart.height).toBe(horizontalBarChartHeight(3));
+  });
+
+  it('adds the OPEX and CAPEX shares to the table and stacks them in the chart with the split', async () => {
+    serverRows = ROWS.map((row, index) => ({ ...row, item_number: index + 1, nature: index === 4 ? 'capex' : 'opex' })) as typeof ROWS;
+    renderReport(<AnalyticsCategoryReport />, '/report?axis=ax-nat&split=nature');
+    await waitFor(() => expect(grid.columns.map((column) => column.headerName)).toContain(`reports.analyticsCategory.opexShare ${Y}`));
+    expect(grid.columns.map((column) => column.headerName).slice(-2)).toEqual([
+      `reports.analyticsCategory.opexShare ${Y}`,
+      `reports.analyticsCategory.capexShare ${Y}`,
+    ]);
+    const nature = post.mock.calls.find(([, body]) => (body as any).spec.groupBy.includes('nature'));
+    expect((nature![1] as any).spec.groupBy).toEqual(['analytics_id_ax-nat', 'nature']);
+    await waitFor(() => expect(chart.options.series).toHaveLength(2));
+    expect(chart.options.series.map((series: any) => [series.yKey, series.stacked, series.normalizedTo])).toEqual([['opex', true, 100], ['capex', true, 100]]);
+    // The total first, then the values that carry an amount this year.
+    expect(chart.options.data[0].label).toBe('reports.columns.total');
+    expect(chart.options.data.length).toBeGreaterThan(2);
+    expect(chart.height).toBe(horizontalBarChartHeight(chart.options.data.length));
+    expect(screen.getByRole('checkbox', { name: 'reports.analyticsCategory.split' })).toBeChecked();
+    expect(screen.getByRole('combobox', { name: 'reports.filters.chartType' })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('offers no split on OPEX lines alone', async () => {
+    renderReport(<AnalyticsCategoryReport />, '/report?scope=opex&axis=ax-nat&split=nature');
+    await waitFor(() => expect(gridRows()).toHaveLength(3));
+    expect(screen.getByRole('checkbox', { name: 'reports.analyticsCategory.split' })).toBeDisabled();
+    expect(grid.columns.map((column) => column.headerName)).not.toContain(`reports.analyticsCategory.opexShare ${Y}`);
+    expect(post.mock.calls.filter(([, body]) => (body as any).spec.groupBy.includes('nature'))).toEqual([]);
   });
 
   it('adds the hidden lines under each value for a limited person, singular and plural', async () => {

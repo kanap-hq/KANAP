@@ -100,6 +100,8 @@ const LABELS: T.ReportTableLabels = {
   analyticsTotal: (metric) => L.analyticsTotal.replace('{{metric}}', metric),
   analyticsLines: L.analyticsLines,
   analyticsNature: L.analyticsNature,
+  analyticsOpexShare: L.analyticsOpexShare,
+  analyticsCapexShare: L.analyticsCapexShare,
   analyticsLevel: L.analyticsLevel,
   analyticsLevelValue: L.analyticsLevelValue,
   analyticsLevelLine: L.analyticsLevelLine,

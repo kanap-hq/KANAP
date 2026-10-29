@@ -32,6 +32,8 @@ export function useReportTableLabels(): ReportTableLabels {
     analyticsTotal: (metric) => t('reports.analyticsCategory.totalMetric', { metric }),
     analyticsLines: t('reports.analyticsCategory.lines'),
     analyticsNature: t('reports.analyticsCategory.nature'),
+    analyticsOpexShare: t('reports.analyticsCategory.opexShare'),
+    analyticsCapexShare: t('reports.analyticsCategory.capexShare'),
     analyticsLevel: t('reports.analyticsCategory.level'),
     analyticsLevelValue: t('reports.analyticsCategory.levelValue'),
     analyticsLevelLine: t('reports.analyticsCategory.levelLine'),
