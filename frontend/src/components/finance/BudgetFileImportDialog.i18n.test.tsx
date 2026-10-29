@@ -80,11 +80,11 @@ describe('BudgetFileImportDialog calculation lines warning', () => {
 
   it('says it in French, with non-breaking spaces', async () => {
     expect(await warningIn('fr', 3, '281280.00'))
-      .toBe('BL-83 · Révision 2026 : 3 lignes de calcul (281 280,00) ne piloteront plus ces montants.');
+      .toBe('BL-83 · Révision 2026\u00a0: 3 lignes de calcul (281\u202f280,00) ne piloteront plus ces montants.');
   });
 
   it('says one line in French', async () => {
     expect(await warningIn('fr', 1, '209280.00'))
-      .toBe('BL-83 · Révision 2026 : 1 ligne de calcul (209 280,00) ne pilotera plus ces montants.');
+      .toBe('BL-83 · Révision 2026\u00a0: 1 ligne de calcul (209\u202f280,00) ne pilotera plus ces montants.');
   });
 });
