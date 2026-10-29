@@ -77,15 +77,19 @@ export type AuditParentRule =
  * the run that gives that record its history, whose own migration backfills the type's rows.
  */
 export const TASK_PARENT_TABLES = {
+  capex_item: 'spend_items',
   contract: 'contracts',
   incident: 'incidents',
+  spend_item: 'spend_items',
 } as const satisfies Readonly<Record<string, RecordHistoryTable>>;
 
 /**
  * A task names its record in the saved task (`related_object_id`), and the record's type beside it.
  * The task's own history reads its rows by `record_id`; the parent is the record it belongs to.
  * `1855900000000-audit-log-parent-contracts-incidents.ts` copies the contract and incident entries
- * in SQL (`__tests__/audit-parent-rules-contracts-incidents.spec.ts` compares them).
+ * in SQL (`__tests__/audit-parent-rules-contracts-incidents.spec.ts` compares them), and
+ * `1855920000000-audit-log-parent-tasks.ts` the budget-line entries: both natures are in
+ * `spend_items` (`__tests__/audit-parent-rules-tasks.spec.ts`).
  */
 const TASK_PARENT_RULES: Readonly<Record<string, AuditParentRule>> = {
   tasks: { from: 'payload_typed', keys: ['related_object_id'], typeKey: 'related_object_type', tables: TASK_PARENT_TABLES },

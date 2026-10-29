@@ -35,6 +35,10 @@ export const spendItemsRecord = {
     spend_item_contacts: 'contact',
     capex_item_contacts: 'contact',
     spend_tasks: 'task',
+    // The line's tasks: the saved task names it (`related_object_type` = 'spend_item' or
+    // 'capex_item', shared rule in `audit-parent-rules.ts`). The legacy label above stays for the
+    // rows the line task routes still write beside it.
+    tasks: 'task',
     // Links to another object. Both sides write the same label: from the line, `record_id` is the
     // line; from the application, technology, asset, contract, project or request, it is that
     // object. Technologies keep one label for both natures.
