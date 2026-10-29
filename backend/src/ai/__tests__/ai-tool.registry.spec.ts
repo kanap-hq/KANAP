@@ -3,6 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { Features } from '../../config/features';
 import { AiAggregateExecutor } from '../query/ai-aggregate.executor';
 import { AiQueryExecutor } from '../query/ai-query.executor';
+import { BUDGET_DELTA_FAMILY, budgetReportMetricFamilies } from '../query/registries/budget-amount-fields';
 import { AiToolRegistry } from '../ai-tool.registry';
 import { AiDocumentMutationSupportService } from '../mutation/ai-document-mutation-support.service';
 import { CreateDocumentAiMutationOperation } from '../mutation/operations/create-document.ai-mutation-operation';
@@ -1901,11 +1902,13 @@ async function testAggregateEntitiesDescribesChangesAndMonthlyFte() {
   const tools = await registry.listAvailableTools(createContext());
   const aggregate = tools.find((tool) => tool.name === 'aggregate_entities')!;
   assert.match(aggregate.description, /A change between two columns is the metric `<destination>_minus_<source>` \(`y_review_minus_y_budget`; in FTE `y_review_fte_minus_y_budget_fte`\), computed as the "Top increase \/ decrease" report/);
+  assert.match(aggregate.description, /Like the report, a question about the largest increases or decreases groups by `line`, unless the person names another axis \(by supplier\)\./);
   assert.match(aggregate.description, /The FTE month by month is the metric `<year>_<column>_fte_by_month` \(`y_budget_fte_by_month`\), computed as the "Staffing by month" report: each group's twelve months, average \(÷ 12\) and peak, with `monthly_fte_note`/);
   assert.match(aggregate.description, /These budget figures read every line, ended ones included, while the budget reports read the lines still active on 1 January of the year before the first year they show/);
   for (const sentence of [/computed as the "Top increase \/ decrease" report/g, /These budget figures read every line/g]) {
     assert.equal(`${aggregate.description} ${properties.metric.description}`.match(sentence)?.length, 1, `said once: ${sentence}`);
   }
+  assert.match(budgetReportMetricFamilies().find((family) => family.family === BUDGET_DELTA_FAMILY)!.description, /group_by line gives the lines themselves, by reference and title, as the report does: use it unless the person names another axis \(by supplier\)\./);
   const describe = tools.find((tool) => tool.name === 'describe_entity_filters')!;
   assert.match(describe.description, /`metric_families` the cost per FTE, the day rate, the change between two columns and the FTE by month aggregate_entities computes/);
   const mcp = registry.toToolJsonSchemas(registry.listRegisteredTools().filter((tool) => tool.surfaces.includes('mcp'))) as any[];

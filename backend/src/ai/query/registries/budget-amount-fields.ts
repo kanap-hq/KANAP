@@ -268,7 +268,7 @@ export function budgetReportMetricFamilies(): AiMetricFamilyDescription[] {
         + '(`y_review_minus_y_budget` is the revision of Y minus its budget, `y_plus1_budget_minus_y_budget` next year\'s budget minus this year\'s), any two years and columns; '
         + 'with `_fte` on both sides (`y_review_fte_minus_y_budget_fte`), the same change in FTE. aggregate_entities only (metric, no function needed): '
         + '`direction` increase (the default) keeps the groups that rise, largest first, decrease the groups that fall; `limit` keeps 10 groups by default (at most 100); '
-        + 'group_by line gives the lines themselves, by reference and title. Each group returns previous, current, delta and pct_increase (null when the source is 0 or less); '
+        + 'group_by line gives the lines themselves, by reference and title, as the report does: use it unless the person names another axis (by supplier). Each group returns previous, current, delta and pct_increase (null when the source is 0 or less); '
         + `overall gives previous, current, net, gross_increase and gross_decrease over every line the filters keep. ${KEY_GRAMMAR}`,
       examples: ['y_review_minus_y_budget', 'y_budget_minus_y_minus1_budget', 'y_plus1_budget_minus_y_budget', 'y_landing_minus_y_budget', 'y_review_fte_minus_y_budget_fte'],
     },
