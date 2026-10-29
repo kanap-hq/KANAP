@@ -44,7 +44,7 @@ function testEntries() {
     recordHistoryModules(),
     [
       'accounts', 'analytics', 'applications', 'budget', 'business_processes', 'companies', 'contacts',
-      'contracts', 'cost_centers', 'departments', 'incidents', 'infrastructure', 'knowledge', 'locations', 'portfolio_projects', 'suppliers',
+      'contracts', 'cost_centers', 'departments', 'incidents', 'infrastructure', 'knowledge', 'locations', 'portfolio_projects', 'portfolio_requests', 'suppliers',
       'tasks',
       'working_day_profiles',
     ],

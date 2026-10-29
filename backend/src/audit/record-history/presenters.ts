@@ -8,6 +8,7 @@ import {
 } from '../record-history.inventory';
 import { taskRelatedFamily } from './records/tasks';
 import { PROJECT_NUMERIC_FIELDS } from './records/portfolio_projects';
+import { REQUEST_NUMERIC_FIELDS, requestAuditPayload } from './records/portfolio_requests';
 import { deepEqual, isPlainObject, isUuid, linkSetIds } from './values';
 
 /**
@@ -1318,8 +1319,20 @@ function assignmentChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange
   return changes;
 }
 
-/** A business process link, written from the process: the process is `record_id`. */
+/**
+ * A business process link. Written from the process, the process is `record_id`; written from a
+ * request (`setOwnedLink`, the assistant), `record_id` is the request and the payload the set of
+ * process ids, so each process added or removed is one event.
+ */
 function processLinkChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  if (String(row.record_id ?? '').toLowerCase() === ctx.recordId.toLowerCase()) {
+    const before = new Set(linkSetIds(row.before_json));
+    const after = new Set(linkSetIds(row.after_json));
+    const changes: RecordHistoryChange[] = [];
+    for (const id of after) if (!before.has(id)) changes.push({ field: 'business_process', event: 'added', after: referenceValue(ctx, 'business_process', id) });
+    for (const id of before) if (!after.has(id)) changes.push({ field: 'business_process', event: 'removed', before: referenceValue(ctx, 'business_process', id) });
+    return changes;
+  }
   const process = referenceValue(ctx, 'business_process', row.record_id);
   if (row.before_json === null || row.before_json === undefined) return [{ field: 'business_process', event: 'added', after: process }];
   if (row.after_json === null || row.after_json === undefined) return [{ field: 'business_process', event: 'removed', before: process }];
@@ -1710,6 +1723,11 @@ function recordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   if (row.table_name === 'contracts') return [...renewalChanges(row, ctx), ...genericChanges(row, ctx, { label: row.table_name })];
   if (row.table_name === 'portfolio_projects') {
     return [...genericChanges(row, ctx, { label: row.table_name, numeric: PROJECT_NUMERIC_FIELDS }), ...scoringChanges(row, ctx)];
+  }
+  if (row.table_name === 'portfolio_requests') {
+    // The deletion of the origin task names it under its own key: it reads as the origin task.
+    const read = { ...row, before_json: requestAuditPayload(row.before_json), after_json: requestAuditPayload(row.after_json) };
+    return [...genericChanges(read, ctx, { label: row.table_name, numeric: REQUEST_NUMERIC_FIELDS }), ...scoringChanges(read, ctx)];
   }
   const changes = genericChanges(row, ctx, { label: row.table_name })
     // The middleware list has its own events below; the id-list itself is never a field line.
