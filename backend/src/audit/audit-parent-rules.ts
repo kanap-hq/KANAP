@@ -25,7 +25,9 @@ import { technologiesParentRules } from './record-history/records/technologies';
  * Adding a family (the procedure, so a later run follows it):
  * 1. Declare the child labels in that family's `RECORD_HISTORY` entry, then add their rules to the
  *    record file's `<table>ParentRules` and its import line below: the payload key that names the
- *    record, or the version lookup when the row names a version whose record is the parent. A
+ *    record, or the version lookup when the row names a version whose record is the parent. A task
+ *    names its record and that record's type (`payload_typed`): a family adds its type to
+ *    `TASK_PARENT_TABLES`, one line, and backfills that type's rows in its own migration. A
  *    label whose write knows the parent names it explicitly (`AuditParent`) instead, when no rule
  *    can choose safely.
  * 2. Write a backfill migration for that family, never edit `1855500000000-audit-log-parent-record.ts`
@@ -44,7 +46,20 @@ export type AuditParentRule =
   /** The record id is a key of the before/after payload (a line: the child's `spend_item_id`, CAPEX: `capex_item_id`). */
   | { parentTable: RecordHistoryTable; from: 'payload'; keys: readonly string[]; fallback?: 'record_id' }
   /** The row names a version, through `record_id` or the payload's `version_id`, whose record is the parent. */
-  | { parentTable: RecordHistoryTable; from: 'version'; via: 'record_id' | 'payload.version_id' };
+  | { parentTable: RecordHistoryTable; from: 'version'; via: 'record_id' | 'payload.version_id' }
+  /**
+   * The payload names the record by a key and its type by another (a task: `related_object_id` and
+   * `related_object_type`): the table follows the type, read from the same payload as the id. A type
+   * absent from `tables` gives no parent. It has no single `parentTable`: `auditParentRuleTables`
+   * lists its tables.
+   */
+  | {
+    parentTable?: never;
+    from: 'payload_typed';
+    keys: readonly string[];
+    typeKey: string;
+    tables: Readonly<Record<string, RecordHistoryTable>>;
+  };
 
 /**
  * The rule sets of the record files, one line per file, sorted by table name: a family run adds its
@@ -68,6 +83,11 @@ const PARENT_RULE_SETS = [
 export const AUDIT_PARENT_RULES: Readonly<Record<string, AuditParentRule>> = Object.freeze(
   Object.assign({}, ...PARENT_RULE_SETS) as Record<string, AuditParentRule>,
 );
+
+/** The record tables a rule may name: its `parentTable`, or every table of a typed rule. */
+export function auditParentRuleTables(rule: AuditParentRule): RecordHistoryTable[] {
+  return rule.from === 'payload_typed' ? Array.from(new Set(Object.values(rule.tables))).sort() : [rule.parentTable];
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -97,6 +117,27 @@ export function payloadParentId(rule: { keys: readonly string[] }, after: unknow
     for (const key of rule.keys) {
       const value = fieldOf(payload, key);
       if (isAuditUuid(value)) return value;
+    }
+  }
+  return null;
+}
+
+/**
+ * The record a typed payload names: in `after` then `before`, the first payload whose type is in
+ * the rule's tables and whose key holds a valid uuid. The type and the id come from the same
+ * payload, so a task moved from one record to another names the record it is on after the write.
+ */
+export function typedPayloadParent(
+  rule: { keys: readonly string[]; typeKey: string; tables: Readonly<Record<string, RecordHistoryTable>> },
+  after: unknown,
+  before: unknown,
+): AuditParent | null {
+  for (const payload of [after, before]) {
+    const type = fieldOf(payload, rule.typeKey);
+    if (typeof type !== 'string' || !Object.prototype.hasOwnProperty.call(rule.tables, type)) continue;
+    for (const key of rule.keys) {
+      const value = fieldOf(payload, key);
+      if (isAuditUuid(value)) return { table: rule.tables[type], id: value };
     }
   }
   return null;
@@ -149,6 +190,7 @@ export async function resolveAuditParent(
   if (entry.parent) return isAuditUuid(entry.parent.id) ? { table: entry.parent.table, id: entry.parent.id } : null;
   const rule = AUDIT_PARENT_RULES[entry.table];
   if (!rule) return null;
+  if (rule.from === 'payload_typed') return typedPayloadParent(rule, entry.after, entry.before);
   if (rule.from === 'payload') {
     const fromPayload = payloadParentId(rule, entry.after, entry.before);
     if (fromPayload) return { table: rule.parentTable, id: fromPayload };

@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import { backendPath } from '../../common/__tests__/backend-root';
 import {
   AUDIT_PARENT_RULES,
+  auditParentRuleTables,
   isAuditUuid,
   payloadParentId,
   resolveAuditParent,
@@ -183,7 +184,9 @@ function testMigrationLabelsMatchRules() {
     assert.ok(!migrationLineRecordLabels().includes(label), `${label}: no backfill of existing rows`);
   }
   for (const [label, rule] of Object.entries(AUDIT_PARENT_RULES)) {
-    assert.ok(Object.prototype.hasOwnProperty.call(RECORD_HISTORY, rule.parentTable), `${label}: a record table of the inventory`);
+    for (const table of auditParentRuleTables(rule)) {
+      assert.ok(Object.prototype.hasOwnProperty.call(RECORD_HISTORY, table), `${label}: a record table of the inventory`);
+    }
     if (!spendItemLabels.includes(label)) continue;
     assert.equal(rule.parentTable, 'spend_items', `${label}: the physical line table`);
   }

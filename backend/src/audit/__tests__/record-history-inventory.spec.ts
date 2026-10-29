@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { AUDIT_PARENT_RULES } from '../audit-parent-rules';
+import { AUDIT_PARENT_RULES, auditParentRuleTables } from '../audit-parent-rules';
 import { DATA_ACCESS_TABLES } from '../../data-access/data-access-tables.inventory';
 import { RESOURCES } from '../../permissions/permissions.service';
 import {
@@ -95,7 +95,9 @@ function testParentRulesAgree() {
   }
   // Every rule is a child of a declared record: a rule whose rows no history reads would be dead.
   for (const [label, rule] of Object.entries(AUDIT_PARENT_RULES)) {
-    assert.ok(Object.prototype.hasOwnProperty.call(RECORD_HISTORY, rule.parentTable), `${label}: ${rule.parentTable} is a record table`);
+    for (const table of auditParentRuleTables(rule)) {
+      assert.ok(Object.prototype.hasOwnProperty.call(RECORD_HISTORY, table), `${label}: ${table} is a record table`);
+    }
     assert.ok(children.has(label), `${label}: a parent rule outside the inventory's children`);
     assert.ok(
       Object.values(RECORD_HISTORY).some((entry) => recordHistoryChildKind(entry, label) !== null),
