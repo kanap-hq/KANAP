@@ -26,6 +26,10 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 //   `cost_centers` receives none either, and `entity_types` with it alone searches it alone;
 // - a dimension and a calendar are found by their code, with the link of their page;
 // - a search about rates or currencies says the rates are read by query_entities, not searched here;
+//   a code alone, a supplier named Devise or a cryptocurrency does not (Plaid L9, lot F, m5);
+// - the words that name the family are taken out ("centre de coûts Group IT", "calendrier France"),
+//   and a search that names a family without a match says how to read it, for a person who reads
+//   it only (lot F, M1);
 // - a family that fails is named, in words, and the others still answer.
 
 let app: INestApplicationContext;
@@ -214,7 +218,7 @@ async function testDimensionCalendarAndRates(): Promise<void> {
     assert.equal(calendar.ref, `FR${s.tag}`);
     assert.equal(calendar.page_url, `/master-data/working-day-calendars/${s.ids.calendar}`);
 
-    for (const query of ['taux de change', 'EUR']) {
+    for (const query of ['taux de change', 'cours EUR', 'EUR/USD']) {
       const rates = await tools().execute(reader, 'search_all', { query });
       assert.equal(rates.not_searched_here?.[0]?.family, 'exchange rates', query);
       assert.equal(rates.not_searched_here[0].note, 'The exchange rates are read by query_entities on exchange_rates, not searched by search_all.');
@@ -223,8 +227,51 @@ async function testDimensionCalendarAndRates(): Promise<void> {
         assert.equal(rates.families_not_read.some((line: string) => /^(cost centers|working-day calendars|analytics dimensions|exchange rates) \(/.test(line)), false);
       }
     }
+    for (const query of ['EUR', 'USD Partners', 'Devise Consulting', 'Cryptocurrency wallet']) {
+      const other = await tools().execute(reader, 'search_all', { query });
+      assert.equal((other.not_searched_here ?? []).some((entry: any) => entry.family === 'exchange rates'), false, query);
+    }
   }));
   console.log('  dimension and calendar by code, rates not searched: OK');
+}
+
+async function testTheWordsOfTheFamily(): Promise<void> {
+  await inTransaction(async (runner) => withoutSurfaceChecks(async () => {
+    const s = await seed(runner);
+    const reader = context(runner, s, s.reader);
+    for (const query of ['centre de coûts Group IT', 'cost center Group IT', 'Centres de couts group it']) {
+      const result = await tools().execute(reader, 'search_all', { query });
+      const centers = ofType(result, 'cost_centers').map((item: any) => item.ref);
+      assert.deepEqual(centers, ['DSI-GRP', 'CC-SUP'], `${query}: ${JSON.stringify(centers)}`);
+      assert.equal(result.items[0].ref, 'DSI-GRP', `${query}: the exact name first`);
+      assert.equal(result.not_searched_here, undefined, query);
+    }
+    const france = await tools().execute(reader, 'search_all', { query: 'calendrier France' });
+    assert.deepEqual(ofType(france, 'working_day_calendars').map((item: any) => item.ref), [`FR${s.tag}`]);
+    const tower = await tools().execute(reader, 'search_all', { query: 'dimension IT tower' });
+    assert.deepEqual(ofType(tower, 'analytics_axes').map((item: any) => item.ref), [`tower${s.tag}`]);
+
+    // A family named without a match: how to read it, never "none".
+    const missing = await tools().execute(reader, 'search_all', { query: 'centre de coûts Inexistant' });
+    assert.deepEqual(ofType(missing, 'cost_centers'), []);
+    const note = (missing.not_searched_here ?? []).find((entry: any) => entry.family === 'cost centers');
+    assert.ok(note, JSON.stringify(missing.not_searched_here));
+    assert.equal(note.note, 'search_all compares the words of the search with the codes and names of the cost centers only. '
+      + 'Read them by query_entities on cost_centers with q (a code or a word of a name) before saying whether one exists.');
+    assert.doesNotMatch(note.note, /\b(no|none|aucun)\b/i);
+
+    // Without the right: neither a row nor a note that would tell whether one exists.
+    const without = await tools().execute(context(runner, s, s.noCostCenters), 'search_all', { query: 'centre de coûts Group IT' });
+    const withoutMissing = await tools().execute(context(runner, s, s.noCostCenters), 'search_all', { query: 'centre de coûts Inexistant' });
+    for (const result of [without, withoutMissing]) {
+      assert.deepEqual(ofType(result, 'cost_centers'), []);
+      assert.equal((result.not_searched_here ?? []).some((entry: any) => entry.family === 'cost centers'), false);
+      assert.ok((result.not_read_here ?? []).some((entry: any) => entry.family === 'cost centers'));
+    }
+    const strip = (result: any) => JSON.stringify(result.not_read_here);
+    assert.equal(strip(without), strip(withoutMissing), 'the same answer whether a center matches or not');
+  }));
+  console.log('  the words of the family, and a family named without a match: OK');
 }
 
 async function testAFamilyThatFails(): Promise<void> {
@@ -264,6 +311,7 @@ async function run(): Promise<void> {
       ['Group IT first', testGroupItFirst],
       ['rights and entity_types', testRightsAndEntityTypes],
       ['dimension, calendar and rates', testDimensionCalendarAndRates],
+      ['the words of the family', testTheWordsOfTheFamily],
       ['a family that fails', testAFamilyThatFails],
     ] as Array<[string, () => Promise<void>]>) {
       try {

@@ -93,6 +93,12 @@ export type AiUnreadFamily = {
    * by search_all (the exchange rates), which a search that asks for it says (`not_searched_here`).
    */
   readAs?: { entityType: string; right: string; searched: boolean };
+  /**
+   * For a family search_all searches by code or name: the words of a search that name the family
+   * ("centre de coûts", "calendar", "dimension"), written without accents, taken out of the text
+   * before the codes and names are compared (`referenceSearchWords`).
+   */
+  searchWords?: RegExp;
 };
 
 /**
@@ -143,6 +149,26 @@ function gapHint(entry: AiUnreadFamily, gap: AiAdminFamiliesGap | undefined, rea
   return undefined;
 }
 
+/** A word of rates beside which a currency code asks for the exchange rates. */
+const RATE_WORD = String.raw`\b(?:taux|cours|rates?|exchange|change|cambio|kurse?)\b`;
+
+const EXCHANGE_RATE_TERMS = new RegExp([
+  String.raw`\bexchange\s+rates?\b`,
+  String.raw`\bfx\s+rates?\b`,
+  String.raw`\btaux\s+de\s+change\b`,
+  String.raw`\bwechselkurs`,
+  String.raw`\btipos?\s+de\s+cambio\b`,
+  String.raw`\bcurrenc(?:y|ies)\b`,
+  String.raw`\bw[aä]hrung(?:en)?(?![a-zäöü])`,
+  String.raw`\b(?:devises|monedas|divisas)\b`,
+  // The singular in a phrase: "devise de reporting", "la devise", "moneda de reporte".
+  String.raw`\b(?:devise|moneda|divisa)\s+(?:de|du|des|del|d['’]|par|por)\b`,
+  String.raw`\b(?:la|une|quelle|en|una|qu[eé])\s+(?:devise|moneda|divisa)\b`,
+  // A code or the singular anywhere in a text that has a word of rates.
+  String.raw`^(?=[\s\S]*${RATE_WORD})[\s\S]*\b(?:eur|usd|gbp|chf|devise|moneda|divisa)\b`,
+  String.raw`\b(?:eur|usd|gbp|chf|jpy|cad|aud|cny|sek|nok|dkk|pln)\s*\/\s*[a-z]{3}\b`,
+].join('|'), 'i');
+
 export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
   {
     family: 'cost centers',
@@ -150,6 +176,7 @@ export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
     hint: 'A budget line names its cost center: the cost_center field and filter of query_entities on budget_lines.',
     terms: /cost[\s_-]*cent|centres?\s+de\s+co[uû]ts?|kostenstelle|centros?\s+de\s+costes?/i,
     readAs: { entityType: 'cost_centers', right: 'Cost centers', searched: true },
+    searchWords: /\b(?:centres?|centros?)\s+de\s+(?:couts?|costes?)\b|\bcost[\s_-]*cent(?:er|re)s?\b|\bkostenstellen?\b/g,
   },
   {
     family: 'working-day calendars',
@@ -157,12 +184,16 @@ export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
     // A working-day calendar, never a project or migration calendar.
     terms: /working[\s-]*days?|business[\s-]*days?|jours?\s+ouvr|arbeitstag|d[ií]as?\s+(h[aá]biles|laborables)|calendarios?\s+laboral/i,
     readAs: { entityType: 'working_day_calendars', right: 'Working-day calendars', searched: true },
+    searchWords: /\bworking[\s-]*days?(?:\s+calendars?)?\b|\bbusiness[\s-]*days?\b|\bcalendriers?(?:\s+(?:des\s+|de\s+)?jours?\s+ouvres?)?\b|\bjours?\s+ouvres?\b|\bcalendars?\b|\barbeitstag\w*|\bkalender\b|\bcalendarios?(?:\s+laborales?)?\b|\bdias?\s+(?:habiles|laborables)\b/g,
   },
   {
     family: 'exchange rates',
     screen: ['budgetManagement', 'budgetAdministration', 'currencies'],
-    // The rates and the currencies, and a currency code alone (EUR, USD) or as a pair (EUR/USD).
-    terms: /exchange\s+rate|fx\s+rate|taux\s+de\s+change|wechselkurs|tipos?\s+de\s+cambio|currenc(y|ies)|\bdevises?\b|w[aä]hrung|\bmonedas?\b|\bdivisas?\b|\b(eur|usd|gbp|chf)\b|\b(eur|usd|gbp|chf|jpy|cad|aud|cny|sek|nok|dkk|pln)\s*\/\s*[a-z]{3}\b/i,
+    // The rates and the currencies, in whole words. A currency code (EUR, USD) asks for them beside a
+    // word of rates (taux, cours, rate, exchange, change) or as a pair (EUR/USD), and a currency in
+    // the singular (devise, moneda, divisa) beside such a word or in a phrase: "USD Partners",
+    // "Devise Consulting" and "Cryptocurrency wallet" are suppliers or products.
+    terms: EXCHANGE_RATE_TERMS,
     readAs: { entityType: 'exchange_rates', right: 'Budget', searched: false },
   },
   {
@@ -171,6 +202,7 @@ export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
     // An analytics dimension, never a supplier or product named Dimension.
     terms: /analytic\w*\s+dimension|dimensions?\s+analytique|axes?\s+analytique|analysedimension|dimensi[oó]n(es)?\s+anal[ií]tica/i,
     readAs: { entityType: 'analytics_axes', right: 'Analytics', searched: true },
+    searchWords: /\banalytic\w*\s+dimensions?\b|\b(?:dimensions?|axes?)\s+analytiques?\b|\banalysedimension\w*|\bdimension(?:es)?(?:\s+analiticas?)?\b|\bdimensions?\b|\baxes?\b/g,
   },
   {
     family: 'data access (which companies or cost centers a person is limited to)',
@@ -347,6 +379,68 @@ export function notSearchedFamiliesAskedBy(
       where: unreadFamilyScreen(entry, language),
       note: `The ${entry.family} are read by query_entities on ${entry.readAs!.entityType}, not searched by search_all.`,
     }));
+}
+
+/** Lower case, without accents: "Coûts" is "couts". */
+function plainText(text: string): string {
+  return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+/** Linking words of a search, which no code or name needs to hold ("calendrier de France"). */
+const LINKING_WORDS = new Set(['de', 'du', 'des', 'd', 'la', 'le', 'les', 'l', 'the', 'of', 'for', 'pour', 'der', 'die', 'das', 'el', 'los', 'del']);
+
+/** The family of a searched reference data entry (`readAs.searched`), by its AI family. */
+function searchedEntry(entityType: string): AiUnreadFamily | undefined {
+  return AI_UNREAD_FAMILIES.find((entry) => entry.readAs?.entityType === entityType && entry.readAs.searched && entry.searchWords);
+}
+
+/**
+ * The words of a search compared with the codes and names of one reference data family: the text
+ * without the words that name the family ("centre de coûts Group IT" gives `group`, `it`), lower
+ * case and without accents. `rest` is that text, for the rank of an exact code or name; `named`,
+ * whether the text names the family in the words of its unread entry (`terms`).
+ */
+export function referenceSearchWords(entityType: string, query: string): { words: string[]; rest: string; named: boolean } {
+  const entry = searchedEntry(entityType);
+  const text = String(query ?? '');
+  const plain = plainText(text);
+  const rest = (entry?.searchWords ? plain.replace(entry.searchWords, ' ') : plain).replace(/\s+/g, ' ').trim();
+  const words = rest.split(' ')
+    .map((word) => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
+    .filter((word) => word.length > 0 && !LINKING_WORDS.has(word));
+  return { words, rest, named: !!entry && entry.terms.test(text) };
+}
+
+/** Whether a code or a name holds every word of a search, without case or accents. */
+export function referenceSearchMatches(words: readonly string[], code: string, name: string): boolean {
+  if (words.length === 0) return false;
+  const plainCode = plainText(code);
+  const plainName = plainText(name);
+  return words.every((word) => plainCode.includes(word) || plainName.includes(word));
+}
+
+/** Whether a code or a name equals the search once the family's words are out: the rank of a reference. */
+export function referenceSearchExact(rest: string, code: string, name: string): boolean {
+  return !!rest && (plainText(code) === rest || plainText(name) === rest);
+}
+
+/**
+ * The note of a reference data family a search names without matching any of its records
+ * (`not_searched_here`): search_all compares codes and names only, so the family is read by
+ * query_entities. It names no record and concludes nothing.
+ */
+export function unmatchedReferenceFamilyNote(
+  entityType: string,
+  language: AiScreenLanguage | null,
+): { family: string; where: string; note: string } | null {
+  const entry = searchedEntry(entityType);
+  if (!entry) return null;
+  return {
+    family: entry.family,
+    where: unreadFamilyScreen(entry, language),
+    note: `search_all compares the words of the search with the codes and names of the ${entry.family} only. `
+      + `Read them by query_entities on ${entityType} with q (a code or a word of a name) before saying whether one exists.`,
+  };
 }
 
 /** The families of the entries read as a family (`readAs`), whose right `unreadFamiliesReachOf` probes. */

@@ -7,6 +7,10 @@ import {
   aiScreenLanguage,
   notSearchedFamiliesAskedBy,
   readAiScreenLanguage,
+  referenceSearchExact,
+  referenceSearchMatches,
+  referenceSearchWords,
+  unmatchedReferenceFamilyNote,
   unreadFamiliesAskedBy,
   unreadFamiliesReachOf,
   unreadFamiliesSentence,
@@ -28,7 +32,12 @@ function testWordsThatAskForAFamily() {
     ['dimensions analytiques', 'analytics dimensions'],
     ['taux EUR/USD', 'exchange rates'],
     ['devise de reporting', 'exchange rates'],
-    ['EUR', 'exchange rates'],
+    ['cours EUR', 'exchange rates'],
+    ['EUR exchange', 'exchange rates'],
+    ['USD/CHF', 'exchange rates'],
+    ['currencies in use', 'exchange rates'],
+    ['devises utilisées', 'exchange rates'],
+    ['taux de la devise CHF', 'exchange rates'],
     ['accès limité aux données', 'data access (which companies or cost centers a person is limited to)'],
     ['périmètre de données de Paul', 'data access (which companies or cost centers a person is limited to)'],
     ["journal d'audit", 'audit log'],
@@ -69,6 +78,11 @@ function testCommonWordsAskForNone() {
     // A pair of words that is no currency pair.
     'TCP/UDP',
     'Europe',
+    // A currency code alone, a supplier or a product (Plaid L9, lot F, m5).
+    'EUR',
+    'USD Partners',
+    'Devise Consulting',
+    'Cryptocurrency wallet',
   ]) {
     assert.deepEqual(families(query), [], `"${query}" asks for no unread family`);
   }
@@ -228,8 +242,35 @@ async function testTheReferenceDataFollowTheirRights() {
   assert.deepEqual(probed, ['chargeback', 'cost_centers', 'working_day_calendars', 'exchange_rates', 'analytics_axes']);
 }
 
+/**
+ * search_all compares the words of a search with the codes and names of the reference data, the
+ * words that name the family taken out, without case or accents (Plaid L9, lot F, M1).
+ */
+function testTheWordsOfAReferenceSearch() {
+  assert.deepEqual(referenceSearchWords('cost_centers', 'centre de coûts Group IT'), { words: ['group', 'it'], rest: 'group it', named: true });
+  assert.deepEqual(referenceSearchWords('cost_centers', 'cost centers Group IT').words, ['group', 'it']);
+  assert.deepEqual(referenceSearchWords('working_day_calendars', 'calendrier France'), { words: ['france'], rest: 'france', named: false });
+  assert.deepEqual(referenceSearchWords('working_day_calendars', 'calendrier des jours ouvrés de France').words, ['france']);
+  assert.equal(referenceSearchWords('working_day_calendars', 'jours ouvrés France').named, true);
+  assert.deepEqual(referenceSearchWords('working_day_calendars', 'working-day calendar CAD218').words, ['cad218']);
+  assert.deepEqual(referenceSearchWords('analytics_axes', 'axe analytique it_tower').words, ['it_tower']);
+  assert.deepEqual(referenceSearchWords('analytics_axes', 'dimension Priorité').words, ['priorite']);
+  assert.ok(referenceSearchMatches(['group', 'it'], 'DSI-GRP', 'Group IT'));
+  assert.ok(referenceSearchMatches(['securite'], 'FR-1', 'Sécurité'), 'without accents');
+  assert.equal(referenceSearchMatches(['group', 'paris'], 'DSI-GRP', 'Group IT'), false, 'every word');
+  assert.equal(referenceSearchMatches([], 'DSI-GRP', 'Group IT'), false, 'no word, no match');
+  assert.ok(referenceSearchExact('group it', 'DSI-GRP', 'Group IT'));
+  assert.equal(referenceSearchExact('group', 'DSI-GRP', 'Group IT'), false);
+  const note = unmatchedReferenceFamilyNote('cost_centers', 'fr')!;
+  assert.equal(note.family, 'cost centers');
+  assert.equal(note.where, 'Données de référence › Centres de coûts');
+  assert.match(note.note, /query_entities on cost_centers with q/);
+  assert.equal(unmatchedReferenceFamilyNote('exchange_rates', 'fr'), null, 'the rates are not searched by code or name');
+}
+
 async function run() {
   testWordsThatAskForAFamily();
+  testTheWordsOfAReferenceSearch();
   await testTheReferenceDataFollowTheirRights();
   testTheFamiliesOfTheAdministratorsOfUsers();
   testTheChargebackFollowsTheReportingRight();

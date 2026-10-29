@@ -149,7 +149,13 @@ import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMA
 import { classificationLabels } from '../../applications/services/application-classification';
 import { readClassificationCatalog } from '../ai-classification-catalog.util';
 import { AI_SCREEN_RESOURCES, aiPermissionLevelLabel, aiResourceLabel } from '../ai-role-labels';
-import { readAiScreenLanguage, type AiScreenLanguage } from '../ai-unread-families';
+import {
+  readAiScreenLanguage,
+  referenceSearchExact,
+  referenceSearchMatches,
+  referenceSearchWords,
+  type AiScreenLanguage,
+} from '../ai-unread-families';
 
 function toIso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -629,6 +635,12 @@ function withoutHiddenLine<T extends { related_object_hidden?: true }>(row: T): 
   const { related_object_hidden: _hidden, ...task } = row;
   return { ...task, related_object_id: null, related_object_name: null } as unknown as T;
 }
+
+/**
+ * A reference data search whose right the caller has checked (`listReadableEntityTypes`), with the
+ * person's language read once for every family.
+ */
+export type ReferenceSearchChecked = { language: AiScreenLanguage | null };
 
 @Injectable()
 export class AiQueryExecutor {
@@ -1569,10 +1581,10 @@ export class AiQueryExecutor {
    * right of their page: checked again here, the database not guarding it, refused in words (the
    * right and the screen).
    */
-  private async workingDayCalendarServices(context: AiExecutionContextWithManager, year?: number | null) {
+  private async workingDayCalendarServices(context: AiExecutionContextWithManager, year?: number | null, checked?: ReferenceSearchChecked) {
     if (!this.policy || !this.workingDayProfiles) throw new BadRequestException('The working-day calendars are not available.');
-    await this.policy.assertEntityTypeReadRight(context, 'working_day_calendars', context.manager);
-    const language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    if (!checked) await this.policy.assertEntityTypeReadRight(context, 'working_day_calendars', context.manager);
+    const language = checked ? checked.language : await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
     const opts: AiWorkingDayCalendarOpts = {
       manager: context.manager,
       tenantId: context.tenantId,
@@ -1583,10 +1595,10 @@ export class AiQueryExecutor {
     return { services: { calendars: this.workingDayProfiles }, opts };
   }
 
-  private async analyticsAxesServices(context: AiExecutionContextWithManager) {
+  private async analyticsAxesServices(context: AiExecutionContextWithManager, checked?: ReferenceSearchChecked) {
     if (!this.policy || !this.analyticsAxes) throw new BadRequestException('The analytics dimensions are not available.');
-    await this.policy.assertEntityTypeReadRight(context, 'analytics_axes', context.manager);
-    const language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    if (!checked) await this.policy.assertEntityTypeReadRight(context, 'analytics_axes', context.manager);
+    const language = checked ? checked.language : await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
     return {
       services: { axes: this.analyticsAxes },
       opts: { manager: context.manager, tenantId: context.tenantId, userId: context.userId, language },
@@ -1634,49 +1646,56 @@ export class AiQueryExecutor {
    * The tree of cost centers, read with the right of its page as its route: checked again here,
    * the database not guarding it, refused in words (the right and the screen).
    */
-  private async costCenterServices(context: AiExecutionContextWithManager) {
+  private async costCenterServices(context: AiExecutionContextWithManager, checked?: ReferenceSearchChecked) {
     if (!this.policy || !this.costCenters) throw new BadRequestException('The cost centers are not available.');
-    await this.policy.assertEntityTypeReadRight(context, 'cost_centers', context.manager);
+    if (!checked) await this.policy.assertEntityTypeReadRight(context, 'cost_centers', context.manager);
     return { services: { costCenters: this.costCenters }, opts: { manager: context.manager, tenantId: context.tenantId } };
   }
 
   /**
-   * The cost centers, working-day calendars or analytics dimensions whose code or name contains
-   * `query`, without case, for `search_all`: the family's own read and quick search (`q`), the
-   * right of its page checked as for query_entities. The path of a cost center does not count, so
-   * that a group's name does not bring back the whole group. A code or name equal to `query` comes
-   * first (`exact`); at most `limit` items, and `total` counts every match.
+   * The cost centers, working-day calendars or analytics dimensions that match a search, for
+   * `search_all`: the family's own read, every row, the right of its page checked as for
+   * query_entities. The words that name the family are taken out of the search ("centre de coûts
+   * Group IT" searches `group` and `it`), then a row matches when its code or its name holds every
+   * word left, without case or accents (`referenceSearchWords`). The path of a cost center does not
+   * count, so that a group's name does not bring back the whole group. A code or name equal to the
+   * rest comes first (`exact`); at most `limit` items, and `total` counts every match. `named`: the
+   * search names the family in words. `checked`: the caller has checked the right (search_all, for
+   * every family at once) and read the person's language.
    */
   async searchReferenceData(
     context: AiExecutionContextWithManager,
     entityType: AiSearchReferenceEntityType,
     query: string,
     limit = 5,
-  ): Promise<{ items: Array<{ item: AiEntitySummaryDto; exact: boolean }>; total: number }> {
-    const q = String(query ?? '').trim();
-    if (!q) return { items: [], total: 0 };
+    checked?: ReferenceSearchChecked,
+  ): Promise<{ items: Array<{ item: AiEntitySummaryDto; exact: boolean }>; total: number; named: boolean }> {
+    if (!String(query ?? '').trim()) return { items: [], total: 0, named: false };
+    const { words, rest, named } = referenceSearchWords(entityType, query);
     let rows: Array<{ code: string; name: string; item: AiEntitySummaryDto }>;
     if (entityType === 'cost_centers') {
-      const { services, opts } = await this.costCenterServices(context);
-      const found = await filterAiCostCenters(services, opts, { q });
-      rows = found.rows
-        .filter((row) => row.matched_on !== 'path')
-        .map((row) => ({ code: row.code, name: row.name, item: this.mapCostCenter(row) }));
+      const { services, opts } = await this.costCenterServices(context, checked);
+      const found = await filterAiCostCenters(services, opts, {});
+      // Where it matched, as the quick search says it: the code when it holds every word.
+      rows = found.rows.map((row) => ({
+        code: row.code,
+        name: row.name,
+        item: this.mapCostCenter({ ...row, matched_on: referenceSearchMatches(words, row.code, '') ? 'code' : 'name' }),
+      }));
     } else if (entityType === 'working_day_calendars') {
-      const { services, opts } = await this.workingDayCalendarServices(context);
-      const found = await listAiWorkingDayCalendars(services, { q }, opts, true);
+      const { services, opts } = await this.workingDayCalendarServices(context, null, checked);
+      const found = await listAiWorkingDayCalendars(services, {}, opts, true);
       rows = found.items.map((row) => ({ code: row.code, name: row.name, item: this.mapWorkingDayCalendar(row) }));
     } else {
-      const { services, opts } = await this.analyticsAxesServices(context);
-      const found = await listAiAnalyticsAxes(services, { q }, opts, true);
+      const { services, opts } = await this.analyticsAxesServices(context, checked);
+      const found = await listAiAnalyticsAxes(services, {}, opts, true);
       rows = found.items.map((row) => ({ code: row.code, name: row.name, item: this.mapAnalyticsAxis(row) }));
     }
-    const needle = q.toLowerCase();
     const matched = rows
-      .filter((row) => row.code.toLowerCase().includes(needle) || row.name.toLowerCase().includes(needle))
-      .map((row) => ({ item: row.item, exact: row.code.toLowerCase() === needle || row.name.toLowerCase() === needle }));
+      .filter((row) => referenceSearchMatches(words, row.code, row.name))
+      .map((row) => ({ item: row.item, exact: referenceSearchExact(rest, row.code, row.name) }));
     const ordered = [...matched.filter((row) => row.exact), ...matched.filter((row) => !row.exact)];
-    return { items: ordered.slice(0, limit), total: ordered.length };
+    return { items: ordered.slice(0, limit), total: ordered.length, named };
   }
 
   /** A node of the tree of cost centers: its code is its reference, its name its label; no person id. */

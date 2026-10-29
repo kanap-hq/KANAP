@@ -60,6 +60,7 @@ import {
   readAiScreenLanguage,
   unreadFamiliesAskedBy,
   unreadFamiliesReachOf,
+  unmatchedReferenceFamilyNote,
   unreadFamilyLines,
   type AiAdminFamiliesGap,
   type AiUnreadFamiliesReach,
@@ -114,11 +115,15 @@ type RankedSearchResult = {
 /**
  * The reference data `search_all` found (`AI_SEARCH_REFERENCE_ENTITY_TYPES`), scored on the scale
  * of the index: an exact code or name at the rank of a reference (4), a part of one at the rank of
- * a label (3). `types` the families searched, `failed` those that could not be.
+ * a label (3). `types` the families searched, `failed` those that could not be, `unmatched` those
+ * the search names in words without matching any of their records. `language`, the person's, when
+ * a family needed it.
  */
 type ReferenceSearchHits = RankedSearchResult & {
   types: AiSearchReferenceEntityType[];
   failed: Array<{ type: AiSearchReferenceEntityType; message: string }>;
+  unmatched: AiSearchReferenceEntityType[];
+  language?: AiScreenLanguage | null;
 };
 
 /** At most this many reference data rows per family in one search. */
@@ -522,9 +527,9 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
 /**
  * A search says what it could not look in: the unread families its words ask for (chargeback, a
  * family the person lacks the right of...), the families read elsewhere that it does not search
- * (`not_searched_here`: the exchange rates), and every unread family when nothing matched, so that
- * no match never reads as "does not exist". Their screens are named in the person's language
- * (`language`, null: all four).
+ * (`not_searched_here`: the exchange rates, and the reference data families it names without a
+ * match, `unmatched`), and every unread family when nothing matched, so that no match never reads
+ * as "does not exist". Their screens are named in the person's language (`language`, null: all four).
  */
 function withUnreadFamilies<T extends { items: unknown[] }>(
   result: T,
@@ -532,6 +537,7 @@ function withUnreadFamilies<T extends { items: unknown[] }>(
   language: AiScreenLanguage | null,
   gap: AiAdminFamiliesGap | undefined,
   reach: AiUnreadFamiliesReach | undefined,
+  unmatched: readonly AiSearchReferenceEntityType[] = [],
 ): T & {
   not_read_here?: ReturnType<typeof unreadFamiliesAskedBy>;
   not_searched_here?: ReturnType<typeof notSearchedFamiliesAskedBy>;
@@ -539,7 +545,10 @@ function withUnreadFamilies<T extends { items: unknown[] }>(
   no_match_note?: string;
 } {
   const asked = unreadFamiliesAskedBy(query, language, gap, reach);
-  const notSearched = notSearchedFamiliesAskedBy(query, language, reach);
+  const notSearched = [
+    ...notSearchedFamiliesAskedBy(query, language, reach),
+    ...unmatched.flatMap((type) => unmatchedReferenceFamilyNote(type, language) ?? []),
+  ];
   return {
     ...result,
     ...(asked.length ? { not_read_here: asked } : {}),
@@ -2146,27 +2155,33 @@ export class AiEntityService {
     // The profile's language, and whether the person reads the families of the administrators of
     // users, the chargeback reports and the reference data, are read only when the answer names an
     // unread family.
-    const namesUnread = result.items.length === 0 || asksForUnreadFamily(input.query);
-    const language = namesUnread ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId) : null;
+    const namesUnread = result.items.length === 0 || asksForUnreadFamily(input.query) || hits.unmatched.length > 0;
+    const language = !namesUnread ? null
+      : hits.language !== undefined ? hits.language : await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
     const gap = namesUnread ? await this.policy.adminFamiliesGap(context, context.manager) : undefined;
     const reach = namesUnread ? await unreadFamiliesReachOf(this.policy, context, context.manager) : undefined;
-    return withUnreadFamilies(result, input.query, language, gap, reach);
+    return withUnreadFamilies(result, input.query, language, gap, reach, hits.unmatched);
   }
 
   /**
    * The cost centers, working-day calendars and analytics dimensions among `types` the person reads
-   * whose code or name holds the query, through the reads of their families
-   * (`AiQueryExecutor.searchReferenceData`), at most `REFERENCE_SEARCH_LIMIT_PER_FAMILY` each. Each
-   * family runs in its own savepoint: one that fails is named in `failed` and the others still answer.
+   * whose code or name holds the words of the query, through the reads of their families
+   * (`AiQueryExecutor.searchReferenceData`), at most `REFERENCE_SEARCH_LIMIT_PER_FAMILY` each. The
+   * right is checked and the language read once for every family. Each family runs in its own
+   * savepoint: one that fails is named in `failed` and the others still answer. A family the query
+   * names in words without a match is named in `unmatched`.
    */
   private async searchReferenceFamilies(
     context: AiExecutionContextWithManager,
     types: AiSearchReferenceEntityType[],
     query: string,
   ): Promise<ReferenceSearchHits> {
-    const hits: ReferenceSearchHits = { items: [], total: 0, types: [], failed: [] };
+    const hits: ReferenceSearchHits = { items: [], total: 0, types: [], failed: [], unmatched: [] };
     if (!this.queryExecutor || types.length === 0 || !String(query ?? '').trim()) return hits;
     const readable = await this.policy.listReadableEntityTypes(context, types, context.manager) as AiSearchReferenceEntityType[];
+    if (readable.length === 0) return hits;
+    hits.language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    const checked = { language: hits.language };
     let counter = 0;
     for (const type of readable) {
       // A fixed prefix and a counter: an SQL identifier never takes a value from the request.
@@ -2174,10 +2189,11 @@ export class AiEntityService {
       // Outside a transaction a savepoint is refused, and a failed read poisons nothing.
       const isolated = await context.manager.query(`SAVEPOINT ${savepoint}`).then(() => true, () => false);
       try {
-        const found = await this.queryExecutor.searchReferenceData(context, type, query, REFERENCE_SEARCH_LIMIT_PER_FAMILY);
+        const found = await this.queryExecutor.searchReferenceData(context, type, query, REFERENCE_SEARCH_LIMIT_PER_FAMILY, checked);
         if (isolated) await context.manager.query(`RELEASE SAVEPOINT ${savepoint}`);
         hits.types.push(type);
         hits.total += found.total;
+        if (found.named && found.total === 0) hits.unmatched.push(type);
         hits.items.push(...found.items.map(({ item, exact }) => ({ ...item, _score: exact ? 4 : 3 })));
       } catch (error) {
         if (isolated) {
