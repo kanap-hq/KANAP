@@ -415,26 +415,45 @@ Zeigen Sie Budgetdaten gruppiert nach den Werten einer Analysedimension. Das Lay
 - **Dimension**: die Dimension, nach der der Bericht gruppiert. Sie bietet die aktivierten Dimensionen an, die für die gewählte Positionsart verwendet werden, erscheint, wenn es zwei oder mehr gibt, und der Bericht öffnet mit der Standarddimension. Wechseln Sie zu einer Positionsart, die die gewählte Dimension nicht verwendet, kehrt der Bericht zur Standarddimension zurück. Die Seitenadresse speichert Ihre Wahl, sodass ein gespeicherter oder geteilter Link mit derselben Dimension öffnet
 - **Startjahr** und **Endjahr**: Vorheriges, aktuelles oder nächstes Jahr
 - **Kennzahl**: Jede angezeigte Budgetspalte. Beginnt mit der Standardspalte
-- **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm (nur Einzeljahr)
+- **Diagrammtyp**: Kreisdiagramm oder horizontales Balkendiagramm. Verfügbar für ein einzelnes Jahr, wenn **OPEX/CAPEX-Aufteilung** nicht aktiviert ist
+- **Detail pro Zeile**: listet die Zeilen jedes Werts darunter auf
+- **OPEX/CAPEX-Aufteilung**: fügt die OPEX- und CAPEX-Anteile jedes Werts hinzu. Nur mit dem Zeilentyp **Alle** verfügbar
 - **Werte ausschließen**: Mehrfachauswahl mit Autovervollständigung zum Ausschließen bestimmter Werte der gewählten Dimension. Die Liste bietet die Werte an, die für den gewählten Zeilentyp verwendet werden, dazu die Werte, die die Zeilen des Berichts haben. Die Liste beginnt mit „Nicht zugeordnet“: Wenn Sie diesen Eintrag wählen, entfallen die Zeilen ohne Wert in der Dimension. Ein Wechsel des Zeilentyps oder der Dimension leert die Auswahl
 - **Kostenstelle**, **Run oder Build**, **Zeilen** und die Filter nach Analysedimension: Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen)
 
-Untertitel, Diagrammtitel und erste Tabellenspalte nennen die gewählte Dimension, zum Beispiel „OPEX nach Nature“.
+Untertitel, Diagrammtitel und erste Tabellenspalte nennen die gewählte Dimension, zum Beispiel „OPEX nach Nature“. Die Seitenadresse speichert auch die beiden Kontrollkästchen, sodass ein geteilter Link mit demselben Detail und derselben Aufteilung öffnet.
 
 ### Was Sie sehen
 
 **Einzeljahr-Modus**:
 
-- Kreis- oder Balkendiagramm der Summen nach Wert
+- Kreis- oder Balkendiagramm der Summen nach Wert. Das Balkendiagramm ist so hoch, wie seine Balken es brauchen
+- Mit **Detail pro Zeile** zeigt das Diagramm die Zeilen („BL-12 · Name“) statt der Werte
+- Mit **OPEX/CAPEX-Aufteilung** ein horizontaler Balken pro Wert, auf 100 % skaliert: sein OPEX-Teil und sein CAPEX-Teil, jeweils mit Prozentsatz. Ab zwei Werten steht ein Balken **Gesamt** an erster Stelle, und eine Legende nennt OPEX und CAPEX. Ist zusätzlich **Detail pro Zeile** aktiviert, bleibt es bei einem Balken pro Wert
 - Fußnote mit der Kennzahl-Summe
 
 **Mehrjahr-Modus**:
 
-- Liniendiagramm mit einer Serie pro Wert
+- Liniendiagramm mit einer Serie pro Wert, oder einer pro Zeile mit **Detail pro Zeile**. Die Aufteilung ändert das Diagramm nicht: Die Tabelle zeigt sie
 
-**Tabelle**: Eine Zeile pro Wert mit Jahresspalten. Eine angeheftete Summenzeile unten. Zeilen ohne Wert in der gewählten Dimension erscheinen als „Nicht zugeordnet“.
+**Tabelle**: Eine Zeile pro Wert mit Jahresspalten und einer Spalte **Zeilen** mit der Anzahl der Zeilen jedes Werts. Eine angeheftete Summenzeile unten, mit der Gesamtzahl der Zeilen. Zeilen ohne Wert in der gewählten Dimension erscheinen als „Nicht zugeordnet“.
+
+Mit **Detail pro Zeile** erscheinen die Zeilen jedes Werts eingerückt darunter, „Nicht zugeordnet“ eingeschlossen, mit diesen Spalten:
+
+- **Ebene**: **Wert** oder **Zeile**
+- **Ref**: die Referenz der Zeile, die die Zeile in einem neuen Tab öffnet
+- **Art**: **OPEX** oder **CAPEX**
+- **Anteil am Gesamt** für jedes Jahr: der Anteil der Zeile an der Summe ihres Werts
+
+Die Spaltensortierung ist deaktiviert, solange Zeilen unter den Werten verschachtelt sind.
+
+Mit **OPEX/CAPEX-Aufteilung** erhält jedes Jahr eine Spalte **OPEX-Anteil** und eine Spalte **CAPEX-Anteil**, für jeden Wert und für die Summenzeile. Mit dem Detail zeigt jede Zeile 100 % in ihrer eigenen Art.
 
 Ein Wert öffnet die Liste seiner Budgetzeilen in einem neuen Tab („Nicht zugeordnet“: die Budgetzeilen ohne Wert). Mit der Messgröße **VZÄ** zeigt die Liste die Budgetzeilen des Werts, die VZÄ melden. Siehe [Die Liste aus einem Bericht öffnen](#die-liste-aus-einem-bericht-offnen). Die Summenzeile ist reiner Text.
+
+**Begrenzter Datenzugriff**: Eine Person mit begrenztem [Datenzugriff](data-access.md#what-a-limited-person-sees) sieht unter jedem Wert einen Hinweis, zum Beispiel „und 3 Zeilen außerhalb Ihres Zugriffs“. Mit dem Detail steht er nach den Zeilen des Werts. Die Zählung folgt dem Zeilentyp und den Jahren des Berichts und berücksichtigt die Filter nicht. „Nicht zugeordnet“ zeigt keinen Hinweis.
+
+Der CSV- oder Excel-Export enthält die Spalte **Zeilen** sowie das Detail und die Aufteilung, wenn sie aktiviert sind. Druck und Export lassen die Hinweise auf Zeilen außerhalb Ihres Zugriffs weg.
 
 ---
 

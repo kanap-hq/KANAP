@@ -415,26 +415,45 @@ View budget data grouped by the values of one analytics dimension. The layout mi
 - **Dimension**: the dimension the report groups on. It offers the enabled dimensions used for the selected line type, shows when there are two or more, and the report opens on the default dimension. Switching the line type to one that does not use the chosen dimension returns to the default dimension. The page address keeps your choice, so a bookmarked or shared link opens on the same dimension
 - **Start year** and **End year**: Previous, current, or next year
 - **Metric**: Any shown budget column. Starts on the default column
-- **Chart type**: Pie chart or horizontal bar chart (single-year only)
+- **Chart type**: Pie chart or horizontal bar chart. Available for a single year, when **OPEX / CAPEX split** is off
+- **Detail by line**: lists the lines of each value under it
+- **OPEX / CAPEX split**: adds the OPEX and CAPEX shares of each value. Available with the **All** line type only
 - **Exclude values**: Multi-select autocomplete to exclude specific values of the chosen dimension. It offers the values used for the selected line type, plus the values the report's lines hold. The list starts with "Unassigned": choosing it leaves out the lines without a value on the dimension. Switching the line type or the dimension clears it
 - **Cost center**, **Run or build**, **Lines** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
-The subtitle, the chart title and the first column of the table name the chosen dimension, for example "OPEX by Nature".
+The subtitle, the chart title and the first column of the table name the chosen dimension, for example "OPEX by Nature". The page address also keeps the two boxes, so a shared link opens with the same detail and split.
 
 ### What you'll see
 
 **Single-year mode**:
 
-- Pie or bar chart of totals by value
+- Pie or bar chart of totals by value. The bar chart is as tall as its bars need
+- With **Detail by line**, the chart shows the lines ("BL-12 · name") instead of the values
+- With **OPEX / CAPEX split**, one horizontal bar per value, scaled to 100 %: its OPEX part and its CAPEX part, each with its percentage. A **Total** bar comes first when there are two values or more, and a legend names OPEX and CAPEX. With **Detail by line** as well, the bars stay one per value
 - Footnote with the metric total
 
 **Multi-year mode**:
 
-- Line chart with one series per value
+- Line chart with one series per value, or one per line with **Detail by line**. The split does not change the chart: the table gives it
 
-**Table**: One row per value with year columns. A pinned totals row at the bottom. Lines without a value on the chosen dimension appear as "Unassigned".
+**Table**: One row per value with year columns, and a **Lines** column with the number of lines of each value. A pinned totals row at the bottom, with the total number of lines. Lines without a value on the chosen dimension appear as "Unassigned".
+
+With **Detail by line**, the lines of each value appear indented under it, "Unassigned" included, with these columns:
+
+- **Level**: **Value** or **Line**
+- **Ref**: the line's reference, which opens the line in a new tab
+- **Nature**: **OPEX** or **CAPEX**
+- **Share of total** for each year: the line's share of its value's total
+
+Column sorting is off while rows are nested under the values.
+
+With **OPEX / CAPEX split**, each year gets an **OPEX share** and a **CAPEX share** column, on every value and on the totals row. With the detail, each line shows 100 % in its own nature.
 
 A value opens the list of its lines in a new tab ("Unassigned": the lines without a value). With the **FTE** measure, the list shows the value's lines that declare FTE. See [Opening the list from a report](#opening-the-list-from-a-report). The totals row is plain text.
+
+**Limited data access**: a person with limited [data access](data-access.md#what-a-limited-person-sees) sees a mention under each value, for example "and 3 lines outside your access". With the detail, it comes after the value's lines. The count follows the line type and the years of the report, and ignores the filters. "Unassigned" shows no mention.
+
+The CSV or Excel export holds the **Lines** column, and the detail and the split when they are on. Printing and the export leave out the mentions of lines outside your access.
 
 ---
 
