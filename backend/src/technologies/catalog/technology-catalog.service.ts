@@ -217,14 +217,26 @@ export class TechnologyCatalogService {
         name: product.name,
         editor: product.editor,
         family: resolved,
+        family_label: technologyFamilies.find((option) => option.code === resolved)?.label ?? resolved,
         hosting_type: resolveHostingType(hostingTypes, this.hostingTypeOf(product)),
         cpe_products: product.cpe_products,
         versions: product.versions.length,
         latest_version: product.versions[0]?.label ?? null,
+        // The end-of-support range of the versions an adoption would write: the assistant's card.
+        ...this.supportRange(product.versions),
         description: this.description(product.key, language),
         completes: completesByName.get(product.name.trim().toLowerCase()) ?? null,
       }));
     return { items };
+  }
+
+  /** The earliest and latest end of support among `versions` (extended when it is later). */
+  private supportRange(versions: CatalogVersion[]): { support_from: string | null; support_to: string | null } {
+    const dates = versions
+      .map((version) => version.extended_support_end ?? version.standard_support_end)
+      .filter((date): date is string => !!date)
+      .sort();
+    return { support_from: dates[0] ?? null, support_to: dates[dates.length - 1] ?? null };
   }
 
   /**

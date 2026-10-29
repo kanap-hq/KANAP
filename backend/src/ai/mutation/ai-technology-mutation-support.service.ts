@@ -93,9 +93,14 @@ export class AiTechnologyMutationSupportService {
 
   /**
    * The technology by TEC-n, UUID or exact name. A technology outside the tenant is refused at
-   * preparation with the screen to add it on; this lot never creates one.
+   * preparation with what to do next: this tool never creates one, the model prepares a plan that
+   * creates or adopts it, then writes the link or the versions.
    */
-  async resolveTechnology(context: AiExecutionContextWithManager, reference: string): Promise<AiTechnologyTarget> {
+  async resolveTechnology(
+    context: AiExecutionContextWithManager,
+    reference: string,
+    purpose: 'link' | 'versions' = 'link',
+  ): Promise<AiTechnologyTarget> {
     const raw = text(reference);
     if (!raw) throw new NotFoundException('Technology "" is not in this workspace.');
     const ref = raw.match(/^TEC-(\d+)$/i)?.[1] ?? null;
@@ -112,7 +117,11 @@ export class AiTechnologyMutationSupportService {
       params,
     );
     if (rows.length === 0) {
-      throw new NotFoundException(`Technology "${raw}" is not in this workspace. Add it on the Technologies screen (IT > Technologies) first, then declare its links.`);
+      const then = purpose === 'versions' ? 'writes its versions' : 'declares the link';
+      throw new NotFoundException(
+        `Technology "${raw}" is not in this workspace. Prepare a plan that creates or adopts it `
+        + `(create_business_record, entity_type technologies) first, then ${then}. This tool creates nothing.`,
+      );
     }
     if (rows.length > 1) throw new BadRequestException(`Multiple technologies matched "${raw}". Use a TEC reference or the UUID.`);
     const row = rows[0];

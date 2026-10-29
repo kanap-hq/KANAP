@@ -232,6 +232,13 @@ async function seedGraph(runner: QueryRunner): Promise<Seed> {
      VALUES ($1, $2, $3, $4)`,
     [tenantId, servers.web, technologies.postgres, versions.pg14],
   );
+  // The seed writes TEC-1..3 by hand: the technology sequence starts after them, as the screen's
+  // creation route would leave it.
+  await runner.query(
+    `INSERT INTO item_sequences (tenant_id, entity_type, next_val) VALUES ($1, 'technology', 4)
+     ON CONFLICT (tenant_id, entity_type) DO UPDATE SET next_val = GREATEST(item_sequences.next_val, 4)`,
+    [tenantId],
+  );
 
   return {
     tenantId,
@@ -750,7 +757,7 @@ async function testUnknownTechnologyNamesTheScreen(harness: Harness) {
       () => harness.previews.createPreview(ctx, 'update_technology_links', {
         technology: 'Postgres', applications: { add: [{ application: 'CheeseTrack', version: '16' }] },
       }),
-      /Technology "Postgres" is not in this workspace\. Add it on the Technologies screen/,
+      /Technology "Postgres" is not in this workspace\. Prepare a plan that creates or adopts it \(create_business_record, entity_type technologies\) first, then declares the link\. This tool creates nothing\./,
     );
   });
 }
@@ -1000,6 +1007,423 @@ async function testApplicationsRightIsReverifiedAtExecutionAndUndo(harness: Harn
   });
 }
 
+
+/** The seed's PostgreSQL and its rows, so the catalog entry is no longer adopted in this tenant. */
+async function removeSeededPostgres(runner: QueryRunner, seed: Seed) {
+  await runner.query(`DELETE FROM application_technologies WHERE tenant_id = $1 AND technology_id = $2`, [seed.tenantId, seed.technologies.postgres]);
+  await runner.query(`DELETE FROM asset_technologies WHERE tenant_id = $1 AND technology_id = $2`, [seed.tenantId, seed.technologies.postgres]);
+  await runner.query(`DELETE FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2`, [seed.tenantId, seed.technologies.postgres]);
+  await runner.query(`DELETE FROM technologies WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.technologies.postgres]);
+}
+
+async function testTechnologyFreeCreate(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-free-create');
+    const preview = await executeToolPreview(harness, ctx, 'create_business_record', {
+      entity_type: 'technologies',
+      fields: { name: 'Redis', family: 'Database', lifecycle: 'Active', from_catalog: false },
+    });
+    assert.equal(preview.target.title, 'Redis');
+    assert.equal(preview.changes.family.to, 'Database');
+    assert.equal(preview.changes.lifecycle.to, 'Active');
+    const executed = await approvePreview(harness, ctx, preview);
+    assert.match(executed.target.ref, /^TEC-\d+$/);
+    const [technology] = await runner.query(
+      `SELECT family, lifecycle FROM technologies WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, executed.target.entity_id],
+    );
+    assert.deepEqual({ family: technology.family, lifecycle: technology.lifecycle }, { family: 'database', lifecycle: 'active' });
+    const audits = await runner.query(
+      `SELECT source, source_ref FROM audit_log
+        WHERE tenant_id = $1 AND record_id = $2 AND table_name = 'technologies' AND action = 'create'`,
+      [seed.tenantId, executed.target.entity_id],
+    );
+    assert.ok(audits.some((row: any) => row.source === 'ai_chat' && row.source_ref === preview.preview_id),
+      'the creation is audited with the AI source and the preview reference');
+  });
+}
+
+async function testTechnologyUnknownFamilyIsRefused(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-unknown-family');
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'create_business_record', {
+        entity_type: 'technologies',
+        fields: { name: 'Kafka', family: 'No such family', lifecycle: 'Active', from_catalog: false },
+      }),
+      /^Unknown family "No such family"\. Valid values: Operating system, Database, /,
+    );
+    const audits = await runner.query(`SELECT 1 FROM audit_log WHERE tenant_id = $1 AND source = 'ai_chat'`, [seed.tenantId]);
+    assert.equal(audits.length, 0, 'the refused preparation wrote nothing');
+  });
+}
+
+async function testTechnologyAdoption(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    await removeSeededPostgres(runner, seed);
+    const ctx = context(seed, runner, 'technology-adoption');
+    const preview = await executeToolPreview(harness, ctx, 'create_business_record', {
+      entity_type: 'technologies',
+      fields: { name: 'PostgreSQL', lifecycle: 'Active' },
+    });
+    assert.equal(preview.summary, 'Adopt technology "PostgreSQL" from the KANAP catalog.');
+    assert.match(preview.changes.catalog_adoption.to, /^\*\*Adopted from the KANAP catalog\*\*/);
+    assert.match(preview.changes.catalog_adoption.to, /Family: Database/);
+    assert.match(preview.changes.catalog_adoption.to, /versions, end of support from \d{4}-\d{2}-\d{2} to \d{4}-\d{2}-\d{2}/);
+    assert.equal(preview.changes.lifecycle.to, 'Active', 'the lifecycle given beside the adoption is listed apart');
+    const executed = await approvePreview(harness, ctx, preview);
+    assert.match(executed.target.ref, /^TEC-\d+$/);
+    const [technology] = await runner.query(
+      `SELECT catalog_key, family, lifecycle FROM technologies WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, executed.target.entity_id],
+    );
+    assert.deepEqual(technology, { catalog_key: 'postgresql', family: 'database', lifecycle: 'active' });
+    const versions = await runner.query(
+      `SELECT label, standard_support_end FROM technology_versions
+        WHERE tenant_id = $1 AND technology_id = $2 ORDER BY label`,
+      [seed.tenantId, executed.target.entity_id],
+    );
+    assert.ok(versions.length > 5, 'the catalog versions are adopted');
+    assert.ok(versions.some((row: any) => row.standard_support_end), 'their support dates come with them');
+    const audits = await runner.query(
+      `SELECT table_name, source, source_ref FROM audit_log
+        WHERE tenant_id = $1 AND record_id = $2 AND source = 'ai_chat'`,
+      [seed.tenantId, executed.target.entity_id],
+    );
+    assert.ok(audits.some((row: any) => row.table_name === 'technologies' && row.source_ref === preview.preview_id));
+    assert.ok(audits.some((row: any) => row.table_name === 'technology_versions' && row.source_ref === preview.preview_id));
+    // A second request on the same name gives the created reference.
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'create_business_record', {
+        entity_type: 'technologies',
+        fields: { name: 'PostgreSQL', lifecycle: 'Active' },
+      }),
+      new RegExp(`^A technology with this name already exists: ${executed.target.ref}\\.$`),
+    );
+    // A version of the catalog says where it comes from on a versions preview.
+    const versionsPreview = await executeToolPreview(harness, ctx, 'update_technology_versions', {
+      technology: 'PostgreSQL',
+      update: [{ version: '16', standard_support_end: '2028-12-31' }],
+    });
+    assert.match(versionsPreview.changes.technology_versions.to, /16: end of support .* \(from the KANAP catalog\)/);
+  });
+}
+
+async function testTechnologyCatalogAmbiguousAndFreeOnRequest(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    await removeSeededPostgres(runner, seed);
+    const ctx = context(seed, runner, 'technology-catalog-ambiguous');
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'create_business_record', {
+        entity_type: 'technologies',
+        fields: { name: 'Postgres', lifecycle: 'Active' },
+      }),
+      /^No exact KANAP catalog entry for "Postgres"\. Closest entries: .*PostgreSQL.* Choose one of them, or ask for a free entry with from_catalog: false\.$/,
+    );
+    const preview = await executeToolPreview(harness, ctx, 'create_business_record', {
+      entity_type: 'technologies',
+      fields: { name: 'Postgres', family: 'Database', lifecycle: 'Active', from_catalog: false },
+    });
+    const executed = await approvePreview(harness, ctx, preview);
+    const [technology] = await runner.query(
+      `SELECT catalog_key FROM technologies WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, executed.target.entity_id],
+    );
+    assert.equal(technology.catalog_key, null, 'the typed entry takes no catalog key');
+  });
+}
+
+async function testTechnologyRefusedFields(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-refused-fields');
+    const messages: Record<string, RegExp> = {
+      cpe_products: /CPE products are filled by the vulnerability matching/,
+      cve_names: /CVE names are filled by the vulnerability matching/,
+      catalog_key: /A catalog key comes from adopting the catalog entry/,
+      vulnerability_alerts: /Vulnerability alerts are a separate setting of the technology/,
+    };
+    for (const [field, pattern] of Object.entries(messages)) {
+      await expectRejects(
+        () => harness.previews.createPreview(ctx, 'create_business_record', {
+          entity_type: 'technologies',
+          fields: { name: `Kafka ${field}`, family: 'Database', lifecycle: 'Active', from_catalog: false, [field]: field === 'cpe_products' ? ['cpe:/a:x'] : field === 'cve_names' ? [] : field === 'vulnerability_alerts' ? true : 'redis' },
+        }),
+        pattern,
+      );
+    }
+  });
+}
+
+async function testTechnologyUpdateAndUndo(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-update');
+    const preview = await executeToolPreview(harness, ctx, 'update_business_record', {
+      entity_type: 'technologies',
+      ref: 'TEC-1',
+      fields: { lifecycle: 'Deprecated', replaced_by: 'nginx' },
+    });
+    assert.equal(preview.changes.lifecycle.to, 'Deprecated');
+    assert.equal(preview.changes.replaced_by_id.to, 'TEC-2 - nginx');
+    await approvePreview(harness, ctx, preview);
+    const [row] = await runner.query(
+      `SELECT lifecycle, replaced_by_id FROM technologies WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    assert.deepEqual({ lifecycle: row.lifecycle, replaced_by_id: row.replaced_by_id }, { lifecycle: 'deprecated', replaced_by_id: seed.technologies.nginx });
+    const undo = await harness.tools.execute(ctx, 'undo_preview', { preview_id: preview.preview_id }) as any;
+    await approvePreview(harness, ctx, undo);
+    const [restored] = await runner.query(
+      `SELECT lifecycle, replaced_by_id FROM technologies WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    assert.deepEqual({ lifecycle: restored.lifecycle, replaced_by_id: restored.replaced_by_id }, { lifecycle: 'active', replaced_by_id: null });
+  });
+}
+
+async function testTechnologyReplacementCycleIsRefused(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-cycle');
+    const preview = await executeToolPreview(harness, ctx, 'update_business_record', {
+      entity_type: 'technologies', ref: 'TEC-1', fields: { replaced_by: 'nginx' },
+    });
+    await approvePreview(harness, ctx, preview);
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'update_business_record', {
+        entity_type: 'technologies', ref: 'TEC-2', fields: { replaced_by: 'PostgreSQL' },
+      }),
+      'This replacement would make a cycle.',
+    );
+  });
+}
+
+async function testTechnologyUpdateDrift(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-update-drift');
+    const preview = await executeToolPreview(harness, ctx, 'update_business_record', {
+      entity_type: 'technologies', ref: 'TEC-1', fields: { lifecycle: 'Deprecated' },
+    });
+    await runner.query(`UPDATE technologies SET lifecycle = 'retired' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.technologies.postgres]);
+    const failed = await approveFailingPreview(harness, ctx, preview);
+    assert.equal(failed.error_message, 'Lifecycle changed after the preview was created.');
+    const [row] = await runner.query(`SELECT lifecycle FROM technologies WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.technologies.postgres]);
+    assert.equal(row.lifecycle, 'retired', 'the screen value stays');
+  });
+}
+
+async function testVersionAddAndUpdate(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'versions-add-update');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_versions', {
+      technology: 'TEC-1',
+      add: [{ label: '17', standard_support_end: '2029-11-08' }],
+      update: [
+        { version: '16', standard_support_end: '2028-12-31' },
+        { version: '15', label: '15.1', notes: 'LTS' },
+      ],
+    });
+    assert.match(preview.changes.technology_versions.to, /^- new version 17 \(end of support 2029-11-08\)$/m);
+    assert.match(preview.changes.technology_versions.to, /^- 16: end of support 2028-11-09 → 2028-12-31$/m);
+    assert.match(preview.changes.technology_versions.to, /^- 15 → 15\.1: notes updated$/m);
+    await approvePreview(harness, ctx, preview);
+    const rows = await runner.query(
+      `SELECT label, to_char(standard_support_end, 'YYYY-MM-DD') AS standard_support_end, notes
+         FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 ORDER BY label`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    const byLabel = new Map(rows.map((row: any) => [row.label, row]));
+    assert.equal((byLabel.get('17') as any)?.standard_support_end, '2029-11-08');
+    assert.equal((byLabel.get('16') as any)?.standard_support_end, '2028-12-31');
+    assert.equal((byLabel.get('15.1') as any)?.notes, 'LTS');
+    assert.equal(byLabel.has('15'), false, 'the renamed version keeps its row, under its new label');
+    const audits = await runner.query(
+      `SELECT action, source, source_ref FROM audit_log
+        WHERE tenant_id = $1 AND table_name = 'technology_versions' AND source = 'ai_chat' ORDER BY created_at`,
+      [seed.tenantId],
+    );
+    assert.ok(audits.some((row: any) => row.action === 'create' && row.source_ref === preview.preview_id));
+    assert.ok(audits.some((row: any) => row.action === 'update' && row.source_ref === preview.preview_id));
+  });
+}
+
+async function testVersionRefusals(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'versions-refusals');
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'update_technology_versions', {
+        technology: 'TEC-1', add: [{ label: '16' }],
+      }),
+      'This version already exists.',
+    );
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'update_technology_versions', {
+        technology: 'TEC-1', add: [{ label: '17', standard_support_end: '2029-01-01', extended_support_end: '2028-01-01' }],
+      }),
+      'The extended support cannot end before the standard support.',
+    );
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'update_technology_versions', {
+        technology: 'TEC-1', update: [{ version: '16', label: '14' }],
+      }),
+      'This version already exists.',
+    );
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'update_technology_versions', {
+        technology: 'TEC-1', update: [{ version: '16', standard_support_end: '2028-11-09' }],
+      }),
+      'Version "16" already has the requested values.',
+    );
+  });
+}
+
+async function testVersionDrift(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'versions-drift');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_versions', {
+      technology: 'TEC-1', update: [{ version: '16', standard_support_end: '2028-12-31' }],
+    });
+    await runner.query(
+      `UPDATE technology_versions SET standard_support_end = '2028-11-10' WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.versions.pg16],
+    );
+    const failed = await approveFailingPreview(harness, ctx, preview);
+    assert.equal(failed.error_message, 'Versions of TEC-1 - PostgreSQL changed after the preview was created.');
+    const [row] = await runner.query(
+      `SELECT to_char(standard_support_end, 'YYYY-MM-DD') AS standard_support_end FROM technology_versions WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.versions.pg16],
+    );
+    assert.equal(row.standard_support_end, '2028-11-10', 'the screen value stays');
+  });
+}
+
+async function testVersionUndo(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'versions-undo');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_versions', {
+      technology: 'TEC-1',
+      add: [{ label: '17', standard_support_end: '2029-11-08' }],
+      update: [{ version: '16', standard_support_end: '2028-12-31' }],
+    });
+    await approvePreview(harness, ctx, preview);
+    const undo = await harness.tools.execute(ctx, 'undo_preview', { preview_id: preview.preview_id }) as any;
+    assert.match(undo.changes.technology_versions.to, /\*\*Kept\*\*\n- new version 17 \(the undo restores the changed versions, not the new one\)/);
+    await approvePreview(harness, ctx, undo);
+    const [sixteen] = await runner.query(
+      `SELECT to_char(standard_support_end, 'YYYY-MM-DD') AS standard_support_end FROM technology_versions WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.versions.pg16],
+    );
+    assert.equal(sixteen.standard_support_end, '2028-11-09', 'the changed version is restored');
+    const [seventeen] = await runner.query(
+      `SELECT label FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND label = '17'`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    assert.ok(seventeen, 'the created version stays');
+  });
+}
+
+
+async function testCreateThenLinkPlan(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    await removeSeededPostgres(runner, seed);
+    const ctx = context(seed, runner, 'create-then-link');
+    await runner.query(
+      `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at)
+       VALUES ($1, $2, $3, 'AI technology writes integration', 'custom', 'technology-write-model', 'custom', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+      [ctx.conversationId, ctx.tenantId, ctx.userId],
+    );
+    // The flagship phrase when the tenant has no PostgreSQL: one plan, the creation (or the
+    // adoption) first, the link second, the created reference carried into the second input.
+    const plan = await harness.tools.execute(ctx, 'prepare_mutation_plan', {
+      summary: 'Add PostgreSQL 16 to CheeseTrack',
+      operations: [
+        {
+          operation_id: 'create_postgres',
+          label: 'Create PostgreSQL',
+          tool_name: 'create_business_record',
+          input: { entity_type: 'technologies', fields: { name: 'PostgreSQL' } },
+        },
+        {
+          operation_id: 'link_postgres',
+          label: 'Declare PostgreSQL 16 on CheeseTrack',
+          tool_name: 'update_technology_links',
+          depends_on: ['create_postgres'],
+          input: {
+            technology: '{{create_postgres.ref}}',
+            applications: { add: [{ application: 'CheeseTrack', version: '16' }] },
+          },
+        },
+      ],
+    }) as any;
+    assert.equal(plan.total, 2);
+    assert.equal(plan.previews.length, 1, 'the independent step has its preview');
+    assert.equal(plan.deferred_count, 1, 'the link waits for the created technology');
+    const createPreview = plan.previews[0];
+    assert.equal(createPreview.tool_name, 'create_business_record');
+    const created = await approvePreview(harness, ctx, createPreview);
+    assert.match(created.target.ref, /^TEC-\d+$/);
+    const [step] = await runner.query(
+      `SELECT preview_id FROM ai_mutation_plan_steps
+        WHERE tenant_id = $1 AND plan_id = $2 AND step_key = 'link_postgres'`,
+      [seed.tenantId, plan.plan.plan_id],
+    );
+    assert.ok(step?.preview_id, 'the dependent preview is prepared after the creation');
+    const linked = await harness.previews.executePreview(ctx, step.preview_id) as any;
+    assert.equal(linked.status, 'executed', linked.error_message || 'the link step did not execute');
+    const [link] = await runner.query(
+      `SELECT l.source, l.source_ref, v.label, to_char(v.standard_support_end, 'YYYY-MM-DD') AS standard_support_end
+         FROM application_technologies l
+         JOIN technology_versions v ON v.id = l.technology_version_id AND v.tenant_id = l.tenant_id
+        WHERE l.tenant_id = $1 AND l.application_id = $2 AND l.technology_id = $3`,
+      [seed.tenantId, seed.apps.cheeseTrack, created.target.entity_id],
+    );
+    assert.equal(link.source, 'ai');
+    assert.equal(link.source_ref, step.preview_id);
+    assert.equal(link.label, '16');
+    assert.ok(link.standard_support_end, 'the catalog version carries its support date');
+    const [planRow] = await runner.query(
+      `SELECT status FROM ai_mutation_plans WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, plan.plan.plan_id],
+    );
+    assert.equal(planRow.status, 'completed');
+  });
+}
+
+
+async function testTechnologyRights(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const readerCtx = context(seed, runner, 'technology-rights-reader', seed.users.reader);
+    const message = 'You need the right to modify IT infrastructure (assets, connections, technologies), which your role does not give. An administrator can add it to your role.';
+    for (const [tool, input] of [
+      ['create_business_record', { entity_type: 'technologies', fields: { name: 'Redis', family: 'Database', lifecycle: 'Active', from_catalog: false } }],
+      ['update_business_record', { entity_type: 'technologies', ref: 'TEC-1', fields: { lifecycle: 'Deprecated' } }],
+      ['update_technology_versions', { technology: 'TEC-1', add: [{ label: '18' }] }],
+    ] as Array<[string, Record<string, unknown>]>) {
+      await expectRejects(() => harness.previews.createPreview(readerCtx, tool, input), message);
+    }
+  });
+
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-rights-downgrade');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_versions', {
+      technology: 'TEC-1', add: [{ label: '18' }],
+    });
+    await runner.query(
+      `UPDATE role_permissions SET level = 'reader'
+        WHERE tenant_id = $1 AND role_id = $2 AND resource = 'infrastructure'`,
+      [seed.tenantId, seed.roles.member],
+    );
+    await expectRejects(
+      () => harness.previews.executePreview(ctx, preview.preview_id),
+      'You need the right to modify IT infrastructure (assets, connections, technologies), which your role does not give. An administrator can add it to your role.',
+    );
+    const versions = await runner.query(
+      `SELECT 1 FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND label = '18'`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    assert.equal(versions.length, 0, 'the refused approval wrote no version');
+  });
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -1025,6 +1449,20 @@ async function run() {
     await testUndoRequiresTheExactLinkItAdded(harness);
     await testUndoRequiresTheExactServerLinkItAdded(harness);
     await testApplicationsRightIsReverifiedAtExecutionAndUndo(harness);
+    await testTechnologyFreeCreate(harness);
+    await testTechnologyUnknownFamilyIsRefused(harness);
+    await testTechnologyAdoption(harness);
+    await testTechnologyCatalogAmbiguousAndFreeOnRequest(harness);
+    await testTechnologyRefusedFields(harness);
+    await testTechnologyUpdateAndUndo(harness);
+    await testTechnologyReplacementCycleIsRefused(harness);
+    await testTechnologyUpdateDrift(harness);
+    await testVersionAddAndUpdate(harness);
+    await testVersionRefusals(harness);
+    await testVersionDrift(harness);
+    await testVersionUndo(harness);
+    await testCreateThenLinkPlan(harness);
+    await testTechnologyRights(harness);
   } finally {
     await harness.app.close();
   }

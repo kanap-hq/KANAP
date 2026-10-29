@@ -170,6 +170,7 @@ import { UpdateBusinessRecordAiMutationOperation } from './mutation/operations/u
 import { UpdateEntityRelationsAiMutationOperation } from './mutation/operations/update-entity-relations.ai-mutation-operation';
 import { UpdateIncidentLinksAiMutationOperation } from './mutation/operations/update-incident-links.ai-mutation-operation';
 import { UpdateTechnologyLinksAiMutationOperation } from './mutation/operations/update-technology-links.ai-mutation-operation';
+import { UpdateTechnologyVersionsAiMutationOperation } from './mutation/operations/update-technology-versions.ai-mutation-operation';
 import { UpdateMasterDataRecordAiMutationOperation } from './mutation/operations/update-master-data-record.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from './mutation/operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskFieldsAiMutationOperation } from './mutation/operations/update-task-fields.ai-mutation-operation';
@@ -309,6 +310,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
     UpdateEntityRelationsAiMutationOperation,
     UpdateIncidentLinksAiMutationOperation,
     UpdateTechnologyLinksAiMutationOperation,
+    UpdateTechnologyVersionsAiMutationOperation,
     UpdateMasterDataRecordAiMutationOperation,
     UpdateTaskFieldsAiMutationOperation,
     UpdateTaskStatusAiMutationOperation,

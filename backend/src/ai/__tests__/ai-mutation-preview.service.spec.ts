@@ -652,7 +652,8 @@ function createService(options?: {
     updateBusinessRecordOperation as any,
     updateEntityRelationsOperation as any,
     updateIncidentLinksOperation as any,
-    // The technology links are not under test here; the registry only needs the operation registered.
+    // The technology links and versions are not under test here; the registry only needs them registered.
+    {} as any,
     {} as any,
     updateTaskFieldsOperation as any,
     new UpdateTaskStatusAiMutationOperation(

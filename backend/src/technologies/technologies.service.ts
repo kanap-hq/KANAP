@@ -510,7 +510,8 @@ export class TechnologiesService {
   }
 
   /** Refuses a replacement that leads back to the technology (A replaced by B, B by A, or longer). */
-  private async assertNoReplacementCycle(mg: EntityManager, tenantId: string, technologyId: string, replacementId: string) {
+  /** The screen's replacement rule, for a preview that checks before the service does. */
+  async assertNoReplacementCycle(mg: EntityManager, tenantId: string, technologyId: string, replacementId: string) {
     const rows = await mg.query(
       `WITH RECURSIVE chain AS (
          SELECT t.id, t.replaced_by_id, 1 AS depth FROM technologies t WHERE t.tenant_id = $1 AND t.id = $2
@@ -525,7 +526,8 @@ export class TechnologiesService {
     if (rows.length) throw new BadRequestException('This replacement would make a cycle.');
   }
 
-  private async assertNameFree(mg: EntityManager, tenantId: string, name: string, exceptId: string | null) {
+  /** The unique-name rule, for a preview that checks before the service does. */
+  async assertNameFree(mg: EntityManager, tenantId: string, name: string, exceptId: string | null) {
     const rows = await mg.query(
       `SELECT id FROM technologies WHERE tenant_id = $1 AND lower(name) = lower($2) AND ($3::uuid IS NULL OR id <> $3::uuid)`,
       [tenantId, name, exceptId],

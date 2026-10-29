@@ -67,6 +67,7 @@ const BUSINESS_RECORD_ROUTES: Record<string, Controller> = {
   connections: ConnectionsController,
   budget_lines: BudgetLinesController,
   incidents: IncidentsController,
+  technologies: TechnologiesController,
 };
 
 const MASTER_DATA_ROUTES: Record<string, Controller> = {
@@ -124,6 +125,9 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
   update_technology_links: {
     technologies: { resource: 'infrastructure', level: 'member', route: [TechnologiesController, 'addAsset'] },
   },
+  update_technology_versions: {
+    technologies: { resource: 'infrastructure', level: 'member', route: [TechnologiesController, 'createVersion'] },
+  },
   change_incident_state: {
     incidents: { resource: 'incidents', level: 'admin', route: [IncidentsController, 'reopen'] },
   },
@@ -172,6 +176,26 @@ function routeGuard([controller, method]: [Controller, string]): RequireLevelMet
   const meta = Reflect.getMetadata(REQUIRE_LEVEL_KEY, handler as object) as RequireLevelMeta | undefined;
   assert.ok(meta, `${controller.name}.${method} has a @RequireLevel guard`);
   return meta;
+}
+
+
+/**
+ * The technology routes the assistant writes through, at the screen's level: the fiche's creation
+ * and modification, the catalog adoption (`create_business_record` when the catalog knows the
+ * name), and the versions. Adoption has no tool of its own; it takes the same member level as the
+ * creation route.
+ */
+function testTechnologyWriteRoutes() {
+  const expected: Array<[string, string]> = [
+    ['create', 'create'],
+    ['adopt', 'adopt'],
+    ['update', 'update'],
+    ['createVersion', 'createVersion'],
+    ['updateVersion', 'updateVersion'],
+  ];
+  for (const [method, label] of expected) {
+    assert.deepEqual(routeGuard([TechnologiesController, method]), { resource: 'infrastructure', level: 'member' }, `${label}: the screen route level`);
+  }
 }
 
 function testTableMatchesRoutesAndPlaid() {
@@ -337,6 +361,7 @@ function testRelationTargetsMatchTheRelationsTab() {
 
 function run() {
   testTableMatchesRoutesAndPlaid();
+  testTechnologyWriteRoutes();
   testOnlyTheContributorRowsAreBelowMember();
   testToolRequirements();
   testRelationTargetsMatchTheRelationsTab();

@@ -123,6 +123,7 @@ const BUSINESS_WRITE_TOOLS: AiToolName[] = [
   'add_incident_note',
   'update_incident_links',
   'update_technology_links',
+  'update_technology_versions',
   'change_incident_state',
   'set_incident_confidentiality',
   'update_entity_relations',
@@ -494,6 +495,7 @@ const TECHNOLOGY_WRITE_VERBS = new Set([
   'mets', 'mettez', 'mettre',
   'enregistre', 'enregistrez', 'enregistrer', 'record',
   'change', 'changez', 'changer',
+  'renomme', 'renommez', 'renommer', 'rename',
   'upgrade', 'passe', 'passez', 'passer',
   'marque', 'marquez', 'marquer', 'mark', 'set',
 ]);
@@ -520,12 +522,17 @@ function hasTechnologyWriteIntent(rawText: string): boolean {
   return first != null && TECHNOLOGY_WRITE_VERBS.has(first);
 }
 
-/** A stated change with "now": "CheeseTrack utilise maintenant Java 21", "CheeseTrack now uses Java 21". */
+/**
+ * A stated change: "CheeseTrack utilise maintenant Java 21", "CheeseTrack now uses Java 21",
+ * "La version 16 de PostgreSQL finit son support le 31/12/2028". A question stays a read.
+ */
 function hasTechnologyChangeStatement(rawText: string, text: string): boolean {
   if (isTechnologyQuestion(rawText)) return false;
   return containsAny(text, [
     /\b(?:utilise|uses|runs|tourne)\b[\s\S]{0,40}\b(?:maintenant|now)\b/,
     /\b(?:maintenant|now)\b[\s\S]{0,40}\b(?:utilise|uses|runs|tourne)\b/,
+    /\b(?:finit|finira|termine|terminera|ends?|end)\b[\s\S]{0,50}\b(?:support|soutien)\b[\s\S]{0,30}\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/.]\d{1,2}[/.]\d{4})\b/,
+    /\b(?:support|soutien)\b[\s\S]{0,30}\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/.]\d{1,2}[/.]\d{4})\b[\s\S]{0,50}\b(?:finit|finira|termine|terminera|ends?|end)\b/,
   ]);
 }
 
@@ -675,7 +682,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     ...(hasDocumentPublishIntent ? [/\b(?:publie|publier|publish)\b/] : []),
     ...(hasDocumentPublicationIntent ? [/\b(?:public|publique|publics|publiques)\b/] : []),
     ...(hasTechnologyWrite || hasTechnologyChange
-      ? [/\b(?:installe|installer|install|declare|declarer|desinstalle|uninstall|remove|detach|replace|remplace|enregistre|upgrade|mets|mettez|mettre|utilise|uses|runs|tourne|maintenant|now)\b/]
+      ? [/\b(?:installe|installer|install|declare|declarer|desinstalle|uninstall|remove|detach|replace|remplace|renomme|renommer|rename|enregistre|upgrade|mets|mettez|mettre|utilise|uses|runs|tourne|maintenant|now|finit|finira|termine|terminera|ends?)\b/]
       : []),
     ...(createsIncident(text, raw) ? [/\bincident\b/] : []),
   ]);

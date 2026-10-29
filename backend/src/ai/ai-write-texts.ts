@@ -212,12 +212,28 @@ export const writeActionText = {
       case 'es': return `modificación de las relaciones de ${subject}`;
     }
   },
+  /** A technology adopted from the KANAP catalog: the record comes from the catalog, not typed. */
+  adoptTechnology(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `adoption ${quoted(language, subject)} du catalogue KANAP`;
+      case 'de': return `${subject} aus dem KANAP-Katalog übernehmen`;
+      case 'es': return `adopción ${quoted(language, subject)} del catálogo KANAP`;
+    }
+  },
   /** The links of a technology to its applications and servers. */
   updateTechnologyLinks(language: AiTranslatedWriteLanguage, subject: string): string {
     switch (language) {
       case 'fr': return `modification des liens de ${subject}`;
       case 'de': return `Verknüpfungen von ${subject} ändern`;
       case 'es': return `modificación de los vínculos de ${subject}`;
+    }
+  },
+  /** The versions of a technology: added and changed in one preview. */
+  updateTechnologyVersions(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `modification des versions de ${subject}`;
+      case 'de': return `Versionen von ${subject} ändern`;
+      case 'es': return `modificación de las versiones de ${subject}`;
     }
   },
   /** A journal note on an incident: the journal only takes additions. */
@@ -326,6 +342,7 @@ const RECORD_NOUNS: Record<string, TranslatedTexts> = {
   connections: { fr: 'de la connexion', de: 'Verbindung', es: 'de la conexión' },
   budget_lines: { fr: 'de la ligne budgétaire', de: 'Budgetzeile', es: 'de la línea presupuestaria' },
   incidents: { fr: "de l'incident", de: 'Vorfall', es: 'del incidente' },
+  technologies: { fr: 'de la technologie', de: 'Technologie', es: 'de la tecnología' },
   companies: { fr: 'de la société', de: 'Unternehmen', es: 'de la empresa' },
   departments: { fr: 'du département', de: 'Abteilung', es: 'del departamento' },
   suppliers: { fr: 'du fournisseur', de: 'Lieferant', es: 'del proveedor' },
@@ -455,6 +472,109 @@ export type TechnologyLinkCardGroup = {
   already: string[];
   absent: string[];
 };
+
+export type TechnologyAdoptionCard = {
+  family_label: string;
+  versions: number;
+  support_from: string | null;
+  support_to: string | null;
+};
+
+/**
+ * The catalog block of an adoption preview: the family the adoption writes and the versions it
+ * brings, with the range of their end-of-support dates. The fields the person added beside the
+ * adoption are listed by the record card, apart from this block.
+ */
+export function technologyAdoptionCardText(language: AiWriteLanguage, adoption: TechnologyAdoptionCard): string {
+  const family = escapeMarkdownLabel(adoption.family_label || '');
+  const count = adoption.versions;
+  const from = adoption.support_from;
+  const to = adoption.support_to;
+  const versions = {
+    en: count === 1 ? '1 version' : `${count} versions`,
+    fr: count === 1 ? '1 version' : `${count} versions`,
+    de: count === 1 ? '1 Version' : `${count} Versionen`,
+    es: count === 1 ? '1 versión' : `${count} versiones`,
+  }[language];
+  const range = from && to
+    ? {
+      en: `end of support from ${from} to ${to}`,
+      fr: `fin de support de ${from} à ${to}`,
+      de: `Supportende von ${from} bis ${to}`,
+      es: `fin de soporte de ${from} a ${to}`,
+    }[language]
+    : from
+      ? { en: `end of support from ${from}`, fr: `fin de support à partir du ${from}`, de: `Supportende ab ${from}`, es: `fin de soporte desde el ${from}` }[language]
+      : to
+        ? { en: `end of support up to ${to}`, fr: `fin de support jusqu'au ${to}`, de: `Supportende bis ${to}`, es: `fin de soporte hasta el ${to}` }[language]
+        : { en: 'no end-of-support date', fr: 'sans date de fin de support', de: 'ohne Supportende', es: 'sin fecha de fin de soporte' }[language];
+  const heading = {
+    en: 'Adopted from the KANAP catalog',
+    fr: 'Adoptée du catalogue KANAP',
+    de: 'Aus dem KANAP-Katalog übernommen',
+    es: 'Adoptada del catálogo KANAP',
+  }[language];
+  const familyLabel = { en: 'Family', fr: 'Famille', de: 'Familie', es: 'Familia' }[language];
+  return [`**${heading}**`, `- ${familyLabel}: ${family}`, `- ${versions}, ${range}`].join('\n');
+}
+
+/**
+ * The versions of a technology as the card of `update_technology_versions` names them: an added
+ * version with its end of support, a changed version with what moved, and, on the undo, the
+ * versions the undo restores but does not remove.
+ */
+export type TechnologyVersionEditAdd = { label: string; end: string | null };
+export type TechnologyVersionEditUpdate = {
+  label: string;
+  next_label: string | null;
+  old_end: string | null;
+  new_end: string | null;
+  notes: 'updated' | 'cleared' | null;
+  catalog: boolean;
+};
+
+export function technologyVersionEditCardText(
+  language: AiWriteLanguage,
+  edit: { add: TechnologyVersionEditAdd[]; update: TechnologyVersionEditUpdate[]; kept: string[] },
+): string {
+  const none = { en: 'none', fr: 'aucune', de: 'keine', es: 'ninguna' }[language];
+  const noDate = { en: 'no support date', fr: 'sans date de support', de: 'ohne Supportdatum', es: 'sin fecha de soporte' }[language];
+  const endOfSupport = { en: 'end of support', fr: 'fin de support', de: 'Supportende', es: 'fin de soporte' }[language];
+  const newVersion = { en: 'new version', fr: 'nouvelle version', de: 'neue Version', es: 'nueva versión' }[language];
+  const notesUpdated = { en: 'notes updated', fr: 'notes mises à jour', de: 'Notizen aktualisiert', es: 'notas actualizadas' }[language];
+  const notesCleared = { en: 'notes cleared', fr: 'notes effacées', de: 'Notizen gelöscht', es: 'notas borradas' }[language];
+  const catalog = { en: 'from the KANAP catalog', fr: 'du catalogue KANAP', de: 'aus dem KANAP-Katalog', es: 'del catálogo KANAP' }[language];
+  const lines: string[] = [];
+  for (const add of edit.add) {
+    const end = add.end ? `${endOfSupport} ${add.end}` : noDate;
+    lines.push(`- ${newVersion} ${add.label} (${end})`);
+  }
+  for (const update of edit.update) {
+    const name = update.next_label ? `${update.label} → ${update.next_label}` : update.label;
+    const parts: string[] = [];
+    if (update.old_end !== update.new_end) {
+      parts.push(`${endOfSupport} ${update.old_end ?? none} → ${update.new_end ?? none}`);
+    }
+    if (update.notes === 'updated') parts.push(notesUpdated);
+    if (update.notes === 'cleared') parts.push(notesCleared);
+    const suffix = update.catalog ? ` (${catalog})` : '';
+    const colon = language === 'fr' ? ' : ' : ': ';
+    lines.push(parts.length > 0 ? `- ${name}${colon}${parts.join('; ')}${suffix}` : `- ${name}${suffix}`);
+  }
+  const blocks: string[] = [];
+  if (lines.length > 0) blocks.push(lines.join('\n'));
+  if (edit.kept.length > 0) {
+    const heading = { en: 'Kept', fr: 'Conservées', de: 'Beibehalten', es: 'Conservadas' }[language];
+    const note = {
+      en: 'the undo restores the changed versions, not the new one',
+      fr: "l'annulation restaure les versions modifiées, pas la nouvelle",
+      de: 'das Rückgängigmachen stellt die geänderten Versionen wieder her, nicht die neue',
+      es: 'la anulación restaura las versiones modificadas, no la nueva',
+    }[language];
+    blocks.push([`**${heading}**`, ...edit.kept.map((label) => `- ${newVersion} ${label} (${note})`)].join('\n'));
+  }
+  return blocks.join('\n\n');
+}
 
 /**
  * The markdown block of the applications or the servers of a technology: what the approval adds

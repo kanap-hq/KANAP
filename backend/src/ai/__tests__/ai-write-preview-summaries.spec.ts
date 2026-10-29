@@ -17,6 +17,7 @@ import { ImportGlpiTicketAiMutationOperation } from '../mutation/operations/impo
 import { SetIncidentConfidentialityAiMutationOperation } from '../mutation/operations/set-incident-confidentiality.ai-mutation-operation';
 import { UpdateIncidentLinksAiMutationOperation } from '../mutation/operations/update-incident-links.ai-mutation-operation';
 import { UpdateTechnologyLinksAiMutationOperation } from '../mutation/operations/update-technology-links.ai-mutation-operation';
+import { UpdateTechnologyVersionsAiMutationOperation } from '../mutation/operations/update-technology-versions.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from '../mutation/operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskStatusAiMutationOperation } from '../mutation/operations/update-task-status.ai-mutation-operation';
 
@@ -940,6 +941,48 @@ async function testPersonLanguage() {
   assert.equal(await personWriteLanguage(manager, 'tenant-1', null), 'en');
 }
 
+
+function testTechnologyVersions() {
+  const operation = make(UpdateTechnologyVersionsAiMutationOperation);
+  const pending = preview({
+    tool_name: 'update_technology_versions',
+    target_entity_type: 'technologies',
+    target_entity_id: 'tec-1',
+    mutation_input: {
+      technology_ref: 'TEC-1',
+      technology_name: 'PostgreSQL',
+      technology_label: 'TEC-1 - PostgreSQL',
+      versions: {
+        add: [{ label: '17', standard_support_end: '2029-11-08', extended_support_end: null, notes: null }],
+        update: [{
+          id: 'version-16',
+          before: { id: 'version-16', label: '16', standard_support_end: '2028-11-09', extended_support_end: null, notes: null, catalog_key: null },
+          next: { standard_support_end: '2028-12-31' },
+        }],
+      },
+    },
+    current_values: { target_ref: 'TEC-1', target_title: 'TEC-1 - PostgreSQL' },
+  });
+  assert.equal(summary(operation, pending, 'en'), 'Update the versions of TEC-1 - PostgreSQL.');
+  assert.equal(summary(operation, pending, 'fr'), 'Modification des versions de « TEC-1 - PostgreSQL ».');
+  assert.equal(summary(operation, pending, 'de'), 'Versionen von „TEC-1 - PostgreSQL“ ändern.');
+  assert.equal(summary(operation, pending, 'es'), 'Modificación de las versiones de «TEC-1 - PostgreSQL».');
+  assert.equal(
+    operation.presentPreview(pending, 'en').changes.technology_versions.to,
+    '- new version 17 (end of support 2029-11-08)\n- 16: end of support 2028-11-09 → 2028-12-31',
+  );
+  assert.equal(
+    operation.presentPreview(pending, 'fr').changes.technology_versions.to,
+    '- nouvelle version 17 (fin de support 2029-11-08)\n- 16 : fin de support 2028-11-09 → 2028-12-31',
+  );
+  const undo = preview({
+    ...pending,
+    mutation_input: { ...(pending.mutation_input ?? {}), versions: { add: [], update: [] }, kept_versions: ['17'] },
+  });
+  assert.match(operation.presentPreview(undo, 'fr').changes.technology_versions.to ?? '',
+    /^\*\*Conservées\*\*\n- nouvelle version 17 \(l'annulation restaure les versions modifiées, pas la nouvelle\)$/);
+}
+
 async function main() {
   testTaskCreation();
   testTaskStatusAndAssignee();
@@ -953,6 +996,7 @@ async function main() {
   testIncidentPreviewsAndWarnings();
   testIncidentNoteAndLinkCards();
   testTechnologyLinkCards();
+  testTechnologyVersions();
   testIncidentStateAndConfidentialityCards();
   testDeleteRecordSummaryAndCard();
   await testDefaultTaskType();

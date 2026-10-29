@@ -246,6 +246,24 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Upgrade CheeseTrack from PostgreSQL 14 to 16', profile: 'write_general', mode: 'write' },
   { prompt: 'CheeseTrack utilise maintenant Java 21', profile: 'write_general', mode: 'write' },
 
+  // Lot 4: the record and its versions write through the business profile.
+  { prompt: 'Crée la technologie Redis', profile: 'write_business', mode: 'write' },
+  { prompt: 'Ajoute la technologie Kafka (famille middleware)', profile: 'write_business', mode: 'write' },
+  { prompt: 'Passe TEC-3 en fin de vie', profile: 'write_business', mode: 'write' },
+  { prompt: 'Update the lifecycle of TEC-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Mets l\'éditeur de TEC-3 à Oracle', profile: 'write_business', mode: 'write' },
+  { prompt: 'Ajoute la version 17 à TEC-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'La version 16 de PostgreSQL finit son support le 31/12/2028', profile: 'write_business', mode: 'write' },
+  { prompt: 'Add version 3.8 to Kafka with end of support 2027-06-30', profile: 'write_business', mode: 'write' },
+  { prompt: 'Renomme la version 16 de TEC-3 en 16.4', profile: 'write_business', mode: 'write' },
+
+  // Lot 4: the version and end-of-support questions stay reads.
+  { prompt: 'Quelle est la fin de support de PostgreSQL 16 ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Quand la version 14 de TEC-3 finit-elle son support ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Liste les versions de TEC-3', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Quelles technologies sont en fin de vie ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Qui est responsable de TEC-3 ?', profile: 'entity_inspection', mode: 'entity' },
+
   // Other probes from the existing profile spec.
   { prompt: 'Show me my overdue tasks', profile: 'read_query', mode: 'read' },
   { prompt: 'Show current tasks', profile: 'read_query', mode: 'read' },
@@ -387,11 +405,14 @@ function testTheTechnologyLinkPhrasesCarryTheTool() {
     'Enregistre Tomcat 9 sur le serveur srv-app-01',
     'Upgrade CheeseTrack from PostgreSQL 14 to 16',
     'CheeseTrack utilise maintenant Java 21',
+    'Renomme la version 16 de TEC-3 en 16.4',
+    'La version 16 de PostgreSQL finit son support le 31/12/2028',
   ];
   for (const prompt of prompts) {
     const profile = selectAiContextProfile(prompt);
     assert.equal(profile.promptMode, 'write', `${prompt}: expected the write mode`);
     assert.ok(profile.toolNames.includes('update_technology_links'), `${prompt}: expected update_technology_links`);
+    assert.ok(profile.toolNames.includes('update_technology_versions'), `${prompt}: expected update_technology_versions`);
   }
 }
 

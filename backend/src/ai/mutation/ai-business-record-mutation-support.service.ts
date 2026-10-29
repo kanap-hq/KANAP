@@ -12,6 +12,8 @@ import { ConnectionsService } from '../../connections/services/connections.servi
 import { ContractsService } from '../../contracts/contracts.service';
 import { InterfacesService } from '../../interfaces/services/interfaces.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { TechnologyCatalogService } from '../../technologies/catalog/technology-catalog.service';
+import { TechnologiesService } from '../../technologies/technologies.service';
 import { findCatalogOption } from '../../it-ops-settings/catalog-resolve';
 import { ClassificationCatalog, resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
@@ -70,6 +72,7 @@ import {
   incidentAccessWarning,
   previewSummaryText,
   quoted,
+  technologyAdoptionCardText,
   writeActionText,
 } from '../ai-write-texts';
 
@@ -83,6 +86,7 @@ export const AI_BUSINESS_RECORD_ENTITY_TYPES = [
   'connections',
   'budget_lines',
   'incidents',
+  'technologies',
 ] as const;
 
 export type AiBusinessRecordEntityType = typeof AI_BUSINESS_RECORD_ENTITY_TYPES[number];
@@ -124,12 +128,16 @@ type FieldKind =
   | 'application_category'
   | 'application_classification'
   | 'incident_category'
+  | 'it_catalog'
   | 'date_time'
   | 'non_negative_decimal'
   | 'percent'
   | 'relation'
   | 'text'
   | 'upper3';
+
+/** The tenant's IT settings lists a `it_catalog` field takes its code and label from. */
+type ItCatalogList = 'technologyFamilies' | 'lifecycleStates' | 'hostingTypes' | 'cyberCriticalityLevels' | 'recoveryWaves' | 'adminZones';
 
 type FieldConfig = {
   label: string;
@@ -140,6 +148,8 @@ type FieldConfig = {
   enumValues?: readonly string[];
   relationTarget?: RelationTarget;
   classificationAxis?: 'business' | 'cyber' | 'confidentiality' | 'recovery';
+  /** A tenant catalog of IT settings: the card accepts the code or the exact label and shows the label. */
+  itCatalog?: ItCatalogList;
   minimum?: number;
 };
 
@@ -419,6 +429,28 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       notified_parties: { label: 'Parties informed', kind: 'text', nullable: true },
     },
   },
+  technologies: {
+    labelSingular: 'technology',
+    labelPlural: 'technologies',
+    businessResource: 'infrastructure',
+    tableName: 'technologies',
+    fields: {
+      name: { label: 'Name', kind: 'text', requiredOnCreate: true },
+      editor: { label: 'Editor', kind: 'text', nullable: true },
+      family: { label: 'Family', kind: 'it_catalog', itCatalog: 'technologyFamilies' },
+      lifecycle: { label: 'Lifecycle', kind: 'it_catalog', itCatalog: 'lifecycleStates' },
+      hosting_type: { label: 'Hosting type', kind: 'it_catalog', itCatalog: 'hostingTypes' },
+      description: { label: 'Description', kind: 'text', nullable: true },
+      notes: { label: 'Notes', kind: 'text', nullable: true },
+      support_notes: { label: 'Support notes', kind: 'text', nullable: true },
+      replaced_by_id: { label: 'Replaced by', kind: 'relation', nullable: true, relationTarget: 'technologies', aliases: ['replaced_by'] },
+      cyber_criticality: { label: 'Cyber criticality', kind: 'it_catalog', itCatalog: 'cyberCriticalityLevels', nullable: true, aliases: ['cyber'] },
+      recovery_wave: { label: 'Recovery wave', kind: 'it_catalog', itCatalog: 'recoveryWaves', nullable: true, aliases: ['wave'] },
+      rto_minutes: { label: 'RTO (minutes)', kind: 'integer', nullable: true, minimum: 1, aliases: ['rto'] },
+      rpo_minutes: { label: 'RPO (minutes)', kind: 'integer', nullable: true, minimum: 0, aliases: ['rpo'] },
+      admin_zone: { label: 'Administration zone', kind: 'it_catalog', itCatalog: 'adminZones', nullable: true },
+    },
+  },
   budget_lines: {
     labelSingular: 'budget line',
     labelPlural: 'budget lines',
@@ -455,6 +487,19 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
 
 /** Every field of the incident family, as the contributor screen accepts them. */
 export const AI_INCIDENT_WRITABLE_FIELDS: readonly string[] = Object.keys(ENTITY_CONFIG.incidents.fields);
+
+/**
+ * The technology fields Plaid never writes, and the sentence that says where they are set:
+ * the CPE and CVE matching fields (lot 5 keeps them to the matcher), the catalog key (an
+ * adoption), `mode` (replaced by `hosting_type`) and the vulnerability alert setting (lot 5).
+ */
+const TECHNOLOGY_REFUSED_FIELDS: Record<string, string> = {
+  cpe_products: 'CPE products are filled by the vulnerability matching, not by a record write.',
+  cve_names: 'CVE names are filled by the vulnerability matching, not by a record write.',
+  catalog_key: 'A catalog key comes from adopting the catalog entry, not from a record write.',
+  mode: 'mode is replaced by hosting_type.',
+  vulnerability_alerts: 'Vulnerability alerts are a separate setting of the technology, not a field of its record.',
+};
 
 export const AI_BUSINESS_RECORD_BUSINESS_RESOURCES = Array.from(
   new Set(AI_BUSINESS_RECORD_ENTITY_TYPES.map((entityType) => ENTITY_CONFIG[entityType].businessResource)),
@@ -602,6 +647,20 @@ function requireEntityType(value: unknown): AiBusinessRecordEntityType {
   return normalized;
 }
 
+/**
+ * Reads the technology instruction `from_catalog` (true or false) out of the given fields and
+ * removes it, so it never reaches normalization or the write. Absent means "the catalog first".
+ */
+function takeFromCatalogFlag(fields: Record<string, unknown>): boolean | undefined {
+  const key = Object.keys(fields).find((name) => normalizeFieldKey(name) === 'from_catalog');
+  if (!key) return undefined;
+  const value = fields[key];
+  delete fields[key];
+  if (value === true || value === 'true') return true;
+  if (value === false || value === 'false') return false;
+  throw new BadRequestException('from_catalog must be true or false.');
+}
+
 @Injectable()
 export class AiBusinessRecordMutationSupportService {
   constructor(
@@ -617,6 +676,8 @@ export class AiBusinessRecordMutationSupportService {
     private readonly portfolioRequests: PortfolioRequestsService,
     private readonly taskSupport: AiTaskMutationSupportService,
     private readonly incidents: IncidentsService,
+    private readonly technologies: TechnologiesService,
+    private readonly technologyCatalog: TechnologyCatalogService,
   ) {}
 
   getBusinessResource(entityType: unknown): string {
@@ -764,6 +825,22 @@ export class AiBusinessRecordMutationSupportService {
       });
       return { value: option.code, displayValue: option.label || option.code };
     }
+    if (field.kind === 'it_catalog') {
+      const settings = await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager });
+      const options = field.itCatalog
+        ? settings[field.itCatalog] as Array<{ code: string; label: string }>
+        : [];
+      // The code or the exact label, without case: the service takes the code at execution.
+      const wanted = String(rawValue).trim().toLowerCase();
+      const option = options.find((item) => item.code.toLowerCase() === wanted || item.label.toLowerCase() === wanted);
+      if (!option) {
+        const allowed = options.slice(0, 10).map((item) => item.label || item.code).join(', ');
+        throw new BadRequestException(
+          `Unknown ${field.label.toLowerCase()} "${String(rawValue).trim()}". Valid values: ${allowed}.`,
+        );
+      }
+      return { value: option.code, displayValue: option.label || option.code };
+    }
     if (field.kind === 'incident_category') {
       const settings = await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager });
       const current = existing?.[fieldName] == null ? null : String(existing[fieldName]);
@@ -908,6 +985,11 @@ export class AiBusinessRecordMutationSupportService {
 
     for (const [rawName, rawValue] of Object.entries(rawFields)) {
       if (rawValue === undefined) continue;
+      if (entityType === 'technologies') {
+        const refused = Object.entries(TECHNOLOGY_REFUSED_FIELDS)
+          .find(([name]) => normalizeFieldKey(name) === normalizeFieldKey(rawName));
+        if (refused) throw new BadRequestException(refused[1]);
+      }
       const axis = scope ? await this.dimensionOfField(rawName, tenantAxes) : undefined;
       let resolved: { name: string; config: FieldConfig } | null;
       if (axis === undefined) {
@@ -1275,6 +1357,13 @@ export class AiBusinessRecordMutationSupportService {
           params,
         );
       }
+      case 'technologies':
+        return manager.query(
+          `SELECT * FROM technologies WHERE tenant_id = $1
+            AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR item_number = $3)
+          ORDER BY item_number LIMIT 6`,
+          [tenantId, ref, Number.isInteger(itemNumber) ? itemNumber : -1],
+        );
       case 'budget_lines': {
         // Both natures in one family (`spend/budget-nature.ts`): by id, native title, own number
         // (BL-n or a bare number) or legacy number (OPX-n, CPX-n). Each row keeps its nature.
@@ -1421,6 +1510,7 @@ export class AiBusinessRecordMutationSupportService {
       case 'requests': return row.item_number == null ? null : `REQ-${row.item_number}`;
       case 'budget_lines': return row.item_number == null ? null : `${BUDGET_LINE_PREFIX}-${row.item_number}`;
       case 'incidents': return row.item_number == null ? null : `INC-${row.item_number}`;
+      case 'technologies': return row.item_number == null ? null : `TEC-${row.item_number}`;
       case 'accounts': return textOrNull(row.account_number);
       case 'cost_centers': return textOrNull(row.code);
       default: return null;
@@ -1450,6 +1540,10 @@ export class AiBusinessRecordMutationSupportService {
       case 'incidents': {
         const reference = this.recordRef('incidents', row);
         return [reference, nameWithoutLeadingReference(reference, textOrNull(row.title))].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled incident';
+      }
+      case 'technologies': {
+        const reference = this.recordRef('technologies', row);
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled technology';
       }
       case 'accounts':
         return [row.account_number, row.account_name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled account';
@@ -1518,7 +1612,16 @@ export class AiBusinessRecordMutationSupportService {
     input: AiCreateBusinessRecordInput,
   ): Promise<AiPreparedMutationPreview> {
     const entityType = requireEntityType(input.entity_type);
-    const normalized = await this.normalizeFields(context, entityType, coerceRecord(input.fields, 'fields'), 'create');
+    // A shallow copy: `from_catalog` is read out of the preparation input without touching the
+    // step input a plan keeps.
+    const rawFields = { ...coerceRecord(input.fields, 'fields') };
+    // `from_catalog: false` asks for a typed technology, never for an adoption. It is an
+    // instruction to this preparation, not a column the write carries.
+    const fromCatalog = entityType === 'technologies' ? takeFromCatalogFlag(rawFields) : undefined;
+    const normalized = await this.normalizeFields(context, entityType, rawFields, 'create');
+    if (entityType === 'technologies') {
+      return this.prepareTechnologyCreate(context, normalized, fromCatalog);
+    }
     // An incident is created open when the request names no status: the card says which step it
     // starts at. The service applies the same default.
     if (entityType === 'incidents' && normalized.fields.status === undefined) {
@@ -1550,6 +1653,116 @@ export class AiBusinessRecordMutationSupportService {
         display_values: null,
       },
     };
+  }
+
+  /**
+   * A technology is adopted from the KANAP catalog when it knows the exact name, typed free
+   * otherwise or when `from_catalog: false` asks for it. A same-name technology is refused here
+   * with its reference; an ambiguous name lists the closest catalog entries.
+   */
+  private async prepareTechnologyCreate(
+    context: AiExecutionContextWithManager,
+    normalized: NormalizedFields,
+    fromCatalog: boolean | undefined,
+  ): Promise<AiPreparedMutationPreview> {
+    const name = String(normalized.fields.name ?? '').trim();
+    const sameName: Array<{ item_number: number }> = await context.manager.query(
+      `SELECT item_number FROM technologies WHERE tenant_id = $1 AND lower(btrim(name)) = lower(btrim($2)) LIMIT 1`,
+      [context.tenantId, name],
+    );
+    if (sameName[0]) {
+      throw new BadRequestException(`A technology with this name already exists: TEC-${sameName[0].item_number}.`);
+    }
+    const title = name;
+    if (fromCatalog !== false) {
+      const catalog = await this.technologyCatalog.notAdopted(
+        { q: name },
+        { manager: context.manager, tenantId: context.tenantId, userId: context.userId },
+      );
+      const wanted = name.toLowerCase();
+      const exact = catalog.items.find((item) => item.name.trim().toLowerCase() === wanted);
+      if (exact) {
+        // The adoption writes the record; the other given fields are an update in the same
+        // transaction. The card lists them apart from the catalog block.
+        const fields = { ...normalized.fields };
+        delete fields.name;
+        const displayValues = { ...normalized.displayValues };
+        delete displayValues.name;
+        const fieldLabels = { ...normalized.fieldLabels };
+        delete fieldLabels.name;
+        return {
+          targetEntityType: 'technologies',
+          targetEntityId: null,
+          mutationInput: {
+            action: 'create',
+            entity_type: 'technologies',
+            fields,
+            display_values: displayValues,
+            field_labels: fieldLabels,
+            adopt: {
+              catalog_key: exact.key,
+              name: exact.name,
+              family: exact.family,
+              family_label: exact.family_label,
+              versions: exact.versions,
+              support_from: exact.support_from,
+              support_to: exact.support_to,
+            },
+          },
+          currentValues: {
+            target_ref: null,
+            target_title: title,
+            values: null,
+            display_values: null,
+          },
+        };
+      }
+      const closest = catalog.items
+        .filter((item) => item.name.trim().toLowerCase().includes(wanted))
+        .slice(0, 5);
+      if (closest.length > 0) {
+        throw new BadRequestException(
+          `No exact KANAP catalog entry for "${name}". Closest entries: ${closest.map((item) => item.name).join(', ')}. `
+          + 'Choose one of them, or ask for a free entry with from_catalog: false.',
+        );
+      }
+    }
+    return {
+      targetEntityType: 'technologies',
+      targetEntityId: null,
+      mutationInput: {
+        action: 'create',
+        entity_type: 'technologies',
+        fields: normalized.fields,
+        display_values: normalized.displayValues,
+        field_labels: normalized.fieldLabels,
+      },
+      currentValues: {
+        target_ref: null,
+        target_title: title,
+        values: null,
+        display_values: null,
+      },
+    };
+  }
+
+  /**
+   * The screen's checks before an update: a new name is free, and the replacement is not the
+   * technology itself and makes no cycle. The service checks again at execution.
+   */
+  private async assertTechnologyUpdateRules(
+    context: AiExecutionContextWithManager,
+    technologyId: string,
+    fields: Record<string, unknown>,
+  ): Promise<void> {
+    if (fields.name != null && fields.name !== '') {
+      await this.technologies.assertNameFree(context.manager, context.tenantId, String(fields.name), technologyId);
+    }
+    if (fields.replaced_by_id != null && fields.replaced_by_id !== '') {
+      const replacementId = String(fields.replaced_by_id);
+      if (replacementId === technologyId) throw new BadRequestException('A technology cannot replace itself.');
+      await this.technologies.assertNoReplacementCycle(context.manager, context.tenantId, technologyId, replacementId);
+    }
   }
 
   async prepareUpdatePreview(
@@ -1610,6 +1823,9 @@ export class AiBusinessRecordMutationSupportService {
       throw new ForbiddenException(INCIDENT_LOCKED_MESSAGE);
     }
     const normalized = await this.normalizeFields(context, entityType, rawFields, 'update', target.row);
+    if (entityType === 'technologies') {
+      await this.assertTechnologyUpdateRules(context, target.id, normalized.fields);
+    }
     const requestedFieldNames = Object.keys(normalized.fields);
     const currentValues = this.pickFieldValues(entityType, target.row, requestedFieldNames);
     const changedFieldNames = requestedFieldNames.filter((fieldName) => !sameValue(currentValues[fieldName], normalized.fields[fieldName]));
@@ -1677,6 +1893,9 @@ export class AiBusinessRecordMutationSupportService {
     const fields = coerceRecord(mutation.fields, 'mutation_input.fields');
     const displayValues = coerceRecord(mutation.display_values ?? {}, 'mutation_input.display_values');
     const fieldLabels = coerceRecord(mutation.field_labels ?? {}, 'mutation_input.field_labels');
+    const adoption = mutation.adopt && typeof mutation.adopt === 'object'
+      ? mutation.adopt as Record<string, unknown>
+      : null;
     const currentValues = current.display_values && typeof current.display_values === 'object'
       ? current.display_values as Record<string, unknown>
       : {};
@@ -1688,22 +1907,22 @@ export class AiBusinessRecordMutationSupportService {
     switch (preview.status) {
       case 'pending':
         summary = action === 'create'
-          ? `Create ${config.labelSingular} "${title}".`
+          ? (adoption ? `Adopt technology "${title}" from the KANAP catalog.` : `Create ${config.labelSingular} "${title}".`)
           : `Update ${config.labelSingular} "${title}": ${labelList}.`;
         break;
       case 'executed':
         summary = action === 'create'
-          ? `Created ${config.labelSingular} "${title}".`
+          ? (adoption ? `Adopted technology "${title}" from the KANAP catalog.` : `Created ${config.labelSingular} "${title}".`)
           : `Updated ${config.labelSingular} "${title}".`;
         break;
       case 'rejected':
-        summary = `${action === 'create' ? 'Creation' : 'Update'} preview for ${config.labelSingular} "${title}" was rejected.`;
+        summary = `${action === 'create' ? (adoption ? 'Adoption' : 'Creation') : 'Update'} preview for ${config.labelSingular} "${title}" was rejected.`;
         break;
       case 'expired':
-        summary = `${action === 'create' ? 'Creation' : 'Update'} preview for ${config.labelSingular} "${title}" expired before approval.`;
+        summary = `${action === 'create' ? (adoption ? 'Adoption' : 'Creation') : 'Update'} preview for ${config.labelSingular} "${title}" expired before approval.`;
         break;
       case 'failed':
-        summary = preview.error_message || `${action === 'create' ? 'Creation' : 'Update'} preview for ${config.labelSingular} "${title}" failed.`;
+        summary = preview.error_message || `${action === 'create' ? (adoption ? 'Adoption' : 'Creation') : 'Update'} preview for ${config.labelSingular} "${title}" failed.`;
         break;
     }
 
@@ -1711,7 +1930,9 @@ export class AiBusinessRecordMutationSupportService {
       summary = previewSummaryText(
         language,
         preview.status,
-        writeActionText.writeRecord(language, action === 'create' ? 'create' : 'update', entityType, quoted(language, title)),
+        adoption && action === 'create'
+          ? writeActionText.adoptTechnology(language, title)
+          : writeActionText.writeRecord(language, action === 'create' ? 'create' : 'update', entityType, quoted(language, title)),
         { errorMessage: preview.error_message },
       );
     }
@@ -1719,6 +1940,19 @@ export class AiBusinessRecordMutationSupportService {
     const previousCodes = current.values && typeof current.values === 'object' ? current.values as Record<string, unknown> : {};
     const shownValue = (_fieldName: string, value: unknown): string | null => formatPlainValue(value);
     const changes: Record<string, AiMutationPreviewChangeDto> = {};
+    if (adoption) {
+      changes.catalog_adoption = {
+        label: { en: 'KANAP catalog', fr: 'Catalogue KANAP', de: 'KANAP-Katalog', es: 'Catálogo KANAP' }[language],
+        from: null,
+        to: technologyAdoptionCardText(language, {
+          family_label: String(adoption.family_label ?? adoption.family ?? ''),
+          versions: Number(adoption.versions ?? 0),
+          support_from: textOrNull(adoption.support_from),
+          support_to: textOrNull(adoption.support_to),
+        }),
+        format: 'markdown',
+      };
+    }
     for (const fieldName of fieldNames) {
       const field = config.fields[fieldName];
       changes[fieldName] = {
@@ -1768,18 +2002,51 @@ export class AiBusinessRecordMutationSupportService {
 
   async executePreview(context: AiExecutionContextWithManager, preview: AiMutationPreview): Promise<void> {
     const entityType = requireEntityType(preview.target_entity_type || preview.mutation_input?.entity_type);
+    const config = this.getConfig(entityType);
     const mutation = preview.mutation_input ?? {};
     const action = String(mutation.action || '');
     const fields = coerceRecord(mutation.fields, 'mutation_input.fields');
     const executionFields = this.executionFields(fields);
     const audit = buildAiMutationAudit(preview);
     if (action === 'create') {
+      const adoption = mutation.adopt && typeof mutation.adopt === 'object'
+        ? mutation.adopt as Record<string, unknown>
+        : null;
+      if (entityType === 'technologies' && adoption) {
+        // The catalog adoption writes the record and its versions; the fields the person added
+        // beside it are one update in the same transaction, with the same audit source.
+        const adopted = await this.technologyCatalog.adopt(String(adoption.catalog_key ?? ''), {
+          manager: context.manager,
+          tenantId: context.tenantId,
+          userId: context.userId,
+          audit,
+        });
+        const updateFields = { ...executionFields };
+        delete updateFields.name;
+        if (Object.keys(updateFields).length > 0) {
+          await this.technologies.update(adopted.technology.id, updateFields as any, {
+            manager: context.manager,
+            tenantId: context.tenantId,
+            userId: context.userId,
+            audit,
+          });
+        }
+        const adoptedSnapshot = await this.getRecordSnapshot(context, 'technologies', adopted.technology.id);
+        const adoptedRef = this.referenceFromRow('technologies', adoptedSnapshot);
+        preview.target_entity_id = adoptedRef.id;
+        preview.current_values = {
+          ...(preview.current_values ?? {}),
+          target_ref: adoptedRef.ref,
+          target_title: adoptedRef.label,
+        };
+        return;
+      }
       const saved = await this.createRecord(context, entityType, executionFields, audit);
-      // The incident service already writes the audit row with the preview's source and reference:
-      // the created detail is the snapshot (its viewer stays the author's, even when they no
-      // longer see the restricted incident they have just created).
-      const snapshot = entityType === 'incidents'
-        ? coerceRecord(saved, 'created incident')
+      // The incident and technology services already write the audit row with the preview's
+      // source and reference: the created detail is the snapshot (its viewer stays the author's,
+      // even when they no longer see the restricted incident they have just created).
+      const snapshot = entityType === 'incidents' || entityType === 'technologies'
+        ? coerceRecord(saved, `created ${config.labelSingular}`)
         : await this.getRecordSnapshot(context, entityType, String((saved as any).id));
       const ref = this.referenceFromRow(entityType, snapshot);
       preview.target_entity_id = ref.id;
@@ -1788,7 +2055,9 @@ export class AiBusinessRecordMutationSupportService {
         target_ref: ref.ref,
         target_title: ref.label,
       };
-      if (entityType !== 'incidents') await this.logAiAudit(context, preview, entityType, 'create', null, snapshot);
+      if (entityType !== 'incidents' && entityType !== 'technologies') {
+        await this.logAiAudit(context, preview, entityType, 'create', null, snapshot);
+      }
       return;
     }
     if (action !== 'update') throw new BadRequestException('Unsupported business record mutation action.');
@@ -1820,9 +2089,10 @@ export class AiBusinessRecordMutationSupportService {
       }
       throw error;
     }
-    // The incident service writes its own audit row, with the preview's source and reference; the
-    // detail it returns stays the author's, even when the change makes the record invisible to them.
-    if (entityType === 'incidents') return;
+    // The incident and technology services write their own audit row, with the preview's source
+    // and reference; the detail they return stays the author's, even when the change makes the
+    // record invisible to them.
+    if (entityType === 'incidents' || entityType === 'technologies') return;
     const after = await this.getRecordSnapshot(context, entityType, preview.target_entity_id);
     await this.logAiAudit(context, preview, entityType, 'update', before, after);
   }
@@ -1925,6 +2195,13 @@ export class AiBusinessRecordMutationSupportService {
         return this.budgetLines.create(fields, context.userId, { manager: context.manager });
       case 'incidents':
         return this.incidents.create(fields, context.userId, await this.incidentWriteOptions(context, audit));
+      case 'technologies':
+        return this.technologies.create(fields as any, {
+          manager: context.manager,
+          tenantId: context.tenantId,
+          userId: context.userId,
+          ...(audit ? { audit } : {}),
+        });
     }
   }
 
@@ -1954,6 +2231,13 @@ export class AiBusinessRecordMutationSupportService {
         return this.budgetLines.update(id, fields, context.userId, { manager: context.manager });
       case 'incidents':
         return this.incidents.update(id, fields, context.userId, await this.incidentWriteOptions(context, audit));
+      case 'technologies':
+        return this.technologies.update(id, fields as any, {
+          manager: context.manager,
+          tenantId: context.tenantId,
+          userId: context.userId,
+          ...(audit ? { audit } : {}),
+        });
     }
   }
 
@@ -1989,6 +2273,12 @@ export class AiBusinessRecordMutationSupportService {
         return this.budgetLines.get(id, { manager: context.manager }) as any;
       case 'incidents':
         return this.incidents.get(id, await this.incidentWriteOptions(context)) as any;
+      case 'technologies':
+        return this.technologies.get(id, {
+          manager: context.manager,
+          tenantId: context.tenantId,
+          userId: context.userId,
+        }) as any;
     }
   }
 }
