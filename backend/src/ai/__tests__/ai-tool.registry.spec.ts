@@ -995,6 +995,43 @@ async function testPrepareMutationPlanDelegatesToPreviewService() {
   ]);
 }
 
+/** The vulnerability state tool needs infrastructure member and the vulnerability feed, as the screen's route. */
+async function testVulnerabilityStateToolFollowsTheRightAndTheFeed() {
+  const operation = {
+    toolName: 'change_vulnerability_state',
+    description: 'Create a preview to change the state of vulnerability rows.',
+    inputSchema: { safeParse: (value: any) => ({ success: true, data: value }) },
+    inputSummary: { state: 'The new state.', rows: 'The rows.' },
+    businessResource: 'infrastructure',
+    writePreview: { entity_type: 'vulnerabilities', fields: ['vulnerability_state'], reversible: true, prompt_hint: 'For the state of vulnerability rows.' },
+  };
+  const mutationOperations = {
+    listOperations: () => [operation],
+    getOperationOrNull: (toolName: string) => (toolName === operation.toolName ? operation : null),
+    isSupportedToolName: (toolName: string) => toolName === operation.toolName,
+  };
+  const registry = (level: 'member' | 'reader') => createRegistry({
+    policy: {
+      assertWriteAccess: async (_context: any, resource: string, _manager: any, options: { level: string }) => {
+        if (resource !== 'infrastructure' || (level === 'reader' && options.level !== 'reader')) throw new Error('missing right');
+      },
+    },
+    mutationOperations,
+  });
+  const offered = async (level: 'member' | 'reader') => (await registry(level).listAvailableTools(createChatContext()))
+    .some((tool) => tool.name === 'change_vulnerability_state');
+  const feed = Features.VULNERABILITY_FEED_ENABLED;
+  try {
+    Features.VULNERABILITY_FEED_ENABLED = true;
+    assert.equal(await offered('member'), true, 'an infrastructure member is offered the tool');
+    assert.equal(await offered('reader'), false, 'an infrastructure reader is not');
+    Features.VULNERABILITY_FEED_ENABLED = false;
+    assert.equal(await offered('member'), false, 'nobody is offered it while the feed is off');
+  } finally {
+    Features.VULNERABILITY_FEED_ENABLED = feed;
+  }
+}
+
 async function testUndoPreviewStaysHiddenWhenOnlyNonReversibleWritesExist() {
   const registry = createRegistry({
     policy: {
@@ -2127,6 +2164,7 @@ async function run() {
   await testAdministratorOnlyIncidentToolsNeedTheAdminLevel();
   await testWritePreviewToolsStayHiddenWithoutWriteAccess();
   await testDeleteRecordIsOfferedOnChatOnly();
+  await testVulnerabilityStateToolFollowsTheRightAndTheFeed();
   await testUpdateTaskAssigneesCreatesOnePreviewPerTaskAndReturnsPartialErrors();
   await testPrepareMutationPlanDelegatesToPreviewService();
   await testUndoPreviewStaysHiddenWhenOnlyNonReversibleWritesExist();

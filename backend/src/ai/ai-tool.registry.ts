@@ -830,6 +830,9 @@ export class AiToolRegistry {
         } catch {
           return false;
         }
+      case 'change_vulnerability_state':
+        // As the screen's routes (`VulnerabilityFeedGuard`): no state change while the feed is off.
+        return Features.VULNERABILITY_FEED_ENABLED;
       default:
         return true;
     }

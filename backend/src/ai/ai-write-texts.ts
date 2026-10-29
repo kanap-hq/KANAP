@@ -918,6 +918,83 @@ export function technologyAlertsCardText(language: AiWriteLanguage, card: Techno
   return blocks.join('\n\n');
 }
 
+/**
+ * The states of a vulnerability row, as the vulnerabilities page names them
+ * (`pages.vulnerabilities.states`). English only for now: French, German and Spanish follow the
+ * page's words in a later lot.
+ */
+export const VULNERABILITY_STATE_LABELS: Readonly<Record<string, string>> = {
+  to_review: 'To review',
+  handled: 'Handled',
+  not_affected: 'Not affected',
+};
+
+export function vulnerabilityStateLabel(state: string): string {
+  return VULNERABILITY_STATE_LABELS[state] ?? state;
+}
+
+/** A row of the card: CVE, technology reference and name, version (null: not recorded). */
+export type VulnerabilityStateCardRow = { cve_id: string; technology: string; technology_name: string; version: string | null };
+
+export type VulnerabilityStateCard = {
+  /** The rows named, the distinct CVE among them, and the rows the change writes. */
+  rows: number;
+  cves: number;
+  changes: number;
+  /** The states the written rows leave, in the page's order, and the state they take. */
+  from: string[];
+  to: string;
+  /** The common note: text, null to clear every note, undefined when each row keeps its own. */
+  note?: string | null;
+  /** Up to five written rows; the card says how many more. */
+  examples: VulnerabilityStateCardRow[];
+  /** Written rows outside the vulnerability alerts, and rows that no longer match (back to review). */
+  outsideAlerts: number;
+  noLongerMatching: number;
+};
+
+/** `CVE-2024-1234 on TEC-3 PostgreSQL 14`, or `(version not recorded)`. */
+export function vulnerabilityStateRowText(row: VulnerabilityStateCardRow): string {
+  const version = row.version ? ` ${row.version}` : ' (version not recorded)';
+  return `${row.cve_id} on ${row.technology} ${row.technology_name}${version}`;
+}
+
+/**
+ * The card of a change of vulnerability state, as sober as the page's bulk dialog: the rows and
+ * CVE, the states before and after, the note when one is given, up to five rows, and a line only
+ * for what changes the decision (rows outside the alerts, rows that will disappear at the next
+ * matching). English only for now.
+ */
+export function vulnerabilityStateCardText(card: VulnerabilityStateCard): string {
+  const rows = card.changes === card.rows
+    ? `${card.rows} row${card.rows === 1 ? '' : 's'}`
+    : `${card.changes} of ${card.rows} rows`;
+  const cves = `${card.cves} CVE${card.cves === 1 ? '' : 's'}`;
+  const from = card.from.length ? card.from.map(vulnerabilityStateLabel).join(', ') : vulnerabilityStateLabel(card.to);
+  // One block per line of meaning: a line right after a list item would join the item.
+  const blocks = [`${rows} (${cves}): ${from} → ${vulnerabilityStateLabel(card.to)}`];
+  if (card.note !== undefined) {
+    blocks.push(card.note ? `Note: ${escapeMarkdownLabel(quoted('en', card.note))}` : 'Note cleared');
+  }
+  const examples = card.examples.slice(0, 5);
+  const more = card.changes - examples.length;
+  if (examples.length > 0) {
+    blocks.push([
+      ...examples.map((row) => `- ${escapeMarkdownLabel(vulnerabilityStateRowText(row))}`),
+      ...(more > 0 ? [`- and ${more} more`] : []),
+    ].join('\n'));
+  }
+  if (card.outsideAlerts > 0) {
+    blocks.push(card.outsideAlerts === 1 ? '1 is outside the vulnerability alerts' : `${card.outsideAlerts} are outside the vulnerability alerts`);
+  }
+  if (card.noLongerMatching > 0) {
+    blocks.push(card.noLongerMatching === 1
+      ? '1 no longer matches and will disappear at the next matching'
+      : `${card.noLongerMatching} no longer match and will disappear at the next matching`);
+  }
+  return blocks.join('\n\n');
+}
+
 /** The detail lines of a task preview: its assignee and its priority. */
 export const taskDetailText = {
   assignee(language: AiTranslatedWriteLanguage, name: string): string {

@@ -27,6 +27,7 @@ import { Tenant } from '../tenants/tenant.entity';
 import { TenantsModule } from '../tenants/tenants.module';
 import { TasksModule } from '../tasks/tasks.module';
 import { TechnologiesModule } from '../technologies/technologies.module';
+import { VulnerabilitiesModule } from '../vulnerabilities/vulnerabilities.module';
 import { UserRole } from '../users/user-role.entity';
 import { UsersModule } from '../users/users.module';
 import { StorageModule } from '../common/storage/storage.module';
@@ -174,6 +175,7 @@ import { UpdateTechnologyVersionsAiMutationOperation } from './mutation/operatio
 import { UpdateTechnologyPeopleAiMutationOperation } from './mutation/operations/update-technology-people.ai-mutation-operation';
 import { UpdateTechnologyWebLinksAiMutationOperation } from './mutation/operations/update-technology-web-links.ai-mutation-operation';
 import { SetTechnologyVulnerabilityAlertsAiMutationOperation } from './mutation/operations/set-technology-vulnerability-alerts.ai-mutation-operation';
+import { ChangeVulnerabilityStateAiMutationOperation } from './mutation/operations/change-vulnerability-state.ai-mutation-operation';
 import { UpdateMasterDataRecordAiMutationOperation } from './mutation/operations/update-master-data-record.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from './mutation/operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskFieldsAiMutationOperation } from './mutation/operations/update-task-fields.ai-mutation-operation';
@@ -254,6 +256,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
     TasksModule,
     TechnologiesModule,
     UsersModule,
+    VulnerabilitiesModule,
   ],
   controllers: [
     AiCapabilitiesController,
@@ -317,6 +320,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
     UpdateTechnologyPeopleAiMutationOperation,
     UpdateTechnologyWebLinksAiMutationOperation,
     SetTechnologyVulnerabilityAlertsAiMutationOperation,
+    ChangeVulnerabilityStateAiMutationOperation,
     UpdateMasterDataRecordAiMutationOperation,
     UpdateTaskFieldsAiMutationOperation,
     UpdateTaskStatusAiMutationOperation,
