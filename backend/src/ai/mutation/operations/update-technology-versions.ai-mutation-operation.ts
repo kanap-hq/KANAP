@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { z } from 'zod';
 import { TechnologiesService } from '../../../technologies/technologies.service';
+import { isCalendarDay } from '../../../technologies/technology-rows';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import {
   AiWriteLanguage,
@@ -14,8 +15,6 @@ import { AiExecutionContextWithManager } from '../../ai.types';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiTechnologyMutationSupportService, AiTechnologyTarget } from '../ai-technology-mutation-support.service';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from '../ai-mutation-operation.types';
-
-const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const VERSION_ADD = z.object({
   label: z.string().trim().min(1).max(100)
@@ -78,10 +77,38 @@ function trimmed(value: unknown): string {
 function dayOf(value: unknown, field: string): string | null {
   if (value === undefined || value === null || String(value).trim() === '') return null;
   const text = String(value).trim().slice(0, 10);
-  if (!DAY_RE.test(text) || Number.isNaN(Date.parse(`${text}T00:00:00Z`))) {
+  if (!isCalendarDay(text)) {
     throw new BadRequestException(`${field} must be a date (YYYY-MM-DD).`);
   }
   return text;
+}
+
+/** A plan step reaches `prepareCreatePreview` without the Zod schema: the keys are checked here too. */
+function assertKnownKeys(value: Record<string, unknown>, allowed: readonly string[], toolName: string): void {
+  const unknown = Object.keys(value).filter((key) => !allowed.includes(key));
+  if (unknown.length) {
+    throw new BadRequestException(`Unknown field "${unknown[0]}" for ${toolName}. Allowed: ${allowed.join(', ')}.`);
+  }
+}
+
+const VERSION_UNSUPPORTED_MESSAGES: Record<string, string> = {
+  delete: 'Deleting a version is done in the technology screen, on the Overview tab, not here.',
+  cpe_version: 'Plaid does not write cpe_version or build_prefixes: the vulnerability matching owns them.',
+  build_prefixes: 'Plaid does not write cpe_version or build_prefixes: the vulnerability matching owns them.',
+  vulnerability_alerts: "A version's vulnerability alerts are set with set_technology_vulnerability_alerts, not here.",
+};
+
+function assertVersionKeys(value: unknown, allowed: readonly string[], toolName: string): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new BadRequestException(`Every entry of ${toolName} must be an object.`);
+  }
+  const entry = value as Record<string, unknown>;
+  for (const key of Object.keys(entry)) {
+    const message = VERSION_UNSUPPORTED_MESSAGES[key];
+    if (message) throw new BadRequestException(message);
+  }
+  assertKnownKeys(entry, allowed, toolName);
+  return entry;
 }
 
 function notesOf(value: unknown): string | null {
@@ -157,9 +184,10 @@ export class UpdateTechnologyVersionsAiMutationOperation implements AiMutationOp
     context: AiExecutionContextWithManager,
     input: UpdateTechnologyVersionsInput,
   ): Promise<AiPreparedMutationPreview> {
-    const technology = await this.support.resolveTechnology(context, input.technology, 'versions');
+    const request = this.normalizeRequest(input);
+    const technology = await this.support.resolveTechnology(context, request.technology, 'versions');
     const live = await this.readVersions(context, technology.id);
-    const versions = this.normalizeChanges(input, live);
+    const versions = this.normalizeChanges(request, live);
     return {
       targetEntityType: 'technologies',
       targetEntityId: technology.id,
@@ -288,6 +316,10 @@ export class UpdateTechnologyVersionsAiMutationOperation implements AiMutationOp
     if (!applied || (applied.updated.length === 0 && applied.created.length === 0)) {
       throw new BadRequestException('This preview changed no version.');
     }
+    // An added version stays (decision 12): an undo with nothing to put back has nothing to do.
+    if (applied.updated.length === 0) {
+      throw new BadRequestException('Nothing to undo: the preview added versions, and an added version stays.');
+    }
     if (!preview.target_entity_id) throw new BadRequestException('Original preview is missing the technology.');
     const technology = await this.support.lockTechnology(context, preview.target_entity_id);
     const live = await this.readVersions(context, technology.id);
@@ -325,6 +357,41 @@ export class UpdateTechnologyVersionsAiMutationOperation implements AiMutationOp
         target_title: technology.label,
       },
     };
+  }
+
+  /**
+   * The request as the operation takes it, including from a plan step, which reaches
+   * `prepareCreatePreview` without the Zod schema: an empty request and every unknown or
+   * unsupported key is refused here, in words.
+   */
+  private normalizeRequest(input: UpdateTechnologyVersionsInput | Record<string, unknown>): UpdateTechnologyVersionsInput {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+      throw new BadRequestException('Nothing to change: add a version or change one.');
+    }
+    const raw = input as Record<string, unknown>;
+    for (const key of Object.keys(raw)) {
+      const message = VERSION_UNSUPPORTED_MESSAGES[key];
+      if (message) throw new BadRequestException(message);
+    }
+    assertKnownKeys(raw, ['technology', 'add', 'update'], 'update_technology_versions');
+    const technology = trimmed(raw.technology);
+    if (!technology) throw new BadRequestException('A technology is required.');
+    if (raw.add !== undefined && !Array.isArray(raw.add)) throw new BadRequestException('add must be a list.');
+    if (raw.update !== undefined && !Array.isArray(raw.update)) throw new BadRequestException('update must be a list.');
+    const add = (raw.add ?? []) as Array<Record<string, unknown>>;
+    const update = (raw.update ?? []) as Array<Record<string, unknown>>;
+    if (add.length === 0 && update.length === 0) {
+      throw new BadRequestException('Nothing to change: add a version or change one.');
+    }
+    for (const entry of add) {
+      assertVersionKeys(entry, ['label', 'standard_support_end', 'extended_support_end', 'notes'], 'update_technology_versions add');
+      if (!trimmed(entry.label)) throw new BadRequestException('Every version to add needs a label.');
+    }
+    for (const entry of update) {
+      assertVersionKeys(entry, ['version', 'label', 'standard_support_end', 'extended_support_end', 'notes'], 'update_technology_versions update');
+      if (!trimmed(entry.version)) throw new BadRequestException('Every version to update needs its current label.');
+    }
+    return { technology, add, update } as unknown as UpdateTechnologyVersionsInput;
   }
 
   private normalizeChanges(input: UpdateTechnologyVersionsInput, live: VersionRow[]): StoredVersions {

@@ -14,6 +14,8 @@ type Row = {
   prompt: string;
   profile: AiContextProfileName;
   mode: AiContextPromptMode;
+  /** The tool the write must offer, when the row fixes it. */
+  tools?: string[];
 };
 
 const FIXTURE_ROWS: Row[] = [
@@ -264,6 +266,36 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Quelles technologies sont en fin de vie ?', profile: 'read_query', mode: 'read' },
   { prompt: 'Qui est responsable de TEC-3 ?', profile: 'entity_inspection', mode: 'entity' },
 
+  // Lot 5: people, web links and vulnerability alerts, with the tool each request needs.
+  { prompt: 'Mets Paul Martin responsable IT de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Ajoute Camille Roux comme responsable métier de PostgreSQL', profile: 'write_general', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Retire Paul Martin des responsables de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Ajoute le contact Oracle Support au support de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Add the release notes link https://www.postgresql.org/docs/release/ to PostgreSQL', profile: 'write_relation', mode: 'write', tools: ['update_technology_web_links'] },
+  { prompt: 'Supprime le lien https://example.com de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_web_links'] },
+  { prompt: 'Désactive les alertes de failles de TEC-3', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+  { prompt: 'Turn vulnerability alerts back on for PostgreSQL', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+  { prompt: 'Exclus la version 14 de TEC-3 des alertes', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+  { prompt: 'Quels liens a la fiche de PostgreSQL ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Les alertes de failles sont-elles actives sur TEC-3 ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Who supports PostgreSQL?', profile: 'read_query', mode: 'read' },
+  { prompt: "Quelles technologies n'ont pas de responsable IT ?", profile: 'read_query', mode: 'read' },
+
+  // Lot 4 review: a noun after upgrade, replace, record or install stays a read; so do a review
+  // and the question of who changed a value.
+  { prompt: 'Upgrade path for PostgreSQL 12', profile: 'read_query', mode: 'read' },
+  { prompt: "Upgrade options for CheeseTrack's database", profile: 'read_query', mode: 'read' },
+  { prompt: 'Replace candidates for Java 8 in the portfolio', profile: 'read_query', mode: 'read' },
+  { prompt: 'Record the end of support dates of all Java versions in a table', profile: 'read_query', mode: 'read' },
+  { prompt: 'Install base of Java 8 per application', profile: 'read_query', mode: 'read' },
+  { prompt: 'Passe en revue les technologies en fin de vie', profile: 'read_query', mode: 'read' },
+  { prompt: 'Qui a changé la fin de support de PostgreSQL 16 ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Adopte PostgreSQL depuis le catalogue KANAP', profile: 'write_business', mode: 'write', tools: ['create_business_record'] },
+  { prompt: 'Adopt Redis from the KANAP catalog', profile: 'write_business', mode: 'write', tools: ['create_business_record'] },
+  { prompt: 'Marque TEC-5 comme obsolète', profile: 'write_business', mode: 'write', tools: ['update_business_record'] },
+  { prompt: 'Indique que TEC-3 est remplacée par TEC-7', profile: 'write_business', mode: 'write', tools: ['update_business_record'] },
+  { prompt: 'Efface la date de fin de support étendu de la version 14 de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_versions'] },
+
   // Other probes from the existing profile spec.
   { prompt: 'Show me my overdue tasks', profile: 'read_query', mode: 'read' },
   { prompt: 'Show current tasks', profile: 'read_query', mode: 'read' },
@@ -385,6 +417,9 @@ function testTheTable() {
     const profile = selectAiContextProfile(row.prompt);
     assert.equal(profile.name, row.profile, `${row.prompt}: expected ${row.profile}`);
     assert.equal(profile.promptMode, row.mode, `${row.prompt}: expected prompt mode ${row.mode}`);
+    for (const tool of row.tools ?? []) {
+      assert.ok(profile.toolNames.includes(tool as any), `${row.prompt}: expected ${tool}`);
+    }
   }
 }
 

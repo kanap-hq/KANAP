@@ -15,6 +15,7 @@ import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.serv
 import { TechnologyCatalogService } from '../../technologies/catalog/technology-catalog.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
 import { findCatalogOption } from '../../it-ops-settings/catalog-resolve';
+import { withShippedLabels } from '../../it-ops-settings/catalog-shipped-labels';
 import { ClassificationCatalog, resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { PortfolioProjectsService } from '../../portfolio/services';
@@ -501,7 +502,9 @@ const TECHNOLOGY_REFUSED_FIELDS: Record<string, string> = {
   cve_names: 'CVE names are filled by the vulnerability matching, not by a record write.',
   catalog_key: 'A catalog key comes from adopting the catalog entry, not from a record write.',
   mode: 'mode is replaced by hosting_type.',
-  vulnerability_alerts: 'Vulnerability alerts are a separate setting of the technology, not a field of its record.',
+  vulnerability_alerts: 'Vulnerability alerts are set with set_technology_vulnerability_alerts, not as a field of the record.',
+  attachments: "Attachments are added from the technology's Relations tab, not by a record write.",
+  technology_attachments: "Attachments are added from the technology's Relations tab, not by a record write.",
 };
 
 export const AI_BUSINESS_RECORD_BUSINESS_RESOURCES = Array.from(
@@ -830,20 +833,27 @@ export class AiBusinessRecordMutationSupportService {
       return { value: option.code, displayValue: option.label || option.code };
     }
     if (field.kind === 'it_catalog') {
-      const settings = await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager });
+      // The tenant's own list, with the labels the app shows for a shipped value in every
+      // language: the code or an exact label is accepted. A retired value is refused unless it is
+      // the one the record already holds, as the screen hides it. An ambiguous label is refused.
+      const settings = withShippedLabels(await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager }));
       const options = field.itCatalog
-        ? settings[field.itCatalog] as Array<{ code: string; label: string }>
+        ? settings[field.itCatalog] as Array<{ code: string; label: string; deprecated?: boolean }>
         : [];
-      // The code or the exact label, without case: the service takes the code at execution.
-      const wanted = String(rawValue).trim().toLowerCase();
-      const option = options.find((item) => item.code.toLowerCase() === wanted || item.label.toLowerCase() === wanted);
+      const current = existing?.[fieldName] == null ? null : String(existing[fieldName]);
+      const option = findCatalogOption(rawValue, options, current, true);
       if (!option) {
-        const allowed = options.slice(0, 10).map((item) => item.label || item.code).join(', ');
+        const allowed = options
+          .filter((item) => !item.deprecated || item.code === current)
+          .slice(0, 10)
+          .map((item) => item.label || item.code)
+          .join(', ');
         throw new BadRequestException(
           `Unknown ${field.label.toLowerCase()} "${String(rawValue).trim()}". Valid values: ${allowed}.`,
         );
       }
-      return { value: option.code, displayValue: option.label || option.code };
+      // The card shows the code: the frontend names it from the same list in the person's language.
+      return { value: option.code, displayValue: option.code };
     }
     if (field.kind === 'incident_category') {
       const settings = await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager });
@@ -1664,8 +1674,10 @@ export class AiBusinessRecordMutationSupportService {
 
   /**
    * A technology is adopted from the KANAP catalog when it knows the exact name, typed free
-   * otherwise or when `from_catalog: false` asks for it. A same-name technology is refused here
-   * with its reference; an ambiguous name lists the closest catalog entries.
+   * otherwise or when `from_catalog: false` asks for it. A hand-typed record of the same name,
+   * without a catalog key, is completed by the exact catalog entry when there is one (the card
+   * names it and what the adoption adds); otherwise a same-name technology is refused here with
+   * its reference, and an ambiguous name lists the closest catalog entries.
    */
   private async prepareTechnologyCreate(
     context: AiExecutionContextWithManager,
@@ -1673,13 +1685,11 @@ export class AiBusinessRecordMutationSupportService {
     fromCatalog: boolean | undefined,
   ): Promise<AiPreparedMutationPreview> {
     const name = String(normalized.fields.name ?? '').trim();
-    const sameName: Array<{ item_number: number }> = await context.manager.query(
-      `SELECT item_number FROM technologies WHERE tenant_id = $1 AND lower(btrim(name)) = lower(btrim($2)) LIMIT 1`,
+    const sameName: Array<{ id: string; item_number: number; catalog_key: string | null }> = await context.manager.query(
+      `SELECT id, item_number, catalog_key FROM technologies
+        WHERE tenant_id = $1 AND lower(btrim(name)) = lower(btrim($2)) LIMIT 1`,
       [context.tenantId, name],
     );
-    if (sameName[0]) {
-      throw new BadRequestException(`A technology with this name already exists: TEC-${sameName[0].item_number}.`);
-    }
     const title = name;
     if (fromCatalog !== false) {
       const catalog = await this.technologyCatalog.notAdopted(
@@ -1688,9 +1698,10 @@ export class AiBusinessRecordMutationSupportService {
       );
       const wanted = name.toLowerCase();
       const exact = catalog.items.find((item) => item.name.trim().toLowerCase() === wanted);
-      if (exact) {
-        // The adoption writes the record; the other given fields are an update in the same
-        // transaction. The card lists them apart from the catalog block.
+      const existing = sameName[0] ?? null;
+      if (exact && (!existing || (!existing.catalog_key && exact.completes_id === existing.id))) {
+        // The adoption writes the record, or completes the hand-typed one the card names; the other
+        // given fields are an update in the same transaction. The card lists them apart.
         const fields = { ...normalized.fields };
         delete fields.name;
         const displayValues = { ...normalized.displayValues };
@@ -1699,7 +1710,7 @@ export class AiBusinessRecordMutationSupportService {
         delete fieldLabels.name;
         return {
           targetEntityType: 'technologies',
-          targetEntityId: null,
+          targetEntityId: existing?.id ?? null,
           mutationInput: {
             action: 'create',
             entity_type: 'technologies',
@@ -1709,20 +1720,31 @@ export class AiBusinessRecordMutationSupportService {
             adopt: {
               catalog_key: exact.key,
               name: exact.name,
+              // The code: the card's family field names it from the tenant's list on the frontend.
               family: exact.family,
-              family_label: exact.family_label,
               versions: exact.versions,
               support_from: exact.support_from,
               support_to: exact.support_to,
+              completes: exact.completes
+                ? {
+                  id: exact.completes_id,
+                  ref: exact.completes,
+                  missing_versions: exact.completes_missing_versions ?? [],
+                  fills_description: exact.completes_description_empty === true,
+                }
+                : null,
             },
           },
           currentValues: {
-            target_ref: null,
-            target_title: title,
+            target_ref: exact.completes ?? null,
+            target_title: exact.completes ? `${exact.completes} - ${title}` : title,
             values: null,
             display_values: null,
           },
         };
+      }
+      if (existing) {
+        throw new BadRequestException(`A technology with this name already exists: TEC-${existing.item_number}.`);
       }
       const closest = catalog.items
         .filter((item) => item.name.trim().toLowerCase().includes(wanted))
@@ -1733,6 +1755,9 @@ export class AiBusinessRecordMutationSupportService {
           + 'Choose one of them, or ask for a free entry with from_catalog: false.',
         );
       }
+    }
+    if (sameName[0]) {
+      throw new BadRequestException(`A technology with this name already exists: TEC-${sameName[0].item_number}.`);
     }
     return {
       targetEntityType: 'technologies',
@@ -1903,6 +1928,12 @@ export class AiBusinessRecordMutationSupportService {
     const adoption = mutation.adopt && typeof mutation.adopt === 'object'
       ? mutation.adopt as Record<string, unknown>
       : null;
+    const adoptionName = adoption ? (textOrNull(adoption.name) ?? '') : '';
+    const completes = adoption?.completes && typeof adoption.completes === 'object'
+      ? adoption.completes as Record<string, unknown>
+      : null;
+    const adoptionKind = adoption ? (completes ? 'completion' : 'adoption') : null;
+    const adoptionTitle = adoptionKind ? (adoptionName || textOrNull(current.target_title) || '') : '';
     const currentValues = current.display_values && typeof current.display_values === 'object'
       ? current.display_values as Record<string, unknown>
       : {};
@@ -1914,22 +1945,30 @@ export class AiBusinessRecordMutationSupportService {
     switch (preview.status) {
       case 'pending':
         summary = action === 'create'
-          ? (adoption ? `Adopt technology "${title}" from the KANAP catalog.` : `Create ${config.labelSingular} "${title}".`)
+          ? (adoptionKind === 'adoption'
+            ? `Adopt technology "${adoptionTitle}" from the KANAP catalog.`
+            : adoptionKind === 'completion'
+              ? `Complete technology "${adoptionTitle}" with the KANAP catalog.`
+              : `Create ${config.labelSingular} "${title}".`)
           : `Update ${config.labelSingular} "${title}": ${labelList}.`;
         break;
       case 'executed':
         summary = action === 'create'
-          ? (adoption ? `Adopted technology "${title}" from the KANAP catalog.` : `Created ${config.labelSingular} "${title}".`)
+          ? (adoptionKind === 'adoption'
+            ? `Adopted technology "${adoptionTitle}" from the KANAP catalog.`
+            : adoptionKind === 'completion'
+              ? `Completed technology "${adoptionTitle}" with the KANAP catalog.`
+              : `Created ${config.labelSingular} "${title}".`)
           : `Updated ${config.labelSingular} "${title}".`;
         break;
       case 'rejected':
-        summary = `${action === 'create' ? (adoption ? 'Adoption' : 'Creation') : 'Update'} preview for ${config.labelSingular} "${title}" was rejected.`;
+        summary = `${action === 'create' ? (adoptionKind === 'adoption' ? 'Adoption' : adoptionKind === 'completion' ? 'Completion' : 'Creation') : 'Update'} preview for ${config.labelSingular} "${title}" was rejected.`;
         break;
       case 'expired':
-        summary = `${action === 'create' ? (adoption ? 'Adoption' : 'Creation') : 'Update'} preview for ${config.labelSingular} "${title}" expired before approval.`;
+        summary = `${action === 'create' ? (adoptionKind === 'adoption' ? 'Adoption' : adoptionKind === 'completion' ? 'Completion' : 'Creation') : 'Update'} preview for ${config.labelSingular} "${title}" expired before approval.`;
         break;
       case 'failed':
-        summary = preview.error_message || `${action === 'create' ? (adoption ? 'Adoption' : 'Creation') : 'Update'} preview for ${config.labelSingular} "${title}" failed.`;
+        summary = preview.error_message || `${action === 'create' ? (adoptionKind === 'adoption' ? 'Adoption' : adoptionKind === 'completion' ? 'Completion' : 'Creation') : 'Update'} preview for ${config.labelSingular} "${title}" failed.`;
         break;
     }
 
@@ -1937,8 +1976,8 @@ export class AiBusinessRecordMutationSupportService {
       summary = previewSummaryText(
         language,
         preview.status,
-        adoption && action === 'create'
-          ? writeActionText.adoptTechnology(language, title)
+        adoptionKind && action === 'create'
+          ? writeActionText.adoptTechnology(language, adoptionTitle)
           : writeActionText.writeRecord(language, action === 'create' ? 'create' : 'update', entityType, quoted(language, title)),
         { errorMessage: preview.error_message },
       );
@@ -1948,14 +1987,27 @@ export class AiBusinessRecordMutationSupportService {
     const shownValue = (_fieldName: string, value: unknown): string | null => formatPlainValue(value);
     const changes: Record<string, AiMutationPreviewChangeDto> = {};
     if (adoption) {
+      const completes = adoption.completes && typeof adoption.completes === 'object'
+        ? adoption.completes as Record<string, unknown>
+        : null;
       changes.catalog_adoption = {
         label: { en: 'KANAP catalog', fr: 'Catalogue KANAP', de: 'KANAP-Katalog', es: 'Catálogo KANAP' }[language],
         from: null,
         to: technologyAdoptionCardText(language, {
-          family_label: String(adoption.family_label ?? adoption.family ?? ''),
+          family: String(adoption.family ?? ''),
+          catalog_key: textOrNull(adoption.catalog_key),
           versions: Number(adoption.versions ?? 0),
           support_from: textOrNull(adoption.support_from),
           support_to: textOrNull(adoption.support_to),
+          completes: completes
+            ? {
+              reference: String(completes.ref ?? ''),
+              missing_versions: Array.isArray(completes.missing_versions)
+                ? completes.missing_versions.map((label) => String(label))
+                : [],
+              fills_description: completes.fills_description === true,
+            }
+            : null,
         }),
         format: 'markdown',
       };
@@ -1975,6 +2027,16 @@ export class AiBusinessRecordMutationSupportService {
             to: textOrNull(fields[fieldName]),
           },
         } : {}),
+      };
+    }
+    // A new adoption writes the catalog's family; the card names the code, the frontend localises
+    // it from the tenant's list. A completion keeps the hand-typed record's family.
+    if (adoption && !adoption.completes && !fieldNames.includes('family') && adoption.family) {
+      changes.family = {
+        label: config.fields.family.label,
+        from: null,
+        to: String(adoption.family),
+        format: 'text',
       };
     }
     const classification = mutation.classification && typeof mutation.classification === 'object'
@@ -2021,13 +2083,26 @@ export class AiBusinessRecordMutationSupportService {
         : null;
       if (entityType === 'technologies' && adoption) {
         // The catalog adoption writes the record and its versions; the fields the person added
-        // beside it are one update in the same transaction, with the same audit source.
+        // beside it are one update in the same transaction, with the same audit source. The
+        // adoption checks under its advisory lock what the card announced: a new record, or the
+        // hand-typed record it completes. A record adopted or typed in between answers 409.
+        const completes = adoption.completes && typeof adoption.completes === 'object'
+          ? adoption.completes as Record<string, unknown>
+          : null;
+        const completesId = completes ? String(completes.id ?? '') : '';
         const adopted = await this.technologyCatalog.adopt(String(adoption.catalog_key ?? ''), {
           manager: context.manager,
           tenantId: context.tenantId,
           userId: context.userId,
           audit,
+          expect: completesId ? { mode: 'complete', technologyId: completesId } : { mode: 'create' },
         });
+        if (completesId && adopted.technology.id !== completesId) {
+          throw new ConflictException(`Technology "${String(adoption.name ?? '')}" changed after the preview was created.`);
+        }
+        if (!completesId && adopted.created !== true) {
+          throw new ConflictException(`Technology "${String(adoption.name ?? '')}" changed after the preview was created.`);
+        }
         const updateFields = { ...executionFields };
         delete updateFields.name;
         if (Object.keys(updateFields).length > 0) {
@@ -2048,7 +2123,27 @@ export class AiBusinessRecordMutationSupportService {
         };
         return;
       }
-      const saved = await this.createRecord(context, entityType, executionFields, audit);
+      // A free technology creation: a record of the same name that appeared between the preview
+      // and the approval is a drift, not the service's duplicate-name error.
+      if (entityType === 'technologies') {
+        const sameName: Array<{ item_number: number }> = await context.manager.query(
+          `SELECT item_number FROM technologies WHERE tenant_id = $1 AND lower(btrim(name)) = lower(btrim($2)) LIMIT 1`,
+          [context.tenantId, String(executionFields.name ?? '')],
+        );
+        if (sameName[0]) {
+          throw new ConflictException(
+            `A technology with this name appeared after the preview was created: TEC-${sameName[0].item_number}.`,
+          );
+        }
+      }
+      const saved = await this.createRecord(context, entityType, executionFields, audit).catch((error) => {
+        if (entityType === 'technologies' && (error as { getStatus?: () => number })?.getStatus?.() === 409) {
+          throw new ConflictException(
+            `A technology with this name appeared after the preview was created: ${String(executionFields.name ?? '')}.`,
+          );
+        }
+        throw error;
+      });
       // The incident and technology services already write the audit row with the preview's
       // source and reference: the created detail is the snapshot (its viewer stays the author's,
       // even when they no longer see the restricted incident they have just created).

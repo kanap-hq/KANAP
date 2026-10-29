@@ -104,14 +104,21 @@ export function optionalText(value: unknown, field: string, max: number): string
   return text;
 }
 
-/** A calendar day YYYY-MM-DD, null when blank; a 400 otherwise. */
+/** A calendar day YYYY-MM-DD, null when blank; a 400 otherwise. `2028-02-30` is refused. */
 export function optionalDay(value: unknown, field: string): string | null {
   if (value === undefined || value === null || String(value).trim() === '') return null;
   const text = String(value).trim().slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(text) || Number.isNaN(Date.parse(`${text}T00:00:00Z`))) {
+  if (!isCalendarDay(text)) {
     throw new BadRequestException(`${field} must be a date (YYYY-MM-DD).`);
   }
   return text;
+}
+
+/** Whether `text` is a day the calendar has: the round trip catches 2028-02-30. */
+export function isCalendarDay(text: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+  const parsed = new Date(`${text}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === text;
 }
 
 /** A list of short texts, trimmed, deduplicated without case; a 400 on a malformed one. */

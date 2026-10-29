@@ -16,7 +16,7 @@ import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, isCloudHostingType, resolveHostingType
 import { normalizeCveNames, sortCveNames } from '../vulnerabilities/cve-affected-rules';
 import { assertWebLinkUrl } from '../common/web-link-url';
 import { defaultVulnerabilityAlerts } from '../vulnerabilities/vulnerability-alerts';
-import { SERVICE_PACK_PRODUCTS, servicePackLabelsOf } from '../vulnerabilities/vulnerability-rules';
+import { servicePackAlertTargets } from '../vulnerabilities/vulnerability-rules';
 import { countingRowSql, rowJoinsSql, severeSql, vulnerabilityCountsEnabled } from '../vulnerabilities/vulnerability-reach-counts';
 import {
   BUILD_PREFIX_RE,
@@ -693,7 +693,6 @@ export class TechnologiesService {
     audit?: AuditSourceOptions,
   ): Promise<TechnologyVersionRow[]> {
     const products = Array.isArray(tech.cpe_products) ? tech.cpe_products : [];
-    if (!products.some((product) => SERVICE_PACK_PRODUCTS.has(String(product).toLowerCase()))) return [];
     const rows: TechnologyVersionRow[] = await mg.query(
       `SELECT ${VERSION_COLUMNS} FROM technology_versions v
          JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
@@ -701,8 +700,7 @@ export class TechnologiesService {
         ORDER BY v.id`,
       [tenantId, tech.id, rootId],
     );
-    const wanted = new Set(servicePackLabelsOf(rootLabel, rows.map((row) => row.label)));
-    const targets = rows.filter((row) => wanted.has(row.label) && row.vulnerability_alerts !== value);
+    const targets = servicePackAlertTargets(products, rootLabel, value, rows);
     if (!targets.length) return [];
     const ids = targets.map((row) => row.id);
     await mg.query(

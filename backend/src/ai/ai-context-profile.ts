@@ -124,6 +124,9 @@ const BUSINESS_WRITE_TOOLS: AiToolName[] = [
   'update_incident_links',
   'update_technology_links',
   'update_technology_versions',
+  'update_technology_people',
+  'update_technology_web_links',
+  'set_technology_vulnerability_alerts',
   'change_incident_state',
   'set_incident_confidentiality',
   'update_entity_relations',
@@ -170,6 +173,7 @@ const RELATION_WRITE_TOOLS: AiToolName[] = [
   'update_document_relations',
   'update_incident_links',
   'update_technology_links',
+  'update_technology_web_links',
   'undo_preview',
 ];
 
@@ -498,6 +502,13 @@ const TECHNOLOGY_WRITE_VERBS = new Set([
   'renomme', 'renommez', 'renommer', 'rename',
   'upgrade', 'passe', 'passez', 'passer',
   'marque', 'marquez', 'marquer', 'mark', 'set',
+  'adopte', 'adoptez', 'adopter', 'adopt',
+  'efface', 'effacez', 'effacer', 'erase', 'clear',
+  'désactive', 'désactivez', 'désactiver', 'desactive', 'disable',
+  'active', 'activez', 'activer', 'enable',
+  'exclus', 'excluez', 'exclure', 'exclude',
+  'indique', 'indiquez', 'indiquer', 'indicate',
+  'turn',
 ]);
 
 /** The head word of the request, after a salutation or a polite turn, raw and lower-case. */
@@ -519,12 +530,34 @@ function isTechnologyQuestion(rawText: string): boolean {
 function hasTechnologyWriteIntent(rawText: string): boolean {
   if (isTechnologyQuestion(rawText)) return false;
   const first = directiveFirstWord(rawText);
-  return first != null && TECHNOLOGY_WRITE_VERBS.has(first);
+  if (first == null) return false;
+  const lower = rawText.toLowerCase();
+  // "Marque" is a noun in "Marque et modèle des serveurs…": it writes only with a technology
+  // reference and a state word. "Indique" writes only a replacement.
+  if (['marque', 'marquez', 'marquer', 'mark'].includes(first)) {
+    return /\bTEC-\d+\b/i.test(rawText)
+      && /\b(?:obsolete|obsolescent|obsolète|deprecated|retire|retired|retiree|remplacee?|remplaces?|replaced|fin de vie)\b/.test(lower);
+  }
+  if (['indique', 'indiquez', 'indiquer', 'indicate'].includes(first)) {
+    return /\b(?:est|sont|is|are)\s+(?:remplacee?|remplaces?|replaced)\b[\s\S]{0,25}\b(?:par|by)\b/.test(lower);
+  }
+  if (first === 'turn') {
+    return /\b(?:alertes? de failles?|vulnerability alerts?)\b/.test(lower);
+  }
+  // A bare verb here is a noun or a report ("Upgrade path", "Replace candidates", "Install base",
+  // "Record the end of support dates…"): it writes only with a version, "from … to", "with" or "on".
+  if (['upgrade', 'replace', 'record', 'install'].includes(first)) {
+    const rest = lower.slice(lower.indexOf(first) + first.length).trim();
+    if (/^(?:path|options|candidates|base|count)\b/.test(rest)) return false;
+    return /\b(?:from\b[\s\S]{0,80}\bto\b|with\b|on\b|sur\b|vers\b|version\b|\d)/.test(rest);
+  }
+  return TECHNOLOGY_WRITE_VERBS.has(first);
 }
 
 /**
  * A stated change: "CheeseTrack utilise maintenant Java 21", "CheeseTrack now uses Java 21",
- * "La version 16 de PostgreSQL finit son support le 31/12/2028". A question stays a read.
+ * "La version 16 de PostgreSQL finit son support le 31/12/2028", "TEC-3 est remplacée par TEC-7".
+ * A question stays a read.
  */
 function hasTechnologyChangeStatement(rawText: string, text: string): boolean {
   if (isTechnologyQuestion(rawText)) return false;
@@ -533,6 +566,9 @@ function hasTechnologyChangeStatement(rawText: string, text: string): boolean {
     /\b(?:maintenant|now)\b[\s\S]{0,40}\b(?:utilise|uses|runs|tourne)\b/,
     /\b(?:finit|finira|termine|terminera|ends?|end)\b[\s\S]{0,50}\b(?:support|soutien)\b[\s\S]{0,30}\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/.]\d{1,2}[/.]\d{4})\b/,
     /\b(?:support|soutien)\b[\s\S]{0,30}\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/.]\d{1,2}[/.]\d{4})\b[\s\S]{0,50}\b(?:finit|finira|termine|terminera|ends?|end)\b/,
+    ...(/\bTEC-\d+\b/i.test(rawText)
+      ? [/\b(?:est|sont|is|are)\s+(?:remplacee?|remplaces?|replaced)\b[\s\S]{0,25}\b(?:par|by)\b/]
+      : []),
   ]);
 }
 
@@ -574,6 +610,16 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     wordsInOrder(/\b(?:latest|current|derniere)\b/, /\b(?:version|release)\b/),
     wordsInOrder(/\b(?:demain|today|tomorrow)\b/, /\b(?:meteo|weather|forecast)\b/),
   ]);
+
+  // A review is a read, not the "passe" write: "Passe en revue les technologies en fin de vie".
+  if (/\b(?:passe|passer|pass|go through)\s+(?:en\s+)?revue\b/.test(text)) {
+    return { profile: withWebCapability(PROFILES.read_query, needsWeb), explicitIntent: true };
+  }
+  // "Qui a changé … ?" asks who changed a value, not for a change.
+  if (isQuestion(raw, text)
+    && /^(?:qui a|who has|who changed|who modified|qui a modifie)\b[\s\S]{0,60}\b(?:change|modifie|updated?|edited?)\b/.test(text)) {
+    return { profile: withWebCapability(PROFILES.read_query, needsWeb), explicitIntent: true };
+  }
 
   if (isMinimalDirectRequest(raw)) {
     return { profile: PROFILES.minimal, explicitIntent: true };
@@ -682,7 +728,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     ...(hasDocumentPublishIntent ? [/\b(?:publie|publier|publish)\b/] : []),
     ...(hasDocumentPublicationIntent ? [/\b(?:public|publique|publics|publiques)\b/] : []),
     ...(hasTechnologyWrite || hasTechnologyChange
-      ? [/\b(?:installe|installer|install|declare|declarer|desinstalle|uninstall|remove|detach|replace|remplace|renomme|renommer|rename|enregistre|upgrade|mets|mettez|mettre|utilise|uses|runs|tourne|maintenant|now|finit|finira|termine|terminera|ends?)\b/]
+      ? [/\b(?:installe|installer|install|declare|declarer|desinstalle|uninstall|remove|detach|replace|remplace|renomme|renommer|rename|enregistre|upgrade|mets|mettez|mettre|utilise|uses|runs|tourne|maintenant|now|finit|finira|termine|terminera|ends?|marque|marquez|marquer|mark|adopte|adopter|adopt|efface|effacer|erase|clear|desactive|desactiver|disable|active|activer|enable|exclus|exclure|exclude|indique|indiquer|indicate|turn)\b/]
       : []),
     ...(createsIncident(text, raw) ? [/\bincident\b/] : []),
   ]);
@@ -706,6 +752,14 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     // A plan that starts an incident and then links it stays a business write:
     // "Crée l'incident puis lie-le à AST-12 et APP-3".
     if (hasIncidentIntent && !hasTaskNameIntent && createsIncidentRecord(text)) {
+      return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
+    }
+    // An adoption and the vulnerability alerts of a technology are business writes without a
+    // reference or a link verb: "Adopte Redis depuis le catalogue KANAP", "Turn alerts back on".
+    if (hasTechnologyWrite && containsAny(text, [/\b(?:adopte|adopter|adopt)\b/])) {
+      return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
+    }
+    if (!question && containsAny(text, [/\b(?:alertes? de failles?|vulnerability alerts?)\b/])) {
       return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
     }
     // A link verb with an incident reference is the incident links tool: "lie APP-2 à INC-3".
