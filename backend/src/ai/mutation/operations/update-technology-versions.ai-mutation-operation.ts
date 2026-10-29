@@ -141,7 +141,7 @@ export class UpdateTechnologyVersionsAiMutationOperation implements AiMutationOp
     entity_type: 'technologies',
     fields: ['technology_versions'],
     reversible: true,
-    prompt_hint: 'For the versions of a technology, use `update_technology_versions` with the technology (TEC-n, UUID or exact name), the versions to `add` with their dates, and the versions to `update` by their current label. A date is YYYY-MM-DD and null clears it; the extended support cannot end before the standard support. Deleting a version is done in the technology screen (Overview tab), not here. Undo restores the changed versions; a version added on the way stays.',
+    prompt_hint: 'For the versions of a technology, use `update_technology_versions` with the technology (TEC-n, UUID or exact name), the versions to `add` with their dates, and the versions to `update` by their current label. A date is YYYY-MM-DD and null clears it; the extended support cannot end before the standard support. It never writes `cpe_version`, `build_prefixes` or a version\'s vulnerability alert setting. Deleting a version is done in the technology screen (Overview tab), not here. Undo restores the changed versions; a version added on the way stays.',
   };
 
   constructor(
