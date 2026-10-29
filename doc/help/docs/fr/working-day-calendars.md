@@ -88,7 +88,7 @@ Le pays et la région se définissent une seule fois, à la création. Pour suiv
 
 ## L'espace de travail du calendrier
 
-Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail.
+Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. Le bouton **Historique** de l'en-tête ouvre l'historique du calendrier dans un panneau latéral. Voir [Historique des fiches](record-history.md).
 
 - **En-tête** : le code comme référence, avec un bouton de copie, et le nom. Cliquez sur le nom pour le renommer. **Précédent** / **Suivant** parcourent la liste dans son ordre et ses filtres actuels, et le bouton de fermeture ramène à la liste
 - **Zone principale** : une ligne comme « Utilisé par 3 lignes OPEX et 1 ligne CAPEX. » lorsque des lignes budgétaires utilisent le calendrier, la **Description**, puis la section **Jours ouvrés**

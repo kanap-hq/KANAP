@@ -83,7 +83,7 @@ The [Network](assets.md#network) tab of each member lists the connections of its
 
 ## The Connections workspace
 
-Click any row to open the workspace. It has two tabs: **Overview** and **Path**. The properties panel on the right holds **Lifecycle**, **Topology**, **Risk mode**, **Criticality**, **Data class**, **Contains PII** and **Created on**. Edits save automatically.
+Click any row to open the workspace. It has three tabs: **Overview**, **Path** and **History** (the changes made to the connection, see [Record history](record-history.md)). The properties panel on the right holds **Lifecycle**, **Topology**, **Risk mode**, **Criticality**, **Data class**, **Contains PII** and **Created on**. Edits save automatically.
 
 **Delete**, a trash icon in the header, deletes the connection after a confirmation (`infrastructure:member`). The confirmation counts the hops deleted with the connection and the interface bindings it is unlinked from. The interfaces themselves stay.
 

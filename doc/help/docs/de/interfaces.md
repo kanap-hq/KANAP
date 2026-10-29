@@ -62,7 +62,7 @@ Das Schnittstellenraster zeigt Ihr Integrationsverzeichnis auf einen Blick.
 
 ## Der Schnittstellen-Arbeitsbereich
 
-Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat ein Seitenpanel mit den Schnittstelleneigenschaften auf der linken Seite und fünf Reiter auf der rechten Seite.
+Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat ein Seitenpanel mit den Schnittstelleneigenschaften auf der linken Seite und sechs Reiter auf der rechten Seite. Der letzte, **Verlauf**, listet die Änderungen an der Schnittstelle auf (siehe [Verlauf der Datensätze](record-history.md)).
 
 ### Schnittstelleneigenschaften (Seitenpanel)
 

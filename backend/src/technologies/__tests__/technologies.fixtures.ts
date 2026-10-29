@@ -12,7 +12,7 @@ import { seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
 // of the specs' reach (audit log, IT Ops settings, storage, FX rates, incidents), and a tenant built
 // in raw SQL with the asset graph of the plan's examples.
 
-export type AuditEntry = { table: string; recordId?: string | null; action?: string; before?: unknown; after?: unknown };
+export type AuditEntry = { table: string; recordId?: string | null; action?: string; before?: unknown; after?: unknown; source?: string; sourceRef?: string | null };
 
 export function services(audit: AuditEntry[] = []) {
   const auditLog = { log: async (entry: AuditEntry) => void audit.push(entry) };

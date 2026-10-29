@@ -254,6 +254,8 @@ export class ConnectionsLegsService extends ConnectionsBaseService {
         before,
         after: [{ id: a.id, order_index: a.order_index }, { id: b.id, order_index: b.order_index }],
         userId,
+        // The swap writes two legs and no `connection_id` key: hand the parent.
+        parent: { table: 'connections', id: connectionId },
       },
       { manager: mg },
     );

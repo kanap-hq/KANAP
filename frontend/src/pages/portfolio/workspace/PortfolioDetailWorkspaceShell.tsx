@@ -15,6 +15,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import EditableTitle from '../../../components/workspace/EditableTitle';
+import RecordHistoryButton from '../../../components/history/RecordHistoryButton';
 import { taskDetailTokens, taskDetailTypography } from '../../tasks/theme/taskDetailTokens';
 import WorkspaceTabs, { type WorkspaceTab } from './WorkspaceTabs';
 
@@ -44,6 +45,8 @@ type PortfolioDetailWorkspaceShellProps = {
   /** Opens the drawer each time this number changes (the page must show one of its fields). */
   drawerOpenRequest?: number;
   isCreate?: boolean;
+  /** The record's history: a History button beside the title opens it in a right panel. */
+  history?: { table: string; recordId: string };
   itemReference?: string | null;
   metadata?: React.ReactNode;
   nav?: PortfolioDetailWorkspaceNav;
@@ -175,6 +178,7 @@ export default function PortfolioDetailWorkspaceShell({
   initialDrawerOpen,
   drawerOpenRequest = 0,
   isCreate = false,
+  history,
   itemReference,
   metadata,
   nav,
@@ -195,7 +199,7 @@ export default function PortfolioDetailWorkspaceShell({
   titleFallback,
 }: PortfolioDetailWorkspaceShellProps) {
   const theme = useTheme();
-  const { t } = useTranslation('portfolio');
+  const { t } = useTranslation(['portfolio', 'admin']);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isCompact = useMediaQuery(theme.breakpoints.down('sm'));
   const [drawerOpen, setDrawerOpen] = React.useState(
@@ -428,7 +432,7 @@ export default function PortfolioDetailWorkspaceShell({
               )}
             </Box>
 
-            {actions && (
+            {(actions || history) && (
               <Box
                 sx={{
                   display: 'flex',
@@ -440,6 +444,8 @@ export default function PortfolioDetailWorkspaceShell({
                   flexWrap: 'wrap',
                 }}
               >
+                {/* The history sits left of the page's own actions (the delete pill comes last). */}
+                {history && <RecordHistoryButton table={history.table} recordId={history.recordId} />}
                 {actions}
               </Box>
             )}

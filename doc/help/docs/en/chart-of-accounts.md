@@ -113,7 +113,7 @@ All row cells are clickable links to the account workspace. You can right-click 
 
 ## The account workspace
 
-Click any row in the accounts grid to open the account workspace.
+Click any row in the accounts grid to open the account workspace. The **History** button in the header opens the account's history in a side panel. See [Record history](record-history.md).
 
 ### Layout
 

@@ -2,8 +2,10 @@ import { BadRequestException, Injectable, Logger, Optional } from '@nestjs/commo
 import { AiPolicyService } from '../ai-policy.service';
 import { FxRateService } from '../../currency/fx-rate.service';
 import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem, yearRateSetId } from '../../spend/allocation-distribution';
-import { listAiTechnologies, resolveAiApplicationsReach } from './ai-technologies.query';
+import { listAiTechnologies, listAiTechnologyVersions, resolveAiApplicationsReach } from './ai-technologies.query';
 import { listAiVulnerabilities } from './ai-vulnerabilities.query';
+import { aggregateSupportRows, APPLICATIONS_UNREAD_NOTE, listAiSupportDeadlines, listAiSupportGaps } from './ai-support.query';
+import { EndOfSupportService } from '../../technologies/reports/end-of-support.service';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
 import { aiDataAccessNote } from './ai-data-access-note.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
@@ -118,6 +120,7 @@ type SupportedAggregateEntityType =
   | 'suppliers'
   | 'tasks'
   | 'technologies'
+  | 'technology_versions'
   | 'users'
   | 'vulnerabilities'
   | 'documents';
@@ -543,6 +546,8 @@ export class AiAggregateExecutor {
     @Optional() private readonly policy?: AiPolicyService,
     /** Live rates for company turnover aggregates. Tests that build the executor by hand omit it. */
     @Optional() private readonly fxRates?: FxRateService,
+    /** The End of support report of the screen, which the two report families group. */
+    @Optional() private readonly endOfSupport?: EndOfSupportService,
   ) {
     // Absent, a technology filter on application_count matches nothing: say so once, at start.
     if (!policy) new Logger(AiAggregateExecutor.name).warn('AiPolicyService is not injected: technology aggregates see no application.');
@@ -936,6 +941,20 @@ export class AiAggregateExecutor {
       return { ids: result.ids, total: result.total, scope: null };
     }
 
+    if (entityType === 'technology_versions') {
+      // "me" and "my_team" do not apply to versions either: refused as for technologies.
+      await applyScopeToAiQuery(context, entityType, {}, scope);
+      const applications = await resolveAiApplicationsReach(context, this.policy);
+      const result = await listAiTechnologyVersions(
+        context.manager,
+        context.tenantId,
+        { q, limit: AGGREGATE_ID_COLLECTION_LIMIT, filters: adaptedFilters },
+        applications,
+        { idsOnly: true },
+      );
+      return { ids: result.ids, total: result.total, scope: null };
+    }
+
     if (entityType === 'vulnerabilities') {
       // "me" and "my_team" do not apply to vulnerabilities: refused as for technologies.
       await applyScopeToAiQuery(context, entityType, {}, scope);
@@ -1222,8 +1241,13 @@ export class AiAggregateExecutor {
     const idColumn = registry.aggregate.idColumn ?? 'id';
     const baseWhere = registry.aggregate.baseWhere ? ` AND ${registry.aggregate.baseWhere}` : '';
     if (fn === 'count' || !metric) {
+      // A many-to-many group whose links can repeat a name (`countDistinct`) counts its record
+      // once: two owners of the same name are one row for that technology.
+      const countExpression = groupField.countDistinct
+        ? `COUNT(DISTINCT ${alias}.${idColumn})::int`
+        : 'COUNT(*)::int';
       const rows = await context.manager.query(
-        `SELECT ${groupField.expression} AS key, COUNT(*)::int AS count
+        `SELECT ${groupField.expression} AS key, ${countExpression} AS count
          FROM ${registry.aggregate.baseTable} ${alias}
          ${joins}
          WHERE ${alias}.tenant_id = $1${baseWhere}
@@ -1239,15 +1263,21 @@ export class AiAggregateExecutor {
       }));
     }
 
-    const aggregateExpression = buildMetricAggregateExpression(fn, metric.def.expression, metric.def.round);
+    // One row per (group, record): a many-to-many group whose links repeat a name (two IT owners
+    // named alike) must not count or sum the record twice. The metric is read once per record.
+    const aggregateExpression = buildMetricAggregateExpression(fn, 'd.metric', metric.def.round);
     const orderDirection = getMetricOrderDirection(fn);
     const rows = await context.manager.query(
-      `SELECT ${groupField.expression} AS key, ${aggregateExpression} AS value
-       FROM ${registry.aggregate.baseTable} ${alias}
-       ${joins}
-       WHERE ${alias}.tenant_id = $1${baseWhere}
-         AND ${alias}.${idColumn} = ANY($2::uuid[])
-       GROUP BY ${groupField.expression}
+      `SELECT d.key, ${aggregateExpression} AS value
+       FROM (
+         SELECT DISTINCT ${groupField.expression} AS key, ${alias}.${idColumn} AS record_id,
+                ${metric.def.expression} AS metric
+           FROM ${registry.aggregate.baseTable} ${alias}
+           ${joins}
+          WHERE ${alias}.tenant_id = $1${baseWhere}
+            AND ${alias}.${idColumn} = ANY($2::uuid[])
+       ) d
+       GROUP BY d.key
        ORDER BY value ${orderDirection} NULLS LAST, key ASC NULLS LAST`,
       queryParams,
     );
@@ -1590,6 +1620,56 @@ export class AiAggregateExecutor {
     }
     const isCompleteAggregateResult = (scope: ResolvedAiScope | null): boolean =>
       adapted.ignored.length === 0 && (scope?.resolved !== false);
+    if (input.entity_type === 'support_gaps' || input.entity_type === 'support_deadlines') {
+      const service = this.endOfSupport;
+      if (!service) throw new BadRequestException('The End of support report is not available.');
+      // The report rows are not participation-scoped: `scope` is applied as on query_entities,
+      // and a scope the family cannot take (`me`) is refused there too.
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: metric?.key ?? null,
+          function: fn,
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const applications = await resolveAiApplicationsReach(context, this.policy);
+      const opts = { manager: context.manager, tenantId: context.tenantId, userId: context.userId };
+      const result = input.entity_type === 'support_gaps'
+        ? await listAiSupportGaps(service, opts, applications, scoped.query, true)
+        : await listAiSupportDeadlines(service, opts, applications, scoped.query, true);
+      const rows = result.items;
+      const groups = aggregateSupportRows(input.entity_type, rows, input.group_by, fn, metric?.key ?? null);
+      const total = rows.length;
+      return {
+        applications_visible: result.applications_visible,
+        ...(result.applications_visible ? {} : { applications_visible_note: APPLICATIONS_UNREAD_NOTE }),
+        group_by: input.group_by,
+        metric: metric?.key ?? null,
+        function: fn,
+        groups,
+        total,
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+    }
     if (input.entity_type === 'documents') {
       const scoped = await applyScopeToAiQuery(
         context,

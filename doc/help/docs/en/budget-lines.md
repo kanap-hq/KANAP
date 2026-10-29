@@ -199,6 +199,14 @@ Click any row in the list to open the workspace. Its address names the line by i
 - **Five tabs**: **Overview**, **Budget**, **Allocations**, **Relations** (the Relations tab shows how many links the line has), and **History**
 - **Properties panel** on the right: the line's main fields, starting with **Type** (with **Change type...** next to it on an existing line, see [Changing the type](#changing-the-type)). Open or close it with the properties button; the workspace remembers your choice
 
+**Owner pickers**:
+
+- In the **Properties** panel of a new line and in the metadata bar of an existing one, the **IT owner** and **Business owner** lists start under **Cost center access** with the people who have budget access and can read lines of the line's cost center. Everyone else follows under a separator
+- Typing searches everyone, as before. You can choose anyone
+- Without a cost center, the list is the usual one. The group is not shown when it would hold everyone, for example when no one has limited [data access](data-access.md)
+- When your own data access is limited, the group appears for the cost centers within your access and for the line you are editing
+- Choosing an owner gives that person access to the line
+
 **Autosave**:
 
 - Every change saves automatically. A **Saving...** / **Saved** hint shows in the header

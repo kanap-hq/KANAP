@@ -450,6 +450,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
       get: READ, // GET :ref
       hiddenByValue: READ, // GET summary/hidden-by-value
       linkRelation: LINE_WRITE, // POST :id/relations/:kind
+      ownerSuggestions: LOOKUP, // GET owner-suggestions (a limited person creates lines too)
       relations: READ, // GET :id/relations
       resolve: LOOKUP, // GET resolve/:ref
       summary: READ, // GET summary

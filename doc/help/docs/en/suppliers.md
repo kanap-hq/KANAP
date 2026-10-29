@@ -50,7 +50,7 @@ Every cell in a row is clickable and opens that supplier's page.
 
 Click any row to open the supplier page. Use the arrows at the top, or the left and right arrow keys, to step through suppliers without returning to the list. Every change saves on its own: there is no save button.
 
-The page has two tabs: **Overview** and **Contacts**.
+The page has three tabs: **Overview**, **Contacts** and **History** (the changes made to the supplier, see [Record history](record-history.md)).
 
 **Title**: The supplier's name. Click it to edit it; the change saves when you leave the field or press Enter, and Escape cancels it. A name is required and must differ from the name of every other supplier, whatever the case (`SAP` and `sap` are the same name): KANAP shows the message under the name and keeps the stored one.
 

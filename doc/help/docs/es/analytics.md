@@ -139,7 +139,7 @@ Una dimensión nueva se coloca la última en el orden de las dimensiones. Despu�
 
 ### El espacio de trabajo de la dimensión
 
-Ábralo con **Editar** (**Abrir** si solo puede consultar) en la barra de selección, con la dimensión seleccionada.
+Ábralo con **Editar** (**Abrir** si solo puede consultar) en la barra de selección, con la dimensión seleccionada. El botón **Historial** de la cabecera abre el historial de la dimensión en un panel lateral. Vea [Historial de los registros](record-history.md).
 
 - **Encabezado**: el nombre de la dimensión. Haga clic en él para cambiar el nombre de la dimensión. **Ant.** / **Sig.** recorren las dimensiones en orden, y el botón de cierre vuelve a la página en esta dimensión
 - **Zona principal**: una línea de uso, y después la **Descripción**. La línea de uso da el número de valores y de líneas de presupuesto que tienen uno de ellos, OPEX y CAPEX juntas, por ejemplo «12 valores · Usada por 29 líneas». **Usada por 29 líneas** es un enlace: abre esas líneas en la lista de líneas presupuestarias, en una pestaña nueva, incluidas las líneas activadas y desactivadas. Una dimensión que ninguna línea usa indica «Aún sin usar», y una sin valores «Todavía no hay valores.» Mientras la dimensión esté desactivada, el recuento se muestra sin enlace
@@ -249,6 +249,8 @@ Haga clic en **Nuevo valor**. El campo **Dimensión** empieza en la dimensión s
 - **Encabezado**: el nombre del valor. Haga clic en él para cambiar el nombre del valor. **Ant.** / **Sig.** recorren los valores de la misma dimensión, en el orden y con los filtros actuales de la lista. El botón de cierre vuelve a la lista
 - **Zona principal**: una línea de uso, y después la **Descripción**. La línea de uso cuenta las líneas de presupuesto que tienen el valor, OPEX y CAPEX juntas, por ejemplo «Usado por 4 líneas». Es un enlace que abre esas líneas en la lista de líneas presupuestarias, en una pestaña nueva. Un valor que ninguna línea usa indica «Aún sin usar». Mientras la dimensión esté desactivada, el recuento se muestra sin enlace
 - **Panel Propiedades** a la derecha: **Dimensión** (solo lectura), **Usada para** y **Ciclo de vida**
+
+El botón **Historial** de la cabecera abre el historial del valor en un panel lateral. Vea [Historial de los registros](record-history.md).
 
 Los cambios se guardan por sí solos, como en el espacio de trabajo de la dimensión. Un nombre rechazado en el encabezado se muestra en la parte superior de la página.
 

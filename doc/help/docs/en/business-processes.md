@@ -53,7 +53,7 @@ The list shows all business processes for your tenant.
 
 ## The Business Process workspace
 
-Click any row in the list (or the **New** button) to open the workspace.
+Click any row in the list (or the **New** button) to open the workspace. The **History** button in the header opens the process's history in a side panel. See [Record history](record-history.md).
 
 The workspace has a single **Overview** tab on the left, and a toolbar across the top:
 

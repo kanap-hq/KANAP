@@ -1,10 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import { RECORD_HISTORY_TABLES } from './recordHistoryTables';
 
-// The record tables whose page has the History tab: `spend_items` in lot 1C, extended by lot 2.
+// The record tables whose page has a history: the budget line in lot 1C, the account and cost
+// center in lot 2, the Knowledge document in lot 2 family E, the first masters of family A, the
+// asset and the technology of family D, the supplier and the contact of family B, the site, the
+// connection and the interface of family C.
 describe('record history tables', () => {
-  it('declares the budget line and keeps the list unique and readable', () => {
-    expect(RECORD_HISTORY_TABLES).toContain('spend_items');
+  it('declares the budget line and the record pages of the families, unique and readable', () => {
+    expect(RECORD_HISTORY_TABLES).toEqual([
+      'spend_items',
+      'accounts',
+      'analytics_axes',
+      'analytics_categories',
+      'assets',
+      'business_processes',
+      'companies',
+      'connections',
+      'contacts',
+      'cost_centers',
+      'departments',
+      'documents',
+      'interfaces',
+      'locations',
+      'suppliers',
+      'technologies',
+      'working_day_profiles',
+    ]);
     expect(new Set(RECORD_HISTORY_TABLES).size).toBe(RECORD_HISTORY_TABLES.length);
     for (const table of RECORD_HISTORY_TABLES) {
       // A physical table name, as the route takes it.

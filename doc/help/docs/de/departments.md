@@ -51,7 +51,7 @@ Das Abteilungs-Grid gibt Ihnen einen Überblick über alle Abteilungen mit ihrer
 
 ## Der Abteilungs-Arbeitsbereich
 
-Klicken Sie auf eine beliebige Zeile, um den Arbeitsbereich zu öffnen. Er hat zwei Tabs: **Übersicht** und **Details**.
+Klicken Sie auf eine beliebige Zeile, um den Arbeitsbereich zu öffnen. Er hat drei Tabs: **Übersicht**, **Details** und **Verlauf** (die Änderungen an der Abteilung, siehe [Verlauf der Datensätze](record-history.md)).
 
 - **Kopfzeile**: der Name der Abteilung. Klicken Sie darauf, um die Abteilung umzubenennen. **Zurück** / **Weiter** wechseln zwischen Abteilungen in der Reihenfolge und mit den Filtern der Liste, ohne zur Liste zurückzukehren, und die Schließen-Schaltfläche führt zur Liste zurück
 - **Bereich Eigenschaften** rechts: **Unternehmen** und **Lebenszyklus**

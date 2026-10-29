@@ -57,7 +57,8 @@ test('the backend alone needs every backend spec and the builds, not the fronten
 });
 
 test('files read across the two trees bring the other suite', (t) => {
-  for (const file of ['frontend/src/pages/admin/auditLogLabels.ts', 'frontend/src/pages/contracts/contractTerms.ts',
+  for (const file of ['frontend/src/lib/audit/auditLogLabels.ts', 'frontend/src/components/history/recordHistoryTables.ts',
+    'frontend/src/pages/contracts/contractTerms.ts',
     'frontend/src/pages/reports/reportAggregates.ts', 'frontend/src/pages/reports/reportTables.ts',
     'frontend/src/pages/operations/copyBudgetRows.ts', 'frontend/src/pages/admin/master-data/masterDataCopyRows.ts',
     'frontend/src/pages/portfolio/contributorsOrdering.ts', 'frontend/src/pages/portfolio/skillsMatrix.ts',
@@ -66,7 +67,9 @@ test('files read across the two trees bring the other suite', (t) => {
     'frontend/src/locales/fr/portfolio.json', 'frontend/src/locales/de/it.json', 'frontend/src/locales/es/ops.json',
     'frontend/src/locales/de/master-data.json',
     // The menu words of the screens the assistant names (`backend/src/ai/ai-unread-families.ts`).
-    'frontend/src/locales/fr/nav.json']) {
+    'frontend/src/locales/fr/nav.json',
+    // The record history labels are checked against the backend allow-lists.
+    'frontend/src/locales/en/admin.json']) {
     assert.equal(needs(t, [file]).backend, 'full', file);
   }
   assert.equal(needs(t, ['backend/fixtures/fromage-co/setup-tenant.mjs']).frontend, 'true');

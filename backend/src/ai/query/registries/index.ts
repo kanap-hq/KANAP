@@ -28,8 +28,11 @@ import { locationsRegistry } from './locations.registry';
 import { projectsRegistry } from './projects.registry';
 import { requestsRegistry } from './requests.registry';
 import { suppliersRegistry } from './suppliers.registry';
+import { supportDeadlinesRegistry } from './support-deadlines.registry';
+import { supportGapsRegistry } from './support-gaps.registry';
 import { tasksRegistry } from './tasks.registry';
 import { technologiesRegistry } from './technologies.registry';
+import { technologyVersionsRegistry } from './technology-versions.registry';
 import { usersRegistry } from './users.registry';
 import { vulnerabilitiesRegistry } from './vulnerabilities.registry';
 
@@ -53,8 +56,11 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   projects: projectsRegistry,
   requests: requestsRegistry,
   suppliers: suppliersRegistry,
+  support_deadlines: supportDeadlinesRegistry,
+  support_gaps: supportGapsRegistry,
   tasks: tasksRegistry,
   technologies: technologiesRegistry,
+  technology_versions: technologyVersionsRegistry,
   users: usersRegistry,
   vulnerabilities: vulnerabilitiesRegistry,
 };

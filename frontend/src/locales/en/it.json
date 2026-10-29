@@ -2086,7 +2086,8 @@
         "network": "Network",
         "hardware": "Hardware",
         "dependencies": "Dependencies",
-        "relations": "Relations"
+        "relations": "Relations",
+        "history": "History"
       },
       "operations": {
         "hostedApplications": "Hosted applications"
@@ -2382,7 +2383,8 @@
         "applications": "Applications",
         "operations": "Operations",
         "compliance": "Compliance",
-        "relations": "Relations"
+        "relations": "Relations",
+        "history": "History"
       },
       "fields": {
         "name": "Name",
@@ -2598,7 +2600,8 @@
         "layers": "Layers",
         "compliance": "Criticality & compliance",
         "interfaces": "Related interfaces",
-        "path": "Path"
+        "path": "Path",
+        "history": "History"
       },
       "createFromBinding": "Creating from interface binding context",
       "overview": {
@@ -2803,7 +2806,8 @@
         "compliance": "Data & compliance",
         "flow": "Flow",
         "dataMapping": "Data mapping",
-        "relations": "Relations"
+        "relations": "Relations",
+        "history": "History"
       },
       "selectSourceTarget": "Select source and target applications to manage bindings.",
       "untitled": "Untitled interface",
@@ -3103,7 +3107,8 @@
       "tabs": {
         "overview": "Overview",
         "contacts": "Contacts & support",
-        "relations": "Relations"
+        "relations": "Relations",
+        "history": "History"
       },
       "deleteTitle": "Delete location?",
       "deleteMessage": "This will permanently delete this location and automatically unassign all linked assets.",

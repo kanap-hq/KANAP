@@ -152,6 +152,20 @@ describe('history lines', () => {
     expect(historyLines(item({ kind: 'round_input', label: 'planned' }, [
       { field: 'line', event: 'added', after: { kind: 'line', id: ID, label: 'Database' } },
     ]), context)).toEqual([{ text: 'Costed line added: Database' }]);
+    // A contact's supplier link: the supplier named, the link's role and primary flag in words.
+    expect(historyLines(item({ kind: 'supplier', label: 'Acme Supplies' }, [
+      { field: 'supplier', event: 'added', after: { kind: 'supplier', id: ID, label: 'Acme Supplies' } },
+      { field: 'role', after: 'commercial' },
+      { field: 'is_primary', after: true },
+    ]), context)).toEqual([
+      { text: 'Supplier added: Acme Supplies' },
+      { label: 'Role', after: 'Commercial' },
+      { label: 'Primary', after: 'Yes' },
+    ]);
+    // A contact's budget-line link: the line named with its business reference.
+    expect(historyLines(item({ kind: 'budget_line', label: 'Main line' }, [
+      { field: 'budget_line', event: 'added', after: { kind: 'budget_line', id: ID, label: 'Main line', reference: 'BL-1' } },
+    ]), context)).toEqual([{ text: 'Budget line added: Main line (BL-1)' }]);
   });
 
   it('falls back to the stored field key when the audit log has no label for it', () => {
@@ -181,9 +195,56 @@ describe('history lines', () => {
     expect(historySubjectText({ kind: 'record' }, t)).toBeNull();
   });
 
+  it('names an asset hardware sheet, a support sheet, a technology version and a vulnerability', () => {
+    expect(historySubjectText({ kind: 'hardware' }, t)).toBe('Hardware');
+    expect(historySubjectText({ kind: 'support' }, t)).toBe('Support');
+    expect(historySubjectText({ kind: 'technology_version', label: '2.1' }, t)).toBe('Version 2.1');
+    expect(historySubjectText({ kind: 'technology_version' }, t)).toBe('Version');
+    expect(historySubjectText({ kind: 'vulnerability', label: 'CVE-2026-1234' }, t)).toBe('Vulnerability CVE-2026-1234');
+    expect(historySubjectText({ kind: 'relation' }, t)).toBeNull();
+  });
+
+  it('writes the asset and technology child writes as sentences', () => {
+    expect(historyLines(item({ kind: 'relation' }, [
+      { field: 'relation_depends_on', event: 'added', after: { kind: 'asset', id: ID, label: 'Server Two', reference: 'AST-2' } },
+    ]), context)).toEqual([{ text: 'Dependency added: Server Two (AST-2)' }]);
+    expect(historyLines(item({ kind: 'member' }, [
+      { field: 'member', event: 'removed', before: { kind: 'asset', id: ID, label: 'Server One', reference: 'AST-1' } },
+    ]), context)).toEqual([{ text: 'Member removed: Server One (AST-1)' }]);
+    expect(historyLines(item({ kind: 'owner' }, [
+      { field: 'owner_it', event: 'added', after: { kind: 'user', id: ID, label: 'Ava Reader' } },
+    ]), context)).toEqual([{ text: 'IT owner added: Ava Reader' }]);
+    expect(historyLines(item({ kind: 'technology' }, [
+      { field: 'operating_system', event: 'added', after: { kind: 'technology', id: ID, label: 'Windows Server 2019', reference: 'TEC-4' } },
+    ]), context)).toEqual([{ text: 'Operating system added: Windows Server 2019 (TEC-4)' }]);
+    expect(historyLines(item({ kind: 'budget_line' }, [
+      { field: 'budget_line', event: 'added', after: { kind: 'budget_line', id: ID, label: 'Main line', reference: 'BL-1' } },
+    ]), context)).toEqual([{ text: 'Budget line added: Main line (BL-1)' }]);
+    expect(historyLines(item({ kind: 'vulnerability', label: 'CVE-2026-1234' }, [
+      { field: 'vulnerability_state', before: 'to_review', after: 'handled' },
+    ]), context)).toEqual([{ label: 'State', before: 'To review', after: 'Handled' }]);
+    expect(historyLines(item({ kind: 'technology_version', label: '2.1' }, [
+      { field: 'standard_support_end', before: '2027-06-30', after: '2028-06-30' },
+    ]), context)).toEqual([{ label: 'Standard support end', before: '30 Jun 2027', after: '30 Jun 2028' }]);
+  });
+
+  it('reads the technology enumerations in the reader language', () => {
+    expect(historyValueText('public_cloud', 'hosting_type', context)).toBe('Public cloud');
+    expect(historyValueText('database', 'family', context)).toBe('Database');
+    expect(historyValueText('physical_server', 'kind', { ...context, table: 'assets' })).toBe('Physical server');
+    expect(historyValueText('handled', 'vulnerability_state', context)).toBe('Handled');
+    expect(historyValueText('high', 'cyber_criticality', context)).toBe('High');
+    expect(historyValueText('vital', 'recovery_wave', context)).toBe('V1 Vital activities');
+  });
+
   it('reads a technical child creation and deletion by its title alone', () => {
     const versionCreate = { ...item({ kind: 'version', label: 'Y2026' }, []), action: 'create' };
     expect(historyChildTitle(versionCreate, t)).toBe('Version Y2026 added');
+    expect(historyChildTitle({ ...item({ kind: 'technology_version', label: '2.1' }, []), action: 'create' }, t)).toBe('Version 2.1 added');
+    expect(historyChildTitle({ ...item({ kind: 'hardware' }, []), action: 'create' }, t)).toBe('Hardware added');
+    expect(historyChildTitle({ ...item({ kind: 'hardware' }, []), action: 'delete' }, t)).toBe('Hardware removed');
+    expect(historyChildTitle({ ...item({ kind: 'support' }, []), action: 'create' }, t)).toBe('Support added');
+    expect(historyChildTitle({ ...item({ kind: 'support' }, []), action: 'delete' }, t)).toBe('Support removed');
     const inputCreate = { ...item({ kind: 'round_input', label: 'planned' }, []), action: 'create' };
     expect(historyChildTitle(inputCreate, t)).toBe('Budget input Budget added');
     const allocationCreate = { ...item({ kind: 'allocations', label: 'Y2026' }, []), action: 'create' };

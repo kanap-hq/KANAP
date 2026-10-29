@@ -345,6 +345,8 @@ async function testDeclareOnServers() {
     );
     assert.equal(manual, true);
     assert.deepEqual(audit.map((entry) => [entry.table, entry.recordId]), [
+      // The version created on the way writes its own row, as the Versions tab does.
+      ['technology_versions', seed.tech.elsewhere],
       ['application_technologies', seed.tech.elsewhere],
       ['asset_technologies', seed.tech.elsewhere],
       ['asset_technologies', seed.tech.elsewhere],
@@ -363,7 +365,7 @@ async function testDeclareOnServers() {
     assert.deepEqual(tomcat, { ok: true, changed: true, servers: { added: 1, skipped: 1 } });
     assert.deepEqual(await installedOn(runner, seed, seed.servers.etl1, seed.tech.tomcat), [null], 'not doubled, not changed');
     assert.deepEqual(await installedOn(runner, seed, seed.servers.etl2, seed.tech.tomcat), ['9.0']);
-    assert.deepEqual(audit.map((entry) => entry.table), ['application_technologies', 'asset_technologies']);
+    assert.deepEqual(audit.map((entry) => entry.table), ['technology_versions', 'application_technologies', 'asset_technologies']);
 
     // Every server has it already: nothing is written on the servers.
     audit.length = 0;

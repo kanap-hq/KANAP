@@ -31,6 +31,12 @@ vi.mock('../../auth/AuthContext', () => ({
   }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+// The shared history: the tab must hand it the supplier's table and identifier.
+vi.mock('../../components/history/RecordHistory', () => ({
+  default: ({ table, recordId }: { table: string; recordId: string }) => (
+    <div data-testid="record-history">{`${table}:${recordId}`}</div>
+  ),
+}));
 vi.mock('../../hooks/useSupplierNav', () => ({
   useSupplierNav: () => ({ total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
@@ -356,6 +362,14 @@ describe('SupplierWorkspacePage', () => {
     renderAt('/master-data/suppliers/s-1/details');
     expect(await screen.findByText('Acme Software')).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/master-data/suppliers/s-1/overview');
+  });
+
+  it('adds the History tab last and hands the supplier to the shared history', async () => {
+    renderAt('/master-data/suppliers/s-1/history');
+    expect(await screen.findByTestId('record-history')).toHaveTextContent('suppliers:s-1');
+    const tabs = screen.getAllByRole('tab').map((tab) => tab.textContent);
+    expect(tabs).toEqual(['shared.labels.overview', 'shared.labels.contacts', 'shared.labels.history']);
+    expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('closes to the list with its sort, filters and scope', async () => {

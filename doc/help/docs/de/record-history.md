@@ -1,9 +1,12 @@
 # Verlauf der Datensätze
 
-Der Tab **Verlauf** eines Datensatzes listet die Änderungen daran auf: wer was wann geändert hat. Er beantwortet alltägliche Fragen wie „Wer hat diesen Betrag erhöht?“ oder „Wann wurde die Verknüpfung mit diesem Vertrag entfernt?“, ohne Umweg über das Audit-Protokoll.
+Der Verlauf eines Datensatzes listet die Änderungen daran auf: wer was wann geändert hat. Er beantwortet alltägliche Fragen wie „Wer hat diesen Betrag erhöht?“ oder „Wann wurde die Verknüpfung mit diesem Vertrag entfernt?“, ohne Umweg über das Audit-Protokoll.
 
-!!! note "Wo er verfügbar ist"
-    Heute gibt es den Tab **Verlauf** bei Budgetzeilen (siehe [Budgetzeilen](budget-lines.md#verlauf)). Andere Datensätze erhalten ihn später.
+## Wo Sie ihn finden
+
+- **Tab Verlauf**, der letzte Tab des Datensatzes: Budgetzeilen (siehe [Budgetzeilen](budget-lines.md#verlauf)), Unternehmen, Abteilungen, Lieferanten, Standorte, Verbindungen, Schnittstellen, Assets und Technologien.
+- **Schaltfläche Verlauf** in der Kopfzeile, die den Verlauf in einem Seitenbereich öffnet: Konten, Kostenstellen, Arbeitstagekalender, Geschäftsprozesse, Analysedimensionen und ihre Werte sowie Kontakte.
+- **Tab Verlauf** im rechten Bereich eines Dokuments der Wissensdatenbank.
 
 ## Wer ihn sehen kann
 
@@ -12,7 +15,7 @@ Der Tab **Verlauf** eines Datensatzes listet die Änderungen daran auf: wer was 
 
 ## Was ein Eintrag zeigt
 
-Der Tab listet einen Eintrag pro Änderung, den neuesten oben. Jeder Eintrag zeigt:
+Der Verlauf listet einen Eintrag pro Änderung, den neuesten oben. Jeder Eintrag zeigt:
 
 - Datum und Uhrzeit der Änderung;
 - ihren Urheber: eine Person, **System** für Änderungen, die KANAP selbst vornimmt, **Import** für Änderungen, die aus einer Datei geladen wurden, oder **Plaid für** eine Person, wenn der Assistent die Änderung in ihrem Auftrag vorgenommen hat;
@@ -25,7 +28,7 @@ Lange Verläufe werden seitenweise geladen: Klicken Sie unten in der Liste auf *
 
 ## Änderungen an den Bestandteilen eines Datensatzes
 
-Der Verlauf einer Budgetzeile listet auch die Änderungen an ihren Bestandteilen auf:
+Der Verlauf listet auch die Änderungen an den Bestandteilen eines Datensatzes auf. Bei einer Budgetzeile zum Beispiel:
 
 - Beträge, nach Jahr und Budgetspalte;
 - Analysedimensionen;
@@ -37,7 +40,12 @@ Der Verlauf einer Budgetzeile listet auch die Änderungen an ihren Bestandteilen
 
 ## Datensätze, die Sie nicht lesen können
 
-Ein Eintrag kann einen Datensatz aus einem anderen Modul nennen, zum Beispiel einen mit der Zeile verknüpften Vertrag. Wenn Sie dieses Modul nicht lesen können oder der Datensatz inzwischen gelöscht wurde, nennt der Eintrag nur seine Art, zum Beispiel „ein Vertrag“.
+Ein Eintrag kann einen anderen Datensatz nennen, zum Beispiel einen mit der Zeile verknüpften Vertrag. Wenn Sie diesen Datensatz nicht öffnen können, nennt der Eintrag nur seine Art, zum Beispiel „ein Vertrag“. Ein inzwischen gelöschter Datensatz erscheint als „ein gelöschter Vertrag“.
+
+## Werte, die der Verlauf nicht zeigt
+
+- E-Mail-Adresse, Telefonnummern und Notizen eines Kontakts erscheinen nie.
+- Bei langen Inhalten sagt der Eintrag nur, dass sie sich geändert haben: **Inhalt geändert** für den Text eines Dokuments der Wissensdatenbank, **Arbeitstage geändert** für die Tage eines Arbeitstagekalenders.
 
 ## Das vollständige Audit-Protokoll
 

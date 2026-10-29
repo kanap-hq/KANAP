@@ -23,6 +23,7 @@ import SupplierSelect from '../../components/fields/SupplierSelect';
 import CompanySelect from '../../components/fields/CompanySelect';
 import CostCenterSelect from '../../components/fields/CostCenterSelect';
 import DateEUField from '../../components/fields/DateEUField';
+import UserSelect from '../../components/fields/UserSelect';
 import { STATUS_DISABLED, STATUS_ENABLED, deriveStatusFromDisabledAt, statusChoicePatch, type StatusValue } from '../../constants/status';
 import { drawerFieldValueSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -665,14 +666,15 @@ function ContractCreate() {
                 </Box>
               </PropertyRow>
               <PropertyRow label={t('contracts.fields.owner')}>
-                <MetadataUserPicker
-                  value={values.owner_user_id}
-                  placeholder={t('contracts.metadata.ownerMissing')}
-                  searchPlaceholder={t('contracts.fields.owner')}
-                  showAvatar={false}
-                  onChange={(next) => set('owner_user_id', next)}
-                  sx={{ maxWidth: '100%' }}
-                />
+                <Box sx={hideInnerLabelSx}>
+                  <UserSelect
+                    hideLabel
+                    label={t('contracts.fields.owner')}
+                    value={values.owner_user_id}
+                    onChange={(next) => set('owner_user_id', next)}
+                    placeholder={t('contracts.metadata.ownerMissing')}
+                  />
+                </Box>
               </PropertyRow>
             </Box>
           </Box>

@@ -139,7 +139,7 @@ Une nouvelle dimension se place en dernier dans l'ordre des dimensions. Revenez 
 
 ### L'espace de travail de la dimension
 
-Ouvrez-le avec **Modifier** (**Ouvrir** si vous pouvez seulement consulter) dans la barre de sélection, la dimension étant sélectionnée.
+Ouvrez-le avec **Modifier** (**Ouvrir** si vous pouvez seulement consulter) dans la barre de sélection, la dimension étant sélectionnée. Le bouton **Historique** de l'en-tête ouvre l'historique de la dimension dans un panneau latéral. Voir [Historique des fiches](record-history.md).
 
 - **En-tête** : le nom de la dimension. Cliquez dessus pour renommer la dimension. **Précédent** / **Suivant** parcourent les dimensions dans leur ordre, et le bouton de fermeture ramène à la page sur cette dimension
 - **Zone principale** : une ligne d'utilisation, puis la **Description**. La ligne d'utilisation donne le nombre de valeurs et de lignes budgétaires qui portent l'une d'elles, OPEX et CAPEX ensemble, par exemple « 12 valeurs · Utilisée par 29 lignes ». **Utilisée par 29 lignes** est un lien : il ouvre ces lignes dans la liste des lignes budgétaires, dans un nouvel onglet, lignes activées et désactivées comprises. Une dimension qu'aucune ligne n'utilise indique « Pas encore utilisée », et une dimension sans valeur « Aucune valeur pour le moment. » Tant que la dimension est désactivée, le compte s'affiche sans lien
@@ -249,6 +249,8 @@ Cliquez sur **Nouvelle valeur**. Le champ **Dimension** commence sur la dimensio
 - **En-tête** : le nom de la valeur. Cliquez dessus pour renommer la valeur. **Précédent** / **Suivant** parcourent les valeurs de la même dimension, dans l'ordre et avec les filtres actuels de la liste. Le bouton de fermeture ramène à la liste
 - **Zone principale** : une ligne d'utilisation, puis la **Description**. La ligne d'utilisation compte les lignes budgétaires qui portent la valeur, OPEX et CAPEX ensemble, par exemple « Utilisée par 4 lignes ». C'est un lien qui ouvre ces lignes dans la liste des lignes budgétaires, dans un nouvel onglet. Une valeur qu'aucune ligne n'utilise indique « Pas encore utilisée ». Tant que la dimension est désactivée, le compte s'affiche sans lien
 - **Panneau Propriétés** à droite : **Dimension** (en lecture seule), **Utilisé pour** et **Cycle de vie**
+
+Le bouton **Historique** de l'en-tête ouvre l'historique de la valeur dans un panneau latéral. Voir [Historique des fiches](record-history.md).
 
 Les modifications s'enregistrent d'elles-mêmes, comme dans l'espace de travail de la dimension. Un nom refusé dans l'en-tête s'affiche en haut de la page.
 

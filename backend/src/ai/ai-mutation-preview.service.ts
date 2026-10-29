@@ -384,16 +384,51 @@ export class AiMutationPreviewService {
     context: AiExecutionContextWithManager,
     operation: ReturnType<AiMutationOperationRegistry['getOperation']>,
     family: string,
-    params: { input?: unknown; preview?: AiMutationPreview },
+    params: { input?: unknown },
     mutationInput?: Record<string, unknown> | null,
   ): Promise<void> {
+    // A technology link touches applications when either side of the request names one: the
+    // preparation input (`applications`), or the change being run or undone
+    // (`mutationInput.changes.applications`). A stored preview is read through the change its
+    // caller passes, never through the preview's own input: an undo is its reverse change.
+    const linkNamesApplications = operation.toolName === 'update_technology_links'
+      && [
+        (params.input as { applications?: unknown } | null | undefined)?.applications,
+        mutationInput?.applications,
+        (mutationInput?.changes as Record<string, unknown> | null | undefined)?.applications,
+      ].some((group) => this.applicationGroupHasEntries(group));
+    // A technology people write adds support contacts when the request does: choosing a contact
+    // needs the contacts read, as the Operations tab's picker. Removing one names a contact the
+    // tab already shows, so it needs no such read (and an undo restores known contacts).
+    const peopleAddContacts = operation.toolName === 'update_technology_people'
+      && [
+        (params.input as { support_contacts?: unknown } | null | undefined)?.support_contacts,
+        mutationInput?.support_contacts,
+      ].some((group) => this.applicationGroupAdds(group));
     const relation = mutationInput?.relation
       ?? (params.input as { relation?: unknown } | null | undefined)?.relation
-      ?? params.preview?.mutation_input?.relation;
+      ?? (linkNamesApplications ? 'applications' : undefined)
+      ?? (peopleAddContacts ? 'support_contacts' : undefined);
     const requirement = aiRelationTargetRequirement(operation.toolName, family, relation);
     if (requirement) {
       await this.policy.assertBusinessPermission(context, requirement.resource, requirement.level, context.manager);
     }
+  }
+
+  /** Whether a technology link's application group adds, removes or names an application. */
+  private applicationGroupHasEntries(group: unknown): boolean {
+    if (!group || typeof group !== 'object') return false;
+    return ['add', 'remove', 'already', 'absent'].some((key) => {
+      const entries = (group as Record<string, unknown>)[key];
+      return Array.isArray(entries) && entries.length > 0;
+    });
+  }
+
+  /** Whether a technology people write asks for a contact to be added (not removed or restored). */
+  private applicationGroupAdds(group: unknown): boolean {
+    if (!group || typeof group !== 'object') return false;
+    const entries = (group as Record<string, unknown>).add;
+    return Array.isArray(entries) && entries.length > 0;
   }
 
   /** The rights of a stored preview, before it runs or is undone. */

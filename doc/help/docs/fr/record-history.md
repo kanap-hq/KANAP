@@ -1,9 +1,12 @@
 # Historique des fiches
 
-L'onglet **Historique** d'une fiche liste les modifications qui lui ont été apportées : qui a modifié quoi, et quand. Il répond aux questions courantes, comme « qui a augmenté ce montant ? » ou « quand ce contrat a-t-il été délié ? », sans passer par le journal d'audit.
+L'historique d'une fiche liste les modifications qui lui ont été apportées : qui a modifié quoi, et quand. Il répond aux questions courantes, comme « qui a augmenté ce montant ? » ou « quand ce contrat a-t-il été délié ? », sans passer par le journal d'audit.
 
-!!! note "Où le trouver"
-    Aujourd'hui, l'onglet **Historique** figure sur les lignes budgétaires (voir [Lignes budgétaires](budget-lines.md#historique)). Les autres fiches le recevront plus tard.
+## Où le trouver
+
+- **Onglet Historique**, le dernier onglet de la fiche : lignes budgétaires (voir [Lignes budgétaires](budget-lines.md#historique)), sociétés, départements, fournisseurs, sites, connexions, interfaces, actifs et technologies.
+- **Bouton Historique** dans l'en-tête, qui ouvre l'historique dans un panneau latéral : comptes, centres de coûts, calendriers de jours ouvrés, processus métier, dimensions et valeurs analytiques, et contacts.
+- **Onglet Historique** dans le panneau de droite d'un document de la base de connaissances.
 
 ## Qui peut le voir
 
@@ -12,7 +15,7 @@ L'onglet **Historique** d'une fiche liste les modifications qui lui ont été ap
 
 ## Ce que montre une entrée
 
-L'onglet liste une entrée par modification, la plus récente en haut. Chaque entrée indique :
+L'historique liste une entrée par modification, la plus récente en haut. Chaque entrée indique :
 
 - la date et l'heure de la modification ;
 - son auteur : une personne, **Système** pour les modifications que KANAP fait lui-même, **Import** pour les modifications chargées depuis un fichier, ou **Plaid pour** une personne quand l'assistant a fait la modification en son nom ;
@@ -25,7 +28,7 @@ Les historiques longs se chargent par pages : cliquez sur **Charger plus** en ba
 
 ## Modifications des éléments d'une fiche
 
-L'historique d'une ligne budgétaire liste aussi les modifications de ses éléments :
+L'historique liste aussi les modifications des éléments d'une fiche. Sur une ligne budgétaire, par exemple :
 
 - les montants, par année et par colonne budgétaire ;
 - les dimensions analytiques ;
@@ -37,7 +40,12 @@ L'historique d'une ligne budgétaire liste aussi les modifications de ses élém
 
 ## Fiches que vous ne pouvez pas lire
 
-Une entrée peut nommer une fiche d'un autre module, par exemple un contrat lié à la ligne. Si vous ne pouvez pas lire ce module, ou si la fiche a été supprimée depuis, l'entrée la désigne seulement par son type, par exemple « un contrat ».
+Une entrée peut nommer une autre fiche, par exemple un contrat lié à la ligne. Si vous ne pouvez pas ouvrir cette fiche, l'entrée la désigne seulement par son type, par exemple « un contrat ». Une fiche supprimée depuis apparaît comme « un contrat supprimé ».
+
+## Valeurs que l'historique ne montre pas
+
+- L'adresse e-mail, les numéros de téléphone et les notes d'un contact n'apparaissent jamais.
+- Pour un contenu long, l'entrée indique seulement qu'il a changé : **Contenu modifié** pour le corps d'un document de la base de connaissances, **Jours ouvrés modifiés** pour les jours d'un calendrier de jours ouvrés.
 
 ## Le journal d'audit complet
 

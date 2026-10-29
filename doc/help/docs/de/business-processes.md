@@ -53,7 +53,7 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 
 ## Der Geschäftsprozess-Arbeitsbereich
 
-Klicken Sie auf eine beliebige Zeile in der Liste (oder die Schaltfläche **Neu**), um den Arbeitsbereich zu öffnen.
+Klicken Sie auf eine beliebige Zeile in der Liste (oder die Schaltfläche **Neu**), um den Arbeitsbereich zu öffnen. Die Schaltfläche **Verlauf** in der Kopfzeile öffnet den Verlauf des Prozesses in einem Seitenbereich. Siehe [Verlauf der Datensätze](record-history.md).
 
 Der Arbeitsbereich hat einen einzelnen **Übersichts**-Tab auf der linken Seite und eine Symbolleiste am oberen Rand:
 

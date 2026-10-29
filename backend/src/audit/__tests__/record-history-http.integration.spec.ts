@@ -27,6 +27,7 @@ import {
   linePayload,
   seedHistoryData,
   seedPerson,
+  seedPilotAudits,
   type HistorySeed,
   type Person,
 } from './record-history.fixtures';
@@ -81,8 +82,11 @@ async function run() {
   try {
     const seeded = await seed(tenantId, async (runner) => {
       const data = await seedHistoryData(runner, tenantId);
+      await seedPilotAudits(runner, data);
       const reader = await seedPerson(runner, tenantId, { first: 'Hana', last: 'Reader' }, { budget: 'reader' });
       const noBudget = await seedPerson(runner, tenantId, { first: 'Nino', last: 'Reader' }, { tasks: 'reader' });
+      const accountReader = await seedPerson(runner, tenantId, { first: 'Ari', last: 'Accounts' }, { accounts: 'reader' });
+      const costReader = await seedPerson(runner, tenantId, { first: 'Cora', last: 'Costs' }, { cost_centers: 'reader' });
       const limited = await seedPerson(
         runner,
         tenantId,
@@ -108,7 +112,7 @@ async function run() {
           before: { notes: `before ${index}` }, after: { notes: `after ${index}` },
         });
       }
-      return { data, reader, noBudget, limited };
+      return { data, reader, noBudget, accountReader, costReader, limited };
     });
 
     app = await NestFactory.create(RecordHistoryProbeModule, { logger: false });
@@ -170,6 +174,22 @@ async function run() {
     assert.equal(hidden.status, 404, hidden.text);
     const visible = await get(linePath(seeded.data.opexLine), seeded.limited);
     assert.equal(visible.status, 200, visible.text);
+
+    // The two pilot records: the module guard and the record check of the same route.
+    const accountOk = await get(`/records/accounts/${seeded.data.account}/history`, seeded.accountReader);
+    assert.equal(accountOk.status, 200, accountOk.text);
+    assert.ok(Array.isArray(accountOk.body?.items) && accountOk.body.items.length >= 2, 'the account history is served');
+    const accountRefused = await get(`/records/accounts/${seeded.data.account}/history`, seeded.reader);
+    assert.equal(accountRefused.status, 403, accountRefused.text);
+    assert.equal(accountRefused.body?.code, 'MODULE_RIGHT_REQUIRED');
+    const costOk = await get(`/records/cost_centers/${seeded.data.costCenterA}/history`, seeded.costReader);
+    assert.equal(costOk.status, 200, costOk.text);
+    assert.ok(Array.isArray(costOk.body?.items) && costOk.body.items.length >= 2, 'the cost center history is served');
+    const costRefused = await get(`/records/cost_centers/${seeded.data.costCenterA}/history`, seeded.accountReader);
+    assert.equal(costRefused.status, 403, costRefused.text);
+    assert.equal(costRefused.body?.code, 'MODULE_RIGHT_REQUIRED');
+    const accountMissing = await get(`/records/accounts/${randomUUID()}/history`, seeded.accountReader);
+    assert.equal(accountMissing.status, 404, accountMissing.text);
 
     // The cursor through the real route: two pages of two, then one, with no repeated row.
     const first = await get(linePath(seeded.data.pageLine, '?limit=2'), seeded.reader);

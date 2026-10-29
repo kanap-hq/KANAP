@@ -34,7 +34,7 @@ These rules come from previous KANAP refactors and must be enforced during imple
 - Do not place `LinearProgress` over tab content. During tab changes, prefer an empty state while fetching and render content when ready; avoid noisy loading flashes.
 - Use sentence case everywhere. Never introduce title case or uppercase UI text.
 - Never use teal for table cell text. Row hover is enough to show clickability.
-- Use `MetadataUserPicker` for single-user metadata pickers such as assignee, owner, lead, and requestor. Do not use `UserSelect`, MUI `Autocomplete`, or local picker code for these cases.
+- Use `MetadataUserPicker` for single-user pickers in a metadata bar (the header row of a workspace: assignee, owner, lead, requestor). In a properties panel or a form, a single-user field is an outlined `UserSelect` like its sibling fields, so it does not read as plain text. Do not use MUI `Autocomplete` or local picker code for either case.
 - `ShareDialog` user/workspace lists show names only. Do not add an email subtitle line.
 - Before editing a file, read it in the current session so edits apply against the latest file state. When using session-aware `Read` and `Edit` tools, run `Read` before `Edit`.
 - Group independent tool operations as parallel tool calls by default, especially independent reads, searches, and inspections.
@@ -88,6 +88,7 @@ Expected structure:
 - Full-width neutral topbar with breadcrumb and sequential navigation chip.
 - Full-width title block with mono ID, click-to-edit title, metadata bar, and action pills.
 - Main work area with content column, permanent drawer-tab gutter, zero-width tab anchor, and right-side contained properties drawer.
+- Every record page has a History tab, or a History button in its header when it has no tab row, served by the common record history route; a new record type declares its table, its family and its child tables in the history inventory.
 - Drawer state persisted in `localStorage` with `kanap.{pageName}.{setting}` keys.
 - Rich text description editor hides toolbar until focus.
 - Autosave is the default for every in-place edit on existing workspace entities, including child tab panels, drawer fields, metadata controls, relations, links, and supporting detail sections. Use save-on-change for selects/dates/autocompletes/toggles and short relation changes, blur-to-save or short debounced autosave for one-line text, and debounced autosave for long-form text.
@@ -112,7 +113,7 @@ For dense workspace sections:
 Use these shared components instead of local picker variants on workspace pages:
 
 - `frontend/src/components/workspace/MetadataUserPicker.tsx` is the standard single-user picker for metadata bars: assignee, requestor, owner, lead, and similar one-person fields. One click on the current value must open the anchored search popover directly. Lists show names only, never email addresses. Search matches names only. The active user appears first with the "me" suffix, followed by a subtle separator before other users. Empty values use field-specific placeholders such as "Assignee missing", not raw translation keys or generic `Not set`.
-- Do not use `UserSelect`, MUI `Autocomplete`, or local menu/popover code for single-user metadata controls. If extra behavior is needed, extend `MetadataUserPicker` first.
+- Do not use `UserSelect`, MUI `Autocomplete`, or local menu/popover code for single-user controls in a metadata bar. If extra behavior is needed, extend `MetadataUserPicker` first. Properties panels and forms use `UserSelect` (`CostCenterPropertiesDrawer`, `ContractPropertiesDrawer`, `BudgetPropertiesDrawer`).
 - `frontend/src/components/knowledge/KnowledgeLinkPickerDialog.tsx` is the standard "Link existing" document picker for workspace knowledge relations. Prefer using it through `EntityKnowledgePanel`; compact task drawers may use the dialog directly.
 - The link picker must query `/knowledge/link-options` with server-side `q`, `page`, and `limit`. Never implement this by fetching only the first `/knowledge` page and filtering locally. Search must work for title/name and business refs such as `DOC-...`.
 - Searching in the link picker must keep the modal shell stable: redraw only the document list area, keep the search field focused, and show a thin in-list loading indicator when replacing results. Keep pagination through a compact "Load more" action.

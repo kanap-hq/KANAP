@@ -53,7 +53,7 @@ vi.mock('../../components/fields/CompanySelect', () => ({
     </div>
   ),
 }));
-vi.mock('../../components/workspace/MetadataUserPicker', () => ({
+vi.mock('../../components/fields/UserSelect', () => ({
   default: (props: { onChange: (v: string | null) => void }) => (
     <button type="button" onClick={() => props.onChange('user-2')}>pick owner</button>
   ),
@@ -125,6 +125,8 @@ describe('CostCenterWorkspacePage', () => {
     renderAt('/master-data/cost-centers/cc-1/access');
     expect(await screen.findByText('admin:dataAccess.accessTab.direct')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'shared.labels.access' })).toHaveAttribute('aria-selected', 'true');
+    // The History button stays in the header for everyone, with or without a tab row.
+    expect(screen.getByRole('button', { name: 'admin:auditLogs.history.title' })).toBeInTheDocument();
   });
 
   it('hides the Access tab from a limited person and falls back to the overview', async () => {
@@ -137,6 +139,7 @@ describe('CostCenterWorkspacePage', () => {
   it('creates with an explicit button and opens the new node', async () => {
     mocked.createCostCenter.mockResolvedValue({ ...NODE, id: 'cc-new' });
     renderAt('/master-data/cost-centers/new/overview?sort=path%3AASC');
+    expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
     fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: ' IT-400 ' } });
     fireEvent.change(screen.getByLabelText('costCenters.fields.name'), { target: { value: 'Workplace' } });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));

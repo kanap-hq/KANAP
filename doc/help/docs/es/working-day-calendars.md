@@ -88,7 +88,7 @@ El país y la región se definen una sola vez, al crear el calendario. Para segu
 
 ## El espacio de trabajo del calendario
 
-Haga clic en cualquier fila de la lista para abrir el espacio de trabajo.
+Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. El botón **Historial** de la cabecera abre el historial del calendario en un panel lateral. Vea [Historial de los registros](record-history.md).
 
 - **Encabezado**: el código como referencia, con un botón para copiarlo, y el nombre. Haga clic en el nombre para cambiarlo. **Ant.** / **Sig.** recorren la lista en su orden y con sus filtros actuales, y el botón de cierre vuelve a la lista
 - **Zona principal**: una línea como "Usado por 3 líneas OPEX y 1 línea CAPEX." cuando hay líneas de presupuesto que usan el calendario, la **Descripción** y después la sección **Días laborables**

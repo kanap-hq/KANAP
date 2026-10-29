@@ -28,10 +28,16 @@ import { SupplierNameTitle, SupplierNotes, SupplierTextRow } from './SupplierFie
 import SupplierContactsTab, { useSupplierContacts } from './SupplierContactsTab';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import RecordUsagesSection, { scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { SUPPLIERS_PATH, type Supplier, type SupplierPatch, isDuplicateError } from './supplierModel';
 
-type TabKey = 'overview' | 'contacts';
-const TAB_KEYS: readonly string[] = ['overview', 'contacts'];
+// The History tab loads with its tab: opening a supplier reads its overview and contacts only.
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
+
+type TabKey = 'overview' | 'contacts' | typeof RECORD_HISTORY_TAB_KEY;
+const TAB_KEYS: readonly string[] = ['overview', 'contacts', RECORD_HISTORY_TAB_KEY];
 const DRAWER_KEY = 'kanap.suppliers.drawerOpen';
 const LIST_CONTEXT_KEYS = ['sort', 'q', 'filters', 'scope'];
 /** How long Saved stays after a field is saved, as the autosave of the notes. */
@@ -281,6 +287,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
         tabs={[
           { key: 'overview', label: t('shared.labels.overview') },
           { key: 'contacts', label: t('shared.labels.contacts') },
+          { key: RECORD_HISTORY_TAB_KEY, label: t('shared.labels.history') },
         ]}
         onTabChange={(next) => goTo(id, next as TabKey)}
         drawerStorageKey={DRAWER_KEY}
@@ -350,6 +357,13 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
           </Stack>
         )}
         {tab === 'contacts' && <SupplierContactsTab supplierId={id} canManage={canEdit} />}
+        {tab === RECORD_HISTORY_TAB_KEY && data && (
+          <WorkspaceTabBoundary resetKey={tab} onRetry={() => historyTab.retry()}>
+            <React.Suspense fallback={null}>
+              <HistoryTab table="suppliers" recordId={data.id} />
+            </React.Suspense>
+          </WorkspaceTabBoundary>
+        )}
       </PortfolioDetailWorkspaceShell>
     </Box>
   );

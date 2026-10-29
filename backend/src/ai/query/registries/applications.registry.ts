@@ -148,6 +148,42 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
       aliases: ['last_recovery_test', 'dr_test', 'dernier_test_reprise'],
       examples: ['{"op":"before","value":"2025-10-11"}', '[null]'],
     },
+    version: {
+      ai: 'version', grid: 'version', type: 'text',
+      description: 'Version or release of the application, as its record holds it (free text). A text filter contains, without case: 16 also keeps 16.4 and 2016. Grouping lists the recorded versions.',
+      sortable: true, groupable: true,
+      aliases: ['release', 'application_version'],
+      examples: ['16.4'],
+    },
+    go_live_date: {
+      ai: 'go_live_date', grid: 'go_live_date', type: 'date',
+      description: 'Date the application went live (its go-live date), or null when none is recorded. [null] matches applications without one; a before filter never matches them.',
+      sortable: true, groupable: false, aggregable: true, blankable: true,
+      aliases: ['go_live', 'mise_en_service'],
+      examples: ['{"op":"between","value":"2025-01-01","valueTo":"2025-12-31"}', '[null]'],
+    },
+    end_of_support_date: {
+      ai: 'end_of_support_date', grid: 'end_of_support_date', type: 'date',
+      description: 'Date the application reaches its end of support, or null when none is recorded. [null] matches applications without one; a before filter never matches them. This list keeps retired applications; the End of support report keeps only those in service.',
+      sortable: true, groupable: false, aggregable: true, blankable: true,
+      aliases: ['end_of_support', 'fin_de_support'],
+      examples: ['{"op":"before","value":"2027-01-01"}', '[null]'],
+    },
+    retired_date: {
+      ai: 'retired_date', grid: 'retired_date', type: 'date',
+      description: 'Date the application was retired, or null when none is recorded. [null] matches applications without one; a before filter never matches them.',
+      sortable: true, groupable: false, aggregable: true, blankable: true,
+      aliases: ['retirement_date', 'date_retrait'],
+      examples: ['{"op":"after","value":"2026-01-01"}', '[null]'],
+    },
+    end_of_support_year: {
+      ai: 'end_of_support_year', grid: 'end_of_support_year', type: 'set',
+      description: 'Year (YYYY) of the application\'s end of support date. null for an application without that date. Values come from get_filter_values. Grouping answers "which applications end their support this year".',
+      acceptedValueKind: 'year, as YYYY',
+      examples: ['2027'],
+      dynamic: true, discoverable: true,
+      sortable: false, groupable: true,
+    },
     category: {
       ai: 'category',
       grid: 'category',
@@ -376,6 +412,10 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
     classification_review_state: 'classification_review_state',
     classification_reviewed_at: 'classification_reviewed_at',
     last_dr_test: 'last_dr_test',
+    version: 'version',
+    go_live_date: 'go_live_date',
+    end_of_support_date: 'end_of_support_date',
+    retired_date: 'retired_date',
     category: 'category',
     editor: 'editor',
     environment: 'environment',
@@ -410,6 +450,8 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
     groupFields: {
       status: { expression: 'a.status' },
       lifecycle: { expression: 'a.lifecycle' },
+      version: { expression: 'a.version' },
+      end_of_support_year: { expression: `to_char(a.end_of_support_date, 'YYYY')` },
       criticality: { expression: 'a.criticality' },
       cyber_criticality: { expression: 'a.cyber_criticality' },
       recovery_wave: { expression: 'a.recovery_wave' },
@@ -480,6 +522,9 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
       classification_reviewed_at: { expression: classificationSql.classification_reviewed_at, type: 'date' },
       // ISO text: min and max order the same as the date and read back as YYYY-MM-DD.
       last_dr_test: { expression: `to_char(a.last_dr_test, 'YYYY-MM-DD')`, type: 'date' },
+      go_live_date: { expression: `to_char(a.go_live_date, 'YYYY-MM-DD')`, type: 'date' },
+      end_of_support_date: { expression: `to_char(a.end_of_support_date, 'YYYY-MM-DD')`, type: 'date' },
+      retired_date: { expression: `to_char(a.retired_date, 'YYYY-MM-DD')`, type: 'date' },
       budget_lines_count: {
         // The links to the budget lines of both natures (`spend/budget-nature.ts`): the link
         // rows name a line of `spend_items`, and every such line is a budget line.

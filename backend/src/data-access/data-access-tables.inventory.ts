@@ -110,7 +110,7 @@ export const DATA_ACCESS_TABLES: DataAccessTableEntry[] = [
   { table: 'ai_mutation_previews', cls: 'excluded', policies: null, reason: 'created by the person (spec §10.3)' },
   { table: 'ai_observations', cls: 'excluded', policies: null, reason: 'polymorphic source object; agent screens reserved (spec §10.3)' },
   { table: 'asset_external_links', cls: 'excluded', policies: null, reason: 'external_type/external_id name objects of an external system' },
-  { table: 'audit_log', cls: 'excluded', policies: null, reason: 'table_name/record_id; the audit log screens are reserved (spec §10.3); the per-record reads serve only a record loaded first under the person\'s access: who changed a line (record-meta counterWriterSql, joined to the line read in item-meta), who wrote a conflicting field (edit-conflicts lastFieldChanges, under the line lock), who created a task (record-creator, for the task read first)' },
+  { table: 'audit_log', cls: 'excluded', policies: null, reason: 'table_name/record_id; the audit log screens are reserved (spec §10.3); a record history is read only after the record itself, under the visibility rule of its history family (record-history.service list); the per-record reads serve only a record loaded first under the person\'s access: who changed a line (record-meta counterWriterSql, joined to the line read in item-meta), who wrote a conflicting field (edit-conflicts lastFieldChanges, under the line lock), who created a task (record-creator, for the task read first)' },
   { table: 'integrated_document_bindings', cls: 'excluded', policies: null, reason: 'source_entity_type CHECK names no line, contract or task (requests, projects, interfaces, applications, assets, locations, connections, incidents)' },
 ];
 

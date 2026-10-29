@@ -22,8 +22,11 @@ export type AiQueryEntityType =
   | 'projects'
   | 'requests'
   | 'suppliers'
+  | 'support_deadlines'
+  | 'support_gaps'
   | 'tasks'
   | 'technologies'
+  | 'technology_versions'
   | 'users'
   | 'vulnerabilities';
 
@@ -78,6 +81,11 @@ export type AiFilterFieldDef = {
 export type AiAggregateGroupDef = {
   expression: string;
   joins?: string[];
+  /**
+   * Counts the distinct base rows of the group instead of every joined row: a many-to-many group
+   * whose links can repeat the same name (two IT owners named alike) counts the record once.
+   */
+  countDistinct?: boolean;
   /**
    * A many-to-many group narrowed to the caller's participation on one linked family (a Business
    * Contributor's applications): the join that names `table` as `alias` also carries the
@@ -201,6 +209,12 @@ export type AiAmountTotals = {
 export type AiQueryResult = {
   /** `invalid_filter_value`: every filter not applied is a known field given values it does not take. */
   status?: 'ok' | 'invalid_filter' | 'invalid_filter_value';
+  /**
+   * `support_gaps` and `support_deadlines`: false when the caller does not read applications. The
+   * application rows are then left out and the application counts are null (`applications_visible_note`).
+   */
+  applications_visible?: boolean;
+  applications_visible_note?: string;
   items: AiEntitySummaryDto[];
   total: number;
   page: number;
@@ -238,6 +252,12 @@ export type AiQueryResult = {
 
 export type AiAggregateResult = {
   status?: 'ok' | 'invalid_filter' | 'invalid_filter_value';
+  /**
+   * `support_gaps` and `support_deadlines`: false when the caller does not read applications. The
+   * application rows are then left out and the application counts are null (`applications_visible_note`).
+   */
+  applications_visible?: boolean;
+  applications_visible_note?: string;
   amounts_currency?: string | null;
   amounts_currency_note?: string;
   /**

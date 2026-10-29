@@ -107,7 +107,7 @@ Quand les vulnérabilités sont suivies, la colonne **Éditeur** ouvre aussi la 
 
 ## La fiche technologie
 
-La fiche comporte un en-tête, un panneau de propriétés à droite et six onglets : **Aperçu**, **Serveurs**, **Applications**, **Exploitation**, **Conformité** et **Relations**. Les onglets **Serveurs**, **Applications** et **Relations** affichent leur nombre en pastille.
+La fiche comporte un en-tête, un panneau de propriétés à droite et sept onglets : **Aperçu**, **Serveurs**, **Applications**, **Exploitation**, **Conformité**, **Relations** et **Historique** (les modifications apportées à la technologie, voir [Historique des fiches](record-history.md)). Les onglets **Serveurs**, **Applications** et **Relations** affichent leur nombre en pastille.
 
 ### En-tête
 
@@ -376,6 +376,25 @@ Un gros fichier prend du temps à charger et retient les liens de ses technologi
 ## Convertir une application
 
 Une fiche créée comme application peut être en réalité une technologie, par exemple un moteur de base de données ou un annuaire. Ouvrez l'application et utilisez **Convertir en technologie**. Voir [Applications](applications.md#convertir-une-application-en-technologie).
+
+## Demander à l'assistant
+
+[Plaid](ai-assistant.md) lit les technologies avec les mêmes droits que cette page. Demandez par exemple : « Qui est responsable de TEC-3 ? », « Quels liens web a PostgreSQL ? », « Les alertes de vulnérabilité sont-elles actives sur TEC-3 ? » ou « Quelles technologies sont hors support ? »
+
+Avec le niveau Membre sur l'infrastructure, Plaid écrit aussi, et chaque modification arrive sous forme d'aperçu que vous approuvez :
+
+- Adopter une entrée du catalogue, compléter une technologie du même nom saisie à la main, ou créer une technologie que le catalogue ne connaît pas.
+- Modifier les champs de la technologie.
+- Ajouter des versions et changer leurs libellés, leurs dates et leurs notes.
+- Ajouter ou retirer des responsables IT, des responsables métier et des contacts de support.
+- Ajouter, modifier ou retirer des liens web.
+- Activer ou désactiver les alertes de vulnérabilité, pour la technologie ou pour une version.
+
+Plaid nomme la famille, le cycle de vie et les autres valeurs de liste dans votre langue, et refuse une valeur qui en désigne plusieurs. Il refuse un nom porté par deux utilisateurs ou par deux contacts, et deux liens de même adresse. Demandez par exemple : « Adopte PostgreSQL depuis le catalogue KANAP », « Ajoute la version 17 à TEC-3 », « Ajoute Camille Roux comme responsable métier de PostgreSQL », « Ajoute le contact Oracle Support au support de TEC-3 », « Ajoute le lien des notes de version https://www.postgresql.org/docs/release/ à PostgreSQL » ou « Exclus la version 14 de TEC-3 des alertes ».
+
+Ajouter un contact de support demande aussi le droit de lire les contacts. En retirer un ne le demande pas. Plaid n'ajoute comme responsables que des utilisateurs actifs, et retire un responsable même si son compte est désactivé. Un contact sans nom ne peut pas être ajouté : donnez-lui d'abord un nom dans Contacts. Quand Plaid complète une technologie saisie à la main, il ne change que les champs qui diffèrent, et s'arrête si l'un d'eux a été modifié à l'écran après l'aperçu.
+
+La suppression d'une technologie ou d'une version, les pièces jointes, les identifiants CPE et les noms CVE.org, et le rapprochement des vulnérabilités restent sur cette page.
 
 ## Conseils
 

@@ -117,13 +117,14 @@ vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
 vi.mock('./workspace/BudgetMetadataBar', async () => {
   const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
   return {
-    default: ({ onStatusChange, costCenterId, costCenter, disabled }: {
-      onStatusChange: (status: string) => void; costCenterId?: string | null; costCenter?: { id: string } | null; disabled?: boolean;
+    default: ({ onStatusChange, costCenterId, costCenter, lineRef, disabled }: {
+      onStatusChange: (status: string) => void; costCenterId?: string | null; costCenter?: { id: string } | null; lineRef?: string | null; disabled?: boolean;
     }) => {
       // The budget holder's read, as the bar makes it.
       useCostCenterNode(costCenterId ?? null, (costCenter ?? null) as never);
       return (
         <>
+          <span data-testid="metadata-line-ref" data-line-ref={lineRef ?? ''} />
           <button type="button" data-disabled={String(!!disabled)} onClick={() => onStatusChange('disabled')}>disable line</button>
           <button type="button" data-disabled={String(!!disabled)} onClick={() => onStatusChange('enabled')}>enable line</button>
         </>
@@ -550,6 +551,12 @@ describe('BudgetLinePage edit', () => {
     fireEvent.click(screen.getByRole('button', { name }));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalled());
   }
+
+  it('gives the owner pickers the line ref in edit mode', async () => {
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
+    await waitFor(() => expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', 'account-1'));
+    expect(screen.getByTestId('metadata-line-ref')).toHaveAttribute('data-line-ref', ITEM_ID);
+  });
 
   it('refreshes the dashboard tiles after a saved field', async () => {
     const { queryClient } = renderAt(`/ops/budget/${ITEM_ID}/overview`);

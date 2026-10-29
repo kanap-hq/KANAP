@@ -27,11 +27,15 @@ import TechnologyComplianceTab from './workspace/TechnologyComplianceTab';
 import TechnologyOperationsTab from './workspace/TechnologyOperationsTab';
 import TechnologyRelationsTab, { fetchTechnologyRelations, technologyRelationsCount, technologyRelationsKey } from './workspace/TechnologyRelationsTab';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
-type TabKey = 'overview' | 'servers' | 'applications' | 'operations' | 'compliance' | 'relations';
-const TAB_KEYS: TabKey[] = ['overview', 'servers', 'applications', 'operations', 'compliance', 'relations'];
+type TabKey = 'overview' | 'servers' | 'applications' | 'operations' | 'compliance' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
+const TAB_KEYS: TabKey[] = ['overview', 'servers', 'applications', 'operations', 'compliance', 'relations', RECORD_HISTORY_TAB_KEY];
 // The tabs not listed here arrive with the next lots of the technology layer.
-const READY_TABS = new Set<TabKey>(['overview', 'servers', 'applications', 'operations', 'compliance', 'relations']);
+const READY_TABS = new Set<TabKey>(['overview', 'servers', 'applications', 'operations', 'compliance', 'relations', RECORD_HISTORY_TAB_KEY]);
 
 function TechnologyDeleteButton({ technology, onDeleted, onError }: {
   technology: TechnologyDetail;
@@ -292,6 +296,13 @@ export default function TechnologyWorkspacePage() {
           <TechnologyComplianceTab technology={technology} canManage={canManage} onPatch={patchTechnology} />
         )}
         {routeTab === 'relations' && <TechnologyRelationsTab id={technology.id} />}
+        {routeTab === RECORD_HISTORY_TAB_KEY && (
+          <WorkspaceTabBoundary resetKey={routeTab} onRetry={historyTab.retry}>
+            <React.Suspense fallback={null}>
+              <HistoryTab key={technology.id} table="technologies" recordId={technology.id} />
+            </React.Suspense>
+          </WorkspaceTabBoundary>
+        )}
       </PortfolioDetailWorkspaceShell>
     </Box>
   );

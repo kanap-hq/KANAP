@@ -117,6 +117,15 @@ const KNOWLEDGE_TEXT_SORTS: Record<string, string> = {
 const KNOWLEDGE_LIBRARY_KEY_SQL = 'dl.slug';
 const KNOWLEDGE_FOLDER_KEY_SQL = 'COALESCE(f.system_key, f.name)';
 
+/**
+ * The ids one access check reads at a time. `resolveDocumentAccess` is a single-document gate, so
+ * the batch methods the record history calls loop over bounded pages instead of one query per
+ * audit row; a page of 50 keeps the work proportional to the history page, never to the table.
+ */
+const ACCESS_CHECK_PAGE_SIZE = 50;
+
+const ACCESS_CHECK_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export type RelationEntityType =
   | 'applications'
   | 'assets'
@@ -1184,6 +1193,111 @@ export class KnowledgeService {
     opts?: DocumentAccessOptions,
   ): Promise<KnowledgeLibraryView> {
     return this.resolveDocumentAccess(documentId, manager, userId, 'read', opts);
+  }
+
+  /** The distinct uuids of an access check, lower-cased: a payload value that is not one is dropped. */
+  private accessCheckIds(ids: readonly string[] | null | undefined): string[] {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const raw of Array.isArray(ids) ? ids : []) {
+      const id = String(raw || '').trim().toLowerCase();
+      if (!ACCESS_CHECK_UUID.test(id) || seen.has(id)) continue;
+      seen.add(id);
+      out.push(id);
+    }
+    return out;
+  }
+
+  /**
+   * The documents of `documentIds` this person may read, under the caller's transaction. The
+   * record history's code check (`record-history/families.ts`) needs the same answer as the
+   * document page, incident review included, so it runs the single-document gate
+   * `resolveDocumentAccess` once per id, in bounded pages of 50. A document outside the person's
+   * access (404/403) is simply absent; a real failure still throws. The gate reads its library,
+   * its incident binding and the person's permissions for each id: the batch is exact, at the cost
+   * of a handful of statements per document of a history page, never per row of the tenant.
+   */
+  async readableDocumentIds(
+    manager: EntityManager,
+    tenantId: string | null | undefined,
+    userId: string | null | undefined,
+    documentIds: readonly string[] | null | undefined,
+  ): Promise<Set<string>> {
+    const ids = this.accessCheckIds(documentIds);
+    const readable = new Set<string>();
+    const normalizedUserId = String(userId || '').trim() || null;
+    for (let start = 0; start < ids.length; start += ACCESS_CHECK_PAGE_SIZE) {
+      for (const id of ids.slice(start, start + ACCESS_CHECK_PAGE_SIZE)) {
+        try {
+          await this.resolveDocumentAccess(id, manager, normalizedUserId, 'read', { tenantId: tenantId ?? null });
+          readable.add(id);
+        } catch (error) {
+          if (!(error instanceof HttpException)) throw error;
+        }
+      }
+    }
+    return readable;
+  }
+
+  /**
+   * The libraries of `libraryIds` this person may read. A library is the same gate the document
+   * page applies (`assertLibraryReadable`), so a restricted library only names itself to its
+   * members (and to Knowledge admins and its owner).
+   */
+  async readableLibraryIds(
+    manager: EntityManager,
+    _tenantId: string | null | undefined,
+    userId: string | null | undefined,
+    libraryIds: readonly string[] | null | undefined,
+  ): Promise<Set<string>> {
+    const ids = this.accessCheckIds(libraryIds);
+    const readable = new Set<string>();
+    const normalizedUserId = String(userId || '').trim() || null;
+    for (let start = 0; start < ids.length; start += ACCESS_CHECK_PAGE_SIZE) {
+      for (const id of ids.slice(start, start + ACCESS_CHECK_PAGE_SIZE)) {
+        try {
+          await this.assertLibraryReadable(id, manager, normalizedUserId);
+          readable.add(id);
+        } catch (error) {
+          if (!(error instanceof HttpException)) throw error;
+        }
+      }
+    }
+    return readable;
+  }
+
+  /**
+   * The folders of `folderIds` this person may read: a folder is readable with its library, as
+   * the document page reads it. The folders of one page are read in one statement, then their
+   * distinct libraries go through `readableLibraryIds`.
+   */
+  async readableFolderIds(
+    manager: EntityManager,
+    tenantId: string | null | undefined,
+    userId: string | null | undefined,
+    folderIds: readonly string[] | null | undefined,
+  ): Promise<Set<string>> {
+    const ids = this.accessCheckIds(folderIds);
+    const readable = new Set<string>();
+    for (let start = 0; start < ids.length; start += ACCESS_CHECK_PAGE_SIZE) {
+      const page = ids.slice(start, start + ACCESS_CHECK_PAGE_SIZE);
+      const rows: Array<{ id: string; library_id: string | null }> = await manager.query(
+        `SELECT id::text AS id, library_id::text AS library_id
+           FROM document_folders
+          WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        [tenantId, page],
+      );
+      const libraries = await this.readableLibraryIds(
+        manager,
+        tenantId,
+        userId,
+        rows.map((row) => String(row.library_id || '')),
+      );
+      for (const row of rows) {
+        if (libraries.has(String(row.library_id || '').toLowerCase())) readable.add(row.id.toLowerCase());
+      }
+    }
+    return readable;
   }
 
   async assertDocumentWritable(

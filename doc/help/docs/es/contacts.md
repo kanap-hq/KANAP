@@ -51,7 +51,7 @@ La cuadrícula de Contactos proporciona un directorio buscable de todos los cont
 
 ## La página del contacto
 
-Haga clic en una fila para abrir la página del contacto. Cada cambio se guarda solo: no hay botón de guardar.
+Haga clic en una fila para abrir la página del contacto. Cada cambio se guarda solo: no hay botón de guardar. El botón **Historial** de la cabecera abre el historial del contacto en un panel lateral. Vea [Historial de los registros](record-history.md).
 
 **Título**: el nombre del contacto. Haga clic en él para editar el nombre y el apellido uno al lado del otro; el cambio se guarda al salir de los dos campos o al pulsar Intro, y Escape lo cancela. Un contacto sin nombre muestra su correo electrónico en su lugar.
 

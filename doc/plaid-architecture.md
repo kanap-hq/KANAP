@@ -128,7 +128,8 @@ Plaid can currently read these entity families:
 `budget_lines`, `business_processes`, `chart_of_accounts`, `companies`,
 `connections`, `contacts`, `contracts`, `departments`, `documents`,
 `incidents`, `interfaces`, `locations`, `projects`, `requests`,
-`suppliers`, `tasks`, `technologies`, `users`, and `vulnerabilities`.
+`suppliers`, `support_deadlines`, `support_gaps`, `tasks`, `technologies`,
+`technology_versions`, `users`, and `vulnerabilities`.
 
 `budget_lines` is one family for the OPEX and CAPEX lines of `spend_items`
 (`nature`, `opex` or `capex`). A question without a nature covers both;
@@ -136,9 +137,11 @@ Plaid can currently read these entity families:
 the line is. The references are `BL-n`; a typed `OPX-n` or `CPX-n` is accepted
 as an input reference and resolves to the same line.
 
-`search_all` searches every family but `vulnerabilities`, which has no search
-index: `AI_SEARCH_ENTITY_TYPES` (the searched families) and
-`AI_QUERY_ENTITY_TYPES` (the listed ones) are two lists in `ai.types.ts`.
+`search_all` searches every family but the ones without a search index:
+`vulnerabilities`, `technology_versions`, `support_gaps` and
+`support_deadlines`. `AI_SEARCH_ENTITY_TYPES` (the
+searched families) and `AI_QUERY_ENTITY_TYPES` (the listed ones) are two lists
+in `ai.types.ts`; the listed-only families have no detail of their own.
 
 `get_entity_context` takes `applications`, `assets`, `projects`, `requests`,
 `tasks` and `technologies` (`AI_CONTEXT_ENTITY_TYPES` in `ai.types.ts`).
@@ -196,8 +199,9 @@ review state.
 one registry per family (`backend/src/ai/query/registries/`) and call the
 family's list service, the one behind its grid. A registry advertises its filter
 fields (`fields`) and its sort fields (`sortFields`, which also holds `label`,
-`created_at` and `updated_at` on every family). `describe_entity_filters`
-returns both, with `sort_fields` and `default_sort`.
+`created_at` and `updated_at` on every family with its own record; the two End
+of support report families are computed rows and carry no `created_at`).
+`describe_entity_filters` returns both, with `sort_fields` and `default_sort`.
 
 Nothing the model asks for is dropped silently:
 
@@ -219,13 +223,17 @@ list services in step: for every family it runs each advertised sort (asc and
 desc) and each filter on a seeded tenant, records the SQL each call sends, and
 fails when a sort sends the same statements in both directions or the same as
 an unknown column, when a filter sends the same statements as no filter, or
-when either fails. It also checks the created_at order on seeded rows, the
-`sort_ignored` result and the page sizes. A field that cannot be filtered or
-sorted in SQL (a value computed per page, such as an application's derived user
-count) stays out of the registry and only appears in the items' metadata.
+when either fails. The two report families are read in memory through the
+report service: for them the same spec checks the applied filter and the order
+the result names, not the statements. It also checks the created_at order on
+seeded rows, the `sort_ignored` result and the page sizes. A field that cannot
+be filtered or sorted in SQL (a value computed per page, such as an
+application's derived user count) stays out of the registry and only appears in
+the items' metadata.
 
-Each item carries `created_at` and `updated_at`. Its `summary` is clipped to 300
-characters; `get_entity_detail` has the full text.
+Each item carries `created_at` and `updated_at` (null on the two report rows).
+Its `summary` is clipped to 300 characters; `get_entity_detail` has the full
+text.
 
 ### Technologies
 
@@ -270,7 +278,22 @@ aggregate:
 
 The other fields are `reference` (`TEC-n`), `name`, `family`, `publisher`,
 `hosting_type`, `lifecycle` and `admin_zone`. `publisher` filters and groups
-without case. `get_entity_detail` adds the versions (end dates, support state and its date,
+without case. The filters also name a version and an owner, both many-to-many
+on the technology and read through `EXISTS`, never a column of `technologies`:
+
+- `version`: the exact label of one of its versions, without case (`16` keeps a
+  technology with version `16`, never one with `16.4` only); `[null]` keeps a
+  technology with no version;
+- `owner` (any type), `it_owner`, `business_owner`: the exact display name of a
+  user, without case; `[null]` keeps a technology with no owner of that type.
+  `get_filter_values` lists the tenant's version labels and owner names, read
+  from `technology_versions` and `technology_owners` (`technologyFilterValues`
+  in `ai-query.executor.ts`), not from the technology row;
+- `it_owner` and `business_owner` group many-to-many, as the incident links do:
+  a technology counts once in each of its owners of that type, and a technology
+  without an owner of that type is in no group.
+
+`get_entity_detail` adds the versions (end dates, support state and its date,
 whether in use, servers in service per version), the owners by name and the number of contracts (null for
 a user who cannot read contracts, as on the technology page). `get_entity_context` lists the servers the technology
 is installed on (version, operating system or not), and, for a user who reads
@@ -283,6 +306,279 @@ and `truncated`; the technology context reads only those 25 servers and
 applications from the database. The chat's read profile (`read_query`) offers
 `get_entity_context` too, so a question that names a server or a technology
 without its reference can reach its related records.
+
+### Technology versions
+
+`technology_versions` (right `infrastructure`) is a family of its own, read
+through `listAiTechnologyVersions` (`backend/src/ai/query/ai-technologies.query.ts`):
+one item per version of a technology, for questions across technologies (which
+versions are no longer used, which end in 2027). Fields: `technology` (`TEC-n`),
+`technology_name`, `label`, `end_of_standard_support` and `end_of_support` (the
+recorded standard and extended ends), `support_status`, `support_date`, `in_use`,
+`server_count`, `application_count`, and the technology's `family` and
+`lifecycle`. The support state and its date come from the report's rule
+(`versionSupportSql`, `versionInUseSql`), through the same
+`technologyVersionFiguresColumns` as the technology detail: the rows of this
+family and the `versions` of `get_entity_detail` on a technology cannot
+disagree. `in_use` is true when the version is installed on a server in service
+or declared by an application in service; `server_count` counts the former
+(clusters excluded); `application_count` counts the applications in service that
+declare this version itself, within the user's application read scope, null
+without it, and no aggregate metric. A line is labelled by its technology and its
+version (`PostgreSQL 16`).
+
+Filters: `technology` (`TEC-n` or exact name, without case), `label` (exact,
+without case), `support_status`, `in_use` (`true` or `false`), the two dates
+(blank, ranges), `family`, `lifecycle` and `end_of_support_year` (the year of
+`support_date`). Groups: `technology` (by name), `support_status`, `in_use`,
+`family`, `lifecycle` and `end_of_support_year`. Metrics: the count, the sum of
+`server_count`, and `MIN`/`MAX` of the two dates as `YYYY-MM-DD`.
+
+A version has no reference of its own and no detail: an item's `ref` is its
+technology's `TEC-n`, and `get_entity_detail` refuses the family with the reason
+(its technology's detail lists every version).
+
+### End of support report
+
+The two lists of the End of support report are families of their own, read
+through `EndOfSupportService` (exported by `TechnologiesModule`), the service
+behind the report's two tabs: never a second formula, no new SQL in the report
+service. `support_gaps` is one item per record to complete, from
+`EndOfSupportService.gaps`: `gap` (the eight kinds of `GAP_KINDS`),
+`subject_type` (application, asset, technology), `subject` (the record's
+business reference, `APP-n`, `AST-n` or `TEC-n`, or its name when it has none),
+`subject_name`, `related` (the other end's reference), `related_name`,
+`related_type` and `version` for the gaps that name them. An asset reference and
+a related record's reference are read after the service, in one query, before
+the filters and the sort; a reference-shaped `subject` or `related` value
+compares exactly (`APP-1` never keeps `APP-12`), any other value contains on
+the name. `support_deadlines` is one item per deadline, from `deadlines`:
+`subject_type` (technology, operating_system, application, hardware), `subject`,
+`subject_name`, `version`, `date`, `state`, the recorded standard and extended
+ends, `milestone`, and the servers and applications by name (ten names, then
+"and N other servers"). `horizon_months` filters the deadlines (6, 12, 24 or 36;
+12 by default) and takes one value: several are refused. `subject_type`,
+`state`, `end_of_support_year`, the counts and the dates filter the deadlines;
+`subject_type`, `state` and `end_of_support_year` group them; `date` is a
+`MIN`/`MAX` metric as `YYYY-MM-DD`. `gap` and `subject_type` filter and group the
+gaps; the gaps take no metric but the count.
+
+Both follow the report's rights: `infrastructure:reader`, and the application
+rows only within the caller's application read scope (a Business Contributor's
+own), as `resolveAiApplicationsReach` gives it. A caller who does not read
+applications gets `applications_visible: false` and an `applications_visible_note`:
+the application rows are left out and the application counts are null, which is
+"not read", never "none". The service returns complete, small lists: the
+families filter, group, sort and page them in memory; `support_deadlines` keeps
+30 items at most. An item names a subject, never an identifier (`subject_id`
+stays in the item's `id`). There is no record detail: read the subject's own
+family by `subject`.
+
+On applications (right `applications`), `version` (text), `go_live_date`,
+`end_of_support_date` and `retired_date` (dates, blank, ranges) filter and sort;
+`version` and `end_of_support_year` group; the three dates are `MIN`/`MAX`
+metrics as `YYYY-MM-DD`. The Applications list service
+(`applications/services/applications-list.service.ts`) carries the same filters
+and sorts for the screen, so Plaid and the grid read one path.
+
+### Technology links (write)
+
+`update_technology_links` (chat only, preview and approval) writes the links of
+one technology: the applications that declare it (with a version and, when the
+person names them, its deployment servers) and the servers it is installed on.
+The input is the technology (`TEC-n`, UUID or exact name), then
+`applications.add` / `applications.remove` and `servers.add` / `servers.remove`.
+An application is an `APP-n` or an exact name, a server an `AST-n`, exact name,
+hostname or fqdn, a version its label. The request may start from the other side
+("add PostgreSQL 16 to CheeseTrack"): the technology stays in `technology` and
+the target goes in its list. A technology absent from the tenant is refused
+before the preview with a tool result that says so; the model prepares a plan
+that creates or adopts it first (`create_business_record`, `entity_type`
+`technologies`), then declares the link. The link tool itself never creates a
+technology.
+
+Every write goes through `TechnologyLinksService`, never the tables: an
+application with a version and servers enters `declareApplicationTechnology`
+(which creates the version when missing, installs on the deployment servers
+asked and skips those that already have the technology); a declaration without
+a version is the same method without a label (version unknown). A server alone
+enters `addAssetLink`; a removal removes the exact link row (technology, server,
+version), and an application declaration through
+`removeApplicationDeclaration`, the new public method that removes one version
+(the screen's remove keeps every version). A version created on the way writes
+its own `technology_versions` audit row (`resolveVersionLabel`).
+
+Rights are the screen's: `infrastructure:member`, plus `applications:reader`
+as soon as an application is named (`aiRelationTargetRequirement`, checked when
+the preview is asked and when it runs). A Business Contributor links only the
+applications they take part in; another answers "not found". Every link is
+written with `source = 'ai'` and `source_ref` the preview, and every audit row
+carries `source: ai_chat` and the preview reference. An operating system is
+refused, towards an application as towards a server: it is recorded from the
+server's page, in its operating system field, which `update_business_record`
+writes. A link already there, or already absent, writes nothing; a preview that
+would write nothing is refused. The execution locks the technology
+(`FOR NO KEY UPDATE`) and reads the links again: a link changed since the
+preview answers 409 and nothing is written. The undo removes exactly the links
+added and puts back exactly the rows removed, with their version and notes; a
+version created on the way stays (decision 12), and the undo card says so.
+
+
+### Technology records and versions (write)
+
+`create_business_record` and `update_business_record` take the family
+`technologies` (right `infrastructure:member`). A creation writes `name`,
+`editor`, `family`, `lifecycle`, `hosting_type`, `description`, `notes`,
+`support_notes`, the replacement (`replaced_by`, a `TEC-n`, UUID or exact name),
+`cyber_criticality`, `recovery_wave`, `rto_minutes`, `rpo_minutes` and
+`admin_zone`. The IT catalog fields take the code or an exact label, without
+case, in the four languages the app shows (the shipped labels are loaded for
+the check); the preview keeps the code in the change, and the frontend names it
+from the tenant's list in the person's language (`labelFor` in
+`previewChangeLabels.ts`). A retired value is refused unless it is the one the
+record already holds, and a label that matches two values is refused as
+ambiguous (`findCatalogOption`, as `incident_category`). The service keeps its
+rules (unique name without case, no replacement cycle, default hosting type,
+default alert setting); the preview checks the name and the replacement first.
+`cpe_products`, `cve_names`, `catalog_key`, `mode`, `vulnerability_alerts` and
+an attachment are never written by Plaid and are refused at preparation, in
+words: `vulnerability_alerts` points to `set_technology_vulnerability_alerts`,
+and an attachment names the Relations tab.
+
+The catalog comes first. Before a free entry, the preparation looks for the
+KANAP catalog entry whose name equals the requested name, without case, and the
+tenant has not adopted. When it finds one, the preview is an adoption: the card
+says "adopted from the KANAP catalog" and the number of versions with the range
+of their end-of-support dates; the family it writes is a field of its own, with
+the code the frontend localises. When a hand-typed record of that name exists
+without a catalog key, the preview is a completion: the card says "completes
+TEC-12 with the KANAP catalog" and lists what the adoption adds (the catalog
+key, the missing version labels, the description when the record has none), and
+the target is that record. A same-name technology with no exact catalog entry is
+refused with its `TEC-n`; a name without an exact entry but with entries that
+contain it is refused with at most five of them, and the person chooses one or
+asks for a free entry (`from_catalog: false`). The free entry runs
+`TechnologiesService.create`.
+
+The execution calls `TechnologyCatalogService.adopt` with the preview's audit
+source and an expectation under the adoption's advisory lock: a preview that
+announced a new record refuses (409, nothing written) when a technology of the
+same name or catalog key exists now, and a completion requires that hand-typed
+record, still without a catalog key and under the same name. `adopt` must have
+created the record the card announced (or completed the one it named). The other
+fields the person gave are one `TechnologiesService.update` in the same
+transaction. The adoption writes its own `technology_versions` audit rows with
+`source: ai_chat` and the preview reference; a creation is not undoable. A free
+creation refuses (409, nothing written) when a technology of the same name
+appeared between the preview and the approval, in words rather than the
+service's duplicate-name error.
+
+An update changes the same fields, checks the name and the replacement at the
+preparation, compares every changed field with the live record before writing
+(409, nothing written), and is undoable through the generic reverse path: the
+previous values go back through `TechnologiesService.update`. The technology
+service writes the audit rows, with the preview's source and reference, and the
+screen keeps its own audit without a source.
+
+`update_technology_versions` (chat only, preview and approval) writes the
+versions of one technology: `add` creates versions with a label, standard and
+extended support dates (`YYYY-MM-DD`) and notes; `update` names a version by
+its current label and changes its label, dates or notes, a date or notes at
+`null` clearing it. The execution calls `TechnologiesService.createVersion` and
+`updateVersion` with the preview's audit source; the service keeps its rules
+(unique label without case, dates, extended support not before standard) and
+the preview checks them first. A date must be a day the calendar has: the round
+trip refuses `2028-02-30` in the shared rule (`isCalendarDay`,
+`technology-rows.ts`). The preview refuses a request with nothing to add or
+change ("Nothing to change"), an unknown key, `delete` (the technology's
+Overview tab has it), `cpe_version` and `build_prefixes` (the vulnerability
+matching owns them) and `vulnerability_alerts` (it points to
+`set_technology_vulnerability_alerts`). A version created only preview cannot be
+undone: the undo refuses with "Nothing to undo: the preview added versions, and
+an added version stays." The execution locks the technology
+(`FOR NO KEY UPDATE`), re-reads the versions and compares label, dates and
+notes: a change since the preview, or a version added in between under the same
+label, answers 409 and writes nothing. The undo restores exactly the changed
+versions; a version added on the way stays, and the undo card says so. A date
+the tenant (or Plaid) writes on a catalog version survives the catalog sync: the
+sync keeps a value that differs from the one it last wrote
+(`technology-catalog-sync.service.ts`, `now !== was`).
+
+The two tools together make the create-then-link plan: when the flagship phrase
+names a technology the tenant does not have, the model prepares one
+`prepare_mutation_plan` with `create_business_record` first and
+`update_technology_links` second, the second input carrying
+`{{create_….ref}}`. The execution of the creation (adoption included) sets
+`target_ref` from the created `TEC-n`, so the second step resolves it; a version
+the catalog holds is adopted with its dates and found by the link, otherwise
+the link creates it as in lot 3.
+
+### Technology people, web links and vulnerability alerts (write)
+
+`update_technology_people` (chat only, preview and approval) changes the owners
+and support contacts of one technology. `owners.add` takes an active user by
+their exact displayed name, without case, and `owner_type` (`it` or `business`);
+`owners.remove` takes the same name and an optional type (omitted removes both),
+and looks among the current owners of the fiche, active or not. A name two
+owners carry is refused with the names only (the rule "names only": no email).
+`support_contacts.add` takes a contact by exact name and an optional role;
+`remove` takes the label the Operations tab shows, its name or, for a contact
+without a name, its email. Adding a contact needs `contacts:reader`, as the
+tab's picker; removing one needs no such read. A contact without a name is
+refused on add, with the instruction to give it a name in Contacts. The check
+runs when the preview is asked and again when it runs (`aiRelationTargetRequirement`).
+The preview reads the owners and contacts, computes the full sets (`bulkReplaceOwners`
+/ `bulkReplaceSupportContacts`, with the audit source) and appends a new contact
+to the end, the others keeping their order; a person already there, or absent,
+writes nothing, and a preview that changes neither kind is refused. The
+execution locks the technology, re-reads the set of each kind it touches and
+answers 409 when it differs. The undo puts the previous owners back and
+restores the contacts in their exact order.
+
+`update_technology_web_links` (chat only, preview and approval) adds, changes
+and removes the web links of one technology. A link is named by its exact
+address; two links of the same address make the designation ambiguous and are
+refused. `add` takes a `url` (http or https, the service's `webLinkUrl`) and an
+optional description; `update` names the current address and changes `new_url`
+or `description` (null clears it); `remove` takes the address. The execution
+locks the technology, re-reads the whole link set and answers 409 when it
+differs, then calls `createLink`, `updateLink` and `deleteLink` with the audit
+source. The undo removes the links added (only while the set is exactly what the
+execution wrote), recreates the removed ones with their address and description,
+and restores the changed ones.
+
+`set_technology_vulnerability_alerts` (chat only, preview and approval) sets
+whether the technology raises vulnerability alerts (`enabled`) and the exception
+of one or more versions (`versions`: `alerts` true, false, or null to follow the
+technology). `enabled` runs first: `setVulnerabilityAlerts` clears every version
+exception, and the preview calls it in `dry_run` to say how many will be cleared
+("3 version exceptions will be cleared"); then the requested exceptions are
+written with `updateVersion`. A base release carries its service packs through
+the pure `servicePackAlertTargets` (`vulnerability-rules.ts`), which the service
+also uses for its write; the card names the versions that will follow, null
+included. A request naming both a base release and one of its service packs is
+refused at the preview: the base carries the pack. The execution locks the
+technology, re-reads the setting and every exception and answers 409 when they
+differ. The undo puts the setting back (which clears the exceptions), then
+restores every version whose value differs from the state before, null
+included, a base release before its service packs; it reads the state back and
+requires the previous state exactly, otherwise the undo fails and is not
+validated. An undo is refused only when the preview changed neither the setting
+nor a version. The vulnerability matching and the vulnerability states stay
+outside L5.
+
+The technology detail (`get_entity_detail`) reads what these tools write: the
+support contacts (name and role), the web links (address and description), the
+technology's alert setting, and each version's own exception and effective
+setting, beside the owners and the versions.
+
+### Non-writes of the technology family
+
+Attachments stay outside L5, though the Relations tab shows them and uploads
+them; a request naming one is refused in words and names the Relations tab.
+`cpe_products` and `cve_names` stay closed to Plaid (decision 10, the matching
+owns them). Deleting a technology or a version, the vulnerabilities matching and
+the vulnerability states stay outside L5.
 
 ### Vulnerabilities
 
@@ -339,7 +635,7 @@ links to the vulnerabilities page searched on its CVE
 (`frontend/src/ai/utils/entityUrls.ts`).
 
 Page size: 25 items by default, at most 50, 30 for `applications`,
-`technologies`, `vulnerabilities` and `budget_lines` (`aiQueryLimit` in
+`technologies`, `vulnerabilities`, `support_deadlines` and `budget_lines` (`aiQueryLimit` in
 `ai-query.executor.ts`; the budget cap is the 15 per nature the two former
 families had, summed). A
 larger `limit` is reduced and the result's `limit` is the one applied. The

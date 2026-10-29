@@ -412,6 +412,10 @@ export class ApplicationsListService extends ApplicationsBaseService {
       is_suite: { expression: 'a.is_suite', dataType: 'boolean' },
       retired_date: { expression: 'a.retired_date', textExpression: 'CAST(a.retired_date AS TEXT)', dataType: 'string' },
       last_dr_test: { expression: 'a.last_dr_test', textExpression: 'CAST(a.last_dr_test AS TEXT)', dataType: 'string' },
+      version: { expression: 'a.version', dataType: 'string' },
+      go_live_date: { expression: 'a.go_live_date', textExpression: 'CAST(a.go_live_date AS TEXT)', dataType: 'string' },
+      end_of_support_date: { expression: 'a.end_of_support_date', textExpression: 'CAST(a.end_of_support_date AS TEXT)', dataType: 'string' },
+      end_of_support_year: { expression: `to_char(a.end_of_support_date, 'YYYY')`, dataType: 'string' },
       sso_enabled: { expression: 'a.sso_enabled', numericExpression: 'COALESCE(a.sso_enabled, false)', dataType: 'boolean' },
       mfa_supported: { expression: 'a.mfa_supported', numericExpression: 'COALESCE(a.mfa_supported, false)', dataType: 'boolean' },
       etl_enabled: { expression: 'a.etl_enabled', numericExpression: 'COALESCE(a.etl_enabled, false)', dataType: 'boolean' },
@@ -570,6 +574,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
       'id', 'name', 'supplier_id', 'category', 'editor', 'environment', 'lifecycle', 'criticality',
       'data_class', 'hosting_model', 'external_facing', 'is_suite', 'last_dr_test', 'sso_enabled',
       'mfa_supported', 'etl_enabled', 'contains_pii', 'users_mode', 'users_year', 'users_override',
+      'version', 'go_live_date', 'end_of_support_date', 'retired_date',
       'status', 'disabled_at', 'created_at', 'updated_at',
     ]);
     const direction: 'ASC' | 'DESC' = (String(sort.direction).toUpperCase() === 'ASC' ? 'ASC' : 'DESC');
@@ -752,7 +757,8 @@ export class ApplicationsListService extends ApplicationsBaseService {
       ...Object.keys(classificationTargets),
       'id', 'name', 'supplier_id', 'category', 'editor', 'environment', 'lifecycle', 'criticality',
       'data_class', 'hosting_model', 'external_facing', 'is_suite', 'sso_enabled', 'mfa_supported',
-      'etl_enabled', 'contains_pii', 'users_mode', 'users_year', 'users_override', 'status',
+      'etl_enabled', 'contains_pii', 'users_mode', 'users_year', 'users_override',
+      'version', 'go_live_date', 'end_of_support_date', 'retired_date', 'status',
       'created_at', 'updated_at',
     ]);
     const direction: 'ASC' | 'DESC' = (String(sort.direction).toUpperCase() === 'ASC' ? 'ASC' : 'DESC');
@@ -892,6 +898,11 @@ export class ApplicationsListService extends ApplicationsBaseService {
       'data_class',
       'contains_pii',
       'users_mode',
+      'version',
+      'go_live_date',
+      'end_of_support_date',
+      'retired_date',
+      'end_of_support_year',
     ]);
     const fields = rawFields.filter((field) => allowed.has(field));
     if (fields.length === 0) return {};
@@ -914,6 +925,10 @@ export class ApplicationsListService extends ApplicationsBaseService {
       is_suite: { expression: 'a.is_suite', dataType: 'boolean' },
       retired_date: { expression: 'a.retired_date', textExpression: 'CAST(a.retired_date AS TEXT)', dataType: 'string' },
       last_dr_test: { expression: 'a.last_dr_test', textExpression: 'CAST(a.last_dr_test AS TEXT)', dataType: 'string' },
+      version: { expression: 'a.version', dataType: 'string' },
+      go_live_date: { expression: 'a.go_live_date', textExpression: 'CAST(a.go_live_date AS TEXT)', dataType: 'string' },
+      end_of_support_date: { expression: 'a.end_of_support_date', textExpression: 'CAST(a.end_of_support_date AS TEXT)', dataType: 'string' },
+      end_of_support_year: { expression: `to_char(a.end_of_support_date, 'YYYY')`, dataType: 'string' },
       sso_enabled: { expression: 'a.sso_enabled', numericExpression: 'COALESCE(a.sso_enabled, false)', dataType: 'boolean' },
       mfa_supported: { expression: 'a.mfa_supported', numericExpression: 'COALESCE(a.mfa_supported, false)', dataType: 'boolean' },
       etl_enabled: { expression: 'a.etl_enabled', numericExpression: 'COALESCE(a.etl_enabled, false)', dataType: 'boolean' },
@@ -1155,6 +1170,21 @@ export class ApplicationsListService extends ApplicationsBaseService {
           break;
         case 'users_mode':
           expression = 'a.users_mode';
+          break;
+        case 'version':
+          expression = 'a.version';
+          break;
+        case 'go_live_date':
+          expression = `to_char(a.go_live_date, 'YYYY-MM-DD')`;
+          break;
+        case 'end_of_support_date':
+          expression = `to_char(a.end_of_support_date, 'YYYY-MM-DD')`;
+          break;
+        case 'end_of_support_year':
+          expression = `to_char(a.end_of_support_date, 'YYYY')`;
+          break;
+        case 'retired_date':
+          expression = `to_char(a.retired_date, 'YYYY-MM-DD')`;
           break;
         case 'data_residency':
           expression = `(SELECT string_agg(DISTINCT dr.country_iso, ',')

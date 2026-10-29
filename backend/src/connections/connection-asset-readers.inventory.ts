@@ -28,6 +28,10 @@ export const CONNECTION_ASSET_READERS: Readonly<Record<string, ConnectionAssetRe
 
   'src/connections/services/connections-crud.service.ts': { status: 'direct', reason: 'Writes the stored endpoints and servers.' },
   'src/connections/services/connections-legs.service.ts': { status: 'direct', reason: 'Writes the stored hops and their equipment.' },
+  'src/audit/record-history/records/connections.ts': {
+    status: 'direct',
+    reason: 'The history allow-list names the hop label and the equipment column of the audit payload; it never reads the stored rows.',
+  },
   'src/connections/services/connections-base.service.ts': { status: 'direct', reason: 'Normalises the stored endpoints and the equipment of a hop before a write.' },
   'src/ai/mutation/ai-delete-mutation-support.service.ts': {
     status: 'direct',

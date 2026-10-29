@@ -50,7 +50,7 @@ Jede Zelle in einer Zeile ist anklickbar und öffnet die Seite dieses Lieferante
 
 Klicken Sie auf eine Zeile, um die Seite des Lieferanten zu öffnen. Mit den Pfeilen oben oder den Pfeiltasten links und rechts wechseln Sie zwischen den Lieferanten, ohne zur Liste zurückzukehren. Jede Änderung wird von selbst gespeichert: Es gibt keine Schaltfläche zum Speichern.
 
-Die Seite hat zwei Reiter: **Übersicht** und **Kontakte**.
+Die Seite hat drei Reiter: **Übersicht**, **Kontakte** und **Verlauf** (die Änderungen am Lieferanten, siehe [Verlauf der Datensätze](record-history.md)).
 
 **Titel**: Der Name des Lieferanten. Klicken Sie darauf, um ihn zu bearbeiten; die Änderung wird gespeichert, wenn Sie das Feld verlassen oder Enter drücken, Escape verwirft sie. Der Name ist Pflicht und muss sich von den Namen aller anderen Lieferanten unterscheiden, unabhängig von Groß- und Kleinschreibung (`SAP` und `sap` sind derselbe Name): KANAP zeigt die Meldung unter dem Namen und behält den gespeicherten Namen.
 

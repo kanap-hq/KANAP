@@ -103,7 +103,7 @@ Après **Créer**, l'espace de travail du nouvel élément s'ouvre.
 
 ## L'espace de travail du centre de coûts
 
-Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail.
+Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. Le bouton **Historique** de l'en-tête ouvre l'historique du centre de coûts dans un panneau latéral. Voir [Historique des fiches](record-history.md).
 
 - **En-tête** : le code comme référence, avec un bouton de copie, et le nom. Cliquez sur le nom pour le renommer. **Précédent** / **Suivant** parcourent la liste dans son ordre et ses filtres actuels, et le bouton de fermeture ramène à la liste
 - **Zone principale** : une ligne comme « Utilisé par 3 lignes OPEX et 1 ligne CAPEX. » lorsque des lignes budgétaires utilisent l'élément, puis la **Description**
