@@ -544,6 +544,16 @@
       "title": "Lignes budgétaires liées",
       "empty": "Aucune ligne budgétaire liée.",
       "pickerLabel": "Lier ou retirer des lignes budgétaires",
+      "mismatch": {
+        "notSet": "Non défini",
+        "line": "{{field}} : {{line}} sur la ligne, {{contract}} sur le contrat",
+        "fields": {
+          "paying_company": "Société payeuse",
+          "cost_center": "Centre de coûts",
+          "supplier": "Fournisseur",
+          "currency": "Devise"
+        }
+      },
       "columns": {
         "ref": "Réf.",
         "line": "Ligne budgétaire",

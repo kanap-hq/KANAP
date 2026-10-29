@@ -9,6 +9,7 @@ import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { lookupUsersByIds, requiredUuid } from '../common/lookup/reference-lookups';
 import { peopleWithCostCenterAccess, OWNER_SUGGESTIONS_MAX } from '../data-access/data-access-people';
 import { resolveBudgetLine } from '../common/resolve-item-id';
+import { canReadResource } from '../common/record-usages';
 import { buildRelationsAccess } from '../common/relations/relations-access';
 import {
   BUDGET_LINE_RELATION_READS,
@@ -320,6 +321,21 @@ export class BudgetLinesController {
       applicationScope,
       projectScope,
     };
+  }
+
+  /**
+   * The contract picker: each candidate the caller can read, with the fields that would differ
+   * once linked. Without the contracts right the answer is empty and no contract is read.
+   * `:id` is a uuid or a line reference. Declared before the generic detail route.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'reader')
+  @Get(':id/contract-consistency')
+  contractConsistency(@Param('id') id: string, @Query('ids') ids: string | undefined, @Tenant() ctx: TenantRequest) {
+    return this.svc.contractConsistency(id, ids, {
+      manager: ctx.manager as EntityManager,
+      contractsAccess: canReadResource(ctx, 'contracts'),
+    });
   }
 
   // Keep the generic detail route after every static GET path.

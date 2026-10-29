@@ -544,6 +544,16 @@
       "title": "Linked budget lines",
       "empty": "No budget line linked.",
       "pickerLabel": "Link or remove budget lines",
+      "mismatch": {
+        "notSet": "Not set",
+        "line": "{{field}}: {{line}} on the line, {{contract}} on the contract",
+        "fields": {
+          "paying_company": "Paying company",
+          "cost_center": "Cost center",
+          "supplier": "Supplier",
+          "currency": "Currency"
+        }
+      },
       "columns": {
         "ref": "Ref.",
         "line": "Budget line",

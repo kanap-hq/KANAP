@@ -575,7 +575,7 @@ The Relations tab shows what this line pays for: its projects, applications, tec
 | **Contracts** | Name, supplier, end of the current term, yearly amount in the contract currency, renewal (tacit or manual) |
 | **Assets** | Reference (`AST-12`), name, type, environment, status |
 
-You only see the sections of the modules you can read. Technologies and assets need a read of the infrastructure. A Business Contributor only sees the projects and applications they take part in. The project names also appear in the list's **Project** column, where the quick search finds them. The contract names appear in its **Contract** column.
+You only see the sections of the modules you can read. Technologies and assets need a read of the infrastructure. A Business Contributor only sees the projects and applications they take part in. The project names also appear in the list's **Project** column, where the quick search finds them. The contract names appear in its **Contract** column. A contract that differs from the line on paying company, cost center, supplier or currency shows a small orange mark next to its name. Hover the mark to see each difference, with the value on the line and the value on the contract. The picker shows the same mark on a contract before you link it. Linking stays possible. The mark appears for a contract you can read.
 
 An end date in orange is a contract whose renewal decision is due within your contract decision window. A disabled contract, or a retired or disabled asset, stays listed with its name greyed out. From two rows on, the contracts end with one total per currency, without the disabled ones.
 

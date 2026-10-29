@@ -445,6 +445,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     controller: 'BudgetLinesController',
     reserved: ['bulkDelete', 'clearBudgetColumn', 'copyBudget', 'deleteCheck'],
     allowed: {
+      contractConsistency: READ, // GET :id/contract-consistency
       create: LINE_WRITE, // POST (root)
       exportBudgetFile: BUDGET_FILE, // GET budget-file/export
       get: READ, // GET :ref
@@ -477,6 +478,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     allowed: {
       attachContact: CONTRACT_WRITE, // POST :id/contacts
       budgetCoverage: READ, // GET :id/budget
+      budgetLineConsistency: READ, // GET :id/budget-line-consistency
       bulkReplace: CONTRACT_WRITE, // POST :id/spend-items/bulk-replace
       bulkReplaceApplications: CONTRACT_WRITE, // POST :id/applications/bulk-replace
       bulkReplaceAssets: CONTRACT_WRITE, // POST :id/assets/bulk-replace

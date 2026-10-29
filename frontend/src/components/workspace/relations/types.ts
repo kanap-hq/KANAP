@@ -1,4 +1,5 @@
 import type React from 'react';
+import type { ContractLineMismatch } from '../../finance/ContractLineMismatchMark';
 import type { RelationOption } from '../RelationAddPicker';
 import type { RelationsColumn } from '../RelationsTable';
 
@@ -34,6 +35,8 @@ export type ContractRow = {
   auto_renewal: boolean;
   in_renewal_window: boolean;
   status: string;
+  /** Set on a budget line's contracts. Empty when the line and the contract agree. */
+  mismatches?: ContractLineMismatch[];
 };
 
 export type ProjectRow = {

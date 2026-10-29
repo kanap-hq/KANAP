@@ -53,6 +53,7 @@ import {
   type ContractRelationsAccess,
   type ContractTabKind,
 } from './contract-relations';
+import { contractBudgetLineConsistency } from './contract-line-match';
 import {
   contractBudgetCurrentYear,
   contractBudgetRowsParams,
@@ -1725,6 +1726,16 @@ export class ContractsService {
   async listBudgetLines(contractId: string, opts?: { manager?: EntityManager; budgetAccess?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;
     return listContractBudgetLines(mg, await this.findContract(contractId, mg), opts?.budgetAccess !== false);
+  }
+
+  /**
+   * The budget-line picker: mismatches a candidate would have once linked. Without the budget
+   * right the answer is empty and no line is read. A line outside data access is left out.
+   */
+  async budgetLineConsistency(contractId: string, rawIds: unknown, opts?: { manager?: EntityManager; budgetAccess?: boolean }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const contract = await this.findContract(contractId, mg);
+    return contractBudgetLineConsistency(mg, contract, rawIds, opts?.budgetAccess === true);
   }
 
   /**

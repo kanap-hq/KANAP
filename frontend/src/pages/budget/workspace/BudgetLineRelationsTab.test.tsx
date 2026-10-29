@@ -157,6 +157,11 @@ function renderTab(nature: LineType, data: Relations, onRelationsChange = vi.fn(
         { id: 'c-8', name: 'Hosting' },
       ] } } as never;
     }
+    if (url === '/budget-lines/line-1/contract-consistency') {
+      return { data: { items: [
+        { id: 'c-8', mismatches: [{ field: 'supplier', line_value: 'Dairy One', contract_value: 'Dairy Two' }] },
+      ] } } as never;
+    }
     if (url === '/assets') {
       return { data: { items: [
         { id: 'as-1', name: 'sap-prd-db01', asset_reference: 'AST-2' },
@@ -279,6 +284,38 @@ describe.each(['opex', 'capex'] as const)('BudgetLineRelationsTab %s', (nature) 
     expect(screen.getByTestId('location')).toHaveTextContent('/it/assets/AST-2/overview');
     fireEvent.click(within(related).getByText('Payroll contract'));
     expect(screen.getByTestId('location')).toHaveTextContent('/ops/contracts/c-7/overview');
+  });
+
+  it('marks a linked contract that differs, and a picker candidate', async () => {
+    const base = relations();
+    renderTab(nature, relations({
+      contracts: [{
+        ...base.contracts![0],
+        mismatches: [{ field: 'paying_company', line_value: 'Fromage SA', contract_value: 'Fromage Italia' }],
+      }],
+    }));
+    const contracts = await screen.findByRole('region', { name: SECTION('contracts') });
+    const mark = within(contracts).getByTestId('contract-line-mismatch');
+    expect(mark.getAttribute('aria-label')).toContain('line=Fromage SA');
+    expect(mark.getAttribute('aria-label')).toContain('contract=Fromage Italia');
+    fireEvent.mouseOver(mark);
+    const tip = await screen.findByRole('tooltip');
+    expect(tip).toHaveTextContent('Fromage SA');
+    expect(tip).toHaveTextContent('Fromage Italia');
+    fireEvent.mouseOut(mark);
+
+    fireEvent.click(within(contracts).getByText('workspace.application.relations.add'));
+    const option = await screen.findByRole('option', { name: /Hosting/ });
+    const candidate = within(option).getByTestId('contract-line-mismatch');
+    expect(candidate.getAttribute('aria-label')).toContain('line=Dairy One');
+    expect(candidate.getAttribute('aria-label')).toContain('contract=Dairy Two');
+    fireEvent.mouseOver(candidate);
+    const pickerTip = await screen.findByRole('tooltip');
+    expect(pickerTip).toHaveTextContent('Dairy One');
+    expect(pickerTip).toHaveTextContent('Dairy Two');
+    expect(mocked.get).toHaveBeenCalledWith('/budget-lines/line-1/contract-consistency', expect.objectContaining({
+      params: { ids: 'c-1,c-8' },
+    }));
   });
 
   it('adds from each picker and leaves out the rows already linked', async () => {

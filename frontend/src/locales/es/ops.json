@@ -544,6 +544,16 @@
       "title": "Líneas presupuestarias vinculadas",
       "empty": "Ninguna línea presupuestaria vinculada.",
       "pickerLabel": "Vincular o quitar líneas presupuestarias",
+      "mismatch": {
+        "notSet": "Sin definir",
+        "line": "{{field}}: {{line}} en la línea, {{contract}} en el contrato",
+        "fields": {
+          "paying_company": "Empresa pagadora",
+          "cost_center": "Centro de coste",
+          "supplier": "Proveedor",
+          "currency": "Moneda"
+        }
+      },
       "columns": {
         "ref": "Ref.",
         "line": "Línea presupuestaria",

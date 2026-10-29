@@ -544,6 +544,16 @@
       "title": "Verknüpfte Budgetzeilen",
       "empty": "Keine Budgetzeile verknüpft.",
       "pickerLabel": "Budgetzeilen verknüpfen oder entfernen",
+      "mismatch": {
+        "notSet": "Nicht festgelegt",
+        "line": "{{field}}: {{line}} auf der Zeile, {{contract}} auf dem Vertrag",
+        "fields": {
+          "paying_company": "Zahlendes Unternehmen",
+          "cost_center": "Kostenstelle",
+          "supplier": "Lieferant",
+          "currency": "Währung"
+        }
+      },
       "columns": {
         "ref": "Ref.",
         "line": "Budgetzeile",

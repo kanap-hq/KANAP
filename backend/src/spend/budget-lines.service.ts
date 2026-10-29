@@ -16,6 +16,7 @@ import {
   setBudgetLineRelation,
   type BudgetLineRelationsContext,
 } from './budget-line-relations';
+import { budgetLineContractConsistency } from '../contracts/contract-line-match';
 import { CapexItemsService, SpendItemsService } from './spend-items.service';
 import { hiddenCategoryLineCounts } from '../data-access/hidden-links';
 
@@ -220,6 +221,14 @@ export class BudgetLinesService {
   /** The Relations tab in one round trip (`budget-line-relations.ts`). */
   relations(ref: string, ctx: BudgetLineRelationsContext) {
     return readBudgetLineRelations(ctx.manager, ref, ctx);
+  }
+
+  /**
+   * The contract picker: mismatches a candidate would have once linked. Without the contracts
+   * right the answer is empty and no contract is read. A missing line, or one outside data access, is 404.
+   */
+  contractConsistency(ref: string, rawIds: unknown, opts: { manager: EntityManager; contractsAccess: boolean }) {
+    return budgetLineContractConsistency(opts.manager, ref, rawIds, opts.contractsAccess);
   }
 
   /** Link or unlink one row of the tab. The line is locked; one audit row when the set changes. */

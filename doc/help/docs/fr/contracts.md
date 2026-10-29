@@ -158,7 +158,7 @@ La fiche recalcule ces dates pendant que vous modifiez le début, la durée, le 
 
 ### Budget
 
-L'onglet liste les lignes budgétaires liées, OPEX et CAPEX ensemble, avec leur référence (`BL-12`), leur nom, leur type et leur société. Utilisez le sélecteur sous le tableau pour lier ou retirer des lignes.
+L'onglet liste les lignes budgétaires liées, OPEX et CAPEX ensemble, avec leur référence (`BL-12`), leur nom, leur type et leur société. Utilisez le sélecteur sous le tableau pour lier ou retirer des lignes. Une ligne dont la société payeuse, le centre de coûts, le fournisseur ou la devise diffère du contrat affiche une petite marque orange. Survolez la marque pour voir chaque écart, avec la valeur sur la ligne et la valeur sur le contrat. Le sélecteur montre la même marque sur une ligne avant de la lier. Le lien reste possible. La marque apparaît pour une ligne que vous pouvez lire.
 
 Avec l'accès en lecture aux lignes budgétaires (`budget:reader`), l'onglet affiche aussi des chiffres :
 
