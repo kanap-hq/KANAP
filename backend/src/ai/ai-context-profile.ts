@@ -582,6 +582,35 @@ function hasUserAdministrationWrite(rawText: string, text: string): boolean {
   return /\bcompte\b[\s\S]{0,30}\b(?:de|d['’]|of)\b[\s\S]{0,40}[A-Z]/.test(rawText);
 }
 
+/** The verbs that give, change or take away a person's access, a role or a right. */
+const ACCESS_WRITE_VERBS = new Set([
+  'donne', 'donnez', 'donner', 'give', 'grant', 'accorde', 'accordez', 'accorder',
+  'ajoute', 'ajoutez', 'ajouter', 'add', 'attribue', 'attribuez', 'attribuer', 'assign',
+  'retire', 'retirez', 'retirer', 'remove', 'enlève', 'enlevez', 'enlever', 'revoke',
+  'révoque', 'révoquez', 'révoquer', 'supprime', 'supprimez', 'supprimer',
+  'limite', 'limitez', 'limiter', 'limit', 'restreins', 'restreignez', 'restreindre', 'restrict',
+  'change', 'changez', 'changer', 'modifie', 'modifiez', 'modifier',
+  'mets', 'mettez', 'mettre', 'passe', 'passez', 'passer', 'set',
+]);
+
+/**
+ * A change of a person's access, roles or rights: "Donne l'accès complet à Paul Martin", "Ajoute le
+ * rôle Budget Member à Paul Martin", "Grant Paul Martin full access". No Plaid tool makes it (Admin ›
+ * Data access, Admin › Roles, Admin › Users): the write profile carries the refusal in words. The
+ * access word follows a determiner or names the access itself, so "Ajoute Microsoft Access à
+ * AST-3" is not one; a question stays a read.
+ */
+function hasAccessAdministrationWrite(rawText: string, text: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  const first = directiveFirstWord(rawText);
+  if (first == null || !ACCESS_WRITE_VERBS.has(first)) return false;
+  return containsAny(text, [
+    /(?:\bl['’]\s*|\b(?:le|la|les|un|une|des|du|son|sa|ses|leur|leurs|ce|cet|cette|the|an?|his|her|their|full|complete|limited|read|edit)\s+)(?:acces|access|roles?|droits?|rights?|permissions?)\b/,
+    /\b(?:access|acces)\s+(?:to|a|aux|au|complet|limite|total|en lecture|en edition)\b/,
+    /\ben acces (?:limite|complet)\b/,
+  ]);
+}
+
 /** An imperative technology verb at the head: "Désinstalle nginx de AST-13", "Remove Java 8 from APP-3". */
 function hasTechnologyWriteIntent(rawText: string, text: string): boolean {
   if (isTechnologyQuestion(rawText)) return false;
@@ -885,9 +914,13 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   const hasTechnologyChange = hasTechnologyChangeStatement(raw, text);
   const hasTaskFieldStateWriteIntent = hasTaskFieldStateWrite(raw, text);
   const hasUserAdministrationIntent = hasUserAdministrationWrite(raw, text);
+  // A person's access or roles: no tool, a write profile for the refusal. A record reference, a
+  // technology owner or a task keeps its own profile.
+  const hasAccessAdministrationIntent = referencedTypes.size === 0 && !hasTechnologyPeopleIntent && !hasTaskNameIntent
+    && !mentionsDocument && hasAccessAdministrationWrite(raw, text);
   const hasVulnerabilityStateIntent = hasVulnerabilityStateWrite(raw, text);
   const isWrite = hasTechnologyPeopleIntent || hasTechnologyWebLinkIntent || hasTaskFieldStateWriteIntent
-    || hasUserAdministrationIntent || hasVulnerabilityStateIntent || containsAny(writeText, [
+    || hasUserAdministrationIntent || hasAccessAdministrationIntent || hasVulnerabilityStateIntent || containsAny(writeText, [
     /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|passe|passer|publish|publier|mark|set)\b/,
     wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
     // A status or lifecycle word with an incident reference is an incident change: "clos INC-7",
@@ -944,6 +977,11 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     // The state of vulnerability rows: "Traite toutes les failles critiques de TEC-3".
     if (hasVulnerabilityStateIntent) {
       return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
+    }
+    // A person's access or roles, before the budget word of a role name ("le rôle Budget Member")
+    // sends it to the financial write: the general write profile, which refuses it in words.
+    if (hasAccessAdministrationIntent) {
+      return { profile: withWebCapability(PROFILES.write_general, needsWeb), explicitIntent: true };
     }
     // A link verb with an incident reference is the incident links tool: "lie APP-2 à INC-3".
     if (hasIncidentReference && isRelationWrite) {
