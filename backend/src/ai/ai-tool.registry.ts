@@ -157,7 +157,8 @@ const REFERENCE_DATA_FAMILIES_SENTENCE = 'The reference data are families too: o
   + 'a `working_day_calendars` row reads one year (the `year` filter), whose `total_days` the server computes; '
   + 'on `analytics_axes` (the analytics dimensions and their settings), `required_for` is where a value is required now, an enabled dimension only; '
   + '`exchange_rates` gives each currency\'s rate for a year in the reporting currency for 1 unit of that currency, '
-  + 'with `inverse_rate` and, with the `against` filter, `cross_rate` computed by the server.';
+  + 'with `inverse_rate` and, with the `against` filter, `cross_rate` computed by the server; '
+  + 'a pair with the reporting currency reads on the row of the other currency (`rate` and `inverse_rate`), and `against` serves a pair of two other currencies.';
 
 const DescribeEntityFiltersInputSchema = z.object({
   entity_type: AiQueryEntityTypeSchema.describe('The entity family to describe.'),

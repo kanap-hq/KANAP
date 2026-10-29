@@ -319,6 +319,16 @@ async function testCrossRate(): Promise<void> {
       note: 'cross_rate gives the units of CHF for 1 unit of the row\'s currency; a year where either rate is missing has none (cross_rate_note).',
     });
     assert.match(usdInChf.exchange_rates.notes.join('\n'), /cross_rate is the number of CHF for 1 unit of the row's currency/);
+    // The reporting currency against another (Plaid L9, lot G, "EUR/USD for 2026"): the cross rate,
+    // and the sentence pointing to the USD row, which gives the pair.
+    const eurInUsd: any = await query.execute(ctx, { entity_type: 'exchange_rates', filters: { year: { op: 'eq', value: 2026 }, currency: ['EUR'], against: 'USD' } });
+    assert.equal(eurInUsd.items.length, 1);
+    assert.equal(eurInUsd.items[0].metadata.cross_rate, 1.1208, '1 EUR in USD');
+    assert.equal(eurInUsd.items[0].metadata.cross_rate_note, 'EUR is the reporting currency: the USD 2026 row gives this pair, rate 0.89222 (1 USD = 0.89222 EUR) and inverse_rate 1.1208 (1 EUR = 1.1208 USD). cross_rate here repeats that inverse_rate.');
+    const eurNotes = eurInUsd.exchange_rates.notes.join('\n');
+    assert.match(eurNotes, /A pair with EUR, the reporting currency, reads on the row of the other currency: its rate and inverse_rate give both directions\. against serves a pair of two other currencies\./);
+    assert.match(eurNotes, /EUR is the reporting currency: the USD row of each year gives the pair EUR\/USD, rate and inverse_rate \(cross_rate_note on the EUR row\)\./);
+    assert.doesNotMatch(usdInChf.exchange_rates.notes.join('\n'), /the CHF row of each year gives the pair/, 'two other currencies: no such sentence');
     // Against the reporting currency: the rate itself.
     const inEur: any = await query.execute(ctx, { entity_type: 'exchange_rates', filters: { year: { op: 'eq', value: 2026 }, currency: ['USD'], against: ['eur'] } });
     assert.equal(inEur.items[0].metadata.cross_rate, 0.89222);

@@ -49,6 +49,7 @@ export type AiExchangeRateRow = {
   rate_note?: string;
   /** With `against`: units of `against` for 1 unit of `currency`, from the two rates of the year. */
   cross_rate?: number | null;
+  /** Why `cross_rate` is null, or, on a row of the reporting currency, the row that gives the pair. */
   cross_rate_note?: string;
 };
 
@@ -172,12 +173,23 @@ function matrixRows(matrix: CurrencyRateMatrix, missing: MissingRatePair[], repo
   return rows;
 }
 
+/**
+ * The sentence on a row of the reporting currency against another currency: the pair is read on the
+ * row of that currency, whose rate and inverse_rate give both directions.
+ */
+function reportingPairNote(reporting: string, other: AiExchangeRateRow): string {
+  return `${reporting} is the reporting currency: the ${other.currency} ${other.year} row gives this pair, rate ${other.rate} (1 ${other.currency} = ${other.rate} ${reporting}) and inverse_rate ${other.inverse_rate} (1 ${reporting} = ${other.inverse_rate} ${other.currency}). cross_rate here repeats that inverse_rate.`;
+}
+
 /** `cross_rate` on every row: units of `against` for 1 unit of the row's currency, same year. */
-function withCrossRates(rows: AiExchangeRateRow[], against: string, inMatrix: boolean, limited: boolean): AiExchangeRateRow[] {
+function withCrossRates(rows: AiExchangeRateRow[], against: string, inMatrix: boolean, limited: boolean, reporting: string): AiExchangeRateRow[] {
   const againstRow = new Map(rows.filter((row) => row.currency === against).map((row) => [row.year, row]));
   return rows.map((row) => {
     const other = againstRow.get(row.year) ?? null;
-    if (row.rate != null && other?.rate != null) return { ...row, cross_rate: round6(row.rate / other.rate) };
+    if (row.rate != null && other?.rate != null) {
+      const cross = { ...row, cross_rate: round6(row.rate / other.rate) };
+      return row.currency === reporting && against !== reporting ? { ...cross, cross_rate_note: reportingPairNote(reporting, other) } : cross;
+    }
     // Each empty cell says why, as its own row does (`rate_note`).
     const gaps = Array.from(new Set([row.rate == null ? row : null, other && other.rate == null && other !== row ? other : null]
       .filter((cell): cell is AiExchangeRateRow => !!cell)
@@ -257,11 +269,12 @@ export async function listAiExchangeRates(
   const missing = await services.rates.listMissingPairs(opts.tenantId, opts.manager, { report: false });
   const all = matrixRows(matrix, missing, reporting);
   const inMatrix = against ? all.some((row) => row.currency === against) : false;
-  const rows = against ? withCrossRates(all, against, inMatrix, opts.limited) : all;
+  const rows = against ? withCrossRates(all, against, inMatrix, opts.limited, reporting) : all;
   const kept = sortRows(filtered(rows, query), query.sort);
 
   const notes = [
     directionNote(all, reporting),
+    `A pair with ${reporting}, the reporting currency, reads on the row of the other currency: its rate and inverse_rate give both directions. against serves a pair of two other currencies.`,
     `The rows are the matrix of the Currency settings screen: each year reads its latest set of rates in ${reporting}, and the currencies are those in use (the reporting currency, the default and allowed currencies, the currencies of the budget lines, of the company turnovers and of the contracts) and those with a manual rate. A currency outside them has no row. The reporting currency is 1 by definition (source identity).`,
     'A frozen budget version keeps the set of rates captured when it was frozen: its lines convert at that set, which can differ from the rate of the year here.',
   ];
@@ -273,6 +286,9 @@ export async function listAiExchangeRates(
   }
   if (against) {
     notes.push(`cross_rate is the number of ${against} for 1 unit of the row's currency, computed by the server from the two rates of the same year.`);
+    if (inMatrix && against !== reporting && kept.some((row) => row.currency === reporting)) {
+      notes.push(`${reporting} is the reporting currency: the ${against} row of each year gives the pair ${reporting}/${against}, rate and inverse_rate (cross_rate_note on the ${reporting} row).`);
+    }
   }
 
   const block: AiExchangeRatesBlock = {

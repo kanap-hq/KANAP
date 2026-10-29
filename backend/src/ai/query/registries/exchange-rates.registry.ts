@@ -54,7 +54,7 @@ export const exchangeRatesRegistry: AiEntityFilterRegistry = {
       ai: 'against',
       grid: 'against',
       type: 'set',
-      description: 'One currency code (CHF): each row then carries cross_rate, the units of that currency for 1 unit of the row\'s currency, computed by the server from the two rates of the same year, and cross_rate_note for a year where either rate is missing. It keeps every row: combine it with currency and year for one pair ("USD in CHF in 2026": currency USD, against CHF, year 2026).',
+      description: 'One currency code (CHF): each row then carries cross_rate, the units of that currency for 1 unit of the row\'s currency, computed by the server from the two rates of the same year, and cross_rate_note for a year where either rate is missing. It keeps every row: combine it with currency and year for one pair ("USD in CHF in 2026": currency USD, against CHF, year 2026). A pair with the reporting currency reads on the row of the other currency, its rate and inverse_rate: against serves a pair of two other currencies.',
       examples: ['CHF'],
       sortable: false,
       groupable: false,

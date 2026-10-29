@@ -1978,6 +1978,8 @@ async function testReferenceDataFamiliesAreDescribed() {
     assert.match(description, /a `working_day_calendars` row reads one year \(the `year` filter\), whose `total_days` the server computes/);
     assert.match(description, /`required_for` is where a value is required now, an enabled dimension only/);
     assert.match(description, /`exchange_rates` gives each currency's rate for a year in the reporting currency for 1 unit of that currency, with `inverse_rate` and, with the `against` filter, `cross_rate` computed by the server/);
+    // Plaid L9, lot G: the pair with the reporting currency is on the other currency's row.
+    assert.match(description, /a pair with the reporting currency reads on the row of the other currency \(`rate` and `inverse_rate`\), and `against` serves a pair of two other currencies\./);
   }
   // A number alone is a filter value (2026 is eq 2026), on both tools that filter.
   for (const schema of registry.toToolJsonSchemas([{ name: 'query_entities' }, { name: 'aggregate_entities' }])) {
