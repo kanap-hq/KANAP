@@ -1637,10 +1637,15 @@ export class AiBusinessRecordMutationSupportService {
     // `from_catalog: false` asks for a typed technology, never for an adoption. It is an
     // instruction to this preparation, not a column the write carries.
     const fromCatalog = entityType === 'technologies' ? takeFromCatalogFlag(rawFields) : undefined;
-    const normalized = await this.normalizeFields(context, entityType, rawFields, 'create');
     if (entityType === 'technologies') {
-      return this.prepareTechnologyCreate(context, normalized, fromCatalog);
+      // The completion of a hand-typed record normalises against that record (update mode), so the
+      // name is checked here rather than by a create-mode pass that would not know the current values.
+      if (!String(rawFields.name ?? '').trim()) {
+        throw new BadRequestException('Name is required for technology creation.');
+      }
+      return this.prepareTechnologyCreate(context, rawFields, fromCatalog);
     }
+    const normalized = await this.normalizeFields(context, entityType, rawFields, 'create');
     // An incident is created open when the request names no status: the card says which step it
     // starts at. The service applies the same default.
     if (entityType === 'incidents' && normalized.fields.status === undefined) {
@@ -1680,13 +1685,18 @@ export class AiBusinessRecordMutationSupportService {
    * without a catalog key, is completed by the exact catalog entry when there is one (the card
    * names it and what the adoption adds); otherwise a same-name technology is refused here with
    * its reference, and an ambiguous name lists the closest catalog entries.
+   *
+   * A completion keeps the record's current values: its other fields are normalised in update mode
+   * against that record, a field equal to the current value leaves the card, and the execution
+   * compares each requested field with the live one before writing (the `update_business_record`
+   * drift check).
    */
   private async prepareTechnologyCreate(
     context: AiExecutionContextWithManager,
-    normalized: NormalizedFields,
+    rawFields: Record<string, unknown>,
     fromCatalog: boolean | undefined,
   ): Promise<AiPreparedMutationPreview> {
-    const name = String(normalized.fields.name ?? '').trim();
+    const name = String(rawFields.name ?? '').trim();
     const sameName: Array<{ id: string; item_number: number; catalog_key: string | null }> = await context.manager.query(
       `SELECT id, item_number, catalog_key FROM technologies
         WHERE tenant_id = $1 AND lower(btrim(name)) = lower(btrim($2)) LIMIT 1`,
@@ -1704,12 +1714,42 @@ export class AiBusinessRecordMutationSupportService {
       if (exact && (!existing || (!existing.catalog_key && exact.completes_id === existing.id))) {
         // The adoption writes the record, or completes the hand-typed one the card names; the other
         // given fields are an update in the same transaction. The card lists them apart.
-        const fields = { ...normalized.fields };
+        const existingRow = existing ? await this.getRecordSnapshot(context, 'technologies', existing.id) : null;
+        const normalized = await this.normalizeFields(
+          context,
+          'technologies',
+          rawFields,
+          existingRow ? 'update' : 'create',
+          existingRow,
+        );
+        let fields = { ...normalized.fields };
+        let displayValues = { ...normalized.displayValues };
+        let fieldLabels = { ...normalized.fieldLabels };
         delete fields.name;
-        const displayValues = { ...normalized.displayValues };
         delete displayValues.name;
-        const fieldLabels = { ...normalized.fieldLabels };
         delete fieldLabels.name;
+        let previousValues: Record<string, unknown> = {};
+        let previousDisplayValues: Record<string, unknown> = {};
+        if (existingRow) {
+          // A requested field equal to the current value is not a change: it leaves the card and
+          // the write, and it is not part of the drift check.
+          const current = this.pickFieldValues('technologies', existingRow, Object.keys(fields));
+          const changed = Object.keys(fields).filter((fieldName) => !sameValue(current[fieldName], fields[fieldName]));
+          const changedFields: Record<string, unknown> = {};
+          const changedDisplay: Record<string, string | null> = {};
+          const changedLabels: Record<string, string> = {};
+          previousValues = {};
+          for (const fieldName of changed) {
+            changedFields[fieldName] = fields[fieldName];
+            changedDisplay[fieldName] = displayValues[fieldName];
+            changedLabels[fieldName] = fieldLabels[fieldName];
+            previousValues[fieldName] = current[fieldName];
+          }
+          fields = changedFields;
+          displayValues = changedDisplay;
+          fieldLabels = changedLabels;
+          previousDisplayValues = await this.previousDisplayValues(context, 'technologies', previousValues);
+        }
         return {
           targetEntityType: 'technologies',
           targetEntityId: existing?.id ?? null,
@@ -1740,8 +1780,8 @@ export class AiBusinessRecordMutationSupportService {
           currentValues: {
             target_ref: exact.completes ?? null,
             target_title: exact.completes ? `${exact.completes} - ${title}` : title,
-            values: null,
-            display_values: null,
+            values: existingRow ? previousValues : null,
+            display_values: existingRow ? previousDisplayValues : null,
           },
         };
       }
@@ -1761,6 +1801,7 @@ export class AiBusinessRecordMutationSupportService {
     if (sameName[0]) {
       throw new BadRequestException(`A technology with this name already exists: TEC-${sameName[0].item_number}.`);
     }
+    const normalized = await this.normalizeFields(context, 'technologies', rawFields, 'create');
     return {
       targetEntityType: 'technologies',
       targetEntityId: null,
@@ -2018,7 +2059,9 @@ export class AiBusinessRecordMutationSupportService {
       const field = config.fields[fieldName];
       changes[fieldName] = {
         label: String(fieldLabels[fieldName] || fieldName),
-        from: action === 'create' ? null : shownValue(fieldName, currentValues[fieldName]),
+        // A completion keeps the hand-typed record's values: the card shows what each requested
+        // field held there, not null as a creation would.
+        from: action === 'create' && adoptionKind !== 'completion' ? null : shownValue(fieldName, currentValues[fieldName]),
         to: shownValue(fieldName, displayValues[fieldName]),
         format: 'text',
         // The card names a level from the catalog in the person's language, as the application screens do.
@@ -2092,6 +2135,16 @@ export class AiBusinessRecordMutationSupportService {
           ? adoption.completes as Record<string, unknown>
           : null;
         const completesId = completes ? String(completes.id ?? '') : '';
+        // A completion writes the fields the person asked beside the catalog: each one is compared
+        // with the live record first, field by field, as `update_business_record` does.
+        if (completesId) {
+          await this.assertTechnologyFieldDrift(
+            context,
+            completesId,
+            coerceRecord(preview.current_values?.values, 'current_values.values'),
+            mutation.field_labels,
+          );
+        }
         const adopted = await this.technologyCatalog.adopt(String(adoption.catalog_key ?? ''), {
           manager: context.manager,
           tenantId: context.tenantId,
@@ -2216,6 +2269,23 @@ export class AiBusinessRecordMutationSupportService {
     }
     if (Object.keys(analyticsValues).length > 0) execution.analytics_values = analyticsValues;
     return execution;
+  }
+
+  /** The `update_business_record` drift check, on the fields a completion writes beside the catalog. */
+  private async assertTechnologyFieldDrift(
+    context: AiExecutionContextWithManager,
+    technologyId: string,
+    expectedValues: Record<string, unknown>,
+    storedLabels: unknown,
+  ): Promise<void> {
+    const fieldNames = Object.keys(expectedValues);
+    if (fieldNames.length === 0) return;
+    const live = await this.getRecordSnapshot(context, 'technologies', technologyId);
+    for (const fieldName of fieldNames) {
+      if (sameValue(live[fieldName] ?? null, expectedValues[fieldName])) continue;
+      const label = await this.conflictLabel(context, 'technologies', fieldName, storedLabels);
+      throw new ConflictException(`${label} changed after the preview was created.`);
+    }
   }
 
   /** The label of a field that changed since the preview: a dimension's current name, else the field's label. */
