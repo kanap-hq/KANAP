@@ -717,7 +717,13 @@
       "source_ref": "External reference",
       "authority_notification_required": "Authority notification required",
       "authority_notified_at": "Notified on",
-      "notified_parties": "Parties informed"
+      "notified_parties": "Parties informed",
+      "base_url": "Base URL",
+      "capex_item_id": "CAPEX line",
+      "department_id": "Department",
+      "server_role": "Server role",
+      "since_date": "Since",
+      "suite_id": "Suite"
     },
     "history": {
       "empty": "No history yet",
@@ -757,7 +763,8 @@
         "notesChanged": "Notes changed",
         "renewalStopped": "Renewal stopped",
         "renewalResumed": "Renewal resumed",
-        "descriptionChanged": "Description changed"
+        "descriptionChanged": "Description changed",
+        "classificationReviewed": "Classification reviewed"
       },
       "actors": {
         "assistant": "Plaid",
@@ -888,6 +895,26 @@
         "renewal_task": {
           "added": "Renewal task created: {{label}}",
           "removed": "Renewal task removed: {{label}}"
+        },
+        "instance": {
+          "added": "Environment added: {{label}}",
+          "removed": "Environment removed: {{label}}"
+        },
+        "assignment": {
+          "added": "Server added: {{label}}",
+          "removed": "Server removed: {{label}}"
+        },
+        "department": {
+          "added": "Department added: {{label}}",
+          "removed": "Department removed: {{label}}"
+        },
+        "suite": {
+          "added": "Suite added: {{label}}",
+          "removed": "Suite removed: {{label}}"
+        },
+        "business_process": {
+          "added": "Business process added: {{label}}",
+          "removed": "Business process removed: {{label}}"
         }
       },
       "unnamed": {
@@ -940,7 +967,9 @@
         "leg": "a segment",
         "set": "a set",
         "binding": "a binding",
-        "person": "a person"
+        "person": "a person",
+        "instance": "an environment",
+        "assignment": "a server"
       },
       "deleted": {
         "record": "a deleted record",
@@ -992,7 +1021,9 @@
         "leg": "a deleted segment",
         "set": "a deleted set",
         "binding": "a deleted binding",
-        "person": "a deleted person"
+        "person": "a deleted person",
+        "instance": "a deleted environment",
+        "assignment": "a deleted server"
       },
       "title": "History",
       "metricsYear": "Metrics {{year}}",
@@ -1025,7 +1056,8 @@
         "added_other": "{{count}} budget lines outside your access added",
         "removed_one": "{{count}} budget line outside your access removed",
         "removed_other": "{{count}} budget lines outside your access removed"
-      }
+      },
+      "instance": "{{environment}} environment"
     },
     "messages": {
       "loadDetailsFailed": "Failed to load audit entry details."

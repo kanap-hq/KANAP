@@ -112,6 +112,8 @@ export type PageContext = {
   categories: Map<string, string>;
   /** The tenant's IT entity labels, by code (a connection's endpoints and a segment's equipment). */
   entityLabels: Map<string, string>;
+  /** The environment of each deployment of the record the page names (an application's assignments). */
+  instances?: Map<string, string | null>;
 };
 
 const AMOUNT_MEASURES = ['planned', 'committed', 'forecast', 'actual', 'expected_landing'] as const;
@@ -148,6 +150,9 @@ const CHILD_KIND_LABELS: Record<RecordHistoryChildKind, string> = {
   binding: 'binding',
   person: 'person',
   compliance_item: 'compliance_item',
+  instance: 'instance',
+  assignment: 'assignment',
+  business_process: 'business_process',
 };
 
 /** The kinds whose row is one link to another record, named by a key of its payload. */
@@ -516,7 +521,8 @@ function linkChanges(row: AuditRow): RecordHistoryChange[] {
   const before = isPlainObject(row.before_json) ? row.before_json : {};
   const after = isPlainObject(row.after_json) ? row.after_json : {};
   // `kind` belongs to the interface's links; the budget line's links do not carry it.
-  for (const field of ['kind', 'url', 'description']) {
+  // `purpose` belongs to the application's links.
+  for (const field of ['kind', 'url', 'description', 'purpose']) {
     if (!deepEqual(before[field], after[field])) {
       changes.push({ field, before: safeScalar(before[field]) ?? null, after: safeScalar(after[field]) ?? null });
     }
@@ -1200,6 +1206,14 @@ function setChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
       }
       case 'interface_data_residency':
         return state;
+      case 'application_companies':
+        return referenceValue(ctx, 'company', stateId(state));
+      case 'application_departments':
+        return referenceValue(ctx, 'department', stateId(state));
+      case 'application_suites':
+        return referenceValue(ctx, 'application', stateId(state));
+      case 'application_data_residency':
+        return state;
       default:
         return state;
     }
@@ -1211,6 +1225,10 @@ function setChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
       case 'interface_dependencies': return 'dependency';
       case 'interface_key_identifiers': return 'key_identifier';
       case 'interface_data_residency': return 'country';
+      case 'application_companies': return 'company';
+      case 'application_departments': return 'department';
+      case 'application_suites': return 'suite';
+      case 'application_data_residency': return 'country';
       default: return 'set';
     }
   };
@@ -1222,6 +1240,76 @@ function setChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
     if (!afterSet.has(state)) changes.push({ field, event: 'removed', before: valueOf(state) });
   }
   return changes;
+}
+
+/** The environment code of a deployment row, from its payload (`after`, then `before`). */
+function instanceEnvironment(row: AuditRow, side: 'before' | 'after'): string | null {
+  const payload = side === 'after' ? row.after_json : row.before_json;
+  return isPlainObject(payload) && typeof payload.environment === 'string' && payload.environment.trim()
+    ? payload.environment.trim()
+    : null;
+}
+
+/**
+ * A deployment of the application: its creation and removal read as its environment ("Environment
+ * added: Production"), its modification as the fields that changed, under the environment title.
+ */
+function instanceChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  if (row.action === 'create' || row.before_json === null || row.before_json === undefined) {
+    return [{ field: 'instance', event: 'added', after: instanceEnvironment(row, 'after') }];
+  }
+  if (row.action === 'delete' || row.after_json === null || row.after_json === undefined) {
+    return [{ field: 'instance', event: 'removed', before: instanceEnvironment(row, 'before') }];
+  }
+  return genericChanges(row, ctx, { label: row.table_name });
+}
+
+/** The deployment an assignment row names, in `after` then `before`. */
+function assignmentInstanceId(row: AuditRow): string | null {
+  for (const payload of [row.after_json, row.before_json]) {
+    if (isPlainObject(payload) && isUuid(payload.app_instance_id)) return payload.app_instance_id.toLowerCase();
+  }
+  return null;
+}
+
+/**
+ * A server of a deployment: the asset added or removed, named under the reader's rights (an asset
+ * they cannot read stays "an asset"), with its role; a modification reads as the role, the date
+ * and the notes that changed. The entry's title is the deployment's environment.
+ */
+function assignmentChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) ? row.before_json : null;
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  const assetOf = (payload: Record<string, unknown> | null) => (payload && isUuid(payload.asset_id) ? payload.asset_id : null);
+  const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : null);
+  if (!before) {
+    const changes: RecordHistoryChange[] = [{ field: 'assignment', event: 'added', after: referenceValue(ctx, 'asset', assetOf(after)) ?? { hidden: true, kind: 'asset' } }];
+    if (text(after?.role)) changes.push({ field: 'server_role', after: text(after?.role) });
+    return changes;
+  }
+  if (!after) {
+    return [{ field: 'assignment', event: 'removed', before: referenceValue(ctx, 'asset', assetOf(before)) ?? { hidden: true, kind: 'asset' } }];
+  }
+  const changes: RecordHistoryChange[] = [];
+  const beforeAsset = assetOf(before)?.toLowerCase() ?? null;
+  const afterAsset = assetOf(after)?.toLowerCase() ?? null;
+  if (beforeAsset !== afterAsset) {
+    if (beforeAsset) changes.push({ field: 'assignment', event: 'removed', before: referenceValue(ctx, 'asset', beforeAsset) });
+    if (afterAsset) changes.push({ field: 'assignment', event: 'added', after: referenceValue(ctx, 'asset', afterAsset) });
+  }
+  if (!deepEqual(text(before.role), text(after.role))) changes.push({ field: 'server_role', before: text(before.role), after: text(after.role) });
+  for (const field of ['since_date', 'notes'] as const) {
+    if (!deepEqual(before[field] ?? null, after[field] ?? null)) changes.push({ field, before: before[field] ?? null, after: after[field] ?? null });
+  }
+  return changes;
+}
+
+/** A business process link, written from the process: the process is `record_id`. */
+function processLinkChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const process = referenceValue(ctx, 'business_process', row.record_id);
+  if (row.before_json === null || row.before_json === undefined) return [{ field: 'business_process', event: 'added', after: process }];
+  if (row.after_json === null || row.after_json === undefined) return [{ field: 'business_process', event: 'removed', before: process }];
+  return [];
 }
 
 /** The interface's middleware applications, written as an id list by older writers. */
@@ -1431,7 +1519,8 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
         ? applicationLinkChanges(row, ctx)
         : setLinkChanges('application', row, ctx);
     case 'technology':
-      return row.table_name === 'asset_technologies'
+      // From an asset or an application, the link row names the technology in `record_id`.
+      return row.table_name === 'asset_technologies' || row.table_name === 'application_technologies'
         ? installedTechnology(row, ctx, isPlainObject(row.after_json) ? row.after_json : isPlainObject(row.before_json) ? row.before_json : null)
         : setLinkChanges('technology', row, ctx);
     case 'asset':
@@ -1481,6 +1570,12 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
       return setChanges(row, ctx);
     case 'binding':
       return bindingChanges(row, ctx);
+    case 'instance':
+      return instanceChanges(row, ctx);
+    case 'assignment':
+      return assignmentChanges(row, ctx);
+    case 'business_process':
+      return processLinkChanges(row, ctx);
     case 'version':
       return genericChanges(row, ctx, { label: row.table_name });
     case 'compliance_item':
@@ -1543,6 +1638,13 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
     case 'compliance_item':
       // The requirement code: the page names it as the Compliance tab does.
       return labelOf(row, ['requirement']);
+    case 'instance':
+      // A creation or a removal names its environment in its event line; an update in its title.
+      return row.action === 'create' || row.action === 'delete' ? null : labelOf(row, ['environment']);
+    case 'assignment': {
+      const instanceId = assignmentInstanceId(row);
+      return instanceId ? ctx.instances?.get(instanceId) ?? null : null;
+    }
     case 'person': {
       if (row.action === 'create' || row.action === 'delete') return null;
       for (const payload of [row.after_json, row.before_json]) {
@@ -1584,6 +1686,7 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
     case 'task':
     case 'relation':
     case 'member':
+    case 'business_process':
     case 'owner': {
       const events = changes.filter((change) => change.event);
       const labels = new Set<string>();

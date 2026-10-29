@@ -717,7 +717,13 @@
       "source_ref": "Referencia externa",
       "authority_notification_required": "Requiere notificación a la autoridad",
       "authority_notified_at": "Notificado el",
-      "notified_parties": "Partes informadas"
+      "notified_parties": "Partes informadas",
+      "base_url": "URL base",
+      "capex_item_id": "Línea CAPEX",
+      "department_id": "Departamento",
+      "server_role": "Rol del servidor",
+      "since_date": "Desde",
+      "suite_id": "Suite"
     },
     "history": {
       "empty": "Todavía no hay historial",
@@ -757,7 +763,8 @@
         "notesChanged": "Notas modificadas",
         "renewalStopped": "Renovación detenida",
         "renewalResumed": "Renovación reanudada",
-        "descriptionChanged": "Descripción modificada"
+        "descriptionChanged": "Descripción modificada",
+        "classificationReviewed": "Clasificación revisada"
       },
       "actors": {
         "assistant": "Plaid",
@@ -888,6 +895,26 @@
         "renewal_task": {
           "added": "Tarea de renovación creada: {{label}}",
           "removed": "Tarea de renovación retirada: {{label}}"
+        },
+        "instance": {
+          "added": "Entorno añadido: {{label}}",
+          "removed": "Entorno eliminado: {{label}}"
+        },
+        "assignment": {
+          "added": "Servidor añadido: {{label}}",
+          "removed": "Servidor eliminado: {{label}}"
+        },
+        "department": {
+          "added": "Departamento añadido: {{label}}",
+          "removed": "Departamento eliminado: {{label}}"
+        },
+        "suite": {
+          "added": "Suite añadida: {{label}}",
+          "removed": "Suite eliminada: {{label}}"
+        },
+        "business_process": {
+          "added": "Proceso de negocio añadido: {{label}}",
+          "removed": "Proceso de negocio eliminado: {{label}}"
         }
       },
       "unnamed": {
@@ -940,7 +967,9 @@
         "leg": "un segmento",
         "set": "un conjunto",
         "binding": "un enlace",
-        "person": "una persona"
+        "person": "una persona",
+        "instance": "un entorno",
+        "assignment": "un servidor"
       },
       "deleted": {
         "record": "un registro eliminado",
@@ -992,7 +1021,9 @@
         "leg": "un segmento eliminado",
         "set": "un conjunto eliminado",
         "binding": "un enlace eliminado",
-        "person": "una persona eliminada"
+        "person": "una persona eliminada",
+        "instance": "un entorno eliminado",
+        "assignment": "un servidor eliminado"
       },
       "title": "Historial",
       "metricsYear": "Indicadores {{year}}",
@@ -1025,7 +1056,8 @@
         "added_other": "{{count}} líneas presupuestarias fuera de su acceso añadidas",
         "removed_one": "{{count}} línea presupuestaria fuera de su acceso retirada",
         "removed_other": "{{count}} líneas presupuestarias fuera de su acceso retiradas"
-      }
+      },
+      "instance": "Entorno {{environment}}"
     },
     "messages": {
       "loadDetailsFailed": "No se pudieron cargar los detalles de la entrada de auditoría."

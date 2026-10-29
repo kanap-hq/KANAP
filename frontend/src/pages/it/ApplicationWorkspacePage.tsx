@@ -73,8 +73,12 @@ import ApplicationClassificationPanel, { HelpLabel, HelpTip, type RecoveryDepend
 import ApplicationCriticalityMetadata from './components/ApplicationCriticalityMetadata';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
-type TabKey = 'overview' | 'deployments' | 'interfaces' | 'operations' | 'compliance' | 'relations';
+type TabKey = 'overview' | 'deployments' | 'interfaces' | 'operations' | 'compliance' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
 
 type ApplicationDetail = {
   id: string;
@@ -199,7 +203,7 @@ type SupportContactRow = {
   } | null;
 };
 
-const VALID_TABS = new Set<TabKey>(['overview', 'deployments', 'interfaces', 'operations', 'compliance', 'relations']);
+const VALID_TABS = new Set<TabKey>(['overview', 'deployments', 'interfaces', 'operations', 'compliance', 'relations', RECORD_HISTORY_TAB_KEY]);
 
 function slugify(value: string) {
   return String(value || '')
@@ -1663,6 +1667,7 @@ export default function ApplicationWorkspacePage() {
     { key: 'operations', label: t('workspace.application.tabs.operations'), disabled: isCreate },
     { key: 'compliance', label: t('workspace.application.tabs.compliance'), disabled: isCreate },
     { key: 'relations', label: t('workspace.application.tabs.relations'), badge: relationCount, disabled: isCreate },
+    { key: RECORD_HISTORY_TAB_KEY, label: t('workspace.application.tabs.history'), disabled: isCreate },
   ];
 
   return (
@@ -1879,6 +1884,14 @@ export default function ApplicationWorkspacePage() {
             }}
             onOpenKnowledge={openKnowledge}
           />
+        )}
+        {!isCreate && app && routeTab === RECORD_HISTORY_TAB_KEY && (
+          <WorkspaceTabBoundary resetKey={routeTab} onRetry={historyTab.retry}>
+            <React.Suspense fallback={null}>
+              {/* The history takes the record's uuid; the route may carry its APP-N reference. */}
+              <HistoryTab key={app.id} table="applications" recordId={app.id} />
+            </React.Suspense>
+          </WorkspaceTabBoundary>
         )}
       </PortfolioDetailWorkspaceShell>
 

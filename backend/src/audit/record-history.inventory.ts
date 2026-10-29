@@ -3,6 +3,7 @@ import type { FamilyKey } from './record-history/families';
 import { accountsRecord } from './record-history/records/accounts';
 import { analyticsAxesRecord } from './record-history/records/analytics_axes';
 import { analyticsCategoriesRecord } from './record-history/records/analytics_categories';
+import { applicationsRecord } from './record-history/records/applications';
 import { assetsRecord } from './record-history/records/assets';
 import { businessProcessesRecord } from './record-history/records/business_processes';
 import { companiesRecord } from './record-history/records/companies';
@@ -90,7 +91,10 @@ export type RecordHistoryChildKind =
   | 'set'
   | 'binding'
   | 'person'
-  | 'compliance_item';
+  | 'compliance_item'
+  | 'instance'
+  | 'assignment'
+  | 'business_process';
 
 export type RecordHistoryExclusion = {
   /** The physical table of the data-access inventory. */
@@ -146,6 +150,7 @@ const RECORD_HISTORY_DEFINITION = [
   accountsRecord,
   analyticsAxesRecord,
   analyticsCategoriesRecord,
+  applicationsRecord,
   assetsRecord,
   businessProcessesRecord,
   companiesRecord,

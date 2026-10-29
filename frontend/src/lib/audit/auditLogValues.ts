@@ -117,6 +117,8 @@ const ENUM_GROUPS: Record<string, string> = {
   integration_route_type: 'it:enums.routeType',
   direction: 'auditLogs.values.direction',
   owner_type: 'auditLogs.values.ownerType',
+  // An application server's role, named as the IT settings name the shipped roles.
+  server_role: 'it:catalogDefaults.serverRoles',
   // The budget history's own enumerations, named as the line screens name them.
   input_grain: 'auditLogs.values.inputGrain',
   allocation_method: 'auditLogs.values.allocationMethod',

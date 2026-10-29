@@ -1699,7 +1699,8 @@
         "knowledge": "Knowledge",
         "compliance": "Compliance",
         "deployments": "Deployments",
-        "operations": "Operations"
+        "operations": "Operations",
+        "history": "History"
       },
       "createNewVersion": "New version",
       "saveBeforeVersion": "Save changes before creating a new version",
