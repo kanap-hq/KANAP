@@ -207,7 +207,7 @@ Une dépendance va dans un seul sens. Si vous ajoutez l'interface B en amont de 
 
 - **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom facultatif ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
 - **Joindre un fichier** ouvre le sélecteur de fichiers. Vous pouvez aussi déposer des fichiers sur la section.
-- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
+- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. Retirer un lien affiche un message et propose **Annuler**, qui recrée le lien. La suppression d'un fichier demande d'abord une confirmation.
 
 **Astuce** : Joignez la spécification et les documents de mapping à l'interface, pour que les personnes qui l'exploitent les trouvent au même endroit.
 

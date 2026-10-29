@@ -368,7 +368,7 @@ Haga clic en **Vincular** para añadir la sugerencia a su sección. La sección 
 
 - **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
 - **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos sobre la sección: se resalta mientras arrastra.
-- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Quitar un enlace muestra un mensaje y ofrece **Deshacer**, que vuelve a crear el enlace. Eliminar un archivo pide una confirmación antes.
 
 ---
 

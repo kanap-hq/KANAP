@@ -374,7 +374,7 @@ Dates in orange need attention: a contract whose renewal decision is due within 
 
 - **Add link** opens a dialog for a URL and an optional name; the link is saved at once. An address typed without `http://` or `https://` gets `https://`. Any other scheme is refused. To change a link, hover its row and click the pencil.
 - **Attach file** opens the file chooser. You can also drop files on the section.
-- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
+- To remove a link or a file, hover the row and click the cross. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation first.
 
 ---
 

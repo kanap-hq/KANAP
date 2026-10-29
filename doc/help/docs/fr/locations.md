@@ -117,7 +117,7 @@ L'onglet Relations affiche les actifs de ce site et les applications qui tournen
 **Liens web** : les liens du site (portails fournisseur, documentation des installations, pages de statut), une ligne chacun avec son nom, le domaine du lien et la date d'ajout. Ce sont les mêmes liens que les **Sites web pertinents** de l'onglet Contacts & Support. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet. Avec `locations:member` :
 
 - **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
-- Pour retirer un lien, survolez sa ligne et cliquez sur la croix.
+- Pour retirer un lien, survolez sa ligne et cliquez sur la croix. Un message nomme le lien et propose **Annuler**, qui le recrée.
 
 ---
 

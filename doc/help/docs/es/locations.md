@@ -117,7 +117,7 @@ La pestaña Relaciones muestra los activos de esta ubicación y las aplicaciones
 **Enlaces web**: los enlaces de la ubicación (portales de proveedores, documentación de instalaciones, páginas de estado), una fila cada uno con su nombre, el dominio del enlace y la fecha en que se añadió. Son los mismos enlaces que los **Sitios web relevantes** de la pestaña Contactos y soporte. Haga clic en un enlace para abrirlo en una pestaña nueva. Con `locations:member`:
 
 - **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
-- Para quitar un enlace, pase el cursor sobre su fila y haga clic en la cruz.
+- Para quitar un enlace, pase el cursor sobre su fila y haga clic en la cruz. Un mensaje nombra el enlace y ofrece **Deshacer**, que lo vuelve a crear.
 
 ---
 
