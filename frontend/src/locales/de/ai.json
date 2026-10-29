@@ -365,6 +365,7 @@
       "get_entity_context": "Entitätskontext abrufen",
       "get_entity_detail": "Entitätsdetails abrufen",
       "get_filter_values": "Filterwerte abrufen",
+      "get_record_history": "Verlauf abrufen",
       "import_ticket": "Ticket importieren",
       "import_glpi_ticket": "GLPI-Ticket importieren",
       "prepare_mutation_plan": "Änderungsplan vorbereiten",
