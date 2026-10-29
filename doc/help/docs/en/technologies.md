@@ -377,6 +377,23 @@ A large file takes some time to load, and holds the links of its technologies un
 
 A record created as an application may really be a technology, for example a database engine or a directory. Open the application and use **Convert to technology**. See [Applications](applications.md#converting-an-application-to-a-technology).
 
+## Ask the assistant
+
+[Plaid](ai-assistant.md) reads the technologies with the same rights as this page. Ask, for example: "Who is responsible for TEC-3?", "Which web links does PostgreSQL have?", "Are vulnerability alerts on for TEC-3?" or "Which technologies are out of support?"
+
+With the Member level on infrastructure, Plaid also writes, and every change comes as a preview that you approve:
+
+- Adopt a catalog entry, complete a technology of the same name typed by hand, or create a technology the catalog does not know.
+- Change the fields of the technology.
+- Add versions and change their labels, dates and notes.
+- Add or remove IT owners, business owners and support contacts.
+- Add, change or remove web links.
+- Turn vulnerability alerts on or off, for the technology or one version.
+
+Plaid names the family, lifecycle and other list values in your language, and refuses a value that matches more than one. It refuses a name shared by two users or two contacts, and two links with the same address. Ask, for example: "Adopt PostgreSQL from the KANAP catalog", "Add version 17 to TEC-3", "Add Camille Roux as business owner of PostgreSQL", "Add the contact Oracle Support to the support of TEC-3", "Add the release notes link https://www.postgresql.org/docs/release/ to PostgreSQL" or "Exclude version 14 of TEC-3 from the alerts".
+
+Deleting a technology or a version, attachments, CPE identifiers and CVE.org names, and the matching of vulnerabilities stay on this page.
+
 ## Tips
 
 - **Start from the catalog**: you get the versions and their end of support dates without typing them.
