@@ -392,6 +392,8 @@ Mit der Stufe Mitglied für die Infrastruktur schreibt Plaid auch, und jede Änd
 
 Plaid nennt die Familie, den Lebenszyklus und die anderen Listenwerte in Ihrer Sprache und lehnt einen Wert ab, der auf mehrere passt. Es lehnt einen Namen ab, den zwei Benutzer oder zwei Kontakte tragen, und zwei Links mit derselben Adresse. Fragen Sie zum Beispiel: „Übernimm PostgreSQL aus dem KANAP-Katalog“, „Füge TEC-3 die Version 17 hinzu“, „Füge Camille Roux als Business-Verantwortliche von PostgreSQL hinzu“, „Füge den Kontakt Oracle Support zum Support von TEC-3 hinzu“, „Füge PostgreSQL den Link zu den Versionshinweisen https://www.postgresql.org/docs/release/ hinzu“ oder „Nimm die Version 14 von TEC-3 aus den Warnungen“.
 
+Einen Support-Kontakt hinzuzufügen erfordert zusätzlich das Recht, Kontakte zu lesen. Einen zu entfernen erfordert es nicht. Plaid fügt nur aktive Benutzer als Verantwortliche hinzu und entfernt einen Verantwortlichen auch dann, wenn sein Konto deaktiviert ist. Ein Kontakt ohne Namen kann nicht hinzugefügt werden: Geben Sie ihm zuerst unter Kontakte einen Namen. Wenn Plaid eine von Hand erfasste Technologie vervollständigt, ändert es nur die abweichenden Felder und hält an, wenn eines davon nach der Vorschau auf dem Bildschirm geändert wurde.
+
 Das Löschen einer Technologie oder einer Version, Anhänge, CPE-Kennungen und CVE.org-Namen sowie der Abgleich der Schwachstellen bleiben auf dieser Seite.
 
 ## Tipps

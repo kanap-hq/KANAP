@@ -392,6 +392,8 @@ With the Member level on infrastructure, Plaid also writes, and every change com
 
 Plaid names the family, lifecycle and other list values in your language, and refuses a value that matches more than one. It refuses a name shared by two users or two contacts, and two links with the same address. Ask, for example: "Adopt PostgreSQL from the KANAP catalog", "Add version 17 to TEC-3", "Add Camille Roux as business owner of PostgreSQL", "Add the contact Oracle Support to the support of TEC-3", "Add the release notes link https://www.postgresql.org/docs/release/ to PostgreSQL" or "Exclude version 14 of TEC-3 from the alerts".
 
+Adding a support contact also needs the right to read contacts. Removing one does not. Plaid adds only active users as owners, and removes an owner even when the account is disabled. A contact without a name cannot be added: give it a name in Contacts first. When Plaid completes a technology typed by hand, it changes only the fields that differ, and stops if one of them changed on the screen after the preview.
+
 Deleting a technology or a version, attachments, CPE identifiers and CVE.org names, and the matching of vulnerabilities stay on this page.
 
 ## Tips

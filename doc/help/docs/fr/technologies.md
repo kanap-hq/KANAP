@@ -392,6 +392,8 @@ Avec le niveau Membre sur l'infrastructure, Plaid écrit aussi, et chaque modifi
 
 Plaid nomme la famille, le cycle de vie et les autres valeurs de liste dans votre langue, et refuse une valeur qui en désigne plusieurs. Il refuse un nom porté par deux utilisateurs ou par deux contacts, et deux liens de même adresse. Demandez par exemple : « Adopte PostgreSQL depuis le catalogue KANAP », « Ajoute la version 17 à TEC-3 », « Ajoute Camille Roux comme responsable métier de PostgreSQL », « Ajoute le contact Oracle Support au support de TEC-3 », « Ajoute le lien des notes de version https://www.postgresql.org/docs/release/ à PostgreSQL » ou « Exclus la version 14 de TEC-3 des alertes ».
 
+Ajouter un contact de support demande aussi le droit de lire les contacts. En retirer un ne le demande pas. Plaid n'ajoute comme responsables que des utilisateurs actifs, et retire un responsable même si son compte est désactivé. Un contact sans nom ne peut pas être ajouté : donnez-lui d'abord un nom dans Contacts. Quand Plaid complète une technologie saisie à la main, il ne change que les champs qui diffèrent, et s'arrête si l'un d'eux a été modifié à l'écran après l'aperçu.
+
 La suppression d'une technologie ou d'une version, les pièces jointes, les identifiants CPE et les noms CVE.org, et le rapprochement des vulnérabilités restent sur cette page.
 
 ## Conseils
