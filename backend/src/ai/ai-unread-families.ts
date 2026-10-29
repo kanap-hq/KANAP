@@ -113,9 +113,11 @@ export type AiAdminFamiliesGap = 'right' | 'all_data' | null;
  * What the person reads among the families kept for one right: `reports`, the chargeback reports
  * (the Reporting right, `canReadEntityType(…, 'chargeback')`); `readable`, the families of the
  * entries read as a family (`readAs`) the person reads. Undefined: not known (the tool
- * descriptions, common to everyone), the right is named.
+ * descriptions, common to everyone), the right is named. `omitReadAs`: the readable families are
+ * not known and the families read with the right of their page are left out, as in
+ * `AI_UNREAD_FAMILIES_SENTENCE` (a chat profile without the read tools).
  */
-export type AiUnreadFamiliesReach = { reports?: boolean; readable?: readonly string[] };
+export type AiUnreadFamiliesReach = { reports?: boolean; readable?: readonly string[]; omitReadAs?: boolean };
 
 /** What a person lacks to read a family of the administrators of users, in words. */
 function usersAdminGapHint(gap: AiAdminFamiliesGap | undefined): string {
@@ -285,7 +287,7 @@ export function unreadFamilyScreen(entry: AiUnreadFamily, language: AiScreenLang
  */
 function unreadFamilies(gap: AiAdminFamiliesGap | undefined, reach: AiUnreadFamiliesReach | undefined): AiUnreadFamily[] {
   return AI_UNREAD_FAMILIES.filter((entry) => !(entry.usersAdminOnly && gap === null) && !(entry.reportingOnly && reach?.reports === true)
-    && !readsFamily(entry, reach));
+    && !readsFamily(entry, reach) && !(entry.readAs && reach?.omitReadAs));
 }
 
 /** The words that close a family's line: what the person lacks, for the families kept for a right. */

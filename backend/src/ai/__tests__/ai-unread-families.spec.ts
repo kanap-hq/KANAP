@@ -268,9 +268,17 @@ function testTheWordsOfAReferenceSearch() {
   assert.equal(unmatchedReferenceFamilyNote('exchange_rates', 'fr'), null, 'the rates are not searched by code or name');
 }
 
+/** Without the readable families (a profile without the read tools), the reference data are left out (lot F, m6). */
+function testUnknownReachLeavesTheReferenceDataOut() {
+  const sentence = unreadFamiliesSentence('en', 'right', { omitReadAs: true });
+  assert.doesNotMatch(sentence, /(: |; )(cost centers|working-day calendars|analytics dimensions|exchange rates) \(/);
+  assert.match(sentence, /audit log/);
+}
+
 async function run() {
   testWordsThatAskForAFamily();
   testTheWordsOfAReferenceSearch();
+  testUnknownReachLeavesTheReferenceDataOut();
   await testTheReferenceDataFollowTheirRights();
   testTheFamiliesOfTheAdministratorsOfUsers();
   testTheChargebackFollowsTheReportingRight();

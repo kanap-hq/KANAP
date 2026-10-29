@@ -439,10 +439,12 @@ export class AiSystemPromptService {
 
     if (params.availableTools.length > 0) {
       // A person who reads Admin › Data access reads its two families; the others are told what they
-      // lack. The chargeback reports and the reference data likewise, when the readable families are known.
+      // lack. The chargeback reports and the reference data likewise, when the readable families are
+      // known; when they are not (a profile without the read tools), the reference data, read with
+      // the right of their page, are left out, as in the tool descriptions.
       const gap = params.readableEntityTypes.includes('data_access') ? null : params.adminFamiliesGap;
       const known = params.readableEntityTypes.length > 0;
-      const reach = known ? { reports: params.readableEntityTypes.includes('chargeback'), readable: params.readableEntityTypes } : {};
+      const reach = known ? { reports: params.readableEntityTypes.includes('chargeback'), readable: params.readableEntityTypes } : { omitReadAs: true };
       addSection('limits', 'Limits of what you read', limitsText(params.currentUser.screenLanguage ?? null, gap, reach));
     }
 
