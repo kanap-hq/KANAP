@@ -1161,6 +1161,32 @@ async function testTechnologyRefusedFields(harness: Harness) {
   });
 }
 
+async function testTechnologyBounds(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-bounds');
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'create_business_record', {
+        entity_type: 'technologies',
+        fields: { name: 'x'.repeat(201), family: 'Database', lifecycle: 'Active', from_catalog: false },
+      }),
+      'Name must be 200 characters or fewer.',
+    );
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'create_business_record', {
+        entity_type: 'technologies',
+        fields: { name: 'Kafka', family: 'Database', lifecycle: 'Active', from_catalog: false, rto_minutes: 5256001 },
+      }),
+      'RTO (minutes) must be an integer from 1 to 5256000.',
+    );
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'update_business_record', {
+        entity_type: 'technologies', ref: 'TEC-1', fields: { description: 'x'.repeat(20001) },
+      }),
+      'Description must be 20000 characters or fewer.',
+    );
+  });
+}
+
 async function testTechnologyUpdateAndUndo(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'technology-update');
@@ -1468,6 +1494,7 @@ async function run() {
     await testTechnologyAdoption(harness);
     await testTechnologyCatalogAmbiguousAndFreeOnRequest(harness);
     await testTechnologyRefusedFields(harness);
+    await testTechnologyBounds(harness);
     await testTechnologyUpdateAndUndo(harness);
     await testTechnologyReplacementCycleIsRefused(harness);
     await testTechnologyUpdateDrift(harness);

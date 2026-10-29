@@ -151,6 +151,9 @@ type FieldConfig = {
   /** A tenant catalog of IT settings: the card accepts the code or the exact label and shows the label. */
   itCatalog?: ItCatalogList;
   minimum?: number;
+  maximum?: number;
+  /** The service's text bound, in characters; absent keeps the generic text rule. */
+  maxLength?: number;
 };
 
 type EntityConfig = {
@@ -435,19 +438,19 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     businessResource: 'infrastructure',
     tableName: 'technologies',
     fields: {
-      name: { label: 'Name', kind: 'text', requiredOnCreate: true },
-      editor: { label: 'Editor', kind: 'text', nullable: true },
+      name: { label: 'Name', kind: 'text', requiredOnCreate: true, maxLength: 200 },
+      editor: { label: 'Editor', kind: 'text', nullable: true, maxLength: 200 },
       family: { label: 'Family', kind: 'it_catalog', itCatalog: 'technologyFamilies' },
       lifecycle: { label: 'Lifecycle', kind: 'it_catalog', itCatalog: 'lifecycleStates' },
       hosting_type: { label: 'Hosting type', kind: 'it_catalog', itCatalog: 'hostingTypes' },
-      description: { label: 'Description', kind: 'text', nullable: true },
-      notes: { label: 'Notes', kind: 'text', nullable: true },
-      support_notes: { label: 'Support notes', kind: 'text', nullable: true },
+      description: { label: 'Description', kind: 'text', nullable: true, maxLength: 20000 },
+      notes: { label: 'Notes', kind: 'text', nullable: true, maxLength: 20000 },
+      support_notes: { label: 'Support notes', kind: 'text', nullable: true, maxLength: 20000 },
       replaced_by_id: { label: 'Replaced by', kind: 'relation', nullable: true, relationTarget: 'technologies', aliases: ['replaced_by'] },
       cyber_criticality: { label: 'Cyber criticality', kind: 'it_catalog', itCatalog: 'cyberCriticalityLevels', nullable: true, aliases: ['cyber'] },
       recovery_wave: { label: 'Recovery wave', kind: 'it_catalog', itCatalog: 'recoveryWaves', nullable: true, aliases: ['wave'] },
-      rto_minutes: { label: 'RTO (minutes)', kind: 'integer', nullable: true, minimum: 1, aliases: ['rto'] },
-      rpo_minutes: { label: 'RPO (minutes)', kind: 'integer', nullable: true, minimum: 0, aliases: ['rpo'] },
+      rto_minutes: { label: 'RTO (minutes)', kind: 'integer', nullable: true, minimum: 1, maximum: 5256000, aliases: ['rto'] },
+      rpo_minutes: { label: 'RPO (minutes)', kind: 'integer', nullable: true, minimum: 0, maximum: 5256000, aliases: ['rpo'] },
       admin_zone: { label: 'Administration zone', kind: 'it_catalog', itCatalog: 'adminZones', nullable: true },
     },
   },
@@ -773,8 +776,9 @@ export class AiBusinessRecordMutationSupportService {
     }
     if (field.kind === 'integer') {
       const parsed = Number(rawValue);
-      if (!Number.isInteger(parsed) || parsed > 2147483647 || (field.minimum !== undefined && parsed < field.minimum)) {
-        throw new BadRequestException(`${field.label} must be an integer${field.minimum !== undefined ? ` from ${field.minimum} to 2147483647` : ''}.`);
+      const maximum = field.maximum ?? 2147483647;
+      if (!Number.isInteger(parsed) || parsed > maximum || (field.minimum !== undefined && parsed < field.minimum)) {
+        throw new BadRequestException(`${field.label} must be an integer${field.minimum !== undefined ? ` from ${field.minimum} to ${maximum}` : ''}.`);
       }
       return { value: parsed, displayValue: String(parsed) };
     }
@@ -885,6 +889,9 @@ export class AiBusinessRecordMutationSupportService {
     }
 
     let text = String(rawValue).trim();
+    if (field.maxLength !== undefined && text.length > field.maxLength) {
+      throw new BadRequestException(`${field.label} must be ${field.maxLength} characters or fewer.`);
+    }
     if (field.kind === 'upper3') {
       text = text.toUpperCase();
       if (text.length !== 3) throw new BadRequestException(`${field.label} must be 3 letters.`);
