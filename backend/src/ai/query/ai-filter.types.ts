@@ -146,6 +146,14 @@ export type AiEntityFilterRegistry = {
   withheldFields?: AiWithheldField[];
 };
 
+/** A group (or the others row) of an aggregate of budget lines with `metrics`: its line count and one value per metric. */
+export type AiBudgetMetricsRow = {
+  count: number;
+  values: Record<string, number | null>;
+  /** The FTE metrics only: the lines without an FTE, left out of the value. */
+  unknown?: Record<string, number>;
+};
+
 /** A field of a family the person may not read, and why: describe_entity_filters and the refusals say it. */
 export type AiWithheldField = {
   field: string;
@@ -327,25 +335,46 @@ export type AiAggregateResult = {
   data_access?: 'limited';
   data_access_note?: string;
   group_by: string;
+  /** Budget lines: the second group field; each group then carries `then_key`. */
+  then_by?: string;
   metric?: string | null;
+  /** Budget lines: the metrics measured together (2 to 8, one function); each group then carries `values`. */
+  metrics?: string[];
   /** `ratio`: a budget ratio metric (cost per FTE, day rate), computed by the server. */
   function?: 'count' | 'sum' | 'avg' | 'min' | 'max' | 'ratio';
   groups: Array<
     // `distinct_count`: a family with `distinctRecord` (vulnerabilities: the distinct CVE of the group).
-    | { key: string | null; count: number; distinct_count?: number }
+    // `then_key`: budget lines with `then_by`, the group's value of the second field (null: the lines without one).
+    | { key: string | null; then_key?: string | null; count: number; distinct_count?: number }
     // `unknown`: FTE metrics only, the lines of the group without an FTE (left out of the value).
-    | { key: string | null; value: number | string | null; unknown?: number }
+    | { key: string | null; then_key?: string | null; value: number | string | null; unknown?: number }
     | ({ key: string | null; count: number; value: number | null } & AiBudgetStaffFigures)
+    // Budget lines with `metrics`: one value per metric; `unknown` per FTE metric.
+    | AiBudgetMetricsRow & { key: string | null; then_key?: string | null }
   >;
   /**
    * Budget lines with a metric: the same measure over every line the filters keep (all groups
    * together), computed by the server. A ratio's overall figures are the ratios of the totals.
+   * With `metrics`, `values` and `unknown` per metric in place of `value` and `unknown`.
    */
-  overall?: { count: number; value: number | null; unknown?: number } & Partial<AiBudgetStaffFigures> & {
+  overall?: {
+    count: number;
+    value?: number | null;
+    values?: Record<string, number | null>;
+    unknown?: number | Record<string, number>;
+  } & Partial<AiBudgetStaffFigures> & {
     fte_without_line_detail?: number;
     fte_amount_not_following_lines?: number;
     staff_cost_not_in_day_rate?: number;
   };
+  /**
+   * Budget lines with `limit` (by default with `then_by`): the groups past it as one row, absent
+   * when there are none; `group_count` counts every group, these included.
+   */
+  others?: { count: number; value?: number | null; values?: Record<string, number | null>; unknown?: number | Record<string, number>; groups: number };
+  group_count?: number;
+  /** Budget lines: the number of groups returned at most, when one applies. */
+  limit?: number;
   /** Budget ratio metrics: how the figures are computed and what they leave out. */
   ratio_note?: string;
   total: number;

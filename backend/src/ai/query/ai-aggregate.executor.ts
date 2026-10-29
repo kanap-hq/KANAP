@@ -70,6 +70,7 @@ import {
   AiAggregateMetricDef,
   AiAggregateMetricType,
   AiAggregateResult,
+  AiBudgetMetricsRow,
   AiBudgetStaffFigures,
   AiDateFilterValue,
   AiEntityFilterRegistry,
@@ -486,8 +487,50 @@ function buildMetricAggregateExpression(fn: AiAggregateFunction, expression: str
   return round != null && fn !== 'sum' && fn !== 'count' ? `ROUND(${aggregate}, ${round})` : aggregate;
 }
 
-type BudgetValueGroup = { key: string | null; value: number | null; unknown?: number };
+type BudgetValueGroup = { key: string | null; then_key?: string | null; value: number | null; unknown?: number };
+type BudgetCountGroup = { key: string | null; then_key?: string | null; count: number };
+type BudgetMetricsGroup = AiBudgetMetricsRow & { key: string | null; then_key?: string | null };
 type BudgetOverall = NonNullable<AiAggregateResult['overall']>;
+type BudgetOthers = NonNullable<AiAggregateResult['others']>;
+
+/**
+ * The groups an aggregate of budget lines returns with `then_by` (by default) or `limit`, the rest
+ * in `others`. 50 is a page of query_entities; at most 100, as the top N of lines: a group is a few
+ * figures (100 groups of 8 values stay near 25 KB), and past that the answer is no longer a table a
+ * person reads, while `others` and `overall` keep the totals whole.
+ */
+export const AI_BUDGET_GROUP_LIMIT = { default: 50, max: 100 } as const;
+
+/**
+ * The budget fields that group a line linked to several records under the combination (the linked
+ * projects' names, streams and categories): crossed with another field, those combinations pile up
+ * into groups nobody reads, so a crossing refuses them.
+ */
+const BUDGET_MULTI_VALUED_GROUPS: Record<string, string> = {
+  project_name: 'projects',
+  project_stream: 'streams',
+  project_category: 'categories',
+};
+
+/**
+ * A budget metric with its own computation (the cost per FTE and the day rate), which `metrics`,
+ * `then_by` and `limit` do not take: the refusal, with what to ask instead; null for any other key.
+ */
+function budgetOwnPathRefusal(key: string, input: 'metrics' | 'then_by' | 'limit'): string | null {
+  if (!resolveBudgetRatioMetric(key)) return null;
+  return `${key} is a ratio the server computes on its own and does not take ${input}. `
+    + `Ask it as metric alone: each group then returns staff_fte, staff_cost, days, day_cost and day_rate. `
+    + 'For two fields, filter on one value of the first and group by the second; for several years or columns, one call per metric.';
+}
+
+/** The engine's refusal of a spec beyond its limits, in words a person reads (400). */
+function engineLimitRefusal(error: unknown): never {
+  if (error instanceof BadRequestException && /^Aggregate: /.test(error.message)) {
+    throw new BadRequestException(`The server cannot compute this aggregate in one call: ${error.message.replace(/^Aggregate: /, '')} `
+      + 'Ask fewer metrics, or split the question into several calls.');
+  }
+  throw error;
+}
 type BudgetRatioGroup = { key: string | null; count: number; value: number | null } & AiBudgetStaffFigures;
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
@@ -1079,6 +1122,62 @@ export class AiAggregateExecutor {
     throw new BadRequestException('Unsupported entity type.');
   }
 
+  /**
+   * Budget lines: `metrics` (2 to 8 metrics with one function, instead of `metric`), `then_by` (a
+   * second group field) and `limit` (the groups kept, 50 by default with `then_by`, the rest in
+   * `others`), checked and refused in words. The other families take none of them.
+   */
+  private resolveBudgetShape(
+    registry: AiEntityFilterRegistry,
+    input: { entity_type: AiQueryEntityType; group_by: string; metric?: string; metrics?: string[]; then_by?: string; limit?: number },
+    fn: AiAggregateFunction,
+  ): { metrics?: string[]; thenBy?: string; limit?: number } {
+    const metrics = input.metrics?.map((key) => key.trim()).filter(Boolean);
+    const thenBy = input.then_by?.trim() || undefined;
+    const asked = !!metrics?.length || !!thenBy || input.limit != null;
+    if (!asked) return {};
+    if (input.entity_type !== 'budget_lines') {
+      throw new BadRequestException('metrics, then_by and limit apply to budget lines only: on this family, group by one field with one metric.');
+    }
+    const metric = input.metric?.trim();
+    if (metric && metrics?.length) throw new BadRequestException('Give metric (one metric) or metrics (several), not both.');
+    // Ratios have their own computation: what to ask instead.
+    const ownPath = metric
+      ? budgetOwnPathRefusal(metric, thenBy ? 'then_by' : 'limit')
+      : (metrics ?? []).map((key) => budgetOwnPathRefusal(key, 'metrics')).find((refusal) => refusal);
+    if (ownPath) throw new BadRequestException(ownPath);
+    if (metrics?.length) {
+      if (metrics.length < 2 || metrics.length > 8) throw new BadRequestException('metrics takes 2 to 8 metrics; for one, use metric.');
+      if (new Set(metrics).size !== metrics.length) throw new BadRequestException('metrics names a metric twice.');
+      if (fn === 'count') throw new BadRequestException('metrics takes the function sum, avg, min or max (one for every metric); a count needs no metric.');
+      for (const key of metrics) {
+        const field = registry.fields[key];
+        if (!field || field.aggregable !== true || field.type !== 'number') {
+          throw new BadRequestException(`metrics: ${key} is not a metric of budget lines (an amount, an FTE or a line total, such as y_budget, y_budget_fte or y_budget_staff_cost).`);
+        }
+      }
+    }
+    if (thenBy) {
+      const withheld = registry.withheldFields?.find((entry) => entry.field === thenBy);
+      if (withheld) throw new ForbiddenException(`then_by ${withheld.field} is not available: ${withheld.reason}`);
+      const field = registry.fields[thenBy];
+      if (!field || field.groupable !== true) throw new BadRequestException('Unsupported then_by field: a group-by field describe_entity_filters lists.');
+      if (thenBy === input.group_by) throw new BadRequestException('then_by names the group_by field again: give a second field, or leave then_by out.');
+      for (const key of [input.group_by, thenBy]) {
+        const linked = BUDGET_MULTI_VALUED_GROUPS[key];
+        if (linked) {
+          throw new BadRequestException(`${key} groups a line linked to several ${linked} under the combination, which a second field cannot cross. `
+            + `Group by ${key} alone, or filter on one of its values and group by the other field.`);
+        }
+      }
+    }
+    const limit = input.limit ?? (thenBy ? AI_BUDGET_GROUP_LIMIT.default : undefined);
+    if (limit != null && !(Number.isInteger(limit) && limit >= 1 && limit <= AI_BUDGET_GROUP_LIMIT.max)) {
+      throw new BadRequestException(`limit is a whole number from 1 to ${AI_BUDGET_GROUP_LIMIT.max}.`);
+    }
+    return { ...(metrics?.length ? { metrics } : {}), ...(thenBy ? { thenBy } : {}), ...(limit != null ? { limit } : {}) };
+  }
+
   private resolveMetric(
     registry: AiEntityFilterRegistry,
     metric: string | undefined,
@@ -1470,15 +1569,36 @@ export class AiAggregateExecutor {
     filters: Record<string, any>,
     fn: AiAggregateFunction,
     metric: { key: string; def: AiAggregateMetricDef } | null,
-  ): Promise<{ groups: Array<{ key: string | null; count: number } | BudgetValueGroup>; total: number; fxMissing: FxMissingPair[] | null; overall: BudgetOverall | null }> {
+    // `metrics`: several metrics with one function (each group's `values`); `thenBy`: a second
+    // group field (`then_key`); `limit`: the groups kept, the rest in `others`.
+    more: { metrics?: string[]; thenBy?: string; limit?: number } = {},
+  ): Promise<{
+    groups: Array<BudgetCountGroup | BudgetValueGroup | BudgetMetricsGroup>;
+    total: number;
+    fxMissing: FxMissingPair[] | null;
+    overall: BudgetOverall | null;
+    others: BudgetOthers | null;
+    groupCount: number;
+  }> {
     const groupField = registry.fields[groupBy];
     if (!groupField) {
       throw new BadRequestException('Unsupported group_by field.');
     }
+    const thenField = more.thenBy ? registry.fields[more.thenBy] : null;
+    const keys = [groupField.grid, ...(thenField ? [thenField.grid] : [])];
+    const limit = more.limit != null ? { limit: more.limit, others: true } : {};
     let spec: AggregateSpec;
     let fte = false;
-    if (fn === 'count' || !metric) {
-      spec = { groupBy: [groupField.grid], measures: [], order: [{ by: 'count', dir: 'DESC' }] };
+    if (more.metrics?.length) {
+      // One measure per metric, ordered by the first.
+      spec = {
+        groupBy: keys,
+        measures: more.metrics.map((key, i) => ({ id: `m${i}`, fn: fn as 'sum' | 'avg' | 'min' | 'max', field: registry.fields[key].grid })),
+        order: [{ by: 'measure', id: 'm0', dir: getMetricOrderDirection(fn), nulls: 'LAST' }],
+        ...limit,
+      };
+    } else if (fn === 'count' || !metric) {
+      spec = { groupBy: keys, measures: [], order: [{ by: 'count', dir: 'DESC' }], ...limit };
     } else {
       const metricField = registry.fields[metric.key];
       if (!metricField) {
@@ -1488,26 +1608,59 @@ export class AiAggregateExecutor {
       const variant = resolveFteVariantField(metricField.grid);
       fte = resolveFteField(metricField.grid) != null || (variant != null && !isMoneyVariant(variant));
       spec = {
-        groupBy: [groupField.grid],
+        groupBy: keys,
         measures: [{ id: 'value', fn, field: metricField.grid }],
         order: [{ by: 'measure', id: 'value', dir: getMetricOrderDirection(fn), nulls: 'LAST' }],
+        ...limit,
       };
     }
 
     // The person's access, as the screen passes it: the consolidation fields read only for a reader of accounts.
     const access = await aiBudgetListAccess(this.policy, context);
-    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager, access });
+    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager, access })
+      .catch(engineLimitRefusal);
+    // `values` and `unknown` by metric name (the engine's measure ids are m0, m1...); `unknown` only for the FTE metrics.
+    const metricsRow = (row: { count: number; values: Record<string, number | null>; unknown: Record<string, number> }): AiBudgetMetricsRow => {
+      const names = more.metrics!;
+      const unknown = Object.fromEntries(names.flatMap((name, i) => (`m${i}` in row.unknown ? [[name, row.unknown[`m${i}`]]] : [])));
+      return {
+        count: row.count,
+        values: Object.fromEntries(names.map((name, i) => [name, row.values[`m${i}`] ?? null])),
+        ...(Object.keys(unknown).length ? { unknown } : {}),
+      };
+    };
     const groups = result.groups.map((group) => {
       const key = group.keys[0] ?? null;
-      if (!spec.measures.length) return { key, count: group.count };
-      return fte ? { key, value: group.values.value, unknown: group.unknown.value } : { key, value: group.values.value };
+      // A null `then_key` is a real group: the lines without a value of the second field.
+      const then = thenField ? { then_key: group.keys[1] ?? null } : {};
+      if (more.metrics?.length) return { key, ...then, ...metricsRow(group) };
+      if (!spec.measures.length) return { key, ...then, count: group.count };
+      return fte ? { key, ...then, value: group.values.value, unknown: group.unknown.value } : { key, ...then, value: group.values.value };
     });
     // The same measure over every line (all groups together): a total the answer quotes, never adds up.
-    const overall: BudgetOverall | null = spec.measures.length
-      ? { count: result.total.count, value: result.total.values.value ?? null, ...(fte ? { unknown: result.total.unknown.value ?? 0 } : {}) }
-      : null;
+    let overall: BudgetOverall | null = null;
+    if (more.metrics?.length) overall = metricsRow(result.total);
+    else if (spec.measures.length) {
+      overall = { count: result.total.count, value: result.total.values.value ?? null, ...(fte ? { unknown: result.total.unknown.value ?? 0 } : {}) };
+    }
+    // The groups past the limit, as one row, with the number of groups it holds.
+    const othersGroups = result.groupCount - groups.length;
+    let others: BudgetOthers | null = null;
+    if (result.others && othersGroups > 0) {
+      const row = result.others;
+      if (more.metrics?.length) others = { ...metricsRow(row), groups: othersGroups };
+      else if (!spec.measures.length) others = { count: row.count, groups: othersGroups };
+      else others = { count: row.count, value: row.values.value ?? null, ...(fte ? { unknown: row.unknown.value ?? 0 } : {}), groups: othersGroups };
+    }
     // The amounts left out of the values for lack of a rate (`[]` when none); null without a measure.
-    return { groups, total: result.total.count, fxMissing: spec.measures.length ? result.fxMissing ?? [] : null, overall };
+    return {
+      groups,
+      total: result.total.count,
+      fxMissing: spec.measures.length ? result.fxMissing ?? [] : null,
+      overall,
+      others,
+      groupCount: result.groupCount,
+    };
   }
 
   /**
@@ -1579,6 +1732,9 @@ export class AiAggregateExecutor {
       entity_type: AiQueryEntityType;
       group_by: string;
       metric?: string;
+      metrics?: string[];
+      then_by?: string;
+      limit?: number;
       function?: AiAggregateFunction;
       filters?: Record<string, AiFilterValue>;
       q?: string;
@@ -1594,9 +1750,10 @@ export class AiAggregateExecutor {
     }
     // A sum or an average of amounts names their currency; a count or an FTE has none.
     const metric = input.metric?.trim() ?? '';
-    const isAmount = metric !== '' && (
-      isBudgetLineEntity(input.entity_type) ? isBudgetMoneyKey(metric) : metric.startsWith('yearly_amount')
-    );
+    // With `metrics` (budget lines), one amount among them is enough: the note names their currency.
+    const isAmount = isBudgetLineEntity(input.entity_type) && result.metrics?.length
+      ? result.metrics.some(isBudgetMoneyKey)
+      : metric !== '' && (isBudgetLineEntity(input.entity_type) ? isBudgetMoneyKey(metric) : metric.startsWith('yearly_amount'));
     const amounts = isAmount ? await aiAmountsCurrency(context, input.entity_type, 'list', result.amounts_fx_missing) : null;
     return amounts ? { ...result, ...amounts } : result;
   }
@@ -1627,6 +1784,9 @@ export class AiAggregateExecutor {
       entity_type: AiQueryEntityType;
       group_by: string;
       metric?: string;
+      metrics?: string[];
+      then_by?: string;
+      limit?: number;
       function?: AiAggregateFunction;
       filters?: Record<string, AiFilterValue>;
       q?: string;
@@ -1648,7 +1808,8 @@ export class AiAggregateExecutor {
     // A budget ratio (cost per FTE, day rate) is no field: the server computes it whatever the function.
     const ratio = isBudgetLineEntity(input.entity_type) ? resolveBudgetRatioMetric(input.metric?.trim()) : null;
     const fn = normalizeAggregateFunction(input.function);
-    const metric = ratio ? null : this.resolveMetric(registry, input.metric?.trim(), fn);
+    const budget = this.resolveBudgetShape(registry, input, fn);
+    const metric = ratio || budget.metrics ? null : this.resolveMetric(registry, input.metric?.trim(), fn);
     const normalizedFilters = await this.normalizePersonFilters(context, input.entity_type, input.filters);
     const adapted = adaptFilters(registry, normalizedFilters);
     if (adapted.ignored.length > 0) {
@@ -1656,7 +1817,9 @@ export class AiAggregateExecutor {
       return {
         status: refusal.status,
         group_by: input.group_by,
+        ...(budget.thenBy ? { then_by: budget.thenBy } : {}),
         metric: metric || ratio ? input.metric?.trim() ?? null : null,
+        ...(budget.metrics ? { metrics: budget.metrics } : {}),
         function: ratio ? 'ratio' : fn,
         groups: [],
         total: 0,
@@ -1953,7 +2116,7 @@ export class AiAggregateExecutor {
     }
 
     if (input.entity_type === 'budget_lines') {
-      const { groups, total, fxMissing, overall } = await this.aggregateBudgetSummary(
+      const { groups, total, fxMissing, overall, others, groupCount } = await this.aggregateBudgetSummary(
         context,
         registry,
         input.group_by,
@@ -1961,16 +2124,22 @@ export class AiAggregateExecutor {
         adapted.filters,
         fn,
         metric,
+        { metrics: budget.metrics, thenBy: budget.thenBy, limit: budget.limit },
       );
       return {
         group_by: input.group_by,
+        ...(budget.thenBy ? { then_by: budget.thenBy } : {}),
         metric: metric?.key ?? null,
+        ...(budget.metrics ? { metrics: budget.metrics } : {}),
         function: fn,
         groups,
         ...(overall ? { overall } : {}),
+        ...(others ? { others } : {}),
+        ...(budget.limit != null ? { limit: budget.limit, group_count: groupCount } : {}),
         total,
         returned: groups.length,
-        truncated: false,
+        // With a limit, the groups past it are in `others`: the figures stay whole (`complete`).
+        truncated: groupCount > groups.length,
         complete: isCompleteAggregateResult(null),
         filters_applied: adapted.applied,
         filters_ignored: adapted.ignored,
