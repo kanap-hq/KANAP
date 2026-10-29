@@ -5,7 +5,7 @@ import { Repository, EntityManager } from 'typeorm';
 import { Role } from './role.entity';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
-import { PermissionsService, RESOURCES } from '../permissions/permissions.service';
+import { PermissionsService } from '../permissions/permissions.service';
 import { RolePermission } from '../permissions/role-permission.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UserRole } from '../users/user-role.entity';
@@ -73,18 +73,8 @@ export class RolesController {
   async getRoles(@Req() req: any) {
     const mg: EntityManager | undefined = req?.queryRunner?.manager;
     const items = await this.rolesService.list({ manager: mg });
-    // One grouped count on the request's single connection: pg refuses a query sent while another
-    // one runs (deprecated since pg 8, an error in pg 9).
-    const rows: Array<{ role_id: string; user_count: number | string }> = items.length
-      ? await (mg ?? this.userRoleRepo.manager).query(
-        `SELECT role_id, COUNT(*)::int AS user_count
-           FROM user_roles
-          WHERE tenant_id = app_current_tenant() AND role_id = ANY($1::uuid[])
-          GROUP BY role_id`,
-        [items.map((role) => role.id)],
-      )
-      : [];
-    const counts = new Map(rows.map((row) => [row.role_id, Number(row.user_count)]));
+    // On the request's single connection (the assistant reads the same count).
+    const counts = await this.rolesService.userCounts(items.map((role) => role.id), { manager: mg ?? this.userRoleRepo.manager });
     return { items: items.map((role) => ({ ...role, user_count: counts.get(role.id) ?? 0 })) };
   }
 
@@ -199,11 +189,7 @@ export class RolesController {
     const mg: EntityManager | undefined = req?.queryRunner?.manager;
     const role = await (mg ?? this.roleRepo.manager).getRepository(Role).findOne({ where: { id } });
     if (!role) throw new BadRequestException('Role not found');
-    const map = await this.perms.getRolePermissionsMap(id, { manager: mg });
-    // Ensure all resources present (default none)
-    const out: Record<string, 'reader'|'contributor'|'member'|'admin'|null> = {} as any;
-    for (const r of RESOURCES) out[r] = (map as any)[r] ?? null;
-    return out;
+    return this.perms.getRolePermissionMatrix(id, { manager: mg });
   }
 
   @ReservedToUnscopedDataAccess()

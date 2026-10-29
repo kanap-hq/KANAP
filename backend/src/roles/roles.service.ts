@@ -19,6 +19,24 @@ export class RolesService {
     return repo.find({ order: { role_name: 'ASC' } });
   }
 
+  /**
+   * The number of people each role is given to, as the Roles screen counts them (`GET /roles`):
+   * the rows of `user_roles`, which hold the primary role too. One grouped count on the caller's
+   * connection: pg refuses a query sent while another one runs (deprecated since pg 8, an error in
+   * pg 9).
+   */
+  async userCounts(roleIds: string[], opts?: { manager?: EntityManager }): Promise<Map<string, number>> {
+    if (roleIds.length === 0) return new Map();
+    const rows: Array<{ role_id: string; user_count: number | string }> = await (opts?.manager ?? this.repo.manager).query(
+      `SELECT role_id, COUNT(*)::int AS user_count
+         FROM user_roles
+        WHERE tenant_id = app_current_tenant() AND role_id = ANY($1::uuid[])
+        GROUP BY role_id`,
+      [roleIds],
+    );
+    return new Map(rows.map((row) => [row.role_id, Number(row.user_count)]));
+  }
+
   async findByName(role_name: string, opts?: { manager?: EntityManager }) {
     const repo = (opts?.manager ?? this.repo.manager).getRepository(Role);
     return repo.findOne({ where: { role_name } });
