@@ -1872,6 +1872,58 @@ async function testTechnologyWebLinks(harness: Harness) {
     );
     assert.deepEqual(links, [{ url: 'https://example.com/docs', description: 'Old page' }]);
   });
+  // An addition of an address already on the fiche is listed as already present and writes
+  // nothing; the rest of the request goes through. Only an address the request itself writes
+  // twice is a duplicate.
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-web-links-already');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_web_links', {
+      technology: 'TEC-1',
+      add: [
+        { url: 'https://example.com/docs', description: 'Docs again' },
+        { url: 'https://example.com/new', description: 'New' },
+      ],
+    });
+    assert.equal(
+      preview.changes.technology_web_links.to,
+      '**Added**\n- https://example.com/new (New)'
+      + '\n\n**Already present**\n- https://example.com/docs',
+    );
+    await approvePreview(harness, ctx, preview);
+    const links = await runner.query(
+      `SELECT url, description FROM technology_links WHERE tenant_id = $1 AND technology_id = $2 ORDER BY url`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    assert.deepEqual(links, [
+      { url: 'https://example.com/docs', description: 'Docs' },
+      { url: 'https://example.com/new', description: 'New' },
+      { url: 'https://example.com/old', description: 'Old page' },
+    ], 'the existing address keeps its description and the new one is written');
+    // Only that addition: the existing address is already there, so nothing changes.
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'update_technology_web_links', {
+        technology: 'TEC-1', add: [{ url: 'https://example.com/docs' }],
+      }),
+      'Nothing to change: TEC-1 - PostgreSQL already has these web links.',
+    );
+    // An address an update frees can be added in the same request: the request writes it once.
+    const moved = await executeToolPreview(harness, ctx, 'update_technology_web_links', {
+      technology: 'TEC-1',
+      update: [{ url: 'https://example.com/new', new_url: 'https://example.com/release' }],
+      add: [{ url: 'https://example.com/new', description: 'New page' }],
+    });
+    await approvePreview(harness, ctx, moved);
+    const after = await runner.query(
+      `SELECT url, description FROM technology_links WHERE tenant_id = $1 AND technology_id = $2 ORDER BY url`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    assert.deepEqual(after, [
+      { url: 'https://example.com/docs', description: 'Docs' },
+      { url: 'https://example.com/new', description: 'New page' },
+      { url: 'https://example.com/old', description: 'Old page' },
+      { url: 'https://example.com/release', description: 'New' },
+    ], 'the freed address is added back once');
+  });
   await withSeededTransaction(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'technology-web-links-drift');
     const preview = await executeToolPreview(harness, ctx, 'update_technology_web_links', {

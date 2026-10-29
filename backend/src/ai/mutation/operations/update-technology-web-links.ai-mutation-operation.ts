@@ -374,6 +374,10 @@ export class UpdateTechnologyWebLinksAiMutationOperation implements AiMutationOp
 
     const planned = new Map(before.map((link) => [link.id, { ...link }]));
     const removedUrls = new Set<string>();
+    // The addresses the request writes itself: an update that moves a link, or an addition. A
+    // second write of one of them is the duplicate the request creates, not an address that was
+    // already there.
+    const createdUrls = new Set<string>();
     for (const entry of input.remove ?? []) {
       const url = text(entry.url);
       const link = designatedUrl(url, 'remove');
@@ -397,6 +401,7 @@ export class UpdateTechnologyWebLinksAiMutationOperation implements AiMutationOp
         // holds (untouched or updated) cannot.
         const newHolder = [...planned.values()].find((row) => row.id !== link.id && row.url === newUrl);
         if (newHolder) throw new BadRequestException(`A link with the address "${newUrl}" already exists.`);
+        createdUrls.add(newUrl);
       }
       const description = descriptionGiven ? optionalText(entry.description, 'Description', 2000) : link.description;
       const next = { id: link.id, url: newUrl, description };
@@ -408,15 +413,21 @@ export class UpdateTechnologyWebLinksAiMutationOperation implements AiMutationOp
     for (const entry of input.add ?? []) {
       const url = webLinkUrl(entry.url);
       const description = optionalText(entry.description, 'Description', 2000);
-      // The projected set after the removals and the updates: an addition may not create a second
-      // link of an address the set would hold, nor put back an address the same request removes.
+      // An address the same request removes stays refused: it would put back what it takes away.
       if (removedUrls.has(url)) {
         throw new BadRequestException(`The link "${url}" is removed and added in the same request: keep one.`);
       }
-      if ([...planned.values()].some((link) => link.url === url)) {
+      // Only an address the request itself writes twice is a duplicate. An address already on the
+      // fiche, untouched by the request, is listed as already present and writes nothing.
+      if (createdUrls.has(url)) {
         throw new BadRequestException(`A link with the address "${url}" already exists.`);
       }
+      if ([...planned.values()].some((link) => link.url === url)) {
+        already.push({ url, description });
+        continue;
+      }
       add.push({ url, description });
+      createdUrls.add(url);
       planned.set(`new:${url}`, { id: `new:${url}`, url, description });
     }
 
