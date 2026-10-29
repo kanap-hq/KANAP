@@ -16,7 +16,7 @@ import TaskMetadataBar from './TaskMetadataBar';
 import SendLinkButton from '../../../components/workspace/SendLinkButton';
 import type { TaskCrumb } from '../taskWorkspaceOrigin';
 import DeleteIconButton from '../../../components/workspace/DeleteIconButton';
-import RecordHistoryButton from '../../../components/history/RecordHistoryButton';
+import WorkspaceTabs, { type WorkspaceTab } from '../../portfolio/workspace/WorkspaceTabs';
 import EditableTitle from '../../../components/workspace/EditableTitle';
 
 function isModifiedClick(event: React.MouseEvent) {
@@ -66,6 +66,11 @@ interface TaskDetailHeaderProps {
   crumbs: TaskCrumb[];
   onOriginClick: () => void;
   onParentClick: (href: string) => void;
+
+  // Tab row
+  tabs: WorkspaceTab[];
+  activeTab: string;
+  onTabChange: (nextTab: string) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -106,6 +111,9 @@ export default function TaskDetailHeader({
   crumbs,
   onOriginClick,
   onParentClick,
+  tabs,
+  activeTab,
+  onTabChange,
 }: TaskDetailHeaderProps) {
   const { t } = useTranslation(['portfolio', 'common']);
   const originCrumb = crumbs.find((crumb) => crumb.key === 'origin');
@@ -198,9 +206,9 @@ export default function TaskDetailHeader({
       </Box>
 
       {/* ---- TitleBlock ---- */}
-      <Box sx={{ pt: taskDetailTokens.titleBlock.pt, px: taskDetailTokens.titleBlock.px, pb: taskDetailTokens.titleStack.metadataOnlyBottomGap }}>
+      <Box sx={{ pt: taskDetailTokens.titleBlock.pt, px: taskDetailTokens.titleBlock.px, pb: taskDetailTokens.titleBlock.pb }}>
         {/* Title row */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: taskDetailTokens.titleRow.gap }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: taskDetailTokens.titleRow.gap, mb: taskDetailTokens.titleStack.metadataToTabsGap }}>
           <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: taskDetailTokens.titleStack.gap }}>
             <Box component="h1" sx={{ ...taskDetailTypography.title, m: 0, minWidth: 0, display: 'flex', alignItems: 'baseline' }}>
               {itemNumber && (
@@ -260,9 +268,6 @@ export default function TaskDetailHeader({
               itemNumber={itemNumber}
             />
 
-            {/* The task has no tab row: its history opens from the header. The header only draws a saved task. */}
-            {taskId && taskId !== 'new' && <RecordHistoryButton table="tasks" recordId={taskId} />}
-
             <Button
               variant="action"
               onClick={onConvertToRequest}
@@ -286,6 +291,8 @@ export default function TaskDetailHeader({
             </IconButton>
           </Box>
         </Box>
+
+        <WorkspaceTabs tabs={tabs} activeTab={activeTab} onTabChange={onTabChange} />
       </Box>
     </Box>
   );

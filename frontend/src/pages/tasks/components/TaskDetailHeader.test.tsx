@@ -25,12 +25,6 @@ vi.mock('../../../components/workspace/SendLinkButton', () => ({
   default: () => <button type="button">Share</button>,
 }));
 
-vi.mock('../../../components/history/RecordHistoryButton', () => ({
-  default: ({ table, recordId }: { table: string; recordId: string }) => (
-    <button type="button" data-testid="record-history" data-table={table} data-record={recordId}>History</button>
-  ),
-}));
-
 const theme = createAppTheme('dark');
 
 const originCrumb: TaskCrumb = {
@@ -50,14 +44,16 @@ const parentCrumb: TaskCrumb = {
 function renderHeader(crumbs: TaskCrumb[], handlers?: {
   onOriginClick?: ReturnType<typeof vi.fn<() => void>>;
   onParentClick?: ReturnType<typeof vi.fn<(href: string) => void>>;
-  taskId?: string;
+  onTabChange?: ReturnType<typeof vi.fn<(tab: string) => void>>;
+  activeTab?: string;
 }) {
   const onOriginClick = handlers?.onOriginClick ?? vi.fn<() => void>();
   const onParentClick = handlers?.onParentClick ?? vi.fn<(href: string) => void>();
+  const onTabChange = handlers?.onTabChange ?? vi.fn<(tab: string) => void>();
   render(
     <ThemeProvider theme={theme}>
       <TaskDetailHeader
-        taskId={handlers?.taskId ?? 'task-1'}
+        taskId="task-1"
         itemNumber={2}
         title="SAP Cheddar vendor selection"
         status="open"
@@ -86,27 +82,34 @@ function renderHeader(crumbs: TaskCrumb[], handlers?: {
         canManage
         canDelete
         canConvertToRequest
+        tabs={[
+          { key: 'overview', label: 'Overview' },
+          { key: 'history', label: 'History' },
+        ]}
+        activeTab={handlers?.activeTab ?? 'overview'}
+        onTabChange={onTabChange}
       />
     </ThemeProvider>,
   );
-  return { onOriginClick, onParentClick };
+  return { onOriginClick, onParentClick, onTabChange };
 }
 
-describe('TaskDetailHeader history', () => {
-  it('opens the task history from the header, between the share and convert actions', () => {
+describe('TaskDetailHeader tabs', () => {
+  it('draws the Overview and History tabs, History last, and no History button among the actions', () => {
     renderHeader([originCrumb]);
-    const history = screen.getByTestId('record-history');
-    expect(history).toHaveAttribute('data-table', 'tasks');
-    expect(history).toHaveAttribute('data-record', 'task-1');
-    const share = screen.getByRole('button', { name: 'Share' });
-    const convert = screen.getByRole('button', { name: 'portfolio:actions.convertToRequest' });
-    expect(share.compareDocumentPosition(history) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(history.compareDocumentPosition(convert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'History']);
+    expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('button', { name: 'History' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'portfolio:actions.convertToRequest' })).toBeInTheDocument();
   });
 
-  it('has no history while the task is being created', () => {
-    renderHeader([originCrumb], { taskId: 'new' });
-    expect(screen.queryByTestId('record-history')).not.toBeInTheDocument();
+  it('marks the active tab and reports a tab change', () => {
+    const { onTabChange } = renderHeader([originCrumb], { activeTab: 'history' });
+    expect(screen.getByRole('tab', { name: 'History' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByRole('tab', { name: 'Overview' }));
+    expect(onTabChange).toHaveBeenCalledWith('overview');
   });
 });
 

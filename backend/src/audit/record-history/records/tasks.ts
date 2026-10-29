@@ -5,7 +5,7 @@ import type { HistoryFields } from '../field-rules';
 import { hidden, hiddenChanged, shown } from '../field-rules';
 
 /**
- * The task (lot 2, linked records): its page (a History button in its header, it has no tab row),
+ * The task (lot 2, linked records): its page (a History tab, last in its tab row),
  * the audit labels of its own row and of its children, their allow-lists and their parent rules.
  *
  * The record entry is read by `record-history.inventory.ts`, the fields by `../fields.ts` and the

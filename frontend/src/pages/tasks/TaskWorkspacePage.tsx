@@ -38,6 +38,8 @@ import { budgetLineDetailQuery } from '../../hooks/budgetItemDetailQuery';
 import { formatItemRef } from '../../utils/item-ref';
 import { buildInlineImageUrl, resolveInlineImageTenantSlug } from '../../utils/inlineImageUrls';
 import ConvertToRequestDialog from './components/ConvertToRequestDialog';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import {
   TASK_STATUS_COLORS,
   TASK_STATUS_OPTIONS,
@@ -173,6 +175,11 @@ function taskMatchesRoute(task: TaskData | null | undefined, routeId: string): b
 
 const MarkdownEditor = React.lazy(() => import('../../components/MarkdownEditor'));
 
+const TASK_TAB_KEYS = ['overview', RECORD_HISTORY_TAB_KEY] as const;
+type TaskTabKey = typeof TASK_TAB_KEYS[number];
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
+
 export default function TaskWorkspacePage() {
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
   const dialogs = useKanapDialogs();
@@ -197,6 +204,9 @@ export default function TaskWorkspacePage() {
 
   const id = String(params.id || '');
   const isCreate = id === 'new';
+  // The tab is part of the address; an address without one, or with an unknown one, opens Overview.
+  const rawTab = String(params.tab || '');
+  const activeTab: TaskTabKey = (TASK_TAB_KEYS as readonly string[]).includes(rawTab) ? rawTab as TaskTabKey : 'overview';
   const canManage = hasLevel('tasks', 'member');
   const canDelete = hasLevel('tasks', 'admin');
   const canCreateRequest = hasLevel('portfolio_requests', 'member');
@@ -1379,8 +1389,25 @@ export default function TaskWorkspacePage() {
       }
     }
     const qs = cleanedSearchParams.toString();
-    navigate(`/portfolio/tasks/${targetId}${qs ? `?${qs}` : ''}`);
-  }, [buildTaskFormFromTask, cleanedSearchParams, dialogs, dirty, handleSave, navigate, resetClassificationTouched, task, t, waitForSidebarSaves]);
+    navigate(`/portfolio/tasks/${targetId}/${activeTab}${qs ? `?${qs}` : ''}`);
+  }, [activeTab, buildTaskFormFromTask, cleanedSearchParams, dialogs, dirty, handleSave, navigate, resetClassificationTouched, task, t, waitForSidebarSaves]);
+
+  // A tab change keeps the page: the pending description and side panel saves go first.
+  const handleTabChange = React.useCallback(async (nextTab: string) => {
+    if (nextTab === activeTab) return;
+    if (descAutosaveTimerRef.current) {
+      clearTimeout(descAutosaveTimerRef.current);
+      descAutosaveTimerRef.current = null;
+      await handleDescriptionAutosave(description);
+    }
+    await waitForSidebarSaves();
+    const qs = cleanedSearchParams.toString();
+    navigate(`/portfolio/tasks/${id}/${nextTab}${qs ? `?${qs}` : ''}`);
+  }, [activeTab, cleanedSearchParams, description, handleDescriptionAutosave, id, navigate, waitForSidebarSaves]);
+  const taskTabs = React.useMemo(() => [
+    { key: 'overview', label: t('portfolio:workspace.task.tabs.overview') },
+    { key: RECORD_HISTORY_TAB_KEY, label: t('portfolio:workspace.task.tabs.history') },
+  ], [t]);
 
   const formatDate = (dateStr: string) => formatShortDateTime(dateStr, locale);
 
@@ -1899,6 +1926,9 @@ export default function TaskWorkspacePage() {
             if (ok) navigate(href);
           });
         }}
+        tabs={taskTabs}
+        activeTab={activeTab}
+        onTabChange={(next) => { void handleTabChange(next); }}
       />
 
       {error && (
@@ -1931,77 +1961,88 @@ export default function TaskWorkspacePage() {
           sx={{ flex: isMobile ? 'none' : 1, minWidth: 0, overflow: isMobile ? 'visible' : 'auto', outline: 'none', pt: '8px', pl: 3, pr: isMobile ? 3 : '29px', pb: 3 }}
           onScroll={handleMainContentScroll}
         >
-          {/* Description */}
-          <Box sx={{ mb: contentSpacing.sectionLarge }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-              <Typography variant="subtitle2" fontWeight={500}>
-                {t('portfolio:labels.description')}
-              </Typography>
-              {descSaveStatus === 'saved' && (
-                <Typography
-                  sx={{
-                    fontSize: 12,
-                    color: 'kanap.text.secondary',
-                    fontWeight: 400,
-                  }}
-                >
-                  {'✓ '}{t('common:status.saved')}
-                </Typography>
-              )}
-            </Stack>
-            {initialized ? (
-              <React.Suspense fallback={<Box sx={{ minHeight: 10 * 24, border: 1, borderColor: 'divider', borderRadius: 1 }} />}>
-                <MarkdownEditor
-                  key={`task-description:${id || 'create'}:${descriptionResetNonce}`}
-                  value={description}
-                  onChange={(val) => { setDescription(val); setDirty(true); }}
-                  placeholder={t('portfolio:workspace.task.description.placeholder')}
-                  minRows={10}
-                  maxRows={26}
-                  collapsedRows={16}
-                  disabled={!canManageCurrentTask}
-                  onImageUpload={handleUploadImage}
-                  onImageUrlImport={handleImportImageUrl}
-                  focusNonce={descriptionFocusNonce}
-                  refreshNonce={descriptionResetNonce}
-                  hideToolbarUntilFocus
-                  surface
-                  delegateWheelUntilFocus
-                />
-              </React.Suspense>
-            ) : (
-              <Box sx={{ minHeight: 10 * 24, border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
-                <Typography color="text.secondary">{t('common:status.loading')}</Typography>
+          {activeTab === 'overview' && (
+            <>
+              {/* Description */}
+              <Box sx={{ mb: contentSpacing.sectionLarge }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                  <Typography variant="subtitle2" fontWeight={500}>
+                    {t('portfolio:labels.description')}
+                  </Typography>
+                  {descSaveStatus === 'saved' && (
+                    <Typography
+                      sx={{
+                        fontSize: 12,
+                        color: 'kanap.text.secondary',
+                        fontWeight: 400,
+                      }}
+                    >
+                      {'✓ '}{t('common:status.saved')}
+                    </Typography>
+                  )}
+                </Stack>
+                {initialized ? (
+                  <React.Suspense fallback={<Box sx={{ minHeight: 10 * 24, border: 1, borderColor: 'divider', borderRadius: 1 }} />}>
+                    <MarkdownEditor
+                      key={`task-description:${id || 'create'}:${descriptionResetNonce}`}
+                      value={description}
+                      onChange={(val) => { setDescription(val); setDirty(true); }}
+                      placeholder={t('portfolio:workspace.task.description.placeholder')}
+                      minRows={10}
+                      maxRows={26}
+                      collapsedRows={16}
+                      disabled={!canManageCurrentTask}
+                      onImageUpload={handleUploadImage}
+                      onImageUrlImport={handleImportImageUrl}
+                      focusNonce={descriptionFocusNonce}
+                      refreshNonce={descriptionResetNonce}
+                      hideToolbarUntilFocus
+                      surface
+                      delegateWheelUntilFocus
+                    />
+                  </React.Suspense>
+                ) : (
+                  <Box sx={{ minHeight: 10 * 24, border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                    <Typography color="text.secondary">{t('common:status.loading')}</Typography>
+                  </Box>
+                )}
               </Box>
-            )}
-          </Box>
 
-          {/* Attachments */}
-          {(canManageCurrentTask || attachments.length > 0) && (
-            <Box sx={{ mb: contentSpacing.section }}>
-              <TaskAttachments
+              {/* Attachments */}
+              {(canManageCurrentTask || attachments.length > 0) && (
+                <Box sx={{ mb: contentSpacing.section }}>
+                  <TaskAttachments
+                    taskId={task.id}
+                    attachments={attachments}
+                    onUpload={handleUploadAttachment}
+                    onDelete={handleDeleteAttachment}
+                    canManage={canManageCurrentTask}
+                  />
+                </Box>
+              )}
+
+              <Divider sx={{ my: contentSpacing.section }} />
+
+              {/* Activity Section */}
+              <TaskActivity
                 taskId={task.id}
-                attachments={attachments}
-                onUpload={handleUploadAttachment}
-                onDelete={handleDeleteAttachment}
-                canManage={canManageCurrentTask}
+                projectId={isProjectTask && effectiveTask.related_object_id ? effectiveTask.related_object_id : undefined}
+                readOnly={!canManageCurrentTask}
+                relatedObjectType={effectiveTask.related_object_type ?? undefined}
+                currentStatus={effectiveTask.status}
+                totalTimeHours={totalTimeHours}
+                initialStatus={initialStatus}
+                commentFocusNonce={commentFocusNonce}
               />
-            </Box>
+            </>
           )}
-
-          <Divider sx={{ my: contentSpacing.section }} />
-
-          {/* Activity Section */}
-          <TaskActivity
-            taskId={task.id}
-            projectId={isProjectTask && effectiveTask.related_object_id ? effectiveTask.related_object_id : undefined}
-            readOnly={!canManageCurrentTask}
-            relatedObjectType={effectiveTask.related_object_type ?? undefined}
-            currentStatus={effectiveTask.status}
-            totalTimeHours={totalTimeHours}
-            initialStatus={initialStatus}
-            commentFocusNonce={commentFocusNonce}
-          />
+          {activeTab === RECORD_HISTORY_TAB_KEY && (
+            <WorkspaceTabBoundary resetKey={activeTab} onRetry={historyTab.retry}>
+              <React.Suspense fallback={null}>
+                <HistoryTab key={task.id} table="tasks" recordId={task.id} />
+              </React.Suspense>
+            </WorkspaceTabBoundary>
+          )}
         </Box>
 
         {/* Tab-anchor: zero-width column with absolutely-positioned classeur tab */}

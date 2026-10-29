@@ -929,6 +929,10 @@
           "emptyNotes": "-",
           "unknownPerson": "Unknown"
         }
+      },
+      "tabs": {
+        "overview": "Overview",
+        "history": "History"
       }
     }
   },
