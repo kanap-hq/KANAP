@@ -729,7 +729,34 @@
       "hours": "Temps",
       "logged_at": "Date",
       "related_object": "Lié à",
-      "converted_to_request": "Convertie en demande"
+      "converted_to_request": "Convertie en demande",
+      "actual_effort_business": "Charge métier réelle",
+      "actual_effort_it": "Charge IT réelle",
+      "actual_start": "Début réel",
+      "actual_end": "Fin réelle",
+      "baseline_effort_business": "Charge métier de référence",
+      "baseline_effort_it": "Charge IT de référence",
+      "baseline_start_date": "Début de référence",
+      "baseline_end_date": "Fin de référence",
+      "business_effort_allocation_mode": "Mode de ventilation de la charge métier",
+      "it_effort_allocation_mode": "Mode de ventilation de la charge IT",
+      "business_sponsor_id": "Sponsor métier",
+      "it_sponsor_id": "Sponsor IT",
+      "category_id": "Catégorie",
+      "source_id": "Source",
+      "stream_id": "Filière",
+      "estimated_effort_business": "Charge métier",
+      "estimated_effort_it": "Charge IT",
+      "execution_progress": "Avancement",
+      "override_justification": "Justification de la surcharge",
+      "override_value": "Valeur de surcharge",
+      "priority_override": "Surcharge de priorité",
+      "priority_score": "Score de priorité",
+      "scheduling_mode": "Mode de planification",
+      "source_request_id": "Créé à partir de la demande",
+      "target_date": "Date cible",
+      "phase_status": "Statut",
+      "milestone_status": "Statut"
     },
     "history": {
       "empty": "Aucun historique",
@@ -778,7 +805,8 @@
         "phaseChanged": "Phase modifiée",
         "sourceChanged": "Source modifiée",
         "categoryChanged": "Catégorie modifiée",
-        "streamChanged": "Filière modifiée"
+        "streamChanged": "Filière modifiée",
+        "purposeChanged": "Objectif modifié"
       },
       "actors": {
         "assistant": "Plaid",
@@ -937,6 +965,26 @@
         "task_viewer": {
           "added": "Observateur ajouté : {{label}}",
           "removed": "Observateur retiré : {{label}}"
+        },
+        "phase": {
+          "added": "Phase ajoutée : {{label}}",
+          "removed": "Phase retirée : {{label}}"
+        },
+        "milestone": {
+          "added": "Jalon ajouté : {{label}}",
+          "removed": "Jalon retiré : {{label}}"
+        },
+        "time_entry": {
+          "added": "Temps saisi ajouté : {{label}}",
+          "removed": "Temps saisi retiré : {{label}}"
+        },
+        "it_team": {
+          "added": "Membre de l'équipe IT ajouté : {{label}}",
+          "removed": "Membre de l'équipe IT retiré : {{label}}"
+        },
+        "business_team": {
+          "added": "Membre de l'équipe métier ajouté : {{label}}",
+          "removed": "Membre de l'équipe métier retiré : {{label}}"
         }
       },
       "unnamed": {
@@ -991,7 +1039,16 @@
         "binding": "une liaison",
         "person": "une personne",
         "instance": "un environnement",
-        "assignment": "un serveur"
+        "assignment": "un serveur",
+        "phase": "une phase",
+        "milestone": "un jalon",
+        "time_entry": "un temps saisi",
+        "team": "une équipe",
+        "dependency": "une dépendance",
+        "criterion_value": "une option",
+        "portfolio_source": "une source",
+        "portfolio_category": "une catégorie",
+        "portfolio_stream": "une filière"
       },
       "deleted": {
         "record": "un enregistrement supprimé",
@@ -1045,7 +1102,13 @@
         "binding": "une liaison supprimée",
         "person": "une personne supprimée",
         "instance": "un environnement supprimé",
-        "assignment": "un serveur supprimé"
+        "assignment": "un serveur supprimé",
+        "phase": "une phase supprimée",
+        "milestone": "un jalon supprimé",
+        "time_entry": "un temps saisi supprimé",
+        "team": "une équipe supprimée",
+        "dependency": "une dépendance supprimée",
+        "criterion_value": "une option supprimée"
       },
       "title": "Historique",
       "metricsYear": "Indicateurs {{year}}",
@@ -1082,7 +1145,13 @@
       "instance": "Environnement {{environment}}",
       "timeEntry": "Temps enregistré",
       "timeEntryCreated": "Temps enregistré",
-      "timeEntryDeleted": "Temps enregistré supprimé"
+      "timeEntryDeleted": "Temps enregistré supprimé",
+      "criterion": "Critère {{name}}",
+      "criterionNoName": "Un critère",
+      "effortAllocationIt": "Part de la charge IT, {{name}}",
+      "effortAllocationBusiness": "Part de la charge métier, {{name}}",
+      "documentUpdated": "Document modifié : {{label}}",
+      "documentUpdatedNoName": "Document modifié"
     },
     "messages": {
       "loadDetailsFailed": "Impossible de charger les détails de l'entrée d'audit."
@@ -1243,11 +1312,16 @@
       "portfolio_phase_templates": "Modèles de phase",
       "portfolio_project_attachments": "Pièces jointes de projet",
       "portfolio_project_capex": "Lignes CAPEX de projet",
+      "portfolio_project_contacts": "Contacts de projet",
+      "portfolio_project_dependencies": "Dépendances de projet",
+      "portfolio_project_documents": "Documents de projet",
+      "portfolio_project_effort_allocations": "Répartitions de la charge de projet",
       "portfolio_project_milestones": "Jalons de projet",
       "portfolio_project_opex": "Lignes OPEX de projet",
       "portfolio_project_phases": "Phases de projet",
       "portfolio_project_team": "Équipes de projet",
       "portfolio_project_time_entries": "Temps saisis sur les projets",
+      "portfolio_project_urls": "Liens web de projet",
       "portfolio_projects": "Projets",
       "portfolio_request_applications": "Applications de demande",
       "portfolio_request_assets": "Actifs de demande",
@@ -1441,6 +1515,14 @@
         "itUsers": "Dérivé",
         "headcount": "Dérivé",
         "manual": "Manuel"
+      },
+      "allocationMode": {
+        "auto": "Automatique",
+        "manual": "Manuel"
+      },
+      "effortType": {
+        "it": "IT",
+        "business": "Métier"
       }
     },
     "dataAccess": {

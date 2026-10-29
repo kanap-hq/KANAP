@@ -54,6 +54,8 @@ export default function ProjectActivityTab({
       readOnly={readOnly}
       onImageUpload={onImageUpload}
       onImageUrlImport={onImageUrlImport}
+      // The project's changes read in its History tab: its feed keeps the comments and decisions.
+      showHistory={false}
     />
   );
 }

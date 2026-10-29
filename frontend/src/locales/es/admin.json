@@ -729,7 +729,34 @@
       "hours": "Tiempo",
       "logged_at": "Fecha",
       "related_object": "Relacionado con",
-      "converted_to_request": "Convertida en solicitud"
+      "converted_to_request": "Convertida en solicitud",
+      "actual_effort_business": "Esfuerzo de negocio real",
+      "actual_effort_it": "Esfuerzo IT real",
+      "actual_start": "Inicio real",
+      "actual_end": "Fin real",
+      "baseline_effort_business": "Esfuerzo de negocio de referencia",
+      "baseline_effort_it": "Esfuerzo IT de referencia",
+      "baseline_start_date": "Inicio de referencia",
+      "baseline_end_date": "Fin de referencia",
+      "business_effort_allocation_mode": "Modo de asignación de esfuerzo de negocio",
+      "it_effort_allocation_mode": "Modo de asignación de esfuerzo IT",
+      "business_sponsor_id": "Patrocinador de negocio",
+      "it_sponsor_id": "Patrocinador IT",
+      "category_id": "Categoría",
+      "source_id": "Origen",
+      "stream_id": "Línea",
+      "estimated_effort_business": "Esfuerzo de negocio",
+      "estimated_effort_it": "Esfuerzo IT",
+      "execution_progress": "Avance",
+      "override_justification": "Justificación de la sobrescritura",
+      "override_value": "Valor de sobrescritura",
+      "priority_override": "Sobrescritura de prioridad",
+      "priority_score": "Puntuación de prioridad",
+      "scheduling_mode": "Modo de planificación",
+      "source_request_id": "Creado a partir de solicitud",
+      "target_date": "Fecha objetivo",
+      "phase_status": "Estado",
+      "milestone_status": "Estado"
     },
     "history": {
       "empty": "Todavía no hay historial",
@@ -778,7 +805,8 @@
         "phaseChanged": "Fase modificada",
         "sourceChanged": "Origen modificado",
         "categoryChanged": "Categoría modificada",
-        "streamChanged": "Línea modificada"
+        "streamChanged": "Línea modificada",
+        "purposeChanged": "Objetivo modificado"
       },
       "actors": {
         "assistant": "Plaid",
@@ -937,6 +965,26 @@
         "task_viewer": {
           "added": "Observador añadido: {{label}}",
           "removed": "Observador retirado: {{label}}"
+        },
+        "phase": {
+          "added": "Fase añadida: {{label}}",
+          "removed": "Fase eliminada: {{label}}"
+        },
+        "milestone": {
+          "added": "Hito añadido: {{label}}",
+          "removed": "Hito eliminado: {{label}}"
+        },
+        "time_entry": {
+          "added": "Registro de tiempo añadido: {{label}}",
+          "removed": "Registro de tiempo eliminado: {{label}}"
+        },
+        "it_team": {
+          "added": "Miembro del equipo IT añadido: {{label}}",
+          "removed": "Miembro del equipo IT eliminado: {{label}}"
+        },
+        "business_team": {
+          "added": "Miembro del equipo de negocio añadido: {{label}}",
+          "removed": "Miembro del equipo de negocio eliminado: {{label}}"
         }
       },
       "unnamed": {
@@ -991,7 +1039,16 @@
         "binding": "un enlace",
         "person": "una persona",
         "instance": "un entorno",
-        "assignment": "un servidor"
+        "assignment": "un servidor",
+        "phase": "una fase",
+        "milestone": "un hito",
+        "time_entry": "un registro de tiempo",
+        "team": "un equipo",
+        "dependency": "una dependencia",
+        "criterion_value": "una opción",
+        "portfolio_source": "un origen",
+        "portfolio_category": "una categoría",
+        "portfolio_stream": "una línea"
       },
       "deleted": {
         "record": "un registro eliminado",
@@ -1045,7 +1102,13 @@
         "binding": "un enlace eliminado",
         "person": "una persona eliminada",
         "instance": "un entorno eliminado",
-        "assignment": "un servidor eliminado"
+        "assignment": "un servidor eliminado",
+        "phase": "una fase eliminada",
+        "milestone": "un hito eliminado",
+        "time_entry": "un registro de tiempo eliminado",
+        "team": "un equipo eliminado",
+        "dependency": "una dependencia eliminada",
+        "criterion_value": "una opción eliminada"
       },
       "title": "Historial",
       "metricsYear": "Indicadores {{year}}",
@@ -1082,7 +1145,13 @@
       "instance": "Entorno {{environment}}",
       "timeEntry": "Tiempo registrado",
       "timeEntryCreated": "Tiempo registrado",
-      "timeEntryDeleted": "Tiempo registrado eliminado"
+      "timeEntryDeleted": "Tiempo registrado eliminado",
+      "criterion": "Criterio {{name}}",
+      "criterionNoName": "Un criterio",
+      "effortAllocationIt": "Parte del esfuerzo IT, {{name}}",
+      "effortAllocationBusiness": "Parte del esfuerzo de negocio, {{name}}",
+      "documentUpdated": "Documento modificado: {{label}}",
+      "documentUpdatedNoName": "Documento modificado"
     },
     "messages": {
       "loadDetailsFailed": "No se pudieron cargar los detalles de la entrada de auditoría."
@@ -1243,11 +1312,16 @@
       "portfolio_phase_templates": "Plantillas de fase",
       "portfolio_project_attachments": "Adjuntos de proyecto",
       "portfolio_project_capex": "Líneas CAPEX de proyecto",
+      "portfolio_project_contacts": "Contactos de proyecto",
+      "portfolio_project_dependencies": "Dependencias de proyecto",
+      "portfolio_project_documents": "Documentos de proyecto",
+      "portfolio_project_effort_allocations": "Reparto del esfuerzo de proyecto",
       "portfolio_project_milestones": "Hitos de proyecto",
       "portfolio_project_opex": "Líneas OPEX de proyecto",
       "portfolio_project_phases": "Fases de proyecto",
       "portfolio_project_team": "Equipos de proyecto",
       "portfolio_project_time_entries": "Registros de tiempo de proyecto",
+      "portfolio_project_urls": "Enlaces web de proyecto",
       "portfolio_projects": "Proyectos",
       "portfolio_request_applications": "Aplicaciones de solicitud",
       "portfolio_request_assets": "Activos de solicitud",
@@ -1441,6 +1515,14 @@
         "itUsers": "Derivado",
         "headcount": "Derivado",
         "manual": "Manual"
+      },
+      "allocationMode": {
+        "auto": "Automático",
+        "manual": "Manual"
+      },
+      "effortType": {
+        "it": "IT",
+        "business": "Negocio"
       }
     },
     "dataAccess": {

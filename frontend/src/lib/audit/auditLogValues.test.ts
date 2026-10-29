@@ -295,6 +295,26 @@ describe('formatAuditValue', () => {
     expect(formatAuditValue('shelf', 'kind', context({ table: 'cost_centers' })).text).toBe('shelf');
   });
 
+  it('names a project, phase and milestone status, origin, modes and effort type from the portfolio lists', () => {
+    const project = (locale: 'en' | 'fr') => ({
+      locale,
+      t: i18n.getFixedT(locale, ['admin', 'portfolio']) as unknown as Translate,
+      table: 'portfolio_projects',
+    });
+    expect(formatAuditValue('in_testing', 'status', project('en')).text).toBe('In testing');
+    expect(formatAuditValue('waiting_list', 'status', project('fr')).text).toBe("Liste d'attente");
+    expect(formatAuditValue('in_progress', 'phase_status', project('en')).text).toBe('In progress');
+    expect(formatAuditValue('achieved', 'milestone_status', project('fr')).text).toBe('Atteint');
+    expect(formatAuditValue('fast_track', 'origin', project('en')).text).toBe('Fast-track');
+    expect(formatAuditValue('collaborative', 'scheduling_mode', project('fr')).text).toBe('Collaboratif');
+    expect(formatAuditValue('manual', 'it_effort_allocation_mode', project('en')).text).toBe('Manual');
+    expect(formatAuditValue('auto', 'business_effort_allocation_mode', project('en')).text).toBe('Automatic');
+    expect(formatAuditValue('business', 'category', project('en')).text).toBe('Business');
+    // Elsewhere the shared names keep their own lists.
+    expect(formatAuditValue('closed', 'status', { locale: 'fr', t: tFrAll, table: 'suppliers' }).text).toBe('Fermé');
+    expect(formatAuditValue('business', 'category', { locale: 'en', t: tEnAll, table: 'suppliers' }).text).toBe('business');
+  });
+
   it('leaves an unknown budget enumeration code as stored', () => {
     expect(formatAuditValue('not_a_profile', 'spread_profile_name', context()).text).toBe('not_a_profile');
     expect(formatAuditValue('not_a_method', 'method', context()).text).toBe('not_a_method');

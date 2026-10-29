@@ -16,6 +16,7 @@ import { documentsRecord } from './record-history/records/documents';
 import { incidentsRecord } from './record-history/records/incidents';
 import { interfacesRecord } from './record-history/records/interfaces';
 import { locationsRecord } from './record-history/records/locations';
+import { portfolioProjectsRecord } from './record-history/records/portfolio_projects';
 import { spendItemsRecord } from './record-history/records/spend_items';
 import { suppliersRecord } from './record-history/records/suppliers';
 import { tasksRecord } from './record-history/records/tasks';
@@ -96,7 +97,12 @@ export type RecordHistoryChildKind =
   | 'instance'
   | 'assignment'
   | 'business_process'
-  | 'time_entry';
+  | 'phase'
+  | 'milestone'
+  | 'time_entry'
+  | 'team'
+  | 'dependency'
+  | 'document';
 
 export type RecordHistoryExclusion = {
   /** The physical table of the data-access inventory. */
@@ -165,6 +171,7 @@ const RECORD_HISTORY_DEFINITION = [
   incidentsRecord,
   interfacesRecord,
   locationsRecord,
+  portfolioProjectsRecord,
   spendItemsRecord,
   suppliersRecord,
   tasksRecord,

@@ -48,11 +48,13 @@ function fxRates() {
 }
 
 function projectsService() {
+  // The project's own audit rows (team, lines, applications, assets) go to a capture of their own:
+  // this spec asserts the rows the Relations tab writes itself.
   const crud = new PortfolioProjectsCrudService(
-    undefined as any, undefined as any, undefined as any, undefined as any,
+    undefined as any, undefined as any, captureAudit() as any, undefined as any,
     undefined as any, undefined as any, undefined as any,
   );
-  const dependencies = new PortfolioDependenciesService(undefined as any, undefined as any);
+  const dependencies = new PortfolioDependenciesService(undefined as any, captureAudit() as any);
   return new PortfolioProjectsService(
     undefined as any, crud, dependencies,
     undefined as any, undefined as any, undefined as any, undefined as any, undefined as any,

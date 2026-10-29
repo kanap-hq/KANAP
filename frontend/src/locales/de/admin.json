@@ -729,7 +729,34 @@
       "hours": "Zeit",
       "logged_at": "Datum",
       "related_object": "Verknüpft mit",
-      "converted_to_request": "In Anfrage konvertiert"
+      "converted_to_request": "In Anfrage konvertiert",
+      "actual_effort_business": "Tatsächlicher Fachbereichs-Aufwand",
+      "actual_effort_it": "Tatsächlicher IT-Aufwand",
+      "actual_start": "Tatsächlicher Beginn",
+      "actual_end": "Tatsächliches Ende",
+      "baseline_effort_business": "Fachbereichs-Aufwand (Baseline)",
+      "baseline_effort_it": "IT-Aufwand (Baseline)",
+      "baseline_start_date": "Beginn (Baseline)",
+      "baseline_end_date": "Ende (Baseline)",
+      "business_effort_allocation_mode": "Zuordnungsmodus Fachbereichs-Aufwand",
+      "it_effort_allocation_mode": "Zuordnungsmodus IT-Aufwand",
+      "business_sponsor_id": "Fachbereichssponsor",
+      "it_sponsor_id": "IT-Sponsor",
+      "category_id": "Kategorie",
+      "source_id": "Quelle",
+      "stream_id": "Stream",
+      "estimated_effort_business": "Fachbereichs-Aufwand",
+      "estimated_effort_it": "IT-Aufwand",
+      "execution_progress": "Fortschritt",
+      "override_justification": "Begründung der Überschreibung",
+      "override_value": "Überschreibungswert",
+      "priority_override": "Prioritätsüberschreibung",
+      "priority_score": "Prioritätsscore",
+      "scheduling_mode": "Planungsmodus",
+      "source_request_id": "Erstellt aus Anfrage",
+      "target_date": "Zieldatum",
+      "phase_status": "Status",
+      "milestone_status": "Status"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -778,7 +805,8 @@
         "phaseChanged": "Phase geändert",
         "sourceChanged": "Quelle geändert",
         "categoryChanged": "Kategorie geändert",
-        "streamChanged": "Stream geändert"
+        "streamChanged": "Stream geändert",
+        "purposeChanged": "Zweck geändert"
       },
       "actors": {
         "assistant": "Plaid",
@@ -937,6 +965,26 @@
         "task_viewer": {
           "added": "Beobachter hinzugefügt: {{label}}",
           "removed": "Beobachter entfernt: {{label}}"
+        },
+        "phase": {
+          "added": "Phase hinzugefügt: {{label}}",
+          "removed": "Phase entfernt: {{label}}"
+        },
+        "milestone": {
+          "added": "Meilenstein hinzugefügt: {{label}}",
+          "removed": "Meilenstein entfernt: {{label}}"
+        },
+        "time_entry": {
+          "added": "Zeiteintrag hinzugefügt: {{label}}",
+          "removed": "Zeiteintrag entfernt: {{label}}"
+        },
+        "it_team": {
+          "added": "IT-Teammitglied hinzugefügt: {{label}}",
+          "removed": "IT-Teammitglied entfernt: {{label}}"
+        },
+        "business_team": {
+          "added": "Fachbereichs-Teammitglied hinzugefügt: {{label}}",
+          "removed": "Fachbereichs-Teammitglied entfernt: {{label}}"
         }
       },
       "unnamed": {
@@ -991,7 +1039,16 @@
         "binding": "eine Bindung",
         "person": "eine Person",
         "instance": "eine Umgebung",
-        "assignment": "ein Server"
+        "assignment": "ein Server",
+        "phase": "eine Phase",
+        "milestone": "ein Meilenstein",
+        "time_entry": "ein Zeiteintrag",
+        "team": "ein Team",
+        "dependency": "eine Abhängigkeit",
+        "criterion_value": "eine Option",
+        "portfolio_source": "eine Quelle",
+        "portfolio_category": "eine Kategorie",
+        "portfolio_stream": "ein Stream"
       },
       "deleted": {
         "record": "ein gelöschter Datensatz",
@@ -1045,7 +1102,13 @@
         "binding": "eine gelöschte Bindung",
         "person": "eine gelöschte Person",
         "instance": "eine gelöschte Umgebung",
-        "assignment": "ein gelöschter Server"
+        "assignment": "ein gelöschter Server",
+        "phase": "eine gelöschte Phase",
+        "milestone": "ein gelöschter Meilenstein",
+        "time_entry": "ein gelöschter Zeiteintrag",
+        "team": "ein gelöschtes Team",
+        "dependency": "eine gelöschte Abhängigkeit",
+        "criterion_value": "eine gelöschte Option"
       },
       "title": "Verlauf",
       "metricsYear": "Kennzahlen {{year}}",
@@ -1082,7 +1145,13 @@
       "instance": "Umgebung {{environment}}",
       "timeEntry": "Zeiteintrag",
       "timeEntryCreated": "Zeit erfasst",
-      "timeEntryDeleted": "Zeiteintrag gelöscht"
+      "timeEntryDeleted": "Zeiteintrag gelöscht",
+      "criterion": "Kriterium {{name}}",
+      "criterionNoName": "Ein Kriterium",
+      "effortAllocationIt": "Anteil IT-Aufwand, {{name}}",
+      "effortAllocationBusiness": "Anteil Fachbereichs-Aufwand, {{name}}",
+      "documentUpdated": "Dokument geändert: {{label}}",
+      "documentUpdatedNoName": "Dokument geändert"
     },
     "messages": {
       "loadDetailsFailed": "Details des Audit-Eintrags konnten nicht geladen werden."
@@ -1243,11 +1312,16 @@
       "portfolio_phase_templates": "Phasenvorlagen",
       "portfolio_project_attachments": "Projektanhänge",
       "portfolio_project_capex": "CAPEX-Zeilen von Projekten",
+      "portfolio_project_contacts": "Projektkontakte",
+      "portfolio_project_dependencies": "Projektabhängigkeiten",
+      "portfolio_project_documents": "Projektdokumente",
+      "portfolio_project_effort_allocations": "Aufwandsverteilungen von Projekten",
       "portfolio_project_milestones": "Projektmeilensteine",
       "portfolio_project_opex": "OPEX-Zeilen von Projekten",
       "portfolio_project_phases": "Projektphasen",
       "portfolio_project_team": "Projektteams",
       "portfolio_project_time_entries": "Zeiterfassung von Projekten",
+      "portfolio_project_urls": "Weblinks von Projekten",
       "portfolio_projects": "Projekte",
       "portfolio_request_applications": "Anwendungen von Anfragen",
       "portfolio_request_assets": "Assets von Anfragen",
@@ -1441,6 +1515,14 @@
         "itUsers": "Abgeleitet",
         "headcount": "Abgeleitet",
         "manual": "Manuell"
+      },
+      "allocationMode": {
+        "auto": "Automatisch",
+        "manual": "Manuell"
+      },
+      "effortType": {
+        "it": "IT",
+        "business": "Fachbereich"
       }
     },
     "dataAccess": {

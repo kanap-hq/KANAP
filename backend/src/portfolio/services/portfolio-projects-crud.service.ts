@@ -27,7 +27,8 @@ import { normalizeMarkdownRichText } from '../../common/markdown-worker';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { activityBudgetLines, budgetLineActivitiesForReader } from '../budget-line-activity';
-import { hiddenLineCount } from '../../data-access/hidden-links';
+import { auditedLinkSet, hiddenLineCount } from '../../data-access/hidden-links';
+import { singleChangedId } from '../../audit/audit-parent-rules';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
 
 /**
@@ -523,7 +524,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       recordId: savedProject.id,
       action: 'create',
       before: null,
-      after: savedProject,
+      // The request it came from rides beside the saved row: the history reads "Created from request".
+      after: { ...savedProject, source_request_id: requestId },
       userId,
     }, { manager: mg });
 
@@ -841,6 +843,15 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         type: 'change',
         changed_fields: { [role]: [beforeNames, afterNames] },
       });
+      // The history reads the people of the role added and removed, by id.
+      await this.audit.log({
+        table: 'portfolio_project_team',
+        recordId: projectId,
+        action: 'update',
+        before: { role, ids: beforeSorted },
+        after: { role, ids: afterSorted },
+        userId: actorId,
+      }, { manager: mg });
     }
 
     return { ok: true, added: toInsert.length, removed: toDelete.length };
@@ -875,6 +886,19 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
 
     if (toDelete.length > 0) await repo.remove(toDelete);
     if (toInsert.length > 0) await repo.save(toInsert);
+
+    if (toDelete.length > 0 || toInsert.length > 0) {
+      const beforeIds = Array.from(new Set(existing.map((e) => String(e.contact_id).toLowerCase()))).sort();
+      const afterIds = Array.from(new Set(unique.map((id) => String(id).toLowerCase()))).sort();
+      await this.audit.log({
+        table: 'portfolio_project_contacts',
+        recordId: projectId,
+        action: 'update',
+        before: { ids: beforeIds },
+        after: { ids: afterIds },
+        userId: opts?.userId ?? null,
+      }, { manager: mg });
+    }
 
     return { ok: true, added: toInsert.length, removed: toDelete.length };
   }
@@ -929,6 +953,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         type: 'change',
         changed_fields: { capex_items: [beforeLabels, afterLabels] },
       });
+      await this.auditBudgetLines(mg, 'capex', projectId, beforeSorted, afterSorted, actorId);
     }
 
     return { ok: true, added: toInsert.length, removed: toDelete.length };
@@ -984,9 +1009,75 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         type: 'change',
         changed_fields: { opex_items: [beforeLabels, afterLabels] },
       });
+      await this.auditBudgetLines(mg, 'opex', projectId, beforeSorted, afterSorted, actorId);
     }
 
     return { ok: true, added: toInsert.length, removed: toDelete.length };
+  }
+
+  /**
+   * The project's line set of one nature, before and after, as the project's history reads it.
+   * The lines a limited person cannot read stayed linked: the row says how many (spec §6.6). The
+   * line the set gained or lost, when exactly one changed, is the parent: the line's history reads
+   * the row too.
+   */
+  private async auditBudgetLines(
+    mg: EntityManager,
+    nature: 'opex' | 'capex',
+    projectId: string,
+    beforeIds: string[],
+    afterIds: string[],
+    userId: string,
+  ): Promise<void> {
+    const hidden = await hiddenLineCount(mg, 'project', projectId);
+    const lineId = singleChangedId(beforeIds, afterIds);
+    await this.audit.log({
+      table: nature === 'opex' ? 'portfolio_project_opex' : 'portfolio_project_capex',
+      recordId: projectId,
+      action: 'update',
+      before: auditedLinkSet({ ids: beforeIds }, hidden),
+      after: auditedLinkSet({ ids: afterIds }, hidden),
+      userId,
+      parent: lineId ? { table: 'spend_items', id: lineId } : null,
+    }, { manager: mg });
+  }
+
+  /** The stored effort allocations of one type, and its mode, as the history reads them. */
+  private async effortAllocationState(mg: EntityManager, projectId: string, effortType: 'it' | 'business') {
+    const modeColumn = effortType === 'it' ? 'it_effort_allocation_mode' : 'business_effort_allocation_mode';
+    const [modeRow] = await mg.query(
+      `SELECT ${modeColumn} AS mode FROM portfolio_projects WHERE tenant_id = app_current_tenant() AND id = $1`,
+      [projectId],
+    );
+    const rows: Array<{ user_id: string; allocation_pct: number }> = await mg.query(
+      `SELECT user_id, allocation_pct FROM portfolio_project_effort_allocations
+        WHERE tenant_id = app_current_tenant() AND project_id = $1 AND effort_type = $2 ORDER BY user_id`,
+      [projectId, effortType],
+    );
+    return {
+      effort_type: effortType,
+      mode: modeRow?.mode ?? null,
+      allocations: rows.map((row) => ({ user_id: String(row.user_id).toLowerCase(), allocation_pct: Number(row.allocation_pct) })),
+    };
+  }
+
+  /** One audit row when the allocations or their mode changed, none otherwise. */
+  private async auditEffortAllocations(
+    mg: EntityManager,
+    projectId: string,
+    before: Awaited<ReturnType<PortfolioProjectsCrudService['effortAllocationState']>>,
+    after: Awaited<ReturnType<PortfolioProjectsCrudService['effortAllocationState']>>,
+    userId: string | null,
+  ): Promise<void> {
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    await this.audit.log({
+      table: 'portfolio_project_effort_allocations',
+      recordId: projectId,
+      action: 'update',
+      before,
+      after,
+      userId,
+    }, { manager: mg });
   }
 
   // ==================== EFFORT ALLOCATIONS ====================
@@ -1167,6 +1258,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       }
     }
 
+    const before = await this.effortAllocationState(mg, projectId, effortType);
+
     // Delete existing allocations
     await mg.query(
       `DELETE FROM portfolio_project_effort_allocations WHERE project_id = $1 AND effort_type = $2`,
@@ -1189,6 +1282,9 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       [projectId]
     );
 
+    const after = await this.effortAllocationState(mg, projectId, effortType);
+    await this.auditEffortAllocations(mg, projectId, before, after, opts?.userId ?? null);
+
     return { ok: true };
   }
 
@@ -1202,6 +1298,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
   ) {
     const mg = this.getManager(opts);
     await this.ensureProject(projectId, mg);
+    const before = await this.effortAllocationState(mg, projectId, effortType);
 
     // Delete stored allocations
     await mg.query(
@@ -1215,6 +1312,9 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       `UPDATE portfolio_projects SET ${modeColumn} = 'auto', updated_at = now() WHERE id = $1`,
       [projectId]
     );
+
+    const after = await this.effortAllocationState(mg, projectId, effortType);
+    await this.auditEffortAllocations(mg, projectId, before, after, opts?.userId ?? null);
 
     return { ok: true };
   }

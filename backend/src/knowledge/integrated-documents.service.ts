@@ -1,3 +1,4 @@
+import { writeAuditLog } from '../audit/audit.service';
 import {
   BadRequestException,
   ForbiddenException,
@@ -1513,6 +1514,17 @@ export class IntegratedDocumentsService {
       // feed can label the change in the reader's language.
       changed_fields: { document_updated: [null, slotKey] },
     }));
+    // The project's history reads the edit as "Document modified: Purpose", from the slot alone.
+    if (sourceEntityType === 'projects') {
+      await writeAuditLog(manager, {
+        table: 'portfolio_project_documents',
+        recordId: sourceEntityId,
+        action: 'update',
+        before: null,
+        after: { slot: slotKey },
+        userId: userId || null,
+      });
+    }
   }
 
   private extractKnowledgeInlineAttachmentIds(content: string): string[] {

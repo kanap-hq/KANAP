@@ -215,6 +215,8 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
   const axes = new Set<string>();
   const categories = new Set<string>();
   const instances = new Set<string>();
+  const criteria = new Set<string>();
+  const criterionOptions = new Set<string>();
 
   const collect = (label: string, kind: RecordHistoryChildKind | null, row: AuditRow) => {
     if (row.user_id) addFamilyId({ ids }, 'user', row.user_id);
@@ -230,6 +232,31 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
       }
       if (kind === 'contact' && !isPlainObject(payload)) {
         for (const contactId of contactIds(payload)) addFamilyId({ ids }, 'contact', contactId);
+      }
+      // A project's contacts are a set of ids.
+      if (kind === 'contact' && isPlainObject(payload) && Array.isArray(payload.ids)) {
+        for (const contactId of contactIds(payload.ids)) addFamilyId({ ids }, 'contact', contactId);
+      }
+      // A team names its people (`{ role, ids }`), an effort allocation each person's share.
+      if (kind === 'team' && isPlainObject(payload)) {
+        for (const userId of linkSetIds(payload)) addFamilyId({ ids }, 'user', userId);
+        if (Array.isArray(payload.allocations)) {
+          for (const allocation of payload.allocations) {
+            if (isPlainObject(allocation)) addFamilyId({ ids }, 'user', allocation.user_id);
+          }
+        }
+      }
+      // A dependency set names projects (`ids`) and, from a request, requests (`request_ids`).
+      if (kind === 'dependency' && isPlainObject(payload)) {
+        for (const value of linkSetIds(payload)) addFamilyId({ ids }, 'project', value);
+        for (const value of linkSetIds(payload.request_ids)) addFamilyId({ ids }, 'request', value);
+      }
+      // The project's scoring names its criteria and options by id.
+      if (entry.auditLabels.includes(label) && isPlainObject(payload) && isPlainObject(payload.criteria_values)) {
+        for (const [criterionId, optionId] of Object.entries(payload.criteria_values)) {
+          if (isUuid(criterionId)) criteria.add(criterionId.toLowerCase());
+          if (isUuid(optionId)) criterionOptions.add(optionId.toLowerCase());
+        }
       }
       const addList = (family: FamilyKey, list: unknown) => {
         if (Array.isArray(list)) for (const value of list) addFamilyId({ ids }, family, value);
@@ -342,7 +369,7 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
     const isRecord = entry.auditLabels.includes(row.table_name);
     collect(row.table_name, isRecord ? null : recordHistoryChildKind(entry, row.table_name), row);
   }
-  return { ids, versions, axes, categories, instances };
+  return { ids, versions, axes, categories, instances, criteria, criterionOptions };
 }
 
 async function loadPageContext(
@@ -426,7 +453,27 @@ async function loadPageContext(
     for (const row of rows) instances.set(row.id.toLowerCase(), row.environment ?? null);
   }
 
-  return { entry, recordId: id, users, versions, references, deleted, readable, dimensions, categories, entityLabels, instances };
+  // The scoring of a project or a request: the criteria and options its rows name, as the scoring
+  // tab names them. They are the tenant's portfolio settings, read by whoever reads the record.
+  const criteria = new Map<string, string>();
+  const criterionOptions = new Map<string, string>();
+  if (collected.criteria.size > 0 || collected.criterionOptions.size > 0) {
+    const criterionRows: Array<{ id: string; name: string | null }> = await reader.manager.query(
+      `SELECT id::text AS id, name FROM portfolio_criteria WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, Array.from(collected.criteria)],
+    );
+    for (const row of criterionRows) if (row.name) criteria.set(row.id.toLowerCase(), row.name);
+    const optionRows: Array<{ id: string; label: string | null }> = await reader.manager.query(
+      `SELECT id::text AS id, label FROM portfolio_criterion_values WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, Array.from(collected.criterionOptions)],
+    );
+    for (const row of optionRows) criterionOptions.set(row.id.toLowerCase(), row.label ?? '');
+  }
+
+  return {
+    entry, recordId: id, users, versions, references, deleted, readable, dimensions, categories, entityLabels, instances,
+    criteria, criterionOptions,
+  };
 }
 
 @Injectable()

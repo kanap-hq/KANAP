@@ -367,3 +367,68 @@ describe('application history entries', () => {
     expect(historyLines(hidden, { t: fr, locale: 'fr' })[0].text).toBe('Serveur retiré : un actif');
   });
 });
+
+describe('project history entries', () => {
+  const fr = i18n.getFixedT('fr', ['admin', 'ops', 'common', 'portfolio']) as unknown as Translate;
+  const en = i18n.getFixedT('en', ['admin', 'ops', 'common', 'portfolio']) as unknown as Translate;
+  const jane = { kind: 'user', id: ID, label: 'Jane Doe' };
+
+  it('names a phase, a milestone, a time entry and a team member as they are added or removed', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'phase', event: 'added', after: 'Design' },
+      { field: 'milestone', event: 'removed', before: 'Go-live' },
+      { field: 'time_entry', event: 'added', after: jane },
+      { field: 'it_team', event: 'added', after: jane },
+      { field: 'business_team', event: 'removed', before: { hidden: true, kind: 'user' } },
+    ];
+    expect(historyLines(item({ kind: 'team' }, changes), { t: en, locale: 'en' }).map((line) => line.text)).toEqual([
+      'Phase added: Design',
+      'Milestone removed: Go-live',
+      'Time entry added: Jane Doe',
+      'IT team member added: Jane Doe',
+      'Business team member removed: a user',
+    ]);
+    const frLines = historyLines(item({ kind: 'phase' }, changes.slice(0, 1)), { t: fr, locale: 'fr' });
+    expect(frLines[0].text).toMatch(/^Phase ajoutée\u00a0: Design$/);
+  });
+
+  it('titles an updated phase or milestone by its name', () => {
+    expect(historySubjectText({ kind: 'phase', label: 'Design' }, en)).toBe('Design');
+    expect(historySubjectText({ kind: 'milestone', label: 'Go-live' }, en)).toBe('Go-live');
+    expect(historySubjectText({ kind: 'phase' }, en)).toBeNull();
+  });
+
+  it('reads a scoring criterion by its name and options, never an identifier', () => {
+    const lines = historyLines(item({ kind: 'record' }, [
+      { field: 'criterion', dimension: 'Strategic fit', before: 'Low', after: 'High' },
+      { field: 'criterion', dimension: null, before: 'High', after: { hidden: true, kind: 'criterion_value', deleted: true } },
+    ]), { t: en, locale: 'en' });
+    expect(lines).toEqual([
+      { label: 'Criterion Strategic fit', before: 'Low', after: 'High' },
+      { label: 'A criterion', before: 'High', after: 'a deleted option' },
+    ]);
+    expect(JSON.stringify(lines)).not.toContain(ID);
+  });
+
+  it('reads an effort share as a percentage, under the person', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'effort_allocation_it', dimension: 'Jane Doe', before: 40, after: 60 },
+      { field: 'effort_allocation_business', dimension: null, before: null, after: 25 },
+    ];
+    expect(historyLines(item({ kind: 'team' }, changes), { t: en, locale: 'en' })).toEqual([
+      { label: 'IT effort share, Jane Doe', before: '40%', after: '60%' },
+      { label: 'Business effort share, a user', before: '—', after: '25%' },
+    ]);
+    const frLine = historyLines(item({ kind: 'team' }, changes.slice(0, 1)), { t: fr, locale: 'fr' })[0];
+    expect(frLine.after).toBe('60\u00a0%');
+  });
+
+  it('names the edited document by the label of its screen', () => {
+    const lines = (slot: string, t: Translate, locale: string) =>
+      historyLines(item({ kind: 'document' }, [{ field: 'document_updated', after: slot }]), { t, locale }).map((line) => line.text);
+    expect(lines('purpose', en, 'en')).toEqual(['Document modified: Purpose']);
+    expect(lines('risks_mitigations', en, 'en')).toEqual(['Document modified: Risks']);
+    expect(lines('purpose', fr, 'fr')[0]).toMatch(/Objectif$/);
+    expect(lines('specification', en, 'en')).toEqual(['Document modified']);
+  });
+});

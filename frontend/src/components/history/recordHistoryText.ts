@@ -47,7 +47,8 @@ export type RecordHistorySubject = {
     | 'contact' | 'application' | 'technology' | 'asset' | 'contract' | 'project' | 'request' | 'task' | 'metrics' | 'value'
     | 'relation' | 'member' | 'hardware' | 'support' | 'technology_version' | 'owner' | 'vulnerability'
     | 'supplier' | 'budget_line'
-    | 'sub_item' | 'leg' | 'set' | 'binding' | 'person' | 'compliance_item' | 'instance' | 'assignment' | 'business_process' | 'time_entry';
+    | 'sub_item' | 'leg' | 'set' | 'binding' | 'person' | 'compliance_item' | 'instance' | 'assignment' | 'business_process'
+    | 'phase' | 'milestone' | 'time_entry' | 'team' | 'dependency' | 'document';
   label?: string | null;
 };
 export type RecordHistoryItem = {
@@ -96,8 +97,17 @@ const EVENT_KINDS = new Set([
   'supplier', 'budget_line', 'relation_contains', 'relation_depends_on', 'member', 'owner_it', 'owner_business', 'operating_system',
   'sub_item', 'person', 'owner', 'company', 'dependency', 'country', 'key_identifier', 'interface_leg',
   'mapping_set', 'middleware', 'renewal_task', 'instance', 'assignment', 'department', 'suite', 'business_process',
-  'task_owner', 'task_viewer',
+  'task_owner', 'task_viewer', 'phase', 'milestone', 'time_entry', 'it_team', 'business_team',
 ]);
+
+/**
+ * The integrated document slots of a project or a request, named as their screen names them
+ * (`portfolio:activity.history.fields.*`).
+ */
+const DOCUMENT_SLOT_LABEL_KEYS: Readonly<Record<string, string>> = {
+  purpose: 'portfolio:activity.history.fields.purpose',
+  risks_mitigations: 'portfolio:activity.history.fields.risks',
+};
 
 /** A contract's renewal decision, named by the label of its button on the contract screen. */
 const RENEWAL_DECISION_KEYS: Readonly<Record<string, string>> = {
@@ -117,6 +127,7 @@ const UNNAMED_KINDS = [
   'document', 'document_folder', 'document_library', 'document_type',
   'relation', 'member', 'hardware', 'support', 'technology_version', 'owner', 'vulnerability',
   'sub_item', 'leg', 'set', 'binding', 'person', 'instance', 'assignment',
+  'phase', 'milestone', 'time_entry', 'team', 'dependency', 'criterion_value',
 ] as const;
 
 export function isHiddenReference(value: unknown): value is RecordHistoryHiddenReference {
@@ -317,6 +328,10 @@ export function historySubjectText(subject: RecordHistorySubject, t: Translate, 
     const label = t(key, { defaultValue: '' });
     return label && label !== key ? label : null;
   }
+  // A phase or a milestone is titled by its name.
+  if (subject.kind === 'phase' || subject.kind === 'milestone') {
+    return subject.label || null;
+  }
   // A deployment, and a server of a deployment, are titled by the deployment's environment.
   if (subject.kind === 'instance' || subject.kind === 'assignment') {
     return subject.label ? t('auditLogs.history.instance', { environment: environmentText(subject.label, t) }) : null;
@@ -405,6 +420,49 @@ function eventLine(change: RecordHistoryChange, t: Translate): HistoryLine | nul
   };
 }
 
+/** A criterion of the scoring whose option changed: "Criterion Strategic fit: Low → High". */
+function criterionLine(change: RecordHistoryChange, context: HistoryTextContext): HistoryLine {
+  const name = typeof change.dimension === 'string' ? change.dimension.trim() : '';
+  return {
+    label: name
+      ? context.t('auditLogs.history.criterion', { name })
+      : context.t('auditLogs.history.criterionNoName'),
+    ...(has(change, 'before') ? { before: historyValueText(change.before, 'criterion', context) } : {}),
+    ...(has(change, 'after') ? { after: historyValueText(change.after, 'criterion', context) } : {}),
+  };
+}
+
+function percentText(value: unknown, locale: string): string {
+  if (value === null || value === undefined || value === '') return DASH;
+  const number = Number(value);
+  if (!Number.isFinite(number)) return DASH;
+  return new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 2 }).format(number / 100);
+}
+
+/** A person's share of the IT or business effort: "IT effort share, Jane Doe: 40% → 60%". */
+function effortAllocationLine(change: RecordHistoryChange, context: HistoryTextContext): HistoryLine {
+  const name = typeof change.dimension === 'string' && change.dimension.trim()
+    ? change.dimension.trim()
+    : unnamedRecord('user', context.t);
+  const key = change.field === 'effort_allocation_business'
+    ? 'auditLogs.history.effortAllocationBusiness'
+    : 'auditLogs.history.effortAllocationIt';
+  return {
+    label: context.t(key, { name }),
+    ...(has(change, 'before') ? { before: percentText(change.before, context.locale) } : {}),
+    ...(has(change, 'after') ? { after: percentText(change.after, context.locale) } : {}),
+  };
+}
+
+/** An integrated document of the record edited: "Document modified: Purpose", never its content. */
+function documentUpdatedLine(change: RecordHistoryChange, t: Translate): HistoryLine {
+  const slot = typeof change.after === 'string' ? change.after : '';
+  const key = DOCUMENT_SLOT_LABEL_KEYS[slot];
+  const label = key ? t(key, { defaultValue: '' }) : '';
+  if (!label || label === key) return { text: t('auditLogs.history.documentUpdatedNoName') };
+  return { text: t('auditLogs.history.documentUpdated', { label }) };
+}
+
 function dimensionLine(change: RecordHistoryChange, context: HistoryTextContext): HistoryLine {
   const name = typeof change.dimension === 'string' ? change.dimension.trim() : '';
   return {
@@ -490,6 +548,11 @@ function fieldLine(change: RecordHistoryChange, context: HistoryTextContext): Hi
   const event = eventLine(change, context.t);
   if (event) return event;
   if (change.field === 'dimension') return dimensionLine(change, context);
+  if (change.field === 'criterion') return criterionLine(change, context);
+  if (change.field === 'effort_allocation_it' || change.field === 'effort_allocation_business') {
+    return effortAllocationLine(change, context);
+  }
+  if (change.field === 'document_updated') return documentUpdatedLine(change, context.t);
   if (change.column && MEASURE_LABEL_KEYS[change.column]) return amountLine(change, context);
   // A column operation writes the measure itself, without its column context.
   if (MEASURE_LABEL_KEYS[change.field] && (has(change, 'before') || has(change, 'after'))) {

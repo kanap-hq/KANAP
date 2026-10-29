@@ -170,6 +170,23 @@ const ENUM_GROUPS: Record<string, string> = {
   source_entity_code: 'it:catalogDefaults.entities',
   destination_entity_code: 'it:catalogDefaults.entities',
   equipment_entity_code: 'it:catalogDefaults.entities',
+  // The portfolio's own lists: a phase's and a milestone's status (renamed by the history so they
+  // never read as the project's), the scheduling mode and the effort allocation modes.
+  phase_status: 'portfolio:statuses.phase',
+  milestone_status: 'portfolio:statuses.milestone',
+  scheduling_mode: 'portfolio:planning.roadmap.schedulingModes',
+  it_effort_allocation_mode: 'auditLogs.values.allocationMode',
+  business_effort_allocation_mode: 'auditLogs.values.allocationMode',
+};
+
+/**
+ * The fields a project names from its own list, where other tables use the same field name: its
+ * status, its origin, and the effort type of a time entry (`category`), read in its history.
+ */
+const PROJECT_ENUM_GROUPS: Record<string, string> = {
+  status: 'portfolio:statuses.project',
+  origin: 'portfolio:origin',
+  category: 'auditLogs.values.effortType',
 };
 
 /** `spread_profile_name` holds `flat` and `4-4-5`; its keys cannot use the stored code as is. */
@@ -356,7 +373,7 @@ function enumerationCode(field: string, code: string): string {
   if (field === 'status' || field === 'lifecycle' || field === 'vulnerability_state'
     || field === 'data_class' || field === 'data_category' || field === 'compliance_state'
     || field === 'source_entity_code' || field === 'destination_entity_code' || field === 'equipment_entity_code'
-    || field === 'access_methods') return code;
+    || field === 'access_methods' || field === 'phase_status' || field === 'milestone_status') return code;
   return code.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
@@ -402,6 +419,10 @@ function enumerationLabel(field: string, code: string, context: AuditValueContex
   // An application's category: the shipped categories of the IT settings, keyed by the stored code.
   if (field === 'category' && context.table === 'applications') {
     return screenLabel(context, `it:catalogDefaults.applicationCategories.${code}`);
+  }
+  // A project's status, origin and time entry effort type, with their stored snake-case codes.
+  if (context.table === 'portfolio_projects' && PROJECT_ENUM_GROUPS[field]) {
+    return screenLabel(context, `${PROJECT_ENUM_GROUPS[field]}.${code}`);
   }
   if (field === 'hosting_type') {
     return screenLabel(context, `auditLogs.values.hostingType.${code}`);

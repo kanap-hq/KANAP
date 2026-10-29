@@ -48,6 +48,11 @@ interface PortfolioActivityProps {
   readOnly?: boolean;
   onImageUpload?: (file: File, sourceField: string) => Promise<string>;
   onImageUrlImport?: (sourceUrl: string, sourceField: string) => Promise<string>;
+  /**
+   * Show the feed's History sub-tab. A record whose changes read in its own History tab (the
+   * project) turns it off: its feed then shows the comments and decisions only.
+   */
+  showHistory?: boolean;
 }
 
 export default function PortfolioActivity({
@@ -65,6 +70,7 @@ export default function PortfolioActivity({
   readOnly = false,
   onImageUpload,
   onImageUrlImport,
+  showHistory = true,
 }: PortfolioActivityProps) {
   const { t } = useTranslation('portfolio');
   const [activeTab, setActiveTab] = React.useState<ActivityTab>('comments');
@@ -90,13 +96,15 @@ export default function PortfolioActivity({
             label={t('activity.tabs.comments')}
             sx={[textTabSx(activeTab === 'comments'), { '& .MuiTab-iconWrapper': { mr: 0.75 } }]}
           />
-          <Tab
-            value="history"
-            icon={<HistoryIcon sx={{ fontSize: 14 }} />}
-            iconPosition="start"
-            label={t('activity.tabs.history')}
-            sx={[textTabSx(activeTab === 'history'), { '& .MuiTab-iconWrapper': { mr: 0.75 } }]}
-          />
+          {showHistory && (
+            <Tab
+              value="history"
+              icon={<HistoryIcon sx={{ fontSize: 14 }} />}
+              iconPosition="start"
+              label={t('activity.tabs.history')}
+              sx={[textTabSx(activeTab === 'history'), { '& .MuiTab-iconWrapper': { mr: 0.75 } }]}
+            />
+          )}
         </Tabs>
       </Box>
 
@@ -117,7 +125,7 @@ export default function PortfolioActivity({
             onImageUrlImport={onImageUrlImport}
           />
         )}
-        {activeTab === 'history' && (
+        {showHistory && activeTab === 'history' && (
           <PortfolioHistory
             entityType={entityType}
             activities={activities}

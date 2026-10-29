@@ -11,6 +11,7 @@ import { documentsParentRules } from './record-history/records/documents';
 import { incidentsParentRules } from './record-history/records/incidents';
 import { interfacesParentRules } from './record-history/records/interfaces';
 import { locationsParentRules } from './record-history/records/locations';
+import { portfolioProjectsParentRules } from './record-history/records/portfolio_projects';
 import { spendItemsParentRules } from './record-history/records/spend_items';
 import { suppliersParentRules } from './record-history/records/suppliers';
 import { tasksParentRules } from './record-history/records/tasks';
@@ -80,6 +81,7 @@ export const TASK_PARENT_TABLES = {
   capex_item: 'spend_items',
   contract: 'contracts',
   incident: 'incidents',
+  project: 'portfolio_projects',
   spend_item: 'spend_items',
 } as const satisfies Readonly<Record<string, RecordHistoryTable>>;
 
@@ -90,6 +92,7 @@ export const TASK_PARENT_TABLES = {
  * in SQL (`__tests__/audit-parent-rules-contracts-incidents.spec.ts` compares them), and
  * `1855920000000-audit-log-parent-tasks.ts` the budget-line entries: both natures are in
  * `spend_items` (`__tests__/audit-parent-rules-tasks.spec.ts`).
+ * `1855930000000-audit-log-parent-projects.ts` the project entry (`audit-parent-rules-projects.spec.ts`).
  */
 const TASK_PARENT_RULES: Readonly<Record<string, AuditParentRule>> = {
   tasks: { from: 'payload_typed', keys: ['related_object_id'], typeKey: 'related_object_type', tables: TASK_PARENT_TABLES },
@@ -111,6 +114,7 @@ const PARENT_RULE_SETS = [
   incidentsParentRules,
   interfacesParentRules,
   locationsParentRules,
+  portfolioProjectsParentRules,
   spendItemsParentRules,
   suppliersParentRules,
   tasksParentRules,
