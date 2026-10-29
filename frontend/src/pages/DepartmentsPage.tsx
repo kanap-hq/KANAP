@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Stack, TextField } from '@mui/material';
+import { Button, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
@@ -16,6 +16,7 @@ import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
 import { countValueFormatter } from '../components/grid/countValueFormatter';
 import { companyListYear } from './companies/companyYear';
+import ListYearField from '../components/navigation/ListYearField';
 import { ImportLabel } from '../components/csv/importFiles';
 
 export default function DepartmentsPage() {
@@ -156,19 +157,15 @@ export default function DepartmentsPage() {
   const canCreate = hasLevel('departments','manager');
   const canAdmin = hasLevel('departments','admin');
   const actions = (
-    <Stack direction="row" spacing={1}>
-      <TextField
-        size="small"
-        label={t('shared.fields.year')}
-        type="number"
-        value={yearDraft}
-        onChange={(e) => {
-          const text = e.target.value;
+    <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+      <ListYearField
+        draft={yearDraft}
+        year={year}
+        onChange={(text) => {
           setYearDraft(text);
           const next = companyListYear(text);
           if (next != null && next !== year) setYear(next);
         }}
-        sx={{ width: 120 }}
       />
       {canCreate && (
         <Button
