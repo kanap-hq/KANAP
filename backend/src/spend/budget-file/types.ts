@@ -27,11 +27,26 @@ export interface MonthCell {
   cents: bigint | null;
 }
 
+/**
+ * A column's calculation lines (quantity × price, written by the Budget tab), as the file reads
+ * them: it neither writes nor exports them, it only says when a total stops their driving the column.
+ */
+export interface StoredRound {
+  /** `computed`: the column follows its lines; any other method keeps them as a reference. */
+  method: 'spread' | 'copied' | 'manual' | 'computed';
+  /** How many calculation lines the column holds. */
+  lineCount: number;
+  /** What the lines compute over the year, in cents, while the column follows them; null otherwise. */
+  linesTotal: bigint | null;
+}
+
 export interface StoredVersion {
   id: string;
   year: number;
   budgetRev: number;
   months: Record<AmountMeasure, MonthCell[]>;
+  /** The columns that have a round-input record; a column without one is absent. Unset reads as none. */
+  rounds?: Partial<Record<AmountMeasure, StoredRound>>;
 }
 
 /** One line as the preflight compares it and as the export writes it. */
@@ -222,6 +237,26 @@ export interface CostCenterCompanyWarning {
   message: string;
 }
 
+/**
+ * A changed amount on a column that follows its calculation lines: the load writes the file's
+ * amounts, and the lines stay as a reference that no longer drives the column. Said once per line,
+ * column and year; never for a column whose lines are already a reference, nor for an equal total.
+ */
+export interface CalculationLinesWarning {
+  line: number;
+  /** The line's reference, `BL-n`. */
+  item: string;
+  /** The file column: `budget`, `revision`, `forecast`, `actual` or `landing`. */
+  column: string;
+  year: number;
+  /** How many calculation lines the column holds. */
+  count: number;
+  /** What they give over the year, two decimals (`281280.00`). */
+  total: string;
+  /** The English sentence, with the tenant's name of the column. */
+  message: string;
+}
+
 export interface BudgetFileReport {
   ok: boolean;
   scope: BudgetFileScope;
@@ -261,6 +296,10 @@ export interface BudgetFileReport {
     supplierNames: Array<{ line: number; message: string }>;
     /** company_name names another company than the cost center's: accepted, said once per line. */
     costCenterCompanies: CostCenterCompanyWarning[];
+    /** Changed amounts on columns that follow their calculation lines, the first 20. */
+    calculationLines: CalculationLinesWarning[];
+    /** How many there are in all. */
+    calculationLinesCount: number;
   };
   creates: {
     dimensionValues: Array<{ dimension: string; names: string[] }>;

@@ -128,6 +128,13 @@ export type BudgetFileReport = {
     }>;
     /** Cells the load does not read, by line and column (the description of a CAPEX line). */
     ignoredCells: Array<{ line: number; column: string; message: string }>;
+    /**
+     * Changed amounts on a column that follows its calculation lines: the lines stay as a reference.
+     * `column` is the file column (`revision`), `total` what the lines give, two decimals.
+     */
+    calculationLines?: Array<{ line: number; item: string; column: string; year: number; count: number; total: string; message: string }>;
+    /** How many calculation lines warnings there are in all; the list holds the first 20. */
+    calculationLinesCount?: number;
   };
   creates: {
     /** Unknown values the load will create. */

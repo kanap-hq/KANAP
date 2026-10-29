@@ -1099,6 +1099,8 @@
       "warningsTitle": "Avertissements",
       "ignoredColumns": "Colonnes ignorées : {{columns}}.",
       "firstSheetOnly": "Seule la première feuille, {{name}}, a été lue.",
+      "calculationLines": "{{item}} · {{column}} {{year}} : {{count}} lignes de calcul ({{total}}) ne piloteront plus ces montants.",
+      "calculationLines_one": "{{item}} · {{column}} {{year}} : 1 ligne de calcul ({{total}}) ne pilotera plus ces montants.",
       "ignoredColumns_one": "Colonne ignorée : {{columns}}.",
       "createsTitle": "Créés par le chargement",
       "createSuppliersList": "Fournisseurs : {{names}}",

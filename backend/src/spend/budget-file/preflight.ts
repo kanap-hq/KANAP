@@ -2,10 +2,12 @@ import { keepStoredEndOfValidity, matchCode } from '../../common/csv-sheet';
 import { normalizeAnalyticsName } from '../../analytics/analytics-context';
 import { notApplicableDimensionMessage, requiredDimensionMessage } from '../item-analytics.util';
 import { AmountMeasure, MEASURE_FREEZE_COLUMN } from '../amounts-write.util';
+import { formatCentsFixed } from '../../common/amount';
 import { endOfValidityFromDate, isActiveAt } from '../../common/status';
 import type { BudgetNature } from '../budget-nature';
 import { BudgetFileRead, firstAmountYear, interpretBudgetFile, InterpretedRow, FieldCell, ItemNumberCell } from './interpret';
 import { tokenError } from './token';
+import { columnOfMeasure } from './columns';
 import { DATA_ACCESS_LEAVES_ACCESS_MESSAGE, DATA_ACCESS_PLACEMENT_MESSAGE } from '../../data-access/line-write-checks';
 import {
   BudgetCatalog,
@@ -15,6 +17,7 @@ import {
   BudgetFileReport,
   BudgetFileScope,
   BudgetFileSnapshotLine,
+  CalculationLinesWarning,
   CatalogCostCenter,
   CostCenterCompanyWarning,
   CatalogSupplier,
@@ -55,10 +58,12 @@ interface LineDraft {
   amounts: BudgetFileAmountChange[];
   grains: Map<number, 'annual' | 'monthly'>;
   newSupplier: { name: string; erpId: string | null } | null;
+  /** The columns whose calculation lines the amounts stop following, once each. */
+  calculationLines: Map<string, Omit<CalculationLinesWarning, 'line'>>;
 }
 
 function emptyDraft(): LineDraft {
-  return { body: {}, analytics: [], amounts: [], grains: new Map(), newSupplier: null };
+  return { body: {}, analytics: [], amounts: [], grains: new Map(), newSupplier: null, calculationLines: new Map() };
 }
 
 /** A create writes the value; an update writes it only when it differs from the line. */
@@ -169,6 +174,7 @@ interface Bag {
   duplicates: Array<{ line: number; message: string }>;
   supplierNames: Array<{ line: number; message: string }>;
   costCenterCompanies: CostCenterCompanyWarning[];
+  calculationLines: CalculationLinesWarning[];
   deleted: Array<{ line: number; itemNumber: string }>;
   changed: BudgetFileReport['changedSinceExport'];
   snapshot: BudgetFileSnapshotLine[];
@@ -364,6 +370,7 @@ function resolveRow(
 
   const failed = errors.length > 0;
   if (failed || !creating && !live) return;
+  for (const warning of draft.calculationLines.values()) bag.calculationLines.push({ line: row.line, ...warning });
   if (creating || changes.length > 0) bag.plans.push(toPlan(nature, row, live, creating, draft));
   if (creating) {
     bag.created.push({ line: row.line, name: textOf(row.fields.name) || '(no name)' });
@@ -1078,7 +1085,47 @@ function resolveAmounts(
     const when = amount.month == null ? String(amount.year) : `${amount.year}-${String(amount.month).padStart(2, '0')}`;
     changes.push(`${amount.column} ${when}`);
     draft.amounts.push({ year: amount.year, measure: amount.measure, month: amount.month, cents: amount.cell.cents });
+    if (live) noteCalculationLines(input, live, version, amount, draft);
   }
+}
+
+/**
+ * A changed total or month on a column that follows its calculation lines (`computed` with lines):
+ * the load writes the file's amounts and the lines stay as a reference, so the person is told once
+ * per column and year. A column whose lines are already a reference is not.
+ */
+function noteCalculationLines(
+  input: PreflightInput,
+  live: StoredLine,
+  version: StoredVersion | undefined,
+  amount: InterpretedRow['amounts'][number],
+  draft: LineDraft,
+): void {
+  const round = version?.rounds?.[amount.measure];
+  if (!round || round.method !== 'computed' || round.lineCount === 0 || round.linesTotal == null) return;
+  const key = `${amount.year}:${amount.measure}`;
+  if (draft.calculationLines.has(key)) return;
+  const item = lineRef(live.itemNumber);
+  const total = formatCentsFixed(round.linesTotal);
+  const column = columnOfMeasure(amount.measure);
+  draft.calculationLines.set(key, {
+    item,
+    column,
+    year: amount.year,
+    count: round.lineCount,
+    total,
+    message: calculationLinesMessage(item, input.labels[column] || column, amount.year, round.lineCount, total),
+  });
+}
+
+/**
+ * `BL-83 · Revision 2026: 3 calculation lines (281 280) will no longer drive these amounts.` The total
+ * is written as the app writes amounts: whole units, a space between thousands.
+ */
+function calculationLinesMessage(item: string, label: string, year: number, count: number, total: string): string {
+  const shown = Math.round(Number(total)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const lines = count === 1 ? '1 calculation line' : `${count} calculation lines`;
+  return `${item} · ${label} ${year}: ${lines} (${shown}) will no longer drive these amounts.`;
 }
 
 function noteFreshness(row: InterpretedRow, live: StoredLine, bag: Bag): void {
@@ -1228,6 +1275,7 @@ function emptyBag(): Bag {
     duplicates: [],
     supplierNames: [],
     costCenterCompanies: [],
+    calculationLines: [],
     deleted: [],
     changed: [],
     snapshot: [],
@@ -1284,6 +1332,8 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
       ignoredColumns: input.read.ignoredColumns,
       supplierNames: bag.supplierNames.slice(0, PREFLIGHT_LIST_LIMIT),
       costCenterCompanies: bag.costCenterCompanies.slice(0, PREFLIGHT_LIST_LIMIT),
+      calculationLines: bag.calculationLines.slice(0, PREFLIGHT_LIST_LIMIT),
+      calculationLinesCount: bag.calculationLines.length,
     },
     creates: {
       dimensionValues: namesByDimension(bag.dimensions),

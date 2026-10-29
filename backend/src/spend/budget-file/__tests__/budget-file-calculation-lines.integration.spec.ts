@@ -17,7 +17,7 @@ import {
   StoredLine,
   StoredRecord,
 } from '../../__tests__/round-inputs.fixtures';
-import { exportBudgetFile, fileRows, loadBudgetFile, withCell } from '../../__tests__/budget-file.fixtures';
+import { exportBudgetFile, fileRows, loadBudgetFile, preflightBudgetFile, withCell } from '../../__tests__/budget-file.fixtures';
 
 // A budget file sets one yearly total per column. A column may also be built
 // from quantity × price lines in the Budget tab (`spend_round_inputs` and
@@ -387,6 +387,88 @@ async function testEqualTotalOnlyTheBudgetTabRewritesTheColumn(kind: Kind) {
   assert.notDeepEqual(comparable(file.column), comparable(tab.column), `${kind}: the file and the tab differ at an equal total`);
 }
 
+/** The export of the line's Budget column, yearly or by month. */
+async function exportBudget(ctx: Pick<Ctx, 'runner' | 'tenantId' | 'itemId'>, kind: Kind, detail: 'yearly' | 'months' = 'yearly'): Promise<string> {
+  return exportBudgetFile(ctx.runner.manager, kind, ctx.tenantId, [ctx.itemId], { amountYears: String(YEAR), columns: 'budget', detail });
+}
+
+/** The preflight's calculation lines warnings for a file, once the file is ready to load. */
+async function calculationWarnings(ctx: Pick<Ctx, 'runner' | 'tenantId'>, kind: Kind, file: string) {
+  const report = await preflightBudgetFile(ctx.runner.manager, kind, ctx.tenantId, file);
+  assert.equal(report.ok, true, `${kind}: the file is ready to load`);
+  return { report, warnings: report.warnings.calculationLines };
+}
+
+/** The warning of the line's Budget column: its two lines and their 60 000. */
+function budgetWarning(item: string) {
+  return {
+    line: 2,
+    item,
+    column: 'budget',
+    year: YEAR,
+    count: 2,
+    total: TOTAL_FROM_LINES,
+    message: `${item} · Budget ${YEAR}: 2 calculation lines (60 000) will no longer drive these amounts.`,
+  };
+}
+
+/**
+ * A different yearly total on a column that follows its lines: the check says, once, that the two
+ * lines and their total no longer drive it. The file still loads.
+ */
+async function testDifferentTotalWarnsAboutTheLines(kind: Kind) {
+  await withCalculationLines(kind, 'warn-different', async (ctx) => {
+    const content = await exportBudget(ctx, kind);
+    const item = fileRows(content)[0].item_number;
+    const { report, warnings } = await calculationWarnings(ctx, kind, withCell(content, `budget_${YEAR}`, DIFFERENT_TOTAL));
+    assert.deepEqual(warnings, [budgetWarning(item)], `${kind}: the lines' count and total`);
+    assert.equal(report.changes.updated, 1);
+    const loaded: any = await loadBudgetFile(ctx.runner.manager, kind, ctx.tenantId, withCell(content, `budget_${YEAR}`, DIFFERENT_TOTAL));
+    assert.equal(loaded.updated, 1, `${kind}: the warning never refuses the load`);
+  });
+}
+
+/** An equal total, and a changed total on a column whose lines are already a reference: no warning. */
+async function testNoWarningForAnEqualTotalOrAReference(kind: Kind) {
+  await withCalculationLines(kind, 'warn-none', async (ctx) => {
+    const content = await exportBudget(ctx, kind);
+    const equal = await calculationWarnings(ctx, kind, content);
+    assert.deepEqual(equal.warnings, [], `${kind}: an equal total keeps the column on its lines`);
+    assert.equal(equal.report.changes.unchanged, 1);
+
+    await loadBudgetTotal(ctx, kind, DIFFERENT_TOTAL);
+    const again = await exportBudget(ctx, kind);
+    const reference = await calculationWarnings(ctx, kind, withCell(again, `budget_${YEAR}`, '50000.00'));
+    assert.equal(reference.report.changes.updated, 1, `${kind}: the new total is a change`);
+    assert.deepEqual(reference.warnings, [], `${kind}: the lines are already a reference`);
+  });
+}
+
+/** Months changed on a column that follows its lines: one warning for the column, whatever the months. */
+async function testMonthChangeWarnsOnce(kind: Kind) {
+  await withCalculationLines(kind, 'warn-month', async (ctx) => {
+    const content = await exportBudget(ctx, kind, 'months');
+    const item = fileRows(content)[0].item_number;
+    const file = withCell(withCell(content, `budget_${YEAR}_03`, '9000.00'), `budget_${YEAR}_04`, '9000.00');
+    const { report, warnings } = await calculationWarnings(ctx, kind, file);
+    assert.deepEqual(report.changes.updatedLines.map((line) => line.fields), [[`budget ${YEAR}-03`, `budget ${YEAR}-04`]]);
+    assert.deepEqual(warnings, [budgetWarning(item)], `${kind}: said once for the column`);
+    const unchanged = await calculationWarnings(ctx, kind, content);
+    assert.deepEqual(unchanged.warnings, [], `${kind}: the same months say nothing`);
+
+    const loaded: any = await loadBudgetFile(ctx.runner.manager, kind, ctx.tenantId, file);
+    assert.equal(loaded.updated, 1, `${kind}: the months load (${JSON.stringify(loaded.errors ?? loaded)})`);
+    const after = await column(ctx.runner, kind, ctx.versionId, 'planned');
+    assert.deepEqual(after.months.slice(1, 5), ['8000.00', '9000.00', '9000.00', '8000.00'], `${kind}: the file's months`);
+    assert.deepEqual(
+      [after.record!.method, after.record!.last_calculation.kind, after.record!.last_calculation.total],
+      ['manual', 'computed', TOTAL_FROM_LINES],
+      `${kind}: the column is manual and keeps the lines' calculation as a reference`,
+    );
+    assert.deepEqual(after.lines.map((line) => line.label), ['Consultant', 'Developer'], `${kind}: the lines are kept`);
+  });
+}
+
 void runSpecs(
   'budget-file-calculation-lines.integration.spec',
   KINDS.flatMap((kind) => [
@@ -394,6 +476,9 @@ void runSpecs(
     [`an equal yearly total leaves the column on its calculation lines (${kind})`, () => testEqualFileTotalLeavesTheColumnOnItsLines(kind)],
     [`the Budget tab writes the same column as the file for a different total (${kind})`, () => testBudgetTabWritesTheSameColumnAsTheFile(kind)],
     [`at an equal total only the Budget tab rewrites the column (${kind})`, () => testEqualTotalOnlyTheBudgetTabRewritesTheColumn(kind)],
+    [`the check warns when a different total stops the calculation lines (${kind})`, () => testDifferentTotalWarnsAboutTheLines(kind)],
+    [`the check says nothing for an equal total or lines kept as a reference (${kind})`, () => testNoWarningForAnEqualTotalOrAReference(kind)],
+    [`the check warns once when months change on a column with lines (${kind})`, () => testMonthChangeWarnsOnce(kind)],
   ] as Array<[string, () => Promise<void>]>),
 );
 
