@@ -315,15 +315,15 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Mets à jour le contact de Fournisseur Lactalis', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
 
   // Lot 7: the six phrases that came back to their pre-lot 5 profile. A state verb that clears a
-  // task field is a task write. The other four name no writable field or tool: a location has no
-  // disabled state, a portfolio exclusion is a roadmap scenario, and user administration has no
-  // AI tool. They stay reads.
+  // task field is a task write, and a user account change is a generic write with no AI tool. A
+  // location has no disabled state and a portfolio exclusion is a roadmap scenario, so those two
+  // name no writable field and stay reads.
   { prompt: 'Efface la description de la tâche T-4', profile: 'write_task', mode: 'write', tools: ['update_task_fields'] },
   { prompt: 'Clear the due date of task T-12', profile: 'write_task', mode: 'write', tools: ['update_task_fields'] },
   { prompt: 'Disable the location LOC-3', profile: 'entity_inspection', mode: 'entity' },
   { prompt: 'Exclus le projet PRJ-2 du portefeuille', profile: 'entity_inspection', mode: 'entity' },
-  { prompt: "Désactive l'utilisateur Paul Martin", profile: 'read_query', mode: 'read' },
-  { prompt: 'Active le compte de Julie Bernard', profile: 'read_query', mode: 'read' },
+  { prompt: "Désactive l'utilisateur Paul Martin", profile: 'write_general', mode: 'write' },
+  { prompt: 'Active le compte de Julie Bernard', profile: 'write_general', mode: 'write' },
 
   // Lot 4 review: a noun after upgrade, replace, record or install stays a read; so do a review
   // and the question of who changed a value.

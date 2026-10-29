@@ -564,6 +564,19 @@ function hasTaskFieldStateWrite(rawText: string, text: string): boolean {
   return namesTask && namesField;
 }
 
+/**
+ * A user administration write: "Désactive l'utilisateur Paul Martin", "Active le compte de Julie
+ * Bernard". The screen changes the account status; the assistant has no user tool, so the write
+ * profile carries the refusal instead of a read query.
+ */
+function hasUserAdministrationWrite(rawText: string, text: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  const first = directiveFirstWord(rawText);
+  if (first == null || !['active', 'activez', 'activer', 'enable', 'désactive', 'désactivez', 'désactiver', 'desactive', 'disable'].includes(first)) return false;
+  if (/\b(?:utilisateur|utilisateurs|user|users)\b/.test(text)) return true;
+  return /\bcompte\b[\s\S]{0,30}\b(?:de|d['’]|of)\b[\s\S]{0,40}[A-Z]/.test(rawText);
+}
+
 /** An imperative technology verb at the head: "Désinstalle nginx de AST-13", "Remove Java 8 from APP-3". */
 function hasTechnologyWriteIntent(rawText: string, text: string): boolean {
   if (isTechnologyQuestion(rawText)) return false;
@@ -818,7 +831,9 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   const hasTechnologyWrite = hasTechnologyWriteIntent(raw, text);
   const hasTechnologyChange = hasTechnologyChangeStatement(raw, text);
   const hasTaskFieldStateWriteIntent = hasTaskFieldStateWrite(raw, text);
-  const isWrite = hasTechnologyPeopleIntent || hasTechnologyWebLinkIntent || hasTaskFieldStateWriteIntent || containsAny(writeText, [
+  const hasUserAdministrationIntent = hasUserAdministrationWrite(raw, text);
+  const isWrite = hasTechnologyPeopleIntent || hasTechnologyWebLinkIntent || hasTaskFieldStateWriteIntent
+    || hasUserAdministrationIntent || containsAny(writeText, [
     /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|passe|passer|publish|publier|mark|set)\b/,
     wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
     // A status or lifecycle word with an incident reference is an incident change: "clos INC-7",
@@ -915,6 +930,11 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     }
     if (containsAny(text, [/\b(budget|opex|capex|spend|expense|financial|finance|forecast|plan)\b/])) {
       return { profile: withWebCapability(PROFILES.write_financial, needsWeb), explicitIntent: true };
+    }
+    // A user account is not a master data record: "Active le compte de Julie Bernard" must not
+    // offer the master data write tool, which cannot change a user.
+    if (hasUserAdministrationIntent) {
+      return { profile: withWebCapability(PROFILES.write_general, needsWeb), explicitIntent: true };
     }
     if (!hasTechnologyPeopleIntent && containsAny(text, [/\b(company|companies|supplier|suppliers|fournisseur|fournisseurs|contact|contacts|department|departement|service|location|site|account|compte|master data|referentiel|referential)\b/])) {
       return { profile: withWebCapability(PROFILES.write_master_data, needsWeb), explicitIntent: true };
