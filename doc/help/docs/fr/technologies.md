@@ -165,7 +165,7 @@ Les nouvelles technologies sont dans les alertes, avec deux exceptions :
 - **Systèmes d'exploitation** : voir [Systèmes d'exploitation](#systemes-dexploitation).
 - **Services cloud gérés par un fournisseur** : une technologie dont le [type d'hébergement](#type-dhebergement) est dans le cloud, comme **Cloud public** ou **SaaS**, et une entrée du catalogue que le fournisseur fait tourner, comme Entra ID. Le fournisseur corrige un service en ligne, donc ses vulnérabilités ne vous demandent aucune action. Une technologie en **Cloud privé** reste dans les alertes.
 
-Changer plus tard la famille ou le type d'hébergement d'une technologie laisse son réglage tel quel. Les interrupteurs demandent `infrastructure:member`.
+Changer plus tard la famille ou le type d'hébergement d'une technologie laisse son réglage tel quel. Les interrupteurs demandent le niveau Membre sur l'infrastructure.
 
 #### Versions issues du catalogue
 
@@ -186,7 +186,7 @@ La consultation ajoute les nouvelles versions, les nouveaux identifiants CPE pro
 Le groupe **Identifiants de vulnérabilité**, sous les versions, réunit les identifiants CPE produit et les noms CVE.org. KANAP trouve les vulnérabilités d'une technologie grâce à eux.
 
 - **Replié** : quand la technologie a au moins un identifiant, le groupe est replié, avec un résumé sur sa ligne de titre, par exemple `2 identifiants CPE · 3 noms CVE.org`. Cliquez sur le titre pour l'ouvrir.
-- **Ouvert** : quand la technologie n'en a aucun, le groupe est ouvert, avec un avertissement : aucune vulnérabilité n'est recherchée pour cette technologie. La section **Versions** le signale aussi. Avec `infrastructure:member`, **Ajouter un identifiant** à côté de cette ligne ouvre le groupe.
+- **Ouvert** : quand la technologie n'en a aucun, le groupe est ouvert, avec un avertissement : aucune vulnérabilité n'est recherchée pour cette technologie. La section **Versions** le signale aussi. Avec le niveau Membre sur l'infrastructure, **Ajouter un identifiant** à côté de cette ligne ouvre le groupe.
 
 Le rapprochement se fait au niveau de la technologie. Chaque version de la technologie est comparée aux vulnérabilités de ses identifiants, et une version que vous ajoutez est rapprochée aussitôt. Sans identifiant, KANAP ne recherche aucune vulnérabilité, pour aucune version.
 
@@ -200,7 +200,7 @@ Le rapprochement se fait au niveau de la technologie. Chaque version de la techn
 - **Version** : une version limite le nom aux versions de la technologie dont le libellé commence par elle, par exemple `2019` pour `Windows Server 2019`. Quand un libellé commence par plusieurs d'entre elles, seule la plus longue compte : `2012 R2` reçoit le nom de `2012 R2` et laisse celui de `2012`.
 - **Depuis le catalogue** : beaucoup d'entrées du catalogue arrivent avec leurs noms (Microsoft, Apache, bases de données et d'autres). La consultation du catalogue les tient à jour comme les identifiants CPE, et un nom que vous avez retiré ne revient pas.
 
-Où trouver cette valeur : sur [cve.org](https://www.cve.org), ouvrez la fiche d'une vulnérabilité du produit. Le nom doit être celui de sa section **Product status**. Modifier les noms demande `infrastructure:member`, comme pour les identifiants CPE.
+Où trouver cette valeur : sur [cve.org](https://www.cve.org), ouvrez la fiche d'une vulnérabilité du produit. Le nom doit être celui de sa section **Product status**. Modifier les noms demande le niveau Membre sur l'infrastructure, comme pour les identifiants CPE.
 
 ### Serveurs
 
@@ -283,7 +283,7 @@ Un résumé des vulnérabilités, une ligne par version installée de la technol
 
 Les versions qu'aucun serveur ni aucune application n'utilise n'ont pas de ligne. Elles sont nommées ensemble sous la table, par exemple « Non installées : 2016, 2017 ». KANAP ne recherche les vulnérabilités que des versions installées sur un serveur ou déclarées par une application.
 
-Quand la technologie ou certaines de ses versions sont hors des alertes, une ligne en tête de la section le dit : **Exclue des alertes**, **Exclue des alertes, sauf 2 versions** ou **3 versions exclues des alertes**. Avec `infrastructure:member`, **Modifier** à côté ouvre la table des versions de l'onglet Aperçu, où se trouvent les interrupteurs. Voir [Alertes de vulnérabilité](#alertes-de-vulnerabilite).
+Quand la technologie ou certaines de ses versions sont hors des alertes, une ligne en tête de la section le dit : **Exclue des alertes**, **Exclue des alertes, sauf 2 versions** ou **3 versions exclues des alertes**. Avec le niveau Membre sur l'infrastructure, **Modifier** à côté ouvre la table des versions de l'onglet Aperçu, où se trouvent les interrupteurs. Voir [Alertes de vulnérabilité](#alertes-de-vulnerabilite).
 
 KANAP rapproche à nouveau la technologie dès que ses identifiants, ses noms CVE.org, ses versions, ses serveurs ou ses applications changent. Après un nouvel identifiant CPE produit, la section indique « Recherche des vulnérabilités en cours… » pendant que KANAP lit ce produit dans la NVD. Quand cette lecture ne peut pas aboutir, la section le dit. **Actualiser** (`infrastructure:member`) lance la comparaison à la main.
 
@@ -295,7 +295,7 @@ Les fiches liées à la technologie, une section par genre :
 - **Contrats** : fournisseur, date de fin et montant annuel, avec un total par devise.
 - **Projets** : statut et fin prévue.
 - **Incidents** : sévérité, statut et date de détection. Lier un incident demande `incidents:contributor`. Un incident clos ou annulé ne peut être ni lié ni délié.
-- **Liens et fichiers** : les liens web de la technologie et ses fichiers, une ligne chacun avec son nom, le domaine du lien ou la taille du fichier, et sa date d'ajout. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet, ou sur un fichier pour le télécharger. Avec `infrastructure:member`, **Ajouter un lien** et **Joindre un fichier** ajoutent une ligne, et les fichiers peuvent aussi être déposés sur la section. Survolez une ligne pour modifier un lien ou retirer une ligne. Retirer un lien affiche un message et propose **Annuler**, qui recrée le lien. La suppression d'un fichier demande une confirmation. Une adresse saisie sans `http://` ni `https://` reçoit `https://`. Tout autre schéma est refusé.
+- **Liens et fichiers** : les liens web de la technologie et ses fichiers, une ligne chacun avec son nom, le domaine du lien ou la taille du fichier, et sa date d'ajout. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet, ou sur un fichier pour le télécharger. Avec le niveau Membre sur l'infrastructure, **Ajouter un lien** et **Joindre un fichier** ajoutent une ligne, et les fichiers peuvent aussi être déposés sur la section. Survolez une ligne pour modifier un lien ou retirer une ligne. Retirer un lien affiche un message et propose **Annuler**, qui recrée le lien. La suppression d'un fichier demande une confirmation. Une adresse saisie sans `http://` ni `https://` reçoit `https://`. Tout autre schéma est refusé.
 
 Une section n'apparaît que si vous pouvez lire son module. **Ajouter** (`infrastructure:member`) ouvre une recherche sur place ; la croix au bout d'une ligne retire le lien.
 

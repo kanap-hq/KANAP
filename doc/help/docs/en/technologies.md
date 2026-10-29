@@ -165,7 +165,7 @@ New technologies are in the alerts, with two exceptions:
 - **Operating systems**: see [Operating systems](#operating-systems).
 - **Cloud services run by a provider**: a technology whose [hosting type](#hosting-type) is in the cloud, such as **Public cloud** or **SaaS**, and a catalog entry the provider runs, such as Entra ID. The provider patches an online service, so its vulnerabilities call for no action on your side. A technology in a **Private cloud** stays in the alerts.
 
-Changing the family or the hosting type of a technology later leaves its setting as it is. The switches need `infrastructure:member`.
+Changing the family or the hosting type of a technology later leaves its setting as it is. The switches need the Member level on infrastructure.
 
 #### Versions from the catalog
 
@@ -186,7 +186,7 @@ The check adds the new versions, CPE product identifiers and CVE.org names of th
 The **Vulnerability identifiers** group, under the versions, holds the CPE product identifiers and the CVE.org names. KANAP finds the vulnerabilities of a technology through them.
 
 - **Folded**: when the technology has at least one identifier, the group is folded, with a summary on its title line, for example `2 CPE identifiers · 3 CVE.org names`. Click the title to open it.
-- **Open**: when the technology has none, the group is open, with a warning: no vulnerability is looked up for this technology. The **Versions** section says so too. With `infrastructure:member`, **Add an identifier** next to that line opens the group.
+- **Open**: when the technology has none, the group is open, with a warning: no vulnerability is looked up for this technology. The **Versions** section says so too. With the Member level on infrastructure, **Add an identifier** next to that line opens the group.
 
 The match is made at the level of the technology. Every version of the technology is compared with the vulnerabilities of its identifiers, and a version you add is matched at once. Without an identifier, KANAP looks up no vulnerability for any version.
 
@@ -200,7 +200,7 @@ The match is made at the level of the technology. Every version of the technolog
 - **Version**: a version limits the name to the versions of the technology whose label starts with it, for example `2019` for `Windows Server 2019`. When a label starts with several of them, only the longest counts: `2012 R2` gets the name of `2012 R2` and leaves the one of `2012`.
 - **From the catalog**: many catalog entries come with their names (Microsoft, Apache, databases and others). The catalog check keeps them up to date like the CPE identifiers, and a name you removed does not come back.
 
-Where to find this value: on [cve.org](https://www.cve.org), open the record of a vulnerability of the product. The name must be the one in its **Product status** section. Changing the names needs `infrastructure:member`, as for the CPE identifiers.
+Where to find this value: on [cve.org](https://www.cve.org), open the record of a vulnerability of the product. The name must be the one in its **Product status** section. Changing the names needs the Member level on infrastructure, as for the CPE identifiers.
 
 ### Servers
 
@@ -283,7 +283,7 @@ A summary of the vulnerabilities, one line per installed version of the technolo
 
 The versions that no server and no application uses get no line. They are named together under the table, for example "Not installed: 2016, 2017". KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.
 
-When the technology or some of its versions are out of the alerts, a line at the top of the section says so: **Excluded from alerts**, **Excluded from alerts, except 2 versions** or **3 versions excluded from alerts**. With `infrastructure:member`, **Change** next to it opens the versions table of the Overview tab, where the switches are. See [Vulnerability alerts](#vulnerability-alerts).
+When the technology or some of its versions are out of the alerts, a line at the top of the section says so: **Excluded from alerts**, **Excluded from alerts, except 2 versions** or **3 versions excluded from alerts**. With the Member level on infrastructure, **Change** next to it opens the versions table of the Overview tab, where the switches are. See [Vulnerability alerts](#vulnerability-alerts).
 
 KANAP matches the technology again as soon as its identifiers, CVE.org names, versions, servers or applications change. After a new CPE product identifier, the section says "Searching for vulnerabilities…" while KANAP reads that product from the NVD. When that read cannot be completed, the section says so. **Refresh** (`infrastructure:member`) runs the comparison by hand.
 
@@ -295,7 +295,7 @@ The records linked to the technology, one section per kind:
 - **Contracts**: supplier, end date and yearly amount, with a total per currency.
 - **Projects**: status and planned end.
 - **Incidents**: severity, status and detection date. Linking an incident needs `incidents:contributor`. A closed or cancelled incident cannot be linked or unlinked.
-- **Links and files**: the web links of the technology and its files, one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With `infrastructure:member`, **Add link** and **Attach file** add a row, and files can also be dropped on the section. Hover a row to edit a link or to remove a row. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation. An address typed without `http://` or `https://` gets `https://`. Any other scheme is refused.
+- **Links and files**: the web links of the technology and its files, one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With the Member level on infrastructure, **Add link** and **Attach file** add a row, and files can also be dropped on the section. Hover a row to edit a link or to remove a row. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation. An address typed without `http://` or `https://` gets `https://`. Any other scheme is refused.
 
 A section appears only if you can read its module. **Add** (`infrastructure:member`) opens a search in place; the cross at the end of a row removes the link.
 
