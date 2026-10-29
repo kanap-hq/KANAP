@@ -2529,7 +2529,8 @@ export class AiQueryExecutor {
     throw new BadRequestException('Unsupported entity type.');
   }
 
-  private async resolveDetailEntityId(
+  /** The record an `entity_id` names (uuid, reference or name), as get_entity_detail reads it; get_record_history reads it the same way. */
+  async resolveDetailEntityId(
     context: AiExecutionContextWithManager,
     entityType: AiQueryEntityType,
     rawId: string,

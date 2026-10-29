@@ -4,6 +4,7 @@ import { AccountsModule } from '../accounts/accounts.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { ApplicationsModule } from '../applications/applications.module';
 import { AuditModule } from '../audit/audit.module';
+import { RecordHistoryModule } from '../audit/record-history.module';
 import { AssetsModule } from '../assets/assets.module';
 import { Subscription } from '../billing/subscription.entity';
 import { BillingModule } from '../billing/billing.module';
@@ -187,6 +188,7 @@ import { AiAggregateExecutor } from './query/ai-aggregate.executor';
 import { AiQueryExecutor } from './query/ai-query.executor';
 import { PlatformAiModule } from './platform/platform-ai.module';
 import { BraveSearchService } from './web-search/brave-search.service';
+import { AiRecordHistoryService } from './ai-record-history.service';
 
 @Module({
   imports: [
@@ -253,6 +255,8 @@ import { BraveSearchService } from './web-search/brave-search.service';
     PlatformAiModule,
     PermissionsModule,
     PortfolioModule,
+    // The History tab's service, read by get_record_history (Plaid L7, lot C).
+    RecordHistoryModule,
     RolesModule,
     SpendModule,
     SuppliersModule,
@@ -338,6 +342,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
     AiQueryExecutor,
     AiAggregateExecutor,
     AiToolRegistry,
+    AiRecordHistoryService,
     AiCapabilityRegistry,
     AiCapabilityDispatcherService,
     AiEvidenceService,

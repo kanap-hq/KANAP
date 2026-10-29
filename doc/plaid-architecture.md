@@ -157,6 +157,8 @@ The core read tools are:
 - `get_entity_detail`
 - `get_entity_context`
 - `get_entity_comments`
+- `get_record_history` (the History tab of one record, for the families that have one;
+  the other families are refused in words)
 - `search_knowledge`
 - `get_document`
 - `web_search`, when the feature and tenant setting are enabled

@@ -1145,7 +1145,7 @@ function toolActivityPhase(toolName: string): AiChatActivityPhase {
   ].includes(toolName)) {
     return 'searching_entities';
   }
-  if (['get_entity_detail', 'get_entity_context', 'get_entity_comments'].includes(toolName)) {
+  if (['get_entity_detail', 'get_entity_context', 'get_entity_comments', 'get_record_history'].includes(toolName)) {
     return 'reading_context';
   }
   if (toolName === 'search_knowledge') {

@@ -48,6 +48,8 @@ import { UsersService } from '../../users/users.service';
 import { AiAdminOverviewService } from '../ai-admin-overview.service';
 import { AiEntityService } from '../ai-entity.service';
 import { AiToolRegistry } from '../ai-tool.registry';
+import { AiRecordHistoryService } from '../ai-record-history.service';
+import { RecordHistoryService } from '../../audit/record-history.service';
 import { AiToolName } from '../ai.types';
 import { AiConversationRetentionService } from '../../cleanup/ai-conversation-retention.service';
 import { AiAggregateExecutor } from '../query/ai-aggregate.executor';
@@ -1732,6 +1734,19 @@ function buildToolIsolationCases(
         },
       ];
 
+    case 'get_record_history':
+      return [
+        {
+          label: 'assets-history',
+          input: { entity_type: 'assets', entity_id: fixtures.graphA.assetId },
+          assertResult: (result: any) => {
+            assert.equal(result.entity.type, 'assets');
+            assert.equal(Array.isArray(result.items), true);
+            assert.match(result.note, /History tab/);
+          },
+        },
+      ];
+
     case 'get_entity_comments':
       return [
         {
@@ -2543,6 +2558,11 @@ async function testAiToolRegistryIsolationCoverageTracksRegisteredTools() {
         runner.manager.getRepository(Tenant),
         runner.manager.getRepository(Location),
         {} as any,
+      ),
+      new AiRecordHistoryService(
+        { ...policy, effectiveAccess: async () => ({ isAdmin: true, permissions: {} }) },
+        queryExecutor,
+        new RecordHistoryService(),
       ),
     );
 

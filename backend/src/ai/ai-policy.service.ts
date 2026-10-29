@@ -426,6 +426,22 @@ export class AiPolicyService {
     return new Set(resources.filter((resource) => this.hasPermission(state, resource, 'reader')));
   }
 
+  /**
+   * The person's rights in the shape a request carries them (`TenantRequest.isAdmin`,
+   * `permissions`), for a service of the screens that checks them itself (the record history).
+   * The same read as every check of this policy; a person the policy refuses holds nothing.
+   */
+  async effectiveAccess(
+    context: Pick<AiExecutionContext, 'userId'>,
+    manager: EntityManager,
+  ): Promise<{ isAdmin: boolean; permissions: Record<string, PermissionLevel> }> {
+    const state = context.userId ? await this.getEffectivePermissionStateOrNull(context.userId, manager) : null;
+    return {
+      isAdmin: state?.isAdmin === true,
+      permissions: state ? Object.fromEntries(state.permissions) : {},
+    };
+  }
+
   async getCapabilities(
     context: AiPolicyAccessContext,
     manager: EntityManager,

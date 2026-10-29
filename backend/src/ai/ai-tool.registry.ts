@@ -8,6 +8,7 @@ import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service
 import { AiMutationPreviewService } from './ai-mutation-preview.service';
 import { AiEntityService } from './ai-entity.service';
 import { AiPolicyService } from './ai-policy.service';
+import { AI_RECORD_HISTORY_ENTITY_TYPES, AI_RECORD_HISTORY_FAMILY_WORDS, AiRecordHistoryService } from './ai-record-history.service';
 import { AiSettingsService } from './ai-settings.service';
 import { AiProviderToolDef } from './providers/ai-provider.types';
 import { BraveSearchService } from './web-search/brave-search.service';
@@ -80,6 +81,14 @@ const GetEntityCommentsInputSchema = z.object({
   entity_id: z.string().trim().min(1).describe('The UUID or reference of the project or task, such as PRJ-12 or T-42.'),
   offset: z.number().int().min(0).max(5000).default(0).describe('Zero-based comment offset (default 0). A higher offset reads older comments.'),
   limit: z.number().int().min(1).max(100).default(20).describe('Maximum number of comments to return (default 20, max 100).'),
+});
+
+const GetRecordHistoryInputSchema = z.object({
+  entity_type: AiDetailEntityTypeSchema.describe(`The entity family of the record. The families with a history: ${AI_RECORD_HISTORY_ENTITY_TYPES.join(', ')}.`),
+  entity_id: z.string().trim().min(1)
+    .describe('The UUID or reference of the record, such as TEC-3, AST-9, BL-5, OPX-12, CPX-3 or DOC-4; a record without a reference by its UUID or exact name.'),
+  cursor: z.string().trim().min(1).optional().describe('The next_cursor of the previous page, for older entries.'),
+  limit: z.number().int().min(1).max(100).default(50).describe('Maximum number of entries (default 50, max 100).'),
 });
 
 const SearchKnowledgeInputSchema = z.object({
@@ -317,6 +326,7 @@ export class AiToolRegistry {
     private readonly previews: AiMutationPreviewService,
     private readonly mutationOperations: AiMutationOperationRegistry,
     @Optional() private readonly itOpsSettings?: ItOpsSettingsService,
+    @Optional() private readonly recordHistory?: AiRecordHistoryService,
   ) {
     this.definitions = new Map<AiToolName, AiToolDefinition<any, any>>([
       [
@@ -467,6 +477,22 @@ export class AiToolRegistry {
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: (context, input) => this.entityTools.getEntityComments(context, input),
+        },
+      ],
+      [
+        'get_record_history',
+        {
+          name: 'get_record_history',
+          category: 'inspection',
+          description: `Returns the history of one record, newest first, as its History tab shows it: who did what and when (creation, each change with its before and after values, deletion), with next_cursor for older entries. The records with a history: ${AI_RECORD_HISTORY_FAMILY_WORDS}. The other families (applications, contracts, projects, requests, tasks, incidents, users and more) have no History tab in KANAP, so no history here.`,
+          inputSchema: GetRecordHistoryInputSchema,
+          inputSummary: fieldDescriptions(GetRecordHistoryInputSchema),
+          surfaces: ['chat', 'mcp'],
+          readOnly: true,
+          execute: (context, input) => {
+            if (!this.recordHistory) throw new BadRequestException('The record history is unavailable.');
+            return this.recordHistory.getRecordHistory(context, input);
+          },
         },
       ],
       [
@@ -779,6 +805,9 @@ export class AiToolRegistry {
         return AI_CONTEXT_ENTITY_TYPES.some((type) => avail.readableEntityTypes.includes(type));
       case 'get_entity_comments':
         return avail.readableEntityTypes.includes('projects') || avail.readableEntityTypes.includes('tasks');
+      case 'get_record_history':
+        // Offered to a person who reads one family with a history; the record's own right is checked on the call.
+        return !!this.recordHistory && AI_RECORD_HISTORY_ENTITY_TYPES.some((type) => avail.readableEntityTypes.includes(type));
       case 'search_knowledge':
       case 'get_document':
         return avail.canReadKnowledge;

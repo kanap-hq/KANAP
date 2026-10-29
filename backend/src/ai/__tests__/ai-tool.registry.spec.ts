@@ -42,7 +42,12 @@ function createRegistry(overrides?: {
   braveSearch?: any;
   previews?: any;
   mutationOperations?: any;
+  /** null: a registry built without the history service. */
+  recordHistory?: any;
 }) {
+  const recordHistory = overrides && 'recordHistory' in overrides
+    ? overrides.recordHistory ?? undefined
+    : { getRecordHistory: async (_context: any, input: any) => ({ entity: { type: input.entity_type, id: input.entity_id }, items: [], returned: 0, next_cursor: null, truncated: false, complete: true, note: 'History tab' }) };
   return new AiToolRegistry(
     {
       searchAll: async () => ({ items: [], total: 0, complete: false, entity_types: ['applications'] }),
@@ -524,6 +529,8 @@ function createRegistry(overrides?: {
       },
       ...(overrides?.mutationOperations || {}),
     } as any,
+    undefined,
+    recordHistory,
   );
 }
 
@@ -612,7 +619,7 @@ async function testListAvailableTools() {
   const tools = await registry.listAvailableTools(createContext());
   assert.deepEqual(
     tools.map((tool) => tool.name),
-    ['search_all', 'describe_entity_filters', 'query_entities', 'aggregate_entities', 'get_filter_values', 'get_application_classification_catalog', 'get_entity_detail', 'get_entity_context', 'search_knowledge', 'get_document'],
+    ['search_all', 'describe_entity_filters', 'query_entities', 'aggregate_entities', 'get_filter_values', 'get_application_classification_catalog', 'get_entity_detail', 'get_entity_context', 'get_record_history', 'search_knowledge', 'get_document'],
   );
   assert.match(
     tools.find((tool) => tool.name === 'describe_entity_filters')?.description || '',
@@ -678,6 +685,40 @@ async function testTaskReadersSeeEntityCommentsTool() {
   assert.ok(tools.some((tool) => tool.name === 'get_entity_comments'));
 }
 
+/**
+ * The history tool is offered to a person who reads one family with a History tab (Plaid L7, lot C),
+ * whatever the family of the record they then name: "Historique de APP-36" keeps the tool, which
+ * answers that applications have no history. The record's own right is checked on the call.
+ */
+async function testRecordHistoryOfferFollowsTheFamilyRights() {
+  const offered = async (readable: string[], recordHistory?: any) => {
+    const registry = createRegistry({
+      policy: { listReadableEntityTypes: async () => readable },
+      ...(recordHistory === undefined ? {} : { recordHistory }),
+    });
+    return (await registry.listAvailableTools(createContext())).some((tool) => tool.name === 'get_record_history');
+  };
+  assert.equal(await offered(['technologies']), true, 'a reader of technologies');
+  assert.equal(await offered(['budget_lines']), true, 'a reader of the budget');
+  assert.equal(await offered(['projects', 'tasks', 'applications', 'contracts']), false, 'no family with a history');
+  assert.equal(await offered(['technologies'], null), false, 'a registry without the history service');
+
+  const calls: any[] = [];
+  const registry = createRegistry({
+    recordHistory: { getRecordHistory: async (_context: any, input: any) => { calls.push(input); return { items: [] }; } },
+  });
+  await registry.execute(createContext(), 'get_record_history', { entity_type: 'technologies', entity_id: 'TEC-3' });
+  assert.deepEqual(calls, [{ entity_type: 'technologies', entity_id: 'TEC-3', limit: 50 }], 'the default page of the History tab');
+  await assert.rejects(
+    registry.execute(createContext(), 'get_record_history', { entity_type: 'technologies', entity_id: 'TEC-3', limit: 101 }),
+    /invalid|limit/i,
+  );
+  const schema = registry.toToolJsonSchemas([{ name: 'get_record_history' }])[0];
+  assert.ok((schema.parameters as any).properties.entity_type.enum.includes('applications'), 'an application is accepted, to be refused in words');
+  assert.match(schema.description, /budget lines, business processes/);
+  assert.equal(registry.listRegisteredTools().find((tool) => tool.name === 'get_record_history')?.category, 'inspection');
+}
+
 async function testListRegisteredToolsExposesRuntimeRegistry() {
   const registry = createRegistry();
 
@@ -693,6 +734,7 @@ async function testListRegisteredToolsExposesRuntimeRegistry() {
       'get_entity_detail',
       'get_entity_context',
       'get_entity_comments',
+      'get_record_history',
       'search_knowledge',
       'get_document',
       'prepare_mutation_plan',
@@ -2177,6 +2219,7 @@ async function testAggregateExecutorMarksUnresolvedScopeIncomplete() {
 async function run() {
   await testListAvailableTools();
   await testTaskReadersSeeEntityCommentsTool();
+  await testRecordHistoryOfferFollowsTheFamilyRights();
   await testReadToolTextStatesFacts();
   await testVulnerabilityReadsAreDescribed();
   await testListRegisteredToolsExposesRuntimeRegistry();
