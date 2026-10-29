@@ -2624,7 +2624,22 @@ async function testTechnologyAlertsUndoServicePacksExactly(harness: Harness) {
     );
     await approvePreview(harness, ctx, preview);
     const undo = await harness.tools.execute(ctx, 'undo_preview', { preview_id: preview.preview_id }) as any;
-    await approvePreview(harness, ctx, undo);
+    // The undo reads the alert state once before the writes and once for the equality check, not
+    // once per version.
+    const { AiMutationOperationRegistry } = require('../mutation/ai-mutation-operation.registry');
+    const alertsOperation: any = harness.app.get(AiMutationOperationRegistry).getOperation('set_technology_vulnerability_alerts');
+    const originalReadState = alertsOperation.readState;
+    let stateReads = 0;
+    alertsOperation.readState = async function (...args: any[]) {
+      stateReads++;
+      return originalReadState.apply(this, args);
+    };
+    try {
+      await approvePreview(harness, ctx, undo);
+    } finally {
+      alertsOperation.readState = originalReadState;
+    }
+    assert.equal(stateReads, 2, 'the undo reads the alert state once before the writes and once at the end');
     const rows = await runner.query(
       `SELECT label, vulnerability_alerts FROM technology_versions
         WHERE tenant_id = $1 AND technology_id = $2 AND label IN ('15', '15 SP1', '15 SP2') ORDER BY label`,
