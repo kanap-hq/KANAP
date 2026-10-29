@@ -3354,8 +3354,16 @@ export class AiQueryExecutor {
     }
 
     if (entityType === 'users') {
-      const row = await this.users.findById(entityId, { manager: context.manager });
-      if (!row) throw new NotFoundException('User not found.');
+      const user = await this.users.findById(entityId, { manager: context.manager });
+      if (!user) throw new NotFoundException('User not found.');
+      // `findById` gives the entity and its relations; `mapUser` reads the columns of the users
+      // list (`company_name`, `department_name`, `primary_role_name`), named here from them.
+      const row = {
+        ...user,
+        company_name: user.company?.name ?? null,
+        department_name: user.department?.name ?? null,
+        primary_role_name: user.role?.role_name ?? null,
+      };
       // A reader of users gets what the user's page gives them (`toUserLookup`): name, email, status.
       if (!(await this.usersAdminView(context))) {
         const lookup = { id: row.id, email: row.email, first_name: row.first_name, last_name: row.last_name, status: row.status };

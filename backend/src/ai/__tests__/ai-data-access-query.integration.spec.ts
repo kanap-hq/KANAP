@@ -290,6 +290,22 @@ async function testPersonAndCompanyDetails(h: Harness, runner: QueryRunner, s: S
   const keys = Object.keys(bruno.data);
   assert.equal(keys.some((key) => /password|secret|token|mfa_secret/i.test(key)), false, keys.join(', '));
 
+  // The detail names the primary role, the company and the department, as the users list does
+  // (Plaid L7, lot D: `findById` gives the entity, whose relations carry them).
+  const department = await insertId(runner, `INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, 'Finance')`, [s.tenantId, s.companies.c1]);
+  await runner.query(`UPDATE users SET company_id = $2, department_id = $3 WHERE id = $1`, [s.users.bruno, s.companies.c1, department]);
+  const placed = await h.tools.execute(ctx(runner, s, 'ulla'), 'get_entity_detail', { entity_type: 'users', entity_id: s.users.bruno });
+  assert.deepEqual(
+    [placed.entity.metadata.primary_role, placed.entity.metadata.company, placed.entity.metadata.department],
+    ['IT Landscape Member', `Formaggio ${s.tag}`, 'Finance'],
+  );
+  const listed = await h.tools.execute(ctx(runner, s, 'ulla'), 'query_entities', { entity_type: 'users', q: 'Bruno' });
+  assert.deepEqual(
+    [listed.items[0].metadata.primary_role, listed.items[0].metadata.company, listed.items[0].metadata.department],
+    [placed.entity.metadata.primary_role, placed.entity.metadata.company, placed.entity.metadata.department],
+    'the detail and the list say the same',
+  );
+
   const victor = await h.tools.execute(ctx(runner, s, 'ulla'), 'get_entity_detail', { entity_type: 'users', entity_id: s.users.victor });
   assert.deepEqual([victor.data.data_access.mode, victor.data.data_access.is_administrator, victor.data.data_access.nodes], ['all', true, []]);
   assert.match(victor.data.data_access.note, /Administrator: sees all data/);
