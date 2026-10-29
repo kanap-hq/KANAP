@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
 import { AnalyticsCategoriesService } from '../../analytics/analytics-categories.service';
@@ -1475,6 +1475,16 @@ export class AiQueryExecutor {
   }
 
   /**
+   * The roles and their rights, checked again here though the tool checked them, as the data access
+   * branch: users at admin level and access not limited, refused in the policy's words (the right
+   * and the screen, or the reserved message). Closed without the policy.
+   */
+  private async assertRolesRead(context: AiExecutionContextWithManager, entityType: 'roles' | 'role_permissions'): Promise<void> {
+    if (!this.policy) throw new ForbiddenException('The roles are not available.');
+    await this.policy.assertEntityTypeReadAccess(context, entityType, context.manager);
+  }
+
+  /**
    * The names of at most ten servers or applications, then the rest counted: a card never carries
    * an unbounded list, and an empty count is "not read", never "none".
    */
@@ -2396,6 +2406,7 @@ export class AiQueryExecutor {
     }
 
     if (input.entity_type === 'roles' || input.entity_type === 'role_permissions') {
+      await this.assertRolesRead(context, input.entity_type);
       const services = this.rolesServices();
       const result = input.entity_type === 'roles'
         ? await listAiRoles(services, context.manager, scoped.query)
@@ -3569,6 +3580,7 @@ export class AiQueryExecutor {
    * counted, never named.
    */
   private async roleDetail(context: AiExecutionContextWithManager, entityId: string): Promise<AiEntityDetailDto> {
+    await this.assertRolesRead(context, 'roles');
     const services = this.rolesServices();
     const value = String(entityId ?? '').trim();
     const role = await findAiRole(services, context.manager, value);

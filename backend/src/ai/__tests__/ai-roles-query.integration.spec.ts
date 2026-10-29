@@ -29,7 +29,7 @@ process.env.S3_BUCKET ||= 'ai-roles-query-spec';
 process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
-type Harness = { app: any; dataSource: DataSource; tools: any; rolesRoute: any };
+type Harness = { app: any; dataSource: DataSource; tools: any; rolesRoute: any; query: any; aggregate: any };
 type Seed = {
   tenantId: string;
   otherTenantId: string;
@@ -43,6 +43,8 @@ async function createHarness(): Promise<Harness> {
   const { AiToolRegistry } = require('../ai-tool.registry');
   const { AiPolicyService } = require('../ai-policy.service');
   const { RolesController } = require('../../roles/roles.controller');
+  const { AiQueryExecutor } = require('../query/ai-query.executor');
+  const { AiAggregateExecutor } = require('../query/ai-aggregate.executor');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   app.get(AiPolicyService).assertSurfaceAccess = async () => undefined;
   return {
@@ -50,6 +52,8 @@ async function createHarness(): Promise<Harness> {
     dataSource: app.get(DataSource),
     tools: app.get(AiToolRegistry),
     rolesRoute: app.get(RolesController),
+    query: app.get(AiQueryExecutor),
+    aggregate: app.get(AiAggregateExecutor),
   };
 }
 
@@ -279,6 +283,33 @@ async function testTheUserCountIsTheScreens(h: Harness, runner: QueryRunner, s: 
   assert.match(description, /filtered on `roles` also counts a person whose primary role it is on their own record only/);
 }
 
+/**
+ * The executors check the right again, the tool not being the only gate (Plaid L7, lot E): a
+ * direct call without users at admin level, or in limited access, is refused in words.
+ */
+async function testTheExecutorsCheckTheRight(h: Harness, runner: QueryRunner, s: Seed) {
+  const budgetReader = await insertId(runner,
+    `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, 'Budget', 'Only', $3, 'enabled')`,
+    [s.tenantId, `budget-only-${s.tenantId.slice(0, 8)}@example.test`, s.roles.reader]);
+  await runner.query(`INSERT INTO user_roles (tenant_id, user_id, role_id, is_primary) VALUES ($1, $2, $3, true)`, [s.tenantId, budgetReader, s.roles.reader]);
+  const withoutRight = { ...ctx(runner, s, 'admin'), userId: budgetReader };
+  const calls = (context: any) => [
+    ['query roles', () => h.query.execute(context, { entity_type: 'roles' })],
+    ['query role_permissions', () => h.query.execute(context, { entity_type: 'role_permissions' })],
+    ['detail of a role', () => h.query.executeDetail(context, { entity_type: 'roles', entity_id: 'Administrator' })],
+    ['aggregate roles', () => h.aggregate.execute(context, { entity_type: 'roles', group_by: 'type' })],
+    ['aggregate role_permissions', () => h.aggregate.execute(context, { entity_type: 'role_permissions', group_by: 'level' })],
+  ] as const;
+  for (const [name, call] of calls(withoutRight)) {
+    await assert.rejects(call, /You need the right to administer users \(the right the Admin › Roles screen asks for\)/, `${name}: refused without the right`);
+  }
+  for (const [name, call] of calls(ctx(runner, s, 'limited'))) {
+    await assert.rejects(call, /reserved to people with access to all data/, `${name}: refused in limited access`);
+  }
+  const allowed = await h.query.execute(ctx(runner, s, 'unlimited'), { entity_type: 'roles' });
+  assert.ok(allowed.total >= 5, 'the right reads');
+}
+
 /** A French profile: the French words of the Roles screen (Plaid L7, lot D). */
 async function testTheWordsFollowTheProfile(h: Harness, runner: QueryRunner, s: Seed) {
   await runner.query(`UPDATE users SET locale = 'fr' WHERE id = $1`, [s.users.unlimited]);
@@ -313,6 +344,7 @@ async function run() {
       await testGateOnARealTransaction(harness, runner, s);
       await testTheWordsFollowTheProfile(harness, runner, s);
       await testTheUserCountIsTheScreens(harness, runner, s);
+      await testTheExecutorsCheckTheRight(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
