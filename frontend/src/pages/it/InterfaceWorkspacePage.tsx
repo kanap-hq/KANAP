@@ -159,7 +159,6 @@ export default function InterfaceWorkspacePage() {
 
   const canManage = hasLevel('applications', 'member');
   const canDelete = hasLevel('applications', 'admin');
-  const canCreateConnection = hasLevel('infrastructure', 'member');
   const idParam = String(params.id || '');
   const isCreate = idParam === 'new';
   const id = idParam;
@@ -774,7 +773,6 @@ export default function InterfaceWorkspacePage() {
             <InterfaceBindingsMatrix
               interfaceId={current.id}
               canManage={canManage}
-              canCreateConnection={canCreateConnection}
               interfaceName={current.name}
               sourceApplicationId={current.source_application_id}
               targetApplicationId={current.target_application_id}
