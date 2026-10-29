@@ -46,13 +46,15 @@ import { fetchProjectTasksCount } from '../../utils/workspaceTabCounts';
 import { portfolioLinksKey, usePortfolioRelationsBadge } from './workspace/portfolioRelations';
 import { unsavedConfirm, useKanapDialogs } from '../../components/design';
 import { carryListFilters } from '../../lib/listContext';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
-type TabKey = 'summary' | 'tasks' | 'timeline' | 'effort' | 'scoring' | 'relations' | 'knowledge';
+type TabKey = 'summary' | 'tasks' | 'timeline' | 'effort' | 'scoring' | 'relations' | 'knowledge' | typeof RECORD_HISTORY_TAB_KEY;
 type LegacyPanelRoute = 'overview' | 'activity' | 'team';
 type RouteTabKey = TabKey | LegacyPanelRoute;
 type DependencyTarget = { type: 'request' | 'project'; id: string; name: string };
 
-const PROJECT_TAB_KEYS: TabKey[] = ['summary', 'tasks', 'timeline', 'effort', 'scoring', 'relations', 'knowledge'];
+const PROJECT_TAB_KEYS: TabKey[] = ['summary', 'tasks', 'timeline', 'effort', 'scoring', 'relations', 'knowledge', RECORD_HISTORY_TAB_KEY];
 
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   waiting_list: ['planned', 'on_hold', 'cancelled'],
@@ -93,6 +95,8 @@ const ProjectTasksPanel = React.lazy(() => import('./editors/ProjectTasksPanel')
 const ProjectActivityTab = React.lazy(() => import('./workspace/project/ProjectActivityTab'));
 const PortfolioRelationsTab = React.lazy(() => import('./workspace/PortfolioRelationsTab'));
 const ProjectKnowledgeTab = React.lazy(() => import('./workspace/project/ProjectKnowledgeTab'));
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
 
 export default function ProjectWorkspacePage() {
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
@@ -128,6 +132,7 @@ export default function ProjectWorkspacePage() {
     { key: 'scoring', label: t('portfolio:labels.scoring') },
     { key: 'relations', label: t('portfolio:labels.relations') },
     { key: 'knowledge', label: t('portfolio:labels.knowledge') },
+    { key: RECORD_HISTORY_TAB_KEY, label: t('portfolio:labels.history') },
   ], [t]);
   const statusOptions = React.useMemo(() => getProjectStatusOptions(t), [t]);
   const originOptions = React.useMemo(() => [
@@ -1134,6 +1139,14 @@ export default function ProjectWorkspacePage() {
               canCreate={hasLevel('knowledge', 'member')}
             />
           </React.Suspense>
+        )}
+
+        {routeTab === RECORD_HISTORY_TAB_KEY && !isCreate && form?.id && (
+          <WorkspaceTabBoundary resetKey={routeTab} onRetry={historyTab.retry}>
+            <React.Suspense fallback={null}>
+              <HistoryTab key={form.id} table="portfolio_projects" recordId={form.id} />
+            </React.Suspense>
+          </WorkspaceTabBoundary>
         )}
 
       </PortfolioDetailWorkspaceShell>
