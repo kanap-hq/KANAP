@@ -75,7 +75,9 @@ export type AuditParentRule =
 
 /**
  * The record a task belongs to, by its `related_object_type`: one line per type, sorted, added by
- * the run that gives that record its history, whose own migration backfills the type's rows.
+ * the run that gives that record its history, whose own migration backfills the type's rows
+ * (`TASK_TYPES`; `__tests__/audit-parent-rules-task-types.spec.ts` checks the union of the
+ * migrations against this map).
  */
 export const TASK_PARENT_TABLES = {
   capex_item: 'spend_items',
