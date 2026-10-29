@@ -281,6 +281,24 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Who supports PostgreSQL?', profile: 'read_query', mode: 'read' },
   { prompt: "Quelles technologies n'ont pas de responsable IT ?", profile: 'read_query', mode: 'read' },
 
+  // Lot 6: the state verbs need a technology complement; these are reports, not writes.
+  { prompt: 'Active applications using PostgreSQL', profile: 'read_query', mode: 'read' },
+  { prompt: 'Active technologies with no IT owner', profile: 'read_query', mode: 'read' },
+  { prompt: 'Active servers running Windows Server 2012', profile: 'read_query', mode: 'read' },
+  { prompt: 'Clear summary of PostgreSQL versions in use', profile: 'read_query', mode: 'read' },
+  { prompt: 'Clear list of technologies without an owner, please', profile: 'read_query', mode: 'read' },
+  { prompt: 'Exclude retired applications and list those using Java 8', profile: 'read_query', mode: 'read' },
+
+  // Lot 6: the people, web-link and alert writes the lot 5 review reproduced.
+  { prompt: 'Make Paul Martin the IT owner of PostgreSQL', profile: 'write_general', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Paul Martin devient responsable IT de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Retire le contact Sage Support de PostgreSQL', profile: 'write_general', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Ajoute Jean Dupont aux contacts de support de Redis avec le rôle Éditeur', profile: 'write_general', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Ajoute un lien vers la documentation https://nginx.org/en/docs/ sur nginx', profile: 'write_general', mode: 'write', tools: ['update_technology_web_links'] },
+  { prompt: 'Réactive les alertes de failles sur PostgreSQL', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+  { prompt: 'Stop vulnerability alerts on Windows Server 2012', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+  { prompt: 'Remets la version 14 de TEC-3 sur le réglage de la technologie pour les alertes', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+
   // Lot 4 review: a noun after upgrade, replace, record or install stays a read; so do a review
   // and the question of who changed a value.
   { prompt: 'Upgrade path for PostgreSQL 12', profile: 'read_query', mode: 'read' },
