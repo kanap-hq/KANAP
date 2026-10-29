@@ -21,7 +21,7 @@ import { FEATURE_SLUGS } from './content/features/types';
  * gets a page at `/blog/topic/<key>`. To add one: extend this enum, then add
  * the four `blog.topic.<key>` labels.
  */
-export const BLOG_TOPICS = ['agents', 'self-hosting', 'cost', 'glpi', 'product', 'portfolio', 'compliance', 'release'] as const;
+export const BLOG_TOPICS = ['agents', 'self-hosting', 'cost', 'glpi', 'mapping', 'portfolio', 'compliance', 'release'] as const;
 export type BlogTopic = (typeof BLOG_TOPICS)[number];
 
 const blog = defineCollection({

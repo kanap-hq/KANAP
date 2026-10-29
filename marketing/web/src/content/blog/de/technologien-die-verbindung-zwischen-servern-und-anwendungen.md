@@ -2,7 +2,7 @@
 title: "Technologien: die Verbindung zwischen Servern und Anwendungen"
 description: "SQL Server, vSphere, Active Directory, Entra ID: Was zwischen Ihren Anwendungen und Ihren Servern läuft, fehlt in den meisten IT-Registern. Mit einem vorbefüllten Katalog macht KANAP daraus das Bindeglied, das Supportenden, Schwachstellen, privilegierte Zugänge und Kosten verbindet."
 date: 2026-10-30
-topic: compliance
+topic: mapping
 features: [it-landscape]
 author: Friedrich
 authorRole: Gründer, CIO
@@ -28,15 +28,17 @@ Das Kriterium ist also einfach: Eine Technologie ist ein Produkt, in dem niemand
 
 ## Ein Katalog mit 192 Produkten, stets aktuell
 
-![Das Fenster des Technologiekatalogs mit einer laufenden Suche.](/screenshots/technologies-catalog-2026-10-29.png)
+![Das Fenster des Technologiekatalogs mit einer Suche nach Hersteller: die sechs Oracle-Produkte.](/screenshots/technologies-catalog-oracle-2026-10-29.png)
 
 Eine Technologie anzulegen beginnt im Katalog. Sie suchen das Produkt und klicken: KANAP legt die Technologie mit Hersteller, Familie, Hosting-Typ, Versionen und deren Supportende an und ergänzt ihre bekannten Schwachstellen sowie eine kurze Beschreibung in Ihrer Sprache.
 
 Die Daten stammen von endoflife.date, der offenen Referenz für Produktlebenszyklen. Für die dort nicht abgedeckten Produkte wie Cisco NX-OS, Juniper Junos, Dell PowerStore oder WebLogic übernimmt KANAP die Daten von den offiziellen Seiten der Hersteller. Jede Version zeigt dann ihre Quelle und den Tag, an dem das Datum geprüft wurde.
 
-Eine übernommene Technologie bleibt aktuell. Jeden Tag prüft KANAP den Katalog: Eine neu veröffentlichte Version kommt hinzu, ein vom Hersteller verschobenes Datum zieht nach. Was Sie von Hand eingegeben haben, bleibt erhalten, und eine Version, die Sie gelöscht haben, wird nicht neu angelegt. Bei einer On-Premise-Installation bringt jede KANAP-Version die Aktualisierungen des Katalogs mit; die tägliche Aktualisierung aus dem Internet können Sie trotzdem aktivieren.
+Eine übernommene Technologie bleibt aktuell. In der gehosteten Version prüft KANAP den Katalog jeden Tag: Eine neu veröffentlichte Version kommt hinzu, ein vom Hersteller verschobenes Datum zieht nach. Was Sie von Hand eingegeben haben, bleibt erhalten, und eine Version, die Sie gelöscht haben, wird nicht neu angelegt.
 
-Ein Produkt, das im Katalog fehlt, lässt sich von Hand anlegen; vier Felder genügen.
+In der On-Premise-Version bringt jede neue KANAP-Version die Aktualisierungen des Katalogs mit; die tägliche Aktualisierung aus dem Internet können Sie trotzdem aktivieren, wenn Ihre Umgebung es zulässt.
+
+Und schließlich: Ein Produkt, das im Katalog fehlt, lässt sich von Hand anlegen; vier Felder genügen.
 
 ## Die Versionen und ihr Status
 
@@ -66,11 +68,11 @@ Ihre Technologien lassen sich nach und nach oder in großer Zahl erfassen.
 
 **Netbox.** Ist Ihr Bestand bereits dort, ordnet KANAP jede Netbox-Plattform einem Betriebssystem zu: Aus „Debian 12“ wird Debian, Version 12. Die virtuellen Maschinen werden ihrem Cluster zugeordnet und erhalten die darauf installierten Technologien. Siehe den Artikel [Ihr Hardware-Bestand existiert bereits, und zwar in Netbox](/de/blog/ihr-bestand-ist-schon-in-netbox).
 
-## Eine Erfassung, vier Antworten
+## Der Nutzen
 
-Sobald die Technologien verknüpft sind, beantworten sich die Fragen aus der Einleitung ohne weitere Arbeit.
+Sobald die Technologien verknüpft sind, beantworten sich die Fragen aus der Einleitung ohne zusätzliche Arbeit.
 
-- **Die Supportenden**: Der Bericht nennt die Server und Anwendungen, die eine Version nutzen, deren Support im gewählten Horizont endet.
+- **Kein Supportende wird übersehen**: Der Bericht nennt die Server und Anwendungen, die eine Version nutzen, deren Support im gewählten Horizont endet.
 - **Die Schwachstellen**: Veröffentlichte Schwachstellen werden Version für Version abgeglichen, bis zu den Fachanwendungen. Darum geht es im Artikel [Schwachstellen: von der CVE zur Fachanwendung](/de/blog/schwachstellen-von-der-cve-zur-fachanwendung).
 - **Die privilegierten Zugänge**: Ein Verzeichnisdienst wie Entra ID wird einer Administrationszone zugeordnet, zum Beispiel Tier 0. Die Zonenansicht meldet die Server, die einen Verzeichnisdienst außerhalb der sensibelsten Zone tragen.
 - **Die Kosten**: Der Reiter Beziehungen einer Technologie bündelt ihre Verträge, mit Fälligkeit und Jahresbetrag, und ihre Budgetzeilen, mit ihrer Summe. Was vSphere kostet, steht in seinem Datensatz, neben den Servern, auf denen es läuft.

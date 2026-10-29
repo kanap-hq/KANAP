@@ -2,7 +2,7 @@
 title: "Technologies: the link between servers and applications"
 description: "SQL Server, vSphere, Active Directory, Entra ID: what runs between your applications and your servers is missing from most IT registries. With a prefilled catalog, KANAP makes it the link that connects end of support, vulnerabilities, privileged access and costs."
 date: 2026-10-30
-topic: compliance
+topic: mapping
 features: [it-landscape]
 author: Friedrich
 authorRole: Founder, CIO
@@ -28,15 +28,17 @@ The criterion is therefore simple: a technology is a product nobody works in, bu
 
 ## A catalog of 192 products, kept up to date
 
-![The technology catalog window, with a search in progress.](/screenshots/technologies-catalog-2026-10-29.png)
+![The technology catalog window, with a search by vendor: the six Oracle products.](/screenshots/technologies-catalog-oracle-2026-10-29.png)
 
 Creating a technology starts with the catalog. You search for the product and click: KANAP creates the technology with its vendor, family, hosting type, versions and their end of support dates, and adds its known vulnerabilities and a short description in your language.
 
 Dates come from endoflife.date, the open reference for product lifecycles. For the products it does not cover, such as Cisco NX-OS, Juniper Junos, Dell PowerStore or WebLogic, KANAP takes the dates from the vendors' official pages. Each version then shows its source and the day the date was checked.
 
-An adopted technology stays up to date. Every day, KANAP checks the catalog: a newly released version is added, a date moved by the vendor follows. What you entered by hand is kept, and a version you deleted is not recreated. On an on-premise installation, each KANAP release brings the catalog updates, and you can still turn on the daily update from the internet.
+An adopted technology stays up to date. In the hosted version, KANAP checks the catalog every day: a newly released version is added, a date moved by the vendor follows. What you entered by hand is kept, and a version you deleted is not recreated.
 
-A product missing from the catalog can be created by hand; four fields are enough.
+For the on-premise version, each new KANAP release brings the catalog updates, and you can still turn on the daily update from the internet if your environment allows it.
+
+Finally, a product missing from the catalog can be created by hand; four fields are enough.
 
 ## Versions and their status
 
@@ -66,11 +68,11 @@ Your technologies can be entered as you go or in bulk.
 
 **Netbox.** If your inventory is already there, KANAP maps each Netbox platform to an operating system: “Debian 12” becomes Debian, version 12. Virtual machines join their cluster and receive the technologies installed on it. See the article [Your hardware inventory already exists, and it is in Netbox](/blog/netbox-inventory-single-source).
 
-## One entry, four answers
+## The benefits
 
-Once the technologies are linked, the questions from the introduction get their answer with no further work.
+Once the technologies are linked, the questions from the introduction get their answer with no extra work.
 
-- **End of support**: the report names the servers and applications using a version that reaches end of support, within the horizon you choose.
+- **End of support can't be missed**: the report names the servers and applications using a version that reaches end of support, within the horizon you choose.
 - **Vulnerabilities**: published vulnerabilities are matched version by version, all the way to business applications. This is the subject of the article [Vulnerabilities: from the CVE to the business application](/blog/vulnerabilities-from-cve-to-business-application).
 - **Privileged access**: a directory service such as Entra ID is placed in an administration zone, for example Tier 0. The zones view flags the servers that carry a directory outside the most sensitive zone.
 - **Cost**: a technology's Relations tab gathers its contracts, with their due date and annual amount, and its budget lines, with their total. What vSphere costs can be read on its record, next to the servers that carry it.

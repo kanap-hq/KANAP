@@ -2,7 +2,7 @@
 title: "Technologies : le lien entre serveurs et applications"
 description: "SQL Server, vSphere, Active Directory, Entra ID : ce qui tourne entre vos applications et vos serveurs manque à la plupart des référentiels. Avec un catalogue pré-rempli, KANAP en fait le maillon qui relie fins de support, vulnérabilités, accès à privilèges et coûts."
 date: 2026-10-30
-topic: compliance
+topic: mapping
 features: [it-landscape]
 author: Friedrich
 authorRole: Fondateur, DSI
@@ -28,15 +28,17 @@ Le critère est donc simple : une technologie, c'est un produit dans lequel pers
 
 ## Un catalogue de 192 produits, tenu à jour
 
-![La fenêtre du catalogue des technologies, avec une recherche en cours.](/screenshots/technologies-catalog-2026-10-29.png)
+![La fenêtre du catalogue des technologies, avec une recherche par éditeur : les six produits Oracle.](/screenshots/technologies-catalog-oracle-2026-10-29.png)
 
 Créer une technologie commence par le catalogue. On cherche le produit, on clique : KANAP crée la technologie avec son éditeur, sa famille, son type d'hébergement, ses versions et leurs dates de fin de support, y ajoute ses vulnérabilités connues et une description courte dans votre langue.
 
 Les dates viennent d'endoflife.date, la référence ouverte des cycles de vie. Pour les produits qu'il ne couvre pas, comme Cisco NX-OS, Juniper Junos, Dell PowerStore ou WebLogic, KANAP relève les dates sur les pages officielles des éditeurs. Chaque version affiche alors sa source et le jour où la date a été vérifiée.
 
-Une technologie adoptée reste à jour. Chaque jour, KANAP consulte le catalogue : une nouvelle version publiée s'ajoute, une date déplacée par l'éditeur suit. Ce que vous avez saisi à la main est conservé, et une version que vous avez supprimée n'est pas recréée. Sur une installation sur site, chaque version de KANAP apporte les mises à jour du catalogue, ce qui ne vous empêche pas d'activer la mise à jour quotidienne depuis Internet.
+Une technologie adoptée reste à jour. Dans la version hébergée, chaque jour, KANAP consulte le catalogue : une nouvelle version publiée s'ajoute, une date déplacée par l'éditeur suit. Ce que vous avez saisi à la main est conservé, et une version que vous avez supprimée n'est pas recréée.
 
-Un produit absent du catalogue peut être créé à la main ; quatre champs suffisent.
+Pour la version on-premise, chaque nouvelle version de KANAP apporte les mises à jour du catalogue, ce qui ne vous empêche pas d'activer la mise à jour quotidienne depuis Internet si votre environnement le permet.
+
+Enfin, un produit absent du catalogue peut être créé à la main ; quatre champs suffisent.
 
 ## Les versions et leur statut
 
@@ -66,11 +68,11 @@ Vos technologies peuvent être saisies au fil de l'eau ou en masse.
 
 **Netbox.** Si votre parc y est déjà, KANAP met chaque plateforme Netbox en correspondance avec un système d'exploitation : « Debian 12 » devient Debian, version 12. Les machines virtuelles rejoignent leur cluster, et reçoivent les technologies installées sur lui. Voir l'article [Votre parc est déjà dans Netbox](/fr/blog/votre-parc-est-deja-dans-netbox).
 
-## Une saisie, quatre réponses
+## Les bénéfices
 
-Une fois les technologies reliées, les questions de l'introduction trouvent leur réponse sans autre travail.
+Une fois les technologies reliées, les questions de l'introduction trouvent leur réponse sans travail supplémentaire.
 
-- **Les fins de support** : le rapport nomme les serveurs et les applications utilisant une version qui arrive en fin de support, à l'horizon que vous choisissez.
+- **Les fins de support sont inratables** : le rapport nomme les serveurs et les applications utilisant une version qui arrive en fin de support, à l'horizon que vous choisissez.
 - **Les vulnérabilités** : les failles publiées sont rapprochées version par version, jusqu'aux applications métier. C'est le sujet de l'article [Vulnérabilités : de la CVE à l'application métier](/fr/blog/vulnerabilites-de-la-cve-a-l-application-metier).
 - **Les accès à privilèges** : un service d'annuaire comme Entra ID se place dans une zone d'administration, par exemple le tier 0. La vue des zones signale les serveurs qui portent un annuaire hors de la zone la plus sensible.
 - **Le coût** : l'onglet Relations d'une technologie rassemble ses contrats, avec leur échéance et leur montant annuel, et ses lignes budgétaires, avec leur total. Ce que coûte vSphere se lit sur sa fiche, à côté des serveurs qui le portent.

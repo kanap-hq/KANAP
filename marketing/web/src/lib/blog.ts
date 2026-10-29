@@ -29,6 +29,7 @@ export function topicPath(topic: BlogTopic): string {
 const TOPIC_FEATURE: Partial<Record<BlogTopic, FeatureSlug>> = {
   cost: 'budget',
   portfolio: 'portfolio',
+  mapping: 'it-landscape',
   compliance: 'it-landscape',
   agents: 'agents',
 };

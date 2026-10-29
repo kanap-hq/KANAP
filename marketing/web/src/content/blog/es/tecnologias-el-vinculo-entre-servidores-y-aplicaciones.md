@@ -2,7 +2,7 @@
 title: "Tecnologías: el vínculo entre servidores y aplicaciones"
 description: "SQL Server, vSphere, Active Directory, Entra ID: lo que se ejecuta entre sus aplicaciones y sus servidores falta en la mayoría de los inventarios de TI. Con un catálogo ya rellenado, KANAP lo convierte en el eslabón que une fines de soporte, vulnerabilidades, accesos privilegiados y costes."
 date: 2026-10-30
-topic: compliance
+topic: mapping
 features: [it-landscape]
 author: Friedrich
 authorRole: Fundador, CIO
@@ -28,15 +28,17 @@ El criterio es, por tanto, sencillo: una tecnología es un producto con el que n
 
 ## Un catálogo de 192 productos, siempre al día
 
-![La ventana del catálogo de tecnologías, con una búsqueda en curso.](/screenshots/technologies-catalog-2026-10-29.png)
+![La ventana del catálogo de tecnologías, con una búsqueda por fabricante: los seis productos de Oracle.](/screenshots/technologies-catalog-oracle-2026-10-29.png)
 
 Crear una tecnología empieza por el catálogo. Se busca el producto y se hace clic: KANAP crea la tecnología con su fabricante, su familia, su tipo de alojamiento, sus versiones y sus fechas de fin de soporte, y le añade sus vulnerabilidades conocidas y una breve descripción en su idioma.
 
 Las fechas proceden de endoflife.date, la referencia abierta de los ciclos de vida. Para los productos que no cubre, como Cisco NX-OS, Juniper Junos, Dell PowerStore o WebLogic, KANAP toma las fechas de las páginas oficiales de los fabricantes. Cada versión muestra entonces su fuente y el día en que se comprobó la fecha.
 
-Una tecnología adoptada se mantiene al día. Cada día, KANAP consulta el catálogo: una nueva versión publicada se añade, una fecha desplazada por el fabricante se actualiza. Lo que usted ha introducido a mano se conserva, y una versión que usted ha eliminado no se vuelve a crear. En una instalación propia, cada versión de KANAP trae las actualizaciones del catálogo, lo que no le impide activar la actualización diaria desde Internet.
+Una tecnología adoptada se mantiene al día. En la versión alojada, KANAP consulta el catálogo cada día: una nueva versión publicada se añade, una fecha desplazada por el fabricante se actualiza. Lo que usted ha introducido a mano se conserva, y una versión que usted ha eliminado no se vuelve a crear.
 
-Un producto que no está en el catálogo puede crearse a mano; bastan cuatro campos.
+En la versión on-premise, cada nueva versión de KANAP trae las actualizaciones del catálogo, lo que no le impide activar la actualización diaria desde Internet si su entorno lo permite.
+
+Por último, un producto que no está en el catálogo puede crearse a mano; bastan cuatro campos.
 
 ## Las versiones y su estado
 
@@ -66,11 +68,11 @@ Sus tecnologías pueden introducirse sobre la marcha o de forma masiva.
 
 **Netbox.** Si su inventario ya está allí, KANAP asocia cada plataforma de Netbox a un sistema operativo: «Debian 12» pasa a ser Debian, versión 12. Las máquinas virtuales se unen a su clúster y reciben las tecnologías instaladas en él. Vea el artículo [Su inventario de hardware ya existe, y está en Netbox](/es/blog/su-inventario-ya-esta-en-netbox).
 
-## Una entrada, cuatro respuestas
+## Los beneficios
 
-Una vez vinculadas las tecnologías, las preguntas de la introducción encuentran su respuesta sin más trabajo.
+Una vez vinculadas las tecnologías, las preguntas de la introducción encuentran su respuesta sin trabajo adicional.
 
-- **Los fines de soporte**: el informe nombra los servidores y las aplicaciones que usan una versión cuyo soporte termina, en el horizonte que usted elija.
+- **Ningún fin de soporte pasa desapercibido**: el informe nombra los servidores y las aplicaciones que usan una versión cuyo soporte termina, en el horizonte que usted elija.
 - **Las vulnerabilidades**: las vulnerabilidades publicadas se relacionan versión por versión, hasta las aplicaciones de negocio. Es el tema del artículo [Vulnerabilidades: de la CVE a la aplicación de negocio](/es/blog/vulnerabilidades-de-la-cve-a-la-aplicacion-de-negocio).
 - **Los accesos privilegiados**: un servicio de directorio como Entra ID se sitúa en una zona de administración, por ejemplo el nivel 0. La vista de zonas señala los servidores que alojan un directorio fuera de la zona más sensible.
 - **El coste**: la pestaña Relaciones de una tecnología reúne sus contratos, con su vencimiento y su importe anual, y sus líneas presupuestarias, con su total. Lo que cuesta vSphere se lee en su ficha, junto a los servidores que lo alojan.

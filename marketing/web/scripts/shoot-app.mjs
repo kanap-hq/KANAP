@@ -1115,8 +1115,8 @@ const PAGES = {
       await sleep(1000);
     },
   },
-  // Technologies article (2026-10-29): "New technology" dialog open on the catalog, with a search typed. Read-only: nothing is created.
-  'technologies-catalog-2026-10-29': {
+  // Technologies article (2026-10-29): "New technology" dialog open on the catalog, searched by editor ("oracle": five products, none adopted on Fromage). Read-only: nothing is created.
+  'technologies-catalog-oracle-2026-10-29': {
     frame: 1280,
     path: '/it/technologies',
     waitFor: 'main',
@@ -1130,7 +1130,7 @@ const PAGES = {
       await page.waitForSelector('input[aria-label="Search the catalog"], [role=dialog] input', { timeout: 15000 });
       await sleep(800);
       const input = await page.$('input[aria-label="Search the catalog"]') || await page.$('[role=dialog] input');
-      await input.type(process.env.CATALOG_QUERY || 'postgres', { delay: 60 });
+      await input.type(process.env.CATALOG_QUERY || 'oracle', { delay: 60 });
       await sleep(2500);
     },
   },

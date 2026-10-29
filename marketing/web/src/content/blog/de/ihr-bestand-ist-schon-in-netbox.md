@@ -2,7 +2,7 @@
 title: "Ihr Hardware-Bestand existiert bereits, und zwar in Netbox"
 description: "Das Infrastrukturteam hält Netbox aktuell. KANAP liest es, hält seine Asset-Datensätze ohne Abtippen auf demselben Stand und ergänzt, was Netbox nicht weiß: Anwendungen, Verträge, Kosten."
 date: 2026-09-23
-topic: product
+topic: mapping
 author: Friedrich
 authorRole: Gründer, CIO
 draft: false
