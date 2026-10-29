@@ -23,6 +23,16 @@ export function useApplicationFeedback() {
   return React.useContext(ApplicationFeedbackContext);
 }
 
+/**
+ * Shows the undo snackbar when the page has none. A page that already provides one
+ * (an asset, an application) keeps it, so a removed web link and an unlinked row share it.
+ */
+export function EnsureApplicationFeedback({ children }: { children: React.ReactNode }) {
+  const current = React.useContext(ApplicationFeedbackContext);
+  if (current !== NOOP) return children;
+  return <ApplicationFeedbackProvider onError={() => undefined}>{children}</ApplicationFeedbackProvider>;
+}
+
 type Toast = { message: string; onUndo?: () => void | Promise<void> };
 
 export function ApplicationFeedbackProvider({ onError, capture, children }: { onError: (message: string) => void; /** Lets the page itself (outside the provider's tree) use the same messages. */ capture?: React.MutableRefObject<ApplicationFeedback>; children: React.ReactNode }) {

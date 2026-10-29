@@ -1530,6 +1530,7 @@
     },
     "linksTitle": "Weblinks",
     "linksEmpty": "Kein Weblink.",
-    "removeFileNamed": "Datei {{name}} löschen"
+    "removeFileNamed": "Datei {{name}} löschen",
+    "removed": "Link „{{name}}“ entfernt."
   }
 }
