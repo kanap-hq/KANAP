@@ -18,7 +18,7 @@ const OWNER_ADD = z.object({
 
 const OWNER_REMOVE = z.object({
   user: z.string().trim().min(1)
-    .describe('Active user by their exact displayed name, without case.'),
+    .describe('User by their exact displayed name, without case, active or not.'),
   owner_type: OWNER_TYPE.optional()
     .describe('The owner type to remove; omitted removes the person from both types.'),
 }).strict();
@@ -152,7 +152,7 @@ export class UpdateTechnologyPeopleAiMutationOperation implements AiMutationOper
     entity_type: 'technologies',
     fields: ['technology_owners', 'technology_support_contacts'],
     reversible: true,
-    prompt_hint: 'Use `update_technology_people` for a technology\'s owners and support contacts: name the technology (TEC-n, UUID or exact name), add or remove owners by their exact active display name with `owner_type`, contacts by their exact name with an optional role. A person already there or absent changes nothing. Undo puts the previous owners and contacts back, in their order.',
+    prompt_hint: 'Use `update_technology_people` for a technology\'s owners and support contacts: name the technology (TEC-n, UUID or exact name), add owners by their exact active display name with `owner_type`, remove owners by their exact displayed name with an optional `owner_type`, contacts by their exact name with an optional role. A person already there or absent changes nothing. Undo puts the previous owners and contacts back, in their order.',
   };
 
   constructor(
