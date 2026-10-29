@@ -294,6 +294,41 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText('Modification des liens de « TEC-1 - PostgreSQL ».')).toBeInTheDocument();
   });
 
+  it('shows a technology adoption and a versions change, in French', () => {
+    renderCard(preview({
+      tool_name: 'update_technology_versions',
+      target: { entity_type: 'technologies', entity_id: 'tec-1', ref: 'TEC-1', title: 'TEC-1 - PostgreSQL' },
+      summary: 'Modification des versions de « TEC-1 - PostgreSQL ».',
+      changes: {
+        technology_versions: {
+          label: 'Versions',
+          from: null,
+          to: '**Conservées**\n- nouvelle version 17 (l\'annulation restaure les versions modifiées, pas la nouvelle)',
+          format: 'markdown',
+        },
+      },
+    }));
+    expect(screen.getByText('Versions')).toBeInTheDocument();
+    expect(screen.getByText('Conservées')).toBeInTheDocument();
+    expect(screen.getByText(/nouvelle version 17/)).toBeInTheDocument();
+
+    renderCard(preview({
+      tool_name: 'create_business_record',
+      target: { entity_type: 'technologies', entity_id: null, ref: null, title: 'PostgreSQL' },
+      summary: 'Adoption de « PostgreSQL » du catalogue KANAP.',
+      changes: {
+        catalog_adoption: {
+          label: 'KANAP catalog',
+          from: null,
+          to: '**Adoptée du catalogue KANAP**\n- Famille : Database\n- 12 versions, fin de support de 2017-01-01 à 2032-12-31',
+          format: 'markdown',
+        },
+      },
+    }));
+    expect(screen.getAllByText('Catalogue KANAP').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Adoptée du catalogue KANAP/)).toBeInTheDocument();
+  });
+
   it('shows a budget line deletion with its versions, tasks and links, in French', () => {
     renderCard(preview({
       tool_name: 'delete_record',
