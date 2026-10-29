@@ -1842,6 +1842,47 @@ async function testAggregateEntitiesSchemaExposesMetricAndFunction() {
   assert.deepEqual(aggregate.parameters.properties.function.enum, ['count', 'sum', 'avg', 'min', 'max']);
 }
 
+/** Plaid L8, lot B: several metrics, a second group field and a limit, one sentence each, chat and MCP alike. */
+async function testAggregateEntitiesSchemaExposesMetricsAndThenBy() {
+  const registry = createRegistry();
+  const schemas = await registry.getToolJsonSchemas(createContext()) as any[];
+  const { properties } = schemas.find((schema) => schema.name === 'aggregate_entities').parameters;
+  assert.deepEqual([properties.metrics.type, properties.metrics.items.type, properties.metrics.minItems, properties.metrics.maxItems], ['array', 'string', 2, 8]);
+  assert.equal(properties.then_by.type, 'string');
+  assert.deepEqual([properties.limit.type, properties.limit.minimum, properties.limit.maximum], ['integer', 1, 100]);
+  assert.deepEqual(properties.function.enum, ['count', 'sum', 'avg', 'min', 'max'], 'the functions do not change');
+  assert.match(properties.metrics.description, /^Budget lines, in place of metric: 2 to 8 amounts, FTE or line totals measured with one function in one call, each group and `overall` then carrying `values` by metric/);
+  assert.match(properties.metrics.description, /group_by paying_company, metrics y_budget, y_review, y_landing\) or of suppliers by year \(group_by supplier, metrics y_minus1_budget, y_budget, y_plus1_budget\)/);
+  assert.match(properties.then_by.description, /^Budget lines: a second group-by field, each group then carrying `then_key` \(a null key or then_key is the group of the lines without that value\), at most limit groups \(50 by default\)/);
+  assert.match(properties.then_by.description, /streams and categories of the linked projects do not cross/);
+  assert.match(properties.limit.description, /the rest is summed in `others`, and `group_count` counts every group/);
+  // Each fact once: the tool's description and the metric field do not repeat them.
+  const tools = await registry.listAvailableTools(createContext());
+  const aggregate = tools.find((tool) => tool.name === 'aggregate_entities')!;
+  assert.doesNotMatch(`${aggregate.description} ${properties.metric.description}`, /then_key|then_by|`values`|group_count/);
+  // The MCP server lists the same schema (one registry).
+  const mcp = registry.toToolJsonSchemas(registry.listRegisteredTools().filter((tool) => tool.surfaces.includes('mcp'))) as any[];
+  assert.deepEqual(mcp.find((schema) => schema.name === 'aggregate_entities').parameters.properties.then_by, properties.then_by);
+}
+
+async function testAggregateEntitiesPassesMetricsAndThenBy() {
+  const calls: unknown[] = [];
+  const registry = createRegistry({
+    aggregateExecutor: {
+      execute: async (_context: unknown, input: unknown) => {
+        calls.push(input);
+        return { group_by: 'paying_company', then_by: 'supplier', metrics: ['y_budget', 'y_review'], function: 'sum', groups: [], total: 0, filters_applied: [], filters_ignored: [], complete: true };
+      },
+    },
+  });
+  const input = { entity_type: 'budget_lines', group_by: 'paying_company', then_by: 'supplier', metrics: ['y_budget', 'y_review'], function: 'sum', limit: 20 };
+  await registry.execute(createContext(), 'aggregate_entities', input);
+  assert.deepEqual(calls, [input], 'metrics, then_by and limit reach the executor');
+  await assert.rejects(registry.execute(createContext(), 'aggregate_entities', { ...input, metrics: ['y_budget'] }), 'one metric goes in metric');
+  await assert.rejects(registry.execute(createContext(), 'aggregate_entities', { ...input, limit: 101 }), 'a limit past 100');
+  assert.equal(calls.length, 1, 'neither reaches the executor');
+}
+
 async function testGetFilterValuesDelegatesToQueryExecutor() {
   const calls: unknown[] = [];
   const registry = createRegistry({
@@ -2270,6 +2311,8 @@ async function run() {
   await testQueryEntitiesLeavesThePageSizeToTheExecutor();
   await testAggregateEntitiesDelegatesToAggregateExecutor();
   await testAggregateEntitiesSchemaExposesMetricAndFunction();
+  await testAggregateEntitiesSchemaExposesMetricsAndThenBy();
+  await testAggregateEntitiesPassesMetricsAndThenBy();
   await testGetFilterValuesDelegatesToQueryExecutor();
   await testGetEntityContextDelegatesToEntityTools();
   await testGetEntityCommentsDelegatesToEntityTools();

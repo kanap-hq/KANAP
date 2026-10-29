@@ -12,7 +12,7 @@ import { AI_RECORD_HISTORY_ENTITY_TYPES, AI_RECORD_HISTORY_FAMILY_WORDS, AiRecor
 import { AiSettingsService } from './ai-settings.service';
 import { AiProviderToolDef } from './providers/ai-provider.types';
 import { BraveSearchService } from './web-search/brave-search.service';
-import { AiAggregateExecutor } from './query/ai-aggregate.executor';
+import { AI_BUDGET_GROUP_LIMIT, AiAggregateExecutor } from './query/ai-aggregate.executor';
 import { AI_QUERY_DEFAULT_LIMIT, AI_QUERY_FAMILY_MAX_LIMIT, AI_QUERY_MAX_LIMIT, AiQueryExecutor } from './query/ai-query.executor';
 import { describeAiEntityFilters } from './query/ai-filter-description.util';
 import { resolveAiEntityRegistry } from './query/registries';
@@ -150,6 +150,14 @@ const AggregateEntitiesInputSchema = z.object({
       + '`y_budget_staff_cost`, `y_budget_staff_fte`, `y_budget_day_cost` and `y_budget_days` the cost and FTE of the people and days lines, the cost of the lines priced per day and the days they buy. '
       + 'Cost per FTE and average day rate (TJM, daily rate): metric `y_budget_cost_per_fte` or `y_budget_day_rate`, no function needed. The server divides as the "Cost per FTE" report does, and each group returns staff_fte, staff_cost, cost_per_fte, days, day_cost and day_rate in one call, so the answer needs no division and no assumed number of working days. `y_budget_cost_per_fte` keeps every group with staff (FTE and day rate per group); `y_budget_day_rate` keeps only the groups with days bought. '
       + 'On budget lines, `overall` gives the measure over all groups together.'),
+  metrics: z.array(z.string().trim().min(1)).min(2).max(8).optional()
+    .describe('Budget lines, in place of metric: 2 to 8 amounts, FTE or line totals measured with one function in one call, each group and `overall` then carrying `values` by metric, '
+      + 'as a table of companies by column (group_by paying_company, metrics y_budget, y_review, y_landing) or of suppliers by year (group_by supplier, metrics y_minus1_budget, y_budget, y_plus1_budget).'),
+  then_by: z.string().trim().min(1).optional()
+    .describe('Budget lines: a second group-by field, each group then carrying `then_key` (a null key or then_key is the group of the lines without that value), '
+      + `at most limit groups (${AI_BUDGET_GROUP_LIMIT.default} by default); the streams and categories of the linked projects do not cross.`),
+  limit: z.number().int().min(1).max(AI_BUDGET_GROUP_LIMIT.max).optional()
+    .describe(`Budget lines: the groups returned at most, 1 to ${AI_BUDGET_GROUP_LIMIT.max} (${AI_BUDGET_GROUP_LIMIT.default} with then_by, every group without), ordered by the metric (the first of metrics) or the count; the rest is summed in \`others\`, and \`group_count\` counts every group.`),
   function: z.enum(['count', 'sum', 'avg', 'min', 'max']).optional().describe('Optional aggregation function: count, sum, avg, min or max. Defaults to count.'),
   filters: z.record(z.string(), AiFilterValueSchema).optional().describe(FILTERS_DESCRIPTION),
   q: z.string().trim().optional().describe(QUICK_SEARCH_DESCRIPTION),
