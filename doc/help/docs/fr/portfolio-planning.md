@@ -9,7 +9,7 @@ Naviguez vers **Portefeuille > Planification**.
 **Autorisations** :
 - Vous avez besoin de `portfolio_projects:reader` pour accéder à la page Planification et aux données chronologiques.
 - Vous avez besoin de `portfolio_reports:reader` pour générer des scénarios de roadmap.
-- Vous avez besoin de `portfolio_projects:contributor` pour appliquer les dates générées aux projets.
+- Vous avez besoin de `portfolio_projects:contributor` pour glisser les dates des projets, changer le mode de planification d'un projet et appliquer les dates générées.
 
 Si vous ne voyez pas Planification dans le menu, demandez à votre administrateur de vous accorder l'accès requis.
 
@@ -32,7 +32,7 @@ Utilisez le mode Chronologie pour les modifications directes de planification.
 - Filtrer par catégorie et statut
 - Choisir la fenêtre temporelle : 1 mois, 3 mois, 6 mois ou 1 an
 - Avancer/reculer dans le temps ou revenir à **Aujourd'hui**
-- Glisser les barres de projet pour mettre à jour les dates de début/fin planifiées
+- Glisser les barres de projet pour mettre à jour les dates de début et de fin planifiées. Cela nécessite `portfolio_projects:contributor`. Avec `portfolio_projects:reader`, les barres restent en place et un double-clic ouvre le projet.
 
 ### Comportement d'affichage
 - Le graphique est centré autour d'aujourd'hui avec environ **25% passé / 75% futur** lorsqu'il est réinitialisé à la période actuelle.

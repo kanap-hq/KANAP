@@ -46,6 +46,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 import api from '../../../api';
+import { useAuth } from '../../../auth/AuthContext';
 import { KanapDialog, StatusDot } from '../../../components/design';
 import LightModeIsland from '../../../components/LightModeIsland';
 import DateEUField from '../../../components/fields/DateEUField';
@@ -373,6 +374,39 @@ type RoadmapResponse = {
 
 const STATUS_OPTIONS = ['waiting_list', 'planned', 'in_progress', 'in_testing'];
 const SCHEDULING_MODES: SchedulingMode[] = ['independent', 'collaborative'];
+
+function SchedulingModeControl({
+  value,
+  disabled,
+  canEdit,
+  onChange,
+}: {
+  value: SchedulingMode;
+  disabled: boolean;
+  canEdit: boolean;
+  onChange: (next: SchedulingMode) => void;
+}) {
+  const { t } = useTranslation('portfolio');
+  if (!canEdit) {
+    return <>{t(`planning.roadmap.schedulingModes.${value}`)}</>;
+  }
+  return (
+    <Select
+      size="small"
+      value={value}
+      onChange={(event) => onChange(event.target.value as SchedulingMode)}
+      disabled={disabled}
+      SelectDisplayProps={{ 'aria-label': t('planning.roadmap.columns.scheduling') }}
+      sx={{ minWidth: 150 }}
+    >
+      {SCHEDULING_MODES.map((option) => (
+        <MenuItem key={option} value={option}>
+          {t(`planning.roadmap.schedulingModes.${option}`)}
+        </MenuItem>
+      ))}
+    </Select>
+  );
+}
 
 // Bar colors derive from the centralized status palette (utils/statusColors.ts).
 // The canvas renders inside a LightModeIsland, so the light-mode hexes apply.
@@ -996,6 +1030,8 @@ type Props = {
 export default function RoadmapGenerator({ onApplied }: Props) {
   const mode = useTheme().palette.mode;
   const locale = useLocale();
+  const { hasLevel } = useAuth();
+  const canEditProjectDates = hasLevel('portfolio_projects', 'contributor');
   const { t } = useTranslation(['portfolio', 'common', 'ops']);
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<RoadmapTab>('schedule');
@@ -1918,7 +1954,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
   };
 
   const handleApply = async () => {
-    if (!response) return;
+    if (!canEditProjectDates || !response) return;
     const selectedProjects = selectedVisibleScheduledProjects
       .map((project) => ({
         projectId: project.projectId,
@@ -1961,7 +1997,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
     currentMode: SchedulingMode,
     nextMode: SchedulingMode,
   ) => {
-    if (currentMode === nextMode) return;
+    if (!canEditProjectDates || currentMode === nextMode) return;
     setError(null);
     setApplyError(null);
     setSuccess(null);
@@ -2443,25 +2479,14 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                               </TableCell>
                               <TableCell>{t(`statuses.project.${status}`, { defaultValue: status })}</TableCell>
                               <TableCell>
-                                <Select
-                                  size="small"
+                                <SchedulingModeControl
                                   value={schedulingMode}
-                                  onChange={(event) => {
-                                    void handleSchedulingModeChange(
-                                      project.projectId,
-                                      schedulingMode,
-                                      event.target.value as SchedulingMode,
-                                    );
-                                  }}
                                   disabled={loading || isSavingSchedulingMode}
-                                  sx={{ minWidth: 150 }}
-                                >
-                                  {SCHEDULING_MODES.map((option) => (
-                                    <MenuItem key={option} value={option}>
-                                      {t(`planning.roadmap.schedulingModes.${option}`)}
-                                    </MenuItem>
-                                  ))}
-                                </Select>
+                                  canEdit={canEditProjectDates}
+                                  onChange={(next) => {
+                                    void handleSchedulingModeChange(project.projectId, schedulingMode, next);
+                                  }}
+                                />
                               </TableCell>
                               <TableCell>
                                 <Stack spacing={0.75} alignItems="flex-start">
@@ -2634,25 +2659,14 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                   <TableCell>{t(`planning.roadmap.reservationReasons.${project.reason}`)}</TableCell>
                                   <TableCell>{t(`statuses.project.${project.status}`, { defaultValue: project.status })}</TableCell>
                                   <TableCell>
-                                    <Select
-                                      size="small"
+                                    <SchedulingModeControl
                                       value={project.schedulingMode}
-                                      onChange={(event) => {
-                                        void handleSchedulingModeChange(
-                                          project.projectId,
-                                          project.schedulingMode,
-                                          event.target.value as SchedulingMode,
-                                        );
-                                      }}
                                       disabled={loading || isSavingSchedulingMode}
-                                      sx={{ minWidth: 150 }}
-                                    >
-                                      {SCHEDULING_MODES.map((option) => (
-                                        <MenuItem key={option} value={option}>
-                                          {t(`planning.roadmap.schedulingModes.${option}`)}
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
+                                      canEdit={canEditProjectDates}
+                                      onChange={(next) => {
+                                        void handleSchedulingModeChange(project.projectId, project.schedulingMode, next);
+                                      }}
+                                    />
                                   </TableCell>
                                   <TableCell>{formatRoadmapDate(t, locale, project.plannedStart)}</TableCell>
                                   <TableCell>{formatRoadmapDate(t, locale, project.plannedEnd)}</TableCell>
@@ -3100,6 +3114,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                   onProjectClick={openExplanation}
                   onProjectPinStart={loading ? undefined : (projectId, startWeek) => setScenarioPinStart(projectId, startWeek)}
                   readOnly
+                  openOnDoubleClick={false}
                   months={monthsForGantt}
                   monthOffset={monthOffsetForGantt}
                 />
@@ -3107,22 +3122,24 @@ export default function RoadmapGenerator({ onApplied }: Props) {
             </LightModeIsland>
           </Paper>
 
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                {t('planning.roadmap.apply.summary', { count: selectedSchedulableCount })}
-              </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                disabled={selectedSchedulableCount === 0 || applying}
-                onClick={() => setConfirmOpen(true)}
-                startIcon={applying ? <CircularProgress size={16} /> : undefined}
-              >
-                {applying ? t('planning.roadmap.apply.applying') : t('planning.roadmap.apply.button')}
-              </Button>
-            </Stack>
-          </Paper>
+          {canEditProjectDates && (
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  {t('planning.roadmap.apply.summary', { count: selectedSchedulableCount })}
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  disabled={selectedSchedulableCount === 0 || applying}
+                  onClick={() => setConfirmOpen(true)}
+                  startIcon={applying ? <CircularProgress size={16} /> : undefined}
+                >
+                  {applying ? t('planning.roadmap.apply.applying') : t('planning.roadmap.apply.button')}
+                </Button>
+              </Stack>
+            </Paper>
+          )}
         </>
       )}
 

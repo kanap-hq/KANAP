@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Gantt } from '@svar-ui/react-gantt';
 import type { ITask, IApi } from '@svar-ui/react-gantt';
@@ -60,6 +60,8 @@ interface Props {
   months?: number;
   monthOffset?: number; // How many months to offset from current month (negative = past, positive = future)
   readOnly?: boolean;
+  /** Double-click opens the project. The roadmap chart turns this off. Locking the dates does not. */
+  openOnDoubleClick?: boolean;
 }
 
 // Bar colors derive from the centralized status palette (utils/statusColors.ts)
@@ -135,6 +137,7 @@ export function PortfolioGantt({
   months = 3,
   monthOffset = 0,
   readOnly = false,
+  openOnDoubleClick = true,
 }: Props) {
   const { t } = useTranslation(['portfolio', 'errors']);
   const dialogs = useKanapDialogs();
@@ -427,26 +430,31 @@ export function PortfolioGantt({
   readOnlyRef.current = readOnly;
   const pinStartModeRef = useRef(pinStartMode);
   pinStartModeRef.current = pinStartMode;
+  const openOnDoubleClickRef = useRef(openOnDoubleClick);
+  openOnDoubleClickRef.current = openOnDoubleClick;
+
+  // Opens a project from its chart id (a milestone opens its project's timeline tab).
+  const openTask = useCallback((taskId: string) => {
+    if (taskId.startsWith('milestone-')) {
+      const task = tasksRef.current.find(t => t.id === taskId) as any;
+      if (task && task._projectId) {
+        navigate(`/portfolio/projects/${task._projectId}/timeline`);
+      }
+    } else {
+      navigate(`/portfolio/projects/${taskId}/summary`);
+    }
+  }, [navigate]);
 
   // Init callback to set up all event handlers
   const handleInit = useCallback((ganttApi: IApi) => {
     apiRef.current = ganttApi;
 
-    // Intercept show-editor (double-click). In read-only mode this is disabled.
+    // Double-click opens the project. Pin-start mode stays on the roadmap chart.
+    // A date lock (readOnly) does not block that opening: the chart then sends no
+    // show-editor, so the container's double-click handler opens the project instead.
     ganttApi.intercept('show-editor', (ev: { id: string | number }) => {
-      if (readOnlyRef.current || pinStartModeRef.current) return false;
-      if (ev?.id) {
-        const taskId = String(ev.id);
-        // Check if it's a milestone or project
-        if (taskId.startsWith('milestone-')) {
-          const task = tasksRef.current.find(t => t.id === taskId) as any;
-          if (task && task._projectId) {
-            navigate(`/portfolio/projects/${task._projectId}/timeline`);
-          }
-        } else {
-          navigate(`/portfolio/projects/${taskId}/summary`);
-        }
-      }
+      if (!openOnDoubleClickRef.current || pinStartModeRef.current) return false;
+      if (ev?.id) openTask(String(ev.id));
       return false; // Prevent default editor
     });
 
@@ -529,6 +537,7 @@ export function PortfolioGantt({
     monthOffset,
     dialogs,
     navigate,
+    openTask,
     resetRenderedChart,
     scrollTodayIntoView,
     syncTodayLine,
@@ -764,6 +773,11 @@ export function PortfolioGantt({
   return (
     <Box
       ref={containerRef}
+      onDoubleClick={ganttReadOnly && openOnDoubleClick ? (event: ReactMouseEvent<HTMLElement>) => {
+        const id = (event.target as HTMLElement).closest('[data-id]')?.getAttribute('data-id');
+        // The chart marks a text id with a leading colon in data-id.
+        if (id) openTask(id.replace(/^:/, ''));
+      } : undefined}
       sx={{
         height: '100%',
         minHeight: 0,
@@ -813,6 +827,10 @@ export function PortfolioGantt({
           '& .wx-progress-marker, & .wx-link, & .wx-delete-button': {
             display: 'none !important',
           },
+        } : {}),
+        // The chart sets a resize cursor on the bar. A date lock keeps the arrow.
+        ...(ganttReadOnly ? {
+          '& .wx-bar': { cursor: 'default !important' },
         } : {}),
       }}
     >
