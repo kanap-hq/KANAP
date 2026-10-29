@@ -209,7 +209,7 @@ Una dependencia va en un solo sentido. Si añade la interfaz B como anterior a l
 
 - **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
 - **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos en la sección.
-- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide confirmación antes.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Quitar un enlace muestra un mensaje y ofrece **Deshacer**, que vuelve a crear el enlace. Eliminar un archivo pide confirmación antes.
 
 **Consejo**: Adjunte la especificación y los documentos de mapeo a la interfaz, para que las personas que la operan los encuentren en un solo lugar.
 

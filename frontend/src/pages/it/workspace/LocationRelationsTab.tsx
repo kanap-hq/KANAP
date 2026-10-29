@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import LinksAndFilesSection, { type LinkDraft, type LinksAndFilesLink } from '../../../components/workspace/LinksAndFilesSection';
+import { removeWebLinkWithUndo, webLinkDraft, webLinkLabel } from '../../../components/workspace/removeWebLink';
 import {
   RelationSections,
   applicationsSection,
@@ -17,6 +18,7 @@ import { useRelationLabels } from '../../../components/workspace/relations/label
 import type { RelationsColumn } from '../../../components/workspace/RelationsTable';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { EnsureApplicationFeedback, useApplicationFeedback } from '../applicationFeedback';
 
 /** An asset at the location, with its provider and sub-location. */
 type LocationAssetRow = AssetRelationRow & {
@@ -55,7 +57,7 @@ function pick<T>(columns: Array<RelationsColumn<any>>, keys: Array<string | Rela
  * location's web links. A row opens its record. A section the response leaves null is absent. A
  * member adds, edits and removes a web link, each saved at once.
  */
-export default function LocationRelationsTab({
+function LocationRelationsTabView({
   locationId,
   onRelationsChange,
 }: {
@@ -64,6 +66,7 @@ export default function LocationRelationsTab({
   onRelationsChange?: () => void;
 }) {
   const { t } = useTranslation(['it', 'common']);
+  const feedback = useApplicationFeedback();
   const { hasLevel } = useAuth();
   const queryClient = useQueryClient();
   const labels = useRelationLabels();
@@ -101,17 +104,20 @@ export default function LocationRelationsTab({
 
   const removeLink = async (linkRow: LinksAndFilesLink) => {
     setError(null);
-    const previous = queryClient.getQueryData<WebLinkRow[]>(linksKey);
-    queryClient.setQueryData<WebLinkRow[]>(linksKey, (rows) => (rows ? rows.filter((row) => row.id !== linkRow.id) : rows));
-    try {
-      await api.delete(`/locations/${locationId}/links/${linkRow.id}`);
-    } catch (e) {
-      if (previous) queryClient.setQueryData(linksKey, previous);
-      failed(e);
-      return;
-    }
-    await queryClient.invalidateQueries({ queryKey: linksKey });
-    onRelationsChange?.();
+    await removeWebLinkWithUndo<WebLinkRow[]>({
+      queryClient,
+      queryKey: linksKey,
+      without: (rows) => rows.filter((row) => row.id !== linkRow.id),
+      commit: () => api.delete(`/locations/${locationId}/links/${linkRow.id}`),
+      refresh: async () => {
+        await queryClient.invalidateQueries({ queryKey: linksKey });
+        onRelationsChange?.();
+      },
+      restore: () => saveLink(null, webLinkDraft(linkRow)),
+      message: t('common:linksAndFiles.removed', { name: webLinkLabel(linkRow) }),
+      feedback,
+      onError: failed,
+    });
   };
 
   const assets = data?.assets ?? null;
@@ -200,5 +206,14 @@ export default function LocationRelationsTab({
         onRemoveFile={() => undefined}
       />
     </Stack>
+  );
+}
+
+/** The tab, with the undo message when the page does not already show one. */
+export default function LocationRelationsTab(props: React.ComponentProps<typeof LocationRelationsTabView>) {
+  return (
+    <EnsureApplicationFeedback>
+      <LocationRelationsTabView {...props} />
+    </EnsureApplicationFeedback>
   );
 }

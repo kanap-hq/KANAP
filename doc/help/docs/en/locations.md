@@ -117,7 +117,7 @@ The Relations tab shows the assets at this location and the applications that ru
 **Web links**: the links of the location (provider portals, facility documentation, status pages), one row each with its name, the domain of the link and the date it was added. They are the same links as the **Relevant websites** of the Contacts & Support tab. Click a link to open it in a new tab. With `locations:member`:
 
 - **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
-- To remove a link, hover its row and click the cross.
+- To remove a link, hover its row and click the cross. A message names the link and offers **Undo**, which creates it again.
 
 ---
 

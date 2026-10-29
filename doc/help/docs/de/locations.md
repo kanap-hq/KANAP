@@ -117,7 +117,7 @@ Der Reiter Beziehungen zeigt die Assets an diesem Standort und die Anwendungen, 
 **Weblinks**: die Links des Standorts (Anbieterportale, Einrichtungsdokumentation, Statusseiten), je eine Zeile mit Name, der Domain des Links und dem Datum, an dem er hinzugefügt wurde. Es sind dieselben Links wie die **Relevanten Websites** im Reiter Kontakte & Support. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen. Mit `locations:member`:
 
 - **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
-- Um einen Link zu entfernen, fahren Sie mit der Maus über seine Zeile und klicken Sie auf das Kreuz.
+- Um einen Link zu entfernen, fahren Sie mit der Maus über seine Zeile und klicken Sie auf das Kreuz. Eine Meldung nennt den Link und bietet **Rückgängig** an, womit er wieder angelegt wird.
 
 ---
 

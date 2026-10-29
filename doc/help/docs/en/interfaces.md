@@ -209,7 +209,7 @@ A dependency goes one way. If you add interface B upstream of interface A, B app
 
 - **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
 - **Attach file** opens the file chooser. You can also drop files on the section.
-- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
+- To remove a link or a file, hover the row and click the cross. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation first.
 
 **Tip**: Attach the specification and the mapping documents to the interface, so the people who run it find them in one place.
 
