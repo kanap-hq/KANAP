@@ -23,9 +23,17 @@ describe('incident workspace journal and reporter words', () => {
     expect(JSON.stringify(es)).not.toMatch(/declarante/i);
   });
 
+  it('names the German journal Journal and the record history Verlauf, as on every record', () => {
+    expect(incidentDe.tabs.journal).toBe('Journal');
+    expect(incidentDe.tabs.history).toBe('Verlauf');
+    expect(incidentDe.journal.placeholder).toBe('Notiz zum Journal hinzufügen');
+    expect(incidentDe.messages.entryFailed).toBe('Fehler beim Hinzufügen des Journaleintrags');
+    expect(incidentDe.dialogs.reopenMessage).toContain('im Journal festgehalten');
+    expect(incidentDe.dialogs.cancelMessage).toContain('im Journal festgehalten');
+  });
+
   it('uses Melder for the German reporter in the field, the hint and the lose-access message', () => {
     expect(incidentDe.drawer.reporter).toBe('Melder');
-    expect(incidentDe.tabs.journal).toBe('Verlauf');
     expect(incidentDe.drawer.restrictAccessHint).toContain('der Melder');
     expect(incidentDe.dialogs.loseAccessMessage).toContain('der Melder');
     expect(JSON.stringify(de)).not.toMatch(/Meldende/);

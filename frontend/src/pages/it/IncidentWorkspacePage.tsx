@@ -52,9 +52,13 @@ import {
   isIncidentLocked,
 } from './workspace/incidentWorkspace';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
-const TAB_KEYS = ['overview', 'journal', 'relations', 'documents'] as const;
+const TAB_KEYS = ['overview', 'journal', 'relations', 'documents', RECORD_HISTORY_TAB_KEY] as const;
 type TabKey = (typeof TAB_KEYS)[number];
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
 
 type CreateForm = IncidentDrawerValues & { title: string; description: string };
 
@@ -570,6 +574,7 @@ export function IncidentWorkspacePage() {
       disabled: isCreate,
     },
     { key: 'documents', label: t('workspace.incident.tabs.documents'), badge: counts?.documents || undefined, disabled: isCreate },
+    { key: RECORD_HISTORY_TAB_KEY, label: t('workspace.incident.tabs.history'), disabled: isCreate },
   ];
 
   const saveHint = (status: IntegratedDocumentSaveStatus) => (
@@ -812,6 +817,13 @@ export function IncidentWorkspacePage() {
                 canCreate={editable}
                 onLinksChange={() => { void queryClient.invalidateQueries({ queryKey }); }}
               />
+            )}
+            {validTab === RECORD_HISTORY_TAB_KEY && (
+              <WorkspaceTabBoundary resetKey={validTab} onRetry={historyTab.retry}>
+                <React.Suspense fallback={null}>
+                  <HistoryTab key={data.id} table="incidents" recordId={data.id} />
+                </React.Suspense>
+              </WorkspaceTabBoundary>
             )}
           </>
         )}

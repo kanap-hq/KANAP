@@ -1562,9 +1562,10 @@
       "next": "Nächster Vorfall",
       "tabs": {
         "overview": "Übersicht",
-        "journal": "Verlauf",
+        "journal": "Journal",
         "relations": "Beziehungen",
-        "documents": "Dokumente"
+        "documents": "Dokumente",
+        "history": "Verlauf"
       },
       "actions": {
         "changeStatus": "Status ändern",
@@ -1575,11 +1576,11 @@
       },
       "dialogs": {
         "reopenTitle": "Vorfall wieder öffnen",
-        "reopenMessage": "Der Vorfall wechselt zurück auf In Bearbeitung. Der Grund wird im Verlauf festgehalten.",
+        "reopenMessage": "Der Vorfall wechselt zurück auf In Bearbeitung. Der Grund wird im Journal festgehalten.",
         "reopenPlaceholder": "z. B. das Problem trat nach der Behebung erneut auf",
         "reopenConfirm": "Wieder öffnen",
         "cancelTitle": "Vorfall abbrechen",
-        "cancelMessage": "Der Eintrag behält seine Nummer und wird als abgebrochen markiert. Der Grund wird im Verlauf festgehalten.",
+        "cancelMessage": "Der Eintrag behält seine Nummer und wird als abgebrochen markiert. Der Grund wird im Journal festgehalten.",
         "cancelPlaceholder": "z. B. doppelt erfasst, siehe INC-12",
         "cancelConfirm": "Vorfall abbrechen",
         "loseAccessTitle": "Sie sehen diesen Vorfall anschließend nicht mehr",
@@ -1618,7 +1619,7 @@
         "cancelledBanner": "Am {{date}} abgebrochen. Öffnen Sie ihn wieder, um Änderungen vorzunehmen."
       },
       "journal": {
-        "placeholder": "Notiz zum Verlauf hinzufügen",
+        "placeholder": "Notiz zum Journal hinzufügen",
         "add": "Hinzufügen",
         "empty": "Noch keine Einträge.",
         "recordedAt": "erfasst am {{date}}",
@@ -1676,7 +1677,7 @@
         "loadFailed": "Fehler beim Laden des Vorfalls",
         "saveFailed": "Fehler beim Speichern des Vorfalls",
         "createFailed": "Fehler beim Erstellen des Vorfalls",
-        "entryFailed": "Fehler beim Hinzufügen des Verlaufseintrags",
+        "entryFailed": "Fehler beim Hinzufügen des Journaleintrags",
         "attachmentsFailed": "Fehler beim Aktualisieren der Anhänge",
         "exportPdfFailed": "Der PDF-Bericht konnte nicht exportiert werden.",
         "confidentialityFailed": "Zugriff konnte nicht aktualisiert werden",
@@ -1698,7 +1699,8 @@
         "knowledge": "Wissensdatenbank",
         "compliance": "Compliance",
         "deployments": "Bereitstellungen",
-        "operations": "Betrieb"
+        "operations": "Betrieb",
+        "history": "Verlauf"
       },
       "createNewVersion": "Neue Version",
       "saveBeforeVersion": "Speichern Sie die Änderungen, bevor Sie eine neue Version erstellen",

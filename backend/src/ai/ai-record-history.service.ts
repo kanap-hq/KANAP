@@ -25,14 +25,16 @@ import {
  * rights, the same data access. Nothing is rebuilt here.
  *
  * The families with a history are the AI families whose table is in the history inventory
- * (`audit/record-history.inventory.ts`): a budget line is `spend_items` (both natures), every other
- * family carries its table's name. A table that joins the inventory with the name of an AI family
+ * (`audit/record-history.inventory.ts`): a budget line is `spend_items` (both natures), a project
+ * `portfolio_projects`, a request `portfolio_requests`, every other family carries its table's name. A table that joins the inventory with the name of an AI family
  * becomes readable here with no change; a table no AI family reads (cost centers, analytics
  * dimensions, working-day calendars) stays out.
  */
 
 function aiFamilyOfHistoryTable(table: string): AiDetailEntityType | null {
   if (table === BUDGET_LINE_TABLE) return 'budget_lines';
+  if (table === 'portfolio_projects') return 'projects';
+  if (table === 'portfolio_requests') return 'requests';
   return (AI_DETAIL_ENTITY_TYPES as readonly string[]).includes(table) ? table as AiDetailEntityType : null;
 }
 

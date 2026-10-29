@@ -148,7 +148,7 @@ async function testEntriesAndChildren(seedRow: Seeded) {
   assert.ok(contacts.some((item) => item.changes[0]?.event === 'removed'), 'the contact is removed');
 
   assert.equal(page.items.some((item) => item.id === seedRow.audits.taskUpdate), false,
-    'a legacy task update with no presentable detail is not an entry');
+    'the legacy line task label, a duplicate of the `tasks` row, is not an entry');
 
   const aiLink = page.items.find((item) => item.id === seedRow.audits.aiLink);
   assert.ok(aiLink, 'the assistant link replacement is in the history');
@@ -381,7 +381,9 @@ async function testReferences(seedRow: Seeded) {
   const asset = visible.items.find((item) => item.subject.kind === 'asset' && item.changes.some((change) => change.event === 'added'));
   assert.ok(asset, 'the asset link is present');
   assert.equal((asset.changes[0]?.after as any)?.reference, 'AST-1');
-  const task = visible.items.find((item) => item.subject.kind === 'task' && item.changes.some((change) => change.event === 'added'));
+  const tasksAdded = visible.items.filter((item) => item.subject.kind === 'task' && item.changes.some((change) => change.event === 'added'));
+  assert.equal(tasksAdded.length, 1, 'a task created on the line shows once, the legacy duplicate excluded');
+  const task = tasksAdded[0];
   assert.ok(task, 'the task is present');
   assert.equal((task.changes[0]?.after as any)?.reference, 'T-5');
 
@@ -602,15 +604,21 @@ async function run() {
         parent: { table: 'spend_items', id: line },
         before: [], after: [seedData.request],
       });
+      // The line's task, as the task writer saves it (`related_object_type` names the line).
+      await audit(runner, {
+        table: 'tasks', recordId: seedData.task, action: 'create', userId: reader.id,
+        after: { related_object_type: 'spend_item', related_object_id: line, title: 'Follow up', item_number: 5 },
+      });
+      // `POST /spend-items/:id/tasks` writes the legacy label in the same call (`spend-tasks.service.ts`).
       await audit(runner, {
         table: 'spend_tasks', recordId: seedData.task, action: 'create', userId: reader.id,
-        after: { related_object_id: line, title: 'Follow up', item_number: 5 },
+        after: { related_object_type: 'spend_item', related_object_id: line, title: 'Follow up', item_number: 5 },
       });
       await audit(runner, {
-        table: 'spend_tasks', recordId: seedData.task, action: 'delete', userId: reader.id,
-        before: { related_object_id: line, title: 'Follow up', item_number: 5 }, after: null,
+        table: 'tasks', recordId: seedData.task, action: 'delete', userId: reader.id,
+        before: { related_object_type: 'spend_item', related_object_id: line, title: 'Follow up', item_number: 5 }, after: null,
       });
-      // The legacy task update writes no before: a modification without detail, never an addition.
+      // The legacy task label, written beside the `tasks` row by the line task route: excluded.
       const taskUpdate = await audit(runner, {
         table: 'spend_tasks', recordId: seedData.task, action: 'update', userId: reader.id,
         before: null, after: { related_object_id: line, title: 'Follow up', item_number: 5, status: 'done' },

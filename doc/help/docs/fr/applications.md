@@ -138,6 +138,8 @@ Une cellule sans valeur affiche un tiret.
 
 Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un **en-tête** avec des métadonnées rapides, un **tiroir des propriétés** sur la droite (la carte d'identité de l'application, toujours visible) et une **zone de contenu** au centre qui change selon l'onglet.
 
+Les onglets sont **Vue d'ensemble**, **Déploiements**, **Interfaces**, **Exploitation**, **Conformité**, **Relations** et **Historique** (les modifications de l'application, voir [Historique des fiches](record-history.md)).
+
 ### En-tête
 
 L'en-tête affiche :
@@ -403,7 +405,7 @@ KANAP propose **deux approches pour gérer les versions d'applications**, selon 
 
 Pour la plupart des applications (où vous mettez à niveau et l'ancienne version disparaît simplement), mettez à jour **Version**, **Mise en production**, **Fin de support** et **Date de retrait** dans le formulaire de création ou le tiroir des propriétés. La pastille de version dans l'en-tête et les métadonnées **Mise en production** reflètent ce que vous avez défini.
 
-Cette approche garde tout dans un seul enregistrement. Lors d'une mise à niveau, mettez à jour les champs de version et c'est fait. L'historique est suivi dans le journal d'audit.
+Cette approche garde tout dans un seul enregistrement. Lors d'une mise à niveau, mettez à jour les champs de version et c'est fait. L'onglet **Historique** garde les valeurs précédentes.
 
 **À utiliser quand** : les mises à niveau se font en place sans chevauchement : une version remplace l'autre.
 

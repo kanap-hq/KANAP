@@ -140,16 +140,18 @@ Debajo de la barra de herramientas, el bloque de título muestra:
   - **Título**: Haga clic para editar en línea (requiere `tasks:member`)
   - **Estado / Prioridad / Puntuación / Asignado / Fecha de vencimiento** como chips de metadatos compactos y clicables
   - **Chip de proyecto** para tareas de proyecto (vincula al espacio de trabajo del proyecto)
+  - **Pestañas**: **Vista general** contiene la descripción, los adjuntos y la actividad; **Historial** lista los cambios de la tarea (vea [Ver historial](#ver-historial))
 
 ### Área de contenido principal
+
+La pestaña **Vista general** contiene el contenido de la tarea.
 
 **Descripción**: Un editor markdown que admite formato, listas, enlaces, bloques de código e imágenes. Puede pegar imágenes directamente; se suben automáticamente. Pulsar **Tab** desde el campo de título salta al editor de descripción. La descripción se autoguarda un par de segundos después de que deje de escribir; el encabezado muestra **Guardado** brevemente cada vez que persiste.
 
 **Adjuntos**: Arrastre y suelte archivos sobre la descripción, o use el área de carga cuando aparezca. Los archivos subidos aparecen como chips debajo de la descripción. Haga clic en un chip para descargar; haga clic en el botón **x** para eliminar (requiere permiso de edición). Máximo 20 MB por archivo.
 
-**Sección de actividad**: Alterne entre tres vistas:
-  - **Comentarios**: Un formulario de actividad unificado (comentario + cambio de estado opcional + registro de tiempo opcional en un solo envío) más el hilo de comentarios
-  - **Historial**: Todos los cambios de campo y estado de la tarea, con marcas de tiempo y autores
+**Sección de actividad**: Alterne entre dos vistas:
+  - **Comentarios**: Un formulario de actividad unificado (comentario + cambio de estado opcional + registro de tiempo opcional en un solo envío) más el hilo de comentarios. Un comentario escrito al cambiar el estado muestra ese cambio
   - **Registro de tiempo**: Entradas de tiempo (disponible solo para tareas independientes y de proyecto)
 
 ### Panel de Propiedades
@@ -320,9 +322,10 @@ El botón de exportar solo está habilitado cuando la descripción tiene conteni
 
 ### Ver historial
 
-La pestaña **Historial** muestra todos los cambios de la tarea:
+La pestaña **Historial**, la última pestaña de la tarea, lista los cambios de la tarea (vea [Historial de los registros](record-history.md)). El panel de **Propiedades** sigue disponible en ella. El historial muestra:
   - Cambios de estado
   - Modificaciones de campos
+  - Vínculos y archivos adjuntos
   - Quién hizo cada cambio y cuándo
   - La entrada de creación, con la fecha, la hora y el creador, mostrada como último elemento
 

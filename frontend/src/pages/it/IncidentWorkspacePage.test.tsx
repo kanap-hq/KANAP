@@ -102,6 +102,9 @@ vi.mock('../../components/EntityKnowledgePanel', () => ({
     <button type="button" onClick={() => onLinksChange?.()}>knowledge-link-saved</button>
   ),
 }));
+vi.mock('../../components/history/RecordHistoryTab', () => ({
+  default: (props: { table: string; recordId: string }) => <div data-testid="record-history">{`${props.table}:${props.recordId}`}</div>,
+}));
 vi.mock('./workspace/IncidentMetadataBar', () => ({ default: () => null }));
 vi.mock('./workspace/IncidentPropertiesDrawer', () => ({
   default: ({ onChange, isCreate }: { onChange?: (patch: { severity?: string }) => void; isCreate?: boolean }) => (
@@ -754,5 +757,33 @@ describe('IncidentWorkspacePage — attachments in the overview', () => {
 
     expect(await screen.findByText('shot.png (2.0 KB)')).toBeInTheDocument();
     expect(screen.queryByText('workspace.task.actions.attachFiles')).toBeNull();
+  });
+});
+
+describe('IncidentWorkspacePage — History tab', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authLevel.incidents = 'reader';
+    shellProps.current = null;
+  });
+
+  it('renders the incident history on its last tab, after the journal and the documents', async () => {
+    vi.mocked(incidentsApi.get).mockResolvedValue(incident);
+    vi.mocked(api.get).mockResolvedValue({ data: null } as any);
+    renderPage('history');
+
+    expect(await screen.findByTestId('record-history')).toHaveTextContent('incidents:inc-1');
+    const tabs = (shellProps.current?.tabs as Array<{ key: string; label: string; disabled?: boolean }>);
+    expect(tabs.map((tab) => tab.key)).toEqual(['overview', 'journal', 'relations', 'documents', 'history']);
+    expect(tabs[4]).toMatchObject({ label: 'workspace.incident.tabs.history', disabled: false });
+  });
+
+  it('keeps the History tab disabled, with no history, while the incident is created', () => {
+    authLevel.incidents = 'contributor';
+    renderNewIncident();
+
+    const tabs = (shellProps.current?.tabs as Array<{ key: string; disabled?: boolean }>);
+    expect(tabs.find((tab) => tab.key === 'history')).toMatchObject({ disabled: true });
+    expect(screen.queryByTestId('record-history')).toBeNull();
   });
 });

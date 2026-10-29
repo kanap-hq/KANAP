@@ -60,7 +60,10 @@ export type FamilyKey =
   | 'document'
   | 'document_folder'
   | 'document_library'
-  | 'document_type';
+  | 'document_type'
+  | 'portfolio_source'
+  | 'portfolio_category'
+  | 'portfolio_stream';
 
 type ParticipationResource = 'applications' | 'portfolio_projects' | 'portfolio_requests' | 'tasks';
 
@@ -282,6 +285,11 @@ export const REFERENCE_FAMILIES: Readonly<Record<FamilyKey, ReferenceFamily>> = 
     visibility: { check: 'knowledge_library' },
   },
   document_type: { module: 'knowledge', table: 'document_types', label: 'r.name', visibility: {} },
+  // The portfolio classification (source, category, stream): tenant settings whose names every
+  // reader of a project or a request sees on its page, so they are open like people's names.
+  portfolio_source: { module: null, table: 'portfolio_sources', label: 'r.name', visibility: {} },
+  portfolio_category: { module: null, table: 'portfolio_categories', label: 'r.name', visibility: {} },
+  portfolio_stream: { module: null, table: 'portfolio_streams', label: 'r.name', visibility: {} },
 };
 
 export const FAMILY_KEYS = Object.keys(REFERENCE_FAMILIES) as FamilyKey[];

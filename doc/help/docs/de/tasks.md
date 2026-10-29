@@ -140,16 +140,18 @@ Unter der Symbolleiste zeigt der Titelblock:
   - **Titel**: Klicken zum Inline-Bearbeiten (erfordert `tasks:member`)
   - **Status / Priorität / Bewertung / Verantwortlicher / Fälligkeitsdatum** als kompakte, anklickbare Metadaten-Chips
   - **Projekt-Chip** für Projektaufgaben (verlinkt zum Projekt-Arbeitsbereich)
+  - **Tabs**: **Übersicht** enthält die Beschreibung, die Anhänge und die Aktivität; **Verlauf** listet die Änderungen an der Aufgabe auf (siehe [Verlauf anzeigen](#verlauf-anzeigen))
 
 ### Hauptinhaltsbereich
+
+Der Tab **Übersicht** enthält den Inhalt der Aufgabe.
 
 **Beschreibung**: Ein Markdown-Editor, der Formatierung, Listen, Links, Codeblöcke und Bilder unterstützt. Sie können Bilder direkt einfügen; sie werden automatisch hochgeladen. Das Drücken von **Tab** im Titelfeld springt in den Beschreibungseditor. Die Beschreibung wird ein paar Sekunden nach dem Aufhören mit dem Tippen automatisch gespeichert; die Kopfzeile zeigt jedes Mal kurz **Gespeichert** an.
 
 **Anhänge**: Ziehen Sie Dateien per Drag-and-Drop auf die Beschreibung oder verwenden Sie den Upload-Bereich, wenn er erscheint. Hochgeladene Dateien erscheinen als Chips unter der Beschreibung. Klicken Sie auf einen Chip zum Herunterladen; klicken Sie auf die **x**-Schaltfläche zum Löschen (erfordert Bearbeitungsberechtigung). Maximal 20 MB pro Datei.
 
-**Aktivitätsbereich**: Wechseln Sie zwischen drei Ansichten:
-  - **Kommentare**: Ein einheitliches Aktivitätsformular (Kommentar + optionale Statusänderung + optionales Zeitprotokoll in einer Übermittlung) plus der Kommentarverlauf
-  - **Historie**: Alle Feld- und Statusänderungen für die Aufgabe, mit Zeitstempeln und Autoren
+**Aktivitätsbereich**: Wechseln Sie zwischen zwei Ansichten:
+  - **Kommentare**: Ein einheitliches Aktivitätsformular (Kommentar + optionale Statusänderung + optionales Zeitprotokoll in einer Übermittlung) plus der Kommentarverlauf. Ein Kommentar, der zusammen mit einer Statusänderung geschrieben wurde, zeigt diese Änderung
   - **Zeitprotokoll**: Zeiteinträge (nur für eigenständige und Projektaufgaben verfügbar)
 
 ### Eigenschaftsleiste
@@ -318,11 +320,12 @@ Die Schaltfläche „Exportieren" ist nur aktiviert, wenn die Beschreibung Inhal
 - Für Projektaufgaben erfordert das Setzen des Status auf **Erledigt** protokollierte Zeit (vorhandene + neu hinzugefügte)
 - Das Status-Dropdown in der Eigenschaftsleiste funktioniert weiterhin unabhängig, wenn Sie diesen Fluss bevorzugen
 
-### Historie anzeigen
+### Verlauf anzeigen
 
-Der Reiter **Historie** zeigt alle Änderungen an der Aufgabe:
+Der Tab **Verlauf**, der letzte Tab der Aufgabe, listet die Änderungen an der Aufgabe auf (siehe [Verlauf der Datensätze](record-history.md)). Die **Eigenschaftsleiste** bleibt dort verfügbar. Der Verlauf zeigt:
   - Statusänderungen
   - Feldänderungen
+  - Verknüpfungen und Anhänge
   - Wer welche Änderung gemacht hat und wann
   - Der Erstellungseintrag mit Datum, Uhrzeit und Ersteller, als letzter Eintrag angezeigt
 

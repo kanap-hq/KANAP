@@ -706,7 +706,62 @@
       "authentication_mode": "Authentication",
       "monitoring_url": "Monitoring URL",
       "env_notes": "Environment notes",
-      "integration_tool_application_id": "Integration tool"
+      "integration_tool_application_id": "Integration tool",
+      "duration_months": "Duration (months)",
+      "auto_renewal": "Tacit renewal",
+      "notice_period_months": "Notice (months)",
+      "yearly_amount_at_signature": "Yearly amount",
+      "billing_frequency": "Billing",
+      "compliance_state": "State",
+      "compliance_reference": "Reference",
+      "source_ref": "External reference",
+      "authority_notification_required": "Authority notification required",
+      "authority_notified_at": "Notified on",
+      "notified_parties": "Parties informed",
+      "base_url": "Base URL",
+      "capex_item_id": "CAPEX line",
+      "department_id": "Department",
+      "server_role": "Server role",
+      "since_date": "Since",
+      "suite_id": "Suite",
+      "priority_level": "Priority",
+      "labels": "Labels",
+      "hours": "Time",
+      "logged_at": "Date",
+      "related_object": "Related to",
+      "converted_to_request": "Converted to request",
+      "converted_to_project": "Converted to project",
+      "actual_effort_business": "Actual business effort",
+      "actual_effort_it": "Actual IT effort",
+      "actual_start": "Actual start",
+      "actual_end": "Actual end",
+      "baseline_effort_business": "Baseline business effort",
+      "baseline_effort_it": "Baseline IT effort",
+      "baseline_start_date": "Baseline start",
+      "baseline_end_date": "Baseline end",
+      "business_effort_allocation_mode": "Business effort allocation mode",
+      "it_effort_allocation_mode": "IT effort allocation mode",
+      "business_sponsor_id": "Business sponsor",
+      "it_sponsor_id": "IT sponsor",
+      "category_id": "Category",
+      "source_id": "Source",
+      "stream_id": "Stream",
+      "estimated_effort_business": "Business effort",
+      "estimated_effort_it": "IT effort",
+      "execution_progress": "Progress",
+      "override_justification": "Override justification",
+      "override_value": "Override value",
+      "priority_override": "Priority override",
+      "priority_score": "Priority score",
+      "scheduling_mode": "Scheduling mode",
+      "source_request_id": "Created from request",
+      "requestor_id": "Requestor",
+      "target_delivery_date": "Target delivery date",
+      "converted_date": "Converted on",
+      "origin_task_id": "Created from task",
+      "target_date": "Target date",
+      "phase_status": "Status",
+      "milestone_status": "Status"
     },
     "history": {
       "empty": "No history yet",
@@ -742,7 +797,20 @@
       "versionChanged": "Version {{before}} → {{after}}",
       "texts": {
         "contentChanged": "Content changed",
-        "workingDaysChanged": "Working days changed"
+        "workingDaysChanged": "Working days changed",
+        "notesChanged": "Notes changed",
+        "renewalStopped": "Renewal stopped",
+        "renewalResumed": "Renewal resumed",
+        "descriptionChanged": "Description changed",
+        "supportNotesChanged": "Support notes changed",
+        "classificationReviewed": "Classification reviewed",
+        "taskTypeChanged": "Task type changed",
+        "phaseChanged": "Phase changed",
+        "purposeChanged": "Purpose changed",
+        "risksChanged": "Risks changed",
+        "currentSituationChanged": "Current situation changed",
+        "expectedBenefitsChanged": "Expected benefits changed",
+        "feasibilityReviewChanged": "Feasibility review changed"
       },
       "actors": {
         "assistant": "Plaid",
@@ -869,6 +937,58 @@
         "middleware": {
           "added": "Middleware added: {{label}}",
           "removed": "Middleware removed: {{label}}"
+        },
+        "renewal_task": {
+          "added": "Renewal task created: {{label}}",
+          "removed": "Renewal task removed: {{label}}"
+        },
+        "instance": {
+          "added": "Environment added: {{label}}",
+          "removed": "Environment removed: {{label}}"
+        },
+        "assignment": {
+          "added": "Server added: {{label}}",
+          "removed": "Server removed: {{label}}"
+        },
+        "department": {
+          "added": "Department added: {{label}}",
+          "removed": "Department removed: {{label}}"
+        },
+        "suite": {
+          "added": "Suite added: {{label}}",
+          "removed": "Suite removed: {{label}}"
+        },
+        "business_process": {
+          "added": "Business process added: {{label}}",
+          "removed": "Business process removed: {{label}}"
+        },
+        "task_owner": {
+          "added": "Owner added: {{label}}",
+          "removed": "Owner removed: {{label}}"
+        },
+        "task_viewer": {
+          "added": "Viewer added: {{label}}",
+          "removed": "Viewer removed: {{label}}"
+        },
+        "phase": {
+          "added": "Phase added: {{label}}",
+          "removed": "Phase removed: {{label}}"
+        },
+        "milestone": {
+          "added": "Milestone added: {{label}}",
+          "removed": "Milestone removed: {{label}}"
+        },
+        "time_entry": {
+          "added": "Time entry added: {{label}}",
+          "removed": "Time entry removed: {{label}}"
+        },
+        "it_team": {
+          "added": "IT team member added: {{label}}",
+          "removed": "IT team member removed: {{label}}"
+        },
+        "business_team": {
+          "added": "Business team member added: {{label}}",
+          "removed": "Business team member removed: {{label}}"
         }
       },
       "unnamed": {
@@ -921,7 +1041,18 @@
         "leg": "a segment",
         "set": "a set",
         "binding": "a binding",
-        "person": "a person"
+        "person": "a person",
+        "instance": "an environment",
+        "assignment": "a server",
+        "phase": "a phase",
+        "milestone": "a milestone",
+        "time_entry": "a time entry",
+        "team": "a team",
+        "dependency": "a dependency",
+        "criterion_value": "an option",
+        "portfolio_source": "a source",
+        "portfolio_category": "a category",
+        "portfolio_stream": "a stream"
       },
       "deleted": {
         "record": "a deleted record",
@@ -973,7 +1104,15 @@
         "leg": "a deleted segment",
         "set": "a deleted set",
         "binding": "a deleted binding",
-        "person": "a deleted person"
+        "person": "a deleted person",
+        "instance": "a deleted environment",
+        "assignment": "a deleted server",
+        "phase": "a deleted phase",
+        "milestone": "a deleted milestone",
+        "time_entry": "a deleted time entry",
+        "team": "a deleted team",
+        "dependency": "a deleted dependency",
+        "criterion_value": "a deleted option"
       },
       "title": "History",
       "metricsYear": "Metrics {{year}}",
@@ -996,7 +1135,29 @@
       "legCreated": "Segment {{index}} added",
       "legDeleted": "Segment {{index}} removed",
       "bindingCreated": "Binding {{environment}} added",
-      "bindingDeleted": "Binding {{environment}} removed"
+      "bindingDeleted": "Binding {{environment}} removed",
+      "renewalDecided": "Renewal decided: {{decision}}",
+      "renewalUndone": "Renewal decision undone",
+      "outsideAccess": {
+        "and_one": "and {{count}} line outside your access",
+        "and_other": "and {{count}} lines outside your access",
+        "added_one": "{{count}} budget line outside your access added",
+        "added_other": "{{count}} budget lines outside your access added",
+        "removed_one": "{{count}} budget line outside your access removed",
+        "removed_other": "{{count}} budget lines outside your access removed"
+      },
+      "instance": "{{environment}} environment",
+      "timeEntry": "Time entry",
+      "timeEntryCreated": "Time logged",
+      "timeEntryDeleted": "Time entry deleted",
+      "criterion": "Criterion {{name}}",
+      "criterionNoName": "A criterion",
+      "linkChanged": "Link {{name}} changed",
+      "linkChangedNoName": "Link changed",
+      "effortAllocationIt": "IT effort share, {{name}}",
+      "effortAllocationBusiness": "Business effort share, {{name}}",
+      "documentUpdated": "Document modified: {{label}}",
+      "documentUpdatedNoName": "Document modified"
     },
     "messages": {
       "loadDetailsFailed": "Failed to load audit entry details."
@@ -1157,19 +1318,28 @@
       "portfolio_phase_templates": "Phase templates",
       "portfolio_project_attachments": "Project attachments",
       "portfolio_project_capex": "Project CAPEX lines",
+      "portfolio_project_contacts": "Project contacts",
+      "portfolio_project_dependencies": "Project dependencies",
+      "portfolio_project_documents": "Project documents",
+      "portfolio_project_effort_allocations": "Project effort allocations",
       "portfolio_project_milestones": "Project milestones",
       "portfolio_project_opex": "Project OPEX lines",
       "portfolio_project_phases": "Project phases",
       "portfolio_project_team": "Project teams",
       "portfolio_project_time_entries": "Project time entries",
+      "portfolio_project_urls": "Project web links",
       "portfolio_projects": "Projects",
       "portfolio_request_applications": "Request applications",
       "portfolio_request_assets": "Request assets",
       "portfolio_request_attachments": "Request attachments",
       "portfolio_request_business_processes": "Request business processes",
       "portfolio_request_capex": "Request CAPEX lines",
+      "portfolio_request_contacts": "Request contacts",
+      "portfolio_request_dependencies": "Request dependencies",
+      "portfolio_request_documents": "Request documents",
       "portfolio_request_opex": "Request OPEX lines",
       "portfolio_request_team": "Request teams",
+      "portfolio_request_urls": "Request web links",
       "portfolio_requests": "Requests",
       "portfolio_skills": "Skills",
       "portfolio_sources": "Portfolio sources",
@@ -1350,6 +1520,19 @@
       "ownerType": {
         "business": "Business",
         "it": "IT"
+      },
+      "usersMode": {
+        "itUsers": "Derived",
+        "headcount": "Derived",
+        "manual": "Manual"
+      },
+      "allocationMode": {
+        "auto": "Automatic",
+        "manual": "Manual"
+      },
+      "effortType": {
+        "it": "IT",
+        "business": "Business"
       }
     },
     "dataAccess": {

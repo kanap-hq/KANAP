@@ -46,7 +46,26 @@ export type AuditValueContext = {
   users?: ReadonlyMap<string, string>;
   /** The audited table. `status` and `mode` name different lists on different tables. */
   table?: string;
+  /**
+   * The tenant's label of a code of an IT catalog list (`applicationCategories`, `serverRoles`...),
+   * as the record's screen shows it, or null when the tenant's catalog has no such code. Without
+   * it, a catalog code reads with the shipped label.
+   */
+  catalogLabel?: (list: AuditCatalogList, code: string) => string | null;
 };
+
+/** The IT catalog lists an audit value may name, with a tenant label (`useItOpsEnumOptions`). */
+export type AuditCatalogList = 'applicationCategories' | 'accessMethods' | 'incidentCategories' | 'serverRoles';
+
+/** The catalog list of a field, by table when the field name is shared. */
+export function auditCatalogList(field: string, table: string | undefined): AuditCatalogList | null {
+  if (field === 'category') {
+    return table === 'applications' ? 'applicationCategories' : table === 'incidents' ? 'incidentCategories' : null;
+  }
+  if (field === 'access_methods') return 'accessMethods';
+  if (field === 'server_role') return 'serverRoles';
+  return null;
+}
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -117,6 +136,12 @@ const ENUM_GROUPS: Record<string, string> = {
   integration_route_type: 'it:enums.routeType',
   direction: 'auditLogs.values.direction',
   owner_type: 'auditLogs.values.ownerType',
+  // An application server's role, named as the IT settings name the shipped roles.
+  server_role: 'it:catalogDefaults.serverRoles',
+  // An application's access methods, named as the IT settings name the shipped methods.
+  access_methods: 'it:catalogDefaults.accessMethods',
+  // How an application counts its users, as its Ownership section names the two methods.
+  users_mode: 'auditLogs.values.usersMode',
   // The budget history's own enumerations, named as the line screens name them.
   input_grain: 'auditLogs.values.inputGrain',
   allocation_method: 'auditLogs.values.allocationMethod',
@@ -132,6 +157,11 @@ const ENUM_GROUPS: Record<string, string> = {
   vulnerability_state: 'auditLogs.values.vulnerabilityState',
   cyber_criticality: 'auditLogs.values.cyberCriticality',
   recovery_wave: 'auditLogs.values.recoveryWave',
+  // The contract's own lists, named as its screens name them.
+  billing_frequency: 'ops:contracts.billing',
+  compliance_state: 'ops:contracts.compliance.states',
+  // A task's priority, named as the task screen names it.
+  priority_level: 'portfolio:priority',
   // The IT landscape's enum values the record history reaches: the data class uses the
   // classification catalog's own labels, the interface data categories and the endpoint entity
   // codes the IT settings' shipped labels.
@@ -140,6 +170,28 @@ const ENUM_GROUPS: Record<string, string> = {
   source_entity_code: 'it:catalogDefaults.entities',
   destination_entity_code: 'it:catalogDefaults.entities',
   equipment_entity_code: 'it:catalogDefaults.entities',
+  // The portfolio's own lists: a phase's and a milestone's status (renamed by the history so they
+  // never read as the project's), the scheduling mode and the effort allocation modes.
+  phase_status: 'portfolio:statuses.phase',
+  milestone_status: 'portfolio:statuses.milestone',
+  scheduling_mode: 'portfolio:planning.roadmap.schedulingModes',
+  it_effort_allocation_mode: 'auditLogs.values.allocationMode',
+  business_effort_allocation_mode: 'auditLogs.values.allocationMode',
+};
+
+/**
+ * The fields a project names from its own list, where other tables use the same field name: its
+ * status, its origin, and the effort type of a time entry (`category`), read in its history.
+ */
+const PROJECT_ENUM_GROUPS: Record<string, string> = {
+  status: 'portfolio:statuses.project',
+  origin: 'portfolio:origin',
+  category: 'auditLogs.values.effortType',
+};
+
+/** A request's status, named from the request's own list (`portfolio:statuses.request`). */
+const REQUEST_ENUM_GROUPS: Record<string, string> = {
+  status: 'portfolio:statuses.request',
 };
 
 /** `spread_profile_name` holds `flat` and `4-4-5`; its keys cannot use the stored code as is. */
@@ -324,13 +376,18 @@ function screenLabel(context: AuditValueContext, key: string): string | null {
  */
 function enumerationCode(field: string, code: string): string {
   if (field === 'status' || field === 'lifecycle' || field === 'vulnerability_state'
-    || field === 'data_class' || field === 'data_category'
-    || field === 'source_entity_code' || field === 'destination_entity_code' || field === 'equipment_entity_code') return code;
+    || field === 'data_class' || field === 'data_category' || field === 'compliance_state'
+    || field === 'source_entity_code' || field === 'destination_entity_code' || field === 'equipment_entity_code'
+    || field === 'access_methods' || field === 'phase_status' || field === 'milestone_status') return code;
   return code.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
 /** The screen label of a known enumeration, or null so an unknown code stays as stored. */
 function enumerationLabel(field: string, code: string, context: AuditValueContext): string | null {
+  // A tenant catalog code: the tenant's own label first, as the screen shows it, then the shipped one.
+  const catalog = auditCatalogList(field, context.table);
+  const tenantLabel = catalog ? context.catalogLabel?.(catalog, code) : null;
+  if (tenantLabel) return tenantLabel;
   // The classification catalog nests each code under `label`/`description`; the other groups map
   // the code straight to the label.
   if (field === 'data_class') {
@@ -360,13 +417,34 @@ function enumerationLabel(field: string, code: string, context: AuditValueContex
   if (field === 'family') {
     return screenLabel(context, `auditLogs.values.technologyFamily.${code}`);
   }
+  // An incident's category: the shipped categories of the IT settings, as the register names them.
+  if (field === 'category' && context.table === 'incidents') {
+    return screenLabel(context, `it:catalogDefaults.incidentCategories.${code}`);
+  }
+  // An application's category: the shipped categories of the IT settings, keyed by the stored code.
+  if (field === 'category' && context.table === 'applications') {
+    return screenLabel(context, `it:catalogDefaults.applicationCategories.${code}`);
+  }
+  // A project's status, origin and time entry effort type, with their stored snake-case codes.
+  if (context.table === 'portfolio_projects' && PROJECT_ENUM_GROUPS[field]) {
+    return screenLabel(context, `${PROJECT_ENUM_GROUPS[field]}.${code}`);
+  }
+  if (context.table === 'portfolio_requests' && REQUEST_ENUM_GROUPS[field]) {
+    return screenLabel(context, `${REQUEST_ENUM_GROUPS[field]}.${code}`);
+  }
   if (field === 'hosting_type') {
     return screenLabel(context, `auditLogs.values.hostingType.${code}`);
+  }
+  // A task's time entry: IT or business time, named as the work log names it.
+  if (field === 'category' && context.table === 'tasks') {
+    return screenLabel(context, `portfolio:dialogs.logTime.categories.${code}`);
   }
   const group = field === 'status'
     ? (context.table === 'incidents'
       ? 'it:enums.incidentStatus'
-      : context.table === 'documents' ? 'knowledge:statuses' : 'common:statuses')
+      : context.table === 'documents'
+        ? 'knowledge:statuses'
+        : context.table === 'tasks' ? 'portfolio:statuses.task' : 'common:statuses')
     : field === 'lifecycle'
       ? 'common:statuses'
       : field === 'nature' && context.table === 'accounts'

@@ -148,7 +148,7 @@ function testAuditLogIncidentVisibilitySql(): void {
   assert.match(sql, /a\.table_name = 'incident_attachments'/);
   assert.match(sql, /a\.table_name = 'documents'/);
   assert.match(sql, /integrated_document_bindings b_audit/);
-  assert.match(sql, /a\.table_name = 'tasks'/);
+  assert.match(sql, /a\.table_name IN \('tasks', 'task_applications', 'task_assets'\)/);
   assert.match(sql, /tasks t_audit/);
   assert.match(sql, /a\.table_name = 'task_attachments'/);
   assert.match(sql, /task_attachments c_audit/);

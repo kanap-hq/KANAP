@@ -706,7 +706,62 @@
       "authentication_mode": "Authentifizierung",
       "monitoring_url": "Monitoring-URL",
       "env_notes": "Umgebungsnotizen",
-      "integration_tool_application_id": "Integrationswerkzeug"
+      "integration_tool_application_id": "Integrationswerkzeug",
+      "duration_months": "Laufzeit (Monate)",
+      "auto_renewal": "Stillschweigende Verlängerung",
+      "notice_period_months": "Kündigungsfrist (Monate)",
+      "yearly_amount_at_signature": "Jahresbetrag",
+      "billing_frequency": "Abrechnung",
+      "compliance_state": "Status",
+      "compliance_reference": "Referenz",
+      "source_ref": "Externe Referenz",
+      "authority_notification_required": "Meldung an Behörde erforderlich",
+      "authority_notified_at": "Gemeldet am",
+      "notified_parties": "Informierte Parteien",
+      "base_url": "Basis-URL",
+      "capex_item_id": "CAPEX-Zeile",
+      "department_id": "Abteilung",
+      "server_role": "Serverrolle",
+      "since_date": "Seit",
+      "suite_id": "Suite",
+      "priority_level": "Priorität",
+      "labels": "Labels",
+      "hours": "Zeit",
+      "logged_at": "Datum",
+      "related_object": "Verknüpft mit",
+      "converted_to_request": "In Anfrage konvertiert",
+      "converted_to_project": "In Projekt konvertiert",
+      "actual_effort_business": "Tatsächlicher Fachbereichs-Aufwand",
+      "actual_effort_it": "Tatsächlicher IT-Aufwand",
+      "actual_start": "Tatsächlicher Beginn",
+      "actual_end": "Tatsächliches Ende",
+      "baseline_effort_business": "Fachbereichs-Aufwand (Baseline)",
+      "baseline_effort_it": "IT-Aufwand (Baseline)",
+      "baseline_start_date": "Beginn (Baseline)",
+      "baseline_end_date": "Ende (Baseline)",
+      "business_effort_allocation_mode": "Zuordnungsmodus Fachbereichs-Aufwand",
+      "it_effort_allocation_mode": "Zuordnungsmodus IT-Aufwand",
+      "business_sponsor_id": "Fachbereichssponsor",
+      "it_sponsor_id": "IT-Sponsor",
+      "category_id": "Kategorie",
+      "source_id": "Quelle",
+      "stream_id": "Stream",
+      "estimated_effort_business": "Fachbereichs-Aufwand",
+      "estimated_effort_it": "IT-Aufwand",
+      "execution_progress": "Fortschritt",
+      "override_justification": "Begründung der Überschreibung",
+      "override_value": "Überschreibungswert",
+      "priority_override": "Prioritätsüberschreibung",
+      "priority_score": "Prioritätsscore",
+      "scheduling_mode": "Planungsmodus",
+      "source_request_id": "Erstellt aus Anfrage",
+      "requestor_id": "Antragsteller",
+      "target_delivery_date": "Ziellieferdatum",
+      "converted_date": "Umgewandelt am",
+      "origin_task_id": "Erstellt aus Aufgabe",
+      "target_date": "Zieldatum",
+      "phase_status": "Status",
+      "milestone_status": "Status"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -742,7 +797,20 @@
       "versionChanged": "Version {{before}} → {{after}}",
       "texts": {
         "contentChanged": "Inhalt geändert",
-        "workingDaysChanged": "Arbeitstage geändert"
+        "workingDaysChanged": "Arbeitstage geändert",
+        "notesChanged": "Notizen geändert",
+        "renewalStopped": "Verlängerung beendet",
+        "renewalResumed": "Verlängerung wieder aufgenommen",
+        "descriptionChanged": "Beschreibung geändert",
+        "supportNotesChanged": "Support-Notizen geändert",
+        "classificationReviewed": "Klassifizierung geprüft",
+        "taskTypeChanged": "Aufgabentyp geändert",
+        "phaseChanged": "Phase geändert",
+        "purposeChanged": "Zweck geändert",
+        "risksChanged": "Risiken geändert",
+        "currentSituationChanged": "Aktuelle Situation geändert",
+        "expectedBenefitsChanged": "Erwarteter Nutzen geändert",
+        "feasibilityReviewChanged": "Machbarkeitsprüfung geändert"
       },
       "actors": {
         "assistant": "Plaid",
@@ -869,6 +937,58 @@
         "middleware": {
           "added": "Middleware hinzugefügt: {{label}}",
           "removed": "Middleware entfernt: {{label}}"
+        },
+        "renewal_task": {
+          "added": "Verlängerungsaufgabe erstellt: {{label}}",
+          "removed": "Verlängerungsaufgabe entfernt: {{label}}"
+        },
+        "instance": {
+          "added": "Umgebung hinzugefügt: {{label}}",
+          "removed": "Umgebung entfernt: {{label}}"
+        },
+        "assignment": {
+          "added": "Server hinzugefügt: {{label}}",
+          "removed": "Server entfernt: {{label}}"
+        },
+        "department": {
+          "added": "Abteilung hinzugefügt: {{label}}",
+          "removed": "Abteilung entfernt: {{label}}"
+        },
+        "suite": {
+          "added": "Suite hinzugefügt: {{label}}",
+          "removed": "Suite entfernt: {{label}}"
+        },
+        "business_process": {
+          "added": "Geschäftsprozess hinzugefügt: {{label}}",
+          "removed": "Geschäftsprozess entfernt: {{label}}"
+        },
+        "task_owner": {
+          "added": "Verantwortliche Person hinzugefügt: {{label}}",
+          "removed": "Verantwortliche Person entfernt: {{label}}"
+        },
+        "task_viewer": {
+          "added": "Beobachter hinzugefügt: {{label}}",
+          "removed": "Beobachter entfernt: {{label}}"
+        },
+        "phase": {
+          "added": "Phase hinzugefügt: {{label}}",
+          "removed": "Phase entfernt: {{label}}"
+        },
+        "milestone": {
+          "added": "Meilenstein hinzugefügt: {{label}}",
+          "removed": "Meilenstein entfernt: {{label}}"
+        },
+        "time_entry": {
+          "added": "Zeiteintrag hinzugefügt: {{label}}",
+          "removed": "Zeiteintrag entfernt: {{label}}"
+        },
+        "it_team": {
+          "added": "IT-Teammitglied hinzugefügt: {{label}}",
+          "removed": "IT-Teammitglied entfernt: {{label}}"
+        },
+        "business_team": {
+          "added": "Fachbereichs-Teammitglied hinzugefügt: {{label}}",
+          "removed": "Fachbereichs-Teammitglied entfernt: {{label}}"
         }
       },
       "unnamed": {
@@ -921,7 +1041,18 @@
         "leg": "ein Segment",
         "set": "ein Satz",
         "binding": "eine Bindung",
-        "person": "eine Person"
+        "person": "eine Person",
+        "instance": "eine Umgebung",
+        "assignment": "ein Server",
+        "phase": "eine Phase",
+        "milestone": "ein Meilenstein",
+        "time_entry": "ein Zeiteintrag",
+        "team": "ein Team",
+        "dependency": "eine Abhängigkeit",
+        "criterion_value": "eine Option",
+        "portfolio_source": "eine Quelle",
+        "portfolio_category": "eine Kategorie",
+        "portfolio_stream": "ein Stream"
       },
       "deleted": {
         "record": "ein gelöschter Datensatz",
@@ -973,7 +1104,15 @@
         "leg": "ein gelöschtes Segment",
         "set": "ein gelöschter Satz",
         "binding": "eine gelöschte Bindung",
-        "person": "eine gelöschte Person"
+        "person": "eine gelöschte Person",
+        "instance": "eine gelöschte Umgebung",
+        "assignment": "ein gelöschter Server",
+        "phase": "eine gelöschte Phase",
+        "milestone": "ein gelöschter Meilenstein",
+        "time_entry": "ein gelöschter Zeiteintrag",
+        "team": "ein gelöschtes Team",
+        "dependency": "eine gelöschte Abhängigkeit",
+        "criterion_value": "eine gelöschte Option"
       },
       "title": "Verlauf",
       "metricsYear": "Kennzahlen {{year}}",
@@ -996,7 +1135,29 @@
       "legCreated": "Segment {{index}} hinzugefügt",
       "legDeleted": "Segment {{index}} entfernt",
       "bindingCreated": "Bindung {{environment}} hinzugefügt",
-      "bindingDeleted": "Bindung {{environment}} entfernt"
+      "bindingDeleted": "Bindung {{environment}} entfernt",
+      "renewalDecided": "Verlängerung entschieden: {{decision}}",
+      "renewalUndone": "Verlängerungsentscheidung zurückgenommen",
+      "outsideAccess": {
+        "and_one": "und {{count}} Position außerhalb Ihres Zugriffs",
+        "and_other": "und {{count}} Positionen außerhalb Ihres Zugriffs",
+        "added_one": "{{count}} Budgetposition außerhalb Ihres Zugriffs hinzugefügt",
+        "added_other": "{{count}} Budgetpositionen außerhalb Ihres Zugriffs hinzugefügt",
+        "removed_one": "{{count}} Budgetposition außerhalb Ihres Zugriffs entfernt",
+        "removed_other": "{{count}} Budgetpositionen außerhalb Ihres Zugriffs entfernt"
+      },
+      "instance": "Umgebung {{environment}}",
+      "timeEntry": "Zeiteintrag",
+      "timeEntryCreated": "Zeit erfasst",
+      "timeEntryDeleted": "Zeiteintrag gelöscht",
+      "criterion": "Kriterium {{name}}",
+      "criterionNoName": "Ein Kriterium",
+      "linkChanged": "Link {{name}} geändert",
+      "linkChangedNoName": "Link geändert",
+      "effortAllocationIt": "Anteil IT-Aufwand, {{name}}",
+      "effortAllocationBusiness": "Anteil Fachbereichs-Aufwand, {{name}}",
+      "documentUpdated": "Dokument geändert: {{label}}",
+      "documentUpdatedNoName": "Dokument geändert"
     },
     "messages": {
       "loadDetailsFailed": "Details des Audit-Eintrags konnten nicht geladen werden."
@@ -1157,19 +1318,28 @@
       "portfolio_phase_templates": "Phasenvorlagen",
       "portfolio_project_attachments": "Projektanhänge",
       "portfolio_project_capex": "CAPEX-Zeilen von Projekten",
+      "portfolio_project_contacts": "Projektkontakte",
+      "portfolio_project_dependencies": "Projektabhängigkeiten",
+      "portfolio_project_documents": "Projektdokumente",
+      "portfolio_project_effort_allocations": "Aufwandsverteilungen von Projekten",
       "portfolio_project_milestones": "Projektmeilensteine",
       "portfolio_project_opex": "OPEX-Zeilen von Projekten",
       "portfolio_project_phases": "Projektphasen",
       "portfolio_project_team": "Projektteams",
       "portfolio_project_time_entries": "Zeiterfassung von Projekten",
+      "portfolio_project_urls": "Weblinks von Projekten",
       "portfolio_projects": "Projekte",
       "portfolio_request_applications": "Anwendungen von Anfragen",
       "portfolio_request_assets": "Assets von Anfragen",
       "portfolio_request_attachments": "Anhänge von Anfragen",
       "portfolio_request_business_processes": "Geschäftsprozesse von Anfragen",
       "portfolio_request_capex": "CAPEX-Zeilen von Anfragen",
+      "portfolio_request_contacts": "Kontakte von Anfragen",
+      "portfolio_request_dependencies": "Abhängigkeiten von Anfragen",
+      "portfolio_request_documents": "Dokumente von Anfragen",
       "portfolio_request_opex": "OPEX-Zeilen von Anfragen",
       "portfolio_request_team": "Teams von Anfragen",
+      "portfolio_request_urls": "Weblinks von Anfragen",
       "portfolio_requests": "Anfragen",
       "portfolio_skills": "Kompetenzen",
       "portfolio_sources": "Portfolio-Quellen",
@@ -1350,6 +1520,19 @@
       "ownerType": {
         "business": "Fachbereich",
         "it": "IT"
+      },
+      "usersMode": {
+        "itUsers": "Abgeleitet",
+        "headcount": "Abgeleitet",
+        "manual": "Manuell"
+      },
+      "allocationMode": {
+        "auto": "Automatisch",
+        "manual": "Manuell"
+      },
+      "effortType": {
+        "it": "IT",
+        "business": "Fachbereich"
       }
     },
     "dataAccess": {

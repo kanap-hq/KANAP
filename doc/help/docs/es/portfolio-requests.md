@@ -71,7 +71,7 @@ La cuadrícula estándar resalta los campos que importan durante la recepción y
 
 El espacio de trabajo utiliza un modelo dividido:
 
-- El área principal contiene las pestañas operativas: **Resumen**, **Análisis**, **Evaluación**, **Relaciones** y **Conocimiento**.
+- El área principal contiene las pestañas operativas: **Resumen**, **Análisis**, **Evaluación**, **Relaciones**, **Conocimiento** e **Historial** (los cambios de la solicitud, vea [Historial de los registros](record-history.md)).
 - Un panel persistente de **Propiedades** en el borde derecho contiene los metadatos estables de la solicitud, la asignación de equipo y los proyectos resultantes. Ábralo o ciérrelo usando la pestaña vertical en el borde derecho.
 
 Esto importa porque no todo se guarda de la misma manera:
@@ -146,10 +146,7 @@ La sección **Propósito** es un documento markdown gestionado embebido directam
 
 ### Actividad
 
-Debajo de Propósito, la pestaña Resumen incluye el flujo de actividad de la solicitud:
-
-- **Comentarios** para discusión, notas contextuales y decisiones formales
-- **Historial** para la pista de auditoría de cambios de campo y estado
+Debajo de Propósito, la pestaña Resumen incluye el flujo de actividad de la solicitud: los comentarios para discusión, notas contextuales y decisiones formales. Los cambios de la solicitud están en la pestaña **Historial**.
 
 Esto coloca la actividad más reciente directamente delante de los revisores sin requerir que naveguen a una pestaña separada.
 
@@ -168,7 +165,7 @@ Los comentarios admiten markdown e imágenes en línea, lo cual es útil para no
 
 #### Historial
 
-El historial es la vista de auditoría. Úselo cuando necesite responder preguntas como:
+La pestaña **Historial** lista los cambios de la solicitud. Úsela cuando necesite responder preguntas como:
 
 - quién cambió el estado
 - cuándo cambiaron las asignaciones de equipo
@@ -176,7 +173,7 @@ El historial es la vista de auditoría. Úselo cuando necesite responder pregunt
 
 La lista termina con la entrada de creación (quién creó la solicitud y cuándo), bajo los cambios registrados, que incluyen las ediciones de los documentos Objetivo y Riesgos.
 
-Si necesita narrativa, use Comentarios. Si necesita prueba, use Historial.
+Si necesita narrativa, use los comentarios. Si necesita prueba, use la pestaña **Historial**.
 
 ## Análisis
 
@@ -277,7 +274,7 @@ Una sección no aparece si usted no puede leer su módulo: las líneas presupues
 
 **Añadir y quitar vínculos** (`portfolio_requests:contributor`): **Añadir**, a la derecha de una sección, abre una búsqueda bajo el botón. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. No hay confirmación, y quitar un vínculo no elimina nada más. Vincular un proceso de negocio requiere también `business_processes:member`. Los lectores ven las tablas en solo lectura.
 
-Los vínculos con líneas presupuestarias, aplicaciones y activos quedan registrados en el **Historial** de la solicitud.
+Los vínculos con líneas presupuestarias, aplicaciones y activos quedan registrados en la pestaña **Historial** de la solicitud.
 
 ### Enlaces y archivos
 

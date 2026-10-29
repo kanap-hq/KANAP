@@ -140,16 +140,18 @@ Below the toolbar, the title block shows:
   - **Title**: Click to edit inline (requires `tasks:member`)
   - **Status / Priority / Score / Assignee / Due Date** as compact, clickable metadata chips
   - **Project chip** for project tasks (links to the project workspace)
+  - **Tabs**: **Overview** holds the description, attachments and activity; **History** lists the changes made to the task (see [Viewing history](#viewing-history))
 
 ### Main content area
+
+The **Overview** tab holds the task content.
 
 **Description**: A markdown editor that supports formatting, lists, links, code blocks, and images. You can paste images directly; they upload automatically. Pressing **Tab** from the title field jumps into the description editor. The description autosaves a couple of seconds after you stop typing; the header shows **Saved** briefly each time it persists.
 
 **Attachments**: Drag and drop files onto the description, or use the upload area when it appears. Uploaded files appear as chips below the description. Click a chip to download; click the **x** button to delete (requires edit permission). Maximum 20 MB per file.
 
-**Activity Section**: Toggle between three views:
-  - **Comments**: A unified activity form (comment + optional status change + optional time log in one submit) plus the comment thread
-  - **History**: All field and status changes for the task, with timestamps and authors
+**Activity Section**: Toggle between two views:
+  - **Comments**: A unified activity form (comment + optional status change + optional time log in one submit) plus the comment thread. A comment written with a status change shows that change
   - **Time Log**: Time entries (available for standalone and project tasks only)
 
 ### Properties drawer
@@ -320,9 +322,10 @@ The export button is only enabled when the description has content.
 
 ### Viewing history
 
-The **History** tab shows all changes to the task:
+The **History** tab, the last tab of the task, lists the changes made to the task (see [Record history](record-history.md)). The **Properties** drawer stays available on it. The history shows:
   - Status changes
   - Field modifications
+  - Links and attachments
   - Who made each change and when
   - The creation entry, with the date, time and creator, shown as the last entry
 

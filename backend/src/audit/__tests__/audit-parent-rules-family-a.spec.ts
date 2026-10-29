@@ -29,7 +29,7 @@ function migrationRules(): Triple[] {
 function expectedRules(): Triple[] {
   const rules: Triple[] = [];
   for (const [label, rule] of Object.entries(AUDIT_PARENT_RULES)) {
-    if (!FAMILY_PARENTS.has(rule.parentTable)) continue;
+    if (!rule.parentTable || !FAMILY_PARENTS.has(rule.parentTable)) continue;
     assert.equal(rule.from, 'payload', `${label}: familles A rules read the payload`);
     assert.equal(rule.keys.length, 1, `${label}: one payload key`);
     rules.push({ label, parentTable: rule.parentTable, payloadKey: rule.keys[0] });

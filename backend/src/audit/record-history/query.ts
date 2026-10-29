@@ -72,17 +72,24 @@ function recordChildLabels(entry: RecordHistoryRecord): string[] {
     .map(([label]) => label);
 }
 
-/** The page query: the three branches and their parameters. */
+/**
+ * The page query: the three branches and their parameters. `closedLabels` are child labels this
+ * reader may not read (a contract's documents, see `contractClosedLabels`): no branch reads them.
+ */
 export function auditPageQuery(
   entry: RecordHistoryRecord,
   tenantId: string,
   id: string,
   cursor: AuditCursor | null,
   fetch: number,
+  closedLabels: readonly string[] = [],
 ): AuditPageQuery {
-  const recordLabels = Array.from(new Set([...entry.auditLabels, ...recordChildLabels(entry)])).sort();
-  const childLabels = Object.keys(entry.children).sort();
-  const payloadKeyReads = recordHistoryPayloadKeyReads(entry);
+  const open = (label: string) => !closedLabels.includes(label);
+  const recordLabels = Array.from(new Set([...entry.auditLabels, ...recordChildLabels(entry).filter(open)])).sort();
+  const childLabels = Object.keys(entry.children).filter(open).sort();
+  const payloadKeyReads = recordHistoryPayloadKeyReads(entry)
+    .map((read) => ({ ...read, labels: read.labels.filter(open) }))
+    .filter((read) => read.labels.length > 0);
   const params: unknown[] = [
     tenantId,
     recordLabels,

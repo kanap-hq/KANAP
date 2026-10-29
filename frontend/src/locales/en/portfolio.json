@@ -929,6 +929,10 @@
           "emptyNotes": "-",
           "unknownPerson": "Unknown"
         }
+      },
+      "tabs": {
+        "overview": "Overview",
+        "history": "History"
       }
     }
   },
@@ -2047,6 +2051,7 @@
     "activity": "Activity",
     "analysis": "Analysis",
     "description": "Description",
+    "history": "History",
     "knowledge": "Knowledge",
     "progress": "Effort",
     "relations": "Relations",
@@ -2060,7 +2065,6 @@
     "authorUnknown": "Unknown",
     "tabs": {
       "comments": "Comments",
-      "history": "History",
       "workLog": "Time log"
     },
     "labels": {
@@ -2118,25 +2122,6 @@
       }
     },
     "history": {
-      "actions": {
-        "addedComment": "Added a comment",
-        "addedField": "Added {{field}}: {{value}}",
-        "changedField": "{{field}}: {{from}} → {{to}}",
-        "decisionWithOutcome": "Decision: {{outcome}}",
-        "recorded": "Activity recorded",
-        "removedField": "Removed {{field}}: {{value}}",
-        "updatedDocument": "{{document}} updated",
-        "updatedMultiple": "Updated: {{changes}}"
-      },
-      "feasibilityDimensions": {
-        "changeManagement": "Change management",
-        "deliveryConstraints": "Delivery constraints",
-        "infrastructureNeeds": "Infrastructure needs",
-        "integrationCompatibility": "Integration & compatibility",
-        "resourceSkills": "Resource & skills",
-        "securityCompliance": "Security & compliance",
-        "technicalFeasibility": "Technical feasibility"
-      },
       "fields": {
         "actualEffortBusiness": "Actual business effort",
         "actualEffortIt": "Actual IT effort",

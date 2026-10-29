@@ -136,7 +136,7 @@ Zum Bearbeiten benötigen Sie `contracts:member`. Leser sehen dieselbe Seite mit
 
 **Teilen** in der Kopfzeile schickt Kollegen Ihres Arbeitsbereichs einen Link zum Vertrag per E-Mail.
 
-Die Seite hat vier Reiter: **Übersicht**, **Budget**, **Konformität** und **Verknüpfungen**. Die Adressen der früheren Reiter **Details** und **Aufgaben** öffnen die Übersicht.
+Die Seite hat fünf Reiter: **Übersicht**, **Budget**, **Konformität**, **Verknüpfungen** und **Verlauf** (die Änderungen am Vertrag, siehe [Verlauf der Datensätze](record-history.md)). Die Adressen der früheren Reiter **Details** und **Aufgaben** öffnen die Übersicht.
 
 ### Übersicht
 

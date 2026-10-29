@@ -88,6 +88,8 @@ Les filtres appliqués sont conservés dans l'incident que vous ouvrez : **Préc
 
 Cliquez sur n'importe quelle ligne pour ouvrir l'incident. L'espace de travail comporte un **en-tête** avec la référence et des métadonnées rapides, un **tiroir des propriétés** sur la droite et une **zone de contenu** au centre qui change selon l'onglet.
 
+Les onglets sont **Vue d'ensemble**, **Journal**, **Relations**, **Documents** et **Historique** (les modifications de l'incident, voir [Historique des fiches](record-history.md)).
+
 ### En-tête et métadonnées
 
 L'en-tête affiche le titre (modifiable sur place), la référence `INC-N` (cliquez pour la copier), les actions de cycle de vie et **Précédent / Suivant** pour parcourir la liste filtrée.
@@ -172,7 +174,7 @@ Chaque ligne affiche l'auteur, l'heure à laquelle elle se rapporte (survolez po
 
 Une entrée **Liens mis à jour** n'apparaît qu'aux personnes qui peuvent lire le module qu'elle nomme : les actifs et les technologies demandent l'infrastructure, les applications les applications. Les notes gardent leur texte, quoi qu'elles mentionnent.
 
-Le composeur disparaît dès que l'incident est clôturé ou annulé. Les modifications de champs faites hors du journal, comme la correction de la description, sont consignées dans le journal d'audit de la plateforme plutôt que dans le journal de l'incident.
+Le composeur disparaît dès que l'incident est clôturé ou annulé. Les modifications de champs faites hors du journal, comme la correction de la description, apparaissent dans l'onglet **Historique**.
 
 La revue d'incident conserve son propre historique. Chaque enregistrement qui la modifie produit une version, et les versions sont conservées définitivement. La rédaction courante ne crée pas d'entrée de journal : écrire la revue n'est pas un événement de l'incident, et le journal d'audit garde la trace de qui a modifié quoi. En revanche, la clôture, l'annulation et les imports écrivent une entrée de journal, et cette entrée nomme la version de la revue à laquelle elle se rapporte, affichée « Version 4 de la revue d'incident (DOC-12) ».
 

@@ -136,7 +136,7 @@ Necesita `contracts:member` para editar. Los lectores ven la misma página con t
 
 **Compartir**, en el encabezado, envía por correo un enlace al contrato a colegas de su espacio de trabajo.
 
-La ficha tiene cuatro pestañas: **Vista general**, **Presupuesto**, **Conformidad** y **Relaciones**. Las direcciones de las antiguas pestañas **Detalles** y **Tareas** abren la vista general.
+La ficha tiene cinco pestañas: **Vista general**, **Presupuesto**, **Conformidad**, **Relaciones** e **Historial** (los cambios del contrato, vea [Historial de los registros](record-history.md)). Las direcciones de las antiguas pestañas **Detalles** y **Tareas** abren la vista general.
 
 ### Vista general
 

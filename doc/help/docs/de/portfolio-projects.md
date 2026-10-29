@@ -85,7 +85,7 @@ Verwenden Sie **Schnellstart** für Arbeit, die wirklich direkt in die Lieferung
 
 Der Projekt-Arbeitsbereich hat zwei Schichten:
 
-- Den **Hauptinhaltsbereich** für die operativen Reiter: **Zusammenfassung**, **Aufgaben**, **Zeitleiste**, **Fortschritt**, **Bewertung**, **Beziehungen** und **Wissensdatenbank**
+- Den **Hauptinhaltsbereich** für die operativen Reiter: **Zusammenfassung**, **Aufgaben**, **Zeitleiste**, **Fortschritt**, **Bewertung**, **Beziehungen**, **Wissensdatenbank** und **Verlauf** (die Änderungen am Projekt, siehe [Verlauf der Datensätze](record-history.md))
 - Eine persistente **Eigenschaftsleiste** am rechten Rand für Kerneigenschaften, Teamzuweisung und Quell-Anfragen
 
 Öffnen oder schließen Sie die Eigenschaftsleiste mit der vertikalen Registerkarte am rechten Rand.
@@ -180,18 +180,15 @@ Das verwaltete Zweck-Dokument unterscheidet sich vom Reiter **Wissensdatenbank**
 
 ### Aktivität
 
-Unter Zweck enthält der Reiter Zusammenfassung den Projektaktivitäts-Stream:
+Unter Zweck enthält der Reiter Zusammenfassung den Projektaktivitäts-Stream: Kommentare für Diskussion, kontextbezogene Notizen und formale Entscheidungen.
 
-- **Kommentare** für Diskussion, kontextbezogene Notizen und formale Entscheidungen
-- **Historie** für das Audit-Protokoll von Feld- und Statusänderungen
-
-**Historie** listet die erfassten Änderungen auf (Statuswechsel, Feldänderungen, Team- und Beziehungsänderungen, Änderungen am Dokument Zweck) und endet mit dem Erstellungseintrag: wer das Projekt erstellt hat und wann.
+Die Änderungen am Projekt stehen im Reiter **Verlauf**: Statuswechsel, Feldänderungen, Team- und Beziehungsänderungen, Änderungen am Dokument Zweck und der Erstellungseintrag (wer das Projekt erstellt hat und wann).
 
 Benutzer mit `portfolio_projects:member` können Projektkommentare hinzufügen und bearbeiten. Kommentare können auch als formale Entscheidungen aufgezeichnet werden, mit einem Ergebnis und einer optionalen Statusänderung. Verwenden Sie das, wenn die Diskussion selbst den Verlauf des Projekts ändert.
 
 Bilder können in Aktivitätskommentaren enthalten sein, wenn visuelle Beweise nützlich sind: Architekturskizzen, Screenshots oder Review-Beweise.
 
-Verwenden Sie **Historie**, wenn Sie wissen müssen, was sich geändert hat. Verwenden Sie **Kommentare**, wenn Sie wissen müssen, warum.
+Verwenden Sie den Reiter **Verlauf**, wenn Sie wissen müssen, was sich geändert hat. Verwenden Sie die Kommentare, wenn Sie wissen müssen, warum.
 
 ## Aufgaben
 
@@ -333,7 +330,7 @@ Ein Abschnitt fehlt, wenn Sie sein Modul nicht lesen dürfen: Budgetzeilen erfor
 
 **Verknüpfungen hinzufügen und entfernen** (`portfolio_projects:contributor`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche unter der Schaltfläche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Es gibt keine Bestätigung, und das Entfernen einer Verknüpfung löscht nichts anderes. Das Verknüpfen einer Technologie erfordert zusätzlich Leserechte auf die Infrastruktur. Leser sehen die Tabellen schreibgeschützt.
 
-Verknüpfungen mit Budgetzeilen, Anwendungen und Assets werden in der **Historie** des Projekts erfasst.
+Verknüpfungen mit Budgetzeilen, Anwendungen und Assets werden im Reiter **Verlauf** des Projekts erfasst.
 
 ### Links und Dateien
 

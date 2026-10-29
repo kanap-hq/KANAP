@@ -1564,7 +1564,8 @@
         "overview": "Vista general",
         "journal": "Diario",
         "relations": "Relaciones",
-        "documents": "Documentos"
+        "documents": "Documentos",
+        "history": "Historial"
       },
       "actions": {
         "changeStatus": "Cambiar estado",
@@ -1698,7 +1699,8 @@
         "knowledge": "Base de conocimiento",
         "compliance": "Conformidad",
         "deployments": "Despliegues",
-        "operations": "Operaciones"
+        "operations": "Operaciones",
+        "history": "Historial"
       },
       "createNewVersion": "Nueva versión",
       "saveBeforeVersion": "Guarde los cambios antes de crear una nueva versión",

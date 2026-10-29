@@ -88,6 +88,8 @@ Whatever you filter carries over into the incident you open, so **Previous / Nex
 
 Click any row to open the incident. The workspace has a **header** with the reference and quick metadata, a **properties drawer** on the right, and a **content area** in the centre that switches with each tab.
 
+The tabs are **Overview**, **Journal**, **Relations**, **Documents** and **History** (the changes made to the incident, see [Record history](record-history.md)).
+
 ### Header and metadata
 
 The header shows the title (editable in place), the reference `INC-N` (click to copy), the lifecycle actions, and **Previous / Next** to walk the filtered list.
@@ -172,7 +174,7 @@ Each row shows the author, the time it refers to (hover for "3 days ago"), and t
 
 A **Links updated** entry shows only to people who can read the module it names: assets and technologies need the infrastructure, applications the applications. Notes keep their text, whatever they mention.
 
-The composer disappears once the incident is closed or cancelled. Field edits made outside the journal, such as correcting the description, are recorded in the platform audit trail rather than in the journal.
+The composer disappears once the incident is closed or cancelled. Field edits made outside the journal, such as correcting the description, show in the **History** tab.
 
 The incident review keeps its own history. Every save that changes it produces a version, and versions are kept for good. Ordinary editing does not add journal entries: writing the review is not an event of the incident, and the audit trail records who changed what. Closing, cancelling and imports do write a journal entry, and that entry names the version of the review it applies to, shown as "Incident review version 4 (DOC-12)".
 

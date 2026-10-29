@@ -140,16 +140,18 @@ Sous la barre d'outils, le bloc de titre affiche :
   - **Titre** : Cliquez pour modifier en ligne (nécessite `tasks:member`)
   - **Statut / Priorité / Score / Assignée à / Date d'échéance** sous forme de pastilles compactes et cliquables de métadonnées
   - **Pastille Projet** pour les tâches de projet (lien vers l'espace de travail du projet)
+  - **Onglets** : **Vue d'ensemble** contient la description, les pièces jointes et l'activité ; **Historique** liste les modifications de la tâche (voir [Consulter l'historique](#consulter-lhistorique))
 
 ### Zone de contenu principale
+
+L'onglet **Vue d'ensemble** contient le contenu de la tâche.
 
 **Description** : Un éditeur markdown qui prend en charge le formatage, les listes, les liens, les blocs de code et les images. Vous pouvez coller des images directement ; elles se téléversent automatiquement. Appuyer sur **Tab** depuis le champ titre saute dans l'éditeur de description. La description s'enregistre automatiquement quelques secondes après que vous arrêtez de taper ; l'en-tête affiche brièvement **Enregistré** à chaque persistance.
 
 **Pièces jointes** : Glissez-déposez des fichiers sur la description, ou utilisez la zone de téléversement lorsqu'elle apparaît. Les fichiers téléversés apparaissent comme des pastilles sous la description. Cliquez sur une pastille pour télécharger ; cliquez sur le bouton **x** pour supprimer (nécessite l'autorisation de modification). Maximum 20 Mo par fichier.
 
-**Section Activité** : Basculez entre trois vues :
-  - **Commentaires** : Un formulaire d'activité unifié (commentaire + changement de statut optionnel + saisie de temps optionnelle en une seule soumission) plus le fil de commentaires
-  - **Historique** : Tous les changements de champs et de statut pour la tâche, avec horodatages et auteurs
+**Section Activité** : Basculez entre deux vues :
+  - **Commentaires** : Un formulaire d'activité unifié (commentaire + changement de statut optionnel + saisie de temps optionnelle en une seule soumission) plus le fil de commentaires. Un commentaire écrit en changeant le statut affiche ce changement
   - **Journal de temps** : Entrées de temps (disponible pour les tâches autonomes et de projet uniquement)
 
 ### Tiroir des propriétés
@@ -320,9 +322,10 @@ Le bouton d'export n'est activé que lorsque la description a du contenu.
 
 ### Consulter l'historique
 
-L'onglet **Historique** affiche tous les changements de la tâche :
+L'onglet **Historique**, le dernier onglet de la tâche, liste les modifications de la tâche (voir [Historique des fiches](record-history.md)). Le tiroir **Propriétés** y reste disponible. L'historique montre :
   - Changements de statut
   - Modifications de champs
+  - Liens et pièces jointes
   - Qui a effectué chaque changement et quand
   - L'entrée de création, avec la date, l'heure et le créateur, affichée en dernière position
 

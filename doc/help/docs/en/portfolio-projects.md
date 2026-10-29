@@ -85,7 +85,7 @@ Use **Fast-track** for work that is genuinely being introduced directly into del
 
 The project workspace has two layers:
 
-- The **main content area** for the operational tabs: **Summary**, **Tasks**, **Timeline**, **Progress**, **Scoring**, **Relations**, and **Knowledge**
+- The **main content area** for the operational tabs: **Summary**, **Tasks**, **Timeline**, **Progress**, **Scoring**, **Relations**, **Knowledge**, and **History** (the changes made to the project, see [Record history](record-history.md))
 - A persistent **Properties** drawer on the right edge for core properties, team assignment, and source requests
 
 Open or close the Properties drawer using the vertical tab on the right edge.
@@ -180,18 +180,15 @@ The managed Purpose document is different from the **Knowledge** tab:
 
 ### Activity
 
-Below Purpose, the Summary tab includes the project activity stream:
+Below Purpose, the Summary tab includes the project activity stream: comments for discussion, contextual notes, and formal decisions.
 
-- **Comments** for discussion, contextual notes, and formal decisions
-- **History** for the audit trail of field and status changes
-
-**History** lists the recorded changes (status moves, field edits, team and relation changes, edits to the Purpose document) and closes with the creation entry: who created the project and when.
+The changes made to the project are in the **History** tab: status moves, field edits, team and relation changes, edits to the Purpose document, and the creation entry (who created the project and when).
 
 Users with `portfolio_projects:member` can add and edit project comments. Comments can also be recorded as formal decisions, with an outcome and an optional status change. Use that when the discussion itself changes the project's course.
 
 Images can be included in activity comments when visual evidence is useful: architecture sketches, screenshots, or review evidence.
 
-Use **History** when you need to know what changed. Use **Comments** when you need to know why.
+Use the **History** tab when you need to know what changed. Use the comments when you need to know why.
 
 ## Tasks
 
@@ -333,7 +330,7 @@ A section is absent when you cannot read its module: budget lines need the budge
 
 **Adding and removing links** (`portfolio_projects:contributor`): **Add** at the right of a section opens a search below the button. Type a name or a reference and pick a result: the link is saved at once. To remove a link, hover the row and click the cross at its end. There is no confirmation, and removing a link deletes nothing else. Linking a technology also needs a read of the infrastructure. Readers see the tables read-only.
 
-Links to budget lines, applications and assets are recorded in the project's **History**.
+Links to budget lines, applications and assets are recorded in the project's **History** tab.
 
 ### Links and files
 

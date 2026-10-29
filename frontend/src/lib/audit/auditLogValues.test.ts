@@ -65,6 +65,40 @@ const BUDGET_ENUM_CASES: Array<{ field: string; code: string; key: string }> = [
 ];
 
 describe('formatAuditValue', () => {
+  it('names an application\'s category, access methods and user count method as its screen does', () => {
+    const app = context({ table: 'applications' });
+    expect(formatAuditValue('line_of_business', 'category', app).text).toBe('Line of business');
+    expect(formatAuditValue(['local', 'vdi'], 'access_methods', app).text).toBe('Locally installed application, VDI / remote desktop');
+    expect(formatAuditValue('it_users', 'users_mode', app).text).toBe('Derived');
+    expect(formatAuditValue('headcount', 'users_mode', app).text).toBe('Derived');
+    expect(formatAuditValue('manual', 'users_mode', app).text).toBe('Manual');
+    const fr = context({ t: tFr, locale: 'fr', table: 'applications' });
+    expect(formatAuditValue('it_users', 'users_mode', fr).text).toBe('Dérivé');
+    // A code the shipped catalog does not know stays as stored.
+    expect(formatAuditValue('custom_cat', 'category', app).text).toBe('custom_cat');
+  });
+
+  it('reads a tenant catalog code with the tenant\'s label first, then the shipped one, then the code', () => {
+    const tenant: Record<string, Record<string, string>> = {
+      applicationCategories: { line_of_business: 'Core business', custom_cat: 'Shop floor' },
+      accessMethods: { kiosk_plus: 'Kiosk plus' },
+      incidentCategories: { plant_stop: 'Plant stop' },
+      serverRoles: { db: 'Our database' },
+    };
+    const catalogLabel = (list: string, code: string) => tenant[list]?.[code] ?? null;
+    const app = context({ table: 'applications', catalogLabel });
+    expect(formatAuditValue('line_of_business', 'category', app).text).toBe('Core business');
+    expect(formatAuditValue('custom_cat', 'category', app).text).toBe('Shop floor');
+    expect(formatAuditValue(['kiosk_plus', 'vdi'], 'access_methods', app).text).toBe('Kiosk plus, VDI / remote desktop');
+    expect(formatAuditValue('db', 'server_role', app).text).toBe('Our database');
+    expect(formatAuditValue('unknown_role', 'server_role', app).text).toBe('unknown_role');
+    const incident = context({ table: 'incidents', catalogLabel });
+    expect(formatAuditValue('plant_stop', 'category', incident).text).toBe('Plant stop');
+    // The application list never names an incident's category, nor the reverse.
+    expect(formatAuditValue('custom_cat', 'category', incident).text).toBe('custom_cat');
+    expect(formatAuditValue('plant_stop', 'category', app).text).toBe('plant_stop');
+  });
+
   it('marks every empty value with the empty-cell glyph', () => {
     expect(formatAuditValue(null, 'notes', context()).text).toBe('—');
     expect(formatAuditValue(undefined, 'notes', context()).text).toBe('—');
@@ -259,6 +293,36 @@ describe('formatAuditValue', () => {
     expect(formatAuditValue('cost_center', 'kind', context({ table: 'cost_centers' })).text).toBe('Cost center');
     expect(formatAuditValue('group', 'kind', context({ table: 'cost_centers' })).text).toBe('Group');
     expect(formatAuditValue('shelf', 'kind', context({ table: 'cost_centers' })).text).toBe('shelf');
+  });
+
+  it('names a project, phase and milestone status, origin, modes and effort type from the portfolio lists', () => {
+    const project = (locale: 'en' | 'fr') => ({
+      locale,
+      t: i18n.getFixedT(locale, ['admin', 'portfolio']) as unknown as Translate,
+      table: 'portfolio_projects',
+    });
+    expect(formatAuditValue('in_testing', 'status', project('en')).text).toBe('In testing');
+    expect(formatAuditValue('waiting_list', 'status', project('fr')).text).toBe("Liste d'attente");
+    expect(formatAuditValue('in_progress', 'phase_status', project('en')).text).toBe('In progress');
+    expect(formatAuditValue('achieved', 'milestone_status', project('fr')).text).toBe('Atteint');
+    expect(formatAuditValue('fast_track', 'origin', project('en')).text).toBe('Fast-track');
+    expect(formatAuditValue('collaborative', 'scheduling_mode', project('fr')).text).toBe('Collaboratif');
+    expect(formatAuditValue('manual', 'it_effort_allocation_mode', project('en')).text).toBe('Manual');
+    expect(formatAuditValue('auto', 'business_effort_allocation_mode', project('en')).text).toBe('Automatic');
+    expect(formatAuditValue('business', 'category', project('en')).text).toBe('Business');
+    // Elsewhere the shared names keep their own lists.
+    expect(formatAuditValue('closed', 'status', { locale: 'fr', t: tFrAll, table: 'suppliers' }).text).toBe('Fermé');
+    expect(formatAuditValue('business', 'category', { locale: 'en', t: tEnAll, table: 'suppliers' }).text).toBe('business');
+  });
+
+  it('names a request status from the request list', () => {
+    const request = (locale: 'en' | 'fr') => ({
+      locale,
+      t: i18n.getFixedT(locale, ['admin', 'portfolio']) as unknown as Translate,
+      table: 'portfolio_requests',
+    });
+    expect(formatAuditValue('pending_review', 'status', request('en')).text).toBe('Pending review');
+    expect(formatAuditValue('converted', 'status', request('en')).text).toBe('Converted');
   });
 
   it('leaves an unknown budget enumeration code as stored', () => {

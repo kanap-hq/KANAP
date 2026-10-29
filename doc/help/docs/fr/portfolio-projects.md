@@ -85,7 +85,7 @@ Utilisez **Fast-track** pour le travail qui est réellement introduit directemen
 
 L'espace de travail du projet a deux couches :
 
-- La **zone de contenu principale** pour les onglets opérationnels : **Synthèse**, **Tâches**, **Planning**, **Avancement**, **Évaluation**, **Relations** et **Connaissances**
+- La **zone de contenu principale** pour les onglets opérationnels : **Synthèse**, **Tâches**, **Planning**, **Avancement**, **Évaluation**, **Relations**, **Connaissances** et **Historique** (les modifications du projet, voir [Historique des fiches](record-history.md))
 - Un tiroir **Propriétés** persistant sur le bord droit pour les propriétés principales, l'assignation d'équipe et les demandes sources
 
 Ouvrez ou fermez le tiroir Propriétés à l'aide de l'onglet vertical sur le bord droit.
@@ -180,18 +180,15 @@ Le document Objectif managé est différent de l'onglet **Connaissances** :
 
 ### Activité
 
-Sous Objectif, l'onglet Synthèse inclut le flux d'activité du projet :
+Sous Objectif, l'onglet Synthèse inclut le flux d'activité du projet : les commentaires pour la discussion, les notes contextuelles et les décisions formelles.
 
-- **Commentaires** pour la discussion, les notes contextuelles et les décisions formelles
-- **Historique** pour le journal d'audit des changements de champs et de statut
-
-**Historique** liste les changements enregistrés (changements de statut, modifications de champs, changements d'équipe et de relations, modifications du document Objectif) et se termine par l'entrée de création : qui a créé le projet et quand.
+Les modifications du projet sont dans l'onglet **Historique** : changements de statut, modifications de champs, changements d'équipe et de relations, modifications du document Objectif, et l'entrée de création (qui a créé le projet et quand).
 
 Les utilisateurs disposant de `portfolio_projects:member` peuvent ajouter et modifier les commentaires de projet. Les commentaires peuvent également être enregistrés comme décisions formelles, avec un résultat et un changement de statut optionnel. Utilisez cela lorsque la discussion elle-même change le cours du projet.
 
 Des images peuvent être incluses dans les commentaires d'activité lorsque l'évidence visuelle est utile : esquisses d'architecture, captures d'écran ou preuves de revue.
 
-Utilisez **Historique** quand vous avez besoin de savoir ce qui a changé. Utilisez **Commentaires** quand vous avez besoin de savoir pourquoi.
+Utilisez l'onglet **Historique** quand vous avez besoin de savoir ce qui a changé. Utilisez les commentaires quand vous avez besoin de savoir pourquoi.
 
 ## Tâches
 
@@ -333,7 +330,7 @@ Une section est absente si vous ne pouvez pas lire son module : les lignes budg�
 
 **Ajouter et retirer des liens** (`portfolio_projects:contributor`) : **Ajouter**, à droite d'une section, ouvre une recherche sous le bouton. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Il n'y a pas de confirmation, et retirer un lien ne supprime rien d'autre. Lier une technologie demande aussi de pouvoir lire l'infrastructure. Les lecteurs voient les tableaux en lecture seule.
 
-Les liens vers les lignes budgétaires, les applications et les actifs sont notés dans l'**Historique** du projet.
+Les liens vers les lignes budgétaires, les applications et les actifs sont notés dans l'onglet **Historique** du projet.
 
 ### Liens et fichiers
 

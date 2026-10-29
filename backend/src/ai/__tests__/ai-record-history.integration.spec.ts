@@ -11,7 +11,7 @@ import { PermissionsService } from '../../permissions/permissions.service';
 import { createRaceTenant, dropRaceTenant, seed } from '../../spend/__tests__/race-harness';
 import { User } from '../../users/user.entity';
 import { AiPolicyService } from '../ai-policy.service';
-import { AiRecordHistoryService, type GetRecordHistoryInput } from '../ai-record-history.service';
+import { AI_RECORD_HISTORY_TABLES, AiRecordHistoryService, type GetRecordHistoryInput } from '../ai-record-history.service';
 import { AiQueryExecutor } from '../query/ai-query.executor';
 import type { AiExecutionContextWithManager } from '../ai.types';
 
@@ -156,10 +156,10 @@ async function testBudgetLineByEveryReference(seeded: Seeded) {
 
 async function testFamilyWithoutHistory(seeded: Seeded) {
   await assert.rejects(
-    read(seeded.data.tenantId, seeded.reader, { entity_type: 'applications', entity_id: 'APP-42' }),
+    read(seeded.data.tenantId, seeded.reader, { entity_type: 'users', entity_id: randomUUID() }),
     (error: any) => {
       assert.equal(error.status, 400);
-      assert.match(error.message, /^This record has no history in KANAP: applications have no History tab\./);
+      assert.match(error.message, /^This record has no history in KANAP: users have no History tab\./);
       assert.match(error.message, /budget lines/);
       assert.match(error.message, /technologies/);
       assert.doesNotMatch(error.message, /cost centers|working day/);
@@ -167,14 +167,20 @@ async function testFamilyWithoutHistory(seeded: Seeded) {
       return true;
     },
   );
-  for (const entityType of ['contracts', 'projects', 'requests', 'tasks', 'incidents', 'users'] as const) {
+  for (const entityType of ['vulnerabilities', 'roles'] as const) {
     await assert.rejects(
       read(seeded.data.tenantId, seeded.reader, { entity_type: entityType, entity_id: randomUUID() }),
       /no history in KANAP/,
       entityType,
     );
   }
-  console.log('  a family without a History tab is refused in words: OK');
+  // A project and a request read their History tab under their own family names.
+  assert.equal(AI_RECORD_HISTORY_TABLES.get('projects'), 'portfolio_projects');
+  assert.equal(AI_RECORD_HISTORY_TABLES.get('requests'), 'portfolio_requests');
+  for (const entityType of ['contracts', 'applications', 'tasks', 'incidents'] as const) {
+    assert.equal(AI_RECORD_HISTORY_TABLES.get(entityType), entityType, `${entityType} has a history`);
+  }
+  console.log('  a family without a History tab is refused in words, the six linked records have one: OK');
 }
 
 async function testReaderWithoutTheRight(seeded: Seeded) {

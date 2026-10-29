@@ -929,6 +929,10 @@
           "emptyNotes": "-",
           "unknownPerson": "Inconnu"
         }
+      },
+      "tabs": {
+        "overview": "Vue d'ensemble",
+        "history": "Historique"
       }
     }
   },
@@ -2047,6 +2051,7 @@
     "activity": "Activité",
     "analysis": "Analyse",
     "description": "Description",
+    "history": "Historique",
     "knowledge": "Connaissances",
     "progress": "Charge",
     "relations": "Relations",
@@ -2060,7 +2065,6 @@
     "authorUnknown": "Inconnu",
     "tabs": {
       "comments": "Commentaires",
-      "history": "Historique",
       "workLog": "Journal de temps"
     },
     "labels": {
@@ -2118,25 +2122,6 @@
       }
     },
     "history": {
-      "actions": {
-        "addedComment": "A ajouté un commentaire",
-        "addedField": "{{field}} ajouté : {{value}}",
-        "changedField": "{{field}} : {{from}} → {{to}}",
-        "decisionWithOutcome": "Décision : {{outcome}}",
-        "recorded": "Activité enregistrée",
-        "removedField": "{{field}} supprimé : {{value}}",
-        "updatedDocument": "{{document}} mis à jour",
-        "updatedMultiple": "Mis à jour : {{changes}}"
-      },
-      "feasibilityDimensions": {
-        "changeManagement": "Gestion du changement",
-        "deliveryConstraints": "Contraintes de livraison",
-        "infrastructureNeeds": "Besoins en infrastructure",
-        "integrationCompatibility": "Intégration et compatibilité",
-        "resourceSkills": "Ressources et compétences",
-        "securityCompliance": "Sécurité et conformité",
-        "technicalFeasibility": "Faisabilité technique"
-      },
       "fields": {
         "actualEffortBusiness": "Charge métier réelle",
         "actualEffortIt": "Charge IT réelle",

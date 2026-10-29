@@ -6,6 +6,9 @@ import {
   type RecordHistoryChildKind,
   type RecordHistoryRecord,
 } from '../record-history.inventory';
+import { taskRelatedFamily } from './records/tasks';
+import { PROJECT_NUMERIC_FIELDS } from './records/portfolio_projects';
+import { REQUEST_NUMERIC_FIELDS, requestAuditPayload } from './records/portfolio_requests';
 import { deepEqual, isPlainObject, isUuid, linkSetIds } from './values';
 
 /**
@@ -112,6 +115,11 @@ export type PageContext = {
   categories: Map<string, string>;
   /** The tenant's IT entity labels, by code (a connection's endpoints and a segment's equipment). */
   entityLabels: Map<string, string>;
+  /** The environment of each deployment of the record the page names (an application's assignments). */
+  instances?: Map<string, string | null>;
+  /** The scoring criteria a project's or a request's rows name: criterion names and option labels, by id. */
+  criteria?: Map<string, string>;
+  criterionOptions?: Map<string, string>;
 };
 
 const AMOUNT_MEASURES = ['planned', 'committed', 'forecast', 'actual', 'expected_landing'] as const;
@@ -147,6 +155,16 @@ const CHILD_KIND_LABELS: Record<RecordHistoryChildKind, string> = {
   set: 'set',
   binding: 'binding',
   person: 'person',
+  compliance_item: 'compliance_item',
+  instance: 'instance',
+  assignment: 'assignment',
+  business_process: 'business_process',
+  phase: 'phase',
+  milestone: 'milestone',
+  time_entry: 'time_entry',
+  team: 'team',
+  dependency: 'dependency',
+  document: 'document',
 };
 
 /** The kinds whose row is one link to another record, named by a key of its payload. */
@@ -475,21 +493,80 @@ function labelOf(row: AuditRow, fields: readonly string[]): string | null {
   return null;
 }
 
-/** The readable label of each link in an assistant payload (`{ payload: { url, description } }`). */
-function linkLabels(value: unknown): string[] {
+type LinkEntry = { url: string | null; label: string };
+
+/**
+ * Each link of a set payload: its address and its readable label. The assistant writes
+ * `{ payload: { url, description } }` (or a bare label), a project's web link `{ url, label }`.
+ */
+function linkEntries(value: unknown): LinkEntry[] {
   if (!Array.isArray(value)) return [];
-  const labels: string[] = [];
+  const entries: LinkEntry[] = [];
   for (const entry of value) {
     if (typeof entry === 'string') {
-      if (entry.trim()) labels.push(entry.trim());
+      if (entry.trim()) entries.push({ url: null, label: entry.trim() });
       continue;
     }
     if (!isPlainObject(entry)) continue;
     const payload = isPlainObject(entry.payload) ? entry.payload : entry;
-    const label = [payload.description, payload.url].find((part) => typeof part === 'string' && part.trim());
-    if (typeof label === 'string') labels.push(label.trim());
+    const url = typeof payload.url === 'string' && payload.url.trim() ? payload.url.trim() : null;
+    // A project's web link carries its `label` where the other links carry a description.
+    const label = [payload.description, payload.label, payload.url].find((part) => typeof part === 'string' && part.trim());
+    if (typeof label === 'string') entries.push({ url, label: label.trim() });
   }
-  return Array.from(new Set(labels));
+  return entries;
+}
+
+/** The entries of `from` that `against` does not hold, compared on the (address, label) pair. */
+function linkEntriesMissing(from: LinkEntry[], against: LinkEntry[]): LinkEntry[] {
+  const key = (entry: LinkEntry) => `${entry.url ?? ''}\u0000${entry.label}`;
+  const left = new Map<string, number>();
+  for (const entry of against) left.set(key(entry), (left.get(key(entry)) ?? 0) + 1);
+  const missing: LinkEntry[] = [];
+  for (const entry of from) {
+    const count = left.get(key(entry)) ?? 0;
+    if (count > 0) left.set(key(entry), count - 1);
+    else missing.push(entry);
+  }
+  return missing;
+}
+
+/**
+ * A replaced link set, compared on the (address, label) pair: a label whose address alone changed
+ * reads as that link changed, from the old address to the new one; the other pairs are added or
+ * removed. A label two links share is named with its address, so the two stay apart.
+ */
+function linkSetChanges(beforeValue: unknown, afterValue: unknown): RecordHistoryChange[] {
+  const before = linkEntries(beforeValue);
+  const after = linkEntries(afterValue);
+  const added = linkEntriesMissing(after, before);
+  const removed = linkEntriesMissing(before, after);
+  const urlsByLabel = new Map<string, Set<string>>();
+  for (const entry of [...before, ...after]) {
+    const urls = urlsByLabel.get(entry.label) ?? new Set<string>();
+    urls.add(entry.url ?? '');
+    urlsByLabel.set(entry.label, urls);
+  }
+  const named = (entry: LinkEntry) => (entry.url && entry.url !== entry.label && (urlsByLabel.get(entry.label)?.size ?? 0) > 1
+    ? `${entry.label} (${entry.url})`
+    : entry.label);
+  const changes: RecordHistoryChange[] = [];
+  const addedLeft: LinkEntry[] = [];
+  for (const entry of added) {
+    const labelled = entry.url !== null && entry.url !== entry.label;
+    const index = labelled
+      ? removed.findIndex((old) => old.label === entry.label && old.url !== null && old.url !== old.label)
+      : -1;
+    if (index < 0) {
+      addedLeft.push(entry);
+      continue;
+    }
+    const [old] = removed.splice(index, 1);
+    changes.push({ field: 'link', dimension: entry.label, before: old.url, after: entry.url });
+  }
+  for (const entry of addedLeft) changes.push({ field: 'link', event: 'added', after: named(entry) });
+  for (const entry of removed) changes.push({ field: 'link', event: 'removed', before: named(entry) });
+  return changes;
 }
 
 function linkChanges(row: AuditRow): RecordHistoryChange[] {
@@ -500,22 +577,16 @@ function linkChanges(row: AuditRow): RecordHistoryChange[] {
     return [{ field: 'link', event: 'removed', before: childRef('link', row.record_id, labelOf(row, ['description', 'url'])) }];
   }
   if (Array.isArray(row.before_json) || Array.isArray(row.after_json)) {
-    // The assistant replaces the whole link set in one row, with no link id: the change names each
-    // link by what the payload holds, and never borrows the line's own id.
-    const beforeLabels = linkLabels(row.before_json);
-    const afterLabels = linkLabels(row.after_json);
-    const beforeSet = new Set(beforeLabels);
-    const afterSet = new Set(afterLabels);
-    const changes: RecordHistoryChange[] = [];
-    for (const label of afterLabels) if (!beforeSet.has(label)) changes.push({ field: 'link', event: 'added', after: label });
-    for (const label of beforeLabels) if (!afterSet.has(label)) changes.push({ field: 'link', event: 'removed', before: label });
-    return changes;
+    // The assistant and the project's web links replace the whole set in one row, with no link id:
+    // the change names each link by what the payload holds, and never borrows the record's own id.
+    return linkSetChanges(row.before_json, row.after_json);
   }
   const changes: RecordHistoryChange[] = [];
   const before = isPlainObject(row.before_json) ? row.before_json : {};
   const after = isPlainObject(row.after_json) ? row.after_json : {};
   // `kind` belongs to the interface's links; the budget line's links do not carry it.
-  for (const field of ['kind', 'url', 'description']) {
+  // `purpose` belongs to the application's links.
+  for (const field of ['kind', 'url', 'description', 'purpose']) {
     if (!deepEqual(before[field], after[field])) {
       changes.push({ field, before: safeScalar(before[field]) ?? null, after: safeScalar(after[field]) ?? null });
     }
@@ -524,7 +595,8 @@ function linkChanges(row: AuditRow): RecordHistoryChange[] {
 }
 
 function attachmentChanges(row: AuditRow): RecordHistoryChange[] {
-  if (row.after_json === null || row.after_json === undefined) {
+  // A removal has no row after, or keeps the row with its removal date (an incident's attachment).
+  if (row.action === 'delete' || row.after_json === null || row.after_json === undefined) {
     return [{ field: 'attachment', event: 'removed', before: childRef('attachment', row.record_id, labelOf(row, ['original_filename'])) }];
   }
   return [{ field: 'attachment', event: 'added', after: childRef('attachment', row.record_id, labelOf(row, ['original_filename'])) }];
@@ -577,8 +649,10 @@ function linkIdOfPayload(payload: Record<string, unknown>, kind: LinkChildKind):
 }
 
 function contactChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
-  const before = row.before_json;
-  const after = row.after_json;
+  // A project's contacts are written as a set (`{ ids }`), the other writers as a list.
+  const listOf = (value: unknown) => (isPlainObject(value) && Array.isArray(value.ids) ? value.ids : value);
+  const before = listOf(row.before_json);
+  const after = listOf(row.after_json);
   if (Array.isArray(before) || Array.isArray(after)) {
     const changes: RecordHistoryChange[] = [];
     const beforeSet = new Set(contactStates(before));
@@ -598,18 +672,18 @@ function contactChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] 
   return linkRowChanges('contact', row, ctx);
 }
 
-function setLinkChanges(kind: 'application' | 'technology', row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
-  // A line's link set is an array of ids. A process's application link is one row with the
-  // application id in its payload (`application_business_processes`, read by `record_id`).
-  const single = (value: unknown): string[] => {
+function setLinkChanges(kind: 'application' | 'technology' | 'asset', row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  // A line's or an incident's link set is an array of ids; a contract writes `{ ids }`. A process's
+  // application link is one row with the application id in its payload
+  // (`application_business_processes`, read by `record_id`).
+  const idsOf = (value: unknown): string[] => {
+    if (Array.isArray(value) || (isPlainObject(value) && Array.isArray(value.ids))) return linkSetIds(value);
     if (!isPlainObject(value)) return [];
     const id = value[`${kind}_id`];
-    return isUuid(id) ? [id] : [];
+    return isUuid(id) ? [id.toLowerCase()] : [];
   };
-  const before = Array.isArray(row.before_json) ? row.before_json : single(row.before_json);
-  const after = Array.isArray(row.after_json) ? row.after_json : single(row.after_json);
-  const beforeSet = new Set(before.filter(isUuid).map((id) => id.toLowerCase()));
-  const afterSet = new Set(after.filter(isUuid).map((id) => id.toLowerCase()));
+  const beforeSet = new Set(idsOf(row.before_json));
+  const afterSet = new Set(idsOf(row.after_json));
   const changes: RecordHistoryChange[] = [];
   for (const id of afterSet) {
     if (!beforeSet.has(id)) changes.push({ field: kind, event: 'added', after: referenceValue(ctx, kind, id) });
@@ -805,17 +879,73 @@ function applicationLinkChanges(row: AuditRow, ctx: PageContext): RecordHistoryC
   return [];
 }
 
-/** A budget line added or removed by an asset or a technology, from its id set. */
+/**
+ * A budget line added or removed by an asset, a technology, a contract or a project, from its id
+ * set. On a contract, a project or a request, the lines the reader may not read are counted, never named (`budget_lines_outside`:
+ * "and 2 lines outside your access"), as its Budget tab counts them; a deleted line still reads
+ * as deleted.
+ */
 function budgetLineChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   const before = new Set(linkSetIds(row.before_json));
   const after = new Set(linkSetIds(row.after_json));
+  const counted = ctx.entry.table === 'contracts' || ctx.entry.table === 'portfolio_projects' || ctx.entry.table === 'portfolio_requests';
   const changes: RecordHistoryChange[] = [];
-  for (const id of after) {
-    if (!before.has(id)) changes.push({ field: 'budget_line', event: 'added', after: referenceValue(ctx, 'budget_line', id) });
+  const outside = { added: 0, removed: 0 };
+  const push = (event: 'added' | 'removed', id: string) => {
+    const value = referenceValue(ctx, 'budget_line', id);
+    if (counted && value && 'hidden' in value && !value.deleted) {
+      outside[event] += 1;
+      return;
+    }
+    changes.push(event === 'added' ? { field: 'budget_line', event, after: value } : { field: 'budget_line', event, before: value });
+  };
+  for (const id of after) if (!before.has(id)) push('added', id);
+  for (const id of before) if (!after.has(id)) push('removed', id);
+  if (outside.added > 0) changes.push({ field: 'budget_lines_outside', event: 'added', after: outside.added });
+  if (outside.removed > 0) changes.push({ field: 'budget_lines_outside', event: 'removed', before: outside.removed });
+  return changes;
+}
+
+/**
+ * A compliance item of a contract: its state and its reference, before and after. A creation
+ * reads from nothing, a deletion to nothing; the requirement is the entry's title.
+ */
+function complianceChanges(row: AuditRow): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) ? row.before_json : {};
+  const after = isPlainObject(row.after_json) ? row.after_json : {};
+  const changes: RecordHistoryChange[] = [];
+  const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : null);
+  for (const [key, field] of [['state', 'compliance_state'], ['reference', 'compliance_reference']] as const) {
+    const b = text(before[key]);
+    const a = text(after[key]);
+    if (b !== a) changes.push({ field, before: b, after: a });
   }
-  for (const id of before) {
-    if (!after.has(id)) changes.push({ field: 'budget_line', event: 'removed', before: referenceValue(ctx, 'budget_line', id) });
+  return changes;
+}
+
+/** The renewal decisions the contract screen names (`RENEWAL_DECISIONS`, and the undoing). */
+const RENEWAL_DECISION_CODES = new Set(['renew', 'terminate', 'renegotiate', 'end', 'undo']);
+
+/**
+ * The renewal markers the renewal service writes beside the saved contract: each one is a sentence
+ * ("Renewal decided: Renew", "Renewal stopped", "Renewal resumed", "Renewal task created: T-12"),
+ * the task named with the reader's rights. The contract's own field changes follow.
+ */
+function renewalChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  if (!after) return [];
+  const changes: RecordHistoryChange[] = [];
+  const decision = isPlainObject(after.renewal_decision) ? after.renewal_decision : null;
+  if (decision && typeof decision.decision === 'string' && RENEWAL_DECISION_CODES.has(decision.decision)) {
+    changes.push({ field: 'renewal_decision', after: decision.decision });
+    if (typeof decision.reason === 'string' && decision.reason.trim()) {
+      changes.push({ field: 'renewal_reason', after: decision.reason.trim() });
+    }
   }
+  if (isPlainObject(after.renewal_stop)) changes.push({ field: 'renewal_stop', text: 'renewalStopped' });
+  if (isPlainObject(after.renewal_resume)) changes.push({ field: 'renewal_resume', text: 'renewalResumed' });
+  const task = isPlainObject(after.renewal_task) ? after.renewal_task : null;
+  if (task) changes.push({ field: 'renewal_task', event: 'added', after: referenceValue(ctx, 'task', task.task_id) ?? { hidden: true, kind: 'task' } });
   return changes;
 }
 
@@ -1142,6 +1272,14 @@ function setChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
       }
       case 'interface_data_residency':
         return state;
+      case 'application_companies':
+        return referenceValue(ctx, 'company', stateId(state));
+      case 'application_departments':
+        return referenceValue(ctx, 'department', stateId(state));
+      case 'application_suites':
+        return referenceValue(ctx, 'application', stateId(state));
+      case 'application_data_residency':
+        return state;
       default:
         return state;
     }
@@ -1153,6 +1291,10 @@ function setChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
       case 'interface_dependencies': return 'dependency';
       case 'interface_key_identifiers': return 'key_identifier';
       case 'interface_data_residency': return 'country';
+      case 'application_companies': return 'company';
+      case 'application_departments': return 'department';
+      case 'application_suites': return 'suite';
+      case 'application_data_residency': return 'country';
       default: return 'set';
     }
   };
@@ -1164,6 +1306,88 @@ function setChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
     if (!afterSet.has(state)) changes.push({ field, event: 'removed', before: valueOf(state) });
   }
   return changes;
+}
+
+/** The environment code of a deployment row, from its payload (`after`, then `before`). */
+function instanceEnvironment(row: AuditRow, side: 'before' | 'after'): string | null {
+  const payload = side === 'after' ? row.after_json : row.before_json;
+  return isPlainObject(payload) && typeof payload.environment === 'string' && payload.environment.trim()
+    ? payload.environment.trim()
+    : null;
+}
+
+/**
+ * A deployment of the application: its creation and removal read as its environment ("Environment
+ * added: Production"), its modification as the fields that changed, under the environment title.
+ */
+function instanceChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  if (row.action === 'create' || row.before_json === null || row.before_json === undefined) {
+    return [{ field: 'instance', event: 'added', after: instanceEnvironment(row, 'after') }];
+  }
+  if (row.action === 'delete' || row.after_json === null || row.after_json === undefined) {
+    return [{ field: 'instance', event: 'removed', before: instanceEnvironment(row, 'before') }];
+  }
+  return genericChanges(row, ctx, { label: row.table_name });
+}
+
+/** The deployment an assignment row names, in `after` then `before`. */
+function assignmentInstanceId(row: AuditRow): string | null {
+  for (const payload of [row.after_json, row.before_json]) {
+    if (isPlainObject(payload) && isUuid(payload.app_instance_id)) return payload.app_instance_id.toLowerCase();
+  }
+  return null;
+}
+
+/**
+ * A server of a deployment: the asset added or removed, named under the reader's rights (an asset
+ * they cannot read stays "an asset"), with its role; a modification reads as the role, the date
+ * and the notes that changed. The entry's title is the deployment's environment.
+ */
+function assignmentChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) ? row.before_json : null;
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  const assetOf = (payload: Record<string, unknown> | null) => (payload && isUuid(payload.asset_id) ? payload.asset_id : null);
+  const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : null);
+  if (!before) {
+    const changes: RecordHistoryChange[] = [{ field: 'assignment', event: 'added', after: referenceValue(ctx, 'asset', assetOf(after)) ?? { hidden: true, kind: 'asset' } }];
+    if (text(after?.role)) changes.push({ field: 'server_role', after: text(after?.role) });
+    return changes;
+  }
+  if (!after) {
+    return [{ field: 'assignment', event: 'removed', before: referenceValue(ctx, 'asset', assetOf(before)) ?? { hidden: true, kind: 'asset' } }];
+  }
+  const changes: RecordHistoryChange[] = [];
+  const beforeAsset = assetOf(before)?.toLowerCase() ?? null;
+  const afterAsset = assetOf(after)?.toLowerCase() ?? null;
+  if (beforeAsset !== afterAsset) {
+    if (beforeAsset) changes.push({ field: 'assignment', event: 'removed', before: referenceValue(ctx, 'asset', beforeAsset) });
+    if (afterAsset) changes.push({ field: 'assignment', event: 'added', after: referenceValue(ctx, 'asset', afterAsset) });
+  }
+  if (!deepEqual(text(before.role), text(after.role))) changes.push({ field: 'server_role', before: text(before.role), after: text(after.role) });
+  for (const field of ['since_date', 'notes'] as const) {
+    if (!deepEqual(before[field] ?? null, after[field] ?? null)) changes.push({ field, before: before[field] ?? null, after: after[field] ?? null });
+  }
+  return changes;
+}
+
+/**
+ * A business process link. Written from the process, the process is `record_id`; written from a
+ * request (`setOwnedLink`, the assistant), `record_id` is the request and the payload the set of
+ * process ids, so each process added or removed is one event.
+ */
+function processLinkChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  if (String(row.record_id ?? '').toLowerCase() === ctx.recordId.toLowerCase()) {
+    const before = new Set(linkSetIds(row.before_json));
+    const after = new Set(linkSetIds(row.after_json));
+    const changes: RecordHistoryChange[] = [];
+    for (const id of after) if (!before.has(id)) changes.push({ field: 'business_process', event: 'added', after: referenceValue(ctx, 'business_process', id) });
+    for (const id of before) if (!after.has(id)) changes.push({ field: 'business_process', event: 'removed', before: referenceValue(ctx, 'business_process', id) });
+    return changes;
+  }
+  const process = referenceValue(ctx, 'business_process', row.record_id);
+  if (row.before_json === null || row.before_json === undefined) return [{ field: 'business_process', event: 'added', after: process }];
+  if (row.after_json === null || row.after_json === undefined) return [{ field: 'business_process', event: 'removed', before: process }];
+  return [];
 }
 
 /** The interface's middleware applications, written as an id list by older writers. */
@@ -1179,6 +1403,179 @@ function middlewareChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange
   }
   for (const id of before) {
     if (!after.has(id)) changes.push({ field: 'middleware', event: 'removed', before: referenceValue(ctx, 'application', id) });
+  }
+  return changes;
+}
+
+/** The status of a phase or a milestone reads from its own list, never the project's. */
+function renamedStatus(changes: RecordHistoryChange[], field: 'phase_status' | 'milestone_status'): RecordHistoryChange[] {
+  return changes.map((change) => (change.field === 'status' ? { ...change, field } : change));
+}
+
+/**
+ * A phase or a milestone of the project: its creation and removal read as its name ("Phase added:
+ * Design"), its modification as the fields that changed, under its name.
+ */
+function phaseChanges(kind: 'phase' | 'milestone', row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const name = labelOf(row, ['name']);
+  if (row.action === 'create' || row.before_json === null || row.before_json === undefined) {
+    return [{ field: kind, event: 'added', after: name }];
+  }
+  if (row.action === 'delete' || row.after_json === null || row.after_json === undefined) {
+    return [{ field: kind, event: 'removed', before: name }];
+  }
+  return renamedStatus(genericChanges(row, ctx, { label: row.table_name }), kind === 'phase' ? 'phase_status' : 'milestone_status');
+}
+
+/**
+ * A time entry: its creation and removal name the person and the hours; its modification reads as
+ * the fields that changed.
+ */
+function timeEntryChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) ? row.before_json : null;
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  const hours = (payload: Record<string, unknown> | null) => historyNumber(payload?.hours ?? null);
+  if (!before && after) {
+    return [
+      { field: 'time_entry', event: 'added', after: userValue(ctx, after.user_id) },
+      ...(after.hours === undefined || after.hours === null ? [] : [{ field: 'hours', after: hours(after) }]),
+    ];
+  }
+  if (before && !after) {
+    return [
+      { field: 'time_entry', event: 'removed', before: userValue(ctx, before.user_id) },
+      ...(before.hours === undefined || before.hours === null ? [] : [{ field: 'hours', before: hours(before) }]),
+    ];
+  }
+  return genericChanges(row, ctx, { label: row.table_name, numeric: ['hours'] });
+}
+
+/** The ids of a team payload (`{ role, ids }`), or of an effort allocation's people. */
+function teamIds(value: unknown): string[] {
+  return isPlainObject(value) ? linkSetIds(value) : [];
+}
+
+/** The role of a team payload: the IT or the business team. */
+function teamRole(row: AuditRow): string | null {
+  for (const payload of [row.after_json, row.before_json]) {
+    if (isPlainObject(payload) && (payload.role === 'it_team' || payload.role === 'business_team')) return payload.role;
+  }
+  return null;
+}
+
+/** The percentages of an effort allocation payload: `{ allocations: [{ user_id, allocation_pct }] }`. */
+function allocationShares(value: unknown): Map<string, number> {
+  const out = new Map<string, number>();
+  if (!isPlainObject(value) || !Array.isArray(value.allocations)) return out;
+  for (const entry of value.allocations) {
+    if (!isPlainObject(entry) || !isUuid(entry.user_id)) continue;
+    const pct = Number(entry.allocation_pct);
+    if (Number.isFinite(pct)) out.set(entry.user_id.toLowerCase(), pct);
+  }
+  return out;
+}
+
+/**
+ * A team of a project or a request: each person added to or removed from the role ("IT team member
+ * added: Jane Doe"). An effort allocation reads as its mode and as each person's share that moved
+ * ("IT effort, Jane Doe: 40 % → 60 %"), the person named as every reader names people.
+ */
+function teamChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const changes: RecordHistoryChange[] = [];
+  if (/_effort_allocations$/.test(row.table_name)) {
+    const before = isPlainObject(row.before_json) ? row.before_json : {};
+    const after = isPlainObject(row.after_json) ? row.after_json : {};
+    const type = after.effort_type === 'business' || before.effort_type === 'business' ? 'business' : 'it';
+    const modeField = `${type}_effort_allocation_mode`;
+    if (!deepEqual(before.mode ?? null, after.mode ?? null)) {
+      changes.push({ field: modeField, before: before.mode ?? null, after: after.mode ?? null });
+    }
+    const beforeShares = allocationShares(before);
+    const afterShares = allocationShares(after);
+    const people = Array.from(new Set([...beforeShares.keys(), ...afterShares.keys()])).sort();
+    for (const id of people) {
+      const b = beforeShares.get(id) ?? null;
+      const a = afterShares.get(id) ?? null;
+      if (b === a) continue;
+      const person = userValue(ctx, id);
+      const name = isPlainObject(person) && !('hidden' in person) && typeof person.label === 'string' ? person.label : null;
+      changes.push({ field: `effort_allocation_${type}`, dimension: name, before: b, after: a });
+    }
+    return changes;
+  }
+  const role = teamRole(row);
+  if (!role) return [];
+  const before = new Set(teamIds(row.before_json));
+  const after = new Set(teamIds(row.after_json));
+  for (const id of after) if (!before.has(id)) changes.push({ field: role, event: 'added', after: userValue(ctx, id) });
+  for (const id of before) if (!after.has(id)) changes.push({ field: role, event: 'removed', before: userValue(ctx, id) });
+  return changes;
+}
+
+/**
+ * A dependency of a project or a request: each record it came to depend on, or stopped depending
+ * on, named with the reader's rights (`{ ids }` projects, `request_ids` requests).
+ */
+function dependencyChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const changes: RecordHistoryChange[] = [];
+  const diff = (family: 'project' | 'request', read: (value: unknown) => string[]) => {
+    const before = new Set(read(row.before_json));
+    const after = new Set(read(row.after_json));
+    for (const id of after) if (!before.has(id)) changes.push({ field: 'dependency', event: 'added', after: referenceValue(ctx, family, id) });
+    for (const id of before) if (!after.has(id)) changes.push({ field: 'dependency', event: 'removed', before: referenceValue(ctx, family, id) });
+  };
+  diff('project', (value) => linkSetIds(value));
+  diff('request', (value) => (isPlainObject(value) ? linkSetIds(value.request_ids) : []));
+  return changes;
+}
+
+/** The integrated document slots a project or a request page shows, by slot key. */
+const DOCUMENT_SLOTS: ReadonlySet<string> = new Set(['purpose', 'risks_mitigations', 'specification', 'overview']);
+
+/** An edit of an integrated document of the record (its purpose, its risks): the slot, never its content. */
+function documentChanges(row: AuditRow): RecordHistoryChange[] {
+  for (const payload of [row.after_json, row.before_json]) {
+    if (isPlainObject(payload) && typeof payload.slot === 'string' && DOCUMENT_SLOTS.has(payload.slot)) {
+      return [{ field: 'document_updated', after: payload.slot }];
+    }
+  }
+  return [];
+}
+
+/** The scoring of a project or a request: `criteria_values` maps a criterion id to an option id. */
+function criteriaMap(value: unknown): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!isPlainObject(value) || !isPlainObject(value.criteria_values)) return out;
+  for (const [criterionId, optionId] of Object.entries(value.criteria_values)) {
+    if (isUuid(criterionId) && isUuid(optionId)) out.set(criterionId.toLowerCase(), optionId.toLowerCase());
+  }
+  return out;
+}
+
+/**
+ * Each criterion whose option changed, named by the criterion and its options as the scoring tab
+ * names them. A criterion or an option deleted since reads as a deleted option, never as its id.
+ */
+function scoringChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = criteriaMap(row.before_json);
+  const after = criteriaMap(row.after_json);
+  const option = (id: string | undefined): unknown => {
+    if (!id) return null;
+    const label = ctx.criterionOptions?.get(id);
+    return label === undefined ? { hidden: true, kind: 'criterion_value', deleted: true } : label;
+  };
+  const changes: RecordHistoryChange[] = [];
+  const criteria = Array.from(new Set([...before.keys(), ...after.keys()]));
+  for (const criterionId of criteria) {
+    const b = before.get(criterionId);
+    const a = after.get(criterionId);
+    if (b === a) continue;
+    // A creation has no before: the scoring it starts with is a value, not a change.
+    if (row.before_json === null || row.before_json === undefined) {
+      changes.push({ field: 'criterion', dimension: ctx.criteria?.get(criterionId) ?? null, after: option(a) });
+      continue;
+    }
+    changes.push({ field: 'criterion', dimension: ctx.criteria?.get(criterionId) ?? null, before: option(b), after: option(a) });
   }
   return changes;
 }
@@ -1314,12 +1711,87 @@ function columnOperationChanges(row: AuditRow): RecordHistoryChange[] | null {
   return null;
 }
 
+function taskPeople(value: unknown): string[] {
+  return Array.isArray(value) ? Array.from(new Set(value.filter(isUuid).map((id) => id.toLowerCase()))) : [];
+}
+
+/**
+ * A task's own row, beyond its allow-listed fields: the record it belongs to, read from its type and
+ * its id together ("Belongs to: PRJ-3"), the request it was converted into, and each owner or viewer
+ * added or removed. Every record is named with the reader's rights, or withheld by its kind.
+ */
+function taskRecordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) ? row.before_json : null;
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  const changes: RecordHistoryChange[] = [];
+  const relatedKey = (payload: Record<string, unknown> | null) => (payload
+    ? `${String(payload.related_object_type ?? '')}:${String(payload.related_object_id ?? '').toLowerCase()}`
+    : null);
+  const related = (payload: Record<string, unknown> | null) => {
+    const family = payload ? taskRelatedFamily(payload.related_object_type) : null;
+    return family && payload ? referenceValue(ctx, family, payload.related_object_id) : null;
+  };
+  if (relatedKey(before) !== relatedKey(after)) {
+    const beforeValue = related(before);
+    const afterValue = related(after);
+    if (beforeValue || afterValue) {
+      changes.push({
+        field: 'related_object',
+        ...(before ? { before: beforeValue } : {}),
+        ...(after ? { after: afterValue } : {}),
+      });
+    }
+  }
+  const requestId = after?.converted_to_request_id;
+  if (isUuid(requestId) && !deepEqual(before?.converted_to_request_id, requestId)) {
+    changes.push({ field: 'converted_to_request', after: referenceValue(ctx, 'request', requestId) });
+  }
+  changes.push(...genericChanges(row, ctx, { label: row.table_name }));
+  // A deletion is the entry itself: its people are not removed one by one.
+  if (after) {
+    for (const [field, kind] of [['owner_ids', 'task_owner'], ['viewer_ids', 'task_viewer']] as const) {
+      const beforeSet = new Set(taskPeople(before?.[field]));
+      const afterSet = new Set(taskPeople(after[field]));
+      for (const id of afterSet) {
+        if (!beforeSet.has(id)) changes.push({ field: kind, event: 'added', after: userValue(ctx, id) });
+      }
+      for (const id of beforeSet) {
+        if (!afterSet.has(id)) changes.push({ field: kind, event: 'removed', before: userValue(ctx, id) });
+      }
+    }
+  }
+  return changes;
+}
+
+/** The project a request was converted into, named with the reader's rights on projects. */
+function requestConversionChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) ? row.before_json : null;
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  const projectId = after?.converted_to_project_id;
+  if (!isUuid(projectId) || deepEqual(before?.converted_to_project_id, projectId)) return [];
+  return [{ field: 'converted_to_project', after: referenceValue(ctx, 'project', projectId) }];
+}
+
 function recordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   const columnOperation = columnOperationChanges(row);
   if (columnOperation) return columnOperation;
   if (row.table_name === 'technologies') {
     const sync = catalogSyncChanges(row);
     if (sync) return sync;
+  }
+  if (row.table_name === 'tasks' && ctx.entry.table === 'tasks') return taskRecordChanges(row, ctx);
+  if (row.table_name === 'contracts') return [...renewalChanges(row, ctx), ...genericChanges(row, ctx, { label: row.table_name })];
+  if (row.table_name === 'portfolio_projects') {
+    return [...genericChanges(row, ctx, { label: row.table_name, numeric: PROJECT_NUMERIC_FIELDS }), ...scoringChanges(row, ctx)];
+  }
+  if (row.table_name === 'portfolio_requests') {
+    // The deletion of the origin task names it under its own key: it reads as the origin task.
+    const read = { ...row, before_json: requestAuditPayload(row.before_json), after_json: requestAuditPayload(row.after_json) };
+    return [
+      ...requestConversionChanges(read, ctx),
+      ...genericChanges(read, ctx, { label: row.table_name, numeric: REQUEST_NUMERIC_FIELDS }),
+      ...scoringChanges(read, ctx),
+    ];
   }
   const changes = genericChanges(row, ctx, { label: row.table_name })
     // The middleware list has its own events below; the id-list itself is never a field line.
@@ -1372,11 +1844,15 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
         ? applicationLinkChanges(row, ctx)
         : setLinkChanges('application', row, ctx);
     case 'technology':
-      return row.table_name === 'asset_technologies'
+      // From an asset or an application, the link row names the technology in `record_id`.
+      return row.table_name === 'asset_technologies' || row.table_name === 'application_technologies'
         ? installedTechnology(row, ctx, isPlainObject(row.after_json) ? row.after_json : isPlainObject(row.before_json) ? row.before_json : null)
         : setLinkChanges('technology', row, ctx);
     case 'asset':
-      return row.table_name === 'asset_technologies' ? installedAsset(row, ctx) : assetChanges(row, ctx);
+      // From a budget line, the asset wrote the set of its lines; from a contract or an incident,
+      // the set holds the assets.
+      if (row.table_name === 'asset_technologies') return installedAsset(row, ctx);
+      return ctx.entry.table === 'spend_items' ? assetChanges(row, ctx) : setLinkChanges('asset', row, ctx);
     case 'budget_line':
       // A contact's link row names its budget line in the payload; an asset or a technology writes
       // the set of its budget lines.
@@ -1419,8 +1895,27 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
       return setChanges(row, ctx);
     case 'binding':
       return bindingChanges(row, ctx);
+    case 'instance':
+      return instanceChanges(row, ctx);
+    case 'assignment':
+      return assignmentChanges(row, ctx);
+    case 'business_process':
+      return processLinkChanges(row, ctx);
     case 'version':
       return genericChanges(row, ctx, { label: row.table_name });
+    case 'compliance_item':
+      return complianceChanges(row);
+    case 'phase':
+    case 'milestone':
+      return phaseChanges(kind, row, ctx);
+    case 'time_entry':
+      return timeEntryChanges(row, ctx);
+    case 'team':
+      return teamChanges(row, ctx);
+    case 'dependency':
+      return dependencyChanges(row, ctx);
+    case 'document':
+      return documentChanges(row);
     default:
       return [];
   }
@@ -1476,6 +1971,20 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
     }
     case 'binding':
       return labelOf(row, ['environment']);
+    case 'compliance_item':
+      // The requirement code: the page names it as the Compliance tab does.
+      return labelOf(row, ['requirement']);
+    case 'phase':
+    case 'milestone':
+      // A creation or a removal names it in its event line; an update in its title.
+      return row.action === 'create' || row.action === 'delete' ? null : labelOf(row, ['name']);
+    case 'instance':
+      // A creation or a removal names its environment in its event line; an update in its title.
+      return row.action === 'create' || row.action === 'delete' ? null : labelOf(row, ['environment']);
+    case 'assignment': {
+      const instanceId = assignmentInstanceId(row);
+      return instanceId ? ctx.instances?.get(instanceId) ?? null : null;
+    }
     case 'person': {
       if (row.action === 'create' || row.action === 'delete') return null;
       for (const payload of [row.after_json, row.before_json]) {
@@ -1517,12 +2026,13 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
     case 'task':
     case 'relation':
     case 'member':
+    case 'business_process':
     case 'owner': {
       const events = changes.filter((change) => change.event);
       const labels = new Set<string>();
       for (const change of events) {
         const value = (change.after ?? change.before) as RecordHistoryReference | RecordHistoryHiddenReference | null | undefined;
-        if (value && !('hidden' in value) && typeof value.label === 'string' && value.label.trim()) {
+        if (value && typeof value === 'object' && !('hidden' in value) && typeof value.label === 'string' && value.label.trim()) {
           labels.add(value.label.trim());
         }
       }
@@ -1570,9 +2080,31 @@ function presentedAction(row: AuditRow, kind: RecordHistoryChildKind | null): st
   return row.action;
 }
 
+/** A value as two sides of a change compare it: a number and its decimal text are one value. */
+function comparableValue(value: unknown): unknown {
+  // Only a plain decimal form: a code with a leading zero ("01000") stays text.
+  if (typeof value === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value.trim())) return Number(value);
+  return value;
+}
+
+/**
+ * A field change whose before and after read the same (a numeric column saved as a number after
+ * it was read as text: "64.58 → 64.58") is no change. A change that carries more than its two
+ * values (a year, a criterion, an event) keeps its own rule, and a withheld record on either side
+ * stays: two hidden records may be two different ones.
+ */
+function unchangedValue(change: RecordHistoryChange): boolean {
+  if (!Object.prototype.hasOwnProperty.call(change, 'before') || !Object.prototype.hasOwnProperty.call(change, 'after')) return false;
+  if (Object.keys(change).some((key) => key !== 'field' && key !== 'before' && key !== 'after')) return false;
+  const hidden = (value: unknown) => isPlainObject(value) && value.hidden === true;
+  if (hidden(change.before) || hidden(change.after)) return false;
+  return deepEqual(comparableValue(change.before), comparableValue(change.after));
+}
+
 export function presentItem(row: AuditRow, entry: RecordHistoryRecord, ctx: PageContext): RecordHistoryItem {
   const kind = entry.auditLabels.includes(row.table_name) ? null : recordHistoryChildKind(entry, row.table_name);
-  const changes = changesFor(row, kind, ctx);
+  // An update left with no visible change is dropped by the service.
+  const changes = changesFor(row, kind, ctx).filter((change) => !unchangedValue(change));
   const label = subjectLabel(row, kind, ctx, changes);
   return {
     id: row.id,

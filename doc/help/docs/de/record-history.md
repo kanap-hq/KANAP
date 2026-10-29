@@ -4,14 +4,19 @@ Der Verlauf eines Datensatzes listet die Änderungen daran auf: wer was wann ge�
 
 ## Wo Sie ihn finden
 
-- **Tab Verlauf**, der letzte Tab des Datensatzes: Budgetzeilen (siehe [Budgetzeilen](budget-lines.md#verlauf)), Unternehmen, Abteilungen, Lieferanten, Standorte, Verbindungen, Schnittstellen, Assets und Technologien.
+- **Tab Verlauf**, der letzte Tab des Datensatzes: Budgetzeilen (siehe [Budgetzeilen](budget-lines.md#verlauf)), Verträge, Unternehmen, Abteilungen, Lieferanten, Standorte, Verbindungen, Schnittstellen, Anwendungen, Assets, Technologien, Vorfälle, Projekte, Anfragen und Aufgaben.
 - **Schaltfläche Verlauf** in der Kopfzeile, die den Verlauf in einem Seitenbereich öffnet: Konten, Kostenstellen, Arbeitstagekalender, Geschäftsprozesse, Analysedimensionen und ihre Werte sowie Kontakte.
 - **Tab Verlauf** im rechten Bereich eines Dokuments der Wissensdatenbank.
+
+Ein Vorfall behält außerdem seinen Tab **Journal**. Das Journal erzählt, was während des Vorfalls geschah. Der Verlauf listet die Änderungen am Datensatz.
+
+Der Aktivitäts-Stream eines Projekts, einer Anfrage oder einer Aufgabe zeigt nur Kommentare und Entscheidungen. Die Änderungen am Datensatz stehen in seinem Verlauf. Bei einer Aufgabe zeigt ein Kommentar, der zusammen mit einer Statusänderung geschrieben wurde, diese Änderung.
 
 ## Wer ihn sehen kann
 
 - Wer den Datensatz öffnen kann, kann auch seinen Verlauf lesen. Es ist keine zusätzliche Berechtigung nötig.
 - Ist der Datenzugriff einer Person auf bestimmte Unternehmen oder Kostenstellen begrenzt, sieht sie nur den Verlauf der Datensätze innerhalb ihres Zugriffs. Siehe [Datenzugriff](data-access.md).
+- Ein eingeschränkter Vorfall bleibt für Personen verborgen, die ihn nicht sehen dürfen, ebenso der Verlauf seiner Aufgaben.
 
 ## Was ein Eintrag zeigt
 
@@ -38,14 +43,18 @@ Der Verlauf listet auch die Änderungen an den Bestandteilen eines Datensatzes a
 - verknüpfte Anwendungen, Technologien und Assets;
 - Aufgaben.
 
+Bei den anderen Datensätzen listet der Verlauf ebenso ihre Verknüpfungen und Bestandteile: Budgetzeilen, Anwendungen, Assets, Verträge, Teammitglieder, Kontakte, Abhängigkeiten, Weblinks, eingebettete Dokumente, Anhänge, Aufgaben, Bereitstellungen und Bewertungen nach Kriterien.
+
 ## Datensätze, die Sie nicht lesen können
 
 Ein Eintrag kann einen anderen Datensatz nennen, zum Beispiel einen mit der Zeile verknüpften Vertrag. Wenn Sie diesen Datensatz nicht öffnen können, nennt der Eintrag nur seine Art, zum Beispiel „ein Vertrag“. Ein inzwischen gelöschter Datensatz erscheint als „ein gelöschter Vertrag“.
 
+Bei einem Vertrag, einem Projekt oder einer Anfrage sieht eine Person mit begrenztem Datenzugriff die Budgetzeilen außerhalb ihres Zugriffs nur als Anzahl, ohne Namen: „und 2 Zeilen außerhalb Ihres Zugriffs“.
+
 ## Werte, die der Verlauf nicht zeigt
 
 - E-Mail-Adresse, Telefonnummern und Notizen eines Kontakts erscheinen nie.
-- Bei langen Inhalten sagt der Eintrag nur, dass sie sich geändert haben: **Inhalt geändert** für den Text eines Dokuments der Wissensdatenbank, **Arbeitstage geändert** für die Tage eines Arbeitstagekalenders.
+- Bei langen Inhalten sagt der Eintrag nur, dass sie sich geändert haben: **Inhalt geändert** für den Text eines Dokuments der Wissensdatenbank, **Arbeitstage geändert** für die Tage eines Arbeitstagekalenders, **Beschreibung geändert**, **Zweck geändert** oder **Aktuelle Situation geändert** für die langen Texte der anderen Datensätze.
 
 ## Den Assistenten fragen
 

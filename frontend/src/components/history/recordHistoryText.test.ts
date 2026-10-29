@@ -275,3 +275,214 @@ describe('history lines', () => {
     expect(historyActorText({ kind: 'assistant', name: null }, t)).toBe('Plaid');
   });
 });
+
+describe('contract history lines', () => {
+  it('reads the renewal markers as sentences, with the contract screen labels', () => {
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'renewal_decision', after: 'terminate' },
+      { field: 'renewal_reason', after: 'Price increase' },
+    ]), context)).toEqual([
+      { text: 'Renewal decided: Terminate' },
+      { text: 'Justification: Price increase' },
+    ]);
+    expect(historyLines(item({ kind: 'record' }, [{ field: 'renewal_decision', after: 'end' }]), context))
+      .toEqual([{ text: 'Renewal decided: Let it end' }]);
+    expect(historyLines(item({ kind: 'record' }, [{ field: 'renewal_decision', after: 'undo' }]), context))
+      .toEqual([{ text: 'Renewal decision undone' }]);
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'renewal_stop', text: 'renewalStopped' },
+      { field: 'renewal_resume', text: 'renewalResumed' },
+      { field: 'notes', text: 'notesChanged' },
+    ]), context)).toEqual([
+      { text: 'Renewal stopped' },
+      { text: 'Renewal resumed' },
+      { text: 'Notes changed' },
+    ]);
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'renewal_task', event: 'added', after: { kind: 'task', id: ID, label: 'Decide', reference: 'T-12' } },
+    ]), context)).toEqual([{ text: 'Renewal task created: Decide (T-12)' }]);
+  });
+
+  it('counts the budget lines outside the reader access, never names them', () => {
+    expect(historyLines(item({ kind: 'budget_line' }, [
+      { field: 'budget_line', event: 'added', after: { kind: 'budget_line', id: ID, label: 'Hosting', reference: 'BL-3' } },
+      { field: 'budget_lines_outside', event: 'added', after: 2 },
+    ]), context)).toEqual([
+      { text: 'Budget line added: Hosting (BL-3)' },
+      { text: 'and 2 lines outside your access' },
+    ]);
+    expect(historyLines(item({ kind: 'budget_line' }, [
+      { field: 'budget_lines_outside', event: 'removed', before: 1 },
+    ]), context)).toEqual([{ text: '1 budget line outside your access removed' }]);
+  });
+
+  it('names a compliance item by its requirement and reads its state', () => {
+    expect(historySubjectText({ kind: 'compliance_item', label: 'exit_plan' }, t)).toBe('Exit plan');
+    expect(historySubjectText({ kind: 'compliance_item', label: 'unknown_code' }, t)).toBeNull();
+    expect(historyLines(item({ kind: 'compliance_item', label: 'exit_plan' }, [
+      { field: 'compliance_state', before: null, after: 'not_applicable' },
+      { field: 'compliance_reference', before: 'Clause 4', after: 'Clause 5' },
+    ]), context)).toEqual([
+      { label: 'State', before: '—', after: 'Not applicable' },
+      { label: 'Reference', before: 'Clause 4', after: 'Clause 5' },
+    ]);
+    expect(historyLines(item({ kind: 'record' }, [{ field: 'billing_frequency', before: 'annual', after: 'monthly' }]), context))
+      .toEqual([{ label: 'Billing', before: 'Annual', after: 'Monthly' }]);
+  });
+});
+
+describe('incident history lines', () => {
+  it('reads the incident fields with the register labels', () => {
+    const incident: HistoryTextContext = { ...context, table: 'incidents' };
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'category', before: 'security', after: 'data' },
+      { field: 'severity', before: 'low', after: 'critical' },
+      { field: 'description', text: 'descriptionChanged' },
+      { field: 'notified_parties', before: null, after: 'Regulator' },
+    ]), incident)).toEqual([
+      { label: 'Category', before: 'Security', after: 'Data' },
+      { label: 'Severity', before: 'Low', after: 'Critical' },
+      { text: 'Description changed' },
+      { label: 'Parties informed', before: '—', after: 'Regulator' },
+    ]);
+  });
+});
+
+describe('application history entries', () => {
+  const fr = i18n.getFixedT('fr', ['admin', 'ops', 'common', 'it']) as unknown as Translate;
+  const en = i18n.getFixedT('en', ['admin', 'ops', 'common', 'it']) as unknown as Translate;
+
+  it('reads a deployment by its environment, as the Deployments tab names it', () => {
+    const added = item({ kind: 'instance' }, [{ field: 'instance', event: 'added', after: 'pre_prod' }]);
+    expect(historyLines(added, { t: en, locale: 'en' }).map((line) => line.text)).toEqual(['Environment added: Pre-prod']);
+    expect(historyLines(added, { t: fr, locale: 'fr' }).map((line) => line.text)).toEqual(['Environnement ajouté : Pré-prod']);
+    expect(historySubjectText({ kind: 'instance', label: 'prod' }, en)).toBe('Prod environment');
+  });
+
+  it('names a server under its environment, or the noun when the asset is not readable', () => {
+    const changes: RecordHistoryChange[] = [{ field: 'assignment', event: 'added', after: { kind: 'asset', id: ID, label: 'srv-db-1', reference: 'AST-4' } }];
+    expect(historyLines(item({ kind: 'assignment', label: 'prod' }, changes), { t: en, locale: 'en' })[0].text).toBe('Server added: srv-db-1 (AST-4)');
+    expect(historySubjectText({ kind: 'assignment', label: 'prod' }, fr)).toBe('Environnement Prod');
+    const hidden = item({ kind: 'assignment' }, [{ field: 'assignment', event: 'removed', before: { hidden: true, kind: 'asset' } }]);
+    expect(historyLines(hidden, { t: fr, locale: 'fr' })[0].text).toBe('Serveur retiré : un actif');
+  });
+});
+
+describe('project history entries', () => {
+  const fr = i18n.getFixedT('fr', ['admin', 'ops', 'common', 'portfolio']) as unknown as Translate;
+  const en = i18n.getFixedT('en', ['admin', 'ops', 'common', 'portfolio']) as unknown as Translate;
+  const jane = { kind: 'user', id: ID, label: 'Jane Doe' };
+
+  it('names a phase, a milestone, a time entry and a team member as they are added or removed', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'phase', event: 'added', after: 'Design' },
+      { field: 'milestone', event: 'removed', before: 'Go-live' },
+      { field: 'time_entry', event: 'added', after: jane },
+      { field: 'it_team', event: 'added', after: jane },
+      { field: 'business_team', event: 'removed', before: { hidden: true, kind: 'user' } },
+    ];
+    expect(historyLines(item({ kind: 'team' }, changes), { t: en, locale: 'en' }).map((line) => line.text)).toEqual([
+      'Phase added: Design',
+      'Milestone removed: Go-live',
+      'Time entry added: Jane Doe',
+      'IT team member added: Jane Doe',
+      'Business team member removed: a user',
+    ]);
+    const frLines = historyLines(item({ kind: 'phase' }, changes.slice(0, 1)), { t: fr, locale: 'fr' });
+    expect(frLines[0].text).toMatch(/^Phase ajoutée\u00a0: Design$/);
+  });
+
+  it('titles an updated phase or milestone by its name', () => {
+    expect(historySubjectText({ kind: 'phase', label: 'Design' }, en)).toBe('Design');
+    expect(historySubjectText({ kind: 'milestone', label: 'Go-live' }, en)).toBe('Go-live');
+    expect(historySubjectText({ kind: 'phase' }, en)).toBeNull();
+  });
+
+  it('reads a scoring criterion by its name and options, never an identifier', () => {
+    const lines = historyLines(item({ kind: 'record' }, [
+      { field: 'criterion', dimension: 'Strategic fit', before: 'Low', after: 'High' },
+      { field: 'criterion', dimension: null, before: 'High', after: { hidden: true, kind: 'criterion_value', deleted: true } },
+    ]), { t: en, locale: 'en' });
+    expect(lines).toEqual([
+      { label: 'Criterion Strategic fit', before: 'Low', after: 'High' },
+      { label: 'A criterion', before: 'High', after: 'a deleted option' },
+    ]);
+    expect(JSON.stringify(lines)).not.toContain(ID);
+  });
+
+  it('reads a link whose address changed under its label, from the old address to the new', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'link', dimension: 'Specification', before: 'https://a.example/spec', after: 'https://b.example/spec' },
+      { field: 'link', event: 'added', after: 'Doc (https://example.invalid/two)' },
+    ];
+    expect(historyLines(item({ kind: 'link' }, changes), { t: en, locale: 'en' })).toEqual([
+      { label: 'Link Specification changed', before: 'https://a.example/spec', after: 'https://b.example/spec' },
+      { text: 'Link added: Doc (https://example.invalid/two)' },
+    ]);
+    const frLines = historyLines(item({ kind: 'link' }, changes.slice(0, 1)), { t: fr, locale: 'fr' });
+    expect(frLines[0].label).toBe('Lien Specification modifié');
+  });
+
+  it('reads an effort share as a percentage, under the person', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'effort_allocation_it', dimension: 'Jane Doe', before: 40, after: 60 },
+      { field: 'effort_allocation_business', dimension: null, before: null, after: 25 },
+    ];
+    expect(historyLines(item({ kind: 'team' }, changes), { t: en, locale: 'en' })).toEqual([
+      { label: 'IT effort share, Jane Doe', before: '40%', after: '60%' },
+      { label: 'Business effort share, a user', before: '—', after: '25%' },
+    ]);
+    const frLine = historyLines(item({ kind: 'team' }, changes.slice(0, 1)), { t: fr, locale: 'fr' })[0];
+    expect(frLine.after).toBe('60\u00a0%');
+  });
+
+  it('names the edited document by the label of its screen', () => {
+    const lines = (slot: string, t: Translate, locale: string) =>
+      historyLines(item({ kind: 'document' }, [{ field: 'document_updated', after: slot }]), { t, locale }).map((line) => line.text);
+    expect(lines('purpose', en, 'en')).toEqual(['Document modified: Purpose']);
+    expect(lines('risks_mitigations', en, 'en')).toEqual(['Document modified: Risks']);
+    expect(lines('purpose', fr, 'fr')[0]).toMatch(/Objectif$/);
+    expect(lines('specification', en, 'en')).toEqual(['Document modified']);
+  });
+});
+
+describe('request history entries', () => {
+  const fr = i18n.getFixedT('fr', ['admin', 'ops', 'common', 'portfolio']) as unknown as Translate;
+  const en = i18n.getFixedT('en', ['admin', 'ops', 'common', 'portfolio']) as unknown as Translate;
+  const task = { kind: 'task', id: ID, label: 'Follow up', reference: 'T-4' };
+
+  it('reads the request fields with its screen labels, the rich texts as changed only', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'origin_task_id', after: task },
+      { field: 'origin_task_id', before: { hidden: true, kind: 'task', deleted: true }, after: null },
+      { field: 'status', before: 'pending_review', after: 'candidate' },
+      { field: 'current_situation', text: 'currentSituationChanged' },
+      { field: 'feasibility_review', text: 'feasibilityReviewChanged' },
+    ];
+    const read = (t: Translate, locale: string) => historyLines(item({ kind: 'record' }, changes), { t, locale, table: 'portfolio_requests' });
+    expect(read(en, 'en')).toEqual([
+      { label: 'Created from task', after: 'Follow up (T-4)' },
+      { label: 'Created from task', before: 'a deleted task', after: '—' },
+      { label: 'Status', before: 'Pending review', after: 'Candidate' },
+      { text: 'Current situation changed' },
+      { text: 'Feasibility review changed' },
+    ]);
+    const frLines = read(fr, 'fr');
+    expect(frLines[0]).toEqual({ label: 'Créée depuis la tâche', after: 'Follow up (T-4)' });
+    expect(frLines[2]).toEqual({ label: 'Statut', before: 'En attente de revue', after: 'Candidat' });
+    expect(frLines[3]).toEqual({ text: 'Situation actuelle modifiée' });
+  });
+
+  it('names a business process and a request dependency as the request adds them', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'business_process', event: 'added', after: { kind: 'business_process', id: ID, label: 'Order to cash' } },
+      { field: 'dependency', event: 'added', after: { kind: 'request', id: ID, label: 'Request Beta', reference: 'REQ-12' } },
+    ];
+    expect(historyLines(item({ kind: 'business_process' }, changes), { t: en, locale: 'en' }).map((line) => line.text)).toEqual([
+      'Business process added: Order to cash',
+      'Dependency added: Request Beta (REQ-12)',
+    ]);
+    expect(historyLines(item({ kind: 'business_process' }, changes.slice(0, 1)), { t: fr, locale: 'fr' })[0].text)
+      .toMatch(/ : Order to cash$/);
+  });
+});
