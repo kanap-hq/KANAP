@@ -14,10 +14,11 @@ vi.mock('../../hooks/useItOpsEnumOptions', () => ({
   default: () => ({
     labelFor: (field: string, code?: string | null) => (
       field === 'lifecycleStatus' && code === 'retired' ? 'Retirée'
-        : field === 'serverRole' && code === 'database' ? 'Base de données'
-          : field === 'incidentCategories' && code === 'security' ? 'Sécurité'
-            : field === 'incidentCategories' && code === 'infrastructure' ? 'Infrastructure'
-              : String(code ?? '')
+        : field === 'technologyFamily' && code === 'database' ? 'Base de données'
+          : field === 'serverRole' && code === 'database' ? 'Base de données'
+            : field === 'incidentCategories' && code === 'security' ? 'Sécurité'
+              : field === 'incidentCategories' && code === 'infrastructure' ? 'Infrastructure'
+                : String(code ?? '')
     ),
   }),
 }));
@@ -315,18 +316,82 @@ describe('PreviewCard in French', () => {
     renderCard(preview({
       tool_name: 'create_business_record',
       target: { entity_type: 'technologies', entity_id: null, ref: null, title: 'PostgreSQL' },
-      summary: 'Adoption de « PostgreSQL » du catalogue KANAP.',
+      summary: 'Adoption de « PostgreSQL » depuis le catalogue KANAP.',
       changes: {
         catalog_adoption: {
           label: 'KANAP catalog',
           from: null,
-          to: '**Adoptée du catalogue KANAP**\n- Famille : Database\n- 12 versions, fin de support de 2017-01-01 à 2032-12-31',
+          to: '**Adoptée du catalogue KANAP**\n- 12 versions, fin de support de 2017-01-01 à 2032-12-31',
           format: 'markdown',
         },
+        family: { label: 'Family', from: null, to: 'database', format: 'text' },
       },
     }));
     expect(screen.getAllByText('Catalogue KANAP').length).toBeGreaterThan(0);
     expect(screen.getByText(/Adoptée du catalogue KANAP/)).toBeInTheDocument();
+    // The family code reads as the screen shows it, in French.
+    expect(screen.getByText('Famille')).toBeInTheDocument();
+    expect(screen.getByText('Base de données')).toBeInTheDocument();
+  });
+
+  it('shows the technology people, web links and vulnerability alerts, in French', () => {
+    renderCard(preview({
+      tool_name: 'update_technology_people',
+      target: { entity_type: 'technologies', entity_id: 'tec-1', ref: 'TEC-1', title: 'TEC-1 - PostgreSQL' },
+      summary: 'Modification des responsables et contacts de « TEC-1 - PostgreSQL ».',
+      changes: {
+        technology_owners: {
+          label: 'Owners',
+          from: null,
+          to: '**Ajoutés**\n- Paul Martin (responsable IT)',
+          format: 'markdown',
+        },
+        technology_support_contacts: {
+          label: 'Support contacts',
+          from: null,
+          to: '**Ajoutés**\n- Oracle Support (rôle : Support)',
+          format: 'markdown',
+        },
+      },
+    }));
+    expect(screen.getByText('Responsables')).toBeInTheDocument();
+    expect(screen.getByText('Contacts de support')).toBeInTheDocument();
+    expect(screen.getByText('Paul Martin (responsable IT)')).toBeInTheDocument();
+    expect(screen.getByText('Oracle Support (rôle : Support)')).toBeInTheDocument();
+
+    renderCard(preview({
+      tool_name: 'update_technology_web_links',
+      target: { entity_type: 'technologies', entity_id: 'tec-1', ref: 'TEC-1', title: 'TEC-1 - PostgreSQL' },
+      summary: 'Modification des liens web de « TEC-1 - PostgreSQL ».',
+      changes: {
+        technology_web_links: {
+          label: 'Web links',
+          from: null,
+          to: '**Ajoutés**\n- https://example.com/runbook (Runbook)',
+          format: 'markdown',
+        },
+      },
+    }));
+    expect(screen.getByText('Liens web')).toBeInTheDocument();
+    expect(screen.getByText(/example\.com\/runbook/)).toBeInTheDocument();
+    expect(screen.getByText(/Runbook/)).toBeInTheDocument();
+
+    renderCard(preview({
+      tool_name: 'set_technology_vulnerability_alerts',
+      target: { entity_type: 'technologies', entity_id: 'tec-1', ref: 'TEC-1', title: 'TEC-1 - PostgreSQL' },
+      summary: 'Modification des alertes de failles de « TEC-1 - PostgreSQL ».',
+      changes: {
+        technology_vulnerability_alerts: {
+          label: 'Vulnerability alerts',
+          from: null,
+          to: '**Alertes de failles**\n- désactivées\n\n- 2 exceptions de version seront effacées : 14, 16',
+          format: 'markdown',
+        },
+      },
+    }));
+    expect(screen.getAllByText('Alertes de failles').length).toBeGreaterThan(0);
+    expect(screen.getByText('désactivées')).toBeInTheDocument();
+    expect(screen.getByText('2 exceptions de version seront effacées : 14, 16')).toBeInTheDocument();
   });
 
   it('shows a budget line deletion with its versions, tasks and links, in French', () => {
