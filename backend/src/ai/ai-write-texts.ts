@@ -995,6 +995,34 @@ export function vulnerabilityStateCardText(card: VulnerabilityStateCard): string
   return blocks.join('\n\n');
 }
 
+export type VulnerabilityStateUndoCard = {
+  /** The rows the change wrote, the distinct CVE among them, and the state they took. */
+  rows: number;
+  cves: number;
+  from: string;
+  /** Whether the change set a note: each group then names the note it gets back. */
+  notes: boolean;
+  /** The rows by the state and note they go back to. */
+  groups: Array<{ state: string; note: string | null; rows: number }>;
+};
+
+/**
+ * The card of the undo of a vulnerability state change: the rows and CVE, then each group with the
+ * state (and the note, when the change set one) it goes back to. `pending` speaks in the future.
+ * English only for now.
+ */
+export function vulnerabilityStateUndoCardText(card: VulnerabilityStateUndoCard, pending = true): string {
+  const one = card.rows === 1;
+  const head = `${card.rows} row${one ? '' : 's'} (${card.cves} CVE${card.cves === 1 ? '' : 's'}): `
+    + `${vulnerabilityStateLabel(card.from)} → back to ${one ? 'its' : 'their'} previous state`;
+  const lines = card.groups.map((group) => {
+    const back = `${group.rows} ${pending ? 'will go back' : 'back'} to ${vulnerabilityStateLabel(group.state)}`;
+    const note = !card.notes ? '' : group.note ? `, note ${quoted('en', group.note)}` : ', note cleared';
+    return `- ${escapeMarkdownLabel(`${back}${note}`)}`;
+  });
+  return lines.length ? `${head}\n\n${lines.join('\n')}` : head;
+}
+
 /** The detail lines of a task preview: its assignee and its priority. */
 export const taskDetailText = {
   assignee(language: AiTranslatedWriteLanguage, name: string): string {

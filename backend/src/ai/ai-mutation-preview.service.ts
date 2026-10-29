@@ -742,6 +742,33 @@ export class AiMutationPreviewService {
     return preview;
   }
 
+  /**
+   * The steps of a tool that must not reach the same records twice in one plan (each preview
+   * compares with the state before the plan), as the steps will be saved: identical steps count
+   * once. Checked before anything is written; the other tools are not concerned.
+   */
+  private async assertPlanStepsDisjoint(
+    context: AiExecutionContextWithManager,
+    operations: AiMutationPlanOperationInput[],
+  ): Promise<void> {
+    const byTool = new Map<string, Map<string, Record<string, unknown>>>();
+    for (const operation of operations) {
+      const normalized = normalizePlanOperationForCompatibility(
+        String(operation?.tool_name || '').trim(),
+        this.clonePlanInput(operation?.input ?? {}),
+      );
+      if (!this.operations.isSupportedToolName(normalized.toolName)) continue;
+      if (!this.operations.getOperation(normalized.toolName).assertPlanStepsDisjoint) continue;
+      const inputs = byTool.get(normalized.toolName) ?? new Map<string, Record<string, unknown>>();
+      inputs.set(stableStringify(normalized.input), normalized.input);
+      byTool.set(normalized.toolName, inputs);
+    }
+    for (const [toolName, inputs] of byTool) {
+      if (inputs.size < 2) continue;
+      await this.operations.getOperation(toolName).assertPlanStepsDisjoint!(context, Array.from(inputs.values()));
+    }
+  }
+
   async createMutationPlan(
     context: AiExecutionContextWithManager,
     input: AiMutationPlanInput,
@@ -756,6 +783,8 @@ export class AiMutationPreviewService {
     if (operations.some((operation) => String(operation?.tool_name || '').trim() === 'delete_record')) {
       throw new BadRequestException('delete_record prepares one record at a time and cannot be part of a mutation plan.');
     }
+
+    await this.assertPlanStepsDisjoint(context, operations);
 
     const expectedRefs = normalizeTargetRefs(input.expected_target_refs);
     const expectedCount = normalizeExpectedTargetCount(input.expected_target_count, expectedRefs);
