@@ -920,18 +920,59 @@ export function technologyAlertsCardText(language: AiWriteLanguage, card: Techno
 
 /**
  * The states of a vulnerability row, as the vulnerabilities page names them
- * (`pages.vulnerabilities.states`). English only for now: French, German and Spanish follow the
- * page's words in a later lot.
+ * (`pages.vulnerabilities.states`), in each language of the page.
  */
-export const VULNERABILITY_STATE_LABELS: Readonly<Record<string, string>> = {
-  to_review: 'To review',
-  handled: 'Handled',
-  not_affected: 'Not affected',
+export const VULNERABILITY_STATE_LABELS: Readonly<Record<AiWriteLanguage, Readonly<Record<string, string>>>> = {
+  en: { to_review: 'To review', handled: 'Handled', not_affected: 'Not affected' },
+  fr: { to_review: 'À traiter', handled: 'Traitée', not_affected: 'Non concernée' },
+  de: { to_review: 'Zu prüfen', handled: 'Behandelt', not_affected: 'Nicht betroffen' },
+  es: { to_review: 'Por revisar', handled: 'Tratada', not_affected: 'No afectada' },
 };
 
-export function vulnerabilityStateLabel(state: string): string {
-  return VULNERABILITY_STATE_LABELS[state] ?? state;
+export function vulnerabilityStateLabel(state: string, language: AiWriteLanguage = 'en'): string {
+  return VULNERABILITY_STATE_LABELS[language][state] ?? state;
 }
+
+/** `3 rows`, `1 ligne`, `2 Zeilen`, `1 fila`: the page's word for a vulnerability row. */
+function vulnerabilityRowsText(language: AiWriteLanguage, count: number): string {
+  const one = count === 1;
+  const word = {
+    en: one ? 'row' : 'rows',
+    fr: one ? 'ligne' : 'lignes',
+    de: one ? 'Zeile' : 'Zeilen',
+    es: one ? 'fila' : 'filas',
+  }[language];
+  return `${count} ${word}`;
+}
+
+/** `2 CVEs` in English; the other languages write CVE as the page does, without a plural. */
+function vulnerabilityCvesText(language: AiWriteLanguage, count: number): string {
+  return language === 'en' ? `${count} CVE${count === 1 ? '' : 's'}` : `${count} CVE`;
+}
+
+/** The title of the card's target: the CVE count. */
+export function vulnerabilityCveCountText(language: AiWriteLanguage, count: number): string {
+  return vulnerabilityCvesText(language, count);
+}
+
+/** The action phrase of a change of vulnerability state, for the summaries in fr, de and es. */
+export const vulnerabilityStateActionText = {
+  change(language: AiTranslatedWriteLanguage, rows: number, state: string): string {
+    const label = quoted(language, vulnerabilityStateLabel(state, language));
+    switch (language) {
+      case 'fr': return `passage de ${vulnerabilityRowsText(language, rows)} de vulnérabilités à l'état ${label}`;
+      case 'de': return `${vulnerabilityRowsText(language, rows)} der Schwachstellen auf ${label} setzen`;
+      case 'es': return `paso de ${vulnerabilityRowsText(language, rows)} de vulnerabilidades al estado ${label}`;
+    }
+  },
+  undo(language: AiTranslatedWriteLanguage, rows: number): string {
+    switch (language) {
+      case 'fr': return `retour de ${vulnerabilityRowsText(language, rows)} de vulnérabilités à ${rows === 1 ? 'son' : 'leur'} état précédent`;
+      case 'de': return `${vulnerabilityRowsText(language, rows)} der Schwachstellen auf den vorherigen Status zurücksetzen`;
+      case 'es': return `retorno de ${vulnerabilityRowsText(language, rows)} de vulnerabilidades a su estado anterior`;
+    }
+  },
+};
 
 /** A row of the card: CVE, technology reference and name, version (null: not recorded). */
 export type VulnerabilityStateCardRow = { cve_id: string; technology: string; technology_name: string; version: string | null };
@@ -954,43 +995,80 @@ export type VulnerabilityStateCard = {
 };
 
 /** `CVE-2024-1234 on TEC-3 PostgreSQL 14`, or `(version not recorded)`. */
-export function vulnerabilityStateRowText(row: VulnerabilityStateCardRow): string {
-  const version = row.version ? ` ${row.version}` : ' (version not recorded)';
-  return `${row.cve_id} on ${row.technology} ${row.technology_name}${version}`;
+export function vulnerabilityStateRowText(row: VulnerabilityStateCardRow, language: AiWriteLanguage = 'en'): string {
+  const on = { en: 'on', fr: 'sur', de: 'auf', es: 'en' }[language];
+  const missing = { en: 'version not recorded', fr: 'version non renseignée', de: 'Version nicht erfasst', es: 'versión no registrada' }[language];
+  const version = row.version ? ` ${row.version}` : ` (${missing})`;
+  return `${row.cve_id} ${on} ${row.technology} ${row.technology_name}${version}`;
 }
 
 /**
  * The card of a change of vulnerability state, as sober as the page's bulk dialog: the rows and
  * CVE, the states before and after, the note when one is given, up to five rows, and a line only
  * for what changes the decision (rows outside the alerts, rows that will disappear at the next
- * matching). English only for now.
+ * matching).
  */
-export function vulnerabilityStateCardText(card: VulnerabilityStateCard): string {
+export function vulnerabilityStateCardText(card: VulnerabilityStateCard, language: AiWriteLanguage = 'en'): string {
+  const colon = language === 'fr' ? ' : ' : ': ';
   const rows = card.changes === card.rows
-    ? `${card.rows} row${card.rows === 1 ? '' : 's'}`
-    : `${card.changes} of ${card.rows} rows`;
-  const cves = `${card.cves} CVE${card.cves === 1 ? '' : 's'}`;
-  const from = card.from.length ? card.from.map(vulnerabilityStateLabel).join(', ') : vulnerabilityStateLabel(card.to);
+    ? vulnerabilityRowsText(language, card.rows)
+    : {
+      en: `${card.changes} of ${card.rows} rows`,
+      fr: `${vulnerabilityRowsText(language, card.changes)} sur ${card.rows}`,
+      de: `${card.changes} von ${card.rows} Zeilen`,
+      es: `${vulnerabilityRowsText(language, card.changes)} de ${card.rows}`,
+    }[language];
+  const from = card.from.length
+    ? card.from.map((state) => vulnerabilityStateLabel(state, language)).join(', ')
+    : vulnerabilityStateLabel(card.to, language);
   // One block per line of meaning: a line right after a list item would join the item.
-  const blocks = [`${rows} (${cves}): ${from} → ${vulnerabilityStateLabel(card.to)}`];
+  const blocks = [`${rows} (${vulnerabilityCvesText(language, card.cves)})${colon}${from} → ${vulnerabilityStateLabel(card.to, language)}`];
   if (card.note !== undefined) {
-    blocks.push(card.note ? `Note: ${escapeMarkdownLabel(quoted('en', card.note))}` : 'Note cleared');
+    const noteWord = { en: 'Note', fr: 'Note', de: 'Notiz', es: 'Nota' }[language];
+    const cleared = { en: 'Note cleared', fr: 'Note effacée', de: 'Notiz gelöscht', es: 'Nota borrada' }[language];
+    blocks.push(card.note ? `${noteWord}${colon}${escapeMarkdownLabel(quoted(language, card.note))}` : cleared);
   }
   const examples = card.examples.slice(0, 5);
   const more = card.changes - examples.length;
   if (examples.length > 0) {
+    const andMore = {
+      en: `and ${more} more`,
+      fr: more === 1 ? 'et 1 autre' : `et ${more} autres`,
+      de: `und ${more} weitere`,
+      es: `y ${more} más`,
+    }[language];
     blocks.push([
-      ...examples.map((row) => `- ${escapeMarkdownLabel(vulnerabilityStateRowText(row))}`),
-      ...(more > 0 ? [`- and ${more} more`] : []),
+      ...examples.map((row) => `- ${escapeMarkdownLabel(vulnerabilityStateRowText(row, language))}`),
+      ...(more > 0 ? [`- ${andMore}`] : []),
     ].join('\n'));
   }
   if (card.outsideAlerts > 0) {
-    blocks.push(card.outsideAlerts === 1 ? '1 is outside the vulnerability alerts' : `${card.outsideAlerts} are outside the vulnerability alerts`);
+    const one = card.outsideAlerts === 1;
+    const n = card.outsideAlerts;
+    blocks.push({
+      en: one ? '1 is outside the vulnerability alerts' : `${n} are outside the vulnerability alerts`,
+      fr: one ? "1 est hors des alertes de vulnérabilité" : `${n} sont hors des alertes de vulnérabilité`,
+      de: one ? '1 ist nicht in den Schwachstellenwarnungen' : `${n} sind nicht in den Schwachstellenwarnungen`,
+      es: one ? '1 está fuera de las alertas de vulnerabilidad' : `${n} están fuera de las alertas de vulnerabilidad`,
+    }[language]);
   }
   if (card.noLongerMatching > 0) {
-    blocks.push(card.noLongerMatching === 1
-      ? '1 no longer matches and will disappear at the next matching'
-      : `${card.noLongerMatching} no longer match and will disappear at the next matching`);
+    const one = card.noLongerMatching === 1;
+    const n = card.noLongerMatching;
+    blocks.push({
+      en: one
+        ? '1 no longer matches and will disappear at the next matching'
+        : `${n} no longer match and will disappear at the next matching`,
+      fr: one
+        ? '1 ne correspond plus et disparaîtra au prochain rapprochement'
+        : `${n} ne correspondent plus et disparaîtront au prochain rapprochement`,
+      de: one
+        ? '1 trifft nicht mehr zu und verschwindet beim nächsten Abgleich'
+        : `${n} treffen nicht mehr zu und verschwinden beim nächsten Abgleich`,
+      es: one
+        ? '1 ya no coincide y desaparecerá en el próximo cotejo'
+        : `${n} ya no coinciden y desaparecerán en el próximo cotejo`,
+    }[language]);
   }
   return blocks.join('\n\n');
 }
@@ -1009,16 +1087,40 @@ export type VulnerabilityStateUndoCard = {
 /**
  * The card of the undo of a vulnerability state change: the rows and CVE, then each group with the
  * state (and the note, when the change set one) it goes back to. `pending` speaks in the future.
- * English only for now.
  */
-export function vulnerabilityStateUndoCardText(card: VulnerabilityStateUndoCard, pending = true): string {
+export function vulnerabilityStateUndoCardText(card: VulnerabilityStateUndoCard, pending = true, language: AiWriteLanguage = 'en'): string {
   const one = card.rows === 1;
-  const head = `${card.rows} row${one ? '' : 's'} (${card.cves} CVE${card.cves === 1 ? '' : 's'}): `
-    + `${vulnerabilityStateLabel(card.from)} → back to ${one ? 'its' : 'their'} previous state`;
+  const colon = language === 'fr' ? ' : ' : ': ';
+  const back = {
+    en: `back to ${one ? 'its' : 'their'} previous state`,
+    fr: `retour à ${one ? 'son' : 'leur'} état précédent`,
+    de: 'zurück auf den vorherigen Status',
+    es: 'vuelta a su estado anterior',
+  }[language];
+  const head = `${vulnerabilityRowsText(language, card.rows)} (${vulnerabilityCvesText(language, card.cves)})${colon}`
+    + `${vulnerabilityStateLabel(card.from, language)} → ${back}`;
   const lines = card.groups.map((group) => {
-    const back = `${group.rows} ${pending ? 'will go back' : 'back'} to ${vulnerabilityStateLabel(group.state)}`;
-    const note = !card.notes ? '' : group.note ? `, note ${quoted('en', group.note)}` : ', note cleared';
-    return `- ${escapeMarkdownLabel(`${back}${note}`)}`;
+    const n = group.rows;
+    const rows = vulnerabilityRowsText(language, n);
+    const state = vulnerabilityStateLabel(group.state, language);
+    const goes = {
+      en: `${n} ${pending ? 'will go back' : 'back'} to ${state}`,
+      fr: pending
+        ? `${rows} ${n === 1 ? 'reviendra' : 'reviendront'} à l'état ${state}`
+        : `${rows} ${n === 1 ? 'revenue' : 'revenues'} à l'état ${state}`,
+      de: pending
+        ? `${rows} ${n === 1 ? 'wird' : 'werden'} auf ${state} zurückgesetzt`
+        : `${rows} auf ${state} zurückgesetzt`,
+      es: pending
+        ? `${rows} ${n === 1 ? 'volverá' : 'volverán'} al estado ${state}`
+        : `${rows} ${n === 1 ? 'vuelta' : 'vueltas'} al estado ${state}`,
+    }[language];
+    const note = !card.notes
+      ? ''
+      : group.note
+        ? `, ${{ en: 'note', fr: 'note', de: 'Notiz', es: 'nota' }[language]} ${quoted(language, group.note)}`
+        : `, ${{ en: 'note cleared', fr: 'note effacée', de: 'Notiz gelöscht', es: 'nota borrada' }[language]}`;
+    return `- ${escapeMarkdownLabel(`${goes}${note}`)}`;
   });
   return lines.length ? `${head}\n\n${lines.join('\n')}` : head;
 }
