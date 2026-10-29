@@ -128,12 +128,22 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 | **Erreurs** | Les lignes que le chargement refuse, par ligne du fichier avec la colonne lorsqu'elle est connue. Un fichier avec une seule erreur ne charge rien |
 | **Modifications** | Les lignes budgétaires à créer, les lignes budgétaires à mettre à jour et les lignes budgétaires que le fichier laisse telles quelles |
 | **Modifiés dans KANAP depuis l'export** | Les lignes budgétaires modifiées par quelqu'un après votre export, avec qui et quand. Charger le fichier écrit vos valeurs à la place de ces modifications |
-| **Avertissements** | Une ligne du fichier qui ressemble à une autre ligne budgétaire, un `company_name` différent de la société du centre de coûts de la ligne, des colonnes et des cellules que le fichier ignore |
+| **Avertissements** | Une ligne du fichier qui ressemble à une autre ligne budgétaire, un `company_name` différent de la société du centre de coûts de la ligne, un montant qui fait cesser une colonne de suivre ses lignes de calcul, des colonnes et des cellules que le fichier ignore |
 | **Créés par le chargement** | Les fournisseurs et les valeurs de dimension que le chargement ajouterait |
 
 3. Cliquez sur **Charger**. Le chargement écrit tout ou rien.
 
 Si une ligne budgétaire change entre la vérification et le chargement, le chargement s'arrête et vous demande de vérifier le fichier de nouveau. La vérification indique aussi comment elle a lu le fichier lorsqu'une date ou un montant pouvait se lire de deux façons, avec un bouton pour changer la lecture.
+
+### Colonnes calculées par quantité et prix
+
+Une ligne budgétaire peut calculer une colonne à partir de lignes de calcul, quantité × prix : voir [Quantité et prix](budget-lines.md#quantite-et-prix). Le fichier budgétaire ne porte que les totaux et les mois d'une colonne. Les lignes de calcul se modifient dans l'onglet **Budget** de la ligne budgétaire.
+
+Lorsque le fichier change le total annuel ou un mois d'une telle colonne, la vérification affiche un avertissement pour chaque ligne budgétaire, colonne et année, par exemple :
+
+> BL-83 · Révision 2026 : 3 lignes de calcul (281 280,00) ne piloteront plus ces montants.
+
+Le chargement est autorisé. Après lui, les lignes de calcul restent sur la ligne budgétaire comme référence, avec leur total, et la colonne suit les montants du fichier. Un total annuel égal à ce que donnent les lignes n'écrit rien : la colonne continue de suivre ses lignes.
 
 ## Accès aux données limité { #limited-data-access }
 

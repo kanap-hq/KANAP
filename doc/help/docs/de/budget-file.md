@@ -128,12 +128,22 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 | **Fehler** | Die Zeilen, die das Laden ablehnt, nach Zeile der Datei mit der Spalte, wenn sie bekannt ist. Eine Datei mit einem einzigen Fehler lädt nichts |
 | **Änderungen** | Die anzulegenden Budgetzeilen, die zu aktualisierenden Budgetzeilen und die Budgetzeilen, die die Datei unverändert lässt |
 | **Seit dem Export in KANAP geändert** | Die Budgetzeilen, die jemand nach Ihrem Export geändert hat, mit wer und wann. Das Laden der Datei schreibt Ihre Werte über diese Änderungen |
-| **Warnungen** | Eine Zeile, die einer anderen Budgetzeile ähnelt, ein `company_name`, der vom Unternehmen der Kostenstelle der Zeile abweicht, Spalten und Zellen, die die Datei ignoriert |
+| **Warnungen** | Eine Zeile, die einer anderen Budgetzeile ähnelt, ein `company_name`, der vom Unternehmen der Kostenstelle der Zeile abweicht, ein Betrag, durch den eine Spalte ihren Berechnungszeilen nicht mehr folgt, Spalten und Zellen, die die Datei ignoriert |
 | **Beim Laden angelegt** | Die Lieferanten und Dimensionswerte, die das Laden hinzufügen würde |
 
 3. Klicken Sie auf **Laden**. Das Laden schreibt alles oder nichts.
 
 Ändert sich eine Budgetzeile zwischen der Prüfung und dem Laden, stoppt das Laden und bittet Sie, die Datei erneut zu prüfen. Die Prüfung sagt außerdem, wie sie die Datei gelesen hat, wenn ein Datum oder ein Betrag auf zwei Arten gelesen werden konnte, mit einer Schaltfläche zum Wechseln der Lesart.
+
+### Spalten aus Menge und Preis
+
+Eine Budgetzeile kann eine Spalte aus Berechnungszeilen bilden, Menge × Preis: siehe [Menge und Preis](budget-lines.md#menge-und-preis). Die Budgetdatei enthält nur die Summen und die Monate einer Spalte. Berechnungszeilen bearbeiten Sie im Tab **Budget** der Budgetzeile.
+
+Ändert die Datei die Jahressumme oder einen Monat einer solchen Spalte, zeigt die Prüfung eine Warnung pro Budgetzeile, Spalte und Jahr, zum Beispiel:
+
+> BL-83 · Revision 2026: 3 Berechnungszeilen (281.280,00) steuern diese Beträge nicht mehr.
+
+Das Laden ist erlaubt. Danach bleiben die Berechnungszeilen als Referenz bei der Budgetzeile, mit ihrer Summe, und die Spalte folgt den Beträgen der Datei. Eine Jahressumme, die dem Ergebnis der Zeilen entspricht, schreibt nichts: Die Spalte folgt weiter ihren Zeilen.
 
 ## Begrenzter Datenzugriff { #limited-data-access }
 
