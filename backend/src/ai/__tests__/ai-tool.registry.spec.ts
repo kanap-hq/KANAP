@@ -1750,12 +1750,18 @@ async function testInvalidInputNamesTheFieldAndWhy() {
   // The roles of Admin › Roles: a role has a detail (its rights), a right of a role is a list row only.
   assert.match(enumValue, /"roles"/, enumValue);
   assert.doesNotMatch(enumValue, /"role_permissions"/, enumValue);
+  // More than 30 families since the chargeback reports (Plaid L8, lot D): the refusal points to the
+  // schema, whose enum names every family.
   const listed = refusal('query_entities', { entity_type: 'spend_items' });
-  assert.match(listed, /"roles"/, listed);
-  assert.match(listed, /"role_permissions"/, listed);
+  assert.match(listed, /"entity_type" must be one of the \d+ values listed in the tool's input schema/, listed);
+  const queried: string[] = (schemas.get('query_entities') as any).properties.entity_type.enum;
+  assert.ok(queried.includes('roles') && queried.includes('role_permissions'), 'the roles and their rights are listed');
   // Admin › Data access: a row names a person, read with get_entity_detail on users.
-  assert.match(listed, /"data_access"/, listed);
+  assert.ok(queried.includes('data_access'), 'data_access is listed');
   assert.doesNotMatch(enumValue, /"data_access"/, enumValue);
+  // The chargeback reports: computed rows, listed and grouped, with no detail of their own.
+  assert.ok(queried.includes('chargeback') && queried.includes('chargeback_lines'), 'the chargeback reports are listed');
+  assert.doesNotMatch(enumValue, /"chargeback/, enumValue);
 
   const nested = refusal('query_entities', { entity_type: 'budget_lines', sort: { field: 'y_budget', direction: 'down' }, page: 'two' });
   assert.match(nested, /"sort.direction" must be one of: "asc", "desc"/, nested);
