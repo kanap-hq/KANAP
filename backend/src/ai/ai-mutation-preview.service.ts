@@ -387,22 +387,31 @@ export class AiMutationPreviewService {
     params: { input?: unknown; preview?: AiMutationPreview },
     mutationInput?: Record<string, unknown> | null,
   ): Promise<void> {
+    // A technology link touches applications when either side of the request names one: the
+    // preparation input (`applications`), or the stored changes of a preview being run or
+    // undone (`mutation_input.changes.applications`).
+    const linkNamesApplications = operation.toolName === 'update_technology_links'
+      && [
+        (params.input as { applications?: unknown } | null | undefined)?.applications,
+        mutationInput?.applications,
+        (mutationInput?.changes as Record<string, unknown> | null | undefined)?.applications,
+        params.preview?.mutation_input?.applications,
+        (params.preview?.mutation_input?.changes as Record<string, unknown> | null | undefined)?.applications,
+      ].some((group) => this.applicationGroupHasEntries(group));
+    // A technology people write names support contacts when the request does, or when the preview
+    // being run or undone restores them (`touches_contacts`).
+    const peopleNameContacts = operation.toolName === 'update_technology_people'
+      && (mutationInput?.touches_contacts === true
+        || [
+          (params.input as { support_contacts?: unknown } | null | undefined)?.support_contacts,
+          mutationInput?.support_contacts,
+          params.preview?.mutation_input?.support_contacts,
+        ].some((group) => this.applicationGroupHasEntries(group)));
     const relation = mutationInput?.relation
       ?? (params.input as { relation?: unknown } | null | undefined)?.relation
       ?? params.preview?.mutation_input?.relation
-      // A technology link touches applications when either side of the request names one: the
-      // preparation input (`applications`), or the stored changes of a preview being run or
-      // undone (`mutation_input.changes.applications`).
-      ?? (operation.toolName === 'update_technology_links'
-        && [
-          (params.input as { applications?: unknown } | null | undefined)?.applications,
-          mutationInput?.applications,
-          (mutationInput?.changes as Record<string, unknown> | null | undefined)?.applications,
-          params.preview?.mutation_input?.applications,
-          (params.preview?.mutation_input?.changes as Record<string, unknown> | null | undefined)?.applications,
-        ].some((group) => this.applicationGroupHasEntries(group))
-        ? 'applications'
-        : undefined);
+      ?? (linkNamesApplications ? 'applications' : undefined)
+      ?? (peopleNameContacts ? 'support_contacts' : undefined);
     const requirement = aiRelationTargetRequirement(operation.toolName, family, relation);
     if (requirement) {
       await this.policy.assertBusinessPermission(context, requirement.resource, requirement.level, context.manager);

@@ -131,6 +131,14 @@ export function aiRelationTargetRequirement(
       ? { resource: 'applications', level: 'reader' }
       : null;
   }
+  if (toolName === 'update_technology_people') {
+    // The support-contact picker reads the contacts list: naming a contact needs that read, as the
+    // Operations tab's ContactSelect does. Owners are named from the users lookup, open to
+    // infrastructure readers.
+    return String(family ?? '').trim() === 'technologies' && key === 'support_contacts'
+      ? { resource: 'contacts', level: 'reader' }
+      : null;
+  }
   if (toolName !== 'update_entity_relations') return null;
   return RELATION_TARGET_REQUIREMENTS[String(family ?? '').trim()]?.[key] ?? null;
 }

@@ -17,6 +17,9 @@ import { ImportGlpiTicketAiMutationOperation } from '../mutation/operations/impo
 import { SetIncidentConfidentialityAiMutationOperation } from '../mutation/operations/set-incident-confidentiality.ai-mutation-operation';
 import { UpdateIncidentLinksAiMutationOperation } from '../mutation/operations/update-incident-links.ai-mutation-operation';
 import { UpdateTechnologyLinksAiMutationOperation } from '../mutation/operations/update-technology-links.ai-mutation-operation';
+import { UpdateTechnologyPeopleAiMutationOperation } from '../mutation/operations/update-technology-people.ai-mutation-operation';
+import { UpdateTechnologyWebLinksAiMutationOperation } from '../mutation/operations/update-technology-web-links.ai-mutation-operation';
+import { SetTechnologyVulnerabilityAlertsAiMutationOperation } from '../mutation/operations/set-technology-vulnerability-alerts.ai-mutation-operation';
 import { UpdateTechnologyVersionsAiMutationOperation } from '../mutation/operations/update-technology-versions.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from '../mutation/operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskStatusAiMutationOperation } from '../mutation/operations/update-task-status.ai-mutation-operation';
@@ -359,6 +362,139 @@ function testTechnologyLinkCards() {
   assert.equal(
     operation.presentPreview(undo, 'fr').changes.technology_versions.to,
     "**Conservées**\n- nouvelle version 17, sans date de support (l'annulation retire les liens, pas la version)",
+  );
+}
+
+
+/**
+ * Lot 5: the people, web links and vulnerability alert cards, and their summaries in the four
+ * languages. The headings agree with their subject in French and Spanish.
+ */
+function testTechnologyPeopleLinksAndAlertsCards() {
+  const target = { target_ref: 'TEC-1', target_title: 'TEC-1 - PostgreSQL' };
+
+  const people = make(UpdateTechnologyPeopleAiMutationOperation);
+  const peoplePreview = preview({
+    tool_name: 'update_technology_people',
+    target_entity_type: 'technologies',
+    target_entity_id: 'tec-1',
+    mutation_input: {
+      technology_ref: 'TEC-1',
+      technology_name: 'PostgreSQL',
+      technology_label: 'TEC-1 - PostgreSQL',
+      owners: {
+        add: [{ name: 'Paul Martin', owner_type: 'it' }],
+        remove: [{ name: 'Anne Roux', owner_type: 'business' }],
+        already: [{ name: 'Luc Martin', owner_type: 'it' }],
+        absent: [{ name: 'Zoé Petit', owner_type: null }],
+      },
+      support_contacts: {
+        add: [{ name: 'Oracle Support', role: 'Support' }],
+        remove: [],
+        already: [],
+        absent: [],
+      },
+      touches_contacts: true,
+    },
+    current_values: target,
+  });
+  assert.equal(summary(people, peoplePreview, 'en'), 'Update the people of TEC-1 - PostgreSQL.');
+  assert.equal(summary(people, peoplePreview, 'fr'), 'Modification des responsables et contacts de « TEC-1 - PostgreSQL ».');
+  assert.equal(summary(people, peoplePreview, 'de'), 'Verantwortliche und Kontakte von „TEC-1 - PostgreSQL“ ändern.');
+  assert.equal(summary(people, peoplePreview, 'es'), 'Modificación de los responsables y contactos de «TEC-1 - PostgreSQL».');
+  const peopleChanges = people.presentPreview(peoplePreview, 'en').changes;
+  assert.equal(
+    peopleChanges.technology_owners.to,
+    '**Added**\n- Paul Martin (IT owner)\n\n**Removed**\n- Anne Roux (business owner)'
+    + '\n\n**Already owners**\n- Luc Martin (IT owner)\n\n**Not owners**\n- Zoé Petit',
+  );
+  assert.equal(
+    people.presentPreview(peoplePreview, 'fr').changes.technology_support_contacts.to,
+    '**Ajoutés**\n- Oracle Support (rôle : Support)',
+  );
+  const peopleUndo = preview({
+    ...peoplePreview,
+    mutation_input: {
+      technology_ref: 'TEC-1', technology_label: 'TEC-1 - PostgreSQL', reverse_of: 'preview-0',
+      owners_restore: [{ user_id: 'u-1', owner_type: 'it', name: 'Paul Martin' }],
+      contacts_restore: [],
+    },
+  });
+  assert.equal(
+    people.presentPreview(peopleUndo, 'fr').changes.technology_owners.to,
+    '**Responsables restaurés**\n- Paul Martin (responsable IT)',
+  );
+
+  const links = make(UpdateTechnologyWebLinksAiMutationOperation);
+  const linksPreview = preview({
+    tool_name: 'update_technology_web_links',
+    target_entity_type: 'technologies',
+    target_entity_id: 'tec-1',
+    mutation_input: {
+      technology_ref: 'TEC-1',
+      technology_name: 'PostgreSQL',
+      technology_label: 'TEC-1 - PostgreSQL',
+      add: [{ url: 'https://example.com/runbook', description: 'Runbook' }],
+      update: [{
+        id: 'link-1',
+        before: { id: 'link-1', url: 'https://example.com/old', description: null },
+        url: 'https://example.com/new',
+        description: 'Release notes',
+        descriptionGiven: true,
+      }],
+      remove: [{ id: 'link-2', before: { id: 'link-2', url: 'https://example.com/gone', description: null } }],
+      already: [],
+      absent: ['https://example.com/missing'],
+    },
+    current_values: target,
+  });
+  assert.equal(summary(links, linksPreview, 'en'), 'Update the web links of TEC-1 - PostgreSQL.');
+  assert.equal(summary(links, linksPreview, 'fr'), 'Modification des liens web de « TEC-1 - PostgreSQL ».');
+  assert.equal(
+    links.presentPreview(linksPreview, 'en').changes.technology_web_links.to,
+    '**Added**\n- https://example.com/runbook (Runbook)'
+    + '\n\n**Updated**\n- https://example.com/old → https://example.com/new (description: Release notes)'
+    + '\n\n**Removed**\n- https://example.com/gone'
+    + '\n\n**Not present**\n- https://example.com/missing',
+  );
+  assert.equal(
+    links.presentPreview(linksPreview, 'fr').changes.technology_web_links.to,
+    '**Ajoutés**\n- https://example.com/runbook (Runbook)'
+    + '\n\n**Modifiés**\n- https://example.com/old → https://example.com/new (description : Release notes)'
+    + '\n\n**Retirés**\n- https://example.com/gone'
+    + '\n\n**Non présents**\n- https://example.com/missing',
+  );
+
+  const alerts = make(SetTechnologyVulnerabilityAlertsAiMutationOperation);
+  const alertsPreview = preview({
+    tool_name: 'set_technology_vulnerability_alerts',
+    target_entity_type: 'technologies',
+    target_entity_id: 'tec-1',
+    mutation_input: {
+      enabled: { from: true, to: false, cleared: ['14', '16'] },
+      versions: [{ id: 'v-17', label: '17', from: null, to: false, propagated: ['17 SP1'] }],
+    },
+    current_values: target,
+  });
+  assert.equal(summary(alerts, alertsPreview, 'en'), 'Set the vulnerability alerts of TEC-1 - PostgreSQL.');
+  assert.equal(summary(alerts, alertsPreview, 'fr'), 'Modification des alertes de failles de « TEC-1 - PostgreSQL ».');
+  assert.equal(
+    alerts.presentPreview(alertsPreview, 'en').changes.technology_vulnerability_alerts.to,
+    '**Vulnerability alerts**\n- off'
+    + '\n\n- 2 version exceptions will be cleared: 14, 16'
+    + '\n\n**Versions**\n- 17: follows the technology → alerts off\n  - the service packs 17 SP1 follow base version 17',
+  );
+  assert.equal(
+    alerts.presentPreview(alertsPreview, 'fr').changes.technology_vulnerability_alerts.to,
+    '**Alertes de failles**\n- désactivées'
+    + '\n\n- 2 exceptions de version seront effacées : 14, 16'
+    + '\n\n**Versions**\n- 17 : suit la technologie → alertes désactivées\n  - les service packs 17 SP1 suivent la version de base 17',
+  );
+  assert.equal(
+    alerts.presentPreview({ ...alertsPreview, status: 'executed' } as AiMutationPreview, 'en').changes.technology_vulnerability_alerts.to,
+    '**Vulnerability alerts**\n- off'
+    + '\n\n- 2 version exceptions cleared: 14, 16'
+    + '\n\n**Versions**\n- 17: follows the technology → alerts off\n  - the service packs 17 SP1 follow base version 17',
   );
 }
 
@@ -997,6 +1133,7 @@ async function main() {
   testIncidentNoteAndLinkCards();
   testTechnologyLinkCards();
   testTechnologyVersions();
+  testTechnologyPeopleLinksAndAlertsCards();
   testIncidentStateAndConfidentialityCards();
   testDeleteRecordSummaryAndCard();
   await testDefaultTaskType();

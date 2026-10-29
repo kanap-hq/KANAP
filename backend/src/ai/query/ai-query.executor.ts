@@ -3163,6 +3163,10 @@ export class AiQueryExecutor {
       .filter((owner) => owner.owner_type === type)
       .map((owner) => owner.full_name)
       .filter((name): name is string => !!name);
+    // What Plaid writes beside the record: support contacts and web links, as the Operations and
+    // Relations tabs read them. Names only for a contact, never its email.
+    const supportContacts: any[] = await this.technologies.listSupportContacts(record.id, opts);
+    const webLinks: any[] = await this.technologies.listLinks(record.id, opts);
     return this.toDetailResult(this.mapTechnology(row), {
       reference: row.reference,
       name: record.name,
@@ -3187,6 +3191,8 @@ export class AiQueryExecutor {
       end_of_support: row.end_of_support,
       versions_in_use: row.versions_in_use,
       open_vulnerabilities: row.open_vulnerabilities,
+      // The technology's alert setting, and each version's own exception: null follows the technology.
+      vulnerability_alerts: record.vulnerability_alerts === true,
       // Each version with its state on the End of support report rule: out_of_support since
       // support_date, extended_support until support_date, supported until support_date (its
       // standard end), unknown without a date. in_use: on a server or an application in service.
@@ -3198,9 +3204,16 @@ export class AiQueryExecutor {
         support_date: figures.get(version.id)?.support_date ?? null,
         in_use: figures.get(version.id)?.in_use ?? false,
         server_count: figures.get(version.id)?.servers ?? 0,
+        vulnerability_alerts: version.vulnerability_alerts == null ? null : version.vulnerability_alerts === true,
+        vulnerability_alerts_effective: version.vulnerability_alerts_effective === true,
       })),
       business_owners: owners('business'),
       it_owners: owners('it'),
+      support_contacts: supportContacts.map((contact: any) => ({
+        name: [contact.contact?.first_name, contact.contact?.last_name].filter(Boolean).join(' ') || null,
+        role: contact.role ?? null,
+      })),
+      web_links: webLinks.map((link: any) => ({ url: String(link.url ?? ''), description: link.description ?? null })),
       // As the technology page: no number of contracts without the contracts read right.
       contract_count: (await this.policy?.canReadEntityType(context, 'contracts', context.manager))
         ? await technologyContractCount(context.manager, context.tenantId, record.id)

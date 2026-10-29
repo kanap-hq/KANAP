@@ -17,6 +17,9 @@ import { UpdateBusinessRecordAiMutationOperation } from './operations/update-bus
 import { UpdateEntityRelationsAiMutationOperation } from './operations/update-entity-relations.ai-mutation-operation';
 import { UpdateIncidentLinksAiMutationOperation } from './operations/update-incident-links.ai-mutation-operation';
 import { UpdateTechnologyLinksAiMutationOperation } from './operations/update-technology-links.ai-mutation-operation';
+import { UpdateTechnologyPeopleAiMutationOperation } from './operations/update-technology-people.ai-mutation-operation';
+import { UpdateTechnologyWebLinksAiMutationOperation } from './operations/update-technology-web-links.ai-mutation-operation';
+import { SetTechnologyVulnerabilityAlertsAiMutationOperation } from './operations/set-technology-vulnerability-alerts.ai-mutation-operation';
 import { UpdateTechnologyVersionsAiMutationOperation } from './operations/update-technology-versions.ai-mutation-operation';
 import { UpdateMasterDataRecordAiMutationOperation } from './operations/update-master-data-record.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from './operations/update-task-assignee.ai-mutation-operation';
@@ -45,6 +48,9 @@ export class AiMutationOperationRegistry {
     updateIncidentLinks: UpdateIncidentLinksAiMutationOperation,
     updateTechnologyLinks: UpdateTechnologyLinksAiMutationOperation,
     updateTechnologyVersions: UpdateTechnologyVersionsAiMutationOperation,
+    updateTechnologyPeople: UpdateTechnologyPeopleAiMutationOperation,
+    updateTechnologyWebLinks: UpdateTechnologyWebLinksAiMutationOperation,
+    setTechnologyVulnerabilityAlerts: SetTechnologyVulnerabilityAlertsAiMutationOperation,
     updateTaskFields: UpdateTaskFieldsAiMutationOperation,
     updateTaskStatus: UpdateTaskStatusAiMutationOperation,
     updateTaskAssignee: UpdateTaskAssigneeAiMutationOperation,
@@ -73,6 +79,9 @@ export class AiMutationOperationRegistry {
       updateIncidentLinks,
       updateTechnologyLinks,
       updateTechnologyVersions,
+      updateTechnologyPeople,
+      updateTechnologyWebLinks,
+      setTechnologyVulnerabilityAlerts,
       updateTaskFields,
       updateTaskStatus,
       updateTaskAssignee,

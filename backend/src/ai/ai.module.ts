@@ -171,6 +171,9 @@ import { UpdateEntityRelationsAiMutationOperation } from './mutation/operations/
 import { UpdateIncidentLinksAiMutationOperation } from './mutation/operations/update-incident-links.ai-mutation-operation';
 import { UpdateTechnologyLinksAiMutationOperation } from './mutation/operations/update-technology-links.ai-mutation-operation';
 import { UpdateTechnologyVersionsAiMutationOperation } from './mutation/operations/update-technology-versions.ai-mutation-operation';
+import { UpdateTechnologyPeopleAiMutationOperation } from './mutation/operations/update-technology-people.ai-mutation-operation';
+import { UpdateTechnologyWebLinksAiMutationOperation } from './mutation/operations/update-technology-web-links.ai-mutation-operation';
+import { SetTechnologyVulnerabilityAlertsAiMutationOperation } from './mutation/operations/set-technology-vulnerability-alerts.ai-mutation-operation';
 import { UpdateMasterDataRecordAiMutationOperation } from './mutation/operations/update-master-data-record.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from './mutation/operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskFieldsAiMutationOperation } from './mutation/operations/update-task-fields.ai-mutation-operation';
@@ -311,6 +314,9 @@ import { BraveSearchService } from './web-search/brave-search.service';
     UpdateIncidentLinksAiMutationOperation,
     UpdateTechnologyLinksAiMutationOperation,
     UpdateTechnologyVersionsAiMutationOperation,
+    UpdateTechnologyPeopleAiMutationOperation,
+    UpdateTechnologyWebLinksAiMutationOperation,
+    SetTechnologyVulnerabilityAlertsAiMutationOperation,
     UpdateMasterDataRecordAiMutationOperation,
     UpdateTaskFieldsAiMutationOperation,
     UpdateTaskStatusAiMutationOperation,

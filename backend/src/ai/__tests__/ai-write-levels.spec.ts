@@ -128,6 +128,15 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
   update_technology_versions: {
     technologies: { resource: 'infrastructure', level: 'member', route: [TechnologiesController, 'createVersion'] },
   },
+  update_technology_people: {
+    technologies: { resource: 'infrastructure', level: 'member', route: [TechnologiesController, 'replaceOwners'] },
+  },
+  update_technology_web_links: {
+    technologies: { resource: 'infrastructure', level: 'member', route: [TechnologiesController, 'createLink'] },
+  },
+  set_technology_vulnerability_alerts: {
+    technologies: { resource: 'infrastructure', level: 'member', route: [TechnologiesController, 'setVulnerabilityAlerts'] },
+  },
   change_incident_state: {
     incidents: { resource: 'incidents', level: 'admin', route: [IncidentsController, 'reopen'] },
   },
@@ -192,6 +201,12 @@ function testTechnologyWriteRoutes() {
     ['update', 'update'],
     ['createVersion', 'createVersion'],
     ['updateVersion', 'updateVersion'],
+    ['replaceOwners', 'replaceOwners'],
+    ['replaceSupportContacts', 'replaceSupportContacts'],
+    ['createLink', 'createLink'],
+    ['updateLink', 'updateLink'],
+    ['deleteLink', 'deleteLink'],
+    ['setVulnerabilityAlerts', 'setVulnerabilityAlerts'],
   ];
   for (const [method, label] of expected) {
     assert.deepEqual(routeGuard([TechnologiesController, method]), { resource: 'infrastructure', level: 'member' }, `${label}: the screen route level`);
@@ -244,6 +259,15 @@ function testOnlyTheContributorRowsAreBelowMember() {
     { resource: 'applications', level: 'reader' },
   );
   assert.equal(aiRelationTargetRequirement('update_technology_links', 'technologies', 'servers'), null);
+  // Naming a support contact needs the contacts read, as the Operations tab's picker does.
+  assert.equal(aiWriteLevel('update_technology_people', 'technologies'), 'member');
+  assert.equal(aiWriteLevel('update_technology_web_links', 'technologies'), 'member');
+  assert.equal(aiWriteLevel('set_technology_vulnerability_alerts', 'technologies'), 'member');
+  assert.deepEqual(
+    aiRelationTargetRequirement('update_technology_people', 'technologies', 'support_contacts'),
+    { resource: 'contacts', level: 'reader' },
+  );
+  assert.equal(aiRelationTargetRequirement('update_technology_people', 'technologies', 'owners'), null);
   // The administrator actions know one level per tool, and an unknown family stays at admin.
   assert.equal(aiWriteLevel('change_incident_state', 'incidents'), 'admin');
   assert.equal(aiWriteLevel('set_incident_confidentiality', 'incidents'), 'admin');
