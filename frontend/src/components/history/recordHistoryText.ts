@@ -47,7 +47,7 @@ export type RecordHistorySubject = {
     | 'contact' | 'application' | 'technology' | 'asset' | 'contract' | 'project' | 'request' | 'task' | 'metrics' | 'value'
     | 'relation' | 'member' | 'hardware' | 'support' | 'technology_version' | 'owner' | 'vulnerability'
     | 'supplier' | 'budget_line'
-    | 'sub_item' | 'leg' | 'set' | 'binding' | 'person' | 'compliance_item' | 'instance' | 'assignment' | 'business_process';
+    | 'sub_item' | 'leg' | 'set' | 'binding' | 'person' | 'compliance_item' | 'instance' | 'assignment' | 'business_process' | 'time_entry';
   label?: string | null;
 };
 export type RecordHistoryItem = {

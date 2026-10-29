@@ -25,6 +25,12 @@ vi.mock('../../../components/workspace/SendLinkButton', () => ({
   default: () => <button type="button">Share</button>,
 }));
 
+vi.mock('../../../components/history/RecordHistoryButton', () => ({
+  default: ({ table, recordId }: { table: string; recordId: string }) => (
+    <button type="button" data-testid="record-history" data-table={table} data-record={recordId}>History</button>
+  ),
+}));
+
 const theme = createAppTheme('dark');
 
 const originCrumb: TaskCrumb = {
@@ -44,13 +50,14 @@ const parentCrumb: TaskCrumb = {
 function renderHeader(crumbs: TaskCrumb[], handlers?: {
   onOriginClick?: ReturnType<typeof vi.fn<() => void>>;
   onParentClick?: ReturnType<typeof vi.fn<(href: string) => void>>;
+  taskId?: string;
 }) {
   const onOriginClick = handlers?.onOriginClick ?? vi.fn<() => void>();
   const onParentClick = handlers?.onParentClick ?? vi.fn<(href: string) => void>();
   render(
     <ThemeProvider theme={theme}>
       <TaskDetailHeader
-        taskId="task-1"
+        taskId={handlers?.taskId ?? 'task-1'}
         itemNumber={2}
         title="SAP Cheddar vendor selection"
         status="open"
@@ -84,6 +91,24 @@ function renderHeader(crumbs: TaskCrumb[], handlers?: {
   );
   return { onOriginClick, onParentClick };
 }
+
+describe('TaskDetailHeader history', () => {
+  it('opens the task history from the header, between the share and convert actions', () => {
+    renderHeader([originCrumb]);
+    const history = screen.getByTestId('record-history');
+    expect(history).toHaveAttribute('data-table', 'tasks');
+    expect(history).toHaveAttribute('data-record', 'task-1');
+    const share = screen.getByRole('button', { name: 'Share' });
+    const convert = screen.getByRole('button', { name: 'portfolio:actions.convertToRequest' });
+    expect(share.compareDocumentPosition(history) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(history.compareDocumentPosition(convert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('has no history while the task is being created', () => {
+    renderHeader([originCrumb], { taskId: 'new' });
+    expect(screen.queryByTestId('record-history')).not.toBeInTheDocument();
+  });
+});
 
 describe('TaskDetailHeader breadcrumbs', () => {
   beforeEach(() => {
