@@ -9,6 +9,7 @@
   "USER_DISABLED": "Esta cuenta ha sido desactivada.",
   "MISSING_CREDENTIALS": "El correo electrónico y la contraseña son obligatorios.",
   "INVALID_TOKEN": "El enlace no es válido o ha expirado.",
+  "INVALID_ID": "Identificador no válido.",
   "TOKEN_REQUIRED": "Se requiere un token de restablecimiento.",
   "TOKEN_EXPIRED": "Este enlace ha expirado. Solicite uno nuevo.",
   "MISSING_TOKEN": "Se requiere autenticación. Inicie sesión.",

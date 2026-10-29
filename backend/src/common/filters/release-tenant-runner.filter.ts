@@ -9,6 +9,7 @@ import {
   isReleasedRunnerError,
   mapDatabaseError,
 } from './database-error.mapping';
+import { invalidIdLogLine, mapInvalidIdError } from './invalid-id-error.mapping';
 import { mapMultipartError } from './multipart-error.mapping';
 
 /**
@@ -30,6 +31,9 @@ import { mapMultipartError } from './multipart-error.mapping';
  * - a multipart refusal multer raised and Nest left untranslated (field name
  *   array index, invalid field name, interrupted file stream) as 400, see
  *   `multipart-error.mapping.ts`;
+ * - a value PostgreSQL refused as a uuid (SQLSTATE 22P02 naming the uuid
+ *   type) as 400 `INVALID_ID`, see `invalid-id-error.mapping.ts` (one warning
+ *   line instead of a stack trace). A 22P02 on another type stays a 500;
  * - anything else as before (BaseExceptionFilter).
  */
 @Catch()
@@ -110,6 +114,12 @@ export class ReleaseTenantRunnerFilter extends BaseExceptionFilter {
     ) {
       // A refusal that clears by itself (MARKDOWN_BUSY) says when to try again.
       res.setHeader('Retry-After', String(retryAfterSeconds));
+    }
+    const invalidId = mapInvalidIdError(exception);
+    if (invalidId) {
+      // eslint-disable-next-line no-console
+      console.warn(invalidIdLogLine(req));
+      return super.catch(invalidId, host);
     }
     return super.catch(mapMultipartError(exception) ?? exception, host);
   }

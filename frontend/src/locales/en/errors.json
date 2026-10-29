@@ -9,6 +9,7 @@
   "USER_DISABLED": "This account has been disabled.",
   "MISSING_CREDENTIALS": "Email and password are required.",
   "INVALID_TOKEN": "The link is invalid or has expired.",
+  "INVALID_ID": "Invalid identifier.",
   "TOKEN_REQUIRED": "A reset token is required.",
   "TOKEN_EXPIRED": "This link has expired. Please request a new one.",
   "MISSING_TOKEN": "Authentication required. Please sign in.",
