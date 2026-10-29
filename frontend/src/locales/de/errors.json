@@ -9,6 +9,7 @@
   "USER_DISABLED": "Dieses Konto wurde deaktiviert.",
   "MISSING_CREDENTIALS": "E-Mail-Adresse und Passwort sind erforderlich.",
   "INVALID_TOKEN": "Der Link ist ungültig oder abgelaufen.",
+  "INVALID_ID": "Ungültige Kennung.",
   "TOKEN_REQUIRED": "Ein Zurücksetzungs-Token ist erforderlich.",
   "TOKEN_EXPIRED": "Dieser Link ist abgelaufen. Bitte fordern Sie einen neuen an.",
   "MISSING_TOKEN": "Authentifizierung erforderlich. Bitte melden Sie sich an.",
