@@ -273,12 +273,14 @@ async function testAdoption() {
     });
     const after = await catalog.notAdopted({ q: 'sql server' }, opts);
     assert.ok(!after.items.some((item) => item.key === 'mssqlserver'), 'an adopted entry is no longer offered');
+    assert.equal(after.adopted.find((item) => item.key === 'mssqlserver')?.reference, first.technology.reference);
     // A technology typed before under the same name receives the key instead of a duplicate.
     await technology(runner, tenantId, 50, 'PostgreSQL', 'database');
     const offered = await catalog.notAdopted({ q: 'postgres' }, opts);
     const pg = offered.items.find((item) => item.key === 'postgresql');
     assert.ok(pg, 'a technology typed by hand keeps its catalog entry on offer');
     assert.equal(pg.completes, 'TEC-50');
+    assert.deepEqual(offered.adopted, [], 'a hand-typed namesake stays on offer');
     const other = offered.items.find((item) => item.key !== 'postgresql');
     assert.ok(other, 'the search also offers an entry with no hand-typed namesake');
     assert.equal(other.completes, null);
@@ -286,6 +288,28 @@ async function testAdoption() {
     assert.equal(merged.created, false);
     assert.equal(merged.technology.reference, 'TEC-50');
     assert.ok(merged.versions_added > 0);
+    // PostgreSQL is adopted: the three cloud entries stay in items, and PostgreSQL moves to adopted.
+    const listed = await catalog.notAdopted({ q: 'postgres' }, opts);
+    assert.deepEqual(listed.items.map((item) => item.key), [
+      'amazon-aurora-postgresql',
+      'amazon-rds-postgresql',
+      'azure-database-for-postgresql',
+    ]);
+    assert.ok(listed.items.every((item) => item.completes == null && item.hosting_type === 'public_cloud'));
+    assert.deepEqual(listed.adopted.map((item) => ({
+      key: item.key, name: item.name, editor: item.editor, family_label: item.family_label, reference: item.reference, id: item.id,
+    })), [{
+      key: 'postgresql',
+      name: 'PostgreSQL',
+      editor: 'PostgreSQL Global Development Group',
+      family_label: 'Database',
+      reference: 'TEC-50',
+      id: merged.technology.id,
+    }]);
+    assert.deepEqual((await catalog.notAdopted({ q: '  ' }, opts)).adopted, [], 'a blank search lists no adopted entry');
+    const byFamily = await catalog.notAdopted({ q: 'postgres', family: 'directory' }, opts);
+    assert.deepEqual(byFamily.items, []);
+    assert.deepEqual(byFamily.adopted, []);
   });
 }
 
