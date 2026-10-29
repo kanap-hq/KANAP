@@ -12,6 +12,7 @@ import { BUDGET_LINE_TABLE } from '../spend/budget-nature';
 import { entityNotFound, isUuid } from './ai-entity-reference.util';
 import { AiPolicyService, missingRightMessage } from './ai-policy.service';
 import { AiQueryExecutor } from './query/ai-query.executor';
+import { AI_PERSON_WITHOUT_NAME } from './query/ai-support.query';
 import {
   AI_DETAIL_ENTITY_TYPES,
   type AiDetailEntityType,
@@ -96,21 +97,37 @@ export type AiRecordHistoryDto = {
   note: string;
 };
 
+/** An email, which the History tab gives for a person without a name (`REFERENCE_FAMILIES.user`). */
+const EMAIL = /^[^\s@]+@[^\s@]+$/;
+
+/** A person's label without the email the History tab falls back to: `AI_PERSON_WITHOUT_NAME`. */
+function personLabel(label: unknown): unknown {
+  return typeof label === 'string' && EMAIL.test(label.trim()) ? AI_PERSON_WITHOUT_NAME : label;
+}
+
 /**
- * A value of an entry without the uuid of a reference that has a business one (`TEC-3`, `BL-5`):
- * the answer names the reference. A reference without one keeps its id, the only handle on it.
+ * A value of an entry as Plaid and the MCP server give it: a person by their name only, never
+ * their id or their email; another reference without its uuid when it has a business one (`TEC-3`,
+ * `BL-5`), which the answer names. A reference without one keeps its id, the only handle on it.
+ * The History tab of the screen is unchanged.
  */
 function withoutRawIds(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(withoutRawIds);
   if (!value || typeof value !== 'object') return value;
   const record = value as Record<string, unknown>;
-  const named = typeof record.kind === 'string' && typeof record.id === 'string'
-    && typeof record.reference === 'string' && record.reference.trim() !== '';
+  const person = record.kind === 'user';
+  const named = person || (typeof record.kind === 'string' && typeof record.id === 'string'
+    && typeof record.reference === 'string' && record.reference.trim() !== '');
   return Object.fromEntries(
     Object.entries(record)
       .filter(([key]) => !(named && key === 'id'))
-      .map(([key, entry]) => [key, withoutRawIds(entry)]),
+      .map(([key, entry]) => [key, person && key === 'label' ? personLabel(entry) : withoutRawIds(entry)]),
   );
+}
+
+/** The author of an entry by their name only: a person without a name is not given by their email. */
+function withoutActorEmail(actor: RecordHistoryActor): RecordHistoryActor {
+  return actor.name ? { ...actor, name: personLabel(actor.name) as string } : actor;
 }
 
 /**
@@ -198,7 +215,7 @@ export class AiRecordHistoryService {
     const items = page.items.map((item): AiRecordHistoryEntryDto => ({
       at: item.at,
       action: item.action,
-      actor: item.actor,
+      actor: withoutActorEmail(item.actor),
       subject: withoutRawIds(item.subject) as RecordHistorySubject,
       changes: item.changes.map(withoutRawIds),
     }));

@@ -11,6 +11,13 @@ import {
 import type { AiApplicationsReach } from './ai-technologies.query';
 
 /**
+ * A person KANAP names by an email only, because they have no first or last name, as the assistant
+ * and the MCP server name them: never the email (AGENTS.md, names only), never null, which would
+ * read as nobody (the budget holder of a cost center, a person in a record's history).
+ */
+export const AI_PERSON_WITHOUT_NAME = '(person without a name)';
+
+/**
  * The two lists of the End of support report (`technologies/reports/end-of-support.service.ts`),
  * as the assistant and the MCP server read them: `support_gaps` (one row per record to complete)
  * and `support_deadlines` (one row per deadline inside a horizon). Both are read through the

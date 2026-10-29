@@ -675,7 +675,7 @@ async function testPromptSaysWhatItDoesWithAccessAndHistory() {
   assert.doesNotMatch(referenceReader, /(cost centers|working-day calendars|analytics dimensions|exchange rates) \(/);
   assert.match(limited, /cost centers \(Données de référence › Centres de coûts\): The tools read it \(the family cost_centers\) for a person with the Cost centers right, which this person's role does not give\./);
   assert.match(limited, /exchange rates \(Gestion budgétaire › Administration › Devises\): The tools read it \(the family exchange_rates\) for a person with the Budget right, which this person's role does not give\./);
-  assert.match(referenceReader, /An empty budget holder of a cost center means none is set, not an unknown person\. An exchange rate, a number of working days or a count comes from the server: quote it as given, never recompute it and never divide one figure by another \(the inverse and cross rates come with the rate\)\./);
+  assert.match(referenceReader, /An empty budget holder of a cost center means none is set, not an unknown person; "\(person without a name\)" is a budget holder whose profile has no name\. An exchange rate, a number of working days or a count comes from the server: quote it as given, never recompute it and never divide one figure by another \(the inverse and cross rates come with the rate\)\./);
 }
 
 async function run() {

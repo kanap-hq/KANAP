@@ -68,7 +68,7 @@ export const costCentersRegistry: AiEntityFilterRegistry = {
       ai: 'budget_holder',
       grid: 'budget_holder',
       type: 'set',
-      description: 'Name of the budget holder of the node, exactly, the person the screen names in its Budget holder column. null is a node without a budget holder (groups usually have none), never an unknown one.',
+      description: 'Name of the budget holder of the node, exactly, the person the screen names in its Budget holder column. null is a node without a budget holder (groups usually have none), never an unknown one; "(person without a name)" is a budget holder whose profile has no name.',
       dynamic: true,
       discoverable: true,
       sortable: true,

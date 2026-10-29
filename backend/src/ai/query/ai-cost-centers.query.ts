@@ -1,6 +1,6 @@
 import type { EntityManager } from 'typeorm';
 import type { CostCenterListRow, CostCentersService } from '../../cost-centers/cost-centers.service';
-import { compareText, dateMatch, numberMatch, paged, setMatch, textMatch } from './ai-support.query';
+import { AI_PERSON_WITHOUT_NAME, compareText, dateMatch, numberMatch, paged, setMatch, textMatch } from './ai-support.query';
 
 /**
  * Master data › Cost centers as the screen shows it, for the assistant and the MCP server: the
@@ -12,7 +12,7 @@ import { compareText, dateMatch, numberMatch, paged, setMatch, textMatch } from 
  * node is read, the disabled ones included (`status` is on every row): the screen opens on the
  * enabled ones only. A node's reference is its code, unique in the workspace; its name may repeat
  * under two groups, the path tells them apart. The budget holder is a name only, never an email:
- * a person without a name gives null. A person in limited access reads the whole tree, as the
+ * a person without a name gives `AI_PERSON_WITHOUT_NAME`, and null is a node without one. A person in limited access reads the whole tree, as the
  * screen; only the line counts of the detail are narrowed to their access.
  */
 
@@ -33,7 +33,7 @@ export type AiCostCenterRow = {
   parent: string | null;
   parent_code: string | null;
   company: string | null;
-  /** The budget holder's name; null without one, or when the person has no name (never an email). */
+  /** The budget holder's name; `AI_PERSON_WITHOUT_NAME` for a person with no name (never an email); null without one. */
   budget_holder: string | null;
   status: AiCostCenterStatus;
   depth: number;
@@ -66,7 +66,7 @@ const EVERY_NODE = { includeDisabled: 'true' };
 
 /**
  * The budget holders' names, without the email the tree falls back to (`loadCostCenterTree`): one
- * query on the owners of the tree, a person with no name giving none.
+ * query on the owners of the tree, a person with no name giving `AI_PERSON_WITHOUT_NAME`.
  */
 async function holderNames(opts: AiCostCentersOpts, ownerIds: Array<string | null>): Promise<Map<string, string | null>> {
   const ids = Array.from(new Set(ownerIds.filter((id): id is string => !!id)));
@@ -77,7 +77,7 @@ async function holderNames(opts: AiCostCentersOpts, ownerIds: Array<string | nul
       WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
     [opts.tenantId, ids],
   );
-  return new Map(rows.map((row) => [String(row.id), row.name ?? null]));
+  return new Map(rows.map((row) => [String(row.id), row.name ?? AI_PERSON_WITHOUT_NAME]));
 }
 
 function toRow(node: CostCenterListRow, children: Map<string, number>, names: Map<string, string | null>): AiCostCenterRow {

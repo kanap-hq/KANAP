@@ -256,19 +256,21 @@ async function testBudgetHolder(): Promise<void> {
     const holder = (code: string) => listed.items.find((item: any) => item.ref === code).metadata.budget_holder;
     assert.equal(holder('GRP-IT'), null, 'a group without a budget holder');
     assert.equal(holder('DIV-A'), 'Hélène Holder');
-    assert.equal(holder('CC-A1'), null, 'a holder without a name: null');
+    assert.equal(holder('CC-A1'), '(person without a name)', 'a holder without a name: said, never null nor an email (lot F, m1)');
     assert.doesNotMatch(JSON.stringify(listed), new RegExp(s.namelessEmail), 'never the email');
     assert.doesNotMatch(JSON.stringify(listed), /owner_user_id|@example\.invalid/, 'no person id or email');
     const none: any = await query.execute(ctx, { entity_type: 'cost_centers', filters: { budget_holder: [null] } });
-    assert.deepEqual(refs(none), ['CC-X', 'GRP-IT', 'CC-A1', 'DIV-B', 'CC-B1'], 'the nodes without a named budget holder');
+    assert.deepEqual(refs(none), ['CC-X', 'GRP-IT', 'DIV-B', 'CC-B1'], 'the nodes without a budget holder; CC-A1 has one, without a name');
+    const nameless: any = await query.execute(ctx, { entity_type: 'cost_centers', filters: { budget_holder: ['(person without a name)'] } });
+    assert.deepEqual(refs(nameless), ['CC-A1']);
     const values: any = await query.executeFilterValues(ctx, { entity_type: 'cost_centers', fields: ['budget_holder', 'company'] });
-    assert.deepEqual(values.values.budget_holder, ['Hélène Holder', null]);
+    assert.deepEqual(values.values.budget_holder, ['(person without a name)', 'Hélène Holder', null]);
     assert.deepEqual(values.values.company, [s.alphaName, s.bravoName, null]);
     const detail: any = await query.executeDetail(ctx, { entity_type: 'cost_centers', entity_id: s.ids['CC-A1'] });
-    assert.equal(detail.data.budget_holder, null, 'the detail too');
+    assert.equal(detail.data.budget_holder, '(person without a name)', 'the detail too');
     assert.doesNotMatch(JSON.stringify(detail), new RegExp(s.namelessEmail));
   });
-  console.log('ok - cost centers: the budget holder is a name or null, never an email');
+  console.log('ok - cost centers: the budget holder is a name, a person without a name or null, never an email');
 }
 
 async function testQuickSearch(): Promise<void> {
