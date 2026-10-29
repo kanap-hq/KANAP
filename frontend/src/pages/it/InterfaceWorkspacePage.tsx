@@ -13,6 +13,7 @@ import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { KanapDialog } from '../../components/design';
 import { type IntegratedDocumentEditorHandle } from '../../components/IntegratedDocumentEditor';
+import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import InterfaceBindingsMatrix from './components/InterfaceBindingsMatrix';
 import type {
@@ -157,6 +158,7 @@ export default function InterfaceWorkspacePage() {
   const { addToRecent } = useRecentlyViewed();
 
   const canManage = hasLevel('applications', 'member');
+  const canDelete = hasLevel('applications', 'admin');
   const canCreateConnection = hasLevel('infrastructure', 'member');
   const idParam = String(params.id || '');
   const isCreate = idParam === 'new';
@@ -645,6 +647,21 @@ export default function InterfaceWorkspacePage() {
         >
           {t('workspace.interface.viewInMap')}
         </Button>
+      )}
+      {!isCreate && current && canDelete && (
+        <RecordDeleteButton
+          base="/interfaces"
+          id={current.id}
+          name={current.name || t('workspace.interface.untitled')}
+          deleteFailed="it:messages.deleteInterfaceFailed"
+          deleteRelated={{
+            lifts: ['INTERFACE_HAS_BINDINGS'],
+            label: t('pages.interfaces.alsoDeleteBindings'),
+            description: t('pages.interfaces.deleteBindingsDescription'),
+            apiKey: 'deleteRelatedBindings',
+          }}
+          onDeleted={closeWorkspace}
+        />
       )}
       <IconButton
         aria-label={t('common:buttons.close')}

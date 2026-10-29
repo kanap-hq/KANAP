@@ -3420,6 +3420,7 @@
     "removeLayerFailed": "Failed to remove layer",
     "loadInterfaceFailed": "Failed to load interface",
     "saveInterfaceFailed": "Failed to save interface",
+    "deleteInterfaceFailed": "Failed to delete interface",
     "loadLocationFailed": "Failed to load location",
     "saveLocationFailed": "Failed to save location",
     "deleteLocationFailed": "Failed to delete location",

@@ -3420,6 +3420,7 @@
     "removeLayerFailed": "Error al eliminar la capa",
     "loadInterfaceFailed": "Error al cargar la interfaz",
     "saveInterfaceFailed": "Error al guardar la interfaz",
+    "deleteInterfaceFailed": "Error al eliminar la interfaz",
     "loadLocationFailed": "Error al cargar la ubicación",
     "saveLocationFailed": "Error al guardar la ubicación",
     "deleteLocationFailed": "Error al eliminar la ubicación",
