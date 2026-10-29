@@ -109,6 +109,7 @@ import {
 } from './ai-data-access.query';
 import { ChargebackReportService } from '../../spend/chargeback-report.service';
 import {
+  chargebackRowId,
   chargebackRowLabel,
   listAiChargeback,
   listAiChargebackLines,
@@ -1422,7 +1423,7 @@ export class AiQueryExecutor {
   private mapChargeback(row: AiChargebackRow): AiEntitySummaryDto {
     return toEntitySummary('chargeback', {
       // Distinct per row: a company's row and its common costs share the company.
-      id: row.key,
+      id: chargebackRowId(row),
       label: chargebackRowLabel(row),
       status: row.level,
       summary: null,

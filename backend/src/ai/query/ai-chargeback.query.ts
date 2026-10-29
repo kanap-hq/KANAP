@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { BadRequestException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { transactionDataAccessMode } from '../../data-access/data-access';
@@ -107,7 +108,6 @@ export type AiChargebackCompany = {
 };
 
 export type AiChargebackRow = {
-  /** Distinct per row and stable: nature, company, then the department or `common` (none on a company row). */
   key: string;
   level: AiChargebackLevel;
   company_id: string;
@@ -425,6 +425,20 @@ export async function chargebackAggregateRows(
 export function chargebackRowLabel(row: Pick<AiChargebackRow, 'level' | 'company' | 'department'>): string {
   if (row.level === 'company') return row.company;
   return `${row.company} › ${row.level === 'common' ? AI_CHARGEBACK_COMMON_COSTS : row.department ?? AI_CHARGEBACK_MISSING_DEPARTMENT}`;
+}
+
+/**
+ * The id of a row as the read tools give it, distinct per row and stable: the company's on a company
+ * row, the department's on a department row, and for a company's common costs, which have no record
+ * of their own, an id in the form of a UUID derived from the company's (so the row still opens its
+ * report through `page_url`).
+ */
+export function chargebackRowId(row: Pick<AiChargebackRow, 'level' | 'company_id' | 'department_id'>): string {
+  if (row.level === 'company') return row.company_id;
+  if (row.level === 'department' && row.department_id) return row.department_id;
+  const hex = createHash('sha256').update(`chargeback-common:${row.company_id}`).digest('hex');
+  const variant = ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 
 export function chargebackGroupValue(row: AiChargebackRow, groupBy: string): string | null {

@@ -458,6 +458,8 @@ async function testDepartmentsOfTheSameName(): Promise<void> {
     const again: any = await query.execute(ctx, { entity_type: 'chargeback', limit: 50 });
     assert.deepEqual(again.items.map((item: any) => item.id), ids, 'stable');
     assert.ok(listed.items.some((item: any) => item.label === `${s.alphaName} › common costs`));
+    // In the form of a UUID, so every row opens its report through page_url (ai-page-urls.ts).
+    assert.ok(ids.every((id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)), `UUID-shaped: ${ids}`);
 
     // A year out of range: refused in words, the transaction intact.
     for (const value of [-3, 10000]) {
