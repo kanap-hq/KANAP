@@ -43,6 +43,7 @@ import { chargebackLinesRegistry } from './chargeback-lines.registry';
 import { costCentersRegistry } from './cost-centers.registry';
 import { workingDayCalendarsRegistry } from './working-day-calendars.registry';
 import { analyticsAxesRegistry } from './analytics-axes.registry';
+import { exchangeRatesRegistry } from './exchange-rates.registry';
 
 export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistry> = {
   accounts: accountsRegistry,
@@ -79,6 +80,7 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   cost_centers: costCentersRegistry,
   working_day_calendars: workingDayCalendarsRegistry,
   analytics_axes: analyticsAxesRegistry,
+  exchange_rates: exchangeRatesRegistry,
 };
 
 export function getAiEntityRegistry(entityType: AiQueryEntityType): AiEntityFilterRegistry {

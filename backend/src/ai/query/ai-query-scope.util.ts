@@ -31,6 +31,7 @@ export type ScopedAiEntityType =
   | 'data_access'
   | 'departments'
   | 'documents'
+  | 'exchange_rates'
   | 'incidents'
   | 'interfaces'
   | 'locations'

@@ -139,6 +139,9 @@ import {
   type AiWorkingDayCalendarRow,
 } from './ai-working-day-calendars.query';
 import { AI_AXIS_VALUES_NOTE, listAiAnalyticsAxes, toAiAnalyticsAxisRow, type AiAnalyticsAxisRow } from './ai-analytics-axes.query';
+import { CurrencySettingsService } from '../../currency/currency-settings.service';
+import { ManualRatesService } from '../../currency/manual-rates.service';
+import { readAiExchangeRates, type AiExchangeRateRow } from './ai-exchange-rates.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
@@ -670,6 +673,10 @@ export class AiQueryExecutor {
     /** Master data › Working-day calendars and Analytics dimensions: `working_day_calendars`, `analytics_axes`. */
     @Optional() private readonly workingDayProfiles?: WorkingDayProfilesService,
     @Optional() private readonly analyticsAxes?: AnalyticsAxesService,
+    /** The rate matrix and the missing rates of the Currency settings screen, which `exchange_rates` reads. */
+    @Optional() private readonly manualRates?: ManualRatesService,
+    /** The currency settings, in every `exchange_rates` response. */
+    @Optional() private readonly currencySettings?: CurrencySettingsService,
   ) {
     // Absent, the technology figures close (no application count, no detail): say so once, at start.
     const logger = new Logger(AiQueryExecutor.name);
@@ -1582,6 +1589,33 @@ export class AiQueryExecutor {
       services: { axes: this.analyticsAxes },
       opts: { manager: context.manager, tenantId: context.tenantId, userId: context.userId, language },
     };
+  }
+
+  /**
+   * A cell of the Currency settings matrix: a currency in one year, named `USD 2026`. No reference
+   * and no page link: the screen is an administration setting.
+   */
+  private mapExchangeRate(row: AiExchangeRateRow): AiEntitySummaryDto {
+    return toEntitySummary('exchange_rates', {
+      id: row.key,
+      label: `${row.currency} ${row.year}`,
+      status: row.source,
+      summary: row.rate == null ? `No ${row.currency} rate in ${row.year}.` : null,
+      created_at: null,
+      updated_at: row.captured_at,
+      metadata: {
+        year: row.year,
+        currency: row.currency,
+        rate: row.rate,
+        inverse_rate: row.inverse_rate,
+        source: row.source,
+        manual: row.manual,
+        captured_at: row.captured_at,
+        reporting_currency: row.reporting_currency,
+        ...(row.cross_rate !== undefined ? { cross_rate: row.cross_rate } : {}),
+        ...(row.cross_rate_note ? { cross_rate_note: row.cross_rate_note } : {}),
+      },
+    });
   }
 
   /**
@@ -2815,6 +2849,29 @@ export class AiQueryExecutor {
       return {
         values_note: AI_AXIS_VALUES_NOTE,
         items: result.items.map((row) => this.mapAnalyticsAxis(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'exchange_rates') {
+      const result = await readAiExchangeRates(
+        { policy: this.policy, rates: this.manualRates, settings: this.currencySettings },
+        context,
+        scoped.query,
+      );
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        exchange_rates: result.block,
+        items: result.items.map((row) => this.mapExchangeRate(row)),
         total: result.total,
         page: result.page,
         limit: result.limit,

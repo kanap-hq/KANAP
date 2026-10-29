@@ -92,6 +92,8 @@ export const AI_SEARCH_ENTITY_TYPES = [
  * `query/ai-chargeback.query.ts`) are listed only: their rows are computed by the report.
  * `cost_centers` (Master data › Cost centers, `query/ai-cost-centers.query.ts`) is not searched
  * either; a node has a detail (its page).
+ * `exchange_rates` (the rate matrix and the currency settings, `query/ai-exchange-rates.query.ts`)
+ * is listed only: a rate is a cell of a year's set, not a record.
  */
 export const AI_QUERY_ENTITY_TYPES = [
   ...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines', 'roles', 'role_permissions',
@@ -99,6 +101,7 @@ export const AI_QUERY_ENTITY_TYPES = [
   'chargeback', 'chargeback_lines',
   'cost_centers',
   'working_day_calendars', 'analytics_axes',
+  'exchange_rates',
 ] as const;
 
 /**
@@ -109,10 +112,11 @@ export const AI_QUERY_ENTITY_TYPES = [
 export const AI_DETAIL_ENTITY_TYPES = AI_QUERY_ENTITY_TYPES.filter(
   (type) => type !== 'technology_versions' && type !== 'support_gaps' && type !== 'support_deadlines' && type !== 'role_permissions'
     && type !== 'data_access'
-    && type !== 'chargeback' && type !== 'chargeback_lines',
+    && type !== 'chargeback' && type !== 'chargeback_lines'
+    && type !== 'exchange_rates',
 ) as [
-  Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions' | 'data_access' | 'chargeback' | 'chargeback_lines'>,
-  ...Array<Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions' | 'data_access' | 'chargeback' | 'chargeback_lines'>>,
+  Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions' | 'data_access' | 'chargeback' | 'chargeback_lines' | 'exchange_rates'>,
+  ...Array<Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions' | 'data_access' | 'chargeback' | 'chargeback_lines' | 'exchange_rates'>>,
 ];
 
 export const AI_CONTEXT_ENTITY_TYPES = [

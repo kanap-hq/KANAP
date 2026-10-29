@@ -28,6 +28,9 @@ import {
   chargebackLineGroupValue,
   listAiChargebackLines,
 } from './ai-chargeback.query';
+import { CurrencySettingsService } from '../../currency/currency-settings.service';
+import { ManualRatesService } from '../../currency/manual-rates.service';
+import { aggregateExchangeRateRows, readAiExchangeRates } from './ai-exchange-rates.query';
 import { aiDataAccessNote } from './ai-data-access-note.util';
 import { CostCentersService } from '../../cost-centers/cost-centers.service';
 import { aggregateCostCenterRows, filterAiCostCenters } from './ai-cost-centers.query';
@@ -694,6 +697,10 @@ export class AiAggregateExecutor {
     /** Master data › Working-day calendars and Analytics dimensions: `working_day_calendars`, `analytics_axes`. */
     @Optional() private readonly workingDayProfiles?: WorkingDayProfilesService,
     @Optional() private readonly analyticsAxes?: AnalyticsAxesService,
+    /** The rate matrix of the Currency settings screen, which `exchange_rates` groups. */
+    @Optional() private readonly manualRates?: ManualRatesService,
+    /** The currency settings, in every `exchange_rates` response. */
+    @Optional() private readonly currencySettings?: CurrencySettingsService,
   ) {
     // Absent, a technology filter on application_count matches nothing: say so once, at start.
     if (!policy) new Logger(AiAggregateExecutor.name).warn('AiPolicyService is not injected: technology aggregates see no application.');
@@ -2352,6 +2359,51 @@ export class AiAggregateExecutor {
         groups,
         // The nodes of the tree the filters keep, groups and cost centers alike unless `kind` says.
         total: rows.length,
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+    }
+    if (input.entity_type === 'exchange_rates') {
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: null,
+          function: 'count',
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const result = await readAiExchangeRates(
+        { policy: this.policy, rates: this.manualRates, settings: this.currencySettings },
+        context,
+        scoped.query,
+        true,
+      );
+      const groups = aggregateExchangeRateRows(result.items, input.group_by);
+      return {
+        exchange_rates: result.block,
+        group_by: input.group_by,
+        metric: null,
+        function: 'count',
+        groups,
+        // `total` counts the rows of the matrix the filters keep: a currency in one year each.
+        total: result.items.length,
         returned: groups.length,
         truncated: false,
         complete: isCompleteAggregateResult(scoped.scope),

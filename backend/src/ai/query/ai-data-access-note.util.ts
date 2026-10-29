@@ -5,11 +5,12 @@ import type { AiQueryEntityType } from './ai-filter.types';
 /**
  * The families data-scoped access narrows: budget lines, contracts, and the tasks of both; the
  * chargeback reports, computed from the budget lines the person reads; the working-day calendars
- * and the analytics dimensions, whose counts of budget lines are of the lines the person reads.
+ * and the analytics dimensions, whose counts of budget lines are of the lines the person reads; the
+ * exchange rates, whose currencies in use are read from the budget lines and contracts the person reads.
  */
 const DATA_ACCESS_SCOPED_FAMILIES = new Set<AiQueryEntityType>([
   'budget_lines', 'contracts', 'tasks', 'chargeback', 'chargeback_lines',
-  'working_day_calendars', 'analytics_axes',
+  'working_day_calendars', 'analytics_axes', 'exchange_rates',
 ]);
 
 export const DATA_ACCESS_LIMITED_NOTE =

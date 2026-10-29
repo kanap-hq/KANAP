@@ -1,6 +1,7 @@
 import type { BudgetNature } from '../../spend/budget-nature';
 import { AiEntitySummaryDto, AiQueryScope } from '../ai.types';
 import type { AiChargebackReport } from './ai-chargeback.query';
+import type { AiExchangeRatesBlock } from './ai-exchange-rates.query';
 
 export type AiFilterFieldType = 'set' | 'text' | 'number' | 'date';
 export type AiQueryEntityType =
@@ -20,6 +21,7 @@ export type AiQueryEntityType =
   | 'data_access'
   | 'departments'
   | 'documents'
+  | 'exchange_rates'
   | 'incidents'
   | 'interfaces'
   | 'locations'
@@ -301,6 +303,8 @@ export type AiQueryResult = {
   calendar_note?: string;
   /** `analytics_axes`: where the values of a dimension and a line's value on it are read. */
   values_note?: string;
+  /** `exchange_rates`: the currency settings, the pairs in use without a rate, the cross-rate currency and the notes on the rates. */
+  exchange_rates?: AiExchangeRatesBlock;
   scope: {
     requested: AiQueryScope;
     resolved: boolean;
@@ -359,6 +363,8 @@ export type AiAggregateResult = {
   calendar_note?: string;
   /** `analytics_axes`: where the values of a dimension and a line's value on it are read. */
   values_note?: string;
+  /** `exchange_rates`: the currency settings, the pairs in use without a rate, the cross-rate currency and the notes on the rates. */
+  exchange_rates?: AiExchangeRatesBlock;
   group_by: string;
   /** Budget lines: the second group field; each group then carries `then_key`. */
   then_by?: string;
