@@ -60,6 +60,8 @@ interface Props {
   months?: number;
   monthOffset?: number; // How many months to offset from current month (negative = past, positive = future)
   readOnly?: boolean;
+  /** Double-click opens the project. The roadmap chart turns this off. Locking the dates does not. */
+  openOnDoubleClick?: boolean;
 }
 
 // Bar colors derive from the centralized status palette (utils/statusColors.ts)
@@ -135,6 +137,7 @@ export function PortfolioGantt({
   months = 3,
   monthOffset = 0,
   readOnly = false,
+  openOnDoubleClick = true,
 }: Props) {
   const { t } = useTranslation(['portfolio', 'errors']);
   const dialogs = useKanapDialogs();
@@ -427,14 +430,17 @@ export function PortfolioGantt({
   readOnlyRef.current = readOnly;
   const pinStartModeRef = useRef(pinStartMode);
   pinStartModeRef.current = pinStartMode;
+  const openOnDoubleClickRef = useRef(openOnDoubleClick);
+  openOnDoubleClickRef.current = openOnDoubleClick;
 
   // Init callback to set up all event handlers
   const handleInit = useCallback((ganttApi: IApi) => {
     apiRef.current = ganttApi;
 
-    // Intercept show-editor (double-click). In read-only mode this is disabled.
+    // Double-click opens the project. Pin-start mode stays on the roadmap chart.
+    // A date lock (readOnly) does not block that opening.
     ganttApi.intercept('show-editor', (ev: { id: string | number }) => {
-      if (readOnlyRef.current || pinStartModeRef.current) return false;
+      if (!openOnDoubleClickRef.current || pinStartModeRef.current) return false;
       if (ev?.id) {
         const taskId = String(ev.id);
         // Check if it's a milestone or project
@@ -813,6 +819,10 @@ export function PortfolioGantt({
           '& .wx-progress-marker, & .wx-link, & .wx-delete-button': {
             display: 'none !important',
           },
+        } : {}),
+        // The chart sets a resize cursor on the bar. A date lock keeps the arrow.
+        ...(ganttReadOnly ? {
+          '& .wx-bar': { cursor: 'default !important' },
         } : {}),
       }}
     >
