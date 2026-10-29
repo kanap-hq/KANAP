@@ -518,18 +518,21 @@ the link creates it as in lot 3.
 `update_technology_people` (chat only, preview and approval) changes the owners
 and support contacts of one technology. `owners.add` takes an active user by
 their exact displayed name, without case, and `owner_type` (`it` or `business`);
-`owners.remove` takes the same name and an optional type (omitted removes both).
-A name two active users carry is refused with the names only (the rule "names
-only": no email), an inactive user is not found. `support_contacts.add` takes a
-contact by exact name and an optional role; `remove` takes the name. Naming a
-contact also needs `contacts:reader`, as the Operations tab's picker; the check
+`owners.remove` takes the same name and an optional type (omitted removes both),
+and looks among the current owners of the fiche, active or not. A name two
+owners carry is refused with the names only (the rule "names only": no email).
+`support_contacts.add` takes a contact by exact name and an optional role;
+`remove` takes the label the Operations tab shows, its name or, for a contact
+without a name, its email. Adding a contact needs `contacts:reader`, as the
+tab's picker; removing one needs no such read. A contact without a name is
+refused on add, with the instruction to give it a name in Contacts. The check
 runs when the preview is asked and again when it runs (`aiRelationTargetRequirement`).
 The preview reads the owners and contacts, computes the full sets (`bulkReplaceOwners`
 / `bulkReplaceSupportContacts`, with the audit source) and appends a new contact
 to the end, the others keeping their order; a person already there, or absent,
 writes nothing, and a preview that changes neither kind is refused. The
-execution locks the technology, re-reads the whole set of the kind it touches
-and answers 409 when it differs. The undo puts the previous owners back and
+execution locks the technology, re-reads the set of each kind it touches and
+answers 409 when it differs. The undo puts the previous owners back and
 restores the contacts in their exact order.
 
 `update_technology_web_links` (chat only, preview and approval) adds, changes
@@ -552,11 +555,17 @@ exception, and the preview calls it in `dry_run` to say how many will be cleared
 ("3 version exceptions will be cleared"); then the requested exceptions are
 written with `updateVersion`. A base release carries its service packs through
 the pure `servicePackAlertTargets` (`vulnerability-rules.ts`), which the service
-also uses for its write; the card names the versions that will follow. The
-execution locks the technology, re-reads the setting and every exception and
-answers 409 when they differ. The undo puts the setting back, then exactly the
-previous exceptions, service packs included, through the same methods. The
-vulnerability matching and the vulnerability states stay outside L5.
+also uses for its write; the card names the versions that will follow, null
+included. A request naming both a base release and one of its service packs is
+refused at the preview: the base carries the pack. The execution locks the
+technology, re-reads the setting and every exception and answers 409 when they
+differ. The undo puts the setting back (which clears the exceptions), then
+restores every version whose value differs from the state before, null
+included, a base release before its service packs; it reads the state back and
+requires the previous state exactly, otherwise the undo fails and is not
+validated. An undo is refused only when the preview changed neither the setting
+nor a version. The vulnerability matching and the vulnerability states stay
+outside L5.
 
 The technology detail (`get_entity_detail`) reads what these tools write: the
 support contacts (name and role), the web links (address and description), the
@@ -565,8 +574,8 @@ setting, beside the owners and the versions.
 
 ### Non-writes of the technology family
 
-Attachments stay outside L5 (the backend routes exist, the screen has no
-upload); a request naming one is refused in words and names the Relations tab.
+Attachments stay outside L5, though the Relations tab shows them and uploads
+them; a request naming one is refused in words and names the Relations tab.
 `cpe_products` and `cve_names` stay closed to Plaid (decision 10, the matching
 owns them). Deleting a technology or a version, the vulnerabilities matching and
 the vulnerability states stay outside L5.
