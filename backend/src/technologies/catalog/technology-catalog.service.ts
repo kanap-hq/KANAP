@@ -189,13 +189,18 @@ export class TechnologyCatalogService {
   }
 
   /**
-   * The entries the tenant has not adopted: no technology with its catalog key, nor a technology of
-   * its name already tied to the catalog. A technology typed by hand under the entry's name keeps the
-   * entry on offer: adopting it completes that technology (`adopt`). Each item carries `completes`,
-   * the reference (`TEC-<item_number>`) of that hand-typed technology, compared without case, or null.
-   * Filtered by `q` (name, editor) and `family`, sorted by name. `family` is the family an adoption
-   * would write (`catalogFamilyForTenant`), so a catalog family the tenant does not list is offered
-   * under the code the tenant would actually receive.
+   * The entries the tenant has not adopted (`items`): no technology with its catalog key, nor a
+   * technology of its name already tied to the catalog. A technology typed by hand under the entry's
+   * name keeps the entry on offer: adopting it completes that technology (`adopt`). Each item carries
+   * `completes`, the reference (`TEC-<item_number>`) of that hand-typed technology, compared without
+   * case, or null. Filtered by `q` (name, editor) and `family`, sorted by name. `family` is the family
+   * an adoption would write (`catalogFamilyForTenant`), so a catalog family the tenant does not list
+   * is offered under the code the tenant would actually receive.
+   *
+   * `adopted` is the same search over the entries the tenant already holds by catalog key
+   * (`{ key, name, editor, family, family_label, reference, id }`, sorted by name). `reference` and
+   * `id` are that technology. It is empty when `q` is blank, so an empty search does not list every
+   * technology the tenant already has. `items` stays the entries still on offer.
    */
   async notAdopted(filters: { q?: string; family?: string; language?: unknown }, opts: Opts) {
     const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, filters.language);
@@ -215,6 +220,13 @@ export class TechnologyCatalogService {
     }
     const keys = new Set(rows.map((row) => row.catalog_key).filter(Boolean));
     const names = new Set(rows.filter((row) => row.catalog_key).map((row) => row.name.trim().toLowerCase()));
+    const adoptedByKey = new Map<string, { id: string; reference: string }>();
+    for (const row of rows) {
+      if (!row.catalog_key) continue;
+      const reference = technologyReference(row.item_number);
+      if (!reference) continue;
+      adoptedByKey.set(row.catalog_key, { id: row.id, reference });
+    }
     const completesByName = new Map<string, { ref: string; id: string; labels: Set<string>; description: string | null }>();
     for (const row of rows) {
       if (row.catalog_key) continue;
@@ -261,7 +273,25 @@ export class TechnologyCatalogService {
           completes_description_empty: !!completes && !String(completes.description ?? '').trim(),
         };
       });
-    return { items };
+    const adopted = needle
+      ? Array.from(living.values()).flatMap((product) => {
+        const tech = adoptedByKey.get(product.key);
+        if (!tech) return [];
+        const resolved = catalogFamilyForTenant(product.family, technologyFamilies);
+        if (family && resolved !== family) return [];
+        if (!product.name.toLowerCase().includes(needle) && !product.editor.toLowerCase().includes(needle)) return [];
+        return [{
+          key: product.key,
+          name: product.name,
+          editor: product.editor,
+          family: resolved,
+          family_label: technologyFamilies.find((option) => option.code === resolved)?.label ?? resolved,
+          reference: tech.reference,
+          id: tech.id,
+        }];
+      }).sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }))
+      : [];
+    return { items, adopted };
   }
 
   /** The earliest and latest end of support among `versions` (extended when it is later). */

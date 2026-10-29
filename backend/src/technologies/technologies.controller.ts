@@ -180,7 +180,7 @@ export class TechnologiesController {
     return this.svc.editors(q, this.catalog.editors(), this.opts(ctx));
   }
 
-  /** The shipped catalog entries the tenant has not adopted yet. */
+  /** Catalog search: entries still on offer (`items`), and those already adopted when `q` is set. */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get('catalog')

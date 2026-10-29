@@ -31,7 +31,7 @@ One technology covers a product as a whole. "SQL Server" stands for every SQL Se
 
 Navigate to **IT Landscape > Technologies** and click **New technology**.
 
-The window opens on the **Catalog**: a list of common products with a short description, their publisher, family and hosting type. Search it by name, then click an entry. KANAP creates the technology at once with its publisher, family, hosting type, CPE product identifiers, CVE.org names, its versions with their end of support dates, and the short description in your language, then opens it. An entry stays offered when a technology of the same name was typed by hand. Adding it completes that technology, and the entry says so (Completes TEC-10).
+The window opens on the **Catalog**: a list of common products with a short description, their publisher, family and hosting type. Search it by name, then click an entry. KANAP creates the technology at once with its publisher, family, hosting type, CPE product identifiers, CVE.org names, its versions with their end of support dates, and the short description in your language, then opens it. An entry stays offered when a technology of the same name was typed by hand. Adding it completes that technology, and the entry says so (Completes TEC-10). A search that matches a catalog entry you already adopted lists it under **Already in your technologies**, with the reference of your technology, and a click opens that technology; while the search is empty, that section stays hidden.
 
 A technology adopted from the catalog stays up to date: when the publisher releases a new version or changes a date, KANAP adds the version and moves the date (see [Versions from the catalog](#versions-from-the-catalog)).
 
