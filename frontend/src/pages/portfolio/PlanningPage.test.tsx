@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -47,7 +47,11 @@ vi.mock('@svar-ui/react-gantt', () => ({
       },
     };
     props.init?.(chart);
-    return <div data-testid="gantt" data-readonly={String(!!props.readonly)} />;
+    return (
+      <div data-testid="gantt" data-readonly={String(!!props.readonly)}>
+        <div data-testid="gantt-bar" data-id=":prj-1" />
+      </div>
+    );
   },
 }));
 
@@ -119,7 +123,8 @@ describe('Planning timeline dates', () => {
     await dragBar();
     expect(api.patch).not.toHaveBeenCalled();
 
-    gantt.onShowEditor?.({ id: 'prj-1' });
+    // A read-only chart sends no show-editor: the container handles the double-click.
+    fireEvent.doubleClick(screen.getByTestId('gantt-bar'));
     expect(navigate).toHaveBeenCalledWith('/portfolio/projects/prj-1/summary');
   });
 
