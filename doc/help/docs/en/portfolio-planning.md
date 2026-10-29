@@ -9,7 +9,7 @@ Navigate to **Portfolio Management > Planning**.
 **Permissions**:
 - You need `portfolio_projects:reader` to access the Planning page and timeline data.
 - You need `portfolio_reports:reader` to generate roadmap scenarios.
-- You need `portfolio_projects:contributor` to apply generated dates to projects.
+- You need `portfolio_projects:contributor` to drag project dates, change a project's scheduling mode, and apply generated dates.
 
 If you do not see Planning in the menu, ask your administrator to grant the required access.
 
@@ -32,7 +32,7 @@ Use Timeline mode for direct planning edits.
 - Filter by category and status
 - Choose time window: 1 month, 3 months, 6 months, or 1 year
 - Move backward/forward in time or reset to **Today**
-- Drag project bars to update planned start/end dates
+- Drag project bars to update planned start and end dates. This needs `portfolio_projects:contributor`. With `portfolio_projects:reader`, the bars stay in place and a double-click still opens the project.
 
 ### Display behavior
 - The chart centers around today with about **25% past / 75% future** when reset to current period.
