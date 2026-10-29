@@ -125,8 +125,9 @@ payloads to the model.
 Plaid can currently read these entity families:
 
 `accounts`, `analytics_categories`, `applications`, `assets`,
-`budget_lines`, `business_processes`, `chart_of_accounts`, `companies`,
-`connections`, `contacts`, `contracts`, `data_access`, `departments`,
+`budget_lines`, `business_processes`, `chargeback`, `chargeback_lines`,
+`chart_of_accounts`, `companies`, `connections`, `contacts`, `contracts`,
+`data_access`, `departments`,
 `documents`, `incidents`, `interfaces`, `locations`, `projects`, `requests`,
 `role_permissions`, `roles`, `suppliers`, `support_deadlines`, `support_gaps`,
 `tasks`, `technologies`, `technology_versions`, `users`, and
@@ -140,7 +141,8 @@ as an input reference and resolves to the same line.
 
 `search_all` searches every family but the ones without a search index:
 `vulnerabilities`, `technology_versions`, `support_gaps`,
-`support_deadlines`, `roles`, `role_permissions` and `data_access`. `AI_SEARCH_ENTITY_TYPES` (the
+`support_deadlines`, `roles`, `role_permissions`, `data_access`, `chargeback`
+and `chargeback_lines`. `AI_SEARCH_ENTITY_TYPES` (the
 searched families) and `AI_QUERY_ENTITY_TYPES` (the listed ones) are two lists
 in `ai.types.ts`; the listed-only families have no detail of their own.
 
@@ -213,7 +215,9 @@ Nothing the model asks for is dropped silently:
   (`status: invalid_filter`);
 - a sort field the registry does not know is named in `sort_ignored`; the
   items come in the default order, `sort` says which, `sortable_fields` lists
-  the fields the family takes, and `complete` is false;
+  the fields the family takes, and `complete` is false; a field withheld for
+  lack of a right (the consolidation account without the right on accounts)
+  also comes with its entry of `fields_withheld`, the reason in words;
 - every result carries `sort`, the order of its items.
 
 Plaid chat attaches a blocking validation to either case
@@ -644,6 +648,77 @@ tab is refused in words with the list of the families that have one; the prompt
 says a history is never rebuilt from other data, the audit log included. The
 tool is in the MCP core read group. The chat shows its entries as the tab's
 first lines (`ToolResultRenderer`, phase `reading_context`).
+
+### Budget reports and chargeback
+
+The budget reports are read through `aggregate_entities` on `budget_lines`,
+with the requests and readers of the report screens themselves
+(`spend/reports/`, the server copy of `reportAggregates.ts`), so a figure of
+Plaid is the screen's figure:
+
+- the consolidation account (`consolidation_account`, the label of the
+  Consolidation accounts report) is a field, a filter and a group for a person
+  with the budget right and `accounts:reader`. Without the right on accounts
+  the field is absent from the registry and named in `fields_withheld` with
+  the reason; a filter, a group or a `then_by` on it is refused in words, never
+  one "unassigned" group. The list engine gets the person's access
+  (`AiPolicyService.effectiveAccess`), without which it reads the field as
+  null for everyone;
+- `metrics` (2 to 8 measures with one function) gives a table in one call,
+  each group and `overall` carrying `values` by metric; `then_by` crosses a
+  second field (`then_key`), refused for `line` and for the streams and
+  categories of the linked projects; `limit` keeps the first groups
+  (50 by default with `then_by`, at most 100), `others` gives the same measure
+  over the rest and `group_count` counts every group;
+- a change between two columns is the metric `<destination>_minus_<source>`
+  (`y_review_minus_y_budget`, in FTE `y_review_fte_minus_y_budget_fte`), read
+  as the "Top increase / decrease" report: the groups that rise or fall
+  (`direction`), 10 by default, each with previous, current, delta and
+  pct_increase, and `overall` with the net change and its gross increase and
+  decrease. `line` groups by line (its `BL-n` and title);
+- the FTE month by month is the metric `<year>_<column>_fte_by_month`, read as
+  the "Staffing by month" report: twelve months, average (÷ 12) and peak per
+  group, with `monthly_fte_note`.
+
+These figures read every line, ended ones included; the reports read the lines
+still active on 1 January of the year before the first year they show. The
+tool description says so. The cost per FTE and the day rate (L2) follow the
+same model.
+
+`chargeback` and `chargeback_lines` read Reporting › Global chargeback and
+Reporting › Company chargeback through `ChargebackReportService`
+(`ai/query/ai-chargeback.query.ts`), which recomputes every allocation of the
+year with the calculator of the Allocations tab; `spend_allocations` is never
+read directly, the default splits not being stored. One call of the service
+serves the request, filtered, sorted, paged and grouped in memory. `year` (one
+year, 1900 to 3000), `column` (the assistant's keys, `review` being the
+service's `revision`) and `nature` (none or both: the two natures, said in
+`chargeback.nature`; the screens open on OPEX) are report parameters given as
+filters. `chargeback` holds the rows of the "Detailed allocations" table: each
+beneficiary company with its paid, net and indicators, then its departments
+and its costs without a department. A group adds up the company rows, or the
+department and common rows when grouped by department, when a department is
+filtered or when the filters keep no company row; grouped by department, a
+group is "company › department" or "company › common costs", so two
+departments of one name in two companies stay apart. Each row has its own
+stable id in the form of a UUID (a company's common costs get one derived from
+the company's), so it opens its report through `page_url`. `chargeback_lines`
+lists the lines charged to the one company its `company` filter names (its
+exact name, or the one name that contains it), with the company's figures and
+departments in `chargeback.company`.
+
+Both families need `reporting:reader`, as the routes; the database does not
+guard it, so the executors check it again. The service's warnings (a line it
+could not spread, a line without a paying company, an amount or a turnover
+without an exchange rate) come back in English words in `chargeback.warnings`
+with a note asking the answer to repeat them. A person in limited access gets
+the service's rules: the global rows of the lines they read without the group
+total, their company report with every share charged to it (a line they do not
+read named by its reference and title, as the screen's line column, without id
+or link), and another company refused with the service's sentence. The entry
+"chargeback by beneficiary company" of the unread families (`reportingOnly`)
+is dropped for a person who reads the families and names the Reporting right
+for the others.
 
 ### Vulnerabilities
 
