@@ -1083,6 +1083,11 @@
         "person": "une personne supprimée",
         "instance": "un environnement supprimé",
         "assignment": "un serveur supprimé",
+        "phase": "une phase supprimée",
+        "milestone": "un jalon supprimé",
+        "time_entry": "un temps saisi supprimé",
+        "team": "une équipe supprimée",
+        "dependency": "une dépendance supprimée",
         "criterion_value": "une option supprimée"
       },
       "title": "Historique",

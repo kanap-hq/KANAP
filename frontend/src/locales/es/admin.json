@@ -1083,6 +1083,11 @@
         "person": "una persona eliminada",
         "instance": "un entorno eliminado",
         "assignment": "un servidor eliminado",
+        "phase": "una fase eliminada",
+        "milestone": "un hito eliminado",
+        "time_entry": "un registro de tiempo eliminado",
+        "team": "un equipo eliminado",
+        "dependency": "una dependencia eliminada",
         "criterion_value": "una opción eliminada"
       },
       "title": "Historial",

@@ -1083,6 +1083,11 @@
         "person": "eine gelöschte Person",
         "instance": "eine gelöschte Umgebung",
         "assignment": "ein gelöschter Server",
+        "phase": "eine gelöschte Phase",
+        "milestone": "ein gelöschter Meilenstein",
+        "time_entry": "ein gelöschter Zeiteintrag",
+        "team": "ein gelöschtes Team",
+        "dependency": "eine gelöschte Abhängigkeit",
         "criterion_value": "eine gelöschte Option"
       },
       "title": "Verlauf",

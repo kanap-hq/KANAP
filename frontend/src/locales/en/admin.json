@@ -1083,6 +1083,11 @@
         "person": "a deleted person",
         "instance": "a deleted environment",
         "assignment": "a deleted server",
+        "phase": "a deleted phase",
+        "milestone": "a deleted milestone",
+        "time_entry": "a deleted time entry",
+        "team": "a deleted team",
+        "dependency": "a deleted dependency",
         "criterion_value": "a deleted option"
       },
       "title": "History",
