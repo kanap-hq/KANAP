@@ -343,5 +343,11 @@
   "DATA_ACCESS_NODE_ID_FORBIDDEN": "Todo cubre ya todos los datos y no necesita empresa ni centro de coste.",
   "DATA_ACCESS_NODE_ID_REQUIRED": "Elija una empresa o un centro de coste.",
   "DATA_ACCESS_NODE_TYPE_INVALID": "Elija una empresa, un centro de coste o todo.",
-  "DATA_ACCESS_ACCESS_INVALID": "Elija lectura o edición."
+  "DATA_ACCESS_ACCESS_INVALID": "Elija lectura o edición.",
+  "DATA_ACCESS_MODE_INVALID": "Elija todos los datos o un acceso limitado.",
+  "DATA_ACCESS_ALL_WITH_NODES": "Todos los datos no necesitan empresa ni centro de coste.",
+  "DATA_ACCESS_NODES_INVALID": "La lista de empresas y centros de coste no es válida.",
+  "DATA_ACCESS_NODE_ID_INVALID": "Elija una empresa o un centro de coste válido.",
+  "DATA_ACCESS_NODE_DUPLICATE": "La misma empresa, el mismo centro de coste o todo aparece dos veces.",
+  "DATA_ACCESS_QUERY_REPEATED": "Indique {{parameter}} una sola vez."
 }
