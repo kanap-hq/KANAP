@@ -16,7 +16,7 @@ import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, isCloudHostingType, resolveHostingType
 import { normalizeCveNames, sortCveNames } from '../vulnerabilities/cve-affected-rules';
 import { assertWebLinkUrl } from '../common/web-link-url';
 import { defaultVulnerabilityAlerts } from '../vulnerabilities/vulnerability-alerts';
-import { servicePackAlertTargets } from '../vulnerabilities/vulnerability-rules';
+import { SERVICE_PACK_PRODUCTS, servicePackAlertTargets } from '../vulnerabilities/vulnerability-rules';
 import { countingRowSql, rowJoinsSql, severeSql, vulnerabilityCountsEnabled } from '../vulnerabilities/vulnerability-reach-counts';
 import {
   BUILD_PREFIX_RE,
@@ -693,6 +693,9 @@ export class TechnologiesService {
     audit?: AuditSourceOptions,
   ): Promise<TechnologyVersionRow[]> {
     const products = Array.isArray(tech.cpe_products) ? tech.cpe_products : [];
+    // The product decides, before any read: a label that looks like a service pack on a product
+    // outside SERVICE_PACK_PRODUCTS keeps its own value and costs no version read.
+    if (!products.some((product) => SERVICE_PACK_PRODUCTS.has(String(product).toLowerCase()))) return [];
     const rows: TechnologyVersionRow[] = await mg.query(
       `SELECT ${VERSION_COLUMNS} FROM technology_versions v
          JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
