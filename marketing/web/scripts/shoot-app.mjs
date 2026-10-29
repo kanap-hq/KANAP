@@ -329,7 +329,7 @@ const PAGES = {
     visit: [
       '/it/applications/APP-8', // SAP S/4HANA
       '/portfolio/projects/PRJ-12', // Customer 360 Data Contracts
-      '/portfolio/requests/REQ-6', // Cave climate sensors dashboard
+      '/portfolio/requests/REQ-3', // Cave Climate Digital Twin
       '/portfolio/tasks/T-2', // SAP Cheddar vendor selection
       '/portfolio/projects/PRJ-3', // Fromage-as-a-Service
       '/portfolio/projects/PRJ-6', // SAP Cheddar Migration
