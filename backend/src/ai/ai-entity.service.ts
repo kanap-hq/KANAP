@@ -56,6 +56,7 @@ import {
   unreadFamiliesAskedBy,
   unreadFamilyLines,
   type AiAdminFamiliesGap,
+  type AiUnreadFamiliesReach,
   type AiScreenLanguage,
 } from './ai-unread-families';
 
@@ -495,18 +496,19 @@ function withUnreadFamilies<T extends { items: unknown[] }>(
   query: string,
   language: AiScreenLanguage | null,
   gap: AiAdminFamiliesGap | undefined,
+  reach: AiUnreadFamiliesReach | undefined,
 ): T & {
   not_read_here?: ReturnType<typeof unreadFamiliesAskedBy>;
   families_not_read?: string[];
   no_match_note?: string;
 } {
-  const asked = unreadFamiliesAskedBy(query, language, gap);
+  const asked = unreadFamiliesAskedBy(query, language, gap, reach);
   return {
     ...result,
     ...(asked.length ? { not_read_here: asked } : {}),
     ...(result.items.length === 0
       ? {
-        families_not_read: unreadFamilyLines(language, gap),
+        families_not_read: unreadFamilyLines(language, gap, reach),
         no_match_note: 'No match among the families searched. The families_not_read are not searched: a record of theirs may exist. Say what you could not read and name its screen.',
       }
       : {}),
@@ -2093,11 +2095,12 @@ export class AiEntityService {
       ? await this.searchAllIndexed(context, input)
       : await this.searchAllLegacy(context, input);
     // The profile's language, and whether the person reads the families of the administrators of
-    // users, are read only when the answer names an unread family.
+    // users and the chargeback reports, are read only when the answer names an unread family.
     const namesUnread = result.items.length === 0 || asksForUnreadFamily(input.query);
     const language = namesUnread ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId) : null;
     const gap = namesUnread ? await this.policy.adminFamiliesGap(context, context.manager) : undefined;
-    return withUnreadFamilies(result, input.query, language, gap);
+    const reach = namesUnread ? { reports: await this.policy.canReadEntityType(context, 'chargeback', context.manager) } : undefined;
+    return withUnreadFamilies(result, input.query, language, gap, reach);
   }
 
   /**

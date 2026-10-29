@@ -147,9 +147,37 @@ function testTheFamiliesOfTheAdministratorsOfUsers() {
   assert.match(AI_UNREAD_FAMILIES_SENTENCE, /roles and their rights \(read for administrators of users with access to all data only\)/);
 }
 
+/**
+ * The chargeback reports (Plaid L8, lot E): a person with the Reporting right reads them through
+ * `chargeback` and `chargeback_lines`, so they are not listed; the others are told the right.
+ */
+function testTheChargebackFollowsTheReportingRight() {
+  const chargeback = 'chargeback by beneficiary company';
+  // A reader of the reports: not unread, neither in the lists nor for a search that asks for it.
+  const reader = unreadFamilyLines('fr', 'right', { reports: true });
+  assert.equal(reader.some((line) => line.startsWith(chargeback)), false, reader.join('\n'));
+  assert.deepEqual(unreadFamiliesAskedBy('refacturation 2026 par société', 'fr', 'right', { reports: true }), []);
+  assert.doesNotMatch(unreadFamiliesSentence('fr', 'right', { reports: true }), /chargeback/);
+  // The families of the administrators of users keep their own rule.
+  assert.ok(reader.some((line) => line.startsWith('roles and their rights (')));
+
+  // Without the right: listed, with the right that is missing and what is read instead.
+  const other = unreadFamilyLines('fr', 'right', { reports: false });
+  assert.ok(other.includes(`${chargeback} (Gestion budgétaire › Rapports › Refacturation globale): The tools read it (the families chargeback and chargeback_lines) for a person with the Reporting right, which this person's role does not give.`), other.join('\n'));
+  const asked = unreadFamiliesAskedBy('refacturation 2026 par société', 'fr', 'right', { reports: false })[0];
+  assert.equal(asked.family, chargeback);
+  assert.match(asked.note, /^KANAP has chargeback by beneficiary company; this server does not read them for this person\. They are on the screen Gestion budgétaire › Rapports › Refacturation globale\. The tools read it \(the families chargeback and chargeback_lines\) for a person with the Reporting right, which this person's role does not give\. A budget line's allocation to companies is in get_entity_detail of the line\.$/);
+  assert.doesNotMatch(asked.note, /no tool computes the chargeback/, 'the tools do compute it');
+
+  // Not known (the tool descriptions, common to everyone): the right is named.
+  assert.match(unreadFamilyLines('en').join('\n'), /Global chargeback\): The tools read it \(the families chargeback and chargeback_lines\) for a person with the Reporting right only\./);
+  assert.match(AI_UNREAD_FAMILIES_SENTENCE, /chargeback by beneficiary company \(read for people with the Reporting right only\)/);
+}
+
 async function run() {
   testWordsThatAskForAFamily();
   testTheFamiliesOfTheAdministratorsOfUsers();
+  testTheChargebackFollowsTheReportingRight();
   testCommonWordsAskForNone();
   await testScreensInThePersonsLanguage();
   console.log('ai-unread-families.spec: ok');

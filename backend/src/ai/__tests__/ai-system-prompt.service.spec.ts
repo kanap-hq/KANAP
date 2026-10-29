@@ -657,6 +657,14 @@ async function testPromptSaysWhatItDoesWithAccessAndHistory() {
   assert.doesNotMatch(reader, /Roles and data access: say who sees what/);
   const limited = build({ tools: [readTool], readable: ['users'], language: 'fr', gap: 'all_data' });
   assert.match(limited, /roles and their rights \(Administration › Rôles\): The tools read it for a person with the right to administer users and access to all data; this person's access is limited to part of the data\./);
+
+  // The chargeback reports (Plaid L8): unread for a person without the Reporting right, with the
+  // right; read, so not listed, with it; the right named when the readable families are not known.
+  assert.match(limited, /chargeback by beneficiary company \(Gestion budgétaire › Rapports › Refacturation globale\): The tools read it \(the families chargeback and chargeback_lines\) for a person with the Reporting right, which this person's role does not give\./);
+  const reporter = build({ tools: [readTool], readable: ['budget_lines', 'chargeback', 'chargeback_lines'], language: 'fr', gap: 'right' });
+  assert.doesNotMatch(reporter, /chargeback by beneficiary company \(/);
+  const unknown = build({ tools: [readTool], readable: [], language: 'fr', gap: 'right' });
+  assert.match(unknown, /chargeback by beneficiary company \(Gestion budgétaire › Rapports › Refacturation globale\): The tools read it \(the families chargeback and chargeback_lines\) for a person with the Reporting right only\./);
 }
 
 async function run() {

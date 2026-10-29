@@ -382,6 +382,7 @@ export class AiToolRegistry {
               families_not_read: unreadFamilyLines(
                 await readAiScreenLanguage(context.manager, context.tenantId, context.userId),
                 await this.policy.adminFamiliesGap(context, context.manager),
+                { reports: await this.policy.canReadEntityType(context, 'chargeback', context.manager) },
               ),
             };
             if (input.entity_type !== 'budget_lines') return description;

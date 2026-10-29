@@ -17,6 +17,7 @@ function createService(overrides?: { knowledge?: Record<string, unknown> }) {
     {
       listReadableEntityTypes: async (_context: unknown, requested: string[]) => requested,
       adminFamiliesGap: async () => 'right',
+      canReadEntityType: async () => false,
       canReadKnowledge: async () => true,
       assertEntityTypeReadAccess: async () => undefined,
     } as any,

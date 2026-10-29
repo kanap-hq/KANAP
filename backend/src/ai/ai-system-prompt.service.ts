@@ -8,7 +8,7 @@ import type { AiContextProfile } from './ai-context-profile';
 import type { budgetColumnsAiContext } from '../budget-columns/budget-columns.util';
 import type { AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
 import { isoDateTimeInTimeZone, knownTimeZone } from '../common/csv-sheet';
-import { aiScreenName, unreadFamiliesSentence, type AiAdminFamiliesGap, type AiScreenLanguage } from './ai-unread-families';
+import { aiScreenName, unreadFamiliesSentence, type AiAdminFamiliesGap, type AiScreenLanguage, type AiUnreadFamiliesReach } from './ai-unread-families';
 
 type CurrentUserPromptContext = {
   displayName: string;
@@ -230,9 +230,9 @@ const unsupportedWritesRule = (screenLanguage: AiScreenLanguage | null) =>
   + 'You may offer the closest change Plaid can make, in words ("I can create a task to track it if you want"); prepare it only after the user says yes.';
 
 /** What the tools cannot read, how totals are given, and the person's data access (AGENTS.md). */
-const limitsText = (screenLanguage: AiScreenLanguage | null, gap: AiAdminFamiliesGap | undefined) => [
+const limitsText = (screenLanguage: AiScreenLanguage | null, gap: AiAdminFamiliesGap | undefined, reach: AiUnreadFamiliesReach) => [
   'Limits of what you read:',
-  `- ${unreadFamiliesSentence(screenLanguage, gap)}`,
+  `- ${unreadFamiliesSentence(screenLanguage, gap, reach)}`,
   '- The change history of a record is its History tab, which get_record_history reads. A record whose page has no History tab has no history in KANAP: say so, and never rebuild a history from other data, the audit log included.',
   `- A question about the person's own access ("what can I see?"): their roles are the \`roles\` of the current user context; which data they see is not read here, and an administrator of users shows it in the person's Data access tab (${aiScreenName(['admin', 'users'], screenLanguage)}).`,
   '- Never conclude that something does not exist, is empty or is "none" because no tool returned it: a family the tools do not read, a field a result does not carry (a context is an extract: get_entity_detail gives every field), or a family the user cannot read (null). Say what you could not read and name the KANAP screen that shows it.',
@@ -435,9 +435,11 @@ export class AiSystemPromptService {
     }
 
     if (params.availableTools.length > 0) {
-      // A person who reads Admin › Data access reads its two families; the others are told what they lack.
+      // A person who reads Admin › Data access reads its two families; the others are told what they
+      // lack. The chargeback reports likewise, when the readable families are known.
       const gap = params.readableEntityTypes.includes('data_access') ? null : params.adminFamiliesGap;
-      addSection('limits', 'Limits of what you read', limitsText(params.currentUser.screenLanguage ?? null, gap));
+      const reports = params.readableEntityTypes.length ? params.readableEntityTypes.includes('chargeback') : undefined;
+      addSection('limits', 'Limits of what you read', limitsText(params.currentUser.screenLanguage ?? null, gap, { reports }));
     }
 
     if (profile.includeReadableEntityTypes && params.readableEntityTypes.length > 0) {
