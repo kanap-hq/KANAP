@@ -718,6 +718,16 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 
 ---
 
+## Preguntar al asistente
+
+[Plaid](ai-assistant.md) lee la versión, la fecha de puesta en servicio, la fecha de fin de soporte y la fecha de retirada de cada aplicación. Filtra, ordena y agrupa las aplicaciones según estas fechas. Su lista conserva las aplicaciones retiradas, mientras que el informe [Fin de soporte](end-of-support.md) solo conserva las que están en servicio.
+
+Plaid también declara una tecnología en una aplicación, o la quita, con su versión y, si usted lo pide, en los servidores de despliegue de la aplicación. Para ello necesita el derecho de leer las aplicaciones y el nivel Miembro en la infraestructura. Un Business Contributor solo lo hace en las aplicaciones en las que participa. Plaid no vincula un sistema operativo: indíquelo en la página del servidor. Cada cambio llega como una vista previa que usted aprueba. Cuando pide a Plaid que lo deshaga, restablece exactamente lo que cambió. Una versión creada de paso se queda en la tecnología.
+
+Pregunte, por ejemplo: «Añade PostgreSQL 16 a CheeseTrack y a sus servidores», «Quita PostgreSQL 14 de CheeseTrack», «¿Qué aplicaciones llegan al fin de soporte en los próximos seis meses?» o «¿Qué aplicaciones declaran PostgreSQL 14?»
+
+---
+
 ## Consejos
 
 - **Empiece por las apps críticas**: Documente primero sus aplicaciones críticas para el negocio, luego avance en los niveles de criticidad.

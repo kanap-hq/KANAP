@@ -14,6 +14,8 @@ type Row = {
   prompt: string;
   profile: AiContextProfileName;
   mode: AiContextPromptMode;
+  /** The tool the write must offer, when the row fixes it. */
+  tools?: string[];
 };
 
 const FIXTURE_ROWS: Row[] = [
@@ -213,7 +215,130 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Publish DOC-151.', profile: 'write_document', mode: 'write' },
   { prompt: 'Update the content of DOC-12', profile: 'write_document', mode: 'write' },
   { prompt: 'Add a document about backups', profile: 'write_document', mode: 'write' },
-  { prompt: 'Update the lifecycle of TEC-3', profile: 'write_general', mode: 'write' },
+  // The technology record is a business write now; the tool that changes its fields arrives in lot 4.
+  { prompt: 'Update the lifecycle of TEC-3', profile: 'write_business', mode: 'write' },
+
+  // Lot 4 review: "installé" and "déclaré" are past participles, not imperatives, and a question
+  // never writes; every one of these words stays a read.
+  { prompt: 'Sur quels serveurs nginx est-il installé ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'PostgreSQL est-il déclaré sur CheeseTrack ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Où nginx est-il installé ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Sur quel serveur Java 8 est-il installé ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Quel est le dernier serveur installé ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Java 21 est installé sur combien de serveurs ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Liste ce qui est déclaré sur CheeseTrack', profile: 'read_query', mode: 'read' },
+  { prompt: 'Comment installer nginx sur un serveur ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'How do I install PostgreSQL on a server?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Which applications declare PostgreSQL 14?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Le serveur AST-12 est installé dans quelle salle ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'CheeseTrack est déclaré sur quels serveurs ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Show the install base of Java 8', profile: 'read_query', mode: 'read' },
+  { prompt: 'Quand Java 21 a-t-il été installé sur AST-12 ?', profile: 'entity_inspection', mode: 'entity' },
+
+  // Lot 4 review: a technology link verb at the head writes; the link tool is in every write profile.
+  { prompt: 'Remove Java 8 from APP-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Remove nginx from AST-13', profile: 'write_business', mode: 'write' },
+  { prompt: 'Detach Java 8 from APP-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Désinstalle nginx de AST-13', profile: 'write_business', mode: 'write' },
+  { prompt: 'Uninstall nginx from srv-web-01', profile: 'write_general', mode: 'write' },
+  { prompt: 'Remplace Java 8 par Java 21 sur APP-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Replace Java 8 with Java 21 on APP-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Mets PostgreSQL 16 sur CheeseTrack', profile: 'write_general', mode: 'write' },
+  { prompt: 'Enregistre Tomcat 9 sur le serveur srv-app-01', profile: 'write_business', mode: 'write' },
+  { prompt: 'Upgrade CheeseTrack from PostgreSQL 14 to 16', profile: 'write_general', mode: 'write' },
+  { prompt: 'CheeseTrack utilise maintenant Java 21', profile: 'write_general', mode: 'write' },
+
+  // Lot 4: the record and its versions write through the business profile.
+  { prompt: 'Crée la technologie Redis', profile: 'write_business', mode: 'write' },
+  { prompt: 'Ajoute la technologie Kafka (famille middleware)', profile: 'write_business', mode: 'write' },
+  { prompt: 'Passe TEC-3 en fin de vie', profile: 'write_business', mode: 'write' },
+  { prompt: 'Update the lifecycle of TEC-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Mets l\'éditeur de TEC-3 à Oracle', profile: 'write_business', mode: 'write' },
+  { prompt: 'Ajoute la version 17 à TEC-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'La version 16 de PostgreSQL finit son support le 31/12/2028', profile: 'write_business', mode: 'write' },
+  { prompt: 'Add version 3.8 to Kafka with end of support 2027-06-30', profile: 'write_business', mode: 'write' },
+  { prompt: 'Renomme la version 16 de TEC-3 en 16.4', profile: 'write_business', mode: 'write' },
+
+  // Lot 4: the version and end-of-support questions stay reads.
+  { prompt: 'Quelle est la fin de support de PostgreSQL 16 ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Quand la version 14 de TEC-3 finit-elle son support ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Liste les versions de TEC-3', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Quelles technologies sont en fin de vie ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Qui est responsable de TEC-3 ?', profile: 'entity_inspection', mode: 'entity' },
+
+  // Lot 5: people, web links and vulnerability alerts, with the tool each request needs.
+  { prompt: 'Mets Paul Martin responsable IT de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Ajoute Camille Roux comme responsable métier de PostgreSQL', profile: 'write_general', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Retire Paul Martin des responsables de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Ajoute le contact Oracle Support au support de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Add the release notes link https://www.postgresql.org/docs/release/ to PostgreSQL', profile: 'write_relation', mode: 'write', tools: ['update_technology_web_links'] },
+  { prompt: 'Supprime le lien https://example.com de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_web_links'] },
+  { prompt: 'Désactive les alertes de failles de TEC-3', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+  { prompt: 'Turn vulnerability alerts back on for PostgreSQL', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+  { prompt: 'Exclus la version 14 de TEC-3 des alertes', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+  { prompt: 'Quels liens a la fiche de PostgreSQL ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Les alertes de failles sont-elles actives sur TEC-3 ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Who supports PostgreSQL?', profile: 'read_query', mode: 'read' },
+  { prompt: "Quelles technologies n'ont pas de responsable IT ?", profile: 'read_query', mode: 'read' },
+
+  // Lot 6: the state verbs need a technology complement; these are reports, not writes.
+  { prompt: 'Active applications using PostgreSQL', profile: 'read_query', mode: 'read' },
+  { prompt: 'Active technologies with no IT owner', profile: 'read_query', mode: 'read' },
+  { prompt: 'Active servers running Windows Server 2012', profile: 'read_query', mode: 'read' },
+  { prompt: 'Clear summary of PostgreSQL versions in use', profile: 'read_query', mode: 'read' },
+  { prompt: 'Clear list of technologies without an owner, please', profile: 'read_query', mode: 'read' },
+  { prompt: 'Exclude retired applications and list those using Java 8', profile: 'read_query', mode: 'read' },
+
+  // Lot 6: the people, web-link and alert writes the lot 5 review reproduced.
+  { prompt: 'Make Paul Martin the IT owner of PostgreSQL', profile: 'write_general', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Paul Martin devient responsable IT de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Retire le contact Sage Support de PostgreSQL', profile: 'write_general', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Ajoute Jean Dupont aux contacts de support de Redis avec le rôle Éditeur', profile: 'write_general', mode: 'write', tools: ['update_technology_people'] },
+  { prompt: 'Ajoute un lien vers la documentation https://nginx.org/en/docs/ sur nginx', profile: 'write_general', mode: 'write', tools: ['update_technology_web_links'] },
+  { prompt: 'Réactive les alertes de failles sur PostgreSQL', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+  { prompt: 'Stop vulnerability alerts on Windows Server 2012', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+  { prompt: 'Remets la version 14 de TEC-3 sur le réglage de la technologie pour les alertes', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+
+  // Lot 7: "make" opens a write only as "make <name> the IT owner/support contact of"; a
+  // determiner or a pronoun after it opens a report.
+  { prompt: 'Make a list of technologies without an IT owner', profile: 'read_query', mode: 'read' },
+  { prompt: 'Make a report of the business owners of each technology', profile: 'read_query', mode: 'read' },
+  { prompt: 'Make a table of the support contacts of Redis', profile: 'read_query', mode: 'read' },
+  { prompt: 'Make me a summary of PostgreSQL versions with their IT owner', profile: 'read_query', mode: 'read' },
+
+  // Lot 7: the contact of a technology names the support or a technology; these name a master
+  // data contact, so they are master data writes.
+  { prompt: 'Retire le contact Marie Durand de ACME', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
+  { prompt: 'Remove the contact Jane Doe from Acme Corp', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
+  { prompt: 'Add contact John Smith from Oracle', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
+  { prompt: 'Change le contact principal de Fromagerie Durand', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
+  { prompt: 'Mets à jour le contact de Fournisseur Lactalis', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
+
+  // Lot 7: the six phrases that came back to their pre-lot 5 profile. A state verb that clears a
+  // task field is a task write, and a user account change is a generic write with no AI tool. A
+  // location has no disabled state and a portfolio exclusion is a roadmap scenario, so those two
+  // name no writable field and stay reads.
+  { prompt: 'Efface la description de la tâche T-4', profile: 'write_task', mode: 'write', tools: ['update_task_fields'] },
+  { prompt: 'Clear the due date of task T-12', profile: 'write_task', mode: 'write', tools: ['update_task_fields'] },
+  { prompt: 'Disable the location LOC-3', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Exclus le projet PRJ-2 du portefeuille', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: "Désactive l'utilisateur Paul Martin", profile: 'write_general', mode: 'write' },
+  { prompt: 'Active le compte de Julie Bernard', profile: 'write_general', mode: 'write' },
+
+  // Lot 4 review: a noun after upgrade, replace, record or install stays a read; so do a review
+  // and the question of who changed a value.
+  { prompt: 'Upgrade path for PostgreSQL 12', profile: 'read_query', mode: 'read' },
+  { prompt: "Upgrade options for CheeseTrack's database", profile: 'read_query', mode: 'read' },
+  { prompt: 'Replace candidates for Java 8 in the portfolio', profile: 'read_query', mode: 'read' },
+  { prompt: 'Record the end of support dates of all Java versions in a table', profile: 'read_query', mode: 'read' },
+  { prompt: 'Install base of Java 8 per application', profile: 'read_query', mode: 'read' },
+  { prompt: 'Passe en revue les technologies en fin de vie', profile: 'read_query', mode: 'read' },
+  { prompt: 'Qui a changé la fin de support de PostgreSQL 16 ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Adopte PostgreSQL depuis le catalogue KANAP', profile: 'write_business', mode: 'write', tools: ['create_business_record'] },
+  { prompt: 'Adopt Redis from the KANAP catalog', profile: 'write_business', mode: 'write', tools: ['create_business_record'] },
+  { prompt: 'Marque TEC-5 comme obsolète', profile: 'write_business', mode: 'write', tools: ['update_business_record'] },
+  { prompt: 'Indique que TEC-3 est remplacée par TEC-7', profile: 'write_business', mode: 'write', tools: ['update_business_record'] },
+  { prompt: 'Efface la date de fin de support étendu de la version 14 de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_versions'] },
 
   // Other probes from the existing profile spec.
   { prompt: 'Show me my overdue tasks', profile: 'read_query', mode: 'read' },
@@ -243,6 +368,26 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Combien de projets sont en cours ?', profile: 'read_query', mode: 'read' },
   { prompt: 'Combien de contrats arrivent à échéance cette année ?', profile: 'read_query', mode: 'read' },
   { prompt: 'Liste les applications du fournisseur Microsoft', profile: 'read_query', mode: 'read' },
+
+  // Technologies: versions, owners and support are read queries (lot L5 technologies).
+  { prompt: 'Quelles versions de PostgreSQL ne sont plus utilisées ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Which technology versions reach end of support in 2027?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Technologies dont Paul est responsable IT', profile: 'read_query', mode: 'read' },
+  { prompt: 'Liste les technologies en version 16', profile: 'read_query', mode: 'read' },
+  { prompt: 'Nombre de versions par état de support', profile: 'read_query', mode: 'read' },
+  // The technology links (lot L5 lot 3): the flagship phrase, both sides, a version, a removal.
+  { prompt: "Ajoute la technologie PostgreSQL en version 16 sur l'application CheeseTrack", profile: 'write_business', mode: 'write' },
+  { prompt: 'Ajoute TEC-3 à APP-36', profile: 'write_relation', mode: 'write' },
+  { prompt: 'Installe nginx 1.26 sur AST-12', profile: 'write_relation', mode: 'write' },
+  { prompt: 'Retire PostgreSQL 14 de CheeseTrack', profile: 'write_general', mode: 'write' },
+  { prompt: 'Add PostgreSQL 16 to CheeseTrack and its servers', profile: 'write_business', mode: 'write' },
+  { prompt: 'Déclare Java 21 sur APP-36', profile: 'write_relation', mode: 'write' },
+  // The End of support report and the application dates (lot L5 lot 2).
+  { prompt: 'Quelles applications ont une fin de support dans les six mois ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Quelles fiches faut-il compléter pour le rapport de fin de support ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Which servers have no host?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Échéances de fin de support des douze prochains mois par type', profile: 'read_query', mode: 'read' },
+  { prompt: 'Applications mises en service en 2025', profile: 'read_query', mode: 'read' },
 
   // Lot 6: the general "passe/passer" writes, without losing the reflexive past reads.
   { prompt: 'Passe APP-3 en production', profile: 'write_business', mode: 'write' },
@@ -316,6 +461,37 @@ function testTheTable() {
     const profile = selectAiContextProfile(row.prompt);
     assert.equal(profile.name, row.profile, `${row.prompt}: expected ${row.profile}`);
     assert.equal(profile.promptMode, row.mode, `${row.prompt}: expected prompt mode ${row.mode}`);
+    for (const tool of row.tools ?? []) {
+      assert.ok(profile.toolNames.includes(tool as any), `${row.prompt}: expected ${tool}`);
+    }
+  }
+}
+
+/**
+ * The technology link phrases of the lot 4 review, in English and in French: the write mode is the
+ * point (a read loses the preview guidance), and the tool that carries the link must be in it.
+ */
+function testTheTechnologyLinkPhrasesCarryTheTool() {
+  const prompts = [
+    'Remove Java 8 from APP-3',
+    'Remove nginx from AST-13',
+    'Detach Java 8 from APP-3',
+    'Désinstalle nginx de AST-13',
+    'Uninstall nginx from srv-web-01',
+    'Remplace Java 8 par Java 21 sur APP-3',
+    'Replace Java 8 with Java 21 on APP-3',
+    'Mets PostgreSQL 16 sur CheeseTrack',
+    'Enregistre Tomcat 9 sur le serveur srv-app-01',
+    'Upgrade CheeseTrack from PostgreSQL 14 to 16',
+    'CheeseTrack utilise maintenant Java 21',
+    'Renomme la version 16 de TEC-3 en 16.4',
+    'La version 16 de PostgreSQL finit son support le 31/12/2028',
+  ];
+  for (const prompt of prompts) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.promptMode, 'write', `${prompt}: expected the write mode`);
+    assert.ok(profile.toolNames.includes('update_technology_links'), `${prompt}: expected update_technology_links`);
+    assert.ok(profile.toolNames.includes('update_technology_versions'), `${prompt}: expected update_technology_versions`);
   }
 }
 
@@ -396,6 +572,7 @@ function testTheFixturePhrasesAreAllPresent() {
 
 function run() {
   testTheTable();
+  testTheTechnologyLinkPhrasesCarryTheTool();
   testTheFixturePhrasesAreAllPresent();
   console.log(`  context profile table: ${FIXTURE_ROWS.length} lines, OK`);
 }

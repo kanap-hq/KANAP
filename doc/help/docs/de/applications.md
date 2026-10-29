@@ -718,6 +718,16 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 
 ---
 
+## Den Assistenten fragen
+
+[Plaid](ai-assistant.md) liest die Version, das Datum der Inbetriebnahme, das Datum des Supportendes und das Datum der Außerbetriebnahme jeder Anwendung. Es filtert, sortiert und gruppiert die Anwendungen nach diesen Daten. Seine Liste behält die außer Betrieb genommenen Anwendungen, während der Bericht [Supportende](end-of-support.md) nur die Anwendungen in Betrieb behält.
+
+Plaid deklariert auch eine Technologie für eine Anwendung oder entfernt sie, mit ihrer Version und, wenn Sie es verlangen, auf den Deployment-Servern der Anwendung. Dazu brauchen Sie das Recht, Anwendungen zu lesen, und die Stufe Mitglied für die Infrastruktur. Ein Business Contributor tut dies nur für die Anwendungen, an denen er beteiligt ist. Plaid verknüpft kein Betriebssystem: Erfassen Sie es auf der Seite des Servers. Jede Änderung kommt als Vorschau, die Sie genehmigen. Wenn Sie Plaid bitten, sie rückgängig zu machen, stellt es genau das wieder her, was es geändert hat. Eine dabei angelegte Version bleibt bei der Technologie.
+
+Fragen Sie zum Beispiel: „Füge CheeseTrack und seinen Servern PostgreSQL 16 hinzu“, „Entferne PostgreSQL 14 von CheeseTrack“, „Welche Anwendungen erreichen in den nächsten sechs Monaten ihr Supportende?“ oder „Welche Anwendungen deklarieren PostgreSQL 14?“
+
+---
+
 ## Tipps
 
 - **Beginnen Sie mit kritischen Apps**: Dokumentieren Sie zuerst Ihre geschäftskritischen Anwendungen, dann arbeiten Sie die Kritikalitätsstufen ab.

@@ -270,6 +270,30 @@ const SCREEN_FIELD_KEYS: Record<string, Record<string, string>> = {
     expected_benefits: 'portfolio:workspace.request.analysis.labels.expectedBenefits',
     feasibility_review: 'portfolio:workspace.request.analysis.sections.feasibilityReview',
   },
+  technologies: {
+    name: 'it:workspace.technology.fields.name',
+    editor: 'it:workspace.technology.fields.editor',
+    family: 'it:workspace.technology.fields.family',
+    lifecycle: 'it:common.lifecycle',
+    hosting_type: 'it:workspace.technology.fields.hostingType',
+    description: 'it:workspace.technology.fields.description',
+    notes: 'it:workspace.technology.fields.notes',
+    support_notes: 'ai:previewCard.fields.support_notes',
+    replaced_by_id: 'it:workspace.technology.fields.replacedBy',
+    cyber_criticality: 'it:classification.cyber_criticality',
+    recovery_wave: 'it:classification.recovery_wave',
+    rto_minutes: 'it:classification.recovery_time_objective_rto',
+    rpo_minutes: 'it:classification.recovery_point_objective_rpo',
+    admin_zone: 'it:workspace.technology.fields.adminZone',
+    catalog_adoption: 'ai:previewCard.fields.catalog_adoption',
+    technology_versions: 'ai:previewCard.fields.technology_versions',
+    technology_owners: 'ai:previewCard.fields.technology_owners',
+    technology_support_contacts: 'ai:previewCard.fields.technology_support_contacts',
+    technology_web_links: 'ai:previewCard.fields.technology_web_links',
+    technology_vulnerability_alerts: 'ai:previewCard.fields.technology_vulnerability_alerts',
+    technology_applications: 'ai:previewCard.fields.technology_applications',
+    technology_servers: 'ai:previewCard.fields.technology_servers',
+  },
   incidents: {
     title: 'it:workspace.incident.fields.title',
     category: 'it:workspace.incident.drawer.category',
@@ -383,8 +407,10 @@ export function usePreviewChangeLabels(preview?: AiMutationPreview) {
   const { labelFor } = useItOpsEnumOptions();
   const locale = useLocale();
   const changes = Object.values(preview?.changes ?? {});
-  const { data: classificationCatalog } = useApplicationClassificationCatalog({
-    enabled: changes.some((change) => !!change.classification),
+  const { data: classificationCatalog = undefined } = useApplicationClassificationCatalog({
+    enabled: changes.some((change) => !!change.classification)
+      || (preview?.target.entity_type === 'technologies'
+        && (preview.changes.cyber_criticality != null || preview.changes.recovery_wave != null)),
   });
   const { labelByName: taskTypeLabels } = useLocalizedTaskTypes({
     enabled: !!preview && TASK_TOOLS.has(preview.tool_name) && !!(preview.changes.task_type?.to || preview.changes.type?.to),
@@ -425,6 +451,19 @@ export function usePreviewChangeLabels(preview?: AiMutationPreview) {
       // The incident category is the tenant's list: its label, in the person's language.
       if (entity === 'incidents' && field === 'category') return labelFor('incidentCategories', value) || value;
       if (TASK_TOOLS.has(preview.tool_name) && (field === 'task_type' || field === 'type')) return taskTypeLabels[value] ?? value;
+      if (entity === 'technologies') {
+        // The tenant's catalogs, in the person's language: the server stores the code.
+        if (field === 'family') return labelFor('technologyFamily', value) || value;
+        if (field === 'lifecycle') return labelFor('lifecycleStatus', value) || value;
+        if (field === 'hosting_type') return labelFor('hostingType', value) || value;
+        if (field === 'admin_zone') return labelFor('adminZone', value) || value;
+        if (field === 'cyber_criticality') {
+          return classificationCatalog?.cyberCriticalityLevels?.find((level) => level.code === value)?.label || value;
+        }
+        if (field === 'recovery_wave') {
+          return classificationCatalog?.recoveryWaves?.find((wave) => wave.code === value)?.label || value;
+        }
+      }
       if (field === 'lifecycle' && entity === 'applications') return labelFor('lifecycleStatus', value) || value;
       if (RECORD_TOOLS.has(preview.tool_name) && (value === 'Yes' || value === 'No')) {
         return known([`it:enums.yesNo.${value.toLowerCase()}`]) ?? value;

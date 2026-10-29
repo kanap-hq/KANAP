@@ -38,6 +38,7 @@ import { CapexVersionsController } from '../../spend/capex-versions.controller';
 import { SpendVersionsController } from '../../spend/spend-versions.controller';
 import { TasksController } from '../../spend/tasks.controller';
 import { SuppliersController } from '../../suppliers/suppliers.controller';
+import { TechnologiesController } from '../../technologies/technologies.controller';
 
 /**
  * Lot D11: each Plaid write needs the level of the screen route that makes the same change.
@@ -66,6 +67,7 @@ const BUSINESS_RECORD_ROUTES: Record<string, Controller> = {
   connections: ConnectionsController,
   budget_lines: BudgetLinesController,
   incidents: IncidentsController,
+  technologies: TechnologiesController,
 };
 
 const MASTER_DATA_ROUTES: Record<string, Controller> = {
@@ -120,6 +122,21 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
   update_incident_links: {
     incidents: { resource: 'incidents', level: 'contributor', route: [IncidentsController, 'linkRelation'] },
   },
+  update_technology_links: {
+    technologies: { resource: 'infrastructure', level: 'member', route: [TechnologiesController, 'addAsset'] },
+  },
+  update_technology_versions: {
+    technologies: { resource: 'infrastructure', level: 'member', route: [TechnologiesController, 'createVersion'] },
+  },
+  update_technology_people: {
+    technologies: { resource: 'infrastructure', level: 'member', route: [TechnologiesController, 'replaceOwners'] },
+  },
+  update_technology_web_links: {
+    technologies: { resource: 'infrastructure', level: 'member', route: [TechnologiesController, 'createLink'] },
+  },
+  set_technology_vulnerability_alerts: {
+    technologies: { resource: 'infrastructure', level: 'member', route: [TechnologiesController, 'setVulnerabilityAlerts'] },
+  },
   change_incident_state: {
     incidents: { resource: 'incidents', level: 'admin', route: [IncidentsController, 'reopen'] },
   },
@@ -170,6 +187,32 @@ function routeGuard([controller, method]: [Controller, string]): RequireLevelMet
   return meta;
 }
 
+
+/**
+ * The technology routes the assistant writes through, at the screen's level: the fiche's creation
+ * and modification, the catalog adoption (`create_business_record` when the catalog knows the
+ * name), and the versions. Adoption has no tool of its own; it takes the same member level as the
+ * creation route.
+ */
+function testTechnologyWriteRoutes() {
+  const expected: Array<[string, string]> = [
+    ['create', 'create'],
+    ['adopt', 'adopt'],
+    ['update', 'update'],
+    ['createVersion', 'createVersion'],
+    ['updateVersion', 'updateVersion'],
+    ['replaceOwners', 'replaceOwners'],
+    ['replaceSupportContacts', 'replaceSupportContacts'],
+    ['createLink', 'createLink'],
+    ['updateLink', 'updateLink'],
+    ['deleteLink', 'deleteLink'],
+    ['setVulnerabilityAlerts', 'setVulnerabilityAlerts'],
+  ];
+  for (const [method, label] of expected) {
+    assert.deepEqual(routeGuard([TechnologiesController, method]), { resource: 'infrastructure', level: 'member' }, `${label}: the screen route level`);
+  }
+}
+
 function testTableMatchesRoutesAndPlaid() {
   let rows = 0;
   for (const [toolName, families] of Object.entries(TABLE)) {
@@ -209,6 +252,22 @@ function testOnlyTheContributorRowsAreBelowMember() {
   assert.equal(aiWriteLevel('update_business_record', 'incidents'), 'contributor');
   assert.equal(aiWriteLevel('add_incident_note', 'incidents'), 'contributor');
   assert.equal(aiWriteLevel('update_incident_links', 'incidents'), 'contributor');
+  assert.equal(aiWriteLevel('update_technology_links', 'technologies'), 'member');
+  // The link to an application needs the application read, as the Applications tab of a technology.
+  assert.deepEqual(
+    aiRelationTargetRequirement('update_technology_links', 'technologies', 'applications'),
+    { resource: 'applications', level: 'reader' },
+  );
+  assert.equal(aiRelationTargetRequirement('update_technology_links', 'technologies', 'servers'), null);
+  // Naming a support contact needs the contacts read, as the Operations tab's picker does.
+  assert.equal(aiWriteLevel('update_technology_people', 'technologies'), 'member');
+  assert.equal(aiWriteLevel('update_technology_web_links', 'technologies'), 'member');
+  assert.equal(aiWriteLevel('set_technology_vulnerability_alerts', 'technologies'), 'member');
+  assert.deepEqual(
+    aiRelationTargetRequirement('update_technology_people', 'technologies', 'support_contacts'),
+    { resource: 'contacts', level: 'reader' },
+  );
+  assert.equal(aiRelationTargetRequirement('update_technology_people', 'technologies', 'owners'), null);
   // The administrator actions know one level per tool, and an unknown family stays at admin.
   assert.equal(aiWriteLevel('change_incident_state', 'incidents'), 'admin');
   assert.equal(aiWriteLevel('set_incident_confidentiality', 'incidents'), 'admin');
@@ -326,6 +385,7 @@ function testRelationTargetsMatchTheRelationsTab() {
 
 function run() {
   testTableMatchesRoutesAndPlaid();
+  testTechnologyWriteRoutes();
   testOnlyTheContributorRowsAreBelowMember();
   testToolRequirements();
   testRelationTargetsMatchTheRelationsTab();

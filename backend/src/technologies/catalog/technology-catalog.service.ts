@@ -1,7 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { addedCpeProducts, TechnologyCpeEvents } from '../technology-cpe-events';
 import type { EntityManager } from 'typeorm';
-import { AuditService } from '../../audit/audit.service';
+import { AuditService, type AuditSourceOptions } from '../../audit/audit.service';
 import { Features } from '../../config/features';
 import { languageOf } from '../../common/csv-sheet/request-options';
 import { allocateItemNumbers } from '../../common/item-number.service';
@@ -66,7 +66,21 @@ export type CatalogProduct = {
   versions: CatalogVersion[];
 };
 
-type Opts = { manager: EntityManager; tenantId: string; userId?: string | null };
+type Opts = {
+  manager: EntityManager;
+  tenantId: string;
+  userId?: string | null;
+  /** The audit row's source: the screen leaves it out (`user`), Plaid names its preview. */
+  audit?: AuditSourceOptions;
+};
+
+/**
+ * What an assistant adoption announced, checked again under the advisory lock before anything is
+ * written: a new record, or the hand-typed record the card said the adoption completes.
+ */
+export type AdoptExpectation =
+  | { mode: 'create' }
+  | { mode: 'complete'; technologyId: string };
 
 /** A cached product read longer ago than this (a product that keeps failing) gives way to the shipped file. */
 export const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -185,16 +199,31 @@ export class TechnologyCatalogService {
    */
   async notAdopted(filters: { q?: string; family?: string; language?: unknown }, opts: Opts) {
     const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, filters.language);
-    const rows: Array<{ catalog_key: string | null; name: string; item_number: number | null }> = await opts.manager.query(
-      `SELECT catalog_key, name, item_number FROM technologies WHERE tenant_id = $1`,
+    const rows: Array<{ id: string; catalog_key: string | null; name: string; item_number: number | null; description: string | null }> = await opts.manager.query(
+      `SELECT id, catalog_key, name, item_number, description FROM technologies WHERE tenant_id = $1`,
       [opts.tenantId],
     );
+    const versionRows: Array<{ technology_id: string; label: string }> = await opts.manager.query(
+      `SELECT technology_id, label FROM technology_versions WHERE tenant_id = $1`,
+      [opts.tenantId],
+    );
+    const labelsByTechnology = new Map<string, string[]>();
+    for (const row of versionRows) {
+      const labels = labelsByTechnology.get(row.technology_id) ?? [];
+      labels.push(row.label);
+      labelsByTechnology.set(row.technology_id, labels);
+    }
     const keys = new Set(rows.map((row) => row.catalog_key).filter(Boolean));
     const names = new Set(rows.filter((row) => row.catalog_key).map((row) => row.name.trim().toLowerCase()));
-    const completesByName = new Map<string, string | null>();
+    const completesByName = new Map<string, { ref: string; id: string; labels: Set<string>; description: string | null }>();
     for (const row of rows) {
       if (row.catalog_key) continue;
-      completesByName.set(row.name.trim().toLowerCase(), technologyReference(row.item_number));
+      completesByName.set(row.name.trim().toLowerCase(), {
+        ref: technologyReference(row.item_number)!,
+        id: row.id,
+        labels: new Set((labelsByTechnology.get(row.id) ?? []).map((label) => label.trim().toLowerCase())),
+        description: row.description,
+      });
     }
     const needle = String(filters.q ?? '').trim().toLowerCase();
     const family = String(filters.family ?? '').trim();
@@ -206,19 +235,42 @@ export class TechnologyCatalogService {
       .filter((row) => !family || row.family === family)
       .filter((row) => !needle || row.product.name.toLowerCase().includes(needle) || row.product.editor.toLowerCase().includes(needle))
       .sort((a, b) => a.product.name.localeCompare(b.product.name, 'en', { sensitivity: 'base' }))
-      .map(({ product, family: resolved }) => ({
-        key: product.key,
-        name: product.name,
-        editor: product.editor,
-        family: resolved,
-        hosting_type: resolveHostingType(hostingTypes, this.hostingTypeOf(product)),
-        cpe_products: product.cpe_products,
-        versions: product.versions.length,
-        latest_version: product.versions[0]?.label ?? null,
-        description: this.description(product.key, language),
-        completes: completesByName.get(product.name.trim().toLowerCase()) ?? null,
-      }));
+      .map(({ product, family: resolved }) => {
+        const completes = completesByName.get(product.name.trim().toLowerCase()) ?? null;
+        // What adopting under an existing hand-typed record adds: the missing catalog versions and,
+        // when the record has none, the description. The card lists them beside the key.
+        const missingVersions = completes
+          ? product.versions.filter((version) => !completes.labels.has(version.label.trim().toLowerCase())).map((version) => version.label)
+          : [];
+        return {
+          key: product.key,
+          name: product.name,
+          editor: product.editor,
+          family: resolved,
+          family_label: technologyFamilies.find((option) => option.code === resolved)?.label ?? resolved,
+          hosting_type: resolveHostingType(hostingTypes, this.hostingTypeOf(product)),
+          cpe_products: product.cpe_products,
+          versions: product.versions.length,
+          latest_version: product.versions[0]?.label ?? null,
+          // The end-of-support range of the versions an adoption would write: the assistant's card.
+          ...this.supportRange(product.versions),
+          description: this.description(product.key, language),
+          completes: completes?.ref ?? null,
+          completes_id: completes?.id ?? null,
+          completes_missing_versions: missingVersions,
+          completes_description_empty: !!completes && !String(completes.description ?? '').trim(),
+        };
+      });
     return { items };
+  }
+
+  /** The earliest and latest end of support among `versions` (extended when it is later). */
+  private supportRange(versions: CatalogVersion[]): { support_from: string | null; support_to: string | null } {
+    const dates = versions
+      .map((version) => version.extended_support_end ?? version.standard_support_end)
+      .filter((date): date is string => !!date)
+      .sort();
+    return { support_from: dates[0] ?? null, support_to: dates[dates.length - 1] ?? null };
   }
 
   /**
@@ -242,7 +294,7 @@ export class TechnologyCatalogService {
    * not change, so its setting does not follow a `subscribed` entry. Two
    * adoptions of one entry at once run one after the other (transaction-level advisory lock).
    */
-  async adopt(key: string, opts: Opts & { language?: unknown }) {
+  async adopt(key: string, opts: Opts & { language?: unknown; expect?: AdoptExpectation }) {
     const { manager: mg, tenantId } = opts;
     const shippedEntry = this.byKey.get(String(key || '').trim());
     if (!shippedEntry) throw new NotFoundException('Catalog entry not found');
@@ -280,6 +332,28 @@ export class TechnologyCatalogService {
         ORDER BY (catalog_key = $2) DESC NULLS LAST LIMIT 1`,
       [tenantId, product.key, product.name],
     );
+    // The card announced a new record: a record of this name or this catalog key means the screen
+    // adopted or typed it between the preview and the approval. Nothing is written.
+    if (opts.expect?.mode === 'create' && existing[0]) {
+      throw new ConflictException(`A technology of this name appeared after the preview was created: TEC-${(
+        await mg.query(`SELECT item_number FROM technologies WHERE tenant_id = $1 AND id = $2`, [tenantId, existing[0].id])
+      )[0]?.item_number ?? '?'}.`);
+    }
+    // The card announced the hand-typed record it completes: the row is still there, still without a
+    // catalog key, still under the same name, and it is the one the card named.
+    if (opts.expect?.mode === 'complete') {
+      const target: Array<{ id: string; catalog_key: string | null; name: string }> = await mg.query(
+        `SELECT id, catalog_key, name FROM technologies WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+        [tenantId, opts.expect.technologyId],
+      );
+      const row = target[0];
+      if (!row
+        || row.catalog_key != null
+        || row.name.trim().toLowerCase() !== product.name.trim().toLowerCase()
+        || existing[0]?.id !== row.id) {
+        throw new ConflictException(`Technology "${product.name}" changed after the preview was created.`);
+      }
+    }
     let technologyId: string;
     let created = false;
     if (existing[0]?.catalog_key === product.key) {
@@ -306,7 +380,7 @@ export class TechnologyCatalogService {
           defaultVulnerabilityAlerts({ catalogKey: product.key })],
       );
       const after = await readTechnology(mg, tenantId, technologyId);
-      await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'update', before, after, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
       await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId, products: addedCpeProducts(before.cpe_products, after.cpe_products) });
     } else {
       const settings = await this.itOps.getSettings(tenantId, { manager: mg });
@@ -326,8 +400,17 @@ export class TechnologyCatalogService {
       technologyId = row.id;
       created = true;
       const after = await readTechnology(mg, tenantId, technologyId);
-      await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'create', before: null, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'create', before: null, after, userId: opts.userId ?? null, ...opts.audit }, { manager: mg });
       await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId, products: addedCpeProducts([], after.cpe_products) });
+    }
+
+    // The service created the record the card announced, or completed the one it named; anything
+    // else would write where the card did not look.
+    if (opts.expect?.mode === 'create' && !created) {
+      throw new ConflictException(`Technology "${product.name}" changed after the preview was created.`);
+    }
+    if (opts.expect?.mode === 'complete' && technologyId !== opts.expect.technologyId) {
+      throw new ConflictException(`Technology "${product.name}" changed after the preview was created.`);
     }
 
     const versions = product.versions;
@@ -345,7 +428,7 @@ export class TechnologyCatalogService {
     if (inserted.length) {
       await this.audit.log({
         table: 'technology_versions', recordId: technologyId, action: 'create', before: null,
-        after: { catalog_key: product.key, versions_added: inserted.length }, userId: opts.userId ?? null,
+        after: { catalog_key: product.key, versions_added: inserted.length }, userId: opts.userId ?? null, ...opts.audit,
       }, { manager: mg });
     }
     const tech = await readTechnology(mg, tenantId, technologyId);

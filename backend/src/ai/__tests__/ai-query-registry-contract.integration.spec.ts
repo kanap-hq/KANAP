@@ -39,6 +39,13 @@ process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
 /**
+ * The families the assistant reads in memory from the screen's service (the two End of support
+ * report lists): their filters and sorts change the rows, never the statements they send. Their
+ * behaviour is asserted on `filters_applied` and the result, and by their own spec.
+ */
+const IN_MEMORY_FAMILIES = new Set(['support_gaps', 'support_deadlines']);
+
+/**
  * The column a list service sorts on when it does not know the requested one. A sort field on
  * that column cannot be told apart from the fallback by its statements; it is checked on data.
  */
@@ -61,6 +68,7 @@ const SERVICE_FALLBACK_SORT: Record<string, string> = {
   requests: 'created_at',
   tasks: 'created_at',
   technologies: 'name',
+  technology_versions: 'technology',
   users: 'last_name',
   vulnerabilities: 'exploited',
 };
@@ -141,9 +149,11 @@ async function seedTenant(runner: QueryRunner): Promise<Seed> {
   await pair('locations', (n, at) => insertId(runner,
     `INSERT INTO locations (tenant_id, name, hosting_type, location_reference, created_at, updated_at) VALUES ($1, $2, 'on_premise', $3, $4, $4)`,
     [tenantId, `Location ${n}`, `LOC-${n}`, at]));
+  // The two applications reach their end of support within the year (the deadlines family needs rows).
   await pair('applications', (n, at) => insertId(runner,
-    `INSERT INTO applications (tenant_id, name, sequential_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $4)`,
-    [tenantId, `Application ${n}`, `APP-${n}`, at]));
+    `INSERT INTO applications (tenant_id, name, sequential_id, end_of_support_date, created_at, updated_at)
+     VALUES ($1, $2, $3, CURRENT_DATE + $4::int, $5, $5)`,
+    [tenantId, `Application ${n}`, `APP-${n}`, n === 1 ? 30 : 60, at]));
   await pair('assets', (n, at) => insertId(runner,
     `INSERT INTO assets (tenant_id, name, kind, environment, created_at, updated_at) VALUES ($1, $2, 'server', 'prod', $3, $3)`,
     [tenantId, `Asset ${n}`, at]));
@@ -186,6 +196,10 @@ async function seedTenant(runner: QueryRunner): Promise<Seed> {
   await pair('technologies', (n, at) => insertId(runner,
     `INSERT INTO technologies (tenant_id, name, item_number, editor, created_at, updated_at) VALUES ($1, $2, $3, 'Contract Inc.', $4, $4)`,
     [tenantId, `Technology ${n}`, n, at]));
+  // One row per version of a technology: the two rows hang on the older technology.
+  await pair('technology_versions', (n, at) => insertId(runner,
+    `INSERT INTO technology_versions (tenant_id, technology_id, label, created_at, updated_at) VALUES ($1, $2, $3, $4, $4)`,
+    [tenantId, rows.technologies.older, `Contract ${n}`, at]));
   // The CVE cache is shared by every tenant; the rows are this tenant's, first detected a year apart.
   const cves = [1, 2].map((n) => `CVE-2098-${`${tag.replace(/\D/g, '')}0000`.slice(0, 4)}${n}`);
   await runner.query(`INSERT INTO vulnerability_cves (cve_id, severity) VALUES ($1, 'high'), ($2, 'low') ON CONFLICT DO NOTHING`, cves);
@@ -249,8 +263,11 @@ async function testStaticConsistency(harness: Harness) {
         assert.equal(registry.sortFields[name], sortKey, `${entityType}.${name}: sorts on the displayed column`);
       }
     }
-    for (const name of ['created_at', 'updated_at']) {
-      assert.ok(registry.sortFields[name], `${entityType}: sorts on ${name}`);
+    // The report rows are computed from the live tables and carry no created_at of their own.
+    if (!IN_MEMORY_FAMILIES.has(entityType)) {
+      for (const name of ['created_at', 'updated_at']) {
+        assert.ok(registry.sortFields[name], `${entityType}: sorts on ${name}`);
+      }
     }
     assert.ok(registry.sortFields[registry.defaultSort.field] ?? registry.defaultSort.field, `${entityType}: default sort`);
   }
@@ -275,13 +292,18 @@ async function testEveryAdvertisedSortAndFilterApplies(harness: Harness, runner:
     assert.equal(unfiltered.error, null, `${entityType}: the default query runs (${unfiltered.error})`);
     assert.ok(unfiltered.ids.length >= 2, `${entityType}: the seeded rows are listed (${unfiltered.ids.length})`);
 
+    const inMemory = IN_MEMORY_FAMILIES.has(entityType);
     for (const [field, grid] of Object.entries<string>(registry.sortFields)) {
       const asc = await runQuery(runner, harness.executor, ctx, { entity_type: entityType, sort: { field, direction: 'asc' } });
       const desc = await runQuery(runner, harness.executor, ctx, { entity_type: entityType, sort: { field, direction: 'desc' } });
       const label = `${entityType} sort ${field} (${grid})`;
       if (asc.error || desc.error) failures.push(`${label}: fails: ${asc.error ?? desc.error}`);
       else if (asc.result.sort_ignored.length || desc.result.sort_ignored.length) failures.push(`${label}: reported as ignored`);
-      else if (asc.sql === desc.sql) failures.push(`${label}: asc and desc send the same statements`);
+      else if (inMemory) {
+        // The rows are ordered in memory: the statements cannot tell, the applied order can.
+        const applied = (run: Run) => run.result.sort?.field;
+        if (applied(asc) !== field || applied(desc) !== field) failures.push(`${label}: the result names another order`);
+      } else if (asc.sql === desc.sql) failures.push(`${label}: asc and desc send the same statements`);
       else if (!unknownAsc.error && asc.sql === unknownAsc.sql && desc.sql === unknownDesc.sql && SERVICE_FALLBACK_SORT[entityType] !== grid) {
         failures.push(`${label}: sorts like an unknown column (the service falls back to ${SERVICE_FALLBACK_SORT[entityType] ?? 'its default'})`);
       }
@@ -292,7 +314,8 @@ async function testEveryAdvertisedSortAndFilterApplies(harness: Harness, runner:
       const label = `${entityType} filter ${field} (${definition.grid}, ${definition.type})`;
       if (filtered.error) failures.push(`${label}: fails: ${filtered.error}`);
       else if (filtered.result.filters_ignored.length) failures.push(`${label}: reported as ignored`);
-      else if (filtered.sql === unfiltered.sql) failures.push(`${label}: sends the same statements as no filter`);
+      else if (inMemory && !filtered.result.filters_applied.includes(field)) failures.push(`${label}: not named as applied`);
+      else if (!inMemory && filtered.sql === unfiltered.sql) failures.push(`${label}: sends the same statements as no filter`);
     }
   }
   assert.deepEqual(failures, [], `every advertised sort and filter applies:\n${failures.join('\n')}`);

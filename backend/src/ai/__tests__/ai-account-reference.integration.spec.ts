@@ -27,6 +27,8 @@ function businessRecordSupport(): any {
   return new AiBusinessRecordMutationSupportService(
     {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
     {} as any,
+    {} as any,
+    {} as any
   );
 }
 

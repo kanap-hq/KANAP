@@ -212,6 +212,54 @@ export const writeActionText = {
       case 'es': return `modificación de las relaciones de ${subject}`;
     }
   },
+  /** A technology adopted from the KANAP catalog: the record comes from the catalog, not typed. */
+  adoptTechnology(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `adoption de ${quoted(language, subject)} depuis le catalogue KANAP`;
+      case 'de': return `${quoted(language, subject)} aus dem KANAP-Katalog übernehmen`;
+      case 'es': return `adopción de ${quoted(language, subject)} del catálogo KANAP`;
+    }
+  },
+  /** The links of a technology to its applications and servers. */
+  updateTechnologyLinks(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `modification des liens de ${subject}`;
+      case 'de': return `Verknüpfungen von ${subject} ändern`;
+      case 'es': return `modificación de los vínculos de ${subject}`;
+    }
+  },
+  /** The versions of a technology: added and changed in one preview. */
+  updateTechnologyVersions(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `modification des versions de ${subject}`;
+      case 'de': return `Versionen von ${subject} ändern`;
+      case 'es': return `modificación de las versiones de ${subject}`;
+    }
+  },
+  /** The owners and support contacts of a technology. */
+  updateTechnologyPeople(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `modification des responsables et contacts de ${subject}`;
+      case 'de': return `Verantwortliche und Kontakte von ${subject} ändern`;
+      case 'es': return `modificación de los responsables y contactos de ${subject}`;
+    }
+  },
+  /** The web links of a technology. */
+  updateTechnologyWebLinks(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `modification des liens web de ${subject}`;
+      case 'de': return `Weblinks von ${subject} ändern`;
+      case 'es': return `modificación de los enlaces web de ${subject}`;
+    }
+  },
+  /** The vulnerability alert setting and the version exceptions of a technology. */
+  setTechnologyVulnerabilityAlerts(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `modification des alertes de failles de ${subject}`;
+      case 'de': return `Sicherheitswarnungen von ${subject} ändern`;
+      case 'es': return `modificación de las alertas de vulnerabilidades de ${subject}`;
+    }
+  },
   /** A journal note on an incident: the journal only takes additions. */
   addIncidentNote(language: AiTranslatedWriteLanguage, subject: string): string {
     switch (language) {
@@ -318,6 +366,7 @@ const RECORD_NOUNS: Record<string, TranslatedTexts> = {
   connections: { fr: 'de la connexion', de: 'Verbindung', es: 'de la conexión' },
   budget_lines: { fr: 'de la ligne budgétaire', de: 'Budgetzeile', es: 'de la línea presupuestaria' },
   incidents: { fr: "de l'incident", de: 'Vorfall', es: 'del incidente' },
+  technologies: { fr: 'de la technologie', de: 'Technologie', es: 'de la tecnología' },
   companies: { fr: 'de la société', de: 'Unternehmen', es: 'de la empresa' },
   departments: { fr: 'du département', de: 'Abteilung', es: 'del departamento' },
   suppliers: { fr: 'du fournisseur', de: 'Lieferant', es: 'del proveedor' },
@@ -429,7 +478,7 @@ export function incidentLinkCardText(language: AiWriteLanguage, group: IncidentL
 }
 
 /** A record's label is data, not Markdown: escape the characters that would style the card. */
-function escapeMarkdownLabel(value: string): string {
+export function escapeMarkdownLabel(value: string): string {
   return value
     // The escape character itself first, so the backslashes added below stay single.
     .replace(/\\/g, '\\\\')
@@ -437,7 +486,436 @@ function escapeMarkdownLabel(value: string): string {
     // A leading list marker, quote or ordered-list number would structure the line.
     .replace(/^([>+-])/, '\\$1')
     .replace(/^(\d+)\./, '$1\\.')
-    .replace(/([*_\[\]()`#])/g, '\\$1');
+    .replace(/([*_\[\]`#])/g, '\\$1');
+}
+
+/** The tech-link card group: the four headings of one kind, with the server wording for `already`. */
+export type TechnologyLinkCardGroup = {
+  add: string[];
+  remove: string[];
+  already: string[];
+  absent: string[];
+};
+
+export type TechnologyAdoptionCard = {
+  /** The code of the family the adoption writes; the card shows it as its own field. */
+  family: string;
+  /** The catalog entry's key, listed when the adoption completes a hand-typed record. */
+  catalog_key?: string | null;
+  versions: number;
+  support_from: string | null;
+  support_to: string | null;
+  /** The hand-typed record the adoption completes, when the catalog entry has one of its name. */
+  completes?: { reference: string; missing_versions: string[]; fills_description: boolean } | null;
+};
+
+/**
+ * The catalog block of an adoption preview: the versions it brings, with the range of their
+ * end-of-support dates. A completion under an existing hand-typed record says so and lists what
+ * the adoption adds (the catalog key, the missing versions, the description when the record has
+ * none). The family is a field of its own on the card, named from the tenant's list on the
+ * frontend, in the person's language. The fields the person added are listed apart from this block.
+ */
+export function technologyAdoptionCardText(language: AiWriteLanguage, adoption: TechnologyAdoptionCard): string {
+  const count = adoption.versions;
+  const from = adoption.support_from;
+  const to = adoption.support_to;
+  const versions = {
+    en: count === 1 ? '1 version' : `${count} versions`,
+    fr: count === 1 ? '1 version' : `${count} versions`,
+    de: count === 1 ? '1 Version' : `${count} Versionen`,
+    es: count === 1 ? '1 versión' : `${count} versiones`,
+  }[language];
+  const range = from && to
+    ? {
+      en: `end of support from ${from} to ${to}`,
+      fr: `fin de support de ${from} à ${to}`,
+      de: `Supportende von ${from} bis ${to}`,
+      es: `fin de soporte de ${from} a ${to}`,
+    }[language]
+    : from
+      ? { en: `end of support from ${from}`, fr: `fin de support à partir du ${from}`, de: `Supportende ab ${from}`, es: `fin de soporte desde el ${from}` }[language]
+      : to
+        ? { en: `end of support up to ${to}`, fr: `fin de support jusqu'au ${to}`, de: `Supportende bis ${to}`, es: `fin de soporte hasta el ${to}` }[language]
+        : { en: 'no end-of-support date', fr: 'sans date de fin de support', de: 'ohne Supportende', es: 'sin fecha de fin de soporte' }[language];
+  const separator = language === 'fr' ? ' : ' : ': ';
+  if (adoption.completes) {
+    const heading = {
+      en: `Completes ${adoption.completes.reference} with the KANAP catalog`,
+      fr: `Complète ${adoption.completes.reference} avec le catalogue KANAP`,
+      de: `Ergänzt ${adoption.completes.reference} aus dem KANAP-Katalog`,
+      es: `Completa ${adoption.completes.reference} con el catálogo KANAP`,
+    }[language];
+    const keyLabel = { en: 'Catalog key', fr: 'Clé de catalogue', de: 'Katalogschlüssel', es: 'Clave de catálogo' }[language];
+    const missingLabel = { en: 'missing versions', fr: 'versions manquantes', de: 'fehlende Versionen', es: 'versiones que faltan' }[language];
+    const description = {
+      en: 'Description added (the record has none)',
+      fr: "Description ajoutée (la fiche n'en a pas)",
+      de: 'Beschreibung ergänzt (der Eintrag hat keine)',
+      es: 'Descripción añadida (la ficha no tiene)',
+    }[language];
+    const lines = [`- ${keyLabel}${separator}${escapeMarkdownLabel(String(adoption.catalog_key ?? ''))}`];
+    if (adoption.completes.missing_versions.length) {
+      lines.push(`- ${adoption.completes.missing_versions.length} ${missingLabel}${separator}${adoption.completes.missing_versions.join(', ')}`);
+    }
+    if (adoption.completes.fills_description) lines.push(`- ${description}`);
+    lines.push(`- ${versions}, ${range}`);
+    return [`**${heading}**`, ...lines].join('\n');
+  }
+  const heading = {
+    en: 'Adopted from the KANAP catalog',
+    fr: 'Adoptée du catalogue KANAP',
+    de: 'Aus dem KANAP-Katalog übernommen',
+    es: 'Adoptada del catálogo KANAP',
+  }[language];
+  return [`**${heading}**`, `- ${versions}, ${range}`].join('\n');
+}
+
+/**
+ * The versions of a technology as the card of `update_technology_versions` names them: an added
+ * version with its end of support, a changed version with what moved, and, on the undo, the
+ * versions the undo restores but does not remove.
+ */
+export type TechnologyVersionEditAdd = { label: string; end: string | null };
+export type TechnologyVersionEditUpdate = {
+  label: string;
+  next_label: string | null;
+  old_end: string | null;
+  new_end: string | null;
+  notes: 'updated' | 'cleared' | null;
+  catalog: boolean;
+};
+
+export function technologyVersionEditCardText(
+  language: AiWriteLanguage,
+  edit: { add: TechnologyVersionEditAdd[]; update: TechnologyVersionEditUpdate[]; kept: string[] },
+): string {
+  const none = { en: 'none', fr: 'aucune', de: 'keine', es: 'ninguna' }[language];
+  const noDate = { en: 'no support date', fr: 'sans date de support', de: 'ohne Supportdatum', es: 'sin fecha de soporte' }[language];
+  const endOfSupport = { en: 'end of support', fr: 'fin de support', de: 'Supportende', es: 'fin de soporte' }[language];
+  const newVersion = { en: 'new version', fr: 'nouvelle version', de: 'neue Version', es: 'nueva versión' }[language];
+  const notesUpdated = { en: 'notes updated', fr: 'notes mises à jour', de: 'Notizen aktualisiert', es: 'notas actualizadas' }[language];
+  const notesCleared = { en: 'notes cleared', fr: 'notes effacées', de: 'Notizen gelöscht', es: 'notas borradas' }[language];
+  const catalog = { en: 'from the KANAP catalog', fr: 'du catalogue KANAP', de: 'aus dem KANAP-Katalog', es: 'del catálogo KANAP' }[language];
+  const lines: string[] = [];
+  for (const add of edit.add) {
+    const end = add.end ? `${endOfSupport} ${add.end}` : noDate;
+    lines.push(`- ${newVersion} ${add.label} (${end})`);
+  }
+  for (const update of edit.update) {
+    const name = update.next_label ? `${update.label} → ${update.next_label}` : update.label;
+    const parts: string[] = [];
+    if (update.old_end !== update.new_end) {
+      parts.push(`${endOfSupport} ${update.old_end ?? none} → ${update.new_end ?? none}`);
+    }
+    if (update.notes === 'updated') parts.push(notesUpdated);
+    if (update.notes === 'cleared') parts.push(notesCleared);
+    const suffix = update.catalog ? ` (${catalog})` : '';
+    const colon = language === 'fr' ? ' : ' : ': ';
+    lines.push(parts.length > 0 ? `- ${name}${colon}${parts.join('; ')}${suffix}` : `- ${name}${suffix}`);
+  }
+  const blocks: string[] = [];
+  if (lines.length > 0) blocks.push(lines.join('\n'));
+  if (edit.kept.length > 0) {
+    const heading = { en: 'Kept', fr: 'Conservées', de: 'Beibehalten', es: 'Conservadas' }[language];
+    const note = {
+      en: 'the undo restores the changed versions, not the new one',
+      fr: "l'annulation restaure les versions modifiées, pas la nouvelle",
+      de: 'das Rückgängigmachen stellt die geänderten Versionen wieder her, nicht die neue',
+      es: 'la anulación restaura las versiones modificadas, no la nueva',
+    }[language];
+    blocks.push([`**${heading}**`, ...edit.kept.map((label) => `- ${newVersion} ${label} (${note})`)].join('\n'));
+  }
+  return blocks.join('\n\n');
+}
+
+/**
+ * The markdown block of the applications or the servers of a technology: what the approval adds
+ * and removes, then what it leaves as it is. A server that already has the technology is listed as
+ * equipped, not as linked. French and Spanish headings agree with the subject (`applications`
+ * is feminine). Labels are data: they are escaped as the incident card escapes them.
+ */
+export function technologyLinkCardText(
+  language: AiWriteLanguage,
+  group: TechnologyLinkCardGroup,
+  alreadyHeading: 'linked' | 'equipped' = 'linked',
+  subject: 'applications' | 'servers' = 'servers',
+): string {
+  const headings = subject === 'applications'
+    ? {
+      add: { en: 'Added', fr: 'Ajoutées', de: 'Hinzugefügt', es: 'Añadidas' }[language],
+      remove: { en: 'Removed', fr: 'Retirées', de: 'Entfernt', es: 'Retiradas' }[language],
+      already: { en: 'Already linked', fr: 'Déjà liées', de: 'Bereits verknüpft', es: 'Ya vinculadas' }[language],
+      absent: { en: 'Not linked', fr: 'Non liées', de: 'Nicht verknüpft', es: 'No vinculadas' }[language],
+    }
+    : {
+      add: { en: 'Added', fr: 'Ajoutés', de: 'Hinzugefügt', es: 'Añadidos' }[language],
+      remove: { en: 'Removed', fr: 'Retirés', de: 'Entfernt', es: 'Retirados' }[language],
+      already: alreadyHeading === 'equipped'
+        ? { en: 'Already equipped', fr: 'Déjà équipés', de: 'Bereits ausgestattet', es: 'Ya equipados' }[language]
+        : { en: 'Already linked', fr: 'Déjà liés', de: 'Bereits verknüpft', es: 'Ya vinculados' }[language],
+      absent: { en: 'Not linked', fr: 'Non liés', de: 'Nicht verknüpft', es: 'No vinculados' }[language],
+    };
+  const blocks: string[] = [];
+  for (const key of ['add', 'remove', 'already', 'absent'] as const) {
+    const items = group[key].filter((item) => item.trim().length > 0);
+    if (items.length === 0) continue;
+    blocks.push([`**${headings[key]}**`, ...items.map((item) => `- ${escapeMarkdownLabel(item)}`)].join('\n'));
+  }
+  return blocks.join('\n\n');
+}
+
+/**
+ * A version as the technology card names it: the technology and its label with the existing end of
+ * support date, or "new version 16, no support date" when the write creates it. Null is the
+ * version-unknown link.
+ */
+export function technologyVersionCardText(
+  language: AiWriteLanguage,
+  technologyName: string,
+  version: { label: string; created?: boolean; standard_support_end?: string | null; extended_support_end?: string | null } | null,
+): string {
+  if (!version) return { en: 'version unknown', fr: 'version inconnue', de: 'Version unbekannt', es: 'versión desconocida' }[language];
+  const label = `${technologyName} ${version.label}`.trim();
+  const end = version.extended_support_end ?? version.standard_support_end ?? null;
+  if (version.created) {
+    return {
+      en: `new version ${version.label}, no support date`,
+      fr: `nouvelle version ${version.label}, sans date de support`,
+      de: `neue Version ${version.label}, ohne Supportdatum`,
+      es: `nueva versión ${version.label}, sin fecha de soporte`,
+    }[language];
+  }
+  if (end) {
+    return {
+      en: `${label} (existing, end of support ${end})`,
+      fr: `${label} (existante, fin de support ${end})`,
+      de: `${label} (vorhanden, Supportende ${end})`,
+      es: `${label} (existente, fin de soporte ${end})`,
+    }[language];
+  }
+  return {
+    en: `${label} (existing, no support date)`,
+    fr: `${label} (existante, sans date de support)`,
+    de: `${label} (vorhanden, ohne Supportdatum)`,
+    es: `${label} (existente, sin fecha de soporte)`,
+  }[language];
+}
+
+/**
+ * The versions a technology link write created on the way: an undo removes the links, never the
+ * version. The card says so, in the person's language.
+ */
+export function technologyKeptVersionCardText(language: AiWriteLanguage, labels: string[]): string | null {
+  if (labels.length === 0) return null;
+  const heading = { en: 'Kept', fr: 'Conservées', de: 'Beibehalten', es: 'Conservadas' }[language];
+  const note = {
+    en: 'the undo removes the links, not the version',
+    fr: "l'annulation retire les liens, pas la version",
+    de: 'das Rückgängigmachen entfernt die Verknüpfungen, nicht die Version',
+    es: 'la anulación quita los vínculos, no la versión',
+  }[language];
+  return [`**${heading}**`, ...labels.map((label) => `- ${technologyVersionCardText(language, '', { label, created: true })} (${note})`)].join('\n');
+}
+
+/** The four groups of a person or a web-link card: what the approval adds, removes and leaves as it is. */
+export type TechnologyPersonCardGroup = {
+  add: string[];
+  remove: string[];
+  already: string[];
+  absent: string[];
+};
+
+const OWNER_TYPE_WORDS = {
+  it: { en: 'IT owner', fr: 'responsable IT', de: 'IT-Verantwortlicher', es: 'responsable de TI' },
+  business: { en: 'business owner', fr: 'responsable métier', de: 'Fachverantwortlicher', es: 'responsable de negocio' },
+} as const;
+
+/** `Paul Martin (IT owner)`: the name only, never an email (the interface shows names). */
+export function technologyOwnerLine(language: AiWriteLanguage, name: string, ownerType: 'it' | 'business'): string {
+  return `${escapeMarkdownLabel(name)} (${OWNER_TYPE_WORDS[ownerType][language]})`;
+}
+
+export function technologyOwnerCardText(language: AiWriteLanguage, group: TechnologyPersonCardGroup): string | null {
+  const headings = {
+    add: { en: 'Added', fr: 'Ajoutés', de: 'Hinzugefügt', es: 'Añadidos' }[language],
+    remove: { en: 'Removed', fr: 'Retirés', de: 'Entfernt', es: 'Retirados' }[language],
+    already: { en: 'Already owners', fr: 'Déjà responsables', de: 'Bereits verantwortlich', es: 'Ya responsables' }[language],
+    absent: { en: 'Not owners', fr: 'Non responsables', de: 'Nicht verantwortlich', es: 'No responsables' }[language],
+  };
+  return personCard(group, headings);
+}
+
+/** `Oracle Support (role: Support)`: the contact's name and its role on the technology. */
+export function technologyContactLine(language: AiWriteLanguage, name: string, role: string | null): string {
+  const text = escapeMarkdownLabel(name);
+  if (!role) return text;
+  const label = { en: 'role', fr: 'rôle', de: 'Rolle', es: 'rol' }[language];
+  const separator = language === 'fr' ? ' : ' : ': ';
+  return `${text} (${label}${separator}${escapeMarkdownLabel(role)})`;
+}
+
+export function technologyContactCardText(language: AiWriteLanguage, group: TechnologyPersonCardGroup): string | null {
+  const headings = {
+    add: { en: 'Added', fr: 'Ajoutés', de: 'Hinzugefügt', es: 'Añadidos' }[language],
+    remove: { en: 'Removed', fr: 'Retirés', de: 'Entfernt', es: 'Retirados' }[language],
+    already: { en: 'Already listed', fr: 'Déjà listés', de: 'Bereits gelistet', es: 'Ya listados' }[language],
+    absent: { en: 'Not listed', fr: 'Non listés', de: 'Nicht gelistet', es: 'No listados' }[language],
+  };
+  return personCard(group, headings);
+}
+
+function personCard(group: TechnologyPersonCardGroup, headings: Record<'add' | 'remove' | 'already' | 'absent', string>): string | null {
+  const blocks: string[] = [];
+  for (const key of ['add', 'remove', 'already', 'absent'] as const) {
+    const items = group[key].filter((item) => item.trim().length > 0);
+    if (items.length === 0) continue;
+    blocks.push([`**${headings[key]}**`, ...items.map((item) => `- ${item}`)].join('\n'));
+  }
+  return blocks.length ? blocks.join('\n\n') : null;
+}
+
+/** The undo card of a people write: the owners and contacts it puts back, in their previous order. */
+export function technologyPeopleRestoreCardText(
+  language: AiWriteLanguage,
+  owners: string[],
+  contacts: string[],
+): { owners: string | null; contacts: string | null } {
+  const ownerHeading = { en: 'Owners restored', fr: 'Responsables restaurés', de: 'Verantwortliche wiederhergestellt', es: 'Responsables restaurados' }[language];
+  const contactHeading = { en: 'Support contacts restored', fr: 'Contacts de support restaurés', de: 'Supportkontakte wiederhergestellt', es: 'Contactos de soporte restaurados' }[language];
+  return {
+    owners: owners.length ? [`**${ownerHeading}**`, ...owners.map((line) => `- ${line}`)].join('\n') : null,
+    contacts: contacts.length ? [`**${contactHeading}**`, ...contacts.map((line) => `- ${line}`)].join('\n') : null,
+  };
+}
+
+/** The four groups of a web-link card, with the updated links already worded line by line. */
+export type TechnologyWebLinkCardGroup = {
+  add: string[];
+  update: string[];
+  remove: string[];
+  already: string[];
+  absent: string[];
+};
+
+/** `https://example.com (Runbook)`: a link with its description, when it has one. */
+export function technologyWebLinkAddText(url: string, description: string | null): string {
+  return description ? `${url} (${description})` : url;
+}
+
+/** `https://old → https://new (description: Runbook)` or `url (description cleared)`. */
+export function technologyWebLinkUpdateText(
+  language: AiWriteLanguage,
+  before: { url: string; description: string | null },
+  after: { url: string; description: string | null },
+  descriptionGiven: boolean,
+): string {
+  const moved = before.url !== after.url ? `${before.url} → ${after.url}` : before.url;
+  if (!descriptionGiven) return moved;
+  const label = { en: 'description', fr: 'description', de: 'Beschreibung', es: 'descripción' }[language];
+  const cleared = { en: 'cleared', fr: 'effacée', de: 'gelöscht', es: 'eliminada' }[language];
+  const separator = language === 'fr' ? ' : ' : ': ';
+  return after.description
+    ? `${moved} (${label}${separator}${after.description})`
+    : `${moved} (${label} ${cleared})`;
+}
+
+export function technologyWebLinkCardText(language: AiWriteLanguage, group: TechnologyWebLinkCardGroup): string | null {
+  const headings = {
+    add: { en: 'Added', fr: 'Ajoutés', de: 'Hinzugefügt', es: 'Añadidos' }[language],
+    update: { en: 'Updated', fr: 'Modifiés', de: 'Geändert', es: 'Modificados' }[language],
+    remove: { en: 'Removed', fr: 'Retirés', de: 'Entfernt', es: 'Retirados' }[language],
+    already: { en: 'Already present', fr: 'Déjà présents', de: 'Bereits vorhanden', es: 'Ya presentes' }[language],
+    absent: { en: 'Not present', fr: 'Non présents', de: 'Nicht vorhanden', es: 'No presentes' }[language],
+  };
+  const blocks: string[] = [];
+  for (const key of ['add', 'update', 'remove', 'already', 'absent'] as const) {
+    const items = group[key].filter((item) => item.trim().length > 0);
+    if (items.length === 0) continue;
+    blocks.push([`**${headings[key]}**`, ...items.map((item) => `- ${escapeMarkdownLabel(item)}`)].join('\n'));
+  }
+  return blocks.length ? blocks.join('\n\n') : null;
+}
+
+/** The alert state of a version: `true` and `false` are its own setting, `null` follows the technology. */
+export function technologyAlertStateText(language: AiWriteLanguage, value: boolean | null): string {
+  if (value === true) return { en: 'alerts on', fr: 'alertes activées', de: 'Warnungen aktiv', es: 'alertas activadas' }[language];
+  if (value === false) return { en: 'alerts off', fr: 'alertes désactivées', de: 'Warnungen inaktiv', es: 'alertas desactivadas' }[language];
+  return { en: 'follows the technology', fr: 'suit la technologie', de: 'folgt der Technologie', es: 'sigue la tecnología' }[language];
+}
+
+export type TechnologyAlertsCard = {
+  /** The technology's setting before and after, when the request names it. */
+  enabled: { from: boolean; to: boolean } | null;
+  /** The version labels whose exceptions the setting clears. */
+  cleared: string[];
+  /** The exceptions the request sets, with the service packs each base release carries. */
+  versions: Array<{ label: string; from: boolean | null; to: boolean | null; propagated: string[] }>;
+};
+
+/**
+ * The vulnerability-alert block of a technology: the setting first (which clears the version
+ * exceptions), then the version exceptions the request sets, with the service packs that follow a
+ * base release. `pending` says "will be cleared"; an executed card says "cleared".
+ */
+export function technologyAlertsCardText(language: AiWriteLanguage, card: TechnologyAlertsCard, pending = true): string {
+  const blocks: string[] = [];
+  // The setting and what it clears are one list: the card's field label already names the setting.
+  const state: string[] = [];
+  if (card.enabled) {
+    const on = { en: 'on', fr: 'activées', de: 'aktiv', es: 'activadas' }[language];
+    const off = { en: 'off', fr: 'désactivées', de: 'inaktiv', es: 'desactivadas' }[language];
+    state.push(`- ${card.enabled.to ? on : off}`);
+  }
+  if (card.cleared.length) {
+    const count = card.cleared.length;
+    const one = count === 1;
+    const text = pending
+      ? {
+        en: `${count} version exception${one ? '' : 's'} will be cleared: ${card.cleared.join(', ')}`,
+        fr: one
+          ? `1 exception de version sera effacée : ${card.cleared.join(', ')}`
+          : `${count} exceptions de version seront effacées : ${card.cleared.join(', ')}`,
+        de: one
+          ? `1 Versionsausnahme wird gelöscht: ${card.cleared.join(', ')}`
+          : `${count} Versionsausnahmen werden gelöscht: ${card.cleared.join(', ')}`,
+        es: one
+          ? `1 excepción de versión se eliminará: ${card.cleared.join(', ')}`
+          : `${count} excepciones de versión se eliminarán: ${card.cleared.join(', ')}`,
+      }[language]
+      : {
+        en: `${count} version exception${one ? '' : 's'} cleared: ${card.cleared.join(', ')}`,
+        fr: one
+          ? `1 exception de version effacée : ${card.cleared.join(', ')}`
+          : `${count} exceptions de version effacées : ${card.cleared.join(', ')}`,
+        de: one
+          ? `1 Versionsausnahme gelöscht: ${card.cleared.join(', ')}`
+          : `${count} Versionsausnahmen gelöscht: ${card.cleared.join(', ')}`,
+        es: one
+          ? `1 excepción de versión eliminada: ${card.cleared.join(', ')}`
+          : `${count} excepciones de versión eliminadas: ${card.cleared.join(', ')}`,
+      }[language];
+    state.push(`- ${text}`);
+  }
+  if (state.length) blocks.push(state.join('\n'));
+  if (card.versions.length) {
+    const label = { en: 'Versions', fr: 'Versions', de: 'Versionen', es: 'Versiones' }[language];
+    const follow = {
+      en: (base: string, packs: string[]) => `the service packs ${packs.join(', ')} follow base version ${base}`,
+      fr: (base: string, packs: string[]) => `les service packs ${packs.join(', ')} suivent la version de base ${base}`,
+      de: (base: string, packs: string[]) => `die Service Packs ${packs.join(', ')} folgen der Basisversion ${base}`,
+      es: (base: string, packs: string[]) => `los service packs ${packs.join(', ')} siguen la versión base ${base}`,
+    }[language];
+    const colon = language === 'fr' ? ' : ' : ': ';
+    const lines = card.versions.flatMap((version) => {
+      const state = `${technologyAlertStateText(language, version.from)} → ${technologyAlertStateText(language, version.to)}`;
+      const items = [`- ${version.label}${colon}${state}`];
+      if (version.propagated.length) items.push(`  - ${follow(version.label, version.propagated)}`);
+      return items;
+    });
+    blocks.push([`**${label}**`, ...lines].join('\n'));
+  }
+  return blocks.join('\n\n');
 }
 
 /** The detail lines of a task preview: its assignee and its priority. */

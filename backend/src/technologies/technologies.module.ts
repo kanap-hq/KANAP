@@ -32,6 +32,7 @@ import { EndOfSupportService } from './reports/end-of-support.service';
  * applications and the business processes, which read and write the links from their side.
  * `ApplicationConversionController` turns an application into a technology (lot C1).
  * `TechnologyCatalogSyncService` keeps the adopted technologies up to date with the living catalog (lot C4).
+ * `EndOfSupportService` is exported for the assistant's two report families, which read its rows.
  */
 @Module({
   imports: [AuditModule, PermissionsModule, forwardRef(() => UsersModule), StorageModule, ItOpsSettingsModule, CurrencyModule, IncidentsModule, forwardRef(() => ApplicationsModule), ScheduledTasksModule],
@@ -52,6 +53,6 @@ import { EndOfSupportService } from './reports/end-of-support.service';
     EndOfSupportService,
     ApplicationConversionService,
   ],
-  exports: [TechnologiesService, TechnologyLinksService, OperatingSystemService, TechnologyReachService, TechnologyCatalogService, TechnologyCpeEvents, CveNamesService],
+  exports: [TechnologiesService, TechnologyLinksService, OperatingSystemService, TechnologyReachService, TechnologyCatalogService, TechnologyCpeEvents, CveNamesService, EndOfSupportService],
 })
 export class TechnologiesModule {}

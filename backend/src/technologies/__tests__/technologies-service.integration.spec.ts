@@ -36,6 +36,12 @@ async function testCreateAndValidate() {
     assert.equal(created.reference, 'TEC-1');
     assert.deepEqual(created.cpe_products, ['a:microsoft:sql_server'], 'CPE lower-cased and deduplicated');
     assert.equal(audit.at(-1)?.table, 'technologies');
+    // The screen passes nothing: its audit row has no source. Plaid names the preview and the
+    // source, and the same creation route writes them.
+    assert.equal(audit.at(-1)?.source, undefined, 'the screen audit keeps its shape');
+    assert.equal(audit.at(-1)?.sourceRef, undefined, 'the screen audit names no preview');
+    await technologies.create({ name: 'SQL Server 2025', family: 'database' }, { ...opts, audit: { source: 'ai_chat', sourceRef: 'preview-1' } });
+    assert.deepEqual({ source: audit.at(-1)?.source, sourceRef: audit.at(-1)?.sourceRef }, { source: 'ai_chat', sourceRef: 'preview-1' });
     await assert.rejects(technologies.create({ name: 'sql server' }, opts), /already exists/);
     await assert.rejects(technologies.create({ name: 'X', family: 'nope' }, opts), BadRequestException);
     await assert.rejects(technologies.create({ name: 'Y', cpe_products: ['microsoft sql'] }, opts), BadRequestException);

@@ -31,6 +31,16 @@ import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
  *   with no version follows the technology. Operating systems start excluded. null while the
  *   vulnerability feed is off.
  *
+ * The filters also name a version label (`version`: a technology with a version of that exact
+ * label, without case) and an owner (`owner` of any type, `it_owner`, `business_owner`: the exact
+ * display name of a user, without case). Both are many-to-many on the technology and filter
+ * through `EXISTS`, never a column of `technologies`. The IT and business owners also group.
+ *
+ * `technology_versions` (`listAiTechnologyVersions`) reads one row per version of a technology,
+ * its support dates and state by the same rule, its servers and the applications that declare
+ * that version. It shares `technologyVersionFiguresColumns` with the technology detail, so the
+ * details of a technology and that family cannot disagree.
+ *
  * Every statement carries the tenant on every table besides RLS.
  */
 
@@ -55,6 +65,19 @@ export function technologyApplicationCountSql(t: string, userRef: string | null)
              JOIN applications cap ON cap.tenant_id = cd.tenant_id AND cap.id = cd.application_id AND ${inServiceSql('cap')}
                   ${userRef ? `AND ${applicationParticipantCondition('cap', userRef)}` : ''}
             WHERE cd.tenant_id = ${t}.tenant_id AND cd.technology_id = ${t}.id)`;
+}
+
+/**
+ * The applications in service that declare the version `v` itself, within the same caller scope
+ * as `technologyApplicationCountSql`: a version of one technology only, never the technology's
+ * other versions.
+ */
+export function technologyVersionApplicationCountSql(v: string, userRef: string | null): string {
+  return `(SELECT count(DISTINCT cd.application_id)::int
+             FROM application_technologies cd
+             JOIN applications cap ON cap.tenant_id = cd.tenant_id AND cap.id = cd.application_id AND ${inServiceSql('cap')}
+                  ${userRef ? `AND ${applicationParticipantCondition('cap', userRef)}` : ''}
+            WHERE cd.tenant_id = ${v}.tenant_id AND cd.technology_version_id = ${v}.id)`;
 }
 
 /** The most severe first: the rank of a version's state (null, no date: 0). */
@@ -225,18 +248,73 @@ function finite(value: unknown): number {
   return n;
 }
 
+/** A set filter's ticked values: the strings, trimmed, and whether `null` (blank) is ticked. */
+function setModel(column: string, model: any): { values: string[]; blank: boolean } {
+  if (model?.filterType !== 'set' || model.mode === 'exclude' || !Array.isArray(model.values)) {
+    throw new BadRequestException(`Unsupported filter on ${column}.`);
+  }
+  return {
+    values: model.values.filter((v: unknown): v is string => typeof v === 'string' && v.trim() !== '').map((v: string) => v.trim()),
+    blank: model.values.some((v: unknown) => v === null || v === ''),
+  };
+}
+
+/** The owner type each owner filter names; `owner` reads both. The keys are the grid columns. */
+const OWNER_COLUMNS: Record<string, 'it' | 'business' | null> = {
+  owner_name: null,
+  it_owner_name: 'it',
+  business_owner_name: 'business',
+};
+
+/**
+ * The technologies whose versions include one of these labels (`version`), or one of whose owners
+ * (of the filter's type) has one of these display names. A blank tick means no version, or no owner
+ * of that type. Both are read through `EXISTS` on the tenant's links, never a column of `r`.
+ */
+function manyToManyClause(column: string, model: any, bind: (value: unknown) => string): string {
+  const { values, blank } = setModel(column, model);
+  if (column === 'version') {
+    const labels = values.map((value) => value.toLowerCase());
+    const hasVersion = labels.length
+      ? `EXISTS (SELECT 1 FROM technology_versions ev
+                 WHERE ev.tenant_id = $1 AND ev.technology_id = r.id
+                   AND lower(ev.label) = ANY(${bind(labels)}::text[]))`
+      : null;
+    const noVersion = blank
+      ? `NOT EXISTS (SELECT 1 FROM technology_versions ev WHERE ev.tenant_id = $1 AND ev.technology_id = r.id)`
+      : null;
+    const parts = [hasVersion, noVersion].filter((part): part is string => !!part);
+    return parts.length ? `(${parts.join(' OR ')})` : 'false';
+  }
+  const type = OWNER_COLUMNS[column];
+  const typeSql = type ? ` AND o.owner_type = '${type}'` : '';
+  const names = values.map((value) => value.toLowerCase());
+  const hasOwner = names.length
+    ? `EXISTS (SELECT 1 FROM technology_owners o
+               JOIN users u ON u.id = o.user_id AND u.tenant_id = o.tenant_id
+              WHERE o.tenant_id = $1 AND o.technology_id = r.id${typeSql}
+                AND lower(btrim(concat_ws(' ', u.first_name, u.last_name))) = ANY(${bind(names)}::text[]))`
+    : null;
+  const noOwner = blank
+    ? `NOT EXISTS (SELECT 1 FROM technology_owners o
+                   WHERE o.tenant_id = $1 AND o.technology_id = r.id${typeSql})`
+    : null;
+  const parts = [hasOwner, noOwner].filter((part): part is string => !!part);
+  return parts.length ? `(${parts.join(' OR ')})` : 'false';
+}
+
 /** One grid filter model on a column of `r`, or a 400 for a model this list cannot take. */
 function filterClause(column: string, model: any, bind: (value: unknown) => string): string | null {
+  if (column === 'version' || Object.prototype.hasOwnProperty.call(OWNER_COLUMNS, column)) {
+    return manyToManyClause(column, model, bind);
+  }
   const expr = `r.${column}`;
   if (SET_COLUMNS[column]) {
-    if (model?.filterType !== 'set' || model.mode === 'exclude' || !Array.isArray(model.values)) {
-      throw new BadRequestException(`Unsupported filter on ${column}.`);
-    }
+    const { values, blank } = setModel(column, model);
     const { ci } = SET_COLUMNS[column];
-    const values = model.values.filter((v: unknown): v is string => typeof v === 'string' && v.trim() !== '').map((v: string) => (ci ? v.trim().toLowerCase() : v.trim()));
-    const blank = model.values.some((v: unknown) => v === null || v === '');
+    const compared = ci ? values.map((value) => value.toLowerCase()) : values;
     const parts = [
-      ...(values.length ? [`${ci ? `lower(${expr})` : expr} = ANY(${bind(values)}::text[])`] : []),
+      ...(compared.length ? [`${ci ? `lower(${expr})` : expr} = ANY(${bind(compared)}::text[])`] : []),
       ...(blank ? [`${expr} IS NULL`] : []),
     ];
     return parts.length ? `(${parts.join(' OR ')})` : 'false';
@@ -366,6 +444,26 @@ export async function listAiTechnologies(
 }
 
 /**
+ * The figures of one version (`v`), shared by the technology detail and the `technology_versions`
+ * family: its servers (`sf` is the `technologyServerFiguresSql` derived table joined on the
+ * technology, `version_servers` the servers of that version), whether it is in use, and its
+ * support state (unknown without a date) and that state's date, by the End of support report rule.
+ */
+export function technologyVersionFiguresColumns(
+  v: string,
+  sf: string,
+): { servers: string; in_use: string; support_status: string; support_date: string; support_year: string } {
+  const support = versionSupportSql(v);
+  return {
+    servers: `COALESCE((${sf}.version_servers ->> ${v}.id::text)::int, 0)`,
+    in_use: versionInUseSql(v),
+    support_status: `COALESCE(${support.state}, 'unknown')`,
+    support_date: `to_char(${support.date}, 'YYYY-MM-DD')`,
+    support_year: `to_char(${support.date}, 'YYYY')`,
+  };
+}
+
+/**
  * Each version of the technology: its servers (`technologyServerFiguresSql`: in service, the
  * version installed on them, clusters excluded), whether it is in use, and its
  * support state (unknown without a date) and that state's date, by the End of support report rule.
@@ -375,12 +473,10 @@ export async function technologyVersionFigures(
   tenantId: string,
   technologyId: string,
 ): Promise<Map<string, { servers: number; in_use: boolean; support_status: string; support_date: string | null }>> {
-  const support = versionSupportSql('v');
+  const figures = technologyVersionFiguresColumns('v', 'sf');
   const rows: Array<{ id: string; servers: number; in_use: boolean; support_status: string; support_date: string | null }> = await mg.query(
-    `SELECT v.id, COALESCE((sf.version_servers ->> v.id::text)::int, 0) AS servers,
-            ${versionInUseSql('v')} AS in_use,
-            COALESCE(${support.state}, 'unknown') AS support_status,
-            to_char(${support.date}, 'YYYY-MM-DD') AS support_date
+    `SELECT v.id, ${figures.servers} AS servers, ${figures.in_use} AS in_use,
+            ${figures.support_status} AS support_status, ${figures.support_date} AS support_date
        FROM technology_versions v
        LEFT JOIN ${technologyServerFiguresSql('$1', '= $2::uuid')} sf ON sf.technology_id = v.technology_id
       WHERE v.tenant_id = $1 AND v.technology_id = $2`,
@@ -392,6 +488,193 @@ export async function technologyVersionFigures(
     support_status: row.support_status,
     support_date: row.support_date ?? null,
   }]));
+}
+
+/** Set columns of a version (`technology_versions`), compared exactly, without case where `ci`. */
+const VERSION_SET_COLUMNS: Record<string, { ci: boolean }> = {
+  technology: { ci: true },
+  label: { ci: true },
+  support_status: { ci: false },
+  in_use: { ci: false },
+  family: { ci: false },
+  lifecycle: { ci: false },
+  end_of_support_year: { ci: false },
+};
+const VERSION_DATE_COLUMNS = new Set(['end_of_standard_support', 'end_of_support']);
+const VERSION_NUMBER_COLUMNS = new Set(['server_count', 'application_count']);
+
+const VERSION_SORTS: Record<string, string> = {
+  label: 'lower(x.label)',
+  technology: 'lower(x.technology_name)',
+  support_status: STATE_RANK('x.support_status'),
+  in_use: 'x.in_use',
+  end_of_standard_support: 'x.end_of_standard_support',
+  end_of_support: 'x.end_of_support',
+  family: 'x.family',
+  lifecycle: 'x.lifecycle',
+  server_count: 'x.server_count',
+  application_count: 'x.application_count',
+  created_at: 'x.created_at',
+  updated_at: 'x.updated_at',
+};
+
+/**
+ * One grid filter model on a column of the version row `x`, or a 400 for a model this list cannot
+ * take. `technology` takes a `TEC-n` reference or an exact name; `label` an exact version label;
+ * `in_use` the strings true and false; `end_of_support_year` the year the support state's date
+ * falls in. A blank tick on a many-to-many field (`technology`) matches no row, a technology
+ * always being named.
+ */
+function versionFilterClause(column: string, model: any, bind: (value: unknown) => string): string | null {
+  const expr = `x.${column}`;
+  if (VERSION_SET_COLUMNS[column]) {
+    const { values, blank } = setModel(column, model);
+    if (column === 'technology') {
+      const names = values.map((value) => value.toLowerCase());
+      if (!names.length) return 'false';
+      const parameter = bind(names);
+      return `(lower(x.technology) = ANY(${parameter}::text[]) OR lower(x.technology_name) = ANY(${parameter}::text[]))`;
+    }
+    if (column === 'in_use') {
+      const yes = values.some((value) => value.toLowerCase() === 'true');
+      const no = values.some((value) => value.toLowerCase() === 'false');
+      return yes && no ? 'true' : yes ? expr : no ? `NOT ${expr}` : 'false';
+    }
+    const { ci } = VERSION_SET_COLUMNS[column];
+    const compared = ci ? values.map((value) => value.toLowerCase()) : values;
+    const parts = [
+      ...(compared.length ? [`${ci ? `lower(${expr})` : expr} = ANY(${bind(compared)}::text[])`] : []),
+      ...(blank ? [`${expr} IS NULL`] : []),
+    ];
+    return parts.length ? `(${parts.join(' OR ')})` : 'false';
+  }
+  if (VERSION_NUMBER_COLUMNS.has(column)) {
+    if (model?.filterType !== 'number') throw new BadRequestException(`Unsupported filter on ${column}.`);
+    if (model.type === 'inRange') return `${expr} BETWEEN ${bind(finite(model.filter))} AND ${bind(finite(model.filterTo))}`;
+    if (model.type === 'blank') return `${expr} IS NULL`;
+    if (model.type === 'notBlank') return `${expr} IS NOT NULL`;
+    const op = NUMBER_OPS[model.type];
+    if (!op) throw new BadRequestException(`Unsupported filter on ${column}.`);
+    return `${expr} ${op} ${bind(finite(model.filter))}`;
+  }
+  if (VERSION_DATE_COLUMNS.has(column)) {
+    if (model?.filterType !== 'date') throw new BadRequestException(`Unsupported filter on ${column}.`);
+    if (model.operator && Array.isArray(model.conditions)) {
+      const parts = model.conditions.map((condition: any) => versionFilterClause(column, { filterType: 'date', ...condition }, bind)).filter(Boolean);
+      return parts.length ? `(${parts.join(model.operator === 'OR' ? ' OR ' : ' AND ')})` : null;
+    }
+    if (model.type === 'blank') return `${expr} IS NULL`;
+    if (model.type === 'notBlank') return `${expr} IS NOT NULL`;
+    if (model.type === 'inRange') return `${expr} BETWEEN ${bind(day(model.dateFrom))}::date AND ${bind(day(model.dateTo))}::date`;
+    const op = DATE_OPS[model.type];
+    if (!op) throw new BadRequestException(`Unsupported filter on ${column}.`);
+    return `${expr} ${op} ${bind(day(model.dateFrom))}::date`;
+  }
+  throw new BadRequestException(`Unsupported filter field: ${column}.`);
+}
+
+export type AiTechnologyVersionRow = {
+  id: string;
+  /** The technology's reference (`TEC-n`) and name; a version has no reference of its own. */
+  technology: string;
+  technology_name: string;
+  label: string;
+  end_of_standard_support: string | null;
+  end_of_support: string | null;
+  support_status: (typeof SUPPORT_STATUSES)[number];
+  support_date: string | null;
+  in_use: boolean;
+  server_count: number;
+  application_count: number | null;
+  family: string | null;
+  lifecycle: string | null;
+  /** The year of `support_date`, the year support ends (or ended) for that version. */
+  end_of_support_year: string | null;
+  created_at: Date | string | null;
+  updated_at: Date | string | null;
+};
+
+/**
+ * A page of technology versions (`page`, `limit`, `sort` as `field:DIR`, `q` on the technology
+ * reference and name and on the label, `filters` keyed by grid column), one row per version, or
+ * their ids only (`idsOnly`, for the aggregates). `application_count` is the count of the version
+ * itself: applications in service that declare this version, within the caller's application
+ * scope, null without that right.
+ * `ids` narrows to those version rows.
+ */
+export async function listAiTechnologyVersions(
+  mg: Pick<EntityManager, 'query'>,
+  tenantId: string,
+  query: Record<string, any>,
+  applications: AiApplicationsReach,
+  opts: { idsOnly?: boolean; ids?: string[] } = {},
+): Promise<{ items: AiTechnologyVersionRow[]; ids: string[]; total: number; page: number; limit: number }> {
+  const params: unknown[] = [tenantId];
+  const bind = (value: unknown) => { params.push(value); return `$${params.length}`; };
+  const idFilter = opts.ids ? `AND v.id = ANY(${bind(opts.ids)}::uuid[])` : '';
+  const applicationCount = applications
+    ? technologyVersionApplicationCountSql('v', applications.scope ? bind(applications.scope.userId) : null)
+    : 'NULL::int';
+  const figures = technologyVersionFiguresColumns('v', 'sf');
+  const where: string[] = [];
+  for (const [column, model] of Object.entries(filterModels(query.filters))) {
+    const clause = versionFilterClause(column, model, bind);
+    if (clause) where.push(clause);
+  }
+  const q = String(query.q ?? '').trim().slice(0, 100);
+  if (q) {
+    const needle = bind(`%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
+    where.push(`(x.technology ILIKE ${needle} OR x.technology_name ILIKE ${needle} OR x.label ILIKE ${needle})`);
+  }
+  const [sortField, sortDirection] = String(query.sort ?? 'technology').split(':');
+  const sort = VERSION_SORTS[sortField] ?? VERSION_SORTS.technology;
+  const direction = String(sortDirection ?? 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+  const limit = opts.idsOnly
+    ? Math.min(Math.max(Number(query.limit) || 10_000, 1), 10_000)
+    : Math.min(Math.max(Number(query.limit) || 25, 1), 500);
+  const page = Math.max(Number(query.page) || 1, 1);
+  const offset = opts.idsOnly ? 0 : (page - 1) * limit;
+  const rows: Array<Omit<AiTechnologyVersionRow, 'server_count' | 'application_count' | 'in_use'> & {
+    server_count: number;
+    application_count: number | null;
+    in_use: boolean;
+    total: string;
+  }> = await mg.query(
+    `WITH x AS (
+       SELECT v.id, ('TEC-' || t.item_number) AS technology, t.name AS technology_name, v.label,
+              v.standard_support_end AS end_of_standard_support, v.extended_support_end AS end_of_support,
+              t.family, t.lifecycle,
+              ${figures.support_status} AS support_status,
+              ${figures.support_date} AS support_date,
+              ${figures.support_year} AS end_of_support_year,
+              ${figures.in_use} AS in_use,
+              ${figures.servers} AS server_count,
+              ${applicationCount} AS application_count,
+              v.created_at, v.updated_at
+         FROM technology_versions v
+         JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
+         LEFT JOIN ${technologyServerFiguresSql('$1')} sf ON sf.technology_id = v.technology_id
+        WHERE v.tenant_id = $1 ${idFilter}
+     )
+     SELECT ${opts.idsOnly ? 'x.id' : `x.id, x.technology, x.technology_name, x.label, x.support_status, x.support_date,
+            x.end_of_support_year, x.in_use, x.server_count, x.application_count, x.family, x.lifecycle,
+            to_char(x.end_of_standard_support, 'YYYY-MM-DD') AS end_of_standard_support,
+            to_char(x.end_of_support, 'YYYY-MM-DD') AS end_of_support,
+            x.created_at, x.updated_at`},
+            count(*) OVER () AS total
+       FROM x
+      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+      ORDER BY ${sort} ${direction} NULLS LAST, lower(x.technology_name), lower(x.label), x.id
+      LIMIT ${bind(limit)} OFFSET ${bind(offset)}`,
+    params,
+  );
+  const items = opts.idsOnly ? [] : rows.map(({ total: _total, ...row }) => ({
+    ...row,
+    in_use: row.in_use === true,
+    server_count: Number(row.server_count) || 0,
+    application_count: row.application_count == null ? null : Number(row.application_count),
+  }));
+  return { items, ids: rows.map((row) => row.id), total: Number(rows[0]?.total ?? 0), page, limit };
 }
 
 /** The contracts linked to the technology. */

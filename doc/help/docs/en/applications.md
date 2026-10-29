@@ -718,6 +718,16 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 
 ---
 
+## Ask the assistant
+
+[Plaid](ai-assistant.md) reads the version, go-live date, end of support date and retirement date of each application. It filters, sorts and groups the applications by these dates. Its list keeps the retired applications, while the [End of support](end-of-support.md) report keeps only those in service.
+
+Plaid also declares a technology on an application, or removes it, with its version and, if you ask, on the application's deployment servers. This needs the right to read applications and the Member level on infrastructure. A Business Contributor does it only on the applications they take part in. Plaid does not link an operating system: set it on the server's page. Every change comes as a preview that you approve. When you ask Plaid to undo it, it puts back exactly what it changed. A version created along the way stays on the technology.
+
+Ask, for example: "Add PostgreSQL 16 to CheeseTrack and its servers", "Remove PostgreSQL 14 from CheeseTrack", "Which applications reach their end of support in the next six months?" or "Which applications declare PostgreSQL 14?"
+
+---
+
 ## Tips
 
 - **Start with critical apps**: Document your business-critical applications first, then work down the criticality levels.

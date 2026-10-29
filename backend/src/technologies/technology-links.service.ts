@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException, Optional } from '@n
 import { TechnologyCpeEvents } from './technology-cpe-events';
 import type { EntityManager } from 'typeorm';
 import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditEntry, type AuditSourceOptions } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { languageOf, type CsvLanguage } from '../common/csv-sheet';
 import { writeListExport, type ListExportFile } from '../common/csv/list-export';
@@ -15,9 +15,15 @@ import { catalogFromMetadata } from '../it-ops-settings/classification-catalog';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { operatingSystemLabelSql } from './operating-system-codes';
 import { assetInServiceSql, inServiceSql, TechnologyReachService, type ReachedAsset, type ReachingTechnology } from './technology-reach.service';
-import { readTechnology, technologyReference, UUID_RE, versionOfInput } from './technology-rows';
+import { readTechnology, resolveVersionLabel, technologyReference, UUID_RE, versionOfInput, type VersionAuditOptions } from './technology-rows';
 
-export type LinkOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
+export type LinkOpts = {
+  manager: EntityManager;
+  tenantId: string;
+  userId?: string | null;
+  /** The audit row's source: the screen leaves it out (`user`), Plaid names its preview. */
+  audit?: AuditSourceOptions;
+};
 
 /**
  * `keepExistingProvenance`: an existing link keeps its source, reference and observation date.
@@ -51,6 +57,16 @@ export type DeploymentServer = {
   asset_reference: string | null;
   environments: string[];
   roles: string[];
+};
+
+/** A declaration of an application removed by a link write, with what an undo puts back. */
+export type RemovedDeclaration = {
+  id: string;
+  application_id: string;
+  technology_version_id: string | null;
+  notes: string | null;
+  source: string;
+  source_ref: string | null;
 };
 
 /** At most this many servers in one declaration (the deployments of one application). */
@@ -142,6 +158,18 @@ export class TechnologyLinksService {
   /** A link changed: the technology is matched again with the vulnerabilities, after the commit (lot T6b). */
   private linksChanged(mg: EntityManager, tenantId: string, technologyId: string) {
     return this.cpeEvents?.emit({ manager: mg, tenantId, technologyId, products: [] });
+  }
+
+  /** The audit row of a link write, with the source Plaid names and the screen leaves out. */
+  private auditEntry<T extends AuditEntry>(entry: T, opts: LinkOpts): T {
+    return opts.audit
+      ? { ...entry, source: opts.audit.source, sourceRef: opts.audit.sourceRef ?? null }
+      : entry;
+  }
+
+  /** The audit options of a version created on the way (`resolveVersionLabel`). */
+  private versionAudit(opts: LinkOpts): VersionAuditOptions {
+    return { service: this.audit, userId: opts.userId ?? null, audit: opts.audit };
   }
 
   // ==================== ASSETS ====================
@@ -262,7 +290,7 @@ export class TechnologyLinksService {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef, true);
     const asset = await this.readAsset(mg, tenantId, assetId);
-    const versionId = await versionOfInput(mg, tenantId, tech.id, body ?? {});
+    const versionId = await versionOfInput(mg, tenantId, tech.id, body ?? {}, this.versionAudit(opts));
     return this.upsertLink('asset', tech.id, asset.id, versionId, notesOf(body?.notes), provenance, opts, write);
   }
 
@@ -409,10 +437,10 @@ export class TechnologyLinksService {
       [tenantId, tech.id, ids],
     );
     if (added.length) {
-      await this.audit.log({
+      await this.audit.log(this.auditEntry({
         table: 'application_technologies', recordId: tech.id, action: 'update',
         before: null, after: { added }, userId: opts.userId ?? null,
-      }, { manager: mg });
+      }, opts), { manager: mg });
       await this.linksChanged(mg, tenantId, tech.id);
     }
     return { ok: true, added: added.length };
@@ -420,20 +448,49 @@ export class TechnologyLinksService {
 
   /** Remove every declaration of the technology by the application (all versions). */
   async removeApplication(idOrRef: string, applicationId: string, opts: LinkOpts, applications: { scope?: ParticipationAccessScope }) {
+    const removed = await this.removeApplicationDeclaration(idOrRef, applicationId, { all: true }, opts, applications);
+    return { ok: true, removed: removed.removed.length };
+  }
+
+  /**
+   * Remove declarations of the technology by one application, exactly: all of them (`all`, as the
+   * screen's "remove" does), the one of a version label, or the one of a version id (`null` is the
+   * version-unknown row). The technology's row is locked first, as every link write; the removed
+   * rows come back with their version and notes, so the assistant can put exactly them back on an
+   * undo. Audited on the link table, `recordId` the technology, with the caller's source.
+   */
+  async removeApplicationDeclaration(
+    idOrRef: string,
+    applicationId: string,
+    selector: { all: true } | { version_label: string } | { version_id: string | null },
+    opts: LinkOpts,
+    applications: { scope?: ParticipationAccessScope },
+  ): Promise<{ ok: true; changed: boolean; removed: RemovedDeclaration[] }> {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef, true);
     const appId = uuidOrThrow(applicationId, 'Application not found.');
     const visible = await this.visibleApplicationIds(mg, tenantId, [appId], applications.scope);
     if (!visible.has(appId)) throw new BadRequestException('Application not found.');
-    const removed = await this.deleteDeclarations(mg, tenantId, tech.id, appId);
+    let versionId: string | null | undefined;
+    if ('version_label' in selector) {
+      const resolved = await resolveVersionLabel(mg, tenantId, tech.id, selector.version_label, { create: false });
+      if (!resolved) return { ok: true, changed: false, removed: [] };
+      versionId = resolved.id;
+    } else if ('version_id' in selector) {
+      versionId = selector.version_id;
+    }
+    const removed = await this.deleteDeclarations(mg, tenantId, tech.id, appId, versionId);
     if (removed.length) {
-      await this.audit.log({
+      // The audit keeps the shape the screen has always written: the ids of the removed rows.
+      // The caller gets the full rows (version, notes, provenance) for its undo.
+      await this.audit.log(this.auditEntry({
         table: 'application_technologies', recordId: tech.id, action: 'update',
         // The application, not the link ids: the history names what it loses.
         before: { removed: [appId] }, after: null, userId: opts.userId ?? null,
-      }, { manager: mg });
+      }, opts), { manager: mg });
+      await this.linksChanged(mg, tenantId, tech.id);
     }
-    return { ok: true, removed: removed.length };
+    return { ok: true, changed: removed.length > 0, removed };
   }
 
   async updateApplicationLink(idOrRef: string, linkId: string, body: LinkInput, opts: LinkOpts) {
@@ -475,14 +532,16 @@ export class TechnologyLinksService {
     if (!add) {
       const removed = await this.deleteDeclarations(mg, tenantId, tech.id, appId);
       if (removed.length) {
-        await this.audit.log({
+        // The screen's audit shape: the ids removed, as before the one-row declaration write.
+        await this.audit.log(this.auditEntry({
           table: 'application_technologies', recordId: tech.id, action: 'update',
           before: { removed: [appId] }, after: null, userId: opts.userId ?? null,
-        }, { manager: mg });
+        }, opts), { manager: mg });
+        await this.linksChanged(mg, tenantId, tech.id);
       }
       return { ok: true, changed: removed.length > 0 };
     }
-    const versionId = await versionOfInput(mg, tenantId, tech.id, body ?? {});
+    const versionId = await versionOfInput(mg, tenantId, tech.id, body ?? {}, this.versionAudit(opts));
     const res = await this.upsertLink('application', tech.id, appId, versionId, notesOf(body?.notes), provenance, opts, write);
     return { ok: true, changed: res.changed, link_id: res.link_id };
   }
@@ -495,14 +554,17 @@ export class TechnologyLinksService {
    * (`deploymentServersOfApplication`), else nothing is written (400). A server that already has
    * the technology installed, at any version, keeps its links and counts as `skipped`: the server's
    * page stays the place to change them. An operating system is not recorded this way (400): the
-   * server's page marks it. The new links are manual and audited like the asset side's.
+   * server's page marks it. The new links carry `provenance` (manual for the screens, `ai` for
+   * Plaid) and are audited like the asset side's.
    */
   async declareApplicationTechnology(
     applicationId: string,
     technologyIdOrRef: string,
     body: LinkInput & { asset_ids?: unknown },
     opts: LinkOpts,
-  ): Promise<{ ok: true; changed: boolean; link_id: string | null; servers?: { added: number; skipped: number } }> {
+    provenance: LinkProvenance = MANUAL_PROVENANCE,
+    write: LinkWriteOptions = {},
+  ): Promise<{ ok: true; changed: boolean; created: boolean; link_id: string | null; servers?: { added: number; skipped: number } }> {
     const { manager: mg, tenantId } = opts;
     const appId = await this.readApplicationId(mg, tenantId, applicationId);
     const tech = await readTechnology(mg, tenantId, technologyIdOrRef, true);
@@ -510,11 +572,11 @@ export class TechnologyLinksService {
     if (serverIds.length > 0 && tech.family === 'operating_system') {
       throw new BadRequestException("An operating system is recorded from the server's page.");
     }
-    const versionId = await versionOfInput(mg, tenantId, tech.id, body ?? {});
-    const res = await this.upsertLink('application', tech.id, appId, versionId, notesOf(body?.notes), MANUAL_PROVENANCE, opts);
-    if (serverIds.length === 0) return { ok: true, changed: res.changed, link_id: res.link_id };
-    const servers = await this.installOnServers(tech.id, versionId, serverIds, opts);
-    return { ok: true, changed: res.changed || servers.added > 0, link_id: res.link_id, servers };
+    const versionId = await versionOfInput(mg, tenantId, tech.id, body ?? {}, this.versionAudit(opts));
+    const res = await this.upsertLink('application', tech.id, appId, versionId, notesOf(body?.notes), provenance, opts, write);
+    if (serverIds.length === 0) return { ok: true, changed: res.changed, created: res.created, link_id: res.link_id };
+    const servers = await this.installOnServers(tech.id, versionId, serverIds, opts, provenance);
+    return { ok: true, changed: res.changed || servers.added > 0, created: res.created, link_id: res.link_id, servers };
   }
 
   /** The deployment servers of an application, in service, by name (`DeploymentServer`). */
@@ -557,7 +619,13 @@ export class TechnologyLinksService {
    * Install the technology at `versionId` on the servers that do not have it yet, in one statement;
    * the others are left as they are. One audit row per new link, as `upsertLink` writes it.
    */
-  private async installOnServers(technologyId: string, versionId: string | null, assetIds: string[], opts: LinkOpts) {
+  private async installOnServers(
+    technologyId: string,
+    versionId: string | null,
+    assetIds: string[],
+    opts: LinkOpts,
+    provenance: LinkProvenance = MANUAL_PROVENANCE,
+  ) {
     const { manager: mg, tenantId } = opts;
     const added: Array<{ id: string; asset_id: string; source: string; source_ref: string | null }> = await mg.query(
       `WITH ins AS (
@@ -571,14 +639,14 @@ export class TechnologyLinksService {
          RETURNING id, asset_id, source, source_ref
        )
        SELECT id::text AS id, asset_id::text AS asset_id, source, source_ref FROM ins ORDER BY asset_id`,
-      [tenantId, technologyId, versionId, assetIds, ...provenanceParams(MANUAL_PROVENANCE)],
+      [tenantId, technologyId, versionId, assetIds, ...provenanceParams(provenance)],
     );
     for (const row of added) {
-      await this.audit.log({
+      await this.audit.log(this.auditEntry({
         table: 'asset_technologies', recordId: technologyId, action: 'create', before: null,
         after: { id: row.id, asset_id: row.asset_id, technology_version_id: versionId, notes: null, source: row.source, source_ref: row.source_ref },
         userId: opts.userId ?? null,
-      }, { manager: mg });
+      }, opts), { manager: mg });
     }
     if (added.length > 0) await this.linksChanged(mg, tenantId, technologyId);
     return { added: added.length, skipped: assetIds.length - added.length };
@@ -652,10 +720,10 @@ export class TechnologyLinksService {
     );
     const changed = Number(n) > 0;
     if (changed) {
-      await this.audit.log({
+      await this.audit.log(this.auditEntry({
         table: 'application_business_processes', recordId: process, action: 'update',
         before: add ? null : { application_id: appId }, after: add ? { application_id: appId } : null, userId: opts.userId ?? null,
-      }, { manager: mg });
+      }, opts), { manager: mg });
     }
     return { ok: true, changed };
   }
@@ -705,10 +773,10 @@ export class TechnologyLinksService {
     const after = { id: row.id, [`${side}_id`]: subjectId, technology_version_id: versionId, notes: row.notes, source: row.source, source_ref: row.source_ref };
     const changed = !before || before.notes !== row.notes || before.source !== row.source || before.source_ref !== row.source_ref;
     if (changed) {
-      await this.audit.log({
+      await this.audit.log(this.auditEntry({
         table, recordId: technologyId, action: before ? 'update' : 'create',
         before: before ? { ...before, [`${side}_id`]: subjectId, technology_version_id: versionId } : null, after, userId: opts.userId ?? null,
-      }, { manager: mg });
+      }, opts), { manager: mg });
     }
     if (changed) await this.linksChanged(mg, tenantId, technologyId);
     return { ok: true, link_id: row.id, created: !before, changed };
@@ -727,7 +795,7 @@ export class TechnologyLinksService {
     const before = rows[0];
     const subjectId = before[`${side}_id`] as string;
     const versionGiven = body && ('technology_version_id' in body || 'version_label' in body);
-    const versionId = versionGiven ? await versionOfInput(mg, tenantId, tech.id, body) : before.technology_version_id;
+    const versionId = versionGiven ? await versionOfInput(mg, tenantId, tech.id, body, this.versionAudit(opts)) : before.technology_version_id;
     const notes = body && 'notes' in body ? notesOf(body.notes) : before.notes;
     try {
       await withSavepoint(mg, () => mg.query(
@@ -739,11 +807,11 @@ export class TechnologyLinksService {
       if ((error?.code ?? error?.driverError?.code) === '23505') throw new BadRequestException('This version is already linked.');
       throw error;
     }
-    await this.audit.log({
+    await this.audit.log(this.auditEntry({
       table, recordId: tech.id, action: 'update', before,
       after: { id, [`${side}_id`]: subjectId, technology_version_id: versionId, notes, source: 'manual' },
       userId: opts.userId ?? null,
-    }, { manager: mg });
+    }, opts), { manager: mg });
     if (versionId !== before.technology_version_id) await this.linksChanged(mg, tenantId, tech.id);
     return { ok: true };
   }
@@ -763,23 +831,38 @@ export class TechnologyLinksService {
       [tenantId, technologyId, id],
     );
     if (removed[0]) {
-      await this.audit.log({ table, recordId: technologyId, action: 'delete', before: removed[0], after: null, userId: opts.userId ?? null }, { manager: mg });
+      await this.audit.log(this.auditEntry({ table, recordId: technologyId, action: 'delete', before: removed[0], after: null, userId: opts.userId ?? null }, opts), { manager: mg });
       await this.linksChanged(mg, tenantId, technologyId);
     }
     return { ok: true, changed: removed.length > 0 };
   }
 
-  /** Delete the declarations of a technology by an application; the removed link ids. */
-  private async deleteDeclarations(mg: EntityManager, tenantId: string, technologyId: string, applicationId: string): Promise<string[]> {
-    const rows: Array<{ id: string }> = await mg.query(
+  /**
+   * Delete the declarations of a technology by an application; the removed rows. No version id
+   * (`undefined`) removes every version; `null` removes the version-unknown row only.
+   */
+  private async deleteDeclarations(
+    mg: EntityManager,
+    tenantId: string,
+    technologyId: string,
+    applicationId: string,
+    versionId?: string | null,
+  ): Promise<RemovedDeclaration[]> {
+    const params: unknown[] = [tenantId, technologyId, applicationId];
+    if (versionId !== undefined) params.push(versionId);
+    const rows: RemovedDeclaration[] = await mg.query(
       `WITH d AS (
-         DELETE FROM application_technologies WHERE tenant_id = $1 AND technology_id = $2 AND application_id = $3 RETURNING id
+         DELETE FROM application_technologies
+          WHERE tenant_id = $1 AND technology_id = $2 AND application_id = $3
+            ${versionId === undefined ? '' : `AND technology_version_id IS NOT DISTINCT FROM $4`}
+          RETURNING id, application_id, technology_version_id, notes, source, source_ref
        )
-       SELECT id::text AS id FROM d ORDER BY id`,
-      [tenantId, technologyId, applicationId],
+       SELECT id::text AS id, application_id::text AS application_id,
+              technology_version_id::text AS technology_version_id, notes, source, source_ref
+         FROM d ORDER BY id`,
+      params,
     );
-    if (rows.length > 0) await this.linksChanged(mg, tenantId, technologyId);
-    return rows.map((row) => row.id);
+    return rows;
   }
 
   /** The applications of `ids` that exist in the tenant and, under a scope, that the caller takes part in. */

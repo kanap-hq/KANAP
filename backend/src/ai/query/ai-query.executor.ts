@@ -28,6 +28,7 @@ import { describeAllocationWarning } from '../../spend/allocation-distribution';
 import type { SpendVersion } from '../../spend/spend-version.entity';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
+import { EndOfSupportService, type DeadlineRow } from '../../technologies/reports/end-of-support.service';
 import { UsersService } from '../../users/users.service';
 import {
   AiEntityMetadata,
@@ -73,12 +74,15 @@ import { LinkedReads, loadLinkedReads } from '../../common/relations/linked-read
 import type { PortfolioLinkedReads } from '../../portfolio/portfolio-linked-reads';
 import {
   AiTechnologyRow,
+  AiTechnologyVersionRow,
   listAiTechnologies,
+  listAiTechnologyVersions,
   resolveAiApplicationsReach,
   technologyContractCount,
   technologyVersionFigures,
 } from './ai-technologies.query';
 import { AiVulnerabilityDetailRow, AiVulnerabilityRow, listAiVulnerabilities } from './ai-vulnerabilities.query';
+import { APPLICATIONS_UNREAD_NOTE, listAiSupportDeadlines, listAiSupportGaps, type AiSupportGapRow } from './ai-support.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
@@ -508,6 +512,8 @@ export const AI_QUERY_FAMILY_MAX_LIMIT: Partial<Record<AiQueryEntityType, number
   technologies: 30,
   // A CVE row carries its summary (clipped), note and page link: about 1,200 characters.
   vulnerabilities: 30,
+  // A deadline carries its servers and applications by name (at most ten then a count).
+  support_deadlines: 30,
 };
 
 export function aiQueryMaxLimit(entityType: AiQueryEntityType): number {
@@ -587,11 +593,14 @@ export class AiQueryExecutor {
     /** Whether the caller reads applications, for the application figures of the technologies. */
     @Optional() private readonly policy?: AiPolicyService,
     @Optional() private readonly technologies?: TechnologiesService,
+    /** The End of support report of the screen, which the two report families read. */
+    @Optional() private readonly endOfSupport?: EndOfSupportService,
   ) {
     // Absent, the technology figures close (no application count, no detail): say so once, at start.
     const logger = new Logger(AiQueryExecutor.name);
     if (!policy) logger.warn('AiPolicyService is not injected: technologies show no application or contract figure.');
     if (!technologies) logger.warn('TechnologiesService is not injected: the technology detail is unavailable.');
+    if (!endOfSupport) logger.warn('EndOfSupportService is not injected: the end-of-support report families are unavailable.');
   }
 
   private async normalizePersonFilters(
@@ -1230,6 +1239,105 @@ export class AiQueryExecutor {
         end_of_support: scalar(row.end_of_support),
         versions_in_use: scalar(row.versions_in_use),
         open_vulnerabilities: numericScalar(row.open_vulnerabilities),
+      },
+    });
+  }
+
+  /**
+   * A technology version as listed: the technology's reference and name, the label, the support
+   * dates and state, whether it is in use, and its servers and the version's applications. Its
+   * line label is the technology and the version ("PostgreSQL 16"); it has no reference of its
+   * own: `ref` is its technology's (`TEC-n`).
+   */
+  private mapTechnologyVersion(row: AiTechnologyVersionRow): AiEntitySummaryDto {
+    return toEntitySummary('technology_versions', {
+      id: row.id,
+      reference: row.technology,
+      label: row.label ? `${row.technology_name} ${row.label}` : row.technology_name,
+      status: row.support_status,
+      created_at: row.created_at ?? null,
+      updated_at: row.updated_at ?? null,
+      metadata: {
+        technology: row.technology,
+        technology_name: row.technology_name,
+        label: row.label,
+        end_of_standard_support: scalar(row.end_of_standard_support),
+        end_of_support: scalar(row.end_of_support),
+        support_status: scalar(row.support_status),
+        support_date: scalar(row.support_date),
+        in_use: row.in_use,
+        server_count: numericScalar(row.server_count),
+        application_count: numericScalar(row.application_count),
+        family: scalar(row.family),
+        lifecycle: scalar(row.lifecycle),
+      },
+    });
+  }
+
+  /**
+   * A record to complete of the End of support report: its gap, its subject (business reference
+   * where the record has one, its name otherwise) and the other end of a link. No identifier: the
+   * subject is read through its own family, by `subject`.
+   */
+  private mapSupportGap(row: AiSupportGapRow): AiEntitySummaryDto {
+    return toEntitySummary('support_gaps', {
+      id: row.key,
+      reference: row.subject_reference ?? null,
+      label: row.subject_name,
+      status: row.gap,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        gap: row.gap,
+        subject_type: row.subject_type,
+        subject: row.subject_reference ?? row.subject_name,
+        subject_name: row.subject_name,
+        related: row.related_reference ?? row.related_name,
+        related_name: row.related_name,
+        related_type: row.related_type,
+        version: scalar(row.version),
+      },
+    });
+  }
+
+  /**
+   * The names of at most ten servers or applications, then the rest counted: a card never carries
+   * an unbounded list, and an empty count is "not read", never "none".
+   */
+  private namesText(items: Array<{ name: string }> | null | undefined, noun: 'server' | 'application'): string | null {
+    if (!items?.length) return null;
+    const shown = items.slice(0, 10).map((item) => item.name);
+    const rest = items.length - shown.length;
+    return rest > 0 ? `${shown.join(', ')}, and ${rest} other ${noun}${rest === 1 ? '' : 's'}` : shown.join(', ');
+  }
+
+  /**
+   * A deadline of the End of support report: its subject and type, the version, the date and the
+   * state, the recorded ends, and the servers and applications by name (the service keeps the
+   * caller's application scope). No identifier: the subject is read through its own family.
+   */
+  private mapSupportDeadline(row: DeadlineRow): AiEntitySummaryDto {
+    return toEntitySummary('support_deadlines', {
+      id: row.key,
+      reference: row.item_reference ?? null,
+      label: row.version ? `${row.item_name} ${row.version}` : row.item_name,
+      status: row.state,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        subject_type: row.type,
+        subject: row.item_reference ?? row.item_name,
+        subject_name: row.item_name,
+        version: scalar(row.version),
+        date: row.date,
+        state: row.state,
+        milestone: scalar(row.milestone),
+        standard_support_end: scalar(row.standard_support_end),
+        extended_support_end: scalar(row.extended_support_end),
+        server_count: numericScalar(row.server_count),
+        servers: this.namesText(row.servers, 'server'),
+        application_count: numericScalar(row.application_count),
+        applications: this.namesText(row.applications, 'application'),
       },
     });
   }
@@ -2058,6 +2166,53 @@ export class AiQueryExecutor {
       };
     }
 
+    if (input.entity_type === 'technology_versions') {
+      const applications = await resolveAiApplicationsReach(context, this.policy);
+      const result = await listAiTechnologyVersions(context.manager, context.tenantId, scoped.query, applications);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        items: result.items.map((row) => this.mapTechnologyVersion(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'support_gaps' || input.entity_type === 'support_deadlines') {
+      const service = this.endOfSupport;
+      if (!service) throw new BadRequestException('The End of support report is not available.');
+      const applications = await resolveAiApplicationsReach(context, this.policy);
+      const opts = { manager: context.manager, tenantId: context.tenantId, userId: context.userId };
+      const result = input.entity_type === 'support_gaps'
+        ? await listAiSupportGaps(service, opts, applications, scoped.query)
+        : await listAiSupportDeadlines(service, opts, applications, scoped.query);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        applications_visible: result.applications_visible,
+        ...(result.applications_visible ? {} : { applications_visible_note: APPLICATIONS_UNREAD_NOTE }),
+        items: result.items.map((row) => (input.entity_type === 'support_gaps'
+          ? this.mapSupportGap(row as AiSupportGapRow)
+          : this.mapSupportDeadline(row as DeadlineRow))),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
     if (input.entity_type === 'vulnerabilities') {
       const applications = await resolveAiApplicationsReach(context, this.policy);
       const result = await listAiVulnerabilities(context.manager, context.tenantId, scoped.query, applications);
@@ -2648,6 +2803,14 @@ export class AiQueryExecutor {
     },
   ): Promise<AiEntityDetailDto> {
     const entityType = input.entity_type;
+    if (entityType === 'technology_versions') {
+      // A version has no page of its own: its technology's detail lists every version.
+      throw new BadRequestException('A technology version has no detail of its own: read its technology with get_entity_detail on technologies (by TEC-n reference), or query_entities on technology_versions filtered on technology.');
+    }
+    if (entityType === 'support_gaps' || entityType === 'support_deadlines') {
+      // A report row has no page of its own: it names its subject by `subject`.
+      throw new BadRequestException('An End of support report row has no detail of its own: its `subject` names the record, read with get_entity_detail on its family (applications, assets or technologies) by that reference or name.');
+    }
     const entityId = await this.resolveDetailEntityId(context, entityType, input.entity_id);
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
 
@@ -3000,6 +3163,10 @@ export class AiQueryExecutor {
       .filter((owner) => owner.owner_type === type)
       .map((owner) => owner.full_name)
       .filter((name): name is string => !!name);
+    // What Plaid writes beside the record: support contacts and web links, as the Operations and
+    // Relations tabs read them. Names only for a contact, never its email.
+    const supportContacts: any[] = await this.technologies.listSupportContacts(record.id, opts);
+    const webLinks: any[] = await this.technologies.listLinks(record.id, opts);
     return this.toDetailResult(this.mapTechnology(row), {
       reference: row.reference,
       name: record.name,
@@ -3024,6 +3191,8 @@ export class AiQueryExecutor {
       end_of_support: row.end_of_support,
       versions_in_use: row.versions_in_use,
       open_vulnerabilities: row.open_vulnerabilities,
+      // The technology's alert setting, and each version's own exception: null follows the technology.
+      vulnerability_alerts: record.vulnerability_alerts === true,
       // Each version with its state on the End of support report rule: out_of_support since
       // support_date, extended_support until support_date, supported until support_date (its
       // standard end), unknown without a date. in_use: on a server or an application in service.
@@ -3035,9 +3204,19 @@ export class AiQueryExecutor {
         support_date: figures.get(version.id)?.support_date ?? null,
         in_use: figures.get(version.id)?.in_use ?? false,
         server_count: figures.get(version.id)?.servers ?? 0,
+        vulnerability_alerts: version.vulnerability_alerts == null ? null : version.vulnerability_alerts === true,
+        vulnerability_alerts_effective: version.vulnerability_alerts_effective === true,
       })),
       business_owners: owners('business'),
       it_owners: owners('it'),
+      support_contacts: supportContacts.map((contact: any) => ({
+        // The Operations tab's label: a name, else the email it shows for an unnamed contact.
+        name: [contact.contact?.first_name, contact.contact?.last_name].filter(Boolean).join(' ')
+          || String(contact.contact?.email ?? '').trim()
+          || 'Unnamed contact',
+        role: contact.role ?? null,
+      })),
+      web_links: webLinks.map((link: any) => ({ url: String(link.url ?? ''), description: link.description ?? null })),
       // As the technology page: no number of contracts without the contracts read right.
       contract_count: (await this.policy?.canReadEntityType(context, 'contracts', context.manager))
         ? await technologyContractCount(context.manager, context.tenantId, record.id)
@@ -3084,6 +3263,55 @@ export class AiQueryExecutor {
         applications_reached: item.applications_reached,
       })),
     });
+  }
+
+  /**
+   * The version labels of the tenant, the values of the `version` filter of the technologies and
+   * of the `label` filter of `technology_versions`: one query, never a label typed in.
+   */
+  private async technologyVersionLabels(context: AiExecutionContextWithManager): Promise<string[]> {
+    const rows: Array<{ value: string }> = await context.manager.query(
+      `SELECT DISTINCT v.label AS value
+         FROM technology_versions v
+        WHERE v.tenant_id = $1 AND btrim(v.label) <> ''
+        ORDER BY value ASC NULLS LAST
+        LIMIT 5000`,
+      [context.tenantId],
+    );
+    return (rows || []).map((row) => String(row.value));
+  }
+
+  /**
+   * The values of the technologies filters that no column carries: the tenant's version labels
+   * (`version`) and the display names of the owners of its technologies (`owner` of any type,
+   * `it_owner`, `business_owner`). Read from `technology_versions` and `technology_owners`, never
+   * from the technology row, and only for the fields the caller asked (`grids`).
+   */
+  private async technologyFilterValues(
+    context: AiExecutionContextWithManager,
+    grids: ReadonlySet<string>,
+  ): Promise<Record<string, Array<string | null>>> {
+    const values: Record<string, Array<string | null>> = {};
+    if (grids.has('version')) values.version = await this.technologyVersionLabels(context);
+    const ownerFields: Array<{ grid: string; type: 'it' | 'business' | null }> = [
+      { grid: 'owner_name', type: null },
+      { grid: 'it_owner_name', type: 'it' },
+      { grid: 'business_owner_name', type: 'business' },
+    ];
+    for (const { grid, type } of ownerFields) {
+      if (!grids.has(grid)) continue;
+      const rows: Array<{ value: string | null }> = await context.manager.query(
+        `SELECT DISTINCT NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS value
+           FROM technology_owners o
+           JOIN users u ON u.id = o.user_id AND u.tenant_id = o.tenant_id
+          WHERE o.tenant_id = $1${type ? ` AND o.owner_type = '${type}'` : ''}
+          ORDER BY value ASC NULLS LAST
+          LIMIT 5000`,
+        [context.tenantId],
+      );
+      values[grid] = (rows || []).map((row) => row.value).filter((value): value is string => !!value);
+    }
+    return values;
   }
 
   private async loadRegistryFilterValues(
@@ -3299,6 +3527,14 @@ export class AiQueryExecutor {
         manager: context.manager,
         tenantId: context.tenantId,
       }) as any;
+    } else if (input.entity_type === 'technologies') {
+      // The version labels and the owner names have no column on `technologies`: they are read
+      // from their own tables. The other dynamic fields fall back to the registry below.
+      raw = await this.technologyFilterValues(context, new Set(dynamicFieldMap.keys()));
+    } else if (input.entity_type === 'technology_versions') {
+      // The labels have no value list on the version row: they are read from the labels of the
+      // tenant's technology versions, one query (the `version` values of the technologies).
+      if (dynamicFieldMap.has('label')) raw.label = await this.technologyVersionLabels(context);
     } else if (input.entity_type === 'incidents') {
       const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
       const reads = this.readProbe(context);

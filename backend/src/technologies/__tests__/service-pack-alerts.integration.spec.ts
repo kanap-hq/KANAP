@@ -5,6 +5,7 @@ import { DEFAULT_HOSTING_TYPES, DEFAULT_TECHNOLOGY_FAMILIES } from '../../it-ops
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { TechnologiesService } from '../technologies.service';
 import { TechnologyReachService } from '../technology-reach.service';
+import { servicePackAlertTargets } from '../../vulnerabilities/vulnerability-rules';
 import type { AuditEntry } from './technologies.fixtures';
 
 // The alert switch of a base release (SUSE Linux Enterprise Server 11) writes the same value on
@@ -41,6 +42,30 @@ function flags(versions: VersionRow[]) {
   return versions
     .map((version) => [version.label, version.vulnerability_alerts, version.vulnerability_alerts_effective])
     .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+}
+
+// The pure rule the service and the assistant's preview share: the versions a base release's
+// exception carries, and only those whose setting differs.
+async function testServicePackAlertTargets() {
+  const rows = [
+    { label: '11 SP1', vulnerability_alerts: null },
+    { label: '11 SP2', vulnerability_alerts: true },
+    { label: '12 SP1', vulnerability_alerts: null },
+    { label: '15.5', vulnerability_alerts: null },
+  ];
+  assert.deepEqual(
+    servicePackAlertTargets(SLES, '11', true, rows).map((row) => row.label),
+    ['11 SP1'],
+    'the packs of the base release whose setting differs',
+  );
+  assert.deepEqual(
+    servicePackAlertTargets(SLES, '11', null, rows).map((row) => row.label),
+    ['11 SP2'],
+    'the packs of the base release whose setting differs; another release is left out',
+  );
+  assert.deepEqual(servicePackAlertTargets(SLES, '11 SP1', true, rows), [], 'a service pack carries none');
+  assert.deepEqual(servicePackAlertTargets(WINDOWS, '11', true, rows), [], 'the product decides, not the label');
+  assert.deepEqual(servicePackAlertTargets([], '11', true, rows), [], 'no product, nothing follows');
 }
 
 async function testServicePackAlerts() {
@@ -167,6 +192,7 @@ async function testServicePackAlerts() {
 }
 
 runSpecs('service-pack-alerts.integration.spec', [
+  ['service pack alert targets', testServicePackAlertTargets],
   ['service pack alerts', testServicePackAlerts],
 ]).catch((err) => {
   console.error(err);

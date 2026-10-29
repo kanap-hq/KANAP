@@ -122,6 +122,11 @@ const BUSINESS_WRITE_TOOLS: AiToolName[] = [
   'update_business_record',
   'add_incident_note',
   'update_incident_links',
+  'update_technology_links',
+  'update_technology_versions',
+  'update_technology_people',
+  'update_technology_web_links',
+  'set_technology_vulnerability_alerts',
   'change_incident_state',
   'set_incident_confidentiality',
   'update_entity_relations',
@@ -167,6 +172,8 @@ const RELATION_WRITE_TOOLS: AiToolName[] = [
   'update_entity_relations',
   'update_document_relations',
   'update_incident_links',
+  'update_technology_links',
+  'update_technology_web_links',
   'undo_preview',
 ];
 
@@ -263,7 +270,6 @@ const CANONICAL_REF_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEn
   // The budget line references the screens show. `BL-n` alone is ambiguous ("bon de livraison"),
   // so it is read as a budget line only with a budget word in the phrase (see below).
   { pattern: /\b(?:OPEX|OPX|CPX)-\d+\b/i, entityType: 'budget_lines' },
-  // Read only for now: kept out of BUSINESS_ENTITY_TYPES until technologies have a write.
   { pattern: /\bTEC-\d+\b/i, entityType: 'technologies' },
   // Read only: a CVE id names the vulnerability rows of that CVE.
   { pattern: /\bCVE-\d{4}-\d{4,}\b/i, entityType: 'vulnerabilities' },
@@ -301,6 +307,7 @@ const BUSINESS_ENTITY_TYPES = new Set<AiQueryEntityType>([
   'connections',
   'contracts',
   'interfaces',
+  'technologies',
   'locations',
   'projects',
   'requests',
@@ -471,6 +478,218 @@ function stripReflexivePast(text: string): string {
   return text.replace(REFLEXIVE_PAST_RE, ' ');
 }
 
+/**
+ * "Installer", "déclarer" and "install", "declare" name a technology write only in the
+ * imperative: "Installe nginx sur AST-12" writes, "nginx est installé sur AST-12 ?" reads. The
+ * test runs on the raw text, before the accents go, so "installé" and "déclaré" never pass for
+ * the imperative; a question never writes, whatever its verb ("Comment installer nginx ?").
+ */
+const TECHNOLOGY_WRITE_VERBS = new Set([
+  'installe', 'installez', 'installer', 'install',
+  'déclare', 'déclarez', 'déclarer', 'declare',
+  'désinstalle', 'désinstallez', 'désinstaller', 'desinstalle', 'uninstall',
+  'retire', 'retirez', 'retirer', 'remove',
+  'enlève', 'enlevez', 'enlever',
+  'détache', 'détachez', 'détacher', 'detach',
+  'remplace', 'remplacez', 'remplacer', 'replace',
+  'lie', 'liez', 'lier', 'link', 'unlink',
+  'associe', 'associez', 'associer', 'attach',
+  'rattache', 'rattachez', 'rattacher',
+  'ajoute', 'ajoutez', 'ajouter', 'add',
+  'mets', 'mettez', 'mettre',
+  'enregistre', 'enregistrez', 'enregistrer', 'record',
+  'change', 'changez', 'changer',
+  'renomme', 'renommez', 'renommer', 'rename',
+  'upgrade', 'passe', 'passez', 'passer',
+  'marque', 'marquez', 'marquer', 'mark', 'set',
+  'adopte', 'adoptez', 'adopter', 'adopt',
+  'efface', 'effacez', 'effacer', 'erase', 'clear',
+  'désactive', 'désactivez', 'désactiver', 'desactive', 'disable',
+  'active', 'activez', 'activer', 'enable',
+  'exclus', 'excluez', 'exclure', 'exclude',
+  'indique', 'indiquez', 'indiquer', 'indicate',
+  'turn',
+  // Lot 5 review: the alert sentences the table adds.
+  'réactive', 'réactivez', 'réactiver', 'reactive', 'reactivate',
+  'stop',
+  'remets', 'remettez', 'remettre',
+]);
+
+/** The head word of the request, after a salutation or a polite turn, raw and lower-case. */
+function directiveFirstWord(rawText: string): string | null {
+  const head = rawText.trim().replace(
+    /^(?:(?:bonjour|bonsoir|salut|hello|hi|hey)[\s,!.]+)*(?:(?:je veux|je voudrais|il faut|tu peux|vous pouvez|peux[- ]tu|pouvez[- ]vous|i want to|i would like to|can you|could you|would you|please|merci de|merci|stp|svp)[\s,]+)*/i,
+    '',
+  );
+  return head.match(/^([\p{L}'’-]+)/u)?.[1]?.toLowerCase() ?? null;
+}
+
+/** A question asks for a fact, whatever verb it quotes: "Comment installer nginx ?" reads. */
+function isTechnologyQuestion(rawText: string): boolean {
+  const raw = rawText.toLowerCase();
+  return raw.includes('?') || /\b(?:comment|how|où|where|quel|quelle|quels|quelles|which|quand|when|qui|who)\b/.test(raw);
+}
+
+/**
+ * The state verbs that only write a technology with a write complement: "Désactive les alertes de
+ * failles de TEC-3" writes, "Active applications using PostgreSQL" reads. The complement is an
+ * alert setting, a version number, a TEC reference or a named exception, as for `upgrade`.
+ */
+const TECHNOLOGY_STATE_WRITE_VERBS = new Set([
+  'active', 'activez', 'activer', 'enable',
+  'efface', 'effacez', 'effacer', 'erase', 'clear',
+  'exclus', 'excluez', 'exclure', 'exclude',
+  'désactive', 'désactivez', 'désactiver', 'desactive', 'disable',
+  'réactive', 'réactivez', 'réactiver', 'reactive', 'reactivate',
+]);
+
+function hasTechnologyStateWriteComplement(rawText: string, text: string): boolean {
+  return /\b(?:alertes?(?: de failles?)?|vulnerability alerts?)\b/.test(text)
+    || /\bversions?\s+\S*\d/.test(text)
+    || /\bTEC-\d+\b/i.test(rawText)
+    || /\b(?:service packs?|exceptions? de version)\b/.test(text);
+}
+
+/**
+ * A state verb that clears a field of a task: "Efface la description de la tâche T-4", "Clear the
+ * due date of task T-12". A bare state verb stays a report ("Clear summary of PostgreSQL versions
+ * in use").
+ */
+function hasTaskFieldStateWrite(rawText: string, text: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  const first = directiveFirstWord(rawText);
+  if (first == null || !['efface', 'effacez', 'effacer', 'erase', 'clear'].includes(first)) return false;
+  const namesTask = /\b(?:task|tasks|tache|taches|t-\d+)\b/.test(text);
+  const namesField = /\b(?:description|due date|echeance|date d echeance|assigne|assignee|priority|priorite|status|statut|comment|commentaire|notes?)\b/.test(text);
+  return namesTask && namesField;
+}
+
+/**
+ * A user administration write: "Désactive l'utilisateur Paul Martin", "Active le compte de Julie
+ * Bernard". The screen changes the account status; the assistant has no user tool, so the write
+ * profile carries the refusal instead of a read query.
+ */
+function hasUserAdministrationWrite(rawText: string, text: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  const first = directiveFirstWord(rawText);
+  if (first == null || !['active', 'activez', 'activer', 'enable', 'désactive', 'désactivez', 'désactiver', 'desactive', 'disable'].includes(first)) return false;
+  if (/\b(?:utilisateur|utilisateurs|user|users)\b/.test(text)) return true;
+  return /\bcompte\b[\s\S]{0,30}\b(?:de|d['’]|of)\b[\s\S]{0,40}[A-Z]/.test(rawText);
+}
+
+/** An imperative technology verb at the head: "Désinstalle nginx de AST-13", "Remove Java 8 from APP-3". */
+function hasTechnologyWriteIntent(rawText: string, text: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  const first = directiveFirstWord(rawText);
+  if (first == null) return false;
+  const lower = rawText.toLowerCase();
+  // "Marque" is a noun in "Marque et modèle des serveurs…": it writes only with a technology
+  // reference and a state word. "Indique" writes only a replacement.
+  if (['marque', 'marquez', 'marquer', 'mark'].includes(first)) {
+    return /\bTEC-\d+\b/i.test(rawText)
+      && /\b(?:obsolete|obsolescent|obsolète|deprecated|retire|retired|retiree|remplacee?|remplaces?|replaced|fin de vie)\b/.test(lower);
+  }
+  if (['indique', 'indiquez', 'indiquer', 'indicate'].includes(first)) {
+    return /\b(?:est|sont|is|are)\s+(?:remplacee?|remplaces?|replaced)\b[\s\S]{0,25}\b(?:par|by)\b/.test(lower);
+  }
+  if (first === 'turn') {
+    return /\b(?:alertes? de failles?|vulnerability alerts?)\b/.test(lower);
+  }
+  // "Stop vulnerability alerts on Windows Server 2012" writes; "Stop the migration" does not.
+  if (first === 'stop') {
+    return /\b(?:alertes? de failles?|vulnerability alerts?)\b/.test(lower);
+  }
+  // A bare state verb here is a report or a screen word ("Active technologies with no IT owner",
+  // "Clear summary of PostgreSQL versions in use"): it needs an alert, a version or a TEC.
+  if (TECHNOLOGY_STATE_WRITE_VERBS.has(first)) {
+    return hasTechnologyStateWriteComplement(rawText, text);
+  }
+  // A bare verb here is a noun or a report ("Upgrade path", "Replace candidates", "Install base",
+  // "Record the end of support dates…"): it writes only with a version, "from … to", "with" or "on".
+  if (['upgrade', 'replace', 'record', 'install'].includes(first)) {
+    const rest = lower.slice(lower.indexOf(first) + first.length).trim();
+    if (/^(?:path|options|candidates|base|count)\b/.test(rest)) return false;
+    return /\b(?:from\b[\s\S]{0,80}\bto\b|with\b|on\b|sur\b|vers\b|version\b|\d)/.test(rest);
+  }
+  return TECHNOLOGY_WRITE_VERBS.has(first);
+}
+
+/**
+ * A technology people write: "Make Paul Martin the IT owner of PostgreSQL", "Paul Martin devient
+ * responsable IT de TEC-3", "Retire le contact Sage Support de PostgreSQL", "Ajoute Jean Dupont aux
+ * contacts de support de Redis". The verb (or the stated change) and the owner/contact phrase are
+ * both required, so a list of owners stays a read.
+ */
+function hasTechnologyPeopleWrite(rawText: string, text: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  const first = directiveFirstWord(rawText);
+  // "Make" writes people only in the form "Make <name> the IT owner of …" or "… the support
+  // contact of …". A determiner or a pronoun after it opens a report: "Make a list of…",
+  // "Make me a summary…".
+  if (first === 'make') {
+    const rest = text.slice(text.indexOf('make') + 4).trim();
+    return /^(?!a\b|an\b|the\b|me\b|us\b)\S[\s\S]*?\bthe\s+(?:(?:it|business)\s+owner|support contacts?)\s+of\b/.test(rest);
+  }
+  const changeVerb = first != null && [
+    'ajoute', 'ajoutez', 'ajouter', 'add',
+    'retire', 'retirez', 'retirer', 'remove',
+    'enlève', 'enlevez', 'enlever',
+    'mets', 'mettez', 'mettre',
+    'remplace', 'remplacez', 'remplacer', 'replace',
+    'change', 'changez', 'changer',
+    'assigne', 'assignez', 'assigner', 'assign',
+    'affecte', 'affectez', 'affecter',
+  ].includes(first);
+  const statement = /\b(?:devient|deviennent|becomes?)\b/.test(text);
+  if (!changeVerb && !statement) return false;
+  const ownerPhrase = /\b(?:it owner|business owner|owners? of|responsable (?:it|metier)|responsables? (?:it|metier))\b/.test(text);
+  const supportPhrase = /\b(?:support contacts?|contacts? de support|contacts? au support)\b/.test(text);
+  // The contact of a technology names the support ("Sage Support", "contacts de support") or a
+  // technology (a TEC reference, or a name followed by a version). "Retire le contact Marie
+  // Durand de ACME" is the master data contact write, not a technology support contact.
+  const namesSupport = /\bsupport\b/.test(text);
+  const namesTechnology = /\bTEC-\d+\b/i.test(rawText)
+    || /\b[A-Za-z][\w.-]*\s+v?\d+(?:\.\d+)*\b/.test(rawText);
+  const contactPhrase = /\bcontact\b[\s\S]{0,60}\b(?:de|du|des|of|from)\b[\s\S]{0,40}[A-Z]/.test(rawText);
+  return ownerPhrase || supportPhrase || (contactPhrase && (namesSupport || namesTechnology));
+}
+
+/**
+ * A web link of a technology: "Ajoute un lien vers la documentation https://nginx.org/en/docs/ sur
+ * nginx", "Add the release notes link https://… to PostgreSQL". The word link, an address and a
+ * write verb; the URL's `docs` path must not send the phrase to the document write.
+ */
+function hasTechnologyWebLinkWrite(rawText: string, text: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  if (!/\b(?:lien|links?)\b/.test(text) || !/\bhttps?:\/\/|\bwww\./.test(text)) return false;
+  const first = directiveFirstWord(rawText);
+  return first != null && [
+    'ajoute', 'ajoutez', 'ajouter', 'add',
+    'supprime', 'supprimez', 'supprimer', 'delete', 'remove',
+    'retire', 'retirez', 'retirer',
+    'change', 'changez', 'changer', 'update', 'mets', 'mettez', 'mettre',
+    'modifie', 'modifiez', 'modifier',
+  ].includes(first);
+}
+
+/**
+ * A stated change: "CheeseTrack utilise maintenant Java 21", "CheeseTrack now uses Java 21",
+ * "La version 16 de PostgreSQL finit son support le 31/12/2028", "TEC-3 est remplacée par TEC-7".
+ * A question stays a read.
+ */
+function hasTechnologyChangeStatement(rawText: string, text: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  return containsAny(text, [
+    /\b(?:utilise|uses|runs|tourne)\b[\s\S]{0,40}\b(?:maintenant|now)\b/,
+    /\b(?:maintenant|now)\b[\s\S]{0,40}\b(?:utilise|uses|runs|tourne)\b/,
+    /\b(?:finit|finira|termine|terminera|ends?|end)\b[\s\S]{0,50}\b(?:support|soutien)\b[\s\S]{0,30}\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/.]\d{1,2}[/.]\d{4})\b/,
+    /\b(?:support|soutien)\b[\s\S]{0,30}\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/.]\d{1,2}[/.]\d{4})\b[\s\S]{0,50}\b(?:finit|finira|termine|terminera|ends?|end)\b/,
+    ...(/\bTEC-\d+\b/i.test(rawText)
+      ? [/\b(?:est|sont|is|are)\s+(?:remplacee?|remplaces?|replaced)\b[\s\S]{0,25}\b(?:par|by)\b/]
+      : []),
+  ]);
+}
+
 /** Undoing the last mutation is a write, never a read: "Undo that", "Annule l'aperçu". */
 const UNDO_REQUEST_RE = /\bundo\b|\bannule (?:ce que|ceci|cela|la derniere|le dernier|la precedent|la precedente|les dernieres|l['’]apercu)\b|\bcancel (?:my |the )?(?:last|previous) (?:preview|change|modification|action)\b/;
 
@@ -510,6 +729,16 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     wordsInOrder(/\b(?:demain|today|tomorrow)\b/, /\b(?:meteo|weather|forecast)\b/),
   ]);
 
+  // A review is a read, not the "passe" write: "Passe en revue les technologies en fin de vie".
+  if (/\b(?:passe|passer|pass|go through)\s+(?:en\s+)?revue\b/.test(text)) {
+    return { profile: withWebCapability(PROFILES.read_query, needsWeb), explicitIntent: true };
+  }
+  // "Qui a changé … ?" asks who changed a value, not for a change.
+  if (isQuestion(raw, text)
+    && /^(?:qui a|who has|who changed|who modified|qui a modifie)\b[\s\S]{0,60}\b(?:change|modifie|updated?|edited?)\b/.test(text)) {
+    return { profile: withWebCapability(PROFILES.read_query, needsWeb), explicitIntent: true };
+  }
+
   if (isMinimalDirectRequest(raw)) {
     return { profile: PROFILES.minimal, explicitIntent: true };
   }
@@ -545,6 +774,10 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     || hasIncidentConfidentialityIntent;
   const question = isQuestion(raw, text);
   const writeText = stripReflexivePast(text);
+  // The people and web-link writes are decided on the raw text, before a document word or the
+  // `docs` path of a link address sends them to another family.
+  const hasTechnologyPeopleIntent = hasTechnologyPeopleWrite(raw, text);
+  const hasTechnologyWebLinkIntent = hasTechnologyWebLinkWrite(raw, text);
   // A polite or wish turn before the verb still carries the request: "Peux-tu passer T-4 ?".
   const hasPoliteRequest = /^(?:(?:bonjour|bonsoir|salut|hello|hi|hey)[\s,!.]+)*(?:je veux|je voudrais|il faut|tu peux|peux[- ]tu|pouvez[- ]vous|i want to|i would like to|can you|could you|would you|please|merci de|stp|svp)\b/.test(text);
   const hasTaskReference = hasReferenceInGroup(referencedTypes, TASK_ENTITY_TYPES);
@@ -552,7 +785,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   const hasTaskNameIntent = containsAny(text, [
     /\b(task|tasks|ticket|tickets|tache|taches|todo|to-do|assignee|echeance|due date)\b/,
   ]);
-  const mentionsDocument = containsAny(text, [
+  const mentionsDocument = !hasTechnologyWebLinkIntent && containsAny(text, [
     /\b(document|documents|doc|docs|knowledge|article|page|library|folder|markdown)\b/,
   ]);
   // A read verb keeps the journal and the notes a read: "Montre le journal de INC-3".
@@ -592,7 +825,15 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   const hasDocumentPublicationIntent = mentionsDocument && containsAny(text, [
     /\b(?:rends|rendre|make)\b[\s\S]{0,40}\b(?:public|publique|publics|publiques)\b/,
   ]);
-  const isWrite = containsAny(writeText, [
+  // A technology link or a version written in the imperative ("Désinstalle nginx de AST-13",
+  // "Declare Redis on AST-12") or stated with "now" ("CheeseTrack now uses Java 21"). The
+  // imperative is read on the raw text, so "installé" stays a read.
+  const hasTechnologyWrite = hasTechnologyWriteIntent(raw, text);
+  const hasTechnologyChange = hasTechnologyChangeStatement(raw, text);
+  const hasTaskFieldStateWriteIntent = hasTaskFieldStateWrite(raw, text);
+  const hasUserAdministrationIntent = hasUserAdministrationWrite(raw, text);
+  const isWrite = hasTechnologyPeopleIntent || hasTechnologyWebLinkIntent || hasTaskFieldStateWriteIntent
+    || hasUserAdministrationIntent || containsAny(writeText, [
     /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|passe|passer|publish|publier|mark|set)\b/,
     wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
     // A status or lifecycle word with an incident reference is an incident change: "clos INC-7",
@@ -611,6 +852,9 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
       : []),
     ...(hasDocumentPublishIntent ? [/\b(?:publie|publier|publish)\b/] : []),
     ...(hasDocumentPublicationIntent ? [/\b(?:public|publique|publics|publiques)\b/] : []),
+    ...(hasTechnologyWrite || hasTechnologyChange
+      ? [/\b(?:installe|installer|install|declare|declarer|desinstalle|uninstall|remove|detach|replace|remplace|renomme|renommer|rename|enregistre|upgrade|mets|mettez|mettre|utilise|uses|runs|tourne|maintenant|now|finit|finira|termine|terminera|ends?|marque|marquez|marquer|mark|adopte|adopter|adopt|efface|effacer|erase|clear|desactive|desactiver|disable|active|activer|enable|exclus|exclure|exclude|indique|indiquer|indicate|turn|reactive|reactivate|stop|remets|remettez|remettre)\b/]
+      : []),
     ...(createsIncident(text, raw) ? [/\bincident\b/] : []),
   ]);
 
@@ -618,7 +862,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     // The French unlink verbs only name a link with an INC reference or the word incident:
     // "Retire le responsable de la tâche T-4" is a task field write.
     const isRelationWrite = containsAny(text, [
-      /\b(relation|relationship|link|linked|lier|lie|lies|relier|relie|associer|associe|associes|rattacher|rattache|connect|connecter|unlink)\b/,
+      /\b(relation|relationship|link|linked|lier|lie|lies|relier|relie|associer|associe|associes|rattacher|rattache|connect|connecter|unlink|installe|installer|install|declare|declarer|declares)\b/,
       ...(hasIncidentIntent
         ? [/\b(delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever)\b/]
         : []),
@@ -633,6 +877,14 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     // A plan that starts an incident and then links it stays a business write:
     // "Crée l'incident puis lie-le à AST-12 et APP-3".
     if (hasIncidentIntent && !hasTaskNameIntent && createsIncidentRecord(text)) {
+      return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
+    }
+    // An adoption and the vulnerability alerts of a technology are business writes without a
+    // reference or a link verb: "Adopte Redis depuis le catalogue KANAP", "Turn alerts back on".
+    if (hasTechnologyWrite && containsAny(text, [/\b(?:adopte|adopter|adopt)\b/])) {
+      return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
+    }
+    if (!question && containsAny(text, [/\b(?:alertes? de failles?|vulnerability alerts?)\b/])) {
       return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
     }
     // A link verb with an incident reference is the incident links tool: "lie APP-2 à INC-3".
@@ -658,7 +910,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     if (hasReferenceInGroup(referencedTypes, FINANCIAL_ENTITY_TYPES)) {
       return { profile: withWebCapability(PROFILES.write_financial, needsWeb), explicitIntent: true };
     }
-    if (hasReferenceInGroup(referencedTypes, MASTER_DATA_ENTITY_TYPES)) {
+    if (!hasTechnologyPeopleIntent && hasReferenceInGroup(referencedTypes, MASTER_DATA_ENTITY_TYPES)) {
       return { profile: withWebCapability(PROFILES.write_master_data, needsWeb), explicitIntent: true };
     }
     if (hasReferenceInGroup(referencedTypes, BUSINESS_ENTITY_TYPES)) {
@@ -679,10 +931,15 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     if (containsAny(text, [/\b(budget|opex|capex|spend|expense|financial|finance|forecast|plan)\b/])) {
       return { profile: withWebCapability(PROFILES.write_financial, needsWeb), explicitIntent: true };
     }
-    if (containsAny(text, [/\b(company|companies|supplier|suppliers|fournisseur|fournisseurs|contact|contacts|department|departement|service|location|site|account|compte|master data|referentiel|referential)\b/])) {
+    // A user account is not a master data record: "Active le compte de Julie Bernard" must not
+    // offer the master data write tool, which cannot change a user.
+    if (hasUserAdministrationIntent) {
+      return { profile: withWebCapability(PROFILES.write_general, needsWeb), explicitIntent: true };
+    }
+    if (!hasTechnologyPeopleIntent && containsAny(text, [/\b(company|companies|supplier|suppliers|fournisseur|fournisseurs|contact|contacts|department|departement|service|location|site|account|compte|master data|referentiel|referential)\b/])) {
       return { profile: withWebCapability(PROFILES.write_master_data, needsWeb), explicitIntent: true };
     }
-    if (containsAny(text, [/\b(application|applications|asset|assets|actif|actifs|project|projects|projet|projets|request|requests|demande|demandes|contract|contracts|contrat|contrats|interface|connection|location|incident|incidents)\b/])) {
+    if (containsAny(text, [/\b(application|applications|asset|assets|actif|actifs|server|servers|serveur|serveurs|project|projects|projet|projets|request|requests|demande|demandes|contract|contracts|contrat|contrats|interface|connection|location|incident|incidents|technologie|technologies|technology|version)\b/])) {
       return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
     }
     return { profile: withWebCapability(PROFILES.write_general, needsWeb), explicitIntent: true };

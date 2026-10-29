@@ -371,8 +371,11 @@ async function testTechnologyReferencesAndRelatedRecords() {
     assert.ok(profile.toolNames.includes('get_entity_context'), prompt);
   }
 
-  // Technologies have no write: a write request on one stays generic, never a business write.
-  assert.equal(selectAiContextProfile('Update the lifecycle of TEC-3').name, 'write_general');
+  // A technology record is a business write now; the tool that changes its fields arrives in
+  // lot 4, while its links are written by `update_technology_links`.
+  const technologyWrite = selectAiContextProfile('Update the lifecycle of TEC-3');
+  assert.equal(technologyWrite.name, 'write_business');
+  assert.ok(technologyWrite.toolNames.includes('update_technology_links'));
 }
 
 // The maintainer's conversation on dev: Plaid offers to list the users, the reply "oui" got no tool.

@@ -398,6 +398,70 @@ function createRegistry(overrides?: {
           },
         },
         {
+          toolName: 'update_technology_links',
+          description: 'Create a preview to link a technology to applications and servers.',
+          inputSchema: {
+            safeParse: (value: any) => ({ success: true, data: value }),
+          },
+          inputSummary: {
+            technology: 'Technology reference, UUID or exact name.',
+            applications: 'Applications to add or remove, with their version.',
+            servers: 'Servers to install on or remove from, with their version.',
+          },
+          businessResource: 'infrastructure',
+          writePreview: {
+            entity_type: 'technologies',
+            fields: ['linked_applications', 'linked_servers'],
+            reversible: true,
+            prompt_hint: 'For the links of a technology, use `update_technology_links`.',
+          },
+        },
+        {
+          toolName: 'update_technology_people',
+          description: 'Create a preview to change the people of a technology.',
+          inputSchema: {
+            safeParse: (value: any) => ({ success: true, data: value }),
+          },
+          inputSummary: { technology: 'Technology reference.', owners: 'Owners to add or remove.' },
+          businessResource: 'infrastructure',
+          writePreview: {
+            entity_type: 'technologies',
+            fields: ['technology_owners', 'technology_support_contacts'],
+            reversible: true,
+            prompt_hint: 'For the people of a technology, use `update_technology_people`.',
+          },
+        },
+        {
+          toolName: 'update_technology_web_links',
+          description: 'Create a preview to change the web links of a technology.',
+          inputSchema: {
+            safeParse: (value: any) => ({ success: true, data: value }),
+          },
+          inputSummary: { technology: 'Technology reference.', add: 'Links to add.' },
+          businessResource: 'infrastructure',
+          writePreview: {
+            entity_type: 'technologies',
+            fields: ['technology_web_links'],
+            reversible: true,
+            prompt_hint: 'For the web links of a technology, use `update_technology_web_links`.',
+          },
+        },
+        {
+          toolName: 'set_technology_vulnerability_alerts',
+          description: 'Create a preview to set the vulnerability alerts of a technology.',
+          inputSchema: {
+            safeParse: (value: any) => ({ success: true, data: value }),
+          },
+          inputSummary: { technology: 'Technology reference.', enabled: 'The technology setting.' },
+          businessResource: 'infrastructure',
+          writePreview: {
+            entity_type: 'technologies',
+            fields: ['technology_vulnerability_alerts'],
+            reversible: true,
+            prompt_hint: 'For the vulnerability alerts, use `set_technology_vulnerability_alerts`.',
+          },
+        },
+        {
           toolName: 'change_incident_state',
           description: 'Create a preview to reopen or cancel one incident.',
           inputSchema: {
@@ -449,6 +513,10 @@ function createRegistry(overrides?: {
           add_task_comment: { toolName: 'add_task_comment' },
           add_incident_note: { toolName: 'add_incident_note' },
           update_incident_links: { toolName: 'update_incident_links' },
+          update_technology_links: { toolName: 'update_technology_links' },
+          update_technology_people: { toolName: 'update_technology_people' },
+          update_technology_web_links: { toolName: 'update_technology_web_links' },
+          set_technology_vulnerability_alerts: { toolName: 'set_technology_vulnerability_alerts' },
           change_incident_state: { toolName: 'change_incident_state' },
           set_incident_confidentiality: { toolName: 'set_incident_confidentiality' },
         } as Record<string, any>)[toolName];
@@ -628,6 +696,10 @@ async function testListRegisteredToolsExposesRuntimeRegistry() {
       'add_task_comment',
       'add_incident_note',
       'update_incident_links',
+      'update_technology_links',
+      'update_technology_people',
+      'update_technology_web_links',
+      'set_technology_vulnerability_alerts',
       'change_incident_state',
       'set_incident_confidentiality',
     ],
@@ -730,6 +802,10 @@ async function testChatSurfaceIncludesWritePreviewToolsWhenWriteAllowed() {
   assert.ok(tools.some((tool) => tool.name === 'add_task_comment'));
   assert.ok(tools.some((tool) => tool.name === 'add_incident_note'));
   assert.ok(tools.some((tool) => tool.name === 'update_incident_links'));
+  assert.ok(tools.some((tool) => tool.name === 'update_technology_links'));
+  assert.ok(tools.some((tool) => tool.name === 'update_technology_people'));
+  assert.ok(tools.some((tool) => tool.name === 'update_technology_web_links'));
+  assert.ok(tools.some((tool) => tool.name === 'set_technology_vulnerability_alerts'));
   assert.ok(tools.some((tool) => tool.name === 'change_incident_state'));
   assert.ok(tools.some((tool) => tool.name === 'set_incident_confidentiality'));
   assert.ok(tools.some((tool) => tool.name === 'undo_preview'));
@@ -769,6 +845,10 @@ async function testWritePreviewToolsStayHiddenWithoutWriteAccess() {
   assert.ok(!tools.some((tool) => tool.name === 'add_task_comment'));
   assert.ok(!tools.some((tool) => tool.name === 'add_incident_note'));
   assert.ok(!tools.some((tool) => tool.name === 'update_incident_links'));
+  assert.ok(!tools.some((tool) => tool.name === 'update_technology_links'));
+  assert.ok(!tools.some((tool) => tool.name === 'update_technology_people'));
+  assert.ok(!tools.some((tool) => tool.name === 'update_technology_web_links'));
+  assert.ok(!tools.some((tool) => tool.name === 'set_technology_vulnerability_alerts'));
   assert.ok(!tools.some((tool) => tool.name === 'change_incident_state'));
   assert.ok(!tools.some((tool) => tool.name === 'set_incident_confidentiality'));
   assert.ok(!tools.some((tool) => tool.name === 'undo_preview'));
