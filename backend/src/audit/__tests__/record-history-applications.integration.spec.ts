@@ -136,6 +136,13 @@ async function seedFamily(runner: QueryRunner, data: HistorySeed): Promise<Seede
   await write({ table: 'application_attachments', recordId: randomUUID(), action: 'create', userId, before: null, after: { application_id: app, original_filename: 'design.pdf' } });
   await write({ table: 'application_business_processes', recordId: data.businessProcess, action: 'update', userId, before: null, after: { application_id: app } });
 
+  // The assistant writes a link set as relation items (`{ key, label, payload }`): on the owned
+  // application, a project read by its payload id; the stored label never comes out.
+  await write({
+    table: 'application_projects', recordId: owned, action: 'update', userId,
+    before: [], after: [{ key: 'project', label: 'Writer label', payload: { project_id: data.project } }],
+  });
+
   // The technology link through the real writer: one audit row per application, on both sides.
   const service = links();
   const opts = { manager: runner.manager, tenantId: t, userId };
@@ -169,6 +176,10 @@ async function testAccess(seeded: Seeded, foreign: HistorySeed) {
   const owned = await readPage(seeded.contributor, data.tenantId, 'applications', seeded.owned, APP_MODULES);
   assert.ok(findChange(owned, 'technology', 'added'), 'the owner reads the application they own');
   console.log('  200 with applications, 403 without, 404 for missing, foreign and non-owned applications: OK');
+  const assistant = await readPage(seeded.allReader, data.tenantId, 'applications', seeded.owned, ALL_MODULES);
+  assert.ok(named(findChange(assistant, 'project', 'added')?.change.after, 'project'), 'the project the assistant linked is named');
+  assert.ok(!JSON.stringify(assistant).includes('Writer label'), 'the stored label never comes out');
+  console.log('  a link set written by the assistant reads as its project: OK');
 }
 
 async function testEntries(seeded: Seeded) {

@@ -234,7 +234,7 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
         if (Array.isArray(list)) for (const value of list) addFamilyId({ ids }, family, value);
       };
       if (kind === 'application') {
-        if (Array.isArray(payload)) addList('application', payload);
+        if (Array.isArray(payload)) addList('application', linkSetIds(payload));
         else if (isPlainObject(payload)) {
           addList('application', payload.added);
           addList('application', payload.removed);
@@ -243,7 +243,7 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
         }
       }
       if (kind === 'technology') {
-        if (Array.isArray(payload)) addList('technology', payload);
+        if (Array.isArray(payload)) addList('technology', linkSetIds(payload));
         else if (isPlainObject(payload)) {
           addList('technology', payload.added);
           addList('technology', payload.removed);
@@ -262,7 +262,7 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
         if (entry.table === 'spend_items') {
           if (isUuid(row.record_id)) addFamilyId({ ids }, 'asset', row.record_id);
         } else if (Array.isArray(payload)) {
-          addList('asset', payload);
+          addList('asset', linkSetIds(payload));
         } else if (isPlainObject(payload)) {
           addList('asset', payload.ids);
           addList('asset', payload.added);

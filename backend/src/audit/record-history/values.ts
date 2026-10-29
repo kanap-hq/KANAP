@@ -18,10 +18,34 @@ export function deepEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-/** The ids of a link-set payload: an array of ids, or `{ ids }` as the writers and `auditedLinkSet` shape it. */
+/**
+ * The id one element of a link set names: a bare id, or the assistant's relation item
+ * (`{ key, label, payload: { <target>_id } }`, `ai-relation-mutation-support.service.ts`), read by
+ * its `key` or its single `<x>_id` payload id. Never its stored `label`: the writer's rights made it.
+ */
+function linkSetEntryId(entry: unknown): string | null {
+  if (isUuid(entry)) return entry;
+  if (!isPlainObject(entry)) return null;
+  if (isUuid(entry.key)) return entry.key;
+  if (!isPlainObject(entry.payload)) return null;
+  const ids = Object.entries(entry.payload)
+    .filter(([key, value]) => key.endsWith('_id') && isUuid(value))
+    .map(([, value]) => value as string);
+  return ids.length === 1 ? ids[0] : null;
+}
+
+/**
+ * The ids of a link-set payload: an array of ids or of the assistant's relation items, or `{ ids }`
+ * as the writers and `auditedLinkSet` shape it.
+ */
 export function linkSetIds(value: unknown): string[] {
-  const list = Array.isArray(value) ? value : isPlainObject(value) && Array.isArray(value.ids) ? value.ids : [];
-  return list.filter(isUuid).map((id) => id.toLowerCase());
+  const list: unknown[] = Array.isArray(value) ? value : isPlainObject(value) && Array.isArray(value.ids) ? value.ids : [];
+  const ids: string[] = [];
+  for (const entry of list) {
+    const id = linkSetEntryId(entry);
+    if (id) ids.push(id.toLowerCase());
+  }
+  return ids;
 }
 
 /**

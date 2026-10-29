@@ -187,6 +187,17 @@ async function seedAudits(runner: QueryRunner, data: HistorySeed): Promise<Seede
     await audit(runner, { table: label, recordId: contract, action: 'update', before: { ids: [] }, after: { ids: [id] }, ...by });
     await audit(runner, { table: label, recordId: contract, action: 'update', before: { ids: [id] }, after: { ids: [] }, ...by });
   }
+  // The assistant writes a link set as relation items (`{ key, label, payload }`) on contract B;
+  // the stored label is the writer's and never comes out.
+  const relation = (lineId: string) => ({ key: lineId, label: 'Writer label', payload: { spend_item_id: lineId } });
+  await audit(runner, {
+    table: 'contract_spend_items', recordId: data.contractB, action: 'update', ...by,
+    before: [], after: [relation(data.opexLine), { key: 'not-an-id', label: 'Writer label', payload: { spend_item_id: data.hiddenLine } }],
+  });
+  await audit(runner, {
+    table: 'contract_spend_items', recordId: data.contractB, action: 'update', ...by,
+    before: [relation(data.opexLine)], after: [],
+  });
   return { data, task: task.id, excludedRow, allReader, contractReader, noModules, limited, throughLine };
 }
 
@@ -345,6 +356,16 @@ async function testDocumentsThroughLine(seeded: Seeded) {
   console.log('  a contract read through a line keeps its documents closed, a direct reader reads them: OK');
 }
 
+async function testAssistantLinkSet(seeded: Seeded) {
+  const { data } = seeded;
+  const page = await readPage(seeded.allReader, data.tenantId, data.contractB, ALL_MODULES);
+  const added = changes(page, 'budget_line', 'added').map(({ change }) => (change.after as any).reference).sort();
+  assert.deepEqual(added, ['BL-1', 'BL-3'], 'the lines the assistant added, read by key or payload id');
+  assert.deepEqual(changes(page, 'budget_line', 'removed').map(({ change }) => (change.before as any).reference), ['BL-1']);
+  assert.ok(!JSON.stringify(page).includes('Writer label'), 'the stored label never comes out');
+  console.log('  a link set written by the assistant reads as its lines: OK');
+}
+
 async function testParentRows(seeded: Seeded) {
   const { data } = seeded;
   const runner = dataSource.createQueryRunner();
@@ -386,6 +407,7 @@ async function run() {
     await testReferencesWithoutModules(seeded);
     await testLimited(seeded);
     await testDocumentsThroughLine(seeded);
+    await testAssistantLinkSet(seeded);
     await testParentRows(seeded);
     console.log('record-history-contracts.integration.spec: ok');
   } finally {
