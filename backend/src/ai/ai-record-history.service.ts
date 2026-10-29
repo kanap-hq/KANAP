@@ -116,6 +116,13 @@ async function budgetLineId(value: string, manager: EntityManager): Promise<stri
   return (await resolveBudgetLine(ref, manager)).id;
 }
 
+/**
+ * The pages read at most for one call when they come back empty with a cursor: the History tab
+ * leaves out an update with no visible change, so a page of such updates is empty though older
+ * entries exist.
+ */
+const MAX_HISTORY_PAGE_READS = 5;
+
 function isModuleRightRefusal(error: unknown): boolean {
   if (!(error instanceof ForbiddenException)) return false;
   const response = error.getResponse();
@@ -157,14 +164,17 @@ export class AiRecordHistoryService {
     const id = await this.recordId(context, input.entity_type, input.entity_id);
     const access = await this.policy.effectiveAccess(context, context.manager);
 
+    const reader = { tenantId: context.tenantId, userId: context.userId, isAdmin: access.isAdmin, permissions: access.permissions, manager: context.manager };
     let page;
     try {
-      page = await this.history.list(
-        { tenantId: context.tenantId, userId: context.userId, isAdmin: access.isAdmin, permissions: access.permissions, manager: context.manager },
-        table,
-        id,
-        { cursor: input.cursor ?? null, limit: input.limit },
-      );
+      // An empty page with a cursor is read past, up to MAX_HISTORY_PAGE_READS pages; then what is
+      // read is given with its cursor.
+      let cursor = input.cursor ?? null;
+      for (let reads = 1; ; reads += 1) {
+        page = await this.history.list(reader, table, id, { cursor, limit: input.limit });
+        if (page.items.length > 0 || page.nextCursor === null || reads >= MAX_HISTORY_PAGE_READS) break;
+        cursor = page.nextCursor;
+      }
     } catch (error) {
       // The record is read first under the person's access: missing, out of access or of another
       // tenant alike, it is not found, and no partial history is served.

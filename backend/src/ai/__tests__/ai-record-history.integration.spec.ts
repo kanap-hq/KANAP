@@ -221,6 +221,30 @@ async function testOtherTenant(seeded: Seeded) {
   console.log('  a record of another tenant is not found: OK');
 }
 
+/**
+ * A record whose newest entries are updates with no visible change (left out by the History tab):
+ * the first page reads past them to the entry before (Plaid L7, lot E), within five pages.
+ */
+async function testEmptyPagesAreReadPast(seeded: Seeded) {
+  const line = await seed(seeded.data.tenantId, (runner) => storedRow(runner, 'spend_items', seeded.data.capexLine));
+  const invisible = () => seed(seeded.data.tenantId, (runner) => audit(runner, {
+    table: 'spend_items', recordId: seeded.data.capexLine, action: 'update', before: line, after: line, userId: seeded.reader.id,
+  }));
+  await invisible();
+  const page = await read(seeded.data.tenantId, seeded.reader, { entity_type: 'budget_lines', entity_id: seeded.data.capexLine, limit: 1 });
+  assert.deepEqual(page.items.map((item) => item.action), ['create'], 'the entry before the update with no visible change');
+  assert.equal(page.returned, 1);
+
+  for (let i = 0; i < 5; i += 1) await invisible();
+  const capped = await read(seeded.data.tenantId, seeded.reader, { entity_type: 'budget_lines', entity_id: seeded.data.capexLine, limit: 1 });
+  assert.deepEqual([capped.returned, capped.truncated], [0, true], 'five empty pages at most, then the cursor');
+  const next = await read(seeded.data.tenantId, seeded.reader, {
+    entity_type: 'budget_lines', entity_id: seeded.data.capexLine, limit: 1, cursor: capped.next_cursor!,
+  });
+  assert.deepEqual(next.items.map((item) => item.action), ['create'], 'the cursor reads on');
+  console.log('  an empty page is read past, five pages at most: OK');
+}
+
 async function seedAll(tenantId: string, otherTenantId: string): Promise<Seeded> {
   const base = await seed(tenantId, async (runner) => {
     const data = await seedHistoryData(runner, tenantId);
@@ -280,6 +304,7 @@ async function run() {
     await testReaderWithoutTheRight(seeded);
     await testLimitedPerson(seeded);
     await testOtherTenant(seeded);
+    await testEmptyPagesAreReadPast(seeded);
     console.log('ai-record-history.integration.spec: ok');
   } finally {
     await dropRaceTenant(tenantId);
