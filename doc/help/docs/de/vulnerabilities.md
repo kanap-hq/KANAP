@@ -147,7 +147,7 @@ Legen Sie den Status jeder Version fest:
 | **Behandelt** | Die Version ist gepatcht, oder ein Workaround ist eingerichtet |
 | **Nicht betroffen** | Die Schwachstelle gilt nicht für Ihre Installation |
 
-Die Notiz hält fest, wie, zum Beispiel „am 12. März gepatcht, Change CHG-123“. Sie wird gespeichert, wenn Sie das Feld verlassen. Das Audit-Log hält fest, wer einen Status geändert hat und wann.
+Die Notiz hält fest, wie, zum Beispiel „am 12. März gepatcht, Change CHG-123“. Sie wird gespeichert, wenn Sie das Feld verlassen. Das Audit-Log hält fest, wer einen Status geändert hat und wann. Sie können auch [Plaid](#den-assistenten-fragen) bitten, einen Status zu ändern.
 
 KANAP ändert nie einen Status, den Sie gewählt haben. Wenn eine Version nicht mehr passt (Sie haben sie aktualisiert, die Technologie wurde außer Betrieb genommen, eine Quelle hat ihre Daten geändert), verschwindet eine Zeile, die noch **Zu prüfen** ist. Eine geprüfte Zeile bleibt, ausgegraut, mit ihrem Status; sie kehrt unverändert zurück, wenn die Version wieder passt.
 
@@ -185,7 +185,23 @@ Empfänger sind die IT-Verantwortlichen der Technologie, deren Konto aktiv ist u
 - **Listen der Assets und Anwendungen**: die Spalte **Zu prüfende Schwachstellen**. Siehe [Assets](assets.md#working-with-the-list) und [Anwendungen](applications.md#working-with-the-list).
 - **Datensätze von Assets und Anwendungen**: der Abschnitt **Schwachstellen** und das Badge der schwerwiegenden Schwachstellen in der Kopfzeile. Siehe [Assets](assets.md#operations) und [Anwendungen](applications.md#operations).
 - **Dashboard**: die Kachel **Schwachstellen im Bestand**. Siehe [Mein Dashboard](my-dashboard.md#vulnerabilities).
-- **Plaid**: Der Assistent beantwortet Fragen zu Schwachstellen. Siehe [Plaid](ai-assistant.md#tool-calls).
+- **Plaid**: Der Assistent beantwortet Fragen zu Schwachstellen und ändert ihren Status. Siehe [Den Assistenten fragen](#den-assistenten-fragen).
+
+## Den Assistenten fragen
+
+[Plaid](ai-assistant.md) liest die Schwachstellen mit denselben Rechten wie diese Seite. Es zählt die Zeilen und die eindeutigen CVE, wie die Seite, behält auf Wunsch die im Bestand eingesetzten Technologien und sagt, wann KANAP jede Quelle zuletzt gelesen hat. Fragen Sie zum Beispiel: „Wie viele kritische Schwachstellen sind bei PostgreSQL zu prüfen, nach Version?“ oder „Welche ausgenutzten CVE betreffen APP-4?“
+
+Mit `infrastructure:member` ändert Plaid auch den Status von Zeilen, und jede Änderung kommt als Vorschau, die Sie genehmigen:
+
+- Nennen Sie eine CVE, um alle ihre Zeilen zu ändern, oder fügen Sie eine Technologie oder eine Technologie und eine Version hinzu.
+- Oder beschreiben Sie die Zeilen mit den Filtern der Seite, zum Beispiel die kritischen Zeilen einer Technologie.
+- Geben Sie eine Notiz an, um sie in jede Zeile zu schreiben. Ohne Notiz behält jede Zeile ihre eigene.
+
+Eine Änderung umfasst höchstens 5.000 Zeilen, wie **Status ändern**. Die Vorschau sagt, wie viele Zeilen und CVE sich ändern und wie viele außerhalb der Warnungen liegen. Wenn Zeilen, die nicht mehr passen, auf **Zu prüfen** zurückgehen, zählt sie diese: Sie verschwinden beim nächsten Abgleich. **Akzeptiert** ist kein Status: Plaid bietet **Behandelt** mit einer Notiz wie „Risiko akzeptiert“ an, oder **Nicht betroffen**, und wartet auf Ihre Wahl. Bitten Sie Plaid, eine Änderung aus der Konversation rückgängig zu machen. Es lehnt ab, wenn sich eine Zeile seitdem geändert hat.
+
+Fragen Sie zum Beispiel: „Setze CVE-2024-3094 auf TEC-3 Version 5.6 auf nicht betroffen, das Paket ist nicht installiert“ oder „Setze die kritischen Zeilen von PostgreSQL 14 auf behandelt mit der Notiz ‚im März gepatcht‘“.
+
+Der erneute Abgleich (**Aktualisieren**) bleibt im Abschnitt **Schwachstellen** der Technologie. Siehe [Technologien](technologies.md#schwachstellen).
 
 ## Tipps
 
