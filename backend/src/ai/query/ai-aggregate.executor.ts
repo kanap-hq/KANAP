@@ -604,7 +604,7 @@ export class AiAggregateExecutor {
     q: string | undefined,
     adaptedFilters: Record<string, any>,
     scope?: AiQueryScope,
-  ): Promise<{ ids: string[]; total: number; scope: ResolvedAiScope | null }> {
+  ): Promise<{ ids: string[]; total: number; scope: ResolvedAiScope | null; distinct_total?: number }> {
     if (entityType === 'tasks') {
       const accessScope = await resolveAiParticipationAccessScope(context, entityType);
       const scoped = await applyScopeToAiQuery(
@@ -966,7 +966,8 @@ export class AiAggregateExecutor {
         applications,
         { idsOnly: true },
       );
-      return { ids: result.ids, total: result.total, scope: null };
+      // The distinct CVE of every row the filters keep, beyond the ids cap.
+      return { ids: result.ids, total: result.total, scope: null, distinct_total: result.distinct_total };
     }
 
     if (entityType === 'interfaces') {
@@ -1578,27 +1579,17 @@ export class AiAggregateExecutor {
 
   /**
    * A family with several rows per record (`distinctRecord`, vulnerabilities: one row per technology
-   * version of a CVE): the distinct records among the rows `ids`, once over the whole set (a record
-   * in two groups counts once here), named by `distinct_label`. Nothing for the other families.
+   * version of a CVE): the distinct records among every row the filters keep, as its id list counts
+   * them over the whole set (beyond the ids cap; a record in two groups counts once), named by
+   * `distinct_label`. Nothing for the other families, nor for a list that does not count them.
    */
-  private async distinctRecordTotal(
-    context: AiExecutionContextWithManager,
+  private distinctRecordTotal(
     registry: AiEntityFilterRegistry,
-    ids: string[],
-  ): Promise<Pick<AiAggregateResult, 'distinct_total' | 'distinct_label'>> {
+    scoped: { distinct_total?: number },
+  ): Pick<AiAggregateResult, 'distinct_total' | 'distinct_label'> {
     const distinct = registry.aggregate.distinctRecord;
-    if (!distinct) return {};
-    if (!ids.length) return { distinct_total: 0, distinct_label: distinct.name };
-    const alias = registry.aggregate.alias;
-    const baseWhere = registry.aggregate.baseWhere ? ` AND ${registry.aggregate.baseWhere}` : '';
-    const [row] = await context.manager.query(
-      `SELECT COUNT(DISTINCT ${distinct.expression})::int AS n
-         FROM ${registry.aggregate.baseTable} ${alias}
-        WHERE ${alias}.tenant_id = $1${baseWhere}
-          AND ${alias}.${registry.aggregate.idColumn ?? 'id'} = ANY($2::uuid[])`,
-      [context.tenantId, ids],
-    );
-    return { distinct_total: Number(row?.n) || 0, distinct_label: distinct.name };
+    if (!distinct || typeof scoped.distinct_total !== 'number') return {};
+    return { distinct_total: scoped.distinct_total, distinct_label: distinct.name };
   }
 
   /** Vulnerabilities: how fresh the feeds are, as the page's feed line. Nothing for the other families. */
@@ -1866,7 +1857,7 @@ export class AiAggregateExecutor {
         function: fn,
         groups: [],
         total: scoped.total,
-        ...(await this.distinctRecordTotal(context, registry, ids)),
+        ...this.distinctRecordTotal(registry, scoped),
         ...(await this.familyFeeds(context, input.entity_type)),
         returned: 0,
         truncated,
@@ -1904,7 +1895,7 @@ export class AiAggregateExecutor {
       function: fn,
       groups,
       total: scoped.total,
-      ...(await this.distinctRecordTotal(context, registry, ids)),
+      ...this.distinctRecordTotal(registry, scoped),
       ...(await this.familyFeeds(context, input.entity_type)),
       returned: groups.length,
       truncated,

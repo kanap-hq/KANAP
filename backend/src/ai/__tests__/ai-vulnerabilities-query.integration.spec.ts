@@ -445,6 +445,41 @@ async function testDistinctCves(harness: Harness, runner: QueryRunner, s: Seed) 
   for (const key of ['distinct_total', 'distinct_label', 'feeds']) assert.ok(!(key in technologyList), `technology list: no ${key}`);
 }
 
+/**
+ * Lot E review: past the aggregates' ids cap (10,000 rows), `distinct_total` still counts the CVE
+ * of every row the filters keep, as query_entities and SQL do, and the result says it is truncated.
+ * 6,000 CVE on one version, the 4,500 latest on a second one: the first 10,000 rows hold only part
+ * of the CVE. Seeded last: the other tests count the small seed.
+ */
+async function testDistinctPastTheIdsCap(harness: Harness, runner: QueryRunner, s: Seed) {
+  const prefix = `CVE-2096-${s.tenantId.replace(/\D/g, '').slice(0, 4).padEnd(4, '0')}`;
+  await runner.query(
+    `INSERT INTO vulnerability_cves (cve_id, summary, severity, published_at)
+     SELECT $1 || lpad(g::text, 5, '0'), 'Bulk', 'low', '2021-01-01T00:00:00Z' FROM generate_series(1, 6000) g`,
+    [prefix],
+  );
+  const technology = await insertId(runner,
+    `INSERT INTO technologies (tenant_id, item_number, name, family, vulnerability_alerts) VALUES ($1, 9, 'Bulk', 'database', true)`, [s.tenantId]);
+  const v1 = await insertId(runner, `INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, '1')`, [s.tenantId, technology]);
+  const v2 = await insertId(runner, `INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, '2')`, [s.tenantId, technology]);
+  await runner.query(
+    `INSERT INTO technology_vulnerabilities (tenant_id, technology_id, technology_version_id, cve_id, match_basis, match_sources)
+     SELECT $1, $2, v.id, $4 || lpad(g::text, 5, '0'), 'version_in_range', ARRAY['nvd']
+       FROM generate_series(1, 6000) g
+       JOIN (VALUES ($3::uuid, 0), ($5::uuid, 1500)) AS v(id, after) ON g > v.after`,
+    [s.tenantId, technology, v1, prefix, v2],
+  );
+  const [sql] = await runner.query(
+    `SELECT count(*)::int AS rows, count(DISTINCT cve_id)::int AS cves FROM technology_vulnerabilities WHERE tenant_id = $1`, [s.tenantId]);
+  assert.deepEqual([sql.rows, sql.cves], [10_505, 6_004], 'the seed: 10,505 rows, 6,004 CVE');
+
+  const aggregate = await harness.aggregates.execute(ctx(runner, s, 'full'), { entity_type: 'vulnerabilities', group_by: 'state', filters: EVERY_ROW });
+  assert.deepEqual([aggregate.total, aggregate.distinct_total, aggregate.distinct_label, aggregate.truncated], [10_505, 6_004, 'cve', true],
+    'every CVE the filters keep, past the 10,000 ids');
+  const listed = await list(harness, runner, s, { filters: EVERY_ROW, limit: 1 });
+  assert.deepEqual([listed.total, listed.distinct_total], [10_505, 6_004], 'the list agrees');
+}
+
 async function testVersionGroup(harness: Harness, runner: QueryRunner, s: Seed) {
   const byVersion = await harness.aggregates.execute(ctx(runner, s, 'full'), { entity_type: 'vulnerabilities', group_by: 'version', filters: EVERY_ROW });
   assert.deepEqual(byVersion.groups.map((g: any) => [g.key, g.count, g.distinct_count]).sort(), [
@@ -742,6 +777,7 @@ async function run() {
       await testTenantIsolation(harness, runner, s);
       await testAssetAndApplicationCounts(harness, runner, s);
       await testCriticalApplicationsQuestion(harness, runner, s);
+      await testDistinctPastTheIdsCap(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

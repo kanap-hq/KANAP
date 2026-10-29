@@ -50,8 +50,8 @@ import type { AiApplicationsReach } from './ai-technologies.query';
  * in service, whatever the version). A boolean on the technology, read over every application as
  * the page does: it names none. `matching`: the matching still finds the row (`false`: no longer
  * matches, as the page's marker).
- * A list also counts the distinct CVE among the rows it keeps (`distinct_total`), as the page's
- * total ("117 rows (112 CVE)").
+ * A list, and the id list of the aggregates, also count the distinct CVE among every row they keep
+ * (`distinct_total`, beyond the page and the ids cap), as the page's total ("117 rows (112 CVE)").
  * The `asset` and `application` filters keep the rows in those direct links
  * (`rowOnAssetsSql`, `rowOnApplicationsSql`); an unknown asset, or an application unknown or out of
  * the caller's scope, matches nothing. Their references are resolved once, before the rows
@@ -458,8 +458,8 @@ export async function listAiVulnerabilities(
         WHERE tv.tenant_id = $1 ${narrow.map((clause) => `AND ${clause}`).join(' ')}
      ),
      f AS (SELECT x.* FROM x ${where.length ? `WHERE ${where.join(' AND ')}` : ''})
-     -- The distinct CVE of the rows kept, as the page's total (a list only: the aggregates count them on their ids).
-     SELECT ${opts.idsOnly ? 'x.id' : 'x.*, (SELECT count(DISTINCT fd.cve_id) FROM f fd)::int AS distinct_total'}, count(*) OVER () AS total
+     -- The distinct CVE of every row kept, as the page's total: over the whole set, never the page or the ids cap.
+     SELECT ${opts.idsOnly ? 'x.id' : 'x.*'}, (SELECT count(DISTINCT fd.cve_id) FROM f fd)::int AS distinct_total, count(*) OVER () AS total
        FROM f x
       ORDER BY ${order}
       LIMIT ${bind(limit)} OFFSET ${bind(offset)}`,
