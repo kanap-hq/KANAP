@@ -33,10 +33,10 @@ Beim ersten Start legt KANAP mit diesen Werten einen Mandanten an. Die Standardw
 Setzen Sie diese Werte vor dem ersten Start:
 
 - Eine spätere Änderung von `DEFAULT_TENANT_SLUG` lässt KANAP einen zweiten, leeren Arbeitsbereich anlegen und diesen bereitstellen. Der erste Arbeitsbereich bleibt unerreichbar in der Datenbank.
-- Eine spätere Änderung von `DEFAULT_TENANT_NAME` hat keine Wirkung, und die Anwendung hat keine Seite, um die Organisation umzubenennen. Setzen Sie den Namen vor dem ersten Start.
+- Eine spätere Änderung von `DEFAULT_TENANT_NAME` hat keine Wirkung. Ein Administrator benennt die Organisation unter **Administration → Branding** um. Die Adresse des Arbeitsbereichs bleibt unverändert.
 - Eine spätere Änderung von `DEFAULT_TENANT_LANGUAGE` hat keine Wirkung: Die Dimensionen behalten ihre Namen. Sie können sie unter **Stammdaten > Analysedimensionen** umbenennen.
 
-Um KANAP das Erscheinungsbild Ihrer Organisation zu geben, fügen Sie unter **Administration → Branding** Ihr Logo und Ihre Farben hinzu.
+Um KANAP das Erscheinungsbild Ihrer Organisation zu geben, legen Sie unter **Administration → Branding** den Namen, das Logo und die Farben fest.
 
 ## Erforderlich: Admin-Zugangsdaten
 

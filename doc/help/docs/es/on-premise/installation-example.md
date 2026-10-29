@@ -371,7 +371,7 @@ La prueba de humo del paso 9 la lee de `.env` sin mostrarla. El paso 10 la muest
 Notas sobre el archivo:
 
 - La cuenta de administrador se crea en el primer arranque a partir de `ADMIN_EMAIL` y `ADMIN_PASSWORD`. Cambiarlos más tarde no cambia nada mientras exista un administrador activo.
-- `DEFAULT_TENANT_NAME` es el nombre de su organización, del paso 0. KANAP solo lo lee en el primer arranque, y la aplicación no tiene ninguna página para cambiarlo.
+- `DEFAULT_TENANT_NAME` es el nombre de su organización, del paso 0. KANAP solo lo lee en el primer arranque. Un administrador lo cambia después en **Administración → Personalización**. La dirección del espacio de trabajo sigue igual.
 - La contraseña de `DATABASE_URL` y `JWT_SECRET` se generaron en el paso 0. No reutilice valores de ejemplo.
 - Con `sslmode=disable`, la conexión con PostgreSQL no sale del servidor. Para otro servidor PostgreSQL, consulte [`sslmode`](configuration.md#obligatorio-base-de-datos).
 - Si accede a KANAP por dirección IP en lugar de un nombre, defina `APP_BASE_URL` y `CORS_ORIGINS` como `https://<dirección ip>`.

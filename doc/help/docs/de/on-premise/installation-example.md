@@ -371,7 +371,7 @@ Der Smoke-Test in Schritt 9 liest es aus `.env`, ohne es anzuzeigen. Schritt 10 
 Hinweise zur Datei:
 
 - Das Administratorkonto wird beim ersten Start aus `ADMIN_EMAIL` und `ADMIN_PASSWORD` angelegt. Spätere Änderungen bewirken nichts, solange ein aktiver Administrator existiert.
-- `DEFAULT_TENANT_NAME` ist der Name Ihrer Organisation aus Schritt 0. KANAP liest ihn nur beim ersten Start, und die Anwendung hat keine Seite, um ihn zu ändern.
+- `DEFAULT_TENANT_NAME` ist der Name Ihrer Organisation aus Schritt 0. KANAP liest ihn nur beim ersten Start. Ein Administrator ändert ihn später unter **Administration → Branding**. Die Adresse des Arbeitsbereichs bleibt unverändert.
 - Das Passwort in `DATABASE_URL` und `JWT_SECRET` wurden in Schritt 0 erzeugt. Verwenden Sie keine Beispielwerte.
 - Mit `sslmode=disable` bleibt die Verbindung zu PostgreSQL auf dem Server. Für einen anderen PostgreSQL-Server siehe [`sslmode`](configuration.md#erforderlich-datenbank).
 - Erreichen Sie KANAP über eine IP-Adresse statt über einen Namen, setzen Sie `APP_BASE_URL` und `CORS_ORIGINS` auf `https://<ip address>`.

@@ -371,7 +371,7 @@ Le test de recette de l'étape 9 le lit dans `.env` sans l'afficher. L'étape 10
 Remarques sur le fichier :
 
 - Le compte administrateur est créé au premier démarrage à partir de `ADMIN_EMAIL` et `ADMIN_PASSWORD`. Les modifier ensuite ne change rien tant qu'un administrateur actif existe.
-- `DEFAULT_TENANT_NAME` est le nom de votre organisation, défini à l'étape 0. KANAP le lit au premier démarrage uniquement, et l'application n'a aucune page pour le modifier.
+- `DEFAULT_TENANT_NAME` est le nom de votre organisation, défini à l'étape 0. KANAP le lit au premier démarrage uniquement. Un administrateur le modifie ensuite dans **Administration → Personnalisation**. L'adresse de l'espace de travail reste la même.
 - Le mot de passe de `DATABASE_URL` et `JWT_SECRET` ont été générés à l'étape 0. Ne réutilisez pas de valeurs d'exemple.
 - Avec `sslmode=disable`, la connexion à PostgreSQL reste sur le serveur. Pour un autre serveur PostgreSQL, voir [`sslmode`](configuration.md#requis-base-de-donnees).
 - Si vous accédez à KANAP par adresse IP plutôt que par un nom, renseignez `APP_BASE_URL` et `CORS_ORIGINS` avec `https://<adresse ip>`.
