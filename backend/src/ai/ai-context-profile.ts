@@ -550,6 +550,20 @@ function hasTechnologyStateWriteComplement(rawText: string, text: string): boole
     || /\b(?:service packs?|exceptions? de version)\b/.test(text);
 }
 
+/**
+ * A state verb that clears a field of a task: "Efface la description de la tâche T-4", "Clear the
+ * due date of task T-12". A bare state verb stays a report ("Clear summary of PostgreSQL versions
+ * in use").
+ */
+function hasTaskFieldStateWrite(rawText: string, text: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  const first = directiveFirstWord(rawText);
+  if (first == null || !['efface', 'effacez', 'effacer', 'erase', 'clear'].includes(first)) return false;
+  const namesTask = /\b(?:task|tasks|tache|taches|t-\d+)\b/.test(text);
+  const namesField = /\b(?:description|due date|echeance|date d echeance|assigne|assignee|priority|priorite|status|statut|comment|commentaire|notes?)\b/.test(text);
+  return namesTask && namesField;
+}
+
 /** An imperative technology verb at the head: "Désinstalle nginx de AST-13", "Remove Java 8 from APP-3". */
 function hasTechnologyWriteIntent(rawText: string, text: string): boolean {
   if (isTechnologyQuestion(rawText)) return false;
@@ -803,7 +817,8 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   // imperative is read on the raw text, so "installé" stays a read.
   const hasTechnologyWrite = hasTechnologyWriteIntent(raw, text);
   const hasTechnologyChange = hasTechnologyChangeStatement(raw, text);
-  const isWrite = hasTechnologyPeopleIntent || hasTechnologyWebLinkIntent || containsAny(writeText, [
+  const hasTaskFieldStateWriteIntent = hasTaskFieldStateWrite(raw, text);
+  const isWrite = hasTechnologyPeopleIntent || hasTechnologyWebLinkIntent || hasTaskFieldStateWriteIntent || containsAny(writeText, [
     /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|passe|passer|publish|publier|mark|set)\b/,
     wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
     // A status or lifecycle word with an incident reference is an incident change: "clos INC-7",
