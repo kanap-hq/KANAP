@@ -2888,13 +2888,13 @@ function vulnerabilityStatePreview(title: string, to: string) {
 }
 
 /**
- * Plaid L6 (trap 4): a CVE id looks like a reference ("CVE-2026" in "CVE-2026-1"). Two CVE in the
+ * Plaid L6 (trap 4): a CVE id looks like a reference ("CVE-2026" in "CVE-2026-10001"). Two CVE in the
  * person's words, one call with two rows: the call runs as asked, without a plan made from the
  * pseudo-references, without the bulk or completeness guards, and its preview is shown.
  */
 async function testTwoCveStateChangeIsOneCall() {
   for (const [prompt, rows] of [
-    ['Passe CVE-2026-1 et CVE-2026-2 à traitée', ['CVE-2026-1', 'CVE-2026-2']],
+    ['Passe CVE-2026-10001 et CVE-2026-10002 à traitée', ['CVE-2026-10001', 'CVE-2026-10002']],
     ['Passe CVE-2024-3094 et CVE-2025-1234 à traitée', ['CVE-2024-3094', 'CVE-2025-1234']],
   ] as const) {
     const preview = vulnerabilityStatePreview('2 CVEs', `2 rows (2 CVEs): To review → Handled\n\n- ${rows[0]} on TEC-1 PostgreSQL 14\n- ${rows[1]} on TEC-1 PostgreSQL 14`);
