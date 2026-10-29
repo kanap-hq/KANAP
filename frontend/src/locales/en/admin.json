@@ -706,7 +706,13 @@
       "authentication_mode": "Authentication",
       "monitoring_url": "Monitoring URL",
       "env_notes": "Environment notes",
-      "integration_tool_application_id": "Integration tool"
+      "integration_tool_application_id": "Integration tool",
+      "base_url": "Base URL",
+      "capex_item_id": "CAPEX line",
+      "department_id": "Department",
+      "server_role": "Server role",
+      "since_date": "Since",
+      "suite_id": "Suite"
     },
     "history": {
       "empty": "No history yet",
@@ -742,7 +748,8 @@
       "versionChanged": "Version {{before}} → {{after}}",
       "texts": {
         "contentChanged": "Content changed",
-        "workingDaysChanged": "Working days changed"
+        "workingDaysChanged": "Working days changed",
+        "classificationReviewed": "Classification reviewed"
       },
       "actors": {
         "assistant": "Plaid",
@@ -869,6 +876,26 @@
         "middleware": {
           "added": "Middleware added: {{label}}",
           "removed": "Middleware removed: {{label}}"
+        },
+        "instance": {
+          "added": "Environment added: {{label}}",
+          "removed": "Environment removed: {{label}}"
+        },
+        "assignment": {
+          "added": "Server added: {{label}}",
+          "removed": "Server removed: {{label}}"
+        },
+        "department": {
+          "added": "Department added: {{label}}",
+          "removed": "Department removed: {{label}}"
+        },
+        "suite": {
+          "added": "Suite added: {{label}}",
+          "removed": "Suite removed: {{label}}"
+        },
+        "business_process": {
+          "added": "Business process added: {{label}}",
+          "removed": "Business process removed: {{label}}"
         }
       },
       "unnamed": {
@@ -921,7 +948,9 @@
         "leg": "a segment",
         "set": "a set",
         "binding": "a binding",
-        "person": "a person"
+        "person": "a person",
+        "instance": "an environment",
+        "assignment": "a server"
       },
       "deleted": {
         "record": "a deleted record",
@@ -973,7 +1002,9 @@
         "leg": "a deleted segment",
         "set": "a deleted set",
         "binding": "a deleted binding",
-        "person": "a deleted person"
+        "person": "a deleted person",
+        "instance": "a deleted environment",
+        "assignment": "a deleted server"
       },
       "title": "History",
       "metricsYear": "Metrics {{year}}",
@@ -996,7 +1027,8 @@
       "legCreated": "Segment {{index}} added",
       "legDeleted": "Segment {{index}} removed",
       "bindingCreated": "Binding {{environment}} added",
-      "bindingDeleted": "Binding {{environment}} removed"
+      "bindingDeleted": "Binding {{environment}} removed",
+      "instance": "{{environment}} environment"
     },
     "messages": {
       "loadDetailsFailed": "Failed to load audit entry details."

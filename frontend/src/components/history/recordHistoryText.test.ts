@@ -275,3 +275,23 @@ describe('history lines', () => {
     expect(historyActorText({ kind: 'assistant', name: null }, t)).toBe('Plaid');
   });
 });
+
+describe('application history entries', () => {
+  const fr = i18n.getFixedT('fr', ['admin', 'ops', 'common', 'it']) as unknown as Translate;
+  const en = i18n.getFixedT('en', ['admin', 'ops', 'common', 'it']) as unknown as Translate;
+
+  it('reads a deployment by its environment, as the Deployments tab names it', () => {
+    const added = item({ kind: 'instance' }, [{ field: 'instance', event: 'added', after: 'pre_prod' }]);
+    expect(historyLines(added, { t: en, locale: 'en' }).map((line) => line.text)).toEqual(['Environment added: Pre-prod']);
+    expect(historyLines(added, { t: fr, locale: 'fr' }).map((line) => line.text)).toEqual(['Environnement ajouté : Pré-prod']);
+    expect(historySubjectText({ kind: 'instance', label: 'prod' }, en)).toBe('Prod environment');
+  });
+
+  it('names a server under its environment, or the noun when the asset is not readable', () => {
+    const changes: RecordHistoryChange[] = [{ field: 'assignment', event: 'added', after: { kind: 'asset', id: ID, label: 'srv-db-1', reference: 'AST-4' } }];
+    expect(historyLines(item({ kind: 'assignment', label: 'prod' }, changes), { t: en, locale: 'en' })[0].text).toBe('Server added: srv-db-1 (AST-4)');
+    expect(historySubjectText({ kind: 'assignment', label: 'prod' }, fr)).toBe('Environnement Prod');
+    const hidden = item({ kind: 'assignment' }, [{ field: 'assignment', event: 'removed', before: { hidden: true, kind: 'asset' } }]);
+    expect(historyLines(hidden, { t: fr, locale: 'fr' })[0].text).toBe('Serveur retiré : un actif');
+  });
+});

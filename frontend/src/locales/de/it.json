@@ -1698,7 +1698,8 @@
         "knowledge": "Wissensdatenbank",
         "compliance": "Compliance",
         "deployments": "Bereitstellungen",
-        "operations": "Betrieb"
+        "operations": "Betrieb",
+        "history": "Verlauf"
       },
       "createNewVersion": "Neue Version",
       "saveBeforeVersion": "Speichern Sie die Änderungen, bevor Sie eine neue Version erstellen",

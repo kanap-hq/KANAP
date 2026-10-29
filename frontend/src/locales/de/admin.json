@@ -706,7 +706,13 @@
       "authentication_mode": "Authentifizierung",
       "monitoring_url": "Monitoring-URL",
       "env_notes": "Umgebungsnotizen",
-      "integration_tool_application_id": "Integrationswerkzeug"
+      "integration_tool_application_id": "Integrationswerkzeug",
+      "base_url": "Basis-URL",
+      "capex_item_id": "CAPEX-Zeile",
+      "department_id": "Abteilung",
+      "server_role": "Serverrolle",
+      "since_date": "Seit",
+      "suite_id": "Suite"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -742,7 +748,8 @@
       "versionChanged": "Version {{before}} → {{after}}",
       "texts": {
         "contentChanged": "Inhalt geändert",
-        "workingDaysChanged": "Arbeitstage geändert"
+        "workingDaysChanged": "Arbeitstage geändert",
+        "classificationReviewed": "Klassifizierung geprüft"
       },
       "actors": {
         "assistant": "Plaid",
@@ -869,6 +876,26 @@
         "middleware": {
           "added": "Middleware hinzugefügt: {{label}}",
           "removed": "Middleware entfernt: {{label}}"
+        },
+        "instance": {
+          "added": "Umgebung hinzugefügt: {{label}}",
+          "removed": "Umgebung entfernt: {{label}}"
+        },
+        "assignment": {
+          "added": "Server hinzugefügt: {{label}}",
+          "removed": "Server entfernt: {{label}}"
+        },
+        "department": {
+          "added": "Abteilung hinzugefügt: {{label}}",
+          "removed": "Abteilung entfernt: {{label}}"
+        },
+        "suite": {
+          "added": "Suite hinzugefügt: {{label}}",
+          "removed": "Suite entfernt: {{label}}"
+        },
+        "business_process": {
+          "added": "Geschäftsprozess hinzugefügt: {{label}}",
+          "removed": "Geschäftsprozess entfernt: {{label}}"
         }
       },
       "unnamed": {
@@ -921,7 +948,9 @@
         "leg": "ein Segment",
         "set": "ein Satz",
         "binding": "eine Bindung",
-        "person": "eine Person"
+        "person": "eine Person",
+        "instance": "eine Umgebung",
+        "assignment": "ein Server"
       },
       "deleted": {
         "record": "ein gelöschter Datensatz",
@@ -973,7 +1002,9 @@
         "leg": "ein gelöschtes Segment",
         "set": "ein gelöschter Satz",
         "binding": "eine gelöschte Bindung",
-        "person": "eine gelöschte Person"
+        "person": "eine gelöschte Person",
+        "instance": "eine gelöschte Umgebung",
+        "assignment": "ein gelöschter Server"
       },
       "title": "Verlauf",
       "metricsYear": "Kennzahlen {{year}}",
@@ -996,7 +1027,8 @@
       "legCreated": "Segment {{index}} hinzugefügt",
       "legDeleted": "Segment {{index}} entfernt",
       "bindingCreated": "Bindung {{environment}} hinzugefügt",
-      "bindingDeleted": "Bindung {{environment}} entfernt"
+      "bindingDeleted": "Bindung {{environment}} entfernt",
+      "instance": "Umgebung {{environment}}"
     },
     "messages": {
       "loadDetailsFailed": "Details des Audit-Eintrags konnten nicht geladen werden."

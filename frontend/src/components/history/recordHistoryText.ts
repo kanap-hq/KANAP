@@ -47,7 +47,7 @@ export type RecordHistorySubject = {
     | 'contact' | 'application' | 'technology' | 'asset' | 'contract' | 'project' | 'request' | 'task' | 'metrics' | 'value'
     | 'relation' | 'member' | 'hardware' | 'support' | 'technology_version' | 'owner' | 'vulnerability'
     | 'supplier' | 'budget_line'
-    | 'sub_item' | 'leg' | 'set' | 'binding' | 'person';
+    | 'sub_item' | 'leg' | 'set' | 'binding' | 'person' | 'instance' | 'assignment' | 'business_process';
   label?: string | null;
 };
 export type RecordHistoryItem = {
@@ -88,7 +88,7 @@ const EVENT_KINDS = new Set([
   'link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line', 'value',
   'supplier', 'budget_line', 'relation_contains', 'relation_depends_on', 'member', 'owner_it', 'owner_business', 'operating_system',
   'sub_item', 'person', 'owner', 'company', 'dependency', 'country', 'key_identifier', 'interface_leg',
-  'mapping_set', 'middleware',
+  'mapping_set', 'middleware', 'instance', 'assignment', 'department', 'suite', 'business_process',
 ]);
 
 /** The noun a nameless record reads as, by the kind the service gives it. */
@@ -100,7 +100,7 @@ const UNNAMED_KINDS = [
   'analytics_axis', 'analytics_category', 'contributor', 'line',
   'document', 'document_folder', 'document_library', 'document_type',
   'relation', 'member', 'hardware', 'support', 'technology_version', 'owner', 'vulnerability',
-  'sub_item', 'leg', 'set', 'binding', 'person',
+  'sub_item', 'leg', 'set', 'binding', 'person', 'instance', 'assignment',
 ] as const;
 
 export function isHiddenReference(value: unknown): value is RecordHistoryHiddenReference {
@@ -161,6 +161,13 @@ function namedValue(value: unknown, kind: string, t: Translate): string {
   // whole-set replacement of a line's web links).
   if (typeof value === 'string' && value.trim()) return value.trim();
   return unnamedRecord(kind, t);
+}
+
+/** An application deployment's environment, as the IT screens name it (`it:enums.environment`). */
+function environmentText(code: string, t: Translate): string {
+  const key = `it:enums.environment.${code.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase())}`;
+  const value = t(key, { defaultValue: '' });
+  return value && value !== key ? value : code;
 }
 
 function measureLabel(measure: string | null | undefined, t: Translate): string | null {
@@ -280,6 +287,10 @@ export function historySubjectText(subject: RecordHistorySubject, t: Translate, 
   if (subject.kind === 'person') {
     return subject.label || null;
   }
+  // A deployment, and a server of a deployment, are titled by the deployment's environment.
+  if (subject.kind === 'instance' || subject.kind === 'assignment') {
+    return subject.label ? t('auditLogs.history.instance', { environment: environmentText(subject.label, t) }) : null;
+  }
   return null;
 }
 
@@ -355,10 +366,12 @@ function eventLine(change: RecordHistoryChange, t: Translate): HistoryLine | nul
   if (change.event !== 'added' && change.event !== 'removed') return null;
   if (!EVENT_KINDS.has(change.field)) return null;
   const value = change.event === 'added' ? change.after : change.before;
+  // A deployment reads as its environment, named as the Deployments tab names it.
+  const label = change.field === 'instance' && typeof value === 'string' && value.trim()
+    ? environmentText(value.trim(), t)
+    : namedValue(value, change.field, t);
   return {
-    text: t(`auditLogs.history.events.${change.field}.${change.event}`, {
-      label: namedValue(value, change.field, t),
-    }),
+    text: t(`auditLogs.history.events.${change.field}.${change.event}`, { label }),
   };
 }
 

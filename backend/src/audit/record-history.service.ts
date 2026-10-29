@@ -190,11 +190,15 @@ function stateId(state: string): string | null {
 function collectSetIds(ctx: { ids: Map<FamilyKey, Set<string>> }, label: string, row: AuditRow) {
   const family: FamilyKey | null = label === 'interface_owners'
     ? 'user'
-    : label === 'interface_companies'
+    : label === 'interface_companies' || label === 'application_companies'
       ? 'company'
       : label === 'interface_dependencies'
         ? 'interface'
-        : null;
+        : label === 'application_departments'
+          ? 'department'
+          : label === 'application_suites'
+            ? 'application'
+            : null;
   if (!family) return;
   for (const payload of [row.before_json, row.after_json]) {
     for (const state of stateStrings(payload)) addFamilyId(ctx, family, stateId(state));
@@ -207,6 +211,7 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
   const versions = new Set<string>();
   const axes = new Set<string>();
   const categories = new Set<string>();
+  const instances = new Set<string>();
 
   const collect = (label: string, kind: RecordHistoryChildKind | null, row: AuditRow) => {
     if (row.user_id) addFamilyId({ ids }, 'user', row.user_id);
@@ -243,8 +248,11 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
           addList('technology', payload.ids);
           addFamilyId({ ids }, 'technology', payload.technology_id);
         }
-        // An installed technology names the technology in `record_id` from the asset's side.
-        if (entry.table === 'assets' && isUuid(row.record_id)) addFamilyId({ ids }, 'technology', row.record_id);
+        // An installed or declared technology names the technology in `record_id` from the asset's
+        // or the application's side.
+        if ((entry.table === 'assets' || entry.table === 'applications') && isUuid(row.record_id)) {
+          addFamilyId({ ids }, 'technology', row.record_id);
+        }
       }
       if (kind === 'asset') {
         // On a budget line, the link payload holds line ids and `record_id` is the asset; on a
@@ -305,13 +313,20 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
       addFamilyId({ ids }, kind, row.record_id);
     }
     if (kind === 'task' && row.record_id) addFamilyId({ ids }, 'task', row.record_id);
+    // A process link is written from the process: `record_id` is the process.
+    if (kind === 'business_process' && row.record_id) addFamilyId({ ids }, 'business_process', row.record_id);
+    if (kind === 'assignment') {
+      for (const payload of payloads(row)) {
+        if (isPlainObject(payload) && isUuid(payload.app_instance_id)) instances.add(payload.app_instance_id.toLowerCase());
+      }
+    }
   };
 
   for (const row of rows) {
     const isRecord = entry.auditLabels.includes(row.table_name);
     collect(row.table_name, isRecord ? null : recordHistoryChildKind(entry, row.table_name), row);
   }
-  return { ids, versions, axes, categories };
+  return { ids, versions, axes, categories, instances };
 }
 
 async function loadPageContext(
@@ -382,7 +397,20 @@ async function loadPageContext(
     }
   }
 
-  return { entry, recordId: id, users, versions, references, deleted, readable, dimensions, categories, entityLabels };
+  // An assignment names its deployment; the entry is titled by the deployment's environment. Only
+  // the record's own deployments are read: they are part of the application the person reads.
+  const instances = new Map<string, string | null>();
+  if (entry.table === 'applications' && collected.instances.size > 0) {
+    const rows: Array<{ id: string; environment: string | null }> = await reader.manager.query(
+      `SELECT id::text AS id, environment
+         FROM app_instances
+        WHERE tenant_id = $1 AND application_id = $2 AND id = ANY($3::uuid[])`,
+      [tenantId, id, Array.from(collected.instances)],
+    );
+    for (const row of rows) instances.set(row.id.toLowerCase(), row.environment ?? null);
+  }
+
+  return { entry, recordId: id, users, versions, references, deleted, readable, dimensions, categories, entityLabels, instances };
 }
 
 @Injectable()

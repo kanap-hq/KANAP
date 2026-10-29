@@ -1,6 +1,7 @@
 import type { EntityManager } from 'typeorm';
 import type { RecordHistoryTable } from './record-history.inventory';
 import { analyticsAxesParentRules } from './record-history/records/analytics_axes';
+import { applicationsParentRules } from './record-history/records/applications';
 import { assetsParentRules } from './record-history/records/assets';
 import { companiesParentRules } from './record-history/records/companies';
 import { connectionsParentRules } from './record-history/records/connections';
@@ -59,6 +60,7 @@ export type AuditParentRule =
  */
 const PARENT_RULE_SETS = [
   analyticsAxesParentRules,
+  applicationsParentRules,
   assetsParentRules,
   companiesParentRules,
   connectionsParentRules,

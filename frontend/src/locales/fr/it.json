@@ -1698,7 +1698,8 @@
         "knowledge": "Base de connaissances",
         "compliance": "Conformité",
         "deployments": "Déploiements",
-        "operations": "Exploitation"
+        "operations": "Exploitation",
+        "history": "Historique"
       },
       "createNewVersion": "Nouvelle version",
       "saveBeforeVersion": "Enregistrez les modifications avant de créer une nouvelle version",

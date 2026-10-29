@@ -2,6 +2,7 @@ import type { HistoryFields } from './field-rules';
 import { accountsFields } from './records/accounts';
 import { analyticsAxesFields } from './records/analytics_axes';
 import { analyticsCategoriesFields } from './records/analytics_categories';
+import { applicationsFields } from './records/applications';
 import { assetsFields } from './records/assets';
 import { businessProcessesFields } from './records/business_processes';
 import { companiesFields } from './records/companies';
@@ -26,6 +27,7 @@ const FIELD_SETS = [
   accountsFields,
   analyticsAxesFields,
   analyticsCategoriesFields,
+  applicationsFields,
   assetsFields,
   businessProcessesFields,
   companiesFields,
