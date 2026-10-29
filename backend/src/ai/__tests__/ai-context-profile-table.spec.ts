@@ -359,6 +359,19 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'How many vulnerabilities are handled?', profile: 'read_query', mode: 'read' },
   { prompt: 'Which CVEs are not affected on nginx?', profile: 'read_query', mode: 'read' },
   { prompt: 'Combien de failles critiques, en CVE distinctes ?', profile: 'read_query', mode: 'read' },
+  // Lot E review: a task phrase stays a task write, whatever vulnerability it names, and
+  // "résolue" / "resolved" is not a vulnerability state.
+  { prompt: 'Mark the task T-5 about CVE-2024-3094 as resolved', profile: 'write_task', mode: 'write' },
+  { prompt: 'Set the task "Patch the vulnerabilities" to resolved', profile: 'write_task', mode: 'write' },
+  { prompt: 'Mark task T-12 on the vulnerability scan as handled', profile: 'write_task', mode: 'write' },
+  { prompt: 'Passe la tâche T-5 sur la faille CVE-2024-3094 à résolue', profile: 'write_task', mode: 'write' },
+  { prompt: 'Mets la tâche « Corriger les failles » en résolue', profile: 'write_task', mode: 'write' },
+  // Lot E review: a handle verb on a report, a list or a question reads.
+  { prompt: 'Traite les failles de TEC-3 dans un rapport', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Handle this list of CVEs as a CSV', profile: 'read_query', mode: 'read' },
+  { prompt: 'Rouvre la liste des failles', profile: 'read_query', mode: 'read' },
+  { prompt: 'Traite la question des failles de TEC-3', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Handle the vulnerabilities report for TEC-3', profile: 'entity_inspection', mode: 'entity' },
 
   // Other probes from the existing profile spec.
   { prompt: 'Show me my overdue tasks', profile: 'read_query', mode: 'read' },

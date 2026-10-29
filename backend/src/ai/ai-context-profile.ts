@@ -692,8 +692,11 @@ function hasTechnologyChangeStatement(rawText: string, text: string): boolean {
   ]);
 }
 
-/** The states of a vulnerability row as the person says them, accents removed. */
-const VULNERABILITY_STATE_WORD_RE = /\b(?:traitee?s?|a traiter|a revoir|non concernee?s?|pas concernee?s?|corrigee?s?|acceptee?s?|resolue?s?|handled|not affected|to review|fixed|accepted|resolved)\b/;
+/**
+ * The states of a vulnerability row as the person says them, accents removed. "Résolue" and
+ * "resolved" are task and incident words: they never name a vulnerability state.
+ */
+const VULNERABILITY_STATE_WORD_RE = /\b(?:traitee?s?|a traiter|a revoir|non concernee?s?|pas concernee?s?|corrigee?s?|acceptee?s?|handled|not affected|to review|fixed|accepted)\b/;
 
 /** The verbs of a vulnerability state change, raw and lower-case; the first group needs a state word. */
 const VULNERABILITY_STATE_VERBS = new Set([
@@ -705,21 +708,36 @@ const VULNERABILITY_HANDLE_VERBS = new Set([
   'traite', 'traitez', 'traiter', 'handle', 'rouvre', 'rouvrez', 'rouvrir', 'reopen',
 ]);
 
+/** Another family is the object of the phrase: "Mark the task T-5 about CVE-2024-3094 as resolved". */
+const VULNERABILITY_OTHER_FAMILY_RE = /\b(?:t|inc|req|prj|doc|opex|opx|cpx|bl)-\d+\b|\b(?:tache|taches|task|tasks|ticket|tickets|demande|demandes|request|requests|incident|incidents|projet|projets|project|projects)\b/;
+
+/** A handle verb names the rows right after itself, a determiner aside: "Traite toutes les failles de TEC-3". */
+const VULNERABILITY_HANDLE_OBJECT_RE = /^\S+\s+(?:(?:(?:toutes|tous)\s+(?:les|ces|mes|nos|vos)|les|la|le|une?|des|du|de|ces|cette|cet|ce|mes|nos|vos|leurs?|the|a|an|all(?:\s+the)?|these|those|this|that|every|each|my|our|your)\s+|[ld]['’]\s*)?(?:cve-\d{4}-\d{4,}|faille|failles|vulnerabilite|vulnerabilites|vulnerability|vulnerabilities)\b/;
+
+/** A handle verb on a report or a list is a read: "Traite les failles de TEC-3 dans un rapport". */
+const VULNERABILITY_REPORT_WORD_RE = /\b(?:rapport|rapports|report|reports|csv|liste|listes|list|lists|tableau|tableaux|table|tables|export|exports|question|questions|resume|resumes|summary|summaries)\b/;
+
 /**
  * A vulnerability state write: an imperative at the head, a CVE id or a vulnerability word, and a
  * state word unless the verb names the change ("Marque CVE-2024-1234 comme corrigée sur
- * PostgreSQL 14", "Traite toutes les failles critiques de TEC-3"). A question and the alert
- * setting ("Désactive les alertes de failles de TEC-3") are not.
+ * PostgreSQL 14", "Traite toutes les failles critiques de TEC-3"). A question, the alert setting
+ * ("Désactive les alertes de failles de TEC-3") and a phrase about a task, a request, an incident
+ * or a project are not. A handle verb names the rows right after itself and no report.
  */
 function hasVulnerabilityStateWrite(rawText: string, text: string): boolean {
   if (isTechnologyQuestion(rawText)) return false;
   const first = directiveFirstWord(rawText);
   if (first == null || (!VULNERABILITY_STATE_VERBS.has(first) && !VULNERABILITY_HANDLE_VERBS.has(first))) return false;
   if (/\b(?:alertes?|alerts?)\b/.test(text)) return false;
+  if (VULNERABILITY_OTHER_FAMILY_RE.test(text)) return false;
   const namesVulnerability = /\bCVE-\d{4}-\d{4,}\b/i.test(rawText)
     || /\b(?:faille|failles|vulnerabilite|vulnerabilites|vulnerability|vulnerabilities|cve|cves)\b/.test(text);
   if (!namesVulnerability) return false;
-  return VULNERABILITY_HANDLE_VERBS.has(first) || VULNERABILITY_STATE_WORD_RE.test(text);
+  if (VULNERABILITY_HANDLE_VERBS.has(first)) {
+    const head = text.trim().replace(DIRECTIVE_PREFIX_RE, '');
+    return VULNERABILITY_HANDLE_OBJECT_RE.test(head) && !VULNERABILITY_REPORT_WORD_RE.test(text);
+  }
+  return VULNERABILITY_STATE_WORD_RE.test(text);
 }
 
 /** Undoing the last mutation is a write, never a read: "Undo that", "Annule l'aperçu". */
