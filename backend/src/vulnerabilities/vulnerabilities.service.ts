@@ -3,7 +3,7 @@ import { Features } from '../config/features';
 import { cveListEnabled } from './cve-list-feed.service';
 import { NvdFeedService } from './nvd-feed.service';
 import type { EntityManager } from 'typeorm';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditSourceOptions } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { languageOf } from '../common/csv-sheet';
@@ -23,7 +23,13 @@ import { severityOf, VULNERABILITY_STATES, type MatchBasis, type VulnerabilitySt
 /** The sheet of the vulnerabilities workbook. */
 const VULNERABILITIES_SHEET: Record<CsvLanguage, string> = { en: 'Vulnerabilities', fr: 'Vulnérabilités', de: 'Schwachstellen', es: 'Vulnerabilidades' };
 
-export type VulnOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
+export type VulnOpts = {
+  manager: EntityManager;
+  tenantId: string;
+  userId?: string | null;
+  /** The audit row's source: the screen leaves it out (`user`), Plaid names its preview. */
+  audit?: AuditSourceOptions;
+};
 /** The applications the caller reads: null without the `applications` read right, a Business Contributor's own only. */
 export type ApplicationsAccess = { scope?: ParticipationAccessScope } | null;
 
@@ -1511,7 +1517,7 @@ export class VulnerabilitiesService {
         [tenantId, row.id, stateChanges ? patch.state : null, noteChanges, patch.note ?? null, stateChanges, opts.userId ?? null],
       );
       await this.audit.log(
-        { table: 'technology_vulnerabilities', recordId: String(row.id), action: 'update', before: row, after, userId: opts.userId ?? null },
+        { table: 'technology_vulnerabilities', recordId: String(row.id), action: 'update', before: row, after, userId: opts.userId ?? null, ...opts.audit },
         { manager: mg },
       );
       changed += 1;
@@ -1647,7 +1653,7 @@ export class VulnerabilitiesService {
         const after = afterById.get(String(row.id));
         if (!after) continue;
         await this.audit.log(
-          { table: 'technology_vulnerabilities', recordId: String(row.id), action: 'update', before: row, after, userId: opts.userId ?? null },
+          { table: 'technology_vulnerabilities', recordId: String(row.id), action: 'update', before: row, after, userId: opts.userId ?? null, ...opts.audit },
           { manager: mg },
         );
         changed += 1;
