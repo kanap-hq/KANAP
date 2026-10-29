@@ -512,7 +512,7 @@ describe('Analytics report dimensions', () => {
     // The total first, then the values that carry an amount this year.
     expect(chart.options.data[0].label).toBe('reports.columns.total');
     expect(chart.options.data.length).toBeGreaterThan(2);
-    expect(chart.height).toBe(horizontalBarChartHeight(chart.options.data.length));
+    expect(chart.height).toBe(horizontalBarChartHeight(chart.options.data.length) + 48);
     expect(screen.getByRole('checkbox', { name: 'reports.analyticsCategory.split' })).toBeChecked();
     expect(screen.getByRole('combobox', { name: 'reports.filters.chartType' })).toHaveAttribute('aria-disabled', 'true');
   });

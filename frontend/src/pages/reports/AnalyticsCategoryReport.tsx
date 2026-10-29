@@ -38,6 +38,8 @@ const AXIS_PARAM = 'axis';
 const DETAIL_PARAM = 'detail';
 /** `?split=nature`: the table adds the OPEX and CAPEX shares, the single-year chart shows them (all natures only). */
 const SPLIT_PARAM = 'split';
+/** The room the split chart's legend takes under its bars. */
+const SPLIT_LEGEND_HEIGHT = 48;
 /** A share with no total to divide by: the report's empty value, as the grid helpers write it. */
 const EMPTY_SHARE = '—';
 
@@ -344,7 +346,8 @@ export default function AnalyticsCategoryReport() {
         label: {
           formatter: ({ datum }: any) => {
             const share = datum[`${key}Share`];
-            return share != null && share >= 5 ? formatPercentPoints(share, locale, 0) : '';
+            // One decimal, as the table writes the share.
+            return share != null && share >= 5 ? formatPercentPoints(share, locale, 1) : '';
           },
         },
         tooltip: {
@@ -485,10 +488,11 @@ export default function AnalyticsCategoryReport() {
       legend: { enabled: true },
     };
   }, [chartItems, splitChart, splitData, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, dimensionInSentence, measureText, formatNumber, tableLabels, locale, t]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Bars take the height of their rows, so a few values do not stretch into a wall of colour.
-  const chartHeight = splitChart || (singleYear && chartType === 'bar')
-    ? horizontalBarChartHeight(chartOptions.data.length)
-    : 520;
+  // Bars take the height of their rows, so a few values do not stretch into a wall of colour; the
+  // split chart adds its OPEX and CAPEX legend.
+  const chartHeight = splitChart
+    ? horizontalBarChartHeight(chartOptions.data.length) + SPLIT_LEGEND_HEIGHT
+    : singleYear && chartType === 'bar' ? horizontalBarChartHeight(chartOptions.data.length) : 520;
 
   return (
     <ReportLayout
