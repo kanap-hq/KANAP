@@ -1691,6 +1691,9 @@ async function testInvalidInputNamesTheFieldAndWhy() {
   const listed = refusal('query_entities', { entity_type: 'spend_items' });
   assert.match(listed, /"roles"/, listed);
   assert.match(listed, /"role_permissions"/, listed);
+  // Admin › Data access: a row names a person, read with get_entity_detail on users.
+  assert.match(listed, /"data_access"/, listed);
+  assert.doesNotMatch(enumValue, /"data_access"/, enumValue);
 
   const nested = refusal('query_entities', { entity_type: 'budget_lines', sort: { field: 'y_budget', direction: 'down' }, page: 'two' });
   assert.match(nested, /"sort.direction" must be one of: "asc", "desc"/, nested);

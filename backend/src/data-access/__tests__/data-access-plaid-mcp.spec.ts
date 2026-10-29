@@ -472,7 +472,28 @@ async function testPlaidReads(): Promise<void> {
   assert.equal(await asPerson(rita, (ctx) => technologyContractCount(ctx.manager, s.tenantId, technologyId)), 1, 'technology contract count: Rita reads one');
   assert.equal(await asPerson(ulla, (ctx) => technologyContractCount(ctx.manager, s.tenantId, technologyId)), 2, 'technology contract count: Ulla reads two');
 
+  // Admin › Data access (Plaid L7 lot B): Rita holds users at admin level, as Ulla, in limited
+  // access. The database does not guard the nodes: the family, the users fields and the access
+  // blocks are closed to her by the code, in her own transaction.
+  for (const [name, input] of [
+    ['query_entities', { entity_type: 'data_access' }],
+    ['aggregate_entities', { entity_type: 'data_access', group_by: 'node_type' }],
+  ] as Array<[string, Record<string, unknown>]>) {
+    const refused = await rejection(() => tool(rita, name, input));
+    assert.equal(refused?.message, DATA_ACCESS_RESERVED_MESSAGE, `${name} data_access: refused to Rita (limited)`);
+  }
+  const ullaAccess = await tool(ulla, 'query_entities', { entity_type: 'data_access', limit: 50 });
+  assert.ok(ullaAccess.items.some((item: any) => item.id === rita), 'Ulla (all) reads Rita among the limited persons');
+  const ritaUsers = await tool(rita, 'query_entities', { entity_type: 'users', limit: 50 });
+  assert.ok(!ritaUsers.items.some((item: any) => 'roles' in item.metadata || 'data_access' in item.metadata), 'users: no roles nor mode to Rita');
+  assert.deepEqual((await tool(rita, 'query_entities', { entity_type: 'users', filters: { data_access: ['limited'] } })).filters_ignored, ['data_access'], 'users: the mode filter is closed to Rita');
+  const ullaUsers = await tool(ulla, 'query_entities', { entity_type: 'users', filters: { data_access: ['limited'] }, limit: 50 });
+  assert.ok(ullaUsers.items.some((item: any) => item.id === rita && item.metadata.data_access === 'limited'), 'users: Ulla reads Rita as limited');
+  assert.equal('data_access' in (await tool(rita, 'get_entity_detail', { entity_type: 'users', entity_id: rita })).data, false, 'users detail: no access block to Rita');
+  assert.equal((await tool(ulla, 'get_entity_detail', { entity_type: 'users', entity_id: rita })).data.data_access.mode, 'limited', 'users detail: Ulla reads Rita\'s access');
+
   console.log('  Plaid reads: query, search, aggregate, detail and context show L1 to L4 only, no trace of L5 to L7; contracts and their tasks follow: OK');
+  console.log('  Plaid reads: Admin › Data access and the users access fields are refused to a users administrator in limited access, read with access to all data: OK');
 }
 
 /** The mention picker (`GET /ai/search/entities`) and the search index under the person's access. */
@@ -865,6 +886,9 @@ async function testMcp(): Promise<void> {
       ['query_entities', { entity_type: 'role_permissions', filters: { resource: ['users'] } }],
       ['aggregate_entities', { entity_type: 'role_permissions', group_by: 'level' }],
       ['get_entity_detail', { entity_type: 'roles', entity_id: roleName }],
+      // Admin › Data access (Plaid L7 lot B), closed the same way.
+      ['query_entities', { entity_type: 'data_access' }],
+      ['aggregate_entities', { entity_type: 'data_access', group_by: 'node' }],
     ] as Array<[string, Record<string, unknown>]>) {
       const what = `MCP ${name} ${JSON.stringify(args)}`;
       assert.equal((await mcpCall(url, keys[rita], name, args)).error, DATA_ACCESS_RESERVED_MESSAGE, `${what}: refused to Rita (limited)`);
@@ -872,9 +896,13 @@ async function testMcp(): Promise<void> {
     }
     const ullaRights = (await mcpCall(url, keys[ulla], 'get_entity_detail', { entity_type: 'roles', entity_id: roleName })).result;
     assert.equal(ullaRights.data.permissions.users, 'admin', 'MCP get_entity_detail roles: the role gives users at admin level');
+    const ritaUsers = (await mcpCall(url, keys[rita], 'query_entities', { entity_type: 'users', filters: { roles: [roleName] } })).result;
+    assert.deepEqual(ritaUsers.filters_ignored, ['roles'], 'MCP query_entities users: the roles filter is closed to Rita');
+    const ullaUsers = (await mcpCall(url, keys[ulla], 'query_entities', { entity_type: 'users', filters: { roles: [roleName] } })).result;
+    assert.ok(ullaUsers.items.some((item: any) => item.id === rita && String(item.metadata.roles).includes(roleName)), 'MCP query_entities users: Ulla finds Rita by her role');
   });
   console.log('  MCP: query_entities, aggregate_entities, search_all and get_entity_detail through the key guard give what Plaid gives: OK');
-  console.log('  MCP: the roles are refused to a users administrator in limited access, read with access to all data: OK');
+  console.log('  MCP: the roles and Admin › Data access are refused to a users administrator in limited access, read with access to all data: OK');
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -40,11 +40,11 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
 /**
  * The families the assistant reads in memory from the screen's service (the two End of support
- * report lists, the roles and their rights): their filters and sorts change the rows, never the
+ * report lists, the roles and their rights, Admin › Data access): their filters and sorts change the rows, never the
  * statements they send. Their behaviour is asserted on `filters_applied` and the result, and by
  * their own spec.
  */
-const IN_MEMORY_FAMILIES = new Set(['support_gaps', 'support_deadlines', 'roles', 'role_permissions']);
+const IN_MEMORY_FAMILIES = new Set(['support_gaps', 'support_deadlines', 'roles', 'role_permissions', 'data_access']);
 
 /**
  * The column a list service sorts on when it does not know the requested one. A sort field on
@@ -128,6 +128,16 @@ async function seedTenant(runner: QueryRunner): Promise<Seed> {
      VALUES ($1, $2, 'Contract', $3, $4, false, 'enabled', $5, $5)`,
     [tenantId, `User${n}`, `contract-${n}-${tag}@example.test`, roleId, at]));
   const userId = rows.users.newer;
+  // Two persons in limited access, one with a node and one without: `data_access` lists two rows.
+  for (const [n, node] of [[3, true], [4, false]] as Array<[number, boolean]>) {
+    const limitedId = await insertId(runner,
+      `INSERT INTO users (tenant_id, first_name, last_name, email, role_id, mfa_enabled, status, data_access_mode, created_at, updated_at)
+       VALUES ($1, $2, 'Contract', $3, $4, false, 'enabled', 'limited', now(), now())`,
+      [tenantId, `User${n}`, `contract-${n}-${tag}@example.test`, readerRoleId]);
+    if (node) {
+      await runner.query(`INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, access) VALUES ($1, $2, 'all', 'read')`, [tenantId, limitedId]);
+    }
+  }
   await pair('companies', (n, at) => insertId(runner,
     `INSERT INTO companies (tenant_id, name, country_iso, city, created_at, updated_at) VALUES ($1, $2, 'FR', 'Paris', $3, $3)`,
     [tenantId, `Company ${n}`, at]));
