@@ -10,7 +10,7 @@ import { itemHref, useReportScope } from './useReportScope';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { metricFileName, MetricKey, useReportMetric } from './reportMetrics';
 import { drawnSliceTotal, percentPoints, pieSliceLabel } from './pieSliceLabel';
-import { escapeTooltipText } from './tooltipText';
+import { escapeTooltipText, tooltipContent } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useTranslation } from 'react-i18next';
 import { formatPercentPoints } from '../../i18n/formatters';
@@ -142,14 +142,12 @@ export default function TopOpexReport() {
               renderer: (params: any) => {
                 const { datum, angleKey } = params;
                 const value = Number(datum[angleKey] || 0);
-                return {
-                  title: escapeTooltipText(datum.name),
-                  data: [
-                    { label: metricLabel, value: formatNumber(value) },
-                    { label: t('reports.shared.share'), value: formatPercentPoints(percentPoints(value, drawnTotal), locale, 1) },
-                    { label: t('reports.topOpex.shareOfAllLines'), value: formatPercentPoints(percentPoints(value, totalMetric), locale, 1) },
-                  ],
-                };
+                const data = [
+                  { label: metricLabel, value: formatNumber(value) },
+                  { label: t('reports.shared.share'), value: formatPercentPoints(percentPoints(value, drawnTotal), locale, 1) },
+                  { label: t('reports.topOpex.shareOfAllLines'), value: formatPercentPoints(percentPoints(value, totalMetric), locale, 1) },
+                ];
+                return { title: escapeTooltipText(datum.name), content: tooltipContent(data), data };
               },
             },
           },
