@@ -485,6 +485,40 @@ const FIXTURE_ROWS: Row[] = [
   // Lot 6: a BL-n is a budget line only with a budget word; otherwise it may be a delivery note.
   { prompt: 'Supprime le BL-123', profile: 'write_general', mode: 'write' },
   { prompt: 'Le bon de livraison BL-123 est arrivé', profile: 'entity_inspection', mode: 'entity' },
+
+  // Plaid L7, lot C: the history of one record is a read that carries get_record_history. An
+  // application has no History tab: the phrase keeps the tool, which answers so.
+  { prompt: 'Historique de OPEX-12', profile: 'entity_inspection', mode: 'entity', tools: ['get_record_history'] },
+  { prompt: 'Qui a modifié AST-3 ?', profile: 'read_query', mode: 'read', tools: ['get_record_history'] },
+  { prompt: 'What changed on TEC-3 last week?', profile: 'entity_inspection', mode: 'entity', tools: ['get_record_history'] },
+  { prompt: 'Historique de APP-36', profile: 'entity_inspection', mode: 'entity', tools: ['get_record_history'] },
+  { prompt: 'Historique des modifications de TEC-3', profile: 'entity_inspection', mode: 'entity', tools: ['get_record_history'] },
+
+  // Plaid L7, lot D: the roles and data access are reads of the common tools (`roles`,
+  // `role_permissions`, `data_access`, the person and company details); the history of a record
+  // carries get_record_history.
+  { prompt: 'Qui a un accès limité aux données et à quoi ?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'aggregate_entities', 'get_entity_detail'] },
+  { prompt: 'Who has limited data access?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'aggregate_entities', 'get_entity_detail'] },
+  { prompt: 'Que voit Paul Martin ?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'get_entity_detail'] },
+  { prompt: 'Quels sont les droits du rôle Budget Member ?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'get_entity_detail'] },
+  { prompt: 'Which roles give budget admin?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'aggregate_entities'] },
+  { prompt: 'Combien de personnes ont le rôle Budget Member ?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'aggregate_entities'] },
+  { prompt: 'Qui voit la société Formaggio Supremo SRL ?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'get_entity_detail'] },
+  { prompt: 'Qui a modifié TEC-3 ?', profile: 'read_query', mode: 'read', tools: ['get_record_history'] },
+  { prompt: 'À quoi ai-je accès ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Quel rôle a Paul Martin ?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'get_entity_detail'] },
+  { prompt: 'Make a list of the roles with budget admin', profile: 'read_query', mode: 'read' },
+  // A person's access, roles or rights: no tool makes them, the write profile refuses in words (a
+  // role named Budget Member is no budget write).
+  { prompt: 'Donne l\'accès complet à Paul Martin', profile: 'write_general', mode: 'write' },
+  { prompt: 'Ajoute le rôle Budget Member à Paul Martin', profile: 'write_general', mode: 'write' },
+  { prompt: 'Grant Paul Martin full access', profile: 'write_general', mode: 'write' },
+  { prompt: 'Give Paul Martin access to all data', profile: 'write_general', mode: 'write' },
+  { prompt: 'Retire le droit budget du rôle Finance', profile: 'write_general', mode: 'write' },
+  { prompt: 'Supprime le rôle Finance custom', profile: 'write_general', mode: 'write' },
+  { prompt: 'Mets Paul Martin en accès limité', profile: 'write_general', mode: 'write' },
+  // The product named Access stays a technology write.
+  { prompt: 'Ajoute Microsoft Access à AST-3', profile: 'write_business', mode: 'write' },
 ];
 
 function testTheTable() {
@@ -603,8 +637,18 @@ function testTheFixturePhrasesAreAllPresent() {
   }
 }
 
+/** No tool writes a person's access or roles: the write profiles of those phrases carry none. */
+function testTheAccessWritesCarryNoAccessTool() {
+  for (const prompt of ['Donne l\'accès complet à Paul Martin', 'Ajoute le rôle Budget Member à Paul Martin']) {
+    const profile = selectAiContextProfile(prompt);
+    const accessTools = profile.toolNames.filter((tool) => /access|role|permission|user/.test(tool));
+    assert.deepEqual(accessTools, [], `${prompt}: no access tool`);
+  }
+}
+
 function run() {
   testTheTable();
+  testTheAccessWritesCarryNoAccessTool();
   testTheTechnologyLinkPhrasesCarryTheTool();
   testTheFixturePhrasesAreAllPresent();
   console.log(`  context profile table: ${FIXTURE_ROWS.length} lines, OK`);

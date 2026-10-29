@@ -128,6 +128,10 @@ Plaid names a record by its reference, such as `APP-8` or `BL-14`, or by its nam
 
 Plaid names a record linked to the one you ask about only when you can read its module, as the record's page does: the applications of a project need the applications, its assets the infrastructure, its source requests the requests. A Business Contributor only gets the projects, requests and applications they take part in. The servers an application runs on are the exception: they come with the application, as on its **Deployments** tab. Asked about a person, Plaid gives what the users list shows you: an administrator of users gets the full profile, everyone else the name, email and status. Assistants connected over MCP get the same answers.
 
+An administrator of users with access to all data reads with Plaid what **Admin › Roles** and **Admin › Data access** show. Plaid lists the roles, the number of people in each and the rights each role gives, with the words of the Roles screen. It says who is limited to which companies, cost centers or groups, in Read or Edit, who is limited with no node, and who sees a company. The users list also carries every role of a person and their access. Ask, for example: "Who is limited to Alpha Spain, and in which access?" or "Which roles give the Admin level on budget?" A person whose own access is limited does not read these, even as an administrator of users, and Plaid says so. Plaid changes none of them: a person's data access, their roles, the rights of a role, and creating or deactivating a person stay on the **Admin** screens. Assistants connected over MCP get the same answers.
+
+Plaid reads the [history](record-history.md) of a record, as its **History** tab shows it, for anyone who can open the record. Ask, for example: "Who changed the amounts of BL-12?" A record without a History tab, such as an application, a contract, a project, a task or an incident, has no history in KANAP: Plaid says so and does not rebuild one from other data. Assistants connected over MCP get the same answers.
+
 When Plaid adds up budget amounts, a line whose currency has no exchange rate for the year is left out of the sum. Plaid then says which currencies and years it left out. Assistants connected over MCP get the same answer.
 
 Plaid reads the staff figures of the [Cost per FTE](reports.md#cost-per-fte) report for each year and budget column: the cost and FTE of the lines in people or days, the cost of the lines priced per day and the days they buy. KANAP computes the cost per FTE and the average daily rate per supplier, company, cost center or any other grouping, as the report does, and Plaid quotes them. Ask, for example: "What are the external FTE and the average daily rate per supplier in 2026?" When you name neither OPEX nor CAPEX, Plaid answers for both types. Assistants connected over MCP get the same answers.
@@ -187,7 +191,6 @@ Plaid does not read:
 - Working-day calendars (**Master data › Working-day calendars**)
 - Exchange rates (**Budget management › Administration › Currencies**). Budget amounts reach Plaid already converted to the reporting currency.
 - The settings of the analytics dimensions (**Master data › Analytics dimensions**). Their values, and the value each budget line holds, are readable.
-- Data access, that is which companies or cost centers a person is limited to (**Admin › Data access**)
 - The audit log (**Admin › Audit log**)
 - AI agents
 - The chargeback by beneficiary company (**Budget management › Reporting › Global chargeback**)

@@ -43,6 +43,34 @@ describe('ToolResultBody', () => {
     expect(screen.getByText('Keep it updated.')).toBeInTheDocument();
   });
 
+  it('renders record history payloads as the History tab lines', () => {
+    render(
+      <ToolResultBody
+        name="get_record_history"
+        result={{
+          entity: { type: 'technologies', id: 'TEC-3' },
+          items: [
+            { at: '2026-10-20T08:00:00.000Z', action: 'update', actor: { kind: 'user', name: 'Alex Operator' }, subject: { kind: 'record' }, changes: [] },
+            { at: '2026-10-01T08:00:00.000Z', action: 'create', actor: { kind: 'system', name: null }, subject: { kind: 'record' }, changes: [] },
+          ],
+          returned: 2,
+          next_cursor: null,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Alex Operator')).toBeInTheDocument();
+    // One line per entry, dated as the History tab dates it.
+    const times = document.querySelectorAll('time');
+    expect(times).toHaveLength(2);
+    expect(times[0].getAttribute('datetime')).toBe('2026-10-20T08:00:00.000Z');
+  });
+
+  it('says a record history without entries in the History tab words', () => {
+    render(<ToolResultBody name="get_record_history" result={{ items: [], returned: 0, next_cursor: null }} />);
+    expect(screen.getByText('admin:auditLogs.history.empty')).toBeInTheDocument();
+  });
+
   it('renders entity comments payloads', () => {
     render(
       <ToolResultBody

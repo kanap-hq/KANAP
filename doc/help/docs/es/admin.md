@@ -434,6 +434,8 @@ La página de Roles tiene un diseño de dos paneles:
 - **Guardar detalles**: Actualizar nombre y descripción del rol
 - **Guardar permisos**: Aplicar cambios de permisos
 
+Un administrador de usuarios con acceso a todos los datos también puede preguntar a [Plaid](ai-assistant.md#tool-calls) por los roles, su número de usuarios y sus derechos. Los cambios se quedan en esta página.
+
 ### Crear un rol personalizado
 
 1. Haga clic en **Nuevo rol**

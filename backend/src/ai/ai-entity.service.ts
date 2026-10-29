@@ -55,6 +55,7 @@ import {
   readAiScreenLanguage,
   unreadFamiliesAskedBy,
   unreadFamilyLines,
+  type AiAdminFamiliesGap,
   type AiScreenLanguage,
 } from './ai-unread-families';
 
@@ -489,18 +490,23 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
  * chargeback...), and every unread family when nothing matched, so that no match never reads as
  * "does not exist". Their screens are named in the person's language (`language`, null: all four).
  */
-function withUnreadFamilies<T extends { items: unknown[] }>(result: T, query: string, language: AiScreenLanguage | null): T & {
+function withUnreadFamilies<T extends { items: unknown[] }>(
+  result: T,
+  query: string,
+  language: AiScreenLanguage | null,
+  gap: AiAdminFamiliesGap | undefined,
+): T & {
   not_read_here?: ReturnType<typeof unreadFamiliesAskedBy>;
   families_not_read?: string[];
   no_match_note?: string;
 } {
-  const asked = unreadFamiliesAskedBy(query, language);
+  const asked = unreadFamiliesAskedBy(query, language, gap);
   return {
     ...result,
     ...(asked.length ? { not_read_here: asked } : {}),
     ...(result.items.length === 0
       ? {
-        families_not_read: unreadFamilyLines(language),
+        families_not_read: unreadFamilyLines(language, gap),
         no_match_note: 'No match among the families searched. The families_not_read are not searched: a record of theirs may exist. Say what you could not read and name its screen.',
       }
       : {}),
@@ -1384,6 +1390,19 @@ export class AiEntityService {
       SELECT string_agg(DISTINCT area.value, ', ' ORDER BY area.value)
       FROM jsonb_array_elements_text(COALESCE(tmc.areas_of_expertise, '[]'::jsonb)) area(value)
     ), '')`;
+    // The administration fields find a person for their readers only; the others search the name
+    // and the email, as the users list.
+    const matches = [`${displayNameSql} ILIKE $2`, 'u.email ILIKE $2'];
+    if (await this.usersAdminView(context)) {
+      matches.push(
+        `COALESCE(u.job_title, '') ILIKE $2`,
+        `COALESCE(r.role_name, '') ILIKE $2`,
+        `COALESCE(c.name, '') ILIKE $2`,
+        `COALESCE(d.name, '') ILIKE $2`,
+        `COALESCE(pt.name, '') ILIKE $2`,
+        `${expertiseSql} ILIKE $2`,
+      );
+    }
     const summarySql = `NULLIF(CONCAT_WS(' | ',
       CASE WHEN ${displayNameSql} <> u.email THEN u.email ELSE NULL END,
       NULLIF(u.job_title, ''),
@@ -1421,16 +1440,7 @@ export class AiEntityService {
        LEFT JOIN portfolio_team_member_configs tmc ON tmc.user_id = u.id AND tmc.tenant_id = u.tenant_id
        LEFT JOIN portfolio_teams pt ON pt.id = tmc.team_id AND pt.tenant_id = u.tenant_id
        WHERE u.tenant_id = $3
-         AND (
-           ${displayNameSql} ILIKE $2
-           OR u.email ILIKE $2
-           OR COALESCE(u.job_title, '') ILIKE $2
-           OR COALESCE(r.role_name, '') ILIKE $2
-           OR COALESCE(c.name, '') ILIKE $2
-           OR COALESCE(d.name, '') ILIKE $2
-           OR COALESCE(pt.name, '') ILIKE $2
-           OR ${expertiseSql} ILIKE $2
-         )
+         AND (${matches.join(' OR ')})
        ORDER BY score DESC, u.last_name ASC NULLS LAST, u.first_name ASC NULLS LAST, u.email ASC
        LIMIT $4`,
       [exact, like, context.tenantId, limit],
@@ -2082,11 +2092,12 @@ export class AiEntityService {
     const result = aiSearchIndexEnabled()
       ? await this.searchAllIndexed(context, input)
       : await this.searchAllLegacy(context, input);
-    // The profile's language is read only when the answer names a screen.
-    const language = result.items.length === 0 || asksForUnreadFamily(input.query)
-      ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId)
-      : null;
-    return withUnreadFamilies(result, input.query, language);
+    // The profile's language, and whether the person reads the families of the administrators of
+    // users, are read only when the answer names an unread family.
+    const namesUnread = result.items.length === 0 || asksForUnreadFamily(input.query);
+    const language = namesUnread ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId) : null;
+    const gap = namesUnread ? await this.policy.adminFamiliesGap(context, context.manager) : undefined;
+    return withUnreadFamilies(result, input.query, language, gap);
   }
 
   /**
@@ -2279,6 +2290,19 @@ export class AiEntityService {
       }
     }
 
+    // A person is found by a word of an administration field (job, role, company, team...) only by
+    // the readers of those fields (`usersAdminView`); the others find them by the name and the
+    // email, as the users list: the label, the email and the A-weighted part of the users vector
+    // (`search_index_tsv('A', name, email)`, migration 1853000000000).
+    if (indexEntityTypes.includes('users') && !(await this.usersAdminView(context))) {
+      scopeClauses.push(`AND (search_index.entity_type <> 'users'
+            OR label ILIKE ${likeRef}
+            OR similarity(label, ${qRef}) > 0.35
+            OR COALESCE(extra_json->>'email', '') ILIKE ${likeRef}
+            OR ts_filter(search_vector, '{a}') @@ ${tsq}
+            OR (${prefixRef}::text IS NOT NULL AND ts_filter(search_vector, '{a}') @@ ${prefixTsq}))`);
+    }
+
     const limitRef = push(limit);
     const offsetRef = push(offset);
 
@@ -2326,17 +2350,27 @@ export class AiEntityService {
   }
 
   /**
-   * People as the users list shows them to the caller: every column to an administrator of users,
-   * the name and the email to a reader (`toUserLookup`), never the job, role, team or company.
+   * People as the users list shows them to the caller: every column to an administrator of users
+   * whose own access is not limited (`usersAdminView`), the name and the email to anyone else
+   * (`toUserLookup`), never the job, role, team or company.
    */
   private async withUserLookupOnly<T extends AiEntitySummaryDto>(context: AiExecutionContextWithManager, items: T[]): Promise<T[]> {
     if (!items.some((item) => item.type === 'users')) return items;
-    if (await this.policy.canReadEntityType(context, 'users', context.manager, 'admin')) return items;
+    if (await this.usersAdminView(context)) return items;
     return items.map((item) => {
       if (item.type !== 'users') return item;
       const email = typeof item.metadata?.email === 'string' ? item.metadata.email : null;
       return { ...item, summary: email && email !== item.label ? email : null, match_context: null, metadata: { email } };
     });
+  }
+
+  /**
+   * Whether the caller reads the administration fields of a person, and finds people by them:
+   * users at admin level and access not limited, the rule of the users registry
+   * (`UNSCOPED_ADMIN_FIELDS`).
+   */
+  private async usersAdminView(context: AiExecutionContextWithManager): Promise<boolean> {
+    return this.policy.canReadEntityType(context, 'data_access', context.manager);
   }
 
   private searchIndexRowToSummary(row: any): AiEntitySummaryDto & { _score: number } {

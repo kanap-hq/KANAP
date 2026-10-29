@@ -29,6 +29,7 @@ const CORE_TOOLS = [
   'get_entity_detail',
   'get_entity_context',
   'get_entity_comments',
+  'get_record_history',
   'search_knowledge',
   'get_document',
 ];
@@ -62,6 +63,8 @@ function realExposure(settings: { webSearch: boolean; knowledge?: boolean }) {
     {} as any,
     { hasExecutedUndoablePreviewInConversation: async () => false } as any,
     { listOperations: () => [], getOperationOrNull: () => null } as any,
+    undefined,
+    { getRecordHistory: async () => ({ items: [] }) } as any,
   );
   const registry = new AiCapabilityRegistry(tools, {} as any, {} as any, {} as any, {} as any, {} as any);
   return new AiMcpExposureService(registry, policy as any);
@@ -88,18 +91,19 @@ async function withWebSearchReady<T>(ready: boolean, fn: () => Promise<T>): Prom
   }
 }
 
-// P3-1: a standard key (the group kanap.read.core, as every key stores it) lists eleven tools, the
-// classification catalog included, and twelve with web search. No key holds the list itself.
-async function testStandardKeyListsElevenToolsTwelveWithWebSearch() {
+// P3-1: a standard key (the group kanap.read.core, as every key stores it) lists twelve tools, the
+// classification catalog and the record history (Plaid L7) included, and thirteen with web search.
+// No key holds the list itself.
+async function testStandardKeyListsTwelveToolsThirteenWithWebSearch() {
   const withoutWeb = await withWebSearchReady(true, () =>
     realExposure({ webSearch: false }).listToolJsonSchemas(mcpContext, standardKey(), MCP_SCOPE_TOOLS_LIST));
   assert.deepEqual(withoutWeb.map((tool) => tool.name).sort(), [...CORE_TOOLS].sort());
-  assert.equal(withoutWeb.length, 11);
+  assert.equal(withoutWeb.length, 12);
 
   const withWeb = await withWebSearchReady(true, () =>
     realExposure({ webSearch: true }).listToolJsonSchemas(mcpContext, standardKey(), MCP_SCOPE_TOOLS_LIST));
   assert.deepEqual(withWeb.map((tool) => tool.name).sort(), [...CORE_TOOLS, 'web_search'].sort());
-  assert.equal(withWeb.length, 12);
+  assert.equal(withWeb.length, 13);
 }
 
 // P3-8: the cause of a refusal, from what KANAP declares.
@@ -326,7 +330,7 @@ function testRedactionKeepsTheVulnerabilityReads() {
 
 async function run() {
   testRedactionKeepsTheVulnerabilityReads();
-  await testStandardKeyListsElevenToolsTwelveWithWebSearch();
+  await testStandardKeyListsTwelveToolsThirteenWithWebSearch();
   await testRefusalExplanationsFromTheRealRegistry();
   await testRateLimitCarriesRetryAfter();
   await testDoubleRevocationKeepsDateAndReason();

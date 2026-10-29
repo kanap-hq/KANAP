@@ -174,6 +174,10 @@ El separador, la codificación y los dos pasos de la importación son los de tod
 
 Cada cambio del acceso de una persona queda registrado en el [Registro de auditoría](admin.md#registro-de-auditoria), en la tabla **Acceso a los datos**. La entrada nombra a la persona y muestra el modo, los nodos y su acceso antes y después. Su origen es **Pantalla** o **Importación**. Un guardado sin cambios no se registra.
 
+## Preguntar al asistente
+
+[Plaid](ai-assistant.md#tool-calls) lee esta página y la pestaña Acceso de las empresas para un administrador de usuarios con acceso a todos los datos. Pregunte, por ejemplo: «¿Quién está limitado a Alpha Spain?», «¿Qué personas limitadas no tienen ningún nodo?» o «¿Qué puede ver Marta Ruiz?» Los cambios en el acceso de una persona se quedan en las pantallas descritas aquí.
+
 ## Lo que ve una persona limitada { #what-a-limited-person-sees }
 
 Para una persona limitada, el presupuesto y los contratos solo contienen lo que cubre su acceso.

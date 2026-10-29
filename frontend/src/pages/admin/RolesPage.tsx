@@ -8,23 +8,13 @@ import { useAuth } from '../../auth/AuthContext';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { refusalCounts } from '../../utils/deleteRefusal';
 import { RESOURCE_LABELS } from '../../utils/permissionLabels';
+import { PERMISSION_GROUPS } from './rolePermissionGroups';
 import { roleDescription, roleLabel } from '../../utils/roleLabel';
 
 type Role = { id: string; role_name: string; role_description: string; is_system?: boolean; is_built_in?: boolean; user_count?: number };
 type PermissionLevel = 'reader'|'contributor'|'member'|'admin'|null;
 type ConcretePermissionLevel = Exclude<PermissionLevel, null>;
 
-// Permission groups for organized display
-const PERMISSION_GROUPS = {
-  'AI': ['ai_chat', 'ai_mcp', 'ai_agents', 'ai_settings'],
-  'Budget & Finance': ['budget', 'budget_ops', 'contracts', 'analytics', 'reporting'],
-  'Portfolio Management': ['portfolio_requests', 'portfolio_projects', 'portfolio_planning', 'portfolio_reports', 'portfolio_settings'],
-  'IT Landscape': ['applications', 'infrastructure', 'locations', 'incidents', 'settings'],
-  'Master Data': ['companies', 'departments', 'cost_centers', 'working_day_profiles', 'suppliers', 'contacts', 'accounts', 'business_processes'],
-  'Tasks': ['tasks'],
-  'Knowledge': ['knowledge'],
-  'Administration': ['users', 'billing'],
-} as const;
 
 // Flat list of all resources for API compatibility
 const RESOURCES = Object.values(PERMISSION_GROUPS).flat();

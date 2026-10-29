@@ -53,7 +53,7 @@ const isDeadline = (row: SupportRow): row is DeadlineRow => 'type' in row && 'da
 const isGap = (row: SupportRow): row is AiSupportGapRow => 'gap' in row;
 
 /** A set filter model of the list (AG Grid): include, or exclude with `mode: 'exclude'`. */
-function setMatch(value: string | null, model: any): boolean {
+export function setMatch(value: string | null, model: any): boolean {
   if (!model || model.filterType !== 'set' || !Array.isArray(model.values)) return true;
   const values = model.values.filter((entry: unknown): entry is string => typeof entry === 'string');
   const blank = model.values.some((entry: unknown) => entry === null || entry === undefined);
@@ -81,7 +81,7 @@ function yearOf(date: string): string {
 }
 
 /** A text filter of the list (contains, without case). */
-function textMatch(value: string | null, model: any): boolean {
+export function textMatch(value: string | null, model: any): boolean {
   if (!model) return true;
   const needle = String(model.filter ?? '').trim().toLowerCase();
   if (!needle) return true;
@@ -107,7 +107,7 @@ function subjectMatch(reference: string | null, name: string | null, model: any)
 }
 
 /** A number filter of the list (AG Grid model), against a nullable count. */
-function numberMatch(value: number | null, model: any): boolean {
+export function numberMatch(value: number | null, model: any): boolean {
   if (!model || model.filterType !== 'number') return true;
   if (model.type === 'blank') return value == null;
   if (model.type === 'notBlank') return value != null;
@@ -126,7 +126,7 @@ function numberMatch(value: number | null, model: any): boolean {
 }
 
 /** A date filter of the list, compared by day (`YYYY-MM-DD`); a null date only matches a blank filter. */
-function dateMatch(value: string | null, model: any): boolean {
+export function dateMatch(value: string | null, model: any): boolean {
   if (!model || model.filterType !== 'date') return true;
   if (model.operator === 'AND' && Array.isArray(model.conditions)) {
     return model.conditions.every((condition: any) => dateMatch(value, condition));
@@ -183,7 +183,7 @@ function deadlineFiltered(rows: DeadlineRow[], filters: Record<string, any> | un
     && dateMatch(row.extended_support_end, filters?.extended_support_end));
 }
 
-function compareText(a: string | null, b: string | null): number {
+export function compareText(a: string | null, b: string | null): number {
   if (a == null && b == null) return 0;
   if (a == null) return 1;
   if (b == null) return -1;
@@ -240,7 +240,7 @@ function sortRows<T extends SupportRow>(rows: T[], sort: string | undefined, ent
  * The list window over the filtered rows. A page is at most 500 rows; the aggregate reads every
  * row (`all`), the lists being complete and small.
  */
-function paged<T>(rows: T[], query: Record<string, any>, all = false): { items: T[]; total: number; page: number; limit: number } {
+export function paged<T>(rows: T[], query: Record<string, any>, all = false): { items: T[]; total: number; page: number; limit: number } {
   const page = all ? 1 : Math.max(Number(query.page) || 1, 1);
   const limit = all ? 10_000 : Math.min(Math.max(Number(query.limit) || 25, 1), 500);
   const offset = (page - 1) * limit;

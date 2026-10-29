@@ -14,6 +14,7 @@ export type AiQueryEntityType =
   | 'connections'
   | 'contacts'
   | 'contracts'
+  | 'data_access'
   | 'departments'
   | 'documents'
   | 'incidents'
@@ -21,6 +22,8 @@ export type AiQueryEntityType =
   | 'locations'
   | 'projects'
   | 'requests'
+  | 'role_permissions'
+  | 'roles'
   | 'suppliers'
   | 'support_deadlines'
   | 'support_gaps'
@@ -222,6 +225,15 @@ export type AiQueryResult = {
    */
   applications_visible?: boolean;
   applications_visible_note?: string;
+  /**
+   * `data_access`: whether limiting data access works on the database, what is missing in the
+   * screen's words, the screen's counters and what the mode covers (the budget and the contracts).
+   */
+  available?: boolean;
+  missing?: string[];
+  unavailable_note?: string;
+  counters?: { limited_persons: number; lines_without_company: number };
+  coverage_note?: string;
   items: AiEntitySummaryDto[];
   total: number;
   /** Vulnerabilities: the distinct CVE among the `total` rows (`distinct_label`), as the page's total. */
@@ -282,6 +294,15 @@ export type AiAggregateResult = {
    */
   applications_visible?: boolean;
   applications_visible_note?: string;
+  /**
+   * `data_access`: whether limiting data access works on the database, what is missing in the
+   * screen's words, the screen's counters and what the mode covers (the budget and the contracts).
+   */
+  available?: boolean;
+  missing?: string[];
+  unavailable_note?: string;
+  counters?: { limited_persons: number; lines_without_company: number };
+  coverage_note?: string;
   amounts_currency?: string | null;
   amounts_currency_note?: string;
   /**

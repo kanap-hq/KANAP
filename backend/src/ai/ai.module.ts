@@ -4,6 +4,7 @@ import { AccountsModule } from '../accounts/accounts.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { ApplicationsModule } from '../applications/applications.module';
 import { AuditModule } from '../audit/audit.module';
+import { RecordHistoryModule } from '../audit/record-history.module';
 import { AssetsModule } from '../assets/assets.module';
 import { Subscription } from '../billing/subscription.entity';
 import { BillingModule } from '../billing/billing.module';
@@ -13,6 +14,7 @@ import { ConnectionsModule } from '../connections/connections.module';
 import { ContactsModule } from '../contacts/contacts.module';
 import { ContractsModule } from '../contracts/contracts.module';
 import { CurrencyModule } from '../currency/currency.module';
+import { DataAccessModule } from '../data-access/data-access.module';
 import { DepartmentsModule } from '../departments/departments.module';
 import { IncidentsModule } from '../incidents/incidents.module';
 import { InterfacesModule } from '../interfaces/interfaces.module';
@@ -21,6 +23,7 @@ import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { LocationsModule } from '../locations/locations.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { PortfolioModule } from '../portfolio/portfolio.module';
+import { RolesModule } from '../roles/roles.module';
 import { SpendModule } from '../spend/spend.module';
 import { SuppliersModule } from '../suppliers/suppliers.module';
 import { Tenant } from '../tenants/tenant.entity';
@@ -185,6 +188,7 @@ import { AiAggregateExecutor } from './query/ai-aggregate.executor';
 import { AiQueryExecutor } from './query/ai-query.executor';
 import { PlatformAiModule } from './platform/platform-ai.module';
 import { BraveSearchService } from './web-search/brave-search.service';
+import { AiRecordHistoryService } from './ai-record-history.service';
 
 @Module({
   imports: [
@@ -240,6 +244,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
     ContactsModule,
     ContractsModule,
     CurrencyModule,
+    DataAccessModule,
     DepartmentsModule,
     IncidentsModule,
     InterfacesModule,
@@ -250,6 +255,9 @@ import { BraveSearchService } from './web-search/brave-search.service';
     PlatformAiModule,
     PermissionsModule,
     PortfolioModule,
+    // The History tab's service, read by get_record_history (Plaid L7, lot C).
+    RecordHistoryModule,
+    RolesModule,
     SpendModule,
     SuppliersModule,
     TenantsModule,
@@ -334,6 +342,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
     AiQueryExecutor,
     AiAggregateExecutor,
     AiToolRegistry,
+    AiRecordHistoryService,
     AiCapabilityRegistry,
     AiCapabilityDispatcherService,
     AiEvidenceService,

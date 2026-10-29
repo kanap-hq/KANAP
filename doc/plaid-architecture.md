@@ -126,10 +126,11 @@ Plaid can currently read these entity families:
 
 `accounts`, `analytics_categories`, `applications`, `assets`,
 `budget_lines`, `business_processes`, `chart_of_accounts`, `companies`,
-`connections`, `contacts`, `contracts`, `departments`, `documents`,
-`incidents`, `interfaces`, `locations`, `projects`, `requests`,
-`suppliers`, `support_deadlines`, `support_gaps`, `tasks`, `technologies`,
-`technology_versions`, `users`, and `vulnerabilities`.
+`connections`, `contacts`, `contracts`, `data_access`, `departments`,
+`documents`, `incidents`, `interfaces`, `locations`, `projects`, `requests`,
+`role_permissions`, `roles`, `suppliers`, `support_deadlines`, `support_gaps`,
+`tasks`, `technologies`, `technology_versions`, `users`, and
+`vulnerabilities`.
 
 `budget_lines` is one family for the OPEX and CAPEX lines of `spend_items`
 (`nature`, `opex` or `capex`). A question without a nature covers both;
@@ -138,8 +139,8 @@ the line is. The references are `BL-n`; a typed `OPX-n` or `CPX-n` is accepted
 as an input reference and resolves to the same line.
 
 `search_all` searches every family but the ones without a search index:
-`vulnerabilities`, `technology_versions`, `support_gaps` and
-`support_deadlines`. `AI_SEARCH_ENTITY_TYPES` (the
+`vulnerabilities`, `technology_versions`, `support_gaps`,
+`support_deadlines`, `roles`, `role_permissions` and `data_access`. `AI_SEARCH_ENTITY_TYPES` (the
 searched families) and `AI_QUERY_ENTITY_TYPES` (the listed ones) are two lists
 in `ai.types.ts`; the listed-only families have no detail of their own.
 
@@ -157,6 +158,8 @@ The core read tools are:
 - `get_entity_detail`
 - `get_entity_context`
 - `get_entity_comments`
+- `get_record_history` (the History tab of one record, for the families that have one;
+  the other families are refused in words)
 - `search_knowledge`
 - `get_document`
 - `web_search`, when the feature and tenant setting are enabled
@@ -579,6 +582,68 @@ them; a request naming one is refused in words and names the Relations tab.
 `cpe_products` and `cve_names` stay closed to Plaid (decision 10, the matching
 owns them). Deleting a technology or a version, the vulnerabilities matching and
 the vulnerability states stay outside L5.
+
+### Roles, data access and record history
+
+`roles` and `role_permissions` read Admin › Roles through the screen's services
+(`backend/src/ai/query/ai-roles.query.ts`: `RolesService.list` and `userCounts`,
+`PermissionsService.getRolePermissionMatrix`, so former right names fold into
+today's and the derived contacts right is included). `roles` has one row per
+role with its kind (system, built in, custom) and `user_count`; no person is
+named. `role_permissions` has one row per role and right it gives. The detail
+of a role (`get_entity_detail` on `roles`, by name or id) is the screen's matrix
+(`permissions`) plus `rights`, the rights it gives. Every right and level
+carries the screen's words in the person's language (`resource_label`,
+`level_label`, and `label` on the groups of `aggregate_entities` by right or
+level), copied from `frontend/src/locales/*/admin.json` into
+`backend/src/ai/ai-role-labels.ts` and compared by `ai-role-labels.spec.ts`;
+without a profile language they come in the four languages. Plaid reads the
+rights the screen shows and no other (`AI_SCREEN_RESOURCES`, compared with the
+screen's `frontend/src/pages/admin/rolePermissionGroups.ts`): `projects`, a
+server right the screen does not show, is in no row, detail or group.
+`user_count` is the screen's count (the rows of `user_roles`); the users list
+filtered on `roles` also reads the primary role kept on a person's record and
+can find more people, which the field's description says.
+
+`data_access` reads Admin › Data access (`ai-data-access.query.ts`, through
+`DataAccessAdminService`): one row per limited person and node, one row with
+no node for a limited person without one, Administrators left out (they see
+all data whatever is stored). On `users`, the administrator of users also gets
+`roles` (every role) and `data_access` (the effective mode) as fields and
+filters, and the detail of a person and of a company carries the Data access
+block of its screen tab. Every administration field of a person (job, company,
+department, primary role, locale, team, contributor profile, availability,
+expertise, roles, access mode) follows one rule, `UNSCOPED_ADMIN_FIELDS` in
+`backend/src/ai/query/registries/index.ts`: users at admin level and access not
+limited, as the screen, which closes the administration of users to a limited
+person. The same rule decides what finds a person: the quick search of `users`,
+`search_all` (index and legacy paths) and the @ mentions look in those fields
+for their readers only, and in the name and the email for everyone else.
+
+The right is a level, not the reader level of the family's resource: the
+three families need `users` at admin level (`ENTITY_MIN_LEVEL` in
+`ai-policy.service.ts`) and a person whose own access is not limited
+(`UNSCOPED_ONLY_ENTITY_TYPES`, checked in the person's transaction; the
+database does not protect the nodes, so this check is the only gate). Every
+check of a family reads both: `canReadEntityType`,
+`assertEntityTypeReadAccess`, `listReadableEntityTypes`. A refusal names the
+right and the screen, or the reserved message for a limited person.
+`AiPolicyService.adminFamiliesGap` says which of the two is missing; the lists
+of what the tools do not read (`ai-unread-families.ts`, entries marked
+`usersAdminOnly`) drop the two families for a person who reads them and name
+what is missing for the others. No tool writes a person's access, their roles,
+a role's rights or a person: the chat prompt says those stay on Admin › Data
+access, Admin › Roles and Admin › Users, and the context profile sends such a
+request to the general write profile, which refuses in words.
+
+`get_record_history` reads the History tab of one record through
+`RecordHistoryService` (`ai-record-history.service.ts`), under the record's
+own right, for the families of the history inventory
+(`backend/src/audit/record-history.inventory.ts`). A family without a History
+tab is refused in words with the list of the families that have one; the prompt
+says a history is never rebuilt from other data, the audit log included. The
+tool is in the MCP core read group. The chat shows its entries as the tab's
+first lines (`ToolResultRenderer`, phase `reading_context`).
 
 ### Vulnerabilities
 

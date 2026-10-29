@@ -225,7 +225,7 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header
 
 ### Outils disponibles
 
-Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos données, sans rien pouvoir modifier. Une clé ou une connexion dispose des onze outils ci-dessous, et de douze lorsque la recherche web est activée pour votre organisation. Une personne ne voit que les outils des données que son rôle lui permet de lire.
+Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos données, sans rien pouvoir modifier. Une clé ou une connexion dispose des douze outils ci-dessous, et de treize lorsque la recherche web est activée pour votre organisation. Une personne ne voit que les outils des données que son rôle lui permet de lire.
 
 | Outil | Ce qu'il fait |
 |---|---|
@@ -238,11 +238,12 @@ Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos donn�
 | `get_entity_detail` | Lit un enregistrement en entier |
 | `get_entity_context` | Lit les enregistrements liés à un enregistrement |
 | `get_entity_comments` | Lit les commentaires d'un projet ou d'une tâche |
+| `get_record_history` | Lit l'historique d'une fiche, tel que le montre son onglet Historique |
 | `search_knowledge` | Recherche dans la base de connaissances |
 | `get_document` | Lit un document de la base de connaissances |
 | `web_search` | Recherche sur le web, lorsque la recherche web est activée pour votre organisation |
 
-Lorsqu'un client se connecte, le serveur lui indique quel espace de travail il lit, qu'il ne fait que lire, qu'il lit avec les droits de la personne derrière la clé ou la connexion, comment rechercher, et quelles données il ne lit pas (centres de coûts, calendriers, taux de change, paramètres d'accès aux données, journal d'audit et agents IA).
+Lorsqu'un client se connecte, le serveur lui indique quel espace de travail il lit, qu'il ne fait que lire, qu'il lit avec les droits de la personne derrière la clé ou la connexion, comment rechercher, et quelles données il ne lit pas (centres de coûts, calendriers, taux de change, journal d'audit et agents IA). Il ne lit les rôles et les paramètres d'accès aux données que pour une personne qui administre les utilisateurs et accède à toutes les données.
 
 Un appel refusé par le serveur revient avec sa cause, pour que l'assistant puisse l'expliquer : un outil inconnu, un outil qui modifierait des données, un outil que la clé n'autorise pas, ou des données que la personne ne peut pas lire.
 

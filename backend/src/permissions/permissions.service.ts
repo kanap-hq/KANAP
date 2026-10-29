@@ -118,6 +118,18 @@ export class PermissionsService {
     return out;
   }
 
+  /**
+   * A role's rights as the Roles screen shows them (`GET /roles/:id/permissions`): every resource,
+   * in `RESOURCES` order, at the level read (aliases folded, the derived contacts right included),
+   * `null` where the role gives none.
+   */
+  async getRolePermissionMatrix(roleId: string, opts?: { manager?: EntityManager }): Promise<Record<Resource, PermissionLevel | null>> {
+    const map = await this.getRolePermissionsMap(roleId, opts);
+    const out = {} as Record<Resource, PermissionLevel | null>;
+    for (const resource of RESOURCES) out[resource] = map[resource] ?? null;
+    return out;
+  }
+
   async setRolePermissionsMap(roleId: string, permissions: Record<string, PermissionLevel | null>, opts?: { manager?: EntityManager }) {
     // Upsert/delete
     const mgr = opts?.manager ?? this.rolePermissionRepo.manager;
