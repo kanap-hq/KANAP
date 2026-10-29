@@ -128,12 +128,22 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 | **Errores** | Las filas que la carga rechaza, por fila del archivo con la columna cuando la conoce. Un archivo con un solo error no carga nada |
 | **Cambios** | Las líneas que se crearán, las que se actualizarán y las que el archivo deja tal como están |
 | **Modificadas en KANAP desde la exportación** | Las líneas que alguien modificó después de su exportación, con quién y cuándo. Cargar el archivo escribe sus valores sobre esos cambios |
-| **Advertencias** | Una fila que se parece a otra línea, un `company_name` distinto de la empresa del centro de coste de la fila, columnas y celdas que el archivo ignora |
+| **Advertencias** | Una fila que se parece a otra línea, un `company_name` distinto de la empresa del centro de coste de la fila, un importe que hace que una columna deje de seguir sus líneas de cálculo, columnas y celdas que el archivo ignora |
 | **Creados por la carga** | Los proveedores y los valores de dimensión que la carga añadiría |
 
 3. Haga clic en **Cargar**. La carga escribe todo o nada.
 
 Si una línea cambia entre la comprobación y la carga, la carga se detiene y le pide comprobar el archivo de nuevo. La verificación también indica cómo ha leído el archivo cuando una fecha o un importe podían leerse de dos maneras, con un botón para cambiar la lectura.
+
+### Columnas calculadas por cantidad y precio
+
+Una línea puede calcular una columna a partir de líneas de cálculo, cantidad × precio: consulte [Cantidad y precio](budget-lines.md#cantidad-y-precio). El archivo de presupuesto solo contiene los totales y los meses de una columna. Las líneas de cálculo se editan en la pestaña **Presupuesto** de la línea.
+
+Cuando el archivo cambia el total anual o un mes de una columna así, la comprobación muestra una advertencia por cada línea, columna y año, por ejemplo:
+
+> BL-83 · Revisión 2026: 3 líneas de cálculo (281 280) ya no determinarán estos importes.
+
+La carga está permitida. Después, las líneas de cálculo se quedan en la línea como referencia, con su total, y la columna sigue los importes del archivo. Un total anual igual al que dan las líneas no escribe nada: la columna sigue determinada por sus líneas.
 
 ## Acceso a los datos limitado { #limited-data-access }
 

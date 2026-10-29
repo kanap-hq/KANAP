@@ -294,6 +294,9 @@ const SCREEN_FIELD_KEYS: Record<string, Record<string, string>> = {
     technology_applications: 'ai:previewCard.fields.technology_applications',
     technology_servers: 'ai:previewCard.fields.technology_servers',
   },
+  vulnerabilities: {
+    vulnerability_state: 'ai:previewCard.fields.vulnerability_state',
+  },
   incidents: {
     title: 'it:workspace.incident.fields.title',
     category: 'it:workspace.incident.drawer.category',

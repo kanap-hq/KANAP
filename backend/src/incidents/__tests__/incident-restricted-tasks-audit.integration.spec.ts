@@ -503,6 +503,7 @@ async function testPlaidAndSearch(): Promise<void> {
     const policy = {
       listReadableEntityTypes: async (_context: unknown, requested: string[]) => requested,
       assertEntityTypeReadAccess: async () => undefined,
+      adminFamiliesGap: async () => 'right',
       canReadKnowledge: async () => false,
       canReadEntityType: async () => true,
     };
@@ -706,6 +707,7 @@ async function testOtherReadSurfaces(): Promise<void> {
     const policy = {
       listReadableEntityTypes: async () => [],
       assertEntityTypeReadAccess: async () => undefined,
+      adminFamiliesGap: async () => 'right',
       canReadKnowledge: async () => false,
       canReadEntityType: async () => true,
     };

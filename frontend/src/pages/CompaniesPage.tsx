@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Box, Button, Stack, TextField } from '@mui/material';
+import { Box, Button, Stack } from '@mui/material';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
@@ -19,6 +19,7 @@ import { metricValueFormatter } from '../components/grid/metricValueFormatter';
 import FxMissingNotice, { FxMissingMark } from '../components/finance/FxMissingNotice';
 import { companyTurnoverFxMissing, companyTurnoverFxNotice, type CompanyTurnoverFxMissing } from './companies/turnoverFxNotice';
 import { companyListYear } from './companies/companyYear';
+import ListYearField from '../components/navigation/ListYearField';
 import { displayedCompanyCity } from './companies/companyCity';
 import { ImportLabel } from '../components/csv/importFiles';
 
@@ -71,12 +72,16 @@ export default function CompaniesPage() {
   // The field may hold a partial year. Requests stay on `year` until it is complete.
   const [yearDraft, setYearDraft] = useState(String(initialYear));
 
+  // Follows the address bar (back and forward). Depends on the parameter alone:
+  // the year this page writes is already that parameter, and running again when
+  // `year` changes requests the year a second time.
   useEffect(() => {
     const parsed = companyListYear(searchParams.get('year') ?? '');
     if (parsed == null || parsed === year) return;
     setYear(parsed);
     setYearDraft(String(parsed));
-  }, [searchParams, year]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `year` is compared; re-running when it changes fights the write
+  }, [searchParams]);
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
@@ -419,18 +424,14 @@ export default function CompaniesPage() {
 
   const actions = (
     <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
-      <TextField
-        size="small"
-        label={t('shared.fields.year')}
-        type="number"
-        value={yearDraft}
-        onChange={(e) => {
-          const text = e.target.value;
+      <ListYearField
+        draft={yearDraft}
+        year={year}
+        onChange={(text) => {
           setYearDraft(text);
           const next = companyListYear(text);
           if (next != null && next !== year) updateSearchYear(next);
         }}
-        sx={{ width: 120 }}
       />
       {canCreate && (
         <Button

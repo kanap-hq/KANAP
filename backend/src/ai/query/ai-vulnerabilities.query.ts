@@ -9,6 +9,7 @@ import {
   EFFECTIVE_CVSS_VERSION,
   EFFECTIVE_SUMMARY,
   SCORE_SOURCE_SQL,
+  vulnerabilityFeedSources,
   vulnerabilitySubjectIds,
 } from '../../vulnerabilities/vulnerabilities.service';
 import { vulnerabilityAlertsSql } from '../../vulnerabilities/vulnerability-alerts';
@@ -22,8 +23,10 @@ import {
   rowJoinsSql,
   rowOnApplicationsSql,
   rowOnAssetsSql,
+  technologyInEstateSql,
   vulnerabilityCountsEnabled,
 } from '../../vulnerabilities/vulnerability-reach-counts';
+import type { AiVulnerabilityFeed } from './ai-filter.types';
 import type { AiApplicationsReach } from './ai-technologies.query';
 
 /**
@@ -42,6 +45,13 @@ import type { AiApplicationsReach } from './ai-technologies.query';
  * - `applications_reached`: the applications in service that declare the technology and version,
  *   or whose server (instance in service) carries it directly, within the caller's read scope (a
  *   Business Contributor's own); null for a caller who cannot read applications.
+ * `estate`: the row's technology is in use in the estate, as the page's "In use in the estate"
+ * filter (`technologyInEstateSql`: installed on an asset in service or declared by an application
+ * in service, whatever the version). A boolean on the technology, read over every application as
+ * the page does: it names none. `matching`: the matching still finds the row (`false`: no longer
+ * matches, as the page's marker).
+ * A list, and the id list of the aggregates, also count the distinct CVE among every row they keep
+ * (`distinct_total`, beyond the page and the ids cap), as the page's total ("117 rows (112 CVE)").
  * The `asset` and `application` filters keep the rows in those direct links
  * (`rowOnAssetsSql`, `rowOnApplicationsSql`); an unknown asset, or an application unknown or out of
  * the caller's scope, matches nothing. Their references are resolved once, before the rows
@@ -131,6 +141,8 @@ const SET_COLUMNS: Record<string, 'text' | 'boolean'> = {
   score_source: 'text',
   exploited: 'boolean',
   alerts: 'boolean',
+  estate: 'boolean',
+  matching: 'boolean',
 };
 const TEXT_COLUMNS = new Set(['cve_id', 'summary', 'note']);
 const NUMBER_COLUMNS = new Set(['cvss_score', 'epss', 'servers_reached', 'applications_reached']);
@@ -324,6 +336,10 @@ export type AiVulnerabilityRow = {
   /** The feeds that matched the row, sorted. */
   sources: string[];
   alerts: boolean;
+  /** The technology is in use in the estate (`technologyInEstateSql`). */
+  estate: boolean;
+  /** The matching still finds the row; false: no longer matches. */
+  matching: boolean;
   published_at: string | null;
   detected_at: string | null;
   /** The first detection, to the second: the item's created_at. */
@@ -367,7 +383,7 @@ export async function listAiVulnerabilities(
   query: Record<string, any>,
   applications: AiApplicationsReach,
   opts: { idsOnly?: boolean; ids?: string[]; cveIds?: string[]; detail?: boolean } = {},
-): Promise<{ items: AiVulnerabilityDetailRow[]; ids: string[]; total: number; page: number; limit: number }> {
+): Promise<{ items: AiVulnerabilityDetailRow[]; ids: string[]; total: number; distinct_total: number; page: number; limit: number }> {
   assertAiVulnerabilitiesAvailable();
   const params: unknown[] = [tenantId];
   const bind = (value: unknown) => { params.push(value); return `$${params.length}`; };
@@ -428,6 +444,7 @@ export async function listAiVulnerabilities(
               ${SCORE_SOURCE_SQL} AS score_source, ${exploitedSql('c')} AS exploited, c.epss,
               tv.state, tv.note, ('TEC-' || t.item_number) AS technology, t.name AS technology_name, v.label AS version,
               tv.match_sources, ${vulnerabilityAlertsSql('v', 't')} AS alerts,
+              ${technologyInEstateSql('tv')} AS estate, tv.matching,
               c.published_at::date AS published_at, tv.detected_at::date AS detected_at, tv.detected_at AS created_at, tv.updated_at,
               -- As text too: the driver would read a date at local midnight.
               to_char(c.published_at::date, 'YYYY-MM-DD') AS published_day, to_char(tv.detected_at::date, 'YYYY-MM-DD') AS detected_day,
@@ -439,10 +456,13 @@ export async function listAiVulnerabilities(
          LEFT JOIN (${vulnerabilityServersReachedByRowSql('$1')}) vsr ON vsr.id = tv.id
          ${applicationsReach}
         WHERE tv.tenant_id = $1 ${narrow.map((clause) => `AND ${clause}`).join(' ')}
-     )
-     SELECT ${opts.idsOnly ? 'x.id' : 'x.*'}, count(*) OVER () AS total
-       FROM x
-      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+     ),
+     -- Inlined: read twice (the rows and the distinct CVE), a materialized f cost a full scan of it
+     -- and most of the time in JIT (lot E review: 75-103 ms against 28 ms on 10,131 rows).
+     f AS NOT MATERIALIZED (SELECT x.* FROM x ${where.length ? `WHERE ${where.join(' AND ')}` : ''})
+     -- The distinct CVE of every row kept, as the page's total: over the whole set, never the page or the ids cap.
+     SELECT ${opts.idsOnly ? 'x.id' : 'x.*'}, (SELECT count(DISTINCT fd.cve_id) FROM f fd)::int AS distinct_total, count(*) OVER () AS total
+       FROM f x
       ORDER BY ${order}
       LIMIT ${bind(limit)} OFFSET ${bind(offset)}`,
     params,
@@ -465,6 +485,8 @@ export async function listAiVulnerabilities(
       version: row.version ?? null,
       sources,
       alerts: row.alerts === true,
+      estate: row.estate === true,
+      matching: row.matching === true,
       published_at: row.published_day ?? null,
       detected_at: row.detected_day ?? null,
       created_at: row.created_at ?? null,
@@ -487,5 +509,32 @@ export async function listAiVulnerabilities(
       state_changed_by: row.state_changed_by ?? null,
     };
   });
-  return { items, ids: rows.map((row) => row.id), total: Number(rows[0]?.total ?? 0), page, limit };
+  return {
+    items,
+    ids: rows.map((row) => row.id),
+    total: Number(rows[0]?.total ?? 0),
+    distinct_total: Number(rows[0]?.distinct_total ?? 0),
+    page,
+    limit,
+  };
+}
+
+const FEED_NAMES: Record<AiVulnerabilityFeed['source'], string> = { nvd: 'NVD', cve_org: 'CVE.org' };
+
+/**
+ * How fresh the feeds are, as the page's feed line (`vulnerabilityFeedSources`, `feedText.ts`):
+ * the feeds that are on, by name, with their last success and whether the last attempt failed.
+ * Never the error text. A platform table: no tenant to carry.
+ */
+export async function readAiVulnerabilityFeeds(mg: Pick<EntityManager, 'query'>): Promise<AiVulnerabilityFeed[]> {
+  assertAiVulnerabilitiesAvailable();
+  return (await vulnerabilityFeedSources(mg))
+    .filter((feed) => feed.enabled)
+    .map((feed) => ({
+      source: feed.source,
+      name: FEED_NAMES[feed.source],
+      // As text: the dispatcher's redaction (MCP and chat) walks objects and would empty a Date.
+      last_success_at: feed.last_success_at ? new Date(feed.last_success_at).toISOString() : null,
+      failing: feed.failing,
+    }));
 }

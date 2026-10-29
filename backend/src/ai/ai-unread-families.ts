@@ -12,13 +12,13 @@ import type { EntityManager } from 'typeorm';
 export type AiScreenLanguage = 'en' | 'fr' | 'de' | 'es';
 export const AI_SCREEN_LANGUAGES: readonly AiScreenLanguage[] = ['en', 'fr', 'de', 'es'];
 
-type ScreenPart =
+export type AiScreenPart =
   | 'masterData' | 'costCenters' | 'workingDayCalendars' | 'analyticsDimensions'
   | 'budgetManagement' | 'budgetAdministration' | 'currencies' | 'budgetReporting' | 'globalChargeback'
-  | 'admin' | 'dataAccess' | 'auditLog' | 'aiAgents';
+  | 'admin' | 'dataAccess' | 'roles' | 'users' | 'auditLog' | 'aiAgents';
 
 /** Where each part of a screen name comes from in `frontend/src/locales/<lang>/<namespace>.json` (checked by a spec). */
-export const AI_SCREEN_LABEL_KEYS: Record<ScreenPart, { namespace: 'nav' | 'ops'; key: string }> = {
+export const AI_SCREEN_LABEL_KEYS: Record<AiScreenPart, { namespace: 'nav' | 'ops'; key: string }> = {
   masterData: { namespace: 'nav', key: 'workspaces.masterData' },
   costCenters: { namespace: 'nav', key: 'sidebar.masterData.costCenters' },
   workingDayCalendars: { namespace: 'nav', key: 'sidebar.masterData.workingDayCalendars' },
@@ -30,47 +30,73 @@ export const AI_SCREEN_LABEL_KEYS: Record<ScreenPart, { namespace: 'nav' | 'ops'
   globalChargeback: { namespace: 'ops', key: 'reports.landing.cards.globalChargeback.title' },
   admin: { namespace: 'nav', key: 'workspaces.admin' },
   dataAccess: { namespace: 'nav', key: 'sidebar.admin.dataAccess' },
+  roles: { namespace: 'nav', key: 'sidebar.admin.roles' },
+  users: { namespace: 'nav', key: 'sidebar.admin.users' },
   auditLog: { namespace: 'nav', key: 'sidebar.admin.auditLog' },
   aiAgents: { namespace: 'nav', key: 'workspaces.agents' },
 };
 
 /** The menu words of the screens, copied from the locale files of the frontend. */
-export const AI_SCREEN_LABELS: Record<AiScreenLanguage, Record<ScreenPart, string>> = {
+export const AI_SCREEN_LABELS: Record<AiScreenLanguage, Record<AiScreenPart, string>> = {
   en: {
     masterData: 'Master data', costCenters: 'Cost centers', workingDayCalendars: 'Working-day calendars',
     analyticsDimensions: 'Analytics dimensions', budgetManagement: 'Budget management', budgetAdministration: 'Administration',
     currencies: 'Currencies', budgetReporting: 'Reporting', globalChargeback: 'Global chargeback',
-    admin: 'Admin', dataAccess: 'Data access', auditLog: 'Audit log', aiAgents: 'AI agents',
+    admin: 'Admin', dataAccess: 'Data access', roles: 'Roles', users: 'Users', auditLog: 'Audit log', aiAgents: 'AI agents',
   },
   fr: {
     masterData: 'Données de référence', costCenters: 'Centres de coûts', workingDayCalendars: 'Calendriers de jours ouvrés',
     analyticsDimensions: 'Dimensions analytiques', budgetManagement: 'Gestion budgétaire', budgetAdministration: 'Administration',
     currencies: 'Devises', budgetReporting: 'Rapports', globalChargeback: 'Refacturation globale',
-    admin: 'Administration', dataAccess: 'Accès aux données', auditLog: 'Journal d\'audit', aiAgents: 'Agents IA',
+    admin: 'Administration', dataAccess: 'Accès aux données', roles: 'Rôles', users: 'Utilisateurs', auditLog: 'Journal d\'audit',
+    aiAgents: 'Agents IA',
   },
   de: {
     masterData: 'Stammdaten', costCenters: 'Kostenstellen', workingDayCalendars: 'Arbeitstagekalender',
     analyticsDimensions: 'Analysedimensionen', budgetManagement: 'Budgetverwaltung', budgetAdministration: 'Administration',
     currencies: 'Währungen', budgetReporting: 'Berichte', globalChargeback: 'Globale Leistungsverrechnung',
-    admin: 'Administration', dataAccess: 'Datenzugriff', auditLog: 'Audit-Protokoll', aiAgents: 'KI-Agenten',
+    admin: 'Administration', dataAccess: 'Datenzugriff', roles: 'Rollen', users: 'Benutzer', auditLog: 'Audit-Protokoll',
+    aiAgents: 'KI-Agenten',
   },
   es: {
     masterData: 'Datos maestros', costCenters: 'Centros de coste', workingDayCalendars: 'Calendarios laborales',
     analyticsDimensions: 'Dimensiones analíticas', budgetManagement: 'Gestión presupuestaria', budgetAdministration: 'Administración',
     currencies: 'Monedas', budgetReporting: 'Informes', globalChargeback: 'Contracargo global',
-    admin: 'Administración', dataAccess: 'Acceso a los datos', auditLog: 'Registro de auditoría', aiAgents: 'Agentes IA',
+    admin: 'Administración', dataAccess: 'Acceso a los datos', roles: 'Roles', users: 'Usuarios', auditLog: 'Registro de auditoría',
+    aiAgents: 'Agentes IA',
   },
 };
 
 export type AiUnreadFamily = {
   family: string;
   /** The menu path of the screen that shows it. */
-  screen: readonly ScreenPart[];
+  screen: readonly AiScreenPart[];
   /** What the tools do read about it, when they read something. */
   hint?: string;
   /** Words of a search that ask for it, in the four languages of the application. */
   terms: RegExp;
+  /**
+   * Read by the tools for an administrator of users with access to all data, as its screen
+   * (Admin › Roles, Admin › Data access): left out for them, and said with what is missing for
+   * the others (`AiAdminFamiliesGap`).
+   */
+  usersAdminOnly?: true;
 };
+
+/**
+ * Why the families of Admin › Roles and Admin › Data access are closed to a person: `right`, no
+ * right to administer users; `all_data`, the right but an access limited to part of the data;
+ * null, they read them (`AiPolicyService.adminFamiliesGap`). Undefined: not known (the tool
+ * descriptions, common to everyone), both conditions are named.
+ */
+export type AiAdminFamiliesGap = 'right' | 'all_data' | null;
+
+/** What a person lacks to read a family of the administrators of users, in words. */
+function usersAdminGapHint(gap: AiAdminFamiliesGap | undefined): string {
+  if (gap === 'right') return 'The tools read it for a person with the right to administer users, which this person\'s role does not give.';
+  if (gap === 'all_data') return 'The tools read it for a person with the right to administer users and access to all data; this person\'s access is limited to part of the data.';
+  return 'The tools read it for a person with the right to administer users and access to all data only.';
+}
 
 export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
   {
@@ -104,12 +130,20 @@ export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
     hint: 'A role says what a person may do, not which data they see.',
     // Not the bare "périmètre", the scope of every project.
     terms: /data\s+access|acc[eè]s\s+(aux\s+donn[eé]es|limit)|p[eé]rim[eè]tre\s+(de\s+)?(donn[eé]es|d['’]acc[eè]s)|datenzugriff|acceso\s+(a\s+(los\s+)?datos|limitado)/i,
+    usersAdminOnly: true,
+  },
+  {
+    family: 'roles and their rights',
+    screen: ['admin', 'roles'],
+    terms: /\br[oô]les?\b|\brollen?\b|\bpermissions?\s+(of|du|des|de)\b|\bdroits?\s+(du|des|d['’]un)\s+r[oô]les?\b/i,
+    usersAdminOnly: true,
   },
   {
     family: 'audit log',
     screen: ['admin', 'auditLog'],
-    // The log, not an audit project or a supplier audit.
-    terms: /audit[\s_-]*(log|trail)|journal\s+d['’]audit|piste\s+d['’]audit|historique\s+des\s+modifications|änderungsprotokoll|audit[\s-]*protokoll|registro\s+de\s+auditor/i,
+    // The log, not an audit project or a supplier audit. "Historique des modifications de TEC-3"
+    // is the History tab of one record, which get_record_history reads: only the bare phrase is the log.
+    terms: /audit[\s_-]*(log|trail)|journal\s+d['’]audit|piste\s+d['’]audit|historique\s+des\s+modifications(?!\s+(?:(?:de|du|des|of|on|for)\b|d['’]))|änderungsprotokoll|audit[\s-]*protokoll|registro\s+de\s+auditor/i,
   },
   {
     family: 'AI agents',
@@ -149,19 +183,41 @@ export async function readAiScreenLanguage(
 }
 
 /** A screen as its menu names it in one language: "Données de référence › Centres de coûts". */
-function screenName(entry: AiUnreadFamily, language: AiScreenLanguage): string {
-  return entry.screen.map((part) => AI_SCREEN_LABELS[language][part]).join(' › ');
+function screenName(screen: readonly AiScreenPart[], language: AiScreenLanguage): string {
+  return screen.map((part) => AI_SCREEN_LABELS[language][part]).join(' › ');
 }
 
-/** The screen in the person's language, or in the four languages when it is not known. */
+/** A screen by its menu path, in the person's language, or in the four languages when it is not known. */
+export function aiScreenName(screen: readonly AiScreenPart[], language: AiScreenLanguage | null): string {
+  if (language) return screenName(screen, language);
+  return AI_SCREEN_LANGUAGES.map((code) => `${code}: ${screenName(screen, code)}`).join('; ');
+}
+
+/** The screen of an unread family in the person's language, or in the four languages when it is not known. */
 export function unreadFamilyScreen(entry: AiUnreadFamily, language: AiScreenLanguage | null): string {
-  if (language) return screenName(entry, language);
-  return AI_SCREEN_LANGUAGES.map((code) => `${code}: ${screenName(entry, code)}`).join('; ');
+  return aiScreenName(entry.screen, language);
 }
 
-/** One line per family with its screen, for describe_entity_filters, search_all and the chat prompt. */
-export function unreadFamilyLines(language: AiScreenLanguage | null): string[] {
-  return AI_UNREAD_FAMILIES.map((entry) => `${entry.family} (${unreadFamilyScreen(entry, language)})`);
+/** The families this person does not read: all, but those of the administrators of users when `gap` is null. */
+function unreadFamilies(gap: AiAdminFamiliesGap | undefined): AiUnreadFamily[] {
+  return AI_UNREAD_FAMILIES.filter((entry) => !(entry.usersAdminOnly && gap === null));
+}
+
+/** The words that close a family's line: what the person lacks, for the families of the administrators of users. */
+function entryHint(entry: AiUnreadFamily, gap: AiAdminFamiliesGap | undefined): string | undefined {
+  if (!entry.usersAdminOnly) return entry.hint;
+  return [usersAdminGapHint(gap), entry.hint].filter(Boolean).join(' ');
+}
+
+/**
+ * One line per family with its screen, for describe_entity_filters, search_all and the chat prompt.
+ * `gap` says whether the person reads the families of the administrators of users (see the type).
+ */
+export function unreadFamilyLines(language: AiScreenLanguage | null, gap?: AiAdminFamiliesGap): string[] {
+  return unreadFamilies(gap).map((entry) => {
+    const line = `${entry.family} (${unreadFamilyScreen(entry, language)})`;
+    return entry.usersAdminOnly ? `${line}: ${usersAdminGapHint(gap)}` : line;
+  });
 }
 
 /** How a screen name is quoted (chat prompt): as given, in the person's language. */
@@ -173,19 +229,21 @@ const SCREEN_NAME_RULE = 'Quote a screen name exactly as given, never translated
  * screens, stated as facts (the read tool descriptions give no orders, `ai-tool.registry.spec.ts`).
  */
 export const AI_UNREAD_FAMILIES_SENTENCE =
-  `KANAP also holds what these tools do not read: ${AI_UNREAD_FAMILIES.map((entry) => entry.family).join('; ')}. `
+  `KANAP also holds what these tools do not read: ${AI_UNREAD_FAMILIES
+    .map((entry) => (entry.usersAdminOnly ? `${entry.family} (read for administrators of users with access to all data only)` : entry.family))
+    .join('; ')}. `
   + 'A search or list without a match is no proof that such a record does not exist: say that you cannot read it and name the screen that shows it, '
   + 'as `not_read_here` or `families_not_read` gives it. A screen name is the name in the person\'s menus, in the language of their profile, '
   + 'or in four languages (en, fr, de, es) when the profile sets none: the person\'s own is the one to quote, untranslated.';
 
-/** For the chat prompt: the families with their screens in the person's language. */
-export function unreadFamiliesSentence(language: AiScreenLanguage | null): string {
-  return `KANAP also holds what these tools do not read: ${unreadFamilyLines(language).join('; ')}. `
+/** For the chat prompt: the families this person does not read, with their screens in the person's language. */
+export function unreadFamiliesSentence(language: AiScreenLanguage | null, gap?: AiAdminFamiliesGap): string {
+  return `KANAP also holds what these tools do not read: ${unreadFamilyLines(language, gap).join('; ')}. `
     + 'A search or list without a match is no proof that such a record does not exist: say that you cannot read it and name the screen that shows it. '
     + SCREEN_NAME_RULE;
 }
 
-/** Whether a search text asks for an unread family. */
+/** Whether a search text asks for a family the tools may not read (for everyone, or for this person). */
 export function asksForUnreadFamily(query: string): boolean {
   const text = String(query ?? '');
   return AI_UNREAD_FAMILIES.some((entry) => entry.terms.test(text));
@@ -195,17 +253,20 @@ export function asksForUnreadFamily(query: string): boolean {
 export function unreadFamiliesAskedBy(
   query: string,
   language: AiScreenLanguage | null,
+  gap?: AiAdminFamiliesGap,
 ): Array<{ family: string; where: string; note: string }> {
   const text = String(query ?? '');
-  return AI_UNREAD_FAMILIES
+  return unreadFamilies(gap)
     .filter((entry) => entry.terms.test(text))
     .map((entry) => {
       const where = unreadFamilyScreen(entry, language);
       const screen = language ? `the screen ${where}` : `the screen named, in the person's language, ${where}`;
+      const hint = entryHint(entry, gap);
+      const read = entry.usersAdminOnly ? 'this server does not read them for this person' : 'this server does not read them';
       return {
         family: entry.family,
         where,
-        note: `KANAP has ${entry.family}; this server does not read them. They are on ${screen}.${entry.hint ? ` ${entry.hint}` : ''}`,
+        note: `KANAP has ${entry.family}; ${read}. They are on ${screen}.${hint ? ` ${hint}` : ''}`,
       };
     });
 }

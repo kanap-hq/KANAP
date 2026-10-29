@@ -1,11 +1,24 @@
-import { BadRequestException, Injectable, Logger, Optional } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, Optional } from '@nestjs/common';
 import { AiPolicyService } from '../ai-policy.service';
 import { FxRateService } from '../../currency/fx-rate.service';
 import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem, yearRateSetId } from '../../spend/allocation-distribution';
 import { listAiTechnologies, listAiTechnologyVersions, resolveAiApplicationsReach } from './ai-technologies.query';
-import { listAiVulnerabilities } from './ai-vulnerabilities.query';
+import { listAiVulnerabilities, readAiVulnerabilityFeeds } from './ai-vulnerabilities.query';
 import { aggregateSupportRows, APPLICATIONS_UNREAD_NOTE, listAiSupportDeadlines, listAiSupportGaps } from './ai-support.query';
 import { EndOfSupportService } from '../../technologies/reports/end-of-support.service';
+import { PermissionsService, type PermissionLevel, type Resource } from '../../permissions/permissions.service';
+import { RolesService } from '../../roles/roles.service';
+import { aggregateRolesRows, listAiRolePermissions, listAiRoles } from './ai-roles.query';
+import { aiPermissionLevelLabel, aiResourceLabel } from '../ai-role-labels';
+import { readAiScreenLanguage } from '../ai-unread-families';
+import { DataAccessAdminService } from '../../data-access/data-access-admin.service';
+import { DataAccessReservedException } from '../../data-access/reserved-operations';
+import {
+  aggregateDataAccessRows,
+  AI_DATA_ACCESS_COVERAGE_NOTE,
+  AI_DATA_ACCESS_UNAVAILABLE_NOTE,
+  listAiDataAccess,
+} from './ai-data-access.query';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
 import { aiDataAccessNote } from './ai-data-access-note.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
@@ -548,6 +561,11 @@ export class AiAggregateExecutor {
     @Optional() private readonly fxRates?: FxRateService,
     /** The End of support report of the screen, which the two report families group. */
     @Optional() private readonly endOfSupport?: EndOfSupportService,
+    /** The services of Admin › Roles, which `roles` and `role_permissions` group. */
+    @Optional() private readonly roles?: RolesService,
+    @Optional() private readonly permissions?: PermissionsService,
+    /** Admin › Data access, which `data_access` groups. */
+    @Optional() private readonly dataAccess?: DataAccessAdminService,
   ) {
     // Absent, a technology filter on application_count matches nothing: say so once, at start.
     if (!policy) new Logger(AiAggregateExecutor.name).warn('AiPolicyService is not injected: technology aggregates see no application.');
@@ -604,7 +622,7 @@ export class AiAggregateExecutor {
     q: string | undefined,
     adaptedFilters: Record<string, any>,
     scope?: AiQueryScope,
-  ): Promise<{ ids: string[]; total: number; scope: ResolvedAiScope | null }> {
+  ): Promise<{ ids: string[]; total: number; scope: ResolvedAiScope | null; distinct_total?: number }> {
     if (entityType === 'tasks') {
       const accessScope = await resolveAiParticipationAccessScope(context, entityType);
       const scoped = await applyScopeToAiQuery(
@@ -966,7 +984,8 @@ export class AiAggregateExecutor {
         applications,
         { idsOnly: true },
       );
-      return { ids: result.ids, total: result.total, scope: null };
+      // The distinct CVE of every row the filters keep, beyond the ids cap.
+      return { ids: result.ids, total: result.total, scope: null, distinct_total: result.distinct_total };
     }
 
     if (entityType === 'interfaces') {
@@ -1012,6 +1031,8 @@ export class AiAggregateExecutor {
         {
           manager: context.manager,
           tenantId: context.tenantId,
+          // The quick search looks in the administration fields for their readers only.
+          accessView: (await this.policy?.canReadEntityType(context, 'data_access', context.manager)) === true,
         },
       );
       const ids = result.ids || [];
@@ -1214,7 +1235,7 @@ export class AiAggregateExecutor {
     ids: string[],
     fn: AiAggregateFunction,
     metric: { key: string; def: AiAggregateMetricDef } | null,
-  ): Promise<Array<{ key: string | null; count: number } | { key: string | null; value: number | string | null }>> {
+  ): Promise<Array<{ key: string | null; count: number; distinct_count?: number } | { key: string | null; value: number | string | null }>> {
     const groupField = registry.aggregate.groupFields[groupBy];
     if (!groupField) {
       throw new BadRequestException('Unsupported group_by field.');
@@ -1246,8 +1267,11 @@ export class AiAggregateExecutor {
       const countExpression = groupField.countDistinct
         ? `COUNT(DISTINCT ${alias}.${idColumn})::int`
         : 'COUNT(*)::int';
+      // A family with several rows per record (`distinctRecord`) counts the records beside the rows.
+      const distinct = registry.aggregate.distinctRecord;
+      const distinctColumn = distinct ? `, COUNT(DISTINCT ${distinct.expression})::int AS distinct_count` : '';
       const rows = await context.manager.query(
-        `SELECT ${groupField.expression} AS key, ${countExpression} AS count
+        `SELECT ${groupField.expression} AS key, ${countExpression} AS count${distinctColumn}
          FROM ${registry.aggregate.baseTable} ${alias}
          ${joins}
          WHERE ${alias}.tenant_id = $1${baseWhere}
@@ -1260,6 +1284,7 @@ export class AiAggregateExecutor {
       return (rows || []).map((row: any) => ({
         key: row.key == null ? null : String(row.key),
         count: Number(row.count) || 0,
+        ...(distinct ? { distinct_count: Number(row.distinct_count) || 0 } : {}),
       }));
     }
 
@@ -1572,6 +1597,26 @@ export class AiAggregateExecutor {
     return amounts ? { ...result, ...amounts } : result;
   }
 
+  /**
+   * A family with several rows per record (`distinctRecord`, vulnerabilities: one row per technology
+   * version of a CVE): the distinct records among every row the filters keep, as its id list counts
+   * them over the whole set (beyond the ids cap; a record in two groups counts once), named by
+   * `distinct_label`. Nothing for the other families, nor for a list that does not count them.
+   */
+  private distinctRecordTotal(
+    registry: AiEntityFilterRegistry,
+    scoped: { distinct_total?: number },
+  ): Pick<AiAggregateResult, 'distinct_total' | 'distinct_label'> {
+    const distinct = registry.aggregate.distinctRecord;
+    if (!distinct || typeof scoped.distinct_total !== 'number') return {};
+    return { distinct_total: scoped.distinct_total, distinct_label: distinct.name };
+  }
+
+  /** Vulnerabilities: how fresh the feeds are, as the page's feed line. Nothing for the other families. */
+  private async familyFeeds(context: AiExecutionContextWithManager, entityType: AiQueryEntityType): Promise<Pick<AiAggregateResult, 'feeds'>> {
+    return entityType === 'vulnerabilities' ? { feeds: await readAiVulnerabilityFeeds(context.manager) } : {};
+  }
+
   private async executeAggregate(
     context: AiExecutionContextWithManager,
     input: {
@@ -1585,8 +1630,8 @@ export class AiAggregateExecutor {
     },
   ): Promise<AiAggregateResult> {
     // The policy decides which linked counts the caller may group, filter and aggregate.
-    const registry = await resolveAiEntityRegistry(context, input.entity_type, async (entityType, level) =>
-      !!(await this.policy?.canReadEntityType(context, entityType, context.manager, level)));
+    const registry = await resolveAiEntityRegistry(context, input.entity_type, async (entityType) =>
+      !!(await this.policy?.canReadEntityType(context, entityType, context.manager)));
     const field = registry.fields[input.group_by];
     if (!field || field.groupable !== true) {
       throw new BadRequestException('Unsupported group_by field.');
@@ -1662,6 +1707,117 @@ export class AiAggregateExecutor {
         function: fn,
         groups,
         total,
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+    }
+    if (input.entity_type === 'roles' || input.entity_type === 'role_permissions') {
+      // The tool already checked the family; checked again here, as the data access branch, in the
+      // policy's words (the right and the screen, or the reserved message).
+      if (!this.policy) throw new ForbiddenException('The roles are not available.');
+      await this.policy.assertEntityTypeReadRight(context, input.entity_type, context.manager);
+      if (!this.roles || !this.permissions) throw new BadRequestException('The roles are not available.');
+      const services = { roles: this.roles, permissions: this.permissions };
+      // The roles are not participation-scoped: `scope` is applied as on query_entities.
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: metric?.key ?? null,
+          function: fn,
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const result = input.entity_type === 'roles'
+        ? await listAiRoles(services, context.manager, scoped.query, true)
+        : await listAiRolePermissions(services, context.manager, scoped.query, true);
+      const counted = aggregateRolesRows(result.items, input.group_by);
+      // A right or a level is named with the Roles screen's words, in the person's language.
+      const labelOf = input.entity_type === 'role_permissions' && (input.group_by === 'resource' || input.group_by === 'level')
+        ? { language: await readAiScreenLanguage(context.manager, context.tenantId, context.userId), field: input.group_by }
+        : null;
+      const groups = labelOf
+        ? counted.map((group) => ({
+          ...group,
+          label: group.key == null
+            ? null
+            : labelOf.field === 'resource'
+              ? aiResourceLabel(group.key as Resource, labelOf.language)
+              : aiPermissionLevelLabel(group.key as PermissionLevel, labelOf.language),
+        }))
+        : counted;
+      return {
+        group_by: input.group_by,
+        metric: null,
+        function: 'count',
+        groups,
+        total: result.items.length,
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+    }
+    if (input.entity_type === 'data_access') {
+      // The tool already checked the family; checked again here, the database not guarding the nodes.
+      if (!this.dataAccess || (await this.policy?.canReadEntityType(context, 'data_access', context.manager)) !== true) {
+        throw new DataAccessReservedException();
+      }
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: metric?.key ?? null,
+          function: fn,
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const result = await listAiDataAccess({ dataAccess: this.dataAccess }, context.manager, scoped.query, true);
+      const groups = aggregateDataAccessRows(result.items, input.group_by);
+      return {
+        available: result.available,
+        missing: result.missing,
+        ...(result.available ? {} : { unavailable_note: AI_DATA_ACCESS_UNAVAILABLE_NOTE }),
+        counters: result.counters,
+        coverage_note: AI_DATA_ACCESS_COVERAGE_NOTE,
+        group_by: input.group_by,
+        metric: null,
+        function: 'count',
+        groups,
+        // `total` counts rows (a person per node); `distinct_total` the persons.
+        total: result.items.length,
+        distinct_total: result.distinct_total,
+        distinct_label: 'person',
         returned: groups.length,
         truncated: false,
         complete: isCompleteAggregateResult(scoped.scope),
@@ -1832,6 +1988,8 @@ export class AiAggregateExecutor {
         function: fn,
         groups: [],
         total: scoped.total,
+        ...this.distinctRecordTotal(registry, scoped),
+        ...(await this.familyFeeds(context, input.entity_type)),
         returned: 0,
         truncated,
         complete: !truncated && isCompleteAggregateResult(scoped.scope),
@@ -1868,6 +2026,8 @@ export class AiAggregateExecutor {
       function: fn,
       groups,
       total: scoped.total,
+      ...this.distinctRecordTotal(registry, scoped),
+      ...(await this.familyFeeds(context, input.entity_type)),
       returned: groups.length,
       truncated,
       complete: !truncated && isCompleteAggregateResult(scoped.scope),

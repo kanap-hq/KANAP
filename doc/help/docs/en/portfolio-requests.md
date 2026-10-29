@@ -282,7 +282,7 @@ Links to budget lines, applications and assets are recorded in the request's **H
 
 - **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
 - **Attach file** opens the file chooser. You can also drop files on the section.
-- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
+- To remove a link or a file, hover the row and click the cross. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation first.
 
 ## Knowledge
 

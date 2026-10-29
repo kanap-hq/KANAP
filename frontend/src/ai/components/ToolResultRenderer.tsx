@@ -9,6 +9,9 @@ import { useTheme } from '@mui/material/styles';
 import { getDotColor } from '../../utils/statusColors';
 import { StatusDot } from '../../components/design';
 import { useTranslation } from 'react-i18next';
+import { historyActionText, historyActorText } from '../../components/history/recordHistoryActor';
+import type { Translate } from '../../lib/audit/auditLogLabels';
+import { formatShortDateTime } from '../../lib/dateFormat';
 
 type ToolResultBodyProps = {
   name: string;
@@ -104,6 +107,38 @@ function CommentsList({ result }: { result: any }) {
             )}
           </Stack>
           <Typography variant="body2">{item.content || t('toolResults.emptyComment', { defaultValue: '(empty comment)' })}</Typography>
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
+
+/** The entries of a record's History tab, each as the tab's first line: date, author, action. */
+function HistoryEntries({ result }: { result: any }) {
+  const { t, i18n } = useTranslation(['admin']);
+  const locale = i18n.resolvedLanguage || i18n.language || 'en';
+  const translate = t as unknown as Translate;
+  const items = Array.isArray(result?.items) ? result.items : [];
+  if (!items.length) {
+    return <Typography variant="body2" color="text.secondary">{t('admin:auditLogs.history.empty')}</Typography>;
+  }
+  return (
+    <Stack spacing={0.5}>
+      {items.map((item: any, i: number) => (
+        <Stack key={`${item.at || 'entry'}-${i}`} direction="row" spacing={1} alignItems="baseline" flexWrap="wrap" useFlexGap>
+          {item.at && (
+            <Box component="time" dateTime={item.at} sx={{ fontSize: 12, color: 'kanap.text.tertiary', fontVariantNumeric: 'tabular-nums' }}>
+              {formatShortDateTime(item.at, locale)}
+            </Box>
+          )}
+          <Typography variant="caption" fontWeight={500}>
+            {historyActorText(item.actor ?? { kind: 'user', name: null }, translate)}
+          </Typography>
+          {item.action && (
+            <Box component="span" sx={{ fontSize: 12, color: 'kanap.text.secondary' }}>
+              {historyActionText(item.action, translate)}
+            </Box>
+          )}
         </Stack>
       ))}
     </Stack>
@@ -298,6 +333,8 @@ export function ToolResultBody({ name, result }: ToolResultBodyProps) {
         );
       case 'get_entity_comments':
         return <CommentsList result={data} />;
+      case 'get_record_history':
+        return <HistoryEntries result={data} />;
       case 'search_knowledge':
         return <DocumentList items={data?.items || []} />;
       case 'get_document':
@@ -354,7 +391,8 @@ export function getToolResultSummary(name: string, result: unknown): { count: nu
     }
     case 'get_document':
       return data?.ref ? { count: 1, kind: 'documents' } : null;
-    case 'get_entity_comments': {
+    case 'get_entity_comments':
+    case 'get_record_history': {
       const items = Array.isArray(data?.items) ? data.items : [];
       return { count: items.length, kind: 'results' };
     }

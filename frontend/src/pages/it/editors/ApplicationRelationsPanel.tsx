@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { useKanapDialogs } from '../../../components/design';
 import LinksAndFilesSection, { type LinkDraft, type LinksAndFilesFile, type LinksAndFilesLink } from '../../../components/workspace/LinksAndFilesSection';
+import { removeWebLinkWithUndo, webLinkDraft, webLinkLabel } from '../../../components/workspace/removeWebLink';
 import ApplicationRelationsTab from '../workspace/ApplicationRelationsTab';
 import { useApplicationFeedback } from '../applicationFeedback';
 
@@ -80,28 +81,29 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
   const links: LinksAndFilesLink[] = (linksQuery.data ?? []).map((row) => ({ id: row.id, name: row.description, url: row.url, added_at: row.created_at }));
   const files: LinksAndFilesFile[] = (attachmentsQuery.data ?? []).map((row) => ({ id: row.id, name: row.original_filename, size: row.size, added_at: row.uploaded_at }));
 
-  const saveLink = async (link: LinksAndFilesLink | null, draft: LinkDraft) => {
+  const saveLink = async (link: LinksAndFilesLink | null, draft: LinkDraft, quiet = false) => {
     setError(null);
     const body = { description: draft.name, url: draft.url };
     if (link) await api.patch(`/applications/${id}/links/${link.id}`, body);
     else await api.post(`/applications/${id}/links`, body);
-    feedback.info(t(link ? 'workspace.application.relations.feedback.linkUpdated' : 'workspace.application.relations.feedback.linkAdded'));
+    // Undo recreates the link through this same write, without a second message.
+    if (!quiet) feedback.info(t(link ? 'workspace.application.relations.feedback.linkUpdated' : 'workspace.application.relations.feedback.linkAdded'));
     await refresh(linksKey);
   };
 
   const removeLink = async (link: LinksAndFilesLink) => {
     setError(null);
-    const previous = queryClient.getQueryData<LinkRow[]>(linksKey);
-    queryClient.setQueryData<LinkRow[]>(linksKey, (rows) => (rows ? rows.filter((row) => row.id !== link.id) : rows));
-    try {
-      await api.delete(`/applications/${id}/links/${link.id}`);
-    } catch (e) {
-      if (previous) queryClient.setQueryData(linksKey, previous);
-      failed(e);
-      return;
-    }
-    feedback.info(t('workspace.application.relations.feedback.linkRemoved'));
-    await refresh(linksKey);
+    await removeWebLinkWithUndo<LinkRow[]>({
+      queryClient,
+      queryKey: linksKey,
+      without: (rows) => rows.filter((row) => row.id !== link.id),
+      commit: () => api.delete(`/applications/${id}/links/${link.id}`),
+      refresh: () => refresh(linksKey),
+      restore: () => saveLink(null, webLinkDraft(link), true),
+      message: t('common:linksAndFiles.removed', { name: webLinkLabel(link) }),
+      feedback,
+      onError: failed,
+    });
   };
 
   const uploadFiles = async (chosen: File[]) => {

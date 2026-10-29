@@ -229,7 +229,7 @@ export default function BudgetLineRelationsTab({
       rows: data?.technologies ?? null,
       familyLabel: labels.family,
     })),
-    readable(contractsSection({ t, rows: data?.contracts ?? null, lang, hidden: data?.contracts_hidden })),
+    readable(contractsSection({ t, rows: data?.contracts ?? null, lang, hidden: data?.contracts_hidden, lineId })),
     readable(assetsSection({
       t,
       rows: data?.assets ?? null,

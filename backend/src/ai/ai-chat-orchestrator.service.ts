@@ -185,6 +185,19 @@ function statesWriteRefusal(content: string): boolean {
     || /\b(no (puedo|es posible|esta disponible|se puede|permite)|solo lectura|imposible)\b/.test(text);
 }
 
+/**
+ * The answer says nothing matches the request, or that there is nothing to change, in the four
+ * languages of the product. A question that follows it offers another action in words; it is not a
+ * write waiting for its preview.
+ */
+function statesNothingToChange(content: string): boolean {
+  const text = normalizePlainText(content).replace(/[’`]/g, "'");
+  return /\bno\b[^.!?\n]{0,80}\bmatch(es)?\b|\bthere (is|are) no\b|\bnone of\b|\bnothing (matches|to change)\b|\bfound no\b|\bno\b[^.!?\n]{0,80}\bto change\b/.test(text)
+    || /\baucun(e|s|es)?\b|\bil n'y a (pas|aucun)|\brien a (changer|modifier)\b|\bne correspond(ent)? a aucun|\bn'a aucun/.test(text)
+    || /\bkein(e|en|er)?\b[^.!?\n]{0,80}\b(gefunden|vorhanden)\b|\bes gibt kein|\bnichts zu (andern|tun)\b|\btrifft auf kein/.test(text)
+    || /\bno hay\b|\bning(un|una|uno)\b|\bnada que (cambiar|modificar)\b|\bno coincide/.test(text);
+}
+
 const CONFIRMATION_REQUEST_RE = /\b(souhaitez|souhaites|voulez|veux|do you want|would you like|shall i|should i|confirm|confirme|approve|approuver)\b/;
 
 /**
@@ -206,9 +219,9 @@ function asksForWriteExecutionWithoutPreview(content: string): boolean {
   if (!asksForConfirmation || !mentionsWriteExecution) {
     return false;
   }
-  // A refusal that offers another action in words is an answer, not a write waiting for its preview
-  // (issue 125), unless it still asks to run a change.
-  return !statesWriteRefusal(content) || questionAsksToRunAChange(content);
+  // A refusal, or a "nothing to change", that offers another action in words is an answer, not a
+  // write waiting for its preview (issue 125, Plaid L6), unless it still asks to run a change.
+  return !(statesWriteRefusal(content) || statesNothingToChange(content)) || questionAsksToRunAChange(content);
 }
 
 function hasMultiStepWriteSignals(content: string): boolean {
@@ -1132,7 +1145,7 @@ function toolActivityPhase(toolName: string): AiChatActivityPhase {
   ].includes(toolName)) {
     return 'searching_entities';
   }
-  if (['get_entity_detail', 'get_entity_context', 'get_entity_comments'].includes(toolName)) {
+  if (['get_entity_detail', 'get_entity_context', 'get_entity_comments', 'get_record_history'].includes(toolName)) {
     return 'reading_context';
   }
   if (toolName === 'search_knowledge') {
@@ -1369,12 +1382,20 @@ export class AiChatOrchestratorService {
     ].join(' ');
   }
 
-  private isUnsafeWritePreviewAssistantText(content: string): boolean {
+  private isUnsafeWritePreviewAssistantText(content: string, writeToolRefusedThisTurn = false): boolean {
     const normalized = String(content || '').trim();
     if (!normalized) {
       return false;
     }
-    return containsRawToolMarkup(normalized) || asksForWriteExecutionWithoutPreview(normalized);
+    if (containsRawToolMarkup(normalized)) {
+      return true;
+    }
+    // The server refused a write tool in this turn: the text that follows explains that refusal,
+    // unless it still asks to run a change.
+    if (writeToolRefusedThisTurn) {
+      return questionAsksToRunAChange(normalized);
+    }
+    return asksForWriteExecutionWithoutPreview(normalized);
   }
 
   private buildUnsafeWritePreviewResponseRepairInstruction(params: {
@@ -2337,6 +2358,7 @@ export class AiChatOrchestratorService {
               analyticsDimensions,
               timeZone,
               writeRights: await this.policy.describeWriteRights(ctx, ctx.manager),
+              adminFamiliesGap: await this.policy.adminFamiliesGap(ctx, ctx.manager),
             });
             const latestUserMessageRow = [...historyAfterApproval]
               .reverse()
@@ -2553,6 +2575,7 @@ export class AiChatOrchestratorService {
           analyticsDimensions,
           timeZone,
           writeRights: await this.policy.describeWriteRights(ctx, ctx.manager),
+          adminFamiliesGap: await this.policy.adminFamiliesGap(ctx, ctx.manager),
         });
         const sysPrompt = builtSystemPrompt.text;
 
@@ -2662,6 +2685,8 @@ export class AiChatOrchestratorService {
     let bulkCompletenessRepairRetries = 0;
     let repeatedToolCallRepairRetries = 0;
     let mutationPreviewCountThisTurn = 0;
+    // A write-preview tool returned an error in this turn (the server refused it).
+    let writeToolRefusedThisTurn = false;
     let deletePreviewCountThisTurn = 0;
     let toolCallCountThisTurn = 0;
     let controlPlaneRunId: string | null = null;
@@ -3176,6 +3201,14 @@ export class AiChatOrchestratorService {
 
             const mutationPreviews = shownPreviews ?? mutationPreviewDtosFromResult(result);
             mutationPreviewCountThisTurn += mutationPreviews.length;
+            if (
+              writePreviewToolNames.some((name) => name === tc.name)
+              && result
+              && typeof result === 'object'
+              && typeof (result as Record<string, unknown>).error === 'string'
+            ) {
+              writeToolRefusedThisTurn = true;
+            }
             deletePreviewCountThisTurn += mutationPreviews
               .filter((preview) => preview.tool_name === 'delete_record')
               .length;
@@ -3394,7 +3427,7 @@ export class AiChatOrchestratorService {
       if (
         requiresWritePreviewGuard
         && mutationPreviewCountThisTurn === 0
-        && this.isUnsafeWritePreviewAssistantText(accumulatedText)
+        && this.isUnsafeWritePreviewAssistantText(accumulatedText, writeToolRefusedThisTurn)
       ) {
         if (unsafeWriteResponseRetries < MAX_UNSAFE_WRITE_RESPONSE_RETRIES) {
           unsafeWriteResponseRetries++;

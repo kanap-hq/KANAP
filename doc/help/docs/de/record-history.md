@@ -56,6 +56,10 @@ Bei einem Vertrag, einem Projekt oder einer Anfrage sieht eine Person mit begren
 - E-Mail-Adresse, Telefonnummern und Notizen eines Kontakts erscheinen nie.
 - Bei langen Inhalten sagt der Eintrag nur, dass sie sich geändert haben: **Inhalt geändert** für den Text eines Dokuments der Wissensdatenbank, **Arbeitstage geändert** für die Tage eines Arbeitstagekalenders, **Beschreibung geändert**, **Zweck geändert** oder **Aktuelle Situation geändert** für die langen Texte der anderen Datensätze.
 
+## Den Assistenten fragen
+
+[Plaid](ai-assistant.md#tool-calls) liest den Verlauf eines Datensatzes mit denselben Rechten wie seine Seite. Fragen Sie zum Beispiel: „Wer hat die Beträge von BL-12 geändert?“ oder „Was hat sich an TEC-3 in diesem Jahr geändert?“ Plaid antwortet nur aus dem Tab Verlauf: Für einen Datensatz ohne diesen Tab sagt es, dass KANAP keinen Verlauf dafür führt.
+
 ## Das vollständige Audit-Protokoll
 
 Der Verlauf beschränkt sich auf das, was ein Leser braucht. Die vollständige technische Aufzeichnung jeder Änderung im gesamten Arbeitsbereich bleibt unter **Administration > Audit-Protokoll**. Siehe [Audit-Protokoll](admin.md#audit-protokoll).

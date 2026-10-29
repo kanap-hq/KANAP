@@ -27,7 +27,7 @@ Gehen Sie zu **IT-Landschaft > Vorfälle**, um das Register zu sehen. Klicken Si
 **Pflichtfelder**:
 
 - **Titel**: eine kurze, sachliche Zusammenfassung, z. B. „Mail-Dienst am Standort Lyon nicht verfügbar"
-- **Schweregrad**: Kritisch, Schwerwiegend, Geringfügig oder Niedrig
+- **Schweregrad**: Kritisch, Hoch, Mittel oder Niedrig
 - **Erkannt**: wann der Vorfall bemerkt wurde (standardmäßig jetzt)
 
 **Auf demselben Bildschirm empfohlen**:
@@ -64,7 +64,7 @@ Die Liste ist das Register selbst: alle Vorfälle, die zuletzt erkannten zuerst.
 | **Ref** | Vorfallsreferenz (z. B. `INC-14`), in Monospace |
 | **Titel** | Kurze Zusammenfassung (zum Öffnen des Vorfalls anklicken) |
 | **Kategorie** | Klassifizierung aus den Einstellungen der IT-Landschaft |
-| **Schweregrad** | Kritisch, Schwerwiegend, Geringfügig, Niedrig, mit einem farbigen Punkt |
+| **Schweregrad** | Kritisch, Hoch, Mittel, Niedrig, mit einem farbigen Punkt |
 | **Status** | Offen, In Bearbeitung, Behoben, Geschlossen, Abgebrochen, mit einem farbigen Punkt |
 | **Erkannt** | Wann der Vorfall bemerkt wurde |
 | **Behoben** | Wann der Dienst wiederhergestellt war |
@@ -78,7 +78,7 @@ Die Liste ist das Register selbst: alle Vorfälle, die zuletzt erkannten zuerst.
 
 **Filtern**: Kategorie, Schweregrad, Status und Verantwortlicher bieten Kontrollkästchenfilter, deren Optionen aus den aktuell angezeigten Vorfällen berechnet werden, Sie sehen also nur Werte, die in der Ergebnismenge vorkommen. Datumsspalten bieten Datumsfilter, auch als Bereich: Filtern Sie **Erkannt** zwischen zwei Daten, um einen Quartals- oder Jahresauszug zu erzeugen. Die Suche erfasst Titel, Beschreibung, Referenz (`INC-14`) sowie Namen und Referenzen verknüpfter Assets und Anwendungen: Eine Suche nach einem Hostnamen wie `PAR-ESX-01` listet die Vorfälle zu diesem Asset. Wörter, die nur in der Vorfallanalyse vorkommen, findet die globale Suche oder der Assistent, nicht dieses Feld. Die globale Suche, die `@`-Auswahl in Plaid und der MCP-Server finden einen Vorfall auch über den Namen, die Referenz `AST-N`, den Hostnamen oder den FQDN seiner verknüpften Assets.
 
-**Tipp**: Kombinieren Sie Schweregrad = Kritisch, Schwerwiegend mit einem Bereich für **Erkannt**, um die Auswahlliste zu erstellen, die die meisten Steuerungsgremien und Prüfungen verlangen.
+**Tipp**: Kombinieren Sie Schweregrad = Kritisch, Hoch mit einem Bereich für **Erkannt**, um die Auswahlliste zu erstellen, die die meisten Steuerungsgremien und Prüfungen verlangen.
 
 Was Sie filtern, wird in den geöffneten Vorfall übernommen: **Zurück / Weiter** im Arbeitsbereich durchläuft genau diese Auswahlliste.
 
@@ -103,7 +103,7 @@ Die Leiste bleibt auf jedem Tab sichtbar und speichert während der Bearbeitung.
 **Klassifizierung**:
 
 - **Kategorie**: aus der in den Einstellungen der IT-Landschaft konfigurierten Liste
-- **Schweregrad**: Kritisch, Schwerwiegend, Geringfügig, Niedrig. Wählen Sie die Stufe, die die geschäftliche Auswirkung zum jeweiligen Zeitpunkt widerspiegelt; jede Änderung wird im Journal festgehalten, ein späteres Anheben oder Absenken ist also normal und nachvollziehbar
+- **Schweregrad**: Kritisch, Hoch, Mittel, Niedrig. Wählen Sie die Stufe, die die geschäftliche Auswirkung zum jeweiligen Zeitpunkt widerspiegelt; jede Änderung wird im Journal festgehalten, ein späteres Anheben oder Absenken ist also normal und nachvollziehbar
 - **Status**: Offen, In Bearbeitung, Behoben, Geschlossen. Der Status bewegt sich nur vorwärts. Der Weg zurück führt über **Wieder öffnen**, damit das Register nicht unbemerkt zurückgedreht werden kann
 - **Auf Registeradministratoren beschränken**: den Vorfall vor anderen Lesern und Mitwirkenden verbergen. Melder und Verantwortlicher sehen ihn weiter. Nur ein Administrator kann die Einschränkung aufheben, auch nach dem Schließen. Wenn sie aktiv ist, zeigt die Metadatenzeile **Eingeschränkt**
 

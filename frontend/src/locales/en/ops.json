@@ -545,6 +545,16 @@
       "title": "Linked budget lines",
       "empty": "No budget line linked.",
       "pickerLabel": "Link or remove budget lines",
+      "mismatch": {
+        "notSet": "Not set",
+        "line": "{{field}}: {{line}} on the line, {{contract}} on the contract",
+        "fields": {
+          "paying_company": "Paying company",
+          "cost_center": "Cost center",
+          "supplier": "Supplier",
+          "currency": "Currency"
+        }
+      },
       "columns": {
         "ref": "Ref.",
         "line": "Budget line",
@@ -1089,6 +1099,8 @@
       "warningsTitle": "Warnings",
       "ignoredColumns": "Ignored columns: {{columns}}.",
       "firstSheetOnly": "Only the first sheet, {{name}}, was read.",
+      "calculationLines": "{{item}} · {{column}} {{year}}: {{count}} calculation lines ({{total}}) will no longer drive these amounts.",
+      "calculationLines_one": "{{item}} · {{column}} {{year}}: 1 calculation line ({{total}}) will no longer drive these amounts.",
       "ignoredColumns_one": "Ignored column: {{columns}}.",
       "createsTitle": "Created by the load",
       "createSuppliersList": "Suppliers: {{names}}",
@@ -1500,6 +1512,7 @@
       "totalMetric": "{{metric}}, total",
       "ofFilteredMetric": "{{pct}}% of the filtered total",
       "shareSubtitle": "Share of annual total ({{metric}})",
+      "shareOfAllLines": "Share of all lines",
       "chartTitle": "Top {{count}} {{type}} · {{metric}} {{year}}",
       "chartTitle_all": "Top {{count}} lines · {{metric}} {{year}}"
     },

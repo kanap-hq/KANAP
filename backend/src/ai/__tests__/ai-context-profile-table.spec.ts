@@ -340,6 +340,39 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Indique que TEC-3 est remplacée par TEC-7', profile: 'write_business', mode: 'write', tools: ['update_business_record'] },
   { prompt: 'Efface la date de fin de support étendu de la version 14 de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_versions'] },
 
+  // Plaid L6: the state of vulnerability rows is a business write; a question or a state word
+  // alone stays a read. "Acceptée" is not a state: the model sees the tool and refuses in words.
+  // The alert phrases above keep set_technology_vulnerability_alerts.
+  { prompt: 'Passe la faille CVE-2024-3094 à traitée', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Marque CVE-2024-1234 comme corrigée sur PostgreSQL 14', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Mets CVE-2024-1234 en non concernée sur TEC-3', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Remets CVE-2024-1234 à traiter', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Traite toutes les failles critiques de TEC-3', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Mark CVE-2024-3094 as handled', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Set CVE-2024-1234 to not affected on nginx 1.24', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Passe la faille CVE-2026-59310 à acceptée', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Passe CVE-2026-1 et CVE-2026-2 à traitée', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: "Quel est l'état de CVE-2024-3094 ?", profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Combien de failles sont traitées ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Failles non concernées de TEC-3', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Liste les failles traitées sur PostgreSQL', profile: 'read_query', mode: 'read' },
+  { prompt: 'How many vulnerabilities are handled?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Which CVEs are not affected on nginx?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Combien de failles critiques, en CVE distinctes ?', profile: 'read_query', mode: 'read' },
+  // Lot E review: a task phrase stays a task write, whatever vulnerability it names, and
+  // "résolue" / "resolved" is not a vulnerability state.
+  { prompt: 'Mark the task T-5 about CVE-2024-3094 as resolved', profile: 'write_task', mode: 'write' },
+  { prompt: 'Set the task "Patch the vulnerabilities" to resolved', profile: 'write_task', mode: 'write' },
+  { prompt: 'Mark task T-12 on the vulnerability scan as handled', profile: 'write_task', mode: 'write' },
+  { prompt: 'Passe la tâche T-5 sur la faille CVE-2024-3094 à résolue', profile: 'write_task', mode: 'write' },
+  { prompt: 'Mets la tâche « Corriger les failles » en résolue', profile: 'write_task', mode: 'write' },
+  // Lot E review: a handle verb on a report, a list or a question reads.
+  { prompt: 'Traite les failles de TEC-3 dans un rapport', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Handle this list of CVEs as a CSV', profile: 'read_query', mode: 'read' },
+  { prompt: 'Rouvre la liste des failles', profile: 'read_query', mode: 'read' },
+  { prompt: 'Traite la question des failles de TEC-3', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Handle the vulnerabilities report for TEC-3', profile: 'entity_inspection', mode: 'entity' },
+
   // Other probes from the existing profile spec.
   { prompt: 'Show me my overdue tasks', profile: 'read_query', mode: 'read' },
   { prompt: 'Show current tasks', profile: 'read_query', mode: 'read' },
@@ -452,6 +485,40 @@ const FIXTURE_ROWS: Row[] = [
   // Lot 6: a BL-n is a budget line only with a budget word; otherwise it may be a delivery note.
   { prompt: 'Supprime le BL-123', profile: 'write_general', mode: 'write' },
   { prompt: 'Le bon de livraison BL-123 est arrivé', profile: 'entity_inspection', mode: 'entity' },
+
+  // Plaid L7, lot C: the history of one record is a read that carries get_record_history. An
+  // application has no History tab: the phrase keeps the tool, which answers so.
+  { prompt: 'Historique de OPEX-12', profile: 'entity_inspection', mode: 'entity', tools: ['get_record_history'] },
+  { prompt: 'Qui a modifié AST-3 ?', profile: 'read_query', mode: 'read', tools: ['get_record_history'] },
+  { prompt: 'What changed on TEC-3 last week?', profile: 'entity_inspection', mode: 'entity', tools: ['get_record_history'] },
+  { prompt: 'Historique de APP-36', profile: 'entity_inspection', mode: 'entity', tools: ['get_record_history'] },
+  { prompt: 'Historique des modifications de TEC-3', profile: 'entity_inspection', mode: 'entity', tools: ['get_record_history'] },
+
+  // Plaid L7, lot D: the roles and data access are reads of the common tools (`roles`,
+  // `role_permissions`, `data_access`, the person and company details); the history of a record
+  // carries get_record_history.
+  { prompt: 'Qui a un accès limité aux données et à quoi ?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'aggregate_entities', 'get_entity_detail'] },
+  { prompt: 'Who has limited data access?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'aggregate_entities', 'get_entity_detail'] },
+  { prompt: 'Que voit Paul Martin ?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'get_entity_detail'] },
+  { prompt: 'Quels sont les droits du rôle Budget Member ?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'get_entity_detail'] },
+  { prompt: 'Which roles give budget admin?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'aggregate_entities'] },
+  { prompt: 'Combien de personnes ont le rôle Budget Member ?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'aggregate_entities'] },
+  { prompt: 'Qui voit la société Formaggio Supremo SRL ?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'get_entity_detail'] },
+  { prompt: 'Qui a modifié TEC-3 ?', profile: 'read_query', mode: 'read', tools: ['get_record_history'] },
+  { prompt: 'À quoi ai-je accès ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Quel rôle a Paul Martin ?', profile: 'read_query', mode: 'read', tools: ['query_entities', 'get_entity_detail'] },
+  { prompt: 'Make a list of the roles with budget admin', profile: 'read_query', mode: 'read' },
+  // A person's access, roles or rights: no tool makes them, the write profile refuses in words (a
+  // role named Budget Member is no budget write).
+  { prompt: 'Donne l\'accès complet à Paul Martin', profile: 'write_general', mode: 'write' },
+  { prompt: 'Ajoute le rôle Budget Member à Paul Martin', profile: 'write_general', mode: 'write' },
+  { prompt: 'Grant Paul Martin full access', profile: 'write_general', mode: 'write' },
+  { prompt: 'Give Paul Martin access to all data', profile: 'write_general', mode: 'write' },
+  { prompt: 'Retire le droit budget du rôle Finance', profile: 'write_general', mode: 'write' },
+  { prompt: 'Supprime le rôle Finance custom', profile: 'write_general', mode: 'write' },
+  { prompt: 'Mets Paul Martin en accès limité', profile: 'write_general', mode: 'write' },
+  // The product named Access stays a technology write.
+  { prompt: 'Ajoute Microsoft Access à AST-3', profile: 'write_business', mode: 'write' },
 ];
 
 function testTheTable() {
@@ -570,8 +637,18 @@ function testTheFixturePhrasesAreAllPresent() {
   }
 }
 
+/** No tool writes a person's access or roles: the write profiles of those phrases carry none. */
+function testTheAccessWritesCarryNoAccessTool() {
+  for (const prompt of ['Donne l\'accès complet à Paul Martin', 'Ajoute le rôle Budget Member à Paul Martin']) {
+    const profile = selectAiContextProfile(prompt);
+    const accessTools = profile.toolNames.filter((tool) => /access|role|permission|user/.test(tool));
+    assert.deepEqual(accessTools, [], `${prompt}: no access tool`);
+  }
+}
+
 function run() {
   testTheTable();
+  testTheAccessWritesCarryNoAccessTool();
   testTheTechnologyLinkPhrasesCarryTheTool();
   testTheFixturePhrasesAreAllPresent();
   console.log(`  context profile table: ${FIXTURE_ROWS.length} lines, OK`);

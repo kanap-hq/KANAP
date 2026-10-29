@@ -652,8 +652,9 @@ function createService(options?: {
     updateBusinessRecordOperation as any,
     updateEntityRelationsOperation as any,
     updateIncidentLinksOperation as any,
-    // The technology links, versions, people, web links and alerts are not under test here; the
-    // registry only needs them registered.
+    // The technology links, versions, people, web links and alerts, and the vulnerability state,
+    // are not under test here; the registry only needs them registered.
+    {} as any,
     {} as any,
     {} as any,
     {} as any,

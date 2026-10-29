@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
 import { AnalyticsCategoriesService } from '../../analytics/analytics-categories.service';
@@ -29,6 +29,10 @@ import type { SpendVersion } from '../../spend/spend-version.entity';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
 import { EndOfSupportService, type DeadlineRow } from '../../technologies/reports/end-of-support.service';
+import { PermissionsService } from '../../permissions/permissions.service';
+import { RolesService } from '../../roles/roles.service';
+import { DataAccessAdminService } from '../../data-access/data-access-admin.service';
+import { DataAccessReservedException } from '../../data-access/reserved-operations';
 import { UsersService } from '../../users/users.service';
 import {
   AiEntityMetadata,
@@ -64,6 +68,7 @@ import { aiAmountsCurrency } from './ai-amounts-currency.util';
 import { aiDataAccessNote } from './ai-data-access-note.util';
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
 import { hiddenContractLineCount } from '../../contracts/contract-relations';
+import { contractMismatchesAgainstLine, lineMismatchesAgainstContract } from '../../contracts/contract-line-match';
 import { AiReadProbe, analyticsAxisFields, resolveAiEntityRegistry } from './registries';
 import { taskRelatedFamily } from './registries/tasks.registry';
 import { budgetFteFields, budgetLineTotalFieldsOf, budgetPairOfKey, isBudgetMoneyKey } from './registries/budget-amount-fields';
@@ -81,12 +86,30 @@ import {
   technologyContractCount,
   technologyVersionFigures,
 } from './ai-technologies.query';
-import { AiVulnerabilityDetailRow, AiVulnerabilityRow, listAiVulnerabilities } from './ai-vulnerabilities.query';
+import { AiVulnerabilityDetailRow, AiVulnerabilityRow, listAiVulnerabilities, readAiVulnerabilityFeeds } from './ai-vulnerabilities.query';
 import { APPLICATIONS_UNREAD_NOTE, listAiSupportDeadlines, listAiSupportGaps, type AiSupportGapRow } from './ai-support.query';
+import {
+  findAiRole,
+  listAiRolePermissions,
+  listAiRoles,
+  type AiRolePermissionRow,
+  type AiRoleRow,
+  type AiRolesServices,
+} from './ai-roles.query';
+import {
+  AI_DATA_ACCESS_COVERAGE_NOTE,
+  AI_DATA_ACCESS_DELETED_NODE,
+  AI_DATA_ACCESS_NO_NODE_NOTE,
+  AI_DATA_ACCESS_UNAVAILABLE_NOTE,
+  listAiDataAccess,
+  type AiDataAccessRow,
+} from './ai-data-access.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
 import { readClassificationCatalog } from '../ai-classification-catalog.util';
+import { AI_SCREEN_RESOURCES, aiPermissionLevelLabel, aiResourceLabel } from '../ai-role-labels';
+import { readAiScreenLanguage, type AiScreenLanguage } from '../ai-unread-families';
 
 function toIso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -595,6 +618,11 @@ export class AiQueryExecutor {
     @Optional() private readonly technologies?: TechnologiesService,
     /** The End of support report of the screen, which the two report families read. */
     @Optional() private readonly endOfSupport?: EndOfSupportService,
+    /** The services of Admin › Roles, which `roles` and `role_permissions` read. */
+    @Optional() private readonly roles?: RolesService,
+    @Optional() private readonly permissions?: PermissionsService,
+    /** Admin › Data access: the `data_access` family, and the access blocks of a person and a company. */
+    @Optional() private readonly dataAccess?: DataAccessAdminService,
   ) {
     // Absent, the technology figures close (no application count, no detail): say so once, at start.
     const logger = new Logger(AiQueryExecutor.name);
@@ -1207,6 +1235,8 @@ export class AiQueryExecutor {
         version: scalar(row.version),
         sources: row.sources.join(', '),
         alerts: row.alerts,
+        estate: row.estate,
+        matching: row.matching,
         published_at: scalar(row.published_at),
         detected_at: scalar(row.detected_at),
         servers_reached: row.servers_reached,
@@ -1298,6 +1328,160 @@ export class AiQueryExecutor {
         version: scalar(row.version),
       },
     });
+  }
+
+  /** A role of Admin › Roles: its name, kind and count of people (never their names). */
+  private mapRole(row: AiRoleRow): AiEntitySummaryDto {
+    return toEntitySummary('roles', {
+      id: row.id,
+      label: row.name,
+      status: row.type,
+      summary: row.description,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      metadata: {
+        name: row.name,
+        type: row.type,
+        user_count: row.user_count,
+      },
+    });
+  }
+
+  /**
+   * A right a role gives, at the level the Roles screen shows, with the screen's words for the right
+   * and the level in the person's language (`language`; null: the four languages).
+   */
+  private mapRolePermission(row: AiRolePermissionRow, language: AiScreenLanguage | null): AiEntitySummaryDto {
+    const resourceLabel = aiResourceLabel(row.resource, language);
+    return toEntitySummary('role_permissions', {
+      id: row.key,
+      label: `${row.role}: ${resourceLabel ?? row.resource}`,
+      status: row.level,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        role: row.role,
+        role_type: row.role_type,
+        resource: row.resource,
+        resource_label: resourceLabel,
+        level: row.level,
+        level_label: aiPermissionLevelLabel(row.level, language),
+      },
+    });
+  }
+
+  /**
+   * A row of Admin › Data access: a person in limited access and one of their nodes, or no node.
+   * The person names the row (`id` is theirs); no email.
+   */
+  private mapDataAccess(row: AiDataAccessRow): AiEntitySummaryDto {
+    const where = row.node_type === null
+      ? 'no node'
+      : row.node_type === 'all' ? 'all data' : row.node ?? '';
+    return toEntitySummary('data_access', {
+      id: row.person_id,
+      label: `${row.person}: ${where}`,
+      status: row.access,
+      summary: row.node_type === null ? AI_DATA_ACCESS_NO_NODE_NOTE : null,
+      created_at: null,
+      updated_at: row.changed_at,
+      metadata: {
+        person: row.person,
+        roles: row.roles.join(', '),
+        node_type: row.node_type,
+        node: row.node,
+        node_code: row.node_code,
+        node_kind: row.node_kind,
+        access: row.access,
+        changed_at: row.changed_at,
+        changed_by: row.changed_by,
+      },
+    });
+  }
+
+  /**
+   * Whether the caller reads Admin › Data access: users at admin level and access not limited, the
+   * family's gate (`AiPolicyService`). The database does not protect the nodes: every read of them
+   * (the family, the users fields, the person and company blocks) passes here. Closed without the
+   * policy or the service.
+   */
+  private async dataAccessView(context: AiExecutionContextWithManager): Promise<boolean> {
+    if (!this.dataAccess) return false;
+    return (await this.policy?.canReadEntityType(context, 'data_access', context.manager)) === true;
+  }
+
+  /**
+   * A person's access as the Data access tab of their dialog shows it (`GET /users/:id/data-access`):
+   * the mode, the nodes with their level, who changed it last, the cost centers they own. Missing
+   * parts of the function in the screen's words.
+   */
+  private personAccessBlock(access: Awaited<ReturnType<DataAccessAdminService['personAccess']>>): Record<string, unknown> {
+    const nodes = access.nodes.map((node) => {
+      if (node.type === 'all') return { type: 'all', access: node.access };
+      if (node.type === 'company') return { type: 'company', name: node.name ?? AI_DATA_ACCESS_DELETED_NODE, access: node.access };
+      const name = [node.code, node.name].filter((part) => !!part && String(part).trim()).join(' ');
+      return { type: 'cost_center', kind: node.kind, code: node.code, name: name || AI_DATA_ACCESS_DELETED_NODE, access: node.access };
+    });
+    const note = access.is_administrator
+      ? 'Administrator: sees all data, whatever is stored.'
+      : access.mode === 'all'
+        ? 'Sees all budget and contract data.'
+        : nodes.length === 0
+          ? AI_DATA_ACCESS_NO_NODE_NOTE
+          : 'Limited to these nodes: a company node covers the company and the cost centers of that company; a group node covers the group, its sub-groups and their cost centers, whatever their company; a cost center node covers that cost center only; all covers everything. Edit includes read. The person also always sees what they are named on.';
+    return {
+      mode: access.mode,
+      is_administrator: access.is_administrator,
+      nodes,
+      updated_at: access.updated_at,
+      updated_by_name: access.updated_by_name,
+      budget_owner_centers: access.budget_owner_centers.map((center) => ({ code: center.code, name: center.name })),
+      available: access.available,
+      ...(access.available ? {} : { unavailable_note: AI_DATA_ACCESS_UNAVAILABLE_NOTE }),
+      note,
+      coverage_note: AI_DATA_ACCESS_COVERAGE_NOTE,
+    };
+  }
+
+  /**
+   * Who sees a company, as its Access tab (`GET /companies/:id/data-access`): `full`, the people in
+   * limited access with an `all` node or a node on the company (by the most direct one), and
+   * `partial`, those whose cost center or group node covers a part of it. People whose access is
+   * not limited see it whole and are not listed.
+   */
+  private companyAccessBlock(access: Awaited<ReturnType<DataAccessAdminService['companyAccess']>>): Record<string, unknown> {
+    return {
+      full: access.full.map((entry) => ({
+        person: entry.person.name,
+        via: entry.via.type === 'all' ? 'all data' : entry.via.name ?? AI_DATA_ACCESS_DELETED_NODE,
+        via_type: entry.via.type,
+        access: entry.access,
+      })),
+      partial: access.partial.map((entry) => ({
+        person: entry.person.name,
+        via: [entry.via.code, entry.via.name].filter((part) => !!part && String(part).trim()).join(' ') || AI_DATA_ACCESS_DELETED_NODE,
+        via_type: entry.via.type,
+        access: entry.access,
+      })),
+      note: 'Only people in limited access are listed: everyone else sees the whole company. full: a node on all data or on this company; partial: a node on a cost center or group that covers a part of it. Who has a node on one cost center: query_entities on data_access filtered on node_code; what a cost center inherits is on its Access tab in KANAP.',
+      coverage_note: AI_DATA_ACCESS_COVERAGE_NOTE,
+    };
+  }
+
+  /** The services the two role families read; refused without them, never an empty list. */
+  private rolesServices(): AiRolesServices {
+    if (!this.roles || !this.permissions) throw new BadRequestException('The roles are not available.');
+    return { roles: this.roles, permissions: this.permissions };
+  }
+
+  /**
+   * The roles and their rights, checked again here though the tool checked them, as the data access
+   * branch: users at admin level and access not limited, refused in the policy's words (the right
+   * and the screen, or the reserved message). Closed without the policy.
+   */
+  private async assertRolesRead(context: AiExecutionContextWithManager, entityType: 'roles' | 'role_permissions'): Promise<void> {
+    if (!this.policy) throw new ForbiddenException('The roles are not available.');
+    await this.policy.assertEntityTypeReadRight(context, entityType, context.manager);
   }
 
   /**
@@ -1418,10 +1602,12 @@ export class AiQueryExecutor {
   }
 
   /**
-   * A user as the users list shows them: every column to an administrator of users, name, email and
-   * status to a reader (`adminView` false), as the screen does.
+   * A user as the users list shows them: every column to an administrator of users whose own access
+   * is not limited, name, email and status to anyone else (`adminView` false), as the screen does. The roles and the data-access mode
+   * (`accessView`) only to an administrator of users whose own access is not limited, as the
+   * list's Access column.
    */
-  private mapUser(row: any, adminView: boolean): AiEntitySummaryDto {
+  private mapUser(row: any, adminView: boolean, accessView = false): AiEntitySummaryDto {
     const label = displayName(row) ?? row.email ?? 'Unknown user';
     if (!adminView) {
       return toEntitySummary('users', {
@@ -1461,6 +1647,12 @@ export class AiQueryExecutor {
         contributor_profile: scalar(row.contributor_profile),
         project_availability: numericScalar(row.project_availability),
         areas_of_expertise: scalar(row.areas_of_expertise),
+        ...(accessView
+          ? {
+            roles: Array.isArray(row.roles) ? row.roles.join(', ') : null,
+            data_access: scalar(row.data_access),
+          }
+          : {}),
       },
     });
   }
@@ -2213,6 +2405,61 @@ export class AiQueryExecutor {
       };
     }
 
+    if (input.entity_type === 'roles' || input.entity_type === 'role_permissions') {
+      await this.assertRolesRead(context, input.entity_type);
+      const services = this.rolesServices();
+      const result = input.entity_type === 'roles'
+        ? await listAiRoles(services, context.manager, scoped.query)
+        : await listAiRolePermissions(services, context.manager, scoped.query);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      // The words of the rights follow the person's menus; a list of roles names none.
+      const language = input.entity_type === 'role_permissions'
+        ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId)
+        : null;
+      return {
+        items: result.items.map((row) => (input.entity_type === 'roles'
+          ? this.mapRole(row as AiRoleRow)
+          : this.mapRolePermission(row as AiRolePermissionRow, language))),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'data_access') {
+      // The tool already checked the family; checked again here, the database not guarding the nodes.
+      if (!this.dataAccess || !(await this.dataAccessView(context))) throw new DataAccessReservedException();
+      const result = await listAiDataAccess({ dataAccess: this.dataAccess }, context.manager, scoped.query);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        available: result.available,
+        missing: result.missing,
+        ...(result.available ? {} : { unavailable_note: AI_DATA_ACCESS_UNAVAILABLE_NOTE }),
+        counters: result.counters,
+        coverage_note: AI_DATA_ACCESS_COVERAGE_NOTE,
+        items: result.items.map((row) => this.mapDataAccess(row)),
+        total: result.total,
+        distinct_total: result.distinct_total,
+        distinct_label: 'person',
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
     if (input.entity_type === 'vulnerabilities') {
       const applications = await resolveAiApplicationsReach(context, this.policy);
       const result = await listAiVulnerabilities(context.manager, context.tenantId, scoped.query, applications);
@@ -2221,6 +2468,10 @@ export class AiQueryExecutor {
       return {
         items: result.items.map((row) => this.mapVulnerability(row)),
         total: result.total,
+        // The rows and the distinct CVE among them, as the page's total.
+        distinct_total: result.distinct_total,
+        distinct_label: 'cve',
+        feeds: await readAiVulnerabilityFeeds(context.manager),
         page: result.page,
         limit: result.limit,
         returned,
@@ -2274,16 +2525,18 @@ export class AiQueryExecutor {
 
     if (input.entity_type === 'users') {
       const adminView = await this.usersAdminView(context);
+      const accessView = adminView && await this.dataAccessView(context);
       const result = await this.users.listForAi(scoped.query, {
         manager: context.manager,
         tenantId: context.tenantId,
+        accessView,
       });
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
       const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
-        items: (result.items || []).map((row: any) => this.mapUser(row, adminView)),
+        items: (result.items || []).map((row: any) => this.mapUser(row, adminView, accessView)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -2299,7 +2552,8 @@ export class AiQueryExecutor {
     throw new BadRequestException('Unsupported entity type.');
   }
 
-  private async resolveDetailEntityId(
+  /** The record an `entity_id` names (uuid, reference or name), as get_entity_detail reads it; get_record_history reads it the same way. */
+  async resolveDetailEntityId(
     context: AiExecutionContextWithManager,
     entityType: AiQueryEntityType,
     rawId: string,
@@ -2606,6 +2860,18 @@ export class AiQueryExecutor {
         ? (nature === 'opex'
           ? this.contracts.listContractsForSpendItem(lineId, { manager: context.manager })
           : this.contracts.listContractsForCapexItem(lineId, { manager: context.manager })).catch(() => ({ items: [] }))
+          .then(async (linked) => {
+            if (!linked || linked.items.length === 0) return linked;
+            const mismatches = await contractMismatchesAgainstLine(
+              context.manager,
+              context.tenantId,
+              lineId,
+              linked.items.map((row) => row.id),
+            );
+            return {
+              items: linked.items.map((row) => ({ ...row, mismatches: mismatches?.get(row.id) ?? [] })),
+            };
+          })
         : null,
       this.budgetLines.listLinks(lineId, nature, { manager: context.manager }).catch(() => []),
       this.budgetLines.listAttachments(lineId, nature, { manager: context.manager }).catch(() => []),
@@ -2671,13 +2937,19 @@ export class AiQueryExecutor {
     // The contract's budget lines, both natures in one list: the OPEX lines come with the contract
     // (`contracts.get`), the CAPEX lines from their own link read. Null without the budget right,
     // which is not "none".
+    const linkedBudgetLineRows = [
+      ...(linkedSpendItems ?? []).map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.product_name, nature: 'opex' as const })),
+      ...((linkedCapexItems?.items ?? []) as Array<{ id: string; description: string | null; item_number?: number | null }>)
+        .map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.description, nature: 'capex' as const })),
+    ];
+    const lineMismatches = reads.budget && linkedBudgetLineRows.length > 0
+      ? await lineMismatchesAgainstContract(context.manager, context.tenantId, contractId, linkedBudgetLineRows.map((line) => line.id))
+      : null;
+    // Null without the budget right, which is not "none". A line outside data access is already
+    // absent; `mismatches` is empty when the visible line agrees with the contract.
     const linkedBudgetLines = reads.budget
       ? {
-        items: [
-          ...(linkedSpendItems ?? []).map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.product_name, nature: 'opex' as const })),
-          ...((linkedCapexItems?.items ?? []) as Array<{ id: string; description: string | null; item_number?: number | null }>)
-            .map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.description, nature: 'capex' as const })),
-        ],
+        items: linkedBudgetLineRows.map((line) => ({ ...line, mismatches: lineMismatches?.get(line.id) ?? [] })),
       }
       : null;
     // What the contract covers, each family on its module's read right:
@@ -2728,9 +3000,14 @@ export class AiQueryExecutor {
     return new Map(contractIds.map((id) => [id, coveredRecordsText(byContract.get(id))]));
   }
 
-  /** Whether the caller administers users, as the users list decides its columns (`canViewUserAdministration`). */
+  /**
+   * Whether the caller reads the administration fields of a person: users at admin level and access
+   * not limited, as the users list decides its columns (`canViewUserAdministration`, closed to a
+   * limited person by `frontend/src/auth/dataAccess.ts`). The rule of the registry
+   * (`UNSCOPED_ADMIN_FIELDS`).
+   */
   private async usersAdminView(context: AiExecutionContextWithManager): Promise<boolean> {
-    return (await this.policy?.canReadEntityType(context, 'users', context.manager, 'admin')) === true;
+    return (await this.policy?.canReadEntityType(context, 'data_access', context.manager)) === true;
   }
 
   /**
@@ -2763,7 +3040,7 @@ export class AiQueryExecutor {
 
   /** Whether the caller reads a family; nothing without the policy. */
   private readProbe(context: AiExecutionContextWithManager): AiReadProbe {
-    return async (entityType, level) => !!(await this.policy?.canReadEntityType(context, entityType, context.manager, level));
+    return async (entityType) => !!(await this.policy?.canReadEntityType(context, entityType, context.manager));
   }
 
   /**
@@ -2810,6 +3087,13 @@ export class AiQueryExecutor {
     if (entityType === 'support_gaps' || entityType === 'support_deadlines') {
       // A report row has no page of its own: it names its subject by `subject`.
       throw new BadRequestException('An End of support report row has no detail of its own: its `subject` names the record, read with get_entity_detail on its family (applications, assets or technologies) by that reference or name.');
+    }
+    if (entityType === 'role_permissions') {
+      throw new BadRequestException('A right of a role has no detail of its own: read the role with get_entity_detail on roles (by name), which lists all its rights.');
+    }
+    if (entityType === 'roles') return this.roleDetail(context, input.entity_id);
+    if (entityType === 'data_access') {
+      throw new BadRequestException('A row of Admin › Data access has no detail of its own: read the person with get_entity_detail on users (by name or email), which gives their data access.');
     }
     const entityId = await this.resolveDetailEntityId(context, entityType, input.entity_id);
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
@@ -3002,6 +3286,10 @@ export class AiQueryExecutor {
         row.turnover_year = selectedMetric.turnover;
         row.metrics_frozen = selectedMetric.is_frozen;
       }
+      // The company's Access tab, to an administrator of users whose own access is not limited only.
+      if (this.dataAccess && await this.dataAccessView(context)) {
+        row.data_access = this.companyAccessBlock(await this.dataAccess.companyAccess(context.manager, entityId));
+      }
       return this.toDetailResult(this.mapCompany(row), row);
     }
 
@@ -3082,14 +3370,30 @@ export class AiQueryExecutor {
     }
 
     if (entityType === 'users') {
-      const row = await this.users.findById(entityId, { manager: context.manager });
-      if (!row) throw new NotFoundException('User not found.');
+      const user = await this.users.findById(entityId, { manager: context.manager });
+      if (!user) throw new NotFoundException('User not found.');
       // A reader of users gets what the user's page gives them (`toUserLookup`): name, email, status.
       if (!(await this.usersAdminView(context))) {
-        const lookup = { id: row.id, email: row.email, first_name: row.first_name, last_name: row.last_name, status: row.status };
+        const lookup = { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name, status: user.status };
         return this.toDetailResult(this.mapUser(lookup, false), lookup);
       }
-      return this.toDetailResult(this.mapUser(row, true), row);
+      // `findById` gives the entity; `mapUser` reads the columns of the users list (company,
+      // department, primary role, team, contributor profile, availability, expertise), read by the
+      // list's own query for this one person.
+      const listed = await this.users.listForAi({ limit: 1 }, { manager: context.manager, tenantId: context.tenantId, ids: [user.id] });
+      const row = { ...user, ...(listed.items[0] ?? {}) };
+      // The Data access tab of the person's dialog, to an administrator of users whose own access
+      // is not limited only (the database does not guard the nodes: the gate is here).
+      if (!this.dataAccess || !(await this.dataAccessView(context))) {
+        return this.toDetailResult(this.mapUser(row, true), row);
+      }
+      const roles = await this.users.rolesOf(row, { manager: context.manager });
+      const access = await this.dataAccess.personAccess(context.manager, row.id);
+      const detail = { ...row, roles, data_access: access.mode };
+      return this.toDetailResult(this.mapUser(detail, true, true), {
+        ...detail,
+        data_access: this.personAccessBlock(access),
+      });
     }
 
     if (entityType === 'documents') {
@@ -3259,9 +3563,47 @@ export class AiQueryExecutor {
         version: item.version,
         state: item.state,
         alerts: item.alerts,
+        matching: item.matching,
         servers_reached: item.servers_reached,
         applications_reached: item.applications_reached,
       })),
+    });
+  }
+
+  /**
+   * A role by its name or id, with its rights as the Roles screen's matrix: every right, in the
+   * screen's order, at the level the role gives, null where it gives none, and `rights`, the rights
+   * it gives with the screen's words in the person's language. The people it is given to are
+   * counted, never named.
+   */
+  private async roleDetail(context: AiExecutionContextWithManager, entityId: string): Promise<AiEntityDetailDto> {
+    await this.assertRolesRead(context, 'roles');
+    const services = this.rolesServices();
+    const value = String(entityId ?? '').trim();
+    const role = await findAiRole(services, context.manager, value);
+    if (!role) throw entityNotFound('roles', value);
+    const matrix = await services.permissions.getRolePermissionMatrix(role.id, { manager: context.manager });
+    // The rights the Roles screen shows, and no other (`AI_SCREEN_RESOURCES`).
+    const permissions = Object.fromEntries(AI_SCREEN_RESOURCES.map((resource) => [resource, matrix[resource] ?? null]));
+    const language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    const rights = (Object.entries(permissions) as Array<[AiRolePermissionRow['resource'], AiRolePermissionRow['level'] | null]>)
+      .filter((entry): entry is [AiRolePermissionRow['resource'], AiRolePermissionRow['level']] => entry[1] != null)
+      .map(([resource, level]) => ({
+        resource,
+        resource_label: aiResourceLabel(resource, language),
+        level,
+        level_label: aiPermissionLevelLabel(level, language),
+      }));
+    return this.toDetailResult(this.mapRole(role), {
+      name: role.name,
+      description: role.description,
+      type: role.type,
+      user_count: role.user_count,
+      created_at: role.created_at,
+      updated_at: role.updated_at,
+      permissions,
+      rights,
+      permissions_note: '`permissions` gives every right of the Roles screen with the level the role gives (null: none); `rights` lists the rights it gives with the words of the Roles screen (`resource_label`, `level_label`), the ones to quote, never the codes.',
     });
   }
 

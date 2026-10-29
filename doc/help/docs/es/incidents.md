@@ -27,7 +27,7 @@ Vaya a **Panorama IT > Incidentes** para ver el registro. Haga clic en **Nuevo i
 **Campos obligatorios**:
 
 - **Título**: un resumen breve y objetivo, p. ej.: «Servicio de correo no disponible en la oficina de Lyon»
-- **Gravedad**: Crítica, Mayor, Menor o Baja
+- **Gravedad**: Crítica, Alta, Media o Baja
 - **Detectado**: cuándo se advirtió el incidente (por defecto, ahora)
 
 **Recomendados en la misma pantalla**:
@@ -64,7 +64,7 @@ La lista es el registro en sí: todos los incidentes, con la detección más rec
 | **Ref** | Referencia del incidente (p. ej.: `INC-14`), monoespaciada |
 | **Título** | Resumen breve (haga clic para abrir el incidente) |
 | **Categoría** | Clasificación procedente de la configuración de Panorama IT |
-| **Gravedad** | Crítica, Mayor, Menor, Baja, con un punto de color |
+| **Gravedad** | Crítica, Alta, Media, Baja, con un punto de color |
 | **Estado** | Abierto, En curso, Resuelto, Cerrado, Cancelado, con un punto de color |
 | **Detectado** | Cuándo se advirtió el incidente |
 | **Resuelto** | Cuándo se restableció el servicio |
@@ -78,7 +78,7 @@ La lista es el registro en sí: todos los incidentes, con la detección más rec
 
 **Filtrado**: Categoría, Gravedad, Estado y Responsable ofrecen filtros de casillas cuyas opciones se calculan a partir de los incidentes visibles, por lo que solo verá valores presentes en el conjunto de resultados. Las columnas de fecha ofrecen filtros de fecha, incluido un rango: filtre **Detectado** entre dos fechas para obtener un extracto trimestral o anual. La búsqueda cubre el título, la descripción, la referencia (`INC-14`) y los nombres y referencias de los activos y aplicaciones vinculados, de modo que una búsqueda por un nombre de host como `PAR-ESX-01` lista los incidentes de ese activo. Las palabras que solo aparecen en la revisión del incidente se encuentran mediante la búsqueda global y el asistente, no mediante este cuadro. La búsqueda global, el selector `@` de Plaid y el servidor MCP también encuentran un incidente por el nombre, la referencia `AST-N`, el nombre de host o el FQDN de sus activos vinculados.
 
-**Consejo**: combine Gravedad = Crítica, Mayor con un rango de **Detectado** para construir la lista corta que piden la mayoría de los comités de dirección y las auditorías.
+**Consejo**: combine Gravedad = Crítica, Alta con un rango de **Detectado** para construir la lista corta que piden la mayoría de los comités de dirección y las auditorías.
 
 Los filtros aplicados se conservan al abrir un incidente: **Anterior / Siguiente** en el espacio de trabajo recorre esa misma lista corta.
 
@@ -103,7 +103,7 @@ El cajón permanece visible en todas las pestañas y guarda a medida que edita.
 **Clasificación**:
 
 - **Categoría**: de la lista configurada en la configuración de Panorama IT
-- **Gravedad**: Crítica, Mayor, Menor, Baja. Elija el nivel que refleje el impacto de negocio en ese momento; cada cambio queda anotado en el diario, así que subirlo o bajarlo después es normal y trazable
+- **Gravedad**: Crítica, Alta, Media, Baja. Elija el nivel que refleje el impacto de negocio en ese momento; cada cambio queda anotado en el diario, así que subirlo o bajarlo después es normal y trazable
 - **Estado**: Abierto, En curso, Resuelto, Cerrado. El estado solo avanza. Volver atrás se hace con **Reabrir**, para que el registro no pueda rebobinarse discretamente
 - **Restringir a los administradores del registro**: ocultar el incidente a los demás lectores y colaboradores. El notificante y el responsable siguen viéndolo. Solo un administrador puede levantar la restricción, también después del cierre. Cuando está activa, la línea de metadatos muestra **Restringido**
 

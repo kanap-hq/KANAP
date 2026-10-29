@@ -56,6 +56,10 @@ On a contract, a project or a request, a person with limited data access sees th
 - The email address, phone numbers and notes of a contact never appear.
 - For long content, the entry says only that it changed: **Content changed** for the body of a knowledge document, **Working days changed** for the days of a working-day calendar, **Description changed**, **Purpose changed** or **Current situation changed** for the long texts of the other records.
 
+## Ask the assistant
+
+[Plaid](ai-assistant.md#tool-calls) reads the history of a record with the same rights as its page. Ask, for example: "Who changed the amounts of BL-12?" or "What changed on TEC-3 this year?" Plaid answers from the History tab only: for a record without one, it says that KANAP keeps no history for it.
+
 ## The full audit log
 
 The history keeps to what a reader needs. The complete technical record of every change, across the whole workspace, stays in **Admin > Audit log**. See [Audit log](admin.md#audit-log).

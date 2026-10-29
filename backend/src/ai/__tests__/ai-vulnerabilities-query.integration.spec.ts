@@ -27,6 +27,10 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   and sort of the lists' column (severe, any, none);
 //   readable with the applications right alone. And the question "which critical applications are
 //   touched by an exploited CVE?" replayed with the tools as the model calls them.
+// - Lot 6 (Plaid L6, lot A): the distinct CVE beside the rows (`distinct_count` per group,
+//   `distinct_total` on the aggregates and the list, other families unchanged), `estate` (in use in
+//   the estate, as the page's filter), `matching`, the group by `version`, and `feeds` (how fresh
+//   each feed is, never the error text).
 // The AI surface checks (tenant settings, provider) are not under test: stubbed open.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -394,7 +398,7 @@ async function testAggregatesAndFilterValues(harness: Harness, runner: QueryRunn
   await rejects(runner, () => aggregate({ group_by: 'state', metric: 'applications_reached', function: 'sum' }), /Unsupported metric field/,
     'applications_reached is no metric: an aggregate expression cannot carry the read scope');
   const scoped = await aggregate({ group_by: 'severity', filters: { applications_reached: { op: 'gt', value: 0 } } }, 'bc');
-  assert.deepEqual(scoped.groups, [{ key: 'critical', count: 1 }], 'an aggregate filter on applications_reached stays in scope');
+  assert.deepEqual(scoped.groups, [{ key: 'critical', count: 1, distinct_count: 1 }], 'an aggregate filter on applications_reached stays in scope');
 
   const values = await harness.executor.executeFilterValues(ctx(runner, s, 'full'), {
     entity_type: 'vulnerabilities', fields: ['technology', 'severity', 'state', 'servers_reached'],
@@ -402,6 +406,181 @@ async function testAggregatesAndFilterValues(harness: Harness, runner: QueryRunn
   assert.deepEqual(values.values.technology, ['PostgreSQL', 'VMware ESXi', 'Windows Server'], 'this tenant\'s technologies only');
   assert.deepEqual(values.values.state, ['to_review', 'handled', 'not_affected', 'all']);
   assert.deepEqual(values.fields_ignored, ['servers_reached'], 'a number has no value list');
+}
+
+/**
+ * Lot 6: the reads the page gives that the tools lacked. c1 has two rows (PostgreSQL 15 and no
+ * version): two rows, one CVE.
+ */
+async function testDistinctCves(harness: Harness, runner: QueryRunner, s: Seed) {
+  const aggregate = (input: Record<string, unknown>, entity_type = 'vulnerabilities') =>
+    harness.aggregates.execute(ctx(runner, s, 'full'), { entity_type, ...input });
+  const bySeverity = await aggregate({ group_by: 'severity', filters: EVERY_ROW });
+  assert.deepEqual(bySeverity.groups.map((g: any) => [g.key, g.count, g.distinct_count]).sort(),
+    [['critical', 2, 1], ['high', 1, 1], ['low', 1, 1], ['medium', 1, 1]], 'c1 is two rows and one CVE');
+  assert.deepEqual([bySeverity.total, bySeverity.distinct_total, bySeverity.distinct_label], [5, 4, 'cve'], 'rows and distinct CVE of the whole set');
+  const byTechnology = await aggregate({ group_by: 'technology', filters: EVERY_ROW });
+  assert.deepEqual(byTechnology.groups.find((g: any) => g.key === 'PostgreSQL'), { key: 'PostgreSQL', count: 3, distinct_count: 2 });
+  const byDefault = await aggregate({ group_by: 'state' });
+  assert.deepEqual([byDefault.total, byDefault.distinct_total], [3, 2], 'the page\'s default rows: r1, r5, r2');
+  const none = await aggregate({ group_by: 'severity', filters: { cve_id: 'CVE-1999-0001' } });
+  assert.deepEqual([none.total, none.distinct_total, none.distinct_label], [0, 0, 'cve'], 'nothing kept: zero CVE');
+  const servers = await aggregate({ group_by: 'state', metric: 'servers_reached', function: 'sum', filters: EVERY_ROW });
+  assert.equal(servers.distinct_total, 4, 'the set\'s distinct CVE with a metric too');
+  assert.ok(servers.groups.every((g: any) => g.distinct_count === undefined), 'a group\'s distinct CVE come with a count only');
+
+  const all = await list(harness, runner, s, { filters: EVERY_ROW });
+  assert.deepEqual([all.total, all.distinct_total, all.distinct_label], [5, 4, 'cve'], 'the list: rows and distinct CVE');
+  const page = await list(harness, runner, s, { filters: EVERY_ROW, limit: 2 });
+  assert.deepEqual([page.total, page.distinct_total, page.returned], [5, 4, 2], 'over every row kept, not the page');
+  assert.deepEqual(keys(s, page), ['r1', 'r5'], 'the order and the paging do not change');
+  assert.deepEqual([(await list(harness, runner, s, {})).distinct_total, (await list(harness, runner, s, { filters: { technology: ['TEC-1'], ...EVERY_ROW } })).distinct_total], [2, 2]);
+
+  // Another family: neither field.
+  const technologies = await aggregate({ group_by: 'family' }, 'technologies');
+  assert.ok(technologies.groups.length > 0);
+  for (const key of ['distinct_total', 'distinct_label', 'feeds']) assert.ok(!(key in technologies), `technologies: no ${key}`);
+  assert.ok(technologies.groups.every((g: any) => !('distinct_count' in g)), 'technologies: no distinct_count');
+  const technologyList = await harness.executor.execute(ctx(runner, s, 'full'), { entity_type: 'technologies' });
+  for (const key of ['distinct_total', 'distinct_label', 'feeds']) assert.ok(!(key in technologyList), `technology list: no ${key}`);
+}
+
+/**
+ * Lot E review: past the aggregates' ids cap (10,000 rows), `distinct_total` still counts the CVE
+ * of every row the filters keep, as query_entities and SQL do, and the result says it is truncated.
+ * 6,000 CVE on one version, the 4,500 latest on a second one: the first 10,000 rows hold only part
+ * of the CVE. Seeded last: the other tests count the small seed.
+ */
+async function testDistinctPastTheIdsCap(harness: Harness, runner: QueryRunner, s: Seed) {
+  const prefix = `CVE-2096-${s.tenantId.replace(/\D/g, '').slice(0, 4).padEnd(4, '0')}`;
+  await runner.query(
+    `INSERT INTO vulnerability_cves (cve_id, summary, severity, published_at)
+     SELECT $1 || lpad(g::text, 5, '0'), 'Bulk', 'low', '2021-01-01T00:00:00Z' FROM generate_series(1, 6000) g`,
+    [prefix],
+  );
+  const technology = await insertId(runner,
+    `INSERT INTO technologies (tenant_id, item_number, name, family, vulnerability_alerts) VALUES ($1, 9, 'Bulk', 'database', true)`, [s.tenantId]);
+  const v1 = await insertId(runner, `INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, '1')`, [s.tenantId, technology]);
+  const v2 = await insertId(runner, `INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, '2')`, [s.tenantId, technology]);
+  await runner.query(
+    `INSERT INTO technology_vulnerabilities (tenant_id, technology_id, technology_version_id, cve_id, match_basis, match_sources)
+     SELECT $1, $2, v.id, $4 || lpad(g::text, 5, '0'), 'version_in_range', ARRAY['nvd']
+       FROM generate_series(1, 6000) g
+       JOIN (VALUES ($3::uuid, 0), ($5::uuid, 1500)) AS v(id, after) ON g > v.after`,
+    [s.tenantId, technology, v1, prefix, v2],
+  );
+  const [sql] = await runner.query(
+    `SELECT count(*)::int AS rows, count(DISTINCT cve_id)::int AS cves FROM technology_vulnerabilities WHERE tenant_id = $1`, [s.tenantId]);
+  assert.deepEqual([sql.rows, sql.cves], [10_505, 6_004], 'the seed: 10,505 rows, 6,004 CVE');
+
+  const aggregate = await harness.aggregates.execute(ctx(runner, s, 'full'), { entity_type: 'vulnerabilities', group_by: 'state', filters: EVERY_ROW });
+  assert.deepEqual([aggregate.total, aggregate.distinct_total, aggregate.distinct_label, aggregate.truncated], [10_505, 6_004, 'cve', true],
+    'every CVE the filters keep, past the 10,000 ids');
+  const listed = await list(harness, runner, s, { filters: EVERY_ROW, limit: 1 });
+  assert.deepEqual([listed.total, listed.distinct_total], [10_505, 6_004], 'the list agrees');
+}
+
+async function testVersionGroup(harness: Harness, runner: QueryRunner, s: Seed) {
+  const byVersion = await harness.aggregates.execute(ctx(runner, s, 'full'), { entity_type: 'vulnerabilities', group_by: 'version', filters: EVERY_ROW });
+  assert.deepEqual(byVersion.groups.map((g: any) => [g.key, g.count, g.distinct_count]).sort(), [
+    ['PostgreSQL (no version recorded)', 1, 1],
+    ['PostgreSQL 12', 1, 1],
+    ['PostgreSQL 15', 1, 1],
+    ['VMware ESXi 8', 1, 1],
+    ['Windows Server 2019', 1, 1],
+  ], 'the technology and the version; no version as the page\'s version=none');
+}
+
+/** `estate` and `matching`, on rows added in a savepoint. */
+async function testEstateAndMatching(harness: Harness, runner: QueryRunner, s: Seed) {
+  await runner.query('SAVEPOINT lot6_estate');
+  try {
+    const tenantId = s.tenantId;
+    const technology = (n: number, name: string) => insertId(runner,
+      `INSERT INTO technologies (tenant_id, item_number, name, family) VALUES ($1, $2, $3, 'database')`, [tenantId, n, name]);
+    // Oracle: installed only on a retired server, declared only by a disabled application.
+    const oracle = await technology(4, 'Oracle Database');
+    const oracle19 = await insertId(runner, `INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, '19')`, [tenantId, oracle]);
+    await runner.query(`INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id) VALUES ($1, $2, $3, $4)`,
+      [tenantId, s.assets.srvOld.id, oracle, oracle19]);
+    await runner.query(`INSERT INTO application_technologies (tenant_id, application_id, technology_id, technology_version_id) VALUES ($1, $2, $3, $4)`,
+      [tenantId, s.apps.legacy, oracle, oracle19]);
+    // Kafka: declared only by Payroll, in service, out of the Business Contributor's scope.
+    const kafka = await technology(5, 'Kafka');
+    await runner.query(`INSERT INTO application_technologies (tenant_id, application_id, technology_id) VALUES ($1, $2, $3)`, [tenantId, s.apps.payroll, kafka]);
+    const row = (technologyId: string, versionId: string | null, cveId: string) => insertId(runner,
+      `INSERT INTO technology_vulnerabilities (tenant_id, technology_id, technology_version_id, cve_id, match_basis) VALUES ($1, $2, $3, $4, $5)`,
+      [tenantId, technologyId, versionId, cveId, versionId ? 'version_in_range' : 'version_unknown']);
+    const r6 = await row(oracle, oracle19, s.cve.c3);
+    const r7 = await row(kafka, null, s.cve.c4);
+    // r3 (handled) no longer matches: kept for its state.
+    await runner.query(`UPDATE technology_vulnerabilities SET matching = false WHERE tenant_id = $1 AND id = $2`, [tenantId, s.rows.r3]);
+
+    const ids = async (filters: Record<string, unknown>, user: keyof Seed['users'] = 'full') =>
+      (await list(harness, runner, s, { filters: { ...EVERY_ROW, ...filters } }, user)).items.map((item: any) => item.id).sort();
+    const original = Object.values(s.rows);
+    assert.deepEqual(await ids({ estate: ['false'] }), [r6], 'a retired server and a disabled application: not in the estate');
+    assert.deepEqual(await ids({ estate: ['true'] }), [...original, r7].sort(), 'installed on an asset in service, or declared by an application in service');
+    const all = await list(harness, runner, s, { filters: EVERY_ROW });
+    const byId = new Map<string, any>(all.items.map((item: any) => [item.id, item]));
+    assert.deepEqual([byId.get(r6).metadata.estate, byId.get(s.rows.r1).metadata.estate], [false, true]);
+    // A boolean on the technology, as the page's filter: true for a Business Contributor too, and no application named.
+    const bc = await list(harness, runner, s, { filters: { ...EVERY_ROW, technology: ['TEC-5'] } }, 'bc');
+    assert.deepEqual(bc.items.map((item: any) => [item.metadata.estate, item.metadata.applications_reached]), [[true, 0]],
+      'Kafka is in the estate through Payroll, which the contributor does not read');
+    assert.doesNotMatch(JSON.stringify(bc.items), /Payroll|APP-2/);
+    const byEstate = await harness.aggregates.execute(ctx(runner, s, 'full'), { entity_type: 'vulnerabilities', group_by: 'estate', filters: EVERY_ROW });
+    assert.deepEqual(byEstate.groups.map((g: any) => [g.key, g.count, g.distinct_count]).sort(), [['false', 1, 1], ['true', 6, 4]]);
+    const inEstateCritical = await harness.aggregates.execute(ctx(runner, s, 'full'), {
+      entity_type: 'vulnerabilities', group_by: 'severity', filters: { estate: ['true'], severity: ['critical'], published_at: { op: 'after', value: '2024-01-01' } },
+    });
+    assert.deepEqual([inEstateCritical.total, inEstateCritical.distinct_total], [2, 1], 'the home tile\'s recipe: estate, severity, published_at');
+
+    assert.deepEqual(await ids({ matching: ['false'] }), [s.rows.r3], 'no longer matching');
+    assert.deepEqual((await list(harness, runner, s, { filters: { matching: ['false'] } })).total, 0, 'r3 is handled: out of the default rows');
+    assert.equal(byId.get(s.rows.r3).metadata.matching, false);
+    assert.equal(byId.get(s.rows.r1).metadata.matching, true);
+    const detail = await harness.executor.executeDetail(ctx(runner, s, 'full'), { entity_type: 'vulnerabilities', entity_id: s.rows.r3 });
+    assert.deepEqual([detail.data.matching, detail.data.estate], [false, true], 'in the detail');
+    assert.deepEqual(detail.data.rows.map((r: any) => [r.technology, r.matching]).sort(), [['TEC-1', false], ['TEC-4', true]], 'each row of the CVE');
+    const r6Detail = await harness.executor.executeDetail(ctx(runner, s, 'full'), { entity_type: 'vulnerabilities', entity_id: r6 });
+    assert.equal(r6Detail.data.estate, false);
+  } finally {
+    await runner.query('ROLLBACK TO SAVEPOINT lot6_estate');
+  }
+}
+
+/** `feeds`: the feeds that are on, their last success and whether they fail, never the error text. */
+async function testFeeds(harness: Harness, runner: QueryRunner, s: Seed) {
+  await runner.query('SAVEPOINT lot6_feeds');
+  const cveList = harness.features.CVE_LIST_FEED_ENABLED;
+  try {
+    // A platform table, without a tenant column.
+    await runner.query(
+      `INSERT INTO vulnerability_feed_sources (source, last_success_at, last_attempt_at, last_error)
+       VALUES ('nvd', '2026-10-01T06:00:00Z', '2026-10-02T06:00:00Z', 'mirror https://mirror.internal.example failed'),
+              ('cve_org', '2026-10-02T07:00:00Z', '2026-10-02T07:00:00Z', NULL)
+       ON CONFLICT (source) DO UPDATE SET last_success_at = EXCLUDED.last_success_at, last_attempt_at = EXCLUDED.last_attempt_at, last_error = EXCLUDED.last_error`,
+    );
+    harness.features.CVE_LIST_FEED_ENABLED = true;
+    // As text: the dispatcher's redaction would empty a Date (ai-mcp-directory-readiness.spec.ts).
+    const feeds = (result: any) => result.feeds.map((feed: any) => [feed.source, feed.name, feed.last_success_at, feed.failing]);
+    const expected = [['nvd', 'NVD', '2026-10-01T06:00:00.000Z', true], ['cve_org', 'CVE.org', '2026-10-02T07:00:00.000Z', false]];
+    const listed = await list(harness, runner, s, {});
+    assert.deepEqual(feeds(listed), expected, 'the list: an attempt newer than the last success, with an error kept, is failing');
+    const aggregated = await harness.aggregates.execute(ctx(runner, s, 'full'), { entity_type: 'vulnerabilities', group_by: 'severity' });
+    assert.deepEqual(feeds(aggregated), expected, 'the aggregates');
+    const empty = await harness.aggregates.execute(ctx(runner, s, 'full'), { entity_type: 'vulnerabilities', group_by: 'severity', filters: { cve_id: 'CVE-1999-0001' } });
+    assert.deepEqual(feeds(empty), expected, 'an aggregate that keeps nothing too');
+    for (const result of [listed, aggregated]) {
+      assert.doesNotMatch(JSON.stringify(result), /mirror|last_error|last_attempt/, 'never the error text');
+    }
+    harness.features.CVE_LIST_FEED_ENABLED = false;
+    assert.deepEqual(feeds(await list(harness, runner, s, {})).map((feed: any) => feed[0]), ['nvd'], 'as the page: the feeds that are on');
+  } finally {
+    harness.features.CVE_LIST_FEED_ENABLED = cveList;
+    await runner.query('ROLLBACK TO SAVEPOINT lot6_feeds');
+  }
 }
 
 async function testDetail(harness: Harness, runner: QueryRunner, s: Seed) {
@@ -448,10 +627,22 @@ async function testFeedOff(harness: Harness, runner: QueryRunner, s: Seed) {
       ['get_filter_values', { entity_type: 'vulnerabilities', fields: ['state'] }],
       ['get_entity_detail', { entity_type: 'vulnerabilities', entity_id: s.cve.c1 }],
     ] as const) {
-      await rejects(runner, () => harness.tools.execute(ctx(runner, s, 'admin'), tool, input), /vulnerabilityFeed is not available/, `${tool}, feed off`);
+      await rejects(runner, () => harness.tools.execute(ctx(runner, s, 'admin'), tool, input), /^Vulnerability tracking is turned off in this deployment\./, `${tool}, feed off`);
     }
-    await rejects(runner, () => harness.executor.execute(ctx(runner, s, 'admin'), { entity_type: 'vulnerabilities' }), /vulnerabilityFeed/,
+    await rejects(runner, () => harness.executor.execute(ctx(runner, s, 'admin'), { entity_type: 'vulnerabilities' }), /^Vulnerability tracking is turned off in this deployment\./,
       'the list itself refuses, whatever the caller');
+    // The family rule of the policy: the same plain sentence; the feature's code stays internal.
+    await runner.query('SAVEPOINT family_rule');
+    try {
+      await harness.policy.assertEntityTypeReadAccess(ctx(runner, s, 'admin'), 'vulnerabilities', runner.manager);
+      assert.fail('the family rule should refuse');
+    } catch (error: any) {
+      if (error?.code === 'ERR_ASSERTION') throw error;
+      assert.equal(error.message, 'Vulnerability tracking is turned off in this deployment.');
+      assert.deepEqual([error.getResponse().code, error.getResponse().feature], ['FEATURE_DISABLED', 'vulnerabilityFeed'], 'the code, for the program only');
+    } finally {
+      await runner.query('ROLLBACK TO SAVEPOINT family_rule');
+    }
     const readable = await harness.policy.listReadableEntityTypes(ctx(runner, s, 'admin'), ['technologies', 'vulnerabilities'], runner.manager);
     assert.deepEqual(readable, ['technologies'], 'left out of the readable families');
     assert.equal(await harness.policy.canReadEntityType(ctx(runner, s, 'admin'), 'vulnerabilities', runner.manager), false);
@@ -565,9 +756,9 @@ async function testFamilies() {
   const { AI_QUERY_ENTITY_TYPES, AI_SEARCH_ENTITY_TYPES } = require('../ai.types');
   assert.ok(AI_QUERY_ENTITY_TYPES.includes('vulnerabilities'), 'listable and aggregatable');
   assert.ok(!AI_SEARCH_ENTITY_TYPES.includes('vulnerabilities'), 'not searched: no search index for it');
-  // A family read without a search index is listed only: the technology versions and the two
-  // End of support report lists have none either.
-  const listedOnly = new Set(['vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines']);
+  // A family read without a search index is listed only: the technology versions, the two
+  // End of support report lists, the roles of Admin › Roles and Admin › Data access have none either.
+  const listedOnly = new Set(['vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines', 'roles', 'role_permissions', 'data_access']);
   assert.ok(AI_QUERY_ENTITY_TYPES.includes('technology_versions'), 'listable and aggregatable');
   assert.ok(AI_QUERY_ENTITY_TYPES.includes('support_gaps') && AI_QUERY_ENTITY_TYPES.includes('support_deadlines'), 'listable and aggregatable');
   assert.deepEqual(AI_QUERY_ENTITY_TYPES.filter((type: string) => !listedOnly.has(type)), [...AI_SEARCH_ENTITY_TYPES], 'every searched family is listable');
@@ -588,12 +779,17 @@ async function run() {
       await testFilters(harness, runner, s);
       await testSorts(harness, runner, s);
       await testAggregatesAndFilterValues(harness, runner, s);
+      await testDistinctCves(harness, runner, s);
+      await testVersionGroup(harness, runner, s);
+      await testEstateAndMatching(harness, runner, s);
+      await testFeeds(harness, runner, s);
       await testDetail(harness, runner, s);
       await testInfrastructureRight(harness, runner, s);
       await testFeedOff(harness, runner, s);
       await testTenantIsolation(harness, runner, s);
       await testAssetAndApplicationCounts(harness, runner, s);
       await testCriticalApplicationsQuestion(harness, runner, s);
+      await testDistinctPastTheIdsCap(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

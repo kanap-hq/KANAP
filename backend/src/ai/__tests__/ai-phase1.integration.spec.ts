@@ -48,6 +48,8 @@ import { UsersService } from '../../users/users.service';
 import { AiAdminOverviewService } from '../ai-admin-overview.service';
 import { AiEntityService } from '../ai-entity.service';
 import { AiToolRegistry } from '../ai-tool.registry';
+import { AiRecordHistoryService } from '../ai-record-history.service';
+import { RecordHistoryService } from '../../audit/record-history.service';
 import { AiToolName } from '../ai.types';
 import { AiConversationRetentionService } from '../../cleanup/ai-conversation-retention.service';
 import { AiAggregateExecutor } from '../query/ai-aggregate.executor';
@@ -1465,6 +1467,7 @@ function createPermissivePolicyStub() {
     canReadEntityType: async () => true,
     assertKnowledgeReadAccess: async () => undefined,
     assertEntityTypeReadAccess: async () => undefined,
+    adminFamiliesGap: async () => 'right',
   } as any;
 }
 
@@ -1728,6 +1731,19 @@ function buildToolIsolationCases(
             assert.equal(result.entity.id, fixtures.graphA.taskId);
             assert.equal(result.data.id, fixtures.graphA.taskId);
             assert.equal(result.data.tenant_id, undefined);
+          },
+        },
+      ];
+
+    case 'get_record_history':
+      return [
+        {
+          label: 'assets-history',
+          input: { entity_type: 'assets', entity_id: fixtures.graphA.assetId },
+          assertResult: (result: any) => {
+            assert.equal(result.entity.type, 'assets');
+            assert.equal(Array.isArray(result.items), true);
+            assert.match(result.note, /History tab/);
           },
         },
       ];
@@ -2153,6 +2169,7 @@ function buildToolIsolationCases(
     case 'update_technology_people':
     case 'update_technology_web_links':
     case 'set_technology_vulnerability_alerts':
+    case 'change_vulnerability_state':
     case 'update_entity_relations':
     case 'update_task_fields':
     case 'update_task_status':
@@ -2314,6 +2331,7 @@ async function testAiEntityServicePhase1TenantDefenseInDepth() {
         canReadKnowledge: async () => true,
         canReadEntityType: async () => true,
         assertEntityTypeReadAccess: async () => undefined,
+        adminFamiliesGap: async () => 'right',
       } as any,
     );
     const entityServiceWithoutKnowledge = new AiEntityService(
@@ -2331,6 +2349,7 @@ async function testAiEntityServicePhase1TenantDefenseInDepth() {
         canReadKnowledge: async () => false,
         canReadEntityType: async () => true,
         assertEntityTypeReadAccess: async () => undefined,
+        adminFamiliesGap: async () => 'right',
       } as any,
     );
 
@@ -2543,6 +2562,11 @@ async function testAiToolRegistryIsolationCoverageTracksRegisteredTools() {
         runner.manager.getRepository(Location),
         {} as any,
       ),
+      new AiRecordHistoryService(
+        { ...policy, effectiveAccess: async () => ({ isAdmin: true, permissions: {} }) },
+        queryExecutor,
+        new RecordHistoryService(),
+      ),
     );
 
     // An administrator of tenant A: a task names its project and phase only to a reader of projects
@@ -2696,6 +2720,7 @@ async function testAiEntityCommentsReturnsPaginatedCommentFeedsAndStaysTenantSco
         canReadKnowledge: async () => true,
         canReadEntityType: async () => true,
         assertEntityTypeReadAccess: async () => undefined,
+        adminFamiliesGap: async () => 'right',
       } as any,
     );
 
@@ -2806,6 +2831,7 @@ async function testAiEntityContextMarksRecentActivityAsTruncatedWhenCapped() {
         canReadKnowledge: async () => true,
         canReadEntityType: async () => true,
         assertEntityTypeReadAccess: async () => undefined,
+        adminFamiliesGap: async () => 'right',
       } as any,
     );
 

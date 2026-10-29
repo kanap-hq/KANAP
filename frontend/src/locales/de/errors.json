@@ -9,6 +9,7 @@
   "USER_DISABLED": "Dieses Konto wurde deaktiviert.",
   "MISSING_CREDENTIALS": "E-Mail-Adresse und Passwort sind erforderlich.",
   "INVALID_TOKEN": "Der Link ist ungültig oder abgelaufen.",
+  "INVALID_ID": "Ungültige Kennung.",
   "TOKEN_REQUIRED": "Ein Zurücksetzungs-Token ist erforderlich.",
   "TOKEN_EXPIRED": "Dieser Link ist abgelaufen. Bitte fordern Sie einen neuen an.",
   "MISSING_TOKEN": "Authentifizierung erforderlich. Bitte melden Sie sich an.",
@@ -342,5 +343,11 @@
   "DATA_ACCESS_NODE_ID_FORBIDDEN": "Alles deckt bereits alle Daten ab und benötigt weder ein Unternehmen noch eine Kostenstelle.",
   "DATA_ACCESS_NODE_ID_REQUIRED": "Wählen Sie ein Unternehmen oder eine Kostenstelle.",
   "DATA_ACCESS_NODE_TYPE_INVALID": "Wählen Sie ein Unternehmen, eine Kostenstelle oder die Option Alles.",
-  "DATA_ACCESS_ACCESS_INVALID": "Wählen Sie Lesen oder Bearbeiten."
+  "DATA_ACCESS_ACCESS_INVALID": "Wählen Sie Lesen oder Bearbeiten.",
+  "DATA_ACCESS_MODE_INVALID": "Wählen Sie alle Daten oder einen begrenzten Datenzugriff.",
+  "DATA_ACCESS_ALL_WITH_NODES": "Alle Daten benötigen weder ein Unternehmen noch eine Kostenstelle.",
+  "DATA_ACCESS_NODES_INVALID": "Die Liste der Unternehmen und Kostenstellen ist ungültig.",
+  "DATA_ACCESS_NODE_ID_INVALID": "Wählen Sie ein gültiges Unternehmen oder eine gültige Kostenstelle.",
+  "DATA_ACCESS_NODE_DUPLICATE": "Dasselbe Unternehmen, dieselbe Kostenstelle oder die Option Alles erscheint zweimal.",
+  "DATA_ACCESS_QUERY_REPEATED": "Geben Sie {{parameter}} nur einmal an."
 }

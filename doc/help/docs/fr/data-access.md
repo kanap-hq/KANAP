@@ -174,6 +174,10 @@ Le séparateur, l'encodage et les deux étapes de l'import sont ceux de tous les
 
 Chaque changement de l'accès d'une personne est enregistré dans le [Journal d'audit](admin.md#journal-daudit), dans la table **Accès aux données**. L'entrée nomme la personne et montre le mode, les nœuds et leur accès avant et après. Sa source est **Écran** ou **Import**. Un enregistrement sans effet n'est pas journalisé.
 
+## Demander à l'assistant
+
+[Plaid](ai-assistant.md#tool-calls) lit cette page et l'onglet Accès des sociétés pour un administrateur des utilisateurs qui a accès à toutes les données. Demandez par exemple : « Qui est limité à Alpha Spain ? », « Quelles personnes limitées n'ont aucun nœud ? » ou « Que peut voir Marta Ruiz ? » Les changements d'accès d'une personne restent sur les écrans décrits ici.
+
 ## Ce que voit une personne limitée { #what-a-limited-person-sees }
 
 Pour une personne limitée, le budget et les contrats ne contiennent que ce que couvre son accès.

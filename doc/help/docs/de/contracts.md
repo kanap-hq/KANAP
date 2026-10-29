@@ -158,7 +158,7 @@ Die Seite berechnet diese Daten neu, während Sie Beginn, Laufzeit, Kündigungsf
 
 ### Budget
 
-Der Reiter listet die verknüpften Budgetzeilen, OPEX und CAPEX zusammen, mit Referenz (`BL-12`), Name, Typ und Unternehmen. Mit der Auswahl unter der Tabelle verknüpfen oder entfernen Sie Zeilen.
+Der Reiter listet die verknüpften Budgetzeilen, OPEX und CAPEX zusammen, mit Referenz (`BL-12`), Name, Typ und Unternehmen. Mit der Auswahl unter der Tabelle verknüpfen oder entfernen Sie Zeilen. Eine Zeile, deren zahlendes Unternehmen, Kostenstelle, Lieferant oder Währung vom Vertrag abweicht, zeigt eine kleine orangefarbene Markierung. Fahren Sie mit der Maus über die Markierung, um jeden Unterschied zu sehen, mit dem Wert auf der Zeile und dem Wert auf dem Vertrag. Die Auswahl zeigt dieselbe Markierung an einer Zeile, bevor Sie sie verknüpfen. Die Verknüpfung bleibt möglich. Die Markierung erscheint für eine Zeile, die Sie lesen dürfen.
 
 Mit Lesezugriff auf Budgetzeilen (`budget:reader`) zeigt der Reiter auch Zahlen:
 
@@ -246,7 +246,7 @@ Der Abschnitt fehlt, wenn es nichts vorzuschlagen gibt.
 
 - **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
 - **Datei anhängen** öffnet die Dateiauswahl. Sie können Dateien auch auf den Abschnitt ziehen.
-- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
+- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Entfernen eines Links zeigt eine Meldung und bietet **Rückgängig** an, womit der Link wieder angelegt wird. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
 
 ### Einen Vertrag löschen
 

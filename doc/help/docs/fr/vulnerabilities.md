@@ -147,7 +147,7 @@ Réglez l'état de chaque version :
 | **Traitée** | La version est corrigée, ou un contournement est en place |
 | **Non concernée** | La vulnérabilité ne s'applique pas à votre installation |
 
-La note dit comment, par exemple « corrigé le 12 mars, changement CHG-123 ». Elle s'enregistre quand vous quittez le champ. Le journal d'audit garde qui a changé un état, et quand.
+La note dit comment, par exemple « corrigé le 12 mars, changement CHG-123 ». Elle s'enregistre quand vous quittez le champ. Le journal d'audit garde qui a changé un état, et quand. Vous pouvez aussi demander à [Plaid](#demander-a-lassistant) de changer un état.
 
 KANAP ne change jamais un état que vous avez choisi. Quand une version ne correspond plus (vous l'avez mise à jour, la technologie a été retirée, une source a changé ses données), une ligne encore **À traiter** disparaît. Une ligne que vous avez traitée reste, grisée, avec son état ; elle revient telle quelle si la version correspond de nouveau.
 
@@ -185,7 +185,23 @@ Les destinataires sont les responsables IT de la technologie dont le compte est 
 - **Listes des actifs et des applications** : la colonne **Vulnérabilités à traiter**. Voir [Actifs](assets.md#working-with-the-list) et [Applications](applications.md#working-with-the-list).
 - **Fiches actif et application** : la section **Vulnérabilités** et le badge des vulnérabilités graves dans l'en-tête. Voir [Actifs](assets.md#operations) et [Applications](applications.md#operations).
 - **Tableau de bord** : la tuile **Vulnérabilités du parc**. Voir [Mon tableau de bord](my-dashboard.md#vulnerabilities).
-- **Plaid** : l'assistant répond aux questions sur les vulnérabilités. Voir [Plaid](ai-assistant.md#tool-calls).
+- **Plaid** : l'assistant répond aux questions sur les vulnérabilités et change leur état. Voir [Demander à l'assistant](#demander-a-lassistant).
+
+## Demander à l'assistant
+
+[Plaid](ai-assistant.md) lit les vulnérabilités avec les mêmes droits que cette page. Il compte les lignes et les CVE distinctes, comme la page, garde les technologies en usage dans le parc quand vous le demandez, et dit quand KANAP a lu chaque source pour la dernière fois. Demandez par exemple : « Combien de vulnérabilités critiques sont à traiter sur PostgreSQL, par version ? » ou « Quelles CVE exploitées touchent APP-4 ? »
+
+Avec `infrastructure:member`, Plaid change aussi l'état des lignes, et chaque changement arrive sous forme d'aperçu que vous approuvez :
+
+- Nommez une CVE pour changer toutes ses lignes, ou ajoutez une technologie, ou une technologie et une version.
+- Ou décrivez les lignes avec les filtres de la page, par exemple les lignes critiques d'une technologie.
+- Donnez une note pour l'écrire sur chaque ligne. Sans note, chaque ligne garde la sienne.
+
+Un changement porte sur 5 000 lignes au plus, comme **Changer l'état**. L'aperçu dit combien de lignes et de CVE changent, et combien sont hors des alertes. Quand des lignes qui ne correspondent plus repassent **À traiter**, il les compte : elles disparaissent au prochain rapprochement. **Acceptée** n'est pas un état : Plaid propose **Traitée** avec une note comme « risque accepté », ou **Non concernée**, et attend votre choix. Demandez à Plaid d'annuler un changement qu'il a fait dans la conversation. Il refuse quand une ligne a changé depuis.
+
+Demandez par exemple : « Passe CVE-2024-3094 en non concernée sur TEC-3 version 5.6, le paquet n'est pas installé » ou « Passe les lignes critiques de PostgreSQL 14 en traitée avec la note "corrigé en mars" ».
+
+Le nouveau rapprochement (**Actualiser**) reste dans la section **Vulnérabilités** de la technologie. Voir [Technologies](technologies.md#vulnerabilites).
 
 ## Conseils
 

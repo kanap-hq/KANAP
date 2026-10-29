@@ -411,6 +411,30 @@ describe('PortfolioRelationsTab', () => {
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/portfolio/projects/p-1/attachments/a-1'));
   });
 
+  it('offers to put a removed web link back with the same name and URL', async () => {
+    renderTab('project', projectRelations());
+    expect(await screen.findByText('Vendor portal')).toBeTruthy();
+    let removed = false;
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/portfolio/projects/p-1/relations') return { data: projectRelations() } as never;
+      if (url === '/portfolio/projects/p-1') return { data: removed ? { ...LINKS, urls: [] } : LINKS } as never;
+      return { data: { items: [] } } as never;
+    });
+    mocked.post.mockImplementation(async (url: string) => {
+      if (url === '/portfolio/projects/p-1/urls') removed = true;
+      return { data: { ok: true } } as never;
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeNamed(name=Vendor portal)' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/portfolio/projects/p-1/urls', { urls: [] }));
+    expect(await screen.findByText('common:linksAndFiles.removed(name=Vendor portal)')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/portfolio/projects/p-1/urls', {
+      urls: [{ url: 'https://me.example.com', label: 'Vendor portal' }],
+    }));
+  });
+
   it('drops a link at once and restores it when the replacement is refused', async () => {
     rights.portfolio_requests = 'member'; // the server writes a request's links and files at member
     const onRelationsChange = renderTab('request', requestRelations());

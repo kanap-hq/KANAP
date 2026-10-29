@@ -88,6 +88,8 @@ export interface SettingsControlsProps {
   saving?: boolean;
   dirty?: boolean;
   addLabel?: string;
+  /** Hides the add button and the save status. The list stays visible and cannot be changed. */
+  readOnly?: boolean;
 }
 
 /**
@@ -100,6 +102,7 @@ export function SettingsControls({
   saving,
   dirty,
   addLabel: addLabelProp,
+  readOnly = false,
 }: SettingsControlsProps) {
   const { t } = useTranslation('common');
   const addLabel = addLabelProp ?? t('settingsSection.addItem');
@@ -118,6 +121,8 @@ export function SettingsControls({
   }, [saving]);
 
   const status = saving ? t('status.saving') : justSaved && !dirty ? t('status.saved') : '';
+
+  if (readOnly) return null;
 
   return (
     <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="flex-end" sx={{ mb: 1 }}>

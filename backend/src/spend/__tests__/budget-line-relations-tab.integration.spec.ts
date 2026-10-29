@@ -349,6 +349,8 @@ async function testPayload() {
         id: seed.contracts.alpha, name: 'Alpha contract', supplier_name: seed.supplierName,
         end_date: '2026-12-31', yearly_amount: 1200, currency: 'EUR', auto_renewal: true,
         in_renewal_window: true, status: 'enabled',
+        // The line has no paying company; the contract names one. Cost center is unset on the contract, so it is not checked.
+        mismatches: [{ field: 'paying_company', line_value: null, contract_value: `Line company ${'blrel-payload'}` }],
       },
     ]);
     assert.deepEqual(res.assets, [

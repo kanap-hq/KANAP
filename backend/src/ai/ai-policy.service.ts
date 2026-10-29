@@ -6,6 +6,8 @@ import { StripeConfigService } from '../billing/stripe';
 import { Subscription } from '../billing/subscription.entity';
 import { evaluateSubscriptionAccess } from '../billing/subscription-freeze.util';
 import { Features } from '../config/features';
+import { DataAccessReservedException, dataAccessModeOf } from '../data-access/reserved-operations';
+import type { AiAdminFamiliesGap } from './ai-unread-families';
 import { PermissionLevel, PermissionsService } from '../permissions/permissions.service';
 import { Tenant, TenantStatus } from '../tenants/tenant.entity';
 import { UsersService } from '../users/users.service';
@@ -74,7 +76,46 @@ const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> =
   documents: 'knowledge',
   // The CVE rows of the technologies, as the vulnerabilities page reads them.
   vulnerabilities: 'infrastructure',
+  // The roles and their rights, as Admin › Roles reads them (`GET /roles`, `GET /roles/:id/permissions`).
+  roles: 'users',
+  role_permissions: 'users',
+  // The limited persons and their nodes, as Admin › Data access reads them (`GET /data-access`).
+  data_access: 'users',
 };
+
+/**
+ * The families whose screen asks more than the reader level of their right: Admin › Roles and
+ * Admin › Data access need users at admin level. Every check of a family reads it (`canReadEntityType`,
+ * `assertEntityTypeReadAccess`, `listReadableEntityTypes`); a lower level asked by a caller is
+ * raised to it.
+ */
+const ENTITY_MIN_LEVEL: Partial<Record<AiQueryEntityType | AiContextEntityType, PermissionLevel>> = {
+  roles: 'admin',
+  role_permissions: 'admin',
+  data_access: 'admin',
+};
+
+/**
+ * The families reserved to people whose access is not limited, as their screen: Admin › Roles is
+ * closed to a person in limited access whatever their role (`frontend/src/auth/dataAccess.ts`), and
+ * the routes of Admin › Data access refuse them (`@ReservedToUnscopedDataAccess`). The database
+ * does not protect the nodes: this check is the only gate.
+ * Checked in the person's transaction (`dataAccessModeOf`), refused with the reserved message.
+ */
+const UNSCOPED_ONLY_ENTITY_TYPES: ReadonlySet<string> = new Set(['roles', 'role_permissions', 'data_access']);
+
+/** The screen whose right a family's refusal names, for the families read as their screen. */
+const ENTITY_SCREEN: Partial<Record<AiQueryEntityType | AiContextEntityType, string>> = {
+  roles: 'Admin › Roles',
+  role_permissions: 'Admin › Roles',
+  data_access: 'Admin › Data access',
+};
+
+/** The level a family is read at: the caller's, raised to the family's minimum. */
+function entityReadLevel(entityType: AiQueryEntityType | AiContextEntityType, level?: PermissionLevel): PermissionLevel {
+  const minimum = ENTITY_MIN_LEVEL[entityType] ?? 'reader';
+  return level && LEVEL_RANK[level] > LEVEL_RANK[minimum] ? level : minimum;
+}
 
 /** Each right in plain words, as a refusal names it to the person (never its code, P4-9). */
 const RIGHT_PLAIN_NAMES: Record<string, string> = {
@@ -109,7 +150,7 @@ const LEVEL_PLAIN_VERBS: Record<PermissionLevel, string> = {
  * The refusal of a missing right, in plain words: which right, at which level (P4-5, P4-9). The
  * chat model says it again in the person's language; an MCP client reads it as is.
  */
-export function missingRightMessage(resource: string, minimumLevel: PermissionLevel): string {
+export function missingRightMessage(resource: string, minimumLevel: PermissionLevel, screen?: string): string {
   if (resource === 'ai_chat') {
     return minimumLevel === 'reader'
       ? 'Your role does not give access to Plaid. An administrator can add it to your role.'
@@ -118,7 +159,8 @@ export function missingRightMessage(resource: string, minimumLevel: PermissionLe
   const name = RIGHT_PLAIN_NAMES[resource];
   // The rights of the settings and the MCP surface keep their code: the administration screens read it.
   if (!name) return `Missing required permission ${resource}:${minimumLevel}.`;
-  return `You need the right to ${LEVEL_PLAIN_VERBS[minimumLevel] ?? minimumLevel} ${name}, which your role does not give. An administrator can add it to your role.`;
+  const where = screen ? ` (the right the ${screen} screen asks for)` : '';
+  return `You need the right to ${LEVEL_PLAIN_VERBS[minimumLevel] ?? minimumLevel} ${name}${where}, which your role does not give. An administrator can add it to your role.`;
 }
 
 /**
@@ -289,6 +331,7 @@ export class AiPolicyService {
     resource: string,
     minimumLevel: PermissionLevel,
     manager: EntityManager,
+    screen?: string,
   ): Promise<void> {
     const state = await this.getEffectivePermissionState(userId, manager);
     if (state.isAdmin) {
@@ -297,8 +340,21 @@ export class AiPolicyService {
 
     const current = state.permissions.get(resource);
     if (!current || (LEVEL_RANK[current] ?? 0) < (LEVEL_RANK[minimumLevel] ?? 0)) {
-      throw moduleRightRequired(resource, minimumLevel, missingRightMessage(resource, minimumLevel));
+      throw moduleRightRequired(resource, minimumLevel, missingRightMessage(resource, minimumLevel, screen));
     }
+  }
+
+  /**
+   * Whether a family reserved to people whose access is not limited is closed to this person: their
+   * access is limited in the transaction of the call (`app.da_mode`, or their mode and roles).
+   */
+  private async isReservedFamilyClosed(
+    context: Pick<AiExecutionContext, 'userId'>,
+    entityType: AiQueryEntityType | AiContextEntityType,
+    manager: EntityManager,
+  ): Promise<boolean> {
+    if (!UNSCOPED_ONLY_ENTITY_TYPES.has(entityType)) return false;
+    return (await dataAccessModeOf({ manager, userId: context.userId })) === 'limited';
   }
 
   /**
@@ -337,17 +393,20 @@ export class AiPolicyService {
 
   /**
    * Whether the user reads `entityType`, without the surface checks (the tool already made them):
-   * for a section of another family inside a record, which is left out rather than refused.
+   * for a section of another family inside a record, which is left out rather than refused. The
+   * level defaults to the family's (`ENTITY_MIN_LEVEL`), and a family reserved to people whose
+   * access is not limited is closed to the others.
    */
   async canReadEntityType(
     context: AiExecutionContext,
     entityType: AiQueryEntityType | AiContextEntityType,
     manager: EntityManager,
-    level: PermissionLevel = 'reader',
+    level: PermissionLevel = entityReadLevel(entityType),
   ): Promise<boolean> {
     if (!KNOWN_ENTITY_TYPES.has(entityType) || entityTypeFeature(entityType)) return false;
     try {
-      await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], level, manager);
+      await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], entityReadLevel(entityType, level), manager);
+      if (await this.isReservedFamilyClosed(context, entityType, manager)) return false;
       return true;
     } catch (error) {
       if (!(error instanceof ForbiddenException)) {
@@ -366,6 +425,36 @@ export class AiPolicyService {
   async readableResources(context: AiExecutionContext, resources: string[], manager: EntityManager): Promise<Set<string>> {
     const state = await this.getEffectivePermissionStateOrNull(context.userId, manager);
     return new Set(resources.filter((resource) => this.hasPermission(state, resource, 'reader')));
+  }
+
+  /**
+   * Why the families of Admin › Roles and Admin › Data access are closed to this person, for the
+   * lists of what the tools do not read (`AiAdminFamiliesGap`): `right` without users at admin
+   * level, `all_data` with it in limited access, null when they read them.
+   */
+  async adminFamiliesGap(
+    context: Pick<AiExecutionContext, 'userId'>,
+    manager: EntityManager,
+  ): Promise<AiAdminFamiliesGap> {
+    const state = context.userId ? await this.getEffectivePermissionStateOrNull(context.userId, manager) : null;
+    if (!this.hasPermission(state, 'users', 'admin')) return 'right';
+    return (await dataAccessModeOf({ manager, userId: context.userId })) === 'limited' ? 'all_data' : null;
+  }
+
+  /**
+   * The person's rights in the shape a request carries them (`TenantRequest.isAdmin`,
+   * `permissions`), for a service of the screens that checks them itself (the record history).
+   * The same read as every check of this policy; a person the policy refuses holds nothing.
+   */
+  async effectiveAccess(
+    context: Pick<AiExecutionContext, 'userId'>,
+    manager: EntityManager,
+  ): Promise<{ isAdmin: boolean; permissions: Record<string, PermissionLevel> }> {
+    const state = context.userId ? await this.getEffectivePermissionStateOrNull(context.userId, manager) : null;
+    return {
+      isAdmin: state?.isAdmin === true,
+      permissions: state ? Object.fromEntries(state.permissions) : {},
+    };
   }
 
   async getCapabilities(
@@ -620,14 +709,34 @@ export class AiPolicyService {
     await this.assertUserPermission(context.userId, businessResource, minimumLevel, manager);
   }
 
+  /**
+   * A read of a family: the surface, the family's right at its level (`ENTITY_MIN_LEVEL`), its
+   * feature, then, for a family reserved to people whose access is not limited, the person's
+   * access (refused with the reserved message, as the screen is closed to them).
+   */
   async assertEntityTypeReadAccess(
     context: AiExecutionContext,
     entityType: AiQueryEntityType | AiContextEntityType,
     manager: EntityManager,
   ): Promise<void> {
-    await this.assertBusinessPermission(context, ENTITY_RESOURCE[entityType], 'reader', manager);
+    await this.assertSurfaceAccess(context, manager);
+    await this.assertEntityTypeReadRight(context, entityType, manager);
+  }
+
+  /**
+   * The read right of a family alone (`canReadEntityType`, refused in words: the right and its
+   * screen, the disabled feature, or the reserved message), without the surface checks the tool
+   * made first. The executors check it again for the families the database does not guard.
+   */
+  async assertEntityTypeReadRight(
+    context: AiExecutionContext,
+    entityType: AiQueryEntityType | AiContextEntityType,
+    manager: EntityManager,
+  ): Promise<void> {
+    await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], entityReadLevel(entityType), manager, ENTITY_SCREEN[entityType]);
     const feature = entityTypeFeature(entityType);
     if (feature) throwFeatureDisabled(feature);
+    if (await this.isReservedFamilyClosed(context, entityType, manager)) throw new DataAccessReservedException();
   }
 
   async listReadableEntityTypes(
@@ -638,11 +747,17 @@ export class AiPolicyService {
     await this.assertSurfaceAccess(context, manager);
 
     const readable: Array<AiQueryEntityType | AiContextEntityType> = [];
+    // Read once, and only when a requested family is reserved to people whose access is not limited.
+    let limited: boolean | null = null;
     for (const entityType of requested) {
       // Checked before the permissions: an administrator passes every permission check.
       if (!KNOWN_ENTITY_TYPES.has(entityType) || entityTypeFeature(entityType)) continue;
       try {
-        await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], 'reader', manager);
+        await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], entityReadLevel(entityType), manager);
+        if (UNSCOPED_ONLY_ENTITY_TYPES.has(entityType)) {
+          limited ??= await this.isReservedFamilyClosed(context, entityType, manager);
+          if (limited) continue;
+        }
         readable.push(entityType);
       } catch (error) {
         if (!(error instanceof ForbiddenException)) {

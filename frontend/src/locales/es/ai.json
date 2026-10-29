@@ -270,6 +270,7 @@
       "typical_data": "Datos típicos",
       "users_year": "Año de los usuarios",
       "version_name": "Nombre de la versión",
+      "vulnerability_state": "Estado de la vulnerabilidad",
       "zone": "Zona"
     },
     "none": "Ninguno",
@@ -364,6 +365,7 @@
       "get_entity_context": "Obtener contexto de entidad",
       "get_entity_detail": "Obtener detalle de entidad",
       "get_filter_values": "Obtener valores de filtro",
+      "get_record_history": "Obtener historial",
       "import_ticket": "Importar ticket",
       "import_glpi_ticket": "Importar ticket GLPI",
       "prepare_mutation_plan": "Preparar plan de cambios",

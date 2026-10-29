@@ -9,6 +9,7 @@
   "USER_DISABLED": "This account has been disabled.",
   "MISSING_CREDENTIALS": "Email and password are required.",
   "INVALID_TOKEN": "The link is invalid or has expired.",
+  "INVALID_ID": "Invalid identifier.",
   "TOKEN_REQUIRED": "A reset token is required.",
   "TOKEN_EXPIRED": "This link has expired. Please request a new one.",
   "MISSING_TOKEN": "Authentication required. Please sign in.",
@@ -342,5 +343,11 @@
   "DATA_ACCESS_NODE_ID_FORBIDDEN": "Everything covers all data and takes no company or cost center.",
   "DATA_ACCESS_NODE_ID_REQUIRED": "Choose a company or a cost center.",
   "DATA_ACCESS_NODE_TYPE_INVALID": "Choose a company, a cost center or everything.",
-  "DATA_ACCESS_ACCESS_INVALID": "Choose read or edit access."
+  "DATA_ACCESS_ACCESS_INVALID": "Choose read or edit access.",
+  "DATA_ACCESS_MODE_INVALID": "Choose all data or a limited access.",
+  "DATA_ACCESS_ALL_WITH_NODES": "All data takes no company or cost center.",
+  "DATA_ACCESS_NODES_INVALID": "The list of companies and cost centers is not valid.",
+  "DATA_ACCESS_NODE_ID_INVALID": "Choose a valid company or cost center.",
+  "DATA_ACCESS_NODE_DUPLICATE": "The same company, cost center or everything appears twice.",
+  "DATA_ACCESS_QUERY_REPEATED": "Give {{parameter}} only once."
 }

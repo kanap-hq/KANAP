@@ -128,12 +128,22 @@ An absent column keeps every stored value of that column. A file holding only `i
 | **Errors** | The rows the load refuses, by line of the file with the column when it knows it. A file with one error loads nothing |
 | **Changes** | The lines to create, the lines to update and the lines the file leaves as they are |
 | **Changed in KANAP since the export** | The lines someone changed after your export, with who and when. Loading the file writes your values over those changes |
-| **Warnings** | A row that looks like another line, a `company_name` other than the company of the row's cost center, columns and cells the file ignores |
+| **Warnings** | A row that looks like another line, a `company_name` other than the company of the row's cost center, an amount that stops a column following its calculation lines, columns and cells the file ignores |
 | **Created by the load** | The suppliers and the dimension values the load would add |
 
 3. Click **Load**. The load writes everything or nothing.
 
 If a line changed between the check and the load, the load stops and asks you to check the file again. The check also states how it read the file when a date or an amount could be read in two ways, with a button to switch the reading.
+
+### Columns built from quantity and price
+
+A line can build a column from calculation lines, quantity × price: see [Quantity and price](budget-lines.md#quantity-and-price). The budget file carries the totals and the months of a column only. Calculation lines are edited on the line's **Budget** tab.
+
+When the file changes the yearly total or a month of such a column, the check shows a warning for each line, column and year, for example:
+
+> BL-83 · Revision 2026: 3 calculation lines (281 280) will no longer drive these amounts.
+
+The load is allowed. After it, the calculation lines stay on the line as a reference, with their total, and the column follows the amounts of the file. A yearly total equal to what the lines give writes nothing: the column keeps following its lines.
 
 ## Limited data access
 

@@ -19,6 +19,7 @@ import { UpdateIncidentLinksAiMutationOperation } from '../mutation/operations/u
 import { UpdateTechnologyLinksAiMutationOperation } from '../mutation/operations/update-technology-links.ai-mutation-operation';
 import { UpdateTechnologyPeopleAiMutationOperation } from '../mutation/operations/update-technology-people.ai-mutation-operation';
 import { UpdateTechnologyWebLinksAiMutationOperation } from '../mutation/operations/update-technology-web-links.ai-mutation-operation';
+import { ChangeVulnerabilityStateAiMutationOperation } from '../mutation/operations/change-vulnerability-state.ai-mutation-operation';
 import { SetTechnologyVulnerabilityAlertsAiMutationOperation } from '../mutation/operations/set-technology-vulnerability-alerts.ai-mutation-operation';
 import { UpdateTechnologyVersionsAiMutationOperation } from '../mutation/operations/update-technology-versions.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from '../mutation/operations/update-task-assignee.ai-mutation-operation';
@@ -477,7 +478,7 @@ function testTechnologyPeopleLinksAndAlertsCards() {
     current_values: target,
   });
   assert.equal(summary(alerts, alertsPreview, 'en'), 'Set the vulnerability alerts of TEC-1 - PostgreSQL.');
-  assert.equal(summary(alerts, alertsPreview, 'fr'), 'Modification des alertes de failles de « TEC-1 - PostgreSQL ».');
+  assert.equal(summary(alerts, alertsPreview, 'fr'), 'Modification des alertes de vulnérabilité de « TEC-1 - PostgreSQL ».');
   assert.equal(
     alerts.presentPreview(alertsPreview, 'en').changes.technology_vulnerability_alerts.to,
     '- off'
@@ -496,6 +497,241 @@ function testTechnologyPeopleLinksAndAlertsCards() {
     + '\n- 2 version exceptions cleared: 14, 16'
     + '\n\n**Versions**\n- 17: follows the technology → alerts off\n  - the service packs 17 SP1 follow base version 17',
   );
+}
+
+function testVulnerabilityStateCards() {
+  const operation = make(ChangeVulnerabilityStateAiMutationOperation);
+  const example = (cve: string, version: string | null) => ({ cve_id: cve, technology: 'TEC-3', technology_name: 'PostgreSQL', version });
+  const handled = preview({
+    tool_name: 'change_vulnerability_state',
+    target_entity_type: 'vulnerabilities',
+    mutation_input: { state: 'handled', note: 'Patched in 14.2' },
+    current_values: {
+      values: {
+        rows: 5,
+        cves: 2,
+        changes: 3,
+        from_states: ['to_review', 'not_affected'],
+        outside_alerts: 1,
+        no_longer_matching: 0,
+        examples: [example('CVE-2024-1111', '14'), example('CVE-2024-1111', null), example('CVE-2024-2222', '15')],
+      },
+    },
+  });
+  const card = (value: AiMutationPreview, language: AiWriteLanguage) => operation.presentPreview(value, language).changes.vulnerability_state.to;
+  assert.equal(summary(operation, handled, 'en'), 'Change the state of 3 vulnerability rows to Handled.');
+  assert.equal(
+    card(handled, 'en'),
+    '3 of 5 rows (2 CVEs): To review, Not affected → Handled'
+    + '\n\nNote: "Patched in 14.2"'
+    + '\n\n- CVE-2024-1111 on TEC-3 PostgreSQL 14\n- CVE-2024-1111 on TEC-3 PostgreSQL (version not recorded)\n- CVE-2024-2222 on TEC-3 PostgreSQL 15'
+    + '\n\n1 is outside the vulnerability alerts',
+  );
+  assert.equal(summary(operation, handled, 'fr'), "Passage de 3 lignes de vulnérabilités à l'état « Traitée ».");
+  assert.equal(
+    card(handled, 'fr'),
+    '3 lignes sur 5 (2 CVE) : À traiter, Non concernée → Traitée'
+    + '\n\nNote : « Patched in 14.2 »'
+    + '\n\n- CVE-2024-1111 sur TEC-3 PostgreSQL 14\n- CVE-2024-1111 sur TEC-3 PostgreSQL (version non renseignée)\n- CVE-2024-2222 sur TEC-3 PostgreSQL 15'
+    + '\n\n1 est hors des alertes de vulnérabilité',
+  );
+  assert.equal(summary(operation, handled, 'de'), '3 Zeilen der Schwachstellen auf „Behandelt“ setzen.');
+  assert.equal(
+    card(handled, 'de'),
+    '3 von 5 Zeilen (2 CVE): Zu prüfen, Nicht betroffen → Behandelt'
+    + '\n\nNotiz: „Patched in 14.2“'
+    + '\n\n- CVE-2024-1111 auf TEC-3 PostgreSQL 14\n- CVE-2024-1111 auf TEC-3 PostgreSQL (Version nicht erfasst)\n- CVE-2024-2222 auf TEC-3 PostgreSQL 15'
+    + '\n\n1 ist nicht in den Schwachstellenwarnungen',
+  );
+  assert.equal(summary(operation, handled, 'es'), 'Paso de 3 filas de vulnerabilidades al estado «Tratada».');
+  assert.equal(
+    card(handled, 'es'),
+    '3 filas de 5 (2 CVE): Por revisar, No afectada → Tratada'
+    + '\n\nNota: «Patched in 14.2»'
+    + '\n\n- CVE-2024-1111 en TEC-3 PostgreSQL 14\n- CVE-2024-1111 en TEC-3 PostgreSQL (versión no registrada)\n- CVE-2024-2222 en TEC-3 PostgreSQL 15'
+    + '\n\n1 está fuera de las alertas de vulnerabilidad',
+  );
+  assert.equal(operation.presentPreview(handled, 'fr').changes.vulnerability_state.label, 'État de la vulnérabilité');
+  assert.equal(operation.presentPreview(handled, 'fr').target.title, '2 CVE');
+
+  // Back to review: the note cleared, the rows that disappear, more rows than the card lists.
+  const review = preview({
+    tool_name: 'change_vulnerability_state',
+    target_entity_type: 'vulnerabilities',
+    mutation_input: { state: 'to_review', note: null },
+    current_values: {
+      values: {
+        rows: 7,
+        cves: 1,
+        changes: 7,
+        from_states: ['handled'],
+        outside_alerts: 0,
+        no_longer_matching: 2,
+        examples: ['1', '2', '3', '4', '5'].map((version) => example('CVE-2024-3333', version)),
+      },
+    },
+  });
+  assert.equal(
+    card(review, 'en'),
+    '7 rows (1 CVE): Handled → To review\n\nNote cleared'
+    + '\n\n' + ['1', '2', '3', '4', '5'].map((v) => `- CVE-2024-3333 on TEC-3 PostgreSQL ${v}`).join('\n') + '\n- and 2 more'
+    + '\n\n2 no longer match and will disappear at the next matching',
+  );
+  assert.equal(
+    card(review, 'fr'),
+    '7 lignes (1 CVE) : Traitée → À traiter\n\nNote effacée'
+    + '\n\n' + ['1', '2', '3', '4', '5'].map((v) => `- CVE-2024-3333 sur TEC-3 PostgreSQL ${v}`).join('\n') + '\n- et 2 autres'
+    + '\n\n2 ne correspondent plus et disparaîtront au prochain rapprochement',
+  );
+  assert.equal(
+    card(review, 'de'),
+    '7 Zeilen (1 CVE): Behandelt → Zu prüfen\n\nNotiz gelöscht'
+    + '\n\n' + ['1', '2', '3', '4', '5'].map((v) => `- CVE-2024-3333 auf TEC-3 PostgreSQL ${v}`).join('\n') + '\n- und 2 weitere'
+    + '\n\n2 treffen nicht mehr zu und verschwinden beim nächsten Abgleich',
+  );
+  assert.equal(
+    card(review, 'es'),
+    '7 filas (1 CVE): Tratada → Por revisar\n\nNota borrada'
+    + '\n\n' + ['1', '2', '3', '4', '5'].map((v) => `- CVE-2024-3333 en TEC-3 PostgreSQL ${v}`).join('\n') + '\n- y 2 más'
+    + '\n\n2 ya no coinciden y desaparecerán en el próximo cotejo',
+  );
+
+  // One row: singular words.
+  const one = preview({
+    tool_name: 'change_vulnerability_state',
+    target_entity_type: 'vulnerabilities',
+    mutation_input: { state: 'not_affected' },
+    current_values: {
+      values: { rows: 1, cves: 1, changes: 1, from_states: ['to_review'], outside_alerts: 0, no_longer_matching: 1, examples: [example('CVE-2024-4444', '9')] },
+    },
+  });
+  assert.equal(
+    card(one, 'fr'),
+    '1 ligne (1 CVE) : À traiter → Non concernée\n\n- CVE-2024-4444 sur TEC-3 PostgreSQL 9'
+    + '\n\n1 ne correspond plus et disparaîtra au prochain rapprochement',
+  );
+  assert.equal(
+    card(one, 'de'),
+    '1 Zeile (1 CVE): Zu prüfen → Nicht betroffen\n\n- CVE-2024-4444 auf TEC-3 PostgreSQL 9'
+    + '\n\n1 trifft nicht mehr zu und verschwindet beim nächsten Abgleich',
+  );
+  assert.equal(
+    card(one, 'es'),
+    '1 fila (1 CVE): Por revisar → No afectada\n\n- CVE-2024-4444 en TEC-3 PostgreSQL 9'
+    + '\n\n1 ya no coincide y desaparecerá en el próximo cotejo',
+  );
+
+  // Lot E review: the note alone changes: the state once, then the note.
+  const noteOnly = (note: string | null) => preview({
+    tool_name: 'change_vulnerability_state',
+    target_entity_type: 'vulnerabilities',
+    mutation_input: { state: 'handled', note },
+    current_values: {
+      values: { rows: 2, cves: 1, changes: 2, from_states: ['handled'], outside_alerts: 0, no_longer_matching: 0, examples: [example('CVE-2024-5555', '14')] },
+    },
+  });
+  const noteRow = { en: 'on', fr: 'sur', de: 'auf', es: 'en' } as const;
+  for (const [language, head, note] of [
+    ['en', '2 rows (1 CVE): Handled, note changed', 'Note: "risk accepted"'],
+    ['fr', '2 lignes (1 CVE) : Traitée, note modifiée', 'Note : « risk accepted »'],
+    ['de', '2 Zeilen (1 CVE): Behandelt, Notiz geändert', 'Notiz: „risk accepted“'],
+    ['es', '2 filas (1 CVE): Tratada, nota modificada', 'Nota: «risk accepted»'],
+  ] as const) {
+    assert.equal(card(noteOnly('risk accepted'), language), `${head}\n\n${note}\n\n- CVE-2024-5555 ${noteRow[language]} TEC-3 PostgreSQL 14\n- ${{ en: 'and 1 more', fr: 'et 1 autre', de: 'und 1 weitere', es: 'y 1 más' }[language]}`);
+  }
+  for (const [language, head] of [
+    ['en', '2 rows (1 CVE): Handled, note cleared'],
+    ['fr', '2 lignes (1 CVE) : Traitée, note effacée'],
+    ['de', '2 Zeilen (1 CVE): Behandelt, Notiz gelöscht'],
+    ['es', '2 filas (1 CVE): Tratada, nota borrada'],
+  ] as const) {
+    assert.ok(String(card(noteOnly(null), language)).startsWith(`${head}\n\n- CVE-2024-5555 `), `${language}: the note cleared, said once`);
+  }
+
+  // Executed, rejected, failed.
+  const executed = { ...handled, status: 'executed', current_values: { ...handled.current_values, applied: { changed: 3 } } } as AiMutationPreview;
+  assert.equal(summary(operation, executed, 'en'), 'Vulnerability state set to Handled on 3 vulnerability rows.');
+  assert.equal(summary(operation, executed, 'fr'), "Appliqué : passage de 3 lignes de vulnérabilités à l'état « Traitée ».");
+  assert.equal(summary(operation, executed, 'de'), 'Angewendet: 3 Zeilen der Schwachstellen auf „Behandelt“ setzen.');
+  assert.equal(summary(operation, executed, 'es'), 'Aplicada: paso de 3 filas de vulnerabilidades al estado «Tratada».');
+  assert.equal(summary(operation, { ...handled, status: 'rejected' } as AiMutationPreview, 'fr'), "Rejeté : passage de 3 lignes de vulnérabilités à l'état « Traitée ».");
+  assert.equal(summary(operation, { ...handled, status: 'failed', error_message: 'Boom.' } as AiMutationPreview, 'de'), 'Boom.');
+
+  // The undo: groups by the state they go back to, in the future while pending.
+  const undo = preview({
+    tool_name: 'change_vulnerability_state',
+    target_entity_type: 'vulnerabilities',
+    mutation_input: {
+      reverse_of: 'preview-0',
+      state: 'handled',
+      note: 'Patched in 14.2',
+      restore_groups: [
+        { state: 'to_review', note: null, ids: ['a', 'b'] },
+        { state: 'not_affected', note: 'Old note', ids: ['c'] },
+      ],
+    },
+    current_values: { values: { rows: 3, cves: 2, cve_id: null } },
+  });
+  assert.equal(summary(operation, undo, 'en'), 'Put 3 vulnerability rows back to their previous state.');
+  assert.equal(
+    card(undo, 'en'),
+    '3 rows (2 CVEs): Handled → back to their previous state'
+    + '\n\n- 2 will go back to To review, note cleared\n- 1 will go back to Not affected, note "Old note"',
+  );
+  assert.equal(summary(operation, undo, 'fr'), 'Retour de 3 lignes de vulnérabilités à leur état précédent.');
+  assert.equal(
+    card(undo, 'fr'),
+    '3 lignes (2 CVE) : Traitée → retour à leur état précédent'
+    + "\n\n- 2 lignes reviendront à l'état À traiter, note effacée\n- 1 ligne reviendra à l'état Non concernée, note « Old note »",
+  );
+  assert.equal(summary(operation, undo, 'de'), '3 Zeilen der Schwachstellen auf den vorherigen Status zurücksetzen.');
+  assert.equal(
+    card(undo, 'de'),
+    '3 Zeilen (2 CVE): Behandelt → zurück auf den vorherigen Status'
+    + '\n\n- 2 Zeilen werden auf Zu prüfen zurückgesetzt, Notiz gelöscht\n- 1 Zeile wird auf Nicht betroffen zurückgesetzt, Notiz „Old note“',
+  );
+  assert.equal(summary(operation, undo, 'es'), 'Retorno de 3 filas de vulnerabilidades a su estado anterior.');
+  assert.equal(
+    card(undo, 'es'),
+    '3 filas (2 CVE): Tratada → vuelta a su estado anterior'
+    + '\n\n- 2 filas volverán al estado Por revisar, nota borrada\n- 1 fila volverá al estado No afectada, nota «Old note»',
+  );
+  // Lot E review: back to review, the rows that no longer match are said as on the change's card.
+  const undoMatching = { ...undo, current_values: { values: { rows: 3, cves: 2, cve_id: null, no_longer_matching: 2 } } } as AiMutationPreview;
+  assert.equal(
+    card(undoMatching, 'en'),
+    '3 rows (2 CVEs): Handled → back to their previous state'
+    + '\n\n- 2 will go back to To review, note cleared\n- 1 will go back to Not affected, note "Old note"'
+    + '\n\n2 no longer match and will disappear at the next matching',
+  );
+  assert.equal(
+    card(undoMatching, 'fr'),
+    '3 lignes (2 CVE) : Traitée → retour à leur état précédent'
+    + "\n\n- 2 lignes reviendront à l'état À traiter, note effacée\n- 1 ligne reviendra à l'état Non concernée, note « Old note »"
+    + '\n\n2 ne correspondent plus et disparaîtront au prochain rapprochement',
+  );
+  const undone = { ...undo, status: 'executed', current_values: { ...undo.current_values, applied: { changed: 3 } } } as AiMutationPreview;
+  assert.equal(
+    card(undone, 'en'),
+    '3 rows (2 CVEs): Handled → back to their previous state'
+    + '\n\n- 2 back to To review, note cleared\n- 1 back to Not affected, note "Old note"',
+  );
+  assert.equal(
+    card(undone, 'fr'),
+    '3 lignes (2 CVE) : Traitée → retour à leur état précédent'
+    + "\n\n- 2 lignes revenues à l'état À traiter, note effacée\n- 1 ligne revenue à l'état Non concernée, note « Old note »",
+  );
+  assert.equal(
+    card(undone, 'de'),
+    '3 Zeilen (2 CVE): Behandelt → zurück auf den vorherigen Status'
+    + '\n\n- 2 Zeilen auf Zu prüfen zurückgesetzt, Notiz gelöscht\n- 1 Zeile auf Nicht betroffen zurückgesetzt, Notiz „Old note“',
+  );
+  assert.equal(
+    card(undone, 'es'),
+    '3 filas (2 CVE): Tratada → vuelta a su estado anterior'
+    + '\n\n- 2 filas vueltas al estado Por revisar, nota borrada\n- 1 fila vuelta al estado No afectada, nota «Old note»',
+  );
+  assert.equal(summary(operation, undone, 'fr'), 'Appliqué : retour de 3 lignes de vulnérabilités à leur état précédent.');
 }
 
 function testIncidentStateAndConfidentialityCards() {
@@ -1134,6 +1370,7 @@ async function main() {
   testTechnologyLinkCards();
   testTechnologyVersions();
   testTechnologyPeopleLinksAndAlertsCards();
+  testVulnerabilityStateCards();
   testIncidentStateAndConfidentialityCards();
   testDeleteRecordSummaryAndCard();
   await testDefaultTaskType();

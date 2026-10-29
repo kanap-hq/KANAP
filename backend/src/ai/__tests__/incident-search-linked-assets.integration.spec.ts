@@ -28,6 +28,7 @@ function createEntityService(): AiEntityService {
       listReadableEntityTypes: async (_context: unknown, requested: string[]) => requested,
       canReadKnowledge: async () => true,
       assertEntityTypeReadAccess: async () => undefined,
+      adminFamiliesGap: async () => 'right',
     } as any,
   );
 }

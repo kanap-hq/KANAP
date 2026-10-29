@@ -64,6 +64,8 @@ Das Schnittstellenraster zeigt Ihr Integrationsverzeichnis auf einen Blick.
 
 Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat ein Seitenpanel mit den Schnittstelleneigenschaften auf der linken Seite und sechs Reiter auf der rechten Seite. Der letzte, **Verlauf**, listet die Änderungen an der Schnittstelle auf (siehe [Verlauf der Datensätze](record-history.md)).
 
+Die Kopfzeile enthält **Löschen**, ein Papierkorbsymbol mit seinem Namen im Tooltip (`applications:admin`). Die Bestätigung verwendet dieselbe Prüfung wie **Ausgewählte löschen**. Sie sagt, dass dies nicht rückgängig gemacht werden kann. Wenn die Schnittstelle Bindungen hat, erklärt sie diese und bietet **Zugehörige Bindungen ebenfalls löschen**: das Löschen ist verfügbar, sobald diese Option aktiviert ist, die Bindungen gehen mit der Schnittstelle, und die Verbindungen bleiben erhalten. Die Liste öffnet sich danach wieder.
+
 ### Schnittstelleneigenschaften (Seitenpanel)
 
 Das Seitenpanel bleibt in jedem Reiter sichtbar und gruppiert die am häufigsten bearbeiteten Felder in drei einklappbare Bereiche:
@@ -207,7 +209,7 @@ Eine Abhängigkeit gilt in eine Richtung. Wenn Sie Schnittstelle B als vorgelage
 
 - **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
 - **Datei anhängen** öffnet die Dateiauswahl. Sie können Dateien auch auf den Abschnitt ziehen.
-- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Vor dem Löschen einer Datei wird eine Bestätigung abgefragt.
+- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Entfernen eines Links zeigt eine Meldung und bietet **Rückgängig** an, womit der Link wieder angelegt wird. Vor dem Löschen einer Datei wird eine Bestätigung abgefragt.
 
 **Tipp**: Hängen Sie die Spezifikation und die Mapping-Dokumente an die Schnittstelle an, damit die Personen, die sie betreiben, alles an einem Ort finden.
 

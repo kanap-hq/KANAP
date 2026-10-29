@@ -42,7 +42,12 @@ function createRegistry(overrides?: {
   braveSearch?: any;
   previews?: any;
   mutationOperations?: any;
+  /** null: a registry built without the history service. */
+  recordHistory?: any;
 }) {
+  const recordHistory = overrides && 'recordHistory' in overrides
+    ? overrides.recordHistory ?? undefined
+    : { getRecordHistory: async (_context: any, input: any) => ({ entity: { type: input.entity_type, id: input.entity_id }, items: [], returned: 0, next_cursor: null, truncated: false, complete: true, note: 'History tab' }) };
   return new AiToolRegistry(
     {
       searchAll: async () => ({ items: [], total: 0, complete: false, entity_types: ['applications'] }),
@@ -78,6 +83,8 @@ function createRegistry(overrides?: {
       canReadKnowledge: async () => true,
       assertKnowledgeReadAccess: async () => undefined,
       assertEntityTypeReadAccess: async () => undefined,
+      // No right to administer users: the families of Admin › Roles and Admin › Data access stay unread.
+      adminFamiliesGap: async () => 'right',
       ...(overrides?.policy || {}),
     } as any,
     {
@@ -524,6 +531,8 @@ function createRegistry(overrides?: {
       },
       ...(overrides?.mutationOperations || {}),
     } as any,
+    undefined,
+    recordHistory,
   );
 }
 
@@ -612,7 +621,7 @@ async function testListAvailableTools() {
   const tools = await registry.listAvailableTools(createContext());
   assert.deepEqual(
     tools.map((tool) => tool.name),
-    ['search_all', 'describe_entity_filters', 'query_entities', 'aggregate_entities', 'get_filter_values', 'get_application_classification_catalog', 'get_entity_detail', 'get_entity_context', 'search_knowledge', 'get_document'],
+    ['search_all', 'describe_entity_filters', 'query_entities', 'aggregate_entities', 'get_filter_values', 'get_application_classification_catalog', 'get_entity_detail', 'get_entity_context', 'get_record_history', 'search_knowledge', 'get_document'],
   );
   assert.match(
     tools.find((tool) => tool.name === 'describe_entity_filters')?.description || '',
@@ -640,6 +649,38 @@ async function testListAvailableTools() {
   );
 }
 
+// Plaid L6, lot A: what the model reads about the vulnerabilities, one sentence per tool.
+async function testVulnerabilityReadsAreDescribed() {
+  const tools = await createRegistry().listAvailableTools(createContext());
+  const text = (name: string) => tools.find((tool) => tool.name === name)?.description || '';
+  assert.match(text('query_entities'), /On vulnerabilities, `total` counts rows \(technology, version, CVE\) and `distinct_total` the distinct CVE/);
+  assert.match(text('query_entities'), /`feeds` gives each feed's last success and whether it is failing/);
+  assert.match(text('query_entities'), /`estate` true keeps the technologies in use in the estate, so the home tile's figures \(critical CVE published in the last 7 and 30 days, exploited CVE, in the estate\) read with `estate` true and `severity`, `published_at` or `exploited`/);
+  assert.match(text('aggregate_entities'), /On vulnerabilities, a group's `count` counts rows and its `distinct_count` the distinct CVE, and `distinct_total` is the distinct CVE of the whole set, not a sum of groups/);
+  assert.match(text('aggregate_entities'), /add up on the fields of the CVE itself \(severity, score_source, exploited\)/);
+  assert.match(text('search_all'), /Vulnerabilities are not searched here: query_entities on `vulnerabilities` finds a CVE by `cve_id` or `q`/);
+  // Each sentence once: the three tools do not repeat one another.
+  assert.doesNotMatch(text('aggregate_entities'), /feeds|estate` true/);
+  assert.doesNotMatch(text('search_all'), /distinct_total|estate/);
+}
+
+/** Plaid L7, lot D: the families of Admin › Roles and Admin › Data access, each fact said once. */
+async function testAccessFamiliesAreDescribed() {
+  const tools = await createRegistry().listAvailableTools(createContext());
+  const text = (name: string) => tools.find((tool) => tool.name === name)?.description || '';
+  const query = text('query_entities');
+  assert.match(query, /For an administrator of users with access to all data, the families `roles` \(each role with its count of people\), `role_permissions` \(one row per role and right it gives\) and `data_access` \(the people whose access is limited, one row per node; Administrators see all data and are not listed\)/);
+  assert.match(query, /on users `primary_role` is the primary role only, `roles` every role of the person/);
+  assert.match(query, /a limited person without a node sees no budget or contract data, a limited access covers the budget and the contracts only, and who sees one company is in the company's get_entity_detail/);
+  assert.doesNotMatch(query, /not readable here/, 'the text of before lot A is gone');
+  assert.match(text('search_all'), /`roles`, `role_permissions`, `data_access`\) are not searched here either: query_entities reads them/);
+  assert.match(text('describe_entity_filters'), /`roles`, `role_permissions` and `data_access` are described for an administrator of users with access to all data only/);
+  // Each fact once: the other two tools do not repeat the facts of query_entities.
+  for (const name of ['search_all', 'describe_entity_filters', 'aggregate_entities']) {
+    assert.doesNotMatch(text(name), /primary role only|without a node|not listed/, name);
+  }
+}
+
 // Anthropic's connector review refuses tool text that reads like instructions to the model.
 async function testReadToolTextStatesFacts() {
   const registry = createRegistry();
@@ -663,6 +704,40 @@ async function testTaskReadersSeeEntityCommentsTool() {
   assert.ok(tools.some((tool) => tool.name === 'get_entity_comments'));
 }
 
+/**
+ * The history tool is offered to a person who reads one family with a History tab (Plaid L7, lot C),
+ * whatever the family of the record they then name: "Historique de APP-36" keeps the tool, which
+ * answers that applications have no history. The record's own right is checked on the call.
+ */
+async function testRecordHistoryOfferFollowsTheFamilyRights() {
+  const offered = async (readable: string[], recordHistory?: any) => {
+    const registry = createRegistry({
+      policy: { listReadableEntityTypes: async () => readable },
+      ...(recordHistory === undefined ? {} : { recordHistory }),
+    });
+    return (await registry.listAvailableTools(createContext())).some((tool) => tool.name === 'get_record_history');
+  };
+  assert.equal(await offered(['technologies']), true, 'a reader of technologies');
+  assert.equal(await offered(['budget_lines']), true, 'a reader of the budget');
+  assert.equal(await offered(['projects', 'tasks', 'applications', 'contracts']), false, 'no family with a history');
+  assert.equal(await offered(['technologies'], null), false, 'a registry without the history service');
+
+  const calls: any[] = [];
+  const registry = createRegistry({
+    recordHistory: { getRecordHistory: async (_context: any, input: any) => { calls.push(input); return { items: [] }; } },
+  });
+  await registry.execute(createContext(), 'get_record_history', { entity_type: 'technologies', entity_id: 'TEC-3' });
+  assert.deepEqual(calls, [{ entity_type: 'technologies', entity_id: 'TEC-3', limit: 50 }], 'the default page of the History tab');
+  await assert.rejects(
+    registry.execute(createContext(), 'get_record_history', { entity_type: 'technologies', entity_id: 'TEC-3', limit: 101 }),
+    /invalid|limit/i,
+  );
+  const schema = registry.toToolJsonSchemas([{ name: 'get_record_history' }])[0];
+  assert.ok((schema.parameters as any).properties.entity_type.enum.includes('applications'), 'an application is accepted, to be refused in words');
+  assert.match(schema.description, /budget lines, business processes/);
+  assert.equal(registry.listRegisteredTools().find((tool) => tool.name === 'get_record_history')?.category, 'inspection');
+}
+
 async function testListRegisteredToolsExposesRuntimeRegistry() {
   const registry = createRegistry();
 
@@ -678,6 +753,7 @@ async function testListRegisteredToolsExposesRuntimeRegistry() {
       'get_entity_detail',
       'get_entity_context',
       'get_entity_comments',
+      'get_record_history',
       'search_knowledge',
       'get_document',
       'prepare_mutation_plan',
@@ -993,6 +1069,43 @@ async function testPrepareMutationPlanDelegatesToPreviewService() {
     'create_project',
     'task_1',
   ]);
+}
+
+/** The vulnerability state tool needs infrastructure member and the vulnerability feed, as the screen's route. */
+async function testVulnerabilityStateToolFollowsTheRightAndTheFeed() {
+  const operation = {
+    toolName: 'change_vulnerability_state',
+    description: 'Create a preview to change the state of vulnerability rows.',
+    inputSchema: { safeParse: (value: any) => ({ success: true, data: value }) },
+    inputSummary: { state: 'The new state.', rows: 'The rows.' },
+    businessResource: 'infrastructure',
+    writePreview: { entity_type: 'vulnerabilities', fields: ['vulnerability_state'], reversible: true, prompt_hint: 'For the state of vulnerability rows.' },
+  };
+  const mutationOperations = {
+    listOperations: () => [operation],
+    getOperationOrNull: (toolName: string) => (toolName === operation.toolName ? operation : null),
+    isSupportedToolName: (toolName: string) => toolName === operation.toolName,
+  };
+  const registry = (level: 'member' | 'reader') => createRegistry({
+    policy: {
+      assertWriteAccess: async (_context: any, resource: string, _manager: any, options: { level: string }) => {
+        if (resource !== 'infrastructure' || (level === 'reader' && options.level !== 'reader')) throw new Error('missing right');
+      },
+    },
+    mutationOperations,
+  });
+  const offered = async (level: 'member' | 'reader') => (await registry(level).listAvailableTools(createChatContext()))
+    .some((tool) => tool.name === 'change_vulnerability_state');
+  const feed = Features.VULNERABILITY_FEED_ENABLED;
+  try {
+    Features.VULNERABILITY_FEED_ENABLED = true;
+    assert.equal(await offered('member'), true, 'an infrastructure member is offered the tool');
+    assert.equal(await offered('reader'), false, 'an infrastructure reader is not');
+    Features.VULNERABILITY_FEED_ENABLED = false;
+    assert.equal(await offered('member'), false, 'nobody is offered it while the feed is off');
+  } finally {
+    Features.VULNERABILITY_FEED_ENABLED = feed;
+  }
 }
 
 async function testUndoPreviewStaysHiddenWhenOnlyNonReversibleWritesExist() {
@@ -1633,6 +1746,15 @@ async function testInvalidInputNamesTheFieldAndWhy() {
   const enumValue = refusal('get_entity_detail', { entity_type: 'spend_items', entity_id: 'BL-102' });
   assert.match(enumValue, /"entity_type" must be one of: "accounts", .*"budget_lines".*"users"/, enumValue);
   assert.doesNotMatch(enumValue, /"spend_items"/, 'no alias: spend_items is not an accepted type');
+  // The roles of Admin › Roles: a role has a detail (its rights), a right of a role is a list row only.
+  assert.match(enumValue, /"roles"/, enumValue);
+  assert.doesNotMatch(enumValue, /"role_permissions"/, enumValue);
+  const listed = refusal('query_entities', { entity_type: 'spend_items' });
+  assert.match(listed, /"roles"/, listed);
+  assert.match(listed, /"role_permissions"/, listed);
+  // Admin › Data access: a row names a person, read with get_entity_detail on users.
+  assert.match(listed, /"data_access"/, listed);
+  assert.doesNotMatch(enumValue, /"data_access"/, enumValue);
 
   const nested = refusal('query_entities', { entity_type: 'budget_lines', sort: { field: 'y_budget', direction: 'down' }, page: 'two' });
   assert.match(nested, /"sort.direction" must be one of: "asc", "desc"/, nested);
@@ -2114,9 +2236,12 @@ async function testAggregateExecutorMarksUnresolvedScopeIncomplete() {
 }
 
 async function run() {
+  await testAccessFamiliesAreDescribed();
   await testListAvailableTools();
   await testTaskReadersSeeEntityCommentsTool();
+  await testRecordHistoryOfferFollowsTheFamilyRights();
   await testReadToolTextStatesFacts();
+  await testVulnerabilityReadsAreDescribed();
   await testListRegisteredToolsExposesRuntimeRegistry();
   await testListAvailableToolsIncludesCategories();
   await testRegisteredToolCategoriesMatchExpectedAssignments();
@@ -2127,6 +2252,7 @@ async function run() {
   await testAdministratorOnlyIncidentToolsNeedTheAdminLevel();
   await testWritePreviewToolsStayHiddenWithoutWriteAccess();
   await testDeleteRecordIsOfferedOnChatOnly();
+  await testVulnerabilityStateToolFollowsTheRightAndTheFeed();
   await testUpdateTaskAssigneesCreatesOnePreviewPerTaskAndReturnsPartialErrors();
   await testPrepareMutationPlanDelegatesToPreviewService();
   await testUndoPreviewStaysHiddenWhenOnlyNonReversibleWritesExist();

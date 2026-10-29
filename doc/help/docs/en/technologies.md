@@ -295,7 +295,7 @@ The records linked to the technology, one section per kind:
 - **Contracts**: supplier, end date and yearly amount, with a total per currency.
 - **Projects**: status and planned end.
 - **Incidents**: severity, status and detection date. Linking an incident needs `incidents:contributor`. A closed or cancelled incident cannot be linked or unlinked.
-- **Links and files**: the web links of the technology and its files, one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With `infrastructure:member`, **Add link** and **Attach file** add a row, and files can also be dropped on the section. Hover a row to edit a link or to remove a row. Deleting a file asks for confirmation. An address typed without `http://` or `https://` gets `https://`. Any other scheme is refused.
+- **Links and files**: the web links of the technology and its files, one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With `infrastructure:member`, **Add link** and **Attach file** add a row, and files can also be dropped on the section. Hover a row to edit a link or to remove a row. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation. An address typed without `http://` or `https://` gets `https://`. Any other scheme is refused.
 
 A section appears only if you can read its module. **Add** (`infrastructure:member`) opens a search in place; the cross at the end of a row removes the link.
 

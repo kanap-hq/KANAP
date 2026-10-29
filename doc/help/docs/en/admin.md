@@ -434,6 +434,8 @@ The Roles page has a two-panel layout:
 - **Save Details**: Update the role name and description
 - **Save Permissions**: Apply permission changes
 
+An administrator of users with access to all data can also ask [Plaid](ai-assistant.md#tool-calls) about the roles, their user counts and their rights. Changes stay on this page.
+
 ### Creating a Custom Role
 
 1. Click **New Role**

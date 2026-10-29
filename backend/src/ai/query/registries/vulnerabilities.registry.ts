@@ -2,7 +2,7 @@ import { AiEntityFilterRegistry } from '../ai-filter.types';
 import { SCORE_SOURCE_SQL } from '../../../vulnerabilities/vulnerabilities.service';
 import { EFFECTIVE_SCORE } from '../../../vulnerabilities/vulnerability-reach-counts';
 import { vulnerabilityAlertsSql } from '../../../vulnerabilities/vulnerability-alerts';
-import { EFFECTIVE_SEVERITY, exploitedSql } from '../../../vulnerabilities/vulnerability-reach-counts';
+import { EFFECTIVE_SEVERITY, exploitedSql, technologyInEstateSql } from '../../../vulnerabilities/vulnerability-reach-counts';
 import {
   ALL,
   VULNERABILITY_ROW_JOINS,
@@ -22,7 +22,9 @@ const asText = (condition: string) => `CASE WHEN ${condition} THEN 'true' ELSE '
  * a technology, as the vulnerabilities page lists them. Not in the search index: `search_all` does
  * not search them. `applications_reached` filters and sorts within the caller's application read
  * scope; it is no metric, since an aggregate expression cannot carry that scope. The aggregates
- * count rows: a CVE on two versions counts twice.
+ * count rows, a CVE on two versions twice, and the distinct CVE beside them (`distinctRecord`): each
+ * group's `distinct_count` and the result's `distinct_total`, as the page's total ("117 rows
+ * (112 CVE)"). The list carries `distinct_total` too.
  */
 export const vulnerabilitiesRegistry: AiEntityFilterRegistry = {
   entityType: 'vulnerabilities',
@@ -127,9 +129,9 @@ export const vulnerabilitiesRegistry: AiEntityFilterRegistry = {
       ai: 'version',
       grid: 'version',
       type: 'set',
-      description: 'Version label of the technology the row concerns. null: no version recorded; the CVE then potentially concerns the technology.',
+      description: 'Version label of the technology the row concerns. null: no version recorded; the CVE then potentially concerns the technology. A group by version names the technology and the version (PostgreSQL 14), or the technology and "(no version recorded)".',
       sortable: false,
-      groupable: false,
+      groupable: true,
     },
     sources: {
       ai: 'sources',
@@ -150,6 +152,26 @@ export const vulnerabilitiesRegistry: AiEntityFilterRegistry = {
       discoverable: true,
       sortable: false,
       groupable: true,
+    },
+    estate: {
+      ai: 'estate',
+      grid: 'estate',
+      type: 'set',
+      description: 'Whether the row\'s technology is in use in the estate, as the vulnerabilities page\'s "In use in the estate" filter: installed on an asset in service or declared by an application in service, whatever the version.',
+      values: ['true', 'false'],
+      discoverable: true,
+      sortable: false,
+      groupable: true,
+    },
+    matching: {
+      ai: 'matching',
+      grid: 'matching',
+      type: 'set',
+      description: 'Whether the matching still finds the row. false: the CVE no longer matches the technology version; the row was kept for its review state (handled or not_affected), and the page marks it as no longer matching. A row that no longer matches and is to review (put back there since) disappears at the next matching; the others stay with matching false. To list them, add a state filter (all, handled or not_affected): the default keeps the rows to review only.',
+      values: ['true', 'false'],
+      discoverable: true,
+      sortable: false,
+      groupable: false,
     },
     published_at: {
       ai: 'published_at',
@@ -233,12 +255,19 @@ export const vulnerabilitiesRegistry: AiEntityFilterRegistry = {
   aggregate: {
     baseTable: 'technology_vulnerabilities',
     alias: 'tv',
+    distinctRecord: { name: 'cve', expression: 'tv.cve_id' },
     groupFields: {
       severity: { expression: EFFECTIVE_SEVERITY, joins },
       score_source: { expression: SCORE_SOURCE_SQL, joins },
       exploited: { expression: asText(exploitedSql('c')), joins },
       state: { expression: 'tv.state' },
       technology: { expression: 't.name', joins },
+      // The technology and the version, as the page's summary by version; no version: the page's `version=none`.
+      version: {
+        expression: `(CASE WHEN tv.technology_version_id IS NULL THEN t.name || ' (no version recorded)' ELSE t.name || ' ' || v.label END)`,
+        joins,
+      },
+      estate: { expression: asText(technologyInEstateSql('tv')) },
       alerts: { expression: asText(vulnerabilityAlertsSql('v', 't')), joins },
     },
     metricFields: {

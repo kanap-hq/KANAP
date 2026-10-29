@@ -545,6 +545,16 @@
       "title": "Lignes budgétaires liées",
       "empty": "Aucune ligne budgétaire liée.",
       "pickerLabel": "Lier ou retirer des lignes budgétaires",
+      "mismatch": {
+        "notSet": "Non défini",
+        "line": "{{field}} : {{line}} sur la ligne, {{contract}} sur le contrat",
+        "fields": {
+          "paying_company": "Société payeuse",
+          "cost_center": "Centre de coûts",
+          "supplier": "Fournisseur",
+          "currency": "Devise"
+        }
+      },
       "columns": {
         "ref": "Réf.",
         "line": "Ligne budgétaire",
@@ -1090,6 +1100,8 @@
       "warningsTitle": "Avertissements",
       "ignoredColumns": "Colonnes ignorées : {{columns}}.",
       "firstSheetOnly": "Seule la première feuille, {{name}}, a été lue.",
+      "calculationLines": "{{item}} · {{column}} {{year}} : {{count}} lignes de calcul ({{total}}) ne piloteront plus ces montants.",
+      "calculationLines_one": "{{item}} · {{column}} {{year}} : 1 ligne de calcul ({{total}}) ne pilotera plus ces montants.",
       "ignoredColumns_one": "Colonne ignorée : {{columns}}.",
       "createsTitle": "Créés par le chargement",
       "createSuppliersList": "Fournisseurs : {{names}}",
@@ -1501,6 +1513,7 @@
       "totalMetric": "{{metric}}, total",
       "ofFilteredMetric": "{{pct}} % du total filtré",
       "shareSubtitle": "Part du total annuel ({{metric}})",
+      "shareOfAllLines": "Part de toutes les lignes",
       "chartTitle": "Top {{count}} des {{type}} · {{metric}} {{year}}",
       "chartTitle_all": "Top {{count}} des lignes · {{metric}} {{year}}"
     },

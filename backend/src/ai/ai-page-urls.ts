@@ -16,10 +16,14 @@ export const AI_PAGE_ROUTES: Readonly<Record<string, { path: (id: string) => str
   analytics_categories: { path: (id) => `/master-data/analytics/${id}`, resource: 'analytics' },
   locations: { path: (id) => `/it/locations/${id}`, resource: 'locations' },
   connections: { path: (id) => `/it/connections/${id}`, resource: 'infrastructure' },
+  // The Roles screen has no page per role: a role opens the screen.
+  roles: { path: () => '/admin/roles', resource: 'users' },
+  // A row of Admin › Data access names a person: it opens the screen.
+  data_access: { path: () => '/admin/data-access', resource: 'users' },
 };
 
 /** The sentence the read tools give about `page_url` (chat and MCP share the descriptions). */
-export const AI_PAGE_URL_NOTE = 'A record without a business reference (contract, company, supplier, contact, department, business process, account, analytics value, site, connection) carries `page_url`, the address of its page in KANAP, when the user can open that page: an absolute address over MCP when the workspace address is configured on the server, otherwise a path from the workspace address.';
+export const AI_PAGE_URL_NOTE = 'A record without a business reference (contract, company, supplier, contact, department, business process, account, analytics value, site, connection, role, data access row) carries `page_url`, the address of its page in KANAP, when the user can open that page: an absolute address over MCP when the workspace address is configured on the server, otherwise a path from the workspace address.';
 
 export type AiPageUrlOptions = {
   /** The rights, among `resources`, the user holds at reader level. */

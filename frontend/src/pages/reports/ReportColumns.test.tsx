@@ -363,10 +363,39 @@ describe('Chart tooltips', () => {
     renderReport(<TopOpexReport />);
     await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('123'));
     const pie = chart.options.series[0];
-    const share = shareOf(pie.tooltip.renderer({ datum: { name: 'Small', value: 123 }, angleKey: 'value' }));
+    const tooltip = pie.tooltip.renderer({ datum: { name: 'Small', value: 123 }, angleKey: 'value' });
+    const share = shareOf(tooltip);
     expect(share).toBe(formatPercentPoints(12.3, 'fr', 1));
     expect(share).toContain('12,3');
     expect(share).not.toContain('12.3');
+    // These two lines are the whole total, so the share of all lines matches the share of the pie.
+    const ofAll = tooltip.data.find((row: { label: string }) => row.label === 'reports.topOpex.shareOfAllLines');
+    expect(ofAll?.value).toBe(share);
+  });
+
+  it('labels a pie slice by the slices drawn and keeps the share of all lines on a second line', async () => {
+    serverRows = [
+      { id: 'a', product_name: 'Large', versions: { y: slot(Y, { budget: 50 }) } },
+      { id: 'b', product_name: 'Mid', versions: { y: slot(Y, { budget: 30 }) } },
+      { id: 'c', product_name: 'Small', versions: { y: slot(Y, { budget: 20 }) } },
+    ];
+    renderReport(<TopOpexReport />);
+    await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('Small'));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'reports.filters.topCount' }), { target: { value: '2' } });
+    await waitFor(() => expect(screen.getByTestId('grid').textContent).not.toContain('Small'));
+
+    const pie = chart.options.series[0];
+    // 50 of the drawn 80 is 62.5%, so the slice reads 63%. Its share of every line (100) is 50%.
+    expect(pie.sectorLabel.formatter({ datum: { value: 50 }, angleKey: 'value' })).toBe('63%');
+    // 2 of the drawn 80 is 2.5%: under 3%, the slice stays blank.
+    expect(pie.sectorLabel.formatter({ datum: { value: 2 }, angleKey: 'value' })).toBe('');
+    // 2.4 of 80 is 3% exactly.
+    expect(pie.sectorLabel.formatter({ datum: { value: 2.4 }, angleKey: 'value' })).toBe('3%');
+
+    const tooltip = pie.tooltip.renderer({ datum: { name: 'Large', value: 50 }, angleKey: 'value' });
+    expect(shareOf(tooltip)).toBe(formatPercentPoints(62.5, 'en', 1));
+    const ofAll = tooltip.data.find((row: { label: string }) => row.label === 'reports.topOpex.shareOfAllLines');
+    expect(ofAll?.value).toBe(formatPercentPoints(50, 'en', 1));
   });
 });
 
@@ -401,5 +430,41 @@ describe('OPEX delta shares', () => {
     const frenchPercent = formatPercentPoints(100, 'fr', 1);
     expect(split).toContain(frenchPercent);
     expect(split).not.toContain('100.0%');
+  });
+});
+
+/** A measure field that names a budget column (`y2026Forecast`, `staff_cost_y2026Forecast`). */
+const COLUMN_FIELD = /y\d{4}(Budget|Revision|Forecast|FollowUp|Landing)/;
+
+/** Aggregates whose measures name a budget column. The filter bar's aggregates have none. */
+function columnPosts() {
+  return post.mock.calls.filter(([, body]) => (body?.spec?.measures ?? []).some((measure: { field?: string }) => COLUMN_FIELD.test(measure.field ?? '')));
+}
+
+function columnSuffixes(): string[] {
+  return columnPosts().flatMap(([, body]) => body.spec.measures.flatMap((measure: { field?: string }) => {
+    const match = COLUMN_FIELD.exec(measure.field ?? '');
+    return match ? [match[1]] : [];
+  }));
+}
+
+describe.each([
+  ['Top items', TopOpexReport, ['Forecast']],
+  ['Column comparison', BudgetColumnsCompareReport, ['Forecast']],
+  ['Increases and decreases', OpexDeltaReport, ['Forecast']],
+  ['Comparison', ComparisonReport, ['Forecast', 'Landing']],
+  ['Consolidation', ConsolidationReport, ['Forecast']],
+] as const)('%s waits for the column setting', (_name, Report, suffixes) => {
+  it('sends one set of aggregates, on the tenant default', async () => {
+    const tenant = { labels: TENANT_NAMES, enabled: ALL_SHOWN, default_column: 'forecast' as const };
+    setBudgetColumns(tenant, false);
+    const { rerenderReport } = renderReport(<Report />);
+    await waitFor(() => expect(post.mock.calls.some(([, body]) => body.spec.groupBy?.[0] === 'run_build')).toBe(true));
+    expect(columnPosts()).toEqual([]);
+
+    setBudgetColumns(tenant);
+    rerenderReport();
+    await waitFor(() => expect(new Set(columnSuffixes())).toEqual(new Set(suffixes)));
+    expect(columnPosts()).toHaveLength(1);
   });
 });

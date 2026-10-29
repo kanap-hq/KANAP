@@ -1,6 +1,6 @@
 {
   "files": {
-    "admin.md": "9ff4edea7475b24c9ab7631e989b95b0",
+    "admin.md": "9da48436b2dbc410d3c203b469380f97",
 
     "administration-view.md": "50d7154af364743f12afb56174c4745c",
 
@@ -14,27 +14,27 @@
 
     "agents-workspace.md": "48f9f5d61e2d0f4cf7e4f0e051657a48",
 
-    "ai-assistant.md": "154c1ad9277148524157aa7846740103",
+    "ai-assistant.md": "c4503d17503e73ad120685d08c3b42f3",
 
     "ai-models.md": "dd41b5b504573ad8a51d75cedcdc1c92",
 
-    "ai-settings.md": "e60918113c6189e73d08755f9ad9ec67",
+    "ai-settings.md": "752c44d949875f5c38c3736f34054757",
 
     "ai-usage.md": "c5ef4c260ba0162a443ac7741a09d47f",
 
     "analytics.md": "f8b72c3537c8ec2af43f1ff67f8127d9",
 
-    "applications.md": "be1fe399c63d7daf1da51ff9a9b696dd",
+    "applications.md": "acc297fc1c54d917abb519397d4b53ec",
 
-    "assets.md": "abb26371576556b7f7cad9f3f6911b1c",
+    "assets.md": "863b02adc107b3fd9b735dd17d35f87d",
 
     "branding.md": "89014110f2460e59fca29b2bc2064272",
 
     "budget-data-model.md": "3a8e09228578e6b5b79fbe376f16a880",
 
-    "budget-file.md": "e058559524ecb48743366234bc538ca2",
+    "budget-file.md": "62cbf47f9cd5c0dbd346c913904432e1",
 
-    "budget-lines.md": "939e2cc2d4ded5f0255d550d64bab951",
+    "budget-lines.md": "e7eefcc236a0a8af5ea9601201569394",
 
     "budget-operations.md": "449be16d51ad61544225d42a1f976bcb",
 
@@ -52,7 +52,7 @@
 
     "contacts.md": "f8622c4d9a0f9a1bb2650c4aa162168c",
 
-    "contracts.md": "856bb017cf347c465103f486d944213a",
+    "contracts.md": "3ba137e52f5ac18d8a44e5152a287b03",
 
     "cost-centers.md": "86c622a10f580371448e38c0a193339a",
 
@@ -60,7 +60,7 @@
 
     "currencies.md": "8de455ec65c514b76c582744f9641cc0",
 
-    "data-access.md": "60ea9dd42829e732451bd26e3fdbf29e",
+    "data-access.md": "c7ebb08ad78f19cee9d65fe34ac1d6af",
 
     "departments.md": "c9c8eb9a8452ff2608f31e7dc9c68af9",
 
@@ -82,13 +82,13 @@
 
     "interface-map.md": "fcbe7ba8d14b23a42356114f4e3c7ba8",
 
-    "interfaces.md": "9f73e42c221f515066b0b21850375509",
+    "interfaces.md": "50bd513c868788e93e05db6018ab290b",
 
     "it-ops-settings.md": "821637d1ec3bcef9bafb8434a92f5e0b",
 
     "knowledge.md": "cf6d770cb17e83a8e8d63dcb6b93832c",
 
-    "locations.md": "50996d220afd9dc3f3a718d88322df84",
+    "locations.md": "3354acf11445ced97fde1279a469c83e",
 
     "master-data-operations.md": "35a9a7fb87e520baf0d6516a0d39e75c",
 
@@ -114,17 +114,17 @@
 
     "portfolio-planning.md": "5f5943ccd182054e61d2c077195680b0",
 
-    "portfolio-projects.md": "5c32ae4413f4fa24d87ecaf2726c84c4",
+    "portfolio-projects.md": "a4640b6b5847ba547eae275e4d53505b",
 
     "portfolio-reporting.md": "e4bac10c4d300364dfbfcc594ec5d411",
 
-    "portfolio-requests.md": "d060738c8d307e9aa1122809802b8e54",
+    "portfolio-requests.md": "78b1c88d9abb3da2681501f9fddb4283",
 
     "portfolio-settings.md": "4d741ccd0508434f52ae3df385cfacd4",
 
     "portfolio-team-members.md": "c2ec5c912a15db1f17ca7071161c8212",
 
-    "record-history.md": "d4b4cb12ad8c01cb2b650979d297fa0f",
+    "record-history.md": "cc91aa9aa5eedadb17d56259f590c3ac",
 
     "reports.md": "95ec94189778f0864fa32981e4dad8a2",
 
@@ -136,9 +136,9 @@
 
     "tasks.md": "86b5109a0fa4cbc45b9522387e496573",
 
-    "technologies.md": "d8535dbb30ec17e3633a0dfe3d5a529c",
+    "technologies.md": "23b77e81961a5345e7d9915ed363655c",
 
-    "vulnerabilities.md": "bee34ae164aa805cee81a1b317547a20",
+    "vulnerabilities.md": "050e0c793f7dd67a464f6f38addc1b4d",
 
     "working-day-calendars.md": "1b9cd606edb2a726f9ce83490a483a51"
   },

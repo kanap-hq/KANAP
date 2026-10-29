@@ -302,6 +302,19 @@ describe('AssetRelationsTab', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/assets/attachments/a-1/delete', {}));
   });
 
+  it('offers to put a removed web link back with the same name and URL', async () => {
+    renderTab(relations());
+    fireEvent.click(await screen.findByRole('button', { name: 'linksAndFiles.removeNamed(name=Console)' }));
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/assets/as-1/links/l-1'));
+    expect(await screen.findByText('common:linksAndFiles.removed(name=Console)')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/links', {
+      description: 'Console',
+      url: 'https://console.example.com',
+    }));
+  });
+
   it('attaches a file', async () => {
     const { badgeRead } = renderTab(relations());
     const file = new File(['x'], 'notes.txt', { type: 'text/plain' });

@@ -105,7 +105,7 @@ async function assertOwnDimensions(tenantId: string, language: string) {
        JOIN spend_item_analytics_values v ON v.item_id = s.id AND v.tenant_id = s.tenant_id
        JOIN analytics_axes a ON a.id = v.axis_id AND a.tenant_id = v.tenant_id AND a.code = 'business_domain'
        JOIN analytics_categories c ON c.id = v.category_id AND c.tenant_id = v.tenant_id
-      WHERE s.tenant_id = $1 AND s.product_name = 'Data center de Paris — hébergement et énergie'`, [tenantId]));
+      WHERE s.tenant_id = $1 AND s.product_name = 'Paris data center — hosting and power'`, [tenantId]));
   assert.equal(line?.name, shared.name, `the file's "Shared IT", in ${language}`);
 }
 
@@ -193,7 +193,7 @@ async function checkDimensions(tenantId: string) {
        JOIN spend_item_analytics_values v ON v.item_id = s.id AND v.tenant_id = s.tenant_id
        JOIN analytics_axes a ON a.id = v.axis_id AND a.tenant_id = v.tenant_id AND a.is_default
        JOIN analytics_categories c ON c.id = v.category_id AND c.tenant_id = v.tenant_id
-      WHERE s.tenant_id = $1 AND s.product_name = 'Data center de Paris — hébergement et énergie'`, [tenantId]));
+      WHERE s.tenant_id = $1 AND s.product_name = 'Paris data center — hosting and power'`, [tenantId]));
   assert.equal(dataCenter?.name, 'Locaux et énergie', 'the file\'s "Facilities and power", in French');
 }
 

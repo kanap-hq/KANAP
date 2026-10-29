@@ -151,9 +151,11 @@ async function testInitializeAdvertisesTools(url: string) {
   assert.match(instructions, /rights of the person/);
   assert.match(instructions, /start with search_all/);
   assert.match(instructions, /describe_entity_filters[^.]*before|Before query_entities[^.]*describe_entity_filters/);
-  for (const family of ['cost centers', 'calendars', 'exchange rates', 'data access', 'audit log', 'AI agents']) {
+  for (const family of ['cost centers', 'calendars', 'exchange rates', 'audit log', 'AI agents']) {
     assert.ok(instructions.includes(family), family);
   }
+  // Roles and data access are read only for an administrator of users with access to all data.
+  assert.match(instructions, /reads roles and data access settings only for a person who administers users with access to all data/);
   assert.ok(instructions.length < 1200, `instructions stay short (${instructions.length})`);
 }
 

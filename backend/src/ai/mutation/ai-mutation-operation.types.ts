@@ -59,4 +59,13 @@ export interface AiMutationOperation<TInput = unknown> {
     context: AiExecutionContextWithManager,
     preview: AiMutationPreview,
   ): Promise<AiPreparedMutationPreview>;
+
+  /**
+   * The inputs of every plan step of this tool, when there are two or more: throws when two of
+   * them reach the same records, before the plan is saved.
+   */
+  assertPlanStepsDisjoint?(
+    context: AiExecutionContextWithManager,
+    inputs: Array<Record<string, unknown>>,
+  ): Promise<void>;
 }

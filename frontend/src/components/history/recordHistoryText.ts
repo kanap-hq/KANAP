@@ -14,8 +14,9 @@ import { formatAuditValue, isPlainObject, type AuditValueContext } from '../../l
  * unknown object stays out instead of becoming JSON.
  */
 
-export type RecordHistoryActorKind = 'user' | 'system' | 'import' | 'assistant';
-export type RecordHistoryActor = { kind: RecordHistoryActorKind; name: string | null };
+import type { RecordHistoryActor } from './recordHistoryActor';
+
+export type { RecordHistoryActor, RecordHistoryActorKind } from './recordHistoryActor';
 export type RecordHistoryReference = {
   kind: string;
   id: string;
@@ -239,34 +240,7 @@ export function historyFieldLabel(field: string, t: Translate, table?: string): 
   return t(`auditLogs.fields.${field}`, { defaultValue: field });
 }
 
-/**
- * The event of the record itself: Created, Updated or Deleted. A child's technical action is never
- * shown (its title or its event line says what happened); an unknown action keeps the audit log's
- * own label, and a missing history label falls back to it.
- */
-export function historyActionText(action: string, t: Translate): string {
-  const code = String(action ?? '').trim().toLowerCase();
-  if (!code) return '';
-  const historyLabel = t(`auditLogs.history.actions.${code}`, { defaultValue: '' });
-  if (historyLabel && historyLabel !== `auditLogs.history.actions.${code}`) return historyLabel;
-  return t(`auditLogs.actions.${code}`, { defaultValue: action });
-}
-
-export function historyActorText(actor: RecordHistoryActor, t: Translate): string {
-  switch (actor.kind) {
-    case 'system':
-      return t('auditLogs.sources.system');
-    case 'import':
-      return t('auditLogs.sources.import');
-    case 'assistant':
-      return actor.name
-        ? t('auditLogs.history.actors.assistantFor', { name: actor.name })
-        : t('auditLogs.history.actors.assistant');
-    case 'user':
-    default:
-      return actor.name || t('auditLogs.history.actors.unknown');
-  }
-}
+export { historyActionText, historyActorText } from './recordHistoryActor';
 
 /** The subject named beside the entry's date and author, for the children whose lines do not name it. */
 export function historySubjectText(subject: RecordHistorySubject, t: Translate, table?: string): string | null {

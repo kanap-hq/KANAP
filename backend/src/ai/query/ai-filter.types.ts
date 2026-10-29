@@ -14,6 +14,7 @@ export type AiQueryEntityType =
   | 'connections'
   | 'contacts'
   | 'contracts'
+  | 'data_access'
   | 'departments'
   | 'documents'
   | 'incidents'
@@ -21,6 +22,8 @@ export type AiQueryEntityType =
   | 'locations'
   | 'projects'
   | 'requests'
+  | 'role_permissions'
+  | 'roles'
   | 'suppliers'
   | 'support_deadlines'
   | 'support_gaps'
@@ -117,6 +120,13 @@ export type AiAggregateConfig = {
    */
   baseWhere?: string;
   idColumn?: string;
+  /**
+   * The record a row stands for, when a family has several rows per record (vulnerabilities: one
+   * row per technology version of a CVE). A count then gives each group `distinct_count`, the
+   * distinct `expression` among its rows, and the result `distinct_total` over every row the
+   * filters keep, named by `distinct_label`. `expression` reads the base alias only.
+   */
+  distinctRecord?: { name: string; expression: string };
   groupFields: Record<string, AiAggregateGroupDef>;
   metricFields?: Record<string, AiAggregateMetricDef>;
 };
@@ -215,8 +225,22 @@ export type AiQueryResult = {
    */
   applications_visible?: boolean;
   applications_visible_note?: string;
+  /**
+   * `data_access`: whether limiting data access works on the database, what is missing in the
+   * screen's words, the screen's counters and what the mode covers (the budget and the contracts).
+   */
+  available?: boolean;
+  missing?: string[];
+  unavailable_note?: string;
+  counters?: { limited_persons: number; lines_without_company: number };
+  coverage_note?: string;
   items: AiEntitySummaryDto[];
   total: number;
+  /** Vulnerabilities: the distinct CVE among the `total` rows (`distinct_label`), as the page's total. */
+  distinct_total?: number;
+  distinct_label?: string;
+  /** Vulnerabilities: how fresh each feed is, as the page's feed line. */
+  feeds?: AiVulnerabilityFeed[];
   page: number;
   limit: number;
   returned: number;
@@ -250,6 +274,18 @@ export type AiQueryResult = {
   } | null;
 };
 
+/**
+ * One vulnerability feed as the vulnerabilities page shows it (`GET /vulnerabilities/sources`): the
+ * feeds that are on, their last success and whether the last attempt failed. Never the error text.
+ */
+export type AiVulnerabilityFeed = {
+  source: 'nvd' | 'cve_org';
+  name: string;
+  /** ISO 8601; null: never read. */
+  last_success_at: string | null;
+  failing: boolean;
+};
+
 export type AiAggregateResult = {
   status?: 'ok' | 'invalid_filter' | 'invalid_filter_value';
   /**
@@ -258,6 +294,15 @@ export type AiAggregateResult = {
    */
   applications_visible?: boolean;
   applications_visible_note?: string;
+  /**
+   * `data_access`: whether limiting data access works on the database, what is missing in the
+   * screen's words, the screen's counters and what the mode covers (the budget and the contracts).
+   */
+  available?: boolean;
+  missing?: string[];
+  unavailable_note?: string;
+  counters?: { limited_persons: number; lines_without_company: number };
+  coverage_note?: string;
   amounts_currency?: string | null;
   amounts_currency_note?: string;
   /**
@@ -278,7 +323,8 @@ export type AiAggregateResult = {
   /** `ratio`: a budget ratio metric (cost per FTE, day rate), computed by the server. */
   function?: 'count' | 'sum' | 'avg' | 'min' | 'max' | 'ratio';
   groups: Array<
-    | { key: string | null; count: number }
+    // `distinct_count`: a family with `distinctRecord` (vulnerabilities: the distinct CVE of the group).
+    | { key: string | null; count: number; distinct_count?: number }
     // `unknown`: FTE metrics only, the lines of the group without an FTE (left out of the value).
     | { key: string | null; value: number | string | null; unknown?: number }
     | ({ key: string | null; count: number; value: number | null } & AiBudgetStaffFigures)
@@ -295,6 +341,14 @@ export type AiAggregateResult = {
   /** Budget ratio metrics: how the figures are computed and what they leave out. */
   ratio_note?: string;
   total: number;
+  /**
+   * A family with `distinctRecord`: the distinct records (`distinct_label`, vulnerabilities: cve)
+   * among every row the filters keep. Not the sum of the groups' `distinct_count`.
+   */
+  distinct_total?: number;
+  distinct_label?: string;
+  /** Vulnerabilities: how fresh each feed is, as the page's feed line. */
+  feeds?: AiVulnerabilityFeed[];
   returned: number;
   truncated: boolean;
   complete: boolean;

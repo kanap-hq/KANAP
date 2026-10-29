@@ -545,6 +545,16 @@
       "title": "Verknüpfte Budgetzeilen",
       "empty": "Keine Budgetzeile verknüpft.",
       "pickerLabel": "Budgetzeilen verknüpfen oder entfernen",
+      "mismatch": {
+        "notSet": "Nicht festgelegt",
+        "line": "{{field}}: {{line}} auf der Zeile, {{contract}} auf dem Vertrag",
+        "fields": {
+          "paying_company": "Zahlendes Unternehmen",
+          "cost_center": "Kostenstelle",
+          "supplier": "Lieferant",
+          "currency": "Währung"
+        }
+      },
       "columns": {
         "ref": "Ref.",
         "line": "Budgetzeile",
@@ -1089,6 +1099,8 @@
       "warningsTitle": "Warnungen",
       "ignoredColumns": "Ignorierte Spalten: {{columns}}.",
       "firstSheetOnly": "Nur das erste Blatt, {{name}}, wurde gelesen.",
+      "calculationLines": "{{item}} · {{column}} {{year}}: {{count}} Berechnungszeilen ({{total}}) steuern diese Beträge nicht mehr.",
+      "calculationLines_one": "{{item}} · {{column}} {{year}}: 1 Berechnungszeile ({{total}}) steuert diese Beträge nicht mehr.",
       "ignoredColumns_one": "Ignorierte Spalte: {{columns}}.",
       "createsTitle": "Beim Laden angelegt",
       "createSuppliersList": "Lieferanten: {{names}}",
@@ -1500,6 +1512,7 @@
       "totalMetric": "{{metric}}, gesamt",
       "ofFilteredMetric": "{{pct}} % der gefilterten Summe",
       "shareSubtitle": "Anteil an der Jahressumme ({{metric}})",
+      "shareOfAllLines": "Anteil an allen Zeilen",
       "chartTitle": "Top {{count}} {{type}} · {{metric}} {{year}}",
       "chartTitle_all": "Top {{count}} Zeilen · {{metric}} {{year}}"
     },

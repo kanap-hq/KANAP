@@ -28,6 +28,9 @@ function testWordsThatAskForAFamily() {
     ['périmètre de données de Paul', 'data access (which companies or cost centers a person is limited to)'],
     ["journal d'audit", 'audit log'],
     ['audit log', 'audit log'],
+    ['historique des modifications', 'audit log'],
+    ['rôle Budget Member', 'roles and their rights'],
+    ['Rollen und Berechtigungen', 'roles and their rights'],
     ['agents IA', 'AI agents'],
     ['AI agents', 'AI agents'],
     ['KI-Agenten', 'AI agents'],
@@ -52,6 +55,12 @@ function testCommonWordsAskForNone() {
     'Dimension Data',
     'calendrier de migration',
     'Outlook calendar',
+    // The History tab of one record, which get_record_history reads (Plaid L7, lot C).
+    'Historique des modifications de TEC-3',
+    "Historique des modifications d'AST-3",
+    'historique des modifications du fournisseur Acme',
+    // "rôle" inside another word.
+    'Contrôle qualité',
   ]) {
     assert.deepEqual(families(query), [], `"${query}" asks for no unread family`);
   }
@@ -107,8 +116,40 @@ async function testScreensInThePersonsLanguage() {
   assert.equal(calls.length, 1);
 }
 
+/**
+ * The families of Admin › Roles and Admin › Data access (Plaid L7, lot D): an administrator of
+ * users with access to all data reads them, so they are not listed; an administrator in limited
+ * access, or a person without the right, is told what they lack.
+ */
+function testTheFamiliesOfTheAdministratorsOfUsers() {
+  const dataAccess = 'data access (which companies or cost centers a person is limited to)';
+  const roles = 'roles and their rights';
+  // Full administrator of users: neither family is unread.
+  const full = unreadFamilyLines('fr', null);
+  assert.equal(full.some((line) => line.startsWith(dataAccess) || line.startsWith(roles)), false, full.join('\n'));
+  assert.deepEqual(unreadFamiliesAskedBy('accès limité aux données', 'fr', null), []);
+  assert.doesNotMatch(unreadFamiliesSentence('fr', null), /data access|roles and their rights/);
+
+  // Administrator of users in limited access: listed, with the access that is missing.
+  const limited = unreadFamilyLines('fr', 'all_data');
+  assert.ok(limited.includes(`${dataAccess} (Administration › Accès aux données): The tools read it for a person with the right to administer users and access to all data; this person's access is limited to part of the data.`), limited.join('\n'));
+  assert.ok(limited.some((line) => line.startsWith(`${roles} (Administration › Rôles): `)));
+  const asked = unreadFamiliesAskedBy('accès limité aux données', 'fr', 'all_data')[0];
+  assert.match(asked.note, /this server does not read them for this person\. They are on the screen Administration › Accès aux données\. The tools read it for a person with the right to administer users and access to all data; this person's access is limited/);
+  assert.match(asked.note, /A role says what a person may do, not which data they see\./);
+
+  // Without the right: the right is what is missing.
+  const reader = unreadFamiliesAskedBy('rôle Budget Member', 'en', 'right')[0];
+  assert.equal(reader.where, 'Admin › Roles');
+  assert.match(reader.note, /with the right to administer users, which this person's role does not give/);
+  // Not known (the tool descriptions): both conditions.
+  assert.match(unreadFamilyLines('en').join('\n'), /Admin › Data access\): The tools read it for a person with the right to administer users and access to all data only\./);
+  assert.match(AI_UNREAD_FAMILIES_SENTENCE, /roles and their rights \(read for administrators of users with access to all data only\)/);
+}
+
 async function run() {
   testWordsThatAskForAFamily();
+  testTheFamiliesOfTheAdministratorsOfUsers();
   testCommonWordsAskForNone();
   await testScreensInThePersonsLanguage();
   console.log('ai-unread-families.spec: ok');

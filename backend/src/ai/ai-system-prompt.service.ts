@@ -8,7 +8,7 @@ import type { AiContextProfile } from './ai-context-profile';
 import type { budgetColumnsAiContext } from '../budget-columns/budget-columns.util';
 import type { AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
 import { isoDateTimeInTimeZone, knownTimeZone } from '../common/csv-sheet';
-import { unreadFamiliesSentence, type AiScreenLanguage } from './ai-unread-families';
+import { aiScreenName, unreadFamiliesSentence, type AiAdminFamiliesGap, type AiScreenLanguage } from './ai-unread-families';
 
 type CurrentUserPromptContext = {
   displayName: string;
@@ -33,6 +33,11 @@ type SystemPromptParams = {
   timeZone?: string | null;
   /** What the person may change through Plaid, for the refusals (`AiPolicyService.describeWriteRights`). */
   writeRights?: { plaidChanges: boolean; modifiableModules: string[]; contributableModules?: string[] };
+  /**
+   * Why the person does not read the families of Admin › Roles and Admin › Data access
+   * (`AiPolicyService.adminFamiliesGap`); null when they do. Absent: both conditions are named.
+   */
+  adminFamiliesGap?: AiAdminFamiliesGap;
 };
 
 type PromptSection = {
@@ -203,12 +208,21 @@ function writeRightsText(writeRights: SystemPromptParams['writeRights']): string
 }
 
 /**
+ * The access writes no Plaid tool makes (Plaid L7: a person's data access, their roles, the rights
+ * of a role, a person created or deactivated): their screens, in the person's language.
+ */
+const accessWritesRule = (screenLanguage: AiScreenLanguage | null) =>
+  `A person's data access (${aiScreenName(['admin', 'dataAccess'], screenLanguage)}), their roles and the rights of a role (${aiScreenName(['admin', 'roles'], screenLanguage)}), `
+  + `and creating or deactivating a person (${aiScreenName(['admin', 'users'], screenLanguage)}) are changed on those screens only: Plaid prepares none of them, whatever the person's rights.`;
+
+/**
  * The writes no Plaid tool makes (issue 125): a refusal in words, never a substitute preview the
  * person has to reject. The alternative is offered in words and prepared once accepted.
  */
-const UNSUPPORTED_WRITES_RULE =
+const unsupportedWritesRule = (screenLanguage: AiScreenLanguage | null) =>
   'Writes Plaid cannot prepare, whatever the person\'s rights: deleting an application, an asset, a contract, a project, a request, an incident, a technology, or any record other than one task, one contact, one location, one document, one budget line, one connection or one interface (`delete_record` does those, one record at a time); deleting several records in one request, which Plaid prepares one at a time, never as one delete or one plan; '
-  + 'changing the state of a vulnerability; deleting one of a technology\'s versions (its Overview tab has the version\'s delete). '
+  + 'deleting one of a technology\'s versions (its Overview tab has the version\'s delete); re-running the vulnerability matching: the technology\'s Vulnerabilities tab has Refresh. '
+  + `${accessWritesRule(screenLanguage)} `
   + 'A technology\'s attachments are added from its Relations tab, not by Plaid; its CPE products and CVE names belong to the vulnerability matching. '
   + 'For such a request, and for any change that no write-preview tool listed here makes, refuse in the user\'s language in one or two sentences: say what Plaid cannot do and name the KANAP screen where the person can do it. '
   + 'For a request to delete several records, prepare the first one and say the others are deleted one at a time, or ask which one comes first. '
@@ -216,9 +230,11 @@ const UNSUPPORTED_WRITES_RULE =
   + 'You may offer the closest change Plaid can make, in words ("I can create a task to track it if you want"); prepare it only after the user says yes.';
 
 /** What the tools cannot read, how totals are given, and the person's data access (AGENTS.md). */
-const limitsText = (screenLanguage: AiScreenLanguage | null) => [
+const limitsText = (screenLanguage: AiScreenLanguage | null, gap: AiAdminFamiliesGap | undefined) => [
   'Limits of what you read:',
-  `- ${unreadFamiliesSentence(screenLanguage)}`,
+  `- ${unreadFamiliesSentence(screenLanguage, gap)}`,
+  '- The change history of a record is its History tab, which get_record_history reads. A record whose page has no History tab has no history in KANAP: say so, and never rebuild a history from other data, the audit log included.',
+  `- A question about the person's own access ("what can I see?"): their roles are the \`roles\` of the current user context; which data they see is not read here, and an administrator of users shows it in the person's Data access tab (${aiScreenName(['admin', 'users'], screenLanguage)}).`,
   '- Never conclude that something does not exist, is empty or is "none" because no tool returned it: a family the tools do not read, a field a result does not carry (a context is an extract: get_entity_detail gives every field), or a family the user cannot read (null). Say what you could not read and name the KANAP screen that shows it.',
   '- Every total, sum, average or count you cite comes from a tool: `amount_totals` of query_entities (every record the filters keep), `page_amount_totals` (only the items returned, for "the ten largest and their total": ask for a page of that size), or aggregate_entities on the same filters. Never add up, subtract or average figures yourself, even from a list you have just read.',
   '- A result with `data_access` limited covers only what the person\'s data access lets them see: give its counts and totals as "within your access", never as the workspace total, and never say they equal it.',
@@ -367,7 +383,7 @@ export class AiSystemPromptService {
         'Do not stop after the first bulk preview and do not ask the user to type "continue" between previews. ' +
         'Do not compress unrelated record edits into one preview; the user must be able to approve or reject each preview independently. ' +
         'Do not claim a write succeeded until you receive the execution result from the backend.\n' +
-        UNSUPPORTED_WRITES_RULE,
+        unsupportedWritesRule(params.currentUser.screenLanguage ?? null),
       );
       if (profile.includeWritableFields) {
         addSection(
@@ -390,7 +406,8 @@ export class AiSystemPromptService {
         'read_only_capabilities',
         'Read-only capability rules',
         'You can ONLY read data for this person. You cannot create, update, or delete anything. ' +
-        'If the user asks for a change, explain which right their role is missing, as the rights section says.',
+        'If the user asks for a change, explain which right their role is missing, as the rights section says. ' +
+        accessWritesRule(params.currentUser.screenLanguage ?? null),
       );
     }
     addSection('write_rights', 'Rights for refusals', writeRightsText(params.writeRights));
@@ -418,7 +435,9 @@ export class AiSystemPromptService {
     }
 
     if (params.availableTools.length > 0) {
-      addSection('limits', 'Limits of what you read', limitsText(params.currentUser.screenLanguage ?? null));
+      // A person who reads Admin › Data access reads its two families; the others are told what they lack.
+      const gap = params.readableEntityTypes.includes('data_access') ? null : params.adminFamiliesGap;
+      addSection('limits', 'Limits of what you read', limitsText(params.currentUser.screenLanguage ?? null, gap));
     }
 
     if (profile.includeReadableEntityTypes && params.readableEntityTypes.length > 0) {
@@ -434,6 +453,17 @@ export class AiSystemPromptService {
         'domain_vocabulary',
         'Domain vocabulary',
         compactDomainVocabulary(profile.promptMode),
+      );
+    }
+
+    // The families of Admin › Roles and Admin › Data access, for the people who read them.
+    if (params.readableEntityTypes.includes('data_access')) {
+      addSection(
+        'access_vocabulary',
+        'Roles and data access',
+        'Roles and data access: say who sees what with the words of the Data access screen in the user\'s language ("All data", "Limited to", "Read", "Edit"), never the values all or limited. '
+        + 'People who have a role are counted on users with the `roles` filter (every role), not `primary_role` (the primary role only). '
+        + 'What one person sees is the Data access block of their get_entity_detail on users (their nodes, what each covers, budget and contracts only); who sees one company is the Data access block of its get_entity_detail.',
       );
     }
 

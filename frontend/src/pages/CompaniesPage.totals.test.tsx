@@ -1,6 +1,6 @@
 import React from 'react';
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../config/ThemeContext';
@@ -44,11 +44,17 @@ vi.mock('../components/DeleteSelectedButton', () => ({ default: () => null }));
 
 import CompaniesPage from './CompaniesPage';
 
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="loc">{location.search}</div>;
+}
+
 function renderPage() {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <MemoryRouter>
         <CompaniesPage />
+        <LocationProbe />
       </MemoryRouter>
     </ThemeProvider>,
   );
@@ -100,5 +106,31 @@ describe('CompaniesPage totals', () => {
     expect(totals.calls[1]).toMatchObject({ year: complete });
     expect(grid.extraParams).toMatchObject({ year: complete });
     expect(totals.calls.every((call) => String(call.year) !== '2' && call.year !== 2)).toBe(true);
+  });
+
+  it('steps the year from the arrows and writes it on the URL', async () => {
+    totals.calls = [];
+    renderPage();
+    await waitFor(() => expect(totals.calls).toHaveLength(1));
+    const initial = Number(totals.calls[0].year);
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:yearTabs.next' }));
+    await waitFor(() => expect(totals.calls).toHaveLength(2));
+    expect(totals.calls[1]).toMatchObject({ year: initial + 1 });
+    expect(grid.extraParams).toMatchObject({ year: initial + 1 });
+    expect(screen.getByTestId('loc').textContent).toContain(`year=${initial + 1}`);
+    expect(screen.getByLabelText('shared.fields.year')).toHaveValue(initial + 1);
+
+    fireEvent.change(screen.getByLabelText('shared.fields.year'), { target: { value: '20' } });
+    expect(screen.getByLabelText('shared.fields.year')).toHaveValue(20);
+    expect(totals.calls).toHaveLength(2);
+    expect(grid.extraParams).toMatchObject({ year: initial + 1 });
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:yearTabs.previous' }));
+    await waitFor(() => expect(totals.calls).toHaveLength(3));
+    expect(totals.calls[2]).toMatchObject({ year: initial });
+    expect(grid.extraParams).toMatchObject({ year: initial });
+    expect(screen.getByTestId('loc').textContent).toContain(`year=${initial}`);
+    expect(screen.getByLabelText('shared.fields.year')).toHaveValue(initial);
   });
 });

@@ -14,6 +14,7 @@ export type AiMutationWriteToolName =
   | 'update_technology_people'
   | 'update_technology_web_links'
   | 'set_technology_vulnerability_alerts'
+  | 'change_vulnerability_state'
   | 'update_entity_relations'
   | 'update_document_content'
   | 'update_document_metadata'

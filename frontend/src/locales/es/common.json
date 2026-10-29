@@ -1530,6 +1530,7 @@
     },
     "linksTitle": "Enlaces web",
     "linksEmpty": "Ningún enlace web.",
-    "removeFileNamed": "Eliminar el archivo {{name}}"
+    "removeFileNamed": "Eliminar el archivo {{name}}",
+    "removed": "Enlace «{{name}}» retirado."
   }
 }

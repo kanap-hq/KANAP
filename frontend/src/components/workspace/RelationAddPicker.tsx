@@ -4,9 +4,17 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { LOOKUP_DEBOUNCE_MS } from '../../hooks/useLookupPicker';
+import ContractLineMismatchMark, { type ContractLineMismatch } from '../finance/ContractLineMismatchMark';
 import { fieldResetSx } from '../../theme/formSx';
 
-export type RelationOption = { id: string; label: string; ref?: string | null; hint?: string | null };
+export type RelationOption = {
+  id: string;
+  label: string;
+  ref?: string | null;
+  hint?: string | null;
+  /** Present when linking this row would disagree with the record the picker belongs to. */
+  mismatches?: ContractLineMismatch[];
+};
 
 type Props = {
   /** The "Add" button: the picker opens under it, aligned on its left edge. */
@@ -127,7 +135,10 @@ export default function RelationAddPicker({ anchorEl, searchKey, search, exclude
                   {option.ref && (
                     <Box component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary', flexShrink: 0 }}>{option.ref}</Box>
                   )}
-                  <Box component="span" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{option.label}</Box>
+                  <Box component="span" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {option.label}
+                    {option.mismatches && option.mismatches.length > 0 ? <ContractLineMismatchMark mismatches={option.mismatches} /> : null}
+                  </Box>
                   {option.hint && <Box component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary', flexShrink: 0 }}>{option.hint}</Box>}
                 </Box>
               </MenuItem>

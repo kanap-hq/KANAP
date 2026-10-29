@@ -47,6 +47,43 @@ describe('getApiErrorMessage', () => {
       .toBe("L'accès aux données est momentanément indisponible. Contactez la personne qui exploite KANAP.");
   });
 
+  it('translates a repeated data access query in French, with its parameter', () => {
+    const repeated = (parameter: string) => ({
+      response: {
+        status: 400,
+        data: {
+          code: 'DATA_ACCESS_QUERY_REPEATED',
+          message: `${parameter} must be given once.`,
+          params: { parameter },
+        },
+      },
+    });
+    const fr = i18n.getFixedT('fr');
+    expect(getApiErrorMessage(repeated('node_type'), fr, 'fallback')).toBe('Indiquez node_type une seule fois.');
+    expect(getApiErrorMessage(repeated('q'), fr, 'fallback')).toBe('Indiquez q une seule fois.');
+    for (const language of ['en', 'de', 'es']) {
+      const text = getApiErrorMessage(repeated('node_id'), i18n.getFixedT(language), 'fallback');
+      expect(text, language).toContain('node_id');
+      expect(text, language).not.toBe('node_id must be given once.');
+    }
+    for (const code of [
+      'DATA_ACCESS_MODE_INVALID',
+      'DATA_ACCESS_ALL_WITH_NODES',
+      'DATA_ACCESS_NODES_INVALID',
+      'DATA_ACCESS_NODE_ID_INVALID',
+      'DATA_ACCESS_NODE_DUPLICATE',
+    ]) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const text = getApiErrorMessage(
+          { response: { status: 400, data: { code, message: 'server words' } } },
+          i18n.getFixedT(language),
+          'fallback',
+        );
+        expect(text, `${code} in ${language}`).not.toBe('server words');
+      }
+    }
+  });
+
   it('words a refusal without a code as a missing right, in each language', () => {
     const forbidden = { response: { status: 403, data: { statusCode: 403, message: 'Forbidden resource', error: 'Forbidden' } } };
     expect(getApiErrorMessage(forbidden, t, 'fallback')).toBe('You do not have the rights for this action.');

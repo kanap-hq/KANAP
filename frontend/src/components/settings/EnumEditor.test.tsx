@@ -117,6 +117,17 @@ describe('EnumEditor', () => {
     expect(onChange.mock.calls[0][0][0]).toMatchObject({ code: 'analytics', label: 'Analytics', translations: { fr: { label: 'Analytique' } } });
   });
 
+  it('locks every field and hides add, remove and translate when read-only', () => {
+    renderEditor({ readOnly: true, hideAddButton: false });
+    const fields = [...screen.getAllByRole('textbox'), ...screen.getAllByRole('checkbox')];
+    expect(fields.length).toBeGreaterThan(0);
+    fields.forEach((field) => expect(field).toBeDisabled());
+    expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Translate/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add value' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Built-in')).not.toBeInTheDocument();
+  });
+
   it('derived editors expose their extra columns and pass the guards through', () => {
     const onChange = vi.fn();
     render(
