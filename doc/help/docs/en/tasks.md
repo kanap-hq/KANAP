@@ -131,6 +131,7 @@ The header contains:
   - **Back** breadcrumb to **Tasks** (or to the originating project workspace, when you came from one)
   - **Position indicator**: Your position in the filtered list (e.g., "3 of 12") with **Previous** / **Next** arrows
   - **Share**: Email a link to the task
+  - **History**: Open the changes made to the task in a side panel (see [Viewing history](#viewing-history))
   - **Convert to Request**: Promote the task to a portfolio request
   - **Delete** (trash icon): Remove the task, with its comments and history (requires `tasks:admin`). You confirm first, and the delete cannot be undone
   - **Close**: Return to the task list
@@ -147,9 +148,8 @@ Below the toolbar, the title block shows:
 
 **Attachments**: Drag and drop files onto the description, or use the upload area when it appears. Uploaded files appear as chips below the description. Click a chip to download; click the **x** button to delete (requires edit permission). Maximum 20 MB per file.
 
-**Activity Section**: Toggle between three views:
-  - **Comments**: A unified activity form (comment + optional status change + optional time log in one submit) plus the comment thread
-  - **History**: All field and status changes for the task, with timestamps and authors
+**Activity Section**: Toggle between two views:
+  - **Comments**: A unified activity form (comment + optional status change + optional time log in one submit) plus the comment thread. A comment written with a status change shows that change
   - **Time Log**: Time entries (available for standalone and project tasks only)
 
 ### Properties drawer
@@ -320,9 +320,10 @@ The export button is only enabled when the description has content.
 
 ### Viewing history
 
-The **History** tab shows all changes to the task:
+The **History** button in the header opens the changes made to the task in a side panel (see [Record history](record-history.md)):
   - Status changes
   - Field modifications
+  - Links and attachments
   - Who made each change and when
   - The creation entry, with the date, time and creator, shown as the last entry
 

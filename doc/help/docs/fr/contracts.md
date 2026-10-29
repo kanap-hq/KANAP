@@ -136,7 +136,7 @@ Il faut `contracts:member` pour modifier. Les lecteurs voient la même page, tou
 
 **Partager**, dans l'en-tête, envoie par e-mail un lien vers le contrat à des collègues de votre espace de travail.
 
-La fiche a quatre onglets : **Vue d'ensemble**, **Budget**, **Conformité** et **Relations**. Les adresses des anciens onglets **Détails** et **Tâches** ouvrent la vue d'ensemble.
+La fiche a cinq onglets : **Vue d'ensemble**, **Budget**, **Conformité**, **Relations** et **Historique** (les modifications du contrat, voir [Historique des fiches](record-history.md)). Les adresses des anciens onglets **Détails** et **Tâches** ouvrent la vue d'ensemble.
 
 ### Vue d'ensemble
 

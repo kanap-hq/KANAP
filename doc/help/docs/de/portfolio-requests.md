@@ -71,7 +71,7 @@ Das Standardraster hebt die Felder hervor, die während der Erfassung und Überp
 
 Der Arbeitsbereich verwendet ein Split-Modell:
 
-- Der Hauptbereich enthält die operativen Reiter: **Zusammenfassung**, **Analyse**, **Bewertung**, **Beziehungen** und **Wissensdatenbank**.
+- Der Hauptbereich enthält die operativen Reiter: **Zusammenfassung**, **Analyse**, **Bewertung**, **Beziehungen**, **Wissensdatenbank** und **Verlauf** (die Änderungen an der Anfrage, siehe [Verlauf der Datensätze](record-history.md)).
 - Eine persistente **Eigenschaftsleiste** am rechten Rand enthält stabile Anfragen-Metadaten, Teamzuweisung und resultierende Projekte. Öffnen oder schließen Sie sie mit der vertikalen Registerkarte am rechten Rand.
 
 Dies ist wichtig, weil nicht alles auf die gleiche Weise gespeichert wird:
@@ -146,10 +146,7 @@ Der Bereich **Zweck** ist ein verwaltetes Markdown-Dokument, das direkt in die A
 
 ### Aktivität
 
-Unter Zweck enthält der Reiter Zusammenfassung den Anfragenaktivitäts-Stream:
-
-- **Kommentare** für Diskussion, kontextbezogene Notizen und formale Entscheidungen
-- **Historie** für das Audit-Protokoll von Feld- und Statusänderungen
+Unter Zweck enthält der Reiter Zusammenfassung den Anfragenaktivitäts-Stream: Kommentare für Diskussion, kontextbezogene Notizen und formale Entscheidungen. Die Änderungen an der Anfrage stehen im Reiter **Verlauf**.
 
 Dies platziert die neueste Aktivität direkt vor Prüfern, ohne dass sie zu einem separaten Reiter navigieren müssen.
 
@@ -168,7 +165,7 @@ Kommentare unterstützen Markdown und Inline-Bilder, was nützlich für Designno
 
 #### Historie
 
-Die Historie ist die Audit-Ansicht. Verwenden Sie sie, wenn Sie Fragen beantworten müssen wie:
+Der Reiter **Verlauf** listet die Änderungen an der Anfrage. Verwenden Sie ihn, wenn Sie Fragen beantworten müssen wie:
 
 - wer den Status geändert hat
 - wann sich Teamzuweisungen geändert haben
@@ -176,7 +173,7 @@ Die Historie ist die Audit-Ansicht. Verwenden Sie sie, wenn Sie Fragen beantwort
 
 Die Liste endet mit dem Erstellungseintrag (wer die Anfrage erstellt hat und wann) unterhalb der erfassten Änderungen, einschließlich Änderungen an den Dokumenten Zweck und Risiken.
 
-Wenn Sie Erzählung benötigen, verwenden Sie Kommentare. Wenn Sie Beweise benötigen, verwenden Sie die Historie.
+Wenn Sie Erzählung benötigen, verwenden Sie die Kommentare. Wenn Sie Beweise benötigen, verwenden Sie den Reiter **Verlauf**.
 
 ## Analyse
 
@@ -277,7 +274,7 @@ Ein Abschnitt fehlt, wenn Sie sein Modul nicht lesen dürfen: Budgetzeilen erfor
 
 **Verknüpfungen hinzufügen und entfernen** (`portfolio_requests:contributor`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche unter der Schaltfläche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Es gibt keine Bestätigung, und das Entfernen einer Verknüpfung löscht nichts anderes. Das Verknüpfen eines Geschäftsprozesses erfordert zusätzlich `business_processes:member`. Leser sehen die Tabellen schreibgeschützt.
 
-Verknüpfungen mit Budgetzeilen, Anwendungen und Assets werden in der **Historie** der Anfrage erfasst.
+Verknüpfungen mit Budgetzeilen, Anwendungen und Assets werden im Reiter **Verlauf** der Anfrage erfasst.
 
 ### Links und Dateien
 

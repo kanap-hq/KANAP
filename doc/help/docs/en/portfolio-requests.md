@@ -71,7 +71,7 @@ The standard grid highlights the fields that matter during intake and review:
 
 The workspace uses a split model:
 
-- The main area holds the operational tabs: **Summary**, **Analysis**, **Scoring**, **Relations**, and **Knowledge**.
+- The main area holds the operational tabs: **Summary**, **Analysis**, **Scoring**, **Relations**, **Knowledge**, and **History** (the changes made to the request, see [Record history](record-history.md)).
 - A persistent **Properties** drawer on the right edge holds stable request metadata, team assignment, and resulting projects. Open or close it using the vertical tab on the right edge.
 
 This matters because not everything is saved the same way:
@@ -146,10 +146,7 @@ The **Purpose** section is a managed markdown document embedded directly in the 
 
 ### Activity
 
-Below Purpose, the Summary tab includes the request activity stream:
-
-- **Comments** for discussion, contextual notes, and formal decisions
-- **History** for the audit trail of field and status changes
+Below Purpose, the Summary tab includes the request activity stream: comments for discussion, contextual notes, and formal decisions. The changes made to the request are in the **History** tab.
 
 This places the latest activity directly in front of reviewers without requiring them to navigate to a separate tab.
 
@@ -168,7 +165,7 @@ Comments support markdown and inline images, which is useful for design notes, e
 
 #### History
 
-History is the audit view. Use it when you need to answer questions such as:
+The **History** tab lists the changes made to the request. Use it when you need to answer questions such as:
 
 - who changed the status
 - when team assignments changed
@@ -176,7 +173,7 @@ History is the audit view. Use it when you need to answer questions such as:
 
 The list closes with the creation entry (who created the request and when) below the recorded changes, which include edits to the Purpose and Risks documents.
 
-If you need narrative, use Comments. If you need proof, use History.
+If you need narrative, use the comments. If you need proof, use the **History** tab.
 
 ## Analysis
 
@@ -277,7 +274,7 @@ A section is absent when you cannot read its module: budget lines need the budge
 
 **Adding and removing links** (`portfolio_requests:contributor`): **Add** at the right of a section opens a search below the button. Type a name or a reference and pick a result: the link is saved at once. To remove a link, hover the row and click the cross at its end. There is no confirmation, and removing a link deletes nothing else. Linking a business process also needs `business_processes:member`. Readers see the tables read-only.
 
-Links to budget lines, applications and assets are recorded in the request's **History**.
+Links to budget lines, applications and assets are recorded in the request's **History** tab.
 
 ### Links and files
 

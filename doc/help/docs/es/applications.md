@@ -138,6 +138,8 @@ Una celda sin valor muestra un guion.
 
 Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un **encabezado** con metadatos rápidos, un **panel de propiedades** a la derecha (la tarjeta de identidad de la aplicación, siempre visible) y un **área de contenido** en el centro que cambia con cada pestaña.
 
+Las pestañas son **Vista general**, **Despliegues**, **Interfaces**, **Operaciones**, **Conformidad**, **Relaciones** e **Historial** (los cambios de la aplicación, vea [Historial de los registros](record-history.md)).
+
 ### Encabezado
 
 El encabezado muestra:
@@ -403,7 +405,7 @@ KANAP ofrece **dos formas de gestionar versiones de aplicaciones**, dependiendo 
 
 Para la mayoría de aplicaciones (donde actualiza y la versión anterior simplemente desaparece), actualice los campos **Versión**, **Puesta en marcha**, **Fin de soporte** y **Fecha de retiro** en el formulario de creación o en el panel de propiedades. El chip de versión del encabezado y los metadatos de **Puesta en marcha** reflejan lo que defina.
 
-Este enfoque mantiene todo en un solo registro. Cuando actualiza, modifique los campos de versión y listo. El historial se rastrea en el registro de auditoría.
+Este enfoque mantiene todo en un solo registro. Cuando actualiza, modifique los campos de versión y listo. La pestaña **Historial** conserva los valores anteriores.
 
 **Use esto cuando**: las actualizaciones ocurren in situ sin solapamiento: una versión reemplaza a otra.
 

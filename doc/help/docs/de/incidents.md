@@ -88,6 +88,8 @@ Was Sie filtern, wird in den geöffneten Vorfall übernommen: **Zurück / Weiter
 
 Klicken Sie auf eine beliebige Zeile, um den Vorfall zu öffnen. Der Arbeitsbereich hat einen **Kopfbereich** mit der Referenz und kurzen Metadaten, eine **Eigenschaftenleiste** rechts und einen **Inhaltsbereich** in der Mitte, der mit jedem Tab wechselt.
 
+Die Tabs sind **Übersicht**, **Verlauf** (das Journal), **Beziehungen**, **Dokumente** und **Historie** (die Änderungen am Vorfall, siehe [Verlauf der Datensätze](record-history.md)).
+
 ### Kopfbereich und Metadaten
 
 Der Kopfbereich zeigt den Titel (direkt bearbeitbar), die Referenz `INC-N` (zum Kopieren anklicken), die Lebenszyklus-Aktionen und **Zurück / Weiter**, um die gefilterte Liste zu durchlaufen.
@@ -172,7 +174,7 @@ Jede Zeile zeigt den Autor, die Zeit, auf die sie sich bezieht (für „vor 3 Ta
 
 Ein Eintrag **Verknüpfungen aktualisiert** erscheint nur für Personen, die das genannte Modul lesen dürfen: Assets und Technologien erfordern die Infrastruktur, Anwendungen die Anwendungen. Notizen behalten ihren Text, unabhängig davon, was sie erwähnen.
 
-Das Eingabefeld verschwindet, sobald der Vorfall geschlossen oder abgebrochen ist. Feldänderungen außerhalb des Journals, etwa die Korrektur der Beschreibung, werden im Audit-Protokoll der Plattform festgehalten, nicht im Journal.
+Das Eingabefeld verschwindet, sobald der Vorfall geschlossen oder abgebrochen ist. Feldänderungen außerhalb des Journals, etwa die Korrektur der Beschreibung, erscheinen im Tab **Historie**.
 
 Die Vorfallanalyse führt ihre eigene Historie. Jedes Speichern, das sie verändert, erzeugt eine Version, und die Versionen bleiben dauerhaft erhalten. Gewöhnliches Bearbeiten erzeugt keine Journaleinträge: Das Schreiben der Analyse ist kein Ereignis des Vorfalls, und das Audit-Protokoll hält fest, wer was geändert hat. Schließen, Abbrechen und Importe schreiben dagegen einen Journaleintrag, und dieser Eintrag nennt die Version der Analyse, auf die er sich bezieht, dargestellt als „Vorfallanalyse, Version 4 (DOC-12)".
 

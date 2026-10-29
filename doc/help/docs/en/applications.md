@@ -138,6 +138,8 @@ A cell with no value shows a dash.
 
 Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties drawer** on the right (the application's identity card, always visible), and a **content area** in the centre that switches with each tab.
 
+The tabs are **Overview**, **Deployments**, **Interfaces**, **Operations**, **Compliance**, **Relations** and **History** (the changes made to the application, see [Record history](record-history.md)).
+
 ### Header
 
 The header shows:
@@ -403,7 +405,7 @@ KANAP offers **two ways to manage application versions**, depending on how your 
 
 For most applications (where you upgrade and the old version simply goes away), update **Version**, **Go live**, **End of support** and **Retired date** in the create form or the properties drawer. The header version chip and the **Go live** metadata reflect what you set.
 
-This approach keeps everything in a single record. When you upgrade, update the version fields and you're done. History is tracked in the audit log.
+This approach keeps everything in a single record. When you upgrade, update the version fields and you're done. The **History** tab keeps the earlier values.
 
 **Use this when**: upgrades happen in place with no overlap: one version replaces another.
 

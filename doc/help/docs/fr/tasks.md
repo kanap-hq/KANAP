@@ -131,6 +131,7 @@ L'en-tête contient :
   - Fil d'Ariane **Retour** vers **Tâches** (ou vers l'espace de travail du projet d'origine, si vous venez de l'un d'eux)
   - **Indicateur de position** : Votre position dans la liste filtrée (ex. : « 3 sur 12 ») avec flèches **Précédent** / **Suivant**
   - **Partager** : Envoyer un lien vers la tâche par e-mail
+  - **Historique** : Ouvrir les modifications de la tâche dans un panneau latéral (voir [Consulter l'historique](#consulter-lhistorique))
   - **Convertir en demande** : Promouvoir la tâche en demande de portefeuille
   - **Supprimer** (icône corbeille) : Supprimer la tâche, avec ses commentaires et son historique (nécessite `tasks:admin`). Vous confirmez d'abord, et la suppression est définitive
   - **Fermer** : Retourner à la liste des tâches
@@ -147,9 +148,8 @@ Sous la barre d'outils, le bloc de titre affiche :
 
 **Pièces jointes** : Glissez-déposez des fichiers sur la description, ou utilisez la zone de téléversement lorsqu'elle apparaît. Les fichiers téléversés apparaissent comme des pastilles sous la description. Cliquez sur une pastille pour télécharger ; cliquez sur le bouton **x** pour supprimer (nécessite l'autorisation de modification). Maximum 20 Mo par fichier.
 
-**Section Activité** : Basculez entre trois vues :
-  - **Commentaires** : Un formulaire d'activité unifié (commentaire + changement de statut optionnel + saisie de temps optionnelle en une seule soumission) plus le fil de commentaires
-  - **Historique** : Tous les changements de champs et de statut pour la tâche, avec horodatages et auteurs
+**Section Activité** : Basculez entre deux vues :
+  - **Commentaires** : Un formulaire d'activité unifié (commentaire + changement de statut optionnel + saisie de temps optionnelle en une seule soumission) plus le fil de commentaires. Un commentaire écrit en changeant le statut affiche ce changement
   - **Journal de temps** : Entrées de temps (disponible pour les tâches autonomes et de projet uniquement)
 
 ### Tiroir des propriétés
@@ -320,9 +320,10 @@ Le bouton d'export n'est activé que lorsque la description a du contenu.
 
 ### Consulter l'historique
 
-L'onglet **Historique** affiche tous les changements de la tâche :
+Le bouton **Historique** de l'en-tête ouvre les modifications de la tâche dans un panneau latéral (voir [Historique des fiches](record-history.md)) :
   - Changements de statut
   - Modifications de champs
+  - Liens et pièces jointes
   - Qui a effectué chaque changement et quand
   - L'entrée de création, avec la date, l'heure et le créateur, affichée en dernière position
 

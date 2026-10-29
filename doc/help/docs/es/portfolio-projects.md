@@ -85,7 +85,7 @@ Use **Fast-track** para trabajo que se introduce genuinamente directo en la entr
 
 El espacio de trabajo del proyecto tiene dos capas:
 
-- El **área de contenido principal** para las pestañas operativas: **Resumen**, **Tareas**, **Cronograma**, **Progreso**, **Evaluación**, **Relaciones** y **Conocimiento**
+- El **área de contenido principal** para las pestañas operativas: **Resumen**, **Tareas**, **Cronograma**, **Progreso**, **Evaluación**, **Relaciones**, **Conocimiento** e **Historial** (los cambios del proyecto, vea [Historial de los registros](record-history.md))
 - Un panel persistente de **Propiedades** en el borde derecho para las propiedades principales, la asignación de equipo y las solicitudes de origen
 
 Abra o cierre el panel de Propiedades usando la pestaña vertical en el borde derecho.
@@ -180,18 +180,15 @@ El documento gestionado de Propósito es diferente de la pestaña **Conocimiento
 
 ### Actividad
 
-Debajo de Propósito, la pestaña Resumen incluye el flujo de actividad del proyecto:
+Debajo de Propósito, la pestaña Resumen incluye el flujo de actividad del proyecto: los comentarios para discusión, notas contextuales y decisiones formales.
 
-- **Comentarios** para discusión, notas contextuales y decisiones formales
-- **Historial** para la pista de auditoría de cambios de campo y estado
-
-**Historial** enumera los cambios registrados (cambios de estado, ediciones de campos, cambios de equipo y relaciones, ediciones del documento Objetivo) y termina con la entrada de creación: quién creó el proyecto y cuándo.
+Los cambios del proyecto están en la pestaña **Historial**: cambios de estado, ediciones de campos, cambios de equipo y relaciones, ediciones del documento Objetivo, y la entrada de creación (quién creó el proyecto y cuándo).
 
 Los usuarios con `portfolio_projects:member` pueden añadir y editar comentarios del proyecto. Los comentarios también pueden registrarse como decisiones formales, con un resultado y un cambio de estado opcional. Use eso cuando la propia discusión cambie el rumbo del proyecto.
 
 Las imágenes pueden incluirse en los comentarios de actividad cuando la evidencia visual sea útil: bocetos de arquitectura, capturas de pantalla o evidencia de revisión.
 
-Use **Historial** cuando necesite saber qué cambió. Use **Comentarios** cuando necesite saber por qué.
+Use la pestaña **Historial** cuando necesite saber qué cambió. Use los comentarios cuando necesite saber por qué.
 
 ## Tareas
 
@@ -333,7 +330,7 @@ Una sección no aparece si usted no puede leer su módulo: las líneas presupues
 
 **Añadir y quitar vínculos** (`portfolio_projects:contributor`): **Añadir**, a la derecha de una sección, abre una búsqueda bajo el botón. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. No hay confirmación, y quitar un vínculo no elimina nada más. Vincular una tecnología requiere también poder leer la infraestructura. Los lectores ven las tablas en solo lectura.
 
-Los vínculos con líneas presupuestarias, aplicaciones y activos quedan registrados en el **Historial** del proyecto.
+Los vínculos con líneas presupuestarias, aplicaciones y activos quedan registrados en la pestaña **Historial** del proyecto.
 
 ### Enlaces y archivos
 

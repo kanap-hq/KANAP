@@ -131,6 +131,7 @@ Die Kopfzeile enthält:
   - **Zurück**-Breadcrumb zu **Aufgaben** (oder zum ursprünglichen Projekt-Arbeitsbereich, wenn Sie von dort kamen)
   - **Positionsindikator**: Ihre Position in der gefilterten Liste (z. B. „3 von 12") mit **Vorherige** / **Nächste**-Pfeilen
   - **Teilen**: Eine Link zur Aufgabe per E-Mail senden
+  - **Verlauf**: Öffnet die Änderungen an der Aufgabe in einem Seitenbereich (siehe [Verlauf anzeigen](#verlauf-anzeigen))
   - **In Anfrage umwandeln**: Die Aufgabe zu einer Portfolio-Anfrage befördern
   - **Löschen** (Papierkorbsymbol): Die Aufgabe mit ihren Kommentaren und ihrem Verlauf entfernen (erfordert `tasks:admin`). Sie bestätigen zuerst, und das Löschen lässt sich nicht rückgängig machen
   - **Schließen**: Zur Aufgabenliste zurückkehren
@@ -147,9 +148,8 @@ Unter der Symbolleiste zeigt der Titelblock:
 
 **Anhänge**: Ziehen Sie Dateien per Drag-and-Drop auf die Beschreibung oder verwenden Sie den Upload-Bereich, wenn er erscheint. Hochgeladene Dateien erscheinen als Chips unter der Beschreibung. Klicken Sie auf einen Chip zum Herunterladen; klicken Sie auf die **x**-Schaltfläche zum Löschen (erfordert Bearbeitungsberechtigung). Maximal 20 MB pro Datei.
 
-**Aktivitätsbereich**: Wechseln Sie zwischen drei Ansichten:
-  - **Kommentare**: Ein einheitliches Aktivitätsformular (Kommentar + optionale Statusänderung + optionales Zeitprotokoll in einer Übermittlung) plus der Kommentarverlauf
-  - **Historie**: Alle Feld- und Statusänderungen für die Aufgabe, mit Zeitstempeln und Autoren
+**Aktivitätsbereich**: Wechseln Sie zwischen zwei Ansichten:
+  - **Kommentare**: Ein einheitliches Aktivitätsformular (Kommentar + optionale Statusänderung + optionales Zeitprotokoll in einer Übermittlung) plus der Kommentarverlauf. Ein Kommentar, der zusammen mit einer Statusänderung geschrieben wurde, zeigt diese Änderung
   - **Zeitprotokoll**: Zeiteinträge (nur für eigenständige und Projektaufgaben verfügbar)
 
 ### Eigenschaftsleiste
@@ -318,11 +318,12 @@ Die Schaltfläche „Exportieren" ist nur aktiviert, wenn die Beschreibung Inhal
 - Für Projektaufgaben erfordert das Setzen des Status auf **Erledigt** protokollierte Zeit (vorhandene + neu hinzugefügte)
 - Das Status-Dropdown in der Eigenschaftsleiste funktioniert weiterhin unabhängig, wenn Sie diesen Fluss bevorzugen
 
-### Historie anzeigen
+### Verlauf anzeigen
 
-Der Reiter **Historie** zeigt alle Änderungen an der Aufgabe:
+Die Schaltfläche **Verlauf** in der Kopfzeile öffnet die Änderungen an der Aufgabe in einem Seitenbereich (siehe [Verlauf der Datensätze](record-history.md)):
   - Statusänderungen
   - Feldänderungen
+  - Verknüpfungen und Anhänge
   - Wer welche Änderung gemacht hat und wann
   - Der Erstellungseintrag mit Datum, Uhrzeit und Ersteller, als letzter Eintrag angezeigt
 

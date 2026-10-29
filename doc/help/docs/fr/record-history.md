@@ -4,14 +4,19 @@ L'historique d'une fiche liste les modifications qui lui ont été apportées : 
 
 ## Où le trouver
 
-- **Onglet Historique**, le dernier onglet de la fiche : lignes budgétaires (voir [Lignes budgétaires](budget-lines.md#historique)), sociétés, départements, fournisseurs, sites, connexions, interfaces, actifs et technologies.
-- **Bouton Historique** dans l'en-tête, qui ouvre l'historique dans un panneau latéral : comptes, centres de coûts, calendriers de jours ouvrés, processus métier, dimensions et valeurs analytiques, et contacts.
+- **Onglet Historique**, le dernier onglet de la fiche : lignes budgétaires (voir [Lignes budgétaires](budget-lines.md#historique)), contrats, sociétés, départements, fournisseurs, sites, connexions, interfaces, applications, actifs, technologies, incidents, projets et demandes.
+- **Bouton Historique** dans l'en-tête, qui ouvre l'historique dans un panneau latéral : comptes, centres de coûts, calendriers de jours ouvrés, processus métier, dimensions et valeurs analytiques, contacts et tâches.
 - **Onglet Historique** dans le panneau de droite d'un document de la base de connaissances.
+
+Un incident garde aussi son onglet **Journal**. Le journal raconte ce qui s'est passé pendant l'incident. L'historique liste les modifications de la fiche.
+
+Le fil d'activité d'un projet, d'une demande ou d'une tâche ne montre que les commentaires et les décisions. Les modifications de la fiche sont dans son historique. Sur une tâche, un commentaire écrit en changeant le statut affiche ce changement.
 
 ## Qui peut le voir
 
 - Toute personne qui peut ouvrir la fiche peut lire son historique. Aucune autorisation supplémentaire n'est nécessaire.
 - Avec un accès aux données limité à certaines sociétés ou à certains centres de coûts, une personne ne voit que l'historique des fiches comprises dans son accès. Voir [Accès aux données](data-access.md).
+- Un incident restreint reste caché à qui ne peut pas le voir, de même que l'historique de ses tâches.
 
 ## Ce que montre une entrée
 
@@ -38,14 +43,18 @@ L'historique liste aussi les modifications des éléments d'une fiche. Sur une l
 - les applications, technologies et actifs liés ;
 - les tâches.
 
+Sur les autres fiches, l'historique liste de la même façon les liens et les éléments qu'elles portent : lignes budgétaires, applications, actifs, contrats, membres de l'équipe, contacts, dépendances, liens web, documents intégrés, pièces jointes, tâches, déploiements et notes par critère.
+
 ## Fiches que vous ne pouvez pas lire
 
 Une entrée peut nommer une autre fiche, par exemple un contrat lié à la ligne. Si vous ne pouvez pas ouvrir cette fiche, l'entrée la désigne seulement par son type, par exemple « un contrat ». Une fiche supprimée depuis apparaît comme « un contrat supprimé ».
 
+Sur un contrat, un projet ou une demande, une personne à l'accès aux données limité voit les lignes budgétaires hors de son accès comptées, sans leur nom : « et 2 lignes hors de votre accès ».
+
 ## Valeurs que l'historique ne montre pas
 
 - L'adresse e-mail, les numéros de téléphone et les notes d'un contact n'apparaissent jamais.
-- Pour un contenu long, l'entrée indique seulement qu'il a changé : **Contenu modifié** pour le corps d'un document de la base de connaissances, **Jours ouvrés modifiés** pour les jours d'un calendrier de jours ouvrés.
+- Pour un contenu long, l'entrée indique seulement qu'il a changé : **Contenu modifié** pour le corps d'un document de la base de connaissances, **Jours ouvrés modifiés** pour les jours d'un calendrier de jours ouvrés, **Description modifiée**, **Objectif modifié** ou **Situation actuelle modifiée** pour les textes longs des autres fiches.
 
 ## Le journal d'audit complet
 

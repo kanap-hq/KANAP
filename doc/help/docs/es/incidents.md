@@ -88,6 +88,8 @@ Los filtros aplicados se conservan al abrir un incidente: **Anterior / Siguiente
 
 Haga clic en cualquier fila para abrir el incidente. El espacio de trabajo tiene un **encabezado** con la referencia y metadatos rápidos, un **cajón de propiedades** a la derecha y un **área de contenido** en el centro que cambia con cada pestaña.
 
+Las pestañas son **Vista general**, **Diario**, **Relaciones**, **Documentos** e **Historial** (los cambios del incidente, vea [Historial de los registros](record-history.md)).
+
 ### Encabezado y metadatos
 
 El encabezado muestra el título (editable en el sitio), la referencia `INC-N` (haga clic para copiarla), las acciones de ciclo de vida y **Anterior / Siguiente** para recorrer la lista filtrada.
@@ -172,7 +174,7 @@ Cada fila muestra el autor, la hora a la que se refiere (pase el cursor para ver
 
 Una entrada **Vínculos actualizados** solo se muestra a las personas que pueden leer el módulo que nombra: los activos y las tecnologías requieren la infraestructura, las aplicaciones las aplicaciones. Las notas conservan su texto, mencionen lo que mencionen.
 
-El redactor desaparece en cuanto el incidente se cierra o se cancela. Las modificaciones de campos hechas fuera del diario, como corregir la descripción, quedan en el registro de auditoría de la plataforma y no en el diario.
+El redactor desaparece en cuanto el incidente se cierra o se cancela. Las modificaciones de campos hechas fuera del diario, como corregir la descripción, aparecen en la pestaña **Historial**.
 
 La revisión del incidente conserva su propio historial. Cada guardado que la modifica produce una versión, y las versiones se conservan para siempre. La edición corriente no añade entradas al diario: redactar la revisión no es un acontecimiento del incidente, y el registro de auditoría recoge quién cambió qué. El cierre, la cancelación y las importaciones sí escriben una entrada de diario, y esa entrada nombra la versión de la revisión a la que se aplica, mostrada como «Versión 4 de la revisión del incidente (DOC-12)».
 

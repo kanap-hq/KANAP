@@ -138,6 +138,8 @@ Eine Zelle ohne Wert zeigt einen Strich.
 
 Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat eine **Kopfzeile** mit schnellen Metadaten, eine **Eigenschaftsleiste** auf der rechten Seite (die Identitätskarte der Anwendung, immer sichtbar) und einen **Inhaltsbereich** in der Mitte, der mit jedem Reiter wechselt.
 
+Die Reiter sind **Übersicht**, **Bereitstellungen**, **Schnittstellen**, **Betrieb**, **Compliance**, **Beziehungen** und **Verlauf** (die Änderungen an der Anwendung, siehe [Verlauf der Datensätze](record-history.md)).
+
 ### Kopfzeile
 
 Die Kopfzeile zeigt:
@@ -403,7 +405,7 @@ KANAP bietet **zwei Wege zur Verwaltung von Anwendungsversionen**, je nachdem, w
 
 Für die meisten Anwendungen (bei denen Sie upgraden und die alte Version einfach verschwindet) aktualisieren Sie **Version**, **Go-Live**, **Support-Ende** und **Außerbetriebnahmedatum** im Erstellungsformular oder in der Eigenschaftsleiste. Der Versions-Chip in der Kopfzeile und die **Go-Live**-Metadaten spiegeln Ihre Einstellungen wider.
 
-Dieser Ansatz hält alles in einem einzigen Datensatz. Wenn Sie ein Upgrade durchführen, aktualisieren Sie die Versionsfelder und Sie sind fertig. Die Historie wird im Audit-Protokoll verfolgt.
+Dieser Ansatz hält alles in einem einzigen Datensatz. Wenn Sie ein Upgrade durchführen, aktualisieren Sie die Versionsfelder und Sie sind fertig. Der Reiter **Verlauf** bewahrt die früheren Werte.
 
 **Verwenden Sie dies, wenn**: Upgrades vor Ort ohne Überlappung erfolgen: eine Version ersetzt eine andere.
 

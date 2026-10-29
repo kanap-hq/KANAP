@@ -71,7 +71,7 @@ La grille standard met en évidence les champs qui comptent pendant l'intake et 
 
 L'espace de travail utilise un modèle divisé :
 
-- La zone principale contient les onglets opérationnels : **Synthèse**, **Analyse**, **Évaluation**, **Relations** et **Connaissances**.
+- La zone principale contient les onglets opérationnels : **Synthèse**, **Analyse**, **Évaluation**, **Relations**, **Connaissances** et **Historique** (les modifications de la demande, voir [Historique des fiches](record-history.md)).
 - Un tiroir **Propriétés** persistant sur le bord droit contient les métadonnées stables de la demande, l'assignation d'équipe et les projets résultants. Ouvrez ou fermez-le à l'aide de l'onglet vertical sur le bord droit.
 
 Cela compte parce que tout n'est pas enregistré de la même manière :
@@ -146,10 +146,7 @@ La section **Objectif** est un document markdown managé intégré directement d
 
 ### Activité
 
-Sous Objectif, l'onglet Synthèse inclut le flux d'activité de la demande :
-
-- **Commentaires** pour la discussion, les notes contextuelles et les décisions formelles
-- **Historique** pour le journal d'audit des changements de champs et de statut
+Sous Objectif, l'onglet Synthèse inclut le flux d'activité de la demande : les commentaires pour la discussion, les notes contextuelles et les décisions formelles. Les modifications de la demande sont dans l'onglet **Historique**.
 
 Cela place l'activité la plus récente directement devant les relecteurs sans les obliger à naviguer vers un onglet séparé.
 
@@ -168,7 +165,7 @@ Les commentaires prennent en charge le markdown et les images en ligne, ce qui e
 
 #### Historique
 
-L'historique est la vue d'audit. Utilisez-la lorsque vous devez répondre à des questions telles que :
+L'onglet **Historique** liste les modifications de la demande. Utilisez-le lorsque vous devez répondre à des questions telles que :
 
 - qui a changé le statut
 - quand les assignations d'équipe ont changé
@@ -176,7 +173,7 @@ L'historique est la vue d'audit. Utilisez-la lorsque vous devez répondre à des
 
 La liste se termine par l'entrée de création (qui a créé la demande et quand), sous les changements enregistrés, qui incluent les modifications des documents Objectif et Risques.
 
-Si vous avez besoin de récit, utilisez Commentaires. Si vous avez besoin de preuve, utilisez Historique.
+Si vous avez besoin de récit, utilisez les commentaires. Si vous avez besoin de preuve, utilisez l'onglet **Historique**.
 
 ## Analyse
 
@@ -277,7 +274,7 @@ Une section est absente si vous ne pouvez pas lire son module : les lignes budg�
 
 **Ajouter et retirer des liens** (`portfolio_requests:contributor`) : **Ajouter**, à droite d'une section, ouvre une recherche sous le bouton. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Il n'y a pas de confirmation, et retirer un lien ne supprime rien d'autre. Lier un processus métier demande aussi `business_processes:member`. Les lecteurs voient les tableaux en lecture seule.
 
-Les liens vers les lignes budgétaires, les applications et les actifs sont notés dans l'**Historique** de la demande.
+Les liens vers les lignes budgétaires, les applications et les actifs sont notés dans l'onglet **Historique** de la demande.
 
 ### Liens et fichiers
 

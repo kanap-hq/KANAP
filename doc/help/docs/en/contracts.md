@@ -136,7 +136,7 @@ You need `contracts:member` to edit. Readers see the same page with every field 
 
 **Share** in the header emails a link to the contract to colleagues of your workspace.
 
-The page has four tabs: **Overview**, **Budget**, **Compliance** and **Relations**. The addresses of the former **Details** and **Tasks** tabs open the overview.
+The page has five tabs: **Overview**, **Budget**, **Compliance**, **Relations** and **History** (the changes made to the contract, see [Record history](record-history.md)). The addresses of the former **Details** and **Tasks** tabs open the overview.
 
 ### Overview
 
