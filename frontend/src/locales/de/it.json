@@ -1564,7 +1564,8 @@
         "overview": "Übersicht",
         "journal": "Verlauf",
         "relations": "Beziehungen",
-        "documents": "Dokumente"
+        "documents": "Dokumente",
+        "history": "Historie"
       },
       "actions": {
         "changeStatus": "Status ändern",

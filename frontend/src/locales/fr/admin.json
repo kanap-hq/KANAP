@@ -713,7 +713,11 @@
       "yearly_amount_at_signature": "Montant annuel",
       "billing_frequency": "Facturation",
       "compliance_state": "État",
-      "compliance_reference": "Référence"
+      "compliance_reference": "Référence",
+      "source_ref": "Référence externe",
+      "authority_notification_required": "Notification aux autorités requise",
+      "authority_notified_at": "Notifié le",
+      "notified_parties": "Parties informées"
     },
     "history": {
       "empty": "Aucun historique",
@@ -752,7 +756,8 @@
         "workingDaysChanged": "Jours ouvrés modifiés",
         "notesChanged": "Notes modifiées",
         "renewalStopped": "Renouvellement arrêté",
-        "renewalResumed": "Renouvellement repris"
+        "renewalResumed": "Renouvellement repris",
+        "descriptionChanged": "Description modifiée"
       },
       "actors": {
         "assistant": "Plaid",

@@ -7,6 +7,7 @@ import { connectionsParentRules } from './record-history/records/connections';
 import { contractsParentRules } from './record-history/records/contracts';
 import { departmentsParentRules } from './record-history/records/departments';
 import { documentsParentRules } from './record-history/records/documents';
+import { incidentsParentRules } from './record-history/records/incidents';
 import { interfacesParentRules } from './record-history/records/interfaces';
 import { locationsParentRules } from './record-history/records/locations';
 import { spendItemsParentRules } from './record-history/records/spend_items';
@@ -68,6 +69,7 @@ export type AuditParentRule =
  */
 export const TASK_PARENT_TABLES = {
   contract: 'contracts',
+  incident: 'incidents',
 } as const satisfies Readonly<Record<string, RecordHistoryTable>>;
 
 /**
@@ -92,6 +94,7 @@ const PARENT_RULE_SETS = [
   contractsParentRules,
   departmentsParentRules,
   documentsParentRules,
+  incidentsParentRules,
   interfacesParentRules,
   locationsParentRules,
   spendItemsParentRules,

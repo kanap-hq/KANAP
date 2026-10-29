@@ -330,3 +330,20 @@ describe('contract history lines', () => {
       .toEqual([{ label: 'Billing', before: 'Annual', after: 'Monthly' }]);
   });
 });
+
+describe('incident history lines', () => {
+  it('reads the incident fields with the register labels', () => {
+    const incident: HistoryTextContext = { ...context, table: 'incidents' };
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'category', before: 'security', after: 'data' },
+      { field: 'severity', before: 'low', after: 'critical' },
+      { field: 'description', text: 'descriptionChanged' },
+      { field: 'notified_parties', before: null, after: 'Regulator' },
+    ]), incident)).toEqual([
+      { label: 'Category', before: 'Security', after: 'Data' },
+      { label: 'Severity', before: 'Low', after: 'Critical' },
+      { text: 'Description changed' },
+      { label: 'Parties informed', before: '—', after: 'Regulator' },
+    ]);
+  });
+});

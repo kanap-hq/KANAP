@@ -12,6 +12,7 @@ import { contractsRecord } from './record-history/records/contracts';
 import { costCentersRecord } from './record-history/records/cost_centers';
 import { departmentsRecord } from './record-history/records/departments';
 import { documentsRecord } from './record-history/records/documents';
+import { incidentsRecord } from './record-history/records/incidents';
 import { interfacesRecord } from './record-history/records/interfaces';
 import { locationsRecord } from './record-history/records/locations';
 import { spendItemsRecord } from './record-history/records/spend_items';
@@ -154,6 +155,7 @@ const RECORD_HISTORY_DEFINITION = [
   costCentersRecord,
   departmentsRecord,
   documentsRecord,
+  incidentsRecord,
   interfacesRecord,
   locationsRecord,
   spendItemsRecord,

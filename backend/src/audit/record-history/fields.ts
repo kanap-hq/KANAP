@@ -11,6 +11,7 @@ import { contractsFields } from './records/contracts';
 import { costCentersFields } from './records/cost_centers';
 import { departmentsFields } from './records/departments';
 import { documentsFields } from './records/documents';
+import { incidentsFields } from './records/incidents';
 import { interfacesFields } from './records/interfaces';
 import { locationsFields } from './records/locations';
 import { spendItemsFields } from './records/spend_items';
@@ -36,6 +37,7 @@ const FIELD_SETS = [
   costCentersFields,
   departmentsFields,
   documentsFields,
+  incidentsFields,
   interfacesFields,
   locationsFields,
   spendItemsFields,

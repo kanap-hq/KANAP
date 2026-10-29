@@ -21,6 +21,7 @@ describe('record history tables', () => {
       'cost_centers',
       'departments',
       'documents',
+      'incidents',
       'interfaces',
       'locations',
       'suppliers',

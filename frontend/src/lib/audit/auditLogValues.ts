@@ -363,6 +363,10 @@ function enumerationLabel(field: string, code: string, context: AuditValueContex
   if (field === 'family') {
     return screenLabel(context, `auditLogs.values.technologyFamily.${code}`);
   }
+  // An incident's category: the shipped categories of the IT settings, as the register names them.
+  if (field === 'category' && context.table === 'incidents') {
+    return screenLabel(context, `it:catalogDefaults.incidentCategories.${code}`);
+  }
   if (field === 'hosting_type') {
     return screenLabel(context, `auditLogs.values.hostingType.${code}`);
   }

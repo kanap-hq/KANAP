@@ -713,7 +713,11 @@
       "yearly_amount_at_signature": "Yearly amount",
       "billing_frequency": "Billing",
       "compliance_state": "State",
-      "compliance_reference": "Reference"
+      "compliance_reference": "Reference",
+      "source_ref": "External reference",
+      "authority_notification_required": "Authority notification required",
+      "authority_notified_at": "Notified on",
+      "notified_parties": "Parties informed"
     },
     "history": {
       "empty": "No history yet",
@@ -752,7 +756,8 @@
         "workingDaysChanged": "Working days changed",
         "notesChanged": "Notes changed",
         "renewalStopped": "Renewal stopped",
-        "renewalResumed": "Renewal resumed"
+        "renewalResumed": "Renewal resumed",
+        "descriptionChanged": "Description changed"
       },
       "actors": {
         "assistant": "Plaid",

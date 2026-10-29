@@ -1564,7 +1564,8 @@
         "overview": "Vista general",
         "journal": "Diario",
         "relations": "Relaciones",
-        "documents": "Documentos"
+        "documents": "Documentos",
+        "history": "Historial"
       },
       "actions": {
         "changeStatus": "Cambiar estado",

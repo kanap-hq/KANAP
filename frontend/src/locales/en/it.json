@@ -1564,7 +1564,8 @@
         "overview": "Overview",
         "journal": "Journal",
         "relations": "Relations",
-        "documents": "Documents"
+        "documents": "Documents",
+        "history": "History"
       },
       "actions": {
         "changeStatus": "Change status",

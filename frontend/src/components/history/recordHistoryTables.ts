@@ -20,6 +20,7 @@ export const RECORD_HISTORY_TABLES = [
   'cost_centers',
   'departments',
   'documents',
+  'incidents',
   'interfaces',
   'locations',
   'suppliers',
