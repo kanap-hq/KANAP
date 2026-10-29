@@ -50,11 +50,9 @@ export type AiRolesServices = {
   permissions: Pick<PermissionsService, 'getRolePermissionMatrix'>;
 };
 
-/** The sorts the in-memory lists apply, and the fields they filter on (compared with the registries). */
+/** The sorts the in-memory lists apply. */
 export const ROLE_SORTS = new Set(['name', 'type', 'user_count']);
 export const ROLE_PERMISSION_SORTS = new Set(['role', 'role_type', 'resource', 'level']);
-export const ROLE_FILTER_FIELDS = ['name', 'description', 'type', 'user_count'] as const;
-export const ROLE_PERMISSION_FILTER_FIELDS = ['role', 'role_type', 'resource', 'level'] as const;
 
 /** System (Administrator, Contact), built in (shipped, locked) or custom, as the screen's badge. */
 export function aiRoleType(role: Pick<Role, 'role_name' | 'is_system' | 'is_built_in'>): AiRoleType {
