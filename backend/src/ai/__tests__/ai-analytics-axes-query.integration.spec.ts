@@ -27,7 +27,7 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 // - the detail by code: the counts of the screen's page (`get`);
 // - refused in words without the right on analytics dimensions;
 // - a person in limited access: every dimension listed, the line counts of the lines they read,
-//   marked `limited`;
+//   the detail marked `limited`;
 // - another tenant's dimensions never show;
 // - the dimension's History tab reads by its code.
 //
@@ -298,16 +298,16 @@ async function testLimitedPerson(): Promise<void> {
 
     const listed: any = await query.execute(ctx, { entity_type: 'analytics_axes' });
     assert.equal(listed.total, 4, 'every dimension, as the screen');
-    assert.equal(listed.data_access, 'limited');
-    assert.match(listed.data_access_note, /every record of this family is listed/);
+    assert.equal(listed.data_access, undefined, 'the list counts records, never narrowed: not marked');
     const detail: any = await query.executeDetail(ctx, { entity_type: 'analytics_axes', entity_id: 'tower' });
     assert.equal(detail.data_access, 'limited');
+    assert.match(detail.data_access_note, /every record of this family is listed/);
     assert.match(detail.data_access_note, /within your access/);
     assert.deepEqual([detail.data.value_count, detail.data.opex_count, detail.data.capex_missing], [2, 1, 1], 'the lines of Alpha only');
     const grouped: any = await aggregates.execute(ctx, { entity_type: 'analytics_axes', group_by: 'status' });
-    assert.equal(grouped.data_access, 'limited');
+    assert.equal(grouped.data_access, undefined, 'the aggregate counts records: not marked');
   });
-  console.log('ok - analytics_axes: a limited person reads every dimension, the line counts of their lines, marked limited');
+  console.log('ok - analytics_axes: a limited person reads every dimension, the line counts of their lines, the detail marked limited');
 }
 
 async function run(): Promise<void> {

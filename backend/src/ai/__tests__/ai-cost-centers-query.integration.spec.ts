@@ -378,7 +378,7 @@ async function testLimitedPerson(): Promise<void> {
     assert.deepEqual([detail.data.opex_count, detail.data.capex_count], [page.opex_count, page.capex_count], 'the counts of the screen for this person');
     assert.ok(detail.data.opex_count < 2, `the lines outside their access are not counted (${detail.data.opex_count})`);
     assert.equal(detail.data_access, 'limited');
-    assert.match(detail.data_access_note, /opex_count, capex_count\) cover only the lines their access lets them see/);
+    assert.match(detail.data_access_note, /budget line counts of the detail \(.*\) cover only the lines their access lets them see/);
   });
   console.log('ok - cost centers: a limited person reads the whole tree, the line counts within their access');
 }

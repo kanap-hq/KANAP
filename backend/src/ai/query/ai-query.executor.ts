@@ -4059,7 +4059,7 @@ export class AiQueryExecutor {
         lines_using_note: 'The OPEX and CAPEX lines with a quantity × price line on this calendar, whatever the year or column.',
         ...yearBlock,
       }),
-      ...(await aiDataAccessNote(context, 'working_day_calendars')),
+      ...(await aiDataAccessCountsNote(context, 'working_day_calendars')),
     };
   }
 
@@ -4084,7 +4084,7 @@ export class AiQueryExecutor {
         counts_note: 'opex_count and capex_count: the lines holding a value on the dimension; opex_missing and capex_missing: the lines of every status without one (0 for a nature it does not apply to), whether or not it is required; unusable_for: the natures it applies to on which none of its enabled values can be chosen.',
         values_note: AI_AXIS_VALUES_NOTE,
       }),
-      ...(await aiDataAccessNote(context, 'analytics_axes')),
+      ...(await aiDataAccessCountsNote(context, 'analytics_axes')),
     };
   }
 
