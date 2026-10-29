@@ -16,7 +16,7 @@ import {
 
 // The audit rows the request's history needs and its feed alone used to carry (record history,
 // lot 2, run 5): its team, contacts, budget lines, applications, assets, business processes, dependencies, web links
-// and the edit of an integrated document. Each real change writes one row on the request
+// the edit of an integrated document and the attachments copied from a task. Each real change writes one row on the request
 // (`recordId` = the request, a set before and after); a write that changes nothing writes none.
 // The feed's `change` entry stays written beside it.
 
@@ -206,6 +206,46 @@ async function testBusinessProcesses() {
   });
 }
 
+async function testAttachmentsCopiedFromTask() {
+  await inRolledBackTransaction(async (runner) => {
+    const data = await seed(runner);
+    const task = await one(
+      runner,
+      `INSERT INTO tasks (tenant_id, item_number, title, status) VALUES ($1, 901, 'Copy my files', 'open') RETURNING id`,
+      [data.tenantId],
+    );
+    for (const name of ['brief.pdf', 'notes.txt']) {
+      await runner.query(
+        `INSERT INTO task_attachments (tenant_id, task_id, original_filename, stored_filename, storage_path, mime_type, size)
+         VALUES ($1, $2, $3, $3, $4, 'application/octet-stream', 10)`,
+        [data.tenantId, task, name, `files/${name}`],
+      );
+    }
+    const audit = captureAudit();
+    const stub = () => ({}) as any;
+    const requests = new PortfolioRequestsService(
+      runner.manager.getRepository(PortfolioRequest),
+      audit as any,
+      stub(),
+      stub(),
+      { logChange: async () => undefined } as any,
+      quiet as any,
+      { nextItemNumber: async () => 902 } as any,
+      stub(),
+      { provisionForRequest: async () => undefined } as any,
+    );
+    const request = await requests.convertFromTask(task, {}, data.tenantId, data.userA, { manager: runner.manager });
+    const rows = rowsOf(audit, 'portfolio_request_attachments');
+    assert.equal(rows.length, 2, 'one row per copied file');
+    for (const row of rows) {
+      assert.equal(row.action, 'create');
+      assert.equal(row.userId, data.userA, 'the author is the caller');
+      assert.equal(row.after.request_id, request.id, 'the payload names the request, its parent');
+    }
+    assert.deepEqual(rows.map((row) => row.after.original_filename).sort(), ['brief.pdf', 'notes.txt']);
+  });
+}
+
 async function testDependencies() {
   await inRolledBackTransaction(async (runner) => {
     const data = await seed(runner);
@@ -262,6 +302,7 @@ void runSpecs('request-history-writes.integration.spec', [
   ['budget lines: one row per nature, the line as parent', testBudgetLines],
   ['applications and assets: one row on the request', testApplicationsAndAssets],
   ['business processes: one row per change, in the Relations tab shape', testBusinessProcesses],
+  ['attachments copied from a task: one row per file', testAttachmentsCopiedFromTask],
   ['dependencies: one row per add or remove, projects and requests', testDependencies],
   ['web links: one row per change', testUrls],
   ['integrated document: one row for a request edit', testDocumentEdit],

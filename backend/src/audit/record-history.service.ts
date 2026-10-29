@@ -337,6 +337,10 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
         addList('user', payload.owner_ids);
         addList('user', payload.viewer_ids);
       }
+      if (entry.table === 'portfolio_requests' && label === 'portfolio_requests' && isPlainObject(payload)) {
+        // A request names the project it was converted into.
+        addFamilyId({ ids }, 'project', payload.converted_to_project_id);
+      }
       if (entry.auditLabels.includes(label) && isPlainObject(payload) && isPlainObject(payload.renewal_task)) {
         // A contract's renewal marker names the decision task it created.
         addFamilyId({ ids }, 'task', payload.renewal_task.task_id);

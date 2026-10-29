@@ -21,7 +21,8 @@ import { hidden, hiddenChanged, shown } from '../field-rules';
  * request's own row: the presenter names each criterion and option by its label, as for the
  * project. The task the request was created from is `origin_task_id`; the deletion of that task
  * writes its id under `__origin_task_id` (`spend/item-delete-cleanup.ts`), which the presenter
- * reads as `origin_task_id` (`requestAuditPayload`).
+ * reads as `origin_task_id` (`requestAuditPayload`). The conversion into a project writes the
+ * project's id beside the saved row (`converted_to_project_id`), read as "Converted to project".
  */
 export const portfolioRequestsRecord = {
   table: 'portfolio_requests',
@@ -60,7 +61,7 @@ export const portfolioRequestsRecord = {
   exclusions: [],
 } as const satisfies RecordHistoryRecord;
 
-/** A request, as its own audit rows record it (31 columns, plus the task-origin cleanup's keys). */
+/** A request, as its own audit rows record it (31 columns, plus the task-origin cleanup's and the conversion's keys). */
 const REQUEST_FIELDS: HistoryFields = {
   name: shown(),
   status: shown(),
@@ -78,6 +79,8 @@ const REQUEST_FIELDS: HistoryFields = {
   converted_date: shown(),
   // The task the request was created from, named under the reader's rights on tasks.
   origin_task_id: shown('task'),
+  // Written beside the saved row by the conversion into a project, presented as its own change.
+  converted_to_project_id: hidden('conversion marker, presented as its own sentence'),
   // The scoring: the criteria are read by the presenter, with their labels.
   criteria_values: hidden('criterion and option ids, presented as the criteria labels'),
   priority_score: shown(),

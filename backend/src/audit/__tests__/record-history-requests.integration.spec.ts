@@ -131,6 +131,13 @@ async function seedAudits(runner: QueryRunner, data: HistorySeed): Promise<Seede
       current_situation: 'New private situation', feasibility_review: { technical: { status: 'done', comment: 'New private review' } },
     },
   });
+  // The conversion into a project: the saved row names the project beside it.
+  const approved = { ...row, status: 'approved', priority_score: '64.58' };
+  await audit(runner, {
+    table: 'portfolio_requests', recordId: request, action: 'update', ...by,
+    before: approved,
+    after: { ...approved, status: 'converted', converted_to_project_id: data.project },
+  });
   // The deletion of the origin task (`spend/item-delete-cleanup.ts`): its label and its id.
   const deletedTask = randomUUID();
   await audit(runner, {
@@ -216,7 +223,7 @@ async function testRecordEntries(seeded: Seeded) {
   );
 
   const updates = records.filter((item) => item.action === 'update');
-  const update = updates.find((item) => item.changes.some((change) => change.field === 'status'));
+  const update = updates.find((item) => item.changes.some((change) => change.field === 'status' && change.after === 'candidate'));
   assert.ok(update, 'the modification is an entry');
   const field = (name: string) => update!.changes.find((change) => change.field === name);
   assert.deepEqual([field('status')?.before, field('status')?.after], ['pending_review', 'candidate']);
@@ -224,6 +231,15 @@ async function testRecordEntries(seeded: Seeded) {
   assert.deepEqual(field('current_situation'), { field: 'current_situation', text: 'currentSituationChanged' }, 'the situation says changed');
   assert.deepEqual(field('feasibility_review'), { field: 'feasibility_review', text: 'feasibilityReviewChanged' }, 'the review says changed');
   assert.deepEqual(field('criterion'), { field: 'criterion', dimension: 'Strategic fit', before: 'Low', after: 'High' });
+
+  // The conversion names the project.
+  const conversion = updates.find((item) => item.changes.some((change) => change.field === 'converted_to_project'));
+  assert.ok(conversion, 'the conversion is an entry');
+  assert.deepEqual(conversion!.changes, [
+    { field: 'converted_to_project', after: { kind: 'project', id: data.project, label: 'Project Alpha', reference: 'PRJ-7' } },
+    { field: 'status', before: 'approved', after: 'converted' },
+  ], 'converted to the project, named for a projects reader');
+  assert.equal(updates.length, 3, 'the modification, the conversion and the task deletion');
 
   // The deletion of the origin task reads as the origin task, deleted, never its stored label.
   const cleanup = updates.find((item) => item.changes.some((change) => change.field === 'origin_task_id'));
@@ -233,7 +249,7 @@ async function testRecordEntries(seeded: Seeded) {
   const serialized = JSON.stringify(page);
   for (const leak of [
     'Old private situation', 'New private situation', 'Old private review', 'New private review', 'Private task title', 'T-77',
-    '__origin_task_id', 'criteria_values', seeded.criterion, seeded.options.low, seeded.options.high, seeded.deletedTask, 'storage_path', 'files/brief.pdf',
+    '__origin_task_id', 'converted_to_project_id', 'criteria_values', seeded.criterion, seeded.options.low, seeded.options.high, seeded.deletedTask, 'storage_path', 'files/brief.pdf',
   ]) {
     assert.ok(!serialized.includes(leak), `never in the answer: ${leak}`);
   }
@@ -277,6 +293,7 @@ async function testReferencesWithoutModules(seeded: Seeded) {
   assert.deepEqual((one(page, 'contact', 'added').change.after as any)?.hidden, true, 'the contact is hidden');
   const created = page.items.find((item) => item.subject.kind === 'record' && item.action === 'create');
   assert.deepEqual(created?.changes.find((change) => change.field === 'origin_task_id')?.after, { hidden: true, kind: 'task' }, 'the origin task is hidden without tasks');
+  assert.deepEqual(one(page, 'converted_to_project').change.after, { hidden: true, kind: 'project' }, 'the project is hidden without projects');
   const dependencies = changes(page, 'dependency', 'added').map(({ change }) => change.after);
   assert.ok(dependencies.some((value) => (value as any)?.hidden === true && (value as any)?.kind === 'project'), 'the project dependency is hidden without projects');
   assert.ok(dependencies.some((value) => labelOf(value) === 'Request Beta'), 'the request dependency is named for a requests reader');

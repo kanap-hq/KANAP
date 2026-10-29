@@ -730,6 +730,7 @@
       "logged_at": "Date",
       "related_object": "Lié à",
       "converted_to_request": "Convertie en demande",
+      "converted_to_project": "Convertie en projet",
       "actual_effort_business": "Charge métier réelle",
       "actual_effort_it": "Charge IT réelle",
       "actual_start": "Début réel",

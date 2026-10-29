@@ -1328,7 +1328,18 @@ export class PortfolioRequestsService {
         storage_path: att.storage_path,
         source_field: null,
       }));
-      await requestAttachmentRepo.save(toInsert);
+      const copied = await requestAttachmentRepo.save(toInsert);
+      // Each copied file writes its row, as an upload does: the request's history lists it.
+      for (const attachment of copied) {
+        await this.audit.log({
+          table: 'portfolio_request_attachments',
+          recordId: attachment.id,
+          action: 'create',
+          before: null,
+          after: attachment,
+          userId,
+        }, { manager: mg });
+      }
     }
 
     const taskLabel = task.item_number

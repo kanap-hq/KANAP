@@ -466,12 +466,14 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       request.converted_date = new Date();
       request.updated_at = new Date();
       await requestRepo.save(request);
+      // The request's row names the project it became (`converted_to_project_id`, beside the saved
+      // row): its history reads "Converted to project: PRJ-7".
       await this.audit.log({
         table: 'portfolio_requests',
         recordId: request.id,
         action: 'update',
         before: requestBefore,
-        after: request,
+        after: { ...request, converted_to_project_id: savedProject.id },
         userId,
       }, { manager: mg });
 

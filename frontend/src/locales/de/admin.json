@@ -730,6 +730,7 @@
       "logged_at": "Datum",
       "related_object": "Verknüpft mit",
       "converted_to_request": "In Anfrage konvertiert",
+      "converted_to_project": "In Projekt konvertiert",
       "actual_effort_business": "Tatsächlicher Fachbereichs-Aufwand",
       "actual_effort_it": "Tatsächlicher IT-Aufwand",
       "actual_start": "Tatsächlicher Beginn",

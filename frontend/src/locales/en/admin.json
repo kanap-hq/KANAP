@@ -730,6 +730,7 @@
       "logged_at": "Date",
       "related_object": "Related to",
       "converted_to_request": "Converted to request",
+      "converted_to_project": "Converted to project",
       "actual_effort_business": "Actual business effort",
       "actual_effort_it": "Actual IT effort",
       "actual_start": "Actual start",

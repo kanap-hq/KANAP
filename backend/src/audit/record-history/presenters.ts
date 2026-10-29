@@ -1763,6 +1763,15 @@ function taskRecordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange
   return changes;
 }
 
+/** The project a request was converted into, named with the reader's rights on projects. */
+function requestConversionChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) ? row.before_json : null;
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  const projectId = after?.converted_to_project_id;
+  if (!isUuid(projectId) || deepEqual(before?.converted_to_project_id, projectId)) return [];
+  return [{ field: 'converted_to_project', after: referenceValue(ctx, 'project', projectId) }];
+}
+
 function recordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   const columnOperation = columnOperationChanges(row);
   if (columnOperation) return columnOperation;
@@ -1778,7 +1787,11 @@ function recordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   if (row.table_name === 'portfolio_requests') {
     // The deletion of the origin task names it under its own key: it reads as the origin task.
     const read = { ...row, before_json: requestAuditPayload(row.before_json), after_json: requestAuditPayload(row.after_json) };
-    return [...genericChanges(read, ctx, { label: row.table_name, numeric: REQUEST_NUMERIC_FIELDS }), ...scoringChanges(read, ctx)];
+    return [
+      ...requestConversionChanges(read, ctx),
+      ...genericChanges(read, ctx, { label: row.table_name, numeric: REQUEST_NUMERIC_FIELDS }),
+      ...scoringChanges(read, ctx),
+    ];
   }
   const changes = genericChanges(row, ctx, { label: row.table_name })
     // The middleware list has its own events below; the id-list itself is never a field line.
