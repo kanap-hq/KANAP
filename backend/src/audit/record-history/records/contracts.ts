@@ -1,3 +1,5 @@
+import type { EntityManager } from 'typeorm';
+import { isLimitedTransaction } from '../../../data-access/line-write-checks';
 import type { AuditParentRule } from '../../audit-parent-rules';
 import type { RecordHistoryRecord } from '../../record-history.inventory';
 import type { HistoryFields } from '../field-rules';
@@ -147,3 +149,36 @@ export const contractsParentRules: Readonly<Record<string, AuditParentRule>> = {
   contract_attachments: { parentTable: 'contracts', from: 'payload', keys: ['contract_id'] },
   contract_compliance_items: { parentTable: 'contracts', from: 'payload', keys: ['contract_id'] },
 };
+
+/**
+ * The contract's documents: its attachments and web links. The page reads them only when the
+ * contract is directly readable (policies `CONTRACT_DOCUMENTS` of
+ * `1855400000000-data-access-contract-policies.ts`); a contract opened through one of its lines
+ * shows neither, only `closed_documents_count` (`contracts.service.ts`).
+ */
+export const CONTRACT_DOCUMENT_LABELS = ['contract_attachments', 'contract_links'] as const;
+
+/**
+ * lisible_contrat_direct (spec §6.4), the predicate of the `CONTRACT_DOCUMENTS` SELECT policies:
+ * a copy of `readableContractDirect` (`1855400000000-data-access-contract-policies.ts`, l.209),
+ * on the settings of `data_access_apply()`. `$1` tenant, `$2` contract.
+ */
+const CONTRACT_DIRECTLY_READABLE_SQL = `SELECT EXISTS (
+    SELECT 1 FROM contracts c
+     WHERE c.tenant_id = $1 AND c.id = $2
+       AND (coalesce((SELECT NULLIF(current_setting('app.da_read_all', true), '')::boolean), false)
+         OR c.company_id = ANY ((SELECT NULLIF(current_setting('app.da_read_companies', true), '')::uuid[])::uuid[])
+         OR c.cost_center_id = ANY ((SELECT NULLIF(current_setting('app.da_read_nodes', true), '')::uuid[])::uuid[])
+         OR c.owner_user_id = (SELECT NULLIF(current_setting('app.da_user', true), '')::uuid))
+  ) AS direct`;
+
+/**
+ * The contract labels the history leaves out for this reader: the documents, when the transaction
+ * is limited and the contract is read only through a line, as the page closes them. The labels
+ * leave the page query itself, so the cut and the cursor stay exact. Empty otherwise.
+ */
+export async function contractClosedLabels(manager: EntityManager, tenantId: string, contractId: string): Promise<string[]> {
+  if (!(await isLimitedTransaction(manager))) return [];
+  const [row]: Array<{ direct: boolean }> = await manager.query(CONTRACT_DIRECTLY_READABLE_SQL, [tenantId, contractId]);
+  return row?.direct === true ? [] : [...CONTRACT_DOCUMENT_LABELS];
+}

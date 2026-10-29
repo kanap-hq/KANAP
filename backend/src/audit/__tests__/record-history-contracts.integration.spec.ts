@@ -38,6 +38,7 @@ type Seeded = {
   contractReader: Person;
   noModules: Person;
   limited: Person;
+  throughLine: Person;
 };
 
 async function readPage(
@@ -94,6 +95,18 @@ async function seedAudits(runner: QueryRunner, data: HistorySeed): Promise<Seede
     { first: 'Lila', last: 'Limited' },
     LIMITED_MODULES,
     { mode: 'limited', nodeCompanyId: data.companyA },
+  );
+  // Limited to company B: reads contract A only through a line of company B linked to it.
+  const throughLine = await seedPerson(
+    runner,
+    data.tenantId,
+    { first: 'Bea', last: 'Beta' },
+    LIMITED_MODULES,
+    { mode: 'limited', nodeCompanyId: data.companyB },
+  );
+  await runner.query(
+    `INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`,
+    [data.tenantId, data.contractA, data.hiddenLine],
   );
   const contract = data.contractA;
   const [stored] = await runner.query(`SELECT to_jsonb(c) AS row FROM contracts c WHERE c.id = $1`, [contract]);
@@ -174,7 +187,7 @@ async function seedAudits(runner: QueryRunner, data: HistorySeed): Promise<Seede
     await audit(runner, { table: label, recordId: contract, action: 'update', before: { ids: [] }, after: { ids: [id] }, ...by });
     await audit(runner, { table: label, recordId: contract, action: 'update', before: { ids: [id] }, after: { ids: [] }, ...by });
   }
-  return { data, task: task.id, excludedRow, allReader, contractReader, noModules, limited };
+  return { data, task: task.id, excludedRow, allReader, contractReader, noModules, limited, throughLine };
 }
 
 async function testAccess(seeded: Seeded, foreign: HistorySeed) {
@@ -309,6 +322,29 @@ async function testLimited(seeded: Seeded) {
   console.log('  a limited person reads the contract of their scope, the other lines counted: OK');
 }
 
+/**
+ * The page closes the documents of a contract read through one of its lines (policies
+ * `CONTRACT_DOCUMENTS`, only `closed_documents_count` on the page): the history leaves out their
+ * entries, so no file name, link label or URL comes out. A direct reader keeps them.
+ */
+async function testDocumentsThroughLine(seeded: Seeded) {
+  const { data } = seeded;
+  const direct = await readPage(seeded.limited, data.tenantId, data.contractA, LIMITED_MODULES, true);
+  assert.equal(labelOf(one(direct, 'link', 'added').change.after), 'Signed terms', 'a direct reader reads the link');
+  assert.equal(labelOf(one(direct, 'attachment', 'added').change.after), 'contract.pdf', 'a direct reader reads the attachment');
+
+  const page = await readPage(seeded.throughLine, data.tenantId, data.contractA, LIMITED_MODULES, true);
+  assert.ok(page.items.length > 0, 'the contract opens through its line, with its history');
+  assert.ok(page.items.some((item) => item.subject.kind === 'record'), 'the contract\'s own entries stay');
+  assert.equal(page.items.some((item) => item.subject.kind === 'link' || item.subject.kind === 'attachment'), false, 'no document entry');
+  assert.equal(changes(page, 'link').length + changes(page, 'attachment').length, 0, 'no document change');
+  const serialized = JSON.stringify(page);
+  for (const leak of ['Signed terms', 'example.invalid/terms', 'contract.pdf']) {
+    assert.ok(!serialized.includes(leak), `never through a line: ${leak}`);
+  }
+  console.log('  a contract read through a line keeps its documents closed, a direct reader reads them: OK');
+}
+
 async function testParentRows(seeded: Seeded) {
   const { data } = seeded;
   const runner = dataSource.createQueryRunner();
@@ -349,6 +385,7 @@ async function run() {
     await testChildEntries(seeded);
     await testReferencesWithoutModules(seeded);
     await testLimited(seeded);
+    await testDocumentsThroughLine(seeded);
     await testParentRows(seeded);
     console.log('record-history-contracts.integration.spec: ok');
   } finally {

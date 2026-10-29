@@ -41,6 +41,7 @@ import {
   type RecordHistorySubject,
 } from './record-history/presenters';
 import { contactIds, isPlainObject, isUuid, linkSetIds } from './record-history/values';
+import { contractClosedLabels, contractsRecord } from './record-history/records/contracts';
 
 /**
  * The history of one record, as its page shows it (lot 1B, extended by lot 2).
@@ -153,8 +154,9 @@ async function readAuditPage(
   id: string,
   cursor: Cursor | null,
   fetch: number,
+  closedLabels: readonly string[],
 ): Promise<AuditRow[]> {
-  const query = auditPageQuery(entry, tenantId, id, cursor, fetch);
+  const query = auditPageQuery(entry, tenantId, id, cursor, fetch, closedLabels);
   return manager.query(query.sql, query.params);
 }
 
@@ -485,7 +487,11 @@ export class RecordHistoryService {
 
     const limit = parseLimit(options.limit);
     const cursor = decodeCursor(options.cursor);
-    const rows = await readAuditPage(manager, ctx.tenantId, entry, recordId, cursor, limit + 1);
+    // A contract read through one of its lines: its documents stay closed, as on its page.
+    const closedLabels = entry.table === contractsRecord.table
+      ? await contractClosedLabels(manager, ctx.tenantId, recordId)
+      : [];
+    const rows = await readAuditPage(manager, ctx.tenantId, entry, recordId, cursor, limit + 1, closedLabels);
     const page = rows.slice(0, limit);
     const pageContext = await loadPageContext(ctx, entry, recordId, page, reader);
     const items = page.map((row) => presentItem(row, entry, pageContext))
