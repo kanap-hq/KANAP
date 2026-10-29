@@ -78,7 +78,8 @@ async function testResolve() {
     ['a time entry names its task', { table: 'task_time_entries', recordId: OTHER, after: { task_id: TASK, hours: 1 } }, { table: 'tasks', id: TASK }],
     ['a task of an OPEX line names its line', { table: 'tasks', recordId: OTHER, after: { related_object_type: 'spend_item', related_object_id: LINE } }, { table: 'spend_items', id: LINE }],
     ['a task of a CAPEX line names its line', { table: 'tasks', recordId: OTHER, before: { related_object_type: 'capex_item', related_object_id: LINE }, after: null }, { table: 'spend_items', id: LINE }],
-    ['a project task has no parent here', { table: 'tasks', recordId: OTHER, after: { related_object_type: 'project', related_object_id: LINE } }, null],
+    ['a project task names its project (project history lot)', { table: 'tasks', recordId: OTHER, after: { related_object_type: 'project', related_object_id: LINE } }, { table: 'portfolio_projects', id: LINE }],
+    ['a request task has no parent', { table: 'tasks', recordId: OTHER, after: { related_object_type: 'request', related_object_id: LINE } }, null],
     ['the legacy line task label has no parent', { table: 'spend_tasks', recordId: OTHER, after: { related_object_type: 'spend_item', related_object_id: LINE } }, null],
     ['a task application set names no parent', { table: 'task_applications', recordId: TASK, before: { ids: [] }, after: { ids: [OTHER] } }, null],
   ];
