@@ -1115,6 +1115,56 @@ const PAGES = {
       await sleep(1000);
     },
   },
+  // Technologies article (2026-10-29): "New technology" dialog open on the catalog, with a search typed. Read-only: nothing is created.
+  'technologies-catalog-2026-10-29': {
+    frame: 1280,
+    path: '/it/technologies',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await sleep(1000);
+      await page.evaluate(() => {
+        const b = [...document.querySelectorAll('button')].find((n) => /New technology/.test(n.textContent || ''));
+        b?.click();
+      });
+      await page.waitForSelector('input[aria-label="Search the catalog"], [role=dialog] input', { timeout: 15000 });
+      await sleep(800);
+      const input = await page.$('input[aria-label="Search the catalog"]') || await page.$('[role=dialog] input');
+      await input.type(process.env.CATALOG_QUERY || 'postgres', { delay: 60 });
+      await sleep(2500);
+    },
+  },
+  // Technologies article (2026-10-29): overview tab with the versions table. Read-only.
+  'technologies-versions-2026-10-29': {
+    frame: 1920,
+    path: '/it/technologies/TEC-5/overview',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await page.waitForFunction(() => /22\.04/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
+  // Technologies article (2026-10-29): applications tab, hosted and declared rows. Read-only.
+  'technologies-applications-2026-10-29': {
+    frame: 1600,
+    path: '/it/technologies/TEC-3/applications',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await sleep(1500);
+    },
+  },
+  // Technologies article (2026-10-29): relations tab of TEC-21 VMware vSphere, contract (Broadcom VMware ELA) and linked budget line BL-12. Read-only.
+  'technologies-relations-vsphere-2026-10-29': {
+    frame: 1280,
+    path: '/it/technologies/TEC-21/relations',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await sleep(1500);
+    },
+  },
 };
 PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];
 
