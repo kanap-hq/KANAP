@@ -2852,6 +2852,167 @@ async function testSingleTargetWriteIsNotTurnedIntoABulkWrite() {
   assert.doesNotMatch(streamedText(events), /previews de masse/);
 }
 
+const VULNERABILITY_STATE_TOOL = {
+  name: 'change_vulnerability_state',
+  category: 'mutation',
+  description: 'Change the state of vulnerability rows.',
+  input_summary: {},
+  read_only: false,
+  surfaces: ['chat'],
+  write_preview: {
+    entity_type: 'vulnerabilities',
+    fields: ['vulnerability_state'],
+    reversible: true,
+    prompt_hint: 'Use change_vulnerability_state with the rows by CVE, technology and version.',
+  },
+};
+
+function vulnerabilityStatePreview(title: string, to: string) {
+  return {
+    preview_id: `preview-${title.toLowerCase()}`,
+    tool_name: 'change_vulnerability_state',
+    status: 'pending',
+    target: { entity_type: 'vulnerabilities', entity_id: null, ref: null, title },
+    changes: { vulnerability_state: { label: 'Vulnerability state', from: null, to, format: 'markdown' } },
+    requires_confirmation: true,
+    actions: ['approve', 'reject'],
+    summary: 'Change the state of 2 vulnerability rows to Handled.',
+    error_message: null,
+    conversation_id: 'conv-1',
+    created_at: '2026-10-29T10:00:00.000Z',
+    expires_at: '2026-10-29T10:10:00.000Z',
+    approved_at: null,
+    rejected_at: null,
+    executed_at: null,
+  };
+}
+
+/**
+ * Plaid L6 (trap 4): a CVE id looks like a reference ("CVE-2026" in "CVE-2026-1"). Two CVE in the
+ * person's words, one call with two rows: the call runs as asked, without a plan made from the
+ * pseudo-references, without the bulk or completeness guards, and its preview is shown.
+ */
+async function testTwoCveStateChangeIsOneCall() {
+  for (const [prompt, rows] of [
+    ['Passe CVE-2026-1 et CVE-2026-2 à traitée', ['CVE-2026-1', 'CVE-2026-2']],
+    ['Passe CVE-2024-3094 et CVE-2025-1234 à traitée', ['CVE-2024-3094', 'CVE-2025-1234']],
+  ] as const) {
+    const preview = vulnerabilityStatePreview('2 CVEs', `2 rows (2 CVEs): To review → Handled\n\n- ${rows[0]} on TEC-1 PostgreSQL 14\n- ${rows[1]} on TEC-1 PostgreSQL 14`);
+    const answer = "J'ai préparé l'aperçu : les deux failles passent à Traitée. Approuvez-le pour l'appliquer.";
+    const args = { state: 'handled', rows: rows.map((cve_id) => ({ cve_id })) };
+    const { orchestrator, executedToolCalls, recordedRequests, providerCallCount } = createOrchestrator({
+      historyMessages: [{ role: 'user', content: prompt }],
+      availableTools: [
+        { name: 'query_entities', category: 'authoritative', description: 'Query entities', input_summary: {}, read_only: true, surfaces: ['chat'] },
+        PLAN_TOOL,
+        VULNERABILITY_STATE_TOOL,
+      ],
+      providerEventBatches: [
+        [
+          { type: 'tool_call_start', id: 'tc-vuln', name: 'change_vulnerability_state' },
+          { type: 'tool_call_delta', id: 'tc-vuln', arguments: JSON.stringify(args) },
+          { type: 'tool_call_end', id: 'tc-vuln' },
+          { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+        ],
+        [
+          { type: 'text_delta', text: answer },
+          { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
+        ],
+      ],
+      toolResult: preview,
+      toolPreviews: [preview],
+    });
+
+    const events = await collectEvents(orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: prompt }));
+
+    assert.deepEqual(executedToolCalls.map((call) => call.toolName), ['change_vulnerability_state'], `${prompt}: one call, no plan`);
+    assert.deepEqual(executedToolCalls[0].input, args, `${prompt}: the call runs as the model asked`);
+    assert.equal(providerCallCount.value, 2, `${prompt}: no re-plan round`);
+    assert.ok(!sentInstructions(recordedRequests).some((content) => /bulk target set|missing|complete/i.test(content)), `${prompt}: no bulk or completeness instruction`);
+    const previews = events.filter((event) => event.type === 'preview') as any[];
+    assert.deepEqual(previews.map((event) => event.preview_id), [preview.preview_id]);
+    assert.equal(streamedText(events), answer);
+  }
+}
+
+/**
+ * Plaid L6 (P2-7): "accepted" is not a state. The server never turns the request into a write of
+ * its own: a model that answers in words gets its answer shown, and a model that substitutes a
+ * task gets exactly that call run, nothing more (no server guard stops a substitute: the tool
+ * hint and the unsupported-writes rule do).
+ */
+async function testAcceptedVulnerabilityIsNotTurnedIntoAWrite() {
+  const prompt = 'Passe la faille CVE-2026-59310 à acceptée';
+  const tools = [
+    { name: 'query_entities', category: 'authoritative', description: 'Query entities', input_summary: {}, read_only: true, surfaces: ['chat'] },
+    PLAN_TOOL,
+    VULNERABILITY_STATE_TOOL,
+    {
+      name: 'create_task',
+      category: 'mutation',
+      description: 'Create a task.',
+      input_summary: {},
+      read_only: false,
+      surfaces: ['chat'],
+      write_preview: { entity_type: 'tasks', fields: ['title'], reversible: true, prompt_hint: 'Use create_task.' },
+    },
+  ];
+
+  const refusal = "« Acceptée » n'est pas un état de faille. Je peux la passer à Traitée avec la note « risque accepté », ou à Non concernée : que préférez-vous ?";
+  const words = createOrchestrator({
+    historyMessages: [{ role: 'user', content: prompt }],
+    availableTools: tools,
+    providerEventBatches: [[
+      { type: 'text_delta', text: refusal },
+      { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+    ]],
+  });
+  const wordEvents = await collectEvents(words.orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: prompt }));
+  assert.deepEqual(words.executedToolCalls, [], 'a refusal in words runs no tool');
+  assert.equal(words.providerCallCount.value, 1, 'the refusal is not sent back as a write to make');
+  assert.equal(wordEvents.filter((event) => event.type === 'preview').length, 0);
+  assert.equal(streamedText(wordEvents), refusal);
+
+  const task = {
+    preview_id: 'preview-task',
+    tool_name: 'create_task',
+    status: 'pending',
+    target: { entity_type: 'tasks', entity_id: null, ref: null, title: 'CVE-2026-59310 : décision sur l\'acceptation du risque' },
+    changes: { title: { from: null, to: 'CVE-2026-59310 : décision sur l\'acceptation du risque' } },
+    requires_confirmation: true,
+    actions: ['approve', 'reject'],
+    summary: 'Créer la tâche.',
+    error_message: null,
+    conversation_id: 'conv-1',
+    created_at: '2026-10-29T10:00:00.000Z',
+    expires_at: '2026-10-29T10:10:00.000Z',
+    approved_at: null,
+    rejected_at: null,
+    executed_at: null,
+  };
+  const substitute = createOrchestrator({
+    historyMessages: [{ role: 'user', content: prompt }],
+    availableTools: tools,
+    providerEventBatches: [
+      [
+        { type: 'tool_call_start', id: 'tc-task', name: 'create_task' },
+        { type: 'tool_call_delta', id: 'tc-task', arguments: '{"title":"CVE-2026-59310 : décision sur l\'acceptation du risque"}' },
+        { type: 'tool_call_end', id: 'tc-task' },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+      ],
+      [
+        { type: 'text_delta', text: "J'ai préparé une tâche." },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
+      ],
+    ],
+    toolResult: task,
+    toolPreviews: [task],
+  });
+  const taskEvents = await collectEvents(substitute.orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: prompt }));
+  assert.deepEqual(substitute.executedToolCalls.map((call) => call.toolName), ['create_task'], 'the server adds no state change and no plan of its own');
+  assert.deepEqual((taskEvents.filter((event) => event.type === 'preview') as any[]).map((event) => event.preview_id), ['preview-task']);
+}
+
 /** A plan whose steps all fail names the refs of its failed steps: they are handled, nothing is pending. */
 async function testFailedPlanStepsCountAsHandledTargets() {
   const answer = "Les tâches T-1 et T-2 sont verrouillées : je n'ai rien préparé.";
@@ -4160,6 +4321,8 @@ async function run() {
   await testPartialMutationPlanUsesCurrentTextualTargetSet();
   await testTextualWriteConfirmationWithoutPreviewIsRewrittenToCreatePreviews();
   await testSingleTargetWriteIsNotTurnedIntoABulkWrite();
+  await testTwoCveStateChangeIsOneCall();
+  await testAcceptedVulnerabilityIsNotTurnedIntoAWrite();
   await testFailedPlanStepsCountAsHandledTargets();
   await testIncompleteBulkWriteStaysBlockedInThePersonsLanguage();
   await testMissingWritePreviewStopIsInThePersonsLanguage();
