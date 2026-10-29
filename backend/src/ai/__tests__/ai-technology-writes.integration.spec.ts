@@ -1669,6 +1669,30 @@ async function testTechnologyPeopleRefusals(harness: Harness) {
       }),
       'Nothing to change: TEC-1 - PostgreSQL already has these people.',
     );
+    // A removal of a name no user of the tenant has is a missing record, not a person who is
+    // simply not an owner.
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'update_technology_people', {
+        technology: 'TEC-1',
+        owners: { remove: [{ user: 'Nobody Atall' }] },
+      }),
+      'User "Nobody Atall" not found.',
+    );
+    // A user who exists but is not an owner stays in "Not owners", active or not.
+    await seedNamedUser(runner, seed.tenantId, seed.roles.member, 'gone-away@example.test', 'Gone', 'Away', 'disabled');
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_people', {
+      technology: 'TEC-1',
+      owners: {
+        remove: [{ user: 'Camille Roux' }, { user: 'Gone Away' }],
+        add: [{ user: 'Paul Martin', owner_type: 'it' }],
+      },
+    });
+    assert.equal(
+      preview.changes.technology_owners.to,
+      '**Added**\n- Paul Martin (IT owner)'
+      + '\n\n**Not owners**\n- Camille Roux\n- Gone Away',
+    );
+    await approvePreview(harness, ctx, preview);
   });
 }
 

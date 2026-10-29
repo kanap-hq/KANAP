@@ -450,6 +450,22 @@ export class UpdateTechnologyPeopleAiMutationOperation implements AiMutationOper
     return matches[0];
   }
 
+  /**
+   * A removal names a person of the tenant, active or not. A name no user has is a missing
+   * record (404), not a person who is simply not an owner; a user who exists but is not an owner
+   * stays in "Not owners".
+   */
+  private async assertKnownUser(context: AiExecutionContextWithManager, name: string): Promise<void> {
+    const rows: Array<{ name: string | null }> = await context.manager.query(
+      `SELECT NULLIF(btrim(concat_ws(' ', first_name, last_name)), '') AS name
+         FROM users WHERE tenant_id = $1`,
+      [context.tenantId],
+    );
+    if (!rows.some((row) => row.name && sameName(row.name, name))) {
+      throw new NotFoundException(`User "${name}" not found.`);
+    }
+  }
+
   /** A current owner of the fiche, active or not, by the name the card shows. */
   private resolveCurrentOwner(owners: readonly OwnerSnapshot[], name: string, ownerType?: OwnerType): OwnerSnapshot | null {
     const matches = owners.filter((owner) => sameName(owner.name, name) && (!ownerType || owner.owner_type === ownerType));
@@ -495,6 +511,7 @@ export class UpdateTechnologyPeopleAiMutationOperation implements AiMutationOper
       // A removal names a current owner of the fiche, active or not, as the Operations tab shows it.
       const user = this.resolveCurrentOwner(ownersAfter, text(entry.user), entry.owner_type);
       if (!user) {
+        await this.assertKnownUser(context, text(entry.user));
         ownerGroup!.absent.push({ name: text(entry.user), owner_type: entry.owner_type ?? null });
         continue;
       }
