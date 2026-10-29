@@ -1952,9 +1952,40 @@ async function testWithheldFieldsAndChargebackAreDescribed() {
     assert.match(description, /`chargeback.warnings` names in words what the figures leave out, for the answer to repeat/);
     assert.match(description, /a group by department keyed "company › department"/);
   }
-  assert.match(text('query_entities'), /data access row, chargeback row, which opens its report\) carries `page_url`/);
+  assert.match(text('query_entities'), /data access row, chargeback row, which opens its report\), and a cost center, working-day calendar or analytics dimension, whose `ref` is its code, carries `page_url`/);
   const mcp = registry.listRegisteredTools().filter((tool) => tool.surfaces.includes('mcp'));
   assert.equal(mcp.find((tool) => tool.name === 'aggregate_entities')?.description, text('aggregate_entities'), 'the MCP server reads the same description');
+}
+
+/** Plaid L9, lot E: the reference data, one sentence in each read tool, the search and the history said as they are. */
+async function testReferenceDataFamiliesAreDescribed() {
+  const registry = createRegistry();
+  const tools = await registry.listAvailableTools(createContext());
+  const text = (name: string) => tools.find((tool) => tool.name === name)?.description || '';
+  for (const name of ['query_entities', 'aggregate_entities', 'describe_entity_filters']) {
+    const description = text(name);
+    assert.equal(description.match(/The reference data are families too/g)?.length, 1, `${name}: the reference data sentence once`);
+    assert.match(description, /on `cost_centers` \(Master data › Cost centers\), `budget_holder` is the budget holder of the node, the person responsible for it, `under` keeps every node below a group and `parent` the nodes directly under it/);
+    assert.match(description, /a `working_day_calendars` row reads one year \(the `year` filter\), whose `total_days` the server computes/);
+    assert.match(description, /`required_for` is where a value is required now, an enabled dimension only/);
+    assert.match(description, /`exchange_rates` gives each currency's rate for a year in the reporting currency for 1 unit of that currency, with `inverse_rate` and, with the `against` filter, `cross_rate` computed by the server/);
+  }
+  const search = text('search_all');
+  assert.match(search, /It also searches the cost centers, working-day calendars and analytics dimensions by code and by name \(`ref` is the code; at most five of each family\)/);
+  assert.match(search, /The exchange rates are not searched here: query_entities on `exchange_rates` reads them, and `not_searched_here` says so/);
+  assert.doesNotMatch(search, /The reference data are families too/, 'search_all says what it searches, not the facts of the families');
+  // No sentence says the reference data are not read.
+  for (const tool of tools) {
+    assert.doesNotMatch(tool.description, /(do|does) not read (the )?(cost centers|working-day calendars|exchange rates|analytics dimensions)/, tool.name);
+    const unread = tool.description.match(/what these tools do not read: [^.]*\./)?.[0] ?? '';
+    assert.doesNotMatch(unread, /(: |; )(cost centers|working-day calendars|exchange rates|analytics dimensions)(;| \(|\.)/, tool.name);
+  }
+  // The history: the families come from the inventory; no stale list of families without one.
+  const history = registry.listRegisteredTools().find((tool) => tool.name === 'get_record_history')!.description;
+  assert.match(history, /cost centers/);
+  assert.match(history, /working-day calendars/);
+  assert.match(history, /The other families have no History tab in KANAP, so no history here\./);
+  assert.doesNotMatch(history, /applications, contracts, projects, requests, tasks, incidents, users and more/);
 }
 
 async function testAggregateEntitiesPassesDirection() {
@@ -2406,6 +2437,7 @@ async function run() {
   await testAggregateEntitiesPassesMetricsAndThenBy();
   await testAggregateEntitiesDescribesChangesAndMonthlyFte();
   await testWithheldFieldsAndChargebackAreDescribed();
+  await testReferenceDataFamiliesAreDescribed();
   await testAggregateEntitiesPassesDirection();
   await testGetFilterValuesDelegatesToQueryExecutor();
   await testGetEntityContextDelegatesToEntityTools();

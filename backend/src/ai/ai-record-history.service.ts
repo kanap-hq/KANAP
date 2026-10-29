@@ -27,8 +27,10 @@ import {
  * The families with a history are the AI families whose table is in the history inventory
  * (`audit/record-history.inventory.ts`): a budget line is `spend_items` (both natures), a project
  * `portfolio_projects`, a request `portfolio_requests`, a working-day calendar `working_day_profiles`,
- * every other family carries its table's name. A table that joins the inventory with the name of an
- * AI family becomes readable here with no change; a table no AI family reads stays out.
+ * every other family carries its table's name. Every table of the inventory has its AI family (the
+ * cost centers, analytics dimensions and working-day calendars since Plaid L9). A table that joins
+ * the inventory with the name of an AI family becomes readable here with no change; one that no AI
+ * family reads would stay out.
  */
 
 function aiFamilyOfHistoryTable(table: string): AiDetailEntityType | null {
@@ -50,12 +52,17 @@ export const AI_RECORD_HISTORY_TABLES: ReadonlyMap<AiDetailEntityType, string> =
 /** The AI families whose records have a History tab, sorted. */
 export const AI_RECORD_HISTORY_ENTITY_TYPES: readonly AiDetailEntityType[] = Array.from(AI_RECORD_HISTORY_TABLES.keys()).sort();
 
+/** A family in plain words: "budget lines", "working-day calendars" (as the menu writes it). */
+function familyWords(entityType: string): string {
+  return entityType === 'working_day_calendars' ? 'working-day calendars' : entityType.replace(/_/g, ' ');
+}
+
 /** The families in plain words: "budget lines", "business processes". */
-export const AI_RECORD_HISTORY_FAMILY_WORDS = AI_RECORD_HISTORY_ENTITY_TYPES.map((type) => type.replace(/_/g, ' ')).join(', ');
+export const AI_RECORD_HISTORY_FAMILY_WORDS = AI_RECORD_HISTORY_ENTITY_TYPES.map(familyWords).join(', ');
 
 /** The refusal of a family whose records have no History tab, with the families that have one. */
 export function noRecordHistoryMessage(entityType: string): string {
-  return `This record has no history in KANAP: ${String(entityType).replace(/_/g, ' ')} have no History tab. `
+  return `This record has no history in KANAP: ${familyWords(String(entityType))} have no History tab. `
     + `The records with a history are: ${AI_RECORD_HISTORY_FAMILY_WORDS}.`;
 }
 

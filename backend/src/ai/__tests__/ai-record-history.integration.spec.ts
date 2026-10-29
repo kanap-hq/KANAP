@@ -165,7 +165,7 @@ async function testFamilyWithoutHistory(seeded: Seeded) {
       assert.match(error.message, /technologies/);
       // Cost centers, working-day calendars and analytics dimensions have their History tab (Plaid L9).
       assert.match(error.message, /cost centers/);
-      assert.match(error.message, /working day calendars/);
+      assert.match(error.message, /working-day calendars/);
       assert.match(error.message, /analytics axes/);
       console.log(`  refusal: ${error.message}`);
       return true;
