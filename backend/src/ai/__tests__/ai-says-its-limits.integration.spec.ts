@@ -34,7 +34,7 @@ process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
 type Harness = { app: any; dataSource: DataSource; executor: any; aggregates: any; entities: any; tools: any };
-type UserKey = 'full' | 'appsOnly';
+type UserKey = 'full' | 'appsOnly' | 'reporter';
 type Seed = { tenantId: string; users: Record<UserKey, string>; contract: string };
 
 const YEAR = new Date().getFullYear();
@@ -88,6 +88,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
   const users = {
     full: await user('Full', await role('Readers', ['applications', 'budget', 'contracts', 'portfolio_projects'])),
     appsOnly: await user('Apps', await role('Applications only', ['applications'])),
+    reporter: await user('Reporter', await role('Report readers', ['budget', 'reporting'])),
   };
 
   // P3 q27: APP-8 with its recovery objectives, as on the demo tenant.
@@ -197,7 +198,9 @@ async function testUnreadFamilies(h: Harness, runner: QueryRunner, s: Seed) {
     const access = await h.tools.execute(full, 'search_all', { query: 'accès limité aux données' });
     assert.ok(access.not_read_here.some((entry: any) => entry.where === 'Administration › Accès aux données'), 'data access');
     const chargeback = await h.tools.execute(full, 'search_all', { query: 'refacturation 2026 par société bénéficiaire' });
-    assert.ok(chargeback.not_read_here.some((entry: any) => entry.where === 'Gestion budgétaire › Rapports › Refacturation globale'), 'chargeback');
+    const unread = chargeback.not_read_here.find((entry: any) => entry.where === 'Gestion budgétaire › Rapports › Refacturation globale');
+    assert.ok(unread, 'chargeback');
+    assert.match(unread.note, /for a person with the Reporting right, which this person's role does not give/, 'without the Reporting right: the right that is missing');
     const frenchFilters = await h.tools.execute(full, 'describe_entity_filters', { entity_type: 'applications' });
     assert.ok(frenchFilters.families_not_read.some((line: string) => line.startsWith('data access (which companies or cost centers a person is limited to) (Administration › Accès aux données): ')));
   } finally {
@@ -208,6 +211,13 @@ async function testUnreadFamilies(h: Harness, runner: QueryRunner, s: Seed) {
   if (found.items.length) assert.equal(found.families_not_read, undefined, 'a match: no generic list');
   const described = await h.tools.execute(full, 'describe_entity_filters', { entity_type: 'applications' });
   assert.ok(described.families_not_read.includes('audit log (en: Admin › Audit log; fr: Administration › Journal d\'audit; de: Administration › Audit-Protokoll; es: Administración › Registro de auditoría)'), 'describe_entity_filters lists them');
+  // A reader of the reports reads the chargeback (Plaid L8): not named as unread.
+  const reporter = ctx(runner, s, 'reporter');
+  const reports = await h.tools.execute(reporter, 'search_all', { query: 'refacturation 2026 par société bénéficiaire' });
+  assert.equal((reports.not_read_here ?? []).some((entry: any) => entry.family === 'chargeback by beneficiary company'), false, 'read with the Reporting right');
+  const reporterFilters = await h.tools.execute(reporter, 'describe_entity_filters', { entity_type: 'budget_lines' });
+  assert.equal(reporterFilters.families_not_read.some((line: string) => line.startsWith('chargeback by beneficiary company')), false);
+  assert.ok(described.families_not_read.some((line: string) => line.startsWith('chargeback by beneficiary company') && /Reporting right, which this person's role does not give/.test(line)));
   const tools = await h.tools.listAvailableTools(full);
   const searchTool = tools.find((tool: any) => tool.name === 'search_all');
   assert.match(searchTool.description, /no proof that such a record does not exist/);

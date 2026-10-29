@@ -128,6 +128,8 @@ import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
     CapexVersionsService,
     CapexAmountsService,
     CapexAllocationsService,
+    // Plaid and the MCP read the chargeback reports through the screens' service.
+    ChargebackReportService,
   ],
 })
 export class SpendModule {}

@@ -21,6 +21,8 @@ export type ScopedAiEntityType =
   | 'assets'
   | 'budget_lines'
   | 'business_processes'
+  | 'chargeback'
+  | 'chargeback_lines'
   | 'chart_of_accounts'
   | 'companies'
   | 'connections'

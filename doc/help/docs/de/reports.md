@@ -570,6 +570,12 @@ Eine angeheftete Zeile **Gesamt** zeigt für jedes Paar die Tage gesamt, die Kos
 
 ---
 
+## Den Assistenten fragen
+
+[Plaid](ai-assistant.md) liefert die Zahlen dieser Berichte, mit denselben Rechten: Konsolidierungskonten, Top Anstieg / Rückgang (standardmäßig 10 Zeilen), Personal nach Monat (jeder Monat, der Durchschnitt und die Spitze), Kosten pro VZÄ, Globale Leistungsverrechnung und Leistungsverrechnung pro Unternehmen. Es misst auch mehrere Spalten oder Jahre in einer Antwort, zum Beispiel das Budget jedes Lieferanten über drei Jahre. Bei der Leistungsverrechnung deckt es OPEX und CAPEX ab, wenn Sie keinen der beiden nennen, und wiederholt die Warnungen des Berichts. Fragen Sie zum Beispiel: „Welche Zeilen steigen vom Budget 2026 zur Revision am stärksten?“ oder „Wie viel wird jedem Unternehmen 2026 verrechnet, und wie viel zahlt jedes?“
+
+Plaid liest alle Budgetzeilen, auch beendete. Die Budgetberichte lesen die Zeilen, die am 1. Januar des Jahres vor dem ersten angezeigten Jahr noch aktiv sind. Eine früher beendete Zeile zählt daher in der Antwort von Plaid und nicht im Bericht.
+
 ## Gemeinsame Funktionen
 
 Jeder Bericht bietet diese Funktionen über die gemeinsame Symbolleiste:

@@ -81,6 +81,11 @@ export type AiUnreadFamily = {
    * the others (`AiAdminFamiliesGap`).
    */
   usersAdminOnly?: true;
+  /**
+   * Read by the tools for a person with the Reporting right, as its screens (the families
+   * `chargeback` and `chargeback_lines`): left out for them, and said with the right for the others.
+   */
+  reportingOnly?: true;
 };
 
 /**
@@ -91,11 +96,31 @@ export type AiUnreadFamily = {
  */
 export type AiAdminFamiliesGap = 'right' | 'all_data' | null;
 
+/**
+ * What the person reads among the families kept for one right: `reports`, the chargeback reports
+ * (the Reporting right, `canReadEntityType(…, 'chargeback')`). Undefined: not known (the tool
+ * descriptions, common to everyone), the right is named.
+ */
+export type AiUnreadFamiliesReach = { reports?: boolean };
+
 /** What a person lacks to read a family of the administrators of users, in words. */
 function usersAdminGapHint(gap: AiAdminFamiliesGap | undefined): string {
   if (gap === 'right') return 'The tools read it for a person with the right to administer users, which this person\'s role does not give.';
   if (gap === 'all_data') return 'The tools read it for a person with the right to administer users and access to all data; this person\'s access is limited to part of the data.';
   return 'The tools read it for a person with the right to administer users and access to all data only.';
+}
+
+/** What a person lacks to read the chargeback reports, in words. */
+function reportingGapHint(reports: boolean | undefined): string {
+  if (reports === false) return 'The tools read it (the families chargeback and chargeback_lines) for a person with the Reporting right, which this person\'s role does not give.';
+  return 'The tools read it (the families chargeback and chargeback_lines) for a person with the Reporting right only.';
+}
+
+/** The words that say what is missing for a family kept for a right; undefined for the others. */
+function gapHint(entry: AiUnreadFamily, gap: AiAdminFamiliesGap | undefined, reach: AiUnreadFamiliesReach | undefined): string | undefined {
+  if (entry.usersAdminOnly) return usersAdminGapHint(gap);
+  if (entry.reportingOnly) return reportingGapHint(reach?.reports);
+  return undefined;
 }
 
 export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
@@ -154,8 +179,9 @@ export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
   {
     family: 'chargeback by beneficiary company',
     screen: ['budgetManagement', 'budgetReporting', 'globalChargeback'],
-    hint: 'A budget line\'s allocation to companies is in get_entity_detail of the line; no tool computes the chargeback across lines.',
+    hint: 'A budget line\'s allocation to companies is in get_entity_detail of the line.',
     terms: /charge[\s-]*back|refactur|weiterverrechnung|leistungsverrechnung|contracargo|repercusi[oó]n\s+de\s+costes/i,
+    reportingOnly: true,
   },
 ];
 
@@ -198,25 +224,29 @@ export function unreadFamilyScreen(entry: AiUnreadFamily, language: AiScreenLang
   return aiScreenName(entry.screen, language);
 }
 
-/** The families this person does not read: all, but those of the administrators of users when `gap` is null. */
-function unreadFamilies(gap: AiAdminFamiliesGap | undefined): AiUnreadFamily[] {
-  return AI_UNREAD_FAMILIES.filter((entry) => !(entry.usersAdminOnly && gap === null));
+/**
+ * The families this person does not read: all, but those of the administrators of users when `gap`
+ * is null, and the chargeback reports when they read them.
+ */
+function unreadFamilies(gap: AiAdminFamiliesGap | undefined, reach: AiUnreadFamiliesReach | undefined): AiUnreadFamily[] {
+  return AI_UNREAD_FAMILIES.filter((entry) => !(entry.usersAdminOnly && gap === null) && !(entry.reportingOnly && reach?.reports === true));
 }
 
-/** The words that close a family's line: what the person lacks, for the families of the administrators of users. */
-function entryHint(entry: AiUnreadFamily, gap: AiAdminFamiliesGap | undefined): string | undefined {
-  if (!entry.usersAdminOnly) return entry.hint;
-  return [usersAdminGapHint(gap), entry.hint].filter(Boolean).join(' ');
+/** The words that close a family's line: what the person lacks, for the families kept for a right. */
+function entryHint(entry: AiUnreadFamily, gap: AiAdminFamiliesGap | undefined, reach: AiUnreadFamiliesReach | undefined): string | undefined {
+  return [gapHint(entry, gap, reach), entry.hint].filter(Boolean).join(' ') || undefined;
 }
 
 /**
  * One line per family with its screen, for describe_entity_filters, search_all and the chat prompt.
- * `gap` says whether the person reads the families of the administrators of users (see the type).
+ * `gap` says whether the person reads the families of the administrators of users, `reach` the
+ * families kept for another right (see the types).
  */
-export function unreadFamilyLines(language: AiScreenLanguage | null, gap?: AiAdminFamiliesGap): string[] {
-  return unreadFamilies(gap).map((entry) => {
+export function unreadFamilyLines(language: AiScreenLanguage | null, gap?: AiAdminFamiliesGap, reach?: AiUnreadFamiliesReach): string[] {
+  return unreadFamilies(gap, reach).map((entry) => {
     const line = `${entry.family} (${unreadFamilyScreen(entry, language)})`;
-    return entry.usersAdminOnly ? `${line}: ${usersAdminGapHint(gap)}` : line;
+    const missing = gapHint(entry, gap, reach);
+    return missing ? `${line}: ${missing}` : line;
   });
 }
 
@@ -230,15 +260,17 @@ const SCREEN_NAME_RULE = 'Quote a screen name exactly as given, never translated
  */
 export const AI_UNREAD_FAMILIES_SENTENCE =
   `KANAP also holds what these tools do not read: ${AI_UNREAD_FAMILIES
-    .map((entry) => (entry.usersAdminOnly ? `${entry.family} (read for administrators of users with access to all data only)` : entry.family))
+    .map((entry) => (entry.usersAdminOnly
+      ? `${entry.family} (read for administrators of users with access to all data only)`
+      : entry.reportingOnly ? `${entry.family} (read for people with the Reporting right only)` : entry.family))
     .join('; ')}. `
   + 'A search or list without a match is no proof that such a record does not exist: say that you cannot read it and name the screen that shows it, '
   + 'as `not_read_here` or `families_not_read` gives it. A screen name is the name in the person\'s menus, in the language of their profile, '
   + 'or in four languages (en, fr, de, es) when the profile sets none: the person\'s own is the one to quote, untranslated.';
 
 /** For the chat prompt: the families this person does not read, with their screens in the person's language. */
-export function unreadFamiliesSentence(language: AiScreenLanguage | null, gap?: AiAdminFamiliesGap): string {
-  return `KANAP also holds what these tools do not read: ${unreadFamilyLines(language, gap).join('; ')}. `
+export function unreadFamiliesSentence(language: AiScreenLanguage | null, gap?: AiAdminFamiliesGap, reach?: AiUnreadFamiliesReach): string {
+  return `KANAP also holds what these tools do not read: ${unreadFamilyLines(language, gap, reach).join('; ')}. `
     + 'A search or list without a match is no proof that such a record does not exist: say that you cannot read it and name the screen that shows it. '
     + SCREEN_NAME_RULE;
 }
@@ -254,15 +286,16 @@ export function unreadFamiliesAskedBy(
   query: string,
   language: AiScreenLanguage | null,
   gap?: AiAdminFamiliesGap,
+  reach?: AiUnreadFamiliesReach,
 ): Array<{ family: string; where: string; note: string }> {
   const text = String(query ?? '');
-  return unreadFamilies(gap)
+  return unreadFamilies(gap, reach)
     .filter((entry) => entry.terms.test(text))
     .map((entry) => {
       const where = unreadFamilyScreen(entry, language);
       const screen = language ? `the screen ${where}` : `the screen named, in the person's language, ${where}`;
-      const hint = entryHint(entry, gap);
-      const read = entry.usersAdminOnly ? 'this server does not read them for this person' : 'this server does not read them';
+      const hint = entryHint(entry, gap, reach);
+      const read = entry.usersAdminOnly || entry.reportingOnly ? 'this server does not read them for this person' : 'this server does not read them';
       return {
         family: entry.family,
         where,

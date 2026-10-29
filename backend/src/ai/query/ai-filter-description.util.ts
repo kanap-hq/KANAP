@@ -89,6 +89,7 @@ export function describeAiEntityFilters(
     fields,
     ...(families.size ? { field_families: [...families.values()] } : {}),
     ...(registry.metricFamilies?.length ? { metric_families: registry.metricFamilies } : {}),
+    ...(registry.withheldFields?.length ? { fields_withheld: registry.withheldFields } : {}),
     // The keys of a family are listed in it, not here.
     sort_fields: Object.keys(registry.sortFields).filter((key) => !registry.fields[key]?.family),
     default_sort: registry.defaultSort,
@@ -132,6 +133,9 @@ export function buildFilterRepairSuggestions(
         reason: `${list(invalid.rejected)} is not a value of ${ignored} on ${registry.entityType}. Accepted values: ${list(invalid.accepted)}. Nothing was searched: query again with an accepted value.`,
       };
     }
+    // A field the person may not read: the reason, never a field "to inspect".
+    const withheld = registry.withheldFields?.find((entry) => entry.field === ignored);
+    if (withheld) return { field: ignored, reason: withheld.reason };
     const aliasMatch = Object.values(registry.fields).find((field) => (field.aliases ?? []).includes(ignored));
     if (aliasMatch) {
       return {

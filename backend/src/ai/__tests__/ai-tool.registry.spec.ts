@@ -3,6 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { Features } from '../../config/features';
 import { AiAggregateExecutor } from '../query/ai-aggregate.executor';
 import { AiQueryExecutor } from '../query/ai-query.executor';
+import { BUDGET_DELTA_FAMILY, budgetReportMetricFamilies } from '../query/registries/budget-amount-fields';
 import { AiToolRegistry } from '../ai-tool.registry';
 import { AiDocumentMutationSupportService } from '../mutation/ai-document-mutation-support.service';
 import { CreateDocumentAiMutationOperation } from '../mutation/operations/create-document.ai-mutation-operation';
@@ -1750,12 +1751,18 @@ async function testInvalidInputNamesTheFieldAndWhy() {
   // The roles of Admin › Roles: a role has a detail (its rights), a right of a role is a list row only.
   assert.match(enumValue, /"roles"/, enumValue);
   assert.doesNotMatch(enumValue, /"role_permissions"/, enumValue);
+  // More than 30 families since the chargeback reports (Plaid L8, lot D): the refusal points to the
+  // schema, whose enum names every family.
   const listed = refusal('query_entities', { entity_type: 'spend_items' });
-  assert.match(listed, /"roles"/, listed);
-  assert.match(listed, /"role_permissions"/, listed);
+  assert.match(listed, /"entity_type" must be one of the \d+ values listed in the tool's input schema/, listed);
+  const queried: string[] = (schemas.get('query_entities') as any).properties.entity_type.enum;
+  assert.ok(queried.includes('roles') && queried.includes('role_permissions'), 'the roles and their rights are listed');
   // Admin › Data access: a row names a person, read with get_entity_detail on users.
-  assert.match(listed, /"data_access"/, listed);
+  assert.ok(queried.includes('data_access'), 'data_access is listed');
   assert.doesNotMatch(enumValue, /"data_access"/, enumValue);
+  // The chargeback reports: computed rows, listed and grouped, with no detail of their own.
+  assert.ok(queried.includes('chargeback') && queried.includes('chargeback_lines'), 'the chargeback reports are listed');
+  assert.doesNotMatch(enumValue, /"chargeback/, enumValue);
 
   const nested = refusal('query_entities', { entity_type: 'budget_lines', sort: { field: 'y_budget', direction: 'down' }, page: 'two' });
   assert.match(nested, /"sort.direction" must be one of: "asc", "desc"/, nested);
@@ -1840,6 +1847,110 @@ async function testAggregateEntitiesSchemaExposesMetricAndFunction() {
 
   assert.equal(aggregate.parameters.properties.metric.type, 'string');
   assert.deepEqual(aggregate.parameters.properties.function.enum, ['count', 'sum', 'avg', 'min', 'max']);
+}
+
+/** Plaid L8, lot B: several metrics, a second group field and a limit, one sentence each, chat and MCP alike. */
+async function testAggregateEntitiesSchemaExposesMetricsAndThenBy() {
+  const registry = createRegistry();
+  const schemas = await registry.getToolJsonSchemas(createContext()) as any[];
+  const { properties } = schemas.find((schema) => schema.name === 'aggregate_entities').parameters;
+  assert.deepEqual([properties.metrics.type, properties.metrics.items.type, properties.metrics.minItems, properties.metrics.maxItems], ['array', 'string', 2, 8]);
+  assert.equal(properties.then_by.type, 'string');
+  assert.deepEqual([properties.limit.type, properties.limit.minimum, properties.limit.maximum], ['integer', 1, 100]);
+  assert.deepEqual(properties.function.enum, ['count', 'sum', 'avg', 'min', 'max'], 'the functions do not change');
+  assert.match(properties.metrics.description, /^Budget lines, in place of metric: 2 to 8 amounts, FTE or line totals measured with one function in one call, each group and `overall` then carrying `values` by metric/);
+  assert.match(properties.metrics.description, /group_by paying_company, metrics y_budget, y_review, y_landing\) or of suppliers by year \(group_by supplier, metrics y_minus1_budget, y_budget, y_plus1_budget\)/);
+  assert.match(properties.then_by.description, /^Budget lines: a second group-by field, each group then carrying `then_key` \(a null key or then_key is the group of the lines without that value\), at most limit groups \(50 by default\)/);
+  assert.match(properties.then_by.description, /streams and categories of the linked projects do not cross/);
+  assert.match(properties.limit.description, /`others` gives the same measure over the rest, and `group_count` counts every group/);
+  assert.doesNotMatch(properties.limit.description, /summed/, 'with avg, min or max the rest is not a sum');
+  // Each fact once: the tool's description and the metric field do not repeat them.
+  const tools = await registry.listAvailableTools(createContext());
+  const aggregate = tools.find((tool) => tool.name === 'aggregate_entities')!;
+  assert.doesNotMatch(`${aggregate.description} ${properties.metric.description}`, /then_key|then_by|`values`|group_count/);
+  // The MCP server lists the same schema (one registry).
+  const mcp = registry.toToolJsonSchemas(registry.listRegisteredTools().filter((tool) => tool.surfaces.includes('mcp'))) as any[];
+  assert.deepEqual(mcp.find((schema) => schema.name === 'aggregate_entities').parameters.properties.then_by, properties.then_by);
+}
+
+async function testAggregateEntitiesPassesMetricsAndThenBy() {
+  const calls: unknown[] = [];
+  const registry = createRegistry({
+    aggregateExecutor: {
+      execute: async (_context: unknown, input: unknown) => {
+        calls.push(input);
+        return { group_by: 'paying_company', then_by: 'supplier', metrics: ['y_budget', 'y_review'], function: 'sum', groups: [], total: 0, filters_applied: [], filters_ignored: [], complete: true };
+      },
+    },
+  });
+  const input = { entity_type: 'budget_lines', group_by: 'paying_company', then_by: 'supplier', metrics: ['y_budget', 'y_review'], function: 'sum', limit: 20 };
+  await registry.execute(createContext(), 'aggregate_entities', input);
+  assert.deepEqual(calls, [input], 'metrics, then_by and limit reach the executor');
+  await assert.rejects(registry.execute(createContext(), 'aggregate_entities', { ...input, metrics: ['y_budget'] }), 'one metric goes in metric');
+  await assert.rejects(registry.execute(createContext(), 'aggregate_entities', { ...input, limit: 101 }), 'a limit past 100');
+  assert.equal(calls.length, 1, 'neither reaches the executor');
+}
+
+/** Plaid L8, lot C: the change between two columns, the FTE by month and the window of lines, said once each, chat and MCP alike. */
+async function testAggregateEntitiesDescribesChangesAndMonthlyFte() {
+  const registry = createRegistry();
+  const schemas = await registry.getToolJsonSchemas(createContext()) as any[];
+  const { properties } = schemas.find((schema) => schema.name === 'aggregate_entities').parameters;
+  assert.deepEqual([properties.direction.type, properties.direction.enum], ['string', ['increase', 'decrease']]);
+  assert.match(properties.direction.description, /^Budget lines, a change between two columns \(metric `y_review_minus_y_budget`\): increase \(the default\)/);
+  assert.match(properties.limit.description, /A change between two columns keeps 10 groups by default, and the FTE by month keeps the largest averages\./);
+  const tools = await registry.listAvailableTools(createContext());
+  const aggregate = tools.find((tool) => tool.name === 'aggregate_entities')!;
+  assert.match(aggregate.description, /A change between two columns is the metric `<destination>_minus_<source>` \(`y_review_minus_y_budget`; in FTE `y_review_fte_minus_y_budget_fte`\), computed as the "Top increase \/ decrease" report/);
+  assert.match(aggregate.description, /Like the report, a question about the largest increases or decreases groups by `line`, unless the person names another axis \(by supplier\)\./);
+  assert.match(aggregate.description, /The FTE month by month is the metric `<year>_<column>_fte_by_month` \(`y_budget_fte_by_month`\), computed as the "Staffing by month" report: each group's twelve months, average \(÷ 12\) and peak, with `monthly_fte_note`/);
+  assert.match(aggregate.description, /These budget figures read every line, ended ones included, while the budget reports read the lines still active on 1 January of the year before the first year they show/);
+  for (const sentence of [/computed as the "Top increase \/ decrease" report/g, /These budget figures read every line/g]) {
+    assert.equal(`${aggregate.description} ${properties.metric.description}`.match(sentence)?.length, 1, `said once: ${sentence}`);
+  }
+  assert.match(budgetReportMetricFamilies().find((family) => family.family === BUDGET_DELTA_FAMILY)!.description, /group_by line gives the lines themselves, by reference and title, as the report does: use it unless the person names another axis \(by supplier\)\./);
+  const describe = tools.find((tool) => tool.name === 'describe_entity_filters')!;
+  assert.match(describe.description, /`metric_families` the cost per FTE, the day rate, the change between two columns and the FTE by month aggregate_entities computes/);
+  const mcp = registry.toToolJsonSchemas(registry.listRegisteredTools().filter((tool) => tool.surfaces.includes('mcp'))) as any[];
+  assert.deepEqual(mcp.find((schema) => schema.name === 'aggregate_entities').parameters.properties.direction, properties.direction, 'the MCP server lists the same schema');
+}
+
+/** Plaid L8, lot E: a withheld field and the chargeback families, said once per tool, chat and MCP alike. */
+async function testWithheldFieldsAndChargebackAreDescribed() {
+  const registry = createRegistry();
+  const tools = await registry.listAvailableTools(createContext());
+  const text = (name: string) => tools.find((tool) => tool.name === name)?.description || '';
+  assert.match(text('describe_entity_filters'), /`fields_withheld` names each field of the family this person may not read, for lack of a right, with the reason: the field is withheld, which says nothing of its values \(they are not empty\)/);
+  assert.match(text('get_filter_values'), /`fields_withheld` names those this person may not read, for lack of a right, with the reason: their values are withheld, not empty/);
+  assert.match(text('query_entities'), /in the default order \(with the reason in `fields_withheld` for a field this person may not read\)/);
+  for (const name of ['query_entities', 'aggregate_entities']) {
+    const description = text(name);
+    assert.equal(description.match(/The chargeback reports are read for a person with the Reporting right/g)?.length, 1, `${name}: the chargeback sentence once`);
+    assert.match(description, /`chargeback_lines` the budget lines charged to the one company its `company` filter names/);
+    assert.match(description, /Each reads one year and one column; without a `nature` filter it covers both natures/);
+    assert.match(description, /`chargeback.warnings` names in words what the figures leave out, for the answer to repeat/);
+    assert.match(description, /a group by department keyed "company › department"/);
+  }
+  assert.match(text('query_entities'), /data access row, chargeback row, which opens its report\) carries `page_url`/);
+  const mcp = registry.listRegisteredTools().filter((tool) => tool.surfaces.includes('mcp'));
+  assert.equal(mcp.find((tool) => tool.name === 'aggregate_entities')?.description, text('aggregate_entities'), 'the MCP server reads the same description');
+}
+
+async function testAggregateEntitiesPassesDirection() {
+  const calls: unknown[] = [];
+  const registry = createRegistry({
+    aggregateExecutor: {
+      execute: async (_context: unknown, input: unknown) => {
+        calls.push(input);
+        return { group_by: 'line', metric: 'y_review_minus_y_budget', function: 'delta', direction: 'decrease', groups: [], total: 0, filters_applied: [], filters_ignored: [], complete: true };
+      },
+    },
+  });
+  const input = { entity_type: 'budget_lines', group_by: 'line', metric: 'y_review_minus_y_budget', direction: 'decrease', limit: 5 };
+  await registry.execute(createContext(), 'aggregate_entities', input);
+  assert.deepEqual(calls, [input], 'direction and limit reach the executor');
+  await assert.rejects(registry.execute(createContext(), 'aggregate_entities', { ...input, direction: 'both' }), 'increase or decrease only');
+  assert.equal(calls.length, 1, 'an unknown direction does not reach the executor');
 }
 
 async function testGetFilterValuesDelegatesToQueryExecutor() {
@@ -2270,6 +2381,11 @@ async function run() {
   await testQueryEntitiesLeavesThePageSizeToTheExecutor();
   await testAggregateEntitiesDelegatesToAggregateExecutor();
   await testAggregateEntitiesSchemaExposesMetricAndFunction();
+  await testAggregateEntitiesSchemaExposesMetricsAndThenBy();
+  await testAggregateEntitiesPassesMetricsAndThenBy();
+  await testAggregateEntitiesDescribesChangesAndMonthlyFte();
+  await testWithheldFieldsAndChargebackAreDescribed();
+  await testAggregateEntitiesPassesDirection();
   await testGetFilterValuesDelegatesToQueryExecutor();
   await testGetEntityContextDelegatesToEntityTools();
   await testGetEntityCommentsDelegatesToEntityTools();

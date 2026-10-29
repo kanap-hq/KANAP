@@ -83,6 +83,9 @@ async function testStructuredReadGuidancePrefersQueryLayerTools() {
   assert.match(prompt, /headcount_year/);
   assert.match(prompt, /pass `year` on query_entities or get_entity_detail/i);
   assert.match(prompt, /Budget-line reads and aggregations are summary-backed/i);
+  // Plaid L8: the report figures come from aggregate_entities, never recomputed (one sentence).
+  assert.match(prompt, /A change between two columns, FTE by month, a table crossing two fields or several columns, and the chargeback by company or department \(families `chargeback` and `chargeback_lines`\) come from aggregate_entities: their totals, changes and averages are those of KANAP's reports, quoted as given and never recomputed\./);
+  assert.equal(prompt.match(/never recomputed/g)?.length, 1, 'said once');
   assert.match(prompt, /Prefer completeness over speed/i);
   assert.match(prompt, /`q` on query_entities and aggregate_entities is literal text quick-search only/i);
   assert.match(prompt, /Treat `filters_ignored` and `sort_ignored` from query_entities or aggregate_entities, and `fields_ignored` from get_filter_values, as blocking validation failures/i);
@@ -657,6 +660,14 @@ async function testPromptSaysWhatItDoesWithAccessAndHistory() {
   assert.doesNotMatch(reader, /Roles and data access: say who sees what/);
   const limited = build({ tools: [readTool], readable: ['users'], language: 'fr', gap: 'all_data' });
   assert.match(limited, /roles and their rights \(Administration › Rôles\): The tools read it for a person with the right to administer users and access to all data; this person's access is limited to part of the data\./);
+
+  // The chargeback reports (Plaid L8): unread for a person without the Reporting right, with the
+  // right; read, so not listed, with it; the right named when the readable families are not known.
+  assert.match(limited, /chargeback by beneficiary company \(Gestion budgétaire › Rapports › Refacturation globale\): The tools read it \(the families chargeback and chargeback_lines\) for a person with the Reporting right, which this person's role does not give\./);
+  const reporter = build({ tools: [readTool], readable: ['budget_lines', 'chargeback', 'chargeback_lines'], language: 'fr', gap: 'right' });
+  assert.doesNotMatch(reporter, /chargeback by beneficiary company \(/);
+  const unknown = build({ tools: [readTool], readable: [], language: 'fr', gap: 'right' });
+  assert.match(unknown, /chargeback by beneficiary company \(Gestion budgétaire › Rapports › Refacturation globale\): The tools read it \(the families chargeback and chargeback_lines\) for a person with the Reporting right only\./);
 }
 
 async function run() {

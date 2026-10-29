@@ -88,11 +88,13 @@ export const AI_SEARCH_ENTITY_TYPES = [
  * (Admin › Roles, `query/ai-roles.query.ts`) are not searched either; a role has a detail (its
  * rights), a row of `role_permissions` none. `data_access` (Admin › Data access,
  * `query/ai-data-access.query.ts`) is listed only: a row names a person, whose access is in their
- * users detail.
+ * users detail. `chargeback` and `chargeback_lines` (Reporting › Global and Company chargeback,
+ * `query/ai-chargeback.query.ts`) are listed only: their rows are computed by the report.
  */
 export const AI_QUERY_ENTITY_TYPES = [
   ...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines', 'roles', 'role_permissions',
   'data_access',
+  'chargeback', 'chargeback_lines',
 ] as const;
 
 /**
@@ -102,10 +104,11 @@ export const AI_QUERY_ENTITY_TYPES = [
  */
 export const AI_DETAIL_ENTITY_TYPES = AI_QUERY_ENTITY_TYPES.filter(
   (type) => type !== 'technology_versions' && type !== 'support_gaps' && type !== 'support_deadlines' && type !== 'role_permissions'
-    && type !== 'data_access',
+    && type !== 'data_access'
+    && type !== 'chargeback' && type !== 'chargeback_lines',
 ) as [
-  Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions' | 'data_access'>,
-  ...Array<Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions' | 'data_access'>>,
+  Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions' | 'data_access' | 'chargeback' | 'chargeback_lines'>,
+  ...Array<Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions' | 'data_access' | 'chargeback' | 'chargeback_lines'>>,
 ];
 
 export const AI_CONTEXT_ENTITY_TYPES = [

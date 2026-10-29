@@ -66,6 +66,9 @@ import {
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { aiAmountsCurrency } from './ai-amounts-currency.util';
 import { aiDataAccessNote } from './ai-data-access-note.util';
+import { aiBudgetListAccess } from './ai-budget-list-access.util';
+import { compareNullableText } from '../../common/list-engine/sql-fragments';
+import type { BudgetListAccess } from '../../spend/budget-list/budget-list.runtime';
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
 import { hiddenContractLineCount } from '../../contracts/contract-relations';
 import { contractMismatchesAgainstLine, lineMismatchesAgainstContract } from '../../contracts/contract-line-match';
@@ -104,6 +107,16 @@ import {
   listAiDataAccess,
   type AiDataAccessRow,
 } from './ai-data-access.query';
+import { ChargebackReportService } from '../../spend/chargeback-report.service';
+import {
+  chargebackRowId,
+  chargebackRowLabel,
+  listAiChargeback,
+  listAiChargebackLines,
+  type AiChargebackLineRow,
+  type AiChargebackList,
+  type AiChargebackRow,
+} from './ai-chargeback.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
@@ -420,12 +433,17 @@ function withDetailAiKeys(row: Record<string, any> | undefined, registry: AiEnti
   return output;
 }
 
-/** The descriptive fields both budget item types share, for the registry resolved for the tenant. */
-function budgetItemMetadata(row: any, registry: AiEntityFilterRegistry): AiEntityMetadata {
+/**
+ * The descriptive fields both budget item types share, for the registry resolved for the tenant.
+ * `consolidation`: each line's consolidation account (`consolidationLabels`), for a registry that
+ * holds the field (a person who reads the accounts).
+ */
+function budgetItemMetadata(row: any, registry: AiEntityFilterRegistry, consolidation?: Map<string, string | null>): AiEntityMetadata {
   return {
     supplier: scalar(row.supplier_name),
     paying_company: scalar(row.paying_company_name ?? row.company_name),
     account: scalar(row.account_display),
+    ...(registry.fields.consolidation_account ? { consolidation_account: consolidation?.get(row.id) ?? null } : {}),
     owner_it: scalar(row.owner_it_name),
     owner_business: scalar(row.owner_business_name),
     analytics_category: registry.fields.analytics_category?.nature && registry.fields.analytics_category.nature !== row.nature
@@ -623,6 +641,8 @@ export class AiQueryExecutor {
     @Optional() private readonly permissions?: PermissionsService,
     /** Admin › Data access: the `data_access` family, and the access blocks of a person and a company. */
     @Optional() private readonly dataAccess?: DataAccessAdminService,
+    /** The chargeback reports of the screens, which `chargeback` and `chargeback_lines` read. */
+    @Optional() private readonly chargeback?: ChargebackReportService,
   ) {
     // Absent, the technology figures close (no application count, no detail): say so once, at start.
     const logger = new Logger(AiQueryExecutor.name);
@@ -932,7 +952,7 @@ export class AiQueryExecutor {
    * A budget line of either nature, in the native shape of the unified list: `product_name` is
    * the title, `description` the description, and `nature` says which nature the line is.
    */
-  private mapBudgetLine(row: any, registry: AiEntityFilterRegistry): AiEntitySummaryDto {
+  private mapBudgetLine(row: any, registry: AiEntityFilterRegistry, consolidation?: Map<string, string | null>): AiEntitySummaryDto {
     const anchorYear = new Date().getFullYear();
     const summary = row.description
       ?? ([row.supplier_name, row.paying_company_name, row.account_display].filter(Boolean).join(' | ') || null);
@@ -947,7 +967,7 @@ export class AiQueryExecutor {
       updated_at: row.updated_at ?? null,
       metadata: {
         nature: scalar(row.nature),
-        ...budgetItemMetadata(row, registry),
+        ...budgetItemMetadata(row, registry, consolidation),
         budget_anchor_year: anchorYear,
         ...budgetAmountMetadata(row, anchorYear),
       },
@@ -1399,6 +1419,75 @@ export class AiQueryExecutor {
     });
   }
 
+  /** A row of the global chargeback: a company, or one of its departments, named by both. */
+  private mapChargeback(row: AiChargebackRow): AiEntitySummaryDto {
+    return toEntitySummary('chargeback', {
+      // Distinct per row: a company's row and its common costs share the company.
+      id: chargebackRowId(row),
+      label: chargebackRowLabel(row),
+      status: row.level,
+      summary: null,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        level: row.level,
+        company: row.company,
+        department: row.department,
+        nature: row.nature,
+        amount: row.amount,
+        share: row.share,
+        headcount: row.headcount,
+        cost_per_user: row.cost_per_user,
+        ...(row.level === 'company' ? {
+          paid: row.paid,
+          net: row.net,
+          it_users: row.it_users,
+          turnover: row.turnover,
+          cost_per_it_user: row.cost_per_it_user,
+          cost_vs_turnover_pct: row.cost_vs_turnover_pct,
+        } : {}),
+      },
+    });
+  }
+
+  /**
+   * A line charged to the company of the report. A line the person does not read keeps no id: its
+   * BL reference and title name it, as the screen's line column, and it opens nothing.
+   */
+  private mapChargebackLine(row: AiChargebackLineRow): AiEntitySummaryDto {
+    return toEntitySummary('chargeback_lines', {
+      id: row.item_id ?? row.ref ?? row.key,
+      reference: row.ref,
+      label: row.line ?? row.ref ?? 'line outside your access',
+      status: row.allocation_method,
+      summary: null,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        nature: row.nature,
+        allocation_method: row.allocation_method,
+        amount: row.amount,
+        share_pct: row.share_pct,
+        readable: row.readable,
+        ...(row.paying_company !== undefined ? {
+          paying_company: row.paying_company,
+          allocation_pct: row.allocation_pct ?? null,
+          departments: (row.departments ?? []).join(', ') || null,
+        } : {}),
+      },
+    });
+  }
+
+  /**
+   * The chargeback reports, read with the reporting right as their routes: checked again here, the
+   * database not guarding it, refused in words (the right and the screen).
+   */
+  private async chargebackServices(context: AiExecutionContextWithManager, entityType: 'chargeback' | 'chargeback_lines') {
+    if (!this.policy || !this.chargeback) throw new BadRequestException('The chargeback reports are not available.');
+    await this.policy.assertEntityTypeReadRight(context, entityType, context.manager);
+    return { chargeback: this.chargeback };
+  }
+
   /**
    * Whether the caller reads Admin › Data access: users at admin level and access not limited, the
    * family's gate (`AiPolicyService`). The database does not protect the nodes: every read of them
@@ -1723,12 +1812,14 @@ export class AiQueryExecutor {
     const amounts = await aiAmountsCurrency(context, input.entity_type);
     const dataAccess = await aiDataAccessNote(context, input.entity_type);
     if (!sort.ignored.length) return { ...result, sort: sort.applied, sort_ignored: [], ...limitCapped, ...amounts, ...dataAccess };
-    // The items come in the default order, said so.
+    // The items come in the default order, said so; a field withheld for lack of a right says why.
+    const withheld = (registry.withheldFields ?? []).filter((entry) => sort.ignored.includes(entry.field));
     return {
       ...result,
       complete: false,
       sort: sort.applied,
       sort_ignored: sort.ignored,
+      ...(withheld.length ? { fields_withheld: withheld } : {}),
       sortable_fields: Object.keys(registry.sortFields),
       ...limitCapped,
       ...amounts,
@@ -1744,8 +1835,9 @@ export class AiQueryExecutor {
     rows: any[],
     anchorYear: number,
     named: string[],
+    access: BudgetListAccess,
   ): Promise<{ amount_totals: AiAmountTotals; page_amount_totals: AiAmountTotals }> {
-    const amountTotals = await this.budgetAmountTotals(context, query, records);
+    const amountTotals = await this.budgetAmountTotals(context, query, records, access);
     const pageTotals = budgetPageAmountTotals(rows, anchorYear, amountTotals.currency);
     // The line totals (staff cost and FTE, day cost, days) of every line kept, and of the page's lines:
     // the five columns of the current year and the years and columns the filters or the sort name
@@ -1758,12 +1850,12 @@ export class AiQueryExecutor {
     const { page: _page, limit: _limit, sort: _sort, years: _years, ...listState } = query;
     const ids = rows.map((row) => row?.id).filter((id): id is string => typeof id === 'string');
     // One after the other: both read on the request's connection.
-    const all = await this.budgetLineTotals(context, listState, pairs);
+    const all = await this.budgetLineTotals(context, listState, pairs, access);
     // A page that holds every line kept sums as all of them: no second statement.
     let page = all;
     if (ids.length !== records) {
       page = ids.length
-        ? await this.budgetLineTotals(context, { ...listState, filters: { ...(listState.filters ?? {}), id: { filterType: 'set', values: ids } } }, pairs)
+        ? await this.budgetLineTotals(context, { ...listState, filters: { ...(listState.filters ?? {}), id: { filterType: 'set', values: ids } } }, pairs, access)
         : Object.fromEntries(budgetLineTotalFieldsOf(pairs).map((field) => [field.ai, isBudgetMoneyKey(field.ai) ? 0 : null]));
     }
     const note = ' The staff cost, staff FTE, day cost and days (`<year>_<column>_staff_cost`...) are summed for the current year\'s columns '
@@ -1785,6 +1877,7 @@ export class AiQueryExecutor {
     context: AiExecutionContextWithManager,
     listState: Record<string, any>,
     pairs: ReadonlySet<string>,
+    access: BudgetListAccess,
   ): Promise<Record<string, number | null>> {
     const fields = budgetLineTotalFieldsOf(pairs);
     const values: Record<string, number | null> = {};
@@ -1794,7 +1887,7 @@ export class AiQueryExecutor {
       const result = await this.budgetLines.summaryAggregate(
         listState,
         { groupBy: [], measures: chunk.map((field, i) => ({ id: `m${i}`, fn: 'sum' as const, field: field.grid })) },
-        { manager: context.manager },
+        { manager: context.manager, access },
       );
       chunk.forEach((field, i) => {
         const value = result.total.values[`m${i}`] ?? null;
@@ -1805,6 +1898,46 @@ export class AiQueryExecutor {
   }
 
   /**
+   * The consolidation account of each line of `rows`, as the list engine labels it for the
+   * Consolidation accounts report (`account_consolidation_label`: one label per consolidation
+   * number, null without one), in one statement on their ids. Nothing when the registry holds no
+   * such field (a person who does not read the accounts).
+   */
+  private async consolidationLabels(
+    context: AiExecutionContextWithManager,
+    rows: any[],
+    registry: AiEntityFilterRegistry,
+    access: BudgetListAccess,
+  ): Promise<Map<string, string | null> | undefined> {
+    if (!registry.fields.consolidation_account) return undefined;
+    const ids = rows.map((row) => row?.id).filter((id): id is string => typeof id === 'string');
+    if (!ids.length) return new Map();
+    const result = await this.budgetLines.summaryAggregate(
+      { filters: { id: { filterType: 'set', values: ids } }, includeDisabled: true },
+      { groupBy: ['id', registry.fields.consolidation_account.grid], measures: [] },
+      { manager: context.manager, access },
+    );
+    return new Map(result.groups.map((group: { keys: Array<string | null> }) => [String(group.keys[0]), group.keys[1] ?? null]));
+  }
+
+  /**
+   * The consolidation accounts of the tenant's budget lines (every line, as the other values), in
+   * text order with null (a line without one) last: one aggregate statement grouped by the label.
+   */
+  private async consolidationValues(
+    context: AiExecutionContextWithManager,
+    grid: string,
+    access: BudgetListAccess,
+  ): Promise<Array<string | null>> {
+    const result = await this.budgetLines.summaryAggregate(
+      { includeDisabled: true },
+      { groupBy: [grid], measures: [] },
+      { manager: context.manager, access },
+    );
+    return result.groups.map((group: { keys: Array<string | null> }) => group.keys[0] ?? null).sort(compareNullableText);
+  }
+
+  /**
    * The amounts of every budget line the query keeps, all pages, as the list footer computes them
    * (`summaryTotals`, same filters and quick search): the total an answer quotes.
    */
@@ -1812,9 +1945,10 @@ export class AiQueryExecutor {
     context: AiExecutionContextWithManager,
     query: Record<string, any>,
     records: number,
+    access: BudgetListAccess,
   ): Promise<AiAmountTotals> {
     const { page: _page, limit: _limit, sort: _sort, years: _years, ...listState } = query;
-    const totals: any = await this.budgetLines.summaryTotals(listState, { manager: context.manager });
+    const totals: any = await this.budgetLines.summaryTotals(listState, { manager: context.manager, access });
     const values: Record<string, number> = {};
     for (const slot of FIXED_SLOTS) {
       for (const column of SUMMARY_COLUMNS) values[`${slot.ai}_${column.ai}`] = Number(totals?.[`${slot.key}${column.suffix}`] ?? 0);
@@ -2024,20 +2158,23 @@ export class AiQueryExecutor {
 
     if (input.entity_type === 'budget_lines') {
       const anchorYear = new Date().getFullYear();
+      // The person's access, as the screen passes it, to every engine call of the list.
+      const access = await aiBudgetListAccess(this.policy, context);
       const result = await this.budgetLines.summary(
         {
           ...scoped.query,
           years: budgetQueryYears(anchorYear).join(','),
         },
-        { manager: context.manager },
+        { manager: context.manager, access },
       );
+      const consolidation = await this.consolidationLabels(context, result.items || [], registry, access);
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
       // The list has no cap: the total is every matching line of either nature.
       const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
-        items: (result.items || []).map((row: any) => this.mapBudgetLine(row, registry)),
+        items: (result.items || []).map((row: any) => this.mapBudgetLine(row, registry, consolidation)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -2046,7 +2183,7 @@ export class AiQueryExecutor {
         complete: isCompleteQueryResult(resultPage, truncated),
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
-        ...await this.budgetTotals(context, scoped.query, result.total ?? 0, result.items || [], anchorYear, [...Object.keys(input.filters ?? {}), sort.applied.field]),
+        ...await this.budgetTotals(context, scoped.query, result.total ?? 0, result.items || [], anchorYear, [...Object.keys(input.filters ?? {}), sort.applied.field], access),
         scope: null,
       };
     }
@@ -2449,6 +2586,31 @@ export class AiQueryExecutor {
         total: result.total,
         distinct_total: result.distinct_total,
         distinct_label: 'person',
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'chargeback' || input.entity_type === 'chargeback_lines') {
+      const services = await this.chargebackServices(context, input.entity_type);
+      const opts = { manager: context.manager, tenantId: context.tenantId, year: input.year };
+      const result: AiChargebackList<AiChargebackRow | AiChargebackLineRow> = input.entity_type === 'chargeback'
+        ? await listAiChargeback(services, scoped.query, opts)
+        : await listAiChargebackLines(services, scoped.query, opts);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        chargeback: result.report,
+        items: result.items.map((row) => (input.entity_type === 'chargeback'
+          ? this.mapChargeback(row as AiChargebackRow)
+          : this.mapChargebackLine(row as AiChargebackLineRow))),
+        total: result.total,
         page: result.page,
         limit: result.limit,
         returned,
@@ -3258,7 +3420,8 @@ export class AiQueryExecutor {
       const registry = await resolveAiEntityRegistry(context, entityType, this.readProbe(context));
       // The id, not the reference the caller may have given (`get` accepts both).
       Object.assign(row, await this.loadBudgetLineDeepDetail(context, row.id as string, row.nature, registry));
-      return this.toDetailResult(this.mapBudgetLine(row, registry), row);
+      const consolidation = await this.consolidationLabels(context, [row], registry, await aiBudgetListAccess(this.policy, context));
+      return this.toDetailResult(this.mapBudgetLine(row, registry, consolidation), row);
     }
 
     if (entityType === 'contracts') {
@@ -3746,6 +3909,8 @@ export class AiQueryExecutor {
     const fieldsIgnored = new Set<string>();
     const dynamicFieldMap = new Map<string, string[]>();
 
+    // The requested fields the person may not read, with the reason.
+    const withheld = (registry.withheldFields ?? []).filter((entry) => requestedFields.includes(entry.field));
     for (const fieldName of requestedFields) {
       const field = registry.fields[fieldName];
       if (!field || field.discoverable !== true) {
@@ -3770,6 +3935,7 @@ export class AiQueryExecutor {
       return {
         values,
         fields_ignored: ignoredFields,
+        ...(withheld.length ? { fields_withheld: withheld } : {}),
         total: requestedFields.length,
         returned: Object.keys(values).length,
         truncated: false,
@@ -3831,9 +3997,11 @@ export class AiQueryExecutor {
         accessScope,
       }) as any;
     } else if (input.entity_type === 'budget_lines') {
-      raw = await this.budgetLines.summaryFilterValues(query, {
-        manager: context.manager,
-      }) as any;
+      const access = await aiBudgetListAccess(this.policy, context);
+      raw = await this.budgetLines.summaryFilterValues(query, { manager: context.manager, access }) as any;
+      // The consolidation account is no column of the list: its values are the engine's labels of the lines.
+      const consolidation = registry.fields.consolidation_account?.grid;
+      if (consolidation && dynamicFieldMap.has(consolidation)) raw[consolidation] = await this.consolidationValues(context, consolidation, access);
     } else if (input.entity_type === 'contracts') {
       raw = await this.contracts.listFilterValues(query, {
         manager: context.manager,
@@ -3917,6 +4085,7 @@ export class AiQueryExecutor {
     return {
       values,
       fields_ignored: ignoredFields,
+      ...(withheld.length ? { fields_withheld: withheld } : {}),
       total: requestedFields.length,
       returned: Object.keys(values).length,
       truncated: false,

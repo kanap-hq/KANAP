@@ -57,7 +57,7 @@ function queryExecutor(kind: Kind): AiQueryExecutor {
   args[1] = budgetReadService();
   args[6] = noContracts;
   args[15] = categoriesService();
-  args[23] = { canReadEntityType: async () => true };
+  args[23] = { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
   return new (AiQueryExecutor as any)(...args);
 }
 
@@ -65,7 +65,7 @@ function aggregateExecutor(kind: Kind): AiAggregateExecutor {
   const args: any[] = Array.from({ length: 23 }, () => ({}));
   args[1] = budgetReadService();
   args[15] = categoriesService();
-  args[21] = { canReadEntityType: async () => true };
+  args[21] = { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
   return new (AiAggregateExecutor as any)(...args);
 }
 
@@ -156,7 +156,7 @@ async function testResolvedRegistry(kind: Kind) {
 async function testDescribeListsDimensions(kind: Kind) {
   await withDimensions(kind, async (runner, seed) => {
     const args: any[] = Array.from({ length: 9 }, () => undefined);
-    args[2] = { assertEntityTypeReadAccess: async () => undefined, adminFamiliesGap: async () => 'right' };
+    args[2] = { assertEntityTypeReadAccess: async () => undefined, adminFamiliesGap: async () => 'right', canReadEntityType: async () => true };
     args[8] = { listOperations: () => [] };
     const describe = (new (AiToolRegistry as any)(...args) as any).definitions.get('describe_entity_filters');
     const result = await describe.execute(context(runner, seed.tenantId), { entity_type: ENTITY[kind] });

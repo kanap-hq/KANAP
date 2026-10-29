@@ -1,4 +1,5 @@
 import { FIXED_SLOTS, fteFieldKey, LineTotalVariant, SUMMARY_COLUMNS } from '../../../spend/spend-summary.builder';
+import type { MetricKey, ReportMeasure } from '../../../spend/reports/shared/reportAggregates';
 import { AiFilterFieldDef, AiMetricFamilyDescription } from '../ai-filter.types';
 
 /**
@@ -152,9 +153,9 @@ const MONEY_KEYS: ReadonlySet<string> = new Set(FIXED_SLOTS.flatMap((slot) => SU
   return [pair, `${pair}_staff_cost`, `${pair}_day_cost`, `${pair}_cost_per_fte`, `${pair}_day_rate`];
 })));
 
-/** Whether a budget line metric is money (named with its currency): an amount, a staff or day cost, a cost per FTE or a day rate. */
+/** Whether a budget line metric is money (named with its currency): an amount, a staff or day cost, a cost per FTE, a day rate or a change between two amounts. */
 export function isBudgetMoneyKey(key: string): boolean {
-  return MONEY_KEYS.has(key);
+  return MONEY_KEYS.has(key) || resolveBudgetDeltaMetric(key)?.measure === 'amount';
 }
 
 export type BudgetRatioKind = 'cost_per_fte' | 'day_rate';
@@ -211,4 +212,73 @@ export function budgetRatioMetricFamilies(): AiMetricFamilyDescription[] {
     description: `${BUDGET_RATIO_DESCRIPTIONS[kind]} aggregate_entities only (metric, no function needed): each group also returns staff_fte, staff_cost, cost_per_fte, days, day_cost and day_rate. ${KEY_GRAMMAR}`,
     metrics: FIXED_SLOTS.flatMap((slot) => SUMMARY_COLUMNS.map((column) => `${slot.ai}_${column.ai}_${kind}`)),
   }));
+}
+
+/** A year and column of the window as the reports name them: the calendar year and the report's column (`revision` for `review`). */
+export type BudgetColumnYear = { year: number; metric: MetricKey };
+
+/** `y_plus1_review` to its year and column (the current year from the server's clock, as the list engine reads `y`); null for any other key. */
+function budgetColumnYearOf(pair: string, currentYear: number): BudgetColumnYear | null {
+  for (const slot of FIXED_SLOTS) {
+    for (const column of SUMMARY_COLUMNS) {
+      if (`${slot.ai}_${column.ai}` === pair) return { year: currentYear + slot.offset, metric: column.key };
+    }
+  }
+  return null;
+}
+
+/** A change between two columns: destination minus source, in amounts or in FTE. */
+export type BudgetDeltaMetric = { key: string; measure: ReportMeasure; source: BudgetColumnYear; destination: BudgetColumnYear };
+
+/**
+ * `<year>_<column>_minus_<year>_<column>` (destination minus source, `y_review_minus_y_budget`), or
+ * the same with `_fte` on both sides (`y_review_fte_minus_y_budget_fte`); null for any other key,
+ * a column minus itself included.
+ */
+export function resolveBudgetDeltaMetric(key: string | undefined | null, currentYear = new Date().getFullYear()): BudgetDeltaMetric | null {
+  const match = /^(.+?)_minus_(.+)$/.exec(String(key ?? ''));
+  if (!match) return null;
+  const fte = match[1].endsWith('_fte') && match[2].endsWith('_fte');
+  const side = (text: string) => budgetColumnYearOf(fte ? text.slice(0, -'_fte'.length) : text, currentYear);
+  const destination = side(match[1]);
+  const source = side(match[2]);
+  if (!destination || !source || (destination.year === source.year && destination.metric === source.metric)) return null;
+  return { key: match[0], measure: fte ? 'fte' : 'amount', source, destination };
+}
+
+/** The FTE of each month of one year and column. */
+export type BudgetMonthlyFteMetric = { key: string } & BudgetColumnYear;
+
+/** `<year>_<column>_fte_by_month` (`y_budget_fte_by_month`); null for any other key. */
+export function resolveBudgetMonthlyFteMetric(key: string | undefined | null, currentYear = new Date().getFullYear()): BudgetMonthlyFteMetric | null {
+  const match = /^(.+)_fte_by_month$/.exec(String(key ?? ''));
+  const column = match ? budgetColumnYearOf(match[1], currentYear) : null;
+  return column ? { key: match![0], ...column } : null;
+}
+
+export const BUDGET_DELTA_FAMILY = '<year>_<column>_minus_<year>_<column>';
+export const BUDGET_MONTHLY_FTE_FAMILY = budgetFamilyName('fte_by_month');
+
+/** The change and monthly FTE metrics of aggregate_entities on budget lines, as describe_entity_filters lists them. */
+export function budgetReportMetricFamilies(): AiMetricFamilyDescription[] {
+  return [
+    {
+      family: BUDGET_DELTA_FAMILY,
+      description: 'Change between two columns, computed by the server as the "Top increase / decrease" report: the destination minus the source, line by line '
+        + '(`y_review_minus_y_budget` is the revision of Y minus its budget, `y_plus1_budget_minus_y_budget` next year\'s budget minus this year\'s), any two years and columns; '
+        + 'with `_fte` on both sides (`y_review_fte_minus_y_budget_fte`), the same change in FTE. aggregate_entities only (metric, no function needed): '
+        + '`direction` increase (the default) keeps the groups that rise, largest first, decrease the groups that fall; `limit` keeps 10 groups by default (at most 100); '
+        + 'group_by line gives the lines themselves, by reference and title, as the report does: use it unless the person names another axis (by supplier). Each group returns previous, current, delta and pct_increase (null when the source is 0 or less); '
+        + `overall gives previous, current, net, gross_increase and gross_decrease over every line the filters keep. ${KEY_GRAMMAR}`,
+      examples: ['y_review_minus_y_budget', 'y_budget_minus_y_minus1_budget', 'y_plus1_budget_minus_y_budget', 'y_landing_minus_y_budget', 'y_review_fte_minus_y_budget_fte'],
+    },
+    {
+      family: BUDGET_MONTHLY_FTE_FAMILY,
+      description: 'FTE month by month, computed by the server as the "Staffing by month" report: each group returns months (January to December, null for a month '
+        + 'no line of the group details), average (the sum of the months ÷ 12, the full-year average) and peak (the highest month); the groups without any month are left out, '
+        + 'largest average first. Lines priced per piece count no FTE. aggregate_entities only (metric, no function needed); overall gives the same over every line, '
+        + `with the FTE the months leave out (see monthly_fte_note). ${KEY_GRAMMAR}`,
+      metrics: FIXED_SLOTS.flatMap((slot) => SUMMARY_COLUMNS.map((column) => `${slot.ai}_${column.ai}_fte_by_month`)),
+    },
+  ];
 }

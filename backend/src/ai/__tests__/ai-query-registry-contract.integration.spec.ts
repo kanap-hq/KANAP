@@ -29,6 +29,12 @@ import { seedMonths, seedVersion } from '../../spend/__tests__/round-inputs.fixt
 //   years without a rate named in `amounts_fx_missing_years`; a sum's amounts left out for lack
 //   of a rate named in `amounts_fx_missing` and in the note.
 // - A field flagged `sortable` is a sort field, and the other way around.
+// - The budget lines' consolidation account reaches the accounts (the engine's `cons_labels`) for
+//   a reader of accounts, in its filter, its sort and its group: the list engine receives the
+//   person's access, without which the field reads null for everyone.
+// - The chargeback reports (`chargeback`, `chargeback_lines`) read one year and, for the lines, one
+//   company: every call names them (`REQUIRED_FILTERS`); their year takes `eq` only, any other
+//   operator refused in words.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -44,7 +50,28 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
  * statements they send. Their behaviour is asserted on `filters_applied` and the result, and by
  * their own spec.
  */
-const IN_MEMORY_FAMILIES = new Set(['support_gaps', 'support_deadlines', 'roles', 'role_permissions', 'data_access']);
+const IN_MEMORY_FAMILIES = new Set(['support_gaps', 'support_deadlines', 'roles', 'role_permissions', 'data_access', 'chargeback', 'chargeback_lines']);
+
+/** The year of the seeded chargeback: outside the window of the budget line fields (y-2 to y+2). */
+const CHARGEBACK_YEAR = 2031;
+
+/**
+ * The filters a family needs on every call: the chargeback reports of the seeded year, the company
+ * report of Company 1. Merged into each call that does not name the field.
+ */
+const REQUIRED_FILTERS: Record<string, Record<string, unknown>> = {
+  chargeback: { year: { op: 'eq', value: CHARGEBACK_YEAR } },
+  chargeback_lines: { year: { op: 'eq', value: CHARGEBACK_YEAR }, company: 'Company 1' },
+};
+
+/** Number fields that take one value (`eq`): a report reads one year, the other operators are refused. */
+const EQ_ONLY_FIELDS: Record<string, Set<string>> = { chargeback: new Set(['year']), chargeback_lines: new Set(['year']) };
+
+function withRequired(input: Record<string, unknown>): Record<string, unknown> {
+  const required = REQUIRED_FILTERS[String(input.entity_type)];
+  if (!required) return input;
+  return { ...input, filters: { ...required, ...((input.filters as Record<string, unknown> | undefined) ?? {}) } };
+}
 
 /**
  * The column a list service sorts on when it does not know the requested one. A sort field on
@@ -194,6 +221,11 @@ async function seedTenant(runner: QueryRunner): Promise<Seed> {
        VALUES ($1, $2, $3, 'EUR', '2026-01-01', $4, $5, $6, $6)`,
       [tenantId, nature, `${nature} line ${n}`, n, companyId, at]);
   });
+  // The chargeback reports of CHARGEBACK_YEAR: both lines, spread evenly over the two companies.
+  for (const itemId of [rows.budget_lines.older, rows.budget_lines.newer]) {
+    const versionId = await seedVersion(runner, 'opex', tenantId, itemId, CHARGEBACK_YEAR);
+    await seedMonths(runner, 'opex', tenantId, versionId, CHARGEBACK_YEAR, { planned: [1200, ...Array(11).fill(0)] });
+  }
   await pair('projects', (n, at) => insertId(runner,
     `INSERT INTO portfolio_projects (tenant_id, name, item_number, created_at, updated_at) VALUES ($1, $2, $3, $4, $4)`,
     [tenantId, `Project ${n}`, n, at]));
@@ -242,7 +274,8 @@ function context(runner: QueryRunner, seed: Seed) {
 type Run = { error: string | null; ids: string[]; sql: string; result: any };
 
 /** One query in a savepoint, with the statements it sent (numbers masked: parameter counters, limits). */
-async function runQuery(runner: QueryRunner, executor: any, ctx: any, input: Record<string, unknown>): Promise<Run> {
+async function runQuery(runner: QueryRunner, executor: any, ctx: any, requested: Record<string, unknown>): Promise<Run> {
+  const input = withRequired(requested);
   await runner.query('SAVEPOINT contract_query');
   const statements: string[] = [];
   const original = runner.query.bind(runner);
@@ -262,7 +295,8 @@ async function runQuery(runner: QueryRunner, executor: any, ctx: any, input: Rec
   }
 }
 
-function probeValue(field: any): unknown {
+function probeValue(entityType: string, name: string, field: any): unknown {
+  if (EQ_ONLY_FIELDS[entityType]?.has(name)) return { op: 'eq', value: 2999 };
   if (field.type === 'set') return [field.values?.find((value: unknown) => value !== null) ?? '__contract_probe__'];
   if (field.type === 'text') return '__contract_probe__';
   if (field.type === 'number') return { op: 'gt', value: 123456789 };
@@ -328,7 +362,7 @@ async function testEveryAdvertisedSortAndFilterApplies(harness: Harness, runner:
     }
 
     for (const [field, definition] of Object.entries<any>(registry.fields)) {
-      const filtered = await runQuery(runner, harness.executor, ctx, { entity_type: entityType, filters: { [field]: probeValue(definition) } });
+      const filtered = await runQuery(runner, harness.executor, ctx, { entity_type: entityType, filters: { [field]: probeValue(entityType, field, definition) } });
       const label = `${entityType} filter ${field} (${definition.grid}, ${definition.type})`;
       if (filtered.error) failures.push(`${label}: fails: ${filtered.error}`);
       else if (filtered.result.filters_ignored.length) failures.push(`${label}: reported as ignored`);
@@ -337,6 +371,38 @@ async function testEveryAdvertisedSortAndFilterApplies(harness: Harness, runner:
     }
   }
   assert.deepEqual(failures, [], `every advertised sort and filter applies:\n${failures.join('\n')}`);
+}
+
+/** The consolidation account reads the accounts for the administrator of the seed, never a null column. */
+async function testConsolidationReadsTheAccounts(harness: Harness, runner: QueryRunner, seed: Seed) {
+  const ctx = context(runner, seed);
+  const filtered = await runQuery(runner, harness.executor, ctx, { entity_type: 'budget_lines', filters: { consolidation_account: ['[601] Software'] } });
+  assert.equal(filtered.error, null, `the filter runs (${filtered.error})`);
+  assert.ok(filtered.sql.includes('cons_labels'), 'the filter reads the consolidation accounts');
+  const sorted = await runQuery(runner, harness.executor, ctx, { entity_type: 'budget_lines', sort: { field: 'consolidation_account', direction: 'asc' } });
+  assert.ok(sorted.sql.includes('cons_labels'), 'the sort reads them');
+  const statements: string[] = [];
+  const original = runner.query.bind(runner);
+  (runner as any).query = (sql: string, params?: unknown[], ...rest: unknown[]) => {
+    statements.push(sql);
+    return original(sql, params as any[], ...(rest as []));
+  };
+  try {
+    await harness.aggregates.execute(ctx, { entity_type: 'budget_lines', group_by: 'consolidation_account' });
+  } finally {
+    (runner as any).query = original;
+  }
+  assert.ok(statements.some((sql) => sql.includes('cons_labels')), 'the group reads them');
+}
+
+/** Budget lines grouped by line: each line by its reference and title, never by its id (lot L8 C). */
+async function testBudgetLineGroup(harness: Harness, runner: QueryRunner, seed: Seed) {
+  const ctx = context(runner, seed);
+  const result = await harness.aggregates.execute(ctx, { entity_type: 'budget_lines', group_by: 'line' });
+  const groups = [...result.groups].sort((a: any, b: any) => String(a.key).localeCompare(String(b.key)));
+  assert.deepEqual(groups.map((group: any) => [group.key, group.title, group.count]), [['BL-1', 'opex line 1', 1], ['BL-2', 'capex line 2', 1]], 'one group per line, by reference and title');
+  const ids = [seed.rows.budget_lines.older, seed.rows.budget_lines.newer];
+  assert.equal(ids.some((id) => JSON.stringify(result).includes(id)), false, 'no line id in the result');
 }
 
 async function testCreatedAtOrderOnSeededRows(harness: Harness, runner: QueryRunner, seed: Seed) {
@@ -440,7 +506,8 @@ async function testAmountsCurrency(harness: Harness, runner: QueryRunner, seed: 
 }
 
 /** Every filter value the AI may send for a field, one per shape the adapter turns it into. */
-function filterShapes(entityType: string, field: any): Array<[string, unknown]> {
+function filterShapes(entityType: string, name: string, field: any): Array<[string, unknown]> {
+  if (EQ_ONLY_FIELDS[entityType]?.has(name)) return [['eq', { op: 'eq', value: CHARGEBACK_YEAR }]];
   if (field.type === 'set') {
     const value = field.values?.find((entry: unknown) => entry !== null) ?? '__contract_probe__';
     return [['set', [value]], ['set with blank', [value, null]], ['set to exclude', { not: [value] }]];
@@ -460,7 +527,7 @@ function filterShapes(entityType: string, field: any): Array<[string, unknown]> 
 async function runAggregate(runner: QueryRunner, aggregates: any, ctx: any, input: Record<string, unknown>): Promise<string | null> {
   await runner.query('SAVEPOINT contract_aggregate');
   try {
-    const result = await aggregates.execute(ctx, input);
+    const result = await aggregates.execute(ctx, withRequired(input));
     await runner.query('RELEASE SAVEPOINT contract_aggregate');
     return result?.status === 'invalid_filter' ? `invalid filter ${JSON.stringify(result.filters_ignored)}` : null;
   } catch (error: any) {
@@ -477,7 +544,7 @@ async function testEveryFilterShapeIsAccepted(harness: Harness, runner: QueryRun
     const registry = await harness.registries.resolveAiEntityRegistry(ctx, entityType);
     const groupBy = Object.entries<any>(registry.fields).find(([, field]) => field.groupable)?.[0];
     for (const [name, field] of Object.entries<any>(registry.fields)) {
-      for (const [shape, value] of filterShapes(entityType, field)) {
+      for (const [shape, value] of filterShapes(entityType, name, field)) {
         checked += 1;
         const label = `${entityType} filter ${name} (${field.grid}, ${shape})`;
         const query = await runQuery(runner, harness.executor, ctx, { entity_type: entityType, filters: { [name]: value } });
@@ -486,6 +553,15 @@ async function testEveryFilterShapeIsAccepted(harness: Harness, runner: QueryRun
         const error = await runAggregate(runner, harness.aggregates, ctx, { entity_type: entityType, group_by: groupBy, filters: { [name]: value } });
         // A shape the adapter does not send for this column (an exclude set where the list has no exclude mode) is reported, not sent.
         if (error && !(shape === 'set to exclude' && /invalid filter/.test(error))) failures.push(`${label}: the aggregate fails: ${error}`);
+      }
+    }
+  }
+  // A year of the chargeback reports takes one value: any other operator is refused in words.
+  for (const [entityType, fields] of Object.entries(EQ_ONLY_FIELDS)) {
+    for (const name of fields) {
+      for (const op of ['gt', 'gte', 'lt', 'lte']) {
+        const refused = await runQuery(runner, harness.executor, ctx, { entity_type: entityType, filters: { [name]: { op, value: 2026 } } });
+        if (!/reads one year/.test(refused.error ?? '')) failures.push(`${entityType} filter ${name} ${op}: not refused in words (${refused.error})`);
       }
     }
   }
@@ -508,6 +584,8 @@ async function run() {
       const seed = await seedTenant(runner);
       await testEveryAdvertisedSortAndFilterApplies(harness, runner, seed);
       await testEveryFilterShapeIsAccepted(harness, runner, seed);
+      await testConsolidationReadsTheAccounts(harness, runner, seed);
+      await testBudgetLineGroup(harness, runner, seed);
       await testCreatedAtOrderOnSeededRows(harness, runner, seed);
       await testUnknownSortIsReported(harness, runner, seed);
       await testPageSizes(harness, runner, seed);

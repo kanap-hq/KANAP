@@ -570,6 +570,12 @@ Une ligne **Total** épinglée donne, pour chaque paire, le total des jours, le 
 
 ---
 
+## Demander à l'assistant
+
+[Plaid](ai-assistant.md) donne les chiffres de ces rapports, avec les mêmes droits : Comptes de consolidation, Top hausse / baisse (10 lignes par défaut), Effectifs par mois (chaque mois, la moyenne et le pic), Coût par ETP, Refacturation globale et Refacturation par société. Il mesure aussi plusieurs colonnes ou années dans une même réponse, par exemple le budget de chaque fournisseur sur trois ans. Pour la refacturation, il couvre OPEX et CAPEX quand vous ne nommez aucun des deux, et reprend les avertissements du rapport. Demandez par exemple : « Quelles lignes augmentent le plus du budget 2026 à la révision ? » ou « Combien est refacturé à chaque société en 2026, et combien chacune paie-t-elle ? »
+
+Plaid lit toutes les lignes budgétaires, y compris les lignes terminées. Les rapports budgétaires lisent les lignes encore actives au 1er janvier de l'année qui précède la première année affichée : une ligne terminée plus tôt compte donc dans la réponse de Plaid et pas dans le rapport.
+
 ## Fonctionnalités communes
 
 Chaque rapport partage ces capacités via la barre d'outils partagée :

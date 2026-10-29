@@ -570,6 +570,12 @@ A pinned **Total** row gives, for each pair, the total days, the total day cost 
 
 ---
 
+## Ask the assistant
+
+[Plaid](ai-assistant.md) gives the figures of these reports, with the same rights: Consolidation accounts, Top increase / decrease (10 lines by default), Staffing by month (each month, the average and the peak), Cost per FTE, Global chargeback and Company chargeback. It also measures several columns or years in one answer, for example the budget of each supplier over three years. On the chargeback, it covers OPEX and CAPEX when you name neither, and repeats the warnings of the report. Ask, for example: "Which lines rise the most from the 2026 budget to the revision?" or "How much is charged to each company in 2026, and how much does each one pay?"
+
+Plaid reads every budget line, ended lines included. The budget reports read the lines still active on 1 January of the year before the first year shown, so a line that ended earlier counts in Plaid's answer and not in the report.
+
 ## Common features
 
 Every report shares these capabilities through the shared toolbar:

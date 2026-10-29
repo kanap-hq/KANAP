@@ -81,6 +81,9 @@ const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> =
   role_permissions: 'users',
   // The limited persons and their nodes, as Admin › Data access reads them (`GET /data-access`).
   data_access: 'users',
+  // The chargeback reports, read with the reporting right as their routes (`GET /reports/chargeback/*`).
+  chargeback: 'reporting',
+  chargeback_lines: 'reporting',
 };
 
 /**
@@ -109,6 +112,8 @@ const ENTITY_SCREEN: Partial<Record<AiQueryEntityType | AiContextEntityType, str
   roles: 'Admin › Roles',
   role_permissions: 'Admin › Roles',
   data_access: 'Admin › Data access',
+  chargeback: 'Reporting › Global chargeback',
+  chargeback_lines: 'Reporting › Company chargeback',
 };
 
 /** The level a family is read at: the caller's, raised to the family's minimum. */
@@ -139,6 +144,14 @@ const RIGHT_PLAIN_NAMES: Record<string, string> = {
   users: 'users',
 };
 
+/**
+ * The rights Plaid reads with but writes nothing under, in plain words for a refusal: kept out of
+ * `RIGHT_PLAIN_NAMES`, whose modules a person may be told they modify.
+ */
+const READ_RIGHT_PLAIN_NAMES: Record<string, string> = {
+  reporting: 'the reports',
+};
+
 const LEVEL_PLAIN_VERBS: Record<PermissionLevel, string> = {
   reader: 'read',
   contributor: 'contribute to',
@@ -156,7 +169,7 @@ export function missingRightMessage(resource: string, minimumLevel: PermissionLe
       ? 'Your role does not give access to Plaid. An administrator can add it to your role.'
       : 'Your role lets you ask Plaid questions but not prepare changes with it: that needs the Plaid right at member level. An administrator can add it to your role.';
   }
-  const name = RIGHT_PLAIN_NAMES[resource];
+  const name = RIGHT_PLAIN_NAMES[resource] ?? READ_RIGHT_PLAIN_NAMES[resource];
   // The rights of the settings and the MCP surface keep their code: the administration screens read it.
   if (!name) return `Missing required permission ${resource}:${minimumLevel}.`;
   const where = screen ? ` (the right the ${screen} screen asks for)` : '';

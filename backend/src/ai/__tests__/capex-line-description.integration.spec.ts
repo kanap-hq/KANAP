@@ -20,7 +20,7 @@ runSpecs('capex-line-description.integration.spec', [['AI budget lines read the 
     services[1] = budgetService(runner);
     services[6] = { listContractsForSpendItem: async () => ({ items: [] }), listContractsForCapexItem: async () => ({ items: [] }) };
     services[22] = realAllocationCalculator();
-    services[23] = { canReadEntityType: async () => true };
+    services[23] = { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
     const executor = new (AiQueryExecutor as any)(...services) as AiQueryExecutor;
     const context = { tenantId: world.tenantId, userId: randomUUID(), manager: runner.manager, surface: 'chat', isPlatformHost: false, authMethod: 'jwt' } as any;
 

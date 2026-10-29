@@ -73,6 +73,7 @@ function entityService() {
       canReadKnowledge: async () => true,
       assertEntityTypeReadAccess: async () => undefined,
       adminFamiliesGap: async () => 'right',
+      canReadEntityType: async () => false,
     } as any,
   );
 }

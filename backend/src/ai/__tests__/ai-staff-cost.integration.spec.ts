@@ -188,14 +188,14 @@ function queryExecutor(): AiQueryExecutor {
   args[1] = budgetReadService();
   args[6] = { listContractsForSpendItem: async () => ({ items: [] }), listContractsForCapexItem: async () => ({ items: [] }) };
   args[22] = realAllocationCalculator();
-  args[23] = { canReadEntityType: async () => true };
+  args[23] = { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
   return new (AiQueryExecutor as any)(...args);
 }
 
 function aggregateExecutor(): AiAggregateExecutor {
   const args: any[] = Array.from({ length: 23 }, () => ({}));
   args[1] = budgetReadService();
-  args[21] = { canReadEntityType: async () => true };
+  args[21] = { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
   return new (AiAggregateExecutor as any)(...args);
 }
 
@@ -298,11 +298,12 @@ async function testRegistryAndDescription() {
       ['<year>_<column>_day_cost', 25, true, true],
       ['<year>_<column>_days', 25, true, true],
     ], `${kind}: one entry per family`);
-    assert.deepEqual(description.metric_families?.map((family) => [family.family, family.metrics.length]), [
+    // The ratio metrics first; the change between two columns and the FTE by month follow (lot L8 C).
+    assert.deepEqual(description.metric_families?.slice(0, 2).map((family) => [family.family, family.metrics?.length]), [
       ['<year>_<column>_cost_per_fte', 25],
       ['<year>_<column>_day_rate', 25],
     ], `${kind}: the ratio metrics`);
-    assert.ok(description.metric_families![1].metrics.includes('y_budget_day_rate'));
+    assert.ok(description.metric_families![1].metrics!.includes('y_budget_day_rate'));
     assert.equal(description.fields.some((field) => field.field.endsWith('_staff_cost')), false, `${kind}: no family key listed one by one`);
     assert.equal(description.sort_fields.includes('y_budget_staff_cost'), false, `${kind}: the family keys are not repeated in sort_fields`);
     assert.ok(description.sort_fields.includes('y_budget_fte'), `${kind}: the other sort fields stay`);
