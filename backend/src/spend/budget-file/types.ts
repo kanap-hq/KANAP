@@ -36,10 +36,7 @@ export interface StoredRound {
   method: 'spread' | 'copied' | 'manual' | 'computed';
   /** How many calculation lines the column holds. */
   lineCount: number;
-  /**
-   * What the lines give over the year, in cents: the computed total, or the `lines_result` kept
-   * once they are a reference. Null without lines.
-   */
+  /** What the lines compute over the year, in cents, while the column follows them; null otherwise. */
   linesTotal: bigint | null;
 }
 

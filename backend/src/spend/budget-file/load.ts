@@ -344,8 +344,7 @@ async function loadVersions(
 
 /**
  * Per version and column, the round-input record's method and its calculation lines: how many, and
- * what they give (the computed total, or `lines_result` once they are a reference). One query for
- * every version.
+ * the total they compute while the column follows them. One query for every version.
  */
 async function loadRounds(
   manager: EntityManager,
@@ -358,8 +357,7 @@ async function loadRounds(
     `SELECT r.version_id::text AS version_id, r.measure, r.method,
             (SELECT count(*)::int FROM spend_round_input_lines l
               WHERE l.tenant_id = r.tenant_id AND l.round_input_id = r.id) AS line_count,
-            CASE WHEN r.last_calculation->>'kind' = 'computed' THEN r.last_calculation->>'total'
-                 ELSE r.last_calculation->'lines_result'->>'total' END AS lines_total
+            CASE WHEN r.last_calculation->>'kind' = 'computed' THEN r.last_calculation->>'total' END AS lines_total
        FROM spend_round_inputs r
       WHERE r.tenant_id = $1 AND r.version_id = ANY($2::uuid[])`,
     [tenantId, versionIds],

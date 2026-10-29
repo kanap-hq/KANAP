@@ -1119,7 +1119,7 @@ function noteCalculationLines(
 }
 
 /** `BL-83 · Revision 2026: 3 calculation lines (281,280.00) will no longer drive these amounts.` */
-export function calculationLinesMessage(item: string, label: string, year: number, count: number, total: string): string {
+function calculationLinesMessage(item: string, label: string, year: number, count: number, total: string): string {
   const [whole, cents] = total.split('.');
   const shown = `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${cents}`;
   const lines = count === 1 ? '1 calculation line' : `${count} calculation lines`;
