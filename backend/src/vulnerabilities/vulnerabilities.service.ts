@@ -3,7 +3,7 @@ import { Features } from '../config/features';
 import { cveListEnabled } from './cve-list-feed.service';
 import { NvdFeedService } from './nvd-feed.service';
 import type { EntityManager } from 'typeorm';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditSourceOptions } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { languageOf } from '../common/csv-sheet';
@@ -23,7 +23,13 @@ import { severityOf, VULNERABILITY_STATES, type MatchBasis, type VulnerabilitySt
 /** The sheet of the vulnerabilities workbook. */
 const VULNERABILITIES_SHEET: Record<CsvLanguage, string> = { en: 'Vulnerabilities', fr: 'Vulnérabilités', de: 'Schwachstellen', es: 'Vulnerabilidades' };
 
-export type VulnOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
+export type VulnOpts = {
+  manager: EntityManager;
+  tenantId: string;
+  userId?: string | null;
+  /** The audit row's source: the screen leaves it out (`user`), Plaid names its preview. */
+  audit?: AuditSourceOptions;
+};
 /** The applications the caller reads: null without the `applications` read right, a Business Contributor's own only. */
 export type ApplicationsAccess = { scope?: ParticipationAccessScope } | null;
 
@@ -541,6 +547,37 @@ function feedFailing(row: { last_error: string | null; last_attempt_at: Date | s
   return new Date(row.last_attempt_at).getTime() > new Date(row.last_success_at).getTime();
 }
 
+/**
+ * How fresh each feed is, as the page reads it (`GET /vulnerabilities/sources`) and the assistant
+ * (`feeds`). Both sources are always named, with null dates when no pass has written a row.
+ * `failing` is true when the last attempt is newer than the last success and an error was kept.
+ * The error text stays in the database: it can name a mirror. `vulnerability_feed_sources` is a
+ * platform table, shared by every tenant: it has no tenant column.
+ */
+export async function vulnerabilityFeedSources(mg: Pick<EntityManager, 'query'>) {
+  const rows: Array<{ source: string; last_success_at: Date | null; last_attempt_at: Date | null; last_error: string | null }> = await mg.query(
+    `SELECT source, last_success_at, last_attempt_at, last_error
+       FROM vulnerability_feed_sources
+      WHERE source = ANY($1::text[])`,
+    [['nvd', 'cve_org']],
+  );
+  const bySource = new Map(rows.map((row) => [row.source, row]));
+  const enabled: Record<MatchSource, boolean> = {
+    nvd: Features.VULNERABILITY_FEED_ENABLED,
+    cve_org: cveListEnabled(),
+  };
+  return (['nvd', 'cve_org'] as const).map((source) => {
+    const row = bySource.get(source);
+    return {
+      source,
+      last_success_at: row?.last_success_at ?? null,
+      last_attempt_at: row?.last_attempt_at ?? null,
+      failing: feedFailing(row),
+      enabled: enabled[source],
+    };
+  });
+}
+
 function presentRecord(cve: CveWithRecord) {
   if (!cve.record_cve_id) return null;
   return {
@@ -953,35 +990,9 @@ export class VulnerabilitiesService {
     return { servers: servers.size, applications: reach.apps ? apps.size : null };
   }
 
-  /**
-   * How fresh each feed is. Both sources are always named, with null dates when no pass has written
-   * a row. `failing` is true when the last attempt is newer than the last success and an error was
-   * kept. The error text stays in the database: it can name a mirror.
-   */
+  /** How fresh each feed is (`vulnerabilityFeedSources`). */
   async sources(opts: VulnOpts) {
-    const rows: Array<{ source: string; last_success_at: Date | null; last_attempt_at: Date | null; last_error: string | null }> = await opts.manager.query(
-      `SELECT source, last_success_at, last_attempt_at, last_error
-         FROM vulnerability_feed_sources
-        WHERE source = ANY($1::text[])`,
-      [['nvd', 'cve_org']],
-    );
-    const bySource = new Map(rows.map((row) => [row.source, row]));
-    const enabled: Record<MatchSource, boolean> = {
-      nvd: Features.VULNERABILITY_FEED_ENABLED,
-      cve_org: cveListEnabled(),
-    };
-    return {
-      items: (['nvd', 'cve_org'] as const).map((source) => {
-        const row = bySource.get(source);
-        return {
-          source,
-          last_success_at: row?.last_success_at ?? null,
-          last_attempt_at: row?.last_attempt_at ?? null,
-          failing: feedFailing(row),
-          enabled: enabled[source],
-        };
-      }),
-    };
+    return { items: await vulnerabilityFeedSources(opts.manager) };
   }
 
   /**
@@ -1511,7 +1522,7 @@ export class VulnerabilitiesService {
         [tenantId, row.id, stateChanges ? patch.state : null, noteChanges, patch.note ?? null, stateChanges, opts.userId ?? null],
       );
       await this.audit.log(
-        { table: 'technology_vulnerabilities', recordId: String(row.id), action: 'update', before: row, after, userId: opts.userId ?? null },
+        { table: 'technology_vulnerabilities', recordId: String(row.id), action: 'update', before: row, after, userId: opts.userId ?? null, ...opts.audit },
         { manager: mg },
       );
       changed += 1;
@@ -1647,7 +1658,7 @@ export class VulnerabilitiesService {
         const after = afterById.get(String(row.id));
         if (!after) continue;
         await this.audit.log(
-          { table: 'technology_vulnerabilities', recordId: String(row.id), action: 'update', before: row, after, userId: opts.userId ?? null },
+          { table: 'technology_vulnerabilities', recordId: String(row.id), action: 'update', before: row, after, userId: opts.userId ?? null, ...opts.audit },
           { manager: mg },
         );
         changed += 1;

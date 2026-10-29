@@ -127,6 +127,7 @@ const BUSINESS_WRITE_TOOLS: AiToolName[] = [
   'update_technology_people',
   'update_technology_web_links',
   'set_technology_vulnerability_alerts',
+  'change_vulnerability_state',
   'change_incident_state',
   'set_incident_confidentiality',
   'update_entity_relations',
@@ -271,7 +272,7 @@ const CANONICAL_REF_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEn
   // so it is read as a budget line only with a budget word in the phrase (see below).
   { pattern: /\b(?:OPEX|OPX|CPX)-\d+\b/i, entityType: 'budget_lines' },
   { pattern: /\bTEC-\d+\b/i, entityType: 'technologies' },
-  // Read only: a CVE id names the vulnerability rows of that CVE.
+  // A CVE id names the vulnerability rows of that CVE.
   { pattern: /\bCVE-\d{4}-\d{4,}\b/i, entityType: 'vulnerabilities' },
 ];
 
@@ -311,6 +312,7 @@ const BUSINESS_ENTITY_TYPES = new Set<AiQueryEntityType>([
   'locations',
   'projects',
   'requests',
+  'vulnerabilities',
 ]);
 const MASTER_DATA_ENTITY_TYPES = new Set<AiQueryEntityType>([
   'accounts',
@@ -690,6 +692,54 @@ function hasTechnologyChangeStatement(rawText: string, text: string): boolean {
   ]);
 }
 
+/**
+ * The states of a vulnerability row as the person says them, accents removed. "Résolue" and
+ * "resolved" are task and incident words: they never name a vulnerability state.
+ */
+const VULNERABILITY_STATE_WORD_RE = /\b(?:traitee?s?|a traiter|a revoir|non concernee?s?|pas concernee?s?|corrigee?s?|acceptee?s?|handled|not affected|to review|fixed|accepted)\b/;
+
+/** The verbs of a vulnerability state change, raw and lower-case; the first group needs a state word. */
+const VULNERABILITY_STATE_VERBS = new Set([
+  'passe', 'passez', 'passer', 'mets', 'mettez', 'mettre', 'remets', 'remettez', 'remettre',
+  'marque', 'marquez', 'marquer', 'mark', 'set', 'move', 'change', 'changez', 'changer',
+]);
+/** These verbs name the change themselves: "Traite toutes les failles critiques de TEC-3". */
+const VULNERABILITY_HANDLE_VERBS = new Set([
+  'traite', 'traitez', 'traiter', 'handle', 'rouvre', 'rouvrez', 'rouvrir', 'reopen',
+]);
+
+/** Another family is the object of the phrase: "Mark the task T-5 about CVE-2024-3094 as resolved". */
+const VULNERABILITY_OTHER_FAMILY_RE = /\b(?:t|inc|req|prj|doc|opex|opx|cpx|bl)-\d+\b|\b(?:tache|taches|task|tasks|ticket|tickets|demande|demandes|request|requests|incident|incidents|projet|projets|project|projects)\b/;
+
+/** A handle verb names the rows right after itself, a determiner aside: "Traite toutes les failles de TEC-3". */
+const VULNERABILITY_HANDLE_OBJECT_RE = /^\S+\s+(?:(?:(?:toutes|tous)\s+(?:les|ces|mes|nos|vos)|les|la|le|une?|des|du|de|ces|cette|cet|ce|mes|nos|vos|leurs?|the|a|an|all(?:\s+the)?|these|those|this|that|every|each|my|our|your)\s+|[ld]['’]\s*)?(?:cve-\d{4}-\d{4,}|faille|failles|vulnerabilite|vulnerabilites|vulnerability|vulnerabilities)\b/;
+
+/** A handle verb on a report or a list is a read: "Traite les failles de TEC-3 dans un rapport". */
+const VULNERABILITY_REPORT_WORD_RE = /\b(?:rapport|rapports|report|reports|csv|liste|listes|list|lists|tableau|tableaux|table|tables|export|exports|question|questions|resume|resumes|summary|summaries)\b/;
+
+/**
+ * A vulnerability state write: an imperative at the head, a CVE id or a vulnerability word, and a
+ * state word unless the verb names the change ("Marque CVE-2024-1234 comme corrigée sur
+ * PostgreSQL 14", "Traite toutes les failles critiques de TEC-3"). A question, the alert setting
+ * ("Désactive les alertes de failles de TEC-3") and a phrase about a task, a request, an incident
+ * or a project are not. A handle verb names the rows right after itself and no report.
+ */
+function hasVulnerabilityStateWrite(rawText: string, text: string): boolean {
+  if (isTechnologyQuestion(rawText)) return false;
+  const first = directiveFirstWord(rawText);
+  if (first == null || (!VULNERABILITY_STATE_VERBS.has(first) && !VULNERABILITY_HANDLE_VERBS.has(first))) return false;
+  if (/\b(?:alertes?|alerts?)\b/.test(text)) return false;
+  if (VULNERABILITY_OTHER_FAMILY_RE.test(text)) return false;
+  const namesVulnerability = /\bCVE-\d{4}-\d{4,}\b/i.test(rawText)
+    || /\b(?:faille|failles|vulnerabilite|vulnerabilites|vulnerability|vulnerabilities|cve|cves)\b/.test(text);
+  if (!namesVulnerability) return false;
+  if (VULNERABILITY_HANDLE_VERBS.has(first)) {
+    const head = text.trim().replace(DIRECTIVE_PREFIX_RE, '');
+    return VULNERABILITY_HANDLE_OBJECT_RE.test(head) && !VULNERABILITY_REPORT_WORD_RE.test(text);
+  }
+  return VULNERABILITY_STATE_WORD_RE.test(text);
+}
+
 /** Undoing the last mutation is a write, never a read: "Undo that", "Annule l'aperçu". */
 const UNDO_REQUEST_RE = /\bundo\b|\bannule (?:ce que|ceci|cela|la derniere|le dernier|la precedent|la precedente|les dernieres|l['’]apercu)\b|\bcancel (?:my |the )?(?:last|previous) (?:preview|change|modification|action)\b/;
 
@@ -832,8 +882,9 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
   const hasTechnologyChange = hasTechnologyChangeStatement(raw, text);
   const hasTaskFieldStateWriteIntent = hasTaskFieldStateWrite(raw, text);
   const hasUserAdministrationIntent = hasUserAdministrationWrite(raw, text);
+  const hasVulnerabilityStateIntent = hasVulnerabilityStateWrite(raw, text);
   const isWrite = hasTechnologyPeopleIntent || hasTechnologyWebLinkIntent || hasTaskFieldStateWriteIntent
-    || hasUserAdministrationIntent || containsAny(writeText, [
+    || hasUserAdministrationIntent || hasVulnerabilityStateIntent || containsAny(writeText, [
     /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|passe|passer|publish|publier|mark|set)\b/,
     wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
     // A status or lifecycle word with an incident reference is an incident change: "clos INC-7",
@@ -885,6 +936,10 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
       return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
     }
     if (!question && containsAny(text, [/\b(?:alertes? de failles?|vulnerability alerts?)\b/])) {
+      return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
+    }
+    // The state of vulnerability rows: "Traite toutes les failles critiques de TEC-3".
+    if (hasVulnerabilityStateIntent) {
       return { profile: withWebCapability(PROFILES.write_business, needsWeb), explicitIntent: true };
     }
     // A link verb with an incident reference is the incident links tool: "lie APP-2 à INC-3".

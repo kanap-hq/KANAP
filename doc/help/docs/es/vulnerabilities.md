@@ -147,7 +147,7 @@ Establezca el estado de cada versión:
 | **Tratada** | La versión está parcheada, o hay una solución alternativa en marcha |
 | **No afectada** | La vulnerabilidad no se aplica a su instalación |
 
-La nota registra cómo, por ejemplo «parcheado el 12 de marzo, cambio CHG-123». Se guarda al salir del campo. El registro de auditoría conserva quién cambió un estado y cuándo.
+La nota registra cómo, por ejemplo «parcheado el 12 de marzo, cambio CHG-123». Se guarda al salir del campo. El registro de auditoría conserva quién cambió un estado y cuándo. También puede pedir a [Plaid](#preguntar-al-asistente) que cambie un estado.
 
 KANAP nunca cambia un estado que usted eligió. Cuando una versión deja de coincidir (la actualizó, la tecnología se retiró, una fuente cambió sus datos), una fila aún **Por revisar** desaparece. Una fila que usted revisó se queda, en gris, con su estado; vuelve tal cual si la versión coincide de nuevo.
 
@@ -185,7 +185,23 @@ Los destinatarios son los responsables de TI de la tecnología cuya cuenta está
 - **Listas de activos y aplicaciones**: la columna **Vulnerabilidades por revisar**. Consulte [Activos](assets.md#working-with-the-list) y [Aplicaciones](applications.md#working-with-the-list).
 - **Fichas de activo y aplicación**: la sección **Vulnerabilidades** y la insignia de vulnerabilidades graves en el encabezado. Consulte [Activos](assets.md#operations) y [Aplicaciones](applications.md#operations).
 - **Panel de control**: el mosaico **Vulnerabilidades del parque**. Consulte [Mi panel de control](my-dashboard.md#vulnerabilities).
-- **Plaid**: el asistente responde a preguntas sobre vulnerabilidades. Consulte [Plaid](ai-assistant.md#tool-calls).
+- **Plaid**: el asistente responde a preguntas sobre vulnerabilidades y cambia su estado. Consulte [Preguntar al asistente](#preguntar-al-asistente).
+
+## Preguntar al asistente
+
+[Plaid](ai-assistant.md) lee las vulnerabilidades con los mismos derechos que esta página. Cuenta las filas y las CVE distintas, como la página, conserva las tecnologías en uso en el parque cuando usted lo pide, y dice cuándo leyó KANAP cada fuente por última vez. Pregunte, por ejemplo: «¿Cuántas vulnerabilidades críticas quedan por revisar en PostgreSQL, por versión?» o «¿Qué CVE explotadas alcanzan APP-4?»
+
+Con `infrastructure:member`, Plaid también cambia el estado de las filas, y cada cambio llega como una vista previa que usted aprueba:
+
+- Nombre una CVE para cambiar todas sus filas, o añada una tecnología, o una tecnología y una versión.
+- O describa las filas con los filtros de la página, por ejemplo las filas críticas de una tecnología.
+- Dé una nota para escribirla en cada fila. Sin nota, cada fila conserva la suya.
+
+Un cambio abarca 5000 filas como máximo, como **Cambiar el estado**. La vista previa dice cuántas filas y CVE cambian, y cuántas están fuera de las alertas. Cuando filas que ya no coinciden vuelven a **Por revisar**, las cuenta: desaparecen en el siguiente cotejo. **Aceptada** no es un estado: Plaid propone **Tratada** con una nota como «riesgo aceptado», o **No afectada**, y espera su elección. Pida a Plaid que deshaga un cambio que hizo en la conversación. Lo rechaza cuando una fila cambió desde entonces.
+
+Pregunte, por ejemplo: «Marca CVE-2024-3094 como no afectada en TEC-3 versión 5.6, el paquete no está instalado» o «Pasa las filas críticas de PostgreSQL 14 a tratada con la nota "parcheado en marzo"».
+
+El nuevo cotejo (**Actualizar**) se queda en la sección **Vulnerabilidades** de la tecnología. Consulte [Tecnologías](technologies.md#vulnerabilidades).
 
 ## Consejos
 

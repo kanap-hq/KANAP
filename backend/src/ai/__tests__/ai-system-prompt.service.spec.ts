@@ -515,7 +515,8 @@ async function testPromptRefusesUnsupportedWritesWithoutSubstitutePreview() {
   assert.doesNotMatch(prompt, /reopening, cancelling and lifting/);
   assert.doesNotMatch(prompt, /the journal entry, the links to assets, applications and technologies, the follow-up task/);
   assert.doesNotMatch(prompt, /creating or changing a technology's record or its versions/);
-  assert.match(prompt, /changing the state of a vulnerability; deleting one of a technology's versions/);
+  assert.doesNotMatch(prompt, /changing the state of a vulnerability/);
+  assert.match(prompt, /deleting one of a technology's versions \(its Overview tab has the version's delete\); re-running the vulnerability matching: the technology's Vulnerabilities tab has Refresh\./);
   assert.doesNotMatch(prompt, /including the technologies of an application/);
   assert.match(prompt, /deleting one of a technology's versions \(its Overview tab has the version's delete\)/);
   assert.match(prompt, /A technology's attachments are added from its Relations tab, not by Plaid/);

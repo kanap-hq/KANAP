@@ -82,7 +82,7 @@ import {
   technologyContractCount,
   technologyVersionFigures,
 } from './ai-technologies.query';
-import { AiVulnerabilityDetailRow, AiVulnerabilityRow, listAiVulnerabilities } from './ai-vulnerabilities.query';
+import { AiVulnerabilityDetailRow, AiVulnerabilityRow, listAiVulnerabilities, readAiVulnerabilityFeeds } from './ai-vulnerabilities.query';
 import { APPLICATIONS_UNREAD_NOTE, listAiSupportDeadlines, listAiSupportGaps, type AiSupportGapRow } from './ai-support.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
@@ -1208,6 +1208,8 @@ export class AiQueryExecutor {
         version: scalar(row.version),
         sources: row.sources.join(', '),
         alerts: row.alerts,
+        estate: row.estate,
+        matching: row.matching,
         published_at: scalar(row.published_at),
         detected_at: scalar(row.detected_at),
         servers_reached: row.servers_reached,
@@ -2222,6 +2224,10 @@ export class AiQueryExecutor {
       return {
         items: result.items.map((row) => this.mapVulnerability(row)),
         total: result.total,
+        // The rows and the distinct CVE among them, as the page's total.
+        distinct_total: result.distinct_total,
+        distinct_label: 'cve',
+        feeds: await readAiVulnerabilityFeeds(context.manager),
         page: result.page,
         limit: result.limit,
         returned,
@@ -3278,6 +3284,7 @@ export class AiQueryExecutor {
         version: item.version,
         state: item.state,
         alerts: item.alerts,
+        matching: item.matching,
         servers_reached: item.servers_reached,
         applications_reached: item.applications_reached,
       })),

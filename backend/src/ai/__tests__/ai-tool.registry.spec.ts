@@ -640,6 +640,21 @@ async function testListAvailableTools() {
   );
 }
 
+// Plaid L6, lot A: what the model reads about the vulnerabilities, one sentence per tool.
+async function testVulnerabilityReadsAreDescribed() {
+  const tools = await createRegistry().listAvailableTools(createContext());
+  const text = (name: string) => tools.find((tool) => tool.name === name)?.description || '';
+  assert.match(text('query_entities'), /On vulnerabilities, `total` counts rows \(technology, version, CVE\) and `distinct_total` the distinct CVE/);
+  assert.match(text('query_entities'), /`feeds` gives each feed's last success and whether it is failing/);
+  assert.match(text('query_entities'), /`estate` true keeps the technologies in use in the estate, so the home tile's figures \(critical CVE published in the last 7 and 30 days, exploited CVE, in the estate\) read with `estate` true and `severity`, `published_at` or `exploited`/);
+  assert.match(text('aggregate_entities'), /On vulnerabilities, a group's `count` counts rows and its `distinct_count` the distinct CVE, and `distinct_total` is the distinct CVE of the whole set, not a sum of groups/);
+  assert.match(text('aggregate_entities'), /add up on the fields of the CVE itself \(severity, score_source, exploited\)/);
+  assert.match(text('search_all'), /Vulnerabilities are not searched here: query_entities on `vulnerabilities` finds a CVE by `cve_id` or `q`/);
+  // Each sentence once: the three tools do not repeat one another.
+  assert.doesNotMatch(text('aggregate_entities'), /feeds|estate` true/);
+  assert.doesNotMatch(text('search_all'), /distinct_total|estate/);
+}
+
 // Anthropic's connector review refuses tool text that reads like instructions to the model.
 async function testReadToolTextStatesFacts() {
   const registry = createRegistry();
@@ -993,6 +1008,43 @@ async function testPrepareMutationPlanDelegatesToPreviewService() {
     'create_project',
     'task_1',
   ]);
+}
+
+/** The vulnerability state tool needs infrastructure member and the vulnerability feed, as the screen's route. */
+async function testVulnerabilityStateToolFollowsTheRightAndTheFeed() {
+  const operation = {
+    toolName: 'change_vulnerability_state',
+    description: 'Create a preview to change the state of vulnerability rows.',
+    inputSchema: { safeParse: (value: any) => ({ success: true, data: value }) },
+    inputSummary: { state: 'The new state.', rows: 'The rows.' },
+    businessResource: 'infrastructure',
+    writePreview: { entity_type: 'vulnerabilities', fields: ['vulnerability_state'], reversible: true, prompt_hint: 'For the state of vulnerability rows.' },
+  };
+  const mutationOperations = {
+    listOperations: () => [operation],
+    getOperationOrNull: (toolName: string) => (toolName === operation.toolName ? operation : null),
+    isSupportedToolName: (toolName: string) => toolName === operation.toolName,
+  };
+  const registry = (level: 'member' | 'reader') => createRegistry({
+    policy: {
+      assertWriteAccess: async (_context: any, resource: string, _manager: any, options: { level: string }) => {
+        if (resource !== 'infrastructure' || (level === 'reader' && options.level !== 'reader')) throw new Error('missing right');
+      },
+    },
+    mutationOperations,
+  });
+  const offered = async (level: 'member' | 'reader') => (await registry(level).listAvailableTools(createChatContext()))
+    .some((tool) => tool.name === 'change_vulnerability_state');
+  const feed = Features.VULNERABILITY_FEED_ENABLED;
+  try {
+    Features.VULNERABILITY_FEED_ENABLED = true;
+    assert.equal(await offered('member'), true, 'an infrastructure member is offered the tool');
+    assert.equal(await offered('reader'), false, 'an infrastructure reader is not');
+    Features.VULNERABILITY_FEED_ENABLED = false;
+    assert.equal(await offered('member'), false, 'nobody is offered it while the feed is off');
+  } finally {
+    Features.VULNERABILITY_FEED_ENABLED = feed;
+  }
 }
 
 async function testUndoPreviewStaysHiddenWhenOnlyNonReversibleWritesExist() {
@@ -2117,6 +2169,7 @@ async function run() {
   await testListAvailableTools();
   await testTaskReadersSeeEntityCommentsTool();
   await testReadToolTextStatesFacts();
+  await testVulnerabilityReadsAreDescribed();
   await testListRegisteredToolsExposesRuntimeRegistry();
   await testListAvailableToolsIncludesCategories();
   await testRegisteredToolCategoriesMatchExpectedAssignments();
@@ -2127,6 +2180,7 @@ async function run() {
   await testAdministratorOnlyIncidentToolsNeedTheAdminLevel();
   await testWritePreviewToolsStayHiddenWithoutWriteAccess();
   await testDeleteRecordIsOfferedOnChatOnly();
+  await testVulnerabilityStateToolFollowsTheRightAndTheFeed();
   await testUpdateTaskAssigneesCreatesOnePreviewPerTaskAndReturnsPartialErrors();
   await testPrepareMutationPlanDelegatesToPreviewService();
   await testUndoPreviewStaysHiddenWhenOnlyNonReversibleWritesExist();

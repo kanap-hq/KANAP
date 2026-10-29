@@ -147,7 +147,7 @@ Set the state of each version:
 | **Handled** | The version is patched, or a workaround is in place |
 | **Not affected** | The vulnerability does not apply to your installation |
 
-The note records how, for example "patched on 12 March, change CHG-123". It saves when you leave the field. The audit log keeps who changed a state, and when.
+The note records how, for example "patched on 12 March, change CHG-123". It saves when you leave the field. The audit log keeps who changed a state, and when. You can also ask [Plaid](#ask-the-assistant) to change a state.
 
 KANAP never changes a state you chose. When a version no longer matches (you upgraded it, the technology was retired, a source changed its data), a row still **To review** goes away. A row you reviewed stays, greyed out, with its state; it comes back as it was if the version matches again.
 
@@ -185,7 +185,23 @@ The recipients are the IT owners of the technology whose account is enabled and 
 - **Assets and applications lists**: the **Vulnerabilities to review** column. See [Assets](assets.md#working-with-the-list) and [Applications](applications.md#working-with-the-list).
 - **Asset and application records**: the **Vulnerabilities** section and the badge of severe vulnerabilities in the header. See [Assets](assets.md#operations) and [Applications](applications.md#operations).
 - **Dashboard**: the **Vulnerabilities in your estate** tile. See [My dashboard](my-dashboard.md#vulnerabilities).
-- **Plaid**: the assistant answers questions about vulnerabilities. See [Plaid](ai-assistant.md#tool-calls).
+- **Plaid**: the assistant answers questions about vulnerabilities and changes their state. See [Ask the assistant](#ask-the-assistant).
+
+## Ask the assistant
+
+[Plaid](ai-assistant.md) reads the vulnerabilities with the same rights as this page. It counts rows and distinct CVE, as the page does, keeps the technologies in use in the estate when you ask, and says when KANAP last read each source. Ask, for example: "How many critical vulnerabilities are to review on PostgreSQL, by version?" or "Which exploited CVE reach APP-4?"
+
+With `infrastructure:member`, Plaid also changes the state of rows, and every change comes as a preview that you approve:
+
+- Name a CVE to change all its rows, or add a technology, or a technology and a version.
+- Or describe the rows with the filters of the page, for example the critical rows of one technology.
+- Give a note to write it on every row. Without a note, each row keeps its own.
+
+One change covers 5,000 rows at most, as **Change state**. The preview says how many rows and CVE change, and how many are out of the alerts. When rows that no longer match go back to **To review**, it counts them: they go away at the next matching. **Accepted** is not a state: Plaid offers **Handled** with a note such as "risk accepted", or **Not affected**, and waits for your choice. Ask Plaid to undo a change it made in the conversation. It refuses when a row changed since.
+
+Ask, for example: "Mark CVE-2024-3094 as not affected on TEC-3 version 5.6, the package is not installed" or "Set the critical rows of PostgreSQL 14 to handled with the note 'patched in March'".
+
+Running the matching again (**Refresh**) stays in the **Vulnerabilities** section of the technology. See [Technologies](technologies.md#vulnerabilities).
 
 ## Tips
 

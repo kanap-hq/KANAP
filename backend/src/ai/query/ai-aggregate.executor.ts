@@ -3,7 +3,7 @@ import { AiPolicyService } from '../ai-policy.service';
 import { FxRateService } from '../../currency/fx-rate.service';
 import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem, yearRateSetId } from '../../spend/allocation-distribution';
 import { listAiTechnologies, listAiTechnologyVersions, resolveAiApplicationsReach } from './ai-technologies.query';
-import { listAiVulnerabilities } from './ai-vulnerabilities.query';
+import { listAiVulnerabilities, readAiVulnerabilityFeeds } from './ai-vulnerabilities.query';
 import { aggregateSupportRows, APPLICATIONS_UNREAD_NOTE, listAiSupportDeadlines, listAiSupportGaps } from './ai-support.query';
 import { EndOfSupportService } from '../../technologies/reports/end-of-support.service';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
@@ -604,7 +604,7 @@ export class AiAggregateExecutor {
     q: string | undefined,
     adaptedFilters: Record<string, any>,
     scope?: AiQueryScope,
-  ): Promise<{ ids: string[]; total: number; scope: ResolvedAiScope | null }> {
+  ): Promise<{ ids: string[]; total: number; scope: ResolvedAiScope | null; distinct_total?: number }> {
     if (entityType === 'tasks') {
       const accessScope = await resolveAiParticipationAccessScope(context, entityType);
       const scoped = await applyScopeToAiQuery(
@@ -966,7 +966,8 @@ export class AiAggregateExecutor {
         applications,
         { idsOnly: true },
       );
-      return { ids: result.ids, total: result.total, scope: null };
+      // The distinct CVE of every row the filters keep, beyond the ids cap.
+      return { ids: result.ids, total: result.total, scope: null, distinct_total: result.distinct_total };
     }
 
     if (entityType === 'interfaces') {
@@ -1214,7 +1215,7 @@ export class AiAggregateExecutor {
     ids: string[],
     fn: AiAggregateFunction,
     metric: { key: string; def: AiAggregateMetricDef } | null,
-  ): Promise<Array<{ key: string | null; count: number } | { key: string | null; value: number | string | null }>> {
+  ): Promise<Array<{ key: string | null; count: number; distinct_count?: number } | { key: string | null; value: number | string | null }>> {
     const groupField = registry.aggregate.groupFields[groupBy];
     if (!groupField) {
       throw new BadRequestException('Unsupported group_by field.');
@@ -1246,8 +1247,11 @@ export class AiAggregateExecutor {
       const countExpression = groupField.countDistinct
         ? `COUNT(DISTINCT ${alias}.${idColumn})::int`
         : 'COUNT(*)::int';
+      // A family with several rows per record (`distinctRecord`) counts the records beside the rows.
+      const distinct = registry.aggregate.distinctRecord;
+      const distinctColumn = distinct ? `, COUNT(DISTINCT ${distinct.expression})::int AS distinct_count` : '';
       const rows = await context.manager.query(
-        `SELECT ${groupField.expression} AS key, ${countExpression} AS count
+        `SELECT ${groupField.expression} AS key, ${countExpression} AS count${distinctColumn}
          FROM ${registry.aggregate.baseTable} ${alias}
          ${joins}
          WHERE ${alias}.tenant_id = $1${baseWhere}
@@ -1260,6 +1264,7 @@ export class AiAggregateExecutor {
       return (rows || []).map((row: any) => ({
         key: row.key == null ? null : String(row.key),
         count: Number(row.count) || 0,
+        ...(distinct ? { distinct_count: Number(row.distinct_count) || 0 } : {}),
       }));
     }
 
@@ -1572,6 +1577,26 @@ export class AiAggregateExecutor {
     return amounts ? { ...result, ...amounts } : result;
   }
 
+  /**
+   * A family with several rows per record (`distinctRecord`, vulnerabilities: one row per technology
+   * version of a CVE): the distinct records among every row the filters keep, as its id list counts
+   * them over the whole set (beyond the ids cap; a record in two groups counts once), named by
+   * `distinct_label`. Nothing for the other families, nor for a list that does not count them.
+   */
+  private distinctRecordTotal(
+    registry: AiEntityFilterRegistry,
+    scoped: { distinct_total?: number },
+  ): Pick<AiAggregateResult, 'distinct_total' | 'distinct_label'> {
+    const distinct = registry.aggregate.distinctRecord;
+    if (!distinct || typeof scoped.distinct_total !== 'number') return {};
+    return { distinct_total: scoped.distinct_total, distinct_label: distinct.name };
+  }
+
+  /** Vulnerabilities: how fresh the feeds are, as the page's feed line. Nothing for the other families. */
+  private async familyFeeds(context: AiExecutionContextWithManager, entityType: AiQueryEntityType): Promise<Pick<AiAggregateResult, 'feeds'>> {
+    return entityType === 'vulnerabilities' ? { feeds: await readAiVulnerabilityFeeds(context.manager) } : {};
+  }
+
   private async executeAggregate(
     context: AiExecutionContextWithManager,
     input: {
@@ -1832,6 +1857,8 @@ export class AiAggregateExecutor {
         function: fn,
         groups: [],
         total: scoped.total,
+        ...this.distinctRecordTotal(registry, scoped),
+        ...(await this.familyFeeds(context, input.entity_type)),
         returned: 0,
         truncated,
         complete: !truncated && isCompleteAggregateResult(scoped.scope),
@@ -1868,6 +1895,8 @@ export class AiAggregateExecutor {
       function: fn,
       groups,
       total: scoped.total,
+      ...this.distinctRecordTotal(registry, scoped),
+      ...(await this.familyFeeds(context, input.entity_type)),
       returned: groups.length,
       truncated,
       complete: !truncated && isCompleteAggregateResult(scoped.scope),

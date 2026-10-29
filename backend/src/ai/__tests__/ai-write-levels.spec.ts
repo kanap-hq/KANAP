@@ -39,6 +39,7 @@ import { SpendVersionsController } from '../../spend/spend-versions.controller';
 import { TasksController } from '../../spend/tasks.controller';
 import { SuppliersController } from '../../suppliers/suppliers.controller';
 import { TechnologiesController } from '../../technologies/technologies.controller';
+import { VulnerabilitiesController } from '../../vulnerabilities/vulnerabilities.controller';
 
 /**
  * Lot D11: each Plaid write needs the level of the screen route that makes the same change.
@@ -136,6 +137,9 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
   },
   set_technology_vulnerability_alerts: {
     technologies: { resource: 'infrastructure', level: 'member', route: [TechnologiesController, 'setVulnerabilityAlerts'] },
+  },
+  change_vulnerability_state: {
+    vulnerabilities: { resource: 'infrastructure', level: 'member', route: [VulnerabilitiesController, 'bulkState'] },
   },
   change_incident_state: {
     incidents: { resource: 'incidents', level: 'admin', route: [IncidentsController, 'reopen'] },
