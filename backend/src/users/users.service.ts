@@ -76,6 +76,8 @@ type AiUserQueryOpts = {
    * expertise). Otherwise it looks in the name and the email only, as the users list for a reader.
    */
   accessView?: boolean;
+  /** These users only: the detail of a person reads the list's columns for that one row. */
+  ids?: string[];
 };
 
 /**
@@ -212,6 +214,10 @@ export class UsersService {
 
     if (tenantId) {
       qb.andWhere('u.tenant_id = :tenantId', { tenantId });
+    }
+
+    if (opts?.ids) {
+      qb.andWhere('u.id = ANY(:aiUserIds::uuid[])', { aiUserIds: opts.ids });
     }
 
     if (status) {

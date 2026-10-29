@@ -313,6 +313,29 @@ async function testPersonAndCompanyDetails(h: Harness, runner: QueryRunner, s: S
     'the detail and the list say the same',
   );
 
+  // The team columns too, read by the list's query (Plaid L7, lot E).
+  const team = await insertId(runner, `INSERT INTO portfolio_teams (tenant_id, name) VALUES ($1, $2)`, [s.tenantId, `Data team ${s.tag}`]);
+  await runner.query(
+    `INSERT INTO portfolio_team_member_configs (tenant_id, user_id, team_id, areas_of_expertise, project_availability, item_number)
+     VALUES ($1, $2, $3, '["SQL", "ERP"]'::jsonb, 3.5,
+             COALESCE((SELECT MAX(item_number) FROM portfolio_team_member_configs WHERE tenant_id = $1), 0) + 1)`,
+    [s.tenantId, s.users.bruno, team],
+  );
+  const teamFields = ['team', 'contributor_profile', 'project_availability', 'areas_of_expertise'];
+  const inTeam = await h.tools.execute(ctx(runner, s, 'ulla'), 'get_entity_detail', { entity_type: 'users', entity_id: s.users.bruno });
+  assert.deepEqual(
+    teamFields.map((field) => inTeam.entity.metadata[field]),
+    [`Data team ${s.tag}`, 'configured', 3.5, 'ERP, SQL'],
+    'the team, the contributor profile, the availability and the expertise',
+  );
+  const inList = await h.tools.execute(ctx(runner, s, 'ulla'), 'query_entities', { entity_type: 'users', q: 'Bruno' });
+  assert.deepEqual(teamFields.map((field) => inTeam.entity.metadata[field]), teamFields.map((field) => inList.items[0].metadata[field]), 'as the list');
+  const unconfigured = await h.tools.execute(ctx(runner, s, 'ulla'), 'get_entity_detail', { entity_type: 'users', entity_id: s.users.alice });
+  assert.equal(unconfigured.entity.metadata.contributor_profile, 'not_configured');
+  // Their rule stays the list's: no team field to a reader of users.
+  const asReader = await h.tools.execute(ctx(runner, s, 'rob'), 'get_entity_detail', { entity_type: 'users', entity_id: s.users.bruno });
+  assert.equal(teamFields.some((field) => field in asReader.entity.metadata), false, 'nothing of the team to a reader');
+
   const victor = await h.tools.execute(ctx(runner, s, 'ulla'), 'get_entity_detail', { entity_type: 'users', entity_id: s.users.victor });
   assert.deepEqual([victor.data.data_access.mode, victor.data.data_access.is_administrator, victor.data.data_access.nodes], ['all', true, []]);
   assert.match(victor.data.data_access.note, /Administrator: sees all data/);

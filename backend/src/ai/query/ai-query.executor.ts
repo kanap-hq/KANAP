@@ -3372,19 +3372,16 @@ export class AiQueryExecutor {
     if (entityType === 'users') {
       const user = await this.users.findById(entityId, { manager: context.manager });
       if (!user) throw new NotFoundException('User not found.');
-      // `findById` gives the entity and its relations; `mapUser` reads the columns of the users
-      // list (`company_name`, `department_name`, `primary_role_name`), named here from them.
-      const row = {
-        ...user,
-        company_name: user.company?.name ?? null,
-        department_name: user.department?.name ?? null,
-        primary_role_name: user.role?.role_name ?? null,
-      };
       // A reader of users gets what the user's page gives them (`toUserLookup`): name, email, status.
       if (!(await this.usersAdminView(context))) {
-        const lookup = { id: row.id, email: row.email, first_name: row.first_name, last_name: row.last_name, status: row.status };
+        const lookup = { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name, status: user.status };
         return this.toDetailResult(this.mapUser(lookup, false), lookup);
       }
+      // `findById` gives the entity; `mapUser` reads the columns of the users list (company,
+      // department, primary role, team, contributor profile, availability, expertise), read by the
+      // list's own query for this one person.
+      const listed = await this.users.listForAi({ limit: 1 }, { manager: context.manager, tenantId: context.tenantId, ids: [user.id] });
+      const row = { ...user, ...(listed.items[0] ?? {}) };
       // The Data access tab of the person's dialog, to an administrator of users whose own access
       // is not limited only (the database does not guard the nodes: the gate is here).
       if (!this.dataAccess || !(await this.dataAccessView(context))) {
