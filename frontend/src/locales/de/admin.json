@@ -754,6 +754,10 @@
       "priority_score": "Prioritätsscore",
       "scheduling_mode": "Planungsmodus",
       "source_request_id": "Erstellt aus Anfrage",
+      "requestor_id": "Antragsteller",
+      "target_delivery_date": "Ziellieferdatum",
+      "converted_date": "Umgewandelt am",
+      "origin_task_id": "Erstellt aus Aufgabe",
       "target_date": "Zieldatum",
       "phase_status": "Status",
       "milestone_status": "Status"
@@ -806,7 +810,11 @@
         "sourceChanged": "Quelle geändert",
         "categoryChanged": "Kategorie geändert",
         "streamChanged": "Stream geändert",
-        "purposeChanged": "Zweck geändert"
+        "purposeChanged": "Zweck geändert",
+        "risksChanged": "Risiken geändert",
+        "currentSituationChanged": "Aktuelle Situation geändert",
+        "expectedBenefitsChanged": "Erwarteter Nutzen geändert",
+        "feasibilityReviewChanged": "Machbarkeitsprüfung geändert"
       },
       "actors": {
         "assistant": "Plaid",
@@ -1328,8 +1336,12 @@
       "portfolio_request_attachments": "Anhänge von Anfragen",
       "portfolio_request_business_processes": "Geschäftsprozesse von Anfragen",
       "portfolio_request_capex": "CAPEX-Zeilen von Anfragen",
+      "portfolio_request_contacts": "Kontakte von Anfragen",
+      "portfolio_request_dependencies": "Abhängigkeiten von Anfragen",
+      "portfolio_request_documents": "Dokumente von Anfragen",
       "portfolio_request_opex": "OPEX-Zeilen von Anfragen",
       "portfolio_request_team": "Teams von Anfragen",
+      "portfolio_request_urls": "Weblinks von Anfragen",
       "portfolio_requests": "Anfragen",
       "portfolio_skills": "Kompetenzen",
       "portfolio_sources": "Portfolio-Quellen",

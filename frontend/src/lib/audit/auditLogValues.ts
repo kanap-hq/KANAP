@@ -189,6 +189,11 @@ const PROJECT_ENUM_GROUPS: Record<string, string> = {
   category: 'auditLogs.values.effortType',
 };
 
+/** A request's status, named from the request's own list (`portfolio:statuses.request`). */
+const REQUEST_ENUM_GROUPS: Record<string, string> = {
+  status: 'portfolio:statuses.request',
+};
+
 /** `spread_profile_name` holds `flat` and `4-4-5`; its keys cannot use the stored code as is. */
 const SPREAD_PROFILE_KEYS: Record<string, string> = {
   flat: 'flat',
@@ -423,6 +428,9 @@ function enumerationLabel(field: string, code: string, context: AuditValueContex
   // A project's status, origin and time entry effort type, with their stored snake-case codes.
   if (context.table === 'portfolio_projects' && PROJECT_ENUM_GROUPS[field]) {
     return screenLabel(context, `${PROJECT_ENUM_GROUPS[field]}.${code}`);
+  }
+  if (context.table === 'portfolio_requests' && REQUEST_ENUM_GROUPS[field]) {
+    return screenLabel(context, `${REQUEST_ENUM_GROUPS[field]}.${code}`);
   }
   if (field === 'hosting_type') {
     return screenLabel(context, `auditLogs.values.hostingType.${code}`);

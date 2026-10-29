@@ -754,6 +754,10 @@
       "priority_score": "Puntuación de prioridad",
       "scheduling_mode": "Modo de planificación",
       "source_request_id": "Creado a partir de solicitud",
+      "requestor_id": "Solicitante",
+      "target_delivery_date": "Fecha de entrega objetivo",
+      "converted_date": "Convertido el",
+      "origin_task_id": "Creada a partir de la tarea",
       "target_date": "Fecha objetivo",
       "phase_status": "Estado",
       "milestone_status": "Estado"
@@ -806,7 +810,11 @@
         "sourceChanged": "Origen modificado",
         "categoryChanged": "Categoría modificada",
         "streamChanged": "Línea modificada",
-        "purposeChanged": "Objetivo modificado"
+        "purposeChanged": "Objetivo modificado",
+        "risksChanged": "Riesgos modificados",
+        "currentSituationChanged": "Situación actual modificada",
+        "expectedBenefitsChanged": "Beneficios esperados modificados",
+        "feasibilityReviewChanged": "Revisión de viabilidad modificada"
       },
       "actors": {
         "assistant": "Plaid",
@@ -1328,8 +1336,12 @@
       "portfolio_request_attachments": "Adjuntos de solicitud",
       "portfolio_request_business_processes": "Procesos de negocio de solicitud",
       "portfolio_request_capex": "Líneas CAPEX de solicitud",
+      "portfolio_request_contacts": "Contactos de solicitud",
+      "portfolio_request_dependencies": "Dependencias de solicitud",
+      "portfolio_request_documents": "Documentos de solicitud",
       "portfolio_request_opex": "Líneas OPEX de solicitud",
       "portfolio_request_team": "Equipos de solicitud",
+      "portfolio_request_urls": "Enlaces web de solicitud",
       "portfolio_requests": "Solicitudes",
       "portfolio_skills": "Competencias",
       "portfolio_sources": "Orígenes del portafolio",

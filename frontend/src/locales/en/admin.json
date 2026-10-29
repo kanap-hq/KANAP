@@ -754,6 +754,10 @@
       "priority_score": "Priority score",
       "scheduling_mode": "Scheduling mode",
       "source_request_id": "Created from request",
+      "requestor_id": "Requestor",
+      "target_delivery_date": "Target delivery date",
+      "converted_date": "Converted on",
+      "origin_task_id": "Created from task",
       "target_date": "Target date",
       "phase_status": "Status",
       "milestone_status": "Status"
@@ -806,7 +810,11 @@
         "sourceChanged": "Source changed",
         "categoryChanged": "Category changed",
         "streamChanged": "Stream changed",
-        "purposeChanged": "Purpose changed"
+        "purposeChanged": "Purpose changed",
+        "risksChanged": "Risks changed",
+        "currentSituationChanged": "Current situation changed",
+        "expectedBenefitsChanged": "Expected benefits changed",
+        "feasibilityReviewChanged": "Feasibility review changed"
       },
       "actors": {
         "assistant": "Plaid",
@@ -1328,8 +1336,12 @@
       "portfolio_request_attachments": "Request attachments",
       "portfolio_request_business_processes": "Request business processes",
       "portfolio_request_capex": "Request CAPEX lines",
+      "portfolio_request_contacts": "Request contacts",
+      "portfolio_request_dependencies": "Request dependencies",
+      "portfolio_request_documents": "Request documents",
       "portfolio_request_opex": "Request OPEX lines",
       "portfolio_request_team": "Request teams",
+      "portfolio_request_urls": "Request web links",
       "portfolio_requests": "Requests",
       "portfolio_skills": "Skills",
       "portfolio_sources": "Portfolio sources",
