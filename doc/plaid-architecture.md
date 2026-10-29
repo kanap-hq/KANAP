@@ -708,11 +708,13 @@ neither field.
 - `version` groups by technology and version (`PostgreSQL 14`), and
   `PostgreSQL (no version recorded)` for a row without a version (the page's
   `version=none`).
-- `feeds`, on the list and the aggregates of this family only: each feed that
-  is on (`vulnerabilityFeedSources`, shared with `GET /vulnerabilities/sources`),
-  its displayed name, `last_success_at` (ISO text: the dispatcher's redaction
-  would empty a `Date`) and `failing` (the page's rule: an error kept from an
-  attempt newer than the last success). Never the error text.
+- `feeds`, on the list and the aggregates of this family only: the NVD and
+  CVE.org when they are on (`vulnerabilityFeedSources`, the `items` of
+  `GET /vulnerabilities/sources`), their displayed name, `last_success_at`
+  (ISO text: the dispatcher's redaction would empty a `Date`) and `failing`
+  (the page's rule: an error kept from an attempt newer than the last success).
+  Never the error text. The exploitation catalogues are the route's `signals`
+  field, shown on the page, and stay off this read.
   `vulnerability_feed_sources` is a platform table, with no tenant column.
 
 Assets and applications carry `open_vulnerabilities` and
