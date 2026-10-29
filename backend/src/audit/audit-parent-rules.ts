@@ -25,7 +25,8 @@ import { technologiesParentRules } from './record-history/records/technologies';
  * Adding a family (the procedure, so a later run follows it):
  * 1. Declare the child labels in that family's `RECORD_HISTORY` entry, then add their rules to the
  *    record file's `<table>ParentRules` and its import line below: the payload key that names the
- *    record, or the version lookup when the row names a version whose record is the parent. A
+ *    record, the version lookup when the row names a version whose record is the parent, or the
+ *    deployment lookup when the row names an application's deployment (`from: 'instance'`). A
  *    label whose write knows the parent names it explicitly (`AuditParent`) instead, when no rule
  *    can choose safely.
  * 2. Write a backfill migration for that family, never edit `1855500000000-audit-log-parent-record.ts`
@@ -44,7 +45,13 @@ export type AuditParentRule =
   /** The record id is a key of the before/after payload (a line: the child's `spend_item_id`, CAPEX: `capex_item_id`). */
   | { parentTable: RecordHistoryTable; from: 'payload'; keys: readonly string[]; fallback?: 'record_id' }
   /** The row names a version, through `record_id` or the payload's `version_id`, whose record is the parent. */
-  | { parentTable: RecordHistoryTable; from: 'version'; via: 'record_id' | 'payload.version_id' };
+  | { parentTable: RecordHistoryTable; from: 'version'; via: 'record_id' | 'payload.version_id' }
+  /**
+   * The row names a deployment (an `app_instances` row) by one of the payload keys, and the parent is
+   * that deployment's application (`app_instances.application_id`): two hops, resolved at write time
+   * in the writer's tenant. A row whose deployment no longer exists keeps no parent.
+   */
+  | { parentTable: RecordHistoryTable; from: 'instance'; keys: readonly string[] };
 
 /**
  * The rule sets of the record files, one line per file, sorted by table name: a family run adds its
@@ -149,6 +156,28 @@ export async function resolveAuditParent(
   if (entry.parent) return isAuditUuid(entry.parent.id) ? { table: entry.parent.table, id: entry.parent.id } : null;
   const rule = AUDIT_PARENT_RULES[entry.table];
   if (!rule) return null;
+  return resolveRuleParent(manager, rule, entry);
+}
+
+/**
+ * The parent one rule finds for one write: the payload key, the version's line, or the deployment's
+ * application. Both lookups run on the writer's `manager`, in its tenant (`app_current_tenant()`).
+ */
+export async function resolveRuleParent(
+  manager: Pick<EntityManager, 'query'>,
+  rule: AuditParentRule,
+  entry: AuditParentInput,
+): Promise<AuditParent | null> {
+  if (rule.from === 'instance') {
+    const instanceId = payloadParentId(rule, entry.after, entry.before);
+    if (!instanceId) return null;
+    const rows: Array<{ application_id: string }> = await manager.query(
+      'SELECT application_id FROM app_instances WHERE tenant_id = app_current_tenant() AND id = $1',
+      [instanceId],
+    );
+    const applicationId = rows[0]?.application_id;
+    return isAuditUuid(applicationId) ? { table: rule.parentTable, id: applicationId } : null;
+  }
   if (rule.from === 'payload') {
     const fromPayload = payloadParentId(rule, entry.after, entry.before);
     if (fromPayload) return { table: rule.parentTable, id: fromPayload };
