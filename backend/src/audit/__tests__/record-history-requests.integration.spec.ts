@@ -136,7 +136,13 @@ async function seedAudits(runner: QueryRunner, data: HistorySeed): Promise<Seede
   await audit(runner, {
     table: 'portfolio_requests', recordId: request, action: 'update', ...by,
     before: approved,
-    after: { ...approved, status: 'converted', converted_to_project_id: data.project },
+    after: { ...approved, status: 'converted', priority_score: 64.58, converted_to_project_id: data.project },
+  });
+  // A save that rewrites values in another form: no change, so no entry.
+  await audit(runner, {
+    table: 'portfolio_requests', recordId: request, action: 'update', ...by,
+    before: { ...approved, priority_score: '64.58', override_value: '5.50' },
+    after: { ...approved, priority_score: 64.58, override_value: 5.5 },
   });
   // The deletion of the origin task (`spend/item-delete-cleanup.ts`): its label and its id.
   const deletedTask = randomUUID();
@@ -232,13 +238,15 @@ async function testRecordEntries(seeded: Seeded) {
   assert.deepEqual(field('feasibility_review'), { field: 'feasibility_review', text: 'feasibilityReviewChanged' }, 'the review says changed');
   assert.deepEqual(field('criterion'), { field: 'criterion', dimension: 'Strategic fit', before: 'Low', after: 'High' });
 
-  // The conversion names the project.
+  // The conversion names the project; the score saved as a number from its stored text is no change.
   const conversion = updates.find((item) => item.changes.some((change) => change.field === 'converted_to_project'));
   assert.ok(conversion, 'the conversion is an entry');
   assert.deepEqual(conversion!.changes, [
     { field: 'converted_to_project', after: { kind: 'project', id: data.project, label: 'Project Alpha', reference: 'PRJ-7' } },
     { field: 'status', before: 'approved', after: 'converted' },
-  ], 'converted to the project, named for a projects reader');
+  ], 'converted to the project, named for a projects reader; the equal score is not shown');
+  assert.equal(updates.filter((item) => item.changes.some((change) => change.field === 'override_value')).length, 0,
+    'an update whose values only changed form is no entry');
   assert.equal(updates.length, 3, 'the modification, the conversion and the task deletion');
 
   // The deletion of the origin task reads as the origin task, deleted, never its stored label.

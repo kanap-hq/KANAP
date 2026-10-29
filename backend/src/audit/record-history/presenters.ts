@@ -2080,9 +2080,31 @@ function presentedAction(row: AuditRow, kind: RecordHistoryChildKind | null): st
   return row.action;
 }
 
+/** A value as two sides of a change compare it: a number and its decimal text are one value. */
+function comparableValue(value: unknown): unknown {
+  // Only a plain decimal form: a code with a leading zero ("01000") stays text.
+  if (typeof value === 'string' && /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value.trim())) return Number(value);
+  return value;
+}
+
+/**
+ * A field change whose before and after read the same (a numeric column saved as a number after
+ * it was read as text: "64.58 → 64.58") is no change. A change that carries more than its two
+ * values (a year, a criterion, an event) keeps its own rule, and a withheld record on either side
+ * stays: two hidden records may be two different ones.
+ */
+function unchangedValue(change: RecordHistoryChange): boolean {
+  if (!Object.prototype.hasOwnProperty.call(change, 'before') || !Object.prototype.hasOwnProperty.call(change, 'after')) return false;
+  if (Object.keys(change).some((key) => key !== 'field' && key !== 'before' && key !== 'after')) return false;
+  const hidden = (value: unknown) => isPlainObject(value) && value.hidden === true;
+  if (hidden(change.before) || hidden(change.after)) return false;
+  return deepEqual(comparableValue(change.before), comparableValue(change.after));
+}
+
 export function presentItem(row: AuditRow, entry: RecordHistoryRecord, ctx: PageContext): RecordHistoryItem {
   const kind = entry.auditLabels.includes(row.table_name) ? null : recordHistoryChildKind(entry, row.table_name);
-  const changes = changesFor(row, kind, ctx);
+  // An update left with no visible change is dropped by the service.
+  const changes = changesFor(row, kind, ctx).filter((change) => !unchangedValue(change));
   const label = subjectLabel(row, kind, ctx, changes);
   return {
     id: row.id,
