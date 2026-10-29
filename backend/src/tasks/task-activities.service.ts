@@ -372,7 +372,12 @@ export class TaskActivitiesService {
           type: 'comment',
           content: normalizedContent,
           context: null,
-          changed_fields: null,
+          // A status changed with the comment rides on it, as on a project's comment
+          // (`portfolio-status.service.ts`): the feed shows it beside the text. The `change` entry
+          // above stays, for the dashboard tiles.
+          changed_fields: hasStatusChange && oldStatus !== undefined && newStatus !== undefined
+            ? { status: [oldStatus, newStatus] }
+            : null,
         }),
       );
       await this.logActivityAuditIfNeeded(commentActivity, userId, opts, mg);
