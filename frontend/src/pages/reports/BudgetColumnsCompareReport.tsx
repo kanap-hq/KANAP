@@ -64,14 +64,15 @@ export default function BudgetColumnsCompareReport() {
   // Sort selections chronologically for display (chart and table)
   const sortedSelections = useMemo(() => sortColumnSelections(selections), [selections]);
 
-  // One total per year and column picked, over the lines the filter bar keeps.
+  // One total per year and column picked, over the lines the filter bar keeps. The columns not picked
+  // yet are the tenant default: wait for the setting, or the product default is asked first.
   const request = useMemo(
-    () => (reportFilters.queryFilters == null ? null : columnsCompareRequest({ selections: sortedSelections, filters: reportFilters.queryFilters, measure })),
-    [reportFilters.queryFilters, sortedSelections, measure],
+    () => (!budgetColumns.ready || reportFilters.queryFilters == null ? null : columnsCompareRequest({ selections: sortedSelections, filters: reportFilters.queryFilters, measure })),
+    [budgetColumns.ready, reportFilters.queryFilters, sortedSelections, measure],
   );
   const report = useBudgetAggregate(itemType, request, { keepPrevious: true });
-  // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
-  const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
+  // Loading, the column setting or the filter bar still unread, or the last answer kept while the new one loads.
+  const busy = !budgetColumns.ready || reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
 
   // The key table (`reportTables.ts`, the same code as the export): one row per selection, or per year
   // when year grouping applies. FTE: a year and column nobody declares is null (an empty cell, no point).
