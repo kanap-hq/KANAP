@@ -117,6 +117,8 @@ async function seedPlaid(): Promise<void> {
     for (const resource of ['ai_chat', 'ai_mcp', 'budget', 'tasks', 'applications', 'portfolio_projects', 'contracts', 'infrastructure']) {
       await q(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, $3, 'member')`, [s.tenantId, roleId, resource]);
     }
+    // The users administration (Plaid L7): the roles are read by Ulla, refused to Rita in limited access.
+    await q(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'users', 'admin')`, [s.tenantId, roleId]);
     for (const row of await q(`SELECT id, item_number FROM spend_items WHERE tenant_id = $1`, [s.tenantId])) {
       const label = (Object.keys(s.lines) as Label[]).find((l) => s.lines[l] === row.id);
       if (label) itemNumbers[label] = Number(row.item_number);
@@ -852,8 +854,27 @@ async function testMcp(): Promise<void> {
     assert.ok(!String(hiddenContract.error).includes(contractHidden), 'MCP get_entity_detail of CH: no id');
     assert.deepEqual(contractsIn((await mcpCall(url, keys[rita], 'query_entities', { entity_type: 'contracts', q: 'DA 4D contract' })).result), ['visible'], 'MCP query_entities contracts: CF alone (Rita)');
     assert.deepEqual(contractsIn((await mcpCall(url, keys[ulla], 'query_entities', { entity_type: 'contracts', q: 'DA 4D contract' })).result), ['visible', 'hidden'], 'MCP query_entities contracts: both (Ulla)');
+
+    // The roles and their rights (Plaid L7 lot A): Admin › Roles is closed to a person in limited
+    // access whatever their role. Rita holds users at admin level, as Ulla: her key reads nothing.
+    const roleName = (await inTenant(async () => (await client.query(
+      `SELECT r.role_name FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1`, [rita],
+    )).rows[0].role_name)) as string;
+    for (const [name, args] of [
+      ['query_entities', { entity_type: 'roles' }],
+      ['query_entities', { entity_type: 'role_permissions', filters: { resource: ['users'] } }],
+      ['aggregate_entities', { entity_type: 'role_permissions', group_by: 'level' }],
+      ['get_entity_detail', { entity_type: 'roles', entity_id: roleName }],
+    ] as Array<[string, Record<string, unknown>]>) {
+      const what = `MCP ${name} ${JSON.stringify(args)}`;
+      assert.equal((await mcpCall(url, keys[rita], name, args)).error, DATA_ACCESS_RESERVED_MESSAGE, `${what}: refused to Rita (limited)`);
+      assert.equal((await mcpCall(url, keys[ulla], name, args)).error, null, `${what}: read by Ulla (all)`);
+    }
+    const ullaRights = (await mcpCall(url, keys[ulla], 'get_entity_detail', { entity_type: 'roles', entity_id: roleName })).result;
+    assert.equal(ullaRights.data.permissions.users, 'admin', 'MCP get_entity_detail roles: the role gives users at admin level');
   });
   console.log('  MCP: query_entities, aggregate_entities, search_all and get_entity_detail through the key guard give what Plaid gives: OK');
+  console.log('  MCP: the roles are refused to a users administrator in limited access, read with access to all data: OK');
 }
 
 // ---------------------------------------------------------------------------------------------
