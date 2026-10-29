@@ -26,8 +26,11 @@ describe('TaskActivity', () => {
     expect(screen.getByTestId('task-comments')).toBeInTheDocument();
   });
 
-  it('shows the comments alone for a task with no time logging', () => {
+  it('shows the comments alone, with no tab row, for a task with no time logging', () => {
     render(<TaskActivity taskId="task-1" relatedObjectType="spend_item" currentStatus="open" />);
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['activity.tabs.comments']);
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
+    expect(screen.getByTestId('task-comments')).toBeInTheDocument();
+    expect(screen.queryByTestId('task-work-log')).not.toBeInTheDocument();
   });
 });

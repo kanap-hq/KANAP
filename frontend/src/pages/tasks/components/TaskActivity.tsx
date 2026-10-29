@@ -46,6 +46,22 @@ export default function TaskActivity({
     setActiveTab('comments');
   }, [commentFocusNonce]);
 
+  const comments = (
+    <TaskComments
+      taskId={taskId}
+      projectId={projectId}
+      readOnly={readOnly}
+      relatedObjectType={relatedObjectType}
+      currentStatus={currentStatus}
+      totalTimeHours={totalTimeHours}
+      initialStatus={initialStatus}
+      commentFocusNonce={commentFocusNonce}
+    />
+  );
+
+  // A task type without time logging has the comments only: no tab row for a single view.
+  if (!supportsTimeLogging) return <Box sx={{ minHeight: 200 }}>{comments}</Box>;
+
   return (
     <Box>
       {/* Comments and work log; the changes are in the History panel of the header. */}
@@ -60,30 +76,17 @@ export default function TaskActivity({
             value="comments"
             sx={textTabSx(activeTab === 'comments')}
           />
-          {supportsTimeLogging && (
-            <Tab
-              label={t('activity.tabs.workLog')}
-              value="worklog"
-              sx={[textTabSx(activeTab === 'worklog'), { mr: 0 }]}
-            />
-          )}
+          <Tab
+            label={t('activity.tabs.workLog')}
+            value="worklog"
+            sx={[textTabSx(activeTab === 'worklog'), { mr: 0 }]}
+          />
         </Tabs>
       </Box>
 
       <Box sx={{ minHeight: 200 }}>
-        {activeTab === 'comments' && (
-          <TaskComments
-            taskId={taskId}
-            projectId={projectId}
-            readOnly={readOnly}
-            relatedObjectType={relatedObjectType}
-            currentStatus={currentStatus}
-            totalTimeHours={totalTimeHours}
-            initialStatus={initialStatus}
-            commentFocusNonce={commentFocusNonce}
-          />
-        )}
-        {activeTab === 'worklog' && supportsTimeLogging && (
+        {activeTab === 'comments' && comments}
+        {activeTab === 'worklog' && (
           <TaskWorkLog taskId={taskId} projectId={projectId} readOnly={readOnly} relatedObjectType={relatedObjectType} />
         )}
       </Box>
