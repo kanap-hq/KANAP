@@ -299,6 +299,13 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Stop vulnerability alerts on Windows Server 2012', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
   { prompt: 'Remets la version 14 de TEC-3 sur le réglage de la technologie pour les alertes', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
 
+  // Lot 7: "make" opens a write only as "make <name> the IT owner/support contact of"; a
+  // determiner or a pronoun after it opens a report.
+  { prompt: 'Make a list of technologies without an IT owner', profile: 'read_query', mode: 'read' },
+  { prompt: 'Make a report of the business owners of each technology', profile: 'read_query', mode: 'read' },
+  { prompt: 'Make a table of the support contacts of Redis', profile: 'read_query', mode: 'read' },
+  { prompt: 'Make me a summary of PostgreSQL versions with their IT owner', profile: 'read_query', mode: 'read' },
+
   // Lot 4 review: a noun after upgrade, replace, record or install stays a read; so do a review
   // and the question of who changed a value.
   { prompt: 'Upgrade path for PostgreSQL 12', profile: 'read_query', mode: 'read' },

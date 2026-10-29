@@ -596,6 +596,13 @@ function hasTechnologyWriteIntent(rawText: string, text: string): boolean {
 function hasTechnologyPeopleWrite(rawText: string, text: string): boolean {
   if (isTechnologyQuestion(rawText)) return false;
   const first = directiveFirstWord(rawText);
+  // "Make" writes people only in the form "Make <name> the IT owner of …" or "… the support
+  // contact of …". A determiner or a pronoun after it opens a report: "Make a list of…",
+  // "Make me a summary…".
+  if (first === 'make') {
+    const rest = text.slice(text.indexOf('make') + 4).trim();
+    return /^(?!a\b|an\b|the\b|me\b|us\b)\S[\s\S]*?\bthe\s+(?:it|business)\s+(?:owner|support contacts?)\s+of\b/.test(rest);
+  }
   const changeVerb = first != null && [
     'ajoute', 'ajoutez', 'ajouter', 'add',
     'retire', 'retirez', 'retirer', 'remove',
@@ -605,7 +612,6 @@ function hasTechnologyPeopleWrite(rawText: string, text: string): boolean {
     'change', 'changez', 'changer',
     'assigne', 'assignez', 'assigner', 'assign',
     'affecte', 'affectez', 'affecter',
-    'make',
   ].includes(first);
   const statement = /\b(?:devient|deviennent|becomes?)\b/.test(text);
   if (!changeVerb && !statement) return false;
