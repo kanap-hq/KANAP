@@ -64,8 +64,10 @@ function projectsService() {
 }
 
 function httpOf(audit = captureAudit()) {
+  // The request's own audit rows (team, lines, applications, assets) go to a capture of their own:
+  // this spec asserts the rows the Relations tab writes itself.
   const requests = new PortfolioRequestsService(
-    undefined as any, undefined as any, undefined as any, undefined as any, undefined as any,
+    undefined as any, captureAudit() as any, undefined as any, undefined as any, undefined as any,
     undefined as any, undefined as any, undefined as any, undefined as any,
   );
   const relations = new PortfolioRelationsService(projectsService(), requests, fxRates() as any, audit as any);
