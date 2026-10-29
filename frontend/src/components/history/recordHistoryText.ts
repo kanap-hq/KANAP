@@ -1,7 +1,7 @@
 import { DASH } from '../workspace/relations/helpers';
 import { formatAmount } from '../../i18n/formatters';
 import type { Translate } from '../../lib/audit/auditLogLabels';
-import { formatAuditValue, isPlainObject } from '../../lib/audit/auditLogValues';
+import { formatAuditValue, isPlainObject, type AuditValueContext } from '../../lib/audit/auditLogValues';
 
 /**
  * The words of a record history entry: who wrote it, what it was, and what changed, from the
@@ -60,7 +60,14 @@ export type RecordHistoryItem = {
 };
 export type RecordHistoryPage = { items: RecordHistoryItem[]; nextCursor: string | null };
 
-export type HistoryTextContext = { t: Translate; locale: string; /** The audited table, for the enumerations that follow it. */ table?: string };
+export type HistoryTextContext = {
+  t: Translate;
+  locale: string;
+  /** The audited table, for the enumerations that follow it. */
+  table?: string;
+  /** The tenant's labels of the IT catalog codes (`AuditValueContext.catalogLabel`). */
+  catalogLabel?: AuditValueContext['catalogLabel'];
+};
 
 /** One drawn line: a full sentence, or a label and its value(s). */
 export type HistoryLine = {
@@ -159,7 +166,9 @@ export function historyValueText(value: unknown, field: string, context: History
   // A structured value has no readable form here: never draw JSON.
   if (Array.isArray(value) && value.some((item) => item !== null && typeof item === 'object')) return DASH;
   if (isPlainObject(value)) return DASH;
-  return formatAuditValue(value, field, { locale: context.locale, t: context.t, table: context.table }).text;
+  return formatAuditValue(value, field, {
+    locale: context.locale, t: context.t, table: context.table, catalogLabel: context.catalogLabel,
+  }).text;
 }
 
 function namedValue(value: unknown, kind: string, t: Translate): string {

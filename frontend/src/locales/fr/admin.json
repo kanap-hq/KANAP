@@ -1412,6 +1412,11 @@
       "ownerType": {
         "business": "Métier",
         "it": "IT"
+      },
+      "usersMode": {
+        "itUsers": "Dérivé",
+        "headcount": "Dérivé",
+        "manual": "Manuel"
       }
     },
     "dataAccess": {

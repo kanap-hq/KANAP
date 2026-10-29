@@ -1412,6 +1412,11 @@
       "ownerType": {
         "business": "Fachbereich",
         "it": "IT"
+      },
+      "usersMode": {
+        "itUsers": "Abgeleitet",
+        "headcount": "Abgeleitet",
+        "manual": "Manuell"
       }
     },
     "dataAccess": {

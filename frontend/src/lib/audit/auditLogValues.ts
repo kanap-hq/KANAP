@@ -46,7 +46,26 @@ export type AuditValueContext = {
   users?: ReadonlyMap<string, string>;
   /** The audited table. `status` and `mode` name different lists on different tables. */
   table?: string;
+  /**
+   * The tenant's label of a code of an IT catalog list (`applicationCategories`, `serverRoles`...),
+   * as the record's screen shows it, or null when the tenant's catalog has no such code. Without
+   * it, a catalog code reads with the shipped label.
+   */
+  catalogLabel?: (list: AuditCatalogList, code: string) => string | null;
 };
+
+/** The IT catalog lists an audit value may name, with a tenant label (`useItOpsEnumOptions`). */
+export type AuditCatalogList = 'applicationCategories' | 'accessMethods' | 'incidentCategories' | 'serverRoles';
+
+/** The catalog list of a field, by table when the field name is shared. */
+export function auditCatalogList(field: string, table: string | undefined): AuditCatalogList | null {
+  if (field === 'category') {
+    return table === 'applications' ? 'applicationCategories' : table === 'incidents' ? 'incidentCategories' : null;
+  }
+  if (field === 'access_methods') return 'accessMethods';
+  if (field === 'server_role') return 'serverRoles';
+  return null;
+}
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -119,6 +138,10 @@ const ENUM_GROUPS: Record<string, string> = {
   owner_type: 'auditLogs.values.ownerType',
   // An application server's role, named as the IT settings name the shipped roles.
   server_role: 'it:catalogDefaults.serverRoles',
+  // An application's access methods, named as the IT settings name the shipped methods.
+  access_methods: 'it:catalogDefaults.accessMethods',
+  // How an application counts its users, as its Ownership section names the two methods.
+  users_mode: 'auditLogs.values.usersMode',
   // The budget history's own enumerations, named as the line screens name them.
   input_grain: 'auditLogs.values.inputGrain',
   allocation_method: 'auditLogs.values.allocationMethod',
@@ -330,12 +353,17 @@ function screenLabel(context: AuditValueContext, key: string): string | null {
 function enumerationCode(field: string, code: string): string {
   if (field === 'status' || field === 'lifecycle' || field === 'vulnerability_state'
     || field === 'data_class' || field === 'data_category' || field === 'compliance_state'
-    || field === 'source_entity_code' || field === 'destination_entity_code' || field === 'equipment_entity_code') return code;
+    || field === 'source_entity_code' || field === 'destination_entity_code' || field === 'equipment_entity_code'
+    || field === 'access_methods') return code;
   return code.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
 /** The screen label of a known enumeration, or null so an unknown code stays as stored. */
 function enumerationLabel(field: string, code: string, context: AuditValueContext): string | null {
+  // A tenant catalog code: the tenant's own label first, as the screen shows it, then the shipped one.
+  const catalog = auditCatalogList(field, context.table);
+  const tenantLabel = catalog ? context.catalogLabel?.(catalog, code) : null;
+  if (tenantLabel) return tenantLabel;
   // The classification catalog nests each code under `label`/`description`; the other groups map
   // the code straight to the label.
   if (field === 'data_class') {
@@ -368,6 +396,10 @@ function enumerationLabel(field: string, code: string, context: AuditValueContex
   // An incident's category: the shipped categories of the IT settings, as the register names them.
   if (field === 'category' && context.table === 'incidents') {
     return screenLabel(context, `it:catalogDefaults.incidentCategories.${code}`);
+  }
+  // An application's category: the shipped categories of the IT settings, keyed by the stored code.
+  if (field === 'category' && context.table === 'applications') {
+    return screenLabel(context, `it:catalogDefaults.applicationCategories.${code}`);
   }
   if (field === 'hosting_type') {
     return screenLabel(context, `auditLogs.values.hostingType.${code}`);

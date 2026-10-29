@@ -258,6 +258,39 @@ describe('RecordHistory', () => {
     await waitFor(() => expect(mocked.get).toHaveBeenCalledTimes(2));
   });
 
+  it('names an application\'s catalog codes with the tenant\'s labels of the IT settings', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') {
+        return { data: { applicationCategories: [{ code: 'custom_cat', label: 'Shop floor' }], accessMethods: [], serverRoles: [] } } as never;
+      }
+      return { data: page([item({ changes: [
+        { field: 'category', before: 'custom_cat', after: 'line_of_business' },
+        { field: 'users_mode', before: 'it_users', after: 'manual' },
+      ] })]) } as never;
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <RecordHistory table="applications" recordId={ID} />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText('Shop floor')).toBeInTheDocument();
+    expect(screen.getByText('Line of business')).toBeInTheDocument();
+    expect(screen.getByText('Derived')).toBeInTheDocument();
+    expect(screen.getByText('Manual')).toBeInTheDocument();
+    expect(bodyText()).not.toContain('custom_cat');
+    expect(bodyText()).not.toContain('it_users');
+  });
+
+  it('does not read the IT settings for a record without catalog codes', async () => {
+    mocked.get.mockResolvedValue({ data: page([item({ changes: [{ field: 'currency', before: 'EUR', after: 'USD' }] })]) } as never);
+    renderHistory();
+    await screen.findByText('Currency');
+    expect(mocked.get.mock.calls.some(([url]) => url === '/it-ops/settings')).toBe(false);
+  });
+
   it('says in one line that there is no write yet', async () => {
     mocked.get.mockResolvedValue({ data: page([]) } as never);
     renderHistory();

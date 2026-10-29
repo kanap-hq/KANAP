@@ -1412,6 +1412,11 @@
       "ownerType": {
         "business": "Negocio",
         "it": "IT"
+      },
+      "usersMode": {
+        "itUsers": "Derivado",
+        "headcount": "Derivado",
+        "manual": "Manual"
       }
     },
     "dataAccess": {

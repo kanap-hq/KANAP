@@ -1412,6 +1412,11 @@
       "ownerType": {
         "business": "Business",
         "it": "IT"
+      },
+      "usersMode": {
+        "itUsers": "Derived",
+        "headcount": "Derived",
+        "manual": "Manual"
       }
     },
     "dataAccess": {

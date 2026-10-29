@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { useLocale } from '../../i18n/useLocale';
+import { useItOpsEnumOptions } from '../../hooks/useItOpsEnumOptions';
+import type { AuditCatalogList } from '../../lib/audit/auditLogValues';
 import {
   historyActionText,
   historyActorText,
@@ -35,6 +37,29 @@ export type RecordHistoryProps = {
 
 const PAGE_SIZE = 50;
 const QUERY_ROOT = 'record-history';
+
+/** The records whose history names IT catalog codes (categories, access methods, server roles). */
+const CATALOG_TABLES = new Set(['applications', 'incidents']);
+
+/** The catalog list of the IT settings that holds each code list of the history. */
+const CATALOG_FIELDS: Record<AuditCatalogList, Parameters<ReturnType<typeof useItOpsEnumOptions>['labelFor']>[0]> = {
+  applicationCategories: 'applicationCategory',
+  accessMethods: 'accessMethod',
+  incidentCategories: 'incidentCategories',
+  serverRoles: 'serverRole',
+};
+
+/**
+ * The tenant's label of a catalog code, as the record's screen shows it (`useItOpsEnumOptions`):
+ * null when the tenant's catalog has no such code, so the shipped label or the code shows instead.
+ */
+function useCatalogLabel(table: string) {
+  const { byField, labelFor } = useItOpsEnumOptions({ enabled: CATALOG_TABLES.has(table) });
+  return React.useCallback((list: AuditCatalogList, code: string): string | null => {
+    const field = CATALOG_FIELDS[list];
+    return (byField[field] ?? []).some((option) => option.code === code) ? labelFor(field, code) : null;
+  }, [byField, labelFor]);
+}
 
 function HistoryLineView({ line, separator }: { line: HistoryLine; separator: string }) {
   if (line.text) {
@@ -114,6 +139,7 @@ function HistoryEntry({ item, context, separator }: { item: RecordHistoryItem; c
 export default function RecordHistory({ table, recordId }: RecordHistoryProps) {
   const { t } = useTranslation(['admin', 'ops', 'common']);
   const locale = useLocale();
+  const catalogLabel = useCatalogLabel(table);
 
   const history = useInfiniteQuery({
     queryKey: [QUERY_ROOT, table, recordId],
@@ -136,7 +162,7 @@ export default function RecordHistory({ table, recordId }: RecordHistoryProps) {
     () => (history.data?.pages ?? []).flatMap((page) => page?.items ?? []),
     [history.data],
   );
-  const context = React.useMemo<HistoryTextContext>(() => ({ t, locale, table }), [t, locale, table]);
+  const context = React.useMemo<HistoryTextContext>(() => ({ t, locale, table, catalogLabel }), [t, locale, table, catalogLabel]);
   const separator = t('auditLogs.history.separator');
 
   // The pages follow audit rows, and an update that presents no change is not an entry: a page can
