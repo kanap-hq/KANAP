@@ -13,7 +13,8 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: stableT, i18n: { language: 'en', resolvedLanguage: 'en' } }),
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
-vi.mock('../../api', () => ({ default: { get: apiGet } }));
+vi.mock('../../api', () => ({ default: { get: apiGet, post: vi.fn() } }));
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => false }) }));
 vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({
   default: () => ({ data: { businessCriticalityLevels: [{ code: 'high', label: 'High' }] } }),
 }));

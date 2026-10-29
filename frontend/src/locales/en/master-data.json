@@ -437,6 +437,9 @@
       "erpSupplierId": "ERP supplier ID"
     },
     "noSuppliersFound": "No suppliers found",
+    "noSupplierAskAdmin": "No supplier found. Ask an administrator of your workspace to create it.",
+    "createOption": "+ Create supplier \"{{name}}\"",
+    "selectExisting": "Select the existing supplier",
     "export": "Export suppliers",
     "import": "Import suppliers",
     "importHint": "Accepted status values: enabled or disabled. disabled_at holds the end of validity, or stays empty. The contact columns take the e-mail of a contact that already exists in Contacts.",
