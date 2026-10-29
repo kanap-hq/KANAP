@@ -23,6 +23,7 @@ function createEntityService(overrides?: { knowledge?: Record<string, unknown> }
     } as any,
     {
       listReadableEntityTypes: async (_context: unknown, requested: string[]) => requested,
+      adminFamiliesGap: async () => 'right',
       canReadKnowledge: async () => true,
       // The task search matches a linked record's name only for a reader of its module.
       canReadEntityType: async () => true,

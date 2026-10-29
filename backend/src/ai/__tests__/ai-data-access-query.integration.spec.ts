@@ -363,6 +363,27 @@ async function testGate(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal('data_access' in readerCompany.data, false, 'no Access tab block for a reader of users');
 }
 
+/**
+ * What the tools say they do not read (Plaid L7, lot D), with the real policy: the full
+ * administrator of users reads the two families, so they are not listed; the administrator in
+ * limited access and the reader are told what they lack.
+ */
+async function testTheUnreadListsSayWhatIsMissing(h: Harness, runner: QueryRunner, s: Seed) {
+  const unread = async (user: PersonKey) => (await h.tools.execute(ctx(runner, s, user), 'describe_entity_filters', { entity_type: 'users' })).families_not_read as string[];
+  const full = await unread('ulla');
+  assert.equal(full.some((line) => /^data access|^roles and their rights/.test(line)), false, full.join('\n'));
+  const limited = await unread('rita');
+  assert.ok(limited.some((line) => /^data access .*this person's access is limited to part of the data\.$/.test(line)), limited.join('\n'));
+  assert.ok(limited.some((line) => /^roles and their rights .*this person's access is limited to part of the data\.$/.test(line)), limited.join('\n'));
+  const reader = await unread('rob');
+  assert.ok(reader.some((line) => /^data access .*which this person's role does not give\.$/.test(line)), reader.join('\n'));
+  // A search that asks for the family names it with what is missing.
+  const search = await h.tools.execute(ctx(runner, s, 'rita'), 'search_all', { query: 'accès limité aux données' });
+  assert.match(search.not_read_here[0].note, /this server does not read them for this person/);
+  const fullSearch = await h.tools.execute(ctx(runner, s, 'ulla'), 'search_all', { query: 'accès limité aux données' });
+  assert.equal(fullSearch.not_read_here, undefined, 'read by the full administrator of users: nothing to say');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -377,6 +398,7 @@ async function run() {
       await testUsersRolesAndMode(harness, runner, s);
       await testPersonAndCompanyDetails(harness, runner, s);
       await testGate(harness, runner, s);
+      await testTheUnreadListsSayWhatIsMissing(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

@@ -615,7 +615,52 @@ async function testAdminWriteBusinessPromptNamesTheIncidentAdministratorTools() 
   );
 }
 
+/**
+ * Plaid L7, lot D: the access writes stay on their screens, the history is the History tab only,
+ * the person's own access is not read here, and the families of the administrators of users are
+ * listed as unread for the others only, with what they lack.
+ */
+async function testPromptSaysWhatItDoesWithAccessAndHistory() {
+  const service = new AiSystemPromptService();
+  const readTool = { name: 'query_entities' as const, category: 'authoritative' as const, description: 'Query.', input_summary: {}, read_only: true, surfaces: ['chat' as const] };
+  const writeTool = {
+    name: 'create_task' as const, category: 'mutation' as const, description: 'Create a task preview.', input_summary: {}, read_only: false,
+    surfaces: ['chat' as const], write_preview: { entity_type: 'tasks', fields: ['title'], reversible: false, prompt_hint: 'Use create_task.' },
+  };
+  const build = (options: { tools: any[]; readable: string[]; language?: 'fr' | null; gap?: 'right' | 'all_data' | null }) => service.build({
+    tenantName: 'Test Tenant',
+    availableTools: options.tools,
+    readableEntityTypes: options.readable,
+    currentUser: { displayName: 'Admin', email: null, roleNames: [], teamName: null, screenLanguage: options.language ?? null },
+    adminFamiliesGap: options.gap,
+  });
+
+  // A person who prepares changes: the access writes are refused, with their screens in French.
+  const writer = build({ tools: [writeTool, readTool], readable: ['tasks', 'users', 'roles', 'role_permissions', 'data_access'], language: 'fr', gap: null });
+  assert.match(writer, /A person's data access \(Administration › Accès aux données\), their roles and the rights of a role \(Administration › Rôles\), and creating or deactivating a person \(Administration › Utilisateurs\) are changed on those screens only: Plaid prepares none of them, whatever the person's rights\./);
+  // A person who only reads gets the same sentence, not a missing right.
+  const reader = build({ tools: [readTool], readable: ['projects'], gap: 'right' });
+  assert.match(reader, /You can ONLY read data for this person\.[^\n]*A person's data access \(en: Admin › Data access; fr: Administration › Accès aux données;/);
+
+  // The history and the person's own access.
+  assert.match(reader, /The change history of a record is its History tab, which get_record_history reads\. A record whose page has no History tab has no history in KANAP: say so, and never rebuild a history from other data, the audit log included\./);
+  assert.match(writer, /A question about the person's own access \("what can I see\?"\): their roles are the `roles` of the current user context; which data they see is not read here, and an administrator of users shows it in the person's Data access tab \(Administration › Utilisateurs\)\./);
+
+  // The full administrator of users reads both families: neither is listed as unread, and the
+  // screen's words come with them.
+  assert.doesNotMatch(writer, /data access \(which companies or cost centers a person is limited to\) \(/);
+  assert.doesNotMatch(writer, /roles and their rights \(/);
+  assert.match(writer, /Roles and data access: say who sees what with the words of the Data access screen in the user's language \("All data", "Limited to", "Read", "Edit"\)/);
+  assert.match(writer, /counted on users with the `roles` filter \(every role\), not `primary_role`/);
+  // Without the right, and in limited access: listed, with what is missing.
+  assert.match(reader, /data access \(which companies or cost centers a person is limited to\) \(en: Admin › Data access;[^)]*\): The tools read it for a person with the right to administer users, which this person's role does not give\./);
+  assert.doesNotMatch(reader, /Roles and data access: say who sees what/);
+  const limited = build({ tools: [readTool], readable: ['users'], language: 'fr', gap: 'all_data' });
+  assert.match(limited, /roles and their rights \(Administration › Rôles\): The tools read it for a person with the right to administer users and access to all data; this person's access is limited to part of the data\./);
+}
+
 async function run() {
+  await testPromptSaysWhatItDoesWithAccessAndHistory();
   await testPromptKeepsTheUserLanguageBetweenToolCalls();
   await testPromptSaysItsLimitsAndRights();
   await testPromptRefusesUnsupportedWritesWithoutSubstitutePreview();

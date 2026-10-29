@@ -83,6 +83,8 @@ function createRegistry(overrides?: {
       canReadKnowledge: async () => true,
       assertKnowledgeReadAccess: async () => undefined,
       assertEntityTypeReadAccess: async () => undefined,
+      // No right to administer users: the families of Admin › Roles and Admin › Data access stay unread.
+      adminFamiliesGap: async () => 'right',
       ...(overrides?.policy || {}),
     } as any,
     {
@@ -660,6 +662,23 @@ async function testVulnerabilityReadsAreDescribed() {
   // Each sentence once: the three tools do not repeat one another.
   assert.doesNotMatch(text('aggregate_entities'), /feeds|estate` true/);
   assert.doesNotMatch(text('search_all'), /distinct_total|estate/);
+}
+
+/** Plaid L7, lot D: the families of Admin › Roles and Admin › Data access, each fact said once. */
+async function testAccessFamiliesAreDescribed() {
+  const tools = await createRegistry().listAvailableTools(createContext());
+  const text = (name: string) => tools.find((tool) => tool.name === name)?.description || '';
+  const query = text('query_entities');
+  assert.match(query, /For an administrator of users with access to all data, the families `roles` \(each role with its count of people\), `role_permissions` \(one row per role and right it gives\) and `data_access` \(the people whose access is limited, one row per node; Administrators see all data and are not listed\)/);
+  assert.match(query, /on users `primary_role` is the primary role only, `roles` every role of the person/);
+  assert.match(query, /a limited person without a node sees no budget or contract data, a limited access covers the budget and the contracts only, and who sees one company is in the company's get_entity_detail/);
+  assert.doesNotMatch(query, /not readable here/, 'the text of before lot A is gone');
+  assert.match(text('search_all'), /`roles`, `role_permissions`, `data_access`\) are not searched here either: query_entities reads them/);
+  assert.match(text('describe_entity_filters'), /`roles`, `role_permissions` and `data_access` are described for an administrator of users with access to all data only/);
+  // Each fact once: the other two tools do not repeat the facts of query_entities.
+  for (const name of ['search_all', 'describe_entity_filters', 'aggregate_entities']) {
+    assert.doesNotMatch(text(name), /primary role only|without a node|not listed/, name);
+  }
 }
 
 // Anthropic's connector review refuses tool text that reads like instructions to the model.
@@ -2217,6 +2236,7 @@ async function testAggregateExecutorMarksUnresolvedScopeIncomplete() {
 }
 
 async function run() {
+  await testAccessFamiliesAreDescribed();
   await testListAvailableTools();
   await testTaskReadersSeeEntityCommentsTool();
   await testRecordHistoryOfferFollowsTheFamilyRights();

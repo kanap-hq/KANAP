@@ -7,6 +7,7 @@ import { Subscription } from '../billing/subscription.entity';
 import { evaluateSubscriptionAccess } from '../billing/subscription-freeze.util';
 import { Features } from '../config/features';
 import { DataAccessReservedException, dataAccessModeOf } from '../data-access/reserved-operations';
+import type { AiAdminFamiliesGap } from './ai-unread-families';
 import { PermissionLevel, PermissionsService } from '../permissions/permissions.service';
 import { Tenant, TenantStatus } from '../tenants/tenant.entity';
 import { UsersService } from '../users/users.service';
@@ -424,6 +425,20 @@ export class AiPolicyService {
   async readableResources(context: AiExecutionContext, resources: string[], manager: EntityManager): Promise<Set<string>> {
     const state = await this.getEffectivePermissionStateOrNull(context.userId, manager);
     return new Set(resources.filter((resource) => this.hasPermission(state, resource, 'reader')));
+  }
+
+  /**
+   * Why the families of Admin › Roles and Admin › Data access are closed to this person, for the
+   * lists of what the tools do not read (`AiAdminFamiliesGap`): `right` without users at admin
+   * level, `all_data` with it in limited access, null when they read them.
+   */
+  async adminFamiliesGap(
+    context: Pick<AiExecutionContext, 'userId'>,
+    manager: EntityManager,
+  ): Promise<AiAdminFamiliesGap> {
+    const state = context.userId ? await this.getEffectivePermissionStateOrNull(context.userId, manager) : null;
+    if (!this.hasPermission(state, 'users', 'admin')) return 'right';
+    return (await dataAccessModeOf({ manager, userId: context.userId })) === 'limited' ? 'all_data' : null;
   }
 
   /**

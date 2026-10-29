@@ -87,6 +87,7 @@ function createOrchestrator(options?: {
     assertSurfaceAccess: async () => {},
     listReadableEntityTypes: async () => ['applications', 'projects'],
     describeWriteRights: async () => ({ plaidChanges: false, modifiableModules: [] }),
+    adminFamiliesGap: async () => 'right',
   };
 
   const mockSettings = {

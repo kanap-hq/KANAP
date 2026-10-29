@@ -55,6 +55,7 @@ import {
   readAiScreenLanguage,
   unreadFamiliesAskedBy,
   unreadFamilyLines,
+  type AiAdminFamiliesGap,
   type AiScreenLanguage,
 } from './ai-unread-families';
 
@@ -489,18 +490,23 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
  * chargeback...), and every unread family when nothing matched, so that no match never reads as
  * "does not exist". Their screens are named in the person's language (`language`, null: all four).
  */
-function withUnreadFamilies<T extends { items: unknown[] }>(result: T, query: string, language: AiScreenLanguage | null): T & {
+function withUnreadFamilies<T extends { items: unknown[] }>(
+  result: T,
+  query: string,
+  language: AiScreenLanguage | null,
+  gap: AiAdminFamiliesGap | undefined,
+): T & {
   not_read_here?: ReturnType<typeof unreadFamiliesAskedBy>;
   families_not_read?: string[];
   no_match_note?: string;
 } {
-  const asked = unreadFamiliesAskedBy(query, language);
+  const asked = unreadFamiliesAskedBy(query, language, gap);
   return {
     ...result,
     ...(asked.length ? { not_read_here: asked } : {}),
     ...(result.items.length === 0
       ? {
-        families_not_read: unreadFamilyLines(language),
+        families_not_read: unreadFamilyLines(language, gap),
         no_match_note: 'No match among the families searched. The families_not_read are not searched: a record of theirs may exist. Say what you could not read and name its screen.',
       }
       : {}),
@@ -2082,11 +2088,12 @@ export class AiEntityService {
     const result = aiSearchIndexEnabled()
       ? await this.searchAllIndexed(context, input)
       : await this.searchAllLegacy(context, input);
-    // The profile's language is read only when the answer names a screen.
-    const language = result.items.length === 0 || asksForUnreadFamily(input.query)
-      ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId)
-      : null;
-    return withUnreadFamilies(result, input.query, language);
+    // The profile's language, and whether the person reads the families of the administrators of
+    // users, are read only when the answer names an unread family.
+    const namesUnread = result.items.length === 0 || asksForUnreadFamily(input.query);
+    const language = namesUnread ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId) : null;
+    const gap = namesUnread ? await this.policy.adminFamiliesGap(context, context.manager) : undefined;
+    return withUnreadFamilies(result, input.query, language, gap);
   }
 
   /**
