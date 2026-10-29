@@ -78,30 +78,36 @@ const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> =
   // The roles and their rights, as Admin › Roles reads them (`GET /roles`, `GET /roles/:id/permissions`).
   roles: 'users',
   role_permissions: 'users',
+  // The limited persons and their nodes, as Admin › Data access reads them (`GET /data-access`).
+  data_access: 'users',
 };
 
 /**
- * The families whose screen asks more than the reader level of their right: Admin › Roles needs
- * users at admin level. Every check of a family reads it (`canReadEntityType`,
+ * The families whose screen asks more than the reader level of their right: Admin › Roles and
+ * Admin › Data access need users at admin level. Every check of a family reads it (`canReadEntityType`,
  * `assertEntityTypeReadAccess`, `listReadableEntityTypes`); a lower level asked by a caller is
  * raised to it.
  */
 const ENTITY_MIN_LEVEL: Partial<Record<AiQueryEntityType | AiContextEntityType, PermissionLevel>> = {
   roles: 'admin',
   role_permissions: 'admin',
+  data_access: 'admin',
 };
 
 /**
  * The families reserved to people whose access is not limited, as their screen: Admin › Roles is
- * closed to a person in limited access whatever their role (`frontend/src/auth/dataAccess.ts`).
+ * closed to a person in limited access whatever their role (`frontend/src/auth/dataAccess.ts`), and
+ * the routes of Admin › Data access refuse them (`@ReservedToUnscopedDataAccess`). The database
+ * does not protect the nodes: this check is the only gate.
  * Checked in the person's transaction (`dataAccessModeOf`), refused with the reserved message.
  */
-const UNSCOPED_ONLY_ENTITY_TYPES: ReadonlySet<string> = new Set(['roles', 'role_permissions']);
+const UNSCOPED_ONLY_ENTITY_TYPES: ReadonlySet<string> = new Set(['roles', 'role_permissions', 'data_access']);
 
 /** The screen whose right a family's refusal names, for the families read as their screen. */
 const ENTITY_SCREEN: Partial<Record<AiQueryEntityType | AiContextEntityType, string>> = {
   roles: 'Admin › Roles',
   role_permissions: 'Admin › Roles',
+  data_access: 'Admin › Data access',
 };
 
 /** The level a family is read at: the caller's, raised to the family's minimum. */

@@ -13,6 +13,7 @@ import { ConnectionsModule } from '../connections/connections.module';
 import { ContactsModule } from '../contacts/contacts.module';
 import { ContractsModule } from '../contracts/contracts.module';
 import { CurrencyModule } from '../currency/currency.module';
+import { DataAccessModule } from '../data-access/data-access.module';
 import { DepartmentsModule } from '../departments/departments.module';
 import { IncidentsModule } from '../incidents/incidents.module';
 import { InterfacesModule } from '../interfaces/interfaces.module';
@@ -241,6 +242,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
     ContactsModule,
     ContractsModule,
     CurrencyModule,
+    DataAccessModule,
     DepartmentsModule,
     IncidentsModule,
     InterfacesModule,

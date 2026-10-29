@@ -126,7 +126,7 @@ export function numberMatch(value: number | null, model: any): boolean {
 }
 
 /** A date filter of the list, compared by day (`YYYY-MM-DD`); a null date only matches a blank filter. */
-function dateMatch(value: string | null, model: any): boolean {
+export function dateMatch(value: string | null, model: any): boolean {
   if (!model || model.filterType !== 'date') return true;
   if (model.operator === 'AND' && Array.isArray(model.conditions)) {
     return model.conditions.every((condition: any) => dateMatch(value, condition));

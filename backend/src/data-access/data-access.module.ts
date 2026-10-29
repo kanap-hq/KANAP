@@ -11,5 +11,7 @@ import { DataAccessController } from './data-access.controller';
   imports: [AuthModule, AuditModule, PermissionsModule, UsersModule],
   controllers: [DataAccessController, DataAccessAdminController],
   providers: [DataAccessAdminService],
+  // The assistant reads the screen's overview and the access tabs through the same service.
+  exports: [DataAccessAdminService],
 })
 export class DataAccessModule {}

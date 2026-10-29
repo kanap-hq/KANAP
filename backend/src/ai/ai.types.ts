@@ -85,10 +85,13 @@ export const AI_SEARCH_ENTITY_TYPES = [
  * `support_gaps` and `support_deadlines` (the End of support report, `query/ai-support.query.ts`)
  * are listed only too: they have no record detail of their own. `roles` and `role_permissions`
  * (Admin › Roles, `query/ai-roles.query.ts`) are not searched either; a role has a detail (its
- * rights), a row of `role_permissions` none.
+ * rights), a row of `role_permissions` none. `data_access` (Admin › Data access,
+ * `query/ai-data-access.query.ts`) is listed only: a row names a person, whose access is in their
+ * users detail.
  */
 export const AI_QUERY_ENTITY_TYPES = [
   ...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines', 'roles', 'role_permissions',
+  'data_access',
 ] as const;
 
 /**
@@ -97,10 +100,11 @@ export const AI_QUERY_ENTITY_TYPES = [
  * no page of their own.
  */
 export const AI_DETAIL_ENTITY_TYPES = AI_QUERY_ENTITY_TYPES.filter(
-  (type) => type !== 'technology_versions' && type !== 'support_gaps' && type !== 'support_deadlines' && type !== 'role_permissions',
+  (type) => type !== 'technology_versions' && type !== 'support_gaps' && type !== 'support_deadlines' && type !== 'role_permissions'
+    && type !== 'data_access',
 ) as [
-  Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions'>,
-  ...Array<Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions'>>,
+  Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions' | 'data_access'>,
+  ...Array<Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions' | 'data_access'>>,
 ];
 
 export const AI_CONTEXT_ENTITY_TYPES = [

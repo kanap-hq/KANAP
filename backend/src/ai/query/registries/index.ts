@@ -27,6 +27,7 @@ import { interfacesRegistry } from './interfaces.registry';
 import { locationsRegistry } from './locations.registry';
 import { projectsRegistry } from './projects.registry';
 import { requestsRegistry } from './requests.registry';
+import { dataAccessRegistry } from './data-access.registry';
 import { rolePermissionsRegistry } from './role-permissions.registry';
 import { rolesRegistry } from './roles.registry';
 import { suppliersRegistry } from './suppliers.registry';
@@ -50,6 +51,7 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   connections: connectionsRegistry,
   contacts: contactsRegistry,
   contracts: contractsRegistry,
+  data_access: dataAccessRegistry,
   departments: departmentsRegistry,
   documents: documentsRegistry,
   incidents: incidentsRegistry,

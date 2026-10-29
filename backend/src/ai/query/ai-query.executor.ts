@@ -31,6 +31,8 @@ import { TechnologiesService } from '../../technologies/technologies.service';
 import { EndOfSupportService, type DeadlineRow } from '../../technologies/reports/end-of-support.service';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { RolesService } from '../../roles/roles.service';
+import { DataAccessAdminService } from '../../data-access/data-access-admin.service';
+import { DataAccessReservedException } from '../../data-access/reserved-operations';
 import { UsersService } from '../../users/users.service';
 import {
   AiEntityMetadata,
@@ -94,6 +96,14 @@ import {
   type AiRoleRow,
   type AiRolesServices,
 } from './ai-roles.query';
+import {
+  AI_DATA_ACCESS_COVERAGE_NOTE,
+  AI_DATA_ACCESS_NO_NODE_NOTE,
+  AI_DATA_ACCESS_UNAVAILABLE_NOTE,
+  dataAccessMissingWords,
+  listAiDataAccess,
+  type AiDataAccessRow,
+} from './ai-data-access.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
@@ -609,6 +619,8 @@ export class AiQueryExecutor {
     /** The services of Admin › Roles, which `roles` and `role_permissions` read. */
     @Optional() private readonly roles?: RolesService,
     @Optional() private readonly permissions?: PermissionsService,
+    /** Admin › Data access: the `data_access` family, and the access blocks of a person and a company. */
+    @Optional() private readonly dataAccess?: DataAccessAdminService,
   ) {
     // Absent, the technology figures close (no application count, no detail): say so once, at start.
     const logger = new Logger(AiQueryExecutor.name);
@@ -1348,6 +1360,46 @@ export class AiQueryExecutor {
         level: row.level,
       },
     });
+  }
+
+  /**
+   * A row of Admin › Data access: a person in limited access and one of their nodes, or no node.
+   * The person names the row (`id` is theirs); no email.
+   */
+  private mapDataAccess(row: AiDataAccessRow): AiEntitySummaryDto {
+    const where = row.node_type === null
+      ? 'no node'
+      : row.node_type === 'all' ? 'all data' : row.node ?? '';
+    return toEntitySummary('data_access', {
+      id: row.person_id,
+      label: `${row.person}: ${where}`,
+      status: row.access,
+      summary: row.node_type === null ? AI_DATA_ACCESS_NO_NODE_NOTE : null,
+      created_at: null,
+      updated_at: row.changed_at,
+      metadata: {
+        person: row.person,
+        roles: row.roles.join(', '),
+        node_type: row.node_type,
+        node: row.node,
+        node_code: row.node_code,
+        node_kind: row.node_kind,
+        access: row.access,
+        changed_at: row.changed_at,
+        changed_by: row.changed_by,
+      },
+    });
+  }
+
+  /**
+   * Whether the caller reads Admin › Data access: users at admin level and access not limited, the
+   * family's gate (`AiPolicyService`). The database does not protect the nodes: every read of them
+   * (the family, the users fields, the person and company blocks) passes here. Closed without the
+   * policy or the service.
+   */
+  private async dataAccessView(context: AiExecutionContextWithManager): Promise<boolean> {
+    if (!this.dataAccess) return false;
+    return (await this.policy?.canReadEntityType(context, 'data_access', context.manager)) === true;
   }
 
   /** The services the two role families read; refused without them, never an empty list. */
@@ -2292,6 +2344,33 @@ export class AiQueryExecutor {
       };
     }
 
+    if (input.entity_type === 'data_access') {
+      // The tool already checked the family; checked again here, the database not guarding the nodes.
+      if (!this.dataAccess || !(await this.dataAccessView(context))) throw new DataAccessReservedException();
+      const result = await listAiDataAccess({ dataAccess: this.dataAccess }, context.manager, scoped.query);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        available: result.available,
+        missing: result.missing,
+        ...(result.available ? {} : { unavailable_note: AI_DATA_ACCESS_UNAVAILABLE_NOTE }),
+        counters: result.counters,
+        coverage_note: AI_DATA_ACCESS_COVERAGE_NOTE,
+        items: result.items.map((row) => this.mapDataAccess(row)),
+        total: result.total,
+        distinct_total: result.distinct_total,
+        distinct_label: 'person',
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
     if (input.entity_type === 'vulnerabilities') {
       const applications = await resolveAiApplicationsReach(context, this.policy);
       const result = await listAiVulnerabilities(context.manager, context.tenantId, scoped.query, applications);
@@ -2916,6 +2995,9 @@ export class AiQueryExecutor {
       throw new BadRequestException('A right of a role has no detail of its own: read the role with get_entity_detail on roles (by name), which lists all its rights.');
     }
     if (entityType === 'roles') return this.roleDetail(context, input.entity_id);
+    if (entityType === 'data_access') {
+      throw new BadRequestException('A row of Admin › Data access has no detail of its own: read the person with get_entity_detail on users (by name or email), which gives their data access.');
+    }
     const entityId = await this.resolveDetailEntityId(context, entityType, input.entity_id);
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
 

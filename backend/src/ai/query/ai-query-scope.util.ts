@@ -26,6 +26,7 @@ export type ScopedAiEntityType =
   | 'connections'
   | 'contacts'
   | 'contracts'
+  | 'data_access'
   | 'departments'
   | 'documents'
   | 'incidents'
