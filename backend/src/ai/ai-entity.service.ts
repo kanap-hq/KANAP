@@ -30,6 +30,7 @@ import { contractTermFields } from '../contracts/contract-terms';
 import { readDecisionWindowDays } from '../contracts/contract-settings.service';
 import { readRenewalDecisions, renewalDecisionOf } from '../contracts/contract-renewal.service';
 import { listContractBudgetLines } from '../contracts/contract-relations';
+import { contractMismatchNote } from '../contracts/contract-line-match';
 import { deriveStatusFromDisabledAt } from '../common/status';
 import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
 import { loadContractCoverage, type ContractCoveredFamily } from './query/ai-contract-coverage';
@@ -3881,7 +3882,7 @@ export class AiEntityService {
       summary: line.company_name,
       status: null,
       updated_at: null,
-      metadata: { nature: line.nature },
+      metadata: { nature: line.nature, contract_mismatches: contractMismatchNote(line.mismatches) },
     }));
 
     return {

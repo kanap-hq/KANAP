@@ -24,6 +24,7 @@ import { parseTargetId } from '../common/relations/relation-target';
 import { resolveBudgetLine } from '../common/resolve-item-id';
 import { auditTableOf, linkedLineOf, natureAnd, naturesAnd, BUDGET_NATURES, type BudgetNature } from './budget-nature';
 import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-write-checks';
+import { contractMismatchesAgainstLine, type ContractLineMismatch } from '../contracts/contract-line-match';
 
 /**
  * The Relations tab of a budget line (OPEX or CAPEX, one table). One round trip lists every
@@ -73,11 +74,14 @@ export type BudgetLineSuggestion = {
   via: { kind: 'same_supplier'; label: null };
 };
 
+/** A contract linked to the line, with the fields that differ from the line (empty when they agree). */
+export type BudgetLineContractRow = RelatedContract & { mismatches: ContractLineMismatch[] };
+
 export type BudgetLineRelations = {
   projects: RelatedProject[] | null;
   applications: RelatedApplication[] | null;
   technologies: RelatedTechnology[] | null;
-  contracts: RelatedContract[] | null;
+  contracts: BudgetLineContractRow[] | null;
   /** The linked contracts the contracts policy hides from a limited person (spec §5.4). */
   contracts_hidden: number;
   assets: RelatedAsset[] | null;
@@ -183,8 +187,14 @@ export async function readBudgetLineRelations(
   const technologies = access.technologies
     ? await listRelatedTechnologies(manager, TECHNOLOGIES, line.tenant_id, line.id)
     : null;
-  const contracts = access.contracts
+  const linkedContracts = access.contracts
     ? await listRelatedContracts(manager, CONTRACTS, line.tenant_id, line.id)
+    : null;
+  const contractMismatches = linkedContracts && linkedContracts.length > 0
+    ? await contractMismatchesAgainstLine(manager, line.tenant_id, line.id, linkedContracts.map((row) => row.id))
+    : null;
+  const contracts = linkedContracts
+    ? linkedContracts.map((row) => ({ ...row, mismatches: contractMismatches?.get(row.id) ?? [] }))
     : null;
   const contractsHidden = access.contracts ? await hiddenLineContractCount(manager, line.tenant_id, line.id) : 0;
   const assets = access.assets

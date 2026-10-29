@@ -64,6 +64,7 @@ import { aiAmountsCurrency } from './ai-amounts-currency.util';
 import { aiDataAccessNote } from './ai-data-access-note.util';
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
 import { hiddenContractLineCount } from '../../contracts/contract-relations';
+import { contractMismatchesAgainstLine, lineMismatchesAgainstContract } from '../../contracts/contract-line-match';
 import { AiReadProbe, analyticsAxisFields, resolveAiEntityRegistry } from './registries';
 import { taskRelatedFamily } from './registries/tasks.registry';
 import { budgetFteFields, budgetLineTotalFieldsOf, budgetPairOfKey, isBudgetMoneyKey } from './registries/budget-amount-fields';
@@ -2606,6 +2607,18 @@ export class AiQueryExecutor {
         ? (nature === 'opex'
           ? this.contracts.listContractsForSpendItem(lineId, { manager: context.manager })
           : this.contracts.listContractsForCapexItem(lineId, { manager: context.manager })).catch(() => ({ items: [] }))
+          .then(async (linked) => {
+            if (!linked || linked.items.length === 0) return linked;
+            const mismatches = await contractMismatchesAgainstLine(
+              context.manager,
+              context.tenantId,
+              lineId,
+              linked.items.map((row) => row.id),
+            );
+            return {
+              items: linked.items.map((row) => ({ ...row, mismatches: mismatches?.get(row.id) ?? [] })),
+            };
+          })
         : null,
       this.budgetLines.listLinks(lineId, nature, { manager: context.manager }).catch(() => []),
       this.budgetLines.listAttachments(lineId, nature, { manager: context.manager }).catch(() => []),
@@ -2671,13 +2684,19 @@ export class AiQueryExecutor {
     // The contract's budget lines, both natures in one list: the OPEX lines come with the contract
     // (`contracts.get`), the CAPEX lines from their own link read. Null without the budget right,
     // which is not "none".
+    const linkedBudgetLineRows = [
+      ...(linkedSpendItems ?? []).map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.product_name, nature: 'opex' as const })),
+      ...((linkedCapexItems?.items ?? []) as Array<{ id: string; description: string | null; item_number?: number | null }>)
+        .map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.description, nature: 'capex' as const })),
+    ];
+    const lineMismatches = reads.budget && linkedBudgetLineRows.length > 0
+      ? await lineMismatchesAgainstContract(context.manager, context.tenantId, contractId, linkedBudgetLineRows.map((line) => line.id))
+      : null;
+    // Null without the budget right, which is not "none". A line outside data access is already
+    // absent; `mismatches` is empty when the visible line agrees with the contract.
     const linkedBudgetLines = reads.budget
       ? {
-        items: [
-          ...(linkedSpendItems ?? []).map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.product_name, nature: 'opex' as const })),
-          ...((linkedCapexItems?.items ?? []) as Array<{ id: string; description: string | null; item_number?: number | null }>)
-            .map((line) => ({ id: line.id, reference: budgetLineReference(line.item_number), product_name: line.description, nature: 'capex' as const })),
-        ],
+        items: linkedBudgetLineRows.map((line) => ({ ...line, mismatches: lineMismatches?.get(line.id) ?? [] })),
       }
       : null;
     // What the contract covers, each family on its module's read right:
