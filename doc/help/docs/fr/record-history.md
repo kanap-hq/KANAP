@@ -4,8 +4,8 @@ L'historique d'une fiche liste les modifications qui lui ont été apportées : 
 
 ## Où le trouver
 
-- **Onglet Historique**, le dernier onglet de la fiche : lignes budgétaires (voir [Lignes budgétaires](budget-lines.md#historique)), contrats, sociétés, départements, fournisseurs, sites, connexions, interfaces, applications, actifs, technologies, incidents, projets et demandes.
-- **Bouton Historique** dans l'en-tête, qui ouvre l'historique dans un panneau latéral : comptes, centres de coûts, calendriers de jours ouvrés, processus métier, dimensions et valeurs analytiques, contacts et tâches.
+- **Onglet Historique**, le dernier onglet de la fiche : lignes budgétaires (voir [Lignes budgétaires](budget-lines.md#historique)), contrats, sociétés, départements, fournisseurs, sites, connexions, interfaces, applications, actifs, technologies, incidents, projets, demandes et tâches.
+- **Bouton Historique** dans l'en-tête, qui ouvre l'historique dans un panneau latéral : comptes, centres de coûts, calendriers de jours ouvrés, processus métier, dimensions et valeurs analytiques, et contacts.
 - **Onglet Historique** dans le panneau de droite d'un document de la base de connaissances.
 
 Un incident garde aussi son onglet **Journal**. Le journal raconte ce qui s'est passé pendant l'incident. L'historique liste les modifications de la fiche.

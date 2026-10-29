@@ -131,7 +131,6 @@ Die Kopfzeile enthält:
   - **Zurück**-Breadcrumb zu **Aufgaben** (oder zum ursprünglichen Projekt-Arbeitsbereich, wenn Sie von dort kamen)
   - **Positionsindikator**: Ihre Position in der gefilterten Liste (z. B. „3 von 12") mit **Vorherige** / **Nächste**-Pfeilen
   - **Teilen**: Eine Link zur Aufgabe per E-Mail senden
-  - **Verlauf**: Öffnet die Änderungen an der Aufgabe in einem Seitenbereich (siehe [Verlauf anzeigen](#verlauf-anzeigen))
   - **In Anfrage umwandeln**: Die Aufgabe zu einer Portfolio-Anfrage befördern
   - **Löschen** (Papierkorbsymbol): Die Aufgabe mit ihren Kommentaren und ihrem Verlauf entfernen (erfordert `tasks:admin`). Sie bestätigen zuerst, und das Löschen lässt sich nicht rückgängig machen
   - **Schließen**: Zur Aufgabenliste zurückkehren
@@ -141,8 +140,11 @@ Unter der Symbolleiste zeigt der Titelblock:
   - **Titel**: Klicken zum Inline-Bearbeiten (erfordert `tasks:member`)
   - **Status / Priorität / Bewertung / Verantwortlicher / Fälligkeitsdatum** als kompakte, anklickbare Metadaten-Chips
   - **Projekt-Chip** für Projektaufgaben (verlinkt zum Projekt-Arbeitsbereich)
+  - **Tabs**: **Übersicht** enthält die Beschreibung, die Anhänge und die Aktivität; **Verlauf** listet die Änderungen an der Aufgabe auf (siehe [Verlauf anzeigen](#verlauf-anzeigen))
 
 ### Hauptinhaltsbereich
+
+Der Tab **Übersicht** enthält den Inhalt der Aufgabe.
 
 **Beschreibung**: Ein Markdown-Editor, der Formatierung, Listen, Links, Codeblöcke und Bilder unterstützt. Sie können Bilder direkt einfügen; sie werden automatisch hochgeladen. Das Drücken von **Tab** im Titelfeld springt in den Beschreibungseditor. Die Beschreibung wird ein paar Sekunden nach dem Aufhören mit dem Tippen automatisch gespeichert; die Kopfzeile zeigt jedes Mal kurz **Gespeichert** an.
 
@@ -320,7 +322,7 @@ Die Schaltfläche „Exportieren" ist nur aktiviert, wenn die Beschreibung Inhal
 
 ### Verlauf anzeigen
 
-Die Schaltfläche **Verlauf** in der Kopfzeile öffnet die Änderungen an der Aufgabe in einem Seitenbereich (siehe [Verlauf der Datensätze](record-history.md)):
+Der Tab **Verlauf**, der letzte Tab der Aufgabe, listet die Änderungen an der Aufgabe auf (siehe [Verlauf der Datensätze](record-history.md)). Die **Eigenschaftsleiste** bleibt dort verfügbar. Der Verlauf zeigt:
   - Statusänderungen
   - Feldänderungen
   - Verknüpfungen und Anhänge

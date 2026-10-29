@@ -4,8 +4,8 @@ Der Verlauf eines Datensatzes listet die Änderungen daran auf: wer was wann ge�
 
 ## Wo Sie ihn finden
 
-- **Tab Verlauf**, der letzte Tab des Datensatzes: Budgetzeilen (siehe [Budgetzeilen](budget-lines.md#verlauf)), Verträge, Unternehmen, Abteilungen, Lieferanten, Standorte, Verbindungen, Schnittstellen, Anwendungen, Assets, Technologien, Vorfälle (dort heißt der Tab **Historie**), Projekte und Anfragen.
-- **Schaltfläche Verlauf** in der Kopfzeile, die den Verlauf in einem Seitenbereich öffnet: Konten, Kostenstellen, Arbeitstagekalender, Geschäftsprozesse, Analysedimensionen und ihre Werte, Kontakte und Aufgaben.
+- **Tab Verlauf**, der letzte Tab des Datensatzes: Budgetzeilen (siehe [Budgetzeilen](budget-lines.md#verlauf)), Verträge, Unternehmen, Abteilungen, Lieferanten, Standorte, Verbindungen, Schnittstellen, Anwendungen, Assets, Technologien, Vorfälle, Projekte, Anfragen und Aufgaben.
+- **Schaltfläche Verlauf** in der Kopfzeile, die den Verlauf in einem Seitenbereich öffnet: Konten, Kostenstellen, Arbeitstagekalender, Geschäftsprozesse, Analysedimensionen und ihre Werte sowie Kontakte.
 - **Tab Verlauf** im rechten Bereich eines Dokuments der Wissensdatenbank.
 
 Ein Vorfall behält außerdem seinen Tab **Journal**. Das Journal erzählt, was während des Vorfalls geschah. Der Verlauf listet die Änderungen am Datensatz.

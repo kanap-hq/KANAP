@@ -131,7 +131,6 @@ El encabezado contiene:
   - Migración de **Volver** a **Tareas** (o al espacio de trabajo del proyecto de origen, cuando viene de uno)
   - **Indicador de posición**: Su posición en la lista filtrada (p. ej., "3 de 12") con flechas **Anterior** / **Siguiente**
   - **Compartir**: Enviar por correo electrónico un enlace a la tarea
-  - **Historial**: Abrir los cambios de la tarea en un panel lateral (vea [Ver historial](#ver-historial))
   - **Convertir en solicitud**: Promover la tarea a una solicitud del portafolio
   - **Eliminar** (icono de papelera): Eliminar la tarea, con sus comentarios y su historial (requiere `tasks:admin`). Primero se pide confirmación, y la eliminación no se puede deshacer
   - **Cerrar**: Volver a la lista de tareas
@@ -141,8 +140,11 @@ Debajo de la barra de herramientas, el bloque de título muestra:
   - **Título**: Haga clic para editar en línea (requiere `tasks:member`)
   - **Estado / Prioridad / Puntuación / Asignado / Fecha de vencimiento** como chips de metadatos compactos y clicables
   - **Chip de proyecto** para tareas de proyecto (vincula al espacio de trabajo del proyecto)
+  - **Pestañas**: **Vista general** contiene la descripción, los adjuntos y la actividad; **Historial** lista los cambios de la tarea (vea [Ver historial](#ver-historial))
 
 ### Área de contenido principal
+
+La pestaña **Vista general** contiene el contenido de la tarea.
 
 **Descripción**: Un editor markdown que admite formato, listas, enlaces, bloques de código e imágenes. Puede pegar imágenes directamente; se suben automáticamente. Pulsar **Tab** desde el campo de título salta al editor de descripción. La descripción se autoguarda un par de segundos después de que deje de escribir; el encabezado muestra **Guardado** brevemente cada vez que persiste.
 
@@ -320,7 +322,7 @@ El botón de exportar solo está habilitado cuando la descripción tiene conteni
 
 ### Ver historial
 
-El botón **Historial** de la cabecera abre los cambios de la tarea en un panel lateral (vea [Historial de los registros](record-history.md)):
+La pestaña **Historial**, la última pestaña de la tarea, lista los cambios de la tarea (vea [Historial de los registros](record-history.md)). El panel de **Propiedades** sigue disponible en ella. El historial muestra:
   - Cambios de estado
   - Modificaciones de campos
   - Vínculos y archivos adjuntos

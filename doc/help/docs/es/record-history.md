@@ -4,8 +4,8 @@ El historial de un registro lista los cambios que se le han hecho: quién cambi�
 
 ## Dónde encontrarlo
 
-- **Pestaña Historial**, la última pestaña del registro: líneas presupuestarias (vea [Líneas presupuestarias](budget-lines.md#historial)), contratos, empresas, departamentos, proveedores, ubicaciones, conexiones, interfaces, aplicaciones, activos, tecnologías, incidentes, proyectos y solicitudes.
-- **Botón Historial** en la cabecera, que abre el historial en un panel lateral: cuentas, centros de coste, calendarios laborales, procesos de negocio, dimensiones y valores analíticos, contactos y tareas.
+- **Pestaña Historial**, la última pestaña del registro: líneas presupuestarias (vea [Líneas presupuestarias](budget-lines.md#historial)), contratos, empresas, departamentos, proveedores, ubicaciones, conexiones, interfaces, aplicaciones, activos, tecnologías, incidentes, proyectos, solicitudes y tareas.
+- **Botón Historial** en la cabecera, que abre el historial en un panel lateral: cuentas, centros de coste, calendarios laborales, procesos de negocio, dimensiones y valores analíticos, y contactos.
 - **Pestaña Historial** en el panel derecho de un documento de la base de conocimiento.
 
 Un incidente conserva también su pestaña **Diario**. El diario cuenta lo que ocurrió durante el incidente. El historial lista los cambios del registro.

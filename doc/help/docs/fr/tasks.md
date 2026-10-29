@@ -131,7 +131,6 @@ L'en-tête contient :
   - Fil d'Ariane **Retour** vers **Tâches** (ou vers l'espace de travail du projet d'origine, si vous venez de l'un d'eux)
   - **Indicateur de position** : Votre position dans la liste filtrée (ex. : « 3 sur 12 ») avec flèches **Précédent** / **Suivant**
   - **Partager** : Envoyer un lien vers la tâche par e-mail
-  - **Historique** : Ouvrir les modifications de la tâche dans un panneau latéral (voir [Consulter l'historique](#consulter-lhistorique))
   - **Convertir en demande** : Promouvoir la tâche en demande de portefeuille
   - **Supprimer** (icône corbeille) : Supprimer la tâche, avec ses commentaires et son historique (nécessite `tasks:admin`). Vous confirmez d'abord, et la suppression est définitive
   - **Fermer** : Retourner à la liste des tâches
@@ -141,8 +140,11 @@ Sous la barre d'outils, le bloc de titre affiche :
   - **Titre** : Cliquez pour modifier en ligne (nécessite `tasks:member`)
   - **Statut / Priorité / Score / Assignée à / Date d'échéance** sous forme de pastilles compactes et cliquables de métadonnées
   - **Pastille Projet** pour les tâches de projet (lien vers l'espace de travail du projet)
+  - **Onglets** : **Vue d'ensemble** contient la description, les pièces jointes et l'activité ; **Historique** liste les modifications de la tâche (voir [Consulter l'historique](#consulter-lhistorique))
 
 ### Zone de contenu principale
+
+L'onglet **Vue d'ensemble** contient le contenu de la tâche.
 
 **Description** : Un éditeur markdown qui prend en charge le formatage, les listes, les liens, les blocs de code et les images. Vous pouvez coller des images directement ; elles se téléversent automatiquement. Appuyer sur **Tab** depuis le champ titre saute dans l'éditeur de description. La description s'enregistre automatiquement quelques secondes après que vous arrêtez de taper ; l'en-tête affiche brièvement **Enregistré** à chaque persistance.
 
@@ -320,7 +322,7 @@ Le bouton d'export n'est activé que lorsque la description a du contenu.
 
 ### Consulter l'historique
 
-Le bouton **Historique** de l'en-tête ouvre les modifications de la tâche dans un panneau latéral (voir [Historique des fiches](record-history.md)) :
+L'onglet **Historique**, le dernier onglet de la tâche, liste les modifications de la tâche (voir [Historique des fiches](record-history.md)). Le tiroir **Propriétés** y reste disponible. L'historique montre :
   - Changements de statut
   - Modifications de champs
   - Liens et pièces jointes

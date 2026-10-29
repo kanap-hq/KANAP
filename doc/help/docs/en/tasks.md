@@ -131,7 +131,6 @@ The header contains:
   - **Back** breadcrumb to **Tasks** (or to the originating project workspace, when you came from one)
   - **Position indicator**: Your position in the filtered list (e.g., "3 of 12") with **Previous** / **Next** arrows
   - **Share**: Email a link to the task
-  - **History**: Open the changes made to the task in a side panel (see [Viewing history](#viewing-history))
   - **Convert to Request**: Promote the task to a portfolio request
   - **Delete** (trash icon): Remove the task, with its comments and history (requires `tasks:admin`). You confirm first, and the delete cannot be undone
   - **Close**: Return to the task list
@@ -141,8 +140,11 @@ Below the toolbar, the title block shows:
   - **Title**: Click to edit inline (requires `tasks:member`)
   - **Status / Priority / Score / Assignee / Due Date** as compact, clickable metadata chips
   - **Project chip** for project tasks (links to the project workspace)
+  - **Tabs**: **Overview** holds the description, attachments and activity; **History** lists the changes made to the task (see [Viewing history](#viewing-history))
 
 ### Main content area
+
+The **Overview** tab holds the task content.
 
 **Description**: A markdown editor that supports formatting, lists, links, code blocks, and images. You can paste images directly; they upload automatically. Pressing **Tab** from the title field jumps into the description editor. The description autosaves a couple of seconds after you stop typing; the header shows **Saved** briefly each time it persists.
 
@@ -320,7 +322,7 @@ The export button is only enabled when the description has content.
 
 ### Viewing history
 
-The **History** button in the header opens the changes made to the task in a side panel (see [Record history](record-history.md)):
+The **History** tab, the last tab of the task, lists the changes made to the task (see [Record history](record-history.md)). The **Properties** drawer stays available on it. The history shows:
   - Status changes
   - Field modifications
   - Links and attachments

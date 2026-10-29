@@ -4,8 +4,8 @@ The history of a record lists the changes made to it: who changed what, and when
 
 ## Where to find it
 
-- **History tab**, the last tab of the record: budget lines (see [Budget lines](budget-lines.md#history)), contracts, companies, departments, suppliers, locations, connections, interfaces, applications, assets, technologies, incidents, projects and requests.
-- **History button** in the header, which opens the history in a side panel: accounts, cost centers, working-day calendars, business processes, analytics dimensions and values, contacts and tasks.
+- **History tab**, the last tab of the record: budget lines (see [Budget lines](budget-lines.md#history)), contracts, companies, departments, suppliers, locations, connections, interfaces, applications, assets, technologies, incidents, projects, requests and tasks.
+- **History button** in the header, which opens the history in a side panel: accounts, cost centers, working-day calendars, business processes, analytics dimensions and values, and contacts.
 - **History tab** in the right panel of a knowledge document.
 
 An incident also keeps its **Journal** tab. The journal tells what happened during the incident. The history lists the changes made to the record.
