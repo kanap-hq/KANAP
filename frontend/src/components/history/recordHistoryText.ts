@@ -454,6 +454,18 @@ function effortAllocationLine(change: RecordHistoryChange, context: HistoryTextC
   };
 }
 
+/** A link whose address alone changed, under its label: "Link Specification changed: old → new". */
+function linkChangedLine(change: RecordHistoryChange, context: HistoryTextContext): HistoryLine {
+  const name = typeof change.dimension === 'string' ? change.dimension.trim() : '';
+  return {
+    label: name
+      ? context.t('auditLogs.history.linkChanged', { name })
+      : context.t('auditLogs.history.linkChangedNoName'),
+    ...(has(change, 'before') ? { before: historyValueText(change.before, 'url', context) } : {}),
+    ...(has(change, 'after') ? { after: historyValueText(change.after, 'url', context) } : {}),
+  };
+}
+
 /** An integrated document of the record edited: "Document modified: Purpose", never its content. */
 function documentUpdatedLine(change: RecordHistoryChange, t: Translate): HistoryLine {
   const slot = typeof change.after === 'string' ? change.after : '';
@@ -549,6 +561,7 @@ function fieldLine(change: RecordHistoryChange, context: HistoryTextContext): Hi
   if (event) return event;
   if (change.field === 'dimension') return dimensionLine(change, context);
   if (change.field === 'criterion') return criterionLine(change, context);
+  if (change.field === 'link') return linkChangedLine(change, context);
   if (change.field === 'effort_allocation_it' || change.field === 'effort_allocation_business') {
     return effortAllocationLine(change, context);
   }

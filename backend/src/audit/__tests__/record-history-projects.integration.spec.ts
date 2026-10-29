@@ -167,6 +167,18 @@ async function seedAudits(runner: QueryRunner, data: HistorySeed): Promise<Seede
     before: [], after: [{ url: 'https://example.invalid/board', label: 'Design board' }],
   });
   await audit(runner, { table: 'portfolio_project_documents', recordId: project, action: 'update', before: null, after: { slot: 'purpose' }, ...by });
+  // On the second project: an address changed under the same label, and a second link with a label
+  // the first one already carries.
+  await audit(runner, {
+    table: 'portfolio_project_urls', recordId: project2, action: 'update', ...by,
+    before: [{ url: 'https://a.example.invalid/spec', label: 'Specification' }],
+    after: [{ url: 'https://b.example.invalid/spec', label: 'Specification' }],
+  });
+  await audit(runner, {
+    table: 'portfolio_project_urls', recordId: project2, action: 'update', ...by,
+    before: [{ url: 'https://example.invalid/doc-one', label: 'Doc' }],
+    after: [{ url: 'https://example.invalid/doc-one', label: 'Doc' }, { url: 'https://example.invalid/doc-two', label: 'Doc' }],
+  });
 
   return {
     data, project2, task: task.id, criterion, options: { low, high },
@@ -262,6 +274,24 @@ async function testChildEntries(seeded: Seeded) {
   console.log('  phases, milestone, attachment, time entry, task, team, effort, lines, links, dependency, contact, document: OK');
 }
 
+async function testWebLinkPairs(seeded: Seeded) {
+  const { data } = seeded;
+  const page = await readPage(seeded.allReader, data.tenantId, seeded.project2, ALL_MODULES);
+  const links = changes(page, 'link');
+  assert.deepEqual(
+    links.find(({ change }) => change.event === undefined)?.change,
+    { field: 'link', dimension: 'Specification', before: 'https://a.example.invalid/spec', after: 'https://b.example.invalid/spec' },
+    'an address changed alone reads as the link changed, old and new address',
+  );
+  assert.deepEqual(
+    links.filter(({ change }) => change.event).map(({ change }) => change),
+    [{ field: 'link', event: 'added', after: 'Doc (https://example.invalid/doc-two)' }],
+    'a second link with the same label is its own entry, named with its address',
+  );
+  assert.equal(links.length, 2, 'one change per real difference');
+  console.log('  web links compared on address and label: OK');
+}
+
 async function testReferencesWithoutModules(seeded: Seeded) {
   const { data } = seeded;
   const page = await readPage(seeded.projectReader, data.tenantId, data.project, PROJECT_ONLY);
@@ -327,6 +357,7 @@ async function run() {
     await testAccess(seeded, foreign);
     await testRecordEntries(seeded);
     await testChildEntries(seeded);
+    await testWebLinkPairs(seeded);
     await testReferencesWithoutModules(seeded);
     await testLimited(seeded);
     await testParentRows(seeded);

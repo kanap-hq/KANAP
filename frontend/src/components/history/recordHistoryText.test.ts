@@ -410,6 +410,19 @@ describe('project history entries', () => {
     expect(JSON.stringify(lines)).not.toContain(ID);
   });
 
+  it('reads a link whose address changed under its label, from the old address to the new', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'link', dimension: 'Specification', before: 'https://a.example/spec', after: 'https://b.example/spec' },
+      { field: 'link', event: 'added', after: 'Doc (https://example.invalid/two)' },
+    ];
+    expect(historyLines(item({ kind: 'link' }, changes), { t: en, locale: 'en' })).toEqual([
+      { label: 'Link Specification changed', before: 'https://a.example/spec', after: 'https://b.example/spec' },
+      { text: 'Link added: Doc (https://example.invalid/two)' },
+    ]);
+    const frLines = historyLines(item({ kind: 'link' }, changes.slice(0, 1)), { t: fr, locale: 'fr' });
+    expect(frLines[0].label).toBe('Lien Specification modifié');
+  });
+
   it('reads an effort share as a percentage, under the person', () => {
     const changes: RecordHistoryChange[] = [
       { field: 'effort_allocation_it', dimension: 'Jane Doe', before: 40, after: 60 },

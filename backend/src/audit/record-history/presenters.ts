@@ -492,22 +492,80 @@ function labelOf(row: AuditRow, fields: readonly string[]): string | null {
   return null;
 }
 
-/** The readable label of each link in an assistant payload (`{ payload: { url, description } }`). */
-function linkLabels(value: unknown): string[] {
+type LinkEntry = { url: string | null; label: string };
+
+/**
+ * Each link of a set payload: its address and its readable label. The assistant writes
+ * `{ payload: { url, description } }` (or a bare label), a project's web link `{ url, label }`.
+ */
+function linkEntries(value: unknown): LinkEntry[] {
   if (!Array.isArray(value)) return [];
-  const labels: string[] = [];
+  const entries: LinkEntry[] = [];
   for (const entry of value) {
     if (typeof entry === 'string') {
-      if (entry.trim()) labels.push(entry.trim());
+      if (entry.trim()) entries.push({ url: null, label: entry.trim() });
       continue;
     }
     if (!isPlainObject(entry)) continue;
     const payload = isPlainObject(entry.payload) ? entry.payload : entry;
+    const url = typeof payload.url === 'string' && payload.url.trim() ? payload.url.trim() : null;
     // A project's web link carries its `label` where the other links carry a description.
     const label = [payload.description, payload.label, payload.url].find((part) => typeof part === 'string' && part.trim());
-    if (typeof label === 'string') labels.push(label.trim());
+    if (typeof label === 'string') entries.push({ url, label: label.trim() });
   }
-  return Array.from(new Set(labels));
+  return entries;
+}
+
+/** The entries of `from` that `against` does not hold, compared on the (address, label) pair. */
+function linkEntriesMissing(from: LinkEntry[], against: LinkEntry[]): LinkEntry[] {
+  const key = (entry: LinkEntry) => `${entry.url ?? ''}\u0000${entry.label}`;
+  const left = new Map<string, number>();
+  for (const entry of against) left.set(key(entry), (left.get(key(entry)) ?? 0) + 1);
+  const missing: LinkEntry[] = [];
+  for (const entry of from) {
+    const count = left.get(key(entry)) ?? 0;
+    if (count > 0) left.set(key(entry), count - 1);
+    else missing.push(entry);
+  }
+  return missing;
+}
+
+/**
+ * A replaced link set, compared on the (address, label) pair: a label whose address alone changed
+ * reads as that link changed, from the old address to the new one; the other pairs are added or
+ * removed. A label two links share is named with its address, so the two stay apart.
+ */
+function linkSetChanges(beforeValue: unknown, afterValue: unknown): RecordHistoryChange[] {
+  const before = linkEntries(beforeValue);
+  const after = linkEntries(afterValue);
+  const added = linkEntriesMissing(after, before);
+  const removed = linkEntriesMissing(before, after);
+  const urlsByLabel = new Map<string, Set<string>>();
+  for (const entry of [...before, ...after]) {
+    const urls = urlsByLabel.get(entry.label) ?? new Set<string>();
+    urls.add(entry.url ?? '');
+    urlsByLabel.set(entry.label, urls);
+  }
+  const named = (entry: LinkEntry) => (entry.url && entry.url !== entry.label && (urlsByLabel.get(entry.label)?.size ?? 0) > 1
+    ? `${entry.label} (${entry.url})`
+    : entry.label);
+  const changes: RecordHistoryChange[] = [];
+  const addedLeft: LinkEntry[] = [];
+  for (const entry of added) {
+    const labelled = entry.url !== null && entry.url !== entry.label;
+    const index = labelled
+      ? removed.findIndex((old) => old.label === entry.label && old.url !== null && old.url !== old.label)
+      : -1;
+    if (index < 0) {
+      addedLeft.push(entry);
+      continue;
+    }
+    const [old] = removed.splice(index, 1);
+    changes.push({ field: 'link', dimension: entry.label, before: old.url, after: entry.url });
+  }
+  for (const entry of addedLeft) changes.push({ field: 'link', event: 'added', after: named(entry) });
+  for (const entry of removed) changes.push({ field: 'link', event: 'removed', before: named(entry) });
+  return changes;
 }
 
 function linkChanges(row: AuditRow): RecordHistoryChange[] {
@@ -518,16 +576,9 @@ function linkChanges(row: AuditRow): RecordHistoryChange[] {
     return [{ field: 'link', event: 'removed', before: childRef('link', row.record_id, labelOf(row, ['description', 'url'])) }];
   }
   if (Array.isArray(row.before_json) || Array.isArray(row.after_json)) {
-    // The assistant replaces the whole link set in one row, with no link id: the change names each
-    // link by what the payload holds, and never borrows the line's own id.
-    const beforeLabels = linkLabels(row.before_json);
-    const afterLabels = linkLabels(row.after_json);
-    const beforeSet = new Set(beforeLabels);
-    const afterSet = new Set(afterLabels);
-    const changes: RecordHistoryChange[] = [];
-    for (const label of afterLabels) if (!beforeSet.has(label)) changes.push({ field: 'link', event: 'added', after: label });
-    for (const label of beforeLabels) if (!afterSet.has(label)) changes.push({ field: 'link', event: 'removed', before: label });
-    return changes;
+    // The assistant and the project's web links replace the whole set in one row, with no link id:
+    // the change names each link by what the payload holds, and never borrows the record's own id.
+    return linkSetChanges(row.before_json, row.after_json);
   }
   const changes: RecordHistoryChange[] = [];
   const before = isPlainObject(row.before_json) ? row.before_json : {};

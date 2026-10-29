@@ -1148,6 +1148,8 @@
       "timeEntryDeleted": "Time entry deleted",
       "criterion": "Criterion {{name}}",
       "criterionNoName": "A criterion",
+      "linkChanged": "Link {{name}} changed",
+      "linkChangedNoName": "Link changed",
       "effortAllocationIt": "IT effort share, {{name}}",
       "effortAllocationBusiness": "Business effort share, {{name}}",
       "documentUpdated": "Document modified: {{label}}",

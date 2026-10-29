@@ -1148,6 +1148,8 @@
       "timeEntryDeleted": "Temps enregistré supprimé",
       "criterion": "Critère {{name}}",
       "criterionNoName": "Un critère",
+      "linkChanged": "Lien {{name}} modifié",
+      "linkChangedNoName": "Lien modifié",
       "effortAllocationIt": "Part de la charge IT, {{name}}",
       "effortAllocationBusiness": "Part de la charge métier, {{name}}",
       "documentUpdated": "Document modifié : {{label}}",
