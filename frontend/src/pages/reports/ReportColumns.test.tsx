@@ -363,10 +363,39 @@ describe('Chart tooltips', () => {
     renderReport(<TopOpexReport />);
     await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('123'));
     const pie = chart.options.series[0];
-    const share = shareOf(pie.tooltip.renderer({ datum: { name: 'Small', value: 123 }, angleKey: 'value' }));
+    const tooltip = pie.tooltip.renderer({ datum: { name: 'Small', value: 123 }, angleKey: 'value' });
+    const share = shareOf(tooltip);
     expect(share).toBe(formatPercentPoints(12.3, 'fr', 1));
     expect(share).toContain('12,3');
     expect(share).not.toContain('12.3');
+    // These two lines are the whole total, so the share of all lines matches the share of the pie.
+    const ofAll = tooltip.data.find((row: { label: string }) => row.label === 'reports.topOpex.shareOfAllLines');
+    expect(ofAll?.value).toBe(share);
+  });
+
+  it('labels a pie slice by the slices drawn and keeps the share of all lines on a second line', async () => {
+    serverRows = [
+      { id: 'a', product_name: 'Large', versions: { y: slot(Y, { budget: 50 }) } },
+      { id: 'b', product_name: 'Mid', versions: { y: slot(Y, { budget: 30 }) } },
+      { id: 'c', product_name: 'Small', versions: { y: slot(Y, { budget: 20 }) } },
+    ];
+    renderReport(<TopOpexReport />);
+    await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('Small'));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'reports.filters.topCount' }), { target: { value: '2' } });
+    await waitFor(() => expect(screen.getByTestId('grid').textContent).not.toContain('Small'));
+
+    const pie = chart.options.series[0];
+    // 50 of the drawn 80 is 62.5%, so the slice reads 63%. Its share of every line (100) is 50%.
+    expect(pie.sectorLabel.formatter({ datum: { value: 50 }, angleKey: 'value' })).toBe('63%');
+    // 2 of the drawn 80 is 2.5%: under 3%, the slice stays blank.
+    expect(pie.sectorLabel.formatter({ datum: { value: 2 }, angleKey: 'value' })).toBe('');
+    // 2.4 of 80 is 3% exactly.
+    expect(pie.sectorLabel.formatter({ datum: { value: 2.4 }, angleKey: 'value' })).toBe('3%');
+
+    const tooltip = pie.tooltip.renderer({ datum: { name: 'Large', value: 50 }, angleKey: 'value' });
+    expect(shareOf(tooltip)).toBe(formatPercentPoints(62.5, 'en', 1));
+    const ofAll = tooltip.data.find((row: { label: string }) => row.label === 'reports.topOpex.shareOfAllLines');
+    expect(ofAll?.value).toBe(formatPercentPoints(50, 'en', 1));
   });
 });
 
