@@ -75,7 +75,8 @@ export const applicationsRecord = {
 /** An application, as its own audit rows record it. */
 const APPLICATION_FIELDS: HistoryFields = {
   name: shown(),
-  description: shown(),
+  // The source of the Overview document (Markdown): the entry says that it changed, never its text.
+  description: hiddenChanged('application description: long content', 'descriptionChanged'),
   editor: shown(),
   supplier_id: shown('supplier'),
   category: shown(),
@@ -111,8 +112,9 @@ const APPLICATION_FIELDS: HistoryFields = {
   users_year: shown(),
   users_override: shown(),
   licensing: shown(),
-  notes: shown(),
-  support_notes: shown(),
+  // Long free text, as the contract's notes: the entry says that they changed.
+  notes: hiddenChanged('application notes: long content', 'notesChanged'),
+  support_notes: hiddenChanged('application support notes: long content', 'supportNotesChanged'),
   sequential_id: hidden('business reference, the page header shows it'),
   // The read state of the classification is derived from the fields above at each read.
   classification_review_state: hidden('derived from the classification fields at each read'),

@@ -764,6 +764,7 @@
         "renewalStopped": "Verlängerung beendet",
         "renewalResumed": "Verlängerung wieder aufgenommen",
         "descriptionChanged": "Beschreibung geändert",
+        "supportNotesChanged": "Support-Notizen geändert",
         "classificationReviewed": "Klassifizierung geprüft"
       },
       "actors": {

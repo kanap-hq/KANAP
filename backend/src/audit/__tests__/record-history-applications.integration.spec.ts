@@ -111,8 +111,14 @@ async function seedFamily(runner: QueryRunner, data: HistorySeed): Promise<Seede
   await write({ table: 'applications', recordId: app, action: 'create', userId, before: null, after: { id: app, tenant_id: t, name: 'Ledger App', lifecycle: 'active', sequential_id: 'APP-42', owners: [] } });
   await write({
     table: 'applications', recordId: app, action: 'update', userId,
-    before: { name: 'Ledger App', criticality: 'medium', supplier_id: null, classification_review: null },
-    after: { name: 'Ledger Platform', criticality: 'high', supplier_id: data.supplier, classification_review: { user_id: userId, reviewed_at: '2026-10-29T10:00:00Z', revision: 3 } },
+    before: {
+      name: 'Ledger App', criticality: 'medium', supplier_id: null, classification_review: null,
+      description: '# Old overview', notes: 'Old app notes', support_notes: 'Old support notes',
+    },
+    after: {
+      name: 'Ledger Platform', criticality: 'high', supplier_id: data.supplier, classification_review: { user_id: userId, reviewed_at: '2026-10-29T10:00:00Z', revision: 3 },
+      description: '# New overview', notes: 'New app notes', support_notes: 'New support notes',
+    },
   });
   await write({ table: 'app_instances', recordId: instance, action: 'create', userId, before: null, after: { id: instance, application_id: app, environment: 'prod' } });
   await write({ table: 'app_instances', recordId: instance, action: 'update', userId, before: { application_id: app, environment: 'prod', base_url: null }, after: { application_id: app, environment: 'prod', base_url: 'https://ledger.example.invalid' } });
@@ -178,6 +184,10 @@ async function testEntries(seeded: Seeded) {
   assert.ok(renamed && renamed.item.action === 'update');
   assert.deepEqual(all.items.flatMap((item) => item.changes).find((change) => change.field === 'criticality'), { field: 'criticality', before: 'medium', after: 'high' });
   assert.deepEqual(findChange(all, 'classification_review')?.change, { field: 'classification_review', text: 'classificationReviewed' }, 'the review reads as a word');
+  // Long content: the entry says that it changed, never its text.
+  assert.deepEqual(findChange(all, 'description')?.change, { field: 'description', text: 'descriptionChanged' }, 'the description reads as a word');
+  assert.deepEqual(findChange(all, 'notes')?.change, { field: 'notes', text: 'notesChanged' }, 'the notes read as a word');
+  assert.deepEqual(findChange(all, 'support_notes')?.change, { field: 'support_notes', text: 'supportNotesChanged' }, 'the support notes read as a word');
   assert.ok(named(findChange(all, 'supplier_id')?.change.after, 'supplier'), 'the supplier is named for a supplier reader');
   assert.ok(hidden(findChange(limited, 'supplier_id')?.change.after, 'supplier'), 'and hidden otherwise');
 
@@ -217,7 +227,7 @@ async function testEntries(seeded: Seeded) {
   assert.ok(hidden(findChange(limited, 'technology', 'added')?.change.after, 'technology'), 'hidden without infrastructure');
 
   const serialized = JSON.stringify(all);
-  for (const raw of [seeded.instance, seeded.assignment, data.tenantId, 'APP-42', 'reviewed_at']) {
+  for (const raw of [seeded.instance, seeded.assignment, data.tenantId, 'APP-42', 'reviewed_at', 'overview', 'app notes', 'support notes']) {
     assert.ok(!serialized.includes(raw), `${raw} never reaches the answer`);
   }
   console.log('  own rows, deployments, servers, sets, links, processes and technologies in words, named by module: OK');

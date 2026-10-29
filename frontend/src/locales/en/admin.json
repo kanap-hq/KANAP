@@ -764,6 +764,7 @@
         "renewalStopped": "Renewal stopped",
         "renewalResumed": "Renewal resumed",
         "descriptionChanged": "Description changed",
+        "supportNotesChanged": "Support notes changed",
         "classificationReviewed": "Classification reviewed"
       },
       "actors": {
