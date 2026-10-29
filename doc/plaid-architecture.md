@@ -601,9 +601,9 @@ without a profile language they come in the four languages. Plaid reads the
 rights the screen shows and no other (`AI_SCREEN_RESOURCES`, compared with the
 screen's `frontend/src/pages/admin/rolePermissionGroups.ts`): `projects`, a
 server right the screen does not show, is in no row, detail or group.
-`user_count` is the screen's count (the rows of `user_roles`); the users list
-filtered on `roles` also reads the primary role kept on a person's record and
-can find more people, which the field's description says.
+`user_count` is the screen's count: each person who holds the role, as their
+primary role (`users.role_id`) or through `user_roles`, once. It is the same
+number as the users list filtered on `roles`, which the field's description says.
 
 `data_access` reads Admin › Data access (`ai-data-access.query.ts`, through
 `DataAccessAdminService`): one row per limited person and node, one row with

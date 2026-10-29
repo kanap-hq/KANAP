@@ -268,9 +268,9 @@ async function testGateOnARealTransaction(h: Harness, runner: QueryRunner, s: Se
 }
 
 /**
- * `user_count` is the Roles screen's count (`user_roles`), and says the users list filtered on
- * `roles` may count more: that filter also reads the primary role kept on the person's record
- * (Plaid L7, lot E; the data is not repaired).
+ * `user_count` is the Roles screen's count: a person whose primary role is on their record and
+ * who has no `user_roles` row is counted, once, and the users list filtered on `roles` finds the
+ * same people.
  */
 async function testTheUserCountIsTheScreens(h: Harness, runner: QueryRunner, s: Seed) {
   await runner.query(
@@ -280,13 +280,14 @@ async function testTheUserCountIsTheScreens(h: Harness, runner: QueryRunner, s: 
   const route = await h.rolesRoute.getRoles(routeRequest(runner));
   const roles = await h.tools.execute(ctx(runner, s, 'unlimited'), 'query_entities', { entity_type: 'roles', filters: { name: 'Budget Reader' } });
   assert.equal(roles.items[0].metadata.user_count, route.items.find((role: any) => role.role_name === 'Budget Reader').user_count, 'the count of the screen');
-  assert.equal(roles.items[0].metadata.user_count, 2);
+  assert.equal(roles.items[0].metadata.user_count, 3, 'the primary role with no user_roles row counts, the two assignments stay');
   const people = await h.tools.execute(ctx(runner, s, 'unlimited'), 'query_entities', { entity_type: 'users', filters: { roles: ['Budget Reader'] } });
-  assert.equal(people.total, 3, 'the users list also reads the primary role of the record');
+  assert.equal(people.total, roles.items[0].metadata.user_count, 'the users list filtered on the role finds the same people');
   const described = await h.tools.execute(ctx(runner, s, 'unlimited'), 'describe_entity_filters', { entity_type: 'roles' });
   const description = JSON.stringify(described);
   assert.match(description, /the count of the Roles screen, to quote as such/);
-  assert.match(description, /filtered on `roles` also counts a person whose primary role it is on their own record only/);
+  assert.match(description, /the same number as the people list filtered on this role/);
+  assert.doesNotMatch(description, /can find more people/);
 }
 
 /**
