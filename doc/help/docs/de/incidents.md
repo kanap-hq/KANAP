@@ -88,7 +88,7 @@ Was Sie filtern, wird in den geöffneten Vorfall übernommen: **Zurück / Weiter
 
 Klicken Sie auf eine beliebige Zeile, um den Vorfall zu öffnen. Der Arbeitsbereich hat einen **Kopfbereich** mit der Referenz und kurzen Metadaten, eine **Eigenschaftenleiste** rechts und einen **Inhaltsbereich** in der Mitte, der mit jedem Tab wechselt.
 
-Die Tabs sind **Übersicht**, **Verlauf** (das Journal), **Beziehungen**, **Dokumente** und **Historie** (die Änderungen am Vorfall, siehe [Verlauf der Datensätze](record-history.md)).
+Die Tabs sind **Übersicht**, **Journal**, **Beziehungen**, **Dokumente** und **Verlauf** (die Änderungen am Vorfall, siehe [Verlauf der Datensätze](record-history.md)).
 
 ### Kopfbereich und Metadaten
 
@@ -174,9 +174,9 @@ Jede Zeile zeigt den Autor, die Zeit, auf die sie sich bezieht (für „vor 3 Ta
 
 Ein Eintrag **Verknüpfungen aktualisiert** erscheint nur für Personen, die das genannte Modul lesen dürfen: Assets und Technologien erfordern die Infrastruktur, Anwendungen die Anwendungen. Notizen behalten ihren Text, unabhängig davon, was sie erwähnen.
 
-Das Eingabefeld verschwindet, sobald der Vorfall geschlossen oder abgebrochen ist. Feldänderungen außerhalb des Journals, etwa die Korrektur der Beschreibung, erscheinen im Tab **Historie**.
+Das Eingabefeld verschwindet, sobald der Vorfall geschlossen oder abgebrochen ist. Feldänderungen außerhalb des Journals, etwa die Korrektur der Beschreibung, erscheinen im Tab **Verlauf**.
 
-Die Vorfallanalyse führt ihre eigene Historie. Jedes Speichern, das sie verändert, erzeugt eine Version, und die Versionen bleiben dauerhaft erhalten. Gewöhnliches Bearbeiten erzeugt keine Journaleinträge: Das Schreiben der Analyse ist kein Ereignis des Vorfalls, und das Audit-Protokoll hält fest, wer was geändert hat. Schließen, Abbrechen und Importe schreiben dagegen einen Journaleintrag, und dieser Eintrag nennt die Version der Analyse, auf die er sich bezieht, dargestellt als „Vorfallanalyse, Version 4 (DOC-12)".
+Die Vorfallanalyse führt ihren eigenen Verlauf. Jedes Speichern, das sie verändert, erzeugt eine Version, und die Versionen bleiben dauerhaft erhalten. Gewöhnliches Bearbeiten erzeugt keine Journaleinträge: Das Schreiben der Analyse ist kein Ereignis des Vorfalls, und das Audit-Protokoll hält fest, wer was geändert hat. Schließen, Abbrechen und Importe schreiben dagegen einen Journaleintrag, und dieser Eintrag nennt die Version der Analyse, auf die er sich bezieht, dargestellt als „Vorfallanalyse, Version 4 (DOC-12)".
 
 Das Wiederöffnen eines Vorfalls ändert daran nichts. Die Versionen bleiben, der Eintrag zum Schließen verweist weiterhin auf die Version, die beim Schließen des Datensatzes aktuell war, und dieser Text lässt sich später weiterhin mit den enthaltenen Bildern lesen, unter den Zugriffsregeln, die für den Vorfall dann gelten.
 

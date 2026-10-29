@@ -2061,7 +2061,6 @@
     "authorUnknown": "Desconocido",
     "tabs": {
       "comments": "Comentarios",
-      "history": "Historial",
       "workLog": "Registro de tiempo"
     },
     "labels": {
@@ -2119,25 +2118,6 @@
       }
     },
     "history": {
-      "actions": {
-        "addedComment": "Añadió un comentario",
-        "addedField": "{{field}} añadido: {{value}}",
-        "changedField": "{{field}}: {{from}} → {{to}}",
-        "decisionWithOutcome": "Decisión: {{outcome}}",
-        "recorded": "Actividad registrada",
-        "removedField": "{{field}} eliminado: {{value}}",
-        "updatedDocument": "{{document}} actualizado",
-        "updatedMultiple": "Actualizado: {{changes}}"
-      },
-      "feasibilityDimensions": {
-        "changeManagement": "Gestión del cambio",
-        "deliveryConstraints": "Restricciones de entrega",
-        "infrastructureNeeds": "Necesidades de infraestructura",
-        "integrationCompatibility": "Integración y compatibilidad",
-        "resourceSkills": "Recursos y competencias",
-        "securityCompliance": "Seguridad y conformidad",
-        "technicalFeasibility": "Viabilidad técnica"
-      },
       "fields": {
         "actualEffortBusiness": "Esfuerzo de negocio real",
         "actualEffortIt": "Esfuerzo IT real",

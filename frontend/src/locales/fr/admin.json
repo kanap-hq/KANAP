@@ -757,7 +757,7 @@
       "source_request_id": "Créé à partir de la demande",
       "requestor_id": "Demandeur",
       "target_delivery_date": "Date de livraison cible",
-      "converted_date": "Converti le",
+      "converted_date": "Convertie le",
       "origin_task_id": "Créée depuis la tâche",
       "target_date": "Date cible",
       "phase_status": "Statut",
@@ -766,8 +766,6 @@
     "history": {
       "empty": "Aucun historique",
       "error": "L'historique n'a pas pu être chargé",
-      "incidentEmpty": "Aucun historique",
-      "incidentError": "L'historique n'a pas pu être chargé",
       "loadMore": "Charger plus",
       "separator": " : ",
       "actions": {
@@ -808,9 +806,6 @@
         "classificationReviewed": "Classification revue",
         "taskTypeChanged": "Type de tâche modifié",
         "phaseChanged": "Phase modifiée",
-        "sourceChanged": "Source modifiée",
-        "categoryChanged": "Catégorie modifiée",
-        "streamChanged": "Filière modifiée",
         "purposeChanged": "Objectif modifié",
         "risksChanged": "Risques modifiés",
         "currentSituationChanged": "Situation actuelle modifiée",

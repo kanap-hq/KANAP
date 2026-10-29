@@ -766,8 +766,6 @@
     "history": {
       "empty": "Noch kein Verlauf",
       "error": "Der Verlauf konnte nicht geladen werden",
-      "incidentEmpty": "Noch keine Historie",
-      "incidentError": "Die Historie konnte nicht geladen werden",
       "loadMore": "Mehr laden",
       "separator": ": ",
       "actions": {
@@ -808,9 +806,6 @@
         "classificationReviewed": "Klassifizierung geprüft",
         "taskTypeChanged": "Aufgabentyp geändert",
         "phaseChanged": "Phase geändert",
-        "sourceChanged": "Quelle geändert",
-        "categoryChanged": "Kategorie geändert",
-        "streamChanged": "Stream geändert",
         "purposeChanged": "Zweck geändert",
         "risksChanged": "Risiken geändert",
         "currentSituationChanged": "Aktuelle Situation geändert",

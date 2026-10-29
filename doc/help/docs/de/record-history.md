@@ -8,7 +8,7 @@ Der Verlauf eines Datensatzes listet die Änderungen daran auf: wer was wann ge�
 - **Schaltfläche Verlauf** in der Kopfzeile, die den Verlauf in einem Seitenbereich öffnet: Konten, Kostenstellen, Arbeitstagekalender, Geschäftsprozesse, Analysedimensionen und ihre Werte, Kontakte und Aufgaben.
 - **Tab Verlauf** im rechten Bereich eines Dokuments der Wissensdatenbank.
 
-Ein Vorfall behält außerdem sein Journal, im Tab **Verlauf**. Das Journal erzählt, was während des Vorfalls geschah. Der Tab **Historie** listet die Änderungen am Datensatz.
+Ein Vorfall behält außerdem seinen Tab **Journal**. Das Journal erzählt, was während des Vorfalls geschah. Der Verlauf listet die Änderungen am Datensatz.
 
 Der Aktivitäts-Stream eines Projekts, einer Anfrage oder einer Aufgabe zeigt nur Kommentare und Entscheidungen. Die Änderungen am Datensatz stehen in seinem Verlauf. Bei einer Aufgabe zeigt ein Kommentar, der zusammen mit einer Statusänderung geschrieben wurde, diese Änderung.
 

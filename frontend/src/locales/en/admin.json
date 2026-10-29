@@ -766,8 +766,6 @@
     "history": {
       "empty": "No history yet",
       "error": "The history could not be loaded",
-      "incidentEmpty": "No history yet",
-      "incidentError": "The history could not be loaded",
       "loadMore": "Load more",
       "separator": ": ",
       "actions": {
@@ -808,9 +806,6 @@
         "classificationReviewed": "Classification reviewed",
         "taskTypeChanged": "Task type changed",
         "phaseChanged": "Phase changed",
-        "sourceChanged": "Source changed",
-        "categoryChanged": "Category changed",
-        "streamChanged": "Stream changed",
         "purposeChanged": "Purpose changed",
         "risksChanged": "Risks changed",
         "currentSituationChanged": "Current situation changed",

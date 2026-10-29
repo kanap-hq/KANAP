@@ -766,8 +766,6 @@
     "history": {
       "empty": "Todavía no hay historial",
       "error": "No se pudo cargar el historial",
-      "incidentEmpty": "Todavía no hay historial",
-      "incidentError": "No se pudo cargar el historial",
       "loadMore": "Cargar más",
       "separator": ": ",
       "actions": {
@@ -808,9 +806,6 @@
         "classificationReviewed": "Clasificación revisada",
         "taskTypeChanged": "Tipo de tarea modificado",
         "phaseChanged": "Fase modificada",
-        "sourceChanged": "Origen modificado",
-        "categoryChanged": "Categoría modificada",
-        "streamChanged": "Línea modificada",
         "purposeChanged": "Objetivo modificado",
         "risksChanged": "Riesgos modificados",
         "currentSituationChanged": "Situación actual modificada",
