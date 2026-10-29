@@ -611,7 +611,14 @@ no node for a limited person without one, Administrators left out (they see
 all data whatever is stored). On `users`, the administrator of users also gets
 `roles` (every role) and `data_access` (the effective mode) as fields and
 filters, and the detail of a person and of a company carries the Data access
-block of its screen tab.
+block of its screen tab. Every administration field of a person (job, company,
+department, primary role, locale, team, contributor profile, availability,
+expertise, roles, access mode) follows one rule, `UNSCOPED_ADMIN_FIELDS` in
+`backend/src/ai/query/registries/index.ts`: users at admin level and access not
+limited, as the screen, which closes the administration of users to a limited
+person. The same rule decides what finds a person: the quick search of `users`,
+`search_all` (index and legacy paths) and the @ mentions look in those fields
+for their readers only, and in the name and the email for everyone else.
 
 The right is a level, not the reader level of the family's resource: the
 three families need `users` at admin level (`ENTITY_MIN_LEVEL` in
