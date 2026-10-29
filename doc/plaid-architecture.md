@@ -124,14 +124,14 @@ payloads to the model.
 
 Plaid can currently read these entity families:
 
-`accounts`, `analytics_categories`, `applications`, `assets`,
+`accounts`, `analytics_axes`, `analytics_categories`, `applications`, `assets`,
 `budget_lines`, `business_processes`, `chargeback`, `chargeback_lines`,
 `chart_of_accounts`, `companies`, `connections`, `contacts`, `contracts`,
-`data_access`, `departments`,
-`documents`, `incidents`, `interfaces`, `locations`, `projects`, `requests`,
+`cost_centers`, `data_access`, `departments`,
+`documents`, `exchange_rates`, `incidents`, `interfaces`, `locations`, `projects`, `requests`,
 `role_permissions`, `roles`, `suppliers`, `support_deadlines`, `support_gaps`,
-`tasks`, `technologies`, `technology_versions`, `users`, and
-`vulnerabilities`.
+`tasks`, `technologies`, `technology_versions`, `users`, `vulnerabilities`, and
+`working_day_calendars`.
 
 `budget_lines` is one family for the OPEX and CAPEX lines of `spend_items`
 (`nature`, `opex` or `capex`). A question without a nature covers both;
@@ -139,12 +139,27 @@ Plaid can currently read these entity families:
 the line is. The references are `BL-n`; a typed `OPX-n` or `CPX-n` is accepted
 as an input reference and resolves to the same line.
 
-`search_all` searches every family but the ones without a search index:
-`vulnerabilities`, `technology_versions`, `support_gaps`,
-`support_deadlines`, `roles`, `role_permissions`, `data_access`, `chargeback`
-and `chargeback_lines`. `AI_SEARCH_ENTITY_TYPES` (the
-searched families) and `AI_QUERY_ENTITY_TYPES` (the listed ones) are two lists
-in `ai.types.ts`; the listed-only families have no detail of their own.
+`search_all` searches every family of the search index (`AI_SEARCH_ENTITY_TYPES`
+in `ai.types.ts`) and three reference data families without an index
+(`AI_SEARCH_REFERENCE_ENTITY_TYPES`): `cost_centers`, `working_day_calendars`
+and `analytics_axes`, by code and by name. It leaves out `vulnerabilities`,
+`technology_versions`, `support_gaps`, `support_deadlines`, `roles`,
+`role_permissions`, `data_access`, `chargeback`, `chargeback_lines` and
+`exchange_rates`. `AI_QUERY_ENTITY_TYPES` lists every family the read tools
+take; the families with no detail of their own are filtered out of
+`AI_DETAIL_ENTITY_TYPES`.
+
+The reference data search runs through the reads of the families
+(`AiQueryExecutor.searchReferenceData`), for the families the person reads
+(`listReadableEntityTypes`) and that `entity_types` keeps: the family's quick
+search (`q`), then the rows whose code or name holds the query. The path of a
+cost center does not count, so a group's name does not bring back the whole
+group. An exact code or name, without case, gets the score of a reference (4),
+a part of one the score of a label (3), on the scale of the index query; at
+most five rows per family join the first page, and `total` counts every
+match. Each family runs in its own savepoint: one that fails is named in
+`failed_entity_types` and in a sentence of `warnings`, and the answer is
+marked incomplete.
 
 `get_entity_context` takes `applications`, `assets`, `projects`, `requests`,
 `tasks` and `technologies` (`AI_CONTEXT_ENTITY_TYPES` in `ai.types.ts`).
@@ -635,7 +650,16 @@ right and the screen, or the reserved message for a limited person.
 `AiPolicyService.adminFamiliesGap` says which of the two is missing; the lists
 of what the tools do not read (`ai-unread-families.ts`, entries marked
 `usersAdminOnly`) drop the two families for a person who reads them and name
-what is missing for the others. No tool writes a person's access, their roles,
+what is missing for the others. The entries of the reference data (`readAs`:
+cost centers, working-day calendars, analytics dimensions and exchange rates)
+follow the same rule with the right of their page: `unreadFamiliesReachOf`
+probes the families once per answer, the entry is dropped for a person who
+reads the family and names the right (Cost centers, Working-day calendars,
+Analytics, Budget) for the others. The tool descriptions, common to everyone,
+no longer list them. The exchange rates are read but not searched: a search
+whose words ask for rates or currencies (`taux de change`, `EUR`, `EUR/USD`)
+gets `not_searched_here`, which points to `query_entities` on
+`exchange_rates`. No tool writes a person's access, their roles,
 a role's rights or a person: the chat prompt says those stay on Admin › Data
 access, Admin › Roles and Admin › Users, and the context profile sends such a
 request to the general write profile, which refuses in words.

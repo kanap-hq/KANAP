@@ -67,6 +67,10 @@ Entity-to-resource mapping:
 | `connections` | `infrastructure` |
 | `contacts` | `contacts` |
 | `contracts` | `contracts` |
+| `cost_centers` | `cost_centers` |
+| `analytics_axes` | `analytics` |
+| `working_day_calendars` | `working_day_profiles` |
+| `exchange_rates` | `budget` |
 | `departments` | `departments` |
 | `documents` | `knowledge` |
 | `incidents` | `incidents` |
@@ -84,7 +88,7 @@ Entity-to-resource mapping:
 
 | Tool | Purpose | Pagination / completeness |
 | --- | --- | --- |
-| `search_all` | Cross-entity discovery over readable entity families. | Returns compact matches with `limit`, `offset`, `returned`, `truncated`, and `complete=false`. |
+| `search_all` | Cross-entity discovery over the readable families of the search index, and over the cost centers, working-day calendars and analytics dimensions by code and name (at most five of each). | Returns compact matches with `limit`, `offset`, `returned`, `truncated`, and `complete=false`. |
 | `query_entities` | Typed list/query with server-side filters, sort, pagination, and exact totals where the source supports them. | Default limit is 200. If `total > returned` or `truncated=true`, Plaid must fetch later pages before claiming all data. |
 | `aggregate_entities` | Generic `count`, `group`, and numeric/date `sum`/`avg`/`min`/`max` over one entity family. | Collects up to 10,000 matching IDs and returns `truncated`/`complete=false` when the aggregate cannot cover all matches. |
 | `get_filter_values` | Discovers exact set-like filter values for supported AI fields. | Returns `fields_ignored` and `complete=false` when a field is unsupported. |
@@ -121,6 +125,10 @@ Entity-to-resource mapping:
 | Contacts | Search, query, aggregate, detail. | Includes supplier link metadata where the service provides it. |
 | Accounts and charts of accounts | Search, query, aggregate, detail. | Account/COA hierarchy is available through entity detail and filters, not a specialized finance report. |
 | Analytics categories | Search, query, aggregate, detail. | Master-data read support only. |
+| Cost centers | `cost_centers`: search (by code and name), query, aggregate, detail (by code), history. | Master data › Cost centers, read through `CostCentersService` with the right of the page. `ref` is the code; `under` keeps every node below a group, `parent` the nodes directly under it; `budget_holder` is the node's budget holder by name, null when none is set (never an email). The quick search follows the screen (code, name, path) with the exact code or name first and `matched_on`; `search_all` leaves the path out. A person in limited access reads the whole tree, and the line counts of a detail are within their access (`data_access: limited`). |
+| Analytics dimensions | `analytics_axes`: search (by code and name), query, aggregate, detail (by code), history. | Master data › Analytics dimensions, read through `AnalyticsAxesService` with the Analytics right. Settings as the screen: applies to, required, `required_for` (where a value is required now, an enabled dimension only), open values, order, status, and the budget lines field of the dimension. The values are the `analytics_categories` family. Line counts in limited access as for cost centers. |
+| Working-day calendars | `working_day_calendars`: search (by code and name), query, aggregate, detail (by code), history. | Master data › Working-day calendars, read through `WorkingDayProfilesService` with the right of the page. A calendar reads one year, from 2000 to 2100, through the screen's year read: `total_days` is the sum of the twelve months computed by the server, and a year without days gives `source: none`, never 0. A country without a calendar is said in words. Line counts in limited access as for cost centers. |
+| Exchange rates and currency settings | `exchange_rates`: query and aggregate, no search, no detail, no history. | Budget management › Administration › Currencies, read through the rate matrix and the missing rates of the screen with the Budget right (as the read routes). One row per currency and year, the rate in the reporting currency for 1 unit of the currency, with `inverse_rate` and, with the `against` filter, `cross_rate` computed by the server; every answer carries the currency settings and the missing rates, read without writing. No page link: the page is an administration setting. In limited access the matrix shows the currencies of the person's lines only (`data_access: limited`). |
 | Business processes | Search, query, aggregate, detail. | Categories and owner metadata are exposed where the service returns them. |
 | Users | Search, query, aggregate, detail. | Business user profile fields are readable; auth tokens and notification settings are out of scope. A reader of users gets name, email and status. An administrator of users with access to all data also gets `roles` (every role; `primary_role` is the primary one only) and `data_access` (the effective mode), and the person's detail carries the Data access tab (nodes, levels, what each covers). |
 | Roles and their rights | `roles`: query, aggregate, detail (by name or id). `role_permissions`: query, aggregate, no detail. No search. | Admin › Roles, read through the screen's services: a role's kind and `user_count` (no person named), one row per role and right it gives, the role's detail as the screen's matrix. Rights and levels carry the screen's words in the person's language (`resource_label`, `level_label`). Users at admin level and access to all data only, as the screen. Writing a role or its rights stays on the screen. |
@@ -137,7 +145,7 @@ These areas are still not separate AI entity families in this stage:
 
 - App instances/deployments, app-asset assignments, interface bindings, interface mapping rules, connection legs/protocol rows, allocation rows, spend/CAPEX version rows, and other child/link tables. They are surfaced through parent detail where current services return them.
 - Portfolio planning, roadmap, capacity, weekly/status reports, dashboard views, and generated report outputs.
-- Currency/FX settings and snapshots, budget freeze/copy/reset operational state, and tenant/admin/platform settings.
+- Currency snapshots, budget freeze/copy/reset operational state, and tenant/admin/platform settings (the rates and the currency settings are the `exchange_rates` family).
 - Audit logs (a record's own history is read through its History tab), billing/subscription records, auth settings, security events, notification preferences, and AI conversations outside the current runtime context.
 - A person's own access ("what can I see?"): their roles are in the chat's user context; their data access is not read for themselves.
 - Raw uploaded binary content. Only metadata is exposed for attachments for now.
