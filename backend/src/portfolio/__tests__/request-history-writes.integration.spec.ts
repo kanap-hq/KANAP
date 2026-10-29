@@ -15,7 +15,7 @@ import {
 } from '../../spend/__tests__/round-inputs.fixtures';
 
 // The audit rows the request's history needs and its feed alone used to carry (record history,
-// lot 2, run 5): its team, contacts, budget lines, applications, assets, dependencies, web links
+// lot 2, run 5): its team, contacts, budget lines, applications, assets, business processes, dependencies, web links
 // and the edit of an integrated document. Each real change writes one row on the request
 // (`recordId` = the request, a set before and after); a write that changes nothing writes none.
 // The feed's `change` entry stays written beside it.
@@ -30,6 +30,7 @@ type Seed = {
   contact: string;
   application: string;
   asset: string;
+  process: string;
 };
 
 async function one(runner: QueryRunner, sql: string, params: unknown[]): Promise<string> {
@@ -71,6 +72,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
        VALUES ($1, 'srv-01', 'server', 'prod', 'active', now(), now()) RETURNING id`,
       [tenantId],
     ),
+    process: await one(runner, `INSERT INTO business_processes (tenant_id, name) VALUES ($1, 'Order to cash') RETURNING id`, [tenantId]),
   };
 }
 
@@ -184,6 +186,26 @@ async function testApplicationsAndAssets() {
   });
 }
 
+async function testBusinessProcesses() {
+  await inRolledBackTransaction(async (runner) => {
+    const data = await seed(runner);
+    const { requests, audit } = services(runner);
+    const opts = { manager: runner.manager, userId: data.userA };
+    const table = 'portfolio_request_business_processes';
+    const row = await onceThenNothing(audit, table, () => requests.bulkReplaceBusinessProcesses(data.requestId, [data.process], opts));
+    assert.equal(row.recordId, data.requestId);
+    assert.equal(row.userId, data.userA, 'the author is the caller');
+    assert.deepEqual(row.before, [], 'the Relations tab shape: the sorted ids');
+    assert.deepEqual(row.after, [data.process.toLowerCase()]);
+    await requests.bulkReplaceBusinessProcesses(data.requestId, [data.process.toUpperCase()], opts);
+    assert.equal(rowsOf(audit, table).length, 1, 'the same set in another case writes nothing');
+    await requests.bulkReplaceBusinessProcesses(data.requestId, [], opts);
+    assert.equal(rowsOf(audit, table).length, 2, 'the removal is a second row');
+    assert.deepEqual(rowsOf(audit, table)[1].before, [data.process.toLowerCase()]);
+    assert.deepEqual(rowsOf(audit, table)[1].after, []);
+  });
+}
+
 async function testDependencies() {
   await inRolledBackTransaction(async (runner) => {
     const data = await seed(runner);
@@ -239,6 +261,7 @@ void runSpecs('request-history-writes.integration.spec', [
   ['contacts: one row per change', testContacts],
   ['budget lines: one row per nature, the line as parent', testBudgetLines],
   ['applications and assets: one row on the request', testApplicationsAndAssets],
+  ['business processes: one row per change, in the Relations tab shape', testBusinessProcesses],
   ['dependencies: one row per add or remove, projects and requests', testDependencies],
   ['web links: one row per change', testUrls],
   ['integrated document: one row for a request edit', testDocumentEdit],

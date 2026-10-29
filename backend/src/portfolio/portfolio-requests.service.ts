@@ -2098,7 +2098,7 @@ export class PortfolioRequestsService {
   async bulkReplaceBusinessProcesses(
     requestId: string,
     businessProcessIds: string[],
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; userId?: string | null },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(PortfolioRequestBusinessProcess);
@@ -2121,6 +2121,21 @@ export class PortfolioRequestsService {
 
     if (toDelete.length > 0) await repo.remove(toDelete);
     if (toInsert.length > 0) await repo.save(toInsert);
+
+    // The request's own row of the set, in the shape of the Relations tab's link (`setOwnedLink`):
+    // the sorted ids before and after, written only when the set changes.
+    const before = Array.from(new Set(existing.map((e) => String(e.business_process_id).toLowerCase()))).sort();
+    const after = Array.from(new Set(unique.map((id) => String(id).toLowerCase()))).sort();
+    if (JSON.stringify(before) !== JSON.stringify(after)) {
+      await this.audit.log({
+        table: 'portfolio_request_business_processes',
+        recordId: requestId,
+        action: 'update',
+        before,
+        after,
+        userId: opts?.userId ?? null,
+      }, { manager: mg });
+    }
 
     return { ok: true, added: toInsert.length, removed: toDelete.length };
   }

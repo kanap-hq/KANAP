@@ -911,6 +911,7 @@ export class PortfolioRequestsController {
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
     return this.svc.bulkReplaceBusinessProcesses(id, body?.business_process_ids ?? [], {
       manager: req?.queryRunner?.manager,
+      userId: req.user?.sub ?? null,
     });
   }
 
