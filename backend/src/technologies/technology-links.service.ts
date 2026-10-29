@@ -437,10 +437,14 @@ export class TechnologyLinksService {
       [tenantId, tech.id, ids],
     );
     if (added.length) {
-      await this.audit.log(this.auditEntry({
-        table: 'application_technologies', recordId: tech.id, action: 'update',
-        before: null, after: { added }, userId: opts.userId ?? null,
-      }, opts), { manager: mg });
+      // One audit row per application, the application in the payload: the technology's history
+      // reads each as one link added, and the application's history finds it by its key.
+      for (const applicationId of added) {
+        await this.audit.log(this.auditEntry({
+          table: 'application_technologies', recordId: tech.id, action: 'update',
+          before: null, after: { application_id: applicationId }, userId: opts.userId ?? null,
+        }, opts), { manager: mg });
+      }
       await this.linksChanged(mg, tenantId, tech.id);
     }
     return { ok: true, added: added.length };
@@ -481,12 +485,12 @@ export class TechnologyLinksService {
     }
     const removed = await this.deleteDeclarations(mg, tenantId, tech.id, appId, versionId);
     if (removed.length) {
-      // The audit keeps the shape the screen has always written: the ids of the removed rows.
-      // The caller gets the full rows (version, notes, provenance) for its undo.
+      // One audit row for the application that loses the technology, the application in the
+      // payload, as for an addition. The caller gets the full rows (version, notes, provenance)
+      // for its undo.
       await this.audit.log(this.auditEntry({
         table: 'application_technologies', recordId: tech.id, action: 'update',
-        // The application, not the link ids: the history names what it loses.
-        before: { removed: [appId] }, after: null, userId: opts.userId ?? null,
+        before: { application_id: appId }, after: null, userId: opts.userId ?? null,
       }, opts), { manager: mg });
       await this.linksChanged(mg, tenantId, tech.id);
     }
@@ -532,10 +536,10 @@ export class TechnologyLinksService {
     if (!add) {
       const removed = await this.deleteDeclarations(mg, tenantId, tech.id, appId);
       if (removed.length) {
-        // The screen's audit shape: the ids removed, as before the one-row declaration write.
+        // One audit row for the application, the application in the payload.
         await this.audit.log(this.auditEntry({
           table: 'application_technologies', recordId: tech.id, action: 'update',
-          before: { removed: [appId] }, after: null, userId: opts.userId ?? null,
+          before: { application_id: appId }, after: null, userId: opts.userId ?? null,
         }, opts), { manager: mg });
         await this.linksChanged(mg, tenantId, tech.id);
       }
