@@ -570,6 +570,12 @@ Una fila **Total** fijada da, para cada par, el total de días, el total del cos
 
 ---
 
+## Preguntar al asistente
+
+[Plaid](ai-assistant.md) da las cifras de estos informes, con los mismos derechos: Cuentas de consolidación, Top aumento / disminución (10 líneas por defecto), Plantilla por mes (cada mes, la media y el pico), Coste por ETC, Contracargo global y Contracargo por empresa. También mide varias columnas o años en una misma respuesta, por ejemplo el presupuesto de cada proveedor a lo largo de tres años. En el contracargo, cubre OPEX y CAPEX cuando usted no nombra ninguno de los dos, y repite los avisos del informe. Pregunte, por ejemplo: "¿Qué líneas suben más del presupuesto 2026 a la revisión?" o "¿Cuánto se imputa a cada empresa en 2026, y cuánto paga cada una?"
+
+Plaid lee todas las líneas presupuestarias, incluidas las terminadas. Los informes presupuestarios leen las líneas aún activas el 1 de enero del año anterior al primer año mostrado, así que una línea terminada antes cuenta en la respuesta de Plaid y no en el informe.
+
 ## Características comunes
 
 Todos los informes comparten estas capacidades a través de la barra de herramientas compartida:
