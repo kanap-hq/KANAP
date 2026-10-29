@@ -1577,6 +1577,15 @@ async function testTechnologyPeopleOwners(harness: Harness) {
       + '\n\n**Removed**\n- Member Tester (IT owner)\n- Both Owner (IT owner)\n- Both Owner (business owner)',
     );
     assert.equal(preview.changes.technology_support_contacts.to, '**Added**\n- Sage Support (role: Sage)');
+    const { AiMutationOperationRegistry } = require('../mutation/ai-mutation-operation.registry');
+    const [peopleStored] = await runner.query(`SELECT * FROM ai_mutation_previews WHERE id = $1`, [preview.preview_id]);
+    const peopleFr = harness.app.get(AiMutationOperationRegistry).getOperation('update_technology_people').presentPreview(peopleStored, 'fr');
+    assert.equal(
+      peopleFr.changes.technology_owners.to,
+      '**Ajoutés**\n- Paul Martin (responsable IT)\n- Camille Roux (responsable métier)'
+      + '\n\n**Retirés**\n- Member Tester (responsable IT)\n- Both Owner (responsable IT)\n- Both Owner (responsable métier)',
+    );
+    assert.equal(peopleFr.changes.technology_support_contacts.to, '**Ajoutés**\n- Sage Support (rôle : Sage)');
     const executed = await approvePreview(harness, ctx, preview);
     assert.equal(executed.status, 'executed');
     const owners = await runner.query(
@@ -1797,6 +1806,13 @@ async function testTechnologyAlerts(harness: Harness) {
       preview.changes.technology_vulnerability_alerts.to,
       '**Vulnerability alerts**\n- off\n\n- 2 version exceptions will be cleared: 14, 16',
     );
+    const { AiMutationOperationRegistry } = require('../mutation/ai-mutation-operation.registry');
+    const [alertsStored] = await runner.query(`SELECT * FROM ai_mutation_previews WHERE id = $1`, [preview.preview_id]);
+    const alertsFr = harness.app.get(AiMutationOperationRegistry).getOperation('set_technology_vulnerability_alerts').presentPreview(alertsStored, 'fr');
+    assert.equal(
+      alertsFr.changes.technology_vulnerability_alerts.to,
+      '**Alertes de failles**\n- désactivées\n\n- 2 exceptions de version seront effacées : 14, 16',
+    );
     await approvePreview(harness, ctx, preview);
     const [technology] = await runner.query(`SELECT vulnerability_alerts FROM technologies WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.technologies.postgres]);
     assert.equal(technology.vulnerability_alerts, false);
@@ -1833,6 +1849,13 @@ async function testTechnologyAlerts(harness: Harness) {
     assert.equal(
       preview.changes.technology_vulnerability_alerts.to,
       '**Versions**\n- 15: follows the technology → alerts off\n  - the service packs 15 SP1, 15 SP2 follow base version 15',
+    );
+    const { AiMutationOperationRegistry } = require('../mutation/ai-mutation-operation.registry');
+    const [packsStored] = await runner.query(`SELECT * FROM ai_mutation_previews WHERE id = $1`, [preview.preview_id]);
+    const packsFr = harness.app.get(AiMutationOperationRegistry).getOperation('set_technology_vulnerability_alerts').presentPreview(packsStored, 'fr');
+    assert.equal(
+      packsFr.changes.technology_vulnerability_alerts.to,
+      '**Versions**\n- 15 : suit la technologie → alertes désactivées\n  - les service packs 15 SP1, 15 SP2 suivent la version de base 15',
     );
     await approvePreview(harness, ctx, preview);
     const rows = await runner.query(
