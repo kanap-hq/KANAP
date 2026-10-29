@@ -457,7 +457,9 @@ export async function listAiVulnerabilities(
          ${applicationsReach}
         WHERE tv.tenant_id = $1 ${narrow.map((clause) => `AND ${clause}`).join(' ')}
      ),
-     f AS (SELECT x.* FROM x ${where.length ? `WHERE ${where.join(' AND ')}` : ''})
+     -- Inlined: read twice (the rows and the distinct CVE), a materialized f cost a full scan of it
+     -- and most of the time in JIT (lot E review: 75-103 ms against 28 ms on 10,131 rows).
+     f AS NOT MATERIALIZED (SELECT x.* FROM x ${where.length ? `WHERE ${where.join(' AND ')}` : ''})
      -- The distinct CVE of every row kept, as the page's total: over the whole set, never the page or the ids cap.
      SELECT ${opts.idsOnly ? 'x.id' : 'x.*'}, (SELECT count(DISTINCT fd.cve_id) FROM f fd)::int AS distinct_total, count(*) OVER () AS total
        FROM f x
