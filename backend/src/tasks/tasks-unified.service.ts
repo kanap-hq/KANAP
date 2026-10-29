@@ -167,6 +167,7 @@ export class TasksUnifiedService {
     changedField: 'linked_applications' | 'linked_assets';
     tenantId?: string;
     userId?: string | null;
+    audit?: TaskAuditOptions;
     manager: EntityManager;
   }): Promise<void> {
     const tenantId = params.tenantId || await this.getTaskTenant(params.taskId, params.manager);
@@ -214,6 +215,19 @@ export class TasksUnifiedService {
       );
     }
 
+    // One audit row per set changed, the task in `record_id` and the sorted ids before and after
+    // (`setOwnedLink`): the task's history reads it by `record_id`. The feed entry stays below.
+    await this.audit.log({
+      table: params.table,
+      recordId: params.taskId,
+      action: 'update',
+      before: { ids: [...existingIds].sort() },
+      after: { ids: [...ids].sort() },
+      userId: params.userId ?? null,
+      source: params.audit?.source,
+      sourceRef: params.audit?.sourceRef ?? null,
+    }, { manager: params.manager });
+
     await this.taskActivitiesSvc.logChange(
       params.taskId,
       { [params.changedField]: [beforeNames, afterNames] },
@@ -223,7 +237,7 @@ export class TasksUnifiedService {
     );
   }
 
-  async setApplicationLinks(taskId: string, applicationIds: string[], opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null }): Promise<void> {
+  async setApplicationLinks(taskId: string, applicationIds: string[], opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null; audit?: TaskAuditOptions }): Promise<void> {
     const manager = opts?.manager ?? this.repo.manager;
     const run = (mg: EntityManager) => this.syncTaskLinks({
       taskId,
@@ -235,13 +249,14 @@ export class TasksUnifiedService {
       changedField: 'linked_applications',
       tenantId: opts?.tenantId,
       userId: opts?.userId,
+      audit: opts?.audit,
       manager: mg,
     });
     if (opts?.manager) return run(manager);
     return this.dataSource.transaction(run);
   }
 
-  async setAssetLinks(taskId: string, assetIds: string[], opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null }): Promise<void> {
+  async setAssetLinks(taskId: string, assetIds: string[], opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null; audit?: TaskAuditOptions }): Promise<void> {
     const manager = opts?.manager ?? this.repo.manager;
     const run = (mg: EntityManager) => this.syncTaskLinks({
       taskId,
@@ -253,6 +268,7 @@ export class TasksUnifiedService {
       changedField: 'linked_assets',
       tenantId: opts?.tenantId,
       userId: opts?.userId,
+      audit: opts?.audit,
       manager: mg,
     });
     if (opts?.manager) return run(manager);
@@ -851,10 +867,10 @@ export class TasksUnifiedService {
     await this.queueTaskAssignmentNotification(saved, null, userId, opts?.tenantId, manager);
 
     if (hasApplicationIds) {
-      await this.setApplicationLinks(saved.id, applicationIds, { manager, tenantId: opts?.tenantId, userId });
+      await this.setApplicationLinks(saved.id, applicationIds, { manager, tenantId: opts?.tenantId, userId, audit: opts?.audit });
     }
     if (hasAssetIds) {
-      await this.setAssetLinks(saved.id, assetIds, { manager, tenantId: opts?.tenantId, userId });
+      await this.setAssetLinks(saved.id, assetIds, { manager, tenantId: opts?.tenantId, userId, audit: opts?.audit });
     }
 
     return saved;
@@ -971,10 +987,10 @@ export class TasksUnifiedService {
     }
 
     if (hasApplicationIds) {
-      await this.setApplicationLinks(saved.id, applicationIds, { manager, tenantId, userId });
+      await this.setApplicationLinks(saved.id, applicationIds, { manager, tenantId, userId, audit: opts?.audit });
     }
     if (hasAssetIds) {
-      await this.setAssetLinks(saved.id, assetIds, { manager, tenantId, userId });
+      await this.setAssetLinks(saved.id, assetIds, { manager, tenantId, userId, audit: opts?.audit });
     }
 
     return write.stillFollowing ? Object.assign(saved, { stillFollowing: true as const }) : saved;
@@ -1177,10 +1193,10 @@ export class TasksUnifiedService {
     }
 
     if (hasApplicationIds) {
-      await this.setApplicationLinks(saved.id, applicationIds, { manager, tenantId, userId });
+      await this.setApplicationLinks(saved.id, applicationIds, { manager, tenantId, userId, audit: opts?.audit });
     }
     if (hasAssetIds) {
-      await this.setAssetLinks(saved.id, assetIds, { manager, tenantId, userId });
+      await this.setAssetLinks(saved.id, assetIds, { manager, tenantId, userId, audit: opts?.audit });
     }
 
     return write.stillFollowing ? Object.assign(saved, { stillFollowing: true as const }) : saved;

@@ -1363,20 +1363,26 @@ export class PortfolioRequestsService {
       { manager: mg },
     );
 
-    if (overrides?.close_task === true && task.status !== 'done') {
-      const beforeTask = { ...task };
-      // The status and its time only, never the task read above (`tasks/task-column-write.ts`).
-      const savedTask = await writeTaskColumns(taskRepo, task, { status: 'done', updated_at: new Date() });
+    const closing = overrides?.close_task === true && task.status !== 'done';
+    const beforeTask = { ...task };
+    // The status and its time only, never the task read above (`tasks/task-column-write.ts`).
+    const savedTask = closing
+      ? await writeTaskColumns(taskRepo, task, { status: 'done', updated_at: new Date() })
+      : task;
 
-      await this.audit.log({
-        table: 'tasks',
-        recordId: savedTask.id,
-        action: 'update',
-        before: beforeTask,
-        after: savedTask,
-        userId,
-      }, { manager: mg });
+    // The task's own audit row names the request it became (`converted_to_request_id`, beside the
+    // saved row), with its closing when the conversion closes it: the task's history reads
+    // "Converted to request: REQ-4". The feed entries above and below stay as they were.
+    await this.audit.log({
+      table: 'tasks',
+      recordId: savedTask.id,
+      action: 'update',
+      before: beforeTask,
+      after: { ...savedTask, converted_to_request_id: savedRequest.id },
+      userId,
+    }, { manager: mg });
 
+    if (closing) {
       await this.taskActivitiesSvc.logChange(
         task.id,
         { status: [beforeTask.status, savedTask.status] },
