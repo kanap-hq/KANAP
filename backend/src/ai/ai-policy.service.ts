@@ -86,6 +86,9 @@ const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> =
   chargeback_lines: 'reporting',
   // The tree of cost centers, read with the right of its page (`GET /cost-centers`).
   cost_centers: 'cost_centers',
+  // Master data › Working-day calendars and Analytics dimensions, read with the right of their page.
+  working_day_calendars: 'working_day_profiles',
+  analytics_axes: 'analytics',
 };
 
 /**
@@ -117,6 +120,8 @@ const ENTITY_SCREEN: Partial<Record<AiQueryEntityType | AiContextEntityType, str
   chargeback: 'Reporting › Global chargeback',
   chargeback_lines: 'Reporting › Company chargeback',
   cost_centers: 'Master data › Cost centers',
+  working_day_calendars: 'Master data › Working-day calendars',
+  analytics_axes: 'Master data › Analytics dimensions',
 };
 
 /** The level a family is read at: the caller's, raised to the family's minimum. */
@@ -154,6 +159,7 @@ const RIGHT_PLAIN_NAMES: Record<string, string> = {
 const READ_RIGHT_PLAIN_NAMES: Record<string, string> = {
   reporting: 'the reports',
   cost_centers: 'cost centers',
+  working_day_profiles: 'working-day calendars',
 };
 
 const LEVEL_PLAIN_VERBS: Record<PermissionLevel, string> = {

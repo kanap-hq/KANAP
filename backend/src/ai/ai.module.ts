@@ -32,6 +32,7 @@ import { TasksModule } from '../tasks/tasks.module';
 import { TechnologiesModule } from '../technologies/technologies.module';
 import { VulnerabilitiesModule } from '../vulnerabilities/vulnerabilities.module';
 import { CostCentersModule } from '../cost-centers/cost-centers.module';
+import { WorkingDayProfilesModule } from '../working-day-profiles/working-day-profiles.module';
 import { UserRole } from '../users/user-role.entity';
 import { UsersModule } from '../users/users.module';
 import { StorageModule } from '../common/storage/storage.module';
@@ -268,6 +269,8 @@ import { AiRecordHistoryService } from './ai-record-history.service';
     VulnerabilitiesModule,
     // Master data › Cost centers, which the `cost_centers` family reads (Plaid L9, lot A).
     CostCentersModule,
+    // Master data › Working-day calendars, read by the working_day_calendars family (Plaid L9).
+    WorkingDayProfilesModule,
   ],
   controllers: [
     AiCapabilitiesController,

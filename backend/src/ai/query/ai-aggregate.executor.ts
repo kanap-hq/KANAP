@@ -31,6 +31,15 @@ import {
 import { aiDataAccessNote } from './ai-data-access-note.util';
 import { CostCentersService } from '../../cost-centers/cost-centers.service';
 import { aggregateCostCenterRows, filterAiCostCenters } from './ai-cost-centers.query';
+import { WorkingDayProfilesService } from '../../working-day-profiles/working-day-profiles.service';
+import { AnalyticsAxesService } from '../../analytics/analytics-axes.service';
+import {
+  AI_CALENDAR_NO_YEAR_NOTE,
+  AI_CALENDAR_YEAR_NOTE,
+  aggregateWorkingDayCalendarRows,
+  listAiWorkingDayCalendars,
+} from './ai-working-day-calendars.query';
+import { AI_AXIS_VALUES_NOTE, aggregateAnalyticsAxisRows, listAiAnalyticsAxes } from './ai-analytics-axes.query';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
@@ -682,6 +691,9 @@ export class AiAggregateExecutor {
     @Optional() private readonly chargeback?: ChargebackReportService,
     /** Master data › Cost centers, which `cost_centers` groups. */
     @Optional() private readonly costCenters?: CostCentersService,
+    /** Master data › Working-day calendars and Analytics dimensions: `working_day_calendars`, `analytics_axes`. */
+    @Optional() private readonly workingDayProfiles?: WorkingDayProfilesService,
+    @Optional() private readonly analyticsAxes?: AnalyticsAxesService,
   ) {
     // Absent, a technology filter on application_count matches nothing: say so once, at start.
     if (!policy) new Logger(AiAggregateExecutor.name).warn('AiPolicyService is not injected: technology aggregates see no application.');
@@ -2184,6 +2196,68 @@ export class AiAggregateExecutor {
         filters_applied: adapted.applied,
         filters_ignored: adapted.ignored,
         scope: scoped.scope,
+      };
+    }
+    if (input.entity_type === 'working_day_calendars' || input.entity_type === 'analytics_axes') {
+      // Read with the right of their page, as the screen: checked again here, the database not guarding it.
+      if (!this.policy) throw new BadRequestException('The master data is not available.');
+      await this.policy.assertEntityTypeReadRight(context, input.entity_type, context.manager);
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: null,
+          function: 'count',
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+      const base = { manager: context.manager, tenantId: context.tenantId, userId: context.userId };
+      const shared = {
+        group_by: input.group_by,
+        metric: null,
+        function: 'count' as const,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+      if (input.entity_type === 'working_day_calendars') {
+        if (!this.workingDayProfiles) throw new BadRequestException('The working-day calendars are not available.');
+        const result = await listAiWorkingDayCalendars({ calendars: this.workingDayProfiles }, scoped.query, { ...base, lang: language ?? 'en' }, true);
+        const groups = aggregateWorkingDayCalendarRows(result.items, input.group_by);
+        return {
+          calendar_year: result.year,
+          calendar_note: result.year != null ? AI_CALENDAR_YEAR_NOTE : AI_CALENDAR_NO_YEAR_NOTE,
+          ...shared,
+          groups,
+          total: result.items.length,
+          returned: groups.length,
+        };
+      }
+      if (!this.analyticsAxes) throw new BadRequestException('The analytics dimensions are not available.');
+      const result = await listAiAnalyticsAxes({ axes: this.analyticsAxes }, scoped.query, { ...base, language }, true);
+      const groups = aggregateAnalyticsAxisRows(result.items, input.group_by);
+      return {
+        values_note: AI_AXIS_VALUES_NOTE,
+        ...shared,
+        groups,
+        // A dimension required for both natures counts in each group of required_for.
+        total: result.items.length,
+        returned: groups.length,
       };
     }
     if (input.entity_type === 'chargeback' || input.entity_type === 'chargeback_lines') {

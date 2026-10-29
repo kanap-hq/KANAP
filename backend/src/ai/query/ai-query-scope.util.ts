@@ -46,7 +46,9 @@ export type ScopedAiEntityType =
   | 'technology_versions'
   | 'users'
   | 'vulnerabilities'
-  | 'cost_centers';
+  | 'cost_centers'
+  | 'working_day_calendars'
+  | 'analytics_axes';
 
 export type ResolvedAiScope = {
   requested: AiQueryScope;

@@ -98,6 +98,7 @@ export const AI_QUERY_ENTITY_TYPES = [
   'data_access',
   'chargeback', 'chargeback_lines',
   'cost_centers',
+  'working_day_calendars', 'analytics_axes',
 ] as const;
 
 /**

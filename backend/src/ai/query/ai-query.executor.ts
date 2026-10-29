@@ -125,6 +125,20 @@ import {
   readAiCostCenterTree,
   type AiCostCenterRow,
 } from './ai-cost-centers.query';
+import { WorkingDayProfilesService } from '../../working-day-profiles/working-day-profiles.service';
+import { AnalyticsAxesService } from '../../analytics/analytics-axes.service';
+import {
+  AI_CALENDAR_NO_YEAR_NOTE,
+  AI_CALENDAR_YEAR_NOTE,
+  calendarHolidays,
+  calendarMonths,
+  calendarYearOf,
+  listAiWorkingDayCalendars,
+  readCalendarYear,
+  type AiWorkingDayCalendarOpts,
+  type AiWorkingDayCalendarRow,
+} from './ai-working-day-calendars.query';
+import { AI_AXIS_VALUES_NOTE, listAiAnalyticsAxes, toAiAnalyticsAxisRow, type AiAnalyticsAxisRow } from './ai-analytics-axes.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
@@ -653,6 +667,9 @@ export class AiQueryExecutor {
     @Optional() private readonly chargeback?: ChargebackReportService,
     /** Master data › Cost centers, which the `cost_centers` family reads. */
     @Optional() private readonly costCenters?: CostCentersService,
+    /** Master data › Working-day calendars and Analytics dimensions: `working_day_calendars`, `analytics_axes`. */
+    @Optional() private readonly workingDayProfiles?: WorkingDayProfilesService,
+    @Optional() private readonly analyticsAxes?: AnalyticsAxesService,
   ) {
     // Absent, the technology figures close (no application count, no detail): say so once, at start.
     const logger = new Logger(AiQueryExecutor.name);
@@ -1486,6 +1503,85 @@ export class AiQueryExecutor {
         } : {}),
       },
     });
+  }
+
+  /** A working-day calendar of Master data, `ref` its code; with a year, its source and exact total. */
+  private mapWorkingDayCalendar(row: AiWorkingDayCalendarRow): AiEntitySummaryDto {
+    return toEntitySummary('working_day_calendars', {
+      id: row.id,
+      reference: row.code,
+      label: row.name,
+      status: row.status,
+      summary: row.description,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      metadata: {
+        code: row.code,
+        name: row.name,
+        kind: row.kind,
+        country: row.country,
+        country_code: row.country_code,
+        region: row.region,
+        region_code: row.region_code,
+        disabled_at: row.disabled_at,
+        years_edited: row.years_edited.join(', ') || null,
+        ...(row.year != null ? { year: row.year, source: row.source, total_days: row.total_days } : {}),
+      },
+    });
+  }
+
+  /** An analytics dimension of Master data, `ref` its code, with its settings and its budget_lines field. */
+  private mapAnalyticsAxis(row: AiAnalyticsAxisRow): AiEntitySummaryDto {
+    return toEntitySummary('analytics_axes', {
+      id: row.id,
+      reference: row.code,
+      label: row.name,
+      status: row.status,
+      summary: row.description,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      metadata: {
+        code: row.code,
+        name: row.name,
+        is_default: row.is_default,
+        applies_to: row.applies_to,
+        required: row.required,
+        required_for: row.required_for.join(', ') || null,
+        open_values: row.open_values,
+        disabled_at: row.disabled_at,
+        sort_order: row.sort_order,
+        field: row.field,
+      },
+    });
+  }
+
+  /**
+   * The services of Master data › Working-day calendars and Analytics dimensions, read with the
+   * right of their page: checked again here, the database not guarding it, refused in words (the
+   * right and the screen).
+   */
+  private async workingDayCalendarServices(context: AiExecutionContextWithManager, year?: number | null) {
+    if (!this.policy || !this.workingDayProfiles) throw new BadRequestException('The working-day calendars are not available.');
+    await this.policy.assertEntityTypeReadRight(context, 'working_day_calendars', context.manager);
+    const language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    const opts: AiWorkingDayCalendarOpts = {
+      manager: context.manager,
+      tenantId: context.tenantId,
+      userId: context.userId,
+      lang: language ?? 'en',
+      year: year ?? null,
+    };
+    return { services: { calendars: this.workingDayProfiles }, opts };
+  }
+
+  private async analyticsAxesServices(context: AiExecutionContextWithManager) {
+    if (!this.policy || !this.analyticsAxes) throw new BadRequestException('The analytics dimensions are not available.');
+    await this.policy.assertEntityTypeReadRight(context, 'analytics_axes', context.manager);
+    const language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    return {
+      services: { axes: this.analyticsAxes },
+      opts: { manager: context.manager, tenantId: context.tenantId, userId: context.userId, language },
+    };
   }
 
   /**
@@ -2690,6 +2786,47 @@ export class AiQueryExecutor {
       };
     }
 
+    if (input.entity_type === 'working_day_calendars') {
+      const { services, opts } = await this.workingDayCalendarServices(context, input.year);
+      const result = await listAiWorkingDayCalendars(services, scoped.query, opts);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        calendar_year: result.year,
+        calendar_note: result.year != null ? AI_CALENDAR_YEAR_NOTE : AI_CALENDAR_NO_YEAR_NOTE,
+        items: result.items.map((row) => this.mapWorkingDayCalendar(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'analytics_axes') {
+      const { services, opts } = await this.analyticsAxesServices(context);
+      const result = await listAiAnalyticsAxes(services, scoped.query, opts);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        values_note: AI_AXIS_VALUES_NOTE,
+        items: result.items.map((row) => this.mapAnalyticsAxis(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
     if (input.entity_type === 'vulnerabilities') {
       const applications = await resolveAiApplicationsReach(context, this.policy);
       const result = await listAiVulnerabilities(context.manager, context.tenantId, scoped.query, applications);
@@ -3332,6 +3469,8 @@ export class AiQueryExecutor {
       // The line counts pass the lines' access rules: within the person's access when it is limited.
       return { ...this.toDetailResult(this.mapCostCenter(row), data), ...await aiDataAccessCountsNote(context, entityType) };
     }
+    if (entityType === 'working_day_calendars') return this.workingDayCalendarDetail(context, entityId, input.year);
+    if (entityType === 'analytics_axes') return this.analyticsAxisDetail(context, entityId);
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
 
     if (entityType === 'tasks') {
@@ -3805,6 +3944,91 @@ export class AiQueryExecutor {
         applications_reached: item.applications_reached,
       })),
     });
+  }
+
+  /**
+   * A working-day calendar as its page (`GET /working-day-profiles/:id`): its source, the years
+   * stored, the OPEX and CAPEX lines using it (within the person's access) and, with a year, that
+   * year as its tab (`GET /working-day-profiles/:id/years/:year`): the source, the twelve months,
+   * their exact total and the public holidays by name in the person's language.
+   */
+  private async workingDayCalendarDetail(context: AiExecutionContextWithManager, id: string, rawYear?: number): Promise<AiEntityDetailDto> {
+    const { services, opts } = await this.workingDayCalendarServices(context);
+    const year = calendarYearOf(undefined, rawYear ?? null);
+    const ctx = { manager: context.manager, tenantId: context.tenantId, userId: context.userId };
+    const calendar = await services.calendars.get(id, ctx, opts.lang);
+    const row: AiWorkingDayCalendarRow = {
+      id: calendar.id,
+      code: calendar.code,
+      name: calendar.name,
+      kind: calendar.country_iso ? 'standard' : 'custom',
+      country: calendar.country_name,
+      country_code: calendar.country_iso,
+      region: calendar.region_name,
+      region_code: calendar.region_code,
+      status: calendar.status,
+      disabled_at: calendar.disabled_at,
+      description: calendar.description,
+      years_edited: Object.keys(calendar.days_by_year ?? {}),
+      created_at: calendar.created_at,
+      updated_at: calendar.updated_at,
+      year: null,
+      source: null,
+      total_days: null,
+    };
+    let yearBlock: Record<string, unknown> = { year_note: AI_CALENDAR_NO_YEAR_NOTE };
+    if (year != null) {
+      const read = await readCalendarYear(services, opts, id, year);
+      row.year = year;
+      row.source = read.source;
+      row.total_days = read.total_days;
+      yearBlock = {
+        year,
+        source: read.source,
+        total_days: read.total_days,
+        months: calendarMonths(read.days),
+        ...(read.source === 'edited' && read.standard_days ? { standard_total_days: read.standard_total_days } : {}),
+        holidays: calendarHolidays(read.holidays),
+        year_note: AI_CALENDAR_YEAR_NOTE,
+      };
+    }
+    const { days_by_year: _days, opex_count: _opex, capex_count: _capex, ...rest } = calendar;
+    return {
+      ...this.toDetailResult(this.mapWorkingDayCalendar(row), {
+        ...rest,
+        kind: row.kind,
+        years_edited: row.years_edited,
+        lines_using: { opex: calendar.opex_count, capex: calendar.capex_count },
+        lines_using_note: 'The OPEX and CAPEX lines with a quantity × price line on this calendar, whatever the year or column.',
+        ...yearBlock,
+      }),
+      ...(await aiDataAccessNote(context, 'working_day_calendars')),
+    };
+  }
+
+  /**
+   * An analytics dimension as its page (`GET /analytics-axes/:id`): its settings, its number of
+   * values, the OPEX and CAPEX lines holding a value on it and without one (within the person's
+   * access), and the natures on which no enabled value can be chosen.
+   */
+  private async analyticsAxisDetail(context: AiExecutionContextWithManager, id: string): Promise<AiEntityDetailDto> {
+    const { services, opts } = await this.analyticsAxesServices(context);
+    const axis = await services.axes.get(id, { manager: context.manager, tenantId: context.tenantId, userId: context.userId });
+    const row = toAiAnalyticsAxisRow(axis, opts.language);
+    return {
+      ...this.toDetailResult(this.mapAnalyticsAxis(row), {
+        ...row,
+        value_count: axis.value_count,
+        opex_count: axis.opex_count,
+        capex_count: axis.capex_count,
+        opex_missing: axis.opex_missing,
+        capex_missing: axis.capex_missing,
+        unusable_for: axis.unusable_for,
+        counts_note: 'opex_count and capex_count: the lines holding a value on the dimension; opex_missing and capex_missing: the lines of every status without one (0 for a nature it does not apply to), whether or not it is required; unusable_for: the natures it applies to on which none of its enabled values can be chosen.',
+        values_note: AI_AXIS_VALUES_NOTE,
+      }),
+      ...(await aiDataAccessNote(context, 'analytics_axes')),
+    };
   }
 
   /**

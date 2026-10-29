@@ -24,6 +24,8 @@ export const AI_PAGE_ROUTES: Readonly<Record<string, { path: (id: string) => str
   chargeback: { path: () => '/ops/reports/chargeback/global', resource: 'reporting' },
   chargeback_lines: { path: () => '/ops/reports/chargeback/company', resource: 'reporting' },
   cost_centers: { path: (id) => `/master-data/cost-centers/${id}`, resource: 'cost_centers' },
+  working_day_calendars: { path: (id) => `/master-data/working-day-calendars/${id}`, resource: 'working_day_profiles' },
+  analytics_axes: { path: (id) => `/master-data/analytics/dimensions/${id}`, resource: 'analytics' },
 };
 
 /** The sentence the read tools give about `page_url` (chat and MCP share the descriptions). */

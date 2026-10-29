@@ -41,6 +41,8 @@ import { vulnerabilitiesRegistry } from './vulnerabilities.registry';
 import { chargebackRegistry } from './chargeback.registry';
 import { chargebackLinesRegistry } from './chargeback-lines.registry';
 import { costCentersRegistry } from './cost-centers.registry';
+import { workingDayCalendarsRegistry } from './working-day-calendars.registry';
+import { analyticsAxesRegistry } from './analytics-axes.registry';
 
 export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistry> = {
   accounts: accountsRegistry,
@@ -75,6 +77,8 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   chargeback: chargebackRegistry,
   chargeback_lines: chargebackLinesRegistry,
   cost_centers: costCentersRegistry,
+  working_day_calendars: workingDayCalendarsRegistry,
+  analytics_axes: analyticsAxesRegistry,
 };
 
 export function getAiEntityRegistry(entityType: AiQueryEntityType): AiEntityFilterRegistry {

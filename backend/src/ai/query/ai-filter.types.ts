@@ -35,7 +35,9 @@ export type AiQueryEntityType =
   | 'technology_versions'
   | 'users'
   | 'vulnerabilities'
-  | 'cost_centers';
+  | 'cost_centers'
+  | 'working_day_calendars'
+  | 'analytics_axes';
 
 export type AiSetFilterValue = Array<string | null>;
 /** Every value of a set field but these (exclude mode): a value created later is kept. */
@@ -294,6 +296,11 @@ export type AiQueryResult = {
   data_access_note?: string;
   /** `chargeback` and `chargeback_lines`: the report's parameters and total, its warnings in words, the company of the lines. */
   chargeback?: AiChargebackReport;
+  /** `working_day_calendars`: the year whose working days the rows give (null without the year filter), and what they mean. */
+  calendar_year?: number | null;
+  calendar_note?: string;
+  /** `analytics_axes`: where the values of a dimension and a line's value on it are read. */
+  values_note?: string;
   scope: {
     requested: AiQueryScope;
     resolved: boolean;
@@ -347,6 +354,11 @@ export type AiAggregateResult = {
   data_access_note?: string;
   /** `chargeback` and `chargeback_lines`: the report's parameters and total, its warnings in words, the company of the lines. */
   chargeback?: AiChargebackReport;
+  /** `working_day_calendars`: the year whose working days the rows give (null without the year filter), and what they mean. */
+  calendar_year?: number | null;
+  calendar_note?: string;
+  /** `analytics_axes`: where the values of a dimension and a line's value on it are read. */
+  values_note?: string;
   group_by: string;
   /** Budget lines: the second group field; each group then carries `then_key`. */
   then_by?: string;
