@@ -392,7 +392,10 @@ An application is an `APP-n` or an exact name, a server an `AST-n`, exact name,
 hostname or fqdn, a version its label. The request may start from the other side
 ("add PostgreSQL 16 to CheeseTrack"): the technology stays in `technology` and
 the target goes in its list. A technology absent from the tenant is refused
-before the preview, with the screen to add it on; this lot never creates one.
+before the preview with a tool result that says so; the model prepares a plan
+that creates or adopts it first (`create_business_record`, `entity_type`
+`technologies`), then declares the link. The link tool itself never creates a
+technology.
 
 Every write goes through `TechnologyLinksService`, never the tables: an
 application with a version and servers enters `declareApplicationTechnology`
@@ -419,6 +422,72 @@ would write nothing is refused. The execution locks the technology
 preview answers 409 and nothing is written. The undo removes exactly the links
 added and puts back exactly the rows removed, with their version and notes; a
 version created on the way stays (decision 12), and the undo card says so.
+
+
+### Technology records and versions (write)
+
+`create_business_record` and `update_business_record` take the family
+`technologies` (right `infrastructure:member`). A creation writes `name`,
+`editor`, `family`, `lifecycle`, `hosting_type`, `description`, `notes`,
+`support_notes`, the replacement (`replaced_by`, a `TEC-n`, UUID or exact name),
+`cyber_criticality`, `recovery_wave`, `rto_minutes`, `rpo_minutes` and
+`admin_zone`; the IT catalog fields take a code or the exact label, without
+case, and the card shows the label. The service keeps its rules (unique name
+without case, no replacement cycle, default hosting type, default alert
+setting); the preview checks the name and the replacement first. `cpe_products`,
+`cve_names`, `catalog_key`, `mode` and `vulnerability_alerts` are never written
+by Plaid and are refused at preparation; `vulnerability_alerts` is a separate
+setting (lot 5).
+
+The catalog comes first. Before a free entry, the preparation looks for the
+KANAP catalog entry whose name equals the requested name, without case, and the
+tenant has not adopted. When it finds one, the preview is an adoption: the card
+says "adopted from the KANAP catalog", the family the adoption writes, and the
+number of versions with the range of their end-of-support dates. The execution
+calls `TechnologyCatalogService.adopt` with the preview's audit source, then
+applies the other fields the person gave with `TechnologiesService.update`, in
+the same transaction; a `family` given by the person is written by that update
+and shown separately on the card. A same-name technology of the tenant is
+refused with its `TEC-n`; a name without an exact entry but with entries that
+contain it is refused with at most five of them, and the person chooses one or
+asks for a free entry (`from_catalog: false`). The free entry runs
+`TechnologiesService.create`. The adoption writes its own `technology_versions`
+audit rows with `source: ai_chat` and the preview reference; a creation is not
+undoable.
+
+An update changes the same fields, checks the name and the replacement at the
+preparation, compares every changed field with the live record before writing
+(409, nothing written), and is undoable through the generic reverse path: the
+previous values go back through `TechnologiesService.update`. The technology
+service writes the audit rows, with the preview's source and reference, and the
+screen keeps its own audit without a source.
+
+`update_technology_versions` (chat only, preview and approval) writes the
+versions of one technology: `add` creates versions with a label, standard and
+extended support dates (`YYYY-MM-DD`) and notes; `update` names a version by
+its current label and changes its label, dates or notes, a date or notes at
+`null` clearing it. The execution calls `TechnologiesService.createVersion` and
+`updateVersion` with the preview's audit source; the service keeps its rules
+(unique label without case, dates, extended support not before standard) and
+the preview checks them first. `cpe_version`, `build_prefixes` and a version's
+`vulnerability_alerts` are not written (the vulnerability matching and the lot
+5 setting); deleting a version stays in the technology's Overview tab. The
+execution locks the technology (`FOR NO KEY UPDATE`), re-reads the versions and
+compares label, dates and notes: a change since the preview, or a version added
+in between under the same label, answers 409 and writes nothing. The undo
+restores exactly the changed versions; a version added on the way stays, and
+the undo card says so. A date the tenant (or Plaid) writes on a catalog version
+survives the catalog sync: the sync keeps a value that differs from the one it
+last wrote (`technology-catalog-sync.service.ts`, `now !== was`).
+
+The two tools together make the create-then-link plan: when the flagship phrase
+names a technology the tenant does not have, the model prepares one
+`prepare_mutation_plan` with `create_business_record` first and
+`update_technology_links` second, the second input carrying
+`{{create_….ref}}`. The execution of the creation (adoption included) sets
+`target_ref` from the created `TEC-n`, so the second step resolves it; a version
+the catalog holds is adopted with its dates and found by the link, otherwise
+the link creates it as in lot 3.
 
 ### Vulnerabilities
 
