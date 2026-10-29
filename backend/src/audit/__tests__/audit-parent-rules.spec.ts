@@ -58,10 +58,11 @@ async function testPayloadRules() {
     'contact supplier sync falls back to record_id',
   );
 
-  // A budget task names its line in the saved task.
-  assert.deepEqual(
+  // The legacy budget task label has no rule: the line reads the `tasks` row written beside it.
+  assert.equal(
     await resolveAuditParent(manager, { table: 'spend_tasks', recordId: OTHER, after: { related_object_id: LINE }, before: null }),
-    { table: 'spend_items', id: LINE },
+    null,
+    'the legacy line task label has no parent',
   );
 }
 
@@ -168,7 +169,13 @@ function testMigrationLabelsMatchRules() {
     .filter(([, rule]) => rule.parentTable === 'spend_items')
     .map(([label]) => label)
     .sort();
-  assert.deepEqual(migrationLabels(), spendItemLabels, 'the migration and the line write rules cover the same labels');
+  // `spend_tasks` left the rules (the line reads the `tasks` row the same call writes): the frozen
+  // migration still names it, and the rows it filled are not read.
+  assert.deepEqual(
+    migrationLabels().filter((label) => label !== 'spend_tasks'),
+    spendItemLabels,
+    'the migration and the line write rules cover the same labels',
+  );
   // The links the backfill fills by `record_id` are the explicit-parent labels, minus the asset
   // links whose `record_id` is the asset, and minus the contract, project and request links added
   // by correctifs C: their old rows stay without parent (the payload cannot choose the line
