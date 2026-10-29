@@ -136,7 +136,7 @@ export class UpdateTechnologyWebLinksAiMutationOperation implements AiMutationOp
     input: UpdateTechnologyWebLinksInput,
   ): Promise<AiPreparedMutationPreview> {
     const request = this.normalizeRequest(input);
-    const technology = await this.support.resolveTechnology(context, request.technology, 'link');
+    const technology = await this.support.resolveTechnology(context, request.technology);
     const before = await this.readLinks(context, technology.id);
     const stored = this.normalizeChanges(request, before);
     if (!stored.add.length && !stored.update.length && !stored.remove.length) {
@@ -373,6 +373,7 @@ export class UpdateTechnologyWebLinksAiMutationOperation implements AiMutationOp
     };
 
     const planned = new Map(before.map((link) => [link.id, { ...link }]));
+    const removedUrls = new Set<string>();
     for (const entry of input.remove ?? []) {
       const url = text(entry.url);
       const link = designatedUrl(url, 'remove');
@@ -381,6 +382,7 @@ export class UpdateTechnologyWebLinksAiMutationOperation implements AiMutationOp
         continue;
       }
       remove.push({ id: link.id, before: link });
+      removedUrls.add(link.url);
       planned.delete(link.id);
     }
 
@@ -391,8 +393,8 @@ export class UpdateTechnologyWebLinksAiMutationOperation implements AiMutationOp
       const descriptionGiven = Object.prototype.hasOwnProperty.call(entry, 'description');
       const newUrl = entry.new_url === undefined ? link.url : webLinkUrl(entry.new_url);
       if (newUrl !== link.url) {
-        const holder = (byUrl.get(newUrl) ?? []).find((row) => row.id !== link.id);
-        if (holder) throw new BadRequestException(`A link with the address "${newUrl}" already exists.`);
+        // The projected set: an address a removal frees can be taken, an address the set still
+        // holds (untouched or updated) cannot.
         const newHolder = [...planned.values()].find((row) => row.id !== link.id && row.url === newUrl);
         if (newHolder) throw new BadRequestException(`A link with the address "${newUrl}" already exists.`);
       }
@@ -403,15 +405,17 @@ export class UpdateTechnologyWebLinksAiMutationOperation implements AiMutationOp
       planned.set(link.id, next);
     }
 
-    const addedUrls = new Set<string>();
     for (const entry of input.add ?? []) {
       const url = webLinkUrl(entry.url);
       const description = optionalText(entry.description, 'Description', 2000);
-      if (byUrl.has(url) || addedUrls.has(url)) {
-        already.push({ url, description });
-        continue;
+      // The projected set after the removals and the updates: an addition may not create a second
+      // link of an address the set would hold, nor put back an address the same request removes.
+      if (removedUrls.has(url)) {
+        throw new BadRequestException(`The link "${url}" is removed and added in the same request: keep one.`);
       }
-      addedUrls.add(url);
+      if ([...planned.values()].some((link) => link.url === url)) {
+        throw new BadRequestException(`A link with the address "${url}" already exists.`);
+      }
       add.push({ url, description });
       planned.set(`new:${url}`, { id: `new:${url}`, url, description });
     }
