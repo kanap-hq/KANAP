@@ -317,10 +317,11 @@ Disable (n), Move (n), Manage X, Edit, a "new" chip in a band, Send link, Conver
 (delete the selection once the selection is not empty, delete on a workspace):
 - Same dimensions as `action`
 - Background `kanap.pillDanger.bg`, border `kanap.pillDanger.border`, color `kanap.danger`
-- `DeleteSelectedButton` does this itself: `action` and disabled at 0 selected, `action-danger` from 1, label "Delete (n)"
+- `DeleteSelectedButton` does this itself: `action-danger` always, disabled at 0 selected, label "Delete (n)"
 
-**Disabled** (all three): the neutral pill, `kanap.pill.bg` / `kanap.pill.border`, text
-`kanap.text.tertiary`. No teal, no red.
+**Disabled**: `action-primary` and `action` take the neutral pill, `kanap.pill.bg` /
+`kanap.pill.border`, text `kanap.text.tertiary`, no teal. A disabled `action-danger` keeps its red
+colours at 45 % opacity, so a delete always reads as a delete (maintainer, 2026-10-28).
 
 **Icons on pills**: 14px (`sx={{ fontSize: '14px !important' }}` on the icon). Keep `+` on "new"
 actions and the trash on delete; import and export carry no icon.

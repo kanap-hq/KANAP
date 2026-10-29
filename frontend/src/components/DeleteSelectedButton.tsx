@@ -269,7 +269,7 @@ export default function DeleteSelectedButton<T>({
     <>
       {/* Neutral while nothing is selected, red once there is something to delete. */}
       <Button
-        variant={selectedRows.length > 0 ? 'action-danger' : 'action'}
+        variant="action-danger"
         startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
         onClick={() => { void handleOpenConfirm(); }}
         disabled={disabled || checking || selectedRows.length === 0}
