@@ -20,6 +20,14 @@ import {
   listAiDataAccess,
 } from './ai-data-access.query';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
+import { ChargebackReportService } from '../../spend/chargeback-report.service';
+import {
+  aggregateChargebackRows,
+  chargebackAggregateRows,
+  chargebackGroupValue,
+  chargebackLineGroupValue,
+  listAiChargebackLines,
+} from './ai-chargeback.query';
 import { aiDataAccessNote } from './ai-data-access-note.util';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
@@ -669,6 +677,8 @@ export class AiAggregateExecutor {
     @Optional() private readonly permissions?: PermissionsService,
     /** Admin › Data access, which `data_access` groups. */
     @Optional() private readonly dataAccess?: DataAccessAdminService,
+    /** The chargeback reports of the screens, which `chargeback` and `chargeback_lines` group. */
+    @Optional() private readonly chargeback?: ChargebackReportService,
   ) {
     // Absent, a technology filter on application_count matches nothing: say so once, at start.
     if (!policy) new Logger(AiAggregateExecutor.name).warn('AiPolicyService is not injected: technology aggregates see no application.');
@@ -2165,6 +2175,59 @@ export class AiAggregateExecutor {
         total: result.items.length,
         distinct_total: result.distinct_total,
         distinct_label: 'person',
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+    }
+    if (input.entity_type === 'chargeback' || input.entity_type === 'chargeback_lines') {
+      // Read with the reporting right, as the routes: checked again here, the database not guarding it.
+      if (!this.policy || !this.chargeback) throw new BadRequestException('The chargeback reports are not available.');
+      await this.policy.assertEntityTypeReadRight(context, input.entity_type, context.manager);
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: metric?.key ?? null,
+          function: fn,
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const services = { chargeback: this.chargeback };
+      const opts = { manager: context.manager, tenantId: context.tenantId };
+      const read = input.entity_type === 'chargeback'
+        ? await chargebackAggregateRows(services, scoped.query, opts, input.group_by)
+        : await listAiChargebackLines(services, scoped.query, opts, true).then((list) => ({ rows: list.items, report: list.report }));
+      const groups = input.entity_type === 'chargeback'
+        ? aggregateChargebackRows(read.rows as any[], (row) => chargebackGroupValue(row, input.group_by), fn, metric?.key ?? null)
+        : aggregateChargebackRows(read.rows as any[], (row) => chargebackLineGroupValue(row, input.group_by), fn, metric?.key ?? null);
+      // An amount names its currency; a count, a share, a headcount or a percentage has none.
+      const money = new Set(['amount', 'paid', 'net', 'turnover', 'cost_per_user', 'cost_per_it_user']);
+      const amounts = metric && money.has(metric.key) ? await aiAmountsCurrency(context, input.entity_type) : null;
+      return {
+        chargeback: read.report,
+        ...(amounts ?? {}),
+        group_by: input.group_by,
+        metric: metric?.key ?? null,
+        function: fn,
+        groups,
+        // The rows of the report table the groups add up (`level`): a count counts them, not budget lines.
+        total: read.rows.length,
         returned: groups.length,
         truncated: false,
         complete: isCompleteAggregateResult(scoped.scope),

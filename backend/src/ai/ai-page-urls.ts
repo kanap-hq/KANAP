@@ -20,6 +20,9 @@ export const AI_PAGE_ROUTES: Readonly<Record<string, { path: (id: string) => str
   roles: { path: () => '/admin/roles', resource: 'users' },
   // A row of Admin › Data access names a person: it opens the screen.
   data_access: { path: () => '/admin/data-access', resource: 'users' },
+  // A chargeback row opens its report: the global one, or the company one (where the company is picked).
+  chargeback: { path: () => '/ops/reports/chargeback/global', resource: 'reporting' },
+  chargeback_lines: { path: () => '/ops/reports/chargeback/company', resource: 'reporting' },
 };
 
 /** The sentence the read tools give about `page_url` (chat and MCP share the descriptions). */

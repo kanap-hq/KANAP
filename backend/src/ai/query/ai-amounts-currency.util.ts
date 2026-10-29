@@ -50,6 +50,13 @@ export async function aiAmountsCurrency(
           : ''),
     };
   }
+  if (entityType === 'chargeback' || entityType === 'chargeback_lines') {
+    const currency = await readReportingCurrency(context.manager, context.tenantId);
+    return {
+      amounts_currency: currency,
+      amounts_currency_note: `Every amount of the report (amount, paid, net, turnover, costs per user, sums) is in ${currency}, the reporting currency: each line is converted from its own currency at the rate of its version. A line without a rate is left out of every figure, which chargeback.warnings says.`,
+    };
+  }
   if (entityType === 'contracts') {
     return {
       amounts_currency: null,

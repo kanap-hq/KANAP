@@ -38,6 +38,8 @@ import { technologiesRegistry } from './technologies.registry';
 import { technologyVersionsRegistry } from './technology-versions.registry';
 import { usersRegistry } from './users.registry';
 import { vulnerabilitiesRegistry } from './vulnerabilities.registry';
+import { chargebackRegistry } from './chargeback.registry';
+import { chargebackLinesRegistry } from './chargeback-lines.registry';
 
 export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistry> = {
   accounts: accountsRegistry,
@@ -69,6 +71,8 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   technology_versions: technologyVersionsRegistry,
   users: usersRegistry,
   vulnerabilities: vulnerabilitiesRegistry,
+  chargeback: chargebackRegistry,
+  chargeback_lines: chargebackLinesRegistry,
 };
 
 export function getAiEntityRegistry(entityType: AiQueryEntityType): AiEntityFilterRegistry {

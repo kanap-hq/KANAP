@@ -1,5 +1,6 @@
 import type { BudgetNature } from '../../spend/budget-nature';
 import { AiEntitySummaryDto, AiQueryScope } from '../ai.types';
+import type { AiChargebackReport } from './ai-chargeback.query';
 
 export type AiFilterFieldType = 'set' | 'text' | 'number' | 'date';
 export type AiQueryEntityType =
@@ -9,6 +10,8 @@ export type AiQueryEntityType =
   | 'assets'
   | 'budget_lines'
   | 'business_processes'
+  | 'chargeback'
+  | 'chargeback_lines'
   | 'chart_of_accounts'
   | 'companies'
   | 'connections'
@@ -286,6 +289,8 @@ export type AiQueryResult = {
   /** `limited`: a person with limited data access; the items and figures cover their access only. */
   data_access?: 'limited';
   data_access_note?: string;
+  /** `chargeback` and `chargeback_lines`: the report's parameters and total, its warnings in words, the company of the lines. */
+  chargeback?: AiChargebackReport;
   scope: {
     requested: AiQueryScope;
     resolved: boolean;
@@ -337,6 +342,8 @@ export type AiAggregateResult = {
   turnover_fx_missing?: Array<{ companyId: string; companyName: string; currency: string; year: number }>;
   data_access?: 'limited';
   data_access_note?: string;
+  /** `chargeback` and `chargeback_lines`: the report's parameters and total, its warnings in words, the company of the lines. */
+  chargeback?: AiChargebackReport;
   group_by: string;
   /** Budget lines: the second group field; each group then carries `then_key`. */
   then_by?: string;

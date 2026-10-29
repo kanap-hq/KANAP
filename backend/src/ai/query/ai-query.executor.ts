@@ -107,6 +107,14 @@ import {
   listAiDataAccess,
   type AiDataAccessRow,
 } from './ai-data-access.query';
+import { ChargebackReportService } from '../../spend/chargeback-report.service';
+import {
+  listAiChargeback,
+  listAiChargebackLines,
+  type AiChargebackLineRow,
+  type AiChargebackList,
+  type AiChargebackRow,
+} from './ai-chargeback.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
@@ -631,6 +639,8 @@ export class AiQueryExecutor {
     @Optional() private readonly permissions?: PermissionsService,
     /** Admin › Data access: the `data_access` family, and the access blocks of a person and a company. */
     @Optional() private readonly dataAccess?: DataAccessAdminService,
+    /** The chargeback reports of the screens, which `chargeback` and `chargeback_lines` read. */
+    @Optional() private readonly chargeback?: ChargebackReportService,
   ) {
     // Absent, the technology figures close (no application count, no detail): say so once, at start.
     const logger = new Logger(AiQueryExecutor.name);
@@ -1405,6 +1415,75 @@ export class AiQueryExecutor {
         changed_by: row.changed_by,
       },
     });
+  }
+
+  /** A row of the global chargeback: a company, or one of its departments, named by both. */
+  private mapChargeback(row: AiChargebackRow): AiEntitySummaryDto {
+    const where = row.level === 'company' ? row.company : `${row.company} › ${row.level === 'common' ? 'common costs' : row.department}`;
+    return toEntitySummary('chargeback', {
+      id: row.department_id ?? row.company_id,
+      label: where ?? row.company,
+      status: row.level,
+      summary: null,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        level: row.level,
+        company: row.company,
+        department: row.department,
+        nature: row.nature,
+        amount: row.amount,
+        share: row.share,
+        headcount: row.headcount,
+        cost_per_user: row.cost_per_user,
+        ...(row.level === 'company' ? {
+          paid: row.paid,
+          net: row.net,
+          it_users: row.it_users,
+          turnover: row.turnover,
+          cost_per_it_user: row.cost_per_it_user,
+          cost_vs_turnover_pct: row.cost_vs_turnover_pct,
+        } : {}),
+      },
+    });
+  }
+
+  /**
+   * A line charged to the company of the report. A line the person does not read keeps no id and no
+   * name: its BL reference names it, and it opens nothing.
+   */
+  private mapChargebackLine(row: AiChargebackLineRow): AiEntitySummaryDto {
+    return toEntitySummary('chargeback_lines', {
+      id: row.item_id ?? row.ref ?? row.key,
+      reference: row.ref,
+      label: row.line ?? row.ref ?? 'line outside your access',
+      status: row.allocation_method,
+      summary: null,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        nature: row.nature,
+        allocation_method: row.allocation_method,
+        amount: row.amount,
+        share_pct: row.share_pct,
+        readable: row.readable,
+        ...(row.paying_company !== undefined ? {
+          paying_company: row.paying_company,
+          allocation_pct: row.allocation_pct ?? null,
+          departments: (row.departments ?? []).join(', ') || null,
+        } : {}),
+      },
+    });
+  }
+
+  /**
+   * The chargeback reports, read with the reporting right as their routes: checked again here, the
+   * database not guarding it, refused in words (the right and the screen).
+   */
+  private async chargebackServices(context: AiExecutionContextWithManager, entityType: 'chargeback' | 'chargeback_lines') {
+    if (!this.policy || !this.chargeback) throw new BadRequestException('The chargeback reports are not available.');
+    await this.policy.assertEntityTypeReadRight(context, entityType, context.manager);
+    return { chargeback: this.chargeback };
   }
 
   /**
@@ -2503,6 +2582,31 @@ export class AiQueryExecutor {
         total: result.total,
         distinct_total: result.distinct_total,
         distinct_label: 'person',
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'chargeback' || input.entity_type === 'chargeback_lines') {
+      const services = await this.chargebackServices(context, input.entity_type);
+      const opts = { manager: context.manager, tenantId: context.tenantId, year: input.year };
+      const result: AiChargebackList<AiChargebackRow | AiChargebackLineRow> = input.entity_type === 'chargeback'
+        ? await listAiChargeback(services, scoped.query, opts)
+        : await listAiChargebackLines(services, scoped.query, opts);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        chargeback: result.report,
+        items: result.items.map((row) => (input.entity_type === 'chargeback'
+          ? this.mapChargeback(row as AiChargebackRow)
+          : this.mapChargebackLine(row as AiChargebackLineRow))),
+        total: result.total,
         page: result.page,
         limit: result.limit,
         returned,
