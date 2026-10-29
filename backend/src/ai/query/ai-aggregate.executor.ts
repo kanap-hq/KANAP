@@ -1719,7 +1719,7 @@ export class AiAggregateExecutor {
       // The tool already checked the family; checked again here, as the data access branch, in the
       // policy's words (the right and the screen, or the reserved message).
       if (!this.policy) throw new ForbiddenException('The roles are not available.');
-      await this.policy.assertEntityTypeReadAccess(context, input.entity_type, context.manager);
+      await this.policy.assertEntityTypeReadRight(context, input.entity_type, context.manager);
       if (!this.roles || !this.permissions) throw new BadRequestException('The roles are not available.');
       const services = { roles: this.roles, permissions: this.permissions };
       // The roles are not participation-scoped: `scope` is applied as on query_entities.

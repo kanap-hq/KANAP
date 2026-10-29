@@ -1481,7 +1481,7 @@ export class AiQueryExecutor {
    */
   private async assertRolesRead(context: AiExecutionContextWithManager, entityType: 'roles' | 'role_permissions'): Promise<void> {
     if (!this.policy) throw new ForbiddenException('The roles are not available.');
-    await this.policy.assertEntityTypeReadAccess(context, entityType, context.manager);
+    await this.policy.assertEntityTypeReadRight(context, entityType, context.manager);
   }
 
   /**

@@ -720,6 +720,19 @@ export class AiPolicyService {
     manager: EntityManager,
   ): Promise<void> {
     await this.assertSurfaceAccess(context, manager);
+    await this.assertEntityTypeReadRight(context, entityType, manager);
+  }
+
+  /**
+   * The read right of a family alone (`canReadEntityType`, refused in words: the right and its
+   * screen, the disabled feature, or the reserved message), without the surface checks the tool
+   * made first. The executors check it again for the families the database does not guard.
+   */
+  async assertEntityTypeReadRight(
+    context: AiExecutionContext,
+    entityType: AiQueryEntityType | AiContextEntityType,
+    manager: EntityManager,
+  ): Promise<void> {
     await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], entityReadLevel(entityType), manager, ENTITY_SCREEN[entityType]);
     const feature = entityTypeFeature(entityType);
     if (feature) throwFeatureDisabled(feature);
