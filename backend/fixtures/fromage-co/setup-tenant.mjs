@@ -47,6 +47,7 @@ import { buildLinesFile, buildMonthlyFile, loadBudgetFile } from '../../scripts/
 import { DATASET_YEAR, parseCsv, shiftCsvText, shiftIsoDate } from '../../scripts/lib/fixture-csv.mjs';
 import { createHttpClient } from '../../scripts/lib/http-client.mjs';
 import { analyticsValuesText, fixtureDimensions, resolveFixtureLanguage, withFixtureDimensionValues } from './fixture-dimensions.mjs';
+import { planDemandScores, sameCriteriaValues } from './demand-scores.mjs';
 import { rewriteIncidentTaskLinks } from './incident-task-links.mjs';
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -850,6 +851,46 @@ async function importCsv(name, route, extraQuery = '') {
   if (result?.ok === false) throw new Error(`${name} import returned ok=false:\n${JSON.stringify(result, null, 2)}`);
   ok(`Imported ${name}`);
   return result;
+}
+
+/**
+ * Fills the default English criteria of three demands, so the list shows distinct scores.
+ * The criterion ids belong to the tenant: they are resolved by name and label. A tenant
+ * whose criteria are not that set is left as it is. A demand that already holds these
+ * values is left as it is, so a re-run changes nothing.
+ */
+async function scoreRequests() {
+  const payload = await apiGet('/portfolio/criteria');
+  const criteria = Array.isArray(payload) ? payload : items(payload);
+  const requests = await getAll('/portfolio/requests?limit=1000&status=all');
+  const plan = planDemandScores(criteria, requests);
+  if (plan.skipped) {
+    info(`Demand scores left as they are: ${plan.reason}.`);
+    return;
+  }
+  for (const name of plan.missing) warn(`Demand '${name}' not found; its score was not set`);
+  let updated = 0;
+  let unchanged = 0;
+  for (const assignment of plan.assignments) {
+    if (sameCriteriaValues(assignment.current, assignment.criteria_values)) {
+      unchanged += 1;
+      continue;
+    }
+    try {
+      await apiPost(`/portfolio/criteria/requests/${assignment.requestId}/score`, {
+        criteria_values: assignment.criteria_values,
+      });
+      updated += 1;
+    } catch (error) {
+      const payloadText = typeof error?.payload === 'string' ? error.payload : JSON.stringify(error?.payload ?? '');
+      if (error?.status === 400 && /converted/i.test(`${error.message}\n${payloadText}`)) {
+        warn(`Demand '${assignment.name}' is converted; its score was left as it is`);
+        continue;
+      }
+      throw error;
+    }
+  }
+  ok(`Demand scores: ${updated} set, ${unchanged} already set`);
 }
 
 /** The data set's own dimension values, named in the tenant's seed language. English sends the file as it is. */
@@ -2025,6 +2066,7 @@ async function runImports(language) {
   step('portfolio');
   await importCsv('16-portfolio-projects.csv', '/portfolio/projects/import');
   await importCsv('17-portfolio-requests.csv', '/portfolio/requests/import');
+  await scoreRequests();
   step('assets');
   const locationIdByFixtureCode = await ensureLocations();
   await ensureAssets(locationIdByFixtureCode);

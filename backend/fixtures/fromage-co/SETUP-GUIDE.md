@@ -102,6 +102,13 @@ its own: load the current dataset on a new tenant instead.
    chosen by hand stays; the runner names those whose choice differs from the
    file. A supplier or contact the file names and the tenant lacks stops the
    runner.
+   **Demand scores**: after the requests import, the runner fills the default
+   English criteria of three demands. On the demand list, Cave Climate
+   Digital Twin scores 64, AI Cheese Grading scores 44 and Smart Packaging
+   Automation scores 26. Automated Warehouse Inventory stays unscored. A
+   re-run writes the same choices and leaves the scores as they are. When
+   the tenant's criteria differ from that default English set, the runner
+   leaves the scores as they are and continues.
 5. **Demo user passwords**: all 18 imported users get the required
    `--demo-password` so you can log in as e.g.
    `thomas.berger@fromage-co.example` during a demo. Pass `--demo-password ''`
