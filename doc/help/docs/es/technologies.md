@@ -165,7 +165,7 @@ Las nuevas tecnologías están en las alertas, con dos excepciones:
 - **Sistemas operativos**: consulte [Sistemas operativos](#sistemas-operativos).
 - **Servicios en la nube gestionados por un proveedor**: una tecnología cuyo [tipo de alojamiento](#tipo-de-alojamiento) está en la nube, como **Cloud público** o **SaaS**, y una entrada del catálogo que el proveedor ejecuta, como Entra ID. El proveedor corrige un servicio en línea, así que sus vulnerabilidades no le piden ninguna acción. Una tecnología en un **Cloud privado** sigue en las alertas.
 
-Cambiar más tarde la familia o el tipo de alojamiento de una tecnología deja su ajuste como está. Los interruptores requieren `infrastructure:member`.
+Cambiar más tarde la familia o el tipo de alojamiento de una tecnología deja su ajuste como está. Los interruptores requieren el nivel Miembro en la infraestructura.
 
 #### Versiones del catálogo
 
@@ -186,7 +186,7 @@ La comprobación añade las nuevas versiones, identificadores de producto CPE y 
 El grupo **Identificadores de vulnerabilidad**, bajo las versiones, reúne los identificadores de producto CPE y los nombres CVE.org. KANAP encuentra las vulnerabilidades de una tecnología a través de ellos.
 
 - **Plegado**: cuando la tecnología tiene al menos un identificador, el grupo está plegado, con un resumen en su línea de título, por ejemplo `2 identificadores CPE · 3 nombres de CVE.org`. Haga clic en el título para abrirlo.
-- **Abierto**: cuando la tecnología no tiene ninguno, el grupo está abierto, con una advertencia: no se busca ninguna vulnerabilidad para esta tecnología. La sección **Versiones** también lo indica. Con `infrastructure:member`, **Añadir un identificador** junto a esa línea abre el grupo.
+- **Abierto**: cuando la tecnología no tiene ninguno, el grupo está abierto, con una advertencia: no se busca ninguna vulnerabilidad para esta tecnología. La sección **Versiones** también lo indica. Con el nivel Miembro en la infraestructura, **Añadir un identificador** junto a esa línea abre el grupo.
 
 El cotejo se hace a nivel de la tecnología. Cada versión de la tecnología se compara con las vulnerabilidades de sus identificadores, y una versión que usted añade se coteja de inmediato. Sin identificador, KANAP no busca ninguna vulnerabilidad para ninguna versión.
 
@@ -200,7 +200,7 @@ El cotejo se hace a nivel de la tecnología. Cada versión de la tecnología se 
 - **Versión**: una versión limita el nombre a las versiones de la tecnología cuya etiqueta empieza por ella, por ejemplo `2019` para `Windows Server 2019`. Cuando una etiqueta empieza por varias de ellas, solo cuenta la más larga: `2012 R2` recibe el nombre de `2012 R2` y deja el de `2012`.
 - **Desde el catálogo**: muchas entradas del catálogo llegan con sus nombres (Microsoft, Apache, bases de datos y otras). La comprobación del catálogo los mantiene al día como los identificadores CPE, y un nombre que usted quitó no vuelve.
 
-Dónde encontrar este valor: en [cve.org](https://www.cve.org), abra la ficha de una vulnerabilidad del producto. El nombre debe ser el de su sección **Product status**. Cambiar los nombres requiere `infrastructure:member`, como para los identificadores CPE.
+Dónde encontrar este valor: en [cve.org](https://www.cve.org), abra la ficha de una vulnerabilidad del producto. El nombre debe ser el de su sección **Product status**. Cambiar los nombres requiere el nivel Miembro en la infraestructura, como para los identificadores CPE.
 
 ### Servidores
 
@@ -283,7 +283,7 @@ Un resumen de las vulnerabilidades, una fila por versión instalada de la tecnol
 
 Las versiones que ningún servidor ni ninguna aplicación usa no tienen fila. Se nombran juntas debajo de la tabla, por ejemplo «No instaladas: 2016, 2017». KANAP solo busca vulnerabilidades de las versiones instaladas en un servidor o declaradas por una aplicación.
 
-Cuando la tecnología o algunas de sus versiones están fuera de las alertas, una línea al principio de la sección lo indica: **Excluida de las alertas**, **Excluida de las alertas, excepto 2 versiones** o **3 versiones excluidas de las alertas**. Con `infrastructure:member`, **Cambiar** junto a ella abre la tabla de versiones de la pestaña Resumen, donde están los interruptores. Consulte [Alertas de vulnerabilidad](#alertas-de-vulnerabilidad).
+Cuando la tecnología o algunas de sus versiones están fuera de las alertas, una línea al principio de la sección lo indica: **Excluida de las alertas**, **Excluida de las alertas, excepto 2 versiones** o **3 versiones excluidas de las alertas**. Con el nivel Miembro en la infraestructura, **Cambiar** junto a ella abre la tabla de versiones de la pestaña Resumen, donde están los interruptores. Consulte [Alertas de vulnerabilidad](#alertas-de-vulnerabilidad).
 
 KANAP vuelve a cotejar la tecnología en cuanto cambian sus identificadores, nombres CVE.org, versiones, servidores o aplicaciones. Tras un nuevo identificador de producto CPE, la sección indica «Búsqueda de vulnerabilidades en curso…» mientras KANAP lee ese producto en la NVD. Cuando esa lectura no se puede completar, la sección lo dice. **Actualizar** (`infrastructure:member`) lanza la comparación a mano.
 
@@ -295,7 +295,7 @@ Los registros vinculados a la tecnología, una sección por tipo:
 - **Contratos**: proveedor, fecha de fin e importe anual, con un total por moneda.
 - **Proyectos**: estado y fin previsto.
 - **Incidentes**: gravedad, estado y fecha de detección. Vincular un incidente requiere `incidents:contributor`. Un incidente cerrado o cancelado no se puede vincular ni desvincular.
-- **Enlaces y archivos**: los enlaces web de la tecnología y sus archivos, una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con `infrastructure:member`, **Añadir enlace** y **Adjuntar archivo** añaden una fila, y los archivos también se pueden soltar sobre la sección. Pase el cursor sobre una fila para editar un enlace o quitar una fila. Quitar un enlace muestra un mensaje y ofrece **Deshacer**, que vuelve a crear el enlace. Eliminar un archivo pide una confirmación. Una dirección escrita sin `http://` ni `https://` recibe `https://`. Cualquier otro esquema se rechaza.
+- **Enlaces y archivos**: los enlaces web de la tecnología y sus archivos, una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con el nivel Miembro en la infraestructura, **Añadir enlace** y **Adjuntar archivo** añaden una fila, y los archivos también se pueden soltar sobre la sección. Pase el cursor sobre una fila para editar un enlace o quitar una fila. Quitar un enlace muestra un mensaje y ofrece **Deshacer**, que vuelve a crear el enlace. Eliminar un archivo pide una confirmación. Una dirección escrita sin `http://` ni `https://` recibe `https://`. Cualquier otro esquema se rechaza.
 
 Una sección solo aparece si puede leer su módulo. **Añadir** (`infrastructure:member`) abre una búsqueda en el sitio; la cruz al final de una fila quita el vínculo.
 
