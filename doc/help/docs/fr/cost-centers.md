@@ -231,6 +231,10 @@ Chaque rôle reçoit le niveau qu'il a sur les départements, sauf le rôle int�
 
 ---
 
+## Demander à l'assistant
+
+[Plaid](ai-assistant.md#tool-calls) lit les centres de coûts pour toute personne qui a le droit de les lire : l'arbre, les responsables budgétaires et les lignes qui utilisent chaque nœud. Demandez par exemple : « Quels centres de coûts dépendent de Group IT ? »
+
 ## Astuces
 
 - **Reprenez votre référentiel finance** : utilisez les mêmes codes que votre système comptable pour que les lignes budgétaires et le réel concordent.

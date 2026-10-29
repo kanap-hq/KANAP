@@ -231,6 +231,10 @@ Cada rol empieza con el nivel que tiene en departamentos, salvo el rol integrado
 
 ---
 
+## Preguntar al asistente
+
+[Plaid](ai-assistant.md#tool-calls) lee los centros de coste para cualquier persona con derecho a leerlos: el árbol, los responsables del presupuesto y las líneas que usan cada nodo. Pregunte, por ejemplo: «¿Qué centros de coste dependen de Group IT?»
+
 ## Consejos
 
 - **Refleje su referencial financiero**: use los mismos códigos que su sistema contable para que las líneas de presupuesto y el realizado coincidan.

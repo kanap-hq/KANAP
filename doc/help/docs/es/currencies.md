@@ -221,6 +221,10 @@ Congelar la columna presupuestaria por defecto de un año fija los tipos de ese 
 
 KANAP obtiene los tipos de ese año en segundo plano (como máximo una vez cada seis horas por año), de modo que la siguiente visualización usa el nuevo tipo en cuanto la fuente lo publica. Para detectar los tipos faltantes, consulte el bloque de tipos faltantes encima de la tabla de tipos de cambio y ejecute **Forzar sincronización de tipos de cambio** para obtenerlos de inmediato. Introducir un [tipo manual](#tipos-manuales) lo corrige al momento.
 
+## Preguntar al asistente
+
+[Plaid](ai-assistant.md#tool-calls) lee las monedas y los tipos de esta página para cualquier persona con derecho de lectura sobre el presupuesto. Pregunte, por ejemplo: «¿Cuál es el tipo del USD para 2026?»
+
 ## Consejos
 
   - **Fije la moneda de reporte una sola vez**: cambiarla a mitad de año afecta a todos los informes. Si debe cambiarla, hágalo al cierre del ejercicio.

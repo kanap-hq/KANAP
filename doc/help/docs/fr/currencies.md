@@ -220,6 +220,10 @@ Geler la colonne budgétaire par défaut d'une année fige les taux de cette ann
 
 KANAP récupère les taux de cette année en arrière-plan (au plus une fois toutes les six heures par année) : l'affichage suivant utilise le nouveau taux dès que la source le publie. Pour repérer les taux manquants, consultez le bloc des taux manquants au-dessus du tableau des taux, et lancez **Forcer la synchronisation des taux de change** pour les récupérer tout de suite. Saisir un [taux manuel](#taux-manuels) règle le problème immédiatement.
 
+## Demander à l'assistant
+
+[Plaid](ai-assistant.md#tool-calls) lit les devises et les taux de cette page pour toute personne qui a le droit de lecture sur le budget. Demandez par exemple : « Quel est le taux USD pour 2026 ? »
+
 ## Conseils
 
   - **Fixez la devise de reporting une fois pour toutes** : la changer en cours d'année modifie tous les rapports. Si vous devez la changer, faites-le en fin d'exercice.

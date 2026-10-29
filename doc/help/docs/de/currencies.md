@@ -221,6 +221,10 @@ Das Einfrieren der Standard-Budgetspalte eines Jahres schreibt die Kurse dieses 
 
 KANAP ruft die Kurse dieses Jahres im Hintergrund ab (höchstens einmal alle sechs Stunden je Jahr), sodass die nächste Anzeige den neuen Kurs verwendet, sobald die Quelle ihn veröffentlicht. Um fehlende Kurse zu erkennen, prüfen Sie den Block der fehlenden Kurse über der FX-Kurs-Snapshot-Tabelle und führen Sie **Wechselkurssynchronisierung erzwingen** aus, um die Kurse sofort abzurufen. Ein [manueller Kurs](#manuelle-kurse) behebt das Problem umgehend.
 
+## Den Assistenten fragen
+
+[Plaid](ai-assistant.md#tool-calls) liest die Währungen und Kurse dieser Seite für alle mit Leserecht auf das Budget. Fragen Sie zum Beispiel: „Wie hoch ist der USD-Kurs für 2026?“
+
 ## Tipps
 
   - **Berichtswährung einmal festlegen**: Eine Änderung mitten im Jahr betrifft alle Berichte. Wenn Sie sie ändern müssen, tun Sie dies am Jahresende.

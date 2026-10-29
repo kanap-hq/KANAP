@@ -366,6 +366,7 @@ The seven budget reports can also be narrowed to one value of a dimension, with 
 - When Plaid creates a line, it needs a value on each required dimension of the line's type. In a workspace created before the recommended dimensions, a CAPEX line needs **PP&E type**, **Investment type** and **Priority**.
 - Plaid knows which dimensions are required. A new line needs a value on each of them, and Plaid cannot clear the value of a required dimension. Plaid refuses a request that breaks the rule and says why, for example "Cost pool is required for spend item creation."
 - Plaid can also create a value in the dimension you name. Without a dimension, the value goes into the default dimension.
+- With read access to analytics, Plaid also reads the settings of each dimension, its number of values and the lines that use it. Ask, for example: "Which dimensions are required?"
 
 ---
 

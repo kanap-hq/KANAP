@@ -243,7 +243,7 @@ Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und
 | `get_document` | Liest ein Dokument der Wissensdatenbank |
 | `web_search` | Sucht im Web, wenn die Websuche für Ihre Organisation eingeschaltet ist |
 
-Wenn sich ein Client verbindet, teilt der Server ihm mit, welchen Arbeitsbereich er liest, dass er nur liest, dass er mit den Rechten der Person hinter dem Schlüssel oder der Verbindung liest, wie er sucht und welche Daten er nicht liest (Kostenstellen, Kalender, Wechselkurse, das Audit-Protokoll und KI-Agenten). Rollen und Einstellungen des Datenzugriffs liest er nur für eine Person, die Benutzer verwaltet und Zugriff auf alle Daten hat.
+Wenn sich ein Client verbindet, teilt der Server ihm mit, welchen Arbeitsbereich er liest, dass er nur liest, dass er mit den Rechten der Person hinter dem Schlüssel oder der Verbindung liest, wie er sucht (Kostenstellen, Kalender und Dimensionen eingeschlossen), wo er die Wechselkurse liest und welche Daten er nicht liest (das Audit-Protokoll und KI-Agenten). Rollen und Einstellungen des Datenzugriffs liest er nur für eine Person, die Benutzer verwaltet und Zugriff auf alle Daten hat.
 
 Ein Aufruf, den der Server ablehnt, kommt mit seiner Ursache zurück, damit der Assistent sie erklären kann: ein unbekanntes Werkzeug, ein Werkzeug, das Daten ändern würde, ein Werkzeug, das der Schlüssel nicht erlaubt, oder Daten, die die Person nicht lesen darf.
 

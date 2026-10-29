@@ -366,6 +366,7 @@ Die sieben Budgetberichte lassen sich auch auf einen Wert einer Dimension eingre
 - Wenn Plaid eine Zeile anlegt, braucht sie einen Wert auf jeder erforderlichen Dimension des Zeilentyps. In einem Arbeitsbereich, der vor den empfohlenen Dimensionen angelegt wurde, braucht eine CAPEX-Zeile **PP&E type**, **Investment type** und **Priority**.
 - Plaid weiß, welche Dimensionen erforderlich sind. Eine neue Zeile braucht in jeder von ihnen einen Wert, und Plaid kann den Wert einer erforderlichen Dimension nicht löschen. Plaid lehnt eine Anfrage ab, die gegen die Regel verstößt, und nennt den Grund, zum Beispiel „Kostenart is required for spend item creation.“
 - Plaid kann auch einen Wert in der Dimension anlegen, die Sie nennen. Ohne Angabe einer Dimension kommt der Wert in die Standarddimension.
+- Mit Leserecht auf Analytik liest Plaid auch die Einstellungen jeder Dimension, die Zahl ihrer Werte und die Zeilen, die sie verwenden. Fragen Sie zum Beispiel: „Welche Dimensionen sind Pflicht?“
 
 ---
 

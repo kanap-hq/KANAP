@@ -140,6 +140,21 @@ Plaid liefert auch die Zahlen weiterer Budgetberichte. Mit Leserecht auf Konten 
 
 Mit Leserecht auf Berichtswesen liest Plaid die Leistungsverrechnung so, wie die Berichte [Globale Leistungsverrechnung](reports.md#globale-leistungsverrechnung) und [Leistungsverrechnung pro Unternehmen](reports.md#leistungsverrechnung-pro-unternehmen) sie zeigen: den Betrag, der jedem begünstigten Unternehmen und jeder Abteilung verrechnet wird, was jedes Unternehmen zahlt, den Saldo, die Kennzahlen pro Benutzer und zum Umsatz sowie die einem Unternehmen verrechneten Zeilen. Wenn Sie weder OPEX noch CAPEX nennen, deckt es beide Typen ab. Plaid wiederholt die Warnungen des Berichts, etwa eine Zeile, die es nicht verteilen konnte, eine Zeile ohne zahlendes Unternehmen oder einen Betrag ohne Wechselkurs. Wenn Ihr Datenzugriff begrenzt ist, beziehen sich die Zahlen auf die Zeilen, die Sie lesen können, ohne die Gesamtsumme der Gruppe, und Plaid listet die einem Unternehmen verrechneten Zeilen nur für die Unternehmen Ihres Zugriffs auf. Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
+Plaid liest vier Arten von Stammdaten, so wie ihre Bildschirme sie zeigen. Es ändert keine davon.
+
+- **Kostenstellen**, mit Leserecht auf Kostenstellen: der Baum der Kostenstellengruppen und Kostenstellen, das Unternehmen und der Budgetverantwortliche jedes Knotens und die Zahl der OPEX- und CAPEX-Zeilen, die ihn verwenden. Plaid listet alle Knoten unter einer Gruppe auf allen Ebenen auf oder nur die Knoten direkt darunter.
+- **Arbeitstagekalender**, mit Leserecht auf Arbeitstagekalender: die Arbeitstage eines Jahres, Monat für Monat, und die Feiertage eines Standardkalenders. KANAP berechnet die Summe des Jahres, und Plaid zitiert sie. Ein Land ohne Kalender in Ihrem Arbeitsbereich hat keinen, und Plaid berechnet seine Tage nicht.
+- **Analysedimensionen**, mit Leserecht auf Analytik: die Einstellungen jeder Dimension (die Zeilenarten, für die sie gilt, ob ein Wert Pflicht ist, ob jeder einen Wert hinzufügen kann), die Zahl ihrer Werte und die Zeilen, die sie verwenden. Eine Pflichtdimension gilt nur als Pflicht, solange sie aktiviert ist.
+- **Wechselkurse und Reporting-Währung**, mit Leserecht auf das Budget: die Reporting-Währung, die Standard- und die zulässigen Währungen, der Kurs jeder Währung für jedes Jahr mit seiner Quelle, die von Hand eingegebenen Kurse und die fehlenden Kurse.
+
+Ein Kurs ist der Betrag in der Reporting-Währung für 1 Einheit der Währung. In einem Arbeitsbereich, der in Euro berichtet, bedeutet ein Kurs von 0,89 für USD: 1 USD = 0,89 EUR. KANAP berechnet den Kehrwert und den Kurs zwischen zwei anderen Währungen, etwa von USD nach CHF, und Plaid zitiert sie.
+
+Ohne das Recht, das eine Art von Stammdaten verlangt, nennt Plaid das fehlende Recht. Wenn Ihr Datenzugriff begrenzt ist, lesen Sie alle Stammdaten, wie auf den Bildschirmen. Nur die Zahlen der Budgetzeilen decken Ihren Zugriff ab, und die mit ihren Kursen aufgeführten Währungen sind die der Zeilen und Verträge, die Sie lesen können.
+
+Plaid liest den Verlauf einer Kostenstelle, eines Kalenders oder einer Dimension, wie ihn der Tab **Verlauf** zeigt. `Search all` findet eine Kostenstelle, einen Kalender oder eine Dimension über Code oder Namen. Wechselkurse durchsucht es nicht: Plaid listet sie stattdessen auf.
+
+Fragen Sie zum Beispiel: „Welche Kostenstellen liegen unter Group IT?“, „Wer ist der Budgetverantwortliche von FR-TRV-600?“, „Wie viele Arbeitstage hat Frankreich 2026?“, „Welche Dimensionen sind Pflicht?“ oder „Wie hoch ist der USD-Kurs für 2026?“ Über MCP verbundene Assistenten erhalten dieselben Antworten.
+
 Summen kommen von KANAP. Eine Liste von Budgetzeilen oder Verträgen enthält die Summe aller passenden Datensätze über alle Seiten hinweg, und die Summe der aufgelisteten Datensätze. Plaid nennt eine der beiden oder lässt KANAP eine Summe bilden. Fragen Sie nach den zehn größten Zeilen und ihrer Summe, nennt Plaid die Summe dieser zehn Zeilen. Wenn Ihr Datenzugriff auf bestimmte Unternehmen oder Kostenstellen beschränkt ist, sagt Plaid, dass seine Anzahlen und Summen Ihren Zugriff abdecken, und stellt sie nicht als Summe des Arbeitsbereichs dar.
 
 Wenn Plaid einen Filterwert versucht, den ein Feld nicht annimmt, etwa „aktiv“ für den Status einer Anwendung (der „aktiviert“ oder „deaktiviert“ ist), lehnt KANAP ihn ab und listet die zulässigen Werte auf. Plaid sucht dann erneut mit dem richtigen Wert.
@@ -191,10 +206,6 @@ Andere Datensätze, etwa Anwendungen, Assets, Verträge, Projekte, Anfragen, Vor
 
 Plaid liest nicht:
 
-- Kostenstellen (**Stammdaten › Kostenstellen**). Eine Budgetzeile nennt ihre Kostenstelle, daher kann Plaid Zeilen danach filtern.
-- Arbeitstagekalender (**Stammdaten › Arbeitstagekalender**)
-- Wechselkurse (**Budgetverwaltung › Administration › Währungen**). Budgetbeträge erreichen Plaid bereits in die Reportingwährung umgerechnet.
-- Die Einstellungen der Analysedimensionen (**Stammdaten › Analysedimensionen**). Ihre Werte und der Wert jeder Budgetzeile sind lesbar.
 - Das Audit-Protokoll (**Administration › Audit-Protokoll**)
 - KI-Agenten
 
