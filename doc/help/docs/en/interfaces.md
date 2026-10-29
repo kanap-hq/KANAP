@@ -64,6 +64,8 @@ The Interfaces grid shows your integration registry at a glance.
 
 Click any row to open the workspace. The workspace has a side panel with the interface properties on the left, and six tabs on the right. The last one, **History**, lists the changes made to the interface (see [Record history](record-history.md)).
 
+The header carries **Delete**, a trash icon with its name in a tooltip (`applications:admin`). The confirmation uses the same check as **Delete selected**. It says this cannot be undone. When the interface has bindings, it explains them and offers **Also delete related bindings**: the delete is available once that option is checked, the bindings go with the interface, and the connections stay. The list opens again afterwards.
+
 ### Interface properties (side panel)
 
 The side panel stays visible across every tab and groups the most-edited fields into three collapsible sections:

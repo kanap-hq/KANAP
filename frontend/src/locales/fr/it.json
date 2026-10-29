@@ -3420,6 +3420,7 @@
     "removeLayerFailed": "Échec de la suppression de la couche",
     "loadInterfaceFailed": "Échec du chargement de l'interface",
     "saveInterfaceFailed": "Échec de l'enregistrement de l'interface",
+    "deleteInterfaceFailed": "Échec de la suppression de l'interface",
     "loadLocationFailed": "Échec du chargement du site",
     "saveLocationFailed": "Échec de l'enregistrement du site",
     "deleteLocationFailed": "Échec de la suppression du site",

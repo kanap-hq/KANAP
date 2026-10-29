@@ -64,6 +64,8 @@ La grille Interfaces affiche votre registre d'intégration en un coup d'œil.
 
 Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un panneau latéral avec les propriétés de l'interface à gauche, et six onglets à droite. Le dernier, **Historique**, liste les modifications apportées à l'interface (voir [Historique des fiches](record-history.md)).
 
+L'en-tête porte **Supprimer**, une icône corbeille avec son nom en infobulle (`applications:admin`). La confirmation utilise la même vérification que **Supprimer la sélection**. Elle indique que cette action est irréversible. Lorsque l'interface a des liaisons, elle les explique et propose **Supprimer également les liaisons associées** : la suppression est disponible une fois cette option cochée, les liaisons partent avec l'interface et les connexions sont conservées. La liste s'ouvre ensuite.
+
 ### Propriétés de l'interface (panneau latéral)
 
 Le panneau latéral reste visible sur chaque onglet et regroupe les champs les plus modifiés en trois sections rétractables :
