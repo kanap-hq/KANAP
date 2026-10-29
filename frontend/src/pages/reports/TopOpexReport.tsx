@@ -57,8 +57,9 @@ export default function TopOpexReport() {
   }, [scope]);
 
   // The server keeps the lines of the filter bar, leaves out the excluded lines and accounts, and
-  // returns the top lines and the total of every kept line.
-  const request = useMemo(() => (reportFilters.queryFilters == null ? null : topItemsRequest({
+  // returns the top lines and the total of every kept line. The preselected column is the tenant
+  // default: wait for the setting, or the product default is asked first.
+  const request = useMemo(() => (!budgetColumns.ready || reportFilters.queryFilters == null ? null : topItemsRequest({
     scope,
     year,
     metric,
@@ -67,10 +68,10 @@ export default function TopOpexReport() {
     excludedAccounts: excludedAccountValues(excludedAccounts, accountOptions.options ?? []),
     filters: reportFilters.queryFilters,
     measure,
-  })), [reportFilters.queryFilters, scope, year, metric, topCount, excludedIds, excludedAccounts, accountOptions.options, measure]);
+  })), [budgetColumns.ready, reportFilters.queryFilters, scope, year, metric, topCount, excludedIds, excludedAccounts, accountOptions.options, measure]);
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
-  // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
-  const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
+  // Loading, the column setting or the filter bar still unread, or the last answer kept while the new one loads.
+  const busy = !budgetColumns.ready || reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
   // FTE: the lines that declare none are left out, and no line declaring any leaves the total blank.
   const { processed, totalMetric: knownTotal, topSelectionTotal } = useMemo(() => readTopItems(report.data, measure), [report.data, measure]);
   const totalMetric = knownTotal ?? 0;

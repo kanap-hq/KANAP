@@ -403,3 +403,39 @@ describe('OPEX delta shares', () => {
     expect(split).not.toContain('100.0%');
   });
 });
+
+/** A measure field that names a budget column (`y2026Forecast`, `staff_cost_y2026Forecast`). */
+const COLUMN_FIELD = /y\d{4}(Budget|Revision|Forecast|FollowUp|Landing)/;
+
+/** Aggregates whose measures name a budget column. The filter bar's aggregates have none. */
+function columnPosts() {
+  return post.mock.calls.filter(([, body]) => (body?.spec?.measures ?? []).some((measure: { field?: string }) => COLUMN_FIELD.test(measure.field ?? '')));
+}
+
+function columnSuffixes(): string[] {
+  return columnPosts().flatMap(([, body]) => body.spec.measures.flatMap((measure: { field?: string }) => {
+    const match = COLUMN_FIELD.exec(measure.field ?? '');
+    return match ? [match[1]] : [];
+  }));
+}
+
+describe.each([
+  ['Top items', TopOpexReport, ['Forecast']],
+  ['Column comparison', BudgetColumnsCompareReport, ['Forecast']],
+  ['Increases and decreases', OpexDeltaReport, ['Forecast']],
+  ['Comparison', ComparisonReport, ['Forecast', 'Landing']],
+  ['Consolidation', ConsolidationReport, ['Forecast']],
+] as const)('%s waits for the column setting', (_name, Report, suffixes) => {
+  it('sends one set of aggregates, on the tenant default', async () => {
+    const tenant = { labels: TENANT_NAMES, enabled: ALL_SHOWN, default_column: 'forecast' as const };
+    setBudgetColumns(tenant, false);
+    const { rerenderReport } = renderReport(<Report />);
+    await waitFor(() => expect(post.mock.calls.some(([, body]) => body.spec.groupBy?.[0] === 'run_build')).toBe(true));
+    expect(columnPosts()).toEqual([]);
+
+    setBudgetColumns(tenant);
+    rerenderReport();
+    await waitFor(() => expect(new Set(columnSuffixes())).toEqual(new Set(suffixes)));
+    expect(columnPosts()).toHaveLength(1);
+  });
+});
