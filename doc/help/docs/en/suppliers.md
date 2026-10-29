@@ -13,7 +13,7 @@ Navigate to **Master Data > Suppliers** to open the supplier directory. Click **
 - **ERP supplier ID**: Reference ID from your ERP or procurement system
 - **Notes**: Free-form notes about the vendor relationship
 
-**Tip**: Create suppliers before adding applications or contracts: you will be able to link them during creation.
+**Tip**: On a contract, an application or a budget line, type the supplier's name and choose **+ Create supplier** when it does not exist yet. **New** on this page creates a supplier on its own.
 
 ---
 
