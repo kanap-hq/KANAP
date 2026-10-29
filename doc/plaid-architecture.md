@@ -431,29 +431,47 @@ version created on the way stays (decision 12), and the undo card says so.
 `editor`, `family`, `lifecycle`, `hosting_type`, `description`, `notes`,
 `support_notes`, the replacement (`replaced_by`, a `TEC-n`, UUID or exact name),
 `cyber_criticality`, `recovery_wave`, `rto_minutes`, `rpo_minutes` and
-`admin_zone`; the IT catalog fields take a code or the exact label, without
-case, and the card shows the label. The service keeps its rules (unique name
-without case, no replacement cycle, default hosting type, default alert
-setting); the preview checks the name and the replacement first. `cpe_products`,
-`cve_names`, `catalog_key`, `mode` and `vulnerability_alerts` are never written
-by Plaid and are refused at preparation; `vulnerability_alerts` is a separate
-setting (lot 5).
+`admin_zone`. The IT catalog fields take the code or an exact label, without
+case, in the four languages the app shows (the shipped labels are loaded for
+the check); the preview keeps the code in the change, and the frontend names it
+from the tenant's list in the person's language (`labelFor` in
+`previewChangeLabels.ts`). A retired value is refused unless it is the one the
+record already holds, and a label that matches two values is refused as
+ambiguous (`findCatalogOption`, as `incident_category`). The service keeps its
+rules (unique name without case, no replacement cycle, default hosting type,
+default alert setting); the preview checks the name and the replacement first.
+`cpe_products`, `cve_names`, `catalog_key`, `mode`, `vulnerability_alerts` and
+an attachment are never written by Plaid and are refused at preparation, in
+words: `vulnerability_alerts` points to `set_technology_vulnerability_alerts`,
+and an attachment names the Relations tab.
 
 The catalog comes first. Before a free entry, the preparation looks for the
 KANAP catalog entry whose name equals the requested name, without case, and the
 tenant has not adopted. When it finds one, the preview is an adoption: the card
-says "adopted from the KANAP catalog", the family the adoption writes, and the
-number of versions with the range of their end-of-support dates. The execution
-calls `TechnologyCatalogService.adopt` with the preview's audit source, then
-applies the other fields the person gave with `TechnologiesService.update`, in
-the same transaction; a `family` given by the person is written by that update
-and shown separately on the card. A same-name technology of the tenant is
+says "adopted from the KANAP catalog" and the number of versions with the range
+of their end-of-support dates; the family it writes is a field of its own, with
+the code the frontend localises. When a hand-typed record of that name exists
+without a catalog key, the preview is a completion: the card says "completes
+TEC-12 with the KANAP catalog" and lists what the adoption adds (the catalog
+key, the missing version labels, the description when the record has none), and
+the target is that record. A same-name technology with no exact catalog entry is
 refused with its `TEC-n`; a name without an exact entry but with entries that
 contain it is refused with at most five of them, and the person chooses one or
 asks for a free entry (`from_catalog: false`). The free entry runs
-`TechnologiesService.create`. The adoption writes its own `technology_versions`
-audit rows with `source: ai_chat` and the preview reference; a creation is not
-undoable.
+`TechnologiesService.create`.
+
+The execution calls `TechnologyCatalogService.adopt` with the preview's audit
+source and an expectation under the adoption's advisory lock: a preview that
+announced a new record refuses (409, nothing written) when a technology of the
+same name or catalog key exists now, and a completion requires that hand-typed
+record, still without a catalog key and under the same name. `adopt` must have
+created the record the card announced (or completed the one it named). The other
+fields the person gave are one `TechnologiesService.update` in the same
+transaction. The adoption writes its own `technology_versions` audit rows with
+`source: ai_chat` and the preview reference; a creation is not undoable. A free
+creation refuses (409, nothing written) when a technology of the same name
+appeared between the preview and the approval, in words rather than the
+service's duplicate-name error.
 
 An update changes the same fields, checks the name and the replacement at the
 preparation, compares every changed field with the live record before writing
@@ -469,16 +487,22 @@ its current label and changes its label, dates or notes, a date or notes at
 `null` clearing it. The execution calls `TechnologiesService.createVersion` and
 `updateVersion` with the preview's audit source; the service keeps its rules
 (unique label without case, dates, extended support not before standard) and
-the preview checks them first. `cpe_version`, `build_prefixes` and a version's
-`vulnerability_alerts` are not written (the vulnerability matching and the lot
-5 setting); deleting a version stays in the technology's Overview tab. The
-execution locks the technology (`FOR NO KEY UPDATE`), re-reads the versions and
-compares label, dates and notes: a change since the preview, or a version added
-in between under the same label, answers 409 and writes nothing. The undo
-restores exactly the changed versions; a version added on the way stays, and
-the undo card says so. A date the tenant (or Plaid) writes on a catalog version
-survives the catalog sync: the sync keeps a value that differs from the one it
-last wrote (`technology-catalog-sync.service.ts`, `now !== was`).
+the preview checks them first. A date must be a day the calendar has: the round
+trip refuses `2028-02-30` in the shared rule (`isCalendarDay`,
+`technology-rows.ts`). The preview refuses a request with nothing to add or
+change ("Nothing to change"), an unknown key, `delete` (the technology's
+Overview tab has it), `cpe_version` and `build_prefixes` (the vulnerability
+matching owns them) and `vulnerability_alerts` (it points to
+`set_technology_vulnerability_alerts`). A version created only preview cannot be
+undone: the undo refuses with "Nothing to undo: the preview added versions, and
+an added version stays." The execution locks the technology
+(`FOR NO KEY UPDATE`), re-reads the versions and compares label, dates and
+notes: a change since the preview, or a version added in between under the same
+label, answers 409 and writes nothing. The undo restores exactly the changed
+versions; a version added on the way stays, and the undo card says so. A date
+the tenant (or Plaid) writes on a catalog version survives the catalog sync: the
+sync keeps a value that differs from the one it last wrote
+(`technology-catalog-sync.service.ts`, `now !== was`).
 
 The two tools together make the create-then-link plan: when the flagship phrase
 names a technology the tenant does not have, the model prepares one
@@ -488,6 +512,64 @@ names a technology the tenant does not have, the model prepares one
 `target_ref` from the created `TEC-n`, so the second step resolves it; a version
 the catalog holds is adopted with its dates and found by the link, otherwise
 the link creates it as in lot 3.
+
+### Technology people, web links and vulnerability alerts (write)
+
+`update_technology_people` (chat only, preview and approval) changes the owners
+and support contacts of one technology. `owners.add` takes an active user by
+their exact displayed name, without case, and `owner_type` (`it` or `business`);
+`owners.remove` takes the same name and an optional type (omitted removes both).
+A name two active users carry is refused with the names only (the rule "names
+only": no email), an inactive user is not found. `support_contacts.add` takes a
+contact by exact name and an optional role; `remove` takes the name. Naming a
+contact also needs `contacts:reader`, as the Operations tab's picker; the check
+runs when the preview is asked and again when it runs (`aiRelationTargetRequirement`).
+The preview reads the owners and contacts, computes the full sets (`bulkReplaceOwners`
+/ `bulkReplaceSupportContacts`, with the audit source) and appends a new contact
+to the end, the others keeping their order; a person already there, or absent,
+writes nothing, and a preview that changes neither kind is refused. The
+execution locks the technology, re-reads the whole set of the kind it touches
+and answers 409 when it differs. The undo puts the previous owners back and
+restores the contacts in their exact order.
+
+`update_technology_web_links` (chat only, preview and approval) adds, changes
+and removes the web links of one technology. A link is named by its exact
+address; two links of the same address make the designation ambiguous and are
+refused. `add` takes a `url` (http or https, the service's `webLinkUrl`) and an
+optional description; `update` names the current address and changes `new_url`
+or `description` (null clears it); `remove` takes the address. The execution
+locks the technology, re-reads the whole link set and answers 409 when it
+differs, then calls `createLink`, `updateLink` and `deleteLink` with the audit
+source. The undo removes the links added (only while the set is exactly what the
+execution wrote), recreates the removed ones with their address and description,
+and restores the changed ones.
+
+`set_technology_vulnerability_alerts` (chat only, preview and approval) sets
+whether the technology raises vulnerability alerts (`enabled`) and the exception
+of one or more versions (`versions`: `alerts` true, false, or null to follow the
+technology). `enabled` runs first: `setVulnerabilityAlerts` clears every version
+exception, and the preview calls it in `dry_run` to say how many will be cleared
+("3 version exceptions will be cleared"); then the requested exceptions are
+written with `updateVersion`. A base release carries its service packs through
+the pure `servicePackAlertTargets` (`vulnerability-rules.ts`), which the service
+also uses for its write; the card names the versions that will follow. The
+execution locks the technology, re-reads the setting and every exception and
+answers 409 when they differ. The undo puts the setting back, then exactly the
+previous exceptions, service packs included, through the same methods. The
+vulnerability matching and the vulnerability states stay outside L5.
+
+The technology detail (`get_entity_detail`) reads what these tools write: the
+support contacts (name and role), the web links (address and description), the
+technology's alert setting, and each version's own exception and effective
+setting, beside the owners and the versions.
+
+### Non-writes of the technology family
+
+Attachments stay outside L5 (the backend routes exist, the screen has no
+upload); a request naming one is refused in words and names the Relations tab.
+`cpe_products` and `cve_names` stay closed to Plaid (decision 10, the matching
+owns them). Deleting a technology or a version, the vulnerabilities matching and
+the vulnerability states stay outside L5.
 
 ### Vulnerabilities
 
