@@ -823,7 +823,7 @@ async function testUnknownTechnologyNamesTheScreen(harness: Harness) {
       () => harness.previews.createPreview(ctx, 'update_technology_links', {
         technology: 'Postgres', applications: { add: [{ application: 'CheeseTrack', version: '16' }] },
       }),
-      /Technology "Postgres" is not in this workspace\. Prepare a plan that creates or adopts it \(create_business_record, entity_type technologies\) first, then declares the link\. This tool creates nothing\./,
+      /Technology "Postgres" is not in this workspace\. Prepare a plan that creates or adopts it \(create_business_record, entity_type technologies\) first, then make this request again\. This tool creates nothing\./,
     );
   });
 }
@@ -1782,6 +1782,46 @@ async function testTechnologyWebLinks(harness: Harness) {
       'Two links have the address "https://example.com/duplicate"; use the screen to choose the right one.',
     );
   });
+  // The projected set after the removals and updates: an addition may not duplicate an address,
+  // and an address removed and added in the same request is refused.
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-web-links-final-set');
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'update_technology_web_links', {
+        technology: 'TEC-1',
+        update: [{ url: 'https://example.com/docs', new_url: 'https://example.com/new' }],
+        add: [{ url: 'https://example.com/new' }],
+      }),
+      'A link with the address "https://example.com/new" already exists.',
+    );
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'update_technology_web_links', {
+        technology: 'TEC-1',
+        remove: [{ url: 'https://example.com/docs' }],
+        add: [{ url: 'https://example.com/docs' }],
+      }),
+      'The link "https://example.com/docs" is removed and added in the same request: keep one.',
+    );
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'update_technology_web_links', {
+        technology: 'TEC-1',
+        add: [{ url: 'https://example.com/new' }, { url: 'https://example.com/new' }],
+      }),
+      'A link with the address "https://example.com/new" already exists.',
+    );
+    // A removal frees its address for an update in the same request.
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_web_links', {
+      technology: 'TEC-1',
+      update: [{ url: 'https://example.com/old', new_url: 'https://example.com/docs' }],
+      remove: [{ url: 'https://example.com/docs' }],
+    });
+    await approvePreview(harness, ctx, preview);
+    const links = await runner.query(
+      `SELECT url, description FROM technology_links WHERE tenant_id = $1 AND technology_id = $2 ORDER BY url`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    assert.deepEqual(links, [{ url: 'https://example.com/docs', description: 'Old page' }]);
+  });
   await withSeededTransaction(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'technology-web-links-drift');
     const preview = await executeToolPreview(harness, ctx, 'update_technology_web_links', {
@@ -1805,14 +1845,14 @@ async function testTechnologyAlerts(harness: Harness) {
     });
     assert.equal(
       preview.changes.technology_vulnerability_alerts.to,
-      '**Vulnerability alerts**\n- off\n\n- 2 version exceptions will be cleared: 14, 16',
+      '- off\n- 2 version exceptions will be cleared: 14, 16',
     );
     const { AiMutationOperationRegistry } = require('../mutation/ai-mutation-operation.registry');
     const [alertsStored] = await runner.query(`SELECT * FROM ai_mutation_previews WHERE id = $1`, [preview.preview_id]);
     const alertsFr = harness.app.get(AiMutationOperationRegistry).getOperation('set_technology_vulnerability_alerts').presentPreview(alertsStored, 'fr');
     assert.equal(
       alertsFr.changes.technology_vulnerability_alerts.to,
-      '**Alertes de failles**\n- désactivées\n\n- 2 exceptions de version seront effacées : 14, 16',
+      '- désactivées\n- 2 exceptions de version seront effacées : 14, 16',
     );
     await approvePreview(harness, ctx, preview);
     const [technology] = await runner.query(`SELECT vulnerability_alerts FROM technologies WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.technologies.postgres]);
@@ -1825,7 +1865,7 @@ async function testTechnologyAlerts(harness: Harness) {
     const undo = await harness.tools.execute(ctx, 'undo_preview', { preview_id: preview.preview_id }) as any;
     assert.equal(
       undo.changes.technology_vulnerability_alerts.to,
-      '**Vulnerability alerts**\n- on\n\n**Versions**\n- 14: follows the technology → alerts off\n- 16: follows the technology → alerts off',
+      '- on\n\n**Versions**\n- 14: follows the technology → alerts off\n- 16: follows the technology → alerts off',
     );
     await approvePreview(harness, ctx, undo);
     const [restoredTechnology] = await runner.query(`SELECT vulnerability_alerts FROM technologies WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.technologies.postgres]);
@@ -1886,7 +1926,7 @@ async function testTechnologyAlerts(harness: Harness) {
     });
     assert.equal(
       preview.changes.technology_vulnerability_alerts.to,
-      '**Vulnerability alerts**\n- on\n\n- 2 version exceptions will be cleared: 14, 16'
+      '- on\n- 2 version exceptions will be cleared: 14, 16'
       + '\n\n**Versions**\n- 14: follows the technology → alerts off',
     );
     await approvePreview(harness, ctx, preview);
@@ -2080,10 +2120,12 @@ async function testTechnologyAdoptionDriftAndCompletion(harness: Harness) {
   await withSeededTransaction(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'technology-adoption-completion');
     const preview = await executeToolPreview(harness, ctx, 'create_business_record', {
-      entity_type: 'technologies', fields: { name: 'PostgreSQL', lifecycle: 'Active' },
+      entity_type: 'technologies', fields: { name: 'PostgreSQL', lifecycle: 'Active', notes: 'From Plaid' },
     });
     assert.equal(preview.target.ref, 'TEC-1', 'the card names the hand-typed record it completes');
     assert.equal(preview.target.title, 'TEC-1 - PostgreSQL');
+    assert.equal(preview.changes.lifecycle, undefined, 'a field equal to the current value leaves the card');
+    assert.deepEqual(preview.changes.notes, { label: 'Notes', from: null, to: 'From Plaid', format: 'text' });
     assert.match(preview.changes.catalog_adoption.to, /^\*\*Completes TEC-1 with the KANAP catalog\*\*/);
     assert.match(preview.changes.catalog_adoption.to, /Catalog key: postgresql/);
     assert.match(preview.changes.catalog_adoption.to, /\d+ missing versions/);
@@ -2096,11 +2138,12 @@ async function testTechnologyAdoptionDriftAndCompletion(harness: Harness) {
     assert.match(fr.changes.catalog_adoption.to, /Description ajoutée \(la fiche n'en a pas\)/);
     await approvePreview(harness, ctx, preview);
     const [technology] = await runner.query(
-      `SELECT catalog_key, lifecycle, description FROM technologies WHERE tenant_id = $1 AND id = $2`,
+      `SELECT catalog_key, lifecycle, description, notes FROM technologies WHERE tenant_id = $1 AND id = $2`,
       [seed.tenantId, seed.technologies.postgres],
     );
     assert.equal(technology.catalog_key, 'postgresql');
     assert.equal(technology.lifecycle, 'active');
+    assert.equal(technology.notes, 'From Plaid', 'the requested field is written beside the catalog');
     assert.ok(technology.description, 'the empty description is filled from the catalog');
     const versions = await runner.query(
       `SELECT count(*)::int AS n FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2`,
@@ -2113,6 +2156,46 @@ async function testTechnologyAdoptionDriftAndCompletion(harness: Harness) {
       [seed.tenantId, seed.technologies.postgres],
     );
     assert.ok(audits.some((row: any) => row.source_ref === preview.preview_id));
+  });
+
+  // A note typed on the screen between the preview and the approval is a drift: 409, nothing written.
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-completion-drift');
+    const preview = await executeToolPreview(harness, ctx, 'create_business_record', {
+      entity_type: 'technologies', fields: { name: 'PostgreSQL', notes: 'From Plaid' },
+    });
+    assert.equal(preview.changes.notes.from, null);
+    await runner.query(`UPDATE technologies SET notes = 'Screen notes' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.technologies.postgres]);
+    const failed = await approveFailingPreview(harness, ctx, preview);
+    assert.equal(failed.error_message, 'Notes changed after the preview was created.');
+    const [technology] = await runner.query(
+      `SELECT catalog_key, description, notes FROM technologies WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    assert.deepEqual(technology, { catalog_key: null, description: null, notes: 'Screen notes' }, 'only the screen wrote');
+  });
+
+  // The IT catalog validation receives the current value: a deprecated option the record already
+  // holds is accepted on a completion, and it leaves the card when the request asks for it unchanged.
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-completion-deprecated-family');
+    await runner.query(
+      `UPDATE tenants SET metadata = metadata || jsonb_build_object('it_ops', jsonb_build_object(
+         'technology_families',
+         '[{"code":"database","label":"Database","deprecated":true},{"code":"operating_system","label":"Operating system"}]'::jsonb))
+       WHERE id = $1`,
+      [seed.tenantId],
+    );
+    const preview = await executeToolPreview(harness, ctx, 'create_business_record', {
+      entity_type: 'technologies', fields: { name: 'PostgreSQL', family: 'Database' },
+    });
+    assert.equal(preview.changes.family, undefined, 'the current deprecated family is accepted and leaves the card');
+    await approvePreview(harness, ctx, preview);
+    const [technology] = await runner.query(
+      `SELECT catalog_key, family FROM technologies WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    assert.deepEqual(technology, { catalog_key: 'postgresql', family: 'database' });
   });
 
   // The hand-typed record adopted by the screen between the preview and the approval: 409.
@@ -2268,6 +2351,219 @@ async function testVersionUndoAndDateRefusals(harness: Harness) {
   });
 }
 
+
+/** A people undo compares only the kind the original preview touched. */
+async function testTechnologyPeopleUndoIgnoresTheUntouchedKind(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-people-undo-untouched');
+    await runner.query(
+      `INSERT INTO contacts (tenant_id, first_name, last_name, email) VALUES ($1, 'Sage', 'Support', 'sage-undo@example.test')`,
+      [seed.tenantId],
+    );
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_people', {
+      technology: 'TEC-1',
+      support_contacts: { add: [{ contact: 'Sage Support' }] },
+    });
+    await approvePreview(harness, ctx, preview);
+    // The screen adds an owner of the other kind between the preview and the undo.
+    await runner.query(
+      `INSERT INTO technology_owners (tenant_id, technology_id, user_id, owner_type) VALUES ($1, $2, $3, 'business')`,
+      [seed.tenantId, seed.technologies.postgres, seed.users.paul],
+    );
+    const undo = await harness.tools.execute(ctx, 'undo_preview', { preview_id: preview.preview_id }) as any;
+    await approvePreview(harness, ctx, undo);
+    const owners = await runner.query(
+      `SELECT user_id, owner_type FROM technology_owners WHERE tenant_id = $1 AND technology_id = $2`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    assert.ok(
+      owners.some((row: any) => row.owner_type === 'business' && row.user_id === seed.users.paul),
+      'the owner added on the screen stays',
+    );
+    const contacts = await runner.query(
+      `SELECT c.first_name FROM technology_support_contacts sc
+         JOIN contacts c ON c.tenant_id = sc.tenant_id AND c.id = sc.contact_id
+        WHERE sc.tenant_id = $1 AND sc.technology_id = $2 ORDER BY sc.created_at, sc.id`,
+      [seed.tenantId, seed.technologies.postgres],
+    );
+    assert.deepEqual(contacts.map((row: any) => row.first_name), ['Oracle', 'Internal'], 'the undo removes only the contact it added');
+  });
+}
+
+/** A removal names a current owner of the fiche, active or not; an add stays on active users. */
+async function testTechnologyPeopleRemoveInactiveOwner(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-people-remove-inactive');
+    await runner.query(
+      `INSERT INTO technology_owners (tenant_id, technology_id, user_id, owner_type) VALUES ($1, $2, $3, 'it')`,
+      [seed.tenantId, seed.technologies.postgres, seed.users.inactive],
+    );
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_people', {
+      technology: 'TEC-1',
+      owners: { remove: [{ user: 'Inactive User' }] },
+    });
+    assert.equal(preview.changes.technology_owners.to, '**Removed**\n- Inactive User (IT owner)');
+    await approvePreview(harness, ctx, preview);
+    const rows = await runner.query(
+      `SELECT 1 FROM technology_owners WHERE tenant_id = $1 AND technology_id = $2 AND user_id = $3`,
+      [seed.tenantId, seed.technologies.postgres, seed.users.inactive],
+    );
+    assert.equal(rows.length, 0, 'the inactive owner is removed');
+  });
+}
+
+/** A contact without a name: refused on add, named by its email on remove, read as the screen shows. */
+async function testTechnologyPeopleNamelessContact(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-people-nameless');
+    const [nameless] = await runner.query(
+      `INSERT INTO contacts (tenant_id, email) VALUES ($1, 'nameless@example.test') RETURNING id`,
+      [seed.tenantId],
+    );
+    await runner.query(
+      `INSERT INTO technology_support_contacts (tenant_id, technology_id, contact_id, role, created_at)
+       VALUES ($1, $2, $3, null, now())`,
+      [seed.tenantId, seed.technologies.postgres, nameless.id],
+    );
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'update_technology_people', {
+        technology: 'TEC-1', support_contacts: { add: [{ contact: 'nameless@example.test' }] },
+      }),
+      'Contact "nameless@example.test" has no name. Give it a name in Contacts first.',
+    );
+    const detail = await harness.tools.execute(ctx, 'get_entity_detail', {
+      entity_type: 'technologies', entity_id: 'TEC-1',
+    }) as any;
+    assert.ok(
+      detail.data.support_contacts.some((contact: any) => contact.name === 'nameless@example.test'),
+      'the detail shows the email the Operations tab shows for an unnamed contact',
+    );
+    const preview = await executeToolPreview(harness, ctx, 'update_technology_people', {
+      technology: 'TEC-1',
+      support_contacts: { remove: [{ contact: 'nameless@example.test' }] },
+    });
+    assert.equal(preview.changes.technology_support_contacts.to, '**Removed**\n- nameless@example.test');
+    await approvePreview(harness, ctx, preview);
+    const rows = await runner.query(
+      `SELECT 1 FROM technology_support_contacts WHERE tenant_id = $1 AND technology_id = $2 AND contact_id = $3`,
+      [seed.tenantId, seed.technologies.postgres, nameless.id],
+    );
+    assert.equal(rows.length, 0, 'the unnamed contact is removed by its email');
+  });
+}
+
+/** The undo of a version-only exception: refused only when nothing changed, and in the future tense. */
+async function testTechnologyAlertsUndoOfAVersionException(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-alerts-undo-version');
+    const preview = await executeToolPreview(harness, ctx, 'set_technology_vulnerability_alerts', {
+      technology: 'TEC-2', versions: [{ version: '1.26', alerts: false }],
+    });
+    assert.equal(
+      preview.changes.technology_vulnerability_alerts.to,
+      '**Versions**\n- 1.26: follows the technology → alerts off',
+    );
+    await approvePreview(harness, ctx, preview);
+    const undo = await harness.tools.execute(ctx, 'undo_preview', { preview_id: preview.preview_id }) as any;
+    const { AiMutationOperationRegistry } = require('../mutation/ai-mutation-operation.registry');
+    const [storedUndo] = await runner.query(`SELECT * FROM ai_mutation_previews WHERE id = $1`, [undo.preview_id]);
+    const undoFr = harness.app.get(AiMutationOperationRegistry).getOperation('set_technology_vulnerability_alerts').presentPreview(storedUndo, 'fr');
+    assert.equal(
+      undoFr.changes.technology_vulnerability_alerts.to,
+      '- 1 exception de version sera effacée : 1.26',
+      'the pending undo card speaks in the future',
+    );
+    await approvePreview(harness, ctx, undo);
+    const [version] = await runner.query(
+      `SELECT vulnerability_alerts FROM technology_versions WHERE tenant_id = $1 AND id = $2`,
+      [seed.tenantId, seed.versions.nginx126],
+    );
+    assert.equal(version.vulnerability_alerts, null, 'the exception is gone again');
+  });
+}
+
+/** An undo puts back the service pack a base release carried, null included, and verifies the state. */
+async function testTechnologyAlertsUndoServicePacksExactly(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-alerts-undo-packs');
+    await runner.query(`UPDATE technologies SET vulnerability_alerts = true WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.technologies.sles]);
+    await runner.query(`UPDATE technology_versions SET vulnerability_alerts = false WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.versions.sles15]);
+    await runner.query(`UPDATE technology_versions SET vulnerability_alerts = false WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.versions.slesSp2]);
+    const preview = await executeToolPreview(harness, ctx, 'set_technology_vulnerability_alerts', {
+      technology: 'SUSE Linux Enterprise Server', enabled: false,
+    });
+    assert.equal(
+      preview.changes.technology_vulnerability_alerts.to,
+      '- off\n- 2 version exceptions will be cleared: 15, 15 SP2',
+    );
+    await approvePreview(harness, ctx, preview);
+    const undo = await harness.tools.execute(ctx, 'undo_preview', { preview_id: preview.preview_id }) as any;
+    await approvePreview(harness, ctx, undo);
+    const rows = await runner.query(
+      `SELECT label, vulnerability_alerts FROM technology_versions
+        WHERE tenant_id = $1 AND technology_id = $2 AND label IN ('15', '15 SP1', '15 SP2') ORDER BY label`,
+      [seed.tenantId, seed.technologies.sles],
+    );
+    assert.deepEqual(rows, [
+      { label: '15', vulnerability_alerts: false },
+      { label: '15 SP1', vulnerability_alerts: null },
+      { label: '15 SP2', vulnerability_alerts: false },
+    ], 'the pack the base carried is put back to null');
+  });
+}
+
+/** A null exception carries the service packs too, and the card names them. */
+async function testTechnologyAlertsNullPropagationCard(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-alerts-null-propagation');
+    await runner.query(
+      `UPDATE technology_versions SET vulnerability_alerts = false
+        WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [seed.tenantId, [seed.versions.sles15, seed.versions.slesSp1, seed.versions.slesSp2]],
+    );
+    const preview = await executeToolPreview(harness, ctx, 'set_technology_vulnerability_alerts', {
+      technology: 'SUSE Linux Enterprise Server',
+      versions: [{ version: '15', alerts: null }],
+    });
+    assert.equal(
+      preview.changes.technology_vulnerability_alerts.to,
+      '**Versions**\n- 15: alerts off → follows the technology\n  - the service packs 15 SP1, 15 SP2 follow base version 15',
+    );
+    const { AiMutationOperationRegistry } = require('../mutation/ai-mutation-operation.registry');
+    const [stored] = await runner.query(`SELECT * FROM ai_mutation_previews WHERE id = $1`, [preview.preview_id]);
+    const fr = harness.app.get(AiMutationOperationRegistry).getOperation('set_technology_vulnerability_alerts').presentPreview(stored, 'fr');
+    assert.equal(
+      fr.changes.technology_vulnerability_alerts.to,
+      '**Versions**\n- 15 : alertes désactivées → suit la technologie\n  - les service packs 15 SP1, 15 SP2 suivent la version de base 15',
+    );
+    await approvePreview(harness, ctx, preview);
+    const rows = await runner.query(
+      `SELECT label, vulnerability_alerts FROM technology_versions
+        WHERE tenant_id = $1 AND technology_id = $2 AND label IN ('15', '15 SP1', '15 SP2') ORDER BY label`,
+      [seed.tenantId, seed.technologies.sles],
+    );
+    assert.deepEqual(rows, [
+      { label: '15', vulnerability_alerts: null },
+      { label: '15 SP1', vulnerability_alerts: null },
+      { label: '15 SP2', vulnerability_alerts: null },
+    ]);
+  });
+}
+
+/** A base release and one of its service packs in the same request are refused at the preview. */
+async function testTechnologyAlertsBaseAndPackRefused(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'technology-alerts-base-and-pack');
+    await expectRejects(
+      () => harness.previews.createPreview(ctx, 'set_technology_vulnerability_alerts', {
+        technology: 'SUSE Linux Enterprise Server',
+        versions: [{ version: '15 SP1', alerts: true }, { version: '15', alerts: false }],
+      }),
+      'Ask for the base version alone: its service packs follow it.',
+    );
+  });
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -2312,8 +2608,15 @@ async function run() {
     await testTechnologyPeopleRefusals(harness);
     await testTechnologyPeopleDrift(harness);
     await testTechnologyPeopleContactsRight(harness);
+    await testTechnologyPeopleUndoIgnoresTheUntouchedKind(harness);
+    await testTechnologyPeopleRemoveInactiveOwner(harness);
+    await testTechnologyPeopleNamelessContact(harness);
     await testTechnologyWebLinks(harness);
     await testTechnologyAlerts(harness);
+    await testTechnologyAlertsUndoOfAVersionException(harness);
+    await testTechnologyAlertsUndoServicePacksExactly(harness);
+    await testTechnologyAlertsNullPropagationCard(harness);
+    await testTechnologyAlertsBaseAndPackRefused(harness);
     await testTechnologyDetailRead(harness);
     await testTechnologyNewToolRights(harness);
     await testTechnologyCatalogLabels(harness);

@@ -99,7 +99,6 @@ export class AiTechnologyMutationSupportService {
   async resolveTechnology(
     context: AiExecutionContextWithManager,
     reference: string,
-    purpose: 'link' | 'versions' = 'link',
   ): Promise<AiTechnologyTarget> {
     const raw = text(reference);
     if (!raw) throw new NotFoundException('Technology "" is not in this workspace.');
@@ -117,10 +116,11 @@ export class AiTechnologyMutationSupportService {
       params,
     );
     if (rows.length === 0) {
-      const then = purpose === 'versions' ? 'writes its versions' : 'declares the link';
+      // One message whatever the calling tool: it prepares a creation or an adoption, then asks again.
       throw new NotFoundException(
         `Technology "${raw}" is not in this workspace. Prepare a plan that creates or adopts it `
-        + `(create_business_record, entity_type technologies) first, then ${then}. This tool creates nothing.`,
+        + '(create_business_record, entity_type technologies) first, then make this request again. '
+        + 'This tool creates nothing.',
       );
     }
     if (rows.length > 1) throw new BadRequestException(`Multiple technologies matched "${raw}". Use a TEC reference or the UUID.`);

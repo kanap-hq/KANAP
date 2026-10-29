@@ -185,7 +185,7 @@ export class UpdateTechnologyVersionsAiMutationOperation implements AiMutationOp
     input: UpdateTechnologyVersionsInput,
   ): Promise<AiPreparedMutationPreview> {
     const request = this.normalizeRequest(input);
-    const technology = await this.support.resolveTechnology(context, request.technology, 'versions');
+    const technology = await this.support.resolveTechnology(context, request.technology);
     const live = await this.readVersions(context, technology.id);
     const versions = this.normalizeChanges(request, live);
     return {
