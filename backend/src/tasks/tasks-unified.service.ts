@@ -334,7 +334,7 @@ export class TasksUnifiedService {
   async bulkReplaceTasksForApplication(
     applicationId: string,
     taskIds: string[],
-    opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null; accessScope?: ParticipationAccessScope },
+    opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null; accessScope?: ParticipationAccessScope; audit?: TaskAuditOptions },
   ) {
     return this.bulkReplaceTargetTaskLinks({
       linkTable: 'task_applications',
@@ -351,7 +351,7 @@ export class TasksUnifiedService {
   async bulkReplaceTasksForAsset(
     assetId: string,
     taskIds: string[],
-    opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null; accessScope?: ParticipationAccessScope },
+    opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null; accessScope?: ParticipationAccessScope; audit?: TaskAuditOptions },
   ) {
     return this.bulkReplaceTargetTaskLinks({
       linkTable: 'task_assets',
@@ -373,7 +373,7 @@ export class TasksUnifiedService {
     fieldName: 'application_ids' | 'asset_ids';
     changedField: 'linked_applications' | 'linked_assets';
     taskIds: string[];
-    opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null; accessScope?: ParticipationAccessScope };
+    opts?: { manager?: EntityManager; tenantId?: string; userId?: string | null; accessScope?: ParticipationAccessScope; audit?: TaskAuditOptions };
   }): Promise<{ task_ids: string[] }> {
     const manager = params.opts?.manager ?? this.repo.manager;
     const run = async (mg: EntityManager) => {
@@ -424,6 +424,9 @@ export class TasksUnifiedService {
           changedField: params.changedField,
           tenantId,
           userId: params.opts?.userId,
+          // The audit source of the caller (the screen by default, the assistant with its preview),
+          // as the task side passes it.
+          audit: params.opts?.audit,
           manager: mg,
         });
       }
