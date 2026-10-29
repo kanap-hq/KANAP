@@ -33,10 +33,10 @@ On first boot, KANAP creates a tenant using these values. The defaults work for 
 Set them before the first start:
 
 - Changing `DEFAULT_TENANT_SLUG` later makes KANAP create a second, empty workspace and serve that one. The first workspace stays in the database, out of reach.
-- Changing `DEFAULT_TENANT_NAME` later has no effect, and the application has no page to rename the organization. Set the name before the first start.
+- Changing `DEFAULT_TENANT_NAME` later has no effect. An administrator renames the organization in **Admin → Branding**. The workspace address stays as it is.
 - Changing `DEFAULT_TENANT_LANGUAGE` later has no effect: the dimensions keep their names. You can rename them in **Master data > Analytics dimensions**.
 
-To give KANAP the look of your organization, add your logo and colors in **Admin → Branding**.
+To give KANAP the look of your organization, set its name, logo and colors in **Admin → Branding**.
 
 ## Required: admin credentials
 

@@ -1717,6 +1717,9 @@
       "reset": "Branding auf KANAP-Standardeinstellungen zurücksetzen? Logo und benutzerdefinierte Farben werden entfernt."
     },
     "fields": {
+      "organizationName": "Name der Organisation",
+      "organizationNameHelper": "Erscheint beim Logo, im Fenster Info, auf der Einwilligungsseite und für den Assistenten. Die Adresse des Arbeitsbereichs bleibt unverändert.",
+      "organizationNamePlaceholder": "z. B. Northwind",
       "showLogoInDark": "Logo im Dunkelmodus anzeigen"
     },
     "logo": {
@@ -1743,7 +1746,8 @@
     },
     "title": "Branding",
     "validation": {
-      "hexColorFormat": "Format #RRGGBB verwenden (Beispiel: #1F3A5F)"
+      "hexColorFormat": "Format #RRGGBB verwenden (Beispiel: #1F3A5F)",
+      "organizationNameLength": "Verwenden Sie 1 bis 120 Zeichen."
     }
   },
   "coaTemplates": {

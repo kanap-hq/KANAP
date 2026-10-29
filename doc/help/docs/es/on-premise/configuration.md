@@ -33,10 +33,10 @@ En el primer arranque, KANAP crea un espacio de trabajo con estos valores. Los v
 Defínalos antes del primer arranque:
 
 - Cambiar `DEFAULT_TENANT_SLUG` más tarde hace que KANAP cree un segundo espacio de trabajo vacío y sirva ese. El primer espacio de trabajo permanece en la base de datos, fuera de alcance.
-- Cambiar `DEFAULT_TENANT_NAME` más tarde no tiene ningún efecto, y la aplicación no tiene ninguna página para cambiar el nombre de la organización. Defina el nombre antes del primer arranque.
+- Cambiar `DEFAULT_TENANT_NAME` más tarde no tiene ningún efecto. Un administrador cambia el nombre de la organización en **Administración → Personalización**. La dirección del espacio de trabajo sigue igual.
 - Cambiar `DEFAULT_TENANT_LANGUAGE` más tarde no tiene ningún efecto: las dimensiones conservan sus nombres. Puede cambiarles el nombre en **Datos maestros > Dimensiones analíticas**.
 
-Para dar a KANAP la imagen de su organización, añada su logotipo y sus colores en **Administración → Personalización**.
+Para dar a KANAP la imagen de su organización, defina su nombre, su logotipo y sus colores en **Administración → Personalización**.
 
 ## Obligatorio: credenciales de administrador
 

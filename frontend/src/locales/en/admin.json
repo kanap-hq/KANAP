@@ -1717,6 +1717,9 @@
       "reset": "Reset branding to default kanap settings? This removes logo and custom colors."
     },
     "fields": {
+      "organizationName": "Organization name",
+      "organizationNameHelper": "Shown with the logo, in About, on the consent page, and to the assistant. The workspace address stays as it is.",
+      "organizationNamePlaceholder": "e.g., Northwind",
       "showLogoInDark": "Show logo in dark mode"
     },
     "logo": {
@@ -1743,7 +1746,8 @@
     },
     "title": "Branding",
     "validation": {
-      "hexColorFormat": "Use format #RRGGBB (example: #1F3A5F)"
+      "hexColorFormat": "Use format #RRGGBB (example: #1F3A5F)",
+      "organizationNameLength": "Use 1 to 120 characters."
     }
   },
   "coaTemplates": {

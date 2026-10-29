@@ -1717,6 +1717,9 @@
       "reset": "¿Restablecer la personalización a la configuración predeterminada de KANAP? Se eliminarán el logo y los colores personalizados."
     },
     "fields": {
+      "organizationName": "Nombre de la organización",
+      "organizationNameHelper": "Se muestra con el logotipo, en Acerca de, en la página de consentimiento y para el asistente. La dirección del espacio de trabajo sigue igual.",
+      "organizationNamePlaceholder": "p. ej., Northwind",
       "showLogoInDark": "Mostrar logo en modo oscuro"
     },
     "logo": {
@@ -1743,7 +1746,8 @@
     },
     "title": "Personalización",
     "validation": {
-      "hexColorFormat": "Use el formato #RRGGBB (ejemplo: #1F3A5F)"
+      "hexColorFormat": "Use el formato #RRGGBB (ejemplo: #1F3A5F)",
+      "organizationNameLength": "Use de 1 a 120 caracteres."
     }
   },
   "coaTemplates": {

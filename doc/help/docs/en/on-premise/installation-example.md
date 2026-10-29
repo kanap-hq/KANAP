@@ -371,7 +371,7 @@ The smoke test of step 9 reads it from `.env` without showing it. Step 10 shows 
 Notes on the file:
 
 - The administrator account is created at the first start from `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Changing them later changes nothing while an active administrator exists.
-- `DEFAULT_TENANT_NAME` is your organization's name, from step 0. KANAP reads it at the first start only, and the application has no page to change it.
+- `DEFAULT_TENANT_NAME` is your organization's name, from step 0. KANAP reads it at the first start only. An administrator changes it later in **Admin → Branding**. The workspace address stays as it is.
 - The `DATABASE_URL` password and the `JWT_SECRET` were generated in step 0. Do not reuse example values.
 - With `sslmode=disable` the connection to PostgreSQL stays on the server. For another PostgreSQL server, see [`sslmode`](configuration.md#required-database).
 - If you reach KANAP by IP address instead of a name, set `APP_BASE_URL` and `CORS_ORIGINS` to `https://<ip address>`.
