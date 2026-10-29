@@ -13,7 +13,14 @@ import BudgetLinesRelationField, {
 } from './BudgetLinesRelationField';
 
 vi.mock('react-i18next', () => {
-  const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
+  const translation = {
+    t: (key: string, opts?: Record<string, unknown>) => {
+      if (!opts) return key;
+      const args = Object.entries(opts).filter(([name]) => name !== 'defaultValue').map(([name, value]) => `${name}=${value}`).join(',');
+      return args ? `${key}(${args})` : key;
+    },
+    i18n: { language: 'en', resolvedLanguage: 'en' },
+  };
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn() } }));
@@ -22,11 +29,11 @@ beforeEach(() => mocked.get.mockReset());
 
 const maintenance: LinkedBudgetLine = { id: 'opex-2', nature: 'opex', item_number: 2, product_name: 'SAP S/4HANA Maintenance' };
 
-function renderField(value: LinkedBudgetLine[], onChange = vi.fn()) {
+function renderField(value: LinkedBudgetLine[], onChange = vi.fn(), contractId?: string) {
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <BudgetLinesRelationField value={value} onChange={onChange} />
+        <BudgetLinesRelationField value={value} onChange={onChange} contractId={contractId} />
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -79,6 +86,35 @@ describe('BudgetLinesRelationField', () => {
       maintenance,
       { id: 'capex-125', nature: 'capex', item_number: 125, product_name: 'Migration S/4HANA' },
     ]);
+  });
+
+  it('marks a candidate that would differ from the contract', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/contracts/c-1/budget-line-consistency') {
+        return {
+          data: { items: [{ id: 'opex-9', mismatches: [{ field: 'currency', line_value: 'USD', contract_value: 'EUR' }] }] },
+        } as never;
+      }
+      return {
+        data: { items: [{ id: 'opex-9', nature: 'opex', item_number: 9, product_name: 'Hosting' }] },
+      } as never;
+    });
+    renderField([], vi.fn(), 'c-1');
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    const option = await screen.findByRole('option', { name: /Hosting/ });
+    const mark = within(option).getByTestId('contract-line-mismatch');
+    expect(mark.getAttribute('aria-label')).toContain('line=USD');
+    expect(mark.getAttribute('aria-label')).toContain('contract=EUR');
+    fireEvent.mouseOver(mark);
+    const tip = await screen.findByRole('tooltip');
+    expect(tip).toHaveTextContent('USD');
+    expect(tip).toHaveTextContent('EUR');
+    expect(mocked.get).toHaveBeenCalledWith('/contracts/c-1/budget-line-consistency', expect.objectContaining({
+      params: { ids: 'opex-9' },
+    }));
+    expect(mocked.get).toHaveBeenCalledWith('/budget-lines/summary', expect.objectContaining({
+      params: { page: 1, limit: 50, status: 'enabled', sort: 'product_name:ASC', q: undefined },
+    }));
   });
 
   it('sends the typed text to the server search', async () => {

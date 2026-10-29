@@ -158,7 +158,7 @@ The page recomputes these dates while you edit the start, duration, notice or re
 
 ### Budget
 
-The tab lists the linked budget lines, OPEX and CAPEX together, with their reference (`BL-12`), name, type and company. Use the picker under the table to link or remove lines.
+The tab lists the linked budget lines, OPEX and CAPEX together, with their reference (`BL-12`), name, type and company. Use the picker under the table to link or remove lines. A line whose paying company, cost center, supplier or currency differs from the contract shows a small orange mark. Hover the mark to see each difference, with the value on the line and the value on the contract. The picker shows the same mark on a line before you link it. Linking stays possible. The mark appears for a line you can read.
 
 With read access to budget lines (`budget:reader`), the tab also shows figures:
 

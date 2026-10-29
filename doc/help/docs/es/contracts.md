@@ -158,7 +158,7 @@ La ficha recalcula estas fechas mientras edita el inicio, la duración, el preav
 
 ### Presupuesto
 
-La pestaña enumera las líneas presupuestarias vinculadas, OPEX y CAPEX juntas, con su referencia (`BL-12`), nombre, tipo y empresa. Use el selector bajo la tabla para vincular o quitar líneas.
+La pestaña enumera las líneas presupuestarias vinculadas, OPEX y CAPEX juntas, con su referencia (`BL-12`), nombre, tipo y empresa. Use el selector bajo la tabla para vincular o quitar líneas. Una línea cuya empresa pagadora, centro de coste, proveedor o moneda difiere del contrato muestra una marca naranja pequeña. Pase el cursor sobre la marca para ver cada diferencia, con el valor en la línea y el valor en el contrato. El selector muestra la misma marca en una línea antes de vincularla. El vínculo sigue siendo posible. La marca aparece para una línea que usted puede leer.
 
 Con acceso de lectura a las líneas presupuestarias (`budget:reader`), la pestaña muestra también cifras:
 
