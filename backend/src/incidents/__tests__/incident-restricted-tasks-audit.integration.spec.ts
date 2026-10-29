@@ -277,6 +277,8 @@ async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
     attachment: await seedAudit(runner, tenantId, 'incident_attachments', attachment.id),
     document: await seedAudit(runner, tenantId, 'documents', reviewDocument.id),
     task: await seedAudit(runner, tenantId, 'tasks', restrictedTask.id),
+    taskApplications: await seedAudit(runner, tenantId, 'task_applications', restrictedTask.id),
+    taskAssets: await seedAudit(runner, tenantId, 'task_assets', restrictedTask.id),
     taskAttachment: await seedAudit(runner, tenantId, 'task_attachments', taskAttachment.id),
     taskTimeEntry: await seedAudit(runner, tenantId, 'task_time_entries', timeEntry.id),
     documentAttachment: await seedAudit(runner, tenantId, 'document_attachments', documentAttachment.id),
@@ -730,9 +732,9 @@ async function testAuditLog(): Promise<void> {
     const opts = (v: IncidentViewer) => ({ manager: runner.manager, viewer: v });
 
     const adminList = await audit.list({ limit: 100 }, opts(viewer(s.adminId, true)));
-    assert.equal(adminList.total, 13, 'incidents:admin sees every audit row');
+    assert.equal(adminList.total, 15, 'incidents:admin sees every audit row');
     const reporterList = await audit.list({ limit: 100 }, opts(viewer(s.reporterId, false)));
-    assert.equal(reporterList.total, 13, 'the reporter sees the rows of their incident');
+    assert.equal(reporterList.total, 15, 'the reporter sees the rows of their incident');
     const readerList = await audit.list({ limit: 100 }, opts(viewer(s.readerId, false)));
     assert.equal(readerList.total, 1, 'the reader sees only the unrelated audit row');
 
@@ -756,12 +758,12 @@ async function testAuditLog(): Promise<void> {
       return content;
     };
     const readerExport = await exportText(viewer(s.readerId, false));
-    for (const table of ['incidents', 'incident_entries', 'incident_assets', 'incident_applications', 'incident_technologies', 'incident_attachments', 'documents', 'tasks', 'task_attachments', 'task_time_entries', 'document_attachments', 'document_incidents']) {
+    for (const table of ['incidents', 'incident_entries', 'incident_assets', 'incident_applications', 'incident_technologies', 'incident_attachments', 'documents', 'tasks', 'task_applications', 'task_assets', 'task_attachments', 'task_time_entries', 'document_attachments', 'document_incidents']) {
       assert.ok(!readerExport.includes(`${AUDIT_MARK}-${table}`), `the reader export omits the ${table} row`);
     }
     assert.ok(readerExport.includes(`${AUDIT_MARK}-suppliers`), 'the reader export keeps the unrelated row');
     const reporterExport = await exportText(viewer(s.reporterId, false));
-    for (const table of ['incidents', 'incident_entries', 'incident_assets', 'incident_applications', 'incident_technologies', 'incident_attachments', 'documents', 'tasks', 'task_attachments', 'task_time_entries', 'document_attachments', 'document_incidents']) {
+    for (const table of ['incidents', 'incident_entries', 'incident_assets', 'incident_applications', 'incident_technologies', 'incident_attachments', 'documents', 'tasks', 'task_applications', 'task_assets', 'task_attachments', 'task_time_entries', 'document_attachments', 'document_incidents']) {
       assert.ok(reporterExport.includes(`${AUDIT_MARK}-${table}`), `the reporter export keeps the ${table} row`);
     }
   });
