@@ -3420,6 +3420,7 @@
     "removeLayerFailed": "Fehler beim Entfernen der Schicht",
     "loadInterfaceFailed": "Fehler beim Laden der Schnittstelle",
     "saveInterfaceFailed": "Fehler beim Speichern der Schnittstelle",
+    "deleteInterfaceFailed": "Fehler beim Löschen der Schnittstelle",
     "loadLocationFailed": "Fehler beim Laden des Standorts",
     "saveLocationFailed": "Fehler beim Speichern des Standorts",
     "deleteLocationFailed": "Fehler beim Löschen des Standorts",
