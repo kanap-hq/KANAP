@@ -503,7 +503,9 @@ const TECHNOLOGY_REFUSED_FIELDS: Record<string, string> = {
   catalog_key: 'A catalog key comes from adopting the catalog entry, not from a record write.',
   mode: 'mode is replaced by hosting_type.',
   vulnerability_alerts: 'Vulnerability alerts are set with set_technology_vulnerability_alerts, not as a field of the record.',
+  attachment: "Attachments are added from the technology's Relations tab, not by a record write.",
   attachments: "Attachments are added from the technology's Relations tab, not by a record write.",
+  file: "Attachments are added from the technology's Relations tab, not by a record write.",
   technology_attachments: "Attachments are added from the technology's Relations tab, not by a record write.",
 };
 

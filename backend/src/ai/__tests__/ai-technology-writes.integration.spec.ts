@@ -1230,6 +1230,7 @@ async function testTechnologyRefusedFields(harness: Harness) {
       cve_names: /CVE names are filled by the vulnerability matching/,
       catalog_key: /A catalog key comes from adopting the catalog entry/,
       vulnerability_alerts: /Vulnerability alerts are set with set_technology_vulnerability_alerts/,
+      attachment: /Attachments are added from the technology's Relations tab/,
       attachments: /Attachments are added from the technology's Relations tab/,
     };
     for (const [field, pattern] of Object.entries(messages)) {
