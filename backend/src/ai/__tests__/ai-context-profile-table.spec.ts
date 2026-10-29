@@ -18,6 +18,24 @@ type Row = {
   tools?: string[];
 };
 
+/** The budget report questions of Plaid L8, in French and in English. */
+const L8_REPORT_PHRASES = [
+  'Top 10 des hausses entre budget et révision 2026',
+  'Quels ETP par mois en 2026 ?',
+  'Budget 2026 par compte de consolidation',
+  'Quelle est la refacturation 2026 par société bénéficiaire ?',
+  'ETP externes et TJM moyen par fournisseur',
+  'Budget 2026 par société et par colonne',
+  'Budget par fournisseur sur trois ans',
+  'Top 10 increases between budget and revision 2026',
+  'What FTE per month in 2026?',
+  'Budget 2026 by consolidation account',
+  'What is the 2026 chargeback by beneficiary company?',
+  'External FTE and average day rate by supplier',
+  'Budget 2026 by company and by column',
+  'Budget by supplier over three years',
+];
+
 const FIXTURE_ROWS: Row[] = [
   // Incident administrator writes: an INC reference and an imperative verb.
   { prompt: 'Rouvre INC-3', profile: 'write_business', mode: 'write' },
@@ -519,6 +537,11 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Mets Paul Martin en accès limité', profile: 'write_general', mode: 'write' },
   // The product named Access stays a technology write.
   { prompt: 'Ajoute Microsoft Access à AST-3', profile: 'write_business', mode: 'write' },
+
+  // Plaid L8: the budget reports are reads of aggregate_entities (a change between two columns, FTE
+  // by month, the consolidation account, a crossing of two fields, several columns or years) and
+  // of the chargeback families, through the common read tools.
+  ...L8_REPORT_PHRASES.map((prompt) => ({ prompt, profile: 'read_query' as const, mode: 'read' as const, tools: ['aggregate_entities', 'query_entities', 'describe_entity_filters'] })),
 ];
 
 function testTheTable() {
@@ -646,8 +669,17 @@ function testTheAccessWritesCarryNoAccessTool() {
   }
 }
 
+/** The families come with the readable entity types: the chargeback ones for a person who reads them. */
+function testTheReportPhrasesListTheReadableFamilies() {
+  for (const prompt of L8_REPORT_PHRASES) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.includeReadableEntityTypes, true, `${prompt}: the readable families are listed`);
+  }
+}
+
 function run() {
   testTheTable();
+  testTheReportPhrasesListTheReadableFamilies();
   testTheAccessWritesCarryNoAccessTool();
   testTheTechnologyLinkPhrasesCarryTheTool();
   testTheFixturePhrasesAreAllPresent();
