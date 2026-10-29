@@ -9,6 +9,7 @@ import { PortfolioRequest } from '../portfolio-request.entity';
 import { PortfolioProjectUrl } from '../portfolio-project-url.entity';
 import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
 import { AuditService } from '../../audit/audit.service';
+import { singleChangedId } from '../../audit/audit-parent-rules';
 
 /**
  * Service for managing project dependencies and source request links.
@@ -20,6 +21,35 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
     private readonly audit: AuditService,
   ) {
     super(projectRepo);
+  }
+
+  /** The projects this project depends on, sorted. */
+  private async dependencyIds(mg: EntityManager, tenantId: string, projectId: string): Promise<string[]> {
+    const rows: Array<{ id: string }> = await mg.query(
+      `SELECT depends_on_project_id AS id FROM portfolio_project_dependencies WHERE tenant_id = $1 AND project_id = $2`,
+      [tenantId, projectId],
+    );
+    return Array.from(new Set(rows.map((row) => String(row.id).toLowerCase()))).sort();
+  }
+
+  /** One audit row for a dependency added or removed: the set before and after, on the project. */
+  private async auditDependencies(
+    mg: EntityManager,
+    tenantId: string,
+    projectId: string,
+    beforeIds: string[],
+    userId: string,
+  ): Promise<void> {
+    const afterIds = await this.dependencyIds(mg, tenantId, projectId);
+    if (JSON.stringify(beforeIds) === JSON.stringify(afterIds)) return;
+    await this.audit.log({
+      table: 'portfolio_project_dependencies',
+      recordId: projectId,
+      action: 'update',
+      before: { ids: beforeIds },
+      after: { ids: afterIds },
+      userId,
+    }, { manager: mg });
   }
 
   private requireActivityAuthor(userId?: string | null): string {
@@ -142,6 +172,7 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
       where: { project_id: projectId, depends_on_project_id: targetId },
     });
     if (existing) return { ok: true, message: 'Already linked' };
+    const beforeIds = await this.dependencyIds(mg, project.tenant_id, projectId);
 
     // Create dependency
     const entity = repo.create({
@@ -160,6 +191,7 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
         dependency: [null, this.formatProjectLabel(target, targetId)],
       },
     });
+    await this.auditDependencies(mg, project.tenant_id, projectId, beforeIds, actorId);
 
     return { ok: true };
   }
@@ -193,6 +225,7 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
 
     const target = await mg.getRepository(PortfolioProject).findOne({ where: { id: targetId } });
     const targetLabel = target ? this.formatProjectLabel(target, targetId) : targetId;
+    const beforeIds = await this.dependencyIds(mg, project.tenant_id, projectId);
 
     await repo.delete({
       project_id: projectId,
@@ -208,6 +241,7 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
         dependency: [targetLabel, null],
       },
     });
+    await this.auditDependencies(mg, project.tenant_id, projectId, beforeIds, actorId);
 
     return { ok: true };
   }
@@ -227,6 +261,7 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
 
     // Every address is checked before the old links go: a refused one changes nothing.
     const checked = webLinkUrlsOf(urls);
+    const stored = await repo.find({ where: { project_id: projectId } });
     await repo.delete({ project_id: projectId });
 
     const toInsert = checked
@@ -239,6 +274,23 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
 
     if (toInsert.length > 0) {
       await repo.save(toInsert);
+    }
+
+    // The links are replaced as a whole and get new ids: the history compares their address and label.
+    const linkState = (rows: Array<{ url: string; label: string | null }>) => rows
+      .map((row) => ({ url: row.url, label: row.label ?? null }))
+      .sort((a, b) => `${a.url}\u0000${a.label ?? ''}`.localeCompare(`${b.url}\u0000${b.label ?? ''}`));
+    const before = linkState(stored);
+    const after = linkState(toInsert);
+    if (JSON.stringify(before) !== JSON.stringify(after)) {
+      await this.audit.log({
+        table: 'portfolio_project_urls',
+        recordId: projectId,
+        action: 'update',
+        before,
+        after,
+        userId: opts?.userId ?? null,
+      }, { manager: mg });
     }
 
     return { ok: true, count: toInsert.length };
@@ -328,6 +380,18 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
         type: 'change',
         changed_fields: { applications: [beforeLabels, afterLabels] },
       });
+      // The project's side of the link: the application added or removed alone is the parent, so its
+      // history reads the row too.
+      const changedId = singleChangedId(beforeSorted, afterSorted);
+      await this.audit.log({
+        table: 'application_projects',
+        recordId: projectId,
+        action: 'update',
+        before: { ids: beforeSorted.map((id) => id.toLowerCase()) },
+        after: { ids: afterSorted.map((id) => id.toLowerCase()) },
+        userId: actorId,
+        parent: changedId ? { table: 'applications', id: changedId } : null,
+      }, { manager: mg });
     }
 
     return this.listLinkedApplications(projectId, { manager: mg });
@@ -417,6 +481,18 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
         type: 'change',
         changed_fields: { assets: [beforeLabels, afterLabels] },
       });
+      // The project's side of the link: the asset added or removed alone is the parent, so its
+      // history reads the row too.
+      const changedId = singleChangedId(beforeSorted, afterSorted);
+      await this.audit.log({
+        table: 'asset_projects',
+        recordId: projectId,
+        action: 'update',
+        before: { ids: beforeSorted.map((id) => id.toLowerCase()) },
+        after: { ids: afterSorted.map((id) => id.toLowerCase()) },
+        userId: actorId,
+        parent: changedId ? { table: 'assets', id: changedId } : null,
+      }, { manager: mg });
     }
 
     return this.listLinkedAssets(projectId, { manager: mg });

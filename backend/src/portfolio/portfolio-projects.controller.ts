@@ -705,6 +705,7 @@ export class PortfolioProjectsController {
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.setEffortAllocations(id, effortType, body?.allocations ?? [], {
       manager: ctx.manager,
+      userId: ctx.userId,
     });
   }
 
@@ -719,6 +720,7 @@ export class PortfolioProjectsController {
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.resetEffortAllocations(id, effortType, {
       manager: ctx.manager,
+      userId: ctx.userId,
     });
   }
 
@@ -735,6 +737,7 @@ export class PortfolioProjectsController {
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.bulkReplaceContacts(id, body?.contact_ids ?? [], {
       manager: ctx.manager,
+      userId: ctx.userId,
     });
   }
 
@@ -943,6 +946,7 @@ export class PortfolioProjectsController {
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     return this.svc.replaceUrls(id, body?.urls ?? [], {
       manager: ctx.manager,
+      userId: ctx.userId,
     });
   }
 
