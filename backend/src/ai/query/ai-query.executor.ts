@@ -66,6 +66,8 @@ import {
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { aiAmountsCurrency } from './ai-amounts-currency.util';
 import { aiDataAccessNote } from './ai-data-access-note.util';
+import { aiBudgetListAccess } from './ai-budget-list-access.util';
+import type { BudgetListAccess } from '../../spend/budget-list/budget-list.runtime';
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
 import { hiddenContractLineCount } from '../../contracts/contract-relations';
 import { contractMismatchesAgainstLine, lineMismatchesAgainstContract } from '../../contracts/contract-line-match';
@@ -1744,8 +1746,9 @@ export class AiQueryExecutor {
     rows: any[],
     anchorYear: number,
     named: string[],
+    access: BudgetListAccess,
   ): Promise<{ amount_totals: AiAmountTotals; page_amount_totals: AiAmountTotals }> {
-    const amountTotals = await this.budgetAmountTotals(context, query, records);
+    const amountTotals = await this.budgetAmountTotals(context, query, records, access);
     const pageTotals = budgetPageAmountTotals(rows, anchorYear, amountTotals.currency);
     // The line totals (staff cost and FTE, day cost, days) of every line kept, and of the page's lines:
     // the five columns of the current year and the years and columns the filters or the sort name
@@ -1758,12 +1761,12 @@ export class AiQueryExecutor {
     const { page: _page, limit: _limit, sort: _sort, years: _years, ...listState } = query;
     const ids = rows.map((row) => row?.id).filter((id): id is string => typeof id === 'string');
     // One after the other: both read on the request's connection.
-    const all = await this.budgetLineTotals(context, listState, pairs);
+    const all = await this.budgetLineTotals(context, listState, pairs, access);
     // A page that holds every line kept sums as all of them: no second statement.
     let page = all;
     if (ids.length !== records) {
       page = ids.length
-        ? await this.budgetLineTotals(context, { ...listState, filters: { ...(listState.filters ?? {}), id: { filterType: 'set', values: ids } } }, pairs)
+        ? await this.budgetLineTotals(context, { ...listState, filters: { ...(listState.filters ?? {}), id: { filterType: 'set', values: ids } } }, pairs, access)
         : Object.fromEntries(budgetLineTotalFieldsOf(pairs).map((field) => [field.ai, isBudgetMoneyKey(field.ai) ? 0 : null]));
     }
     const note = ' The staff cost, staff FTE, day cost and days (`<year>_<column>_staff_cost`...) are summed for the current year\'s columns '
@@ -1785,6 +1788,7 @@ export class AiQueryExecutor {
     context: AiExecutionContextWithManager,
     listState: Record<string, any>,
     pairs: ReadonlySet<string>,
+    access: BudgetListAccess,
   ): Promise<Record<string, number | null>> {
     const fields = budgetLineTotalFieldsOf(pairs);
     const values: Record<string, number | null> = {};
@@ -1794,7 +1798,7 @@ export class AiQueryExecutor {
       const result = await this.budgetLines.summaryAggregate(
         listState,
         { groupBy: [], measures: chunk.map((field, i) => ({ id: `m${i}`, fn: 'sum' as const, field: field.grid })) },
-        { manager: context.manager },
+        { manager: context.manager, access },
       );
       chunk.forEach((field, i) => {
         const value = result.total.values[`m${i}`] ?? null;
@@ -1812,9 +1816,10 @@ export class AiQueryExecutor {
     context: AiExecutionContextWithManager,
     query: Record<string, any>,
     records: number,
+    access: BudgetListAccess,
   ): Promise<AiAmountTotals> {
     const { page: _page, limit: _limit, sort: _sort, years: _years, ...listState } = query;
-    const totals: any = await this.budgetLines.summaryTotals(listState, { manager: context.manager });
+    const totals: any = await this.budgetLines.summaryTotals(listState, { manager: context.manager, access });
     const values: Record<string, number> = {};
     for (const slot of FIXED_SLOTS) {
       for (const column of SUMMARY_COLUMNS) values[`${slot.ai}_${column.ai}`] = Number(totals?.[`${slot.key}${column.suffix}`] ?? 0);
@@ -2024,12 +2029,14 @@ export class AiQueryExecutor {
 
     if (input.entity_type === 'budget_lines') {
       const anchorYear = new Date().getFullYear();
+      // The person's access, as the screen passes it, to every engine call of the list.
+      const access = await aiBudgetListAccess(this.policy, context);
       const result = await this.budgetLines.summary(
         {
           ...scoped.query,
           years: budgetQueryYears(anchorYear).join(','),
         },
-        { manager: context.manager },
+        { manager: context.manager, access },
       );
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
@@ -2046,7 +2053,7 @@ export class AiQueryExecutor {
         complete: isCompleteQueryResult(resultPage, truncated),
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
-        ...await this.budgetTotals(context, scoped.query, result.total ?? 0, result.items || [], anchorYear, [...Object.keys(input.filters ?? {}), sort.applied.field]),
+        ...await this.budgetTotals(context, scoped.query, result.total ?? 0, result.items || [], anchorYear, [...Object.keys(input.filters ?? {}), sort.applied.field], access),
         scope: null,
       };
     }
@@ -3833,6 +3840,7 @@ export class AiQueryExecutor {
     } else if (input.entity_type === 'budget_lines') {
       raw = await this.budgetLines.summaryFilterValues(query, {
         manager: context.manager,
+        access: await aiBudgetListAccess(this.policy, context),
       }) as any;
     } else if (input.entity_type === 'contracts') {
       raw = await this.contracts.listFilterValues(query, {

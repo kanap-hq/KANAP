@@ -56,14 +56,14 @@ function queryExecutor(): AiQueryExecutor {
   args[1] = budgetReadService();
   args[6] = noContracts;
   args[22] = realAllocationCalculator();
-  args[23] = { canReadEntityType: async () => true };
+  args[23] = { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
   return new (AiQueryExecutor as any)(...args);
 }
 
 function aggregateExecutor(): AiAggregateExecutor {
   const args: any[] = Array.from({ length: 23 }, () => ({}));
   args[1] = budgetReadService();
-  args[21] = { canReadEntityType: async () => true };
+  args[21] = { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
   return new (AiAggregateExecutor as any)(...args);
 }
 

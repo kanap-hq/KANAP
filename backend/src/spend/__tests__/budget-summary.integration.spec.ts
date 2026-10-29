@@ -550,14 +550,14 @@ function queryExecutor(items?: unknown): AiQueryExecutor {
   // unified all-natures engine. A partial mock (no `get`) keeps its own list methods.
   args[1] = items && typeof (items as any).get === 'function' ? budgetReadService() : partialBudgetLines(items);
   args[22] = realAllocationCalculator();
-  args[23] = { canReadEntityType: async () => true };
+  args[23] = { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
   return new (AiQueryExecutor as any)(...args);
 }
 
 function aggregateExecutor(): AiAggregateExecutor {
   const args: any[] = Array.from({ length: 23 }, () => ({}));
   args[1] = budgetReadService();
-  args[21] = { canReadEntityType: async () => true };
+  args[21] = { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
   return new (AiAggregateExecutor as any)(...args);
 }
 
@@ -591,7 +591,7 @@ async function testAiCapexDetail() {
     args[6] = { listContractsForCapexItem: async () => ({ items: [] }) };
     args[22] = realAllocationCalculator();
     // A caller who reads every module: the linked applications need the applications right.
-    args[23] = { canReadEntityType: async () => true };
+    args[23] = { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
     // By reference: the detail reads the line under its id.
     const detail: any = await new (AiQueryExecutor as any)(...args).executeDetail(aiContext(runner, tenantId), {
       entity_type: 'budget_lines',

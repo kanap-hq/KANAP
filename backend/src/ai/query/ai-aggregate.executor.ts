@@ -21,6 +21,7 @@ import {
 } from './ai-data-access.query';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
 import { aiDataAccessNote } from './ai-data-access-note.util';
+import { aiBudgetListAccess } from './ai-budget-list-access.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
 import { bilingualDocumentTsQuerySql } from '../../common/document-search-tsquery';
@@ -1493,7 +1494,9 @@ export class AiAggregateExecutor {
       };
     }
 
-    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager });
+    // The person's access, as the screen passes it: the consolidation fields read only for a reader of accounts.
+    const access = await aiBudgetListAccess(this.policy, context);
+    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager, access });
     const groups = result.groups.map((group) => {
       const key = group.keys[0] ?? null;
       if (!spec.measures.length) return { key, count: group.count };
@@ -1539,7 +1542,8 @@ export class AiAggregateExecutor {
       ],
       order: [{ by: 'measure', id: governing, dir: 'DESC', nulls: 'LAST' }],
     };
-    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager });
+    const access = await aiBudgetListAccess(this.policy, context);
+    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager, access });
     const valueOf = (figures: AiBudgetStaffFigures) => (ratio.kind === 'cost_per_fte' ? figures.cost_per_fte : figures.day_rate);
     const groups = result.groups
       .filter((group) => group.values[governing] != null)
