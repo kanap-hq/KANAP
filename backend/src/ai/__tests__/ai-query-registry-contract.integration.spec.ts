@@ -507,7 +507,7 @@ async function testAmountsCurrency(harness: Harness, runner: QueryRunner, seed: 
 
 /** Every filter value the AI may send for a field, one per shape the adapter turns it into. */
 function filterShapes(entityType: string, name: string, field: any): Array<[string, unknown]> {
-  if (EQ_ONLY_FIELDS[entityType]?.has(name)) return [['eq', { op: 'eq', value: 3 }]];
+  if (EQ_ONLY_FIELDS[entityType]?.has(name)) return [['eq', { op: 'eq', value: CHARGEBACK_YEAR }]];
   if (field.type === 'set') {
     const value = field.values?.find((entry: unknown) => entry !== null) ?? '__contract_probe__';
     return [['set', [value]], ['set with blank', [value, null]], ['set to exclude', { not: [value] }]];
