@@ -277,6 +277,8 @@ export type AiQueryResult = {
   sort?: { field: string; direction: 'asc' | 'desc' };
   /** A requested sort field the family cannot sort on; `sortable_fields` then lists the ones it can. */
   sort_ignored?: string[];
+  /** A sort or filter field this person may not read, with the reason. */
+  fields_withheld?: AiWithheldField[];
   sortable_fields?: string[];
   /** A `limit` above the family's maximum: the page size asked and the one applied (`limit`). */
   limit_capped?: { requested: number; applied: number };

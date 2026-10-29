@@ -528,12 +528,11 @@ type BudgetOthers = NonNullable<AiAggregateResult['others']>;
 export const AI_BUDGET_GROUP_LIMIT = { default: 50, max: 100 } as const;
 
 /**
- * The budget fields that group a line linked to several records under the combination (the linked
- * projects' names, streams and categories): crossed with another field, those combinations pile up
- * into groups nobody reads, so a crossing refuses them.
+ * The budget fields that group a line linked to several records under the combination (the streams
+ * and categories of the linked projects; their names do not group): crossed with another field,
+ * those combinations pile up into groups nobody reads, so a crossing refuses them.
  */
 const BUDGET_MULTI_VALUED_GROUPS: Record<string, string> = {
-  project_name: 'projects',
   project_stream: 'streams',
   project_category: 'categories',
 };

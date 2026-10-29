@@ -1812,12 +1812,14 @@ export class AiQueryExecutor {
     const amounts = await aiAmountsCurrency(context, input.entity_type);
     const dataAccess = await aiDataAccessNote(context, input.entity_type);
     if (!sort.ignored.length) return { ...result, sort: sort.applied, sort_ignored: [], ...limitCapped, ...amounts, ...dataAccess };
-    // The items come in the default order, said so.
+    // The items come in the default order, said so; a field withheld for lack of a right says why.
+    const withheld = (registry.withheldFields ?? []).filter((entry) => sort.ignored.includes(entry.field));
     return {
       ...result,
       complete: false,
       sort: sort.applied,
       sort_ignored: sort.ignored,
+      ...(withheld.length ? { fields_withheld: withheld } : {}),
       sortable_fields: Object.keys(registry.sortFields),
       ...limitCapped,
       ...amounts,

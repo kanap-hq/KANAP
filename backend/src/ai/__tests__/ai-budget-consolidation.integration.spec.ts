@@ -364,6 +364,10 @@ async function testWithoutAccountsRight(harness: Harness, runner: QueryRunner, s
   const listed = await harness.queries.execute(ctx, { entity_type: 'budget_lines' });
   assert.equal(listed.items.length, LINES.length, 'the lines are listed');
   assert.equal(listed.items.some((item: any) => 'consolidation_account' in item.metadata), false, 'without the field');
+  const sorted = await harness.queries.execute(ctx, { entity_type: 'budget_lines', sort: { field: 'consolidation_account', direction: 'asc' } });
+  assert.deepEqual(sorted.sort_ignored, ['consolidation_account'], 'a sort on it is ignored');
+  assert.equal(sorted.fields_withheld?.[0]?.field, 'consolidation_account');
+  assert.match(sorted.fields_withheld?.[0]?.reason ?? '', /right on accounts/, 'with the reason, not only the default order');
   const values = await harness.queries.executeFilterValues(ctx, { entity_type: 'budget_lines', fields: ['consolidation_account', 'supplier'] });
   assert.deepEqual(values.fields_ignored, ['consolidation_account'], 'no values');
   assert.match(values.fields_withheld?.[0]?.reason ?? '', /right on accounts/, 'and why');
