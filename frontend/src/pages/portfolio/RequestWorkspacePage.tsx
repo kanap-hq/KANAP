@@ -1106,8 +1106,6 @@ export default function RequestWorkspacePage() {
                 <RequestActivityTab
                   entityId={form?.id || ''}
                   activities={form?.activities || []}
-                  createdAt={form?.created_at || null}
-                  createdByName={form?.created_by_name || null}
                   currentStatus={form?.status || ''}
                   allowedTransitions={ALLOWED_TRANSITIONS[form?.status] || []}
                   statusOptions={statusOptions}
