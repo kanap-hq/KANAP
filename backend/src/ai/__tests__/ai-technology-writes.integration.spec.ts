@@ -1680,16 +1680,17 @@ async function testTechnologyPeopleRefusals(harness: Harness) {
     );
     // A user who exists but is not an owner stays in "Not owners", active or not.
     await seedNamedUser(runner, seed.tenantId, seed.roles.member, 'gone-away@example.test', 'Gone', 'Away', 'disabled');
+    await seedNamedUser(runner, seed.tenantId, seed.roles.member, 'terry-new@example.test', 'Terry', 'New');
     const preview = await executeToolPreview(harness, ctx, 'update_technology_people', {
       technology: 'TEC-1',
       owners: {
         remove: [{ user: 'Camille Roux' }, { user: 'Gone Away' }],
-        add: [{ user: 'Paul Martin', owner_type: 'it' }],
+        add: [{ user: 'Terry New', owner_type: 'it' }],
       },
     });
     assert.equal(
       preview.changes.technology_owners.to,
-      '**Added**\n- Paul Martin (IT owner)'
+      '**Added**\n- Terry New (IT owner)'
       + '\n\n**Not owners**\n- Camille Roux\n- Gone Away',
     );
     await approvePreview(harness, ctx, preview);
