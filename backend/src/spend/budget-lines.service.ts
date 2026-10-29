@@ -17,8 +17,13 @@ import {
   type BudgetLineRelationsContext,
 } from './budget-line-relations';
 import { CapexItemsService, SpendItemsService } from './spend-items.service';
+import { hiddenCategoryLineCounts } from '../data-access/hidden-links';
 
 type ReadOptions = { manager: EntityManager; access?: BudgetListAccess };
+
+/** The most values one hidden-count request names. */
+const MAX_HIDDEN_VALUES = 500;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The neutral list routes use the same SQL engine with its explicit all-natures scope. */
 @Injectable()
@@ -99,6 +104,48 @@ export class BudgetLinesService {
 
   summaryAggregateRequest(body: unknown, opts: ReadOptions) {
     return budgetList.budgetListAggregateRequest(SUMMARY_SCOPES.all, this.deps(opts.access), body, opts.manager);
+  }
+
+  /**
+   * Data-scoped access (spec §6.6): the lines of each dimension value that the person cannot read,
+   * for the analytics report. Body `{ axis, values, year?, scope }`: the dimension, its values (500
+   * at most), the report's first year and its tab (`all`, `opex` or `capex`). The window is the
+   * engine's `windowScope`, computed here in UTC: 1 January of `year`, or of the server's current
+   * year - 1 when none is given. An unscoped person gets an empty answer without a counting query
+   * (`hiddenCategoryLineCounts`).
+   */
+  async hiddenCategoryCounts(body: unknown, opts: { manager: EntityManager }) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new BadRequestException('A body is required.');
+    const input = body as Record<string, unknown>;
+    const axis = input.axis;
+    if (typeof axis !== 'string' || !UUID.test(axis)) throw new BadRequestException('axis must be a dimension id.');
+    if (!Array.isArray(input.values)) throw new BadRequestException('values must be a list of value ids.');
+    if (input.values.length === 0) throw new BadRequestException('values must name at least one value id.');
+    if (input.values.length > MAX_HIDDEN_VALUES) throw new BadRequestException(`values holds ${MAX_HIDDEN_VALUES} values at most.`);
+    const values: string[] = [];
+    for (const value of input.values) {
+      if (typeof value !== 'string' || !UUID.test(value)) throw new BadRequestException('values must be value ids.');
+      values.push(value.toLowerCase());
+    }
+    const scope = input.scope;
+    if (scope !== 'all' && scope !== 'opex' && scope !== 'capex') throw new BadRequestException('scope must be all, opex or capex.');
+    const currentYear = new Date().getFullYear();
+    let year: number;
+    if (input.year == null) {
+      year = currentYear - 1;
+    } else {
+      if (typeof input.year !== 'number' || !Number.isInteger(input.year)) throw new BadRequestException('year must be a whole year.');
+      year = input.year;
+    }
+    budgetList.assertBudgetYearsWithinBounds([year], currentYear);
+    const counts = await hiddenCategoryLineCounts(
+      opts.manager,
+      axis.toLowerCase(),
+      Array.from(new Set(values)),
+      `${year}-01-01`,
+      scope === 'all' ? null : scope,
+    );
+    return { counts: Object.fromEntries(counts) };
   }
 
   /** The lines of `ids` as the unified list draws them (the AI detail, which names its line by id). */

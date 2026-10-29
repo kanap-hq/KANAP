@@ -115,6 +115,8 @@ export interface AggregateResult {
   reportingCurrency: string | null;
   /** The amounts the converted measures leave out for lack of an exchange rate (`[]` when none). */
   fxMissing: Array<{ currency: string; year: number; lines: number }>;
+  /** The answer is computed on a limited person's access. */
+  dataAccessLimited?: true;
 }
 
 // ----- fields and filters -----
@@ -719,12 +721,12 @@ export function readDeltaYears(result: AggregateResult | undefined, currentYear:
 
 // ----- per year groups (ConsolidationReport, AnalyticsCategoryReport) -----
 
-/** `name`: the dimension value's stored name (Analytics), null for the lines without a value. */
-export type YearGroup = { key: string; label: string; name?: string | null; values: Record<number, number> };
-export type YearGroups = { groups: YearGroup[]; totals: Record<number, number> };
+/** `name`: the dimension value's stored name (Analytics), null for the lines without a value. `count`: its number of lines. */
+export type YearGroup = { key: string; label: string; name?: string | null; id?: string | null; count?: number; values: Record<number, number> };
+export type YearGroups = { groups: YearGroup[]; totals: Record<number, number>; /** The number of lines the groups hold (the answer's total count). */ lineCount?: number };
 /** FTE: a year no line of the group declares is null. */
-export type FteYearGroup = { key: string; label: string; name?: string | null; values: Record<number, number | null> };
-export type FteYearGroups = { groups: FteYearGroup[]; totals: Record<number, number | null> };
+export type FteYearGroup = { key: string; label: string; name?: string | null; id?: string | null; count?: number; values: Record<number, number | null> };
+export type FteYearGroups = { groups: FteYearGroup[]; totals: Record<number, number | null>; lineCount?: number };
 
 function yearMeasures(years: readonly number[], metric: MetricKey, measure?: ReportMeasure): AggregateMeasure[] {
   return years.map((year) => ({ id: `y${year}`, fn: 'sum', field: measureField(year, metric, measure) }));
@@ -825,6 +827,9 @@ export interface AnalyticsParams {
   measure?: ReportMeasure;
 }
 
+/** The value fields of an analytics answer: its raw id (null for unassigned) and its line count. */
+export type AnalyticsValueFields = { id: string | null; count: number };
+
 /**
  * By the line's value on the dimension (none: unassigned), one sum per year, the first year's largest first.
  * An excluded `NO_ANALYTICS_VALUE` leaves out the lines without a value.
@@ -852,10 +857,126 @@ export function readAnalytics(years: readonly number[], result: AggregateResult 
       key: id ? `cat_${id}` : 'uncategorized',
       label: id ? (group.keys[1] ?? '').trim() || labels.unnamed : labels.unassigned,
       name: id ? group.keys[1] ?? '' : null,
+      id,
+      count: group.count,
       values: yearValues(group, years, measure),
     };
   });
-  return { groups, totals: yearValues(result?.total, years, measure) };
+  return { groups, totals: yearValues(result?.total, years, measure), lineCount: groups.reduce((count, group) => count + (group.count ?? 0), 0) };
+}
+
+/** A line of one dimension value, as the detail table lists it: its id, name, number, nature and amounts. */
+export type AnalyticsLine = {
+  id: string;
+  itemNumber: number | null;
+  name: string;
+  nature: 'opex' | 'capex' | null;
+  values: Record<number, number | null>;
+};
+
+export interface AnalyticsLinesParams extends AnalyticsParams {
+  scope: BudgetScope;
+}
+
+/**
+ * The lines of every value on the dimension, in one aggregate: grouped by value, then by line (id, name,
+ * number) and, on the all-natures scope, by nature. Same filters, exclusions and window as the value
+ * request; the first year's largest line first. The reader regroups by value (`readAnalyticsLines`).
+ */
+export function analyticsLinesRequest(p: AnalyticsLinesParams): AggregateRequest {
+  const excluded = p.excludedIds.map((id) => (id === NO_ANALYTICS_VALUE ? null : id));
+  const filters = excluded.length ? withFilter(p.filters, analyticsIdField(p.axisId), dropValues(excluded)) : p.filters;
+  return {
+    query: { filters },
+    spec: withFteNotice({
+      groupBy: [analyticsIdField(p.axisId), ...lineKeys(p.scope), ...(p.scope === 'all' ? ['nature'] : [])],
+      measures: yearMeasures(p.years, p.metric, p.measure),
+      order: [{ by: 'measure', id: `y${p.years[0]}`, dir: 'DESC' }],
+    }),
+  };
+}
+
+/**
+ * The lines of each value, keyed by the raw value id (an empty key for the lines without a value).
+ * Rows keep the server order (the first year's largest first). FTE: a line that declares none is left
+ * out, as the value reader leaves its value out; amounts keep every line.
+ */
+export function readAnalyticsLines(
+  scope: BudgetScope,
+  years: readonly number[],
+  result: AggregateResult | undefined,
+  measure: ReportMeasure = 'amount',
+): Map<string, AnalyticsLine[]> {
+  const byValue = new Map<string, AnalyticsLine[]>();
+  for (const group of declaredGroups(result, years, measure)) {
+    const valueId = group.keys[0];
+    const id = group.keys[1];
+    if (!id) continue;
+    const number = group.keys[3];
+    const nature = group.keys[4];
+    const line: AnalyticsLine = {
+      id,
+      itemNumber: number == null || number === '' ? null : Number(number),
+      name: (group.keys[2] ?? '').trim(),
+      nature: scope === 'all' ? (nature === 'opex' || nature === 'capex' ? nature : null) : scope,
+      values: yearValues(group, years, measure),
+    };
+    const key = valueId ?? '';
+    const lines = byValue.get(key);
+    if (lines) lines.push(line);
+    else byValue.set(key, [line]);
+  }
+  return byValue;
+}
+
+/** The OPEX and CAPEX sums of one value (or of the total), per year. FTE: a year neither nature declares is null. */
+export type AnalyticsNatureSplit = { opex: Record<number, number | null>; capex: Record<number, number | null> };
+
+/**
+ * The OPEX and CAPEX sums of every value on the dimension, in one aggregate of the all-natures lines:
+ * grouped by value, then by nature. Same filters, exclusions and window as the value request.
+ */
+export function analyticsNatureRequest(p: AnalyticsParams): AggregateRequest {
+  const excluded = p.excludedIds.map((id) => (id === NO_ANALYTICS_VALUE ? null : id));
+  const filters = excluded.length ? withFilter(p.filters, analyticsIdField(p.axisId), dropValues(excluded)) : p.filters;
+  return {
+    query: { filters },
+    spec: { groupBy: [analyticsIdField(p.axisId), 'nature'], measures: yearMeasures(p.years, p.metric, p.measure) },
+  };
+}
+
+/**
+ * The OPEX and CAPEX sums of each value, keyed by the raw value id (an empty key for the lines without
+ * a value), and of all of them together (`total`).
+ */
+export function readAnalyticsNatures(
+  years: readonly number[],
+  result: AggregateResult | undefined,
+  measure: ReportMeasure = 'amount',
+): { byValue: Map<string, AnalyticsNatureSplit>; total: AnalyticsNatureSplit } {
+  const empty = (): AnalyticsNatureSplit => ({
+    opex: Object.fromEntries(years.map((year) => [year, null])),
+    capex: Object.fromEntries(years.map((year) => [year, null])),
+  });
+  const add = (into: Record<number, number | null>, values: Record<number, number | null>) => {
+    for (const year of years) {
+      const value = values[year];
+      if (value != null) into[year] = (into[year] ?? 0) + value;
+    }
+  };
+  const byValue = new Map<string, AnalyticsNatureSplit>();
+  const total = empty();
+  for (const group of result?.groups ?? []) {
+    const nature = group.keys[1];
+    if (nature !== 'opex' && nature !== 'capex') continue;
+    const key = group.keys[0] ?? '';
+    const split = byValue.get(key) ?? empty();
+    const values = yearValues(group, years, measure);
+    add(split[nature], values);
+    add(total[nature], values);
+    byValue.set(key, split);
+  }
+  return { byValue, total };
 }
 
 // ----- staffing by month (StaffingByMonthReport) -----

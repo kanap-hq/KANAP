@@ -1587,6 +1587,18 @@
       "totalMetric": "Total {{metric}}",
       "unassigned": "Unassigned",
       "unnamed": "Unnamed value",
+      "lines": "Lines",
+      "nature": "Nature",
+      "detail": "Detail by line",
+      "split": "OPEX / CAPEX split",
+      "opexShare": "OPEX share",
+      "capexShare": "CAPEX share",
+      "splitChartTitle": "OPEX and CAPEX split by {{dimension}} · {{year}}",
+      "level": "Level",
+      "levelValue": "Value",
+      "levelLine": "Line",
+      "hidden_one": "and {{count}} line outside your access",
+      "hidden_other": "and {{count}} lines outside your access",
       "defaultDimensionInSentence": "analytics dimension"
     },
     "staffing": {

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Box, Checkbox, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import ReportGrid from '../../components/reports/ReportGrid';
 import type { ColDef } from 'ag-grid-community';
 import { useSearchParams } from 'react-router-dom';
@@ -7,19 +7,20 @@ import ReportLayout, { ReportFilter, reportFilterMenuProps, reportFilterSelectSx
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import ReportExclusionPicker from '../../components/reports/ReportExclusionPicker';
 import ReportDataStatus from '../../components/reports/ReportDataStatus';
-import { useReportScope } from './useReportScope';
+import { useReportPrinting } from '../../components/reports/reportPrint';
+import { itemHref, useReportScope } from './useReportScope';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
-import { MetricKey, useReportMetric } from './reportMetrics';
+import { MetricKey, horizontalBarChartHeight, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import type { AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import type { AnalyticsAxis } from '../../services/analytics';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { useTranslation } from 'react-i18next';
-import { formatPercentPoints } from '../../i18n/formatters';
+import { formatCount, formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
-import { NO_ANALYTICS_VALUE, analyticsRequest, readAnalytics, requestFirstYear } from './reportAggregates';
+import { NO_ANALYTICS_VALUE, analyticsLinesRequest, analyticsNatureRequest, analyticsRequest, readAnalytics, readAnalyticsNatures, requestFirstYear, type AnalyticsNatureSplit } from './reportAggregates';
 import { analyticsTable } from './reportTables';
 import { useReportTableLabels } from './useReportTableLabels';
 import { useBudgetAggregate } from './useBudgetAggregate';
@@ -27,9 +28,20 @@ import { useAxisValueOptions } from './useReportOptions';
 import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
 import { axisListColumn, reportListLink, reportListPicks, rowListGroup } from './reportListLink';
 import ReportGroupLinkCell from './ReportGroupLinkCell';
+import AnalyticsGroupCell from './AnalyticsGroupCell';
+import { useHiddenCategoryCounts } from './useHiddenCategoryCounts';
+import { LinkCellRenderer } from '../../components/grid/renderers';
 
 /** `?axis=<dimension id>`: the dimension the report groups on. */
 const AXIS_PARAM = 'axis';
+/** `?detail=lines`: the table lists the lines of every value; absent, values only. */
+const DETAIL_PARAM = 'detail';
+/** `?split=nature`: the table adds the OPEX and CAPEX shares, the single-year chart shows them (all natures only). */
+const SPLIT_PARAM = 'split';
+/** The room the split chart's legend takes under its bars. */
+const SPLIT_LEGEND_HEIGHT = 48;
+/** A share with no total to divide by: the report's empty value, as the grid helpers write it. */
+const EMPTY_SHARE = '—';
 
 /**
  * The dimension named in the address when it is enabled, else the default one. Kept in the address
@@ -52,6 +64,7 @@ function useReportAxis(axes: AnalyticsAxes): [AnalyticsAxis | null, (id: string)
 export default function AnalyticsCategoryReport() {
   const { t } = useTranslation(["ops"]);
   const locale = useLocale();
+  const printing = useReportPrinting();
   const budgetColumns = useBudgetColumns();
   const now = new Date();
   const Y = now.getFullYear();
@@ -69,6 +82,19 @@ export default function AnalyticsCategoryReport() {
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
   const [measure, setMeasure] = useReportMeasure();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const detail = searchParams.get(DETAIL_PARAM) === 'lines';
+  const setFlag = useCallback((param: string, value: string, next: boolean) => {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      if (next) params.set(param, value);
+      else params.delete(param);
+      return params;
+    }, { replace: true });
+  }, [setSearchParams]);
+  // A split of OPEX-only or CAPEX-only lines says nothing: the box only counts on the all-natures tab.
+  const splitWanted = searchParams.get(SPLIT_PARAM) === 'nature';
+  const split = splitWanted && scope === 'all';
   const measureText = useMeasureText(measure);
   const formatNumber = measureText.format;
   const tableLabels = useReportTableLabels();
@@ -107,17 +133,41 @@ export default function AnalyticsCategoryReport() {
     measure,
   })), [reportFilters.queryFilters, analyticsAxes.ready, axisId, years, metric, excludedCategories, measure]);
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
+  // The lines of every value, in one aggregate: asked only when the address turns the detail on.
+  const detailRequest = useMemo(() => (detail && reportFilters.queryFilters != null && analyticsAxes.ready ? analyticsLinesRequest({
+    scope,
+    axisId,
+    years,
+    metric,
+    excludedIds: excludedCategories,
+    filters: reportFilters.queryFilters,
+    measure,
+  }) : null), [detail, reportFilters.queryFilters, analyticsAxes.ready, scope, axisId, years, metric, excludedCategories, measure]);
+  const detailReport = useBudgetAggregate(scope, detailRequest, { keepPrevious: true });
+  // The OPEX and CAPEX sums of every value, in one aggregate: asked only when the split is on.
+  const natureRequest = useMemo(() => (split && reportFilters.queryFilters != null && analyticsAxes.ready ? analyticsNatureRequest({
+    axisId,
+    years,
+    metric,
+    excludedIds: excludedCategories,
+    filters: reportFilters.queryFilters,
+    measure,
+  }) : null), [split, reportFilters.queryFilters, analyticsAxes.ready, axisId, years, metric, excludedCategories, measure]);
+  const natureReport = useBudgetAggregate(scope, natureRequest, { keepPrevious: true });
   // Loading, waiting for the filter bar or the dimensions, or the last answer kept while the new one loads.
-  const busy = reportFilters.queryFilters == null || !analyticsAxes.ready || report.isLoading || report.isPlaceholderData;
+  const busy = reportFilters.queryFilters == null || !analyticsAxes.ready || report.isLoading || report.isPlaceholderData
+    || (detail && (detailReport.isLoading || detailReport.isPlaceholderData))
+    || (split && (natureReport.isLoading || natureReport.isPlaceholderData));
   const labels = useMemo(() => ({ unassigned: t('reports.analyticsCategory.unassigned'), unnamed: t('reports.analyticsCategory.unnamed') }), [t]);
   // FTE: only the values that declare FTE in one of the years.
   const { groups } = useMemo(() => readAnalytics(years, report.data, labels, measure), [years, report.data, labels, measure]);
 
+  // The report's lifecycle window: the lines still active on 1 January of its first year.
+  const firstYear = requestFirstYear(request, Y);
   // A value opens the list filtered on it and on the bar, in a new tab; the total row stays plain.
   const listPicks = useMemo(() => reportListPicks(reportFilters), [reportFilters]);
   const axisColumn = axis ? axisListColumn(axis) : null;
   // The list shows the lines the row counts: the report's window, and with FTE the lines that declare it.
-  const firstYear = requestFirstYear(request, Y);
   const fteOnly = measure === 'fte';
   const valueLink = useCallback((row: { groupName?: string | null }) => {
     if (row.groupName === undefined || !listPicks) return null;
@@ -127,19 +177,113 @@ export default function AnalyticsCategoryReport() {
 
   // The key table (`reportTables.ts`, the same code as the export): one row per value, the total as footer.
   const table = useMemo(
-    () => analyticsTable({ years, metric, measure, dimension: dimensionLabel }, report.data, tableLabels),
-    [years, metric, measure, dimensionLabel, report.data, tableLabels],
+    () => analyticsTable(
+      { scope, years, metric, measure, dimension: dimensionLabel, detail, split },
+      report.data,
+      tableLabels,
+      detail ? detailReport.data : undefined,
+      split ? natureReport.data : undefined,
+    ),
+    [scope, years, metric, measure, dimensionLabel, detail, split, report.data, tableLabels, detailReport.data, natureReport.data],
   );
-  const columns = useMemo<ColDef[]>(() => table.columns.map((column): ColDef => (column.key === 'group'
-    ? {
+  // Data-scoped access: the values on screen, and the hidden lines of each of them in the report's
+  // window. Nothing is asked outside limited mode, and the print view leaves these mentions out.
+  const valueIds = useMemo(() => groups.map((group) => group.id).filter((id): id is string => id != null), [groups]);
+  const hiddenCounts = useHiddenCategoryCounts({
+    axisId,
+    valueIds,
+    year: firstYear,
+    scope,
+    enabled: report.data?.dataAccessLimited === true,
+  });
+  const screenRows = useMemo(() => {
+    if (report.data?.dataAccessLimited !== true) return table.rows;
+    const rows: typeof table.rows = [];
+    let mention: (typeof table.rows)[number] | null = null;
+    const flushMention = () => {
+      if (mention) rows.push(mention);
+      mention = null;
+    };
+    for (const row of table.rows) {
+      if (Number(row.level ?? 0) === 0) {
+        flushMention();
+        rows.push(row);
+        const valueId = typeof row.valueId === 'string' ? row.valueId.toLowerCase() : null;
+        const count = valueId ? hiddenCounts[valueId] ?? 0 : 0;
+        if (count > 0) {
+          const hiddenRow = { group: t('reports.analyticsCategory.hidden', { count }), level: 1, hiddenRow: 'yes' };
+          // With the detail, the mention follows the value's lines; alone, it sits right under the value.
+          if (detail) mention = hiddenRow;
+          else rows.push(hiddenRow);
+        }
+      } else {
+        rows.push(row);
+      }
+    }
+    flushMention();
+    return rows;
+  }, [table.rows, hiddenCounts, report.data?.dataAccessLimited, detail, t]);
+  // Sorting a flat hierarchy would move lines under another value: it is off while rows are nested
+  // (the detail, or a hidden-line mention under its value).
+  const hierarchicalRows = detail || screenRows.some((row) => row.hiddenRow === 'yes');
+  const columns = useMemo<ColDef[]>(() => table.columns.map((column): ColDef => {
+    if (column.key === 'group') {
+      return {
+        field: column.key,
+        headerName: column.header,
+        flex: 1,
+        minWidth: 240,
+        cellRenderer: AnalyticsGroupCell,
+        cellRendererParams: { getLink: valueLink },
+      };
+    }
+    if (column.key === 'reference') {
+      return {
+        field: column.key,
+        headerName: column.header,
+        width: 110,
+        cellRenderer: LinkCellRenderer,
+        cellRendererParams: {
+          newTab: true,
+          getHref: (row: { id?: string | null; itemNumber?: number | null }) => itemHref(scope, row.id, row.itemNumber),
+        },
+        cellStyle: {
+          color: 'var(--kanap-text-secondary)',
+          fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
+          fontVariantNumeric: 'tabular-nums',
+          fontSize: '12px',
+        },
+      };
+    }
+    if (column.kind === 'count') {
+      return {
+        field: column.key,
+        headerName: column.header,
+        width: 100,
+        type: 'rightAligned',
+        valueFormatter: (p) => (p.data?.hiddenRow || p.value == null ? '' : formatCount(Number(p.value), locale)),
+      };
+    }
+    if (column.kind === 'percent') {
+      return {
+        field: column.key,
+        headerName: column.header,
+        width: 150,
+        type: 'rightAligned',
+        valueFormatter: (p) => (p.data?.hiddenRow ? '' : p.value == null ? EMPTY_SHARE : formatSharePercent(Number(p.value) * 100, locale, 1)),
+      };
+    }
+    if (column.key === 'levelLabel' || column.key === 'nature') {
+      return { field: column.key, headerName: column.header, width: 100 };
+    }
+    return {
       field: column.key,
       headerName: column.header,
-      flex: 1,
-      minWidth: 240,
-      cellRenderer: ReportGroupLinkCell,
-      cellRendererParams: { getLink: valueLink },
-    }
-    : { field: column.key, headerName: column.header, width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) })), [table, valueLink, formatNumber]);
+      width: 140,
+      type: 'rightAligned',
+      valueFormatter: (p) => (p.data?.hiddenRow ? '' : formatNumber(p.value)),
+    };
+  }), [table, valueLink, formatNumber, scope, locale]);
 
   // The column as the measure reads it: `Budget`, or `Budget FTE`.
   const metricLabel = measureText.column(budgetColumns.label(metric));
@@ -148,12 +292,95 @@ export default function AnalyticsCategoryReport() {
 
   const metricsCaption = metricLabel;
 
+  // What the chart draws: the values, or with the detail their lines (`BL-12 · name`), read from the
+  // table's own rows so the chart and the table always agree.
+  const chartItems = useMemo(() => {
+    if (!detail) return groups.map((group) => ({ key: group.key, label: group.label, values: group.values as Record<number, number | null> }));
+    return table.rows
+      .filter((row) => Number(row.level ?? 0) === 1)
+      .map((row) => ({
+        key: `line_${String(row.id)}`,
+        label: row.reference ? `${String(row.reference)} · ${String(row.group ?? '')}` : String(row.group ?? ''),
+        values: Object.fromEntries(years.map((year) => [year, (row[String(year)] as number | null | undefined) ?? null])) as Record<number, number | null>,
+      }));
+  }, [detail, groups, table.rows, years]);
+
+  // The split chart (one year, all natures): one bar per value, OPEX and CAPEX stacked to 100 %, the
+  // total first when there are several values. A line is all OPEX or all CAPEX, so with the detail
+  // too the bars stay on the values (the table gives each line's nature).
+  const splitChart = split && singleYear;
+  const splitData = useMemo(() => {
+    if (!splitChart) return [];
+    const year = years[0];
+    const { byValue, total } = readAnalyticsNatures(years, natureReport.data, measure);
+    const datum = (label: string, nature: AnalyticsNatureSplit | undefined) => {
+      const opex = nature?.opex[year] ?? null;
+      const capex = nature?.capex[year] ?? null;
+      const sum = (opex ?? 0) + (capex ?? 0);
+      const known = (opex != null || capex != null) && sum !== 0;
+      return {
+        label,
+        opex: opex ?? 0,
+        capex: capex ?? 0,
+        opexShare: known ? ((opex ?? 0) / sum) * 100 : null,
+        capexShare: known ? ((capex ?? 0) / sum) * 100 : null,
+      };
+    };
+    // A value with nothing to split that year (no amount, or no FTE declared) gets no bar.
+    const bars = groups.map((group) => datum(group.label, byValue.get(group.id ?? ''))).filter((bar) => bar.opexShare != null);
+    return bars.length >= 2 ? [datum(t('reports.columns.total'), total), ...bars] : bars;
+  }, [splitChart, years, natureReport.data, measure, groups, t]);
+
   const chartOptions = useMemo(() => {
+    if (splitChart) {
+      const year = years[0];
+      const natureSeries = (key: 'opex' | 'capex', name: string) => ({
+        type: 'bar',
+        direction: 'horizontal',
+        xKey: 'label',
+        yKey: key,
+        yName: name,
+        stacked: true,
+        normalizedTo: 100,
+        strokeWidth: 0,
+        label: {
+          formatter: ({ datum }: any) => {
+            const share = datum[`${key}Share`];
+            // One decimal, as the table writes the share.
+            return share != null && share >= 5 ? formatPercentPoints(share, locale, 1) : '';
+          },
+        },
+        tooltip: {
+          renderer: ({ datum }: any) => {
+            const share = datum[`${key}Share`];
+            return {
+              title: escapeTooltipText(datum.label),
+              data: [
+                { label: `${name} · ${metricLabel}`, value: formatNumber(datum[key]) },
+                { label: t('reports.shared.share'), value: share == null ? EMPTY_SHARE : formatPercentPoints(share, locale, 1) },
+              ],
+            };
+          },
+        },
+      });
+      return {
+        title: { text: measureText.chartTitle(t('reports.analyticsCategory.splitChartTitle', { dimension: dimensionInSentence, year })) },
+        subtitle: { text: metricsCaption },
+        data: splitData,
+        axes: [
+          { type: 'category', position: 'left', label: { padding: 8 } },
+          { type: 'number', position: 'bottom', label: { formatter: ({ value }: { value: number }) => formatPercentPoints(value, locale, 0) } },
+        ],
+        series: [natureSeries('opex', tableLabels.natureOpex), natureSeries('capex', tableLabels.natureCapex)],
+        legend: { enabled: true, position: 'bottom' },
+        animation: { enabled: true, duration: 800 },
+      };
+    }
     if (singleYear) {
       const year = years[0];
-      // FTE: a value that declares none that year gets no slice or bar.
-      const chartData = groups
-        .map((group) => ({ label: group.label, value: cell(group.values[year]) }))
+      // FTE: a value (or a line) that declares none that year gets no slice or bar.
+      const chartData = chartItems
+        .map((item) => ({ label: item.label, value: cell(item.values[year]) }))
         .filter((datum) => datum.value != null);
       const total = chartData.reduce((acc, datum) => acc + (Number(datum.value) || 0), 0);
       const base = {
@@ -231,10 +458,10 @@ export default function AnalyticsCategoryReport() {
     }
     const chartData = years.map((yr) => {
       const row: any = { year: yr };
-      for (const group of groups) row[group.key] = cell(group.values[yr]);
+      for (const item of chartItems) row[item.key] = cell(item.values[yr]);
       return row;
     });
-    const series = groups.map((group) => ({
+    const series = chartItems.map((group) => ({
       type: 'line',
       xKey: 'year',
       yKey: group.key,
@@ -260,7 +487,12 @@ export default function AnalyticsCategoryReport() {
       ],
       legend: { enabled: true },
     };
-  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, dimensionInSentence, measureText, formatNumber, locale, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chartItems, splitChart, splitData, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, dimensionInSentence, measureText, formatNumber, tableLabels, locale, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Bars take the height of their rows, so a few values do not stretch into a wall of colour; the
+  // split chart adds its OPEX and CAPEX legend.
+  const chartHeight = splitChart
+    ? horizontalBarChartHeight(chartOptions.data.length) + SPLIT_LEGEND_HEIGHT
+    : singleYear && chartType === 'bar' ? horizontalBarChartHeight(chartOptions.data.length) : 520;
 
   return (
     <ReportLayout
@@ -338,13 +570,32 @@ export default function AnalyticsCategoryReport() {
               ))}
             </TextField>
           </ReportFilter>
+          <ReportFilter label={t('reports.analyticsCategory.detail')} width={150}>
+            <Checkbox
+              size="small"
+              checked={detail}
+              onChange={(e) => setFlag(DETAIL_PARAM, 'lines', e.target.checked)}
+              inputProps={{ 'aria-label': t('reports.analyticsCategory.detail') }}
+              sx={{ p: '5px', alignSelf: 'flex-start' }}
+            />
+          </ReportFilter>
+          <ReportFilter label={t('reports.analyticsCategory.split')} width={190}>
+            <Checkbox
+              size="small"
+              checked={split}
+              disabled={scope !== 'all'}
+              onChange={(e) => setFlag(SPLIT_PARAM, 'nature', e.target.checked)}
+              inputProps={{ 'aria-label': t('reports.analyticsCategory.split') }}
+              sx={{ p: '5px', alignSelf: 'flex-start' }}
+            />
+          </ReportFilter>
           <ReportFilter label={t('reports.filters.chartType')} width={180}>
             <TextField
               select
               size="small"
               value={chartType}
               onChange={(e) => setChartType(e.target.value as 'pie' | 'bar')}
-              disabled={!singleYear}
+              disabled={!singleYear || split}
               SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('reports.filters.chartType') } }}
               sx={reportFilterSelectSx}
             >
@@ -380,6 +631,8 @@ export default function AnalyticsCategoryReport() {
           endYear,
           metric,
           excludeValues: excludedCategories.join(','),
+          detail: detail ? 'lines' : 'values',
+          split: split ? 'nature' : 'none',
         },
         fileBase: measureText.fileName(`analytics-${scope}-${years[0]}-${years[years.length - 1]}`),
       }}
@@ -387,15 +640,16 @@ export default function AnalyticsCategoryReport() {
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
         <Box sx={{ minWidth: 0 }}>
-          <ChartCard ref={chartRef} title={t('reports.shared.chart')} options={chartOptions} height={520} />
+          <ChartCard ref={chartRef} title={t('reports.shared.chart')} options={chartOptions} height={chartHeight} />
         </Box>
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>{t("reports.shared.summaryTable")}</Typography>
           <ReportGrid
+            key={hierarchicalRows ? 'hierarchy' : 'flat'}
             wrapperSx={{ height: 520 }}
-            rowData={table.rows}
+            rowData={printing ? table.rows : screenRows}
             columnDefs={columns}
-            defaultColDef={{ sortable: true, resizable: true }}
+            defaultColDef={{ sortable: !hierarchicalRows, resizable: true }}
             pinnedBottomRowData={table.footer}
           />
           <ReportFteNotice scope={scope} request={request} result={report.data} columnLabel={(column) => `${budgetColumns.label(column.metric)} ${column.year}`} />

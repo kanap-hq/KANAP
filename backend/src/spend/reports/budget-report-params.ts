@@ -49,7 +49,7 @@ export const BUDGET_REPORT_KEYS: Record<BudgetReport, readonly string[]> = {
     ...COMMON_KEYS, 'sourceYear', 'sourceMetric', 'destinationYear', 'destinationMetric', 'direction', 'top', 'excludeIds', 'excludeAccounts',
   ],
   consolidation: [...COMMON_KEYS, 'startYear', 'endYear', 'metric', 'excludeAccounts'],
-  analytics: [...COMMON_KEYS, 'axis', 'startYear', 'endYear', 'metric', 'excludeValues'],
+  analytics: [...COMMON_KEYS, 'axis', 'startYear', 'endYear', 'metric', 'excludeValues', 'detail', 'split'],
   staffing: [...FILTER_KEYS, 'group', 'year', 'metric'],
   'cost-per-fte': [...FILTER_KEYS, 'group', 'view', 'pairs'],
 };
@@ -87,7 +87,7 @@ export type BudgetReportParams = BudgetReportFilterParams & (
     top: number;
   } & LineExclusions)
   | { report: 'consolidation'; startYear: number; endYear: number; metric: MetricKey; excludeAccounts: string[] }
-  | { report: 'analytics'; axis: AnalyticsAxisInfo | null; startYear: number; endYear: number; metric: MetricKey; excludeValues: string[] }
+  | { report: 'analytics'; axis: AnalyticsAxisInfo | null; startYear: number; endYear: number; metric: MetricKey; excludeValues: string[]; detail: boolean; split: boolean }
   | { report: 'staffing'; group: ReportGroupParam; year: number; metric: MetricKey }
   | { report: 'cost-per-fte'; group: ReportGroupParam; view: CostPerFteView; pairs: ColumnYear[] }
 );
@@ -381,5 +381,15 @@ export async function parseBudgetReportParams(
     axis = (await enabledAxes(manager, tenantId, scope)).find((candidate) => candidate.id === axisRaw.toLowerCase()) ?? null;
     if (!axis) throw new BadRequestException(`axis: ${axisRaw} is not an enabled dimension of these lines.`);
   }
-  return { ...filters, report, axis, startYear, endYear, metric, excludeValues: idList(query, 'excludeValues', NO_ANALYTICS_VALUE, 'value ids') };
+  const detailRaw = text(query, 'detail') ?? 'values';
+  if (detailRaw !== 'values' && detailRaw !== 'lines') throw new BadRequestException('detail must be values or lines.');
+  // The OPEX and CAPEX shares: only the all-natures lines have two natures to split.
+  const splitRaw = text(query, 'split') ?? 'none';
+  if (splitRaw !== 'none' && splitRaw !== 'nature') throw new BadRequestException('split must be none or nature.');
+  return {
+    ...filters, report, axis, startYear, endYear, metric,
+    excludeValues: idList(query, 'excludeValues', NO_ANALYTICS_VALUE, 'value ids'),
+    detail: detailRaw === 'lines',
+    split: splitRaw === 'nature' && scope === 'all',
+  };
 }

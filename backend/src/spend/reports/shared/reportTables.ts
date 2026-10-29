@@ -14,6 +14,10 @@ import {
   METRIC_SUFFIX,
   MONTHS,
   readAnalytics,
+  readAnalyticsLines,
+  readAnalyticsNatures,
+  type AnalyticsLine,
+  type AnalyticsNatureSplit,
   readColumnsCompare,
   readConsolidation,
   readCostPerFte,
@@ -23,6 +27,7 @@ import {
   readTopItems,
   readTrend,
   type AggregateResult,
+  type BudgetScope,
   type ColumnYear,
   type DeltaMode,
   type FteYearGroups,
@@ -31,8 +36,8 @@ import {
   type StaffingLabels,
 } from './reportAggregates';
 
-/** `amount`: currency units; `number`: FTE, years, counts; `percent`: a fraction. */
-export type ReportTableColumnKind = 'text' | 'number' | 'amount' | 'percent';
+/** `amount`: currency units; `number`: FTE and years; `count`: a number of lines (a whole number); `percent`: a fraction. */
+export type ReportTableColumnKind = 'text' | 'number' | 'count' | 'amount' | 'percent';
 
 export interface ReportTableColumn {
   /** The row field the column reads (the grid's `field`). */
@@ -96,6 +101,20 @@ export interface ReportTableLabels {
   analyticsUnnamed: string;
   /** `reports.analyticsCategory.totalMetric`: `Total Budget`. */
   analyticsTotal: (metric: string) => string;
+  /** `reports.analyticsCategory.lines`: the number of lines of a value. */
+  analyticsLines: string;
+  /** `reports.analyticsCategory.nature`: the nature of a line (OPEX or CAPEX). */
+  analyticsNature: string;
+  /** `reports.analyticsCategory.opexShare` and `.capexShare`: the split columns (with the year). */
+  analyticsOpexShare: string;
+  analyticsCapexShare: string;
+  /** `reports.analyticsCategory.level`, `.levelValue` and `.levelLine`: the row type (value or line). */
+  analyticsLevel: string;
+  analyticsLevelValue: string;
+  analyticsLevelLine: string;
+  /** `operations.scope.opex` and `operations.scope.capex`: the two nature values. */
+  natureOpex: string;
+  natureCapex: string;
   /** The twelve short month names, January first, in the table's language (`shortMonthNames`). */
   monthNames: readonly string[];
   /** `reports.staffing.average` */
@@ -392,21 +411,113 @@ export function consolidationTable(
 }
 
 export interface AnalyticsTableParams extends YearGroupsTableParams {
+  /** The lines the report reads: the detail request groups the nature of the all-natures scope. */
+  scope: BudgetScope;
   /** The header of the group column: the dimension's name, or the product name of the default one. */
   dimension: string;
+  /** List the lines of every value under it (the detail request's answer is the fourth argument). */
+  detail?: boolean;
+  /**
+   * The all-natures scope only: the OPEX and CAPEX shares of every row and of the total, per year
+   * (the nature request's answer is the fifth argument).
+   */
+  split?: boolean;
 }
 
-/** By value on the dimension (server order: the first year's largest first), the total as footer. */
+/** The OPEX and CAPEX shares of a split for one year (fractions), null without a total to divide by. */
+function natureShares(split: AnalyticsNatureSplit | undefined, year: number): { opex: number | null; capex: number | null } {
+  const opex = split?.opex[year] ?? null;
+  const capex = split?.capex[year] ?? null;
+  const total = (opex ?? 0) + (capex ?? 0);
+  if ((opex == null && capex == null) || total === 0) return { opex: null, capex: null };
+  return { opex: (opex ?? 0) / total, capex: (capex ?? 0) / total };
+}
+
+/**
+ * By value on the dimension (server order: the first year's largest first), the total as footer.
+ * With `detail`, the lines of each value follow it, indented by the row's `level` (1), with their
+ * reference, nature, amounts and share of their value's total for each year (a fraction). The rows
+ * stay flat, so the print view and the export write the same table without a tree.
+ * With `split` (all natures), each year also gets the OPEX and CAPEX shares of the row (`opex_<year>`,
+ * `capex_<year>`, fractions): a value's from the nature answer, a line's from its nature, the total's
+ * from all values together.
+ */
 export function analyticsTable(
   p: AnalyticsTableParams,
   result: AggregateResult | undefined,
-  labels: Pick<ReportTableLabels, 'columnNames' | 'columnFte' | 'analyticsUnassigned' | 'analyticsUnnamed' | 'analyticsTotal'>,
+  labels: Pick<
+    ReportTableLabels,
+    'columnNames' | 'columnFte' | 'analyticsUnassigned' | 'analyticsUnnamed' | 'analyticsTotal' | 'analyticsLines'
+    | 'analyticsNature' | 'analyticsLevel' | 'analyticsLevelValue' | 'analyticsLevelLine'
+    | 'natureOpex' | 'natureCapex' | 'reference' | 'shareOfTotal' | 'analyticsOpexShare' | 'analyticsCapexShare'
+  >,
+  lines?: AggregateResult | undefined,
+  natures?: AggregateResult | undefined,
 ): ReportTableData {
   const read = readAnalytics(p.years, result, { unassigned: labels.analyticsUnassigned, unnamed: labels.analyticsUnnamed }, p.measure);
-  return yearGroupsTable(p, read, {
-    header: p.dimension,
-    total: labels.analyticsTotal(measureColumnName(labels, p.metric, p.measure)),
-  });
+  const detail = p.detail === true;
+  const byValue = detail ? readAnalyticsLines(p.scope, p.years, lines, p.measure) : new Map<string, AnalyticsLine[]>();
+  const split = p.split === true && p.scope === 'all';
+  const splits = split ? readAnalyticsNatures(p.years, natures, p.measure) : null;
+  const writeShares = (row: ReportTableRow, nature: AnalyticsNatureSplit | undefined) => {
+    for (const year of p.years) {
+      const shares = natureShares(nature, year);
+      row[`opex_${year}`] = shares.opex;
+      row[`capex_${year}`] = shares.capex;
+    }
+  };
+  const kind = measureKind(p.measure);
+  const columns: ReportTableColumn[] = [
+    { key: 'group', header: p.dimension, kind: 'text' },
+    { key: 'count', header: labels.analyticsLines, kind: 'count' },
+    ...(detail ? [
+      { key: 'levelLabel', header: labels.analyticsLevel, kind: 'text' as const },
+      { key: 'reference', header: labels.reference, kind: 'text' as const },
+      { key: 'nature', header: labels.analyticsNature, kind: 'text' as const },
+    ] : []),
+    ...p.years.map((year): ReportTableColumn => ({ key: String(year), header: String(year), kind })),
+    ...(detail ? p.years.map((year): ReportTableColumn => ({ key: `share_${year}`, header: `${labels.shareOfTotal} ${year}`, kind: 'percent' as const })) : []),
+    ...(split ? p.years.flatMap((year): ReportTableColumn[] => [
+      { key: `opex_${year}`, header: `${labels.analyticsOpexShare} ${year}`, kind: 'percent' },
+      { key: `capex_${year}`, header: `${labels.analyticsCapexShare} ${year}`, kind: 'percent' },
+    ]) : []),
+  ];
+  const footer: ReportTableRow = { group: labels.analyticsTotal(measureColumnName(labels, p.metric, p.measure)), count: read.lineCount ?? null };
+  for (const year of p.years) footer[String(year)] = measureCell(read.totals[year], p.measure);
+  if (splits) writeShares(footer, splits.total);
+  const rows: ReportTableRow[] = [];
+  for (const group of read.groups) {
+    const row: ReportTableRow = { group: group.label, groupKey: group.key, groupName: group.name ?? null, valueId: group.id ?? null, count: group.count ?? null, level: 0, ...(detail ? { levelLabel: labels.analyticsLevelValue } : {}) };
+    for (const year of p.years) row[String(year)] = measureCell(group.values[year], p.measure);
+    if (splits) writeShares(row, splits.byValue.get(group.id ?? ''));
+    rows.push(row);
+    if (!detail) continue;
+    for (const line of byValue.get(group.id ?? '') ?? []) {
+      const lineRow: ReportTableRow = {
+        group: line.name,
+        level: 1,
+        levelLabel: labels.analyticsLevelLine,
+        id: line.id,
+        itemNumber: line.itemNumber,
+        reference: budgetLineReference(line.itemNumber),
+        nature: line.nature === 'opex' ? labels.natureOpex : line.nature === 'capex' ? labels.natureCapex : null,
+      };
+      for (const year of p.years) {
+        lineRow[String(year)] = measureCell(line.values[year], p.measure);
+        const total = group.values[year];
+        const value = line.values[year];
+        lineRow[`share_${year}`] = total == null || total === 0 || value == null ? null : value / total;
+        // A line is all OPEX or all CAPEX: its shares are 1 and 0 for the years it carries an amount.
+        if (split) {
+          const known = value != null && value !== 0 && line.nature != null;
+          lineRow[`opex_${year}`] = known ? (line.nature === 'opex' ? 1 : 0) : null;
+          lineRow[`capex_${year}`] = known ? (line.nature === 'capex' ? 1 : 0) : null;
+        }
+      }
+      rows.push(lineRow);
+    }
+  }
+  return { columns, rows, footer: [footer] };
 }
 
 // ----- By group (StaffingByMonthReport, CostPerFteReport): grouped on a cost center, a line, a supplier or a dimension -----

@@ -1588,6 +1588,18 @@
       "totalMetric": "Total {{metric}}",
       "unassigned": "Non affecté",
       "unnamed": "Valeur sans nom",
+      "lines": "Lignes",
+      "nature": "Nature",
+      "detail": "Détail par ligne",
+      "split": "Répartition OPEX / CAPEX",
+      "opexShare": "Part OPEX",
+      "capexShare": "Part CAPEX",
+      "splitChartTitle": "Répartition OPEX et CAPEX par {{dimension}} · {{year}}",
+      "level": "Niveau",
+      "levelValue": "Valeur",
+      "levelLine": "Ligne",
+      "hidden_one": "et {{count}} ligne hors de votre accès",
+      "hidden_other": "et {{count}} lignes hors de votre accès",
       "defaultDimensionInSentence": "dimension analytique"
     },
     "staffing": {

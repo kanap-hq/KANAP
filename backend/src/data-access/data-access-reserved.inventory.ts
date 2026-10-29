@@ -448,6 +448,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
       create: LINE_WRITE, // POST (root)
       exportBudgetFile: BUDGET_FILE, // GET budget-file/export
       get: READ, // GET :ref
+      hiddenByValue: READ, // GET summary/hidden-by-value
       linkRelation: LINE_WRITE, // POST :id/relations/:kind
       ownerSuggestions: LOOKUP, // GET owner-suggestions (a limited person creates lines too)
       relations: READ, // GET :id/relations

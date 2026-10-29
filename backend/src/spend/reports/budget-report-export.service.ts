@@ -30,6 +30,8 @@ import {
 import {
   accountIdOptionsRequest,
   accountLabelOptions,
+  analyticsLinesRequest,
+  analyticsNatureRequest,
   analyticsRequest,
   columnsCompareRequest,
   consolidationRequest,
@@ -126,6 +128,15 @@ export class BudgetReportExportService {
       analyticsUnassigned: labels.analyticsUnassigned,
       analyticsUnnamed: labels.analyticsUnnamed,
       analyticsTotal: (metric) => fillLabel(labels.analyticsTotal, 'metric', metric),
+      analyticsLines: labels.analyticsLines,
+      analyticsNature: labels.analyticsNature,
+      analyticsOpexShare: labels.analyticsOpexShare,
+      analyticsCapexShare: labels.analyticsCapexShare,
+      analyticsLevel: labels.analyticsLevel,
+      analyticsLevelValue: labels.analyticsLevelValue,
+      analyticsLevelLine: labels.analyticsLevelLine,
+      natureOpex: labels.scope_opex,
+      natureCapex: labels.scope_capex,
       monthNames: shortMonthNames(language),
       average: labels.average,
       peak: labels.peak,
@@ -275,20 +286,31 @@ export class BudgetReportExportService {
         own = [...range, ...(excluded.length ? [[labels.excludeAccounts, excluded.join(', ')] as [string, string]] : [])];
       } else {
         const excluded = await this.excludedValues(params, manager, ctx, labels);
-        answer = await run(analyticsRequest({
+        const analytics = {
           axisId: params.axis?.id ?? null,
           years,
           metric: params.metric,
           excludedIds: params.excludeValues,
           filters,
           measure: params.measure,
-        }));
+        };
+        answer = await run(analyticsRequest(analytics));
+        const lineAnswer = params.detail ? await run(analyticsLinesRequest({ ...analytics, scope: params.scope })) : undefined;
+        if (lineAnswer?.dataAccessLimited === true) limited = true;
+        const natureAnswer = params.split ? await run(analyticsNatureRequest(analytics)) : undefined;
+        if (natureAnswer?.dataAccessLimited === true) limited = true;
         // The screen's header: the dimension's name, the product name of the default one.
         const dimension = params.axis ? axisLabel(params.axis, language) : labels.analyticsDimension;
-        table = analyticsTable({ years, metric: params.metric, measure: params.measure, dimension }, answer, tableLabels);
+        table = analyticsTable({ scope: params.scope, years, metric: params.metric, measure: params.measure, dimension, detail: params.detail, split: params.split }, answer, tableLabels, lineAnswer, natureAnswer);
         sheet = labels.analyticsSheet;
         fileBase = `analytics-${params.scope}-${params.startYear}-${params.endYear}`;
-        own = [[labels.dimension, dimension], ...range, ...(excluded.length ? [[labels.excludeValues, excluded.join(', ')] as [string, string]] : [])];
+        own = [
+          ...(params.detail ? [[labels.analyticsDetail, labels.yes] as [string, string]] : []),
+          ...(params.split ? [[labels.analyticsSplit, labels.yes] as [string, string]] : []),
+          [labels.dimension, dimension],
+          ...range,
+          ...(excluded.length ? [[labels.excludeValues, excluded.join(', ')] as [string, string]] : []),
+        ];
       }
     }
 
@@ -453,15 +475,15 @@ function reportTable(key: string, sheet: string, table: ReportTableData): Report
     if (column.kind === 'text') return String(value);
     if (typeof value !== 'number' || !Number.isFinite(value)) return null;
     if (column.kind === 'amount') return { kind: 'amount', value: reportAmount(value) };
-    return { kind: column.kind, value };
+    return { kind: column.kind === 'count' ? 'number' : column.kind, value };
   });
   return {
     key,
     sheet,
-    // FTE and days show two decimals, as the screens; a year stays a plain number.
+    // FTE and days show two decimals, as the screens; a year and a count stay whole numbers.
     columns: table.columns.map((column) => (column.kind === 'number' && column.key !== 'year'
       ? { header: column.header, kind: column.kind, decimals: 2 as const }
-      : { header: column.header, kind: column.kind })),
+      : { header: column.header, kind: column.kind === 'count' ? 'number' as const : column.kind })),
     rows: table.rows.map(cells),
     footer: table.footer.map(cells),
   };

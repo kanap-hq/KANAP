@@ -122,6 +122,45 @@ export async function hiddenContractCount(manager: EntityManager, owner: HiddenC
   return (await hiddenContractCounts(manager, owner, [ownerId])).get(ownerId.toLowerCase()) ?? 0;
 }
 
+/**
+ * The lines the person cannot read on one dimension value of the budget analytics report: the value
+ * ids of that dimension, counted by `data_access_hidden_category_count(axis, values, active_from,
+ * nature)`. No query for an unscoped person, and none without a value. A value the function did not
+ * answer (no readable line with it, no hidden line, or a value of another dimension) is absent from
+ * the map.
+ *
+ * `activeFrom` is the report's lifecycle window (`YYYY-MM-DD`): a line with no end of validity, or
+ * one ending on or after that day, is counted; null counts every line. It is the same day the
+ * aggregate engine gives `windowScope`, computed in UTC. `nature` is the report's tab (`opex`,
+ * `capex` or null for both), intersected with the dimension's own nature.
+ *
+ * `limited` lets a caller that already read the transaction mode skip the extra statement; absent,
+ * the mode is read here.
+ */
+export async function hiddenCategoryLineCounts(
+  manager: EntityManager,
+  axisId: string,
+  categoryIds: readonly string[],
+  activeFrom: string | null = null,
+  nature: 'opex' | 'capex' | null = null,
+  limited?: boolean,
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const ids = Array.from(new Set(categoryIds.filter((id) => typeof id === 'string' && id !== '')));
+  if (ids.length === 0 || !(limited ?? await isLimitedTransaction(manager))) return counts;
+  const rows: Array<{ category_id: string | null; n: number | null }> = await manager.query(
+    `SELECT category_id, n FROM data_access_hidden_category_count($1::uuid, $2::uuid[], $3::date, $4::text)`,
+    [axisId, ids, activeFrom, nature],
+  );
+  for (const row of rows) {
+    // Without data_access_apply() the function answers one all-NULL row, as the scalar count
+    // answers NULL: no count, never a hidden line invented.
+    if (row.category_id == null || row.n == null) continue;
+    counts.set(String(row.category_id).toLowerCase(), Number(row.n));
+  }
+  return counts;
+}
+
 /** Both counts of each object, one query per type (no query for an unscoped person). */
 async function hiddenCounts(
   manager: EntityManager,

@@ -415,26 +415,45 @@ Consultez les données budgétaires regroupées par les valeurs d'une dimension 
 - **Dimension** : la dimension sur laquelle le rapport regroupe. Elle propose les dimensions activées utilisées pour le type de ligne choisi, s'affiche lorsqu'il y en a au moins deux, et le rapport s'ouvre sur la dimension par défaut. Si vous passez à un type de ligne qui n'utilise pas la dimension choisie, le rapport revient à la dimension par défaut. L'adresse de la page conserve votre choix : un lien enregistré en favori ou partagé s'ouvre sur la même dimension
 - **Année de début** et **Année de fin** : Année précédente, en cours ou suivante
 - **Métrique** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
-- **Type de graphique** : Graphique en secteurs ou en barres horizontales (année unique uniquement)
+- **Type de graphique** : Graphique en secteurs ou en barres horizontales. Disponible pour une seule année, quand **Répartition OPEX / CAPEX** n'est pas cochée
+- **Détail par ligne** : liste les lignes de chaque valeur sous celle-ci
+- **Répartition OPEX / CAPEX** : ajoute les parts OPEX et CAPEX de chaque valeur. Disponible avec le type de ligne **Tous** uniquement
 - **Exclure des valeurs** : Autocomplétion multi-sélection pour exclure des valeurs précises de la dimension choisie. Elle propose les valeurs utilisées pour le type de ligne choisi, plus celles que portent les lignes du rapport. La liste commence par « Non affecté » : le choisir exclut les lignes sans valeur sur la dimension. Changer le type de ligne ou la dimension la vide
 - **Centre de coûts**, **Run ou build**, **Lignes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
-Le sous-titre, le titre du graphique et la première colonne du tableau nomment la dimension choisie, par exemple « OPEX par Nature ».
+Le sous-titre, le titre du graphique et la première colonne du tableau nomment la dimension choisie, par exemple « OPEX par Nature ». L'adresse de la page conserve aussi les deux cases : un lien partagé s'ouvre avec le même détail et la même répartition.
 
 ### Ce que vous verrez
 
 **Mode année unique** :
 
-- Graphique en secteurs ou en barres des totaux par valeur
+- Graphique en secteurs ou en barres des totaux par valeur. Le graphique en barres prend la hauteur de ses barres
+- Avec **Détail par ligne**, le graphique montre les lignes (« BL-12 · nom ») au lieu des valeurs
+- Avec **Répartition OPEX / CAPEX**, une barre horizontale par valeur, ramenée à 100 % : sa part OPEX et sa part CAPEX, chacune avec son pourcentage. Une barre **Total** vient en tête dès qu'il y a au moins deux valeurs, et une légende nomme OPEX et CAPEX. Avec **Détail par ligne** en plus, les barres restent une par valeur
 - Note de bas de page avec le total de la métrique
 
 **Mode multi-années** :
 
-- Graphique en courbe avec une série par valeur
+- Graphique en courbe avec une série par valeur, ou une par ligne avec **Détail par ligne**. La répartition ne change pas le graphique : le tableau la donne
 
-**Tableau** : Une ligne par valeur avec des colonnes d'années. Une ligne de totaux épinglée en bas. Les lignes sans valeur sur la dimension choisie apparaissent comme « Non affecté ».
+**Tableau** : Une ligne par valeur avec des colonnes d'années, et une colonne **Lignes** avec le nombre de lignes de chaque valeur. Une ligne de totaux épinglée en bas, avec le nombre total de lignes. Les lignes sans valeur sur la dimension choisie apparaissent comme « Non affecté ».
+
+Avec **Détail par ligne**, les lignes de chaque valeur apparaissent en retrait sous celle-ci, « Non affecté » compris, avec ces colonnes :
+
+- **Niveau** : **Valeur** ou **Ligne**
+- **Réf** : la référence de la ligne, qui ouvre la ligne dans un nouvel onglet
+- **Nature** : **OPEX** ou **CAPEX**
+- **Part du total** pour chaque année : la part de la ligne dans le total de sa valeur
+
+Le tri des colonnes est désactivé tant que des lignes sont imbriquées sous les valeurs.
+
+Avec **Répartition OPEX / CAPEX**, chaque année reçoit une colonne **Part OPEX** et une colonne **Part CAPEX**, sur chaque valeur et sur la ligne de totaux. Avec le détail, chaque ligne affiche 100 % dans sa propre nature.
 
 Une valeur ouvre la liste de ses lignes budgétaires dans un nouvel onglet (« Non affecté » : les lignes budgétaires sans valeur). Avec la mesure **ETP**, la liste montre les lignes budgétaires de la valeur qui déclarent des ETP. Voir [Ouvrir la liste depuis un rapport](#ouvrir-la-liste-depuis-un-rapport). La ligne de totaux est en texte simple.
+
+**Accès limité aux données** : une personne dont l'[accès aux données](data-access.md#what-a-limited-person-sees) est limité voit une mention sous chaque valeur, par exemple « et 3 lignes hors de votre accès ». Avec le détail, elle vient après les lignes de la valeur. Le compte suit le type de ligne et les années du rapport, et ignore les filtres. « Non affecté » n'affiche aucune mention.
+
+L'export CSV ou Excel contient la colonne **Lignes**, ainsi que le détail et la répartition quand ils sont cochés. L'impression et l'export laissent de côté les mentions des lignes hors de votre accès.
 
 ---
 

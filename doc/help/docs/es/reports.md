@@ -415,26 +415,45 @@ Vea datos presupuestarios agrupados por los valores de una dimensión analítica
 - **Dimensión**: la dimensión por la que agrupa el informe. Ofrece las dimensiones activadas usadas para el tipo de línea elegido, aparece cuando hay dos o más, y el informe se abre en la dimensión por defecto. Si cambia a un tipo de línea que no usa la dimensión elegida, el informe vuelve a la dimensión por defecto. La dirección de la página conserva su elección, de modo que un enlace guardado o compartido se abre en la misma dimensión
 - **Año de inicio** y **Año de fin**: Año anterior, actual o siguiente
 - **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
-- **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo un año)
+- **Tipo de gráfico**: Gráfico circular o de barras horizontales. Disponible para un solo año, cuando **Reparto OPEX / CAPEX** no está marcado
+- **Detalle por línea**: lista las líneas de cada valor debajo de él
+- **Reparto OPEX / CAPEX**: añade las proporciones OPEX y CAPEX de cada valor. Disponible solo con el tipo de línea **Todo**
 - **Excluir valores**: Autocompletado de selección múltiple para excluir valores concretos de la dimensión elegida. Ofrece los valores que se usan para el tipo de línea elegido, además de los que tienen las líneas del informe. La lista empieza por "Sin asignar": al elegirlo se excluyen las líneas sin valor en la dimensión. Cambiar el tipo de línea o la dimensión borra esta selección
 - **Centro de coste**, **Run o build**, **Líneas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
-El subtítulo, el título del gráfico y la primera columna de la tabla indican la dimensión elegida, por ejemplo "OPEX por Nature".
+El subtítulo, el título del gráfico y la primera columna de la tabla indican la dimensión elegida, por ejemplo "OPEX por Nature". La dirección de la página también conserva las dos casillas, de modo que un enlace compartido se abre con el mismo detalle y el mismo reparto.
 
 ### Qué verá
 
 **Modo un solo año**:
 
-- Gráfico circular o de barras de totales por valor
+- Gráfico circular o de barras de totales por valor. El gráfico de barras tiene la altura que necesitan sus barras
+- Con **Detalle por línea**, el gráfico muestra las líneas ("BL-12 · nombre") en lugar de los valores
+- Con **Reparto OPEX / CAPEX**, una barra horizontal por valor, llevada al 100 %: su parte OPEX y su parte CAPEX, cada una con su porcentaje. Una barra **Total** va primero cuando hay dos valores o más, y una leyenda nombra OPEX y CAPEX. Con **Detalle por línea** también marcado, las barras siguen siendo una por valor
 - Nota al pie con el total de la métrica
 
 **Modo varios años**:
 
-- Gráfico de líneas con una serie por valor
+- Gráfico de líneas con una serie por valor, o una por línea con **Detalle por línea**. El reparto no cambia el gráfico: la tabla lo muestra
 
-**Tabla**: Una fila por valor con columnas de año. Una fila de totales fijada en la parte inferior. Las líneas sin valor en la dimensión elegida aparecen como "Sin asignar".
+**Tabla**: Una fila por valor con columnas de año, y una columna **Líneas** con el número de líneas de cada valor. Una fila de totales fijada en la parte inferior, con el número total de líneas. Las líneas sin valor en la dimensión elegida aparecen como "Sin asignar".
+
+Con **Detalle por línea**, las líneas de cada valor aparecen con sangría debajo de él, "Sin asignar" incluido, con estas columnas:
+
+- **Nivel**: **Valor** o **Línea**
+- **Ref**: la referencia de la línea, que abre la línea en una pestaña nueva
+- **Naturaleza**: **OPEX** o **CAPEX**
+- **Participación del total** para cada año: la parte de la línea en el total de su valor
+
+La ordenación de columnas está desactivada mientras haya filas anidadas bajo los valores.
+
+Con **Reparto OPEX / CAPEX**, cada año recibe una columna **Proporción OPEX** y una columna **Proporción CAPEX**, en cada valor y en la fila de totales. Con el detalle, cada línea muestra 100 % en su propia naturaleza.
 
 Un valor abre la lista de sus líneas en una pestaña nueva ("Sin asignar": las líneas sin valor). Con la medida **ETC**, la lista muestra las líneas del valor que declaran ETC. Consulte [Abrir la lista desde un informe](#abrir-la-lista-desde-un-informe). La fila de totales es texto sin enlace.
+
+**Acceso a los datos limitado**: una persona con el [acceso a los datos](data-access.md#what-a-limited-person-sees) limitado ve una mención debajo de cada valor, por ejemplo "y 3 líneas fuera de su acceso". Con el detalle, aparece después de las líneas del valor. El recuento sigue el tipo de línea y los años del informe, e ignora los filtros. "Sin asignar" no muestra ninguna mención.
+
+La exportación CSV o Excel contiene la columna **Líneas**, y el detalle y el reparto cuando están marcados. La impresión y la exportación omiten las menciones de líneas fuera de su acceso.
 
 ---
 

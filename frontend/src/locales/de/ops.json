@@ -1587,6 +1587,18 @@
       "totalMetric": "Gesamt {{metric}}",
       "unassigned": "Nicht zugeordnet",
       "unnamed": "Unbenannter Wert",
+      "lines": "Zeilen",
+      "nature": "Art",
+      "detail": "Detail pro Zeile",
+      "split": "OPEX/CAPEX-Aufteilung",
+      "opexShare": "OPEX-Anteil",
+      "capexShare": "CAPEX-Anteil",
+      "splitChartTitle": "OPEX- und CAPEX-Aufteilung nach {{dimension}} · {{year}}",
+      "level": "Ebene",
+      "levelValue": "Wert",
+      "levelLine": "Zeile",
+      "hidden_one": "und {{count}} Zeile außerhalb Ihres Zugriffs",
+      "hidden_other": "und {{count}} Zeilen außerhalb Ihres Zugriffs",
       "defaultDimensionInSentence": "Analysedimension"
     },
     "staffing": {
