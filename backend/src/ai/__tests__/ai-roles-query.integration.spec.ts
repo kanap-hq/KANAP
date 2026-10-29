@@ -257,6 +257,28 @@ async function testGateOnARealTransaction(h: Harness, runner: QueryRunner, s: Se
   }
 }
 
+/**
+ * `user_count` is the Roles screen's count (`user_roles`), and says the users list filtered on
+ * `roles` may count more: that filter also reads the primary role kept on the person's record
+ * (Plaid L7, lot E; the data is not repaired).
+ */
+async function testTheUserCountIsTheScreens(h: Harness, runner: QueryRunner, s: Seed) {
+  await runner.query(
+    `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, 'Recordonly', 'Tester', $3, 'enabled')`,
+    [s.tenantId, `recordonly-${s.tenantId.slice(0, 8)}@example.test`, s.roles.reader],
+  );
+  const route = await h.rolesRoute.getRoles(routeRequest(runner));
+  const roles = await h.tools.execute(ctx(runner, s, 'unlimited'), 'query_entities', { entity_type: 'roles', filters: { name: 'Budget Reader' } });
+  assert.equal(roles.items[0].metadata.user_count, route.items.find((role: any) => role.role_name === 'Budget Reader').user_count, 'the count of the screen');
+  assert.equal(roles.items[0].metadata.user_count, 2);
+  const people = await h.tools.execute(ctx(runner, s, 'unlimited'), 'query_entities', { entity_type: 'users', filters: { roles: ['Budget Reader'] } });
+  assert.equal(people.total, 3, 'the users list also reads the primary role of the record');
+  const described = await h.tools.execute(ctx(runner, s, 'unlimited'), 'describe_entity_filters', { entity_type: 'roles' });
+  const description = JSON.stringify(described);
+  assert.match(description, /the count of the Roles screen, to quote as such/);
+  assert.match(description, /filtered on `roles` also counts a person whose primary role it is on their own record only/);
+}
+
 /** A French profile: the French words of the Roles screen (Plaid L7, lot D). */
 async function testTheWordsFollowTheProfile(h: Harness, runner: QueryRunner, s: Seed) {
   await runner.query(`UPDATE users SET locale = 'fr' WHERE id = $1`, [s.users.unlimited]);
@@ -290,6 +312,7 @@ async function run() {
       await testRolePermissionsRows(harness, runner, s);
       await testGateOnARealTransaction(harness, runner, s);
       await testTheWordsFollowTheProfile(harness, runner, s);
+      await testTheUserCountIsTheScreens(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

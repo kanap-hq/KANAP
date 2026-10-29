@@ -41,7 +41,7 @@ export const rolesRegistry: AiEntityFilterRegistry = {
       ai: 'user_count',
       grid: 'user_count',
       type: 'number',
-      description: 'Number of people the role is given to, as primary or additional role, as the Roles screen counts them. The people are not named.',
+      description: 'Number of people the role is given to, as primary or additional role: the count of the Roles screen, to quote as such. The people are not named. The users list filtered on `roles` also counts a person whose primary role it is on their own record only, so it can find more people than this count.',
       sortable: true,
       groupable: false,
     },
