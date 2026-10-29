@@ -176,6 +176,71 @@ async function testImportCodesEveryRowProblem() {
   assert.deepEqual(byColumn(4), { start_date: { code: 'CSV_DATE_INVALID', params: { value: 'not a date' } } });
 }
 
+function errorsByColumn(result: { errors: Array<{ row?: number; column?: string; code?: string; params?: Record<string, unknown> }> }, row: number) {
+  return Object.fromEntries(
+    result.errors.filter((error) => error.row === row).map((error) => [error.column, { code: error.code, params: error.params ?? {} }]),
+  );
+}
+
+// A bad yes/no, amount or month count does not hide the other errors of the same row.
+// Dry run and load report the same list, and a valid row in the file is not given an error.
+async function testImportReportsEveryErrorOfARow() {
+  const svc = createService();
+  const rows = [
+    'New Deal;Ghost Corp;Ghost Supplier;;2024-01-01;12;maybe;1;0;EUR;annual;enabled;;',
+    'Kept Deal;Fromage Co;Dell;;2024-01-15;36;yes;3;12000;EUR;annual;enabled;alice@fromage.co;',
+    'Short;Ghost Corp;Dell;;2024-01-01;soon;no;later;nope;EUR;annual;enabled;;',
+  ];
+  for (const dryRun of [true, false]) {
+    const result = await svc.importCsv(
+      { file: { buffer: Buffer.from(`${HEADER}\n${rows.join('\n')}\n`, 'utf8') } as any, dryRun },
+      { manager: createMockManager() },
+    );
+    assert.equal(result.ok, false, JSON.stringify(result.errors));
+    assert.deepEqual(errorsByColumn(result, 2), {
+      auto_renewal: { code: 'CSV_BOOLEAN_INVALID', params: { value: 'maybe' } },
+      company_name: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Ghost Corp' } },
+      supplier_name: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Ghost Supplier' } },
+    }, dryRun ? 'dry run' : 'load');
+    assert.deepEqual(errorsByColumn(result, 3), {}, 'a valid row stays clean');
+    assert.deepEqual(errorsByColumn(result, 4), {
+      duration_months: { code: 'CSV_NUMBER_INVALID', params: { value: 'soon' } },
+      notice_period_months: { code: 'CSV_NUMBER_INVALID', params: { value: 'later' } },
+      yearly_amount_at_signature: { code: 'CSV_NUMBER_INVALID', params: { value: 'nope' } },
+      company_name: { code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Ghost Corp' } },
+    });
+    assert.equal(result.inserted, 0);
+    assert.equal(result.updated, 0);
+  }
+}
+
+// Text that is not a whole number of months is a row error. Blank keeps the column default, and 0 is a number.
+async function testInvalidMonthCountsAreRowErrors() {
+  const svc = createService();
+  for (const value of ['soon', '12.5', '12abc', '-1', '2147483648']) {
+    const row = `New Deal;Fromage Co;Dell;;2024-01-01;${value};no;1;0;EUR;annual;enabled;;`;
+    const result = await svc.importCsv(
+      { file: { buffer: Buffer.from(`${HEADER}\n${row}\n`, 'utf8') } as any, dryRun: true },
+      { manager: createMockManager() },
+    );
+    assert.equal(result.ok, false, value);
+    assert.deepEqual(errorsByColumn(result, 2), {
+      duration_months: { code: 'CSV_NUMBER_INVALID', params: { value } },
+    }, JSON.stringify(result.errors));
+  }
+  for (const row of [
+    'Fresh;Fromage Co;Dell;;2024-01-01;;no;;0;EUR;annual;enabled;;',
+    'Zero;Fromage Co;Dell;;2024-01-01;0;no;0;0;EUR;annual;enabled;;',
+  ]) {
+    const result = await svc.importCsv(
+      { file: { buffer: Buffer.from(`${HEADER}\n${row}\n`, 'utf8') } as any, dryRun: true },
+      { manager: createMockManager() },
+    );
+    assert.equal(result.ok, true, `${row}: ${JSON.stringify(result.errors)}`);
+    assert.equal(result.inserted, 1, row);
+  }
+}
+
 async function testImportReadsWindows1252() {
   const svc = createService();
   // Excel "CSV (semicolon)" on Windows writes Windows-1252: latin1 matches it for "é".
@@ -205,6 +270,8 @@ async function testImportRefusesUtf16WithBadRequest() {
   await testImportReportsUnresolvedReferences();
   await testImportCodesAnInvalidYesNo();
   await testImportCodesEveryRowProblem();
+  await testImportReportsEveryErrorOfARow();
+  await testInvalidMonthCountsAreRowErrors();
   await testImportReadsWindows1252();
   await testImportRefusesUtf16WithBadRequest();
 
