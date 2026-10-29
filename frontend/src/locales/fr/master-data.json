@@ -437,6 +437,9 @@
       "erpSupplierId": "ID fournisseur ERP"
     },
     "noSuppliersFound": "Aucun fournisseur trouvé",
+    "noSupplierAskAdmin": "Aucun fournisseur trouvé. Demandez à un administrateur de votre espace de travail de le créer.",
+    "createOption": "+ Créer le fournisseur « {{name}} »",
+    "selectExisting": "Sélectionner le fournisseur existant",
     "export": "Exporter les fournisseurs",
     "import": "Importer les fournisseurs",
     "importHint": "Valeurs acceptées pour status : enabled ou disabled. disabled_at contient la fin de validité, ou reste vide. Les colonnes de contact prennent l'e-mail d'un contact qui existe déjà dans Contacts.",

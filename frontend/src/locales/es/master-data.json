@@ -437,6 +437,9 @@
       "erpSupplierId": "ID de proveedor ERP"
     },
     "noSuppliersFound": "No se encontraron proveedores",
+    "noSupplierAskAdmin": "No se encontró ningún proveedor. Pida a un administrador de su espacio de trabajo que lo cree.",
+    "createOption": "+ Crear el proveedor «{{name}}»",
+    "selectExisting": "Seleccionar el proveedor existente",
     "export": "Exportar proveedores",
     "import": "Importar proveedores",
     "importHint": "Valores aceptados para status: enabled o disabled. disabled_at contiene el fin de validez o queda vacío. Las columnas de contacto llevan el correo electrónico de un contacto que ya existe en Contactos.",
