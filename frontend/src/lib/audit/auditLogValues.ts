@@ -132,6 +132,9 @@ const ENUM_GROUPS: Record<string, string> = {
   vulnerability_state: 'auditLogs.values.vulnerabilityState',
   cyber_criticality: 'auditLogs.values.cyberCriticality',
   recovery_wave: 'auditLogs.values.recoveryWave',
+  // The contract's own lists, named as its screens name them.
+  billing_frequency: 'ops:contracts.billing',
+  compliance_state: 'ops:contracts.compliance.states',
   // The IT landscape's enum values the record history reaches: the data class uses the
   // classification catalog's own labels, the interface data categories and the endpoint entity
   // codes the IT settings' shipped labels.
@@ -324,7 +327,7 @@ function screenLabel(context: AuditValueContext, key: string): string | null {
  */
 function enumerationCode(field: string, code: string): string {
   if (field === 'status' || field === 'lifecycle' || field === 'vulnerability_state'
-    || field === 'data_class' || field === 'data_category'
+    || field === 'data_class' || field === 'data_category' || field === 'compliance_state'
     || field === 'source_entity_code' || field === 'destination_entity_code' || field === 'equipment_entity_code') return code;
   return code.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }

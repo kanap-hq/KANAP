@@ -287,6 +287,10 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
           if (isUuid(categoryId)) categories.add(categoryId.toLowerCase());
         }
       }
+      if (entry.auditLabels.includes(label) && isPlainObject(payload) && isPlainObject(payload.renewal_task)) {
+        // A contract's renewal marker names the decision task it created.
+        addFamilyId({ ids }, 'task', payload.renewal_task.task_id);
+      }
       if (entry.auditLabels.includes(label) && isPlainObject(payload) && Array.isArray(payload.middleware_application_ids)) {
         // An older interface writer kept the middleware applications as an id list in the payload.
         for (const applicationId of payload.middleware_application_ids) addFamilyId({ ids }, 'application', applicationId);

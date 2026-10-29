@@ -17,6 +17,7 @@ describe('record history tables', () => {
       'companies',
       'connections',
       'contacts',
+      'contracts',
       'cost_centers',
       'departments',
       'documents',

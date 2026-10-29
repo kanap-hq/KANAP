@@ -706,7 +706,14 @@
       "authentication_mode": "Authentifizierung",
       "monitoring_url": "Monitoring-URL",
       "env_notes": "Umgebungsnotizen",
-      "integration_tool_application_id": "Integrationswerkzeug"
+      "integration_tool_application_id": "Integrationswerkzeug",
+      "duration_months": "Laufzeit (Monate)",
+      "auto_renewal": "Stillschweigende Verlängerung",
+      "notice_period_months": "Kündigungsfrist (Monate)",
+      "yearly_amount_at_signature": "Jahresbetrag",
+      "billing_frequency": "Abrechnung",
+      "compliance_state": "Status",
+      "compliance_reference": "Referenz"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -742,7 +749,10 @@
       "versionChanged": "Version {{before}} → {{after}}",
       "texts": {
         "contentChanged": "Inhalt geändert",
-        "workingDaysChanged": "Arbeitstage geändert"
+        "workingDaysChanged": "Arbeitstage geändert",
+        "notesChanged": "Notizen geändert",
+        "renewalStopped": "Verlängerung beendet",
+        "renewalResumed": "Verlängerung wieder aufgenommen"
       },
       "actors": {
         "assistant": "Plaid",
@@ -869,6 +879,10 @@
         "middleware": {
           "added": "Middleware hinzugefügt: {{label}}",
           "removed": "Middleware entfernt: {{label}}"
+        },
+        "renewal_task": {
+          "added": "Verlängerungsaufgabe erstellt: {{label}}",
+          "removed": "Verlängerungsaufgabe entfernt: {{label}}"
         }
       },
       "unnamed": {
@@ -996,7 +1010,17 @@
       "legCreated": "Segment {{index}} hinzugefügt",
       "legDeleted": "Segment {{index}} entfernt",
       "bindingCreated": "Bindung {{environment}} hinzugefügt",
-      "bindingDeleted": "Bindung {{environment}} entfernt"
+      "bindingDeleted": "Bindung {{environment}} entfernt",
+      "renewalDecided": "Verlängerung entschieden: {{decision}}",
+      "renewalUndone": "Verlängerungsentscheidung zurückgenommen",
+      "outsideAccess": {
+        "and_one": "und {{count}} Position außerhalb Ihres Zugriffs",
+        "and_other": "und {{count}} Positionen außerhalb Ihres Zugriffs",
+        "added_one": "{{count}} Budgetposition außerhalb Ihres Zugriffs hinzugefügt",
+        "added_other": "{{count}} Budgetpositionen außerhalb Ihres Zugriffs hinzugefügt",
+        "removed_one": "{{count}} Budgetposition außerhalb Ihres Zugriffs entfernt",
+        "removed_other": "{{count}} Budgetpositionen außerhalb Ihres Zugriffs entfernt"
+      }
     },
     "messages": {
       "loadDetailsFailed": "Details des Audit-Eintrags konnten nicht geladen werden."

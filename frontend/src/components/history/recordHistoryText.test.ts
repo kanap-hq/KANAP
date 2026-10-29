@@ -275,3 +275,58 @@ describe('history lines', () => {
     expect(historyActorText({ kind: 'assistant', name: null }, t)).toBe('Plaid');
   });
 });
+
+describe('contract history lines', () => {
+  it('reads the renewal markers as sentences, with the contract screen labels', () => {
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'renewal_decision', after: 'terminate' },
+      { field: 'renewal_reason', after: 'Price increase' },
+    ]), context)).toEqual([
+      { text: 'Renewal decided: Terminate' },
+      { text: 'Justification: Price increase' },
+    ]);
+    expect(historyLines(item({ kind: 'record' }, [{ field: 'renewal_decision', after: 'end' }]), context))
+      .toEqual([{ text: 'Renewal decided: Let it end' }]);
+    expect(historyLines(item({ kind: 'record' }, [{ field: 'renewal_decision', after: 'undo' }]), context))
+      .toEqual([{ text: 'Renewal decision undone' }]);
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'renewal_stop', text: 'renewalStopped' },
+      { field: 'renewal_resume', text: 'renewalResumed' },
+      { field: 'notes', text: 'notesChanged' },
+    ]), context)).toEqual([
+      { text: 'Renewal stopped' },
+      { text: 'Renewal resumed' },
+      { text: 'Notes changed' },
+    ]);
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'renewal_task', event: 'added', after: { kind: 'task', id: ID, label: 'Decide', reference: 'T-12' } },
+    ]), context)).toEqual([{ text: 'Renewal task created: Decide (T-12)' }]);
+  });
+
+  it('counts the budget lines outside the reader access, never names them', () => {
+    expect(historyLines(item({ kind: 'budget_line' }, [
+      { field: 'budget_line', event: 'added', after: { kind: 'budget_line', id: ID, label: 'Hosting', reference: 'BL-3' } },
+      { field: 'budget_lines_outside', event: 'added', after: 2 },
+    ]), context)).toEqual([
+      { text: 'Budget line added: Hosting (BL-3)' },
+      { text: 'and 2 lines outside your access' },
+    ]);
+    expect(historyLines(item({ kind: 'budget_line' }, [
+      { field: 'budget_lines_outside', event: 'removed', before: 1 },
+    ]), context)).toEqual([{ text: '1 budget line outside your access removed' }]);
+  });
+
+  it('names a compliance item by its requirement and reads its state', () => {
+    expect(historySubjectText({ kind: 'compliance_item', label: 'exit_plan' }, t)).toBe('Exit plan');
+    expect(historySubjectText({ kind: 'compliance_item', label: 'unknown_code' }, t)).toBeNull();
+    expect(historyLines(item({ kind: 'compliance_item', label: 'exit_plan' }, [
+      { field: 'compliance_state', before: null, after: 'not_applicable' },
+      { field: 'compliance_reference', before: 'Clause 4', after: 'Clause 5' },
+    ]), context)).toEqual([
+      { label: 'State', before: '—', after: 'Not applicable' },
+      { label: 'Reference', before: 'Clause 4', after: 'Clause 5' },
+    ]);
+    expect(historyLines(item({ kind: 'record' }, [{ field: 'billing_frequency', before: 'annual', after: 'monthly' }]), context))
+      .toEqual([{ label: 'Billing', before: 'Annual', after: 'Monthly' }]);
+  });
+});

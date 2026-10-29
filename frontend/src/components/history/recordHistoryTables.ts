@@ -16,6 +16,7 @@ export const RECORD_HISTORY_TABLES = [
   'companies',
   'connections',
   'contacts',
+  'contracts',
   'cost_centers',
   'departments',
   'documents',

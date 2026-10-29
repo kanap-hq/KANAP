@@ -44,7 +44,7 @@ function testEntries() {
     recordHistoryModules(),
     [
       'accounts', 'analytics', 'applications', 'budget', 'business_processes', 'companies', 'contacts',
-      'cost_centers', 'departments', 'infrastructure', 'knowledge', 'locations', 'suppliers',
+      'contracts', 'cost_centers', 'departments', 'infrastructure', 'knowledge', 'locations', 'suppliers',
       'working_day_profiles',
     ],
     'the modules of the route guard',
@@ -84,6 +84,10 @@ function testParentRulesAgree() {
       } else if (read === undefined) {
         // Read through `parent_table` / `parent_id`: the label needs its rule.
         assert.ok(rule, `${label}: a child label read by its parent needs a parent rule (or explicitParentLabels)`);
+        assert.ok(
+          (auditParentRuleTables(rule) as string[]).includes(entry.table),
+          `${label}: its parent rule names ${entry.table}`,
+        );
       }
       // A child read by `record_id` (`childReads: 'record'`, where `parent_*` is not needed) may
       // still carry a rule for its other rows (`interface_links`: the whole-set replacement names
@@ -107,9 +111,15 @@ function testParentRulesAgree() {
   console.log(`  ${children.size} child labels, ${Object.keys(AUDIT_PARENT_RULES).length} parent rules: OK`);
 }
 
+/**
+ * The data-access classes whose tables follow or link to a budget line or a contract: each one is
+ * a child of a history or an exclusion with its reason.
+ */
+const FOLLOWING_CLASSES: ReadonlySet<string> = new Set(['follows_line', 'link_to_line', 'follows_contract', 'link_to_contract']);
+
 function testDataAccessTablesAreDeclared() {
   const followed = DATA_ACCESS_TABLES
-    .filter((table) => table.cls === 'follows_line' || table.cls === 'link_to_line')
+    .filter((table) => FOLLOWING_CLASSES.has(table.cls))
     .map((table) => table.table)
     .sort();
   const declared = new Set<string>();
@@ -122,22 +132,25 @@ function testDataAccessTablesAreDeclared() {
     for (const exclusion of entry.exclusions) declared.add(exclusion.table);
   }
   const missing = followed.filter((table) => !declared.has(table));
-  assert.deepEqual(missing, [], 'every follows_line and link_to_line table is a child or an exclusion');
+  assert.deepEqual(missing, [], 'every follows_line, link_to_line, follows_contract and link_to_contract table is a child or an exclusion');
+  for (const cls of FOLLOWING_CLASSES) {
+    assert.ok(DATA_ACCESS_TABLES.some((table) => table.cls === cls), `${cls}: the class still names a table`);
+  }
   const dataAccess = new Map(DATA_ACCESS_TABLES.map((table) => [table.table, table]));
   for (const entry of Object.values(RECORD_HISTORY)) {
     for (const exclusion of entry.exclusions) {
       const table = dataAccess.get(exclusion.table);
       // A family may also exclude a table it follows outside the data-access inventory (an asset's
       // application assignments, an incident's links). A scoped table may only be excluded when it
-      // follows or links to a line.
+      // follows or links to a line or a contract.
       if (!table) continue;
       assert.ok(
-        table.cls === 'follows_line' || table.cls === 'link_to_line',
-        `${exclusion.table}: an exclusion of a scoped table is a follows_line or link_to_line table`,
+        FOLLOWING_CLASSES.has(table.cls),
+        `${exclusion.table}: an exclusion of a scoped table follows or links to a line or a contract`,
       );
     }
   }
-  console.log(`  ${followed.length} follows_line/link_to_line tables declared: OK`);
+  console.log(`  ${followed.length} line and contract tables declared: OK`);
 }
 
 function run() {

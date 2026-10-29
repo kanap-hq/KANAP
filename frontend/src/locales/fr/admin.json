@@ -706,7 +706,14 @@
       "authentication_mode": "Authentification",
       "monitoring_url": "URL de supervision",
       "env_notes": "Notes d'environnement",
-      "integration_tool_application_id": "Outil d'intégration"
+      "integration_tool_application_id": "Outil d'intégration",
+      "duration_months": "Durée (mois)",
+      "auto_renewal": "Reconduction tacite",
+      "notice_period_months": "Préavis (mois)",
+      "yearly_amount_at_signature": "Montant annuel",
+      "billing_frequency": "Facturation",
+      "compliance_state": "État",
+      "compliance_reference": "Référence"
     },
     "history": {
       "empty": "Aucun historique",
@@ -742,7 +749,10 @@
       "versionChanged": "Version {{before}} → {{after}}",
       "texts": {
         "contentChanged": "Contenu modifié",
-        "workingDaysChanged": "Jours ouvrés modifiés"
+        "workingDaysChanged": "Jours ouvrés modifiés",
+        "notesChanged": "Notes modifiées",
+        "renewalStopped": "Renouvellement arrêté",
+        "renewalResumed": "Renouvellement repris"
       },
       "actors": {
         "assistant": "Plaid",
@@ -869,6 +879,10 @@
         "middleware": {
           "added": "Middleware ajouté : {{label}}",
           "removed": "Middleware retiré : {{label}}"
+        },
+        "renewal_task": {
+          "added": "Tâche de renouvellement créée : {{label}}",
+          "removed": "Tâche de renouvellement retirée : {{label}}"
         }
       },
       "unnamed": {
@@ -996,7 +1010,17 @@
       "legCreated": "Segment {{index}} ajouté",
       "legDeleted": "Segment {{index}} retiré",
       "bindingCreated": "Liaison {{environment}} ajoutée",
-      "bindingDeleted": "Liaison {{environment}} retirée"
+      "bindingDeleted": "Liaison {{environment}} retirée",
+      "renewalDecided": "Renouvellement décidé : {{decision}}",
+      "renewalUndone": "Décision de renouvellement annulée",
+      "outsideAccess": {
+        "and_one": "et {{count}} ligne hors de votre accès",
+        "and_other": "et {{count}} lignes hors de votre accès",
+        "added_one": "{{count}} ligne budgétaire hors de votre accès ajoutée",
+        "added_other": "{{count}} lignes budgétaires hors de votre accès ajoutées",
+        "removed_one": "{{count}} ligne budgétaire hors de votre accès retirée",
+        "removed_other": "{{count}} lignes budgétaires hors de votre accès retirées"
+      }
     },
     "messages": {
       "loadDetailsFailed": "Impossible de charger les détails de l'entrée d'audit."

@@ -44,11 +44,15 @@ import ContractComplianceTab, { useContractCompliance } from './workspace/Contra
 import ContractDeleteButton from './workspace/ContractDeleteButton';
 import { contractComplianceKey } from './contractCompliance';
 import { BillingField, CurrencyField, RenewalField, useDefaultContractCurrency } from './workspace/ContractFields';
+import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
 const MarkdownEditor = React.lazy(() => import('../../components/MarkdownEditor'));
 
-type TabKey = 'overview' | 'budget' | 'compliance' | 'relations';
-const TAB_KEYS: TabKey[] = ['overview', 'budget', 'compliance', 'relations'];
+type TabKey = 'overview' | 'budget' | 'compliance' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
+const TAB_KEYS: TabKey[] = ['overview', 'budget', 'compliance', 'relations', RECORD_HISTORY_TAB_KEY];
+const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
+const HistoryTab = historyTab.Component;
 /** Tabs of the former page: their address opens the tab that now holds their content. */
 const LEGACY_TABS: Record<string, TabKey> = { details: 'overview', tasks: 'overview' };
 const LIST_PATH = '/ops/contracts';
@@ -303,6 +307,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
     { key: 'budget', label: t('contracts.tabs.budget'), badge: counts?.budget_lines || undefined },
     { key: 'compliance', label: t('contracts.tabs.compliance'), badge: complianceQuery.data?.summary?.missing || undefined },
     { key: 'relations', label: t('contracts.tabs.relations'), badge: counts?.relations || undefined },
+    { key: RECORD_HISTORY_TAB_KEY, label: t('contracts.tabs.history') },
   ];
 
   const savingHint = autosave.status === 'saving' || autosave.status === 'pending'
@@ -473,6 +478,13 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             onChanged={refreshRelations}
           />
         )}
+        {form && tab === RECORD_HISTORY_TAB_KEY && (
+          <WorkspaceTabBoundary resetKey={tab} onRetry={historyTab.retry}>
+            <React.Suspense fallback={null}>
+              <HistoryTab key={form.id} table="contracts" recordId={form.id} />
+            </React.Suspense>
+          </WorkspaceTabBoundary>
+        )}
       </PortfolioDetailWorkspaceShell>
       {form?.disabled_at && (
         <ContractResumeRenewalDialog
@@ -611,6 +623,7 @@ function ContractCreate() {
           { key: 'budget', label: t('contracts.tabs.budget'), disabled: true },
           { key: 'compliance', label: t('contracts.tabs.compliance'), disabled: true },
           { key: 'relations', label: t('contracts.tabs.relations'), disabled: true },
+          { key: RECORD_HISTORY_TAB_KEY, label: t('contracts.tabs.history'), disabled: true },
         ]}
         onTabChange={() => undefined}
         drawerStorageKey={DRAWER_KEY}

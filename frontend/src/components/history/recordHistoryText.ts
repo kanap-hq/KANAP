@@ -47,7 +47,7 @@ export type RecordHistorySubject = {
     | 'contact' | 'application' | 'technology' | 'asset' | 'contract' | 'project' | 'request' | 'task' | 'metrics' | 'value'
     | 'relation' | 'member' | 'hardware' | 'support' | 'technology_version' | 'owner' | 'vulnerability'
     | 'supplier' | 'budget_line'
-    | 'sub_item' | 'leg' | 'set' | 'binding' | 'person';
+    | 'sub_item' | 'leg' | 'set' | 'binding' | 'person' | 'compliance_item';
   label?: string | null;
 };
 export type RecordHistoryItem = {
@@ -88,8 +88,16 @@ const EVENT_KINDS = new Set([
   'link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line', 'value',
   'supplier', 'budget_line', 'relation_contains', 'relation_depends_on', 'member', 'owner_it', 'owner_business', 'operating_system',
   'sub_item', 'person', 'owner', 'company', 'dependency', 'country', 'key_identifier', 'interface_leg',
-  'mapping_set', 'middleware',
+  'mapping_set', 'middleware', 'renewal_task',
 ]);
+
+/** A contract's renewal decision, named by the label of its button on the contract screen. */
+const RENEWAL_DECISION_KEYS: Readonly<Record<string, string>> = {
+  renew: 'ops:contracts.renewal.renew',
+  renegotiate: 'ops:contracts.renewal.renegotiate',
+  terminate: 'ops:contracts.renewal.terminate',
+  end: 'ops:contracts.renewal.letEnd',
+};
 
 /** The noun a nameless record reads as, by the kind the service gives it. */
 const UNNAMED_KINDS = [
@@ -280,6 +288,13 @@ export function historySubjectText(subject: RecordHistorySubject, t: Translate, 
   if (subject.kind === 'person') {
     return subject.label || null;
   }
+  if (subject.kind === 'compliance_item') {
+    // The requirement, named as the contract's Compliance tab names it.
+    if (!subject.label) return null;
+    const key = `ops:contracts.compliance.requirements.${subject.label}`;
+    const label = t(key, { defaultValue: '' });
+    return label && label !== key ? label : null;
+  }
   return null;
 }
 
@@ -434,6 +449,16 @@ function fieldLine(change: RecordHistoryChange, context: HistoryTextContext): Hi
     const number = after ?? before;
     return { text: context.t('auditLogs.history.versionNumber', { number: String(number) }) };
   }
+  if (change.field === 'renewal_decision') {
+    const code = String(change.after ?? '');
+    if (code === 'undo') return { text: context.t('auditLogs.history.renewalUndone') };
+    const key = RENEWAL_DECISION_KEYS[code];
+    const decision = key ? context.t(key, { defaultValue: code }) : code;
+    return { text: context.t('auditLogs.history.renewalDecided', { decision }) };
+  }
+  if (change.field === 'renewal_reason' && typeof change.after === 'string') {
+    return { text: context.t('ops:contracts.renewal.reasonShown', { reason: change.after }) };
+  }
   const event = eventLine(change, context.t);
   if (event) return event;
   if (change.field === 'dimension') return dimensionLine(change, context);
@@ -464,9 +489,28 @@ function roundInputLine(change: RecordHistoryChange, context: HistoryTextContext
   return fieldLine(change, context);
 }
 
+/**
+ * The budget lines of a contract the reader may not read, counted: "and 2 lines outside your
+ * access" after the lines the same entry names, or a sentence of its own when it names none.
+ */
+function outsideLine(change: RecordHistoryChange, changes: RecordHistoryChange[], t: Translate): HistoryLine | null {
+  if (change.event !== 'added' && change.event !== 'removed') return null;
+  const count = Number(change.event === 'added' ? change.after : change.before);
+  if (!Number.isFinite(count) || count <= 0) return null;
+  const named = changes.some((other) => other.field === 'budget_line' && other.event === change.event);
+  return {
+    text: t(named ? 'auditLogs.history.outsideAccess.and' : `auditLogs.history.outsideAccess.${change.event}`, { count }),
+  };
+}
+
 /** Every line an entry shows, newest entry first as the service returns it. */
 export function historyLines(item: RecordHistoryItem, context: HistoryTextContext): HistoryLine[] {
   const changes = item.changes ?? [];
+  if (changes.some((change) => change.field === 'budget_lines_outside')) {
+    return changes
+      .map((change) => (change.field === 'budget_lines_outside' ? outsideLine(change, changes, context.t) : fieldLine(change, context)))
+      .filter((line): line is HistoryLine => line !== null);
+  }
   const lines = item.subject.kind === 'amounts'
     ? changes.map((change) => amountLine(change, context))
     : item.subject.kind === 'allocations'

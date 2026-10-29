@@ -706,7 +706,14 @@
       "authentication_mode": "Autenticación",
       "monitoring_url": "URL de supervisión",
       "env_notes": "Notas del entorno",
-      "integration_tool_application_id": "Herramienta de integración"
+      "integration_tool_application_id": "Herramienta de integración",
+      "duration_months": "Duración (meses)",
+      "auto_renewal": "Renovación tácita",
+      "notice_period_months": "Preaviso (meses)",
+      "yearly_amount_at_signature": "Importe anual",
+      "billing_frequency": "Facturación",
+      "compliance_state": "Estado",
+      "compliance_reference": "Referencia"
     },
     "history": {
       "empty": "Todavía no hay historial",
@@ -742,7 +749,10 @@
       "versionChanged": "Versión {{before}} → {{after}}",
       "texts": {
         "contentChanged": "Contenido modificado",
-        "workingDaysChanged": "Días laborables modificados"
+        "workingDaysChanged": "Días laborables modificados",
+        "notesChanged": "Notas modificadas",
+        "renewalStopped": "Renovación detenida",
+        "renewalResumed": "Renovación reanudada"
       },
       "actors": {
         "assistant": "Plaid",
@@ -869,6 +879,10 @@
         "middleware": {
           "added": "Middleware añadido: {{label}}",
           "removed": "Middleware eliminado: {{label}}"
+        },
+        "renewal_task": {
+          "added": "Tarea de renovación creada: {{label}}",
+          "removed": "Tarea de renovación retirada: {{label}}"
         }
       },
       "unnamed": {
@@ -996,7 +1010,17 @@
       "legCreated": "Segmento {{index}} añadido",
       "legDeleted": "Segmento {{index}} eliminado",
       "bindingCreated": "Enlace {{environment}} añadido",
-      "bindingDeleted": "Enlace {{environment}} eliminado"
+      "bindingDeleted": "Enlace {{environment}} eliminado",
+      "renewalDecided": "Renovación decidida: {{decision}}",
+      "renewalUndone": "Decisión de renovación anulada",
+      "outsideAccess": {
+        "and_one": "y {{count}} línea fuera de su acceso",
+        "and_other": "y {{count}} líneas fuera de su acceso",
+        "added_one": "{{count}} línea presupuestaria fuera de su acceso añadida",
+        "added_other": "{{count}} líneas presupuestarias fuera de su acceso añadidas",
+        "removed_one": "{{count}} línea presupuestaria fuera de su acceso retirada",
+        "removed_other": "{{count}} líneas presupuestarias fuera de su acceso retiradas"
+      }
     },
     "messages": {
       "loadDetailsFailed": "No se pudieron cargar los detalles de la entrada de auditoría."

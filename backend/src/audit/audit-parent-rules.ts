@@ -4,6 +4,7 @@ import { analyticsAxesParentRules } from './record-history/records/analytics_axe
 import { assetsParentRules } from './record-history/records/assets';
 import { companiesParentRules } from './record-history/records/companies';
 import { connectionsParentRules } from './record-history/records/connections';
+import { contractsParentRules } from './record-history/records/contracts';
 import { departmentsParentRules } from './record-history/records/departments';
 import { documentsParentRules } from './record-history/records/documents';
 import { interfacesParentRules } from './record-history/records/interfaces';
@@ -62,6 +63,24 @@ export type AuditParentRule =
   };
 
 /**
+ * The record a task belongs to, by its `related_object_type`: one line per type, sorted, added by
+ * the run that gives that record its history, whose own migration backfills the type's rows.
+ */
+export const TASK_PARENT_TABLES = {
+  contract: 'contracts',
+} as const satisfies Readonly<Record<string, RecordHistoryTable>>;
+
+/**
+ * A task names its record in the saved task (`related_object_id`), and the record's type beside it.
+ * The task's own history reads its rows by `record_id`; the parent is the record it belongs to.
+ * `1855900000000-audit-log-parent-contracts-incidents.ts` copies the contract and incident entries
+ * in SQL (`__tests__/audit-parent-rules-contracts-incidents.spec.ts` compares them).
+ */
+const TASK_PARENT_RULES: Readonly<Record<string, AuditParentRule>> = {
+  tasks: { from: 'payload_typed', keys: ['related_object_id'], typeKey: 'related_object_type', tables: TASK_PARENT_TABLES },
+};
+
+/**
  * The rule sets of the record files, one line per file, sorted by table name: a family run adds its
  * own file and its own line, never the same line.
  */
@@ -70,6 +89,7 @@ const PARENT_RULE_SETS = [
   assetsParentRules,
   companiesParentRules,
   connectionsParentRules,
+  contractsParentRules,
   departmentsParentRules,
   documentsParentRules,
   interfacesParentRules,
@@ -79,9 +99,9 @@ const PARENT_RULE_SETS = [
   technologiesParentRules,
 ] as const;
 
-/** The audit labels that carry a record, and how to find it. */
+/** The audit labels that carry a record, and how to find it. The task rule is shared by its types. */
 export const AUDIT_PARENT_RULES: Readonly<Record<string, AuditParentRule>> = Object.freeze(
-  Object.assign({}, ...PARENT_RULE_SETS) as Record<string, AuditParentRule>,
+  Object.assign({}, ...PARENT_RULE_SETS, TASK_PARENT_RULES) as Record<string, AuditParentRule>,
 );
 
 /** The record tables a rule may name: its `parentTable`, or every table of a typed rule. */

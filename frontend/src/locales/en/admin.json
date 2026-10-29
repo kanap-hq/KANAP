@@ -706,7 +706,14 @@
       "authentication_mode": "Authentication",
       "monitoring_url": "Monitoring URL",
       "env_notes": "Environment notes",
-      "integration_tool_application_id": "Integration tool"
+      "integration_tool_application_id": "Integration tool",
+      "duration_months": "Duration (months)",
+      "auto_renewal": "Tacit renewal",
+      "notice_period_months": "Notice (months)",
+      "yearly_amount_at_signature": "Yearly amount",
+      "billing_frequency": "Billing",
+      "compliance_state": "State",
+      "compliance_reference": "Reference"
     },
     "history": {
       "empty": "No history yet",
@@ -742,7 +749,10 @@
       "versionChanged": "Version {{before}} → {{after}}",
       "texts": {
         "contentChanged": "Content changed",
-        "workingDaysChanged": "Working days changed"
+        "workingDaysChanged": "Working days changed",
+        "notesChanged": "Notes changed",
+        "renewalStopped": "Renewal stopped",
+        "renewalResumed": "Renewal resumed"
       },
       "actors": {
         "assistant": "Plaid",
@@ -869,6 +879,10 @@
         "middleware": {
           "added": "Middleware added: {{label}}",
           "removed": "Middleware removed: {{label}}"
+        },
+        "renewal_task": {
+          "added": "Renewal task created: {{label}}",
+          "removed": "Renewal task removed: {{label}}"
         }
       },
       "unnamed": {
@@ -996,7 +1010,17 @@
       "legCreated": "Segment {{index}} added",
       "legDeleted": "Segment {{index}} removed",
       "bindingCreated": "Binding {{environment}} added",
-      "bindingDeleted": "Binding {{environment}} removed"
+      "bindingDeleted": "Binding {{environment}} removed",
+      "renewalDecided": "Renewal decided: {{decision}}",
+      "renewalUndone": "Renewal decision undone",
+      "outsideAccess": {
+        "and_one": "and {{count}} line outside your access",
+        "and_other": "and {{count}} lines outside your access",
+        "added_one": "{{count}} budget line outside your access added",
+        "added_other": "{{count}} budget lines outside your access added",
+        "removed_one": "{{count}} budget line outside your access removed",
+        "removed_other": "{{count}} budget lines outside your access removed"
+      }
     },
     "messages": {
       "loadDetailsFailed": "Failed to load audit entry details."

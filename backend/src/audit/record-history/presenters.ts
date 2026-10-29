@@ -147,6 +147,7 @@ const CHILD_KIND_LABELS: Record<RecordHistoryChildKind, string> = {
   set: 'set',
   binding: 'binding',
   person: 'person',
+  compliance_item: 'compliance_item',
 };
 
 /** The kinds whose row is one link to another record, named by a key of its payload. */
@@ -524,7 +525,8 @@ function linkChanges(row: AuditRow): RecordHistoryChange[] {
 }
 
 function attachmentChanges(row: AuditRow): RecordHistoryChange[] {
-  if (row.after_json === null || row.after_json === undefined) {
+  // A removal has no row after, or keeps the row with its removal date (an incident's attachment).
+  if (row.action === 'delete' || row.after_json === null || row.after_json === undefined) {
     return [{ field: 'attachment', event: 'removed', before: childRef('attachment', row.record_id, labelOf(row, ['original_filename'])) }];
   }
   return [{ field: 'attachment', event: 'added', after: childRef('attachment', row.record_id, labelOf(row, ['original_filename'])) }];
@@ -598,18 +600,18 @@ function contactChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] 
   return linkRowChanges('contact', row, ctx);
 }
 
-function setLinkChanges(kind: 'application' | 'technology', row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
-  // A line's link set is an array of ids. A process's application link is one row with the
-  // application id in its payload (`application_business_processes`, read by `record_id`).
-  const single = (value: unknown): string[] => {
+function setLinkChanges(kind: 'application' | 'technology' | 'asset', row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  // A line's or an incident's link set is an array of ids; a contract writes `{ ids }`. A process's
+  // application link is one row with the application id in its payload
+  // (`application_business_processes`, read by `record_id`).
+  const idsOf = (value: unknown): string[] => {
+    if (Array.isArray(value) || (isPlainObject(value) && Array.isArray(value.ids))) return linkSetIds(value);
     if (!isPlainObject(value)) return [];
     const id = value[`${kind}_id`];
-    return isUuid(id) ? [id] : [];
+    return isUuid(id) ? [id.toLowerCase()] : [];
   };
-  const before = Array.isArray(row.before_json) ? row.before_json : single(row.before_json);
-  const after = Array.isArray(row.after_json) ? row.after_json : single(row.after_json);
-  const beforeSet = new Set(before.filter(isUuid).map((id) => id.toLowerCase()));
-  const afterSet = new Set(after.filter(isUuid).map((id) => id.toLowerCase()));
+  const beforeSet = new Set(idsOf(row.before_json));
+  const afterSet = new Set(idsOf(row.after_json));
   const changes: RecordHistoryChange[] = [];
   for (const id of afterSet) {
     if (!beforeSet.has(id)) changes.push({ field: kind, event: 'added', after: referenceValue(ctx, kind, id) });
@@ -805,17 +807,73 @@ function applicationLinkChanges(row: AuditRow, ctx: PageContext): RecordHistoryC
   return [];
 }
 
-/** A budget line added or removed by an asset or a technology, from its id set. */
+/**
+ * A budget line added or removed by an asset, a technology or a contract, from its id set. On a
+ * contract, the lines the reader may not read are counted, never named (`budget_lines_outside`:
+ * "and 2 lines outside your access"), as its Budget tab counts them; a deleted line still reads
+ * as deleted.
+ */
 function budgetLineChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   const before = new Set(linkSetIds(row.before_json));
   const after = new Set(linkSetIds(row.after_json));
+  const counted = ctx.entry.table === 'contracts';
   const changes: RecordHistoryChange[] = [];
-  for (const id of after) {
-    if (!before.has(id)) changes.push({ field: 'budget_line', event: 'added', after: referenceValue(ctx, 'budget_line', id) });
+  const outside = { added: 0, removed: 0 };
+  const push = (event: 'added' | 'removed', id: string) => {
+    const value = referenceValue(ctx, 'budget_line', id);
+    if (counted && value && 'hidden' in value && !value.deleted) {
+      outside[event] += 1;
+      return;
+    }
+    changes.push(event === 'added' ? { field: 'budget_line', event, after: value } : { field: 'budget_line', event, before: value });
+  };
+  for (const id of after) if (!before.has(id)) push('added', id);
+  for (const id of before) if (!after.has(id)) push('removed', id);
+  if (outside.added > 0) changes.push({ field: 'budget_lines_outside', event: 'added', after: outside.added });
+  if (outside.removed > 0) changes.push({ field: 'budget_lines_outside', event: 'removed', before: outside.removed });
+  return changes;
+}
+
+/**
+ * A compliance item of a contract: its state and its reference, before and after. A creation
+ * reads from nothing, a deletion to nothing; the requirement is the entry's title.
+ */
+function complianceChanges(row: AuditRow): RecordHistoryChange[] {
+  const before = isPlainObject(row.before_json) ? row.before_json : {};
+  const after = isPlainObject(row.after_json) ? row.after_json : {};
+  const changes: RecordHistoryChange[] = [];
+  const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : null);
+  for (const [key, field] of [['state', 'compliance_state'], ['reference', 'compliance_reference']] as const) {
+    const b = text(before[key]);
+    const a = text(after[key]);
+    if (b !== a) changes.push({ field, before: b, after: a });
   }
-  for (const id of before) {
-    if (!after.has(id)) changes.push({ field: 'budget_line', event: 'removed', before: referenceValue(ctx, 'budget_line', id) });
+  return changes;
+}
+
+/** The renewal decisions the contract screen names (`RENEWAL_DECISIONS`, and the undoing). */
+const RENEWAL_DECISION_CODES = new Set(['renew', 'terminate', 'renegotiate', 'end', 'undo']);
+
+/**
+ * The renewal markers the renewal service writes beside the saved contract: each one is a sentence
+ * ("Renewal decided: Renew", "Renewal stopped", "Renewal resumed", "Renewal task created: T-12"),
+ * the task named with the reader's rights. The contract's own field changes follow.
+ */
+function renewalChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
+  const after = isPlainObject(row.after_json) ? row.after_json : null;
+  if (!after) return [];
+  const changes: RecordHistoryChange[] = [];
+  const decision = isPlainObject(after.renewal_decision) ? after.renewal_decision : null;
+  if (decision && typeof decision.decision === 'string' && RENEWAL_DECISION_CODES.has(decision.decision)) {
+    changes.push({ field: 'renewal_decision', after: decision.decision });
+    if (typeof decision.reason === 'string' && decision.reason.trim()) {
+      changes.push({ field: 'renewal_reason', after: decision.reason.trim() });
+    }
   }
+  if (isPlainObject(after.renewal_stop)) changes.push({ field: 'renewal_stop', text: 'renewalStopped' });
+  if (isPlainObject(after.renewal_resume)) changes.push({ field: 'renewal_resume', text: 'renewalResumed' });
+  const task = isPlainObject(after.renewal_task) ? after.renewal_task : null;
+  if (task) changes.push({ field: 'renewal_task', event: 'added', after: referenceValue(ctx, 'task', task.task_id) ?? { hidden: true, kind: 'task' } });
   return changes;
 }
 
@@ -1321,6 +1379,7 @@ function recordChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
     const sync = catalogSyncChanges(row);
     if (sync) return sync;
   }
+  if (row.table_name === 'contracts') return [...renewalChanges(row, ctx), ...genericChanges(row, ctx, { label: row.table_name })];
   const changes = genericChanges(row, ctx, { label: row.table_name })
     // The middleware list has its own events below; the id-list itself is never a field line.
     .filter((change) => change.field !== 'middleware_application_ids');
@@ -1376,7 +1435,10 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
         ? installedTechnology(row, ctx, isPlainObject(row.after_json) ? row.after_json : isPlainObject(row.before_json) ? row.before_json : null)
         : setLinkChanges('technology', row, ctx);
     case 'asset':
-      return row.table_name === 'asset_technologies' ? installedAsset(row, ctx) : assetChanges(row, ctx);
+      // From a budget line, the asset wrote the set of its lines; from a contract or an incident,
+      // the set holds the assets.
+      if (row.table_name === 'asset_technologies') return installedAsset(row, ctx);
+      return ctx.entry.table === 'spend_items' ? assetChanges(row, ctx) : setLinkChanges('asset', row, ctx);
     case 'budget_line':
       // A contact's link row names its budget line in the payload; an asset or a technology writes
       // the set of its budget lines.
@@ -1421,6 +1483,8 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
       return bindingChanges(row, ctx);
     case 'version':
       return genericChanges(row, ctx, { label: row.table_name });
+    case 'compliance_item':
+      return complianceChanges(row);
     default:
       return [];
   }
@@ -1476,6 +1540,9 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
     }
     case 'binding':
       return labelOf(row, ['environment']);
+    case 'compliance_item':
+      // The requirement code: the page names it as the Compliance tab does.
+      return labelOf(row, ['requirement']);
     case 'person': {
       if (row.action === 'create' || row.action === 'delete') return null;
       for (const payload of [row.after_json, row.before_json]) {
@@ -1522,7 +1589,7 @@ function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: P
       const labels = new Set<string>();
       for (const change of events) {
         const value = (change.after ?? change.before) as RecordHistoryReference | RecordHistoryHiddenReference | null | undefined;
-        if (value && !('hidden' in value) && typeof value.label === 'string' && value.label.trim()) {
+        if (value && typeof value === 'object' && !('hidden' in value) && typeof value.label === 'string' && value.label.trim()) {
           labels.add(value.label.trim());
         }
       }

@@ -8,6 +8,7 @@ import { businessProcessesRecord } from './record-history/records/business_proce
 import { companiesRecord } from './record-history/records/companies';
 import { connectionsRecord } from './record-history/records/connections';
 import { contactsRecord } from './record-history/records/contacts';
+import { contractsRecord } from './record-history/records/contracts';
 import { costCentersRecord } from './record-history/records/cost_centers';
 import { departmentsRecord } from './record-history/records/departments';
 import { documentsRecord } from './record-history/records/documents';
@@ -34,8 +35,9 @@ import { workingDayProfilesRecord } from './record-history/records/working_day_p
  *   (an asset link holds the ids of every line linked to the asset). A label read by `childReads`
  *   is not read through the parent columns, so it needs no parent rule of its own (`supplier_contacts`
  *   still has one for the supplier's page);
- * - every table of the data-access families `follows_line` and `link_to_line`
- *   (`data-access/data-access-tables.inventory.ts`) is a child here or an exclusion with its reason.
+ * - every table of the data-access families `follows_line`, `link_to_line`, `follows_contract` and
+ *   `link_to_contract` (`data-access/data-access-tables.inventory.ts`) is a child here or an
+ *   exclusion with its reason.
  *   `__tests__/record-history-inventory.spec.ts` checks both ways, beside the catalog spec.
  *
  * A child label is normally read by its parent columns (`parent_table` / `parent_id`). `childReads`
@@ -86,7 +88,8 @@ export type RecordHistoryChildKind =
   | 'leg'
   | 'set'
   | 'binding'
-  | 'person';
+  | 'person'
+  | 'compliance_item';
 
 export type RecordHistoryExclusion = {
   /** The physical table of the data-access inventory. */
@@ -147,6 +150,7 @@ const RECORD_HISTORY_DEFINITION = [
   companiesRecord,
   connectionsRecord,
   contactsRecord,
+  contractsRecord,
   costCentersRecord,
   departmentsRecord,
   documentsRecord,

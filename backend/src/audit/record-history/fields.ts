@@ -7,6 +7,7 @@ import { businessProcessesFields } from './records/business_processes';
 import { companiesFields } from './records/companies';
 import { connectionsFields } from './records/connections';
 import { contactsFields } from './records/contacts';
+import { contractsFields } from './records/contracts';
 import { costCentersFields } from './records/cost_centers';
 import { departmentsFields } from './records/departments';
 import { documentsFields } from './records/documents';
@@ -31,6 +32,7 @@ const FIELD_SETS = [
   companiesFields,
   connectionsFields,
   contactsFields,
+  contractsFields,
   costCentersFields,
   departmentsFields,
   documentsFields,
