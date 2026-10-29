@@ -1098,6 +1098,8 @@
       "warningsTitle": "Warnings",
       "ignoredColumns": "Ignored columns: {{columns}}.",
       "firstSheetOnly": "Only the first sheet, {{name}}, was read.",
+      "calculationLines": "{{item}} · {{column}} {{year}}: {{count}} calculation lines ({{total}}) will no longer drive these amounts.",
+      "calculationLines_one": "{{item}} · {{column}} {{year}}: 1 calculation line ({{total}}) will no longer drive these amounts.",
       "ignoredColumns_one": "Ignored column: {{columns}}.",
       "createsTitle": "Created by the load",
       "createSuppliersList": "Suppliers: {{names}}",

@@ -1098,6 +1098,8 @@
       "warningsTitle": "Warnungen",
       "ignoredColumns": "Ignorierte Spalten: {{columns}}.",
       "firstSheetOnly": "Nur das erste Blatt, {{name}}, wurde gelesen.",
+      "calculationLines": "{{item}} · {{column}} {{year}}: {{count}} Berechnungszeilen ({{total}}) steuern diese Beträge nicht mehr.",
+      "calculationLines_one": "{{item}} · {{column}} {{year}}: 1 Berechnungszeile ({{total}}) steuert diese Beträge nicht mehr.",
       "ignoredColumns_one": "Ignorierte Spalte: {{columns}}.",
       "createsTitle": "Beim Laden angelegt",
       "createSuppliersList": "Lieferanten: {{names}}",
