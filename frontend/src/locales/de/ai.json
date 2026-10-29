@@ -270,6 +270,7 @@
       "typical_data": "Typische Daten",
       "users_year": "Benutzerjahr",
       "version_name": "Versionsname",
+      "vulnerability_state": "Status der Schwachstelle",
       "zone": "Zone"
     },
     "none": "Keine",

@@ -394,6 +394,53 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText('2 exceptions de version seront effacées : 14, 16')).toBeInTheDocument();
   });
 
+  it('shows the state change of vulnerability rows and its undo, in French', () => {
+    renderCard(preview({
+      tool_name: 'change_vulnerability_state',
+      target: { entity_type: 'vulnerabilities', entity_id: null, ref: null, title: '2 CVE' },
+      summary: "Passage de 3 lignes de vulnérabilités à l'état « Traitée ».",
+      changes: {
+        vulnerability_state: {
+          label: 'Vulnerability state',
+          from: null,
+          to: [
+            '3 lignes sur 5 (2 CVE) : À traiter → Traitée',
+            'Note : « Corrigé en 14.2 »',
+            '- CVE-2024-1111 sur TEC-3 PostgreSQL 14\n- et 2 autres',
+            '1 est hors des alertes de vulnérabilité',
+          ].join('\n\n'),
+          format: 'markdown',
+        },
+      },
+    }));
+    expect(screen.getAllByText('État de la vulnérabilité').length).toBeGreaterThan(0);
+    expect(screen.getByText('3 lignes sur 5 (2 CVE) : À traiter → Traitée')).toBeInTheDocument();
+    expect(screen.getByText('Note : « Corrigé en 14.2 »')).toBeInTheDocument();
+    expect(screen.getByText('CVE-2024-1111 sur TEC-3 PostgreSQL 14')).toBeInTheDocument();
+    expect(screen.getByText('et 2 autres')).toBeInTheDocument();
+    expect(screen.getByText('1 est hors des alertes de vulnérabilité')).toBeInTheDocument();
+
+    renderCard(preview({
+      tool_name: 'change_vulnerability_state',
+      target: { entity_type: 'vulnerabilities', entity_id: null, ref: null, title: '2 CVE' },
+      summary: 'Retour de 3 lignes de vulnérabilités à leur état précédent.',
+      changes: {
+        vulnerability_state: {
+          label: 'Vulnerability state',
+          from: null,
+          to: [
+            '3 lignes (2 CVE) : Traitée → retour à leur état précédent',
+            "- 2 lignes reviendront à l'état À traiter, note effacée\n- 1 ligne reviendra à l'état Non concernée",
+          ].join('\n\n'),
+          format: 'markdown',
+        },
+      },
+    }));
+    expect(screen.getByText('3 lignes (2 CVE) : Traitée → retour à leur état précédent')).toBeInTheDocument();
+    expect(screen.getByText("2 lignes reviendront à l'état À traiter, note effacée")).toBeInTheDocument();
+    expect(screen.getByText("1 ligne reviendra à l'état Non concernée")).toBeInTheDocument();
+  });
+
   it('shows a budget line deletion with its versions, tasks and links, in French', () => {
     renderCard(preview({
       tool_name: 'delete_record',
