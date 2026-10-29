@@ -384,7 +384,7 @@ describe('PreviewCard in French', () => {
         technology_vulnerability_alerts: {
           label: 'Vulnerability alerts',
           from: null,
-          to: '**Alertes de failles**\n- désactivées\n\n- 2 exceptions de version seront effacées : 14, 16',
+          to: '- désactivées\n- 2 exceptions de version seront effacées : 14, 16',
           format: 'markdown',
         },
       },

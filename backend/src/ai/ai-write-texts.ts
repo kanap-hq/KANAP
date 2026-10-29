@@ -860,11 +860,12 @@ export type TechnologyAlertsCard = {
  */
 export function technologyAlertsCardText(language: AiWriteLanguage, card: TechnologyAlertsCard, pending = true): string {
   const blocks: string[] = [];
+  // The setting and what it clears are one list: the card's field label already names the setting.
+  const state: string[] = [];
   if (card.enabled) {
     const on = { en: 'on', fr: 'activées', de: 'aktiv', es: 'activadas' }[language];
     const off = { en: 'off', fr: 'désactivées', de: 'inaktiv', es: 'desactivadas' }[language];
-    const label = { en: 'Vulnerability alerts', fr: 'Alertes de failles', de: 'Sicherheitswarnungen', es: 'Alertas de vulnerabilidades' }[language];
-    blocks.push(`**${label}**\n- ${card.enabled.to ? on : off}`);
+    state.push(`- ${card.enabled.to ? on : off}`);
   }
   if (card.cleared.length) {
     const count = card.cleared.length;
@@ -894,8 +895,9 @@ export function technologyAlertsCardText(language: AiWriteLanguage, card: Techno
           ? `1 excepción de versión eliminada: ${card.cleared.join(', ')}`
           : `${count} excepciones de versión eliminadas: ${card.cleared.join(', ')}`,
       }[language];
-    blocks.push(`- ${text}`);
+    state.push(`- ${text}`);
   }
+  if (state.length) blocks.push(state.join('\n'));
   if (card.versions.length) {
     const label = { en: 'Versions', fr: 'Versions', de: 'Versionen', es: 'Versiones' }[language];
     const follow = {

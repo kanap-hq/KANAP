@@ -480,20 +480,20 @@ function testTechnologyPeopleLinksAndAlertsCards() {
   assert.equal(summary(alerts, alertsPreview, 'fr'), 'Modification des alertes de failles de « TEC-1 - PostgreSQL ».');
   assert.equal(
     alerts.presentPreview(alertsPreview, 'en').changes.technology_vulnerability_alerts.to,
-    '**Vulnerability alerts**\n- off'
-    + '\n\n- 2 version exceptions will be cleared: 14, 16'
+    '- off'
+    + '\n- 2 version exceptions will be cleared: 14, 16'
     + '\n\n**Versions**\n- 17: follows the technology → alerts off\n  - the service packs 17 SP1 follow base version 17',
   );
   assert.equal(
     alerts.presentPreview(alertsPreview, 'fr').changes.technology_vulnerability_alerts.to,
-    '**Alertes de failles**\n- désactivées'
-    + '\n\n- 2 exceptions de version seront effacées : 14, 16'
+    '- désactivées'
+    + '\n- 2 exceptions de version seront effacées : 14, 16'
     + '\n\n**Versions**\n- 17 : suit la technologie → alertes désactivées\n  - les service packs 17 SP1 suivent la version de base 17',
   );
   assert.equal(
     alerts.presentPreview({ ...alertsPreview, status: 'executed' } as AiMutationPreview, 'en').changes.technology_vulnerability_alerts.to,
-    '**Vulnerability alerts**\n- off'
-    + '\n\n- 2 version exceptions cleared: 14, 16'
+    '- off'
+    + '\n- 2 version exceptions cleared: 14, 16'
     + '\n\n**Versions**\n- 17: follows the technology → alerts off\n  - the service packs 17 SP1 follow base version 17',
   );
 }
