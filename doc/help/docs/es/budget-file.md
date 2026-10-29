@@ -141,7 +141,7 @@ Una línea puede calcular una columna a partir de líneas de cálculo, cantidad 
 
 Cuando el archivo cambia el total anual o un mes de una columna así, la comprobación muestra una advertencia por cada línea, columna y año, por ejemplo:
 
-> BL-83 · Revisión 2026: 3 líneas de cálculo (281.280,00) ya no determinarán estos importes.
+> BL-83 · Revisión 2026: 3 líneas de cálculo (281 280) ya no determinarán estos importes.
 
 La carga está permitida. Después, las líneas de cálculo se quedan en la línea como referencia, con su total, y la columna sigue los importes del archivo. Un total anual igual al que dan las líneas no escribe nada: la columna sigue determinada por sus líneas.
 

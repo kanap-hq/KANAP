@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import KanapDialog from '../design/KanapDialog';
 import { formatShortDateTime } from '../../lib/dateFormat';
-import { formatNumber } from '../../i18n/formatters';
+import { formatAmount } from '../../i18n/formatters';
 import { useBudgetColumns, type BudgetColumns } from '../../hooks/useBudgetColumns';
 import { forgetAllAllocations } from './allocationsCache';
 import {
@@ -463,7 +463,7 @@ function ReportView({
             />
           ))}
           {calculationLines.map((warning) => (
-            <Line key={`cl-${warning.line}-${warning.column}-${warning.year}`} text={calculationLinesText(warning, columns, locale, t)} />
+            <Line key={`cl-${warning.line}-${warning.column}-${warning.year}`} text={calculationLinesText(warning, columns, t)} />
           ))}
           {more(calculationLinesCount, calculationLines.length) && <Line text={more(calculationLinesCount, calculationLines.length)!} />}
           {ignoredCells.map((warning) => (
@@ -510,15 +510,14 @@ function missingText(item: BudgetFileReport['missing'][number], t: Translate): s
   return t(`${K}missing.${item.type}`, { count: item.count, examples });
 }
 
-/** `BL-83 · Revision 2026: 3 calculation lines (281,280.00) will no longer drive these amounts.` */
+/** `BL-83 · Revision 2026: 3 calculation lines (281 280) will no longer drive these amounts.` */
 function calculationLinesText(
   warning: NonNullable<BudgetFileReport['warnings']['calculationLines']>[number],
   columns: BudgetColumns,
-  locale: string,
   t: Translate,
 ): string {
   const column = columns.all.find((entry) => entry.freezeKey === warning.column || entry.key === warning.column)?.label ?? warning.column;
-  const total = formatNumber(Number(warning.total), locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const total = formatAmount(Number(warning.total));
   return t(`${K}calculationLines`, {
     item: warning.item,
     column,

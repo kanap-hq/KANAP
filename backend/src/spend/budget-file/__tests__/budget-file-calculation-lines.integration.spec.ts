@@ -408,7 +408,7 @@ function budgetWarning(item: string) {
     year: YEAR,
     count: 2,
     total: TOTAL_FROM_LINES,
-    message: `${item} · Budget ${YEAR}: 2 calculation lines (60,000.00) will no longer drive these amounts.`,
+    message: `${item} · Budget ${YEAR}: 2 calculation lines (60 000) will no longer drive these amounts.`,
   };
 }
 

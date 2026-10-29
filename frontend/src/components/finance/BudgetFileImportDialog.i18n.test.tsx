@@ -19,7 +19,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import BudgetFileImportDialog from './BudgetFileImportDialog';
 
 // The warning of a changed column that follows its calculation lines, in the real locale texts:
-// the count with the right plural, the column's name and the lines' total in the screen language.
+// the count with the right plural, the column's name and the lines' total as the app writes amounts.
 
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 
@@ -71,20 +71,20 @@ describe('BudgetFileImportDialog calculation lines warning', () => {
   afterEach(async () => { await i18n.changeLanguage('en'); });
 
   it('says it in English, one line and several', async () => {
-    expect(await warningIn('en', 3, '281280.00')).toBe('BL-83 · Revision 2026: 3 calculation lines (281,280.00) will no longer drive these amounts.');
+    expect(await warningIn('en', 3, '281280.00')).toBe('BL-83 · Revision 2026: 3 calculation lines (281 280) will no longer drive these amounts.');
   });
 
   it('says one line in English', async () => {
-    expect(await warningIn('en', 1, '209280.00')).toBe('BL-83 · Revision 2026: 1 calculation line (209,280.00) will no longer drive these amounts.');
+    expect(await warningIn('en', 1, '209280.00')).toBe('BL-83 · Revision 2026: 1 calculation line (209 280) will no longer drive these amounts.');
   });
 
   it('says it in French, with non-breaking spaces', async () => {
     expect(await warningIn('fr', 3, '281280.00'))
-      .toBe('BL-83 · Révision 2026\u00a0: 3 lignes de calcul (281\u202f280,00) ne piloteront plus ces montants.');
+      .toBe('BL-83 · Révision 2026\u00a0: 3 lignes de calcul (281 280) ne piloteront plus ces montants.');
   });
 
   it('says one line in French', async () => {
     expect(await warningIn('fr', 1, '209280.00'))
-      .toBe('BL-83 · Révision 2026\u00a0: 1 ligne de calcul (209\u202f280,00) ne pilotera plus ces montants.');
+      .toBe('BL-83 · Révision 2026\u00a0: 1 ligne de calcul (209 280) ne pilotera plus ces montants.');
   });
 });

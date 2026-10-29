@@ -141,7 +141,7 @@ Une ligne budgétaire peut calculer une colonne à partir de lignes de calcul, q
 
 Lorsque le fichier change le total annuel ou un mois d'une telle colonne, la vérification affiche un avertissement pour chaque ligne budgétaire, colonne et année, par exemple :
 
-> BL-83 · Révision 2026 : 3 lignes de calcul (281 280,00) ne piloteront plus ces montants.
+> BL-83 · Révision 2026 : 3 lignes de calcul (281 280) ne piloteront plus ces montants.
 
 Le chargement est autorisé. Après lui, les lignes de calcul restent sur la ligne budgétaire comme référence, avec leur total, et la colonne suit les montants du fichier. Un total annuel égal à ce que donnent les lignes n'écrit rien : la colonne continue de suivre ses lignes.
 

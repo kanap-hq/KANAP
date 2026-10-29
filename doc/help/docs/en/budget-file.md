@@ -141,7 +141,7 @@ A line can build a column from calculation lines, quantity × price: see [Quanti
 
 When the file changes the yearly total or a month of such a column, the check shows a warning for each line, column and year, for example:
 
-> BL-83 · Revision 2026: 3 calculation lines (281,280.00) will no longer drive these amounts.
+> BL-83 · Revision 2026: 3 calculation lines (281 280) will no longer drive these amounts.
 
 The load is allowed. After it, the calculation lines stay on the line as a reference, with their total, and the column follows the amounts of the file. A yearly total equal to what the lines give writes nothing: the column keeps following its lines.
 

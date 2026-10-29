@@ -905,7 +905,7 @@ async function testCalculationLinesCap() {
     year: YEAR,
     count: 2,
     total: '100.00',
-    message: 'BL-1 · Budget 2026: 2 calculation lines (100.00) will no longer drive these amounts.',
+    message: 'BL-1 · Budget 2026: 2 calculation lines (100) will no longer drive these amounts.',
   });
 }
 

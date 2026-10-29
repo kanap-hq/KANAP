@@ -1118,10 +1118,12 @@ function noteCalculationLines(
   });
 }
 
-/** `BL-83 · Revision 2026: 3 calculation lines (281,280.00) will no longer drive these amounts.` */
+/**
+ * `BL-83 · Revision 2026: 3 calculation lines (281 280) will no longer drive these amounts.` The total
+ * is written as the app writes amounts: whole units, a space between thousands.
+ */
 function calculationLinesMessage(item: string, label: string, year: number, count: number, total: string): string {
-  const [whole, cents] = total.split('.');
-  const shown = `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${cents}`;
+  const shown = Math.round(Number(total)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   const lines = count === 1 ? '1 calculation line' : `${count} calculation lines`;
   return `${item} · ${label} ${year}: ${lines} (${shown}) will no longer drive these amounts.`;
 }

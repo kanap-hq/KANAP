@@ -320,8 +320,8 @@ describe('BudgetFileImportDialog', () => {
   });
 
   it.each([
-    [1, '70000.00', '70\u202f000,00'],
-    [3, '281280.00', '281\u202f280,00'],
+    [1, '70000.00', '70 000'],
+    [3, '281280.00', '281 280'],
   ])('warns that %i calculation line(s) will no longer drive a changed column, with their total', async (count, total, shown) => {
     const warning = {
       line: 2, item: 'BL-83', column: 'revision', year: 2026, count, total,
@@ -339,7 +339,7 @@ describe('BudgetFileImportDialog', () => {
   it('says how many calculation lines warnings the list leaves out', async () => {
     const calculationLines = Array.from({ length: 20 }, (_, index) => ({
       line: index + 2, item: `BL-${index + 1}`, column: 'budget', year: 2026, count: 2, total: '100.00',
-      message: `BL-${index + 1} · Budget 2026: 2 calculation lines (100.00) will no longer drive these amounts.`,
+      message: `BL-${index + 1} · Budget 2026: 2 calculation lines (100) will no longer drive these amounts.`,
     }));
     post.mockResolvedValueOnce({ data: report({
       warnings: { duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [], calculationLines, calculationLinesCount: 23 },

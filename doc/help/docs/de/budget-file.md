@@ -141,7 +141,7 @@ Eine Budgetzeile kann eine Spalte aus Berechnungszeilen bilden, Menge × Preis: 
 
 Ändert die Datei die Jahressumme oder einen Monat einer solchen Spalte, zeigt die Prüfung eine Warnung pro Budgetzeile, Spalte und Jahr, zum Beispiel:
 
-> BL-83 · Revision 2026: 3 Berechnungszeilen (281.280,00) steuern diese Beträge nicht mehr.
+> BL-83 · Revision 2026: 3 Berechnungszeilen (281 280) steuern diese Beträge nicht mehr.
 
 Das Laden ist erlaubt. Danach bleiben die Berechnungszeilen als Referenz bei der Budgetzeile, mit ihrer Summe, und die Spalte folgt den Beträgen der Datei. Eine Jahressumme, die dem Ergebnis der Zeilen entspricht, schreibt nichts: Die Spalte folgt weiter ihren Zeilen.
 
