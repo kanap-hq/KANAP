@@ -149,6 +149,21 @@ function importRowUnchanged(stored: Contract, next: Partial<Record<keyof Contrac
   return sameStoredValues(stored as unknown as Record<string, unknown>, next);
 }
 
+/** The `duration_months` and `notice_period_months` columns are 32-bit integers. */
+const MONTH_COUNT_MAX = 2147483647;
+
+/**
+ * A whole number of months. A blank cell keeps `fallback` (12 and 1, the column defaults).
+ * Any other text is invalid: the fallback stands in so the row's other checks still run.
+ */
+function wholeMonthCount(raw: string, fallback: number): { value: number; invalid: boolean } {
+  if (raw === '') return { value: fallback, invalid: false };
+  if (!/^\d+$/.test(raw)) return { value: fallback, invalid: true };
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value > MONTH_COUNT_MAX) return { value: fallback, invalid: true };
+  return { value, invalid: false };
+}
+
 type ListItem = Contract & ContractTermFields & {
   supplier?: { id: string; name: string } | null;
   company?: { id: string; name: string } | null;
@@ -1431,23 +1446,30 @@ export class ContractsService {
       // A day in the file's own form (31/12/2027, 2027-12-31); a timestamp gives its UTC day.
       const parsedStart = r.dates['start_date'];
       const start_date = parsedStart?.kind === 'date' ? parsedStart.isoDate : parsedStart?.kind === 'instant' ? parsedStart.iso.slice(0, 10) : '';
-      const duration_months = parseInt(cellOf(r, 'duration_months') || '12', 10) || 12;
+      // A bad number or yes/no is reported, then the row's other checks still run. The fallback
+      // is never written: any error returns before the load.
+      const durationRaw = cellOf(r, 'duration_months');
+      const duration = wholeMonthCount(durationRaw, 12);
+      if (duration.invalid) errors.push(rowError(line, 'duration_months', 'CSV_NUMBER_INVALID', `Invalid number '${durationRaw}'.`, { value: durationRaw }));
+      const duration_months = duration.value;
       // Yes or no in any language, or the true/false and 1/0 of older files; blank is no, as before.
       const autoCell = parseCsvBoolean(cellOf(r, 'auto_renewal'));
       if (autoCell === undefined) {
         // The shared coded error (`errors:CSV_BOOLEAN_INVALID`): the dialog words it in the interface language.
         const value = cellOf(r, 'auto_renewal');
         errors.push(rowError(line, 'auto_renewal', 'CSV_BOOLEAN_INVALID', `Invalid value '${value}'. Use yes or no.`, { value }));
-        continue;
       }
       const auto_renewal = autoCell ?? false;
-      const notice_period_months = parseInt(cellOf(r, 'notice_period_months') || '1', 10) || 1;
-      // Blank is 0, as before; the decimal mark is the file's (`fieldAmounts`).
+      const noticeRaw = cellOf(r, 'notice_period_months');
+      const notice = wholeMonthCount(noticeRaw, 1);
+      if (notice.invalid) errors.push(rowError(line, 'notice_period_months', 'CSV_NUMBER_INVALID', `Invalid number '${noticeRaw}'.`, { value: noticeRaw }));
+      const notice_period_months = notice.value;
+      // Blank is 0, as before; the decimal mark is the file's (`fieldAmounts`). An unreadable
+      // amount is 0 for the same reason as a bad yes/no: the row's other checks still run.
       const amount = amounts.amountOf(r);
       if (amount.kind === 'invalid' || amount.kind === 'clear') {
         const value = cellOf(r, 'yearly_amount_at_signature');
         errors.push(rowError(line, 'yearly_amount_at_signature', 'CSV_NUMBER_INVALID', `Invalid amount '${value}'.`, { value }));
-        continue;
       }
       const yearly_amount_at_signature = amount.kind === 'value' ? Number(amount.decimal.toString()) : 0;
       const currency = (cellOf(r, 'currency') || 'EUR').toUpperCase();
