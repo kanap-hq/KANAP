@@ -234,7 +234,7 @@ async function testMatrixAsTheScreen(): Promise<void> {
     assert.equal(usd.metadata.manual, false);
     assert.equal(usd.metadata.captured_at, '2026-10-01T08:00:00.000Z', 'the latest set of the year');
     assert.equal(listed.items.find((item: any) => item.label === 'USD 2027').metadata.manual, true);
-    assert.equal(listed.items.find((item: any) => item.label === 'CHF 2027').summary, 'No CHF rate in 2027.');
+    assert.equal(listed.items.find((item: any) => item.label === 'CHF 2027').summary, 'No CHF rate is recorded for 2027, a year where CHF is used (missing_rates).');
     assert.ok(!('page_url' in usd), 'no page link: the Currency settings page is an administration setting');
     assert.doesNotMatch(JSON.stringify(listed.items), /GBP|JPY|NOK|"2028/, 'no currency outside the matrix, no set in another base, nothing of another tenant');
 
@@ -295,7 +295,7 @@ async function testCrossRate(): Promise<void> {
     assert.equal(y2026.metadata.cross_rate, 0.821875);
     assert.equal(y2026.metadata.cross_rate_note, undefined);
     assert.equal(y2027.metadata.cross_rate, null, 'no CHF rate in 2027: no value');
-    assert.equal(y2027.metadata.cross_rate_note, 'No CHF rate in 2027: no cross rate for this year.');
+    assert.equal(y2027.metadata.cross_rate_note, 'No CHF rate is recorded for 2027, a year where CHF is used (missing_rates): no cross rate for this year.');
     assert.deepEqual(usdInChf.exchange_rates.against, {
       currency: 'CHF',
       in_matrix: true,
@@ -310,7 +310,21 @@ async function testCrossRate(): Promise<void> {
     const gbp: any = await query.execute(ctx, { entity_type: 'exchange_rates', filters: { currency: ['USD'], against: ['GBP'] } });
     assert.ok(gbp.items.every((item: any) => item.metadata.cross_rate === null && item.metadata.cross_rate_note === 'GBP is not in the rate matrix: no cross rate.'));
     assert.equal(gbp.exchange_rates.against.in_matrix, false);
-    assert.match(gbp.exchange_rates.against.note, /GBP is not among the currencies of the rate matrix/);
+    assert.match(gbp.exchange_rates.against.note, /GBP is not among the currencies of the rate matrix \(no budget line/);
+
+    // The case of the review (Plaid L9, lot F, m2): JPY is in the 2026 set but not in use, and
+    // shown for a manual rate of 2029 only. The screen leaves its 2026 cell empty; the answer says
+    // that, never that 2026 has no JPY rate.
+    await seedSet(runner, s.tenantId, { year: 2029, base: 'EUR', rates: { EUR: 1, JPY: 0.006 }, sources: { EUR: 'identity', JPY: 'manual' }, source: 'manual', capturedAt: '2026-10-04T08:00:00Z' });
+    const usdInJpy: any = await query.execute(ctx, { entity_type: 'exchange_rates', filters: { year: { op: 'eq', value: 2026 }, currency: ['USD', 'JPY'], against: 'JPY' } });
+    const jpy2026 = usdInJpy.items.find((item: any) => item.label === 'JPY 2026');
+    const usd2026 = usdInJpy.items.find((item: any) => item.label === 'USD 2026');
+    const empty = 'The rate matrix of the Currency settings screen has no JPY rate for 2026 (the screen leaves the cell empty)';
+    assert.equal(jpy2026.metadata.rate, null);
+    assert.equal(jpy2026.summary, `${empty}.`);
+    assert.equal(usd2026.metadata.cross_rate, null);
+    assert.equal(usd2026.metadata.cross_rate_note, `${empty}: no cross rate for this year.`);
+    assert.doesNotMatch(JSON.stringify(usdInJpy.items), /No JPY rate/);
   });
   console.log('ok - exchange_rates: cross rates computed by the server, a year without one said with no value');
 }
@@ -442,6 +456,11 @@ async function testLimitedPerson(): Promise<void> {
     const grouped: any = await aggregates.execute(ctx, { entity_type: 'exchange_rates', group_by: 'currency' });
     assert.equal(grouped.data_access, 'limited');
     assert.deepEqual(grouped.groups.map((group: any) => group.key).sort(), ['EUR', 'USD']);
+    // CHF is used by a line outside the access: the note says so within the access (lot F, m3).
+    const against: any = await query.execute(ctx, { entity_type: 'exchange_rates', filters: { against: 'CHF' } });
+    assert.equal(against.exchange_rates.against.in_matrix, false);
+    assert.equal(against.exchange_rates.against.note, 'CHF is not among the currencies of the rate matrix within your access (no budget line, company, contract or setting within your access uses it, and it has no manual rate): no cross rate can be given.');
+    assert.ok(against.items.every((item: any) => item.metadata.cross_rate_note === 'CHF is not in the rate matrix within your access: no cross rate.'));
   });
   console.log('ok - exchange_rates: a limited person reads the currencies of their lines, marked limited');
 }

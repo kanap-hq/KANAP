@@ -1614,7 +1614,7 @@ export class AiQueryExecutor {
       id: row.key,
       label: `${row.currency} ${row.year}`,
       status: row.source,
-      summary: row.rate == null ? `No ${row.currency} rate in ${row.year}.` : null,
+      summary: row.rate == null ? row.rate_note ?? null : null,
       created_at: null,
       updated_at: row.captured_at,
       metadata: {

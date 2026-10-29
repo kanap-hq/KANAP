@@ -45,6 +45,8 @@ export type AiExchangeRateRow = {
   manual: boolean;
   captured_at: string | null;
   reporting_currency: string;
+  /** Why the cell is empty, in words, when `rate` is null (`rateGapText`). */
+  rate_note?: string;
   /** With `against`: units of `against` for 1 unit of `currency`, from the two rates of the year. */
   cross_rate?: number | null;
   cross_rate_note?: string;
@@ -125,6 +127,18 @@ function againstOf(filters: Record<string, any> | undefined): string | null {
 }
 
 /**
+ * Why a cell of the matrix is empty. A pair of the missing rates is used that year without a rate.
+ * Any other empty cell is what the screen shows, an empty cell, whatever the stored set holds: the
+ * matrix keeps a currency's rates only when it is in use or entered by hand (a currency shown for a
+ * manual rate of another year has no cell value this year).
+ */
+function rateGapText(currency: string, year: number, missing: boolean): string {
+  return missing
+    ? `No ${currency} rate is recorded for ${year}, a year where ${currency} is used (missing_rates)`
+    : `The rate matrix of the Currency settings screen has no ${currency} rate for ${year} (the screen leaves the cell empty)`;
+}
+
+/**
  * Every cell of the screen's matrix, in its order: years ascending (the years of the sets and of
  * the missing pairs, as the screen's columns), the reporting currency first, then the others.
  */
@@ -132,6 +146,7 @@ function matrixRows(matrix: CurrencyRateMatrix, missing: MissingRatePair[], repo
   const setByYear = new Map(matrix.rates.map((set) => [set.fiscalYear, set]));
   const years = Array.from(new Set([...matrix.rates.map((set) => set.fiscalYear), ...missing.map((pair) => pair.year)])).sort((a, b) => a - b);
   const currencies = matrix.currencies.map((code) => code.trim().toUpperCase()).filter((code) => code.length > 0);
+  const missingKeys = new Set(missing.map((pair) => `${pair.year}:${String(pair.currency).trim().toUpperCase()}`));
   const rows: AiExchangeRateRow[] = [];
   for (const year of years) {
     const set = setByYear.get(year);
@@ -150,6 +165,7 @@ function matrixRows(matrix: CurrencyRateMatrix, missing: MissingRatePair[], repo
         manual: source === 'manual',
         captured_at: set ? toIsoText(set.capturedAt) : null,
         reporting_currency: reporting,
+        ...(rate == null ? { rate_note: `${rateGapText(currency, year, missingKeys.has(`${year}:${currency}`))}.` } : {}),
       });
     }
   }
@@ -157,15 +173,18 @@ function matrixRows(matrix: CurrencyRateMatrix, missing: MissingRatePair[], repo
 }
 
 /** `cross_rate` on every row: units of `against` for 1 unit of the row's currency, same year. */
-function withCrossRates(rows: AiExchangeRateRow[], against: string, inMatrix: boolean): AiExchangeRateRow[] {
-  const againstRate = new Map(rows.filter((row) => row.currency === against).map((row) => [row.year, row.rate]));
+function withCrossRates(rows: AiExchangeRateRow[], against: string, inMatrix: boolean, limited: boolean): AiExchangeRateRow[] {
+  const againstRow = new Map(rows.filter((row) => row.currency === against).map((row) => [row.year, row]));
   return rows.map((row) => {
-    const other = againstRate.get(row.year) ?? null;
-    if (row.rate != null && other != null) return { ...row, cross_rate: round6(row.rate / other) };
-    const lacking = [row.rate == null ? row.currency : null, other == null && inMatrix ? against : null].filter((code): code is string => !!code);
+    const other = againstRow.get(row.year) ?? null;
+    if (row.rate != null && other?.rate != null) return { ...row, cross_rate: round6(row.rate / other.rate) };
+    // Each empty cell says why, as its own row does (`rate_note`).
+    const gaps = Array.from(new Set([row.rate == null ? row : null, other && other.rate == null && other !== row ? other : null]
+      .filter((cell): cell is AiExchangeRateRow => !!cell)
+      .map((cell) => String(cell.rate_note ?? '').replace(/\.$/, ''))));
     const note = !inMatrix
-      ? `${against} is not in the rate matrix: no cross rate.`
-      : `No ${Array.from(new Set(lacking)).join(' or ')} rate in ${row.year}: no cross rate for this year.`;
+      ? `${against} is not in the rate matrix${limited ? ' within your access' : ''}: no cross rate.`
+      : `${gaps.join('; ')}: no cross rate for this year.`;
     return { ...row, cross_rate: null, cross_rate_note: note };
   });
 }
@@ -238,7 +257,7 @@ export async function listAiExchangeRates(
   const missing = await services.rates.listMissingPairs(opts.tenantId, opts.manager, { report: false });
   const all = matrixRows(matrix, missing, reporting);
   const inMatrix = against ? all.some((row) => row.currency === against) : false;
-  const rows = against ? withCrossRates(all, against, inMatrix) : all;
+  const rows = against ? withCrossRates(all, against, inMatrix, opts.limited) : all;
   const kept = sortRows(filtered(rows, query), query.sort);
 
   const notes = [
@@ -269,7 +288,9 @@ export async function listAiExchangeRates(
         years_without_cross_rate: Array.from(new Set(kept.filter((row) => row.cross_rate == null).map((row) => row.year))).sort((a, b) => a - b),
         note: inMatrix
           ? `cross_rate gives the units of ${against} for 1 unit of the row's currency; a year where either rate is missing has none (cross_rate_note).`
-          : `${against} is not among the currencies of the rate matrix (no budget line, company, contract or setting uses it, and it has no manual rate): no cross rate can be given.`,
+          : opts.limited
+            ? `${against} is not among the currencies of the rate matrix within your access (no budget line, company, contract or setting within your access uses it, and it has no manual rate): no cross rate can be given.`
+            : `${against} is not among the currencies of the rate matrix (no budget line, company, contract or setting uses it, and it has no manual rate): no cross rate can be given.`,
       },
     } : {}),
     notes,
