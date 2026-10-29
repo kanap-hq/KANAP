@@ -245,7 +245,7 @@ The MCP server is read only. A client can search and read your data but cannot c
 | `get_document` | Reads one knowledge document |
 | `web_search` | Searches the web, when web search is switched on for your organization |
 
-When a client connects, the server tells it which workspace it reads, that it only reads, that it reads with the rights of the person behind the key or the connection, how to search, and which data it does not read (cost centers, calendars, exchange rates, data access settings, the audit log and AI agents).
+When a client connects, the server tells it which workspace it reads, that it only reads, that it reads with the rights of the person behind the key or the connection, how to search, and which data it does not read (cost centers, calendars, exchange rates, the audit log and AI agents). It reads roles and data access settings only for a person who administers users with access to all data.
 
 A call the server refuses comes back with its cause, so that the assistant can explain it: an unknown tool, a tool that would change data, a tool the key does not allow, or data the person cannot read.
 

@@ -243,7 +243,7 @@ El servidor MCP es de solo lectura. Un cliente puede buscar y leer sus datos, si
 | `get_document` | Lee un documento de la base de conocimiento |
 | `web_search` | Busca en la web, cuando la búsqueda web está activada para su organización |
 
-Cuando un cliente se conecta, el servidor le indica qué espacio de trabajo lee, que solo lee, que lee con los derechos de la persona detrás de la clave o de la conexión, cómo buscar y qué datos no lee (centros de coste, calendarios, tipos de cambio, configuración de acceso a los datos, el registro de auditoría y los agentes de IA).
+Cuando un cliente se conecta, el servidor le indica qué espacio de trabajo lee, que solo lee, que lee con los derechos de la persona detrás de la clave o de la conexión, cómo buscar y qué datos no lee (centros de coste, calendarios, tipos de cambio, el registro de auditoría y los agentes de IA). Solo lee los roles y la configuración de acceso a los datos para una persona que administra los usuarios y tiene acceso a todos los datos.
 
 Una llamada que el servidor rechaza vuelve con su causa, para que el asistente pueda explicarla: una herramienta desconocida, una herramienta que cambiaría datos, una herramienta que la clave no permite o datos que la persona no puede leer.
 
