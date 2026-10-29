@@ -678,15 +678,32 @@
         "age": {
           "line": "Données lues : {{list}}",
           "item": "{{source}} le {{date}} à {{time}}",
+          "scores": "scores {{source}} du {{date}}",
           "never": "{{source}} pas encore lue",
           "nvd": "NVD",
           "cve_org": "Éditeurs (CVE.org)",
+          "cisa_kev": "CISA KEV",
+          "eu_kev": "EU KEV",
+          "epss": "EPSS",
+          "euvd": "EUVD",
           "failingNvd": "La dernière lecture de la NVD a échoué",
           "failingCveOrg": "La dernière lecture de CVE.org a échoué",
+          "failingCisaKev": "La dernière lecture de CISA KEV a échoué",
+          "failingEuKev": "La dernière lecture d'EU KEV a échoué",
+          "failingEpss": "La dernière lecture d'EPSS a échoué",
+          "failingEuvd": "La dernière lecture d'EUVD a échoué",
           "staleNvd_one": "La NVD n'a pas été lue depuis {{count}} jour",
           "staleNvd_other": "La NVD n'a pas été lue depuis {{count}} jours",
           "staleCveOrg_one": "CVE.org n'a pas été lue depuis {{count}} jour",
-          "staleCveOrg_other": "CVE.org n'a pas été lue depuis {{count}} jours"
+          "staleCveOrg_other": "CVE.org n'a pas été lue depuis {{count}} jours",
+          "staleCisaKev_one": "CISA KEV n'a pas été lu depuis {{count}} jour",
+          "staleCisaKev_other": "CISA KEV n'a pas été lu depuis {{count}} jours",
+          "staleEuKev_one": "EU KEV n'a pas été lu depuis {{count}} jour",
+          "staleEuKev_other": "EU KEV n'a pas été lu depuis {{count}} jours",
+          "staleEpss_one": "EPSS n'a pas été lu depuis {{count}} jour",
+          "staleEpss_other": "EPSS n'a pas été lu depuis {{count}} jours",
+          "staleEuvd_one": "EUVD n'a pas été lue depuis {{count}} jour",
+          "staleEuvd_other": "EUVD n'a pas été lue depuis {{count}} jours"
         }
       },
       "reach": {

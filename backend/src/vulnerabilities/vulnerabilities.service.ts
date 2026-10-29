@@ -19,6 +19,7 @@ import { probesOf, productsOf, readCveNames, VulnerabilityMatchService } from '.
 import { vulnerabilityAlertsSql } from './vulnerability-alerts';
 import { applicationCountsForTenantSql, applicationLinksSql, assetCountsForTenantSql, assetLinksSql, directReachOfTechnologies, EFFECTIVE_SCORE, EFFECTIVE_SEVERITY, exploitedSql, rowOnApplicationsSql, rowOnAssetsSql, technologyInEstateSql } from './vulnerability-reach-counts';
 import { severityOf, VULNERABILITY_STATES, type MatchBasis, type VulnerabilityState } from './vulnerability-rules';
+import { SIGNAL_FEED_SOURCES, type SignalFeedSource } from './vulnerability-signals.service';
 
 /** The sheet of the vulnerabilities workbook. */
 const VULNERABILITIES_SHEET: Record<CsvLanguage, string> = { en: 'Vulnerabilities', fr: 'Vulnérabilités', de: 'Schwachstellen', es: 'Vulnerabilidades' };
@@ -548,11 +549,13 @@ function feedFailing(row: { last_error: string | null; last_attempt_at: Date | s
 }
 
 /**
- * How fresh each feed is, as the page reads it (`GET /vulnerabilities/sources`) and the assistant
- * (`feeds`). Both sources are always named, with null dates when no pass has written a row.
- * `failing` is true when the last attempt is newer than the last success and an error was kept.
- * The error text stays in the database: it can name a mirror. `vulnerability_feed_sources` is a
- * platform table, shared by every tenant: it has no tenant column.
+ * How fresh each feed is, as the page reads it (`GET /vulnerabilities/sources`, field `items`)
+ * and the assistant (`feeds`). Both sources are always named, with null dates when no pass has
+ * written a row. `failing` is true when the last attempt is newer than the last success and an
+ * error was kept. The error text stays in the database: it can name a mirror.
+ * `vulnerability_feed_sources` is a platform table, shared by every tenant: it has no tenant column.
+ * The exploitation catalogues are `vulnerabilitySignalSources` (the route's `signals`). This
+ * function stays on NVD and CVE.org: the assistant's type names only those two.
  */
 export async function vulnerabilityFeedSources(mg: Pick<EntityManager, 'query'>) {
   const rows: Array<{ source: string; last_success_at: Date | null; last_attempt_at: Date | null; last_error: string | null }> = await mg.query(
@@ -574,6 +577,54 @@ export async function vulnerabilityFeedSources(mg: Pick<EntityManager, 'query'>)
       last_attempt_at: row?.last_attempt_at ?? null,
       failing: feedFailing(row),
       enabled: enabled[source],
+    };
+  });
+}
+
+/** One exploitation catalogue of `GET /vulnerabilities/sources` (`signals`). */
+export type VulnerabilitySignalSource = {
+  source: SignalFeedSource;
+  last_success_at: Date | null;
+  last_attempt_at: Date | null;
+  failing: boolean;
+  /** The vulnerability feed: the catalogues are read by that task, and by no switch of their own. */
+  enabled: boolean;
+  /** EPSS: the day of the scores (`cursor.score_date`). Null for the other catalogues. */
+  score_date: string | null;
+};
+
+const SCORE_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function scoreDateOf(cursor: unknown): string | null {
+  if (!cursor || typeof cursor !== 'object') return null;
+  const value = (cursor as { score_date?: unknown }).score_date;
+  return typeof value === 'string' && SCORE_DAY.test(value) ? value : null;
+}
+
+/**
+ * How fresh each exploitation catalogue is. The four are always named, with null dates when no
+ * pass has written a row. Same `failing` rule as `vulnerabilityFeedSources`, and the error text
+ * stays in the database. `score_date` is the EPSS file's day of scores. `enabled` follows the
+ * vulnerability feed: there is no separate switch.
+ */
+export async function vulnerabilitySignalSources(mg: Pick<EntityManager, 'query'>): Promise<VulnerabilitySignalSource[]> {
+  const rows: Array<{ source: string; last_success_at: Date | null; last_attempt_at: Date | null; last_error: string | null; cursor: unknown }> = await mg.query(
+    `SELECT source, last_success_at, last_attempt_at, last_error, cursor
+       FROM vulnerability_feed_sources
+      WHERE source = ANY($1::text[])`,
+    [SIGNAL_FEED_SOURCES],
+  );
+  const bySource = new Map(rows.map((row) => [row.source, row]));
+  const enabled = Features.VULNERABILITY_FEED_ENABLED;
+  return SIGNAL_FEED_SOURCES.map((source) => {
+    const row = bySource.get(source);
+    return {
+      source,
+      last_success_at: row?.last_success_at ?? null,
+      last_attempt_at: row?.last_attempt_at ?? null,
+      failing: feedFailing(row),
+      enabled,
+      score_date: source === 'epss' ? scoreDateOf(row?.cursor) : null,
     };
   });
 }
@@ -990,9 +1041,12 @@ export class VulnerabilitiesService {
     return { servers: servers.size, applications: reach.apps ? apps.size : null };
   }
 
-  /** How fresh each feed is (`vulnerabilityFeedSources`). */
+  /** How fresh each feed is (`vulnerabilityFeedSources`) and each exploitation catalogue (`vulnerabilitySignalSources`). */
   async sources(opts: VulnOpts) {
-    return { items: await vulnerabilityFeedSources(opts.manager) };
+    return {
+      items: await vulnerabilityFeedSources(opts.manager),
+      signals: await vulnerabilitySignalSources(opts.manager),
+    };
   }
 
   /**

@@ -89,7 +89,7 @@ export class VulnerabilitiesController {
     return this.cveNames.directory(requireManager(ctx.manager), q, vendor);
   }
 
-  /** How fresh the NVD and CVE.org passes are. A static path, declared before `:cveId`. */
+  /** How fresh the NVD, CVE.org and the exploitation catalogues are. A static path, declared before `:cveId`. */
   @RequireLevel('infrastructure', 'reader')
   @Get('sources')
   sources(@Tenant() ctx: TenantRequest) {
