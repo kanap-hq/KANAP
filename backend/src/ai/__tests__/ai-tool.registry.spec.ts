@@ -1979,6 +1979,11 @@ async function testReferenceDataFamiliesAreDescribed() {
     assert.match(description, /`required_for` is where a value is required now, an enabled dimension only/);
     assert.match(description, /`exchange_rates` gives each currency's rate for a year in the reporting currency for 1 unit of that currency, with `inverse_rate` and, with the `against` filter, `cross_rate` computed by the server/);
   }
+  // A number alone is a filter value (2026 is eq 2026), on both tools that filter.
+  for (const schema of registry.toToolJsonSchemas([{ name: 'query_entities' }, { name: 'aggregate_entities' }])) {
+    const values = (schema.parameters as any).properties.filters.additionalProperties.anyOf;
+    assert.ok(values.some((value: any) => value.type === 'number'), `${schema.name}: a number alone is accepted (${JSON.stringify(values)})`);
+  }
   const search = text('search_all');
   assert.match(search, /It also searches the cost centers, working-day calendars and analytics dimensions by code and by name \(`ref` is the code; at most five of each family\)/);
   assert.match(search, /The exchange rates are not searched here: query_entities on `exchange_rates` reads them, and `not_searched_here` says so/);

@@ -60,6 +60,8 @@ export type AiFilterValue =
   | AiSetExcludeFilterValue
   | AiTextFilterValue
   | AiNumberFilterValue
+  /** A number alone on a number field: `{"op": "eq", "value": n}` (`ai-filter.adapter.ts`). */
+  | number
   | AiDateFilterValue;
 
 export type AiFilterFieldDef = {

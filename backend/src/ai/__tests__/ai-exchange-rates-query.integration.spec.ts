@@ -272,6 +272,22 @@ async function testMatrixAsTheScreen(): Promise<void> {
     const byYear: any = await aggregates.execute(ctx, { entity_type: 'exchange_rates', group_by: 'year', filters: { currency: ['USD', 'CHF'] } });
     assert.deepEqual(byYear.groups.map((group: any) => [group.key, group.count]), [['2026', 2], ['2027', 2]]);
 
+    // A year given alone, as a number or as a string of one, is the year (Plaid L9, lot G); a value
+    // that is not a number is refused with the form the field takes, never as an unknown field.
+    for (const year of [2026, '2026']) {
+      const bare: any = await query.execute(ctx, { entity_type: 'exchange_rates', filters: { year, currency: ['USD'] } as any });
+      assert.deepEqual(bare.filters_applied, ['year', 'currency'], `year ${JSON.stringify(year)} applied`);
+      assert.deepEqual(rows(bare), [[2026, 'USD', 0.89222, 'exchangerateapi-spot']]);
+    }
+    const bareGroups: any = await aggregates.execute(ctx, { entity_type: 'exchange_rates', group_by: 'currency', filters: { year: '2027' } as any });
+    assert.equal(bareGroups.total, 3, 'the aggregate reads the year alone too');
+    const wrong: any = await query.execute(ctx, { entity_type: 'exchange_rates', filters: { year: 'next year' } as any });
+    assert.deepEqual(wrong.filters_ignored, ['year']);
+    assert.equal(wrong.items.length, 0);
+    const reason = wrong.suggested_repairs.find((repair: any) => repair.field === 'year')?.reason;
+    assert.match(reason, /^year is a number field of exchange_rates, and the value given is not one it takes\. It takes a number alone \(2026 means \{"op":"eq","value":2026\}\) or a comparison, for example \{"op":"gte","value":10\}\. Nothing was searched/);
+    assert.doesNotMatch(JSON.stringify(wrong), /Unsupported AI filter field/);
+
     // A year out of range, two currencies against: refused in words, the transaction intact.
     for (const value of [3, 10000]) {
       const refused = await rejection(() => query.execute(ctx, { entity_type: 'exchange_rates', filters: { year: { op: 'gt', value } } }));

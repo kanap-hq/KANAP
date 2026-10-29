@@ -106,6 +106,8 @@ const AiFilterValueSchema = z.union([
   // Exclude mode of a set field: every value but these (budget lines only).
   z.object({ not: z.array(z.union([z.string(), z.null()])) }).strict(),
   z.string(),
+  // A number alone on a number field means eq (`2026` is {"op": "eq", "value": 2026}).
+  z.number(),
   z.object({
     op: z.enum(['eq', 'gt', 'lt', 'gte', 'lte', 'between']),
     value: z.number(),

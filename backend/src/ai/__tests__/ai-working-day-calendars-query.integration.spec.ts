@@ -221,6 +221,14 @@ async function testYearAsTheScreen(): Promise<void> {
     assert.equal(byCode(listed).get('CAD').metadata.source, 'edited');
     assert.equal(byCode(listed).get('CAD').metadata.total_days, 228.999996, 'twelve months of 19.083333, exactly');
 
+    // A year given alone, as a number or as a string of one, is the year (Plaid L9, lot G).
+    for (const year of [2026, '2026']) {
+      const bare: any = await query.execute(ctx, { entity_type: 'working_day_calendars', filters: { year } as any });
+      assert.deepEqual(bare.filters_applied, ['year'], `year ${JSON.stringify(year)} applied`);
+      assert.equal(bare.calendar_year, 2026);
+      assert.deepEqual(bare.items.map((item: any) => [item.ref, item.metadata.total_days]), listed.items.map((item: any) => [item.ref, item.metadata.total_days]));
+    }
+
     // The year argument of query_entities sets it too; a year the custom calendar lacks has no days.
     const next: any = await query.execute(ctx, { entity_type: 'working_day_calendars', year: 2027 });
     assert.equal(next.calendar_year, 2027);
