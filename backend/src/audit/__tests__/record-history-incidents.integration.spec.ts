@@ -27,7 +27,7 @@ import { audit, seedHistoryData, seedPerson, type HistorySeed, type Level, type 
 
 const INCIDENT_ONLY: Record<string, Level> = { incidents: 'reader' };
 const ALL_MODULES: Record<string, Level> = {
-  incidents: 'reader', infrastructure: 'reader', applications: 'reader', tasks: 'reader', contracts: 'reader',
+  incidents: 'reader', infrastructure: 'reader', applications: 'reader', tasks: 'reader', contracts: 'reader', budget: 'reader',
 };
 
 type Seeded = {
@@ -178,8 +178,8 @@ async function testConfidential(seeded: Seeded) {
   ));
   assert.deepEqual(parent[0], { parent_table: 'incidents', parent_id: seeded.confidential }, 'the task row belongs to the confidential incident');
   const holders = Object.values(RECORD_HISTORY).filter((entry) => Object.prototype.hasOwnProperty.call(entry.children, 'tasks'));
-  assert.deepEqual(holders.map((entry) => entry.table).sort(), ['contracts', 'incidents'], 'the records that read tasks');
-  for (const [table, id] of [['incidents', data.incident], ['contracts', data.contractA]] as const) {
+  assert.deepEqual(holders.map((entry) => entry.table).sort(), ['contracts', 'incidents', 'spend_items'], 'the records that read tasks');
+  for (const [table, id] of [['incidents', data.incident], ['contracts', data.contractA], ['spend_items', data.opexLine]] as const) {
     const other = await readPage(seeded.allReader, data.tenantId, table, id, ALL_MODULES);
     const serialized = JSON.stringify(other);
     assert.ok(!other.items.some((item) => item.id === seeded.confidentialTaskRow), `${table}: the confidential task row is absent`);
