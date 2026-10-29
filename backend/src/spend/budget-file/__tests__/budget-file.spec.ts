@@ -909,6 +909,34 @@ async function testCalculationLinesCap() {
   });
 }
 
+/** No warning for a row in error, a frozen column, or a line the file creates. */
+async function testCalculationLinesSilentCases() {
+  const [stored] = computedLines(1);
+  const inError = await preflight('opex', 'item_number,name,currency,budget_2026,revision_2026\nBL-1,Widget 1,EUR,200.00,1.234\n', [stored]);
+  assert.ok(inError.errors.some((error) => error.message === 'revision_2026 has more than two decimals.'), JSON.stringify(inError.errors));
+  assert.deepEqual([inError.warnings.calculationLines, inError.warnings.calculationLinesCount], [[], 0], 'a row in error says nothing about its lines');
+
+  const frozen = await preflight('opex', 'item_number,name,currency,budget_2026\nBL-1,Widget 1,EUR,200.00\n', [stored], {
+    cat: catalog({ frozen: ['opex:2026:budget'] }),
+  });
+  assert.ok(frozen.errors.some((error) => error.message === 'Budget for 2026 is frozen.'));
+  assert.deepEqual(frozen.warnings.calculationLines, [], 'a frozen column is refused, not warned about');
+
+  const cat = catalog({
+    companies: [{ id: 'c1', name: 'Acme', coaId: 'chart', disabledAt: null }],
+    accounts: [{ id: 'a1', number: '1200', coaId: 'chart', disabledAt: null }],
+  });
+  const created = await preflight(
+    'opex',
+    'item_number,name,company_name,account_number,currency,budget_2026\nBL-1,Widget 1,Acme,,EUR,100.00\n,New widget,Acme,1200,EUR,200.00\n',
+    [stored],
+    { cat },
+  );
+  assert.equal(created.ok, true, JSON.stringify(created.errors));
+  assert.deepEqual([created.changes.created, created.changes.unchanged], [1, 1]);
+  assert.deepEqual(created.warnings.calculationLines, [], 'a line the file creates has no calculation lines');
+}
+
 async function main() {
   await testTokenLanguages();
   await testDecimalMarkParameter();
@@ -934,6 +962,7 @@ async function main() {
   await testCapexDescription();
   await testCostCenterOfAnotherCompany();
   await testCalculationLinesCap();
+  await testCalculationLinesSilentCases();
   console.log('budget-file.spec: ok');
 }
 

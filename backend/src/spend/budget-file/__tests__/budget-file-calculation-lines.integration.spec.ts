@@ -455,6 +455,17 @@ async function testMonthChangeWarnsOnce(kind: Kind) {
     assert.deepEqual(warnings, [budgetWarning(item)], `${kind}: said once for the column`);
     const unchanged = await calculationWarnings(ctx, kind, content);
     assert.deepEqual(unchanged.warnings, [], `${kind}: the same months say nothing`);
+
+    const loaded: any = await loadBudgetFile(ctx.runner.manager, kind, ctx.tenantId, file);
+    assert.equal(loaded.updated, 1, `${kind}: the months load (${JSON.stringify(loaded.errors ?? loaded)})`);
+    const after = await column(ctx.runner, kind, ctx.versionId, 'planned');
+    assert.deepEqual(after.months.slice(1, 5), ['8000.00', '9000.00', '9000.00', '8000.00'], `${kind}: the file's months`);
+    assert.deepEqual(
+      [after.record!.method, after.record!.last_calculation.kind, after.record!.last_calculation.total],
+      ['manual', 'computed', TOTAL_FROM_LINES],
+      `${kind}: the column is manual and keeps the lines' calculation as a reference`,
+    );
+    assert.deepEqual(after.lines.map((line) => line.label), ['Consultant', 'Developer'], `${kind}: the lines are kept`);
   });
 }
 
