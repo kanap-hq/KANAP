@@ -164,6 +164,12 @@ async function seedAudits(runner: QueryRunner, data: HistorySeed): Promise<Seede
     table: 'portfolio_request_urls', recordId: request, action: 'update', ...by,
     before: [], after: [{ url: 'https://example.invalid/brief', label: 'Brief board' }],
   });
+  // An address changed under the same label reads as that link changed (address and label compared).
+  await audit(runner, {
+    table: 'portfolio_request_urls', recordId: request, action: 'update', ...by,
+    before: [{ url: 'https://a.example.invalid/spec', label: 'Specification' }],
+    after: [{ url: 'https://b.example.invalid/spec', label: 'Specification' }],
+  });
   await audit(runner, { table: 'portfolio_request_documents', recordId: request, action: 'update', before: null, after: { slot: 'risks_mitigations' }, ...by });
 
   return {
@@ -253,6 +259,11 @@ async function testChildEntries(seeded: Seeded) {
   assert.deepEqual(dependencies, ['Project Alpha', 'Request Beta'], 'the dependencies name the project and the request');
   assert.equal(labelOf(one(page, 'contact', 'added').change.after), 'Cora Contact', 'the contact is named');
   assert.equal(one(page, 'link', 'added').change.after, 'Brief board', 'the web link reads by its label');
+  assert.deepEqual(
+    changes(page, 'link').find(({ change }) => change.event === undefined)?.change,
+    { field: 'link', dimension: 'Specification', before: 'https://a.example.invalid/spec', after: 'https://b.example.invalid/spec' },
+    'an address changed alone reads as the link changed, old and new address',
+  );
   assert.deepEqual(one(page, 'document_updated').change, { field: 'document_updated', after: 'risks_mitigations' }, 'the document slot, never its content');
   console.log('  attachment, process, team, lines, application, asset, dependencies, contact, link, document: OK');
 }
