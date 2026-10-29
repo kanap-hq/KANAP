@@ -84,6 +84,8 @@ const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> =
   // The chargeback reports, read with the reporting right as their routes (`GET /reports/chargeback/*`).
   chargeback: 'reporting',
   chargeback_lines: 'reporting',
+  // The tree of cost centers, read with the right of its page (`GET /cost-centers`).
+  cost_centers: 'cost_centers',
 };
 
 /**
@@ -114,6 +116,7 @@ const ENTITY_SCREEN: Partial<Record<AiQueryEntityType | AiContextEntityType, str
   data_access: 'Admin › Data access',
   chargeback: 'Reporting › Global chargeback',
   chargeback_lines: 'Reporting › Company chargeback',
+  cost_centers: 'Master data › Cost centers',
 };
 
 /** The level a family is read at: the caller's, raised to the family's minimum. */
@@ -150,6 +153,7 @@ const RIGHT_PLAIN_NAMES: Record<string, string> = {
  */
 const READ_RIGHT_PLAIN_NAMES: Record<string, string> = {
   reporting: 'the reports',
+  cost_centers: 'cost centers',
 };
 
 const LEVEL_PLAIN_VERBS: Record<PermissionLevel, string> = {

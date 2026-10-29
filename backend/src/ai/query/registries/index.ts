@@ -40,6 +40,7 @@ import { usersRegistry } from './users.registry';
 import { vulnerabilitiesRegistry } from './vulnerabilities.registry';
 import { chargebackRegistry } from './chargeback.registry';
 import { chargebackLinesRegistry } from './chargeback-lines.registry';
+import { costCentersRegistry } from './cost-centers.registry';
 
 export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistry> = {
   accounts: accountsRegistry,
@@ -73,6 +74,7 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   vulnerabilities: vulnerabilitiesRegistry,
   chargeback: chargebackRegistry,
   chargeback_lines: chargebackLinesRegistry,
+  cost_centers: costCentersRegistry,
 };
 
 export function getAiEntityRegistry(entityType: AiQueryEntityType): AiEntityFilterRegistry {

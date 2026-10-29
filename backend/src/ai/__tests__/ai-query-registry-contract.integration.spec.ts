@@ -46,11 +46,12 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
 /**
  * The families the assistant reads in memory from the screen's service (the two End of support
- * report lists, the roles and their rights, Admin › Data access): their filters and sorts change the rows, never the
+ * report lists, the roles and their rights, Admin › Data access, the chargeback reports, the tree of
+ * cost centers): their filters and sorts change the rows, never the
  * statements they send. Their behaviour is asserted on `filters_applied` and the result, and by
  * their own spec.
  */
-const IN_MEMORY_FAMILIES = new Set(['support_gaps', 'support_deadlines', 'roles', 'role_permissions', 'data_access', 'chargeback', 'chargeback_lines']);
+const IN_MEMORY_FAMILIES = new Set(['support_gaps', 'support_deadlines', 'roles', 'role_permissions', 'data_access', 'chargeback', 'chargeback_lines', 'cost_centers']);
 
 /** The year of the seeded chargeback: outside the window of the budget line fields (y-2 to y+2). */
 const CHARGEBACK_YEAR = 2031;
@@ -169,6 +170,13 @@ async function seedTenant(runner: QueryRunner): Promise<Seed> {
     `INSERT INTO companies (tenant_id, name, country_iso, city, created_at, updated_at) VALUES ($1, $2, 'FR', 'Paris', $3, $3)`,
     [tenantId, `Company ${n}`, at]));
   const companyId = rows.companies.older;
+  // A group and a cost center under it: `cost_centers` lists two nodes, in the tree's order.
+  const groupId = await insertId(runner,
+    `INSERT INTO cost_centers (tenant_id, code, kind, name, owner_user_id) VALUES ($1, 'CT-GRP', 'group', 'Contract group', $2)`,
+    [tenantId, userId]);
+  await runner.query(
+    `INSERT INTO cost_centers (tenant_id, code, kind, name, parent_id, company_id) VALUES ($1, 'CT-100', 'cost_center', 'Contract center', $2, $3)`,
+    [tenantId, groupId, companyId]);
   await pair('departments', (n, at) => insertId(runner,
     `INSERT INTO departments (tenant_id, company_id, name, created_at, updated_at) VALUES ($1, $2, $3, $4, $4)`,
     [tenantId, companyId, `Department ${n}`, at]));

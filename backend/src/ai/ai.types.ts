@@ -90,11 +90,14 @@ export const AI_SEARCH_ENTITY_TYPES = [
  * `query/ai-data-access.query.ts`) is listed only: a row names a person, whose access is in their
  * users detail. `chargeback` and `chargeback_lines` (Reporting › Global and Company chargeback,
  * `query/ai-chargeback.query.ts`) are listed only: their rows are computed by the report.
+ * `cost_centers` (Master data › Cost centers, `query/ai-cost-centers.query.ts`) is not searched
+ * either; a node has a detail (its page).
  */
 export const AI_QUERY_ENTITY_TYPES = [
   ...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines', 'roles', 'role_permissions',
   'data_access',
   'chargeback', 'chargeback_lines',
+  'cost_centers',
 ] as const;
 
 /**
@@ -289,6 +292,9 @@ export type AiEntityDetailDto = {
   /** The currency of the amounts, on the families that carry some (`ai-amounts-currency.util.ts`). */
   amounts_currency?: string | null;
   amounts_currency_note?: string;
+  /** The line counts of the detail are narrowed by the person's data access (`aiDataAccessCountsNote`). */
+  data_access?: 'limited';
+  data_access_note?: string;
   total: number;
   returned: number;
   truncated: boolean;

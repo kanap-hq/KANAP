@@ -1763,6 +1763,12 @@ async function testInvalidInputNamesTheFieldAndWhy() {
   // The chargeback reports: computed rows, listed and grouped, with no detail of their own.
   assert.ok(queried.includes('chargeback') && queried.includes('chargeback_lines'), 'the chargeback reports are listed');
   assert.doesNotMatch(enumValue, /"chargeback/, enumValue);
+  // Master data › Cost centers (Plaid L9, lot A): listed, grouped, and a node has its detail and history.
+  assert.ok(queried.includes('cost_centers'), 'the cost centers are listed');
+  assert.match(enumValue, /"cost_centers"/, enumValue);
+  const more = new Map(registry.toToolJsonSchemas([{ name: 'aggregate_entities' }, { name: 'get_record_history' }]).map((schema) => [schema.name, schema.parameters]));
+  assert.ok((more.get('aggregate_entities') as any).properties.entity_type.enum.includes('cost_centers'), 'the cost centers are grouped');
+  assert.ok((more.get('get_record_history') as any).properties.entity_type.enum.includes('cost_centers'), 'a cost center has its history');
 
   const nested = refusal('query_entities', { entity_type: 'budget_lines', sort: { field: 'y_budget', direction: 'down' }, page: 'two' });
   assert.match(nested, /"sort.direction" must be one of: "asc", "desc"/, nested);

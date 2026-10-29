@@ -29,6 +29,8 @@ import {
   listAiChargebackLines,
 } from './ai-chargeback.query';
 import { aiDataAccessNote } from './ai-data-access-note.util';
+import { CostCentersService } from '../../cost-centers/cost-centers.service';
+import { aggregateCostCenterRows, filterAiCostCenters } from './ai-cost-centers.query';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
@@ -678,6 +680,8 @@ export class AiAggregateExecutor {
     @Optional() private readonly dataAccess?: DataAccessAdminService,
     /** The chargeback reports of the screens, which `chargeback` and `chargeback_lines` group. */
     @Optional() private readonly chargeback?: ChargebackReportService,
+    /** Master data › Cost centers, which `cost_centers` groups. */
+    @Optional() private readonly costCenters?: CostCentersService,
   ) {
     // Absent, a technology filter on application_count matches nothing: say so once, at start.
     if (!policy) new Logger(AiAggregateExecutor.name).warn('AiPolicyService is not injected: technology aggregates see no application.');
@@ -2227,6 +2231,53 @@ export class AiAggregateExecutor {
         groups,
         // The rows of the report table the groups add up (`level`): a count counts them, not budget lines.
         total: read.rows.length,
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+    }
+    if (input.entity_type === 'cost_centers') {
+      // Read with the right of the page, as its route: checked again here, the database not guarding it.
+      if (!this.policy || !this.costCenters) throw new BadRequestException('The cost centers are not available.');
+      await this.policy.assertEntityTypeReadRight(context, input.entity_type, context.manager);
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: null,
+          function: 'count',
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const { rows, unmatched_note } = await filterAiCostCenters(
+        { costCenters: this.costCenters },
+        { manager: context.manager, tenantId: context.tenantId },
+        scoped.query,
+      );
+      const groups = aggregateCostCenterRows(rows, input.group_by);
+      return {
+        ...(unmatched_note ? { unmatched_note } : {}),
+        group_by: input.group_by,
+        metric: null,
+        function: 'count',
+        groups,
+        // The nodes of the tree the filters keep, groups and cost centers alike unless `kind` says.
+        total: rows.length,
         returned: groups.length,
         truncated: false,
         complete: isCompleteAggregateResult(scoped.scope),

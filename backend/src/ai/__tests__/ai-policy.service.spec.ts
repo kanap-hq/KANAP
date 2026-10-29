@@ -800,8 +800,49 @@ async function testRolesNeedUsersAdminAndUnlimitedAccess() {
   }
 }
 
+/** Plaid L9, lot A: the cost centers need the right of their page, limited access included, refused in words. */
+async function testCostCentersNeedTheirPageRight() {
+  const originalFeature = Features.AI_CHAT_ENABLED;
+  Features.AI_CHAT_ENABLED = true;
+  const context = {
+    tenantId: 'tenant-1',
+    userId: 'user-1',
+    isPlatformHost: false,
+    surface: 'chat' as const,
+    authMethod: 'jwt' as const,
+  };
+  try {
+    // budget:reader reads cost_center on its lines, not the family: the right of the page is missing.
+    const budgetReader = createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['budget', 'reader']]) });
+    await assert.rejects(
+      () => budgetReader.assertEntityTypeReadAccess(context, 'cost_centers', createManager()),
+      (error: any) => {
+        assert.equal(error.message, 'You need the right to read cost centers (the right the Master data › Cost centers screen asks for), which your role does not give. An administrator can add it to your role.');
+        assert.equal(error.getResponse().code, 'MODULE_RIGHT_REQUIRED');
+        return true;
+      },
+      'budget:reader is refused',
+    );
+    assert.equal(await budgetReader.canReadEntityType(context, 'cost_centers', createManager()), false, 'budget:reader cannot read');
+
+    // cost_centers:reader reads, in limited access too: the family is not reserved.
+    const reader = createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['cost_centers', 'reader']]) });
+    await reader.assertEntityTypeReadAccess(context, 'cost_centers', createManager());
+    await reader.assertEntityTypeReadAccess(context, 'cost_centers', createManager({ limited: true }));
+    assert.equal(await reader.canReadEntityType(context, 'cost_centers', createManager({ limited: true })), true, 'limited access reads the tree');
+    assert.deepEqual(
+      await reader.listReadableEntityTypes(context, ['cost_centers', 'budget_lines'] as any[], createManager({ limited: true })),
+      ['cost_centers'],
+      'listed among the readable families',
+    );
+  } finally {
+    Features.AI_CHAT_ENABLED = originalFeature;
+  }
+}
+
 async function run() {
   await testRolesNeedUsersAdminAndUnlimitedAccess();
+  await testCostCentersNeedTheirPageRight();
   await testContributorWritesAtTheScreenLevel();
   await testMissingRightIsSaidInPlainWords();
   await testListReadableEntityTypesFiltersUnreadableFamilies();

@@ -31,6 +31,7 @@ import { TenantsModule } from '../tenants/tenants.module';
 import { TasksModule } from '../tasks/tasks.module';
 import { TechnologiesModule } from '../technologies/technologies.module';
 import { VulnerabilitiesModule } from '../vulnerabilities/vulnerabilities.module';
+import { CostCentersModule } from '../cost-centers/cost-centers.module';
 import { UserRole } from '../users/user-role.entity';
 import { UsersModule } from '../users/users.module';
 import { StorageModule } from '../common/storage/storage.module';
@@ -265,6 +266,8 @@ import { AiRecordHistoryService } from './ai-record-history.service';
     TechnologiesModule,
     UsersModule,
     VulnerabilitiesModule,
+    // Master data › Cost centers, which the `cost_centers` family reads (Plaid L9, lot A).
+    CostCentersModule,
   ],
   controllers: [
     AiCapabilitiesController,

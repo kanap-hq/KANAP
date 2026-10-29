@@ -65,7 +65,7 @@ import {
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { aiAmountsCurrency } from './ai-amounts-currency.util';
-import { aiDataAccessNote } from './ai-data-access-note.util';
+import { aiDataAccessCountsNote, aiDataAccessNote } from './ai-data-access-note.util';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
 import { compareNullableText } from '../../common/list-engine/sql-fragments';
 import type { BudgetListAccess } from '../../spend/budget-list/budget-list.runtime';
@@ -117,6 +117,14 @@ import {
   type AiChargebackList,
   type AiChargebackRow,
 } from './ai-chargeback.query';
+import { CostCentersService } from '../../cost-centers/cost-centers.service';
+import {
+  aiCostCenterDetail,
+  costCenterFilterValues,
+  listAiCostCenters,
+  readAiCostCenterTree,
+  type AiCostCenterRow,
+} from './ai-cost-centers.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
@@ -643,6 +651,8 @@ export class AiQueryExecutor {
     @Optional() private readonly dataAccess?: DataAccessAdminService,
     /** The chargeback reports of the screens, which `chargeback` and `chargeback_lines` read. */
     @Optional() private readonly chargeback?: ChargebackReportService,
+    /** Master data › Cost centers, which the `cost_centers` family reads. */
+    @Optional() private readonly costCenters?: CostCentersService,
   ) {
     // Absent, the technology figures close (no application count, no detail): say so once, at start.
     const logger = new Logger(AiQueryExecutor.name);
@@ -1486,6 +1496,44 @@ export class AiQueryExecutor {
     if (!this.policy || !this.chargeback) throw new BadRequestException('The chargeback reports are not available.');
     await this.policy.assertEntityTypeReadRight(context, entityType, context.manager);
     return { chargeback: this.chargeback };
+  }
+
+  /**
+   * The tree of cost centers, read with the right of its page as its route: checked again here,
+   * the database not guarding it, refused in words (the right and the screen).
+   */
+  private async costCenterServices(context: AiExecutionContextWithManager) {
+    if (!this.policy || !this.costCenters) throw new BadRequestException('The cost centers are not available.');
+    await this.policy.assertEntityTypeReadRight(context, 'cost_centers', context.manager);
+    return { services: { costCenters: this.costCenters }, opts: { manager: context.manager, tenantId: context.tenantId } };
+  }
+
+  /** A node of the tree of cost centers: its code is its reference, its name its label; no person id. */
+  private mapCostCenter(row: AiCostCenterRow): AiEntitySummaryDto {
+    return toEntitySummary('cost_centers', {
+      id: row.id,
+      reference: row.code,
+      label: row.name,
+      status: row.status,
+      summary: null,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        code: row.code,
+        name: row.name,
+        kind: row.kind,
+        parent: row.parent,
+        parent_code: row.parent_code,
+        company: row.company,
+        budget_holder: row.budget_holder,
+        status: row.status,
+        depth: row.depth,
+        path: row.path,
+        children: row.children,
+        disabled_at: row.disabled_at,
+        ...(row.matched_on ? { matched_on: row.matched_on } : {}),
+      },
+    });
   }
 
   /**
@@ -2622,6 +2670,26 @@ export class AiQueryExecutor {
       };
     }
 
+    if (input.entity_type === 'cost_centers') {
+      const { services, opts } = await this.costCenterServices(context);
+      const result = await listAiCostCenters(services, opts, scoped.query);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        ...(result.unmatched_note ? { unmatched_note: result.unmatched_note } : {}),
+        items: result.items.map((row) => this.mapCostCenter(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
     if (input.entity_type === 'vulnerabilities') {
       const applications = await resolveAiApplicationsReach(context, this.policy);
       const result = await listAiVulnerabilities(context.manager, context.tenantId, scoped.query, applications);
@@ -3258,6 +3326,12 @@ export class AiQueryExecutor {
       throw new BadRequestException('A row of Admin › Data access has no detail of its own: read the person with get_entity_detail on users (by name or email), which gives their data access.');
     }
     const entityId = await this.resolveDetailEntityId(context, entityType, input.entity_id);
+    if (entityType === 'cost_centers') {
+      const { services, opts } = await this.costCenterServices(context);
+      const { row, data } = await aiCostCenterDetail(services, opts, entityId);
+      // The line counts pass the lines' access rules: within the person's access when it is limited.
+      return { ...this.toDetailResult(this.mapCostCenter(row), data), ...await aiDataAccessCountsNote(context, entityType) };
+    }
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
 
     if (entityType === 'tasks') {
@@ -4045,6 +4119,13 @@ export class AiQueryExecutor {
       // The labels have no value list on the version row: they are read from the labels of the
       // tenant's technology versions, one query (the `version` values of the technologies).
       if (dynamicFieldMap.has('label')) raw.label = await this.technologyVersionLabels(context);
+    } else if (input.entity_type === 'cost_centers') {
+      // The names the nodes carry, read from the tree: no column to read them from.
+      const { services, opts } = await this.costCenterServices(context);
+      const { rows } = await readAiCostCenterTree(services, opts);
+      for (const field of ['company', 'budget_holder'] as const) {
+        if (dynamicFieldMap.has(field)) raw[field] = costCenterFilterValues(rows, field);
+      }
     } else if (input.entity_type === 'incidents') {
       const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
       const reads = this.readProbe(context);

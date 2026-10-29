@@ -23,6 +23,7 @@ export const AI_PAGE_ROUTES: Readonly<Record<string, { path: (id: string) => str
   // A chargeback row opens its report: the global one, or the company one (where the company is picked).
   chargeback: { path: () => '/ops/reports/chargeback/global', resource: 'reporting' },
   chargeback_lines: { path: () => '/ops/reports/chargeback/company', resource: 'reporting' },
+  cost_centers: { path: (id) => `/master-data/cost-centers/${id}`, resource: 'cost_centers' },
 };
 
 /** The sentence the read tools give about `page_url` (chat and MCP share the descriptions). */
