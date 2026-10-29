@@ -601,7 +601,7 @@ function hasTechnologyPeopleWrite(rawText: string, text: string): boolean {
   // "Make me a summary…".
   if (first === 'make') {
     const rest = text.slice(text.indexOf('make') + 4).trim();
-    return /^(?!a\b|an\b|the\b|me\b|us\b)\S[\s\S]*?\bthe\s+(?:it|business)\s+(?:owner|support contacts?)\s+of\b/.test(rest);
+    return /^(?!a\b|an\b|the\b|me\b|us\b)\S[\s\S]*?\bthe\s+(?:(?:it|business)\s+owner|support contacts?)\s+of\b/.test(rest);
   }
   const changeVerb = first != null && [
     'ajoute', 'ajoutez', 'ajouter', 'add',
@@ -615,9 +615,16 @@ function hasTechnologyPeopleWrite(rawText: string, text: string): boolean {
   ].includes(first);
   const statement = /\b(?:devient|deviennent|becomes?)\b/.test(text);
   if (!changeVerb && !statement) return false;
-  return /\b(?:it owner|business owner|owners? of|responsable (?:it|metier)|responsables? (?:it|metier))\b/.test(text)
-    || /\b(?:support contacts?|contacts? de support|contacts? au support)\b/.test(text)
-    || /\bcontact\b[\s\S]{0,60}\b(?:de|du|des|of|from)\b[\s\S]{0,40}[A-Z]/.test(rawText);
+  const ownerPhrase = /\b(?:it owner|business owner|owners? of|responsable (?:it|metier)|responsables? (?:it|metier))\b/.test(text);
+  const supportPhrase = /\b(?:support contacts?|contacts? de support|contacts? au support)\b/.test(text);
+  // The contact of a technology names the support ("Sage Support", "contacts de support") or a
+  // technology (a TEC reference, or a name followed by a version). "Retire le contact Marie
+  // Durand de ACME" is the master data contact write, not a technology support contact.
+  const namesSupport = /\bsupport\b/.test(text);
+  const namesTechnology = /\bTEC-\d+\b/i.test(rawText)
+    || /\b[A-Za-z][\w.-]*\s+v?\d+(?:\.\d+)*\b/.test(rawText);
+  const contactPhrase = /\bcontact\b[\s\S]{0,60}\b(?:de|du|des|of|from)\b[\s\S]{0,40}[A-Z]/.test(rawText);
+  return ownerPhrase || supportPhrase || (contactPhrase && (namesSupport || namesTechnology));
 }
 
 /**

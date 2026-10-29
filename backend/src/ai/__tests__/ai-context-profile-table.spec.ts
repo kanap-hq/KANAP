@@ -306,6 +306,14 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Make a table of the support contacts of Redis', profile: 'read_query', mode: 'read' },
   { prompt: 'Make me a summary of PostgreSQL versions with their IT owner', profile: 'read_query', mode: 'read' },
 
+  // Lot 7: the contact of a technology names the support or a technology; these name a master
+  // data contact, so they are master data writes.
+  { prompt: 'Retire le contact Marie Durand de ACME', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
+  { prompt: 'Remove the contact Jane Doe from Acme Corp', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
+  { prompt: 'Add contact John Smith from Oracle', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
+  { prompt: 'Change le contact principal de Fromagerie Durand', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
+  { prompt: 'Mets à jour le contact de Fournisseur Lactalis', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
+
   // Lot 4 review: a noun after upgrade, replace, record or install stays a read; so do a review
   // and the question of who changed a value.
   { prompt: 'Upgrade path for PostgreSQL 12', profile: 'read_query', mode: 'read' },
