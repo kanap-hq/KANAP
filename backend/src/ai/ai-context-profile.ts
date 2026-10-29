@@ -51,6 +51,8 @@ const COMMON_READ_TOOLS: AiToolName[] = [
   // The related records of one record (what runs on a server, which applications use a
   // technology), for a question that names it without a reference.
   'get_entity_context',
+  // Who changed a record and when ("Qui a modifié AST-3 ?"), from its History tab.
+  'get_record_history',
 ];
 
 const ENTITY_INSPECTION_TOOLS: AiToolName[] = [
@@ -61,6 +63,7 @@ const ENTITY_INSPECTION_TOOLS: AiToolName[] = [
   'get_entity_detail',
   'get_entity_context',
   'get_entity_comments',
+  'get_record_history',
   'search_knowledge',
   'get_document',
 ];

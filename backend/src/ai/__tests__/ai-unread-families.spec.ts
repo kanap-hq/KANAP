@@ -28,6 +28,7 @@ function testWordsThatAskForAFamily() {
     ['périmètre de données de Paul', 'data access (which companies or cost centers a person is limited to)'],
     ["journal d'audit", 'audit log'],
     ['audit log', 'audit log'],
+    ['historique des modifications', 'audit log'],
     ['agents IA', 'AI agents'],
     ['AI agents', 'AI agents'],
     ['KI-Agenten', 'AI agents'],
@@ -52,6 +53,10 @@ function testCommonWordsAskForNone() {
     'Dimension Data',
     'calendrier de migration',
     'Outlook calendar',
+    // The History tab of one record, which get_record_history reads (Plaid L7, lot C).
+    'Historique des modifications de TEC-3',
+    "Historique des modifications d'AST-3",
+    'historique des modifications du fournisseur Acme',
   ]) {
     assert.deepEqual(families(query), [], `"${query}" asks for no unread family`);
   }

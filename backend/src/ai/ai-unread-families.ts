@@ -108,8 +108,9 @@ export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
   {
     family: 'audit log',
     screen: ['admin', 'auditLog'],
-    // The log, not an audit project or a supplier audit.
-    terms: /audit[\s_-]*(log|trail)|journal\s+d['’]audit|piste\s+d['’]audit|historique\s+des\s+modifications|änderungsprotokoll|audit[\s-]*protokoll|registro\s+de\s+auditor/i,
+    // The log, not an audit project or a supplier audit. "Historique des modifications de TEC-3"
+    // is the History tab of one record, which get_record_history reads: only the bare phrase is the log.
+    terms: /audit[\s_-]*(log|trail)|journal\s+d['’]audit|piste\s+d['’]audit|historique\s+des\s+modifications(?!\s+(?:(?:de|du|des|of|on|for)\b|d['’]))|änderungsprotokoll|audit[\s-]*protokoll|registro\s+de\s+auditor/i,
   },
   {
     family: 'AI agents',

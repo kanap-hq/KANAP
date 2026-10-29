@@ -485,6 +485,14 @@ const FIXTURE_ROWS: Row[] = [
   // Lot 6: a BL-n is a budget line only with a budget word; otherwise it may be a delivery note.
   { prompt: 'Supprime le BL-123', profile: 'write_general', mode: 'write' },
   { prompt: 'Le bon de livraison BL-123 est arrivé', profile: 'entity_inspection', mode: 'entity' },
+
+  // Plaid L7, lot C: the history of one record is a read that carries get_record_history. An
+  // application has no History tab: the phrase keeps the tool, which answers so.
+  { prompt: 'Historique de OPEX-12', profile: 'entity_inspection', mode: 'entity', tools: ['get_record_history'] },
+  { prompt: 'Qui a modifié AST-3 ?', profile: 'read_query', mode: 'read', tools: ['get_record_history'] },
+  { prompt: 'What changed on TEC-3 last week?', profile: 'entity_inspection', mode: 'entity', tools: ['get_record_history'] },
+  { prompt: 'Historique de APP-36', profile: 'entity_inspection', mode: 'entity', tools: ['get_record_history'] },
+  { prompt: 'Historique des modifications de TEC-3', profile: 'entity_inspection', mode: 'entity', tools: ['get_record_history'] },
 ];
 
 function testTheTable() {
