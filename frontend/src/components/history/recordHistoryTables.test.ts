@@ -26,6 +26,7 @@ describe('record history tables', () => {
       'interfaces',
       'locations',
       'portfolio_projects',
+      'portfolio_requests',
       'suppliers',
       'tasks',
       'technologies',

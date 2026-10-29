@@ -1,4 +1,4 @@
-export type RequestWorkspaceTabKey = 'summary' | 'analysis' | 'scoring' | 'relations' | 'knowledge';
+export type RequestWorkspaceTabKey = 'summary' | 'analysis' | 'scoring' | 'relations' | 'knowledge' | 'history';
 export type ProjectWorkspaceTabKey = 'summary' | 'tasks' | 'timeline' | 'effort' | 'scoring' | 'relations' | 'knowledge' | 'history';
 
 const REQUEST_SHARED_INCLUDES = [

@@ -687,6 +687,7 @@ export class PortfolioRequestsController {
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
     return this.svc.bulkReplaceContacts(id, body?.contact_ids ?? [], {
       manager: req?.queryRunner?.manager,
+      userId: req.user?.sub ?? null,
     });
   }
 
@@ -926,6 +927,7 @@ export class PortfolioRequestsController {
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
     return this.svc.replaceUrls(id, body?.urls ?? [], {
       manager: req?.queryRunner?.manager,
+      userId: req.user?.sub ?? null,
     });
   }
 

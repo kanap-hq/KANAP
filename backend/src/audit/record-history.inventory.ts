@@ -17,6 +17,7 @@ import { incidentsRecord } from './record-history/records/incidents';
 import { interfacesRecord } from './record-history/records/interfaces';
 import { locationsRecord } from './record-history/records/locations';
 import { portfolioProjectsRecord } from './record-history/records/portfolio_projects';
+import { portfolioRequestsRecord } from './record-history/records/portfolio_requests';
 import { spendItemsRecord } from './record-history/records/spend_items';
 import { suppliersRecord } from './record-history/records/suppliers';
 import { tasksRecord } from './record-history/records/tasks';
@@ -172,6 +173,7 @@ const RECORD_HISTORY_DEFINITION = [
   interfacesRecord,
   locationsRecord,
   portfolioProjectsRecord,
+  portfolioRequestsRecord,
   spendItemsRecord,
   suppliersRecord,
   tasksRecord,

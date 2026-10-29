@@ -27,6 +27,7 @@ import { HISTORY_FIELDS, historyFields } from './record-history/fields';
 import type { HistoryFieldRule, HistoryFields } from './record-history/field-rules';
 import { auditPageQuery, type AuditCursor } from './record-history/query';
 import { taskRelatedFamily } from './record-history/records/tasks';
+import { requestAuditPayload } from './record-history/records/portfolio_requests';
 import {
   linkReference,
   presentItem,
@@ -222,8 +223,10 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
     if (row.user_id) addFamilyId({ ids }, 'user', row.user_id);
     for (const payload of payloads(row)) {
       if (isPlainObject(payload)) {
+        // A request's task-origin cleanup names the task under its own key (`requestAuditPayload`).
+        const fieldsPayload = label === 'portfolio_requests' ? requestAuditPayload(payload) as Record<string, unknown> : payload;
         for (const [field, rule] of Object.entries(historyFields(label))) {
-          if (rule.family) addFamilyId({ ids }, rule.family, payload[field]);
+          if (rule.family) addFamilyId({ ids }, rule.family, fieldsPayload[field]);
         }
         // A link names its other record by a payload key of its kind (a contact's supplier,
         // contract or budget line), not by one of the record's own fields.
@@ -356,8 +359,17 @@ function collectPageIds(rows: AuditRow[], entry: RecordHistoryRecord, recordId: 
       addFamilyId({ ids }, kind, row.record_id);
     }
     if (kind === 'task' && row.record_id) addFamilyId({ ids }, 'task', row.record_id);
-    // A process link is written from the process: `record_id` is the process.
-    if (kind === 'business_process' && row.record_id) addFamilyId({ ids }, 'business_process', row.record_id);
+    // A process link is written from the process: `record_id` is the process. From a request,
+    // `record_id` is the request and the payload the set of process ids.
+    if (kind === 'business_process' && row.record_id) {
+      if (String(row.record_id).toLowerCase() === recordId.toLowerCase()) {
+        for (const payload of payloads(row)) {
+          for (const value of linkSetIds(payload)) addFamilyId({ ids }, 'business_process', value);
+        }
+      } else {
+        addFamilyId({ ids }, 'business_process', row.record_id);
+      }
+    }
     if (kind === 'assignment') {
       for (const payload of payloads(row)) {
         if (isPlainObject(payload) && isUuid(payload.app_instance_id)) instances.add(payload.app_instance_id.toLowerCase());

@@ -11,16 +11,28 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
   useTranslation: () => ({ t: stableT, i18n: { language: 'en', resolvedLanguage: 'en' } }),
 }));
-// The comments and the feed history have their own tests: here they only mark where they render.
-vi.mock('../../components/PortfolioComments', () => ({
-  default: () => <div data-testid="portfolio-comments" />,
+// The real comments list: it reads each entry's text through the Markdown renderer.
+vi.mock('../../../../components/MarkdownContent', () => ({
+  MarkdownContent: (props: { content?: string | null }) => <div>{props.content}</div>,
 }));
-vi.mock('../../components/PortfolioHistory', () => ({
-  default: () => <div data-testid="portfolio-history" />,
-}));
+vi.mock('../../../../components/MarkdownEditor', () => ({ default: () => <div data-testid="editor" /> }));
+vi.mock('../../../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+
+const entry = (id: string, type: 'comment' | 'change' | 'decision') => ({
+  id,
+  type,
+  content: type === 'change' ? null : `Text ${id}`,
+  context: null,
+  decision_outcome: type === 'decision' ? 'go' : null,
+  changed_fields: type === 'change' ? { name: ['Old name', 'New name'] as [unknown, unknown] } : undefined,
+  author_id: 'u-1',
+  first_name: 'Ada',
+  last_name: 'Spec',
+  created_at: '2026-10-29T10:00:00Z',
+});
 
 const props = {
-  activities: [],
+  activities: [entry('a-1', 'comment'), entry('a-2', 'change'), entry('a-3', 'decision')],
   allowedTransitions: [],
   currentStatus: 'planned',
   entityId: 'p-1',
@@ -37,15 +49,23 @@ function renderWithTheme(node: React.ReactNode) {
 }
 
 describe('portfolio activity feeds', () => {
-  it('shows the project feed with its comments only: its changes read in the History tab', () => {
+  it('shows the project feed as its comments and decisions, with no tab row and no change entry', () => {
     renderWithTheme(<ProjectActivityTab {...props} />);
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['activity.tabs.comments']);
-    expect(screen.getByTestId('portfolio-comments')).toBeInTheDocument();
-    expect(screen.queryByTestId('portfolio-history')).toBeNull();
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.getByText('Text a-1')).toBeInTheDocument();
+    expect(screen.getByText('Text a-3')).toBeInTheDocument();
+    expect(screen.queryByText(/New/)).toBeNull();
+    expect(screen.queryByText('activity.tabs.history')).toBeNull();
   });
 
-  it('keeps the History sub-tab of the request feed', () => {
-    renderWithTheme(<RequestActivityTab {...props} />);
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['activity.tabs.comments', 'activity.tabs.history']);
+  it('shows the request feed the same way: its changes read in the History tab', () => {
+    renderWithTheme(<RequestActivityTab {...props} entityId="r-1" />);
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.getByText('Text a-1')).toBeInTheDocument();
+    expect(screen.getByText('Text a-3')).toBeInTheDocument();
+    expect(screen.queryByText(/New/)).toBeNull();
+    expect(screen.queryByText('activity.tabs.history')).toBeNull();
   });
 });

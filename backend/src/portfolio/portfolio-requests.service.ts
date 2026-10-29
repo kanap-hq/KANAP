@@ -20,7 +20,8 @@ import { PortfolioRequestUrl } from './portfolio-request-url.entity';
 import { PortfolioRequestAttachment } from './portfolio-request-attachment.entity';
 import { PortfolioRequestOpex } from './portfolio-request-opex.entity';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, OPEX_ITEMS_NOT_FOUND } from './project-budget-links.util';
-import { assertNoHiddenLines, hiddenLineCount } from '../data-access/hidden-links';
+import { assertNoHiddenLines, auditedLinkSet, hiddenLineCount } from '../data-access/hidden-links';
+import { singleChangedId } from '../audit/audit-parent-rules';
 import { activityBudgetLines, budgetLineActivitiesForReader } from './budget-line-activity';
 import { PortfolioRequestBusinessProcess } from './portfolio-request-business-process.entity';
 import { PortfolioRequestDependency } from './portfolio-request-dependency.entity';
@@ -1702,6 +1703,15 @@ export class PortfolioRequestsService {
         type: 'change',
         changed_fields: { [role]: [beforeNames, afterNames] },
       });
+      // The history reads the people of the role added and removed, by id.
+      await this.audit.log({
+        table: 'portfolio_request_team',
+        recordId: requestId,
+        action: 'update',
+        before: { role, ids: beforeSorted },
+        after: { role, ids: afterSorted },
+        userId: actorId,
+      }, { manager: mg });
     }
 
     return { ok: true, added: toInsert.length, removed: toDelete.length };
@@ -1711,7 +1721,7 @@ export class PortfolioRequestsService {
   async bulkReplaceContacts(
     requestId: string,
     contactIds: string[],
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; userId?: string | null },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(PortfolioRequestContact);
@@ -1734,6 +1744,19 @@ export class PortfolioRequestsService {
 
     if (toDelete.length > 0) await repo.remove(toDelete);
     if (toInsert.length > 0) await repo.save(toInsert);
+
+    if (toDelete.length > 0 || toInsert.length > 0) {
+      const beforeIds = Array.from(new Set(existing.map((e) => String(e.contact_id).toLowerCase()))).sort();
+      const afterIds = Array.from(new Set(unique.map((id) => String(id).toLowerCase()))).sort();
+      await this.audit.log({
+        table: 'portfolio_request_contacts',
+        recordId: requestId,
+        action: 'update',
+        before: { ids: beforeIds },
+        after: { ids: afterIds },
+        userId: opts?.userId ?? null,
+      }, { manager: mg });
+    }
 
     return { ok: true, added: toInsert.length, removed: toDelete.length };
   }
@@ -1820,6 +1843,15 @@ export class PortfolioRequestsService {
         type: 'change',
         changed_fields: { applications: [beforeLabels, afterLabels] },
       });
+      // The request's own row of the link set, read by its history.
+      await this.audit.log({
+        table: 'portfolio_request_applications',
+        recordId: requestId,
+        action: 'update',
+        before: { ids: beforeSorted.map((id) => id.toLowerCase()) },
+        after: { ids: afterSorted.map((id) => id.toLowerCase()) },
+        userId: actorId,
+      }, { manager: mg });
     }
 
     return { ok: true, count: unique.length };
@@ -1907,6 +1939,15 @@ export class PortfolioRequestsService {
         type: 'change',
         changed_fields: { assets: [beforeLabels, afterLabels] },
       });
+      // The request's own row of the link set, read by its history.
+      await this.audit.log({
+        table: 'portfolio_request_assets',
+        recordId: requestId,
+        action: 'update',
+        before: { ids: beforeSorted.map((id) => id.toLowerCase()) },
+        after: { ids: afterSorted.map((id) => id.toLowerCase()) },
+        userId: actorId,
+      }, { manager: mg });
     }
 
     return { ok: true, count: unique.length };
@@ -1963,6 +2004,7 @@ export class PortfolioRequestsService {
         type: 'change',
         changed_fields: { capex_items: [beforeLabels, afterLabels] },
       });
+      await this.auditBudgetLines(mg, 'capex', requestId, beforeSorted, afterSorted, actorId);
     }
 
     return { ok: true, added: toInsert.length, removed: toDelete.length };
@@ -2019,9 +2061,37 @@ export class PortfolioRequestsService {
         type: 'change',
         changed_fields: { opex_items: [beforeLabels, afterLabels] },
       });
+      await this.auditBudgetLines(mg, 'opex', requestId, beforeSorted, afterSorted, actorId);
     }
 
     return { ok: true, added: toInsert.length, removed: toDelete.length };
+  }
+
+  /**
+   * The request's line set of one nature, before and after, as the request's history reads it.
+   * The lines a limited person cannot read stayed linked: the row says how many (spec §6.6). The
+   * line the set gained or lost, when exactly one changed, is the parent: the line's history reads
+   * the row too.
+   */
+  private async auditBudgetLines(
+    mg: EntityManager,
+    nature: 'opex' | 'capex',
+    requestId: string,
+    beforeIds: string[],
+    afterIds: string[],
+    userId: string,
+  ): Promise<void> {
+    const hidden = await hiddenLineCount(mg, 'request', requestId);
+    const lineId = singleChangedId(beforeIds, afterIds);
+    await this.audit.log({
+      table: nature === 'opex' ? 'portfolio_request_opex' : 'portfolio_request_capex',
+      recordId: requestId,
+      action: 'update',
+      before: auditedLinkSet({ ids: beforeIds }, hidden),
+      after: auditedLinkSet({ ids: afterIds }, hidden),
+      userId,
+      parent: lineId ? { table: 'spend_items', id: lineId } : null,
+    }, { manager: mg });
   }
 
   // ==================== BUSINESS PROCESSES MANAGEMENT ====================
@@ -2088,6 +2158,7 @@ export class PortfolioRequestsService {
       : { request_id: requestId, depends_on_project_id: targetId };
     const existing = await repo.findOne({ where: whereClause });
     if (existing) return { ok: true, message: 'Already linked' };
+    const before = await this.dependencyState(mg, request.tenant_id, requestId);
 
     // Create dependency
     const entity = repo.create({
@@ -2107,6 +2178,7 @@ export class PortfolioRequestsService {
         dependency: [null, await this.resolveDependencyTargetLabel(targetType, targetId, mg)],
       },
     });
+    await this.auditDependencies(mg, request.tenant_id, requestId, before, actorId);
 
     return { ok: true };
   }
@@ -2128,6 +2200,7 @@ export class PortfolioRequestsService {
 
     const existing = await repo.findOne({ where: whereClause });
     if (!existing) return { ok: true };
+    const before = await this.dependencyState(mg, request.tenant_id, requestId);
 
     await repo.delete(whereClause);
 
@@ -2140,8 +2213,42 @@ export class PortfolioRequestsService {
         dependency: [await this.resolveDependencyTargetLabel(targetType, targetId, mg), null],
       },
     });
+    await this.auditDependencies(mg, request.tenant_id, requestId, before, actorId);
 
     return { ok: true };
+  }
+
+  /** The projects (`ids`) and the requests (`request_ids`) this request depends on, sorted. */
+  private async dependencyState(mg: EntityManager, tenantId: string, requestId: string): Promise<{ ids: string[]; request_ids: string[] }> {
+    const rows: Array<{ project_id: string | null; request_id: string | null }> = await mg.query(
+      `SELECT depends_on_project_id AS project_id, depends_on_request_id AS request_id
+         FROM portfolio_request_dependencies WHERE tenant_id = $1 AND request_id = $2`,
+      [tenantId, requestId],
+    );
+    const sorted = (values: Array<string | null>) => Array.from(new Set(
+      values.filter((value): value is string => !!value).map((value) => String(value).toLowerCase()),
+    )).sort();
+    return { ids: sorted(rows.map((row) => row.project_id)), request_ids: sorted(rows.map((row) => row.request_id)) };
+  }
+
+  /** One audit row for a dependency added or removed: the sets before and after, on the request. */
+  private async auditDependencies(
+    mg: EntityManager,
+    tenantId: string,
+    requestId: string,
+    before: { ids: string[]; request_ids: string[] },
+    userId: string,
+  ): Promise<void> {
+    const after = await this.dependencyState(mg, tenantId, requestId);
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    await this.audit.log({
+      table: 'portfolio_request_dependencies',
+      recordId: requestId,
+      action: 'update',
+      before,
+      after,
+      userId,
+    }, { manager: mg });
   }
 
   /**
@@ -2205,7 +2312,7 @@ export class PortfolioRequestsService {
   async replaceUrls(
     requestId: string,
     urls: Array<{ url: string; label?: string }>,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; userId?: string | null },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(PortfolioRequestUrl);
@@ -2214,6 +2321,7 @@ export class PortfolioRequestsService {
 
     // Every address is checked before the old links go: a refused one changes nothing.
     const checked = webLinkUrlsOf(urls);
+    const stored = await repo.find({ where: { request_id: requestId } });
     await repo.delete({ request_id: requestId });
 
     const toInsert = checked
@@ -2226,6 +2334,23 @@ export class PortfolioRequestsService {
 
     if (toInsert.length > 0) {
       await repo.save(toInsert);
+    }
+
+    // The links are replaced as a whole and get new ids: the history compares their address and label.
+    const linkState = (rows: Array<{ url: string; label: string | null }>) => rows
+      .map((row) => ({ url: row.url, label: row.label ?? null }))
+      .sort((a, b) => `${a.url}\u0000${a.label ?? ''}`.localeCompare(`${b.url}\u0000${b.label ?? ''}`));
+    const before = linkState(stored);
+    const after = linkState(toInsert);
+    if (JSON.stringify(before) !== JSON.stringify(after)) {
+      await this.audit.log({
+        table: 'portfolio_request_urls',
+        recordId: requestId,
+        action: 'update',
+        before,
+        after,
+        userId: opts?.userId ?? null,
+      }, { manager: mg });
     }
 
     return { ok: true, count: toInsert.length };

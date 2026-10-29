@@ -2,7 +2,7 @@
  * The record tables whose page has a history: the budget line's History tab, the account and cost
  * center History buttons of lot 2, the Knowledge document's History tab of lot 2 family E, the masters of
  * family A, the asset and technology of family D, the application of the linked records lot, the supplier and contact of family B, and the site,
- * connection and interface of family C, the task's History button and the portfolio project. Each table is served by `GET /records/:table/:id/history` and
+ * connection and interface of family C, the task's History button, the portfolio project and the portfolio request. Each table is served by `GET /records/:table/:id/history` and
  * declared in `backend/src/audit/record-history.inventory.ts`; the backend inventory spec keeps both
  * lists equal.
  */
@@ -25,6 +25,7 @@ export const RECORD_HISTORY_TABLES = [
   'interfaces',
   'locations',
   'portfolio_projects',
+  'portfolio_requests',
   'suppliers',
   'tasks',
   'technologies',

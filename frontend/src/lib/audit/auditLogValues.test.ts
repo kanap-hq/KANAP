@@ -315,6 +315,16 @@ describe('formatAuditValue', () => {
     expect(formatAuditValue('business', 'category', { locale: 'en', t: tEnAll, table: 'suppliers' }).text).toBe('business');
   });
 
+  it('names a request status from the request list', () => {
+    const request = (locale: 'en' | 'fr') => ({
+      locale,
+      t: i18n.getFixedT(locale, ['admin', 'portfolio']) as unknown as Translate,
+      table: 'portfolio_requests',
+    });
+    expect(formatAuditValue('pending_review', 'status', request('en')).text).toBe('Pending review');
+    expect(formatAuditValue('converted', 'status', request('en')).text).toBe('Converted');
+  });
+
   it('leaves an unknown budget enumeration code as stored', () => {
     expect(formatAuditValue('not_a_profile', 'spread_profile_name', context()).text).toBe('not_a_profile');
     expect(formatAuditValue('not_a_method', 'method', context()).text).toBe('not_a_method');

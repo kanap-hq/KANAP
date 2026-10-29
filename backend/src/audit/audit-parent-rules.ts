@@ -12,6 +12,7 @@ import { incidentsParentRules } from './record-history/records/incidents';
 import { interfacesParentRules } from './record-history/records/interfaces';
 import { locationsParentRules } from './record-history/records/locations';
 import { portfolioProjectsParentRules } from './record-history/records/portfolio_projects';
+import { portfolioRequestsParentRules } from './record-history/records/portfolio_requests';
 import { spendItemsParentRules } from './record-history/records/spend_items';
 import { suppliersParentRules } from './record-history/records/suppliers';
 import { tasksParentRules } from './record-history/records/tasks';
@@ -117,6 +118,7 @@ const PARENT_RULE_SETS = [
   interfacesParentRules,
   locationsParentRules,
   portfolioProjectsParentRules,
+  portfolioRequestsParentRules,
   spendItemsParentRules,
   suppliersParentRules,
   tasksParentRules,

@@ -46,9 +46,10 @@ export function relationsService(opts: { audit?: AuditEntry[]; taskCalls?: TaskR
       return { task_ids: taskIds };
     },
   };
-  // The request side writes through its own service: only its manager-bound methods run here.
+  // The request side writes through its own service: only its manager-bound methods run here. Its
+  // own audit row of the link set (the request's history) goes to a sink: the application's rows are under test.
   const requests = new PortfolioRequestsService(
-    undefined as any, undefined as any, undefined as any, undefined as any, undefined as any,
+    undefined as any, { log: async () => undefined } as any, undefined as any, undefined as any, undefined as any,
     undefined as any, undefined as any, undefined as any, undefined as any,
   );
   // The technology layer is the real service (lot T2a): its reach, idempotence and audit are under test.
