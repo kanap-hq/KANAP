@@ -133,6 +133,8 @@ export type BudgetFileReport = {
      * `column` is the file column (`revision`), `total` what the lines give, two decimals.
      */
     calculationLines?: Array<{ line: number; item: string; column: string; year: number; count: number; total: string; message: string }>;
+    /** How many calculation lines warnings there are in all; the list holds the first 20. */
+    calculationLinesCount?: number;
   };
   creates: {
     /** Unknown values the load will create. */

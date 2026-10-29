@@ -1331,6 +1331,7 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
       supplierNames: bag.supplierNames.slice(0, PREFLIGHT_LIST_LIMIT),
       costCenterCompanies: bag.costCenterCompanies.slice(0, PREFLIGHT_LIST_LIMIT),
       calculationLines: bag.calculationLines.slice(0, PREFLIGHT_LIST_LIMIT),
+      calculationLinesCount: bag.calculationLines.length,
     },
     creates: {
       dimensionValues: namesByDimension(bag.dimensions),

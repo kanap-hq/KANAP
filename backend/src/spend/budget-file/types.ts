@@ -299,8 +299,10 @@ export interface BudgetFileReport {
     supplierNames: Array<{ line: number; message: string }>;
     /** company_name names another company than the cost center's: accepted, said once per line. */
     costCenterCompanies: CostCenterCompanyWarning[];
-    /** Changed amounts on columns that follow their calculation lines. */
+    /** Changed amounts on columns that follow their calculation lines, the first 20. */
     calculationLines: CalculationLinesWarning[];
+    /** How many there are in all. */
+    calculationLinesCount: number;
   };
   creates: {
     dimensionValues: Array<{ dimension: string; names: string[] }>;

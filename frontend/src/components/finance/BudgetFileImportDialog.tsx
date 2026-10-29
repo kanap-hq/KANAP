@@ -361,6 +361,7 @@ function ReportView({
   const ignoredCells = report.warnings.ignoredCells ?? [];
   const costCenterCompanies = report.warnings.costCenterCompanies ?? [];
   const calculationLines = report.warnings.calculationLines ?? [];
+  const calculationLinesCount = report.warnings.calculationLinesCount ?? calculationLines.length;
   const hasWarnings = report.warnings.duplicates.length > 0 || report.warnings.ignoredColumns.length > 0
     || report.warnings.supplierNames.length > 0 || ignoredCells.length > 0 || costCenterCompanies.length > 0
     || calculationLines.length > 0
@@ -464,6 +465,7 @@ function ReportView({
           {calculationLines.map((warning) => (
             <Line key={`cl-${warning.line}-${warning.column}-${warning.year}`} text={calculationLinesText(warning, columns, locale, t)} />
           ))}
+          {more(calculationLinesCount, calculationLines.length) && <Line text={more(calculationLinesCount, calculationLines.length)!} />}
           {ignoredCells.map((warning) => (
             <Line key={`c-${warning.line}-${warning.column}`} text={t(`${K}rowColumn`, { line: warning.line, column: warning.column, message: warning.message })} />
           ))}

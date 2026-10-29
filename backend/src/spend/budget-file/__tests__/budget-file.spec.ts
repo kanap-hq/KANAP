@@ -17,6 +17,7 @@ import {
   BudgetFileScope,
   LineHint,
   StoredLine,
+  StoredVersion,
   emptyCatalog,
   emptyMonths,
 } from '../types';
@@ -63,6 +64,23 @@ function withJanuary(cents: bigint | null) {
   const months = emptyMonths();
   months.planned[0] = { cents };
   return [{ id: 'ver-2026', year: YEAR, budgetRev: 3, months }];
+}
+
+/** A 2026 version whose Budget follows two calculation lines that give `cents`, with the same January. */
+function computedBudget(cents: bigint): StoredVersion[] {
+  const [version] = withJanuary(cents);
+  return [{ ...version, rounds: { planned: { method: 'computed', lineCount: 2, linesTotal: cents } } }];
+}
+
+/** `count` lines whose Budget follows its calculation lines, BL-1 to BL-n. */
+function computedLines(count: number): StoredLine[] {
+  return Array.from({ length: count }, (_, index) => line({
+    id: `line-${index + 1}`,
+    itemNumber: index + 1,
+    legacyNumber: null,
+    name: `Widget ${index + 1}`,
+    versions: computedBudget(10000n),
+  }));
 }
 
 function catalog(patch: Partial<BudgetCatalog> = {}): BudgetCatalog {
@@ -870,6 +888,27 @@ async function testCostCenterOfAnotherCompany() {
   assert.deepEqual(kept.warnings.costCenterCompanies.map((warning) => warning.line), [2]);
 }
 
+/** Past 20 calculation lines warnings, the list stops at 20 and the count says how many there are. */
+async function testCalculationLinesCap() {
+  const stored = computedLines(21);
+  const rows = stored.map((item) => `BL-${item.itemNumber},${item.name},EUR,200.00`).join('\n');
+  const report = await preflight('opex', `item_number,name,currency,budget_2026\n${rows}\n`, stored);
+  assert.equal(report.ok, true, JSON.stringify(report.errors));
+  assert.equal(report.changes.updated, 21);
+  assert.equal(report.warnings.calculationLines.length, 20, 'the list is capped');
+  assert.equal(report.warnings.calculationLinesCount, 21, 'the count is the full one');
+  assert.deepEqual(report.warnings.calculationLines.map((warning) => warning.item), stored.slice(0, 20).map((item) => `BL-${item.itemNumber}`));
+  assert.deepEqual(report.warnings.calculationLines[0], {
+    line: 2,
+    item: 'BL-1',
+    column: 'budget',
+    year: YEAR,
+    count: 2,
+    total: '100.00',
+    message: 'BL-1 · Budget 2026: 2 calculation lines (100.00) will no longer drive these amounts.',
+  });
+}
+
 async function main() {
   await testTokenLanguages();
   await testDecimalMarkParameter();
@@ -894,6 +933,7 @@ async function main() {
   await testTrailingLineBreak();
   await testCapexDescription();
   await testCostCenterOfAnotherCompany();
+  await testCalculationLinesCap();
   console.log('budget-file.spec: ok');
 }
 

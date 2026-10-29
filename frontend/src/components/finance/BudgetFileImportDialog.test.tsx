@@ -336,6 +336,20 @@ describe('BudgetFileImportDialog', () => {
     expect(screen.getByText('operations.budgetFile.ready')).toBeInTheDocument();
   });
 
+  it('says how many calculation lines warnings the list leaves out', async () => {
+    const calculationLines = Array.from({ length: 20 }, (_, index) => ({
+      line: index + 2, item: `BL-${index + 1}`, column: 'budget', year: 2026, count: 2, total: '100.00',
+      message: `BL-${index + 1} · Budget 2026: 2 calculation lines (100.00) will no longer drive these amounts.`,
+    }));
+    post.mockResolvedValueOnce({ data: report({
+      warnings: { duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [], calculationLines, calculationLinesCount: 23 },
+    }) });
+    renderDialog();
+    expect(await screen.findByText('operations.budgetFile.warningsTitle')).toBeInTheDocument();
+    expect(screen.getAllByText(/^operations\.budgetFile\.calculationLines:/)).toHaveLength(20);
+    expect(screen.getByText('operations.budgetFile.andMore:{"count":3}')).toBeInTheDocument();
+  });
+
   it('turns a stale check into a plain sentence with a way to check again', async () => {
     post.mockResolvedValueOnce({ data: report() });
     renderDialog();
