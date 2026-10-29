@@ -47,10 +47,10 @@ export function toolTitle(name: string): string {
  * search, and the families it does not read (so that an empty answer is not taken for "none").
  */
 export const MCP_SERVER_INSTRUCTIONS = [
-  'KANAP MCP server. It only reads: no tool creates, changes or deletes anything; changes are made in the KANAP application.',
-  'Every call runs with the rights of the person who owns the key or the connection: records that person cannot read are left out of every answer.',
-  'To find a record, start with search_all (names, codes and references such as APP-4; cost centers, calendars and dimensions included). Before query_entities or aggregate_entities on a family, call describe_entity_filters for its fields, and get_filter_values for the exact values of a field.',
-  'This server does not read the audit log or AI agents, and it reads roles and data access settings only for a person who administers users with access to all data: an empty answer about them does not mean they do not exist in KANAP. Exchange rates: query_entities on exchange_rates.',
+  'KANAP MCP server. It only reads: no tool creates, changes or deletes anything; changes are made in KANAP.',
+  'Every call runs with the rights of the person who owns the key or the connection: records they cannot read are left out.',
+  'To find a record, start with search_all (names, codes and references such as APP-4; cost centers, calendars and dimensions included). Before query_entities or aggregate_entities on a family, call describe_entity_filters for its fields and get_filter_values for exact values. get_entity_detail and get_entity_context read one record.',
+  'This server does not read the audit log or AI agents, and it reads roles and data access settings only for a person who administers users with access to all data: an empty answer about them does not mean they do not exist. Exchange rates: query_entities on exchange_rates.',
   'Budget lines are one family, budget_lines: a question that names no nature covers both OPEX and CAPEX. aggregate_entities describes their budget keys and computes FTE, cost per FTE and day rate per group (metric y_budget_cost_per_fte) with no describe call first.',
 ].join('\n');
 

@@ -160,6 +160,8 @@ async function testInitializeAdvertisesTools(url: string) {
   assert.doesNotMatch(instructions, /does not read cost centers|does not read[^.]*(calendars|exchange rates)/);
   // Roles and data access are read only for an administrator of users with access to all data.
   assert.match(instructions, /reads roles and data access settings only for a person who administers users with access to all data/);
+  // The path from a search to one record (Plaid L9, lot F, m4).
+  assert.match(instructions, /get_entity_detail and get_entity_context read one record\./);
   assert.ok(instructions.length < 1200, `instructions stay short (${instructions.length})`);
 }
 

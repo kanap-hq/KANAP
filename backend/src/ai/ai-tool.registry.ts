@@ -71,9 +71,9 @@ const GetEntityContextInputSchema = z.object({
 const GetEntityDetailInputSchema = z.object({
   entity_type: AiDetailEntityTypeSchema.describe(`The entity family of the record: one of ${AI_DETAIL_ENTITY_TYPES.join(', ')}.`),
   entity_id: z.string().trim().min(1)
-    .describe('The UUID of the record, or its reference where the family has one, such as APP-4, AST-9, PRJ-12, REQ-7, T-42, DOC-3, INC-12, BL-5 or TEC-3, or a CVE id such as CVE-2024-3094 on vulnerabilities.'),
+    .describe('The UUID of the record, or its reference where the family has one, such as APP-4, AST-9, PRJ-12, REQ-7, T-42, DOC-3, INC-12, BL-5 or TEC-3, or a CVE id such as CVE-2024-3094 on vulnerabilities. A cost center, a working-day calendar or an analytics dimension is also named by its code, such as FR-TRV-500, FR or it_tower.'),
   year: z.number().int().min(1900).max(3000).optional()
-    .describe('Optional fiscal or calendar year for year-backed metrics, on companies and departments.'),
+    .describe('Optional fiscal or calendar year for year-backed metrics, on companies and departments, and the year whose working days a working-day calendar gives.'),
 });
 
 const GetEntityCommentsInputSchema = z.object({

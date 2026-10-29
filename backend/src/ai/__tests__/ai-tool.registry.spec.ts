@@ -1731,6 +1731,15 @@ async function testQueryEntitiesLeavesThePageSizeToTheExecutor() {
  * A refused input names each field and why, in the message the caller's model reads: the
  * dispatcher's schema check (MCP and the chat capabilities) and the tool's own (Zod).
  */
+/** get_entity_detail names a reference data record by its code and reads a calendar's year (Plaid L9, lot F, m7). */
+async function testEntityDetailDescribesTheReferenceData() {
+  const registry = createRegistry();
+  const [schema] = registry.toToolJsonSchemas([{ name: 'get_entity_detail' }]);
+  const properties = (schema.parameters as any).properties;
+  assert.match(properties.entity_id.description, /A cost center, a working-day calendar or an analytics dimension is also named by its code/);
+  assert.match(properties.year.description, /on companies and departments, and the year whose working days a working-day calendar gives\./);
+}
+
 async function testInvalidInputNamesTheFieldAndWhy() {
   const { AiCapabilityDispatcherService } = require('../control-plane/dispatcher/ai-capability-dispatcher.service');
   const registry = createRegistry();
@@ -2446,6 +2455,7 @@ async function run() {
   await testSearchKnowledgeAppliesDefaultLimit();
   await testSchemasExposeDefaultLimits();
   await testInvalidInputNamesTheFieldAndWhy();
+  await testEntityDetailDescribesTheReferenceData();
   await testGetEntityCommentsSchemaExposesPaginationDefaults();
   await testGetDocumentMapsStableDto();
   await testWebSearchRejectsOversizedQueries();
