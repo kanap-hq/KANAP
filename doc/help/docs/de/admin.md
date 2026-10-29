@@ -434,6 +434,8 @@ Die Rollenseite hat ein zweispaltiges Layout:
 - **Details speichern**: Rollenname und -beschreibung aktualisieren
 - **Berechtigungen speichern**: Berechtigungsänderungen anwenden
 
+Ein Benutzeradministrator mit Zugriff auf alle Daten kann [Plaid](ai-assistant.md#tool-calls) auch nach den Rollen, ihrer Benutzerzahl und ihren Rechten fragen. Änderungen bleiben auf dieser Seite.
+
 ### Benutzerdefinierte Rolle erstellen
 
 1. Klicken Sie auf **Neue Rolle**

@@ -434,6 +434,8 @@ La page Rôles a une disposition à deux panneaux :
 - **Enregistrer les détails** : Mettre à jour le nom et la description du rôle
 - **Enregistrer les autorisations** : Appliquer les modifications d'autorisations
 
+Un administrateur des utilisateurs qui a accès à toutes les données peut aussi interroger [Plaid](ai-assistant.md#tool-calls) sur les rôles, leur nombre d'utilisateurs et leurs droits. Les modifications restent sur cette page.
+
 ### Créer un rôle personnalisé
 
 1. Cliquez sur **Nouveau rôle**

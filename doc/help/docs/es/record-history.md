@@ -47,6 +47,10 @@ Una entrada puede nombrar otro registro, por ejemplo un contrato vinculado a la 
 - La dirección de correo electrónico, los números de teléfono y las notas de un contacto no aparecen nunca.
 - Para un contenido largo, la entrada indica solo que ha cambiado: **Contenido modificado** para el cuerpo de un documento de la base de conocimiento, **Días laborables modificados** para los días de un calendario laboral.
 
+## Preguntar al asistente
+
+[Plaid](ai-assistant.md#tool-calls) lee el historial de un registro con los mismos derechos que su página. Pregunte, por ejemplo: «¿Quién cambió los importes de BL-12?» o «¿Qué cambió en TEC-3 este año?» Plaid responde solo a partir de la pestaña Historial: para un registro que no la tiene, indica que KANAP no guarda historial de él.
+
 ## El registro de auditoría completo
 
 El historial se limita a lo que necesita un lector. El registro técnico completo de cada cambio, en todo el espacio de trabajo, sigue en **Administración > Registro de auditoría**. Vea [Registro de auditoría](admin.md#registro-de-auditoria).

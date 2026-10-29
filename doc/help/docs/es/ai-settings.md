@@ -225,7 +225,7 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header
 
 ### Herramientas disponibles
 
-El servidor MCP es de solo lectura. Un cliente puede buscar y leer sus datos, sin poder cambiar nada. Una clave o una conexión obtiene las once herramientas siguientes, y doce cuando la búsqueda web está activada para su organización. Una persona solo ve las herramientas de los datos que su rol le permite leer.
+El servidor MCP es de solo lectura. Un cliente puede buscar y leer sus datos, sin poder cambiar nada. Una clave o una conexión obtiene las doce herramientas siguientes, y trece cuando la búsqueda web está activada para su organización. Una persona solo ve las herramientas de los datos que su rol le permite leer.
 
 | Herramienta | Qué hace |
 |---|---|
@@ -238,6 +238,7 @@ El servidor MCP es de solo lectura. Un cliente puede buscar y leer sus datos, si
 | `get_entity_detail` | Lee un registro completo |
 | `get_entity_context` | Lee los registros vinculados a un registro |
 | `get_entity_comments` | Lee los comentarios de un proyecto o una tarea |
+| `get_record_history` | Lee el historial de un registro, tal como lo muestra su pestaña Historial |
 | `search_knowledge` | Busca en la base de conocimiento |
 | `get_document` | Lee un documento de la base de conocimiento |
 | `web_search` | Busca en la web, cuando la búsqueda web está activada para su organización |

@@ -174,6 +174,10 @@ Trennzeichen, Kodierung und die zwei Importschritte sind die aller CSV-Dateien: 
 
 Jede Änderung des Zugriffs einer Person wird im [Audit-Protokoll](admin.md#audit-protokoll) in der Tabelle **Datenzugriff** erfasst. Der Eintrag nennt die Person und zeigt Modus, Knoten und deren Zugriff vorher und nachher. Seine Quelle ist **Bildschirm** oder **Import**. Ein Speichern ohne Änderung wird nicht erfasst.
 
+## Den Assistenten fragen
+
+[Plaid](ai-assistant.md#tool-calls) liest diese Seite und den Reiter Zugriff der Unternehmen für einen Benutzeradministrator mit Zugriff auf alle Daten. Fragen Sie zum Beispiel: „Wer ist auf Alpha Spain begrenzt?“, „Welche begrenzten Personen haben keinen Knoten?“ oder „Was sieht Marta Ruiz?“ Änderungen am Zugriff einer Person bleiben auf den hier beschriebenen Seiten.
+
 ## Was eine begrenzte Person sieht { #what-a-limited-person-sees }
 
 Für eine begrenzte Person enthalten Budget und Verträge nur, was ihr Zugriff abdeckt.

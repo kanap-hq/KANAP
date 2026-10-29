@@ -174,6 +174,10 @@ The separator, the encoding and the two import steps are those of every CSV file
 
 Every change of a person's access is recorded in the [Audit log](admin.md#audit-log), in the table **Data access**. The entry names the person and shows the mode, the nodes and their access before and after. Its source is **Screen** or **Import**. A save that changes nothing is not recorded.
 
+## Ask the assistant
+
+[Plaid](ai-assistant.md#tool-calls) reads this page and the Access tab of companies for an administrator of users with access to all data. Ask, for example: "Who is limited to Alpha Spain?", "Which limited people have no node?" or "What can Marta Ruiz see?" Changes to a person's access stay on the screens described here.
+
 ## What a limited person sees
 
 For a limited person, the budget and the contracts hold only what their access covers.

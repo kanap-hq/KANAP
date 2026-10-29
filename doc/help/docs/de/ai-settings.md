@@ -225,7 +225,7 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header
 
 ### Verfügbare Werkzeuge
 
-Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und lesen, aber nichts ändern. Ein Schlüssel oder eine Verbindung erhält die elf Werkzeuge unten, und zwölf, wenn die Websuche für Ihre Organisation eingeschaltet ist. Eine Person sieht nur die Werkzeuge für die Daten, die ihre Rolle sie lesen lässt.
+Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und lesen, aber nichts ändern. Ein Schlüssel oder eine Verbindung erhält die zwölf Werkzeuge unten, und dreizehn, wenn die Websuche für Ihre Organisation eingeschaltet ist. Eine Person sieht nur die Werkzeuge für die Daten, die ihre Rolle sie lesen lässt.
 
 | Werkzeug | Funktion |
 |---|---|
@@ -238,6 +238,7 @@ Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und
 | `get_entity_detail` | Liest einen Datensatz vollständig |
 | `get_entity_context` | Liest die mit einem Datensatz verknüpften Datensätze |
 | `get_entity_comments` | Liest die Kommentare eines Projekts oder einer Aufgabe |
+| `get_record_history` | Liest den Verlauf eines Datensatzes, wie ihn sein Tab Verlauf zeigt |
 | `search_knowledge` | Durchsucht die Wissensdatenbank |
 | `get_document` | Liest ein Dokument der Wissensdatenbank |
 | `web_search` | Sucht im Web, wenn die Websuche für Ihre Organisation eingeschaltet ist |

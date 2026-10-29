@@ -47,6 +47,10 @@ Une entrée peut nommer une autre fiche, par exemple un contrat lié à la ligne
 - L'adresse e-mail, les numéros de téléphone et les notes d'un contact n'apparaissent jamais.
 - Pour un contenu long, l'entrée indique seulement qu'il a changé : **Contenu modifié** pour le corps d'un document de la base de connaissances, **Jours ouvrés modifiés** pour les jours d'un calendrier de jours ouvrés.
 
+## Demander à l'assistant
+
+[Plaid](ai-assistant.md#tool-calls) lit l'historique d'une fiche avec les mêmes droits que sa page. Demandez par exemple : « Qui a modifié les montants de BL-12 ? » ou « Qu'est-ce qui a changé sur TEC-3 cette année ? » Plaid répond à partir de l'onglet Historique seulement : pour une fiche qui n'en a pas, il dit que KANAP n'en garde pas l'historique.
+
 ## Le journal d'audit complet
 
 L'historique s'en tient à ce dont un lecteur a besoin. Le relevé technique complet de chaque modification, pour tout l'espace de travail, reste dans **Administration > Journal d'audit**. Voir [Journal d'audit](admin.md#journal-daudit).
