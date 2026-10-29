@@ -719,7 +719,8 @@ async function testRecordHistoryOfferFollowsTheFamilyRights() {
   };
   assert.equal(await offered(['technologies']), true, 'a reader of technologies');
   assert.equal(await offered(['budget_lines']), true, 'a reader of the budget');
-  assert.equal(await offered(['projects', 'tasks', 'applications', 'contracts']), false, 'no family with a history');
+  assert.equal(await offered(['projects']), true, 'a reader of projects');
+  assert.equal(await offered(['users', 'vulnerabilities', 'roles']), false, 'no family with a history');
   assert.equal(await offered(['technologies'], null), false, 'a registry without the history service');
 
   const calls: any[] = [];
