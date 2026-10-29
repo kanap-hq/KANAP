@@ -1031,6 +1031,8 @@ export class AiAggregateExecutor {
         {
           manager: context.manager,
           tenantId: context.tenantId,
+          // The quick search looks in the administration fields for their readers only.
+          accessView: (await this.policy?.canReadEntityType(context, 'data_access', context.manager)) === true,
         },
       );
       const ids = result.ids || [];

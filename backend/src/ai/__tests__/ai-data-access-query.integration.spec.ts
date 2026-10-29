@@ -29,7 +29,7 @@ process.env.S3_BUCKET ||= 'ai-data-access-query-spec';
 process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
-type Harness = { app: any; dataSource: DataSource; tools: any; dataAccess: any };
+type Harness = { app: any; dataSource: DataSource; tools: any; dataAccess: any; entities: any };
 type PersonKey = 'ulla' | 'victor' | 'alice' | 'bruno' | 'chloe' | 'dan' | 'eva' | 'rita' | 'rob';
 type Seed = {
   tenantId: string;
@@ -57,9 +57,16 @@ async function createHarness(): Promise<Harness> {
   const { AiToolRegistry } = require('../ai-tool.registry');
   const { AiPolicyService } = require('../ai-policy.service');
   const { DataAccessAdminService } = require('../../data-access/data-access-admin.service');
+  const { AiEntityService } = require('../ai-entity.service');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   app.get(AiPolicyService).assertSurfaceAccess = async () => undefined;
-  return { app, dataSource: app.get(DataSource), tools: app.get(AiToolRegistry), dataAccess: app.get(DataAccessAdminService) };
+  return {
+    app,
+    dataSource: app.get(DataSource),
+    tools: app.get(AiToolRegistry),
+    dataAccess: app.get(DataAccessAdminService),
+    entities: app.get(AiEntityService),
+  };
 }
 
 async function insertId(runner: QueryRunner, sql: string, params: unknown[]): Promise<string> {
@@ -414,6 +421,56 @@ async function testTheAdministrationFieldsNeedAccessToAllData(h: Harness, runner
   assert.deepEqual([fullList.total, fullList.items[0].metadata.primary_role], [4, 'Budget Member'], 'filters on it and reads it');
 }
 
+/**
+ * A word of an administration field finds a person only for the readers of those fields (Plaid L7,
+ * lot E): a reader of users, or an administrator of users in limited access, who searches a role,
+ * a company or a job finds nobody by it, in every search of people (the list, the aggregate, the
+ * search of every family on the index and on the legacy path, the @ mentions); the name and the
+ * email still find them. The full administrator finds them by those words.
+ */
+async function testTheSearchesOfPeopleFollowTheFields(h: Harness, runner: QueryRunner, s: Seed) {
+  await runner.query(`UPDATE users SET job_title = $2, company_id = $3 WHERE id = $1`, [s.users.alice, `Affineur ${s.tag}`, s.companies.c2]);
+  const words = { role: 'Budget Member', company: `Fromagerie ${s.tag}`, job: `Affineur ${s.tag}` };
+  const listed = async (user: PersonKey, q: string) =>
+    (await h.tools.execute(ctx(runner, s, user), 'query_entities', { entity_type: 'users', q, limit: 50 })).items.map((item: any) => item.id) as string[];
+  const counted = async (user: PersonKey, q: string) =>
+    (await h.tools.execute(ctx(runner, s, user), 'aggregate_entities', { entity_type: 'users', group_by: 'status', q })).total as number;
+  const searched = async (user: PersonKey, query: string) =>
+    (await h.tools.execute(ctx(runner, s, user), 'search_all', { query, entity_types: ['users'] })).items
+      .filter((item: any) => item.type === 'users').map((item: any) => item.id) as string[];
+  const mentioned = async (user: PersonKey, query: string) =>
+    (await h.entities.searchMentionCandidates(ctx(runner, s, user), { query, entity_types: ['users'] })).items
+      .filter((item: any) => item.type === 'users').map((item: any) => item.id) as string[];
+  const legacy = async (user: PersonKey, query: string) => {
+    process.env.AI_SEARCH_INDEX_ENABLED = 'false';
+    try {
+      return await searched(user, query);
+    } finally {
+      delete process.env.AI_SEARCH_INDEX_ENABLED;
+    }
+  };
+  const searches = { listed, searched, mentioned, legacy };
+
+  for (const user of ['rob', 'rita'] as const) {
+    for (const [word, value] of Object.entries(words)) {
+      for (const [name, search] of Object.entries(searches)) {
+        assert.equal((await search(user, value)).includes(s.users.alice), false, `${user}, ${name}: nobody found by the ${word}`);
+      }
+      assert.equal(await counted(user, value), 0, `${user}, aggregate: nobody counted by the ${word}`);
+    }
+    for (const [name, search] of Object.entries(searches)) {
+      assert.ok((await search(user, 'Alice Company')).includes(s.users.alice), `${user}, ${name}: found by the name`);
+      assert.ok((await search(user, `alice-${s.tag}@example.test`)).includes(s.users.alice), `${user}, ${name}: found by the email`);
+    }
+  }
+  for (const [word, value] of Object.entries(words)) {
+    for (const [name, search] of Object.entries(searches)) {
+      assert.ok((await search('ulla', value)).includes(s.users.alice), `full administrator, ${name}: found by the ${word}`);
+    }
+    assert.ok(await counted('ulla', value) >= 1, `full administrator, aggregate: counted by the ${word}`);
+  }
+}
+
 async function testTheUnreadListsSayWhatIsMissing(h: Harness, runner: QueryRunner, s: Seed) {
   const unread = async (user: PersonKey) => (await h.tools.execute(ctx(runner, s, user), 'describe_entity_filters', { entity_type: 'users' })).families_not_read as string[];
   const full = await unread('ulla');
@@ -445,6 +502,7 @@ async function run() {
       await testPersonAndCompanyDetails(harness, runner, s);
       await testGate(harness, runner, s);
       await testTheAdministrationFieldsNeedAccessToAllData(harness, runner, s);
+      await testTheSearchesOfPeopleFollowTheFields(harness, runner, s);
       await testTheUnreadListsSayWhatIsMissing(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();

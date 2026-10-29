@@ -71,7 +71,9 @@ type AiUserQueryOpts = {
   tenantId?: string;
   /**
    * The caller administers users and their own access is not limited, as the users list's access
-   * column: each row then carries every role of the user and their effective data-access mode.
+   * column: each row then carries every role of the user and their effective data-access mode, and
+   * the quick search looks in the administration fields too (job, role, company, department, team,
+   * expertise). Otherwise it looks in the name and the email only, as the users list for a reader.
    */
   accessView?: boolean;
 };
@@ -231,16 +233,20 @@ export class UsersService {
       }
     }
 
-    const quickSearchExpressions = [
-      displayNameSql,
-      'u.email',
-      `COALESCE(u.job_title, '')`,
-      `COALESCE(r.role_name, '')`,
-      `COALESCE(c.name, '')`,
-      `COALESCE(d.name, '')`,
-      `COALESCE(pt.name, '')`,
-      expertiseSql,
-    ];
+    // A word finds a person by a field the caller may read only: the name and the email, plus the
+    // administration fields for the administration view.
+    const quickSearchExpressions = opts?.accessView
+      ? [
+        displayNameSql,
+        'u.email',
+        `COALESCE(u.job_title, '')`,
+        `COALESCE(r.role_name, '')`,
+        `COALESCE(c.name, '')`,
+        `COALESCE(d.name, '')`,
+        `COALESCE(pt.name, '')`,
+        expertiseSql,
+      ]
+      : [displayNameSql, 'u.email'];
     const quickSearch = q ? buildQuickSearchConditions(q, quickSearchExpressions, nextParam) : [];
     if (quickSearch.length > 0) {
       qb.andWhere(new Brackets((sub) => {

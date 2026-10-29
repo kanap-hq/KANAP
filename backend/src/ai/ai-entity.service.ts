@@ -1390,6 +1390,19 @@ export class AiEntityService {
       SELECT string_agg(DISTINCT area.value, ', ' ORDER BY area.value)
       FROM jsonb_array_elements_text(COALESCE(tmc.areas_of_expertise, '[]'::jsonb)) area(value)
     ), '')`;
+    // The administration fields find a person for their readers only; the others search the name
+    // and the email, as the users list.
+    const matches = [`${displayNameSql} ILIKE $2`, 'u.email ILIKE $2'];
+    if (await this.usersAdminView(context)) {
+      matches.push(
+        `COALESCE(u.job_title, '') ILIKE $2`,
+        `COALESCE(r.role_name, '') ILIKE $2`,
+        `COALESCE(c.name, '') ILIKE $2`,
+        `COALESCE(d.name, '') ILIKE $2`,
+        `COALESCE(pt.name, '') ILIKE $2`,
+        `${expertiseSql} ILIKE $2`,
+      );
+    }
     const summarySql = `NULLIF(CONCAT_WS(' | ',
       CASE WHEN ${displayNameSql} <> u.email THEN u.email ELSE NULL END,
       NULLIF(u.job_title, ''),
@@ -1427,16 +1440,7 @@ export class AiEntityService {
        LEFT JOIN portfolio_team_member_configs tmc ON tmc.user_id = u.id AND tmc.tenant_id = u.tenant_id
        LEFT JOIN portfolio_teams pt ON pt.id = tmc.team_id AND pt.tenant_id = u.tenant_id
        WHERE u.tenant_id = $3
-         AND (
-           ${displayNameSql} ILIKE $2
-           OR u.email ILIKE $2
-           OR COALESCE(u.job_title, '') ILIKE $2
-           OR COALESCE(r.role_name, '') ILIKE $2
-           OR COALESCE(c.name, '') ILIKE $2
-           OR COALESCE(d.name, '') ILIKE $2
-           OR COALESCE(pt.name, '') ILIKE $2
-           OR ${expertiseSql} ILIKE $2
-         )
+         AND (${matches.join(' OR ')})
        ORDER BY score DESC, u.last_name ASC NULLS LAST, u.first_name ASC NULLS LAST, u.email ASC
        LIMIT $4`,
       [exact, like, context.tenantId, limit],
@@ -2284,6 +2288,19 @@ export class AiEntityService {
             ${incidentVisibilitySql}
         ))`);
       }
+    }
+
+    // A person is found by a word of an administration field (job, role, company, team...) only by
+    // the readers of those fields (`usersAdminView`); the others find them by the name and the
+    // email, as the users list: the label, the email and the A-weighted part of the users vector
+    // (`search_index_tsv('A', name, email)`, migration 1853000000000).
+    if (indexEntityTypes.includes('users') && !(await this.usersAdminView(context))) {
+      scopeClauses.push(`AND (search_index.entity_type <> 'users'
+            OR label ILIKE ${likeRef}
+            OR similarity(label, ${qRef}) > 0.35
+            OR COALESCE(extra_json->>'email', '') ILIKE ${likeRef}
+            OR ts_filter(search_vector, '{a}') @@ ${tsq}
+            OR (${prefixRef}::text IS NOT NULL AND ts_filter(search_vector, '{a}') @@ ${prefixTsq}))`);
     }
 
     const limitRef = push(limit);
