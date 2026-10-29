@@ -25,7 +25,7 @@ Fill in the frontmatter (the block between the `---` lines):
 | `title` | yes | Sentence case, no trailing period. Around 60 characters reads well in the list and in search results. |
 | `description` | yes | One or two sentences. This is the excerpt on the index, the meta description for search, and the RSS summary. |
 | `date` | yes | `YYYY-MM-DD`. A future date keeps the article out of the build until that day (useful to prepare a post ahead of a deploy). |
-| `topic` | yes | One of `agents`, `self-hosting`, `cost`, `glpi`, `product`, `portfolio`, `compliance`, `release`. Shown as the chip next to the article. |
+| `topic` | yes | One of `agents`, `self-hosting`, `cost`, `glpi`, `mapping`, `portfolio`, `compliance`, `release`. Shown as the chip next to the article. |
 | `features` | no | Feature pages that list this article: `budget`, `portfolio`, `it-landscape`, `knowledge`, `ai`, `agents`. When the field is absent, the topic supplies a default (see below). |
 | `author` | no | Defaults to `KANAP`. |
 | `authorRole` | no | Short line after the name, e.g. `Founder, CIO`. |
@@ -34,7 +34,7 @@ Fill in the frontmatter (the block between the `---` lines):
 | `translationKey` | no | Only when the FR and EN filenames differ (see §3). |
 | `ogImage` | no | Override the social card (see §4). |
 
-Each topic that has an article gets a page at `/blog/topic/<key>` (and the same path under `/fr`, `/de` and `/es`). The index shows one chip per such topic, with a count, and the chip on each row links there. `features` chooses the feature pages that list the article. With the field absent, `cost` maps to Budget, `portfolio` to Portfolio, `compliance` to IT landscape and `agents` to Agents. A value set on one language version covers the translations that leave the field out. Each feature page shows up to three articles.
+Each topic that has an article gets a page at `/blog/topic/<key>` (and the same path under `/fr`, `/de` and `/es`). The index shows one chip per such topic, with a count, and the chip on each row links there. `features` chooses the feature pages that list the article. With the field absent, `cost` maps to Budget, `portfolio` to Portfolio, `mapping` and `compliance` to IT landscape and `agents` to Agents. A value set on one language version covers the translations that leave the field out. Each feature page shows up to three articles.
 
 Then write the body in plain Markdown. What renders well:
 
