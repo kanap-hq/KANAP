@@ -1883,6 +1883,45 @@ async function testAggregateEntitiesPassesMetricsAndThenBy() {
   assert.equal(calls.length, 1, 'neither reaches the executor');
 }
 
+/** Plaid L8, lot C: the change between two columns, the FTE by month and the window of lines, said once each, chat and MCP alike. */
+async function testAggregateEntitiesDescribesChangesAndMonthlyFte() {
+  const registry = createRegistry();
+  const schemas = await registry.getToolJsonSchemas(createContext()) as any[];
+  const { properties } = schemas.find((schema) => schema.name === 'aggregate_entities').parameters;
+  assert.deepEqual([properties.direction.type, properties.direction.enum], ['string', ['increase', 'decrease']]);
+  assert.match(properties.direction.description, /^Budget lines, a change between two columns \(metric `y_review_minus_y_budget`\): increase \(the default\)/);
+  assert.match(properties.limit.description, /A change between two columns keeps 10 groups by default, and the FTE by month keeps the largest averages\./);
+  const tools = await registry.listAvailableTools(createContext());
+  const aggregate = tools.find((tool) => tool.name === 'aggregate_entities')!;
+  assert.match(aggregate.description, /A change between two columns is the metric `<destination>_minus_<source>` \(`y_review_minus_y_budget`; in FTE `y_review_fte_minus_y_budget_fte`\), computed as the "Top increase \/ decrease" report/);
+  assert.match(aggregate.description, /The FTE month by month is the metric `<year>_<column>_fte_by_month` \(`y_budget_fte_by_month`\), computed as the "Staffing by month" report: each group's twelve months, average \(÷ 12\) and peak, with `monthly_fte_note`/);
+  assert.match(aggregate.description, /These budget figures read every line, ended ones included, while the budget reports read the lines still active on 1 January of the year before the first year they show/);
+  for (const sentence of [/computed as the "Top increase \/ decrease" report/g, /These budget figures read every line/g]) {
+    assert.equal(`${aggregate.description} ${properties.metric.description}`.match(sentence)?.length, 1, `said once: ${sentence}`);
+  }
+  const describe = tools.find((tool) => tool.name === 'describe_entity_filters')!;
+  assert.match(describe.description, /`metric_families` the cost per FTE, the day rate, the change between two columns and the FTE by month aggregate_entities computes/);
+  const mcp = registry.toToolJsonSchemas(registry.listRegisteredTools().filter((tool) => tool.surfaces.includes('mcp'))) as any[];
+  assert.deepEqual(mcp.find((schema) => schema.name === 'aggregate_entities').parameters.properties.direction, properties.direction, 'the MCP server lists the same schema');
+}
+
+async function testAggregateEntitiesPassesDirection() {
+  const calls: unknown[] = [];
+  const registry = createRegistry({
+    aggregateExecutor: {
+      execute: async (_context: unknown, input: unknown) => {
+        calls.push(input);
+        return { group_by: 'line', metric: 'y_review_minus_y_budget', function: 'delta', direction: 'decrease', groups: [], total: 0, filters_applied: [], filters_ignored: [], complete: true };
+      },
+    },
+  });
+  const input = { entity_type: 'budget_lines', group_by: 'line', metric: 'y_review_minus_y_budget', direction: 'decrease', limit: 5 };
+  await registry.execute(createContext(), 'aggregate_entities', input);
+  assert.deepEqual(calls, [input], 'direction and limit reach the executor');
+  await assert.rejects(registry.execute(createContext(), 'aggregate_entities', { ...input, direction: 'both' }), 'increase or decrease only');
+  assert.equal(calls.length, 1, 'an unknown direction does not reach the executor');
+}
+
 async function testGetFilterValuesDelegatesToQueryExecutor() {
   const calls: unknown[] = [];
   const registry = createRegistry({
@@ -2313,6 +2352,8 @@ async function run() {
   await testAggregateEntitiesSchemaExposesMetricAndFunction();
   await testAggregateEntitiesSchemaExposesMetricsAndThenBy();
   await testAggregateEntitiesPassesMetricsAndThenBy();
+  await testAggregateEntitiesDescribesChangesAndMonthlyFte();
+  await testAggregateEntitiesPassesDirection();
   await testGetFilterValuesDelegatesToQueryExecutor();
   await testGetEntityContextDelegatesToEntityTools();
   await testGetEntityCommentsDelegatesToEntityTools();
