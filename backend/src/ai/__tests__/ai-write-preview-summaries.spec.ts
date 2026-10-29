@@ -645,7 +645,7 @@ function testVulnerabilityStateCards() {
     ['de', '2 Zeilen (1 CVE): Behandelt, Notiz gelöscht'],
     ['es', '2 filas (1 CVE): Tratada, nota borrada'],
   ] as const) {
-    assert.ok(card(noteOnly(null), language).startsWith(`${head}\n\n- CVE-2024-5555 `), `${language}: the note cleared, said once`);
+    assert.ok(String(card(noteOnly(null), language)).startsWith(`${head}\n\n- CVE-2024-5555 `), `${language}: the note cleared, said once`);
   }
 
   // Executed, rejected, failed.
