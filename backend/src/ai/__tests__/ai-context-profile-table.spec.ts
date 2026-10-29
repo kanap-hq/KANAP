@@ -340,6 +340,26 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Indique que TEC-3 est remplacée par TEC-7', profile: 'write_business', mode: 'write', tools: ['update_business_record'] },
   { prompt: 'Efface la date de fin de support étendu de la version 14 de TEC-3', profile: 'write_business', mode: 'write', tools: ['update_technology_versions'] },
 
+  // Plaid L6: the state of vulnerability rows is a business write; a question or a state word
+  // alone stays a read. "Acceptée" is not a state: the model sees the tool and refuses in words.
+  // The alert phrases above keep set_technology_vulnerability_alerts.
+  { prompt: 'Passe la faille CVE-2024-3094 à traitée', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Marque CVE-2024-1234 comme corrigée sur PostgreSQL 14', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Mets CVE-2024-1234 en non concernée sur TEC-3', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Remets CVE-2024-1234 à traiter', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Traite toutes les failles critiques de TEC-3', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Mark CVE-2024-3094 as handled', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Set CVE-2024-1234 to not affected on nginx 1.24', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Passe la faille CVE-2026-59310 à acceptée', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: 'Passe CVE-2026-1 et CVE-2026-2 à traitée', profile: 'write_business', mode: 'write', tools: ['change_vulnerability_state'] },
+  { prompt: "Quel est l'état de CVE-2024-3094 ?", profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Combien de failles sont traitées ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Failles non concernées de TEC-3', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Liste les failles traitées sur PostgreSQL', profile: 'read_query', mode: 'read' },
+  { prompt: 'How many vulnerabilities are handled?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Which CVEs are not affected on nginx?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Combien de failles critiques, en CVE distinctes ?', profile: 'read_query', mode: 'read' },
+
   // Other probes from the existing profile spec.
   { prompt: 'Show me my overdue tasks', profile: 'read_query', mode: 'read' },
   { prompt: 'Show current tasks', profile: 'read_query', mode: 'read' },
