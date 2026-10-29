@@ -515,7 +515,8 @@ export function technologyAdoptionCardText(language: AiWriteLanguage, adoption: 
     es: 'Adoptada del catálogo KANAP',
   }[language];
   const familyLabel = { en: 'Family', fr: 'Famille', de: 'Familie', es: 'Familia' }[language];
-  return [`**${heading}**`, `- ${familyLabel}: ${family}`, `- ${versions}, ${range}`].join('\n');
+  const separator = language === 'fr' ? ' : ' : ': ';
+  return [`**${heading}**`, `- ${familyLabel}${separator}${family}`, `- ${versions}, ${range}`].join('\n');
 }
 
 /**

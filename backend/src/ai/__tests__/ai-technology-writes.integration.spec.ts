@@ -1071,6 +1071,13 @@ async function testTechnologyAdoption(harness: Harness) {
     assert.match(preview.changes.catalog_adoption.to, /Family: Database/);
     assert.match(preview.changes.catalog_adoption.to, /versions, end of support from \d{4}-\d{2}-\d{2} to \d{4}-\d{2}-\d{2}/);
     assert.equal(preview.changes.lifecycle.to, 'Active', 'the lifecycle given beside the adoption is listed apart');
+    const { AiMutationOperationRegistry } = require('../mutation/ai-mutation-operation.registry');
+    const [storedPreview] = await runner.query(`SELECT * FROM ai_mutation_previews WHERE id = $1`, [preview.preview_id]);
+    const fr = harness.app.get(AiMutationOperationRegistry).getOperation('create_business_record').presentPreview(storedPreview, 'fr');
+    assert.equal(
+      fr.changes.catalog_adoption.to,
+      '**Adoptée du catalogue KANAP**\n- Famille : Database\n- 8 versions, fin de support de 2023-11-09 à 2030-11-14',
+    );
     const executed = await approvePreview(harness, ctx, preview);
     assert.match(executed.target.ref, /^TEC-\d+$/);
     const [technology] = await runner.query(
@@ -1224,6 +1231,13 @@ async function testVersionAddAndUpdate(harness: Harness) {
     assert.match(preview.changes.technology_versions.to, /^- new version 17 \(end of support 2029-11-08\)$/m);
     assert.match(preview.changes.technology_versions.to, /^- 16: end of support 2028-11-09 → 2028-12-31$/m);
     assert.match(preview.changes.technology_versions.to, /^- 15 → 15\.1: notes updated$/m);
+    const { AiMutationOperationRegistry } = require('../mutation/ai-mutation-operation.registry');
+    const [storedPreview] = await runner.query(`SELECT * FROM ai_mutation_previews WHERE id = $1`, [preview.preview_id]);
+    const fr = harness.app.get(AiMutationOperationRegistry).getOperation('update_technology_versions').presentPreview(storedPreview, 'fr');
+    assert.equal(
+      fr.changes.technology_versions.to,
+      '- nouvelle version 17 (fin de support 2029-11-08)\n- 16 : fin de support 2028-11-09 → 2028-12-31\n- 15 → 15.1 : notes mises à jour',
+    );
     await approvePreview(harness, ctx, preview);
     const rows = await runner.query(
       `SELECT label, to_char(standard_support_end, 'YYYY-MM-DD') AS standard_support_end, notes
