@@ -13,3 +13,13 @@ const HTML_ESCAPES: Record<string, string> = {
 export function escapeTooltipText(value: unknown): string {
   return String(value ?? '').replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
 }
+
+/**
+ * HTML for the `content` of a custom chart tooltip, one line per label and value.
+ * AG Charts 9 writes `content` into the tooltip body and ignores a `data` list.
+ */
+export function tooltipContent(rows: Array<{ label: string; value: string }>): string {
+  return rows
+    .map((row) => `<div>${escapeTooltipText(row.label)}: ${escapeTooltipText(row.value)}</div>`)
+    .join('');
+}

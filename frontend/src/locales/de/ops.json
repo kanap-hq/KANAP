@@ -1511,6 +1511,7 @@
       "totalMetric": "{{metric}}, gesamt",
       "ofFilteredMetric": "{{pct}} % der gefilterten Summe",
       "shareSubtitle": "Anteil an der Jahressumme ({{metric}})",
+      "shareOfAllLines": "Anteil an allen Zeilen",
       "chartTitle": "Top {{count}} {{type}} · {{metric}} {{year}}",
       "chartTitle_all": "Top {{count}} Zeilen · {{metric}} {{year}}"
     },

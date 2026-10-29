@@ -9,7 +9,8 @@ import ReportDataStatus from '../../components/reports/ReportDataStatus';
 import { itemHref, useReportScope } from './useReportScope';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { metricFileName, MetricKey, useReportMetric } from './reportMetrics';
-import { escapeTooltipText } from './tooltipText';
+import { drawnSliceTotal, percentPoints, pieSliceLabel } from './pieSliceLabel';
+import { escapeTooltipText, tooltipContent } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useTranslation } from 'react-i18next';
 import { formatPercentPoints } from '../../i18n/formatters';
@@ -112,6 +113,8 @@ export default function TopOpexReport() {
 
   const chartData = useMemo(() => processed.map((r) => ({ name: r.name, value: r.value })), [processed]);
   const chartOptions = useMemo(() => {
+    // The pie is read as parts of what it draws. An "others" slice counts once it is in `chartData`.
+    const drawnTotal = drawnSliceTotal(chartData.map((row) => row.value));
     const base = {
       title: { text: t('reports.topOpex.chartTitle', { count: chartData.length, type: scopeLabel, context: scope, metric: metricLabel, year }) },
       subtitle: { text: t('reports.topOpex.shareSubtitle', { metric: metricLabel }) },
@@ -132,12 +135,7 @@ export default function TopOpexReport() {
             calloutLabel: { offset: 20 },
             sectorLabel: {
               positionOffset: 30,
-              formatter: ({ datum, angleKey }: any) => {
-                const value = Number(datum[angleKey] || 0);
-                const pct = totalMetric > 0 ? (value / totalMetric) * 100 : 0;
-                const shown = Math.round(pct);
-                return shown >= 5 ? `${shown}%` : '';
-              },
+              formatter: ({ datum, angleKey }: any) => pieSliceLabel(Number(datum[angleKey] || 0), drawnTotal),
             },
             strokeWidth: 1,
             tooltip: {
@@ -145,14 +143,12 @@ export default function TopOpexReport() {
               renderer: (params: any) => {
                 const { datum, angleKey } = params;
                 const value = Number(datum[angleKey] || 0);
-                const pct = totalMetric > 0 ? (value / totalMetric) * 100 : 0;
-                return {
-                  title: escapeTooltipText(datum.name),
-                  data: [
-                    { label: metricLabel, value: formatNumber(value) },
-                    { label: t('reports.shared.share'), value: formatPercentPoints(pct, locale, 1) },
-                  ],
-                };
+                const data = [
+                  { label: metricLabel, value: formatNumber(value) },
+                  { label: t('reports.shared.share'), value: formatPercentPoints(percentPoints(value, drawnTotal), locale, 1) },
+                  { label: t('reports.topOpex.shareOfAllLines'), value: formatPercentPoints(percentPoints(value, totalMetric), locale, 1) },
+                ];
+                return { title: escapeTooltipText(datum.name), content: tooltipContent(data), data };
               },
             },
           },
