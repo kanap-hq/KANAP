@@ -86,6 +86,13 @@ export type AiUnreadFamily = {
    * `chargeback` and `chargeback_lines`): left out for them, and said with the right for the others.
    */
   reportingOnly?: true;
+  /**
+   * A family the tools read for a person with the right of its page (`entityType`, the right as
+   * Admin › Roles names it): left out for them, and said with the right for the others
+   * (`AiUnreadFamiliesReach.readable`). `searched` false: read by query_entities but not searched
+   * by search_all (the exchange rates), which a search that asks for it says (`not_searched_here`).
+   */
+  readAs?: { entityType: string; right: string; searched: boolean };
 };
 
 /**
@@ -98,10 +105,11 @@ export type AiAdminFamiliesGap = 'right' | 'all_data' | null;
 
 /**
  * What the person reads among the families kept for one right: `reports`, the chargeback reports
- * (the Reporting right, `canReadEntityType(…, 'chargeback')`). Undefined: not known (the tool
+ * (the Reporting right, `canReadEntityType(…, 'chargeback')`); `readable`, the families of the
+ * entries read as a family (`readAs`) the person reads. Undefined: not known (the tool
  * descriptions, common to everyone), the right is named.
  */
-export type AiUnreadFamiliesReach = { reports?: boolean };
+export type AiUnreadFamiliesReach = { reports?: boolean; readable?: readonly string[] };
 
 /** What a person lacks to read a family of the administrators of users, in words. */
 function usersAdminGapHint(gap: AiAdminFamiliesGap | undefined): string {
@@ -116,10 +124,22 @@ function reportingGapHint(reports: boolean | undefined): string {
   return 'The tools read it (the families chargeback and chargeback_lines) for a person with the Reporting right only.';
 }
 
+/** What a person lacks to read a family read with the right of its page, in words. */
+function readAsGapHint(readAs: NonNullable<AiUnreadFamily['readAs']>, reach: AiUnreadFamiliesReach | undefined): string {
+  const known = reach?.readable !== undefined;
+  return `The tools read it (the family ${readAs.entityType}) for a person with the ${readAs.right} right${known ? ', which this person\'s role does not give.' : ' only.'}`;
+}
+
+/** Whether the person reads the family of an entry read as a family (`readAs`). */
+function readsFamily(entry: AiUnreadFamily, reach: AiUnreadFamiliesReach | undefined): boolean {
+  return !!entry.readAs && !!reach?.readable?.includes(entry.readAs.entityType);
+}
+
 /** The words that say what is missing for a family kept for a right; undefined for the others. */
 function gapHint(entry: AiUnreadFamily, gap: AiAdminFamiliesGap | undefined, reach: AiUnreadFamiliesReach | undefined): string | undefined {
   if (entry.usersAdminOnly) return usersAdminGapHint(gap);
   if (entry.reportingOnly) return reportingGapHint(reach?.reports);
+  if (entry.readAs) return readAsGapHint(entry.readAs, reach);
   return undefined;
 }
 
@@ -129,25 +149,28 @@ export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
     screen: ['masterData', 'costCenters'],
     hint: 'A budget line names its cost center: the cost_center field and filter of query_entities on budget_lines.',
     terms: /cost[\s_-]*cent|centres?\s+de\s+co[uû]ts?|kostenstelle|centros?\s+de\s+costes?/i,
+    readAs: { entityType: 'cost_centers', right: 'Cost centers', searched: true },
   },
   {
     family: 'working-day calendars',
     screen: ['masterData', 'workingDayCalendars'],
     // A working-day calendar, never a project or migration calendar.
     terms: /working[\s-]*days?|business[\s-]*days?|jours?\s+ouvr|arbeitstag|d[ií]as?\s+(h[aá]biles|laborables)|calendarios?\s+laboral/i,
+    readAs: { entityType: 'working_day_calendars', right: 'Working-day calendars', searched: true },
   },
   {
     family: 'exchange rates',
     screen: ['budgetManagement', 'budgetAdministration', 'currencies'],
-    hint: 'Budget amounts come already converted to the reporting currency (amounts_currency).',
-    terms: /exchange\s+rate|fx\s+rate|taux\s+de\s+change|wechselkurs|tipos?\s+de\s+cambio/i,
+    // The rates and the currencies, and a currency code alone (EUR, USD) or as a pair (EUR/USD).
+    terms: /exchange\s+rate|fx\s+rate|taux\s+de\s+change|wechselkurs|tipos?\s+de\s+cambio|currenc(y|ies)|\bdevises?\b|w[aä]hrung|\bmonedas?\b|\bdivisas?\b|\b(eur|usd|gbp|chf)\b|\b(eur|usd|gbp|chf|jpy|cad|aud|cny|sek|nok|dkk|pln)\s*\/\s*[a-z]{3}\b/i,
+    readAs: { entityType: 'exchange_rates', right: 'Budget', searched: false },
   },
   {
-    family: 'analytics dimensions as records (their settings)',
+    family: 'analytics dimensions',
     screen: ['masterData', 'analyticsDimensions'],
-    hint: 'Their values are the analytics_categories family, and a budget line carries its value on each dimension.',
     // An analytics dimension, never a supplier or product named Dimension.
     terms: /analytic\w*\s+dimension|dimensions?\s+analytique|axes?\s+analytique|analysedimension|dimensi[oó]n(es)?\s+anal[ií]tica/i,
+    readAs: { entityType: 'analytics_axes', right: 'Analytics', searched: true },
   },
   {
     family: 'data access (which companies or cost centers a person is limited to)',
@@ -229,7 +252,8 @@ export function unreadFamilyScreen(entry: AiUnreadFamily, language: AiScreenLang
  * is null, and the chargeback reports when they read them.
  */
 function unreadFamilies(gap: AiAdminFamiliesGap | undefined, reach: AiUnreadFamiliesReach | undefined): AiUnreadFamily[] {
-  return AI_UNREAD_FAMILIES.filter((entry) => !(entry.usersAdminOnly && gap === null) && !(entry.reportingOnly && reach?.reports === true));
+  return AI_UNREAD_FAMILIES.filter((entry) => !(entry.usersAdminOnly && gap === null) && !(entry.reportingOnly && reach?.reports === true)
+    && !readsFamily(entry, reach));
 }
 
 /** The words that close a family's line: what the person lacks, for the families kept for a right. */
@@ -260,6 +284,8 @@ const SCREEN_NAME_RULE = 'Quote a screen name exactly as given, never translated
  */
 export const AI_UNREAD_FAMILIES_SENTENCE =
   `KANAP also holds what these tools do not read: ${AI_UNREAD_FAMILIES
+    // The families read with the right of their page are families of these tools, as any other.
+    .filter((entry) => !entry.readAs)
     .map((entry) => (entry.usersAdminOnly
       ? `${entry.family} (read for administrators of users with access to all data only)`
       : entry.reportingOnly ? `${entry.family} (read for people with the Reporting right only)` : entry.family))
@@ -295,11 +321,50 @@ export function unreadFamiliesAskedBy(
       const where = unreadFamilyScreen(entry, language);
       const screen = language ? `the screen ${where}` : `the screen named, in the person's language, ${where}`;
       const hint = entryHint(entry, gap, reach);
-      const read = entry.usersAdminOnly || entry.reportingOnly ? 'this server does not read them for this person' : 'this server does not read them';
+      const read = entry.usersAdminOnly || entry.reportingOnly || entry.readAs ? 'this server does not read them for this person' : 'this server does not read them';
       return {
         family: entry.family,
         where,
         note: `KANAP has ${entry.family}; ${read}. They are on ${screen}.${hint ? ` ${hint}` : ''}`,
       };
     });
+}
+
+/**
+ * The families a search text asks for that the person reads but `search_all` does not search
+ * (the exchange rates), each with the sentence the answer can give (`not_searched_here`).
+ */
+export function notSearchedFamiliesAskedBy(
+  query: string,
+  language: AiScreenLanguage | null,
+  reach?: AiUnreadFamiliesReach,
+): Array<{ family: string; where: string; note: string }> {
+  const text = String(query ?? '');
+  return AI_UNREAD_FAMILIES
+    .filter((entry) => entry.readAs && !entry.readAs.searched && readsFamily(entry, reach) && entry.terms.test(text))
+    .map((entry) => ({
+      family: entry.family,
+      where: unreadFamilyScreen(entry, language),
+      note: `The ${entry.family} are read by query_entities on ${entry.readAs!.entityType}, not searched by search_all.`,
+    }));
+}
+
+/** The families of the entries read as a family (`readAs`), whose right `unreadFamiliesReachOf` probes. */
+const READ_AS_ENTITY_TYPES = AI_UNREAD_FAMILIES.flatMap((entry) => (entry.readAs ? [entry.readAs.entityType] : []));
+
+/**
+ * What the person reads among the families kept for a right (`AiUnreadFamiliesReach`), through the
+ * policy's probe of one family (`AiPolicyService.canReadEntityType`).
+ */
+export async function unreadFamiliesReachOf<C, M>(
+  policy: { canReadEntityType(context: C, entityType: any, manager: M): Promise<boolean> },
+  context: C,
+  manager: M,
+): Promise<AiUnreadFamiliesReach> {
+  const reports = await policy.canReadEntityType(context, 'chargeback', manager);
+  const readable: string[] = [];
+  for (const entityType of READ_AS_ENTITY_TYPES) {
+    if (await policy.canReadEntityType(context, entityType, manager)) readable.push(entityType);
+  }
+  return { reports, readable };
 }

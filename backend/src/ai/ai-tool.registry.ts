@@ -27,7 +27,7 @@ import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/pr
 import { dataAccessRefusalMessage } from '../common/filters/database-error.mapping';
 import { resolveConfiguredAppBaseUrl } from '../common/url';
 import { AI_PAGE_URL_NOTE, withAiPageUrls } from './ai-page-urls';
-import { AI_UNREAD_FAMILIES_SENTENCE, readAiScreenLanguage, unreadFamilyLines } from './ai-unread-families';
+import { AI_UNREAD_FAMILIES_SENTENCE, readAiScreenLanguage, unreadFamiliesReachOf, unreadFamilyLines } from './ai-unread-families';
 import {
   AI_CONTEXT_ENTITY_TYPES,
   AI_DETAIL_ENTITY_TYPES,
@@ -43,7 +43,7 @@ import {
   AiToolCategory,
   AiQueryEntityTypeSchema,
   AiQueryScopeSchema,
-  AiSearchEntityTypeSchema,
+  AiSearchAllEntityTypeSchema,
   AiToolDefinition,
   AiToolListItemDto,
   AiToolName,
@@ -58,7 +58,7 @@ const YEAR_DESCRIPTION = 'Optional fiscal or calendar year for year-backed metri
 
 const SearchAllInputSchema = z.object({
   query: z.string().trim().min(1).describe('Search text or item reference such as PRJ-12, REQ-7, T-42, DOC-3 or INC-12.'),
-  entity_types: z.array(AiSearchEntityTypeSchema).optional().describe('Optional entity families to search. All readable families by default.'),
+  entity_types: z.array(AiSearchAllEntityTypeSchema).optional().describe('Optional entity families to search. All readable families by default.'),
   limit: z.number().int().min(1).max(100).default(25)
     .describe('Maximum number of results (default 25, max 100). When `truncated` is true, more matches exist than returned: a narrower query or query_entities on one family finds them.'),
 });
@@ -382,7 +382,7 @@ export class AiToolRegistry {
               families_not_read: unreadFamilyLines(
                 await readAiScreenLanguage(context.manager, context.tenantId, context.userId),
                 await this.policy.adminFamiliesGap(context, context.manager),
-                { reports: await this.policy.canReadEntityType(context, 'chargeback', context.manager) },
+                await unreadFamiliesReachOf(this.policy, context, context.manager),
               ),
             };
             if (input.entity_type !== 'budget_lines') return description;

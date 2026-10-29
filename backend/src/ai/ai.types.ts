@@ -90,8 +90,9 @@ export const AI_SEARCH_ENTITY_TYPES = [
  * `query/ai-data-access.query.ts`) is listed only: a row names a person, whose access is in their
  * users detail. `chargeback` and `chargeback_lines` (Reporting › Global and Company chargeback,
  * `query/ai-chargeback.query.ts`) are listed only: their rows are computed by the report.
- * `cost_centers` (Master data › Cost centers, `query/ai-cost-centers.query.ts`) is not searched
- * either; a node has a detail (its page).
+ * `cost_centers` (Master data › Cost centers, `query/ai-cost-centers.query.ts`),
+ * `working_day_calendars` and `analytics_axes` have no search index: `search_all` searches them by
+ * code and by name through their reads (`AI_SEARCH_REFERENCE_ENTITY_TYPES`); each has a detail.
  * `exchange_rates` (the rate matrix and the currency settings, `query/ai-exchange-rates.query.ts`)
  * is listed only: a rate is a cell of a year's set, not a record.
  */
@@ -153,6 +154,19 @@ export function aiSearchEntityTypeOfIndexRow(indexEntityType: string): AiSearchE
 }
 
 export const AiSearchEntityTypeSchema = z.enum(AI_SEARCH_ENTITY_TYPES);
+
+/**
+ * The reference data `search_all` searches without an index, by code and by name, through the
+ * reads of their families (`AiQueryExecutor.searchReferenceData`): lists of a few dozen rows.
+ * The exchange rates are cells of a year's set, not records: they are not searched.
+ */
+export const AI_SEARCH_REFERENCE_ENTITY_TYPES = ['cost_centers', 'working_day_calendars', 'analytics_axes'] as const;
+export type AiSearchReferenceEntityType = (typeof AI_SEARCH_REFERENCE_ENTITY_TYPES)[number];
+
+/** The families `search_all` takes in `entity_types`: the indexed ones and the reference data. */
+export const AI_SEARCH_ALL_ENTITY_TYPES = [...AI_SEARCH_ENTITY_TYPES, ...AI_SEARCH_REFERENCE_ENTITY_TYPES] as const;
+export const AiSearchAllEntityTypeSchema = z.enum(AI_SEARCH_ALL_ENTITY_TYPES);
+export type AiSearchAllEntityType = z.infer<typeof AiSearchAllEntityTypeSchema>;
 
 export const AiQueryEntityTypeSchema = z.enum(AI_QUERY_ENTITY_TYPES);
 export const AiDetailEntityTypeSchema = z.enum(AI_DETAIL_ENTITY_TYPES);

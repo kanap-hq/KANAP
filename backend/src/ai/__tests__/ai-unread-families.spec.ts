@@ -5,8 +5,10 @@ import {
   AI_SCREEN_LABELS,
   AI_UNREAD_FAMILIES_SENTENCE,
   aiScreenLanguage,
+  notSearchedFamiliesAskedBy,
   readAiScreenLanguage,
   unreadFamiliesAskedBy,
+  unreadFamiliesReachOf,
   unreadFamiliesSentence,
   unreadFamilyLines,
 } from '../ai-unread-families';
@@ -23,7 +25,10 @@ function testWordsThatAskForAFamily() {
     ['calendrier des jours ouvrés', 'working-day calendars'],
     ['working-day calendar France', 'working-day calendars'],
     ['taux de change USD 2026', 'exchange rates'],
-    ['dimensions analytiques', 'analytics dimensions as records (their settings)'],
+    ['dimensions analytiques', 'analytics dimensions'],
+    ['taux EUR/USD', 'exchange rates'],
+    ['devise de reporting', 'exchange rates'],
+    ['EUR', 'exchange rates'],
     ['accès limité aux données', 'data access (which companies or cost centers a person is limited to)'],
     ['périmètre de données de Paul', 'data access (which companies or cost centers a person is limited to)'],
     ["journal d'audit", 'audit log'],
@@ -61,6 +66,9 @@ function testCommonWordsAskForNone() {
     'historique des modifications du fournisseur Acme',
     // "rôle" inside another word.
     'Contrôle qualité',
+    // A pair of words that is no currency pair.
+    'TCP/UDP',
+    'Europe',
   ]) {
     assert.deepEqual(families(query), [], `"${query}" asks for no unread family`);
   }
@@ -103,7 +111,9 @@ async function testScreensInThePersonsLanguage() {
   assert.match(unreadFamiliesSentence(null), /Quote a screen name exactly as given, never translated/);
   // The tool descriptions, shared with the MCP server, name the families and leave the screens to the results.
   assert.doesNotMatch(AI_UNREAD_FAMILIES_SENTENCE, /›/);
-  assert.match(AI_UNREAD_FAMILIES_SENTENCE, /cost centers; working-day calendars/);
+  // The reference data are families of these tools (Plaid L9): the sentence no longer lists them.
+  assert.doesNotMatch(AI_UNREAD_FAMILIES_SENTENCE, /cost centers;|working-day calendars|exchange rates|analytics dimensions/);
+  assert.match(AI_UNREAD_FAMILIES_SENTENCE, /^KANAP also holds what these tools do not read: data access/);
 
   // The profile's language, read in the tenant.
   const calls: unknown[][] = [];
@@ -174,8 +184,53 @@ function testTheChargebackFollowsTheReportingRight() {
   assert.match(AI_UNREAD_FAMILIES_SENTENCE, /chargeback by beneficiary company \(read for people with the Reporting right only\)/);
 }
 
+/**
+ * The reference data (Plaid L9): cost centers, working-day calendars and analytics dimensions are
+ * families read with the right of their page, and the exchange rates with the budget right. A
+ * person who has the right does not see them as unread; the rates, which search_all does not
+ * search, are said as such. A person without the right is told the right.
+ */
+async function testTheReferenceDataFollowTheirRights() {
+  const all = ['cost_centers', 'working_day_calendars', 'analytics_axes', 'exchange_rates'];
+  const reader = { reports: false, readable: all };
+  const lines = unreadFamilyLines('fr', 'right', reader);
+  for (const family of ['cost centers', 'working-day calendars', 'analytics dimensions', 'exchange rates']) {
+    assert.equal(lines.some((line) => line.startsWith(`${family} (`)), false, `${family} is read: ${lines.join('\n')}`);
+  }
+  assert.deepEqual(unreadFamiliesAskedBy('centre de coûts FR-TRV-600', 'fr', 'right', reader), []);
+  assert.deepEqual(unreadFamiliesAskedBy('taux de change 2026', 'fr', 'right', reader), []);
+  assert.doesNotMatch(unreadFamiliesSentence('fr', 'right', reader), /Centres de coûts|Calendriers|Dimensions analytiques|Devises/);
+  // The rates: read, not searched.
+  const rates = notSearchedFamiliesAskedBy('taux de change EUR', 'fr', reader);
+  assert.equal(rates.length, 1);
+  assert.equal(rates[0].family, 'exchange rates');
+  assert.equal(rates[0].where, 'Gestion budgétaire › Administration › Devises');
+  assert.equal(rates[0].note, 'The exchange rates are read by query_entities on exchange_rates, not searched by search_all.');
+  assert.deepEqual(notSearchedFamiliesAskedBy('centre de coûts Group IT', 'fr', reader), [], 'the cost centers are searched');
+  assert.deepEqual(notSearchedFamiliesAskedBy('taux de change', 'fr', { readable: [] }), [], 'without the right: not read, said so');
+
+  // Without the rights: unread, with the right that is missing.
+  const other = { reports: false, readable: [] as string[] };
+  const otherLines = unreadFamilyLines('en', 'right', other);
+  assert.ok(otherLines.includes('cost centers (Master data › Cost centers): The tools read it (the family cost_centers) for a person with the Cost centers right, which this person\'s role does not give.'), otherLines.join('\n'));
+  assert.ok(otherLines.some((line) => line.startsWith('working-day calendars (Master data › Working-day calendars): The tools read it (the family working_day_calendars) for a person with the Working-day calendars right,')));
+  assert.ok(otherLines.some((line) => line.startsWith('analytics dimensions (Master data › Analytics dimensions): The tools read it (the family analytics_axes) for a person with the Analytics right,')));
+  assert.ok(otherLines.some((line) => line.startsWith('exchange rates (Budget management › Administration › Currencies): The tools read it (the family exchange_rates) for a person with the Budget right,')));
+  const asked = unreadFamiliesAskedBy('cost center FR-TRV-600', 'en', 'right', other)[0];
+  assert.match(asked.note, /^KANAP has cost centers; this server does not read them for this person\. They are on the screen Master data › Cost centers\. The tools read it \(the family cost_centers\) for a person with the Cost centers right, which this person's role does not give\./);
+  // Not known: the right is named.
+  assert.ok(unreadFamilyLines('en').includes('cost centers (Master data › Cost centers): The tools read it (the family cost_centers) for a person with the Cost centers right only.'));
+
+  // The probe: one per family, through the policy.
+  const probed: string[] = [];
+  const policy = { canReadEntityType: async (_context: unknown, type: string) => { probed.push(type); return type === 'cost_centers'; } };
+  assert.deepEqual(await unreadFamiliesReachOf(policy, {}, {}), { reports: false, readable: ['cost_centers'] });
+  assert.deepEqual(probed, ['chargeback', 'cost_centers', 'working_day_calendars', 'exchange_rates', 'analytics_axes']);
+}
+
 async function run() {
   testWordsThatAskForAFamily();
+  await testTheReferenceDataFollowTheirRights();
   testTheFamiliesOfTheAdministratorsOfUsers();
   testTheChargebackFollowsTheReportingRight();
   testCommonWordsAskForNone();

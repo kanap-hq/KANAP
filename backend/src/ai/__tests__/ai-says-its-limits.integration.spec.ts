@@ -12,7 +12,8 @@ import { addMonthsYmd } from '../../contracts/contract-terms';
 //   filters keep (all pages), with the currency, and `page_amount_totals`, those of the page
 //   returned (the ten largest lines and their total); the same for contracts, per currency.
 // - P2 q10b, q12, q20: search_all names the families it does not read (cost centers, data access,
-//   chargeback) when the words ask for them, and all of them when nothing matched;
+//   chargeback) when the words ask for them, and all of them when nothing matched; the reference
+//   data (Plaid L9) only to a person without their right, with the right;
 //   describe_entity_filters lists them. Their screens come in the person's language (profile),
 //   in the four languages when the profile sets none (essay of 2026-10-27).
 // - P3 q27: get_entity_context of an application carries RTO, RPO, recovery wave, last recovery
@@ -34,7 +35,7 @@ process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
 type Harness = { app: any; dataSource: DataSource; executor: any; aggregates: any; entities: any; tools: any };
-type UserKey = 'full' | 'appsOnly' | 'reporter';
+type UserKey = 'full' | 'appsOnly' | 'reporter' | 'referenceReader';
 type Seed = { tenantId: string; users: Record<UserKey, string>; contract: string };
 
 const YEAR = new Date().getFullYear();
@@ -89,6 +90,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     full: await user('Full', await role('Readers', ['applications', 'budget', 'contracts', 'portfolio_projects'])),
     appsOnly: await user('Apps', await role('Applications only', ['applications'])),
     reporter: await user('Reporter', await role('Report readers', ['budget', 'reporting'])),
+    referenceReader: await user('Reference', await role('Reference data readers', ['budget', 'cost_centers', 'working_day_profiles', 'analytics'])),
   };
 
   // P3 q27: APP-8 with its recovery objectives, as on the demo tenant.
@@ -186,7 +188,8 @@ async function testUnreadFamilies(h: Harness, runner: QueryRunner, s: Seed) {
   assert.match(code.no_match_note, /may exist/);
   const named = await h.tools.execute(full, 'search_all', { query: 'centre de coûts FR-TRV-600' });
   assert.equal(named.not_read_here[0].family, 'cost centers');
-  assert.match(named.not_read_here[0].note, /^KANAP has cost centers; this server does not read them\. They are on the screen named, in the person's language, en: Master data › Cost centers; fr: Données de référence › Centres de coûts;/);
+  assert.match(named.not_read_here[0].note, /^KANAP has cost centers; this server does not read them for this person\. They are on the screen named, in the person's language, en: Master data › Cost centers; fr: Données de référence › Centres de coûts;/);
+  assert.match(named.not_read_here[0].note, /for a person with the Cost centers right, which this person's role does not give/);
 
   // A French profile: the screens as the French menus name them (P2 q10b, q12, q20).
   await runner.query(`UPDATE users SET locale = 'fr' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.users.full]);
@@ -218,6 +221,17 @@ async function testUnreadFamilies(h: Harness, runner: QueryRunner, s: Seed) {
   const reporterFilters = await h.tools.execute(reporter, 'describe_entity_filters', { entity_type: 'budget_lines' });
   assert.equal(reporterFilters.families_not_read.some((line: string) => line.startsWith('chargeback by beneficiary company')), false);
   assert.ok(described.families_not_read.some((line: string) => line.startsWith('chargeback by beneficiary company') && /Reporting right, which this person's role does not give/.test(line)));
+  // A reader of the reference data (Plaid L9): read, so not named as unread; the rates are not searched.
+  const referenceReader = ctx(runner, s, 'referenceReader');
+  const none = await h.tools.execute(referenceReader, 'search_all', { query: 'FR-TRV-600' });
+  assert.equal(none.items.length, 0);
+  assert.equal(none.families_not_read.some((line: string) => /^(cost centers|working-day calendars|analytics dimensions|exchange rates) \(/.test(line)), false, none.families_not_read.join('\n'));
+  const rates = await h.tools.execute(referenceReader, 'search_all', { query: 'taux de change 2026' });
+  assert.equal(rates.not_searched_here[0].family, 'exchange rates');
+  assert.equal(rates.not_read_here, undefined);
+  const referenceFilters = await h.tools.execute(referenceReader, 'describe_entity_filters', { entity_type: 'budget_lines' });
+  assert.equal(referenceFilters.families_not_read.some((line: string) => line.startsWith('cost centers (')), false);
+  assert.ok(described.families_not_read.some((line: string) => line.startsWith('cost centers (') && /Cost centers right, which this person's role does not give/.test(line)));
   const tools = await h.tools.listAvailableTools(full);
   const searchTool = tools.find((tool: any) => tool.name === 'search_all');
   assert.match(searchTool.description, /no proof that such a record does not exist/);

@@ -10,6 +10,9 @@ import {
 } from '../knowledge/document-entity-visibility';
 import {
   AI_SEARCH_ENTITY_TYPES,
+  AI_SEARCH_REFERENCE_ENTITY_TYPES,
+  type AiSearchAllEntityType,
+  type AiSearchReferenceEntityType,
   aiSearchEntityTypeOfIndexRow,
   searchIndexEntityTypesFor,
   AiEntityCommentDto,
@@ -50,10 +53,13 @@ import {
 import { resolveAiApplicationsReach } from './query/ai-technologies.query';
 import { classificationLabels } from '../applications/services/application-classification';
 import { readClassificationCatalog } from './ai-classification-catalog.util';
+import { AiQueryExecutor } from './query/ai-query.executor';
 import {
   asksForUnreadFamily,
+  notSearchedFamiliesAskedBy,
   readAiScreenLanguage,
   unreadFamiliesAskedBy,
+  unreadFamiliesReachOf,
   unreadFamilyLines,
   type AiAdminFamiliesGap,
   type AiUnreadFamiliesReach,
@@ -104,6 +110,33 @@ type RankedSearchResult = {
   items: Array<AiEntitySummaryDto & { _score: number }>;
   total: number;
 };
+
+/**
+ * The reference data `search_all` found (`AI_SEARCH_REFERENCE_ENTITY_TYPES`), scored on the scale
+ * of the index: an exact code or name at the rank of a reference (4), a part of one at the rank of
+ * a label (3). `types` the families searched, `failed` those that could not be.
+ */
+type ReferenceSearchHits = RankedSearchResult & {
+  types: AiSearchReferenceEntityType[];
+  failed: Array<{ type: AiSearchReferenceEntityType; message: string }>;
+};
+
+/** At most this many reference data rows per family in one search. */
+const REFERENCE_SEARCH_LIMIT_PER_FAMILY = 5;
+
+const REFERENCE_FAMILY_WORDS: Record<AiSearchReferenceEntityType, string> = {
+  cost_centers: 'cost centers',
+  working_day_calendars: 'working-day calendars',
+  analytics_axes: 'analytics dimensions',
+};
+
+/** The rows of one page, the index's and the reference data's, by score; the index first on a tie. */
+function mergeByScore<T extends { _score: number }>(indexed: T[], reference: T[]): T[] {
+  return [...indexed, ...reference]
+    .map((item, index) => ({ item, index }))
+    .sort((left, right) => (right.item._score - left.item._score) || (left.index - right.index))
+    .map((entry) => entry.item);
+}
 
 type ContextActivityRow = {
   type: string | null;
@@ -487,9 +520,11 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
 };
 
 /**
- * A search says what it could not look in: the unread families its words ask for (cost centers,
- * chargeback...), and every unread family when nothing matched, so that no match never reads as
- * "does not exist". Their screens are named in the person's language (`language`, null: all four).
+ * A search says what it could not look in: the unread families its words ask for (chargeback, a
+ * family the person lacks the right of...), the families read elsewhere that it does not search
+ * (`not_searched_here`: the exchange rates), and every unread family when nothing matched, so that
+ * no match never reads as "does not exist". Their screens are named in the person's language
+ * (`language`, null: all four).
  */
 function withUnreadFamilies<T extends { items: unknown[] }>(
   result: T,
@@ -499,13 +534,16 @@ function withUnreadFamilies<T extends { items: unknown[] }>(
   reach: AiUnreadFamiliesReach | undefined,
 ): T & {
   not_read_here?: ReturnType<typeof unreadFamiliesAskedBy>;
+  not_searched_here?: ReturnType<typeof notSearchedFamiliesAskedBy>;
   families_not_read?: string[];
   no_match_note?: string;
 } {
   const asked = unreadFamiliesAskedBy(query, language, gap, reach);
+  const notSearched = notSearchedFamiliesAskedBy(query, language, reach);
   return {
     ...result,
     ...(asked.length ? { not_read_here: asked } : {}),
+    ...(notSearched.length ? { not_searched_here: notSearched } : {}),
     ...(result.items.length === 0
       ? {
         families_not_read: unreadFamilyLines(language, gap, reach),
@@ -556,6 +594,8 @@ export class AiEntityService {
     /** The technology sections of the contexts (lot C2b); absent, they are left out. */
     @Optional() private readonly technologyLinks?: TechnologyLinksService,
     @Optional() private readonly technologyReach?: TechnologyReachService,
+    /** The reads of the reference data `search_all` searches without an index; absent, they are not searched. */
+    @Optional() private readonly queryExecutor?: AiQueryExecutor,
   ) {
     // Absent, the technology sections are left out: say so once, at start.
     if (!technologyLinks) this.logger.warn('TechnologyLinksService is not injected: the asset and application contexts carry no technology section.');
@@ -2086,21 +2126,79 @@ export class AiEntityService {
     context: AiExecutionContextWithManager,
     input: {
       query: string;
-      entity_types?: AiSearchEntityType[];
+      entity_types?: AiSearchAllEntityType[];
       limit?: number;
       offset?: number;
     },
   ) {
+    // The indexed families and the reference data the request names; every one by default.
+    const named = input.entity_types && input.entity_types.length > 0 ? input.entity_types : null;
+    const isReference = (type: string): type is AiSearchReferenceEntityType =>
+      (AI_SEARCH_REFERENCE_ENTITY_TYPES as readonly string[]).includes(type);
+    const indexed = named
+      ? named.filter((type): type is AiSearchEntityType => !isReference(type))
+      : [...AI_SEARCH_ENTITY_TYPES] as AiSearchEntityType[];
+    const reference = (named ?? AI_SEARCH_REFERENCE_ENTITY_TYPES).filter(isReference);
+    const hits = await this.searchReferenceFamilies(context, reference, input.query);
     const result = aiSearchIndexEnabled()
-      ? await this.searchAllIndexed(context, input)
-      : await this.searchAllLegacy(context, input);
+      ? await this.searchAllIndexed(context, input, indexed, hits)
+      : await this.searchAllLegacy(context, input, indexed, hits);
     // The profile's language, and whether the person reads the families of the administrators of
-    // users and the chargeback reports, are read only when the answer names an unread family.
+    // users, the chargeback reports and the reference data, are read only when the answer names an
+    // unread family.
     const namesUnread = result.items.length === 0 || asksForUnreadFamily(input.query);
     const language = namesUnread ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId) : null;
     const gap = namesUnread ? await this.policy.adminFamiliesGap(context, context.manager) : undefined;
-    const reach = namesUnread ? { reports: await this.policy.canReadEntityType(context, 'chargeback', context.manager) } : undefined;
+    const reach = namesUnread ? await unreadFamiliesReachOf(this.policy, context, context.manager) : undefined;
     return withUnreadFamilies(result, input.query, language, gap, reach);
+  }
+
+  /**
+   * The cost centers, working-day calendars and analytics dimensions among `types` the person reads
+   * whose code or name holds the query, through the reads of their families
+   * (`AiQueryExecutor.searchReferenceData`), at most `REFERENCE_SEARCH_LIMIT_PER_FAMILY` each. Each
+   * family runs in its own savepoint: one that fails is named in `failed` and the others still answer.
+   */
+  private async searchReferenceFamilies(
+    context: AiExecutionContextWithManager,
+    types: AiSearchReferenceEntityType[],
+    query: string,
+  ): Promise<ReferenceSearchHits> {
+    const hits: ReferenceSearchHits = { items: [], total: 0, types: [], failed: [] };
+    if (!this.queryExecutor || types.length === 0 || !String(query ?? '').trim()) return hits;
+    const readable = await this.policy.listReadableEntityTypes(context, types, context.manager) as AiSearchReferenceEntityType[];
+    let counter = 0;
+    for (const type of readable) {
+      // A fixed prefix and a counter: an SQL identifier never takes a value from the request.
+      const savepoint = `reference_search_sp_${++counter}`;
+      // Outside a transaction a savepoint is refused, and a failed read poisons nothing.
+      const isolated = await context.manager.query(`SAVEPOINT ${savepoint}`).then(() => true, () => false);
+      try {
+        const found = await this.queryExecutor.searchReferenceData(context, type, query, REFERENCE_SEARCH_LIMIT_PER_FAMILY);
+        if (isolated) await context.manager.query(`RELEASE SAVEPOINT ${savepoint}`);
+        hits.types.push(type);
+        hits.total += found.total;
+        hits.items.push(...found.items.map(({ item, exact }) => ({ ...item, _score: exact ? 4 : 3 })));
+      } catch (error) {
+        if (isolated) {
+          await context.manager.query(`ROLLBACK TO SAVEPOINT ${savepoint}`)
+            .then(() => context.manager.query(`RELEASE SAVEPOINT ${savepoint}`))
+            .catch(() => undefined);
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        hits.failed.push({ type, message });
+        this.logger.warn(`searchAll: ${type} failed for query "${query}": ${message}`);
+      }
+    }
+    return hits;
+  }
+
+  /** What a search says of the reference data it could not search, in words. */
+  private referenceSearchWarnings(hits: ReferenceSearchHits): Array<{ entity_type: AiSearchAllEntityType; message: string }> {
+    return hits.failed.map((entry) => ({
+      entity_type: entry.type,
+      message: `The ${REFERENCE_FAMILY_WORDS[entry.type]} could not be searched (${entry.message}): a match may exist, and query_entities on ${entry.type} with q lists them.`,
+    }));
   }
 
   /**
@@ -2114,27 +2212,30 @@ export class AiEntityService {
     context: AiExecutionContextWithManager,
     input: {
       query: string;
-      entity_types?: AiSearchEntityType[];
       limit?: number;
       offset?: number;
     },
+    requested: AiSearchEntityType[],
+    hits: ReferenceSearchHits,
   ) {
-    const requested = input.entity_types && input.entity_types.length > 0
-      ? input.entity_types
-      : [...AI_SEARCH_ENTITY_TYPES] as AiSearchEntityType[];
-    const allowed = await this.policy.listReadableEntityTypes(context, requested, context.manager) as AiSearchEntityType[];
-    if (allowed.length === 0) {
-      return { items: [], total: 0, complete: false, entity_types: [] as AiSearchEntityType[] };
+    const allowed = requested.length > 0
+      ? await this.policy.listReadableEntityTypes(context, requested, context.manager) as AiSearchEntityType[]
+      : [];
+    if (allowed.length === 0 && hits.types.length === 0 && hits.failed.length === 0) {
+      return { items: [], total: 0, complete: false, entity_types: [] as AiSearchAllEntityType[] };
     }
 
     const limit = Math.min(Math.max(Number(input.limit) || 100, 1), 100);
     const offset = Math.min(Math.max(Number(input.offset) || 0, 0), 5000);
 
-    const { rows, total } = await this.runSearchIndexQuery(context, allowed, input.query, limit, offset);
-    const items = await this.withUserLookupOnly(context, rows.map((row) => {
-      const { _score, ...item } = this.searchIndexRowToSummary(row);
-      return item;
-    }));
+    const { rows, total: indexTotal } = allowed.length > 0
+      ? await this.runSearchIndexQuery(context, allowed, input.query, limit, offset)
+      : { rows: [] as any[], total: 0 };
+    const scored = rows.map((row) => this.searchIndexRowToSummary(row));
+    // The reference data joins the first page, at its rank among the index's rows.
+    const page = offset === 0 ? mergeByScore(scored, hits.items).slice(0, limit) : scored;
+    const items = await this.withUserLookupOnly(context, page.map(({ _score, ...item }) => item));
+    const total = indexTotal + hits.total;
     const truncated = offset + items.length < total;
 
     return {
@@ -2144,10 +2245,10 @@ export class AiEntityService {
       limit,
       returned: items.length,
       truncated,
-      complete: !truncated,
-      entity_types: allowed,
-      failed_entity_types: [] as AiSearchEntityType[],
-      warnings: [] as Array<{ entity_type: AiSearchEntityType; message: string }>,
+      complete: !truncated && hits.failed.length === 0,
+      entity_types: [...allowed, ...hits.types] as AiSearchAllEntityType[],
+      failed_entity_types: hits.failed.map((entry) => entry.type) as AiSearchAllEntityType[],
+      warnings: this.referenceSearchWarnings(hits),
     };
   }
 
@@ -2420,17 +2521,17 @@ export class AiEntityService {
     context: AiExecutionContextWithManager,
     input: {
       query: string;
-      entity_types?: AiSearchEntityType[];
       limit?: number;
       offset?: number;
     },
+    requested: AiSearchEntityType[],
+    hits: ReferenceSearchHits,
   ) {
-    const requested = input.entity_types && input.entity_types.length > 0
-      ? input.entity_types
-      : [...AI_SEARCH_ENTITY_TYPES] as AiSearchEntityType[];
-    const allowed = await this.policy.listReadableEntityTypes(context, requested, context.manager) as AiSearchEntityType[];
-    if (allowed.length === 0) {
-      return { items: [], total: 0, complete: false, entity_types: [] as AiSearchEntityType[] };
+    const allowed = requested.length > 0
+      ? await this.policy.listReadableEntityTypes(context, requested, context.manager) as AiSearchEntityType[]
+      : [];
+    if (allowed.length === 0 && hits.types.length === 0 && hits.failed.length === 0) {
+      return { items: [], total: 0, complete: false, entity_types: [] as AiSearchAllEntityType[] };
     }
 
     const limit = Math.min(Math.max(Number(input.limit) || 100, 1), 100);
@@ -2496,6 +2597,8 @@ export class AiEntityService {
       results.push(r);
     }
 
+    // The reference data, ranked with the others.
+    results.push({ items: hits.items, total: hits.total });
     const total = results.reduce((sum, result) => sum + (result.total || 0), 0);
     const items = results
       .flatMap((result) => result.items)
@@ -2520,13 +2623,16 @@ export class AiEntityService {
       limit,
       returned: items.length,
       truncated,
-      complete: !truncated && failedEntityTypes.length === 0,
-      entity_types: allowed,
-      failed_entity_types: failedTypeNames,
-      warnings: failedEntityTypes.map((entry) => ({
-        entity_type: entry.type,
-        message: `Search failed for ${entry.type}: ${entry.message}`,
-      })),
+      complete: !truncated && failedEntityTypes.length === 0 && hits.failed.length === 0,
+      entity_types: [...allowed, ...hits.types] as AiSearchAllEntityType[],
+      failed_entity_types: [...failedTypeNames, ...hits.failed.map((entry) => entry.type)] as AiSearchAllEntityType[],
+      warnings: [
+        ...failedEntityTypes.map((entry) => ({
+          entity_type: entry.type as AiSearchAllEntityType,
+          message: `Search failed for ${entry.type}: ${entry.message}`,
+        })),
+        ...this.referenceSearchWarnings(hits),
+      ],
     };
   }
 

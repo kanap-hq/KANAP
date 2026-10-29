@@ -40,6 +40,7 @@ import {
   AiEntitySummaryDto,
   AiExecutionContextWithManager,
   AiQueryEntityType,
+  AiSearchReferenceEntityType,
   AiQueryScope,
 } from '../ai.types';
 import { adaptFilters } from './ai-filter.adapter';
@@ -121,6 +122,7 @@ import { CostCentersService } from '../../cost-centers/cost-centers.service';
 import {
   aiCostCenterDetail,
   costCenterFilterValues,
+  filterAiCostCenters,
   listAiCostCenters,
   readAiCostCenterTree,
   type AiCostCenterRow,
@@ -1636,6 +1638,45 @@ export class AiQueryExecutor {
     if (!this.policy || !this.costCenters) throw new BadRequestException('The cost centers are not available.');
     await this.policy.assertEntityTypeReadRight(context, 'cost_centers', context.manager);
     return { services: { costCenters: this.costCenters }, opts: { manager: context.manager, tenantId: context.tenantId } };
+  }
+
+  /**
+   * The cost centers, working-day calendars or analytics dimensions whose code or name contains
+   * `query`, without case, for `search_all`: the family's own read and quick search (`q`), the
+   * right of its page checked as for query_entities. The path of a cost center does not count, so
+   * that a group's name does not bring back the whole group. A code or name equal to `query` comes
+   * first (`exact`); at most `limit` items, and `total` counts every match.
+   */
+  async searchReferenceData(
+    context: AiExecutionContextWithManager,
+    entityType: AiSearchReferenceEntityType,
+    query: string,
+    limit = 5,
+  ): Promise<{ items: Array<{ item: AiEntitySummaryDto; exact: boolean }>; total: number }> {
+    const q = String(query ?? '').trim();
+    if (!q) return { items: [], total: 0 };
+    let rows: Array<{ code: string; name: string; item: AiEntitySummaryDto }>;
+    if (entityType === 'cost_centers') {
+      const { services, opts } = await this.costCenterServices(context);
+      const found = await filterAiCostCenters(services, opts, { q });
+      rows = found.rows
+        .filter((row) => row.matched_on !== 'path')
+        .map((row) => ({ code: row.code, name: row.name, item: this.mapCostCenter(row) }));
+    } else if (entityType === 'working_day_calendars') {
+      const { services, opts } = await this.workingDayCalendarServices(context);
+      const found = await listAiWorkingDayCalendars(services, { q }, opts, true);
+      rows = found.items.map((row) => ({ code: row.code, name: row.name, item: this.mapWorkingDayCalendar(row) }));
+    } else {
+      const { services, opts } = await this.analyticsAxesServices(context);
+      const found = await listAiAnalyticsAxes(services, { q }, opts, true);
+      rows = found.items.map((row) => ({ code: row.code, name: row.name, item: this.mapAnalyticsAxis(row) }));
+    }
+    const needle = q.toLowerCase();
+    const matched = rows
+      .filter((row) => row.code.toLowerCase().includes(needle) || row.name.toLowerCase().includes(needle))
+      .map((row) => ({ item: row.item, exact: row.code.toLowerCase() === needle || row.name.toLowerCase() === needle }));
+    const ordered = [...matched.filter((row) => row.exact), ...matched.filter((row) => !row.exact)];
+    return { items: ordered.slice(0, limit), total: ordered.length };
   }
 
   /** A node of the tree of cost centers: its code is its reference, its name its label; no person id. */
