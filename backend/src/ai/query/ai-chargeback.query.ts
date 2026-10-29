@@ -28,7 +28,8 @@ import { compareText, numberMatch, paged, setMatch, textMatch } from './ai-suppo
  * screens opening on OPEX alone) and, for the lines, `company`. The service's warnings come back in
  * English words. Read with the reporting right, as the routes; a person in limited access gets the
  * service's own rules (global: the lines they read, here without the group total; company: refused
- * outside their company nodes, the lines they do not read named by their reference only).
+ * outside their company nodes, the lines they do not read named by their reference and title, as on
+ * the screen, with no link and no id).
  */
 
 export type AiChargebackColumn = 'budget' | 'review' | 'forecast' | 'actual' | 'landing';
@@ -44,12 +45,16 @@ export const AI_CHARGEBACK_ALLOCATION_METHODS: readonly AiChargebackAllocationMe
 
 /** A department row whose department no longer exists: the screen shows no name for it. */
 export const AI_CHARGEBACK_MISSING_DEPARTMENT = 'deleted department';
-export const AI_CHARGEBACK_YEAR_REFUSAL = 'The chargeback reads one year: give year as {"op": "eq", "value": 2026}.';
+/** A company's costs without a department, after its name: "Alpha › common costs". */
+export const AI_CHARGEBACK_COMMON_COSTS = 'common costs';
+/** The years a report reads, as the `year` argument of query_entities. */
+export const AI_CHARGEBACK_YEARS = { min: 1900, max: 3000 } as const;
+export const AI_CHARGEBACK_YEAR_REFUSAL = `The chargeback reads one year, from ${AI_CHARGEBACK_YEARS.min} to ${AI_CHARGEBACK_YEARS.max}: give year as {"op": "eq", "value": 2026}.`;
 export const AI_CHARGEBACK_COLUMN_REFUSAL = `The chargeback reads one column: give column as one of ${AI_CHARGEBACK_COLUMNS.join(', ')}.`;
 export const AI_CHARGEBACK_COMPANY_REQUIRED = 'chargeback_lines lists the lines charged to one company: give the company filter (its name).';
 export const AI_CHARGEBACK_WARNINGS_NOTE = 'Each warning names what these figures leave out or how a line was spread: repeat every warning in the answer, in the person\'s words.';
 export const AI_CHARGEBACK_LIMITED_NOTE = 'Within your access: the report adds up the shares of the budget lines your data access lets you read. The group total is not given, as on the screen.';
-export const AI_CHARGEBACK_LINES_LIMITED_NOTE = 'Every share charged to this company is listed, the lines outside your access included: those are named by their reference only (readable false, no link). The group total is not given, as on the screen.';
+export const AI_CHARGEBACK_LINES_LIMITED_NOTE = 'Every share charged to this company is listed, the lines outside your access included: those are named by their reference and title, as on the screen (readable false, no link). The group total is not given, as on the screen.';
 
 const NATURE_NOTES: Record<'opex' | 'capex' | 'both', string> = {
   opex: 'OPEX lines only.',
@@ -102,6 +107,7 @@ export type AiChargebackCompany = {
 };
 
 export type AiChargebackRow = {
+  /** Distinct per row and stable: nature, company, then the department or `common` (none on a company row). */
   key: string;
   level: AiChargebackLevel;
   company_id: string;
@@ -130,7 +136,7 @@ export type AiChargebackLineRow = {
   /** The line's id; null for a line the person does not read. */
   item_id: string | null;
   ref: string | null;
-  /** The line's name; null for a line the person does not read (named by `ref` only). */
+  /** The line's title, as the screen shows it, also for a line the person does not read. */
   line: string | null;
   nature: BudgetNature | null;
   allocation_method: string;
@@ -164,7 +170,8 @@ function yearOf(filters: Record<string, any> | undefined, fallback?: number | nu
   const model = filters?.year;
   if (model) {
     const value = Number(model.filter);
-    if (model.filterType !== 'number' || model.type !== 'equals' || !Number.isInteger(value)) {
+    if (model.filterType !== 'number' || model.type !== 'equals' || !Number.isInteger(value)
+      || value < AI_CHARGEBACK_YEARS.min || value > AI_CHARGEBACK_YEARS.max) {
       throw new BadRequestException(AI_CHARGEBACK_YEAR_REFUSAL);
     }
     return value;
@@ -174,7 +181,7 @@ function yearOf(filters: Record<string, any> | undefined, fallback?: number | nu
 }
 
 function setValues(model: any): string[] {
-  if (!model || model.filterType !== 'set' || !Array.isArray(model.values) || model.mode === 'exclude') return [];
+  if (!model || model.filterType !== 'set' || !Array.isArray(model.values)) return [];
   return Array.from(new Set(model.values.filter((value: unknown): value is string => typeof value === 'string')));
 }
 
@@ -386,11 +393,10 @@ export async function listAiChargeback(
   services: AiChargebackServices,
   query: Record<string, any>,
   opts: ReportOpts,
-  readAll = false,
 ): Promise<AiChargebackList<AiChargebackRow>> {
   const { rows, report } = await readChargebackRows(services, query, opts);
   const kept = sortedBy(filterRows(rows, query), query.sort, CHARGEBACK_SORTS, 'amount', chargebackSortValue);
-  return { ...paged(kept, query, readAll), report };
+  return { ...paged(kept, query), report };
 }
 
 /** The rows of the filtered report an aggregate adds up: grouped by nature, one report per nature. */
@@ -403,20 +409,29 @@ export async function chargebackAggregateRows(
   const { rows, report } = await readChargebackRows(services, query, opts, groupBy === 'nature');
   const kept = filterRows(rows, query);
   // A company's total row and its department rows hold the same amount twice: a group adds up
-  // the company rows, or the department and common rows when grouped by department, unless the
-  // `level` filter or a group by level says which.
-  if (groupBy === 'level' || query.filters?.level) {
-    const levels = new Set(kept.map((row) => row.level));
-    if (groupBy === 'level' || !(levels.has('company') && levels.size > 1)) return { rows: kept, report };
-  }
-  const departments = groupBy === 'department';
+  // the company rows, or the department and common rows when grouped by department, when a
+  // department is filtered or when the filters keep no company row (a `level` of department or
+  // common). A group by level gives each level once, and rows of one level only count nothing twice.
+  const levels = new Set(kept.map((row) => row.level));
+  if (groupBy === 'level' || levels.size <= 1) return { rows: kept, report };
+  const departments = groupBy === 'department' || query.filters?.department != null || !levels.has('company');
   return { rows: kept.filter((row) => (departments ? row.level !== 'company' : row.level === 'company')), report };
+}
+
+/**
+ * A row by its place in the report: "Alpha", "Alpha › IT", "Alpha › common costs". Two departments
+ * of the same name in two companies stay apart, as the rows of the screen.
+ */
+export function chargebackRowLabel(row: Pick<AiChargebackRow, 'level' | 'company' | 'department'>): string {
+  if (row.level === 'company') return row.company;
+  return `${row.company} › ${row.level === 'common' ? AI_CHARGEBACK_COMMON_COSTS : row.department ?? AI_CHARGEBACK_MISSING_DEPARTMENT}`;
 }
 
 export function chargebackGroupValue(row: AiChargebackRow, groupBy: string): string | null {
   switch (groupBy) {
     case 'company': return row.company;
-    case 'department': return row.department;
+    // Grouped by department, a company row (rows of that level only) has no department.
+    case 'department': return row.level === 'company' ? null : chargebackRowLabel(row);
     case 'level': return row.level;
     case 'nature': return row.nature;
     default: return null;
@@ -461,7 +476,8 @@ function lineRows(report: CompanyReport): AiChargebackLineRow[] {
       key: readable && item.versionId ? item.versionId : `${ref ?? 'line'}:${index}`,
       item_id: readable ? item.itemId : null,
       ref,
-      line: readable ? item.itemName : null,
+      // The title, as the screen's line column shows it ("BL-12 · name" for a line not read).
+      line: item.itemName,
       nature: item.nature,
       allocation_method: item.allocationMethod,
       amount: item.amount,

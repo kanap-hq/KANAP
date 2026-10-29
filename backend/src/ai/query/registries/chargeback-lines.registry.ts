@@ -8,7 +8,7 @@ import { CHARGEBACK_PARAMETER_FIELDS } from './chargeback.registry';
  * method, amount and share of the company's consumed amount; the result's `chargeback.company` gives
  * the company's figures and departments. A person in limited access reads it for the companies of
  * their company nodes only, every line charged to it listed, those outside their access by their BL
- * reference only (`readable` false, no link). Listed, filtered, grouped, sorted and paged in memory;
+ * reference and title, as the screen (`readable` false, no link, no id). Listed, filtered, grouped, sorted and paged in memory;
  * the `aggregate` block is descriptive and never reads its empty base table. Read with the reporting
  * right, as the screen.
  */

@@ -109,6 +109,7 @@ import {
 } from './ai-data-access.query';
 import { ChargebackReportService } from '../../spend/chargeback-report.service';
 import {
+  chargebackRowLabel,
   listAiChargeback,
   listAiChargebackLines,
   type AiChargebackLineRow,
@@ -1419,10 +1420,10 @@ export class AiQueryExecutor {
 
   /** A row of the global chargeback: a company, or one of its departments, named by both. */
   private mapChargeback(row: AiChargebackRow): AiEntitySummaryDto {
-    const where = row.level === 'company' ? row.company : `${row.company} › ${row.level === 'common' ? 'common costs' : row.department}`;
     return toEntitySummary('chargeback', {
-      id: row.department_id ?? row.company_id,
-      label: where ?? row.company,
+      // Distinct per row: a company's row and its common costs share the company.
+      id: row.key,
+      label: chargebackRowLabel(row),
       status: row.level,
       summary: null,
       created_at: null,
@@ -1449,8 +1450,8 @@ export class AiQueryExecutor {
   }
 
   /**
-   * A line charged to the company of the report. A line the person does not read keeps no id and no
-   * name: its BL reference names it, and it opens nothing.
+   * A line charged to the company of the report. A line the person does not read keeps no id: its
+   * BL reference and title name it, as the screen's line column, and it opens nothing.
    */
   private mapChargebackLine(row: AiChargebackLineRow): AiEntitySummaryDto {
     return toEntitySummary('chargeback_lines', {

@@ -28,10 +28,13 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 //   a line in a currency without a rate;
 // - the paid amount of each paying company equals budget_lines summed by paying_company on the same
 //   year and column (every line active);
-// - aggregates by company, department and nature;
+// - aggregates by company, department and nature; two departments of one name in two companies
+//   group apart ("company › department"), and a department filtered, grouped by company, gives the
+//   department rows of each company; each row its own stable id; a year out of 1900-3000 refused;
 // - without the reporting right: refused in words naming the screen;
 // - a person limited to one company: the global rows of their lines, no group total; their company
-//   report with the lines they do not read named by their BL reference only; another company refused
+//   report with the lines they do not read named by their BL reference and title, as the screen,
+//   with no id; another company refused
 //   with the service's sentence;
 // - another tenant's companies and lines never show.
 //
@@ -395,6 +398,78 @@ async function testPaidEqualsTheBudgetLines(): Promise<void> {
   console.log('ok - chargeback: paid by company equals budget_lines summed by paying company');
 }
 
+/**
+ * A department name in two companies (as "IT" in nine companies of the demo): grouped by department,
+ * each company's apart, with each company's common costs; filtered on that name and grouped by
+ * company or nature, the department rows. Each row has its own stable id; a year out of range is
+ * refused in words before any read.
+ */
+async function testDepartmentsOfTheSameName(): Promise<void> {
+  await inTransaction(async (runner) => {
+    const s = await seed(runner);
+    const name = `Dept D ${s.tag}`;
+    const twin = await insertId(runner, `INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, $3)`, [s.tenantId, s.bravo, name]);
+    await runner.query(`INSERT INTO department_metrics (tenant_id, department_id, fiscal_year, headcount) VALUES ($1, $2, $3, 4)`, [s.tenantId, twin, Y]);
+    const versionId = await seedLine(runner, s.tenantId, { number: 7, name: `CB line L7 ${s.tag}`, nature: 'opex', currency: 'EUR', planned: 400, payer: s.bravo, method: 'manual_pct' });
+    await runner.query(
+      `INSERT INTO spend_allocations (tenant_id, version_id, company_id, department_id, allocation_pct) VALUES ($1, $2, $3, $4, 100)`,
+      [s.tenantId, versionId, s.bravo, twin],
+    );
+    const { query, aggregates, service } = executors();
+    const ctx = context(runner, s, s.admin);
+    const report = await service.generateGlobal(Y, 'budget', s.tenantId, { manager: runner.manager, scope: 'all' });
+    const below = report.detailedRows.filter((row: any) => row.rowType !== 'company');
+    const pairs = (result: any) => result.groups.map((group: any) => [group.key, group.value]).sort();
+
+    const byDepartment: any = await aggregates.execute(ctx, { entity_type: 'chargeback', group_by: 'department', metric: 'amount', function: 'sum' });
+    assert.deepEqual(
+      pairs(byDepartment),
+      below.map((row: any) => [`${row.companyName} › ${row.departmentId ? row.departmentName : 'common costs'}`, row.amount]).sort(),
+      'one group per department of each company, and per company\'s common costs',
+    );
+    const keys = byDepartment.groups.map((group: any) => group.key);
+    assert.ok(keys.includes(`${s.alphaName} › ${name}`) && keys.includes(`${s.bravoName} › ${name}`), `the two departments named ${name} stay apart: ${keys}`);
+    assert.equal(keys.includes(null), false, 'no group of every company\'s common costs');
+
+    // The cost of that department by company: the department rows, not zero groups.
+    const named = below.filter((row: any) => row.departmentName === name);
+    assert.equal(named.length, 2);
+    const byCompany: any = await aggregates.execute(ctx, { entity_type: 'chargeback', group_by: 'company', metric: 'amount', function: 'sum', filters: { department: name } });
+    assert.deepEqual(pairs(byCompany), named.map((row: any) => [row.companyName, row.amount]).sort(), 'the department of each company');
+    const common: any = await aggregates.execute(ctx, { entity_type: 'chargeback', group_by: 'company', metric: 'amount', function: 'sum', filters: { level: ['common'] } });
+    assert.deepEqual(
+      pairs(common),
+      below.filter((row: any) => !row.departmentId).map((row: any) => [row.companyName, row.amount]).sort(),
+      'level common grouped by company: each company\'s common costs',
+    );
+    const opex = await service.generateGlobal(Y, 'budget', s.tenantId, { manager: runner.manager, scope: 'opex' });
+    const byNature: any = await aggregates.execute(ctx, { entity_type: 'chargeback', group_by: 'nature', metric: 'amount', function: 'sum', filters: { department: name } });
+    const opexNamed = opex.detailedRows.filter((row: any) => row.rowType !== 'company' && row.departmentName === name);
+    assert.equal(
+      byNature.groups.find((group: any) => group.key === 'opex')?.value,
+      round2(opexNamed.reduce((sum: number, row: any) => sum + row.amount, 0)),
+      'grouped by nature: the department rows of each nature',
+    );
+
+    // One id per row, the same on every read; a company's common costs named after it.
+    const listed: any = await query.execute(ctx, { entity_type: 'chargeback', limit: 50 });
+    const ids = listed.items.map((item: any) => item.id);
+    assert.equal(new Set(ids).size, ids.length, `one id per row: ${ids}`);
+    const again: any = await query.execute(ctx, { entity_type: 'chargeback', limit: 50 });
+    assert.deepEqual(again.items.map((item: any) => item.id), ids, 'stable');
+    assert.ok(listed.items.some((item: any) => item.label === `${s.alphaName} › common costs`));
+
+    // A year out of range: refused in words, the transaction intact.
+    for (const value of [-3, 10000]) {
+      const refused = await rejection(() => query.execute(ctx, { entity_type: 'chargeback', filters: { year: { op: 'eq', value } } }));
+      assert.equal(refused?.getStatus?.(), 400, String(refused?.message));
+      assert.match(String(refused?.message), /from 1900 to 3000/);
+    }
+    assert.ok((await query.execute(ctx, { entity_type: 'chargeback' })).total > 0, 'the transaction goes on');
+  });
+  console.log('ok - chargeback: departments of one name apart, a department by company, one id per row, the year bounded');
+}
+
 async function testReportingRight(): Promise<void> {
   await inTransaction(async (runner) => {
     const s = await seed(runner);
@@ -447,7 +522,7 @@ async function testLimitedPerson(): Promise<void> {
     assert.equal(grouped.data_access, 'limited');
     assert.equal(grouped.chargeback.report_total, null);
 
-    // Their company: every share charged to it, the lines they do not read by their reference only.
+    // Their company: every share charged to it, the lines they do not read by their reference and title.
     const company = await service.generateCompany(Y, 'budget', s.alpha, s.tenantId, { manager: runner.manager, scope: 'all' });
     const lines: any = await query.execute(ctx, { entity_type: 'chargeback_lines', filters: { company: s.alphaName } });
     assert.deepEqual(
@@ -457,16 +532,20 @@ async function testLimitedPerson(): Promise<void> {
     );
     const hidden = lines.items.filter((item: any) => item.metadata.readable === false);
     assert.deepEqual(hidden.map((item: any) => item.ref).sort(), ['BL-2', 'BL-3', 'BL-4'], 'the lines Alpha does not pay');
+    // As the screen's line column: the reference and the title, no link.
+    const { chargebackItemLabel } = require('../../spend/chargeback-report.tables');
+    const screen = new Map(company.items.map((row: any) => [`BL-${row.itemNumber}`, chargebackItemLabel(row)]));
     for (const item of hidden) {
       assert.equal(item.id, item.ref, `${item.ref}: no id`);
-      assert.equal(item.label, item.ref, `${item.ref}: named by its reference only`);
+      assert.equal(`${item.ref} · ${item.label}`, screen.get(item.ref), `${item.ref}: its reference and title, as the screen`);
     }
     for (const label of ['L2', 'L3', 'L4'] as const) {
-      const text = JSON.stringify(lines);
-      assert.ok(!text.includes(s.lines[label].name) && !text.includes(s.lines[label].id), `${label}: neither name nor id`);
+      const item = hidden.find((entry: any) => entry.ref === `BL-${s.lines[label].number}`);
+      assert.equal(item.label, s.lines[label].name, `${label}: its title`);
+      assert.ok(!JSON.stringify(lines).includes(s.lines[label].id), `${label}: no id`);
     }
     assert.equal(lines.chargeback.company.group_total, null, 'no group total');
-    assert.match(lines.chargeback.access_note, /named by their reference only/);
+    assert.match(lines.chargeback.access_note, /named by their reference and title, as on the screen/);
 
     // Another company: the service's sentence.
     const { DATA_ACCESS_CHARGEBACK_COMPANY_MESSAGE } = require('../../spend/chargeback-report.service');
@@ -479,7 +558,7 @@ async function testLimitedPerson(): Promise<void> {
       assert.equal(refused?.getStatus?.(), 403);
     }
   });
-  console.log('ok - chargeback: a limited person reads their lines, their company by reference, another company refused');
+  console.log('ok - chargeback: a limited person reads their lines, their company with the lines they do not read by reference and title, another company refused');
 }
 
 async function run(): Promise<void> {
@@ -493,6 +572,7 @@ async function run(): Promise<void> {
       ['global as the report', testGlobalAsTheReport],
       ['company as the report', testCompanyAsTheReport],
       ['paid equals the budget lines', testPaidEqualsTheBudgetLines],
+      ['departments of the same name', testDepartmentsOfTheSameName],
       ['reporting right', testReportingRight],
       ['limited person', testLimitedPerson],
     ] as Array<[string, () => Promise<void>]>) {
