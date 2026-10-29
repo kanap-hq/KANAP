@@ -29,6 +29,9 @@ import { seedMonths, seedVersion } from '../../spend/__tests__/round-inputs.fixt
 //   years without a rate named in `amounts_fx_missing_years`; a sum's amounts left out for lack
 //   of a rate named in `amounts_fx_missing` and in the note.
 // - A field flagged `sortable` is a sort field, and the other way around.
+// - The budget lines' consolidation account reaches the accounts (the engine's `cons_labels`) for
+//   a reader of accounts, in its filter, its sort and its group: the list engine receives the
+//   person's access, without which the field reads null for everyone.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -339,6 +342,28 @@ async function testEveryAdvertisedSortAndFilterApplies(harness: Harness, runner:
   assert.deepEqual(failures, [], `every advertised sort and filter applies:\n${failures.join('\n')}`);
 }
 
+/** The consolidation account reads the accounts for the administrator of the seed, never a null column. */
+async function testConsolidationReadsTheAccounts(harness: Harness, runner: QueryRunner, seed: Seed) {
+  const ctx = context(runner, seed);
+  const filtered = await runQuery(runner, harness.executor, ctx, { entity_type: 'budget_lines', filters: { consolidation_account: ['[601] Software'] } });
+  assert.equal(filtered.error, null, `the filter runs (${filtered.error})`);
+  assert.ok(filtered.sql.includes('cons_labels'), 'the filter reads the consolidation accounts');
+  const sorted = await runQuery(runner, harness.executor, ctx, { entity_type: 'budget_lines', sort: { field: 'consolidation_account', direction: 'asc' } });
+  assert.ok(sorted.sql.includes('cons_labels'), 'the sort reads them');
+  const statements: string[] = [];
+  const original = runner.query.bind(runner);
+  (runner as any).query = (sql: string, params?: unknown[], ...rest: unknown[]) => {
+    statements.push(sql);
+    return original(sql, params as any[], ...(rest as []));
+  };
+  try {
+    await harness.aggregates.execute(ctx, { entity_type: 'budget_lines', group_by: 'consolidation_account' });
+  } finally {
+    (runner as any).query = original;
+  }
+  assert.ok(statements.some((sql) => sql.includes('cons_labels')), 'the group reads them');
+}
+
 async function testCreatedAtOrderOnSeededRows(harness: Harness, runner: QueryRunner, seed: Seed) {
   const ctx = context(runner, seed);
   for (const [entityType, { older, newer }] of Object.entries(seed.rows)) {
@@ -508,6 +533,7 @@ async function run() {
       const seed = await seedTenant(runner);
       await testEveryAdvertisedSortAndFilterApplies(harness, runner, seed);
       await testEveryFilterShapeIsAccepted(harness, runner, seed);
+      await testConsolidationReadsTheAccounts(harness, runner, seed);
       await testCreatedAtOrderOnSeededRows(harness, runner, seed);
       await testUnknownSortIsReported(harness, runner, seed);
       await testPageSizes(harness, runner, seed);

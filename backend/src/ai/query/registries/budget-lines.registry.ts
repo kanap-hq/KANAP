@@ -90,6 +90,19 @@ export const budgetLinesRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: true,
     },
+    consolidation_account: {
+      ai: 'consolidation_account',
+      grid: 'account_consolidation_label',
+      type: 'set',
+      description: 'Consolidation account of the line\'s account, as the Consolidation accounts report groups the lines: "[number] name" (or the number or the name alone). '
+        + 'The accounts that share a consolidation number make one consolidation account, under one name. '
+        + 'null is a line whose account has no consolidation account, or a line without an account: call that group "without a consolidation account". '
+        + 'Read with the right on accounts, as the report: describe_entity_filters names it in `fields_withheld` for a person without that right.',
+      dynamic: true,
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+    },
     owner_it: {
       ai: 'owner_it',
       grid: 'owner_it_name',
@@ -245,6 +258,7 @@ export const budgetLinesRegistry: AiEntityFilterRegistry = {
     supplier: 'supplier_name',
     paying_company: 'paying_company_name',
     account: 'account_display',
+    consolidation_account: 'account_consolidation_label',
     owner_it: 'owner_it_name',
     owner_business: 'owner_business_name',
     analytics_category: 'analytics_category_name',

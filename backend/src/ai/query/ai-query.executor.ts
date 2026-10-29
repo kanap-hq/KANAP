@@ -67,6 +67,7 @@ import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { aiAmountsCurrency } from './ai-amounts-currency.util';
 import { aiDataAccessNote } from './ai-data-access-note.util';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
+import { compareNullableText } from '../../common/list-engine/sql-fragments';
 import type { BudgetListAccess } from '../../spend/budget-list/budget-list.runtime';
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
 import { hiddenContractLineCount } from '../../contracts/contract-relations';
@@ -422,12 +423,17 @@ function withDetailAiKeys(row: Record<string, any> | undefined, registry: AiEnti
   return output;
 }
 
-/** The descriptive fields both budget item types share, for the registry resolved for the tenant. */
-function budgetItemMetadata(row: any, registry: AiEntityFilterRegistry): AiEntityMetadata {
+/**
+ * The descriptive fields both budget item types share, for the registry resolved for the tenant.
+ * `consolidation`: each line's consolidation account (`consolidationLabels`), for a registry that
+ * holds the field (a person who reads the accounts).
+ */
+function budgetItemMetadata(row: any, registry: AiEntityFilterRegistry, consolidation?: Map<string, string | null>): AiEntityMetadata {
   return {
     supplier: scalar(row.supplier_name),
     paying_company: scalar(row.paying_company_name ?? row.company_name),
     account: scalar(row.account_display),
+    ...(registry.fields.consolidation_account ? { consolidation_account: consolidation?.get(row.id) ?? null } : {}),
     owner_it: scalar(row.owner_it_name),
     owner_business: scalar(row.owner_business_name),
     analytics_category: registry.fields.analytics_category?.nature && registry.fields.analytics_category.nature !== row.nature
@@ -934,7 +940,7 @@ export class AiQueryExecutor {
    * A budget line of either nature, in the native shape of the unified list: `product_name` is
    * the title, `description` the description, and `nature` says which nature the line is.
    */
-  private mapBudgetLine(row: any, registry: AiEntityFilterRegistry): AiEntitySummaryDto {
+  private mapBudgetLine(row: any, registry: AiEntityFilterRegistry, consolidation?: Map<string, string | null>): AiEntitySummaryDto {
     const anchorYear = new Date().getFullYear();
     const summary = row.description
       ?? ([row.supplier_name, row.paying_company_name, row.account_display].filter(Boolean).join(' | ') || null);
@@ -949,7 +955,7 @@ export class AiQueryExecutor {
       updated_at: row.updated_at ?? null,
       metadata: {
         nature: scalar(row.nature),
-        ...budgetItemMetadata(row, registry),
+        ...budgetItemMetadata(row, registry, consolidation),
         budget_anchor_year: anchorYear,
         ...budgetAmountMetadata(row, anchorYear),
       },
@@ -1809,6 +1815,46 @@ export class AiQueryExecutor {
   }
 
   /**
+   * The consolidation account of each line of `rows`, as the list engine labels it for the
+   * Consolidation accounts report (`account_consolidation_label`: one label per consolidation
+   * number, null without one), in one statement on their ids. Nothing when the registry holds no
+   * such field (a person who does not read the accounts).
+   */
+  private async consolidationLabels(
+    context: AiExecutionContextWithManager,
+    rows: any[],
+    registry: AiEntityFilterRegistry,
+    access: BudgetListAccess,
+  ): Promise<Map<string, string | null> | undefined> {
+    if (!registry.fields.consolidation_account) return undefined;
+    const ids = rows.map((row) => row?.id).filter((id): id is string => typeof id === 'string');
+    if (!ids.length) return new Map();
+    const result = await this.budgetLines.summaryAggregate(
+      { filters: { id: { filterType: 'set', values: ids } }, includeDisabled: true },
+      { groupBy: ['id', registry.fields.consolidation_account.grid], measures: [] },
+      { manager: context.manager, access },
+    );
+    return new Map(result.groups.map((group: { keys: Array<string | null> }) => [String(group.keys[0]), group.keys[1] ?? null]));
+  }
+
+  /**
+   * The consolidation accounts of the tenant's budget lines (every line, as the other values), in
+   * text order with null (a line without one) last: one aggregate statement grouped by the label.
+   */
+  private async consolidationValues(
+    context: AiExecutionContextWithManager,
+    grid: string,
+    access: BudgetListAccess,
+  ): Promise<Array<string | null>> {
+    const result = await this.budgetLines.summaryAggregate(
+      { includeDisabled: true },
+      { groupBy: [grid], measures: [] },
+      { manager: context.manager, access },
+    );
+    return result.groups.map((group: { keys: Array<string | null> }) => group.keys[0] ?? null).sort(compareNullableText);
+  }
+
+  /**
    * The amounts of every budget line the query keeps, all pages, as the list footer computes them
    * (`summaryTotals`, same filters and quick search): the total an answer quotes.
    */
@@ -2038,13 +2084,14 @@ export class AiQueryExecutor {
         },
         { manager: context.manager, access },
       );
+      const consolidation = await this.consolidationLabels(context, result.items || [], registry, access);
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
       // The list has no cap: the total is every matching line of either nature.
       const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
-        items: (result.items || []).map((row: any) => this.mapBudgetLine(row, registry)),
+        items: (result.items || []).map((row: any) => this.mapBudgetLine(row, registry, consolidation)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -3265,7 +3312,8 @@ export class AiQueryExecutor {
       const registry = await resolveAiEntityRegistry(context, entityType, this.readProbe(context));
       // The id, not the reference the caller may have given (`get` accepts both).
       Object.assign(row, await this.loadBudgetLineDeepDetail(context, row.id as string, row.nature, registry));
-      return this.toDetailResult(this.mapBudgetLine(row, registry), row);
+      const consolidation = await this.consolidationLabels(context, [row], registry, await aiBudgetListAccess(this.policy, context));
+      return this.toDetailResult(this.mapBudgetLine(row, registry, consolidation), row);
     }
 
     if (entityType === 'contracts') {
@@ -3753,6 +3801,8 @@ export class AiQueryExecutor {
     const fieldsIgnored = new Set<string>();
     const dynamicFieldMap = new Map<string, string[]>();
 
+    // The requested fields the person may not read, with the reason.
+    const withheld = (registry.withheldFields ?? []).filter((entry) => requestedFields.includes(entry.field));
     for (const fieldName of requestedFields) {
       const field = registry.fields[fieldName];
       if (!field || field.discoverable !== true) {
@@ -3777,6 +3827,7 @@ export class AiQueryExecutor {
       return {
         values,
         fields_ignored: ignoredFields,
+        ...(withheld.length ? { fields_withheld: withheld } : {}),
         total: requestedFields.length,
         returned: Object.keys(values).length,
         truncated: false,
@@ -3838,10 +3889,11 @@ export class AiQueryExecutor {
         accessScope,
       }) as any;
     } else if (input.entity_type === 'budget_lines') {
-      raw = await this.budgetLines.summaryFilterValues(query, {
-        manager: context.manager,
-        access: await aiBudgetListAccess(this.policy, context),
-      }) as any;
+      const access = await aiBudgetListAccess(this.policy, context);
+      raw = await this.budgetLines.summaryFilterValues(query, { manager: context.manager, access }) as any;
+      // The consolidation account is no column of the list: its values are the engine's labels of the lines.
+      const consolidation = registry.fields.consolidation_account?.grid;
+      if (consolidation && dynamicFieldMap.has(consolidation)) raw[consolidation] = await this.consolidationValues(context, consolidation, access);
     } else if (input.entity_type === 'contracts') {
       raw = await this.contracts.listFilterValues(query, {
         manager: context.manager,
@@ -3925,6 +3977,7 @@ export class AiQueryExecutor {
     return {
       values,
       fields_ignored: ignoredFields,
+      ...(withheld.length ? { fields_withheld: withheld } : {}),
       total: requestedFields.length,
       returned: Object.keys(values).length,
       truncated: false,

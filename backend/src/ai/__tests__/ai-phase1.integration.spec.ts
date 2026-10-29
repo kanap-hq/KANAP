@@ -4096,7 +4096,7 @@ async function testAiQueryExecutorBudgetLinesExposeRelativeYearlyTotals() {
     // The footer totals of the list (`amount_totals`), not under test here.
     summaryTotals: async () => ({ reportingCurrency: 'EUR', fxMissing: [] }),
     // The line totals (`y_budget_staff_cost`...), not under test here.
-    summaryAggregate: async () => ({ total: { count: 0, values: {}, unknown: {} } }),
+    summaryAggregate: async () => ({ groups: [], total: { count: 0, values: {}, unknown: {} } }),
     summary: async (query: any) => {
       summaryCalls.push(query);
       return {
@@ -4153,7 +4153,8 @@ async function testAiQueryExecutorBudgetLinesExposeRelativeYearlyTotals() {
     {} as any, // incidents
     {} as any, // incidentRecords
     {} as any, // policy
-    {} as any, // technologies
+    // The constructor's policy (position 23; the labels above lag the constructor by one).
+    { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) } as any,
   );
 
   const result = await executor.execute(

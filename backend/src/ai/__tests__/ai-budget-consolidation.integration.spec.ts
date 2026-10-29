@@ -3,6 +3,10 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
+import { consolidationRequest, readConsolidation, type ColumnFilters } from '../../spend/reports/shared/reportAggregates';
+import { adaptFilters } from '../query/ai-filter.adapter';
+import { describeAiEntityFilters } from '../query/ai-filter-description.util';
+import { getAiEntityRegistry, resolveAiEntityRegistry } from '../query/registries';
 
 // The budget lines of Plaid and the MCP server read through the list engine with the person's
 // access, as the screens pass it (lot L8 A of the Plaid pass), against the database:
@@ -10,7 +14,18 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   from the person's rights (`AiPolicyService.effectiveAccess`): readers of accounts read the
 //   consolidation fields, the others do not;
 // - nothing else changes: an aggregate, a list (items and totals) and filter values on today's
-//   fields give the same results with the access as without it.
+//   fields give the same results with the access as without it;
+// - `consolidation_account`, the consolidation account of the line's account: aggregate_entities
+//   grouped by it equals the Consolidation accounts report (its own request and reader,
+//   `consolidationRequest` and `readConsolidation`, run on the same lines), without and with a
+//   filter, two accounts of one consolidation number in one group, the lines without one in the
+//   null group, the amounts of two currencies converted as the report converts them;
+// - the field filters, sorts, lists its values and shows on each listed line;
+// - without the right on accounts the field is absent from the registry, the description, the
+//   groups, the filters, the filter values and the items, and the description and the refusals say
+//   why; a reader of budget and accounts reads it;
+// - a person limited to one company adds up the consolidation accounts of that company's lines,
+//   as the report filtered on it, said within their access.
 // @database-spec: boots the application context, so run-ci-tests.js runs this file in a database lane.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -80,7 +95,7 @@ const LINES: Line[] = [
 
 type Seed = {
   tenantId: string;
-  users: { admin: string; budgetOnly: string; budgetAndAccounts: string };
+  users: { admin: string; budgetOnly: string; budgetAndAccounts: string; limited: string };
   companies: Record<'a' | 'b', { id: string; name: string }>;
   lines: Record<string, string>;
 };
@@ -124,16 +139,23 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     `INSERT INTO currency_rate_sets (tenant_id, fiscal_year, base_currency, rates) VALUES ($1, $2, 'EUR', $3::jsonb)`,
     [tenantId, Y, JSON.stringify({ USD: USD_RATE })],
   );
-  const users = {
-    admin: await seedUser(runner, tenantId, await seedRole(runner, tenantId, 'Administrator', [])),
-    budgetOnly: await seedUser(runner, tenantId, await seedRole(runner, tenantId, 'Budget only', ['budget'])),
-    budgetAndAccounts: await seedUser(runner, tenantId, await seedRole(runner, tenantId, 'Budget and accounts', ['budget', 'accounts'])),
-  };
+  const budgetAndAccountsRole = await seedRole(runner, tenantId, 'Budget and accounts', ['budget', 'accounts']);
   const company = async (name: string) => ({
     id: await insertId(runner, `INSERT INTO companies (tenant_id, name, country_iso, city, status) VALUES ($1, $2, 'FR', 'Lyon', 'enabled')`, [tenantId, `${name} ${tag}`]),
     name: `${name} ${tag}`,
   });
   const companies = { a: await company('Company A'), b: await company('Company B') };
+  const users = {
+    admin: await seedUser(runner, tenantId, await seedRole(runner, tenantId, 'Administrator', [])),
+    budgetOnly: await seedUser(runner, tenantId, await seedRole(runner, tenantId, 'Budget only', ['budget'])),
+    budgetAndAccounts: await seedUser(runner, tenantId, budgetAndAccountsRole),
+    // Limited to company A, with the right on accounts.
+    limited: await seedUser(runner, tenantId, budgetAndAccountsRole, 'limited'),
+  };
+  await runner.query(
+    `INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, company_id, access) VALUES ($1, $2, 'company', $3, 'read')`,
+    [tenantId, users.limited, companies.a.id],
+  );
   const suppliers = {
     s1: await insertId(runner, `INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2)`, [tenantId, `Supplier one ${tag}`]),
     s2: await insertId(runner, `INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2)`, [tenantId, `Supplier two ${tag}`]),
@@ -252,19 +274,146 @@ async function testEngineAccess(harness: Harness, runner: QueryRunner, seed: See
   console.log('ok - every engine call receives the access; today\'s fields read the same');
 }
 
+/** What the report and the tools call the lines without a consolidation account, here. */
+const NONE = 'without a consolidation account';
+
+/**
+ * The Consolidation accounts report for Budget Y, read by its own functions on its own request
+ * (`POST /budget-lines/summary/aggregate`, both natures, a reader of accounts): `[label, amount]`
+ * per row in its order, and the total.
+ */
+async function reportRows(harness: Harness, runner: QueryRunner, filters: ColumnFilters = {}) {
+  const request = consolidationRequest({ years: [Y], metric: 'budget', excludedAccountIds: [], filters });
+  const answer = await harness.budgetLines.summaryAggregateRequest(request, { manager: runner.manager, access: { accounts: true } });
+  const read = readConsolidation([Y], answer, NONE);
+  return { rows: read.groups.map((group) => [group.label, group.values[Y]]), total: read.totals[Y] };
+}
+
+/** The AI aggregate by consolidation account, as the report's rows. */
+function aiRows(result: any) {
+  return { rows: result.groups.map((group: any) => [group.key ?? NONE, group.value]), total: result.overall.value };
+}
+
+const byConsolidation = (filters?: Record<string, unknown>) => ({
+  entity_type: 'budget_lines', group_by: 'consolidation_account', metric: 'y_budget', function: 'sum', ...(filters ? { filters } : {}),
+});
+
+async function testAsTheReport(harness: Harness, runner: QueryRunner, seed: Seed) {
+  const ctx = context(runner, seed, seed.users.admin);
+  const result = await harness.aggregates.execute(ctx, byConsolidation());
+  const report = await reportRows(harness, runner);
+  assert.equal(report.rows.length, 4, 'the report has four rows');
+  assert.deepEqual(aiRows(result), report, 'groups, order and overall equal the report');
+  assert.deepEqual(result.groups.map((group: any) => group.key), ['[610] Services', '[601] Software', 'Travel', null],
+    'one group per consolidation account (two accounts of 601 under one name), the lines without one under null');
+  assert.notEqual(result.groups[1].value, 1500, 'the USD line is converted, not added as is');
+  assert.equal(result.amounts_currency, 'EUR', 'the sum names its currency');
+  assert.deepEqual(result.amounts_fx_missing, [], 'no amount left out');
+  assert.match(result.amounts_currency_note, /EUR is the reporting currency/, 'the currency note stays');
+
+  const filters = { paying_company: [seed.companies.a.name] };
+  const filtered = await harness.aggregates.execute(ctx, byConsolidation(filters));
+  const filteredReport = await reportRows(harness, runner, adaptFilters(getAiEntityRegistry('budget_lines'), filters).filters);
+  assert.deepEqual(aiRows(filtered), filteredReport, 'with a filter, as the report on the same filter');
+  assert.equal(filtered.groups.length, 3, 'company A: three rows');
+
+  // The same groups for a reader of budget and accounts.
+  const reader = await harness.aggregates.execute(context(runner, seed, seed.users.budgetAndAccounts), byConsolidation());
+  assert.deepEqual(aiRows(reader), report, 'a reader of budget and accounts reads the same figures');
+  console.log('ok - grouped by consolidation account as the report');
+}
+
+async function testFilterSortValues(harness: Harness, runner: QueryRunner, seed: Seed) {
+  const ctx = context(runner, seed, seed.users.admin);
+  const counted = await harness.aggregates.execute(ctx, { entity_type: 'budget_lines', group_by: 'nature', filters: { consolidation_account: ['[601] Software'] } });
+  assert.equal(counted.total, 2, 'the two lines of the 601 accounts');
+  const without = await harness.queries.execute(ctx, { entity_type: 'budget_lines', filters: { consolidation_account: [null] }, sort: { field: 'product_name', direction: 'asc' } });
+  assert.deepEqual(without.items.map((item: any) => [item.label, item.metadata.consolidation_account]), [['Line misc', null], ['Line no account', null]],
+    'the lines without a consolidation account, said null');
+  const travel = await harness.queries.execute(ctx, { entity_type: 'budget_lines', filters: { consolidation_account: ['Travel'] } });
+  assert.deepEqual(travel.items.map((item: any) => [item.label, item.metadata.consolidation_account]), [['Line travel', 'Travel']], 'a name-only consolidation account');
+  const sorted = await harness.queries.execute(ctx, { entity_type: 'budget_lines', sort: { field: 'consolidation_account', direction: 'asc' }, limit: 30 });
+  assert.deepEqual(sorted.sort_ignored, [], 'the field sorts');
+  assert.deepEqual(sorted.items.map((item: any) => item.metadata.consolidation_account).slice(0, 3), ['[601] Software', '[601] Software', '[610] Services'],
+    'each line carries its consolidation account, in order');
+  const values = await harness.queries.executeFilterValues(ctx, { entity_type: 'budget_lines', fields: ['consolidation_account'] });
+  assert.deepEqual([...values.values.consolidation_account].sort(), ['[601] Software', '[610] Services', 'Travel', null].sort(), 'its values');
+  assert.equal(values.fields_withheld, undefined, 'nothing withheld');
+  console.log('ok - filtered, sorted, listed with its values');
+}
+
+async function testWithoutAccountsRight(harness: Harness, runner: QueryRunner, seed: Seed) {
+  const ctx = context(runner, seed, seed.users.budgetOnly);
+  const probe = (entityType: any) => harness.policy.canReadEntityType(ctx, entityType, runner.manager);
+  const registry = await resolveAiEntityRegistry(ctx, 'budget_lines', probe);
+  assert.equal(registry.fields.consolidation_account, undefined, 'not a field of the registry');
+  assert.equal(registry.sortFields.consolidation_account, undefined, 'nor a sort');
+  const description = describeAiEntityFilters('budget_lines', registry);
+  assert.equal(description.fields.some((field) => field.field === 'consolidation_account'), false, 'not described as a field');
+  assert.equal(description.fields_withheld?.[0]?.field, 'consolidation_account', 'named as withheld');
+  assert.match(description.fields_withheld![0].reason, /right on accounts/, 'with the reason: the right on accounts');
+
+  await assert.rejects(harness.aggregates.execute(ctx, byConsolidation()), (error: any) => {
+    assert.equal(error?.status, 403, 'a refusal of a right');
+    assert.match(error.message, /right on accounts/, 'in words');
+    return true;
+  }, 'never one "unassigned" group');
+  const filtered = await harness.aggregates.execute(ctx, { entity_type: 'budget_lines', group_by: 'nature', filters: { consolidation_account: ['[601] Software'] } });
+  assert.equal(filtered.status, 'invalid_filter', 'a filter on it is refused');
+  assert.match(filtered.suggested_repairs[0].reason, /right on accounts/, 'with the reason');
+  const listed = await harness.queries.execute(ctx, { entity_type: 'budget_lines' });
+  assert.equal(listed.items.length, LINES.length, 'the lines are listed');
+  assert.equal(listed.items.some((item: any) => 'consolidation_account' in item.metadata), false, 'without the field');
+  const values = await harness.queries.executeFilterValues(ctx, { entity_type: 'budget_lines', fields: ['consolidation_account', 'supplier'] });
+  assert.deepEqual(values.fields_ignored, ['consolidation_account'], 'no values');
+  assert.match(values.fields_withheld?.[0]?.reason ?? '', /right on accounts/, 'and why');
+
+  const readerRegistry = await resolveAiEntityRegistry(context(runner, seed, seed.users.budgetAndAccounts), 'budget_lines',
+    (entityType: any) => harness.policy.canReadEntityType(context(runner, seed, seed.users.budgetAndAccounts), entityType, runner.manager));
+  assert.ok(readerRegistry.fields.consolidation_account, 'a reader of accounts has the field');
+  assert.equal(readerRegistry.withheldFields, undefined, 'and nothing withheld');
+  console.log('ok - absent without the right on accounts, with the reason');
+}
+
+/** A person limited to company A adds up the consolidation accounts of company A's lines, as the report on it. */
+async function testLimitedPerson(harness: Harness, runner: QueryRunner, seed: Seed) {
+  if (!(await runner.query(`SELECT to_regrole('kanap_data_limited') IS NOT NULL AS present`))[0].present) {
+    if (process.env.CI) assert.fail('CI installs kanap_data_limited before the migrations');
+    console.log('skip - kanap_data_limited not installed');
+    return;
+  }
+  const expected = await reportRows(harness, runner, adaptFilters(getAiEntityRegistry('budget_lines'), { paying_company: [seed.companies.a.name] }).filters);
+  assert.equal((await runner.query(`SELECT data_access_apply($1) AS mode`, [seed.users.limited]))[0].mode, 'limited');
+  const result = await harness.aggregates.execute(context(runner, seed, seed.users.limited), byConsolidation());
+  assert.deepEqual(aiRows(result), expected, 'the lines of company A only, as the report on company A');
+  assert.equal(result.data_access, 'limited', 'said within their access');
+  assert.equal(result.amounts_currency, 'EUR', 'in the reporting currency');
+  console.log('ok - a limited person adds up their lines only');
+}
+
+async function inTransaction(harness: Harness, fn: (runner: QueryRunner, seed: Seed) => Promise<void>) {
+  const runner = harness.dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    await fn(runner, await seed(runner));
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
 async function run() {
   const harness = await createHarness();
   try {
-    const runner = harness.dataSource.createQueryRunner();
-    await runner.connect();
-    await runner.startTransaction();
-    try {
-      const s = await seed(runner);
+    await inTransaction(harness, async (runner, s) => {
       await testEngineAccess(harness, runner, s);
-    } finally {
-      await runner.rollbackTransaction();
-      await runner.release();
-    }
+      await testAsTheReport(harness, runner, s);
+      await testFilterSortValues(harness, runner, s);
+      await testWithoutAccountsRight(harness, runner, s);
+    });
+    // `data_access_apply` limits the rest of its transaction: a transaction of its own.
+    await inTransaction(harness, (runner, s) => testLimitedPerson(harness, runner, s));
   } finally {
     await harness.app.close();
   }

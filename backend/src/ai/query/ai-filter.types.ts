@@ -142,6 +142,14 @@ export type AiEntityFilterRegistry = {
   aggregate: AiAggregateConfig;
   /** Metrics aggregate_entities computes that are not fields (budget lines: the cost per FTE and the day rate). */
   metricFamilies?: AiMetricFamilyDescription[];
+  /** The fields left out for this person for lack of a right, each with the reason (`withoutUnreadableLinkedCounts`). */
+  withheldFields?: AiWithheldField[];
+};
+
+/** A field of a family the person may not read, and why: describe_entity_filters and the refusals say it. */
+export type AiWithheldField = {
+  field: string;
+  reason: string;
 };
 
 /**
@@ -366,6 +374,8 @@ export type AiAggregateResult = {
 export type AiFilterValuesResult = {
   values: Record<string, Array<string | boolean | null>>;
   fields_ignored: string[];
+  /** The requested fields this person may not read, with the reason (also in `fields_ignored`). */
+  fields_withheld?: AiWithheldField[];
   total: number;
   returned: number;
   truncated: boolean;
@@ -400,6 +410,8 @@ export type AiFilterDescriptionResult = {
   field_families?: AiFieldFamilyDescription[];
   /** Metrics of aggregate_entities that are not fields (budget lines: the cost per FTE and the day rate). */
   metric_families?: AiMetricFamilyDescription[];
+  /** The fields of the family this person may not read, each with the reason. */
+  fields_withheld?: AiWithheldField[];
   /** Every `sort.field` query_entities takes for this family (the sortable fields, label, created_at, updated_at...), the keys of `field_families` aside. */
   sort_fields: string[];
   default_sort: { field: string; direction: 'asc' | 'desc' };

@@ -1637,6 +1637,9 @@ export class AiAggregateExecutor {
     const registry = await resolveAiEntityRegistry(context, input.entity_type, async (entityType) =>
       !!(await this.policy?.canReadEntityType(context, entityType, context.manager)));
     const field = registry.fields[input.group_by];
+    // A field the person may not read is refused with the reason (the right), never grouped as one blank group.
+    const withheld = registry.withheldFields?.find((entry) => entry.field === input.group_by);
+    if (withheld) throw new ForbiddenException(`group_by ${withheld.field} is not available: ${withheld.reason}`);
     if (!field || field.groupable !== true) {
       throw new BadRequestException('Unsupported group_by field.');
     }

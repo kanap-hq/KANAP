@@ -7,7 +7,7 @@ import {
   isAxisActive,
   loadAnalyticsAxes,
 } from '../../../analytics/analytics-axes.util';
-import { AiEntityFilterRegistry, AiFilterFieldDef, AiQueryEntityType } from '../ai-filter.types';
+import { AiEntityFilterRegistry, AiFilterFieldDef, AiQueryEntityType, AiWithheldField } from '../ai-filter.types';
 import { accountsRegistry } from './accounts.registry';
 import { analyticsCategoriesRegistry } from './analytics-categories.registry';
 import { applicationsRegistry } from './applications.registry';
@@ -179,6 +179,23 @@ const UNSCOPED_ADMIN_FIELDS: Partial<Record<AiQueryEntityType, string[]>> = {
   ],
 };
 
+/**
+ * Fields that read another module's data with that module's right, as their screen: absent
+ * (lists, filters, sorts, groups, filter values) for a person without it, and named with the
+ * reason in `withheldFields`. The consolidation account of a budget line is read with the right on
+ * accounts, as the Consolidation accounts report: without it the list engine reads every line as
+ * "unassigned", a figure the tools never give.
+ */
+const RIGHT_GATED_FIELDS: Partial<Record<AiQueryEntityType, Record<string, { family: AiQueryEntityType; reason: string }>>> = {
+  budget_lines: {
+    consolidation_account: {
+      family: 'accounts',
+      reason: 'The consolidation accounts are read with the right on accounts (Accounts, reader level), as the Consolidation accounts report, and this person does not have it. '
+        + 'Tell them the consolidation accounts are not available to them, and do not report their lines as without a consolidation account.',
+    },
+  },
+};
+
 /** The registry without the linked counts, filters and groups of the modules the caller does not read. */
 export async function withoutUnreadableLinkedCounts(
   registry: AiEntityFilterRegistry,
@@ -186,7 +203,8 @@ export async function withoutUnreadableLinkedCounts(
 ): Promise<AiEntityFilterRegistry> {
   const gated = LINKED_COUNT_FIELDS[registry.entityType];
   const unscopedAdminOnly = UNSCOPED_ADMIN_FIELDS[registry.entityType];
-  if (!gated && !unscopedAdminOnly) return registry;
+  const rightGated = RIGHT_GATED_FIELDS[registry.entityType];
+  if (!gated && !unscopedAdminOnly && !rightGated) return registry;
   const hidden = new Set<string>();
   for (const [field, entityType] of Object.entries(gated ?? {})) {
     if (!(await canRead(entityType))) hidden.add(field);
@@ -194,10 +212,17 @@ export async function withoutUnreadableLinkedCounts(
   if (unscopedAdminOnly && !(await canRead('data_access'))) {
     for (const field of unscopedAdminOnly) hidden.add(field);
   }
+  const withheld: AiWithheldField[] = [];
+  for (const [field, { family, reason }] of Object.entries(rightGated ?? {})) {
+    if (!registry.fields[field] || (await canRead(family))) continue;
+    hidden.add(field);
+    withheld.push({ field, reason });
+  }
   if (!hidden.size) return registry;
   const kept = <T>(record: Record<string, T>) => Object.fromEntries(Object.entries(record).filter(([key]) => !hidden.has(key)));
   return {
     ...registry,
+    ...(withheld.length ? { withheldFields: [...(registry.withheldFields ?? []), ...withheld] } : {}),
     fields: kept(registry.fields),
     sortFields: kept(registry.sortFields),
     aggregate: {

@@ -129,6 +129,7 @@ function executorFor(deps: ReturnType<typeof realSummaryDeps>): AiAggregateExecu
     summaryAggregate: (query: any, spec: AggregateSpec, opts: { manager: any }) =>
       engine.budgetListAggregate(SUMMARY_SCOPES.all, deps, query, spec, opts.manager),
   };
+  args[21] = { canReadEntityType: async () => true, effectiveAccess: async () => ({ isAdmin: false, permissions: {} }) };
   return new (AiAggregateExecutor as any)(...args);
 }
 
