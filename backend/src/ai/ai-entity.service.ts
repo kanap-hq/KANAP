@@ -2333,17 +2333,27 @@ export class AiEntityService {
   }
 
   /**
-   * People as the users list shows them to the caller: every column to an administrator of users,
-   * the name and the email to a reader (`toUserLookup`), never the job, role, team or company.
+   * People as the users list shows them to the caller: every column to an administrator of users
+   * whose own access is not limited (`usersAdminView`), the name and the email to anyone else
+   * (`toUserLookup`), never the job, role, team or company.
    */
   private async withUserLookupOnly<T extends AiEntitySummaryDto>(context: AiExecutionContextWithManager, items: T[]): Promise<T[]> {
     if (!items.some((item) => item.type === 'users')) return items;
-    if (await this.policy.canReadEntityType(context, 'users', context.manager, 'admin')) return items;
+    if (await this.usersAdminView(context)) return items;
     return items.map((item) => {
       if (item.type !== 'users') return item;
       const email = typeof item.metadata?.email === 'string' ? item.metadata.email : null;
       return { ...item, summary: email && email !== item.label ? email : null, match_context: null, metadata: { email } };
     });
+  }
+
+  /**
+   * Whether the caller reads the administration fields of a person, and finds people by them:
+   * users at admin level and access not limited, the rule of the users registry
+   * (`UNSCOPED_ADMIN_FIELDS`).
+   */
+  private async usersAdminView(context: AiExecutionContextWithManager): Promise<boolean> {
+    return this.policy.canReadEntityType(context, 'data_access', context.manager);
   }
 
   private searchIndexRowToSummary(row: any): AiEntitySummaryDto & { _score: number } {

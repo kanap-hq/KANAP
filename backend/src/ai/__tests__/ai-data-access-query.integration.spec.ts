@@ -362,7 +362,6 @@ async function testGate(h: Harness, runner: QueryRunner, s: Seed) {
     );
   }
   const asLimited = await h.tools.execute(ctx(runner, s, 'rita'), 'query_entities', { entity_type: 'users', limit: 50 });
-  assert.ok(asLimited.items.some((item: any) => 'job_title' in item.metadata), 'the admin columns stay');
   assert.equal(asLimited.items.some((item: any) => 'roles' in item.metadata || 'data_access' in item.metadata), false, 'no roles nor mode in limited access');
   const limitedGroup = await h.tools.execute(ctx(runner, s, 'rita'), 'aggregate_entities', { entity_type: 'users', group_by: 'status', filters: { data_access: ['limited'] } });
   assert.deepEqual(limitedGroup.filters_ignored, ['data_access'], 'the mode filter is not offered in limited access');
@@ -384,6 +383,37 @@ async function testGate(h: Harness, runner: QueryRunner, s: Seed) {
  * administrator of users reads the two families, so they are not listed; the administrator in
  * limited access and the reader are told what they lack.
  */
+/**
+ * The administration fields of a person (job, company, primary role, team...) follow the rule of
+ * the roles and the mode (Plaid L7, lot E): an administrator of users in limited access, whose
+ * screen closes the administration of users, neither reads, filters nor groups them; the full
+ * administrator does.
+ */
+async function testTheAdministrationFieldsNeedAccessToAllData(h: Harness, runner: QueryRunner, s: Seed) {
+  const adminFields = ['job_title', 'company', 'department', 'primary_role', 'locale', 'team', 'contributor_profile', 'project_availability', 'areas_of_expertise'];
+  const limited = await h.tools.execute(ctx(runner, s, 'rita'), 'query_entities', { entity_type: 'users', limit: 50 });
+  assert.equal(limited.items.length > 0, true);
+  assert.equal(limited.items.some((item: any) => adminFields.some((field) => field in item.metadata)), false, 'no administration field in limited access');
+  const filtered = await h.tools.execute(ctx(runner, s, 'rita'), 'query_entities', { entity_type: 'users', filters: { primary_role: ['Budget Member'] } });
+  assert.deepEqual(filtered.filters_ignored, ['primary_role'], 'the primary role filter is not offered in limited access');
+  await assert.rejects(
+    () => h.tools.execute(ctx(runner, s, 'rita'), 'aggregate_entities', { entity_type: 'users', group_by: 'primary_role' }),
+    /Unsupported group_by field/,
+    'nor the primary role group',
+  );
+  const described = await h.tools.execute(ctx(runner, s, 'rita'), 'describe_entity_filters', { entity_type: 'users' });
+  assert.equal(JSON.stringify(described).includes('"primary_role"'), false, 'nor described');
+  const person = await h.tools.execute(ctx(runner, s, 'rita'), 'get_entity_detail', { entity_type: 'users', entity_id: s.users.alice });
+  assert.equal(adminFields.some((field) => field in person.entity.metadata), false, 'nor in a detail');
+  const found = await h.tools.execute(ctx(runner, s, 'rita'), 'search_all', { query: fullName('alice'), entity_types: ['users'] });
+  assert.equal(found.items.some((item: any) => adminFields.some((field) => field in (item.metadata ?? {}))), false, 'nor in a search result');
+
+  const full = await h.tools.execute(ctx(runner, s, 'ulla'), 'aggregate_entities', { entity_type: 'users', group_by: 'primary_role' });
+  assert.deepEqual(full.groups.find((group: any) => group.key === 'Budget Member'), { key: 'Budget Member', count: 4 }, 'the full administrator groups by it');
+  const fullList = await h.tools.execute(ctx(runner, s, 'ulla'), 'query_entities', { entity_type: 'users', filters: { primary_role: ['Budget Member'] }, limit: 50 });
+  assert.deepEqual([fullList.total, fullList.items[0].metadata.primary_role], [4, 'Budget Member'], 'filters on it and reads it');
+}
+
 async function testTheUnreadListsSayWhatIsMissing(h: Harness, runner: QueryRunner, s: Seed) {
   const unread = async (user: PersonKey) => (await h.tools.execute(ctx(runner, s, user), 'describe_entity_filters', { entity_type: 'users' })).families_not_read as string[];
   const full = await unread('ulla');
@@ -414,6 +444,7 @@ async function run() {
       await testUsersRolesAndMode(harness, runner, s);
       await testPersonAndCompanyDetails(harness, runner, s);
       await testGate(harness, runner, s);
+      await testTheAdministrationFieldsNeedAccessToAllData(harness, runner, s);
       await testTheUnreadListsSayWhatIsMissing(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();

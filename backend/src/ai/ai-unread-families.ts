@@ -135,7 +135,6 @@ export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
   {
     family: 'roles and their rights',
     screen: ['admin', 'roles'],
-    hint: 'A person\'s primary role is the primary_role field of users.',
     terms: /\br[oô]les?\b|\brollen?\b|\bpermissions?\s+(of|du|des|de)\b|\bdroits?\s+(du|des|d['’]un)\s+r[oô]les?\b/i,
     usersAdminOnly: true,
   },

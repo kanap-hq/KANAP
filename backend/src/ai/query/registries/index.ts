@@ -141,11 +141,8 @@ export function withAnalyticsAxisFields(registry: AiEntityFilterRegistry, axes: 
   return { ...registry, fields, sortFields };
 }
 
-/**
- * Whether the caller reads a family (`AiPolicyService.canReadEntityType`), or holds `level` on it
- * when given (`admin`: the users administration).
- */
-export type AiReadProbe = (entityType: AiQueryEntityType, level?: 'reader' | 'admin') => Promise<boolean>;
+/** Whether the caller reads a family (`AiPolicyService.canReadEntityType`). */
+export type AiReadProbe = (entityType: AiQueryEntityType) => Promise<boolean>;
 
 /**
  * Fields that count or name another module's records, with that module: listed, filtered, sorted
@@ -167,23 +164,19 @@ const LINKED_COUNT_FIELDS: Partial<Record<AiQueryEntityType, Record<string, AiQu
 };
 
 /**
- * The fields of a family that its own list shows only to an administrator of it. A reader of users
- * sees what the users list shows them: name, email and status.
- */
-const ADMIN_ONLY_FIELDS: Partial<Record<AiQueryEntityType, string[]>> = {
-  users: [
-    'job_title', 'company', 'department', 'primary_role', 'locale', 'team',
-    'contributor_profile', 'project_availability', 'areas_of_expertise',
-  ],
-};
-
-/**
- * The fields of a family its own screen shows only to an administrator of it whose own access is
- * not limited: the Access column of the users list (`dataAccessView`) and the roles beside it. They
- * follow the read of Admin › Data access (`data_access`: users at admin level, access not limited).
+ * The administration fields of a family: listed, filtered, sorted and grouped only for an
+ * administrator of it whose own access is not limited, the read of Admin › Data access
+ * (`data_access`: users at admin level, access not limited). A reader of users sees what the users
+ * list shows them: name, email and status; an administrator of users in limited access no more,
+ * the screen closing the administration of users to them (`frontend/src/auth/dataAccess.ts`). One
+ * rule for every administration field of a person, the quick search included
+ * (`UsersService.listForAi`, `accessView`).
  */
 const UNSCOPED_ADMIN_FIELDS: Partial<Record<AiQueryEntityType, string[]>> = {
-  users: ['roles', 'data_access'],
+  users: [
+    'job_title', 'company', 'department', 'primary_role', 'locale', 'team',
+    'contributor_profile', 'project_availability', 'areas_of_expertise', 'roles', 'data_access',
+  ],
 };
 
 /** The registry without the linked counts, filters and groups of the modules the caller does not read. */
@@ -192,15 +185,11 @@ export async function withoutUnreadableLinkedCounts(
   canRead: AiReadProbe,
 ): Promise<AiEntityFilterRegistry> {
   const gated = LINKED_COUNT_FIELDS[registry.entityType];
-  const adminOnly = ADMIN_ONLY_FIELDS[registry.entityType];
   const unscopedAdminOnly = UNSCOPED_ADMIN_FIELDS[registry.entityType];
-  if (!gated && !adminOnly && !unscopedAdminOnly) return registry;
+  if (!gated && !unscopedAdminOnly) return registry;
   const hidden = new Set<string>();
   for (const [field, entityType] of Object.entries(gated ?? {})) {
     if (!(await canRead(entityType))) hidden.add(field);
-  }
-  if (adminOnly && !(await canRead(registry.entityType, 'admin'))) {
-    for (const field of adminOnly) hidden.add(field);
   }
   if (unscopedAdminOnly && !(await canRead('data_access'))) {
     for (const field of unscopedAdminOnly) hidden.add(field);

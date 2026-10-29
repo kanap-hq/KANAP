@@ -356,8 +356,8 @@ export class AiToolRegistry {
             await this.policy.assertEntityTypeReadAccess(context, input.entity_type, context.manager);
             // The budget lines list the tenant's analytics dimensions (`analytics:<code>`) among their fields.
             const description = {
-              ...describeAiEntityFilters(input.entity_type, await resolveAiEntityRegistry(context, input.entity_type, (entityType, level) =>
-                this.policy.canReadEntityType(context, entityType, context.manager, level))),
+              ...describeAiEntityFilters(input.entity_type, await resolveAiEntityRegistry(context, input.entity_type, (entityType) =>
+                this.policy.canReadEntityType(context, entityType, context.manager))),
               families_not_read: unreadFamilyLines(
                 await readAiScreenLanguage(context.manager, context.tenantId, context.userId),
                 await this.policy.adminFamiliesGap(context, context.manager),

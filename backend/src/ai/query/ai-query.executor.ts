@@ -1592,8 +1592,8 @@ export class AiQueryExecutor {
   }
 
   /**
-   * A user as the users list shows them: every column to an administrator of users, name, email and
-   * status to a reader (`adminView` false), as the screen does. The roles and the data-access mode
+   * A user as the users list shows them: every column to an administrator of users whose own access
+   * is not limited, name, email and status to anyone else (`adminView` false), as the screen does. The roles and the data-access mode
    * (`accessView`) only to an administrator of users whose own access is not limited, as the
    * list's Access column.
    */
@@ -2989,9 +2989,14 @@ export class AiQueryExecutor {
     return new Map(contractIds.map((id) => [id, coveredRecordsText(byContract.get(id))]));
   }
 
-  /** Whether the caller administers users, as the users list decides its columns (`canViewUserAdministration`). */
+  /**
+   * Whether the caller reads the administration fields of a person: users at admin level and access
+   * not limited, as the users list decides its columns (`canViewUserAdministration`, closed to a
+   * limited person by `frontend/src/auth/dataAccess.ts`). The rule of the registry
+   * (`UNSCOPED_ADMIN_FIELDS`).
+   */
   private async usersAdminView(context: AiExecutionContextWithManager): Promise<boolean> {
-    return (await this.policy?.canReadEntityType(context, 'users', context.manager, 'admin')) === true;
+    return (await this.policy?.canReadEntityType(context, 'data_access', context.manager)) === true;
   }
 
   /**
@@ -3024,7 +3029,7 @@ export class AiQueryExecutor {
 
   /** Whether the caller reads a family; nothing without the policy. */
   private readProbe(context: AiExecutionContextWithManager): AiReadProbe {
-    return async (entityType, level) => !!(await this.policy?.canReadEntityType(context, entityType, context.manager, level));
+    return async (entityType) => !!(await this.policy?.canReadEntityType(context, entityType, context.manager));
   }
 
   /**
