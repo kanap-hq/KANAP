@@ -3435,6 +3435,143 @@ async function testRefusalWordsDoNotCoverARequestToApply() {
   assert.equal(streamedText(events), writePreviewMissingText('en'));
 }
 
+const VULNERABILITY_TOOLS = [
+  { name: 'query_entities', category: 'authoritative', description: 'Query entities', input_summary: {}, read_only: true, surfaces: ['chat'] },
+  PLAN_TOOL,
+  VULNERABILITY_STATE_TOOL,
+];
+
+function vulnerabilityQueryCall(id: string, args: Record<string, unknown>) {
+  return [
+    { type: 'tool_call_start', id, name: 'query_entities' },
+    { type: 'tool_call_delta', id, arguments: JSON.stringify(args) },
+    { type: 'tool_call_end', id },
+    { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+  ];
+}
+
+function textBatch(text: string) {
+  return [
+    { type: 'text_delta', text },
+    { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
+  ];
+}
+
+/**
+ * Plaid L6 (lot F): nothing matches the request. Two reads find no row, and the answer says there
+ * is nothing to change and offers another action in words: it is shown as it is, with no repair
+ * instruction and no write call.
+ */
+async function testNothingToChangeWithAnOfferIsShownAsIs() {
+  const cases = [
+    {
+      prompt: 'Traite toutes les failles critiques exploitées de TEC-3 avec la note « corrigé »',
+      answer: 'Aucune vulnérabilité critique exploitée sur TEC-3 : rien à changer, aucune modification n\'est nécessaire. Voulez-vous que je passe plutôt les 4 critiques non exploitées à Traitée ?',
+    },
+    {
+      prompt: 'Mark every critical exploited vulnerability of TEC-3 as handled with the note "fixed"',
+      answer: 'No critical exploited vulnerability on TEC-3, nothing to change: no modification is needed. Would you like me to mark the 4 critical ones that are not exploited as handled instead?',
+    },
+  ];
+  for (const { prompt, answer } of cases) {
+    const { orchestrator, executedToolCalls, recordedRequests, providerCallCount } = createOrchestrator({
+      historyMessages: [{ role: 'user', content: prompt }],
+      availableTools: VULNERABILITY_TOOLS,
+      providerEventBatches: [
+        vulnerabilityQueryCall('tc-q1', { entity_type: 'vulnerabilities', filters: { technology: 'TEC-3', severity: 'critical', exploited: true } }),
+        vulnerabilityQueryCall('tc-q2', { entity_type: 'vulnerabilities', filters: { technology: 'TEC-3', severity: 'critical', exploited: true, state: 'all', alerts: 'all' } }),
+        textBatch(answer),
+        textBatch(answer),
+        textBatch(answer),
+      ],
+      toolResult: { items: [], total: 0 },
+    });
+
+    const events = await collectEvents(orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: prompt }));
+
+    assert.deepEqual(executedToolCalls.map((call) => call.toolName), ['query_entities', 'query_entities'], `${prompt}: no write call`);
+    assert.equal(providerCallCount.value, 3, `${prompt}: the answer is not sent back`);
+    assert.ok(!sentInstructions(recordedRequests).some((content) => /was blocked|backend mutation previews/i.test(content)), `${prompt}: no repair instruction`);
+    assert.equal(events.filter((event) => event.type === 'text_delta').length, 1, `${prompt}: one text`);
+    assert.equal(streamedText(events), answer);
+  }
+}
+
+/**
+ * Plaid L6 (lot F): the server refused the write tool in this turn. The text that follows explains
+ * the refusal and offers another action: it is an answer, shown as it is.
+ */
+async function testAnswerAfterARefusedWriteToolIsShownAsIs() {
+  const prompt = 'Traite toutes les failles critiques exploitées de TEC-3 avec la note « corrigé »';
+  const answer = 'Le serveur a refusé le changement : ces filtres ne trouvent pas de ligne sur TEC-3. Voulez-vous que je passe plutôt les 4 critiques non exploitées à Traitée ?';
+  const { orchestrator, executedToolCalls, recordedRequests, providerCallCount } = createOrchestrator({
+    historyMessages: [{ role: 'user', content: prompt }],
+    availableTools: VULNERABILITY_TOOLS,
+    providerEventBatches: [
+      [
+        { type: 'tool_call_start', id: 'tc-vuln', name: 'change_vulnerability_state' },
+        { type: 'tool_call_delta', id: 'tc-vuln', arguments: JSON.stringify({ state: 'handled', note: 'corrigé', filters: { technology: 'TEC-3', severity: 'critical', exploited: true } }) },
+        { type: 'tool_call_end', id: 'tc-vuln' },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+      ],
+      textBatch(answer),
+      textBatch(answer),
+      textBatch(answer),
+    ],
+    toolOutcomes: [new Error('No vulnerability row matches these filters.')],
+  });
+
+  const events = await collectEvents(orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: prompt }));
+
+  assert.deepEqual(executedToolCalls.map((call) => call.toolName), ['change_vulnerability_state']);
+  assert.equal(providerCallCount.value, 2, 'the answer is not sent back');
+  assert.ok(!sentInstructions(recordedRequests).some((content) => /was blocked|backend mutation previews/i.test(content)), 'no repair instruction');
+  assert.equal(streamedText(events), answer);
+}
+
+/**
+ * Plaid L6 (lot F): a "nothing to change", or a refused write tool, does not let through an answer
+ * that asks to run a change without its preview: it is repaired then stopped as before.
+ */
+async function testNothingToChangeDoesNotCoverARequestToApply() {
+  const prompt = 'Traite toutes les failles critiques exploitées de TEC-3 avec la note « corrigé »';
+  for (const text of [
+    'Je vais passer les failles à Traitée. Voulez-vous que j\'applique la modification ?',
+    'Aucune autre modification. Voulez-vous que j\'applique ?',
+  ]) {
+    const { orchestrator, providerCallCount, executedToolCalls } = createOrchestrator({
+      historyMessages: [{ role: 'user', content: prompt }],
+      availableTools: VULNERABILITY_TOOLS,
+      providerEventBatches: [textBatch(text), textBatch(text), textBatch(text)],
+    });
+    const events = await collectEvents(orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: prompt }));
+    assert.equal(executedToolCalls.length, 0, text);
+    assert.equal(providerCallCount.value, 3, text);
+    assert.equal(streamedText(events), writePreviewMissingText('en'), text);
+  }
+
+  const ask = 'Ces filtres ne trouvent pas de ligne. Voulez-vous que j\'applique la modification à toutes les failles de TEC-3 ?';
+  const { orchestrator, providerCallCount } = createOrchestrator({
+    historyMessages: [{ role: 'user', content: prompt }],
+    availableTools: VULNERABILITY_TOOLS,
+    providerEventBatches: [
+      [
+        { type: 'tool_call_start', id: 'tc-vuln', name: 'change_vulnerability_state' },
+        { type: 'tool_call_delta', id: 'tc-vuln', arguments: JSON.stringify({ state: 'handled', filters: { technology: 'TEC-3', severity: 'critical', exploited: true } }) },
+        { type: 'tool_call_end', id: 'tc-vuln' },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+      ],
+      textBatch(ask),
+      textBatch(ask),
+      textBatch(ask),
+    ],
+    toolOutcomes: [new Error('No vulnerability row matches these filters.')],
+  });
+  const events = await collectEvents(orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: prompt }));
+  assert.equal(providerCallCount.value, 4, 'a request to apply after a refused write is repaired');
+  assert.equal(streamedText(events), writePreviewMissingText('en'));
+}
+
 async function testTextualWriteConfirmationWithoutPreviewIsRewrittenToCreatePreviews() {
   const { orchestrator, recordedRequests } = createOrchestrator({
     historyMessages: [
@@ -4331,6 +4468,9 @@ async function run() {
   await testHeldBackAnswerStatesNoTargetSet();
   await testConfirmedProposalKeepsItsTargetSet();
   await testRefusalWordsDoNotCoverARequestToApply();
+  await testNothingToChangeWithAnOfferIsShownAsIs();
+  await testAnswerAfterARefusedWriteToolIsShownAsIs();
+  await testNothingToChangeDoesNotCoverARequestToApply();
   await testProviderReceivesAbortSignal();
   await testProviderRequestUsesChatTimeout();
   await testProviderEndpointSourceFollowsTheResolvedModel();
