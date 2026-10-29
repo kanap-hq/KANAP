@@ -11,8 +11,9 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *
  * The children whose audit row names the contract or the incident in `record_id` (the link sets
  * to budget lines, applications, assets and technologies) keep `parent_*` NULL on purpose: the
- * history reads them by `record_id`. The contact links of a contract fall back on `record_id`:
- * the supplier sync writes the contract there, with a list of contacts as payload.
+ * history reads them by `record_id`. The contact links and the web links of a contract fall back
+ * on `record_id`: the supplier sync and the assistant write the contract there, with a list of
+ * contacts or of links as payload.
  */
 const CONTRACT_LABELS = [
   'contract_contacts',
@@ -22,7 +23,7 @@ const CONTRACT_LABELS = [
 ] as const;
 
 /** The contract labels whose row names the contract in `record_id` when the payload does not. */
-const CONTRACT_RECORD_FALLBACK_LABELS = ['contract_contacts'] as const;
+const CONTRACT_RECORD_FALLBACK_LABELS = ['contract_contacts', 'contract_links'] as const;
 
 const INCIDENT_LABELS = ['incident_attachments'] as const;
 

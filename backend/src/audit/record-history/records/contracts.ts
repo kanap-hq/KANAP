@@ -138,14 +138,16 @@ export const contractsFields: Readonly<Record<string, HistoryFields>> = {
 
 /**
  * The contract children an audit rule finds: their payload names the contract (`contract_id`), and
- * the supplier sync of the contacts names it in `record_id` (same shape as `spend_item_contacts`).
+ * the supplier sync of the contacts and the assistant's replacement of the web links name it in
+ * `record_id` (same shape as `spend_item_contacts`).
  * The contract's tasks use the shared task rule of `audit-parent-rules.ts`.
  *
  * `1855900000000-audit-log-parent-contracts-incidents.ts` copies these rules in SQL on purpose.
  */
 export const contractsParentRules: Readonly<Record<string, AuditParentRule>> = {
   contract_contacts: { parentTable: 'contracts', from: 'payload', keys: ['contract_id'], fallback: 'record_id' },
-  contract_links: { parentTable: 'contracts', from: 'payload', keys: ['contract_id'] },
+  // The assistant replaces the web links as a whole, with the contract in `record_id`.
+  contract_links: { parentTable: 'contracts', from: 'payload', keys: ['contract_id'], fallback: 'record_id' },
   contract_attachments: { parentTable: 'contracts', from: 'payload', keys: ['contract_id'] },
   contract_compliance_items: { parentTable: 'contracts', from: 'payload', keys: ['contract_id'] },
 };

@@ -8,7 +8,8 @@ import { AuditLogParentContractsIncidents1855900000000 as Migration } from '../.
 
 // Migration 1855900000000 (the contract and incident children, and the tasks of both), against a
 // real database, in a transaction rolled back at the end. It seeds two tenants with one audit row
-// per label (after and before payloads, the supplier sync's record_id fallback, a task of each
+// per label (after and before payloads, the record_id fallback of the supplier sync and of the
+// assistant's web links, a task of each
 // type), and rows that must keep no parent (an invalid uuid, a record absent from its table, a
 // record of the other tenant, a project task, a standalone task, a link set read by record_id),
 // plus an already-parented row, then:
@@ -133,6 +134,8 @@ async function seedRows(runner: QueryRunner, tenantId: string, foreignContract: 
   filled.contactRemoved = [await insertAudit(runner, tenantId, 'contract_contacts', randomUUID(), 'delete', { contract_id: contractId, contact_id: contact }, null), 'contracts'];
   filled.supplierSync = [await insertAudit(runner, tenantId, 'contract_contacts', contractId, 'update', [`${contact}:commercial`], []), 'contracts'];
   filled.webLink = [await insertAudit(runner, tenantId, 'contract_links', randomUUID(), 'update', { contract_id: contractId, url: 'https://example.invalid' }, null), 'contracts'];
+  // The assistant's whole-set replacement of the web links: the contract in record_id.
+  filled.assistantLinks = [await insertAudit(runner, tenantId, 'contract_links', contractId, 'update', [], [{ key: 'https://example.invalid/a', label: 'Terms', payload: { url: 'https://example.invalid/a', description: 'Terms' } }]), 'contracts'];
   filled.attachment = [await insertAudit(runner, tenantId, 'contract_attachments', randomUUID(), 'create', null, { contract_id: contractId, original_filename: 'signed.pdf' }), 'contracts'];
   filled.compliance = [await insertAudit(runner, tenantId, 'contract_compliance_items', randomUUID(), 'create', null, { contract_id: contractId, requirement: 'exit_plan', state: 'present' }), 'contracts'];
   filled.incidentAttachment = [await insertAudit(runner, tenantId, 'incident_attachments', randomUUID(), 'delete', { incident_id: incidentId, original_filename: 'log.txt' }, { incident_id: incidentId, original_filename: 'log.txt', deleted_at: '2026-10-29T10:00:00Z' }), 'incidents'];
@@ -200,7 +203,7 @@ async function testBackfillRerunAndDown() {
     const seed = await seedRows(runner, tenantId, otherSeed.contractId);
     await clearTenant(runner);
 
-    // Batches of 4 rows: each tenant's 18-19 rows take several statements.
+    // Batches of 4 rows: each tenant's 19-20 rows take several statements.
     migration.batchSize = 4;
     const recorded = recordStatements(runner);
     let first;

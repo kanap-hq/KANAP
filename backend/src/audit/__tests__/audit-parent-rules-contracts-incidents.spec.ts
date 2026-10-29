@@ -82,6 +82,7 @@ async function testResolve() {
   const cases: Array<[string, Parameters<typeof resolveAuditParent>[1], unknown]> = [
     ['a contract contact link names its contract', { table: 'contract_contacts', recordId: OTHER, after: { contract_id: CONTRACT, contact_id: OTHER } }, { table: 'contracts', id: CONTRACT }],
     ['the supplier sync names the contract in record_id', { table: 'contract_contacts', recordId: CONTRACT, before: [`${OTHER}:commercial`], after: [] }, { table: 'contracts', id: CONTRACT }],
+    ['the assistant\'s web links name the contract in record_id', { table: 'contract_links', recordId: CONTRACT, before: [], after: [{ key: 'https://example.invalid', label: 'Terms', payload: { url: 'https://example.invalid', description: 'Terms' } }] }, { table: 'contracts', id: CONTRACT }],
     ['a removed web link names its contract before', { table: 'contract_links', recordId: OTHER, before: { contract_id: CONTRACT }, after: null }, { table: 'contracts', id: CONTRACT }],
     ['an attachment names its contract', { table: 'contract_attachments', recordId: OTHER, after: { contract_id: CONTRACT } }, { table: 'contracts', id: CONTRACT }],
     ['a compliance item names its contract', { table: 'contract_compliance_items', recordId: OTHER, after: { contract_id: CONTRACT, requirement: 'exit_plan' } }, { table: 'contracts', id: CONTRACT }],
