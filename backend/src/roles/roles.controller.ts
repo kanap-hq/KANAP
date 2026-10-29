@@ -130,7 +130,8 @@ export class RolesController {
       throw new RecordInUseException('ROLE_BUILT_IN', 'role', role.role_name, [],
         `Cannot delete ${role.is_system ? 'system' : 'built-in'} role "${role.role_name}". Duplicate it to make a role you can change.`);
     }
-    const count = await (mg ?? this.userRoleRepo.manager).getRepository(UserRole).count({ where: { role_id: id } });
+    // The same count as the Roles screen: a primary role with no `user_roles` row still holds the role.
+    const count = (await this.rolesService.userCounts([id], { manager: mg ?? this.userRoleRepo.manager })).get(id) ?? 0;
     if (count > 0) {
       throw new RecordInUseException('ROLE_IN_USE', 'role', role.role_name, [{ type: 'users', total: count }],
         `Cannot delete role "${role.role_name}" with users assigned. Give them another role first.`);
