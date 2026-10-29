@@ -21,6 +21,7 @@ import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { LocationsModule } from '../locations/locations.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { PortfolioModule } from '../portfolio/portfolio.module';
+import { RolesModule } from '../roles/roles.module';
 import { SpendModule } from '../spend/spend.module';
 import { SuppliersModule } from '../suppliers/suppliers.module';
 import { Tenant } from '../tenants/tenant.entity';
@@ -250,6 +251,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
     PlatformAiModule,
     PermissionsModule,
     PortfolioModule,
+    RolesModule,
     SpendModule,
     SuppliersModule,
     TenantsModule,

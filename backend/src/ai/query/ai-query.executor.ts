@@ -29,6 +29,8 @@ import type { SpendVersion } from '../../spend/spend-version.entity';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
 import { EndOfSupportService, type DeadlineRow } from '../../technologies/reports/end-of-support.service';
+import { PermissionsService } from '../../permissions/permissions.service';
+import { RolesService } from '../../roles/roles.service';
 import { UsersService } from '../../users/users.service';
 import {
   AiEntityMetadata,
@@ -84,6 +86,14 @@ import {
 } from './ai-technologies.query';
 import { AiVulnerabilityDetailRow, AiVulnerabilityRow, listAiVulnerabilities, readAiVulnerabilityFeeds } from './ai-vulnerabilities.query';
 import { APPLICATIONS_UNREAD_NOTE, listAiSupportDeadlines, listAiSupportGaps, type AiSupportGapRow } from './ai-support.query';
+import {
+  findAiRole,
+  listAiRolePermissions,
+  listAiRoles,
+  type AiRolePermissionRow,
+  type AiRoleRow,
+  type AiRolesServices,
+} from './ai-roles.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
@@ -596,6 +606,9 @@ export class AiQueryExecutor {
     @Optional() private readonly technologies?: TechnologiesService,
     /** The End of support report of the screen, which the two report families read. */
     @Optional() private readonly endOfSupport?: EndOfSupportService,
+    /** The services of Admin › Roles, which `roles` and `role_permissions` read. */
+    @Optional() private readonly roles?: RolesService,
+    @Optional() private readonly permissions?: PermissionsService,
   ) {
     // Absent, the technology figures close (no application count, no detail): say so once, at start.
     const logger = new Logger(AiQueryExecutor.name);
@@ -1301,6 +1314,46 @@ export class AiQueryExecutor {
         version: scalar(row.version),
       },
     });
+  }
+
+  /** A role of Admin › Roles: its name, kind and count of people (never their names). */
+  private mapRole(row: AiRoleRow): AiEntitySummaryDto {
+    return toEntitySummary('roles', {
+      id: row.id,
+      label: row.name,
+      status: row.type,
+      summary: row.description,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      metadata: {
+        name: row.name,
+        type: row.type,
+        user_count: row.user_count,
+      },
+    });
+  }
+
+  /** A right a role gives, at the level the Roles screen shows. */
+  private mapRolePermission(row: AiRolePermissionRow): AiEntitySummaryDto {
+    return toEntitySummary('role_permissions', {
+      id: row.key,
+      label: `${row.role}: ${row.resource}`,
+      status: row.level,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        role: row.role,
+        role_type: row.role_type,
+        resource: row.resource,
+        level: row.level,
+      },
+    });
+  }
+
+  /** The services the two role families read; refused without them, never an empty list. */
+  private rolesServices(): AiRolesServices {
+    if (!this.roles || !this.permissions) throw new BadRequestException('The roles are not available.');
+    return { roles: this.roles, permissions: this.permissions };
   }
 
   /**
@@ -2216,6 +2269,29 @@ export class AiQueryExecutor {
       };
     }
 
+    if (input.entity_type === 'roles' || input.entity_type === 'role_permissions') {
+      const services = this.rolesServices();
+      const result = input.entity_type === 'roles'
+        ? await listAiRoles(services, context.manager, scoped.query)
+        : await listAiRolePermissions(services, context.manager, scoped.query);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        items: result.items.map((row) => (input.entity_type === 'roles'
+          ? this.mapRole(row as AiRoleRow)
+          : this.mapRolePermission(row as AiRolePermissionRow))),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
     if (input.entity_type === 'vulnerabilities') {
       const applications = await resolveAiApplicationsReach(context, this.policy);
       const result = await listAiVulnerabilities(context.manager, context.tenantId, scoped.query, applications);
@@ -2836,6 +2912,10 @@ export class AiQueryExecutor {
       // A report row has no page of its own: it names its subject by `subject`.
       throw new BadRequestException('An End of support report row has no detail of its own: its `subject` names the record, read with get_entity_detail on its family (applications, assets or technologies) by that reference or name.');
     }
+    if (entityType === 'role_permissions') {
+      throw new BadRequestException('A right of a role has no detail of its own: read the role with get_entity_detail on roles (by name), which lists all its rights.');
+    }
+    if (entityType === 'roles') return this.roleDetail(context, input.entity_id);
     const entityId = await this.resolveDetailEntityId(context, entityType, input.entity_id);
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
 
@@ -3288,6 +3368,29 @@ export class AiQueryExecutor {
         servers_reached: item.servers_reached,
         applications_reached: item.applications_reached,
       })),
+    });
+  }
+
+  /**
+   * A role by its name or id, with its rights as the Roles screen's matrix: every right, in the
+   * screen's order, at the level the role gives, null where it gives none. The people it is given
+   * to are counted, never named.
+   */
+  private async roleDetail(context: AiExecutionContextWithManager, entityId: string): Promise<AiEntityDetailDto> {
+    const services = this.rolesServices();
+    const value = String(entityId ?? '').trim();
+    const role = await findAiRole(services, context.manager, value);
+    if (!role) throw entityNotFound('roles', value);
+    const permissions = await services.permissions.getRolePermissionMatrix(role.id, { manager: context.manager });
+    return this.toDetailResult(this.mapRole(role), {
+      name: role.name,
+      description: role.description,
+      type: role.type,
+      user_count: role.user_count,
+      created_at: role.created_at,
+      updated_at: role.updated_at,
+      permissions,
+      permissions_note: 'Every right of the Roles screen with the level the role gives (null: none). Tell the user each right in plain words, as the screen names it, and the level in words (Reader, Contributor, Member, Admin), never as codes.',
     });
   }
 

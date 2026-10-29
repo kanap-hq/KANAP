@@ -33,6 +33,8 @@ export type ScopedAiEntityType =
   | 'locations'
   | 'projects'
   | 'requests'
+  | 'role_permissions'
+  | 'roles'
   | 'suppliers'
   | 'support_deadlines'
   | 'support_gaps'

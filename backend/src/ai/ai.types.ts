@@ -83,9 +83,13 @@ export const AI_SEARCH_ENTITY_TYPES = [
  * `query/ai-vulnerabilities.query.ts`) is listed only: `search_all` does not search it.
  * `technology_versions` (the versions of the technologies, `query/ai-technologies.query.ts`),
  * `support_gaps` and `support_deadlines` (the End of support report, `query/ai-support.query.ts`)
- * are listed only too: they have no record detail of their own.
+ * are listed only too: they have no record detail of their own. `roles` and `role_permissions`
+ * (Admin › Roles, `query/ai-roles.query.ts`) are not searched either; a role has a detail (its
+ * rights), a row of `role_permissions` none.
  */
-export const AI_QUERY_ENTITY_TYPES = [...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines'] as const;
+export const AI_QUERY_ENTITY_TYPES = [
+  ...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines', 'roles', 'role_permissions',
+] as const;
 
 /**
  * The families get_entity_detail reads: every queried family but the ones with no record detail.
@@ -93,10 +97,10 @@ export const AI_QUERY_ENTITY_TYPES = [...AI_SEARCH_ENTITY_TYPES, 'vulnerabilitie
  * no page of their own.
  */
 export const AI_DETAIL_ENTITY_TYPES = AI_QUERY_ENTITY_TYPES.filter(
-  (type) => type !== 'technology_versions' && type !== 'support_gaps' && type !== 'support_deadlines',
+  (type) => type !== 'technology_versions' && type !== 'support_gaps' && type !== 'support_deadlines' && type !== 'role_permissions',
 ) as [
-  Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines'>,
-  ...Array<Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines'>>,
+  Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions'>,
+  ...Array<Exclude<(typeof AI_QUERY_ENTITY_TYPES)[number], 'technology_versions' | 'support_gaps' | 'support_deadlines' | 'role_permissions'>>,
 ];
 
 export const AI_CONTEXT_ENTITY_TYPES = [

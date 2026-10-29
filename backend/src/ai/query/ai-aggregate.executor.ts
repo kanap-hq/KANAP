@@ -6,6 +6,9 @@ import { listAiTechnologies, listAiTechnologyVersions, resolveAiApplicationsReac
 import { listAiVulnerabilities, readAiVulnerabilityFeeds } from './ai-vulnerabilities.query';
 import { aggregateSupportRows, APPLICATIONS_UNREAD_NOTE, listAiSupportDeadlines, listAiSupportGaps } from './ai-support.query';
 import { EndOfSupportService } from '../../technologies/reports/end-of-support.service';
+import { PermissionsService } from '../../permissions/permissions.service';
+import { RolesService } from '../../roles/roles.service';
+import { aggregateRolesRows, listAiRolePermissions, listAiRoles } from './ai-roles.query';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
 import { aiDataAccessNote } from './ai-data-access-note.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
@@ -548,6 +551,9 @@ export class AiAggregateExecutor {
     @Optional() private readonly fxRates?: FxRateService,
     /** The End of support report of the screen, which the two report families group. */
     @Optional() private readonly endOfSupport?: EndOfSupportService,
+    /** The services of Admin › Roles, which `roles` and `role_permissions` group. */
+    @Optional() private readonly roles?: RolesService,
+    @Optional() private readonly permissions?: PermissionsService,
   ) {
     // Absent, a technology filter on application_count matches nothing: say so once, at start.
     if (!policy) new Logger(AiAggregateExecutor.name).warn('AiPolicyService is not injected: technology aggregates see no application.');
@@ -1687,6 +1693,49 @@ export class AiAggregateExecutor {
         function: fn,
         groups,
         total,
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+      };
+    }
+    if (input.entity_type === 'roles' || input.entity_type === 'role_permissions') {
+      if (!this.roles || !this.permissions) throw new BadRequestException('The roles are not available.');
+      const services = { roles: this.roles, permissions: this.permissions };
+      // The roles are not participation-scoped: `scope` is applied as on query_entities.
+      const scoped = await applyScopeToAiQuery(
+        context,
+        input.entity_type,
+        { q: input.q?.trim(), filters: adapted.filters },
+        input.scope,
+      );
+      if (scoped.scope && scoped.scope.resolved === false) {
+        return {
+          group_by: input.group_by,
+          metric: metric?.key ?? null,
+          function: fn,
+          groups: [],
+          total: 0,
+          returned: 0,
+          truncated: false,
+          complete: false,
+          filters_applied: adapted.applied,
+          filters_ignored: adapted.ignored,
+          scope: scoped.scope,
+        };
+      }
+      const result = input.entity_type === 'roles'
+        ? await listAiRoles(services, context.manager, scoped.query, true)
+        : await listAiRolePermissions(services, context.manager, scoped.query, true);
+      const groups = aggregateRolesRows(result.items, input.group_by);
+      return {
+        group_by: input.group_by,
+        metric: null,
+        function: 'count',
+        groups,
+        total: result.items.length,
         returned: groups.length,
         truncated: false,
         complete: isCompleteAggregateResult(scoped.scope),

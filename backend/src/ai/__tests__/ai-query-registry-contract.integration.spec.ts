@@ -40,10 +40,11 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
 /**
  * The families the assistant reads in memory from the screen's service (the two End of support
- * report lists): their filters and sorts change the rows, never the statements they send. Their
- * behaviour is asserted on `filters_applied` and the result, and by their own spec.
+ * report lists, the roles and their rights): their filters and sorts change the rows, never the
+ * statements they send. Their behaviour is asserted on `filters_applied` and the result, and by
+ * their own spec.
  */
-const IN_MEMORY_FAMILIES = new Set(['support_gaps', 'support_deadlines']);
+const IN_MEMORY_FAMILIES = new Set(['support_gaps', 'support_deadlines', 'roles', 'role_permissions']);
 
 /**
  * The column a list service sorts on when it does not know the requested one. A sort field on
@@ -109,6 +110,13 @@ async function seedTenant(runner: QueryRunner): Promise<Seed> {
     `INSERT INTO roles (tenant_id, role_name, role_description, is_system, is_built_in, created_at, updated_at)
      VALUES ($1, 'Administrator', 'Administrator', false, false, now(), now())`, [tenantId]);
   const axisId = await ensureDefaultAnalyticsAxis(runner.manager, tenantId);
+  // A second role with two rights: `roles` and `role_permissions` list at least two rows.
+  const readerRoleId = await insertId(runner,
+    `INSERT INTO roles (tenant_id, role_name, role_description, is_system, is_built_in, created_at, updated_at)
+     VALUES ($1, 'Contract Reader', 'Reads the contract spec', false, false, now(), now())`, [tenantId]);
+  for (const resource of ['budget', 'suppliers']) {
+    await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, $3, 'reader')`, [tenantId, readerRoleId, resource]);
+  }
 
   const rows: Seed['rows'] = {};
   const pair = async (family: string, insert: (n: number, createdAt: string) => Promise<string>) => {

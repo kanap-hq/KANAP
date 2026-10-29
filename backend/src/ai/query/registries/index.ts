@@ -27,6 +27,8 @@ import { interfacesRegistry } from './interfaces.registry';
 import { locationsRegistry } from './locations.registry';
 import { projectsRegistry } from './projects.registry';
 import { requestsRegistry } from './requests.registry';
+import { rolePermissionsRegistry } from './role-permissions.registry';
+import { rolesRegistry } from './roles.registry';
 import { suppliersRegistry } from './suppliers.registry';
 import { supportDeadlinesRegistry } from './support-deadlines.registry';
 import { supportGapsRegistry } from './support-gaps.registry';
@@ -55,6 +57,8 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   locations: locationsRegistry,
   projects: projectsRegistry,
   requests: requestsRegistry,
+  role_permissions: rolePermissionsRegistry,
+  roles: rolesRegistry,
   suppliers: suppliersRegistry,
   support_deadlines: supportDeadlinesRegistry,
   support_gaps: supportGapsRegistry,

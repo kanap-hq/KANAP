@@ -1685,6 +1685,12 @@ async function testInvalidInputNamesTheFieldAndWhy() {
   const enumValue = refusal('get_entity_detail', { entity_type: 'spend_items', entity_id: 'BL-102' });
   assert.match(enumValue, /"entity_type" must be one of: "accounts", .*"budget_lines".*"users"/, enumValue);
   assert.doesNotMatch(enumValue, /"spend_items"/, 'no alias: spend_items is not an accepted type');
+  // The roles of Admin › Roles: a role has a detail (its rights), a right of a role is a list row only.
+  assert.match(enumValue, /"roles"/, enumValue);
+  assert.doesNotMatch(enumValue, /"role_permissions"/, enumValue);
+  const listed = refusal('query_entities', { entity_type: 'spend_items' });
+  assert.match(listed, /"roles"/, listed);
+  assert.match(listed, /"role_permissions"/, listed);
 
   const nested = refusal('query_entities', { entity_type: 'budget_lines', sort: { field: 'y_budget', direction: 'down' }, page: 'two' });
   assert.match(nested, /"sort.direction" must be one of: "asc", "desc"/, nested);

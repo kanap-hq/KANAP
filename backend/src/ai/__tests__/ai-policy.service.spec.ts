@@ -4,6 +4,7 @@ import { Features } from '../../config/features';
 import { Tenant, TenantStatus } from '../../tenants/tenant.entity';
 import { UserRole } from '../../users/user-role.entity';
 import { Subscription, SubscriptionStatus } from '../../billing/subscription.entity';
+import { DATA_ACCESS_RESERVED_MESSAGE } from '../../data-access/reserved-operations';
 
 type TestSettings = {
   tenant_id: string;
@@ -20,6 +21,8 @@ function createManager(options?: {
   tenantStatus?: TenantStatus;
   userRoles?: Array<{ role_id: string; role?: { role_name?: string | null } }>;
   subscription?: any;
+  /** The person's data access (`dataAccessModeOf`): limited, or all when left out. */
+  limited?: boolean;
 }) {
   const tenant = {
     id: 'tenant-1',
@@ -28,7 +31,10 @@ function createManager(options?: {
   const userRoles = options?.userRoles ?? [{ role_id: 'role-1', role: { role_name: 'AI Chat User' } }];
   const subscription = options?.subscription ?? null;
 
+  const limited = options?.limited === true;
   return {
+    // `app.da_mode`, then the person's mode and roles: both answer `limited`.
+    query: async () => [{ limited }],
     getRepository(entity: unknown) {
       if (entity === UserRole) {
         return {
@@ -722,7 +728,80 @@ async function testContributorWritesAtTheScreenLevel() {
   Features.AI_CHAT_ENABLED = originalFeature;
 }
 
+/**
+ * The roles and their rights (Plaid L7 lot A) are read as Admin › Roles: users at admin level, by a
+ * person whose access is not limited. Below that, refused in words and left out of the families.
+ */
+async function testRolesNeedUsersAdminAndUnlimitedAccess() {
+  const originalFeature = Features.AI_CHAT_ENABLED;
+  Features.AI_CHAT_ENABLED = true;
+  const context = {
+    tenantId: 'tenant-1',
+    userId: 'user-1',
+    isPlatformHost: false,
+    surface: 'chat' as const,
+    authMethod: 'jwt' as const,
+  };
+  const withUsers = (level: string) => createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['users', level]]) });
+  const administrator = createPolicy({
+    user: { id: 'user-1', status: 'enabled', role_id: 'role-admin', role: { role_name: 'Administrator', is_system: true } },
+  });
+  const adminManager = (limited = false) => createManager({ limited, userRoles: [{ role_id: 'role-admin', role: { role_name: 'Administrator' } }] });
+  try {
+    for (const family of ['roles', 'role_permissions'] as const) {
+      // users:reader: the right is missing, named in words with its screen.
+      const reader = withUsers('reader');
+      await assert.rejects(
+        () => reader.assertEntityTypeReadAccess(context, family, createManager()),
+        (error: any) => {
+          assert.equal(error.message, 'You need the right to administer users (the right the Admin › Roles screen asks for), which your role does not give. An administrator can add it to your role.');
+          assert.equal(error.getResponse().code, 'MODULE_RIGHT_REQUIRED');
+          return true;
+        },
+        `${family}: users:reader is refused`,
+      );
+      assert.equal(await reader.canReadEntityType(context, family, createManager()), false, `${family}: users:reader cannot read`);
+      assert.equal(await reader.canReadEntityType(context, family, createManager(), 'reader'), false, `${family}: a reader level asked is raised to admin`);
+
+      // users:admin in limited access: reserved to people with access to all data.
+      const admin = withUsers('admin');
+      await assert.rejects(
+        () => admin.assertEntityTypeReadAccess(context, family, createManager({ limited: true })),
+        (error: any) => {
+          assert.equal(error.message, DATA_ACCESS_RESERVED_MESSAGE);
+          assert.equal(error.getResponse().code, 'DATA_ACCESS_LIMITED');
+          return true;
+        },
+        `${family}: users:admin in limited access is refused`,
+      );
+      assert.equal(await admin.canReadEntityType(context, family, createManager({ limited: true })), false, `${family}: users:admin limited cannot read`);
+
+      // users:admin with access to all data, and an Administrator: read.
+      await admin.assertEntityTypeReadAccess(context, family, createManager());
+      assert.equal(await admin.canReadEntityType(context, family, createManager()), true, `${family}: users:admin unlimited reads`);
+      await administrator.assertEntityTypeReadAccess(context, family, adminManager());
+      assert.equal(await administrator.canReadEntityType(context, family, adminManager()), true, `${family}: an Administrator reads`);
+    }
+
+    // The readable families (the prompt's "Readable entity types"): the two families only for the
+    // last two, users still for the first two.
+    const requested = ['users', 'roles', 'role_permissions'] as any[];
+    assert.deepEqual(await withUsers('reader').listReadableEntityTypes(context, requested, createManager()), ['users'], 'users:reader');
+    assert.deepEqual(await withUsers('admin').listReadableEntityTypes(context, requested, createManager({ limited: true })), ['users'], 'users:admin limited');
+    assert.deepEqual(await withUsers('admin').listReadableEntityTypes(context, requested, createManager()), requested, 'users:admin unlimited');
+    assert.deepEqual(await administrator.listReadableEntityTypes(context, requested, adminManager()), requested, 'Administrator');
+
+    // Every other family keeps the reader level, without reading the access.
+    const noQuery = { ...createManager(), query: async () => { throw new Error('the access is read for the reserved families only'); } } as any;
+    assert.equal(await withUsers('reader').canReadEntityType(context, 'users', noQuery), true, 'users stays at reader level');
+    assert.equal(await withUsers('reader').canReadEntityType(context, 'users', noQuery, 'admin'), false, 'a level asked above it still applies');
+  } finally {
+    Features.AI_CHAT_ENABLED = originalFeature;
+  }
+}
+
 async function run() {
+  await testRolesNeedUsersAdminAndUnlimitedAccess();
   await testContributorWritesAtTheScreenLevel();
   await testMissingRightIsSaidInPlainWords();
   await testListReadableEntityTypesFiltersUnreadableFamilies();
