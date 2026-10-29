@@ -16,7 +16,8 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { EntityManager } from 'typeorm';
 import * as path from 'path';
-import { IsBoolean, IsOptional, IsString, Matches, ValidateIf } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf } from 'class-validator';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionGuard } from '../../auth/permission.guard';
 import { RequireLevel } from '../../auth/require-level.decorator';
@@ -26,6 +27,9 @@ import { StorageService } from '../../common/storage/storage.service';
 import { fixMulterFilename, inlineImageMulterOptions } from '../../common/upload';
 import { validateUploadedFile } from '../../common/upload-validation';
 import { ReservedToUnscopedDataAccess } from '../../data-access/reserved-operations';
+
+/** Display name only. The slug is the workspace address and is never written here. */
+const ORGANIZATION_NAME_MAX = 120;
 
 class UpdateBrandingSettingsDto {
   @IsOptional()
@@ -43,6 +47,14 @@ class UpdateBrandingSettingsDto {
   @IsOptional()
   @IsBoolean()
   use_logo_in_dark?: boolean;
+
+  /** Absent: the name stays. Present: trimmed, 1 to 120 characters. */
+  @ValidateIf((_obj, value) => value !== undefined)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MinLength(1)
+  @MaxLength(ORGANIZATION_NAME_MAX)
+  name?: string;
 }
 
 @ReservedToUnscopedDataAccess()
@@ -60,6 +72,7 @@ export class AdminBrandingController {
     const tenant = await this.getTenantFromRequest(req, req?.queryRunner?.manager);
     const branding = this.normalizeBranding(tenant.branding);
     return {
+      name: tenant.name,
       has_logo: !!branding.logo_storage_path,
       logo_version: branding.logo_version,
       use_logo_in_dark: branding.use_logo_in_dark,
@@ -166,10 +179,25 @@ export class AdminBrandingController {
       set.use_logo_in_dark = body.use_logo_in_dark !== false;
     }
 
-    const branding = this.normalizeBranding(await this.tenants.mergeBranding(tenant.id, { set }, { manager }));
+    // Name is its own column. Passing `name` only: a slug in the body is not a
+    // field of this DTO, and updateTenant never receives one.
+    let current = tenant;
+    if (body.name !== undefined) {
+      if (typeof body.name !== 'string' || body.name.length < 1 || body.name.length > ORGANIZATION_NAME_MAX) {
+        throw new BadRequestException('Organization name must be 1 to 120 characters');
+      }
+      current = await this.tenants.updateTenant(tenant.id, { name: body.name }, { manager });
+    }
+
+    const branding = this.normalizeBranding(
+      Object.keys(set).length > 0
+        ? await this.tenants.mergeBranding(tenant.id, { set }, { manager })
+        : current.branding,
+    );
 
     return {
       ok: true,
+      name: current.name,
       has_logo: !!branding.logo_storage_path,
       logo_version: branding.logo_version,
       use_logo_in_dark: branding.use_logo_in_dark,
