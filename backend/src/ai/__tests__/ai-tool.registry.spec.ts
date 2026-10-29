@@ -1861,7 +1861,8 @@ async function testAggregateEntitiesSchemaExposesMetricsAndThenBy() {
   assert.match(properties.metrics.description, /group_by paying_company, metrics y_budget, y_review, y_landing\) or of suppliers by year \(group_by supplier, metrics y_minus1_budget, y_budget, y_plus1_budget\)/);
   assert.match(properties.then_by.description, /^Budget lines: a second group-by field, each group then carrying `then_key` \(a null key or then_key is the group of the lines without that value\), at most limit groups \(50 by default\)/);
   assert.match(properties.then_by.description, /streams and categories of the linked projects do not cross/);
-  assert.match(properties.limit.description, /the rest is summed in `others`, and `group_count` counts every group/);
+  assert.match(properties.limit.description, /`others` gives the same measure over the rest, and `group_count` counts every group/);
+  assert.doesNotMatch(properties.limit.description, /summed/, 'with avg, min or max the rest is not a sum');
   // Each fact once: the tool's description and the metric field do not repeat them.
   const tools = await registry.listAvailableTools(createContext());
   const aggregate = tools.find((tool) => tool.name === 'aggregate_entities')!;
@@ -1909,6 +1910,27 @@ async function testAggregateEntitiesDescribesChangesAndMonthlyFte() {
   assert.match(describe.description, /`metric_families` the cost per FTE, the day rate, the change between two columns and the FTE by month aggregate_entities computes/);
   const mcp = registry.toToolJsonSchemas(registry.listRegisteredTools().filter((tool) => tool.surfaces.includes('mcp'))) as any[];
   assert.deepEqual(mcp.find((schema) => schema.name === 'aggregate_entities').parameters.properties.direction, properties.direction, 'the MCP server lists the same schema');
+}
+
+/** Plaid L8, lot E: a withheld field and the chargeback families, said once per tool, chat and MCP alike. */
+async function testWithheldFieldsAndChargebackAreDescribed() {
+  const registry = createRegistry();
+  const tools = await registry.listAvailableTools(createContext());
+  const text = (name: string) => tools.find((tool) => tool.name === name)?.description || '';
+  assert.match(text('describe_entity_filters'), /`fields_withheld` names each field of the family this person may not read, for lack of a right, with the reason: the field is withheld, which says nothing of its values \(they are not empty\)/);
+  assert.match(text('get_filter_values'), /`fields_withheld` names those this person may not read, for lack of a right, with the reason: their values are withheld, not empty/);
+  assert.match(text('query_entities'), /in the default order \(with the reason in `fields_withheld` for a field this person may not read\)/);
+  for (const name of ['query_entities', 'aggregate_entities']) {
+    const description = text(name);
+    assert.equal(description.match(/The chargeback reports are read for a person with the Reporting right/g)?.length, 1, `${name}: the chargeback sentence once`);
+    assert.match(description, /`chargeback_lines` the budget lines charged to the one company its `company` filter names/);
+    assert.match(description, /Each reads one year and one column; without a `nature` filter it covers both natures/);
+    assert.match(description, /`chargeback.warnings` names in words what the figures leave out, for the answer to repeat/);
+    assert.match(description, /a group by department keyed "company › department"/);
+  }
+  assert.match(text('query_entities'), /data access row, chargeback row, which opens its report\) carries `page_url`/);
+  const mcp = registry.listRegisteredTools().filter((tool) => tool.surfaces.includes('mcp'));
+  assert.equal(mcp.find((tool) => tool.name === 'aggregate_entities')?.description, text('aggregate_entities'), 'the MCP server reads the same description');
 }
 
 async function testAggregateEntitiesPassesDirection() {
@@ -2359,6 +2381,7 @@ async function run() {
   await testAggregateEntitiesSchemaExposesMetricsAndThenBy();
   await testAggregateEntitiesPassesMetricsAndThenBy();
   await testAggregateEntitiesDescribesChangesAndMonthlyFte();
+  await testWithheldFieldsAndChargebackAreDescribed();
   await testAggregateEntitiesPassesDirection();
   await testGetFilterValuesDelegatesToQueryExecutor();
   await testGetEntityContextDelegatesToEntityTools();
