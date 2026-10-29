@@ -364,6 +364,16 @@ async function testConsolidationReadsTheAccounts(harness: Harness, runner: Query
   assert.ok(statements.some((sql) => sql.includes('cons_labels')), 'the group reads them');
 }
 
+/** Budget lines grouped by line: each line by its reference and title, never by its id (lot L8 C). */
+async function testBudgetLineGroup(harness: Harness, runner: QueryRunner, seed: Seed) {
+  const ctx = context(runner, seed);
+  const result = await harness.aggregates.execute(ctx, { entity_type: 'budget_lines', group_by: 'line' });
+  const groups = [...result.groups].sort((a: any, b: any) => String(a.key).localeCompare(String(b.key)));
+  assert.deepEqual(groups.map((group: any) => [group.key, group.title, group.count]), [['BL-1', 'opex line 1', 1], ['BL-2', 'capex line 2', 1]], 'one group per line, by reference and title');
+  const ids = [seed.rows.budget_lines.older, seed.rows.budget_lines.newer];
+  assert.equal(ids.some((id) => JSON.stringify(result).includes(id)), false, 'no line id in the result');
+}
+
 async function testCreatedAtOrderOnSeededRows(harness: Harness, runner: QueryRunner, seed: Seed) {
   const ctx = context(runner, seed);
   for (const [entityType, { older, newer }] of Object.entries(seed.rows)) {
@@ -534,6 +544,7 @@ async function run() {
       await testEveryAdvertisedSortAndFilterApplies(harness, runner, seed);
       await testEveryFilterShapeIsAccepted(harness, runner, seed);
       await testConsolidationReadsTheAccounts(harness, runner, seed);
+      await testBudgetLineGroup(harness, runner, seed);
       await testCreatedAtOrderOnSeededRows(harness, runner, seed);
       await testUnknownSortIsReported(harness, runner, seed);
       await testPageSizes(harness, runner, seed);

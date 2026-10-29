@@ -74,13 +74,31 @@ import {
   AiBudgetStaffFigures,
   AiDateFilterValue,
   AiEntityFilterRegistry,
+  AiFilterFieldDef,
   AiFilterValue,
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { resolveAiEntityRegistry } from './registries';
 import { COMPANY_AGGREGATE_METRIC_YEAR_SQL } from './registries/companies.registry';
 import { isMoneyVariant, resolveFteField, resolveFteVariantField } from '../../spend/spend-summary.builder';
-import { BudgetRatioMetric, isBudgetMoneyKey, resolveBudgetRatioMetric } from './registries/budget-amount-fields';
+import {
+  BudgetDeltaMetric,
+  BudgetMonthlyFteMetric,
+  BudgetRatioMetric,
+  isBudgetMoneyKey,
+  resolveBudgetDeltaMetric,
+  resolveBudgetMonthlyFteMetric,
+  resolveBudgetRatioMetric,
+} from './registries/budget-amount-fields';
+import {
+  deltaRequests,
+  readDelta,
+  readStaffing,
+  staffingGroupKeys,
+  staffingRequest,
+  type AggregateResult as ReportAggregateResult,
+  type DeltaMode,
+} from '../../spend/reports/shared/reportAggregates';
 import type { AggregateSpec } from '../../common/list-engine/list-aggregate';
 import type { FxMissingPair } from '../../spend/budget-list/budget-list.service';
 import { trailingDigits } from '../../common/text-scan';
@@ -487,9 +505,9 @@ function buildMetricAggregateExpression(fn: AiAggregateFunction, expression: str
   return round != null && fn !== 'sum' && fn !== 'count' ? `ROUND(${aggregate}, ${round})` : aggregate;
 }
 
-type BudgetValueGroup = { key: string | null; then_key?: string | null; value: number | null; unknown?: number };
-type BudgetCountGroup = { key: string | null; then_key?: string | null; count: number };
-type BudgetMetricsGroup = AiBudgetMetricsRow & { key: string | null; then_key?: string | null };
+type BudgetValueGroup = { key: string | null; title?: string | null; then_key?: string | null; value: number | null; unknown?: number };
+type BudgetCountGroup = { key: string | null; title?: string | null; then_key?: string | null; count: number };
+type BudgetMetricsGroup = AiBudgetMetricsRow & { key: string | null; title?: string | null; then_key?: string | null };
 type BudgetOverall = NonNullable<AiAggregateResult['overall']>;
 type BudgetOthers = NonNullable<AiAggregateResult['others']>;
 
@@ -512,16 +530,55 @@ const BUDGET_MULTI_VALUED_GROUPS: Record<string, string> = {
   project_category: 'categories',
 };
 
+/** The lines a change between two columns keeps by default, as the report's top (`OpexDeltaReport`); at most AI_BUDGET_GROUP_LIMIT.max. */
+export const AI_BUDGET_DELTA_DEFAULT_LIMIT = 10;
+
 /**
- * A budget metric with its own computation (the cost per FTE and the day rate), which `metrics`,
- * `then_by` and `limit` do not take: the refusal, with what to ask instead; null for any other key.
+ * A budget metric with its own computation, which `metrics` and `then_by` do not take: the cost
+ * per FTE and the day rate (nor `limit`), the change between two columns and the FTE by month
+ * (which take `limit`). The refusal, with what to ask instead; null for any other key.
  */
 function budgetOwnPathRefusal(key: string, input: 'metrics' | 'then_by' | 'limit'): string | null {
-  if (!resolveBudgetRatioMetric(key)) return null;
-  return `${key} is a ratio the server computes on its own and does not take ${input}. `
-    + `Ask it as metric alone: each group then returns staff_fte, staff_cost, days, day_cost and day_rate. `
-    + 'For two fields, filter on one value of the first and group by the second; for several years or columns, one call per metric.';
+  if (resolveBudgetRatioMetric(key)) {
+    return `${key} is a ratio the server computes on its own and does not take ${input}. `
+      + `Ask it as metric alone: each group then returns staff_fte, staff_cost, days, day_cost and day_rate. `
+      + 'For two fields, filter on one value of the first and group by the second; for several years or columns, one call per metric.';
+  }
+  if (input === 'limit') return null;
+  if (resolveBudgetDeltaMetric(key)) {
+    return `${key} is a change between two columns the server computes on its own and does not take ${input}. `
+      + 'Ask it as metric alone, with group_by, direction and limit: each group then returns previous, current, delta and pct_increase. '
+      + 'For two fields, filter on one value of the first and group by the second; for another pair of columns, one call per change.';
+  }
+  if (resolveBudgetMonthlyFteMetric(key)) {
+    return `${key} is the FTE month by month the server computes on its own and does not take ${input}. `
+      + 'Ask it as metric alone, with group_by: each group then returns its months, average and peak. '
+      + 'For two fields, filter on one value of the first and group by the second; for another year or column, one call each.';
+  }
+  return null;
 }
+
+/** The engine keys of a line, as the reports group it: its id, its title and its number (`BL-n`). */
+const BUDGET_LINE_GROUP_KEYS = staffingGroupKeys('all', { kind: 'item' });
+
+/** The engine keys of a budget group field: a line is grouped on its id, title and number, any other field on its column. */
+function budgetGroupKeys(field: AiFilterFieldDef): string[] {
+  return field.ai === 'line' ? BUDGET_LINE_GROUP_KEYS : [field.grid];
+}
+
+/** A budget group's key, read on its engine keys: a line is named by its reference (BL-12) and its title, never by its id. */
+function budgetGroupKey(field: AiFilterFieldDef, keys: Array<string | null>): { key: string | null; title?: string | null } {
+  if (field.ai !== 'line') return { key: keys[0] ?? null };
+  return { key: keys[2] != null ? `BL-${keys[2]}` : null, title: keys[1] ?? null };
+}
+
+const BUDGET_MONTHLY_FTE_NOTE = 'Computed by the server, as the "Staffing by month" report: each month sums the FTE the quantity × price lines of the column give that month '
+  + '(people and days lines; pieces lines count nothing); a null month is one no line of the group details, which is not 0. '
+  + 'average is the sum of the twelve months ÷ 12 (the full-year average, not the average of the months covered) and peak the highest month; '
+  + 'the groups without any month are left out. Quote these figures: never average the months again. '
+  + 'fte_without_monthly_detail is FTE declared on columns without monthly detail (spread or copied), in no month; '
+  + 'fte_amount_not_following_lines is FTE in the months of columns whose amount no longer follows their lines (spread, copied or edited): '
+  + 'their months come from the lines, not from the column amount. Say so when present.';
 
 /** The engine's refusal of a spec beyond its limits, in words a person reads (400). */
 function engineLimitRefusal(error: unknown): never {
@@ -531,7 +588,9 @@ function engineLimitRefusal(error: unknown): never {
   }
   throw error;
 }
-type BudgetRatioGroup = { key: string | null; count: number; value: number | null } & AiBudgetStaffFigures;
+type BudgetDeltaGroup = { key: string | null; title?: string | null; count: number; previous: number | null; current: number | null; delta: number; pct_increase: number | null };
+type BudgetMonthlyFteGroup = { key: string | null; title?: string | null; months: Array<number | null>; average: number | null; peak: number | null };
+type BudgetRatioGroup = { key: string | null; title?: string | null; count: number; value: number | null } & AiBudgetStaffFigures;
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
@@ -1163,6 +1222,9 @@ export class AiAggregateExecutor {
       const field = registry.fields[thenBy];
       if (!field || field.groupable !== true) throw new BadRequestException('Unsupported then_by field: a group-by field describe_entity_filters lists.');
       if (thenBy === input.group_by) throw new BadRequestException('then_by names the group_by field again: give a second field, or leave then_by out.');
+      if (thenBy === 'line' || input.group_by === 'line') {
+        throw new BadRequestException('A line has one value of every other field, so a second field does not cross it: group by line alone (query_entities gives its fields), or cross two other fields.');
+      }
       for (const key of [input.group_by, thenBy]) {
         const linked = BUDGET_MULTI_VALUED_GROUPS[key];
         if (linked) {
@@ -1585,7 +1647,8 @@ export class AiAggregateExecutor {
       throw new BadRequestException('Unsupported group_by field.');
     }
     const thenField = more.thenBy ? registry.fields[more.thenBy] : null;
-    const keys = [groupField.grid, ...(thenField ? [thenField.grid] : [])];
+    const groupKeys = budgetGroupKeys(groupField);
+    const keys = [...groupKeys, ...(thenField ? [thenField.grid] : [])];
     const limit = more.limit != null ? { limit: more.limit, others: true } : {};
     let spec: AggregateSpec;
     let fte = false;
@@ -1630,12 +1693,12 @@ export class AiAggregateExecutor {
       };
     };
     const groups = result.groups.map((group) => {
-      const key = group.keys[0] ?? null;
+      const key = budgetGroupKey(groupField, group.keys);
       // A null `then_key` is a real group: the lines without a value of the second field.
-      const then = thenField ? { then_key: group.keys[1] ?? null } : {};
-      if (more.metrics?.length) return { key, ...then, ...metricsRow(group) };
-      if (!spec.measures.length) return { key, ...then, count: group.count };
-      return fte ? { key, ...then, value: group.values.value, unknown: group.unknown.value } : { key, ...then, value: group.values.value };
+      const then = thenField ? { then_key: group.keys[groupKeys.length] ?? null } : {};
+      if (more.metrics?.length) return { ...key, ...then, ...metricsRow(group) };
+      if (!spec.measures.length) return { ...key, ...then, count: group.count };
+      return fte ? { ...key, ...then, value: group.values.value, unknown: group.unknown.value } : { ...key, ...then, value: group.values.value };
     });
     // The same measure over every line (all groups together): a total the answer quotes, never adds up.
     let overall: BudgetOverall | null = null;
@@ -1684,7 +1747,7 @@ export class AiAggregateExecutor {
     }
     const governing = ratio.kind === 'cost_per_fte' ? 'staff_fte' : 'days';
     const spec: AggregateSpec = {
-      groupBy: [groupField.grid],
+      groupBy: budgetGroupKeys(groupField),
       measures: [
         { id: 'staff_cost', fn: 'sum', field: ratio.staffCost },
         { id: 'staff_fte', fn: 'sum', field: ratio.staffFte },
@@ -1702,7 +1765,7 @@ export class AiAggregateExecutor {
       .filter((group) => group.values[governing] != null)
       .map((group): BudgetRatioGroup => {
         const figures = budgetStaffFigures(group.values);
-        return { key: group.keys[0] ?? null, count: group.count, value: valueOf(figures), ...figures };
+        return { ...budgetGroupKey(groupField, group.keys), count: group.count, value: valueOf(figures), ...figures };
       });
     const total = result.total.values;
     const figures = budgetStaffFigures(total);
@@ -1726,6 +1789,108 @@ export class AiAggregateExecutor {
     return { groups, total: result.total.count, fxMissing: result.fxMissing ?? [], overall };
   }
 
+  /**
+   * A change between two columns (`y_review_minus_y_budget`, or in FTE): the "Top increase /
+   * decrease" report's own request (`deltaRequests`: the source, the destination, their change and
+   * its rises and falls; the groups that rise, or fall, largest change first, `limit` of them) grouped
+   * by Plaid's field, on Plaid's lines, read by the report's own reader (`readDelta`). `overall`
+   * holds the sources, destinations and changes of every line the filters keep.
+   */
+  private async aggregateBudgetDelta(
+    context: AiExecutionContextWithManager,
+    registry: AiEntityFilterRegistry,
+    groupBy: string,
+    q: string | undefined,
+    filters: Record<string, any>,
+    delta: BudgetDeltaMetric,
+    direction: DeltaMode,
+    limit: number,
+  ): Promise<{ groups: BudgetDeltaGroup[]; total: number; groupCount: number; fxMissing: FxMissingPair[]; overall: BudgetOverall }> {
+    const groupField = registry.fields[groupBy];
+    if (!groupField) throw new BadRequestException('Unsupported group_by field.');
+    const [request] = deltaRequests({
+      scope: 'all',
+      source: delta.source,
+      destination: delta.destination,
+      modes: [direction],
+      topCount: limit,
+      excludedIds: [],
+      excludedAccounts: [],
+      filters: {},
+      measure: delta.measure,
+    });
+    const spec = { ...request.spec, groupBy: budgetGroupKeys(groupField) } as AggregateSpec;
+    const access = await aiBudgetListAccess(this.policy, context);
+    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager, access });
+    // One direction: the reader's rows are the groups, in their order.
+    const { processed, allTotals } = readDelta([direction], [result as unknown as ReportAggregateResult], delta.measure);
+    const groups = result.groups.map((group, i): BudgetDeltaGroup => {
+      const row = processed[i];
+      return {
+        ...budgetGroupKey(groupField, group.keys),
+        count: group.count,
+        previous: row.previous,
+        current: row.current,
+        delta: row.delta,
+        pct_increase: row.pct_increase == null ? null : round2(row.pct_increase),
+      };
+    });
+    // As the reader: an amount nobody holds is 0, an FTE nobody declares is null.
+    const side = (id: 'prev' | 'curr') => result.total.values[id] ?? (delta.measure === 'fte' ? null : 0);
+    const overall: BudgetOverall = {
+      count: result.total.count,
+      previous: side('prev'),
+      current: side('curr'),
+      net: allTotals.net,
+      gross_increase: allTotals.grossIncrease,
+      gross_decrease: allTotals.grossDecrease,
+    };
+    return { groups, total: result.total.count, groupCount: result.groupCount, fxMissing: result.fxMissing ?? [], overall };
+  }
+
+  /**
+   * The FTE of each month of one year and column (`y_budget_fte_by_month`): the "Staffing by month"
+   * report's own request (`staffingRequest`: twelve monthly sums, the FTE whose amount no longer
+   * follows its lines and the FTE without monthly detail) grouped by Plaid's field, on Plaid's lines,
+   * read by the report's own reader (`readStaffing`: the groups with a month, largest average first,
+   * the total row and its two notices). `limit` keeps the first groups; `overall` holds every line.
+   */
+  private async aggregateBudgetMonthlyFte(
+    context: AiExecutionContextWithManager,
+    registry: AiEntityFilterRegistry,
+    groupBy: string,
+    q: string | undefined,
+    filters: Record<string, any>,
+    monthly: BudgetMonthlyFteMetric,
+    limit: number | undefined,
+  ): Promise<{ groups: BudgetMonthlyFteGroup[]; total: number; groupCount: number; overall: BudgetOverall }> {
+    const groupField = registry.fields[groupBy];
+    if (!groupField) throw new BadRequestException('Unsupported group_by field.');
+    const request = staffingRequest({ scope: 'all', year: monthly.year, metric: monthly.metric, group: { kind: 'item' }, filters: {} });
+    const spec = { ...request.spec, groupBy: budgetGroupKeys(groupField) } as AggregateSpec;
+    const access = await aiBudgetListAccess(this.policy, context);
+    const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager, access });
+    const staffing = readStaffing(result as unknown as ReportAggregateResult, { none: '', unnamed: '' }, (a, b) => a.localeCompare(b));
+    const line = groupField.ai === 'line';
+    const figures = (row: { months: Array<number | null>; average: number | null; peak: number | null }) => ({
+      months: row.months.map((value) => (value == null ? null : round2(value))),
+      average: row.average == null ? null : round2(row.average),
+      peak: row.peak == null ? null : round2(row.peak),
+    });
+    // The reader keys a line by its reference and any other group by its value (`name` null: the lines without one).
+    const rows = staffing.rows.map((row): BudgetMonthlyFteGroup => (line
+      ? { key: row.key.startsWith('BL-') ? row.key : null, title: row.name, ...figures(row) }
+      : { key: row.name == null ? null : row.key, ...figures(row) }));
+    const groups = limit != null ? rows.slice(0, limit) : rows;
+    const overall: BudgetOverall = {
+      count: result.total.count,
+      ...figures(staffing.total),
+      ...(staffing.noDetail ? { fte_without_monthly_detail: staffing.noDetail.fte } : {}),
+      ...(staffing.detached ? { fte_amount_not_following_lines: staffing.detached.fte } : {}),
+    };
+    return { groups, total: result.total.count, groupCount: rows.length, overall };
+  }
+
   async execute(
     context: AiExecutionContextWithManager,
     input: {
@@ -1735,6 +1900,7 @@ export class AiAggregateExecutor {
       metrics?: string[];
       then_by?: string;
       limit?: number;
+      direction?: DeltaMode;
       function?: AiAggregateFunction;
       filters?: Record<string, AiFilterValue>;
       q?: string;
@@ -1787,6 +1953,7 @@ export class AiAggregateExecutor {
       metrics?: string[];
       then_by?: string;
       limit?: number;
+      direction?: DeltaMode;
       function?: AiAggregateFunction;
       filters?: Record<string, AiFilterValue>;
       q?: string;
@@ -1805,11 +1972,21 @@ export class AiAggregateExecutor {
     }
     assertPlainTextQuickSearch(input.entity_type, input.q, registry);
 
-    // A budget ratio (cost per FTE, day rate) is no field: the server computes it whatever the function.
-    const ratio = isBudgetLineEntity(input.entity_type) ? resolveBudgetRatioMetric(input.metric?.trim()) : null;
+    // A budget ratio (cost per FTE, day rate), a change between two columns and the FTE by month are
+    // no fields: the server computes them whatever the function.
+    const budgetLines = isBudgetLineEntity(input.entity_type);
+    const ratio = budgetLines ? resolveBudgetRatioMetric(input.metric?.trim()) : null;
+    const delta = budgetLines ? resolveBudgetDeltaMetric(input.metric?.trim()) : null;
+    const monthly = budgetLines ? resolveBudgetMonthlyFteMetric(input.metric?.trim()) : null;
     const fn = normalizeAggregateFunction(input.function);
     const budget = this.resolveBudgetShape(registry, input, fn);
-    const metric = ratio || budget.metrics ? null : this.resolveMetric(registry, input.metric?.trim(), fn);
+    if (input.direction != null) {
+      if (!delta) throw new BadRequestException('direction applies to a change between two columns, a metric such as y_review_minus_y_budget.');
+      if (input.direction !== 'increase' && input.direction !== 'decrease') throw new BadRequestException('direction is increase or decrease.');
+    }
+    const ownMetric = ratio ?? delta ?? monthly;
+    const ownFunction = ratio ? 'ratio' : delta ? 'delta' : monthly ? 'by_month' : null;
+    const metric = ownMetric || budget.metrics ? null : this.resolveMetric(registry, input.metric?.trim(), fn);
     const normalizedFilters = await this.normalizePersonFilters(context, input.entity_type, input.filters);
     const adapted = adaptFilters(registry, normalizedFilters);
     if (adapted.ignored.length > 0) {
@@ -1818,9 +1995,9 @@ export class AiAggregateExecutor {
         status: refusal.status,
         group_by: input.group_by,
         ...(budget.thenBy ? { then_by: budget.thenBy } : {}),
-        metric: metric || ratio ? input.metric?.trim() ?? null : null,
+        metric: metric || ownMetric ? input.metric?.trim() ?? null : null,
         ...(budget.metrics ? { metrics: budget.metrics } : {}),
-        function: ratio ? 'ratio' : fn,
+        function: ownFunction ?? fn,
         groups: [],
         total: 0,
         returned: 0,
@@ -2112,6 +2289,67 @@ export class AiAggregateExecutor {
         filters_ignored: adapted.ignored,
         scope: null,
         amounts_fx_missing: fxMissing,
+      };
+    }
+
+    if (input.entity_type === 'budget_lines' && delta) {
+      const direction = input.direction ?? 'increase';
+      const limit = budget.limit ?? AI_BUDGET_DELTA_DEFAULT_LIMIT;
+      const { groups, total, groupCount, fxMissing, overall } = await this.aggregateBudgetDelta(
+        context,
+        registry,
+        input.group_by,
+        input.q?.trim(),
+        adapted.filters,
+        delta,
+        direction,
+        limit,
+      );
+      return {
+        group_by: input.group_by,
+        metric: delta.key,
+        function: 'delta',
+        direction,
+        groups,
+        overall,
+        limit,
+        group_count: groupCount,
+        total,
+        returned: groups.length,
+        truncated: groupCount > groups.length,
+        complete: isCompleteAggregateResult(null),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: null,
+        ...(delta.measure === 'amount' ? { amounts_fx_missing: fxMissing } : {}),
+      };
+    }
+
+    if (input.entity_type === 'budget_lines' && monthly) {
+      const { groups, total, groupCount, overall } = await this.aggregateBudgetMonthlyFte(
+        context,
+        registry,
+        input.group_by,
+        input.q?.trim(),
+        adapted.filters,
+        monthly,
+        budget.limit,
+      );
+      return {
+        group_by: input.group_by,
+        metric: monthly.key,
+        function: 'by_month',
+        groups,
+        overall,
+        monthly_fte_note: BUDGET_MONTHLY_FTE_NOTE,
+        ...(budget.limit != null ? { limit: budget.limit, group_count: groupCount } : {}),
+        total,
+        returned: groups.length,
+        truncated: groupCount > groups.length,
+        complete: isCompleteAggregateResult(null),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: null,
       };
     }
 

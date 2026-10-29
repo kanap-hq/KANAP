@@ -178,7 +178,10 @@ export type AiBudgetStaffFigures = {
 export type AiMetricFamilyDescription = {
   family: string;
   description: string;
-  metrics: string[];
+  /** Every key of the family, when it lists them. */
+  metrics?: string[];
+  /** A few keys, for a family that combines two (a change between any two columns). */
+  examples?: string[];
 };
 
 /** A family of generated fields, as describe_entity_filters lists it: one entry for its keys. */
@@ -340,17 +343,27 @@ export type AiAggregateResult = {
   metric?: string | null;
   /** Budget lines: the metrics measured together (2 to 8, one function); each group then carries `values`. */
   metrics?: string[];
-  /** `ratio`: a budget ratio metric (cost per FTE, day rate), computed by the server. */
-  function?: 'count' | 'sum' | 'avg' | 'min' | 'max' | 'ratio';
+  /**
+   * `ratio`: a budget ratio metric (cost per FTE, day rate); `delta`: a change between two budget
+   * columns; `by_month`: the FTE of each month of a budget column. Each computed by the server.
+   */
+  function?: 'count' | 'sum' | 'avg' | 'min' | 'max' | 'ratio' | 'delta' | 'by_month';
+  /** Budget lines, a change between two columns: the groups that rise (`increase`) or fall (`decrease`). */
+  direction?: 'increase' | 'decrease';
   groups: Array<
     // `distinct_count`: a family with `distinctRecord` (vulnerabilities: the distinct CVE of the group).
     // `then_key`: budget lines with `then_by`, the group's value of the second field (null: the lines without one).
-    | { key: string | null; then_key?: string | null; count: number; distinct_count?: number }
+    // `title`: budget lines grouped by line, the line's title (its `key` is its reference, BL-12).
+    | { key: string | null; title?: string | null; then_key?: string | null; count: number; distinct_count?: number }
     // `unknown`: FTE metrics only, the lines of the group without an FTE (left out of the value).
-    | { key: string | null; then_key?: string | null; value: number | string | null; unknown?: number }
-    | ({ key: string | null; count: number; value: number | null } & AiBudgetStaffFigures)
+    | { key: string | null; title?: string | null; then_key?: string | null; value: number | string | null; unknown?: number }
+    | ({ key: string | null; title?: string | null; count: number; value: number | null } & AiBudgetStaffFigures)
     // Budget lines with `metrics`: one value per metric; `unknown` per FTE metric.
-    | AiBudgetMetricsRow & { key: string | null; then_key?: string | null }
+    | AiBudgetMetricsRow & { key: string | null; title?: string | null; then_key?: string | null }
+    // Budget lines, a change between two columns: the source, the destination and the change (pct_increase null when the source is 0 or less).
+    | { key: string | null; title?: string | null; count: number; previous: number | null; current: number | null; delta: number; pct_increase: number | null }
+    // Budget lines, the FTE by month: January to December (null: no line of the group details the month), the average (÷ 12) and the peak.
+    | { key: string | null; title?: string | null; months: Array<number | null>; average: number | null; peak: number | null }
   >;
   /**
    * Budget lines with a metric: the same measure over every line the filters keep (all groups
@@ -366,6 +379,17 @@ export type AiAggregateResult = {
     fte_without_line_detail?: number;
     fte_amount_not_following_lines?: number;
     staff_cost_not_in_day_rate?: number;
+    /** A change between two columns, over every line: the sources, the destinations, the net change and its rises and falls (the falls as a positive figure). */
+    previous?: number | null;
+    current?: number | null;
+    net?: number | null;
+    gross_increase?: number | null;
+    gross_decrease?: number | null;
+    /** The FTE by month, over every line, and the FTE declared without monthly detail (in no month). */
+    months?: Array<number | null>;
+    average?: number | null;
+    peak?: number | null;
+    fte_without_monthly_detail?: number;
   };
   /**
    * Budget lines with `limit` (by default with `then_by`): the groups past it as one row, absent
@@ -377,6 +401,8 @@ export type AiAggregateResult = {
   limit?: number;
   /** Budget ratio metrics: how the figures are computed and what they leave out. */
   ratio_note?: string;
+  /** Budget lines, the FTE by month: how the figures are computed and what they leave out. */
+  monthly_fte_note?: string;
   total: number;
   /**
    * A family with `distinctRecord`: the distinct records (`distinct_label`, vulnerabilities: cve)

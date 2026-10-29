@@ -586,7 +586,14 @@ async function runAiCase(env: Env, c: Extract<Case, { kind: 'ai' }>): Promise<vo
     const scoped = await budgetReadService().summaryIds({ q: input.q?.trim(), limit: 10_000, filters: adapted.filters, includeDisabled: true }, { manager: m });
     const fn = input.function as any;
     const metric = fn === 'count' ? null : { key: input.metric!, def: {} as any };
-    const groups = scoped.ids.length ? await aggregateBudgetSummaryByIds(env.rowsOf, env.registry, input.group_by, scoped.ids, fn, metric) : [];
+    const found = scoped.ids.length ? await aggregateBudgetSummaryByIds(env.rowsOf, env.registry, input.group_by, scoped.ids, fn, metric) : [];
+    // Grouped by line (lot L8 C), a group names its line by reference and title, never by its id.
+    const groups = input.group_by === 'line'
+      ? await Promise.all(found.map(async ({ key, ...rest }) => {
+        const [row] = key == null ? [] : await env.rowsOf([key]);
+        return { key: row ? `BL-${row.item_number}` : null, title: row?.product_name || null, ...rest };
+      }))
+      : found;
     return { status: undefined, groups, total: scoped.total, returned: groups.length, truncated: scoped.ids.length < scoped.total, complete: true, filters_applied: adapted.applied };
   });
   if (failed(label, e, o)) return;

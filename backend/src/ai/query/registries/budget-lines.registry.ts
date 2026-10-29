@@ -7,6 +7,7 @@ import {
   budgetLineTotalFields,
   budgetLineTotalSortFields,
   budgetRatioMetricFamilies,
+  budgetReportMetricFamilies,
 } from './budget-amount-fields';
 
 export const budgetLinesRegistry: AiEntityFilterRegistry = {
@@ -30,6 +31,14 @@ export const budgetLinesRegistry: AiEntityFilterRegistry = {
       aliases: ['name'],
       sortable: true,
       groupable: false,
+    },
+    line: {
+      ai: 'line',
+      grid: 'id',
+      type: 'set',
+      description: 'The line itself, as a group: group_by line gives one group per line, its `key` the line\'s reference (BL-12) and its `title` the line\'s title, '
+        + 'as the reports list their top lines. A group, not a filter: to keep one line, search its reference with q.',
+      groupable: true,
     },
     description: {
       ai: 'description',
@@ -280,7 +289,7 @@ export const budgetLinesRegistry: AiEntityFilterRegistry = {
     created_at: 'created_at',
     updated_at: 'updated_at',
   },
-  metricFamilies: budgetRatioMetricFamilies(),
+  metricFamilies: [...budgetRatioMetricFamilies(), ...budgetReportMetricFamilies()],
   defaultSort: {
     field: 'created_at',
     direction: 'desc',
