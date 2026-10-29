@@ -3210,7 +3210,10 @@ export class AiQueryExecutor {
       business_owners: owners('business'),
       it_owners: owners('it'),
       support_contacts: supportContacts.map((contact: any) => ({
-        name: [contact.contact?.first_name, contact.contact?.last_name].filter(Boolean).join(' ') || null,
+        // The Operations tab's label: a name, else the email it shows for an unnamed contact.
+        name: [contact.contact?.first_name, contact.contact?.last_name].filter(Boolean).join(' ')
+          || String(contact.contact?.email ?? '').trim()
+          || 'Unnamed contact',
         role: contact.role ?? null,
       })),
       web_links: webLinks.map((link: any) => ({ url: String(link.url ?? ''), description: link.description ?? null })),

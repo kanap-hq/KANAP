@@ -105,8 +105,13 @@ function sameContacts(a: readonly ContactSnapshot[], b: readonly ContactSnapshot
     && row.name.toLowerCase() === b[index].name.toLowerCase());
 }
 
-function contactName(row: { first_name?: string | null; last_name?: string | null; email?: string | null }): string {
-  return [row.first_name, row.last_name].map((part) => text(part)).filter(Boolean).join(' ') || text(row.email);
+function contactName(row: { first_name?: string | null; last_name?: string | null }): string {
+  return [row.first_name, row.last_name].map((part) => text(part)).filter(Boolean).join(' ');
+}
+
+/** The label the Operations tab shows for a contact: its name, its email when unnamed, else "Unnamed contact". */
+function contactLabel(row: { first_name?: string | null; last_name?: string | null; email?: string | null }): string {
+  return contactName(row) || text(row.email) || 'Unnamed contact';
 }
 
 /** A plan step reaches `prepareCreatePreview` without the Zod schema: the keys are checked here too. */
@@ -147,7 +152,7 @@ export class UpdateTechnologyPeopleAiMutationOperation implements AiMutationOper
     entity_type: 'technologies',
     fields: ['technology_owners', 'technology_support_contacts'],
     reversible: true,
-    prompt_hint: 'Use `update_technology_people` for a technology\'s owners and support contacts: name the technology (TEC-n, UUID or exact name), add or remove owners by their exact active display name with `owner_type`, contacts by their exact name with an optional role. A person already there or absent changes nothing. Undo puts the previous owners and contacts back, in their order. The card never mentions the vulnerability digests an IT owner receives.',
+    prompt_hint: 'Use `update_technology_people` for a technology\'s owners and support contacts: name the technology (TEC-n, UUID or exact name), add or remove owners by their exact active display name with `owner_type`, contacts by their exact name with an optional role. A person already there or absent changes nothing. Undo puts the previous owners and contacts back, in their order.',
   };
 
   constructor(
@@ -164,7 +169,7 @@ export class UpdateTechnologyPeopleAiMutationOperation implements AiMutationOper
     input: UpdateTechnologyPeopleInput,
   ): Promise<AiPreparedMutationPreview> {
     const request = this.normalizeRequest(input);
-    const technology = await this.support.resolveTechnology(context, request.technology, 'link');
+    const technology = await this.support.resolveTechnology(context, request.technology);
     const opts = { manager: context.manager, tenantId: context.tenantId };
     const currentOwners = await this.readOwners(context, technology.id);
     const currentContacts = await this.readContacts(context, technology.id);
@@ -273,7 +278,8 @@ export class UpdateTechnologyPeopleAiMutationOperation implements AiMutationOper
       const restoreContacts = this.coerceContacts(mutation.contacts_restore);
       const liveOwners = await this.readOwners(context, technology.id);
       const liveContacts = await this.readContacts(context, technology.id);
-      if (!sameOwners(liveOwners, expectedOwners) || !sameContacts(liveContacts, expectedContacts)) {
+      if ((mutation.touches_owners === true && !sameOwners(liveOwners, expectedOwners))
+        || (mutation.touches_contacts === true && !sameContacts(liveContacts, expectedContacts))) {
         throw new ConflictException(`People of ${technology.label} changed after the preview was created.`);
       }
       if (mutation.touches_owners === true) {
@@ -425,19 +431,34 @@ export class UpdateTechnologyPeopleAiMutationOperation implements AiMutationOper
     return { id: matches[0].id, name: matches[0].name! };
   }
 
-  private async resolveContact(context: AiExecutionContextWithManager, name: string): Promise<{ id: string; name: string }> {
+  /**
+   * A contact by the label the Operations tab shows: its name, or its email when it has no name.
+   * The add refuses an unnamed contact; the remove can still name it by that email.
+   */
+  private async resolveContact(context: AiExecutionContextWithManager, value: string): Promise<{ id: string; named: boolean; label: string }> {
     const rows: Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null }> = await context.manager.query(
       `SELECT id, first_name, last_name, email FROM contacts WHERE tenant_id = $1`,
       [context.tenantId],
     );
     const matches = rows
-      .map((row) => ({ id: row.id, name: contactName(row) }))
-      .filter((row) => row.name && sameName(row.name, name));
+      .map((row) => ({ id: row.id, named: !!contactName(row), label: contactLabel(row) }))
+      .filter((row) => sameName(row.label, value));
     if (matches.length > 1) {
-      throw new BadRequestException(`Two contacts are named "${name}". Use the screen to choose the right one.`);
+      throw new BadRequestException(`Two contacts are named "${value}". Use the screen to choose the right one.`);
     }
-    if (!matches[0]) throw new NotFoundException(`Contact "${name}" not found.`);
+    if (!matches[0]) throw new NotFoundException(`Contact "${value}" not found.`);
     return matches[0];
+  }
+
+  /** A current owner of the fiche, active or not, by the name the card shows. */
+  private resolveCurrentOwner(owners: readonly OwnerSnapshot[], name: string, ownerType?: OwnerType): OwnerSnapshot | null {
+    const matches = owners.filter((owner) => sameName(owner.name, name) && (!ownerType || owner.owner_type === ownerType));
+    const userIds = new Set(matches.map((owner) => owner.user_id));
+    if (userIds.size > 1) {
+      // The interface shows names only: the refusal does not reveal an email.
+      throw new BadRequestException(`Two owners are named "${name}". Use the screen to choose the right one.`);
+    }
+    return matches[0] ?? null;
   }
 
   private async readOwners(context: AiExecutionContextWithManager, technologyId: string): Promise<OwnerSnapshot[]> {
@@ -454,7 +475,7 @@ export class UpdateTechnologyPeopleAiMutationOperation implements AiMutationOper
     return rows.map((row: any) => ({
       contact_id: String(row.contact_id),
       role: row.role == null ? null : String(row.role),
-      name: contactName(row.contact ?? {}),
+      name: contactLabel(row.contact ?? {}),
     }));
   }
 
@@ -471,11 +492,16 @@ export class UpdateTechnologyPeopleAiMutationOperation implements AiMutationOper
       const key = `remove:${text(entry.user).toLowerCase()}:${entry.owner_type ?? '*'}`;
       if (seenOwners.has(key)) continue;
       seenOwners.add(key);
-      const user = await this.resolveActiveUser(context, text(entry.user));
+      // A removal names a current owner of the fiche, active or not, as the Operations tab shows it.
+      const user = this.resolveCurrentOwner(ownersAfter, text(entry.user), entry.owner_type);
+      if (!user) {
+        ownerGroup!.absent.push({ name: text(entry.user), owner_type: entry.owner_type ?? null });
+        continue;
+      }
       const types: OwnerType[] = entry.owner_type ? [entry.owner_type] : ['it', 'business'];
       let removed = false;
       for (const type of types) {
-        const index = ownersAfter.findIndex((owner) => owner.user_id === user.id && owner.owner_type === type);
+        const index = ownersAfter.findIndex((owner) => owner.user_id === user.user_id && owner.owner_type === type);
         if (index < 0) continue;
         ownersAfter.splice(index, 1);
         ownerGroup!.remove.push({ name: user.name, owner_type: type });
@@ -507,7 +533,7 @@ export class UpdateTechnologyPeopleAiMutationOperation implements AiMutationOper
       const contact = await this.resolveContact(context, text(entry.contact));
       const index = contactsAfter.findIndex((row) => row.contact_id === contact.id);
       if (index < 0) {
-        contactGroup!.absent.push({ name: contact.name, role: null });
+        contactGroup!.absent.push({ name: contact.label, role: null });
         continue;
       }
       const [removed] = contactsAfter.splice(index, 1);
@@ -518,14 +544,19 @@ export class UpdateTechnologyPeopleAiMutationOperation implements AiMutationOper
       if (seenContacts.has(key)) continue;
       seenContacts.add(key);
       const contact = await this.resolveContact(context, text(entry.contact));
+      // A contact without a name would read back as its email, and the card would differ from the
+      // detail: it must be named in Contacts first.
+      if (!contact.named) {
+        throw new BadRequestException(`Contact "${contact.label}" has no name. Give it a name in Contacts first.`);
+      }
       const existing = contactsAfter.find((row) => row.contact_id === contact.id);
       if (existing) {
         contactGroup!.already.push({ name: existing.name, role: existing.role });
         continue;
       }
       const role = text(entry.role) || null;
-      contactsAfter.push({ contact_id: contact.id, role, name: contact.name });
-      contactGroup!.add.push({ name: contact.name, role });
+      contactsAfter.push({ contact_id: contact.id, role, name: contact.label });
+      contactGroup!.add.push({ name: contact.label, role });
     }
 
     const ownersChanged = !sameOwners(currentOwners, ownersAfter);

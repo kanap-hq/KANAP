@@ -398,20 +398,20 @@ export class AiMutationPreviewService {
         params.preview?.mutation_input?.applications,
         (params.preview?.mutation_input?.changes as Record<string, unknown> | null | undefined)?.applications,
       ].some((group) => this.applicationGroupHasEntries(group));
-    // A technology people write names support contacts when the request does, or when the preview
-    // being run or undone restores them (`touches_contacts`).
-    const peopleNameContacts = operation.toolName === 'update_technology_people'
-      && (mutationInput?.touches_contacts === true
-        || [
-          (params.input as { support_contacts?: unknown } | null | undefined)?.support_contacts,
-          mutationInput?.support_contacts,
-          params.preview?.mutation_input?.support_contacts,
-        ].some((group) => this.applicationGroupHasEntries(group)));
+    // A technology people write adds support contacts when the request does: choosing a contact
+    // needs the contacts read, as the Operations tab's picker. Removing one names a contact the
+    // tab already shows, so it needs no such read (and an undo restores known contacts).
+    const peopleAddContacts = operation.toolName === 'update_technology_people'
+      && [
+        (params.input as { support_contacts?: unknown } | null | undefined)?.support_contacts,
+        mutationInput?.support_contacts,
+        params.preview?.mutation_input?.support_contacts,
+      ].some((group) => this.applicationGroupAdds(group));
     const relation = mutationInput?.relation
       ?? (params.input as { relation?: unknown } | null | undefined)?.relation
       ?? params.preview?.mutation_input?.relation
       ?? (linkNamesApplications ? 'applications' : undefined)
-      ?? (peopleNameContacts ? 'support_contacts' : undefined);
+      ?? (peopleAddContacts ? 'support_contacts' : undefined);
     const requirement = aiRelationTargetRequirement(operation.toolName, family, relation);
     if (requirement) {
       await this.policy.assertBusinessPermission(context, requirement.resource, requirement.level, context.manager);
@@ -425,6 +425,13 @@ export class AiMutationPreviewService {
       const entries = (group as Record<string, unknown>)[key];
       return Array.isArray(entries) && entries.length > 0;
     });
+  }
+
+  /** Whether a technology people write asks for a contact to be added (not removed or restored). */
+  private applicationGroupAdds(group: unknown): boolean {
+    if (!group || typeof group !== 'object') return false;
+    const entries = (group as Record<string, unknown>).add;
+    return Array.isArray(entries) && entries.length > 0;
   }
 
   /** The rights of a stored preview, before it runs or is undone. */
