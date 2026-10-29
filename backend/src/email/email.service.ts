@@ -14,7 +14,7 @@ import type {
   EmailRetryConfig,
   EmailTransport,
 } from './transports/email-transport.interface';
-import type { SendEmailOptions } from './email.types';
+import type { Recipient, SendEmailOptions } from './email.types';
 import { findAddressTokens, replaceAddressTokens } from '../common/text-scan';
 
 export type { EmailAttachment, Recipient, SendEmailOptions } from './email.types';
@@ -43,6 +43,11 @@ export function isExampleRecipient(entry: unknown): boolean {
 /** `text` with every e-mail address replaced by `[address]`, for a log line. */
 export function maskEmailAddresses(text: string): string {
   return replaceAddressTokens(text, '[address]');
+}
+
+/** How many recipient entries an e-mail names. A log line prints this count, never the addresses. */
+function recipientCount(to: Recipient): number {
+  return Array.isArray(to) ? to.length : 1;
 }
 
 function escapeHtml(text: string): string {
@@ -85,7 +90,7 @@ export class EmailService {
     };
 
     if (this.emailOverride) {
-      this.logger.warn(`Email override active: all emails will be sent to ${this.emailOverride}`);
+      this.logger.warn('Email override active: all emails will be sent to the override address');
     }
   }
 
@@ -172,9 +177,8 @@ export class EmailService {
         }
 
         attempt += 1;
-        const to = Array.isArray(options.to) ? options.to.join(', ') : options.to;
         this.logger.warn(
-          `${this.transport.name} delivery throttled for ${to}; retry ${attempt}/${this.RATE_LIMIT_MAX_RETRIES} in ${retryDelayMs}ms`,
+          `${this.transport.name} delivery throttled for ${recipientCount(options.to)} recipient(s); retry ${attempt}/${this.RATE_LIMIT_MAX_RETRIES} in ${retryDelayMs}ms`,
         );
 
         this.deferNextSendUntil(Date.now() + retryDelayMs);
@@ -206,11 +210,12 @@ export class EmailService {
         to: [this.emailOverride],
         subject: `[To: ${originalTo.join(', ')}] ${options.subject}`,
       };
-      this.logger.debug(`Email redirected from ${originalTo.join(', ')} to ${this.emailOverride}`);
+      this.logger.debug('Email redirected to the override address');
     }
 
-    const finalTo = Array.isArray(resolved.to) ? resolved.to.join(', ') : resolved.to;
-    this.logger.debug(`Sending email via ${this.transport.name} to ${finalTo}: ${resolved.subject}`);
+    this.logger.debug(
+      `Sending email via ${this.transport.name} to ${recipientCount(resolved.to)} recipient(s)`,
+    );
     await this.transport.send(resolved);
   }
 
