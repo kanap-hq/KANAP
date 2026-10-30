@@ -313,9 +313,9 @@ describe('ChatMessageList', () => {
             id: 'assistant-1',
             role: 'assistant',
             content: [
-              'APP-36 runs on AST-4 (INT-7) and costs BL-113; see INC-26, T-8, PRJ-5, REQ-2, DOC-12 and TEC-3.',
+              'APP-36 runs on AST-4 (INT-7) at LOC-2 over CONN-9 and costs BL-113; see INC-26, T-8, PRJ-5, REQ-2, DOC-12, TEC-3 and CTR-4.',
               '',
-              'Inline `APP-99`, already linked [T-115](/portfolio/tasks/task-115), CVE-2026-1234, XAPP-1, APP-1x, CTR-4 and the server part APP-01.',
+              'Inline `APP-99`, already linked [T-115](/portfolio/tasks/task-115), CVE-2026-1234, XAPP-1, APP-1x and the server part APP-01.',
               '',
               '```',
               'INC-77',
@@ -334,13 +334,16 @@ describe('ChatMessageList', () => {
     expect(hrefOf('INT-7')).toBe('/it/interfaces/INT-7');
     expect(hrefOf('BL-113')).toBe('/ops/budget/BL-113');
     expect(hrefOf('INC-26')).toBe('/it/incidents/INC-26');
+    expect(hrefOf('LOC-2')).toBe('/it/locations/LOC-2');
+    expect(hrefOf('CONN-9')).toBe('/it/connections/CONN-9');
     expect(hrefOf('T-8')).toBe('/portfolio/tasks/T-8');
     expect(hrefOf('PRJ-5')).toBe('/portfolio/projects/PRJ-5');
     expect(hrefOf('REQ-2')).toBe('/portfolio/requests/REQ-2');
     expect(hrefOf('DOC-12')).toBe('/knowledge/DOC-12');
     expect(hrefOf('TEC-3')).toBe('/it/technologies/TEC-3');
+    expect(hrefOf('CTR-4')).toBe('/portfolio/contributors/CTR-4');
     expect(hrefOf('T-115')).toBe('/portfolio/tasks/task-115');
-    expect(screen.getAllByRole('link')).toHaveLength(11);
+    expect(screen.getAllByRole('link')).toHaveLength(14);
     expect(container.querySelector('code')?.textContent).toBe('APP-99');
     expect(container.querySelector('pre')?.textContent).toContain('INC-77');
     expect(container.textContent).toContain('CVE-2026-1234');
@@ -353,13 +356,15 @@ describe('ChatMessageList', () => {
     try {
       renderWithTheme(
         <ChatMessageList
-          messages={[{ id: 'assistant-1', role: 'assistant', content: 'APP-36 is funded by BL-113.' }]}
+          messages={[{ id: 'assistant-1', role: 'assistant', content: 'APP-36 is funded by BL-113 and hosted at LOC-2 (CTR-4).' }]}
           previews={[]}
           onSend={() => undefined}
         />,
       );
       expect(screen.getByRole('link', { name: 'APP-36' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'BL-113' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'LOC-2' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'CTR-4' })).toBeNull();
     } finally {
       readableResources = null;
     }
