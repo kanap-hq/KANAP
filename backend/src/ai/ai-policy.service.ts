@@ -84,6 +84,14 @@ const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> =
   // The chargeback reports, read with the reporting right as their routes (`GET /reports/chargeback/*`).
   chargeback: 'reporting',
   chargeback_lines: 'reporting',
+  // The tree of cost centers, read with the right of its page (`GET /cost-centers`).
+  cost_centers: 'cost_centers',
+  // Master data › Working-day calendars and Analytics dimensions, read with the right of their page.
+  working_day_calendars: 'working_day_profiles',
+  analytics_axes: 'analytics',
+  // The exchange rates and the currency settings, read with the budget right as their routes
+  // (`GET /currency/rates`, `/rates/missing`, `/settings`), limited access included.
+  exchange_rates: 'budget',
 };
 
 /**
@@ -114,6 +122,18 @@ const ENTITY_SCREEN: Partial<Record<AiQueryEntityType | AiContextEntityType, str
   data_access: 'Admin › Data access',
   chargeback: 'Reporting › Global chargeback',
   chargeback_lines: 'Reporting › Company chargeback',
+  cost_centers: 'Master data › Cost centers',
+  working_day_calendars: 'Master data › Working-day calendars',
+  analytics_axes: 'Master data › Analytics dimensions',
+};
+
+/**
+ * What a family's refusal says it reads, when the family is read with the right of another module
+ * and its screen asks for more than its routes: the exchange rates are read with the budget right,
+ * while the Currency settings page is a budget administration setting.
+ */
+const ENTITY_READ_SUBJECT: Partial<Record<AiQueryEntityType | AiContextEntityType, string>> = {
+  exchange_rates: 'the exchange rates and the currency settings',
 };
 
 /** The level a family is read at: the caller's, raised to the family's minimum. */
@@ -150,6 +170,8 @@ const RIGHT_PLAIN_NAMES: Record<string, string> = {
  */
 const READ_RIGHT_PLAIN_NAMES: Record<string, string> = {
   reporting: 'the reports',
+  cost_centers: 'cost centers',
+  working_day_profiles: 'working-day calendars',
 };
 
 const LEVEL_PLAIN_VERBS: Record<PermissionLevel, string> = {
@@ -163,7 +185,7 @@ const LEVEL_PLAIN_VERBS: Record<PermissionLevel, string> = {
  * The refusal of a missing right, in plain words: which right, at which level (P4-5, P4-9). The
  * chat model says it again in the person's language; an MCP client reads it as is.
  */
-export function missingRightMessage(resource: string, minimumLevel: PermissionLevel, screen?: string): string {
+export function missingRightMessage(resource: string, minimumLevel: PermissionLevel, screen?: string, subject?: string): string {
   if (resource === 'ai_chat') {
     return minimumLevel === 'reader'
       ? 'Your role does not give access to Plaid. An administrator can add it to your role.'
@@ -173,7 +195,8 @@ export function missingRightMessage(resource: string, minimumLevel: PermissionLe
   // The rights of the settings and the MCP surface keep their code: the administration screens read it.
   if (!name) return `Missing required permission ${resource}:${minimumLevel}.`;
   const where = screen ? ` (the right the ${screen} screen asks for)` : '';
-  return `You need the right to ${LEVEL_PLAIN_VERBS[minimumLevel] ?? minimumLevel} ${name}${where}, which your role does not give. An administrator can add it to your role.`;
+  const what = subject ? ` to read ${subject}` : '';
+  return `You need the right to ${LEVEL_PLAIN_VERBS[minimumLevel] ?? minimumLevel} ${name}${where}${what}, which your role does not give. An administrator can add it to your role.`;
 }
 
 /**
@@ -345,6 +368,7 @@ export class AiPolicyService {
     minimumLevel: PermissionLevel,
     manager: EntityManager,
     screen?: string,
+    subject?: string,
   ): Promise<void> {
     const state = await this.getEffectivePermissionState(userId, manager);
     if (state.isAdmin) {
@@ -353,7 +377,7 @@ export class AiPolicyService {
 
     const current = state.permissions.get(resource);
     if (!current || (LEVEL_RANK[current] ?? 0) < (LEVEL_RANK[minimumLevel] ?? 0)) {
-      throw moduleRightRequired(resource, minimumLevel, missingRightMessage(resource, minimumLevel, screen));
+      throw moduleRightRequired(resource, minimumLevel, missingRightMessage(resource, minimumLevel, screen, subject));
     }
   }
 
@@ -746,7 +770,7 @@ export class AiPolicyService {
     entityType: AiQueryEntityType | AiContextEntityType,
     manager: EntityManager,
   ): Promise<void> {
-    await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], entityReadLevel(entityType), manager, ENTITY_SCREEN[entityType]);
+    await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], entityReadLevel(entityType), manager, ENTITY_SCREEN[entityType], ENTITY_READ_SUBJECT[entityType]);
     const feature = entityTypeFeature(entityType);
     if (feature) throwFeatureDisabled(feature);
     if (await this.isReservedFamilyClosed(context, entityType, manager)) throw new DataAccessReservedException();

@@ -40,6 +40,7 @@ import {
   AiEntitySummaryDto,
   AiExecutionContextWithManager,
   AiQueryEntityType,
+  AiSearchReferenceEntityType,
   AiQueryScope,
 } from '../ai.types';
 import { adaptFilters } from './ai-filter.adapter';
@@ -65,7 +66,7 @@ import {
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { aiAmountsCurrency } from './ai-amounts-currency.util';
-import { aiDataAccessNote } from './ai-data-access-note.util';
+import { aiDataAccessCountsNote, aiDataAccessNote } from './ai-data-access-note.util';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
 import { compareNullableText } from '../../common/list-engine/sql-fragments';
 import type { BudgetListAccess } from '../../spend/budget-list/budget-list.runtime';
@@ -117,12 +118,44 @@ import {
   type AiChargebackList,
   type AiChargebackRow,
 } from './ai-chargeback.query';
+import { CostCentersService } from '../../cost-centers/cost-centers.service';
+import {
+  aiCostCenterDetail,
+  costCenterFilterValues,
+  filterAiCostCenters,
+  listAiCostCenters,
+  readAiCostCenterTree,
+  type AiCostCenterRow,
+} from './ai-cost-centers.query';
+import { WorkingDayProfilesService } from '../../working-day-profiles/working-day-profiles.service';
+import { AnalyticsAxesService } from '../../analytics/analytics-axes.service';
+import {
+  AI_CALENDAR_NO_YEAR_NOTE,
+  AI_CALENDAR_YEAR_NOTE,
+  calendarHolidays,
+  calendarMonths,
+  calendarYearOf,
+  listAiWorkingDayCalendars,
+  readCalendarYear,
+  type AiWorkingDayCalendarOpts,
+  type AiWorkingDayCalendarRow,
+} from './ai-working-day-calendars.query';
+import { AI_AXIS_VALUES_NOTE, listAiAnalyticsAxes, toAiAnalyticsAxisRow, type AiAnalyticsAxisRow } from './ai-analytics-axes.query';
+import { CurrencySettingsService } from '../../currency/currency-settings.service';
+import { ManualRatesService } from '../../currency/manual-rates.service';
+import { readAiExchangeRates, type AiExchangeRateRow } from './ai-exchange-rates.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 import { classificationLabels } from '../../applications/services/application-classification';
 import { readClassificationCatalog } from '../ai-classification-catalog.util';
 import { AI_SCREEN_RESOURCES, aiPermissionLevelLabel, aiResourceLabel } from '../ai-role-labels';
-import { readAiScreenLanguage, type AiScreenLanguage } from '../ai-unread-families';
+import {
+  readAiScreenLanguage,
+  referenceSearchExact,
+  referenceSearchMatches,
+  referenceSearchWords,
+  type AiScreenLanguage,
+} from '../ai-unread-families';
 
 function toIso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -603,6 +636,12 @@ function withoutHiddenLine<T extends { related_object_hidden?: true }>(row: T): 
   return { ...task, related_object_id: null, related_object_name: null } as unknown as T;
 }
 
+/**
+ * A reference data search whose right the caller has checked (`listReadableEntityTypes`), with the
+ * person's language read once for every family.
+ */
+export type ReferenceSearchChecked = { language: AiScreenLanguage | null };
+
 @Injectable()
 export class AiQueryExecutor {
   constructor(
@@ -643,6 +682,15 @@ export class AiQueryExecutor {
     @Optional() private readonly dataAccess?: DataAccessAdminService,
     /** The chargeback reports of the screens, which `chargeback` and `chargeback_lines` read. */
     @Optional() private readonly chargeback?: ChargebackReportService,
+    /** Master data › Cost centers, which the `cost_centers` family reads. */
+    @Optional() private readonly costCenters?: CostCentersService,
+    /** Master data › Working-day calendars and Analytics dimensions: `working_day_calendars`, `analytics_axes`. */
+    @Optional() private readonly workingDayProfiles?: WorkingDayProfilesService,
+    @Optional() private readonly analyticsAxes?: AnalyticsAxesService,
+    /** The rate matrix and the missing rates of the Currency settings screen, which `exchange_rates` reads. */
+    @Optional() private readonly manualRates?: ManualRatesService,
+    /** The currency settings, in every `exchange_rates` response. */
+    @Optional() private readonly currencySettings?: CurrencySettingsService,
   ) {
     // Absent, the technology figures close (no application count, no detail): say so once, at start.
     const logger = new Logger(AiQueryExecutor.name);
@@ -1478,6 +1526,112 @@ export class AiQueryExecutor {
     });
   }
 
+  /** A working-day calendar of Master data, `ref` its code; with a year, its source and exact total. */
+  private mapWorkingDayCalendar(row: AiWorkingDayCalendarRow): AiEntitySummaryDto {
+    return toEntitySummary('working_day_calendars', {
+      id: row.id,
+      reference: row.code,
+      label: row.name,
+      status: row.status,
+      summary: row.description,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      metadata: {
+        code: row.code,
+        name: row.name,
+        kind: row.kind,
+        country: row.country,
+        country_code: row.country_code,
+        region: row.region,
+        region_code: row.region_code,
+        disabled_at: row.disabled_at,
+        years_edited: row.years_edited.join(', ') || null,
+        ...(row.year != null ? { year: row.year, source: row.source, total_days: row.total_days } : {}),
+      },
+    });
+  }
+
+  /** An analytics dimension of Master data, `ref` its code, with its settings and its budget_lines field. */
+  private mapAnalyticsAxis(row: AiAnalyticsAxisRow): AiEntitySummaryDto {
+    return toEntitySummary('analytics_axes', {
+      id: row.id,
+      reference: row.code,
+      label: row.name,
+      status: row.status,
+      summary: row.description,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      metadata: {
+        code: row.code,
+        name: row.name,
+        is_default: row.is_default,
+        applies_to: row.applies_to,
+        required: row.required,
+        required_for: row.required_for.join(', ') || null,
+        open_values: row.open_values,
+        disabled_at: row.disabled_at,
+        sort_order: row.sort_order,
+        field: row.field,
+      },
+    });
+  }
+
+  /**
+   * The services of Master data › Working-day calendars and Analytics dimensions, read with the
+   * right of their page: checked again here, the database not guarding it, refused in words (the
+   * right and the screen).
+   */
+  private async workingDayCalendarServices(context: AiExecutionContextWithManager, year?: number | null, checked?: ReferenceSearchChecked) {
+    if (!this.policy || !this.workingDayProfiles) throw new BadRequestException('The working-day calendars are not available.');
+    if (!checked) await this.policy.assertEntityTypeReadRight(context, 'working_day_calendars', context.manager);
+    const language = checked ? checked.language : await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    const opts: AiWorkingDayCalendarOpts = {
+      manager: context.manager,
+      tenantId: context.tenantId,
+      userId: context.userId,
+      lang: language ?? 'en',
+      year: year ?? null,
+    };
+    return { services: { calendars: this.workingDayProfiles }, opts };
+  }
+
+  private async analyticsAxesServices(context: AiExecutionContextWithManager, checked?: ReferenceSearchChecked) {
+    if (!this.policy || !this.analyticsAxes) throw new BadRequestException('The analytics dimensions are not available.');
+    if (!checked) await this.policy.assertEntityTypeReadRight(context, 'analytics_axes', context.manager);
+    const language = checked ? checked.language : await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    return {
+      services: { axes: this.analyticsAxes },
+      opts: { manager: context.manager, tenantId: context.tenantId, userId: context.userId, language },
+    };
+  }
+
+  /**
+   * A cell of the Currency settings matrix: a currency in one year, named `USD 2026`. No reference
+   * and no page link: the screen is an administration setting.
+   */
+  private mapExchangeRate(row: AiExchangeRateRow): AiEntitySummaryDto {
+    return toEntitySummary('exchange_rates', {
+      id: row.key,
+      label: `${row.currency} ${row.year}`,
+      status: row.source,
+      summary: row.rate == null ? row.rate_note ?? null : null,
+      created_at: null,
+      updated_at: row.captured_at,
+      metadata: {
+        year: row.year,
+        currency: row.currency,
+        rate: row.rate,
+        inverse_rate: row.inverse_rate,
+        source: row.source,
+        manual: row.manual,
+        captured_at: row.captured_at,
+        reporting_currency: row.reporting_currency,
+        ...(row.cross_rate !== undefined ? { cross_rate: row.cross_rate } : {}),
+        ...(row.cross_rate_note ? { cross_rate_note: row.cross_rate_note } : {}),
+      },
+    });
+  }
+
   /**
    * The chargeback reports, read with the reporting right as their routes: checked again here, the
    * database not guarding it, refused in words (the right and the screen).
@@ -1486,6 +1640,90 @@ export class AiQueryExecutor {
     if (!this.policy || !this.chargeback) throw new BadRequestException('The chargeback reports are not available.');
     await this.policy.assertEntityTypeReadRight(context, entityType, context.manager);
     return { chargeback: this.chargeback };
+  }
+
+  /**
+   * The tree of cost centers, read with the right of its page as its route: checked again here,
+   * the database not guarding it, refused in words (the right and the screen).
+   */
+  private async costCenterServices(context: AiExecutionContextWithManager, checked?: ReferenceSearchChecked) {
+    if (!this.policy || !this.costCenters) throw new BadRequestException('The cost centers are not available.');
+    if (!checked) await this.policy.assertEntityTypeReadRight(context, 'cost_centers', context.manager);
+    return { services: { costCenters: this.costCenters }, opts: { manager: context.manager, tenantId: context.tenantId } };
+  }
+
+  /**
+   * The cost centers, working-day calendars or analytics dimensions that match a search, for
+   * `search_all`: the family's own read, every row, the right of its page checked as for
+   * query_entities. The words that name the family are taken out of the search ("centre de coûts
+   * Group IT" searches `group` and `it`), then a row matches when its code or its name holds every
+   * word left, without case or accents (`referenceSearchWords`). The path of a cost center does not
+   * count, so that a group's name does not bring back the whole group. A code or name equal to the
+   * rest comes first (`exact`); at most `limit` items, and `total` counts every match. `named`: the
+   * search names the family in words. `checked`: the caller has checked the right (search_all, for
+   * every family at once) and read the person's language.
+   */
+  async searchReferenceData(
+    context: AiExecutionContextWithManager,
+    entityType: AiSearchReferenceEntityType,
+    query: string,
+    limit = 5,
+    checked?: ReferenceSearchChecked,
+  ): Promise<{ items: Array<{ item: AiEntitySummaryDto; exact: boolean }>; total: number; named: boolean }> {
+    if (!String(query ?? '').trim()) return { items: [], total: 0, named: false };
+    const { words, rest, named } = referenceSearchWords(entityType, query);
+    let rows: Array<{ code: string; name: string; item: AiEntitySummaryDto }>;
+    if (entityType === 'cost_centers') {
+      const { services, opts } = await this.costCenterServices(context, checked);
+      const found = await filterAiCostCenters(services, opts, {});
+      // Where it matched, as the quick search says it: the code when it holds every word.
+      rows = found.rows.map((row) => ({
+        code: row.code,
+        name: row.name,
+        item: this.mapCostCenter({ ...row, matched_on: referenceSearchMatches(words, row.code, '') ? 'code' : 'name' }),
+      }));
+    } else if (entityType === 'working_day_calendars') {
+      const { services, opts } = await this.workingDayCalendarServices(context, null, checked);
+      const found = await listAiWorkingDayCalendars(services, {}, opts, true);
+      rows = found.items.map((row) => ({ code: row.code, name: row.name, item: this.mapWorkingDayCalendar(row) }));
+    } else {
+      const { services, opts } = await this.analyticsAxesServices(context, checked);
+      const found = await listAiAnalyticsAxes(services, {}, opts, true);
+      rows = found.items.map((row) => ({ code: row.code, name: row.name, item: this.mapAnalyticsAxis(row) }));
+    }
+    const matched = rows
+      .filter((row) => referenceSearchMatches(words, row.code, row.name))
+      .map((row) => ({ item: row.item, exact: referenceSearchExact(rest, row.code, row.name) }));
+    const ordered = [...matched.filter((row) => row.exact), ...matched.filter((row) => !row.exact)];
+    return { items: ordered.slice(0, limit), total: ordered.length, named };
+  }
+
+  /** A node of the tree of cost centers: its code is its reference, its name its label; no person id. */
+  private mapCostCenter(row: AiCostCenterRow): AiEntitySummaryDto {
+    return toEntitySummary('cost_centers', {
+      id: row.id,
+      reference: row.code,
+      label: row.name,
+      status: row.status,
+      summary: null,
+      created_at: null,
+      updated_at: null,
+      metadata: {
+        code: row.code,
+        name: row.name,
+        kind: row.kind,
+        parent: row.parent,
+        parent_code: row.parent_code,
+        company: row.company,
+        budget_holder: row.budget_holder,
+        status: row.status,
+        depth: row.depth,
+        path: row.path,
+        children: row.children,
+        disabled_at: row.disabled_at,
+        ...(row.matched_on ? { matched_on: row.matched_on } : {}),
+      },
+    });
   }
 
   /**
@@ -2622,6 +2860,90 @@ export class AiQueryExecutor {
       };
     }
 
+    if (input.entity_type === 'cost_centers') {
+      const { services, opts } = await this.costCenterServices(context);
+      const result = await listAiCostCenters(services, opts, scoped.query);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        ...(result.unmatched_note ? { unmatched_note: result.unmatched_note } : {}),
+        items: result.items.map((row) => this.mapCostCenter(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'working_day_calendars') {
+      const { services, opts } = await this.workingDayCalendarServices(context, input.year);
+      const result = await listAiWorkingDayCalendars(services, scoped.query, opts);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        calendar_year: result.year,
+        calendar_note: result.year != null ? AI_CALENDAR_YEAR_NOTE : AI_CALENDAR_NO_YEAR_NOTE,
+        items: result.items.map((row) => this.mapWorkingDayCalendar(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'analytics_axes') {
+      const { services, opts } = await this.analyticsAxesServices(context);
+      const result = await listAiAnalyticsAxes(services, scoped.query, opts);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        values_note: AI_AXIS_VALUES_NOTE,
+        items: result.items.map((row) => this.mapAnalyticsAxis(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'exchange_rates') {
+      const result = await readAiExchangeRates(
+        { policy: this.policy, rates: this.manualRates, settings: this.currencySettings },
+        context,
+        scoped.query,
+      );
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        exchange_rates: result.block,
+        items: result.items.map((row) => this.mapExchangeRate(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
     if (input.entity_type === 'vulnerabilities') {
       const applications = await resolveAiApplicationsReach(context, this.policy);
       const result = await listAiVulnerabilities(context.manager, context.tenantId, scoped.query, applications);
@@ -3258,6 +3580,14 @@ export class AiQueryExecutor {
       throw new BadRequestException('A row of Admin › Data access has no detail of its own: read the person with get_entity_detail on users (by name or email), which gives their data access.');
     }
     const entityId = await this.resolveDetailEntityId(context, entityType, input.entity_id);
+    if (entityType === 'cost_centers') {
+      const { services, opts } = await this.costCenterServices(context);
+      const { row, data } = await aiCostCenterDetail(services, opts, entityId);
+      // The line counts pass the lines' access rules: within the person's access when it is limited.
+      return { ...this.toDetailResult(this.mapCostCenter(row), data), ...await aiDataAccessCountsNote(context, entityType) };
+    }
+    if (entityType === 'working_day_calendars') return this.workingDayCalendarDetail(context, entityId, input.year);
+    if (entityType === 'analytics_axes') return this.analyticsAxisDetail(context, entityId);
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
 
     if (entityType === 'tasks') {
@@ -3734,6 +4064,91 @@ export class AiQueryExecutor {
   }
 
   /**
+   * A working-day calendar as its page (`GET /working-day-profiles/:id`): its source, the years
+   * stored, the OPEX and CAPEX lines using it (within the person's access) and, with a year, that
+   * year as its tab (`GET /working-day-profiles/:id/years/:year`): the source, the twelve months,
+   * their exact total and the public holidays by name in the person's language.
+   */
+  private async workingDayCalendarDetail(context: AiExecutionContextWithManager, id: string, rawYear?: number): Promise<AiEntityDetailDto> {
+    const { services, opts } = await this.workingDayCalendarServices(context);
+    const year = calendarYearOf(undefined, rawYear ?? null);
+    const ctx = { manager: context.manager, tenantId: context.tenantId, userId: context.userId };
+    const calendar = await services.calendars.get(id, ctx, opts.lang);
+    const row: AiWorkingDayCalendarRow = {
+      id: calendar.id,
+      code: calendar.code,
+      name: calendar.name,
+      kind: calendar.country_iso ? 'standard' : 'custom',
+      country: calendar.country_name,
+      country_code: calendar.country_iso,
+      region: calendar.region_name,
+      region_code: calendar.region_code,
+      status: calendar.status,
+      disabled_at: calendar.disabled_at,
+      description: calendar.description,
+      years_edited: Object.keys(calendar.days_by_year ?? {}),
+      created_at: calendar.created_at,
+      updated_at: calendar.updated_at,
+      year: null,
+      source: null,
+      total_days: null,
+    };
+    let yearBlock: Record<string, unknown> = { year_note: AI_CALENDAR_NO_YEAR_NOTE };
+    if (year != null) {
+      const read = await readCalendarYear(services, opts, id, year);
+      row.year = year;
+      row.source = read.source;
+      row.total_days = read.total_days;
+      yearBlock = {
+        year,
+        source: read.source,
+        total_days: read.total_days,
+        months: calendarMonths(read.days),
+        ...(read.source === 'edited' && read.standard_days ? { standard_total_days: read.standard_total_days } : {}),
+        holidays: calendarHolidays(read.holidays),
+        year_note: AI_CALENDAR_YEAR_NOTE,
+      };
+    }
+    const { days_by_year: _days, opex_count: _opex, capex_count: _capex, ...rest } = calendar;
+    return {
+      ...this.toDetailResult(this.mapWorkingDayCalendar(row), {
+        ...rest,
+        kind: row.kind,
+        years_edited: row.years_edited,
+        lines_using: { opex: calendar.opex_count, capex: calendar.capex_count },
+        lines_using_note: 'The OPEX and CAPEX lines with a quantity × price line on this calendar, whatever the year or column.',
+        ...yearBlock,
+      }),
+      ...(await aiDataAccessCountsNote(context, 'working_day_calendars')),
+    };
+  }
+
+  /**
+   * An analytics dimension as its page (`GET /analytics-axes/:id`): its settings, its number of
+   * values, the OPEX and CAPEX lines holding a value on it and without one (within the person's
+   * access), and the natures on which no enabled value can be chosen.
+   */
+  private async analyticsAxisDetail(context: AiExecutionContextWithManager, id: string): Promise<AiEntityDetailDto> {
+    const { services, opts } = await this.analyticsAxesServices(context);
+    const axis = await services.axes.get(id, { manager: context.manager, tenantId: context.tenantId, userId: context.userId });
+    const row = toAiAnalyticsAxisRow(axis, opts.language);
+    return {
+      ...this.toDetailResult(this.mapAnalyticsAxis(row), {
+        ...row,
+        value_count: axis.value_count,
+        opex_count: axis.opex_count,
+        capex_count: axis.capex_count,
+        opex_missing: axis.opex_missing,
+        capex_missing: axis.capex_missing,
+        unusable_for: axis.unusable_for,
+        counts_note: 'opex_count and capex_count: the lines holding a value on the dimension; opex_missing and capex_missing: the lines of every status without one (0 for a nature it does not apply to), whether or not it is required; unusable_for: the natures it applies to on which none of its enabled values can be chosen.',
+        values_note: AI_AXIS_VALUES_NOTE,
+      }),
+      ...(await aiDataAccessCountsNote(context, 'analytics_axes')),
+    };
+  }
+
+  /**
    * A role by its name or id, with its rights as the Roles screen's matrix: every right, in the
    * screen's order, at the level the role gives, null where it gives none, and `rights`, the rights
    * it gives with the screen's words in the person's language. The people it is given to are
@@ -4045,6 +4460,13 @@ export class AiQueryExecutor {
       // The labels have no value list on the version row: they are read from the labels of the
       // tenant's technology versions, one query (the `version` values of the technologies).
       if (dynamicFieldMap.has('label')) raw.label = await this.technologyVersionLabels(context);
+    } else if (input.entity_type === 'cost_centers') {
+      // The names the nodes carry, read from the tree: no column to read them from.
+      const { services, opts } = await this.costCenterServices(context);
+      const { rows } = await readAiCostCenterTree(services, opts);
+      for (const field of ['company', 'budget_holder'] as const) {
+        if (dynamicFieldMap.has(field)) raw[field] = costCenterFilterValues(rows, field);
+      }
     } else if (input.entity_type === 'incidents') {
       const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
       const reads = this.readProbe(context);

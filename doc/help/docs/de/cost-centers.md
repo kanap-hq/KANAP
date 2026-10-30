@@ -231,6 +231,10 @@ Jede Rolle beginnt mit der Stufe, die sie für Abteilungen hat, mit Ausnahme der
 
 ---
 
+## Den Assistenten fragen
+
+[Plaid](ai-assistant.md#tool-calls) liest die Kostenstellen für alle, die sie lesen dürfen: den Baum, die Budgetverantwortlichen und die Zeilen, die jeden Knoten verwenden. Fragen Sie zum Beispiel: „Welche Kostenstellen liegen unter Group IT?“
+
 ## Tipps
 
 - **Übernehmen Sie Ihre Finanzstruktur**: Verwenden Sie dieselben Codes wie Ihr Buchhaltungssystem, damit Budgetzeilen und Istwerte übereinstimmen.

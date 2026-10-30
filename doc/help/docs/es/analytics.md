@@ -366,6 +366,7 @@ Los siete informes presupuestarios también se pueden limitar a un valor de una 
 - Cuando Plaid crea una línea, necesita un valor en cada dimensión obligatoria del tipo de la línea. En un espacio de trabajo creado antes de las dimensiones recomendadas, una línea CAPEX necesita **PP&E type**, **Investment type** y **Priority**.
 - Plaid sabe qué dimensiones son obligatorias. Una línea nueva necesita un valor en cada una de ellas, y Plaid no puede borrar el valor de una dimensión obligatoria. Plaid rechaza una petición que no cumple la regla e indica el motivo, por ejemplo "Tipo de coste is required for spend item creation."
 - Plaid también puede crear un valor en la dimensión que usted indique. Sin dimensión, el valor se crea en la dimensión por defecto.
+- Con derecho de lectura sobre la analítica, Plaid también lee los ajustes de cada dimensión, su número de valores y las líneas que la usan. Pregunte, por ejemplo: «¿Qué dimensiones son obligatorias?»
 
 ---
 

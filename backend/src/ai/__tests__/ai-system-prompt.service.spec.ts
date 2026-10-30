@@ -668,6 +668,22 @@ async function testPromptSaysWhatItDoesWithAccessAndHistory() {
   assert.doesNotMatch(reporter, /chargeback by beneficiary company \(/);
   const unknown = build({ tools: [readTool], readable: [], language: 'fr', gap: 'right' });
   assert.match(unknown, /chargeback by beneficiary company \(Gestion budgétaire › Rapports › Refacturation globale\): The tools read it \(the families chargeback and chargeback_lines\) for a person with the Reporting right only\./);
+
+  // The reference data (Plaid L9): read with the right of their page, so not listed as unread for
+  // a reader; listed with the right for the others; their figures come from the server.
+  const referenceReader = build({ tools: [readTool], readable: ['budget_lines', 'cost_centers', 'working_day_calendars', 'analytics_axes', 'exchange_rates'], language: 'fr', gap: 'right' });
+  assert.doesNotMatch(referenceReader, /(cost centers|working-day calendars|analytics dimensions|exchange rates) \(/);
+  assert.match(limited, /cost centers \(Données de référence › Centres de coûts\): The tools read it \(the family cost_centers\) for a person with the Cost centers right, which this person's role does not give\./);
+  assert.match(limited, /exchange rates \(Gestion budgétaire › Administration › Devises\): The tools read it \(the family exchange_rates\) for a person with the Budget right, which this person's role does not give\./);
+  assert.match(referenceReader, /An empty budget holder of a cost center means none is set, not an unknown person; "\(person without a name\)" is a budget holder whose profile has no name\. An exchange rate, a number of working days or a count comes from the server: quote it as given, never recompute it and never divide one figure by another \(the inverse and cross rates come with the rate\)\./);
+
+  // Readable families not known (the web profile: web_search only, Plaid L9 lot F, m6): the
+  // reference data are not listed among what the tools do not read.
+  assert.doesNotMatch(unknown, /(cost centers|working-day calendars|analytics dimensions|exchange rates) \(/);
+  const web = build({ tools: [{ name: 'web_search', category: 'discovery', description: 'Web search.', input_summary: {}, read_only: true, surfaces: ['chat'] }], readable: [], language: 'fr', gap: 'right' });
+  assert.match(web, /Limits of what you read/);
+  assert.doesNotMatch(web, /(cost centers|working-day calendars|analytics dimensions|exchange rates) \(/);
+  assert.doesNotMatch(web, /for a person with the (Cost centers|Working-day calendars|Analytics|Budget) right only/);
 }
 
 async function run() {

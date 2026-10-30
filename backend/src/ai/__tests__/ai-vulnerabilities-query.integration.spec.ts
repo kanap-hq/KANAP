@@ -758,8 +758,11 @@ async function testFamilies() {
   assert.ok(!AI_SEARCH_ENTITY_TYPES.includes('vulnerabilities'), 'not searched: no search index for it');
   // A family read without a search index is listed only: the technology versions, the two
   // End of support report lists, the roles of Admin › Roles, Admin › Data access and the two
-  // chargeback reports have none either.
-  const listedOnly = new Set(['vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines', 'roles', 'role_permissions', 'data_access', 'chargeback', 'chargeback_lines']);
+  // chargeback reports have none either, nor the cost centers, working-day calendars, analytics dimensions and exchange rates.
+  const listedOnly = new Set([
+    'vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines', 'roles', 'role_permissions', 'data_access', 'chargeback', 'chargeback_lines',
+    'cost_centers', 'working_day_calendars', 'analytics_axes', 'exchange_rates',
+  ]);
   assert.ok(AI_QUERY_ENTITY_TYPES.includes('technology_versions'), 'listable and aggregatable');
   assert.ok(AI_QUERY_ENTITY_TYPES.includes('support_gaps') && AI_QUERY_ENTITY_TYPES.includes('support_deadlines'), 'listable and aggregatable');
   assert.deepEqual(AI_QUERY_ENTITY_TYPES.filter((type: string) => !listedOnly.has(type)), [...AI_SEARCH_ENTITY_TYPES], 'every searched family is listable');

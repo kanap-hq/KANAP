@@ -12,6 +12,7 @@ import { BUDGET_LINE_TABLE } from '../spend/budget-nature';
 import { entityNotFound, isUuid } from './ai-entity-reference.util';
 import { AiPolicyService, missingRightMessage } from './ai-policy.service';
 import { AiQueryExecutor } from './query/ai-query.executor';
+import { AI_PERSON_WITHOUT_NAME } from './query/ai-support.query';
 import {
   AI_DETAIL_ENTITY_TYPES,
   type AiDetailEntityType,
@@ -26,15 +27,18 @@ import {
  *
  * The families with a history are the AI families whose table is in the history inventory
  * (`audit/record-history.inventory.ts`): a budget line is `spend_items` (both natures), a project
- * `portfolio_projects`, a request `portfolio_requests`, every other family carries its table's name. A table that joins the inventory with the name of an AI family
- * becomes readable here with no change; a table no AI family reads (cost centers, analytics
- * dimensions, working-day calendars) stays out.
+ * `portfolio_projects`, a request `portfolio_requests`, a working-day calendar `working_day_profiles`,
+ * every other family carries its table's name. Every table of the inventory has its AI family (the
+ * cost centers, analytics dimensions and working-day calendars since Plaid L9). A table that joins
+ * the inventory with the name of an AI family becomes readable here with no change; one that no AI
+ * family reads would stay out.
  */
 
 function aiFamilyOfHistoryTable(table: string): AiDetailEntityType | null {
   if (table === BUDGET_LINE_TABLE) return 'budget_lines';
   if (table === 'portfolio_projects') return 'projects';
   if (table === 'portfolio_requests') return 'requests';
+  if (table === 'working_day_profiles') return 'working_day_calendars';
   return (AI_DETAIL_ENTITY_TYPES as readonly string[]).includes(table) ? table as AiDetailEntityType : null;
 }
 
@@ -49,12 +53,17 @@ export const AI_RECORD_HISTORY_TABLES: ReadonlyMap<AiDetailEntityType, string> =
 /** The AI families whose records have a History tab, sorted. */
 export const AI_RECORD_HISTORY_ENTITY_TYPES: readonly AiDetailEntityType[] = Array.from(AI_RECORD_HISTORY_TABLES.keys()).sort();
 
+/** A family in plain words: "budget lines", "working-day calendars" (as the menu writes it). */
+function familyWords(entityType: string): string {
+  return entityType === 'working_day_calendars' ? 'working-day calendars' : entityType.replace(/_/g, ' ');
+}
+
 /** The families in plain words: "budget lines", "business processes". */
-export const AI_RECORD_HISTORY_FAMILY_WORDS = AI_RECORD_HISTORY_ENTITY_TYPES.map((type) => type.replace(/_/g, ' ')).join(', ');
+export const AI_RECORD_HISTORY_FAMILY_WORDS = AI_RECORD_HISTORY_ENTITY_TYPES.map(familyWords).join(', ');
 
 /** The refusal of a family whose records have no History tab, with the families that have one. */
 export function noRecordHistoryMessage(entityType: string): string {
-  return `This record has no history in KANAP: ${String(entityType).replace(/_/g, ' ')} have no History tab. `
+  return `This record has no history in KANAP: ${familyWords(String(entityType))} have no History tab. `
     + `The records with a history are: ${AI_RECORD_HISTORY_FAMILY_WORDS}.`;
 }
 
@@ -88,21 +97,37 @@ export type AiRecordHistoryDto = {
   note: string;
 };
 
+/** An email, which the History tab gives for a person without a name (`REFERENCE_FAMILIES.user`). */
+const EMAIL = /^[^\s@]+@[^\s@]+$/;
+
+/** A person's label without the email the History tab falls back to: `AI_PERSON_WITHOUT_NAME`. */
+function personLabel(label: unknown): unknown {
+  return typeof label === 'string' && EMAIL.test(label.trim()) ? AI_PERSON_WITHOUT_NAME : label;
+}
+
 /**
- * A value of an entry without the uuid of a reference that has a business one (`TEC-3`, `BL-5`):
- * the answer names the reference. A reference without one keeps its id, the only handle on it.
+ * A value of an entry as Plaid and the MCP server give it: a person by their name only, never
+ * their id or their email; another reference without its uuid when it has a business one (`TEC-3`,
+ * `BL-5`), which the answer names. A reference without one keeps its id, the only handle on it.
+ * The History tab of the screen is unchanged.
  */
 function withoutRawIds(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(withoutRawIds);
   if (!value || typeof value !== 'object') return value;
   const record = value as Record<string, unknown>;
-  const named = typeof record.kind === 'string' && typeof record.id === 'string'
-    && typeof record.reference === 'string' && record.reference.trim() !== '';
+  const person = record.kind === 'user';
+  const named = person || (typeof record.kind === 'string' && typeof record.id === 'string'
+    && typeof record.reference === 'string' && record.reference.trim() !== '');
   return Object.fromEntries(
     Object.entries(record)
       .filter(([key]) => !(named && key === 'id'))
-      .map(([key, entry]) => [key, withoutRawIds(entry)]),
+      .map(([key, entry]) => [key, person && key === 'label' ? personLabel(entry) : withoutRawIds(entry)]),
   );
+}
+
+/** The author of an entry by their name only: a person without a name is not given by their email. */
+function withoutActorEmail(actor: RecordHistoryActor): RecordHistoryActor {
+  return actor.name ? { ...actor, name: personLabel(actor.name) as string } : actor;
 }
 
 /**
@@ -190,7 +215,7 @@ export class AiRecordHistoryService {
     const items = page.items.map((item): AiRecordHistoryEntryDto => ({
       at: item.at,
       action: item.action,
-      actor: item.actor,
+      actor: withoutActorEmail(item.actor),
       subject: withoutRawIds(item.subject) as RecordHistorySubject,
       changes: item.changes.map(withoutRawIds),
     }));

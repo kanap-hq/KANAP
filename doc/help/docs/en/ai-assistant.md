@@ -140,6 +140,21 @@ Plaid also gives the figures of other budget reports. With read access to accoun
 
 With read access to Reporting, Plaid reads the chargeback as the [Global chargeback](reports.md#global-chargeback) and [Company chargeback](reports.md#company-chargeback) reports show it: the amount charged to each beneficiary company and department, what each company pays, the net, the ratios per user and to turnover, and the lines charged to one company. When you name neither OPEX nor CAPEX, it covers both types. Plaid repeats the warnings of the report, such as a line it could not spread, a line without a paying company or an amount without an exchange rate. When your data access is limited, the figures cover the lines you can read, without the group total, and Plaid lists the lines charged to a company only for the companies of your access. Assistants connected over MCP get the same answers.
 
+Plaid reads four kinds of reference data, as their screens show them. It changes none of them.
+
+- **Cost centers**, with read access to cost centers: the tree of groups and cost centers, the company and the budget holder of each node, and the number of OPEX and CAPEX lines that use it. Plaid lists every node under a group, at every level, or only the nodes directly under it.
+- **Working-day calendars**, with read access to working-day calendars: the working days of a year, month by month, and the public holidays of a standard calendar. KANAP computes the total of the year, and Plaid quotes it. A country without a calendar in your workspace has none, and Plaid does not compute its days.
+- **Analytics dimensions**, with read access to analytics: the settings of each dimension (the line types it applies to, whether a value is required, whether anyone can add a value), its number of values and the lines that use it. A required dimension counts as required only while it is enabled.
+- **Exchange rates and the reporting currency**, with read access to the budget: the reporting currency, the default and allowed currencies, the rate of each currency for each year with its source, the rates entered by hand and the missing rates.
+
+A rate is the amount in the reporting currency for 1 unit of the currency. In a workspace that reports in euros, a rate of 0.89 for USD means 1 USD = 0.89 EUR. KANAP computes the inverse rate and the rate between two other currencies, such as USD to CHF, and Plaid quotes them.
+
+Without the right a kind of reference data needs, Plaid names the missing right. When your data access is limited, you read all the reference data, as on the screens. Only the counts of budget lines cover your access, and the currencies listed with their rates are those of the lines and contracts you can read.
+
+Plaid reads the history of a cost center, a calendar or a dimension as its **History** tab shows it. `Search all` finds a cost center, a calendar or a dimension by its code or its name. It does not search exchange rates: Plaid lists them instead.
+
+Ask, for example: "Which cost centers sit under Group IT?", "Who is the budget holder of FR-TRV-600?", "How many working days are there in France in 2026?", "Which dimensions are required?" or "What is the USD rate for 2026?" Assistants connected over MCP get the same answers.
+
 Totals come from KANAP. A list of budget lines or contracts comes with the total of every matching record, all pages included, and with the total of the records listed, so Plaid quotes one of them or asks KANAP for a sum. Asked for the ten largest lines and their total, Plaid gives the total of those ten. When your data access is limited to some companies or cost centers, Plaid says that its counts and totals cover your access, and does not present them as the total of the workspace.
 
 When Plaid tries a filter value that a field does not take, for example "active" for the status of an application (which is "enabled" or "disabled"), KANAP refuses it and lists the accepted values. Plaid then searches again with the right value.
@@ -191,10 +206,6 @@ Other records, such as applications, assets, contracts, projects, requests, inci
 
 Plaid does not read:
 
-- Cost centers (**Master data › Cost centers**). A budget line names its cost center, so Plaid can filter lines by it.
-- Working-day calendars (**Master data › Working-day calendars**)
-- Exchange rates (**Budget management › Administration › Currencies**). Budget amounts reach Plaid already converted to the reporting currency.
-- The settings of the analytics dimensions (**Master data › Analytics dimensions**). Their values, and the value each budget line holds, are readable.
 - The audit log (**Admin › Audit log**)
 - AI agents
 

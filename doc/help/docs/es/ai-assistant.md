@@ -140,6 +140,21 @@ Plaid también da las cifras de otros informes presupuestarios. Con derecho de l
 
 Con derecho de lectura sobre Informes, Plaid lee el contracargo tal como lo muestran los informes [Contracargo global](reports.md#contracargo-global) y [Contracargo por empresa](reports.md#contracargo-por-empresa): el importe imputado a cada empresa y departamento beneficiarios, lo que paga cada empresa, el neto, las ratios por usuario y sobre la facturación, y las líneas imputadas a una empresa. Cuando usted no nombra ni OPEX ni CAPEX, cubre ambos tipos. Plaid repite los avisos del informe, como una línea que no pudo repartir, una línea sin empresa pagadora o un importe sin tipo de cambio. Cuando su acceso a los datos está limitado, las cifras cubren las líneas que usted puede leer, sin el total del grupo, y Plaid lista las líneas imputadas a una empresa solo para las empresas de su acceso. Los asistentes conectados por MCP reciben las mismas respuestas.
 
+Plaid lee cuatro clases de datos de referencia, tal como los muestran sus pantallas. No modifica ninguna.
+
+- **Centros de coste**, con derecho de lectura sobre los centros de coste: el árbol de grupos de centros y centros de coste, la empresa y el responsable del presupuesto de cada nodo, y el número de líneas OPEX y CAPEX que lo usan. Plaid lista todos los nodos bajo un grupo, en todos los niveles, o solo los nodos situados justo debajo.
+- **Calendarios laborales**, con derecho de lectura sobre los calendarios laborales: los días laborables de un año, mes a mes, y los festivos de un calendario estándar. KANAP calcula el total del año y Plaid lo cita. Un país sin calendario en su espacio de trabajo no tiene ninguno, y Plaid no calcula sus días.
+- **Dimensiones analíticas**, con derecho de lectura sobre la analítica: los ajustes de cada dimensión (los tipos de línea a los que se aplica, si un valor es obligatorio, si cualquiera puede añadir un valor), su número de valores y las líneas que la usan. Una dimensión obligatoria solo cuenta como obligatoria mientras está activada.
+- **Tipos de cambio y moneda de reporting**, con derecho de lectura sobre el presupuesto: la moneda de reporting, las monedas por defecto y permitidas, el tipo de cada moneda para cada año con su fuente, los tipos introducidos a mano y los tipos que faltan.
+
+Un tipo de cambio es el importe en la moneda de reporting por 1 unidad de la moneda. En un espacio de trabajo que informa en euros, un tipo de 0,89 para USD significa 1 USD = 0,89 EUR. KANAP calcula el tipo inverso y el tipo entre otras dos monedas, por ejemplo de USD a CHF, y Plaid los cita.
+
+Sin el derecho que pide una clase de datos de referencia, Plaid nombra el derecho que falta. Cuando su acceso a los datos está limitado, usted lee todos los datos de referencia, como en las pantallas. Solo los recuentos de líneas presupuestarias cubren su acceso, y las monedas listadas con sus tipos son las de las líneas y contratos que usted puede leer.
+
+Plaid lee el historial de un centro de coste, un calendario o una dimensión, tal como lo muestra su pestaña **Historial**. `Search all` encuentra un centro de coste, un calendario o una dimensión por su código o su nombre. No busca los tipos de cambio: Plaid los lista en su lugar.
+
+Pregunte, por ejemplo: «¿Qué centros de coste dependen de Group IT?», «¿Quién es el responsable del presupuesto de FR-TRV-600?», «¿Cuántos días laborables tiene Francia en 2026?», «¿Qué dimensiones son obligatorias?» o «¿Cuál es el tipo del USD para 2026?» Los asistentes conectados por MCP reciben las mismas respuestas.
+
 Los totales vienen de KANAP. Una lista de líneas presupuestarias o de contratos llega con el total de todos los registros que coinciden, todas las páginas incluidas, y con el total de los registros listados, así que Plaid cita uno de los dos o pide una suma a KANAP. Si usted pide las diez líneas más grandes y su total, Plaid da el total de esas diez líneas. Cuando su acceso a los datos está limitado a algunas empresas o centros de coste, Plaid indica que sus recuentos y totales cubren su acceso, y no los presenta como el total del espacio de trabajo.
 
 Cuando Plaid prueba un valor de filtro que un campo no admite, por ejemplo «activa» para el estado de una aplicación (que es «activado» o «desactivado»), KANAP lo rechaza y lista los valores aceptados. Plaid vuelve entonces a buscar con el valor correcto.
@@ -191,10 +206,6 @@ Los demás registros, como las aplicaciones, los activos, los contratos, los pro
 
 Plaid no lee:
 
-- Los centros de coste (**Datos maestros › Centros de coste**). Una línea presupuestaria indica su centro de coste, así que Plaid puede filtrar las líneas por él.
-- Los calendarios laborales (**Datos maestros › Calendarios laborales**)
-- Los tipos de cambio (**Gestión presupuestaria › Administración › Monedas**). Los importes presupuestarios llegan a Plaid ya convertidos a la moneda de informes.
-- Los ajustes de las dimensiones analíticas (**Datos maestros › Dimensiones analíticas**). Sus valores, y el valor que tiene cada línea presupuestaria, se pueden leer.
 - El registro de auditoría (**Administración › Registro de auditoría**)
 - Los agentes IA
 

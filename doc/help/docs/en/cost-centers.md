@@ -231,6 +231,10 @@ Each role starts with the level it has on departments, except the built-in Budge
 
 ---
 
+## Ask the assistant
+
+[Plaid](ai-assistant.md#tool-calls) reads the cost centers for anyone with read access to them: the tree, the budget holders and the lines that use each node. Ask, for example: "Which cost centers sit under Group IT?"
+
 ## Tips
 
 - **Mirror your finance referential**: use the same codes as your accounting system so budget lines and actuals line up.

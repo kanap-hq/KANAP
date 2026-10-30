@@ -31,6 +31,7 @@ export type ScopedAiEntityType =
   | 'data_access'
   | 'departments'
   | 'documents'
+  | 'exchange_rates'
   | 'incidents'
   | 'interfaces'
   | 'locations'
@@ -45,7 +46,10 @@ export type ScopedAiEntityType =
   | 'technologies'
   | 'technology_versions'
   | 'users'
-  | 'vulnerabilities';
+  | 'vulnerabilities'
+  | 'cost_centers'
+  | 'working_day_calendars'
+  | 'analytics_axes';
 
 export type ResolvedAiScope = {
   requested: AiQueryScope;

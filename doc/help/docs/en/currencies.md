@@ -221,6 +221,10 @@ Freezing the default budget column of a year fixes that year's rates for the typ
 
 KANAP fetches the rates of that year in the background (at most once every six hours per year), so the next display uses the new rate once the source publishes it. To spot missing rates, check the missing rates block above the FX Rate Snapshots table, and run **Force FX rates sync** to fetch the rates at once. Entering a [manual rate](#manual-rates) fixes it immediately.
 
+## Ask the assistant
+
+[Plaid](ai-assistant.md#tool-calls) reads the currencies and the rates of this page for anyone with read access to the budget. Ask, for example: "What is the USD rate for 2026?"
+
 ## Tips
 
   - **Set reporting currency once**: Changing it mid-year affects all reports. If you must change it, do so at year-end.

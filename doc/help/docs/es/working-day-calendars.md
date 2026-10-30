@@ -245,6 +245,10 @@ Cualquier persona que pueda leer las líneas presupuestarias (Presupuesto) puede
 
 ---
 
+## Preguntar al asistente
+
+[Plaid](ai-assistant.md#tool-calls) lee los calendarios para cualquier persona con derecho a leerlos y cita los días laborables de un año tal como KANAP los calcula. Pregunte, por ejemplo: «¿Cuántos días laborables tiene Francia en 2026?»
+
 ## Consejos
 
 - **Empiece por los calendarios estándar**: uno por país cubre la mayoría de los presupuestos. Añada una región solo cuando sus festivos difieran, por ejemplo Mosela en Francia o Baviera en Alemania.

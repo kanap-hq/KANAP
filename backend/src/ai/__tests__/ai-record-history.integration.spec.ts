@@ -30,6 +30,10 @@ type Seeded = {
   budgetOnly: Person;
   limited: Person;
   otherTenantTechnology: string;
+  costCenter: string;
+  /** A person with no first or last name, and the one they replaced as owner (Plaid L9, lot F, M2). */
+  nameless: Person;
+  named: Person;
 };
 
 const SECOND_TENANT_NAME = 'Other tenant Postgres';
@@ -59,7 +63,7 @@ function historyTool(): AiRecordHistoryService {
 async function inTransaction<T>(
   tenantId: string,
   person: Person,
-  options: { limited?: boolean },
+  options: { limited?: boolean; surface?: 'chat' | 'mcp' },
   fn: (context: AiExecutionContextWithManager) => Promise<T>,
 ): Promise<T> {
   const runner = dataSource.createQueryRunner();
@@ -75,18 +79,24 @@ async function inTransaction<T>(
       tenantId,
       userId: person.id,
       isPlatformHost: false,
-      surface: 'chat',
-      authMethod: 'jwt',
+      surface: options.surface ?? 'chat',
+      authMethod: options.surface === 'mcp' ? 'api_key' : 'jwt',
       manager: runner.manager,
-    });
+    } as AiExecutionContextWithManager);
   } finally {
     if (runner.isTransactionActive) await runner.rollbackTransaction().catch(() => undefined);
     await runner.release();
   }
 }
 
-function read(tenantId: string, person: Person, input: Omit<GetRecordHistoryInput, 'limit'> & { limit?: number }, limited = false) {
-  return inTransaction(tenantId, person, { limited }, (context) =>
+function read(
+  tenantId: string,
+  person: Person,
+  input: Omit<GetRecordHistoryInput, 'limit'> & { limit?: number },
+  limited = false,
+  surface: 'chat' | 'mcp' = 'chat',
+) {
+  return inTransaction(tenantId, person, { limited, surface }, (context) =>
     historyTool().getRecordHistory(context, { limit: 50, ...input }));
 }
 
@@ -162,7 +172,10 @@ async function testFamilyWithoutHistory(seeded: Seeded) {
       assert.match(error.message, /^This record has no history in KANAP: users have no History tab\./);
       assert.match(error.message, /budget lines/);
       assert.match(error.message, /technologies/);
-      assert.doesNotMatch(error.message, /cost centers|working day/);
+      // Cost centers, working-day calendars and analytics dimensions have their History tab (Plaid L9).
+      assert.match(error.message, /cost centers/);
+      assert.match(error.message, /working-day calendars/);
+      assert.match(error.message, /analytics axes/);
       console.log(`  refusal: ${error.message}`);
       return true;
     },
@@ -180,7 +193,52 @@ async function testFamilyWithoutHistory(seeded: Seeded) {
   for (const entityType of ['contracts', 'applications', 'tasks', 'incidents'] as const) {
     assert.equal(AI_RECORD_HISTORY_TABLES.get(entityType), entityType, `${entityType} has a history`);
   }
+  // A working-day calendar reads the table of its page, a dimension its own name.
+  assert.equal(AI_RECORD_HISTORY_TABLES.get('working_day_calendars'), 'working_day_profiles');
+  assert.equal(AI_RECORD_HISTORY_TABLES.get('analytics_axes'), 'analytics_axes');
   console.log('  a family without a History tab is refused in words, the six linked records have one: OK');
+}
+
+/** Plaid L9, lot A: a cost center's History tab, read under the family's name, with the right of its page. */
+async function testCostCenter(seeded: Seeded) {
+  assert.equal(AI_RECORD_HISTORY_TABLES.get('cost_centers'), 'cost_centers');
+  const page = await read(seeded.data.tenantId, seeded.reader, { entity_type: 'cost_centers', entity_id: seeded.costCenter });
+  assert.deepEqual(page.items.map((item) => item.action), ['update', 'create']);
+  assert.equal(page.items[1].actor.name, 'Una Unlimited');
+  await assert.rejects(
+    read(seeded.data.tenantId, seeded.budgetOnly, { entity_type: 'cost_centers', entity_id: seeded.costCenter }),
+    (error: any) => {
+      assert.equal(error.status, 403);
+      assert.match(error.message, /^You need the right to read cost centers \(the right the Master data › Cost centers screen asks for\)/);
+      return true;
+    },
+  );
+  console.log('  a cost center: its entries with the cost centers right, refused in words without it: OK');
+}
+
+/**
+ * A person is given by their name only, never their id or their email, the one the History tab
+ * falls back to for a person without a name (Plaid L9, lot F, M2): the budget holder of a cost
+ * center and the owner of a contract, and the author of the change, by the chat and by MCP.
+ */
+async function testPeopleByTheirNameOnly(seeded: Seeded) {
+  for (const surface of ['chat', 'mcp'] as const) {
+    for (const [entityType, entityId] of [['cost_centers', seeded.costCenter], ['contracts', seeded.data.contractA]] as const) {
+      const page = await read(seeded.data.tenantId, seeded.reader, { entity_type: entityType, entity_id: entityId }, false, surface);
+      const change = page.items.flatMap((item) => item.changes).find((entry: any) => entry.field === 'owner_user_id') as any;
+      assert.ok(change, `${entityType} (${surface}): the change of owner is an entry: ${JSON.stringify(page.items)}`);
+      assert.deepEqual(change.before, { kind: 'user', label: 'Olivier Owner' }, `${entityType} (${surface})`);
+      assert.deepEqual(change.after, { kind: 'user', label: '(person without a name)' }, `${entityType} (${surface})`);
+      const author = page.items.find((item) => item.changes.includes(change))!.actor;
+      assert.deepEqual(author, { kind: 'user', name: '(person without a name)' }, 'the author without a name');
+      const serialized = JSON.stringify(page);
+      for (const value of [seeded.nameless.id, seeded.named.id, seeded.nameless.email, seeded.named.email]) {
+        assert.ok(!serialized.includes(value), `${entityType} (${surface}): no person id or email (${value})`);
+      }
+      assert.doesNotMatch(serialized, /@example\.invalid/);
+    }
+  }
+  console.log('  a person by their name only, a person without a name said so, by the chat and MCP: OK');
 }
 
 async function testReaderWithoutTheRight(seeded: Seeded) {
@@ -258,7 +316,9 @@ async function seedAll(tenantId: string, otherTenantId: string): Promise<Seeded>
       `INSERT INTO technologies (tenant_id, item_number, name, family) VALUES ($1, 10, 'Postgres 17', 'database') RETURNING id`,
       [tenantId],
     );
-    const reader = await seedPerson(runner, tenantId, { first: 'Una', last: 'Unlimited' }, { infrastructure: 'reader', budget: 'reader', applications: 'reader' });
+    const reader = await seedPerson(runner, tenantId, { first: 'Una', last: 'Unlimited' }, { infrastructure: 'reader', budget: 'reader', applications: 'reader', cost_centers: 'reader', contracts: 'reader' });
+    const named = await seedPerson(runner, tenantId, { first: 'Olivier', last: 'Owner' }, {});
+    const nameless = await seedPerson(runner, tenantId, { first: '', last: '' }, {});
     const budgetOnly = await seedPerson(runner, tenantId, { first: 'Bob', last: 'Budget' }, { budget: 'reader' });
     const limited = await seedPerson(runner, tenantId, { first: 'Lila', last: 'Limited' }, { budget: 'reader' }, { mode: 'limited', nodeCompanyId: data.companyA });
     const technology = await storedRow(runner, 'technologies', data.technology);
@@ -269,8 +329,27 @@ async function seedAll(tenantId: string, otherTenantId: string): Promise<Seeded>
     await audit(runner, { table: 'capex_items', recordId: data.capexLine, action: 'create', after: capex, userId: reader.id });
     const hidden = await storedRow(runner, 'spend_items', data.hiddenLine);
     await audit(runner, { table: 'spend_items', recordId: data.hiddenLine, action: 'create', after: hidden, userId: reader.id });
-    return { data, successor: successor.id as string, reader, budgetOnly, limited, technology, line };
+    const [costCenter] = await runner.query(
+      `INSERT INTO cost_centers (tenant_id, code, kind, name) VALUES ($1, 'HIST-GRP', 'group', 'History group') RETURNING id`,
+      [tenantId],
+    );
+    const storedCenter = (await runner.query(`SELECT to_jsonb(t) AS row FROM cost_centers t WHERE t.id = $1`, [costCenter.id]))[0].row;
+    await audit(runner, { table: 'cost_centers', recordId: costCenter.id, action: 'create', after: storedCenter, userId: reader.id });
+    const storedContract = (await runner.query(`SELECT to_jsonb(t) AS row FROM contracts t WHERE t.id = $1`, [data.contractA]))[0].row;
+    return {
+      data, successor: successor.id as string, reader, budgetOnly, limited, technology, line, costCenter: costCenter.id as string,
+      storedCenter, storedContract, named, nameless,
+    };
   });
+  // The owner changes from a named person to a person without a name, by that person.
+  await seed(tenantId, (runner) => audit(runner, {
+    table: 'cost_centers', recordId: base.costCenter, action: 'update',
+    before: { ...base.storedCenter, owner_user_id: base.named.id }, after: { ...base.storedCenter, owner_user_id: base.nameless.id }, userId: base.nameless.id,
+  }));
+  await seed(tenantId, (runner) => audit(runner, {
+    table: 'contracts', recordId: base.data.contractA, action: 'update',
+    before: { ...base.storedContract, owner_user_id: base.named.id }, after: { ...base.storedContract, owner_user_id: base.nameless.id }, userId: base.nameless.id,
+  }));
   // One transaction per change: each entry gets its own time, as in the application.
   await seed(tenantId, (runner) => audit(runner, {
     table: 'technologies', recordId: base.data.technology, action: 'update',
@@ -293,7 +372,10 @@ async function seedAll(tenantId: string, otherTenantId: string): Promise<Seeded>
     await audit(runner, { table: 'technologies', recordId: row.id, action: 'create', after: stored });
     return row.id as string;
   });
-  return { data: base.data, successor: base.successor, reader: base.reader, budgetOnly: base.budgetOnly, limited: base.limited, otherTenantTechnology };
+  return {
+    data: base.data, successor: base.successor, reader: base.reader, budgetOnly: base.budgetOnly, limited: base.limited, otherTenantTechnology,
+    costCenter: base.costCenter, nameless: base.nameless, named: base.named,
+  };
 }
 
 async function run() {
@@ -308,6 +390,8 @@ async function run() {
     await testBudgetLineByEveryReference(seeded);
     await testFamilyWithoutHistory(seeded);
     await testReaderWithoutTheRight(seeded);
+    await testCostCenter(seeded);
+    await testPeopleByTheirNameOnly(seeded);
     await testLimitedPerson(seeded);
     await testOtherTenant(seeded);
     await testEmptyPagesAreReadPast(seeded);

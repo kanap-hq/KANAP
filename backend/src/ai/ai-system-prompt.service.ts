@@ -8,6 +8,7 @@ import type { AiContextProfile } from './ai-context-profile';
 import type { budgetColumnsAiContext } from '../budget-columns/budget-columns.util';
 import type { AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
 import { isoDateTimeInTimeZone, knownTimeZone } from '../common/csv-sheet';
+import { AI_PERSON_WITHOUT_NAME } from './query/ai-support.query';
 import { aiScreenName, unreadFamiliesSentence, type AiAdminFamiliesGap, type AiScreenLanguage, type AiUnreadFamiliesReach } from './ai-unread-families';
 
 type CurrentUserPromptContext = {
@@ -238,6 +239,7 @@ const limitsText = (screenLanguage: AiScreenLanguage | null, gap: AiAdminFamilie
   `- A question about the person's own access ("what can I see?"): their roles are the \`roles\` of the current user context; which data they see is not read here, and an administrator of users shows it in the person's Data access tab (${aiScreenName(['admin', 'users'], screenLanguage)}).`,
   '- Never conclude that something does not exist, is empty or is "none" because no tool returned it: a family the tools do not read, a field a result does not carry (a context is an extract: get_entity_detail gives every field), or a family the user cannot read (null). Say what you could not read and name the KANAP screen that shows it.',
   '- Every total, sum, average or count you cite comes from a tool: `amount_totals` of query_entities (every record the filters keep), `page_amount_totals` (only the items returned, for "the ten largest and their total": ask for a page of that size), or aggregate_entities on the same filters. Never add up, subtract or average figures yourself, even from a list you have just read.',
+  `- An empty budget holder of a cost center means none is set, not an unknown person; "${AI_PERSON_WITHOUT_NAME}" is a budget holder whose profile has no name. An exchange rate, a number of working days or a count comes from the server: quote it as given, never recompute it and never divide one figure by another (the inverse and cross rates come with the rate).`,
   '- A result with `data_access` limited covers only what the person\'s data access lets them see: give its counts and totals as "within your access", never as the workspace total, and never say they equal it.',
   '- `invalid_filter_value` means a filter value the field does not take: retry with one of the accepted values it lists. It never means that no record matches.',
 ].join('\n');
@@ -437,10 +439,13 @@ export class AiSystemPromptService {
 
     if (params.availableTools.length > 0) {
       // A person who reads Admin › Data access reads its two families; the others are told what they
-      // lack. The chargeback reports likewise, when the readable families are known.
+      // lack. The chargeback reports and the reference data likewise, when the readable families are
+      // known; when they are not (a profile without the read tools), the reference data, read with
+      // the right of their page, are left out, as in the tool descriptions.
       const gap = params.readableEntityTypes.includes('data_access') ? null : params.adminFamiliesGap;
-      const reports = params.readableEntityTypes.length ? params.readableEntityTypes.includes('chargeback') : undefined;
-      addSection('limits', 'Limits of what you read', limitsText(params.currentUser.screenLanguage ?? null, gap, { reports }));
+      const known = params.readableEntityTypes.length > 0;
+      const reach = known ? { reports: params.readableEntityTypes.includes('chargeback'), readable: params.readableEntityTypes } : { omitReadAs: true };
+      addSection('limits', 'Limits of what you read', limitsText(params.currentUser.screenLanguage ?? null, gap, reach));
     }
 
     if (profile.includeReadableEntityTypes && params.readableEntityTypes.length > 0) {

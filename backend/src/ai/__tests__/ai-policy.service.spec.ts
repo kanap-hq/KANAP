@@ -151,6 +151,15 @@ async function testListReadableEntityTypesFiltersUnreadableFamilies() {
   );
 
   assert.deepEqual(readable, ['applications', 'tasks']);
+
+  // Master data (Plaid L9): each family with the right of its page, the budget right alone reads neither.
+  const chat = { tenantId: 'tenant-1', userId: 'user-1', isPlatformHost: false, surface: 'chat' as const, authMethod: 'jwt' as const };
+  const families = ['working_day_calendars', 'analytics_axes'] as any[];
+  const readableWith = (rights: Array<[string, string]>) =>
+    createPolicy({ permissions: new Map([['ai_chat', 'reader'], ...rights]) as any }).listReadableEntityTypes(chat, families, createManager());
+  assert.deepEqual(await readableWith([['working_day_profiles', 'reader']]), ['working_day_calendars']);
+  assert.deepEqual(await readableWith([['analytics', 'reader']]), ['analytics_axes']);
+  assert.deepEqual(await readableWith([['budget', 'admin'], ['reporting', 'admin']]), []);
   Features.AI_CHAT_ENABLED = originalFeature;
 }
 
@@ -672,8 +681,51 @@ async function testMissingRightIsSaidInPlainWords() {
   assert.equal(missingRightMessage('portfolio_projects', 'member'), 'You need the right to modify projects, which your role does not give. An administrator can add it to your role.');
   assert.equal(missingRightMessage('budget', 'reader'), 'You need the right to read budget lines, which your role does not give. An administrator can add it to your role.');
   assert.match(missingRightMessage('ai_chat', 'member'), /^Your role lets you ask Plaid questions but not prepare changes with it/);
-  for (const [resource, level] of [['budget', 'reader'], ['infrastructure', 'reader'], ['applications', 'member'], ['knowledge', 'reader']] as const) {
+  // Master data (Plaid L9): the right of each page, named in words with its screen.
+  assert.equal(
+    missingRightMessage('working_day_profiles', 'reader', 'Master data › Working-day calendars'),
+    'You need the right to read working-day calendars (the right the Master data › Working-day calendars screen asks for), which your role does not give. An administrator can add it to your role.',
+  );
+  assert.equal(
+    missingRightMessage('analytics', 'reader', 'Master data › Analytics dimensions'),
+    'You need the right to read analytics dimensions (the right the Master data › Analytics dimensions screen asks for), which your role does not give. An administrator can add it to your role.',
+  );
+  for (const [resource, level] of [['budget', 'reader'], ['infrastructure', 'reader'], ['applications', 'member'], ['knowledge', 'reader'], ['working_day_profiles', 'reader']] as const) {
     assert.doesNotMatch(missingRightMessage(resource, level), /:|reader|member/, `${resource}: no permission code`);
+  }
+}
+
+/**
+ * Plaid L9, lot D: the exchange rates are read with the budget right at reader level, as their
+ * routes, limited access included; the refusal names the budget right and the exchange rates.
+ */
+async function testExchangeRatesNeedBudgetReader() {
+  const originalFeature = Features.AI_CHAT_ENABLED;
+  Features.AI_CHAT_ENABLED = true;
+  const context = { tenantId: 'tenant-1', userId: 'user-1', isPlatformHost: false, surface: 'chat' as const, authMethod: 'jwt' as const };
+  try {
+    assert.equal(
+      missingRightMessage('budget', 'reader', undefined, 'the exchange rates and the currency settings'),
+      'You need the right to read budget lines to read the exchange rates and the currency settings, which your role does not give. An administrator can add it to your role.',
+    );
+    const withoutBudget = createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['budget_ops', 'admin']]) });
+    await assert.rejects(
+      () => withoutBudget.assertEntityTypeReadAccess(context, 'exchange_rates', createManager()),
+      (error: any) => {
+        assert.equal(error.message, missingRightMessage('budget', 'reader', undefined, 'the exchange rates and the currency settings'));
+        assert.equal(error.getResponse().code, 'MODULE_RIGHT_REQUIRED');
+        return true;
+      },
+    );
+    const reader = createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['budget', 'reader']]) });
+    await reader.assertEntityTypeReadAccess(context, 'exchange_rates', createManager());
+    // Not reserved: a person in limited access reads them, their access is never read for it.
+    const noQuery = { ...createManager({ limited: true }), query: async () => { throw new Error('the access is read for the reserved families only'); } } as any;
+    assert.equal(await reader.canReadEntityType(context, 'exchange_rates', noQuery), true, 'budget:reader reads them, limited access included');
+    assert.deepEqual(await reader.listReadableEntityTypes(context, ['exchange_rates'] as any[], createManager({ limited: true })), ['exchange_rates']);
+    assert.deepEqual(await withoutBudget.listReadableEntityTypes(context, ['exchange_rates'] as any[], createManager()), []);
+  } finally {
+    Features.AI_CHAT_ENABLED = originalFeature;
   }
 }
 
@@ -800,8 +852,50 @@ async function testRolesNeedUsersAdminAndUnlimitedAccess() {
   }
 }
 
+/** Plaid L9, lot A: the cost centers need the right of their page, limited access included, refused in words. */
+async function testCostCentersNeedTheirPageRight() {
+  const originalFeature = Features.AI_CHAT_ENABLED;
+  Features.AI_CHAT_ENABLED = true;
+  const context = {
+    tenantId: 'tenant-1',
+    userId: 'user-1',
+    isPlatformHost: false,
+    surface: 'chat' as const,
+    authMethod: 'jwt' as const,
+  };
+  try {
+    // budget:reader reads cost_center on its lines, not the family: the right of the page is missing.
+    const budgetReader = createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['budget', 'reader']]) });
+    await assert.rejects(
+      () => budgetReader.assertEntityTypeReadAccess(context, 'cost_centers', createManager()),
+      (error: any) => {
+        assert.equal(error.message, 'You need the right to read cost centers (the right the Master data › Cost centers screen asks for), which your role does not give. An administrator can add it to your role.');
+        assert.equal(error.getResponse().code, 'MODULE_RIGHT_REQUIRED');
+        return true;
+      },
+      'budget:reader is refused',
+    );
+    assert.equal(await budgetReader.canReadEntityType(context, 'cost_centers', createManager()), false, 'budget:reader cannot read');
+
+    // cost_centers:reader reads, in limited access too: the family is not reserved.
+    const reader = createPolicy({ permissions: new Map([['ai_chat', 'reader'], ['cost_centers', 'reader']]) });
+    await reader.assertEntityTypeReadAccess(context, 'cost_centers', createManager());
+    await reader.assertEntityTypeReadAccess(context, 'cost_centers', createManager({ limited: true }));
+    assert.equal(await reader.canReadEntityType(context, 'cost_centers', createManager({ limited: true })), true, 'limited access reads the tree');
+    assert.deepEqual(
+      await reader.listReadableEntityTypes(context, ['cost_centers', 'budget_lines'] as any[], createManager({ limited: true })),
+      ['cost_centers'],
+      'listed among the readable families',
+    );
+  } finally {
+    Features.AI_CHAT_ENABLED = originalFeature;
+  }
+}
+
 async function run() {
   await testRolesNeedUsersAdminAndUnlimitedAccess();
+  await testCostCentersNeedTheirPageRight();
+  await testExchangeRatesNeedBudgetReader();
   await testContributorWritesAtTheScreenLevel();
   await testMissingRightIsSaidInPlainWords();
   await testListReadableEntityTypesFiltersUnreadableFamilies();

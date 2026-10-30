@@ -140,6 +140,21 @@ Plaid donne aussi les chiffres d'autres rapports budgétaires. Avec le droit de 
 
 Avec le droit de lecture sur Reporting, Plaid lit la refacturation comme la montrent les rapports [Refacturation globale](reports.md#refacturation-globale) et [Refacturation par société](reports.md#refacturation-par-societe) : le montant refacturé à chaque société et département bénéficiaires, ce que paie chaque société, le net, les ratios par utilisateur et au chiffre d'affaires, et les lignes refacturées à une société. Quand vous ne nommez ni OPEX ni CAPEX, il couvre les deux types. Plaid reprend les avertissements du rapport, comme une ligne qu'il n'a pas pu répartir, une ligne sans société payeuse ou un montant sans taux de change. Quand votre accès aux données est limité, les chiffres portent sur les lignes que vous pouvez lire, sans le total du groupe, et Plaid ne liste les lignes refacturées à une société que pour les sociétés de votre accès. Les assistants connectés par MCP reçoivent les mêmes réponses.
 
+Plaid lit quatre référentiels, tels que leurs écrans les montrent. Il n'en modifie aucun.
+
+- **Centres de coûts**, avec le droit de lecture sur les centres de coûts : l'arbre des groupes de centres et des centres de coûts, la société et le responsable budgétaire de chaque nœud, et le nombre de lignes OPEX et CAPEX qui l'utilisent. Plaid liste tous les nœuds sous un groupe, à tous les niveaux, ou seulement les nœuds placés juste en dessous.
+- **Calendriers de jours ouvrés**, avec le droit de lecture sur les calendriers de jours ouvrés : les jours ouvrés d'une année, mois par mois, et les jours fériés d'un calendrier standard. KANAP calcule le total de l'année, et Plaid le cite. Un pays sans calendrier dans votre espace de travail n'en a aucun, et Plaid ne calcule pas ses jours.
+- **Dimensions analytiques**, avec le droit de lecture sur l'analytique : les réglages de chaque dimension (les types de ligne concernés, si une valeur est obligatoire, si chacun peut ajouter une valeur), son nombre de valeurs et les lignes qui l'utilisent. Une dimension obligatoire ne compte comme obligatoire que tant qu'elle est activée.
+- **Taux de change et devise de reporting**, avec le droit de lecture sur le budget : la devise de reporting, les devises par défaut et autorisées, le taux de chaque devise pour chaque année avec sa source, les taux saisis à la main et les taux manquants.
+
+Un taux est le montant en devise de reporting pour 1 unité de la devise. Dans un espace de travail qui présente ses rapports en euros, un taux de 0,89 pour USD signifie 1 USD = 0,89 EUR. KANAP calcule le taux inverse et le taux entre deux autres devises, par exemple de USD vers CHF, et Plaid les cite.
+
+Sans le droit qu'un référentiel demande, Plaid nomme le droit manquant. Quand votre accès aux données est limité, vous lisez tous les référentiels, comme à l'écran. Seuls les nombres de lignes budgétaires couvrent votre accès, et les devises listées avec leurs taux sont celles des lignes et des contrats que vous pouvez lire.
+
+Plaid lit l'historique d'un centre de coûts, d'un calendrier ou d'une dimension, tel que le montre son onglet **Historique**. `Search all` trouve un centre de coûts, un calendrier ou une dimension par son code ou son nom. Il ne cherche pas les taux de change : Plaid les liste à la place.
+
+Demandez par exemple : « Quels centres de coûts dépendent de Group IT ? », « Qui est le responsable budgétaire de FR-TRV-600 ? », « Combien de jours ouvrés en France en 2026 ? », « Quelles dimensions sont obligatoires ? » ou « Quel est le taux USD pour 2026 ? » Les assistants connectés par MCP reçoivent les mêmes réponses.
+
 Les totaux viennent de KANAP. Une liste de lignes budgétaires ou de contrats est accompagnée du total de toutes les fiches qui correspondent, toutes pages comprises, et du total des fiches listées : Plaid cite l'un des deux ou demande une somme à KANAP. Si vous demandez les dix plus grosses lignes et leur total, Plaid donne le total de ces dix lignes. Quand votre accès aux données est limité à certaines sociétés ou à certains centres de coûts, Plaid précise que ses décomptes et ses totaux couvrent votre accès, et ne les présente pas comme le total de l'espace de travail.
 
 Quand Plaid essaie une valeur de filtre qu'un champ n'accepte pas, par exemple « actif » pour le statut d'une application (qui est « activé » ou « désactivé »), KANAP la refuse et liste les valeurs acceptées. Plaid relance alors la recherche avec la bonne valeur.
@@ -191,10 +206,6 @@ Les autres fiches, comme les applications, les actifs, les contrats, les projets
 
 Plaid ne lit pas :
 
-- Les centres de coûts (**Données de référence › Centres de coûts**). Une ligne budgétaire indique son centre de coûts, Plaid peut donc filtrer les lignes par centre de coûts.
-- Les calendriers de jours ouvrés (**Données de référence › Calendriers de jours ouvrés**)
-- Les taux de change (**Gestion budgétaire › Administration › Devises**). Les montants budgétaires parviennent à Plaid déjà convertis dans la devise de reporting.
-- Les réglages des dimensions analytiques (**Données de référence › Dimensions analytiques**). Leurs valeurs, et la valeur que porte chaque ligne budgétaire, sont lisibles.
 - Le journal d'audit (**Administration › Journal d'audit**)
 - Les agents IA
 

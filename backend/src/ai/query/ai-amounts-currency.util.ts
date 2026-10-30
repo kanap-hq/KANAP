@@ -12,6 +12,9 @@ export type AiAmountsCurrency = {
   amounts_currency_note: string;
 };
 
+/** Where the rates the amounts are converted at are read. */
+const EXCHANGE_RATES_POINTER = 'The exchange rates themselves are read through query_entities on the family exchange_rates.';
+
 export function isBudgetLineEntity(entityType: AiQueryEntityType): boolean {
   return entityType === 'budget_lines';
 }
@@ -44,9 +47,9 @@ export async function aiAmountsCurrency(
       : `Every amount (y_budget, yearly_totals, sums...) is in ${currency}.`;
     return {
       amounts_currency: currency,
-      amounts_currency_note: `${where} ${currency} is the reporting currency: each line's amounts are converted from its own currency (its currency field) at the year's rate. A line's amounts_fx_missing_years names the years without a rate for its currency (null when every year has one): their amounts have no value in ${currency} and are left out of every sum.`
+      amounts_currency_note: `${where} ${currency} is the reporting currency: each line's amounts are converted from its own currency (its currency field) at the year's rate. A line's amounts_fx_missing_years names the years without a rate for its currency (null when every year has one): their amounts have no value in ${currency} and are left out of every sum. ${EXCHANGE_RATES_POINTER}`
         + (fxMissing?.length
-          ? ` These values leave out the amounts of the lines without a ${currency} rate listed in amounts_fx_missing: ${describeFxMissing(fxMissing)}. Tell the user that those amounts are not included in the figures and that they will count once the rate is available.`
+          ? ` These values leave out the amounts of the lines without a ${currency} rate listed in amounts_fx_missing: ${describeFxMissing(fxMissing)}. Tell the user that those amounts are not included in the figures and that they will count once the rate is available. The rates missing in the workspace are in missing_rates of the family exchange_rates.`
           : ''),
     };
   }

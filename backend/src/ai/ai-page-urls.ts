@@ -23,10 +23,13 @@ export const AI_PAGE_ROUTES: Readonly<Record<string, { path: (id: string) => str
   // A chargeback row opens its report: the global one, or the company one (where the company is picked).
   chargeback: { path: () => '/ops/reports/chargeback/global', resource: 'reporting' },
   chargeback_lines: { path: () => '/ops/reports/chargeback/company', resource: 'reporting' },
+  cost_centers: { path: (id) => `/master-data/cost-centers/${id}`, resource: 'cost_centers' },
+  working_day_calendars: { path: (id) => `/master-data/working-day-calendars/${id}`, resource: 'working_day_profiles' },
+  analytics_axes: { path: (id) => `/master-data/analytics/dimensions/${id}`, resource: 'analytics' },
 };
 
 /** The sentence the read tools give about `page_url` (chat and MCP share the descriptions). */
-export const AI_PAGE_URL_NOTE = 'A record without a business reference (contract, company, supplier, contact, department, business process, account, analytics value, site, connection, role, data access row, chargeback row, which opens its report) carries `page_url`, the address of its page in KANAP, when the user can open that page: an absolute address over MCP when the workspace address is configured on the server, otherwise a path from the workspace address.';
+export const AI_PAGE_URL_NOTE = 'A record without a business reference (contract, company, supplier, contact, department, business process, account, analytics value, site, connection, role, data access row, chargeback row, which opens its report), and a cost center, working-day calendar or analytics dimension, whose `ref` is its code, carries `page_url`, the address of its page in KANAP, when the user can open that page: an absolute address over MCP when the workspace address is configured on the server, otherwise a path from the workspace address.';
 
 export type AiPageUrlOptions = {
   /** The rights, among `resources`, the user holds at reader level. */

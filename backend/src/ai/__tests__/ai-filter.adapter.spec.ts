@@ -7,6 +7,45 @@ import { incidentsRegistry } from '../query/registries/incidents.registry';
 import { budgetLinesRegistry } from '../query/registries/budget-lines.registry';
 import { companiesRegistry } from '../query/registries/companies.registry';
 import { applicationsRegistry } from '../query/registries/applications.registry';
+import { exchangeRatesRegistry } from '../query/registries/exchange-rates.registry';
+import { workingDayCalendarsRegistry } from '../query/registries/working-day-calendars.registry';
+import { invalidFilterResult } from '../query/ai-filter-description.util';
+
+/**
+ * A number alone on a number field, or a string that is only a number, is eq (Plaid L9, lot G),
+ * for every family: the in-memory ones that read `year` themselves and the list engine's. A value
+ * that is no number is still refused, with the form the field takes.
+ */
+function testBareNumberIsEq() {
+  for (const [registry, field] of [[exchangeRatesRegistry, 'year'], [workingDayCalendarsRegistry, 'year'], [projectsRegistry, 'priority_score']] as const) {
+    for (const value of [2026, '2026', ' 2026 ']) {
+      const adapted = adaptFilters(registry, { [field]: value } as any);
+      assert.deepEqual(adapted.filters, { [registry.fields[field].grid]: { filterType: 'number', type: 'equals', filter: 2026 } }, `${registry.entityType}.${field} = ${JSON.stringify(value)}`);
+      assert.deepEqual(adapted.applied, [field]);
+      assert.deepEqual(adapted.ignored, []);
+    }
+  }
+  assert.deepEqual(adaptFilters(projectsRegistry, { priority_score: '12.5' } as any).filters.priority_score, { filterType: 'number', type: 'equals', filter: 12.5 });
+  // The comparison form is unchanged.
+  assert.deepEqual(adaptFilters(exchangeRatesRegistry, { year: { op: 'gte', value: 2026 } }).filters, { year: { filterType: 'number', type: 'greaterThanOrEqual', filter: 2026 } });
+
+  for (const [registry, field] of [[exchangeRatesRegistry, 'year'], [projectsRegistry, 'priority_score']] as const) {
+    for (const value of ['next year', '2026-01', ['2026'], true]) {
+      const adapted = adaptFilters(registry, { [field]: value } as any);
+      assert.deepEqual(adapted.ignored, [field], `${registry.entityType}.${field} = ${JSON.stringify(value)} is not applied`);
+      const [repair] = invalidFilterResult(registry, adapted).suggested_repairs;
+      assert.equal(repair.field, field);
+      assert.match(repair.reason, new RegExp(`^${field} is a number field of ${registry.entityType}, and the value given is not one it takes\\. It takes a number alone \\(2026 means \\{"op":"eq","value":2026\\}\\) or a comparison, for example `));
+      assert.doesNotMatch(repair.reason, /Unsupported/);
+    }
+  }
+  // A known field of another type given a value it does not take: its form too.
+  const [dateRepair] = invalidFilterResult(projectsRegistry, adaptFilters(projectsRegistry, { planned_start: 'soon' } as any)).suggested_repairs;
+  assert.match(dateRepair.reason, /^planned_start is a date field of projects, and the value given is not one it takes\. It takes date comparison, for example \{"op":"before","value":"2026-05-08"\}/);
+  // An unknown field keeps its reason.
+  const [unknown] = invalidFilterResult(exchangeRatesRegistry, adaptFilters(exchangeRatesRegistry, { made_up: '1' } as any)).suggested_repairs;
+  assert.match(unknown.reason, /^Unsupported AI filter field for exchange_rates/);
+}
 
 function testSetFilterAdaptation() {
   const adapted = adaptFilters(tasksRegistry, {
@@ -166,6 +205,7 @@ function testBlankableDateFilter() {
 }
 
 function run() {
+  testBareNumberIsEq();
   testExcludeSetFilter();
   testApplicationLifecycleExcludeOnly();
   testBlankableDateFilter();
