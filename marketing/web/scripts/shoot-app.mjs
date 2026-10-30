@@ -1165,6 +1165,33 @@ const PAGES = {
       await sleep(1500);
     },
   },
+  // Release 26.10.8 (2026-10-30): the History tab of a budget line, the last tab of the record.
+  'history-budget-line-2026-10-30': {
+    frame: 1440,
+    path: '/ops/budget/BL-53/history',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /History/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(2500);
+    },
+  },
+  // Release 26.10.8: Plaid reads the history of a record (read only, nothing is written).
+  'plaid-history-2026-10-30': {
+    frame: 1920,
+    path: '/ai',
+    waitFor: 'main',
+    async prepare(page) {
+      await askPlaid(page, 'What changed on budget line BL-53 and who did it? Answer in English.', () => /BL-53/.test(document.querySelector('main')?.innerText || ''));
+    },
+  },
+  // Release 26.10.8: the access denied page names the missing right. Run it with a reader account
+  // (APP_EMAIL / APP_PASSWORD of a user without administration rights).
+  'access-denied-2026-10-30': {
+    frame: 1280,
+    path: '/admin/users',
+    waitFor: 'main',
+    prepare: (page) => sleep(1500),
+  },
 };
 PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];
 
