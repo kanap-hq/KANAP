@@ -25,7 +25,7 @@ Chaque proposition correspond à une action concrète qu'un agent souhaite effec
 | **Clôturer le ticket** | Clôture le ticket. Voir [Clôturer et résoudre les tickets](#cloturer-et-resoudre-les-tickets). |
 | **Résoudre le ticket** | Marque le ticket comme résolu. Voir [Clôturer et résoudre les tickets](#cloturer-et-resoudre-les-tickets). |
 | **Affectation** | Ajoute un groupe de techniciens **ou** un technicien nommé au ticket, selon la règle de routage écrite dans les instructions de l'agent. Personne déjà présent sur le ticket n'est retiré. La proposition indique qui est ajouté et qui est actuellement affecté. |
-| **Participants** | Une modification des observateurs ou des demandeurs du ticket. |
+| **Observateurs** | Ajoute un technicien ou un groupe affectable comme observateur. Le demandeur reste inchangé, et les personnes qui suivent déjà le ticket restent. |
 
 Pour une **Réponse demandeur** ou une **Note interne**, le corps que vous voyez est le message rédigé complet, exactement tel qu'il serait publié. Lisez-le comme le ferait le demandeur (ou votre équipe). Pour les cinq autres types, le corps est un bref résumé du changement plutôt qu'un texte libre, par exemple `Status: New -> Pending`, `Assignee: Unassigned -> Jane`, ou un différentiel de classification champ par champ, souvent suivi d'une ligne **Motif** expliquant pourquoi l'agent le propose.
 

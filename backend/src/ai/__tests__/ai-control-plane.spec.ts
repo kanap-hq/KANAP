@@ -14616,6 +14616,176 @@ async function testGlpiTriagePlannerGroupRoutingUsesCatalogueAndSkipsInvalidTarg
   assert.match(recommendations[0].summary, /assignment update/);
 }
 
+// Observer adds follow the same catalogue rules as assignment: one group and one technician,
+// copied from routing_targets, never an observer already listed. remove_observer and
+// set_observers are skipped before a proposal exists.
+async function testGlpiTriagePlannerAddsObserversFromCatalogue() {
+  const { manager } = createMemoryManager();
+  const context = createContext(manager);
+  const queue = new AiAgentWorkQueueService();
+  const liveTarget = glpiReadSafeTarget();
+  const routingContext = {
+    ticketId: '4',
+    requester: 'Bob Requester',
+    assignee: null,
+    group: 'Tech-desk',
+    assignedUsers: [],
+    assignedGroups: [{ kind: 'group', key: '7', label: 'Tech-desk' }],
+    supportedAssignmentTargets: [
+      { kind: 'group', key: '7', label: 'Tech-desk' },
+      { kind: 'group', key: '12', label: 'SAP-team' },
+      { kind: 'group', key: '13', label: 'PLM-team' },
+      { kind: 'user', key: '21', label: 'Marie Dupont' },
+      { kind: 'user', key: '22', label: 'Paul Martin' },
+    ],
+    assignmentSupported: true,
+    supported: true,
+  };
+  const participantContext = {
+    ticketId: '4',
+    requester: 'Bob Requester',
+    observers: ['SAP-team', 'Paul Martin'],
+    observerTargets: [
+      { kind: 'group', key: '12', label: 'SAP-team' },
+      { kind: 'user', key: '22', label: 'Paul Martin' },
+    ],
+    watchers: [],
+    viewers: [],
+    participantUpdatesSupported: true,
+    supported: true,
+  };
+  const calls: Array<{ capabilityName: string; input: any }> = [];
+  let plannerPayload: any = null;
+  let toolIndex = 0;
+  const dispatcher = {
+    execute: async (_context: unknown, request: any) => {
+      calls.push({ capabilityName: request.capabilityName, input: request.input });
+      toolIndex += 1;
+      const toolExecutionId = `observer-tool-${toolIndex}`;
+      const step = (stepId: string, data: unknown) => ({
+        run_id: 'run-glpi-observers',
+        step_id: stepId,
+        tool_execution_id: toolExecutionId,
+        output: { ok: true, data, evidence: [] },
+      });
+      if (request.capabilityName === 'ticketing.ticket.get') {
+        return step('step-ticket', {
+          id: '4',
+          title: 'SAP order entry blocked',
+          status: 'new',
+          priority: 'medium',
+          description: 'Transaction VA01 fails with an authorization error since this morning.',
+        });
+      }
+      if (request.capabilityName === TICKETING_TICKET_NOTES_LIST_CAPABILITY) {
+        return step('step-notes', { notes: [] });
+      }
+      if (request.capabilityName === TICKETING_CLASSIFICATION_CONTEXT_CAPABILITY) {
+        return step('step-classification', { type: 'Incident', priority: 'Medium', urgency: 'Medium' });
+      }
+      if (request.capabilityName === TICKETING_LIFECYCLE_CONTEXT_CAPABILITY) {
+        return step('step-lifecycle', { terminal: false, allowedTransitions: [] });
+      }
+      if (request.capabilityName === TICKETING_ROUTING_CONTEXT_CAPABILITY) {
+        return step('step-routing', routingContext);
+      }
+      if (request.capabilityName === TICKETING_PARTICIPANT_CONTEXT_CAPABILITY) {
+        return step('step-participant', participantContext);
+      }
+      if (request.capabilityName === 'search_knowledge') {
+        return { run_id: 'run-glpi-observers', step_id: 'step-search', tool_execution_id: toolExecutionId, output: { items: [], total: 0, returned: 0, truncated: false, complete: true } };
+      }
+      if (request.capabilityName === TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY) {
+        await savePreparedTicketingAction(context, {
+          id: 'observer-internal-action',
+          runId: 'run-glpi-observers',
+          toolExecutionId,
+          capabilityName: TICKETING_INTERNAL_NOTE_ADD_APPROVED_CAPABILITY,
+          body: request.input.note_body,
+          visibility: 'internal',
+          providerKey: 'glpi',
+        });
+        return step('step-internal', { action_request_id: 'observer-internal-action' });
+      }
+      if (request.capabilityName === TICKETING_PARTICIPANT_UPDATE_PREPARE_CAPABILITY) {
+        return step('step-observer', {
+          action_request_id: `observer-${request.input.participants?.[0]?.kind}`,
+          participants: request.input.participants,
+        });
+      }
+      throw new Error(`Unexpected capability ${request.capabilityName}`);
+    },
+  };
+  const actionPlanner = {
+    maxOutputTokens: () => 1600,
+    buildPromptPayload: (plannerInput: any) => {
+      plannerPayload = plannerInput;
+      return plannerInput;
+    },
+    planActions: async () => ({
+      source: 'llm',
+      actions: [
+        { action_type: 'internal_note', reason: 'Summarize the SAP authorization failure for the technicians.' },
+        { action_type: 'participant_update', operation: 'add_observer', participants: [{ kind: 'group', key: '12', label: 'SAP-team' }], reason: 'Already watching.' },
+        { action_type: 'participant_update', operation: 'add_observer', participants: [{ kind: 'group', key: '7', label: 'tech desk' }], reason: 'Keep Tech-desk informed about the SAP outage.' },
+        { action_type: 'participant_update', operation: 'add_observer', participants: [{ kind: 'group', key: '13', label: 'PLM-team' }], reason: 'Also PLM.' },
+        { action_type: 'participant_update', operation: 'add_observer', participants: [{ kind: 'group', key: '99', label: 'Ghost-team' }], reason: 'Invented.' },
+        { action_type: 'participant_update', operation: 'remove_observer', participants: [{ kind: 'user', key: '22', label: 'Paul Martin' }], reason: 'Drop Paul.' },
+        { action_type: 'participant_update', operation: 'set_observers', participants: [{ kind: 'user', key: '21', label: 'Marie Dupont' }, { kind: 'user', key: '22', label: 'Paul Martin' }], reason: 'Replace the list.' },
+        { action_type: 'participant_update', target: { kind: 'user', key: '21', label: 'marie' }, reason: 'Marie follows badge tickets.' },
+        { action_type: 'participant_update', operation: 'add_observer', participants: [{ kind: 'user', key: '22', label: 'Paul Martin' }], reason: 'Already an observer.' },
+      ],
+      rationale: 'Add observers.',
+      confidence: 0.8,
+      model: 'test:planner',
+      usage: null,
+      estimated_tokens: 20,
+      estimated_cost_eur: 0.00004,
+      latency_ms: 1,
+    }),
+  };
+  const service = new AiAgentControlService(
+    {} as any,
+    {} as any,
+    dispatcher as any,
+    { requireSingleEnabledTarget: async () => liveTarget } as any,
+    { getApplicability: async () => ({ available: true }) } as any,
+    queue,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    actionPlanner as any,
+  ) as any;
+  service.getRunDetail = async () => ({ action_requests: [] });
+
+  const triageBundle = await seedTestHelpdeskDefinition(context);
+  const result = await service.runTicketingTriage(context, { provider_key: 'glpi', target_key: '4', agent_definition_id: triageBundle.definition.id });
+
+  assert.equal(plannerPayload.owned_action_types.includes('participant_update'), true);
+  const realPlanner = new AiAgentActionPlannerService({} as any);
+  const prompt = realPlanner.buildPromptPayload(plannerPayload) as any;
+  assert.deepEqual(prompt.routing_targets.map((target: { key: string }) => target.key), ['7', '12', '13', '21', '22']);
+  assert.match(String(prompt.schema.actions[0].operation), /add_observer/);
+  assert.match(String(prompt.schema.actions[0].participants), /routing_targets/);
+
+  const observerCalls = calls.filter((call) => call.capabilityName === TICKETING_PARTICIPANT_UPDATE_PREPARE_CAPABILITY);
+  assert.equal(observerCalls.length, 2);
+  assert.equal(observerCalls[0].input.operation, 'add_observer');
+  assert.deepEqual(observerCalls[0].input.participants, [{ kind: 'group', key: '7', label: 'Tech-desk' }]);
+  assert.equal(observerCalls[0].input.reason, 'Keep Tech-desk informed about the SAP outage.');
+  assert.deepEqual(observerCalls[1].input.participants, [{ kind: 'user', key: '21', label: 'Marie Dupont' }]);
+  const planner = result.diagnostic.action_planner as any;
+  assert.deepEqual(
+    planner.authorized_actions.map((action: any) => action.action_type),
+    ['internal_note', 'participant_update', 'participant_update'],
+  );
+  assert.equal(planner.skipped_actions.participant_update, 'observer_already_present');
+  const recommendations = await manager.getRepository(AiRecommendation).find();
+  assert.equal(recommendations.length, 1);
+  assert.match(recommendations[0].summary, /observer update/);
+}
+
 // Without the Assignment capability the planner is not offered assignment_update at all, and a
 // model proposing it anyway is skipped for the missing grant rather than crashing the run.
 async function testGlpiTriagePlannerClassificationUsesCatalogue(category = 'software > sap', invalidFirst = false) {
@@ -16640,6 +16810,7 @@ async function run() {
   testSynthesisPayloadIncludesScreenshotEvidence();
   await testGlpiTriageDowngradesUnusableSourcedReplyToInternalNoteAndHonorsLanguage();
   await testGlpiTriagePlannerGroupRoutingUsesCatalogueAndSkipsInvalidTargets();
+  await testGlpiTriagePlannerAddsObserversFromCatalogue();
   await testGlpiTriagePlannerTechnicianRoutingIsKindScoped();
   await testGlpiTriagePlannerTechnicianRoutingRejectsAmbiguousNames();
   await testGlpiTriageAssignmentExpiryIsScopedToTargetKind();

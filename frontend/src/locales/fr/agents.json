@@ -665,7 +665,7 @@
       "classification": "Classification",
       "status": "Mises à jour statut",
       "assignment": "Affectation",
-      "participant": "Participants"
+      "participant": "Observateurs"
     },
     "autonomy": "Autonomie",
     "autonomyDialog": {
@@ -679,7 +679,7 @@
       "highRisk": {
         "public_reply": "L’agent répondra directement aux demandeurs, sans que personne ne relise la réponse. À n’activer que si ce qu’il a proposé jusqu’ici vous convient.",
         "assignment": "L’agent réaffectera des tickets à d’autres personnes, sans relecture préalable.",
-        "participant": "L’agent ajoutera et retirera des personnes sur les tickets, sans relecture préalable."
+        "participant": "L’agent ajoutera un observateur sur les tickets, sans relecture préalable. Le demandeur n’est pas modifié."
       },
       "reasonHighRiskHint": "Obligatoire. Elle est conservée dans l’historique de l’agent pour que votre équipe sache qui a accepté, et pourquoi."
     },
@@ -704,7 +704,7 @@
       "status": "Mise à jour statut",
       "public_reply": "Réponse demandeur",
       "assignment": "Affectation",
-      "participant": "Participants"
+      "participant": "Observateurs"
     },
     "monitoringTargetingFields": {
       "status": "État de l'alerte",
@@ -816,7 +816,7 @@
     "autonomyHighRiskNote": {
       "public_reply": "L’agent répondrait au demandeur sans que personne ne relise avant.",
       "assignment": "L’agent réaffecterait les tickets sans que personne ne relise avant.",
-      "participant": "L’agent ajouterait ou retirerait des personnes sur les tickets sans que personne ne relise avant."
+      "participant": "L’agent ajouterait un observateur sur les tickets sans que personne ne relise avant. Le demandeur n’est pas modifié."
     },
     "charCounter": "{{used}} / {{max}} caractères",
     "instructionsOverLimit": "Les instructions sont limitées à {{max}} caractères. Au-delà, une partie ne serait plus transmise à l’agent. Cette section n’est pas enregistrée tant qu’elle dépasse.",
@@ -832,7 +832,7 @@
     "closeTicket": "Clôturer le ticket",
     "solveTicket": "Résoudre le ticket",
     "assignment": "Affectation",
-    "participants": "Participants",
+    "participants": "Observateurs",
     "classificationUpdate": "Mise à jour classification",
     "statusUpdate": "Mise à jour statut",
     "reason": "Motif",
@@ -850,7 +850,10 @@
     "assignToTechnician": "Attribuer au technicien",
     "currentTechnicians": "Actuellement attribué à",
     "noTechnicianAssigned": "Aucun technicien attribué",
-    "participantUpdate": "Mise à jour des participants",
+    "participantUpdate": "Ajout d’un observateur",
+    "addObserver": "Ajouter un observateur",
+    "currentObservers": "Observateurs actuels",
+    "noObservers": "Aucun observateur",
     "classificationFields": {
       "category": "Catégorie",
       "type": "Type",

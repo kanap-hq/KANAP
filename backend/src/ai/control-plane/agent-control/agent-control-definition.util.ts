@@ -6,7 +6,7 @@ import { AiAgentDefinition } from '../entities/ai-agent-definition.entity';
 import { AiRun } from '../entities/ai-run.entity';
 import { hashStableJson } from '../evidence/ai-evidence.service';
 import { ticketActorRoleFromResponsePolicy } from '../providers/provider.types';
-import { PLANNER_ASSIGNMENT_ACTION_TYPE, PLANNER_CLASSIFICATION_ACTION_TYPE, PLANNER_TERMINAL_TRANSITIONS, UUID_RE, numericMetadata, possibleCapabilityCapsForAgentType } from './agent-control-constants.util';
+import { PLANNER_ASSIGNMENT_ACTION_TYPE, PLANNER_CLASSIFICATION_ACTION_TYPE, PLANNER_PARTICIPANT_ACTION_TYPE, PLANNER_TERMINAL_TRANSITIONS, UUID_RE, numericMetadata, possibleCapabilityCapsForAgentType } from './agent-control-constants.util';
 import { stripKnowledgeAccents } from './agent-control-knowledge.util';
 import { cleanAgentPriority, metadataObject, trimmedString } from './agent-control-util';
 import { PlannerAction } from './ai-agent-action-planner.service';
@@ -514,6 +514,12 @@ export function plannerActionKindKey(action: PlannerAction): string {
   if (action.action_type === PLANNER_ASSIGNMENT_ACTION_TYPE) {
     return `${action.action_type}:${action.target?.kind ?? 'unspecified'}:${action.target?.key ?? 'unspecified'}`;
   }
+  if (action.action_type === PLANNER_PARTICIPANT_ACTION_TYPE) {
+    const participant = Array.isArray(action.participants) && action.participants.length > 0
+      ? action.participants[0]
+      : action.target ?? null;
+    return `${action.action_type}:${action.operation ?? 'add_observer'}:${participant?.kind ?? 'unspecified'}:${participant?.key ?? 'unspecified'}`;
+  }
   return action.action_type;
 }
 
@@ -550,6 +556,61 @@ export function resolvePlannerAssignmentTarget(
   const assigned = Array.isArray(assignedRaw) ? assignedRaw.filter(isRecord) : [];
   if (assigned.some((entry) => String(entry.key ?? '') === String(match.key))) {
     return { target: null, reason: 'assignment_target_already_present' };
+  }
+  return { target: { kind: match.kind, key: String(match.key), label: String(match.label) }, reason: null };
+}
+
+// Resolves one observer add against the routing catalogue. The label always comes from
+// the catalogue. remove_observer and set_observers are refused in words by the provider;
+// the planner skips them before a proposal exists. An observer already listed is refused.
+export function resolvePlannerObserverTarget(
+  routing: Record<string, unknown> | null,
+  participants: Record<string, unknown> | null,
+  action: PlannerAction,
+): { target: { kind: 'user' | 'group'; key: string; label: string } | null; reason: string | null } {
+  if (action.operation && action.operation !== 'add_observer') {
+    return { target: null, reason: 'participant_operation_not_supported' };
+  }
+  if (Array.isArray(action.participants) && action.participants.length > 1) {
+    return { target: null, reason: 'one_observer_per_proposal' };
+  }
+  const requested = Array.isArray(action.participants) && action.participants.length === 1
+    ? action.participants[0]
+    : action.target ?? null;
+  const key = typeof requested?.key === 'string' ? requested.key.trim() : '';
+  const label = typeof requested?.label === 'string' ? requested.label.trim().toLowerCase() : '';
+  if (!key && !label) {
+    return { target: null, reason: 'missing_observer_target' };
+  }
+  if (!participants || participants.participantUpdatesSupported !== true) {
+    return { target: null, reason: 'participant_updates_not_supported' };
+  }
+  if (!routing || routing.assignmentSupported !== true) {
+    return { target: null, reason: 'observer_target_not_in_routing_catalogue' };
+  }
+  const catalogue = Array.isArray(routing.supportedAssignmentTargets) ? routing.supportedAssignmentTargets.filter(isRecord) : [];
+  const sameKind = catalogue.filter((candidate) => candidate.kind === requested?.kind && typeof candidate.key === 'string' && typeof candidate.label === 'string');
+  let match = sameKind.find((candidate) => key && candidate.key === key);
+  if (!match && label) {
+    const labelMatches = sameKind.filter((candidate) => String(candidate.label).trim().toLowerCase() === label);
+    if (labelMatches.length > 1) {
+      return { target: null, reason: 'observer_target_ambiguous' };
+    }
+    match = labelMatches[0];
+  }
+  if (!match || (match.kind !== 'group' && match.kind !== 'user')) {
+    return { target: null, reason: 'observer_target_not_in_routing_catalogue' };
+  }
+  const observerTargets = Array.isArray(participants.observerTargets) ? participants.observerTargets.filter(isRecord) : null;
+  if (observerTargets) {
+    if (observerTargets.some((entry) => entry.kind === match.kind && String(entry.key ?? '') === String(match.key))) {
+      return { target: null, reason: 'observer_already_present' };
+    }
+  } else if (Array.isArray(participants.observers)) {
+    const wanted = String(match.label).trim().toLowerCase();
+    if (participants.observers.some((entry) => String(entry).trim().toLowerCase() === wanted)) {
+      return { target: null, reason: 'observer_already_present' };
+    }
   }
   return { target: { kind: match.kind, key: String(match.key), label: String(match.label) }, reason: null };
 }

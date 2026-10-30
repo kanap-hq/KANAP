@@ -665,7 +665,7 @@
       "classification": "Classification",
       "status": "Status updates",
       "assignment": "Assignment",
-      "participant": "Participants"
+      "participant": "Observers"
     },
     "autonomy": "Autonomy",
     "autonomyDialog": {
@@ -679,7 +679,7 @@
       "highRisk": {
         "public_reply": "The agent will reply to requesters directly, with nobody reading the reply first. Turn this on only if you are comfortable with what it has proposed so far.",
         "assignment": "The agent will reassign tickets to other people, with nobody reviewing the change first.",
-        "participant": "The agent will add and remove people on tickets, with nobody reviewing the change first."
+        "participant": "The agent will add an observer to tickets, with nobody reviewing the change first. The requester is not changed."
       },
       "reasonHighRiskHint": "Required. It is kept in the agent history so your team can see who accepted this and why."
     },
@@ -704,7 +704,7 @@
       "status": "Status update",
       "public_reply": "Requester reply",
       "assignment": "Assignment",
-      "participant": "Participants"
+      "participant": "Observers"
     },
     "monitoringTargetingFields": {
       "status": "Alert state",
@@ -816,7 +816,7 @@
     "autonomyHighRiskNote": {
       "public_reply": "The agent would reply to the requester with nobody reading it first.",
       "assignment": "The agent would reassign tickets with nobody reading it first.",
-      "participant": "The agent would add or remove people on tickets with nobody reading it first."
+      "participant": "The agent would add an observer to tickets with nobody reading it first. The requester is not changed."
     },
     "charCounter": "{{used}} / {{max}} characters",
     "instructionsOverLimit": "Instructions are limited to {{max}} characters. Beyond that, part of them would no longer reach the agent. This section is not saved while it is over the limit.",
@@ -832,7 +832,7 @@
     "closeTicket": "Close ticket",
     "solveTicket": "Solve ticket",
     "assignment": "Assignment",
-    "participants": "Participants",
+    "participants": "Observers",
     "classificationUpdate": "Classification update",
     "statusUpdate": "Status update",
     "reason": "Reason",
@@ -850,7 +850,10 @@
     "assignToTechnician": "Assign to technician",
     "currentTechnicians": "Currently assigned",
     "noTechnicianAssigned": "No technician assigned",
-    "participantUpdate": "Participant update",
+    "participantUpdate": "Observer update",
+    "addObserver": "Add observer",
+    "currentObservers": "Current observers",
+    "noObservers": "No observers",
     "classificationFields": {
       "category": "Category",
       "type": "Type",
