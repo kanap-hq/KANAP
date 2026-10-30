@@ -8,7 +8,7 @@
 
 services:
   api:
-    image: ghcr.io/kanap-hq/kanap-api:${KANAP_VERSION:-26.10.7}
+    image: ghcr.io/kanap-hq/kanap-api:${KANAP_VERSION:-26.10.8}
     env_file: ../.env
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -55,7 +55,7 @@ services:
     #                 under PostgreSQL's max_connections minus about 15; the API warns at start.
 
   web:
-    image: ghcr.io/kanap-hq/kanap-web:${KANAP_VERSION:-26.10.7}
+    image: ghcr.io/kanap-hq/kanap-web:${KANAP_VERSION:-26.10.8}
     depends_on:
       - api
     ports:
@@ -94,7 +94,7 @@ services:
   #   docker compose -f infra/compose.onprem.yml run --rm tools npm run typeorm -- migration:show
   tools:
     profiles: ["tools"]
-    image: ghcr.io/kanap-hq/kanap-api-tools:${KANAP_VERSION:-26.10.7}
+    image: ghcr.io/kanap-hq/kanap-api-tools:${KANAP_VERSION:-26.10.8}
     env_file: ../.env
     extra_hosts:
       - "host.docker.internal:host-gateway"

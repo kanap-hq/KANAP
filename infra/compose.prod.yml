@@ -10,7 +10,7 @@
 
 services:
   api:
-    image: ghcr.io/kanap-hq/kanap-api:${KANAP_VERSION:-26.10.7}
+    image: ghcr.io/kanap-hq/kanap-api:${KANAP_VERSION:-26.10.8}
     env_file: ../backend/.env.prod
     environment:
       INTEGRATED_DOCS_AUTO_ROLLOUT: ${INTEGRATED_DOCS_AUTO_ROLLOUT:-if-needed}
@@ -55,7 +55,7 @@ services:
     # keep 1 there. See doc/architecture.md, "Several API processes".
 
   web:
-    image: ghcr.io/kanap-hq/kanap-web:${KANAP_VERSION:-26.10.7}
+    image: ghcr.io/kanap-hq/kanap-web:${KANAP_VERSION:-26.10.8}
     env_file: ../frontend/.env.prod
     depends_on:
       - api
@@ -91,7 +91,7 @@ services:
       - NET_BIND_SERVICE
 
   marketing:
-    image: ghcr.io/kanap-hq/kanap-marketing:${KANAP_MARKETING_VERSION:-${KANAP_VERSION:-26.10.7}}
+    image: ghcr.io/kanap-hq/kanap-marketing:${KANAP_MARKETING_VERSION:-${KANAP_VERSION:-26.10.8}}
     ports:
       - "127.0.0.1:8082:80"
     restart: unless-stopped
