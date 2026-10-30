@@ -96,7 +96,10 @@ export const PHASE_1_PLANNER_OWNED_ACTION_TYPES = [
 // capability pair and the provider exposes a routing catalogue for the ticket.
 export const PLANNER_ASSIGNMENT_ACTION_TYPE = 'assignment_update' as const satisfies PlannerActionType;
 export const PLANNER_CLASSIFICATION_ACTION_TYPE = 'classification_update' as const satisfies PlannerActionType;
-export const PLANNER_OWNED_ACTION_TYPES = new Set<PlannerActionType>([...PHASE_1_PLANNER_OWNED_ACTION_TYPES, PLANNER_ASSIGNMENT_ACTION_TYPE, PLANNER_CLASSIFICATION_ACTION_TYPE]);
+// Observer adds: owned only when the agent holds the participant capability pair and
+// the provider can add an observer on this ticket.
+export const PLANNER_PARTICIPANT_ACTION_TYPE = 'participant_update' as const satisfies PlannerActionType;
+export const PLANNER_OWNED_ACTION_TYPES = new Set<PlannerActionType>([...PHASE_1_PLANNER_OWNED_ACTION_TYPES, PLANNER_ASSIGNMENT_ACTION_TYPE, PLANNER_CLASSIFICATION_ACTION_TYPE, PLANNER_PARTICIPANT_ACTION_TYPE]);
 export const PLANNER_TERMINAL_TRANSITIONS = new Set(['solved', 'closed', 'resolved']);
 export const ACTION_TYPE_CAPABILITY_TABLE: Record<string, { prepare: string; approved: string } | undefined> = {
   internal_note: {

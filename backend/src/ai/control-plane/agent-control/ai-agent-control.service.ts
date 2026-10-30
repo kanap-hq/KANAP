@@ -287,6 +287,7 @@ import {
   resolvePlannerStatusTransition,
   plannerActionKindKey,
   resolvePlannerAssignmentTarget,
+  resolvePlannerObserverTarget,
   resolveVerbatimCandidate,
   plannerActionKey,
   configSnapshot,
@@ -319,6 +320,7 @@ import {
   PHASE_1_PLANNER_OWNED_ACTION_TYPES,
   PLANNER_ASSIGNMENT_ACTION_TYPE,
   PLANNER_CLASSIFICATION_ACTION_TYPE,
+  PLANNER_PARTICIPANT_ACTION_TYPE,
   PLANNER_OWNED_ACTION_TYPES,
   PLANNER_TERMINAL_TRANSITIONS,
   STATIC_CAPABILITY_EXECUTION_PHASES,
@@ -5835,6 +5837,10 @@ export class AiAgentControlService {
       && definitionAllowsCapability(agentDefinition, TICKETING_ASSIGNMENT_UPDATE_PREPARE_CAPABILITY)
       && definitionAllowsCapability(agentDefinition, TICKETING_ASSIGNMENT_UPDATE_APPROVED_CAPABILITY);
     const assignmentRoutingAvailable = assignmentWriteCapable && routingContext?.assignmentSupported === true;
+    const participantWriteCapable = !!agentDefinition
+      && definitionAllowsCapability(agentDefinition, TICKETING_PARTICIPANT_UPDATE_PREPARE_CAPABILITY)
+      && definitionAllowsCapability(agentDefinition, TICKETING_PARTICIPANT_UPDATE_APPROVED_CAPABILITY);
+    const participantUpdatesAvailable = participantWriteCapable && participantContext?.participantUpdatesSupported === true;
     const classificationWriteCapable = !!agentDefinition
       && definitionAllowsCapability(agentDefinition, TICKETING_CLASSIFICATION_UPDATE_PREPARE_CAPABILITY)
       && definitionAllowsCapability(agentDefinition, TICKETING_CLASSIFICATION_UPDATE_APPROVED_CAPABILITY);
@@ -5843,6 +5849,7 @@ export class AiAgentControlService {
       ...PHASE_1_PLANNER_OWNED_ACTION_TYPES,
       ...(assignmentRoutingAvailable ? [PLANNER_ASSIGNMENT_ACTION_TYPE] : []),
       ...(classificationAvailable ? [PLANNER_CLASSIFICATION_ACTION_TYPE] : []),
+      ...(participantUpdatesAvailable ? [PLANNER_PARTICIPANT_ACTION_TYPE] : []),
     ];
     const closeWriteCapable = !!agentDefinition
       && definitionAllowsCapability(agentDefinition, TICKETING_STATUS_UPDATE_PREPARE_CAPABILITY)
@@ -5948,6 +5955,10 @@ export class AiAgentControlService {
         }
         if (actionType === PLANNER_ASSIGNMENT_ACTION_TYPE && !assignmentRoutingAvailable) {
           markPlannerSkipped(actionType, assignmentWriteCapable ? 'assignment_not_supported_by_provider' : 'prepare_capability_not_granted');
+          continue;
+        }
+        if (actionType === PLANNER_PARTICIPANT_ACTION_TYPE && !participantUpdatesAvailable) {
+          markPlannerSkipped(actionType, participantWriteCapable ? 'participant_updates_not_supported' : 'prepare_capability_not_granted');
           continue;
         }
         if (actionType === PLANNER_CLASSIFICATION_ACTION_TYPE && !classificationAvailable) {
@@ -6077,6 +6088,25 @@ export class AiAgentControlService {
             continue;
           }
           authorizedAction = { ...action, target: resolvedTarget.target } as PlannerAction;
+        } else if (actionType === PLANNER_PARTICIPANT_ACTION_TYPE) {
+          const resolvedTarget = resolvePlannerObserverTarget(routingContext, participantContext, action);
+          if (!resolvedTarget.target) {
+            markPlannerSkipped(actionType, resolvedTarget.reason ?? 'observer_target_not_in_routing_catalogue');
+            continue;
+          }
+          // One group and one technician may be added as observers in the same plan.
+          // The writes are additive, so both can apply in one approved batch.
+          if (plannerAuthorizedActions.some((entry) => entry.action.action_type === PLANNER_PARTICIPANT_ACTION_TYPE
+            && (entry.action.participants?.[0]?.kind ?? entry.action.target?.kind) === resolvedTarget.target!.kind)) {
+            markPlannerSkipped(actionType, 'one_observer_per_kind_per_plan');
+            continue;
+          }
+          authorizedAction = {
+            ...action,
+            operation: 'add_observer',
+            participants: [resolvedTarget.target],
+            target: resolvedTarget.target,
+          } as PlannerAction;
         }
         plannerAuthorizedActions.push({
           action: authorizedAction,
@@ -6105,6 +6135,7 @@ export class AiAgentControlService {
         ? entry.action.transition_resolution
         : null,
       target: entry.action.target ?? null,
+      participants: entry.action.participants ?? null,
       proposed: entry.action.proposed ?? null,
       terminal: entry.terminal,
       reason: entry.action.reason,
@@ -6115,6 +6146,8 @@ export class AiAgentControlService {
       administrative_intent: action.administrative_intent ?? null,
       transition_key: action.transition_key ?? null,
       target: action.target ?? null,
+      participants: action.participants ?? null,
+      operation: action.operation ?? null,
       proposed: action.proposed ?? null,
       verbatim_ref: action.verbatim_ref ?? null,
       body_present: typeof action.body === 'string' && action.body.trim().length > 0,
@@ -6265,6 +6298,7 @@ export class AiAgentControlService {
         ? entry.action.transition_resolution
         : null,
       target: entry.action.target ?? null,
+      participants: entry.action.participants ?? null,
       proposed: entry.action.proposed ?? null,
       terminal: entry.terminal,
       reason: entry.action.reason,
@@ -6351,6 +6385,7 @@ export class AiAgentControlService {
       fallbackStatusUpdateInput || effectivePlannerActions.some((entry) => entry.action.action_type === 'status_update') ? 'status update' : null,
       classificationUpdateInput ? 'classification update' : null,
       effectivePlannerActions.some((entry) => entry.action.action_type === PLANNER_ASSIGNMENT_ACTION_TYPE) ? 'assignment update' : null,
+      effectivePlannerActions.some((entry) => entry.action.action_type === PLANNER_PARTICIPANT_ACTION_TYPE) ? 'observer update' : null,
     ].filter((label): label is string => !!label);
     const anyActionEligible = expectedActionLabels.length > 0;
     const recommendationRepo = context.manager.getRepository(AiRecommendation);
@@ -6869,6 +6904,66 @@ export class AiAgentControlService {
     }
     const assignmentUpdateProposal = assignmentUpdateProposals[0] ?? null;
 
+    // One prepare per proposed kind, same as assignment. A fresh group observer must
+    // not withdraw a technician observer that is still waiting for review.
+    const plannerParticipantUpdates = effectivePlannerActions.filter((entry) => entry.action.action_type === PLANNER_PARTICIPANT_ACTION_TYPE
+      && (entry.action.participants?.length ?? 0) > 0);
+    const participantUpdateProposals: Array<Awaited<ReturnType<typeof this.dispatcher.execute>>> = [];
+    for (const entry of plannerParticipantUpdates) {
+      const proposalHashValue = plannerProposalHashFor({ ...entry, replyBody: null });
+      const contextHashValue = plannerProposalContextHash(entry);
+      const suppression = proposalHashValue && contextHashValue
+        ? await this.unchangedProposalSuppressionReason(context, {
+          capabilityName: TICKETING_PARTICIPANT_UPDATE_APPROVED_CAPABILITY,
+          ...proposalScope,
+          proposalHash: proposalHashValue,
+          contextHash: contextHashValue,
+        })
+        : null;
+      if (suppression) {
+        plannerSuppressionReasons.participant_update = plannerSuppressionReasons.participant_update ?? suppression;
+        continue;
+      }
+      const targetKind = entry.action.participants?.[0]?.kind ?? null;
+      const prepared = await this.dispatcher.execute(context, {
+        capabilityName: TICKETING_PARTICIPANT_UPDATE_PREPARE_CAPABILITY,
+        input: {
+          provider_key: target.provider_key,
+          ticket_id: ticket.id,
+          operation: 'add_observer',
+          participants: entry.action.participants,
+          reason: entry.action.reason,
+          evidence_ids: allEvidenceIds,
+          observation_id: observation.id,
+          recommendation_id: recommendation.id,
+          decision_id: decision.id,
+          evaluation_id: evaluation.id,
+        },
+        execution: {
+          surface: 'internal',
+          trigger_kind: 'internal',
+          runId: ticketResult.run_id,
+          stepIndex: stepIndex++,
+          metadata: plannerMetadata(entry, proposalHashValue, contextHashValue, 'planner_prepare_participant_update'),
+        },
+      });
+      participantUpdateProposals.push(prepared);
+      if (adapterData(prepared.output) != null) {
+        await this.expirePriorPendingSameClass(context, {
+          ...proposalScope,
+          capabilityName: TICKETING_PARTICIPANT_UPDATE_APPROVED_CAPABILITY,
+          agentDefinitionId: proposalAgentDefinitionId,
+          matchPayload: (payload) => isRecord(payload)
+            && Array.isArray(payload.participants)
+            && isRecord(payload.participants[0])
+            && payload.participants[0].kind === targetKind,
+          excludeActionIds: actionRequestIdsFromCapabilityOutput(prepared.output),
+          excludeRunId: ticketResult.run_id,
+        });
+      }
+    }
+    const participantUpdateProposal = participantUpdateProposals[0] ?? null;
+
     const plannerSkippedActionsWithSuppression = {
       ...plannerSkippedActions,
       ...plannerSuppressionReasons,
@@ -6885,6 +6980,7 @@ export class AiAgentControlService {
       ...(classificationUpdateProposal ? actionRequestIdsFromCapabilityOutput(classificationUpdateProposal.output) : []),
       ...(statusUpdateProposal ? actionRequestIdsFromCapabilityOutput(statusUpdateProposal.output) : []),
       ...assignmentUpdateProposals.flatMap((prepared) => actionRequestIdsFromCapabilityOutput(prepared.output)),
+      ...participantUpdateProposals.flatMap((prepared) => actionRequestIdsFromCapabilityOutput(prepared.output)),
     ]));
     const expectedPreparedActionCount = [
       !!proposal && adapterData(proposal.output) != null,
@@ -6892,6 +6988,7 @@ export class AiAgentControlService {
       !!classificationUpdateProposal && adapterData(classificationUpdateProposal.output) != null,
       !!statusUpdateProposal && adapterData(statusUpdateProposal.output) != null,
       ...assignmentUpdateProposals.map((prepared) => adapterData(prepared.output) != null),
+      ...participantUpdateProposals.map((prepared) => adapterData(prepared.output) != null),
     ].filter(Boolean).length;
     const recoveredPreparedActionIds = directPreparedActionIds.length >= expectedPreparedActionCount
       ? []
@@ -7045,7 +7142,7 @@ export class AiAgentControlService {
               ?? statusSuppressionReason
               ?? (statusUpdateInput ? null : 'no_safe_status_transition'),
             assignment: plannerSkippedActionsWithSuppression.assignment_update ?? (assignmentUpdateInput ? null : (assignmentRoutingAvailable ? 'not_selected_by_action_planner' : assignmentWriteCapable ? 'no_supported_assignment_target' : 'assignment_capability_not_granted')),
-            participants: 'provider_participant_update_not_prepared',
+            participants: plannerSkippedActionsWithSuppression.participant_update ?? (participantUpdateProposals.length > 0 ? null : (participantUpdatesAvailable ? 'not_selected_by_action_planner' : participantWriteCapable ? 'participant_updates_not_supported' : 'participant_capability_not_granted')),
           },
         },
       });
@@ -7135,12 +7232,14 @@ export class AiAgentControlService {
         classification_update_tool_execution_id: classificationUpdateProposal?.tool_execution_id ?? null,
         status_update_tool_execution_id: statusUpdateProposal?.tool_execution_id ?? null,
         assignment_update_tool_execution_id: assignmentUpdateProposal?.tool_execution_id ?? null,
+        participant_update_tool_execution_id: participantUpdateProposal?.tool_execution_id ?? null,
       },
       proposal,
       public_reply_proposal: publicReplyProposal,
       classification_update_proposal: classificationUpdateProposal,
       status_update_proposal: statusUpdateProposal,
       assignment_update_proposal: assignmentUpdateProposal,
+      participant_update_proposal: participantUpdateProposal,
       detail: await this.getRunDetail(context, ticketResult.run_id),
     };
     } catch (error) {

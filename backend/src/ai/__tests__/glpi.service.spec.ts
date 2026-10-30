@@ -1599,6 +1599,183 @@ async function testAddTicketTechnicianIsAdditiveIdempotentAndRestricted() {
   }
 }
 
+// Observer writes are Group_Ticket type 3. An assigned group (type 2) is not already an
+// observer. A second add of the same observer does not POST again.
+async function testAddTicketGroupObserverIsAdditiveIdempotentAndRestricted() {
+  const service = createService();
+  const originalFetch = global.fetch;
+  const requests: Array<{ url: string; method: string; body: string | null }> = [];
+  const session = {
+    baseUrl: 'https://glpi.internal/',
+    sessionToken: 'session-token',
+    appToken: 'app-token',
+  };
+  const associations = [
+    { id: 1, groups_id: 7, tickets_id: 4523, type: 2 },
+    { id: 2, groups_id: 12, tickets_id: 4523, type: 3 },
+  ];
+  const jsonResponse = (payload: unknown) => new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: {
+      'content-type': 'application/json',
+      'content-range': Array.isArray(payload) ? `0-${Math.max(payload.length - 1, 0)}/${payload.length}` : '0-0/1',
+    },
+  });
+
+  try {
+    global.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      const body = typeof init?.body === 'string' ? init.body : null;
+      requests.push({ url, method, body });
+      if (/apirest\.php\/Group\?/.test(url)) {
+        return jsonResponse([
+          { id: 7, name: 'Tech-desk', completename: 'Tech-desk', is_assign: 1 },
+          { id: 12, name: 'SAP-team', completename: 'Support > SAP-team', is_assign: 1 },
+        ]);
+      }
+      if (/Ticket\/4523\/Group_Ticket/.test(url)) {
+        return jsonResponse(associations);
+      }
+      if (method === 'POST' && /apirest\.php\/Group_Ticket$/.test(url)) {
+        const parsed = JSON.parse(body ?? '{}') as { input?: { groups_id?: number; type?: number } };
+        associations.push({
+          id: associations.length + 1,
+          groups_id: Number(parsed.input?.groups_id),
+          tickets_id: 4523,
+          type: Number(parsed.input?.type),
+        });
+        return jsonResponse({ id: associations.length });
+      }
+      throw new Error(`Unexpected GLPI call ${method} ${url}`);
+    }) as typeof fetch;
+
+    const present = await service.addTicketGroupObserver(session, 4523, 12);
+    assert.deepEqual(
+      { added: present.added, alreadyPresent: present.alreadyPresent },
+      { added: false, alreadyPresent: true },
+    );
+    assert.equal(requests.some((request) => request.method === 'POST'), false);
+
+    // Assigned (type 2) is a different row from observer (type 3).
+    const added = await service.addTicketGroupObserver(session, 4523, 7);
+    assert.deepEqual({ added: added.added, alreadyPresent: added.alreadyPresent }, { added: true, alreadyPresent: false });
+    assert.equal(added.group.completename, 'Tech-desk');
+    const post = requests.find((request) => request.method === 'POST');
+    assert.ok(post);
+    assert.match(post!.url, /apirest\.php\/Group_Ticket$/);
+    assert.deepEqual(JSON.parse(post!.body ?? '{}'), { input: { tickets_id: 4523, groups_id: 7, type: 3 } });
+
+    const again = await service.addTicketGroupObserver(session, 4523, 7);
+    assert.deepEqual(
+      { added: again.added, alreadyPresent: again.alreadyPresent },
+      { added: false, alreadyPresent: true },
+    );
+    assert.equal(requests.filter((request) => request.method === 'POST').length, 1);
+
+    await assert.rejects(
+      () => service.addTicketGroupObserver(session, 4523, 99),
+      (error: unknown) => error instanceof BadRequestException && /assignable groups/.test(String((error as Error).message)),
+    );
+    assert.equal(requests.filter((request) => request.method === 'POST').length, 1);
+  } finally {
+    global.fetch = originalFetch;
+  }
+}
+
+// Observer writes are Ticket_User type 3. An assigned technician is not already an
+// observer. A second add of the same observer does not POST again.
+async function testAddTicketTechnicianObserverIsAdditiveIdempotentAndRestricted() {
+  const service = createService();
+  const originalFetch = global.fetch;
+  const requests: Array<{ url: string; method: string; body: string | null }> = [];
+  const session = {
+    baseUrl: 'https://glpi.internal/',
+    sessionToken: 'session-token',
+    appToken: 'app-token',
+  };
+  const associations = [
+    { id: 1, tickets_id: 4523, users_id: 21, type: 2 },
+    { id: 2, tickets_id: 4523, users_id: 22, type: 3 },
+  ];
+  const jsonResponse = (payload: unknown) => new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: {
+      'content-type': 'application/json',
+      'content-range': Array.isArray(payload) ? `0-${Math.max(payload.length - 1, 0)}/${payload.length}` : '0-0/1',
+    },
+  });
+
+  try {
+    global.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      const body = typeof init?.body === 'string' ? init.body : null;
+      requests.push({ url, method, body });
+      if (/apirest\.php\/Group\?/.test(url)) {
+        return jsonResponse([{ id: 7, name: 'Tech-desk', completename: 'Tech-desk', is_assign: 1 }]);
+      }
+      if (/apirest\.php\/Group_User\?/.test(url)) {
+        return jsonResponse([
+          { id: 1, groups_id: 7, users_id: 21 },
+          { id: 2, groups_id: 7, users_id: 22 },
+        ]);
+      }
+      if (/apirest\.php\/User\?/.test(url)) {
+        return jsonResponse([
+          { id: 21, name: 'mdupont', realname: 'Dupont', firstname: 'Marie', is_active: 1, is_deleted: 0 },
+          { id: 22, name: 'pmartin', realname: 'Martin', firstname: 'Paul', is_active: 1, is_deleted: 0 },
+        ]);
+      }
+      if (/Ticket\/4523\/Ticket_User/.test(url)) {
+        return jsonResponse(associations);
+      }
+      if (method === 'POST' && /apirest\.php\/Ticket_User$/.test(url)) {
+        const parsed = JSON.parse(body ?? '{}') as { input?: { users_id?: number; type?: number } };
+        associations.push({
+          id: associations.length + 1,
+          tickets_id: 4523,
+          users_id: Number(parsed.input?.users_id),
+          type: Number(parsed.input?.type),
+        });
+        return jsonResponse({ id: associations.length });
+      }
+      throw new Error(`Unexpected GLPI call ${method} ${url}`);
+    }) as typeof fetch;
+
+    const present = await service.addTicketTechnicianObserver(session, 4523, 22);
+    assert.deepEqual(
+      { added: present.added, alreadyPresent: present.alreadyPresent, label: present.technician.label },
+      { added: false, alreadyPresent: true, label: 'Martin Paul' },
+    );
+    assert.equal(requests.some((request) => request.method === 'POST'), false);
+
+    const added = await service.addTicketTechnicianObserver(session, 4523, 21);
+    assert.deepEqual({ added: added.added, alreadyPresent: added.alreadyPresent }, { added: true, alreadyPresent: false });
+    assert.equal(added.technician.label, 'Dupont Marie');
+    const post = requests.find((request) => request.method === 'POST');
+    assert.ok(post);
+    assert.match(post!.url, /apirest\.php\/Ticket_User$/);
+    assert.deepEqual(JSON.parse(post!.body ?? '{}'), { input: { tickets_id: 4523, users_id: 21, type: 3 } });
+
+    const again = await service.addTicketTechnicianObserver(session, 4523, 21);
+    assert.deepEqual(
+      { added: again.added, alreadyPresent: again.alreadyPresent },
+      { added: false, alreadyPresent: true },
+    );
+    assert.equal(requests.filter((request) => request.method === 'POST').length, 1);
+
+    await assert.rejects(
+      () => service.addTicketTechnicianObserver(session, 4523, 99),
+      (error: unknown) => error instanceof BadRequestException
+        && /technicians of an assignable group/.test(String((error as Error).message)),
+    );
+    assert.equal(requests.filter((request) => request.method === 'POST').length, 1);
+  } finally {
+    global.fetch = originalFetch;
+  }
+}
+
 async function run() {
   await testInitSessionSendsJsonHeaders();
   await testInitSessionExplainsHtmlResponse();
@@ -1629,12 +1806,14 @@ async function run() {
   await testCategoriesCatalogueAndWrite();
   await testAssignableGroupsCatalogueFiltersSortsAndCaches();
   await testAddTicketGroupIsAdditiveIdempotentAndRestrictedToAssignableGroups();
+  await testAddTicketGroupObserverIsAdditiveIdempotentAndRestricted();
   await testTechnicianCatalogueFiltersSortsAndCaches();
   await testTechnicianCatalogueCapsAndFlagsTruncation();
   await testTechnicianCatalogueFallsBackToPerGroupMembership();
   await testTechnicianFallbackReadsEveryMembershipPage();
   await testTechnicianMembershipIgnoresGroupPromptCap();
   await testAddTicketTechnicianIsAdditiveIdempotentAndRestricted();
+  await testAddTicketTechnicianObserverIsAdditiveIdempotentAndRestricted();
 }
 
 void run();

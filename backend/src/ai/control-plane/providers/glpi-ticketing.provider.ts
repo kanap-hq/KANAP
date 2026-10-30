@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { AiSettingsService } from '../../ai-settings.service';
 import { GlpiService } from '../../glpi/glpi.service';
-import { GlpiAssignableGroup, GlpiCategory, GlpiConnectionOverrides, GlpiTechnician, GlpiTicket, GlpiTicketFollowup, GlpiTicketUserAssociation } from '../../glpi/glpi.types';
+import { GlpiAssignableGroup, GlpiCategory, GlpiConnectionOverrides, GlpiTechnician, GlpiTicket, GlpiTicketFollowup, GlpiTicketGroupAssociation, GlpiTicketUserAssociation } from '../../glpi/glpi.types';
 import { classificationContextWithoutCatalogue } from './ticket-classification';
 import { decodeHtmlEntities, decodeNumericHtmlEntities, HTML_TEXT_ENTITIES } from '../../../common/html-entities';
 import { GLPI_TICKETING_IMPLEMENTATION, LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './provider-constants';
@@ -88,6 +88,7 @@ const GLPI_ACTION_PLANNER_PROFILE: ProviderActionPlannerProfile = {
     'For assignment_update, target must be one entry of routing_targets copied exactly (kind, key, label); propose at most one group and one user per plan.',
     'Prefer a group unless the instructions name a person. Only propose assignment_update when the agent configuration says who handles this kind of ticket; never invent a routing rule.',
     'Do not propose assignment_update for a group already listed in current_assignment.groups, nor for a user already listed in current_assignment.users. Assignment is additive: it never removes existing technicians or groups.',
+    'For participant_update, operation must be add_observer and participants must be exactly one entry of routing_targets copied exactly (kind, key, label). Propose at most one group and one user per plan. Do not propose an observer already listed in the participant context. The requester is not changed. remove_observer and set_observers are not supported.',
     'For classification_update, copy proposed type/priority/urgency keys from classification_options; category must be a category key or exact label. Propose at most one classification_update per plan, with several fields allowed. Only propose when the instructions give a rule; do not repeat current_classification values. Urgency uses the priority scale.',
     'Do not propose assignment or participant updates unless they are in owned_action_types.',
   ],
@@ -616,6 +617,26 @@ function groupRoutingTarget(group: GlpiAssignableGroup): TicketRoutingTarget {
 
 function userRoutingTarget(technician: GlpiTechnician): TicketRoutingTarget {
   return { kind: 'user', key: String(technician.id), label: technician.label };
+}
+
+function observerUserTarget(
+  user: GlpiTicketUserAssociation,
+  technicianById: Map<number, GlpiTechnician>,
+): TicketRoutingTarget {
+  const known = technicianById.get(user.user_id);
+  return known
+    ? userRoutingTarget(known)
+    : { kind: 'user', key: String(user.user_id), label: associationLabel(user) };
+}
+
+function observerGroupTarget(
+  group: GlpiTicketGroupAssociation,
+  catalogueById: Map<number, GlpiAssignableGroup>,
+): TicketRoutingTarget {
+  const known = catalogueById.get(group.group_id);
+  return known
+    ? groupRoutingTarget(known)
+    : { kind: 'group', key: String(group.group_id), label: group.group_label ?? `GLPI group ${group.group_id}` };
 }
 
 @Injectable()
@@ -1298,18 +1319,45 @@ export class GlpiTicketingProvider implements TicketingProvider {
       return providerError<TicketParticipantContext>('malformed_config', 'GLPI ticket id must be a positive integer.', false);
     }
     return this.withSession(context, async (session) => {
-      const users = await this.glpi.getTicketUsers(session, ticketId);
-      const requesters = users.filter((user) => user.role === 'requester').map(associationLabel);
-      const observers = users.filter((user) => user.role === 'observer').map(associationLabel);
+      const [users, groups, catalogue] = await Promise.all([
+        this.glpi.getTicketUsers(session, ticketId),
+        this.glpi.getTicketGroups(session, ticketId),
+        this.glpi.listAssignableGroups(session),
+      ]);
+      const warnings: string[] = ['glpi_watchers_viewers_not_available_in_current_adapter'];
+      // Same catalogue as assignment. An empty group list means there is nobody
+      // the agent may add, so the write stays off for this ticket.
+      let technicians: GlpiTechnician[] = [];
+      if (catalogue.length === 0) {
+        warnings.push('glpi_no_assignable_groups');
+      } else {
+        try {
+          technicians = (await this.glpi.listTechnicians(session)).technicians;
+        } catch {
+          warnings.push('glpi_technician_catalogue_unavailable');
+        }
+      }
+      const catalogueById = new Map(catalogue.map((group) => [group.id, group]));
+      const technicianById = new Map(technicians.map((technician) => [technician.id, technician]));
+      const requesterLabel = (user: GlpiTicketUserAssociation): string => {
+        const known = technicianById.get(user.user_id);
+        return known ? known.label : associationLabel(user);
+      };
+      const observerTargets: TicketRoutingTarget[] = [
+        ...groups.filter((group) => group.role === 'observer').map((group) => observerGroupTarget(group, catalogueById)),
+        ...users.filter((user) => user.role === 'observer').map((user) => observerUserTarget(user, technicianById)),
+      ];
+      const participantUpdatesSupported = catalogue.length > 0 || technicians.length > 0;
       const data: TicketParticipantContext = {
         ticketId: String(ticketId),
-        requester: requesters[0] ?? null,
-        observers,
+        requester: users.filter((user) => user.role === 'requester').map(requesterLabel)[0] ?? null,
+        observers: observerTargets.map((target) => target.label),
+        observerTargets,
         watchers: [],
         viewers: [],
-        participantUpdatesSupported: false,
+        participantUpdatesSupported,
         supported: true,
-        warnings: ['glpi_participant_writes_not_enabled', 'glpi_watchers_viewers_not_available_in_current_adapter'],
+        warnings,
       };
       return ok(data, [
         evidenceSeed('ticket_participants', data.ticketId, `GLPI ticket ${data.ticketId} participant context.`, data),
@@ -1623,30 +1671,130 @@ export class GlpiTicketingProvider implements TicketingProvider {
     });
   }
 
+  // Catalogue-bound observers: the target must be one routing target (kind, key, label
+  // copied from the catalogue). Only add_observer is supported. Additive (Group_Ticket /
+  // Ticket_User type 3): an observer already on the ticket is refused here, and the
+  // requester is never written.
   async prepareTicketParticipantUpdate(
     context: ProviderContext,
     input: { ticketId: string; operation: TicketParticipantUpdateOperation; participants: TicketRoutingTarget[]; reason: string },
   ): Promise<AdapterResult<TicketProviderActionPrepared<TicketParticipantUpdateActionPayload>>> {
-    void context;
-    void input;
-    return providerError<TicketProviderActionPrepared<TicketParticipantUpdateActionPayload>>(
-      'unsafe_operation',
-      'GLPI participant writes require tenant-safe participant mappings and are not enabled in the current adapter.',
-      false,
-    );
+    const ticketId = normalizeTicketId(input.ticketId);
+    const reason = normalizeReason(input.reason);
+    if (!ticketId) {
+      return providerError<TicketProviderActionPrepared<TicketParticipantUpdateActionPayload>>('malformed_config', 'GLPI ticket id must be a positive integer.', false);
+    }
+    if (!reason) {
+      return providerError<TicketProviderActionPrepared<TicketParticipantUpdateActionPayload>>('unsafe_operation', 'GLPI observer updates require a reason.', false);
+    }
+    if (input.operation !== 'add_observer') {
+      const refused = input.operation === 'remove_observer'
+        ? 'Removing an observer is not supported.'
+        : input.operation === 'set_observers'
+          ? 'Replacing the observer list is not supported.'
+          : 'This observer operation is not supported.';
+      return providerError<TicketProviderActionPrepared<TicketParticipantUpdateActionPayload>>(
+        'unsafe_operation',
+        `GLPI only adds an observer. ${refused} The requester is not changed.`,
+        false,
+      );
+    }
+    if (!Array.isArray(input.participants) || input.participants.length !== 1) {
+      return providerError<TicketProviderActionPrepared<TicketParticipantUpdateActionPayload>>('unsafe_operation', 'GLPI observer updates add exactly one technician or one group.', false);
+    }
+    const requested = input.participants[0];
+    const targetKind = requested?.kind;
+    if (targetKind !== 'group' && targetKind !== 'user') {
+      return providerError<TicketProviderActionPrepared<TicketParticipantUpdateActionPayload>>('unsafe_operation', 'GLPI observer updates support technician groups and named technicians only.', false);
+    }
+    const routing = await this.getTicketRoutingContext(context, { ticketId: String(ticketId) });
+    if (routing.ok === false) {
+      return providerError<TicketProviderActionPrepared<TicketParticipantUpdateActionPayload>>(routing.errorCode, routing.message, routing.retryable);
+    }
+    const target = routing.data.supportedAssignmentTargets.find((candidate) => candidate.kind === targetKind && candidate.key === String(requested.key).trim());
+    if (!routing.data.assignmentSupported || !target) {
+      return providerError<TicketProviderActionPrepared<TicketParticipantUpdateActionPayload>>('unsafe_operation', 'GLPI observer target is not in the routing catalogue.', false);
+    }
+    const participants = await this.getTicketParticipantContext(context, { ticketId: String(ticketId) });
+    if (participants.ok === false) {
+      return providerError<TicketProviderActionPrepared<TicketParticipantUpdateActionPayload>>(participants.errorCode, participants.message, participants.retryable);
+    }
+    const alreadyObserver = (participants.data.observerTargets ?? []).some((entry) => entry.kind === target.kind && entry.key === target.key);
+    if (alreadyObserver) {
+      return providerError<TicketProviderActionPrepared<TicketParticipantUpdateActionPayload>>('unsafe_operation', `GLPI ticket ${ticketId} already has ${target.label} as an observer.`, false);
+    }
+    const actionPayload: TicketParticipantUpdateActionPayload = {
+      ticketId: String(ticketId),
+      action: 'participant_update',
+      current: participants.data,
+      operation: 'add_observer',
+      participants: [target],
+      providerFields: targetKind === 'group'
+        ? { groups_id: Number(target.key), type: 3, operation: 'add' }
+        : { users_id: Number(target.key), type: 3, operation: 'add' },
+      reason,
+    };
+    const data = {
+      actionPayload,
+      summary: `Prepared observer ${target.label} on GLPI ticket ${ticketId}.`,
+    };
+    return ok(data, [
+      evidenceSeed('ticket_participant_update_prepared', String(ticketId), data.summary, {
+        ticketId,
+        target,
+        currentObservers: participants.data.observerTargets ?? [],
+      }),
+    ]);
   }
 
   async updateTicketParticipants(
     context: ProviderContext,
     input: { actionPayload: TicketParticipantUpdateActionPayload; idempotencyKey: string },
   ): Promise<AdapterResult<TicketProviderActionWriteResult>> {
-    void context;
-    void input;
-    return providerError<TicketProviderActionWriteResult>(
-      'unsafe_operation',
-      'GLPI participant writes are not enabled in the current adapter.',
-      false,
-    );
+    const ticketId = normalizeTicketId(input.actionPayload.ticketId);
+    const participant = input.actionPayload.participants?.[0];
+    const targetKind = participant?.kind;
+    const targetId = Number.parseInt(String(participant?.key ?? ''), 10);
+    if (!ticketId) {
+      return providerError<TicketProviderActionWriteResult>('malformed_config', 'GLPI ticket id must be a positive integer.', false);
+    }
+    if (
+      input.actionPayload.action !== 'participant_update'
+      || input.actionPayload.operation !== 'add_observer'
+      || input.actionPayload.participants.length !== 1
+      || (targetKind !== 'group' && targetKind !== 'user')
+      || !Number.isInteger(targetId)
+      || targetId <= 0
+    ) {
+      return providerError<TicketProviderActionWriteResult>('unsafe_operation', 'GLPI provider refused an invalid observer update.', false);
+    }
+    return this.withSession(context, async (session) => {
+      const result = targetKind === 'group'
+        ? await this.glpi.addTicketGroupObserver(session, ticketId, targetId)
+        : await this.glpi.addTicketTechnicianObserver(session, ticketId, targetId);
+      const label = 'group' in result
+        ? groupRoutingTarget(result.group).label
+        : userRoutingTarget(result.technician).label;
+      const data: TicketProviderActionWriteResult = {
+        ticketId: String(ticketId),
+        summary: result.alreadyPresent
+          ? `GLPI ticket ${ticketId} already had ${label} as an observer.`
+          : `GLPI ticket ${ticketId} observer added: ${label}.`,
+        idempotencyKey: input.idempotencyKey,
+        updatedFields: result.added ? ['participants'] : [],
+        alreadyApplied: result.alreadyPresent,
+      };
+      return ok(data, [
+        evidenceSeed('ticket_participants_updated', String(ticketId), data.summary, {
+          ticketId,
+          ...(targetKind === 'group' ? { groupsId: targetId } : { usersId: targetId }),
+          label,
+          added: result.added,
+          alreadyPresent: result.alreadyPresent,
+          idempotencyKey: input.idempotencyKey,
+        }),
+      ]);
+    });
   }
 
   async prepareInternalNote(
