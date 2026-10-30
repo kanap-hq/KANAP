@@ -665,7 +665,7 @@
       "classification": "Klassifizierung",
       "status": "Statusänderungen",
       "assignment": "Zuweisung",
-      "participant": "Beteiligte"
+      "participant": "Beobachter"
     },
     "autonomy": "Autonomie",
     "autonomyDialog": {
@@ -679,7 +679,7 @@
       "highRisk": {
         "public_reply": "Der Agent antwortet Anfragenden direkt, ohne dass jemand die Antwort vorher liest. Nur einschalten, wenn Sie mit den bisherigen Vorschlägen zufrieden sind.",
         "assignment": "Der Agent weist Tickets anderen Personen zu, ohne dass die Änderung vorher geprüft wird.",
-        "participant": "Der Agent fügt Personen auf Tickets hinzu und entfernt sie, ohne dass die Änderung vorher geprüft wird."
+        "participant": "Der Agent fügt Tickets einen Beobachter hinzu, ohne dass die Änderung vorher geprüft wird. Der Anfragende wird nicht geändert."
       },
       "reasonHighRiskHint": "Erforderlich. Sie wird im Agentenverlauf aufbewahrt, damit Ihr Team sieht, wer das akzeptiert hat und warum."
     },
@@ -704,7 +704,7 @@
       "status": "Status aktualisieren",
       "public_reply": "Antwort an Anfragende",
       "assignment": "Zuweisung",
-      "participant": "Beteiligte"
+      "participant": "Beobachter"
     },
     "monitoringTargetingFields": {
       "status": "Alarmzustand",
@@ -816,7 +816,7 @@
     "autonomyHighRiskNote": {
       "public_reply": "Der Agent würde dem Anfragenden antworten, ohne dass jemand vorher mitliest.",
       "assignment": "Der Agent würde Tickets neu zuweisen, ohne dass jemand vorher mitliest.",
-      "participant": "Der Agent würde Personen auf Tickets hinzufügen oder entfernen, ohne dass jemand vorher mitliest."
+      "participant": "Der Agent würde Tickets einen Beobachter hinzufügen, ohne dass jemand vorher mitliest. Der Anfragende wird nicht geändert."
     },
     "charCounter": "{{used}} / {{max}} Zeichen",
     "instructionsOverLimit": "Die Anweisungen sind auf {{max}} Zeichen begrenzt. Darüber hinaus würde ein Teil den Agenten nicht mehr erreichen. Dieser Abschnitt wird nicht gespeichert, solange er darüber liegt.",
@@ -832,7 +832,7 @@
     "closeTicket": "Ticket schließen",
     "solveTicket": "Ticket lösen",
     "assignment": "Zuweisung",
-    "participants": "Beteiligte",
+    "participants": "Beobachter",
     "classificationUpdate": "Klassifizierung aktualisieren",
     "statusUpdate": "Status aktualisieren",
     "reason": "Grund",
@@ -850,7 +850,10 @@
     "assignToTechnician": "Techniker zuweisen",
     "currentTechnicians": "Aktuell zugewiesen",
     "noTechnicianAssigned": "Kein Techniker zugewiesen",
-    "participantUpdate": "Teilnehmer aktualisieren",
+    "participantUpdate": "Beobachter aktualisieren",
+    "addObserver": "Beobachter hinzufügen",
+    "currentObservers": "Aktuelle Beobachter",
+    "noObservers": "Keine Beobachter",
     "classificationFields": {
       "category": "Kategorie",
       "type": "Typ",

@@ -25,7 +25,7 @@ Each proposal is one concrete action an agent wants to take on one ticket. There
 | **Close ticket** | Closes the ticket. See [Closing and solving tickets](#closing-and-solving-tickets). |
 | **Solve ticket** | Marks the ticket solved. See [Closing and solving tickets](#closing-and-solving-tickets). |
 | **Assignment** | Adds a technician group **or** a named technician to the ticket, following the routing rule written in the agent's instructions. Nobody already on the ticket is removed. The proposal shows who is being added and who is currently assigned. |
-| **Participants** | A change to the ticket's watchers or requesters. |
+| **Observers** | Adds one technician or one assignable group as an observer. The requester stays unchanged, and people already watching the ticket stay. |
 
 For a **Requester reply** or **Internal note**, the body you see is the full drafted message, exactly as it would be posted. Read it as the requester (or your team) would. For the other five types, the body is a short change summary rather than free text, for example `Status: New -> Pending`, `Assignee: Unassigned -> Jane`, or a per-field classification diff, often followed by a **Reason** line explaining why the agent proposes it.
 

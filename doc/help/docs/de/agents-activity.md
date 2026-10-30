@@ -32,7 +32,7 @@ Die Ticketsuche und die Typ-Chips lassen sich kombinieren, sodass Sie sich zum B
 Jeder Eintrag steht für ein einzelnes Ereignis und enthält genug Kontext, um es auf einen Blick zu verstehen:
 
 - Einen **Typ-Chip**: zu welcher der sieben oben genannten Kategorien das Ereignis gehört.
-- Einen **Aktionstyp-Chip** (wenn das Ereignis eine bestimmte Art von Ticketarbeit betrifft): **Interne Notiz**, **Antwort an Anfragende**, **Klassifizierung aktualisieren**, **Status aktualisieren**, **Zuweisung** oder **Beteiligte**.
+- Einen **Aktionstyp-Chip** (wenn das Ereignis eine bestimmte Art von Ticketarbeit betrifft): **Interne Notiz**, **Antwort an Anfragende**, **Klassifizierung aktualisieren**, **Status aktualisieren**, **Zuweisung** oder **Beobachter**.
 - Einen **Statuspunkt** mit einer verständlichen Beschriftung (zum Beispiel „Wartet auf Freigabe", „Fertig", „Abgelehnt", „Verworfen", „Aufmerksamkeit erforderlich"), die beschreibt, wo dieses Element steht.
 - Den **Agentennamen** und das betroffene **Ticket** (angezeigt als `#N`).
 - Einen **Ereignistitel**: zum Beispiel „Vorschlag erstellt" oder „Ticket-Prüfung: 3 neue Tickets".
@@ -74,7 +74,7 @@ Ein Prüfungseintrag sagt Ihnen bereits im Titel, was der Agent gefunden hat, oh
 
 - Die oben beschriebene **Aufschlüsselung der Prüfung**.
 - Die vollständige **Vorgeschlagene Nachricht**: der gesamte vom Agenten entworfene Text, nicht nur die einzeilige Vorschau.
-- **Feldänderungen**, geschrieben als „Feld: von → nach" (zum Beispiel „Status: Zugewiesen → Ausstehend"), sodass eine Änderung an Klassifizierung, Status, Zuweisung oder Beteiligten lesbar ist, ohne das Ticket zu öffnen.
+- **Feldänderungen**, geschrieben als „Feld: von → nach" (zum Beispiel „Status: Zugewiesen → Ausstehend"), sodass eine Änderung an Klassifizierung, Status, Zuweisung oder Beobachtern lesbar ist, ohne das Ticket zu öffnen.
 - Den **Grund**: die kurze Begründung des Agenten für den Vorschlag.
 - Die **Anmerkung des Prüfers**: die Notiz, die erfasst wurde, als über den Vorschlag entschieden wurde.
 - Eine Zeile **„{n} Quellen zitiert"**: wie viele Ergebnisse aus Ihrer [Wissensbibliothek](knowledge.md) die entworfene Antwort gestützt haben. Das ist das ehrliche Signal dafür, ob die Antwort auf Ihren eigenen Quellen beruht; eine Antwort mit zitierten Quellen ist eine, hinter der der Agent stehen kann. Ihr Fehlen bei einer administrativen oder verfahrenstechnischen Antwort ist normal und bedeutet nicht, dass etwas fehlgeschlagen ist. Wie sich das bei der Prüfung auswirkt, erfahren Sie unter [Freigaben](agents-approvals.md).
