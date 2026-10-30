@@ -37,13 +37,15 @@ docker compose -f infra/compose.onprem.yml up -d
 
 `infra/compose.onprem.yml` nombra las imágenes de la versión que tiene en el checkout. `pull` las descarga de `ghcr.io`, y `up -d` vuelve a crear los contenedores sobre ellas. Si compila las imágenes usted mismo (consulte [Compilar las imágenes usted mismo](installation.md#build-the-images-yourself)), ejecute los comandos `build` y `up -d` de esa sección en lugar de `pull` y `up -d`.
 
-**Primera actualización a una versión con imágenes publicadas.** Las versiones hasta la 26.10.7 se compilaban en el servidor. El procedimiento anterior basta para pasar a una versión posterior. Cuando la nueva versión esté en marcha y supere las comprobaciones del paso 4, libere la caché de compilación y las imágenes antiguas (unos 2,5 GB). Añada `kanap-api-tools` a la segunda línea si había compilado la imagen de herramientas de mantenimiento.
+**Primera actualización a una versión con imágenes publicadas.** Las versiones hasta la 26.10.7 se compilaban en el servidor. El procedimiento anterior basta para pasar a una versión posterior. Cuando la nueva versión esté en marcha y supere las comprobaciones del paso 4, libere la caché de compilación y las imágenes antiguas. En un servidor que compiló KANAP, ocupan varios gigabytes, según cuántas compilaciones haya hecho. Añada `kanap-api-tools` a la segunda línea si había compilado la imagen de herramientas de mantenimiento.
 
 ```bash
-docker builder prune
+docker builder prune -a
 docker image rm infra-api infra-web
 docker image prune
 ```
+
+`docker builder prune -a` y `docker image prune` piden cada uno una confirmación: responda `y`. Sin `-a`, `docker builder prune` deja una parte de la caché de compilación.
 
 A partir de esa versión, las actualizaciones necesitan acceso saliente a `ghcr.io` en lugar de `registry.npmjs.org` y de los espejos de paquetes Alpine (consulte [Reglas de cortafuegos](configuration.md#outbound-installation-and-upgrades)).
 
@@ -101,11 +103,11 @@ curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 
 - `ps` muestra `api` y `web` como `healthy` al cabo de un minuto aproximadamente.
 - El registro de la API muestra las migraciones (`[entrypoint] Migrations complete (N executed).`) y después el arranque de la API (`Nest application successfully started`). Lea también las demás líneas de arranque: [Configuración](configuration.md#que-muestra-el-registro-de-la-api-al-arrancar) explica cada una.
-- La dirección de estado responde `{"status":"ok"}`.
+- La dirección de estado responde `{"status":"ok","text_processing":"ready"}` (consulte [Monitorización](#monitorizacion)).
 
 **Acceso a los datos por ámbito.** Tras actualizar a una versión con [acceso a los datos](../data-access.md), todos siguen trabajando con todos los datos. Para limitar a algunas personas a una parte del presupuesto y de los contratos, ejecute una vez el paso opcional del [acceso a los datos por ámbito](installation.md#optional-data-scoped-access) y reinicie la API. El paso se hace una vez por servidor PostgreSQL: las actualizaciones siguientes no requieren nada más, porque la API define los permisos del rol en cada arranque.
 
-Después ejecute la prueba de humo. Comprueba la base de datos, el inicio de sesión, las listas principales y las exportaciones a través de la API pública. El servidor no tiene Node.js, así que la prueba se ejecuta en un contenedor. La primera ejecución en un servidor descarga la imagen `node:24-alpine` de Docker Hub (unos 240 MB) y la conserva: ejecute la prueba una vez mientras el acceso saliente esté abierto (consulte [Reglas de cortafuegos](configuration.md#outbound-installation-and-upgrades)). Cuando se le pida, escriba la contraseña actual de la cuenta `ADMIN_EMAIL`; no se muestra nada mientras escribe. El `ADMIN_PASSWORD` de `.env` solo se lee en el primer arranque, así que puede que ya no sea el correcto. Mantenga `-e KANAP_INSECURE_TLS=1` cuando el certificado es autofirmado (el contenedor no confía en él); quítelo con un certificado de una autoridad pública. Con un certificado de su autoridad interna, manténgalo, o sustitúyalo por `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem` para que el contenedor verifique el certificado con el archivo de la autoridad en `/opt/kanap/infra/certs/` (consulte [Certificados de una autoridad interna](configuration.md#opcional-certificados-de-una-autoridad-interna)). No añada `-e KANAP_WRITE=1` en una instalación de producción: esa opción crea una tarea temporal con un adjunto para comprobar el almacenamiento, lo que solo conviene a una instalación nueva.
+Después ejecute la prueba de humo. Comprueba la base de datos, el inicio de sesión, las listas principales y las exportaciones a través de la API pública. El servidor no tiene Node.js, así que la prueba se ejecuta en un contenedor. La primera ejecución en un servidor descarga la imagen `node:24-alpine` de Docker Hub (unos 65 MB, unos 240 MB en disco) y la conserva: ejecute la prueba una vez mientras el acceso saliente esté abierto (consulte [Reglas de cortafuegos](configuration.md#outbound-installation-and-upgrades)). Cuando se le pida, escriba la contraseña actual de la cuenta `ADMIN_EMAIL`; no se muestra nada mientras escribe. El `ADMIN_PASSWORD` de `.env` solo se lee en el primer arranque, así que puede que ya no sea el correcto. Mantenga `-e KANAP_INSECURE_TLS=1` cuando el certificado es autofirmado (el contenedor no confía en él); quítelo con un certificado de una autoridad pública. Con un certificado de su autoridad interna, manténgalo, o sustitúyalo por `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem` para que el contenedor verifique el certificado con el archivo de la autoridad en `/opt/kanap/infra/certs/` (consulte [Certificados de una autoridad interna](configuration.md#opcional-certificados-de-una-autoridad-interna)). No añada `-e KANAP_WRITE=1` en una instalación de producción: esa opción crea una tarea temporal con un adjunto para comprobar el almacenamiento, lo que solo conviene a una instalación nueva.
 
 ```bash
 read -rsp 'Administrator password: ' KANAP_PASSWORD; echo; export KANAP_PASSWORD
@@ -208,7 +210,7 @@ EOF
 
 ### Antes de una actualización
 
-Antes de cada actualización, haga una copia de seguridad completa en un directorio propio con fecha, por ejemplo `/var/backups/kanap/before-upgrade-20261009-1400/`. Contiene `db.dump`, `files/` y `config/`. La copia de seguridad diaria escribe otros nombres, así que nunca la sobrescribe.
+Antes de cada actualización, haga una copia de seguridad completa en un directorio propio con fecha, por ejemplo `/var/backups/kanap/before-upgrade-20261009-1400/`. Contiene `db.dump`, `files/` y `config/`. La copia de seguridad diaria escribe otros nombres, así que nunca la sobrescribe. En un servidor donde `/var/backups/kanap` aún no existe, [prepare primero el directorio de copias de seguridad](#copia-de-seguridad-y-restauracion).
 
 ```bash
 B=/var/backups/kanap/before-upgrade-$(date +%Y%m%d-%H%M)
@@ -306,6 +308,8 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml run --rm tools npm run typeorm -- migration:show
 ```
 
+La lista tarda alrededor de medio minuto en aparecer: el comando compila primero las fuentes TypeScript.
+
 ## Configuración de PostgreSQL
 
 Los valores predeterminados de PostgreSQL están pensados para una máquina pequeña. `infra/postgres/kanap-pg-tune.sh` muestra parámetros calculados a partir de la memoria de su servidor (memoria, costes para SSD, registro de consultas lentas, estadísticas de consultas). Ejecútelo en el servidor PostgreSQL y lea el archivo antes de aplicarlo: su cabecera explica cada valor. El ejemplo de instalación lo aplica en el [paso 4](installation-example.md#dimensionar-postgresql-para-este-servidor).
@@ -339,12 +343,14 @@ Las migraciones de KANAP también hacen que autovacuum empiece antes en las dos 
 
 ## Monitorización
 
-**Estado.** La API responde a `GET /health` en su propio puerto y a `GET /api/health` a través del proxy inverso. Ambos devuelven `{"status":"ok"}`:
+**Estado.** La API responde a `GET /health` en su propio puerto y a `GET /api/health` a través del proxy inverso. Ambos devuelven `{"status":"ok","text_processing":"ready"}`:
 
 ```bash
 curl -sSk -w '\n' http://127.0.0.1:8080/health
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ```
+
+`text_processing` vale `starting` durante unos segundos después de un arranque. Vale `unavailable` cuando la API no pudo iniciar el procesamiento de los textos con formato: la API sigue funcionando, rechaza guardar textos con formato (descripciones, comentarios) y lo vuelve a intentar cada pocos segundos. El registro de la API indica el motivo.
 
 **Contenedores.** `docker compose -f infra/compose.onprem.yml ps` muestra `healthy` para `api` y `web` cuando responden. Docker solo lo indica: nada se reinicia por ese estado.
 
@@ -375,7 +381,7 @@ ss -ltn | grep 172.17.0.1:9000
 ```
 
 - `ps` muestra `api` y `web` como `healthy`. Durante los primeros 30 segundos aproximadamente tras el arranque, puede mostrar todavía `health: starting`: ejecútelo de nuevo.
-- La dirección de estado responde `{"status":"ok"}`.
+- La dirección de estado responde `{"status":"ok","text_processing":"ready"}`.
 - El último comando muestra una línea con `172.17.0.1:9000`: el almacenamiento del ejemplo de instalación está a la escucha. Con otro almacenamiento, compruébelo a su manera.
 
 ### Métricas de la API para una herramienta de monitorización

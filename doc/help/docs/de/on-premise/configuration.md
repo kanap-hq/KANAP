@@ -108,14 +108,15 @@ docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^
 
 Der Filter behält die unten aufgeführten Zeilen und lässt die Details des Frameworks weg. Ohne ihn zeigt `docker compose -f infra/compose.onprem.yml logs api` alles.
 
-**Reihenfolge.** Die Zeilen, die KANAP selbst schreibt (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`, `[DATA-ACCESS]`), kommen zuerst. Die Zeilen des Frameworks (`Starting Nest application...`, E-Mail, geplante Jobs, `Nest application successfully started`) folgen. Die Zeile `[DB] pool budget` kommt zuletzt.
+**Reihenfolge.** Die Zeilen, die KANAP selbst schreibt (`[entrypoint]`, `[VERSION]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`, `[DATA-ACCESS]`, `[markdown]`), kommen zuerst. Die Zeilen des Frameworks (`Starting Nest application...`, E-Mail, geplante Jobs, `Nest application successfully started`) folgen. Die Zeile `[DB] pool budget` kommt zuletzt.
 
 **Ein sauberer erster Start** des [Installationsbeispiels](installation-example.md#7-herunterladen-und-starten) zeigt diese Zeilen in dieser Reihenfolge (die erste `[SECRETS]`-Zeile ist hier gekürzt):
 
 ```
 [entrypoint] Initializing DB (attempt 1/30) ...
 [entrypoint] DB initialized. Running migrations...
-[entrypoint] Migrations complete (330 executed).
+[entrypoint] Migrations complete (394 executed).
+[VERSION] KANAP 26.10.8
 [ENV] run mode: production
 [SECRETS] token families: password-reset=derived-key provisioning=jwt-secret entra-state=derived-key (...)
 [SECRETS] Access tokens must carry purpose="access" (legacy untyped access tokens: refused)
@@ -127,12 +128,13 @@ Der Filter behält die unten aufgeführten Zeilen und lässt die Details des Fra
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
 [on-prem] Created default subscription (On-Prem)
 [DATA-ACCESS] data-scoped access not installed (no kanap_data_limited role): nobody can be limited
+[markdown] Text processing workers ready
 ... WARN [EmailService] No outbound email transport configured; email sending is disabled.
 ... Nest application successfully started
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
 ```
 
-Der Block lässt die Migrationszeilen weg: Auf `Running migrations...` folgen etwa 40 Zeilen, die mit `[Migration]` oder `[migration:` beginnen. Sie dienen der Information. Auf einer neuen Datenbank melden einige davon Änderungen an mitgelieferten Referenzdaten oder nennen eine Mandanten-ID, die nicht Ihre ist: KANAP führt einen Systemmandanten für Plattformfunktionen. Sie erfordern keine Maßnahme. `...` steht für das Präfix `[Nest]` mit Prozess-ID und Uhrzeit sowie für die Quelle in Klammern (zum Beispiel `LOG [NestApplication]`). Einige dieser Zeilen enden mit einer Dauer wie `+0ms`. Die letzte Zeile der gefilterten Ausgabe ist `[DB] pool budget ...`. Eine in eine Datei gespeicherte Protokollausgabe kann Farbcodes wie `[33m` enthalten.
+Der Block lässt die Migrationszeilen weg: Auf einer neuen Installation folgen auf `Running migrations...` einige hundert Zeilen, die mit `[Migration]` oder `[migration:` beginnen. Einige wenige beginnen stattdessen mit der Nummer ihrer Migration, zum Beispiel `[1854170000000] ...` oder `[migration 1854350000000] ...`. Sie dienen der Information. Auf einer neuen Datenbank melden einige davon Änderungen an mitgelieferten Referenzdaten oder nennen eine Mandanten-ID, die nicht Ihre ist: KANAP führt einen Systemmandanten für Plattformfunktionen. Sie erfordern keine Maßnahme. `...` steht für das Präfix `[Nest]` mit Prozess-ID und Uhrzeit sowie für die Quelle in Klammern (zum Beispiel `LOG [NestApplication]`). Einige dieser Zeilen enden mit einer Dauer wie `+0ms`. Die letzte Zeile der gefilterten Ausgabe ist `[DB] pool budget ...`. Eine in eine Datei gespeicherte Protokollausgabe kann Farbcodes wie `[33m` enthalten.
 
 Die Zeile `[DATA-ACCESS]` ist normal, solange niemand auf einen Teil der Daten begrenzt ist. Nach dem optionalen Schritt [Datenzugriff nach Bereich](installation.md#optional-data-scoped-access) lautet sie `data-scoped access available`. Eine Zeile `data-scoped access unavailable, missing: ...` bedeutet, dass der Schritt unvollständig ist: Führen Sie ihn erneut aus und starten Sie dann die API neu. Bis dahin werden begrenzte Personen abgewiesen.
 
@@ -143,6 +145,7 @@ Die Zahl der Migrationen ändert sich von Version zu Version. Bei späteren Star
 | Zeile | Bedeutung |
 |------|---------|
 | `[entrypoint] Migrations complete (N executed).` | Die Datenbank ist aktuell. N ist die Zahl der Migrationen, die bei diesem Start gelaufen sind. |
+| `[VERSION] KANAP <version>` | Zur Information. Die Version, die die API ausführt, dieselbe wie im Feld `version` von `/api/config/public`. |
 | `[entrypoint] DB not ready or migration failed (attempt N): ... Retrying` | Die API kann die Datenbank nicht erreichen oder nicht nutzen. Sie versucht es 30 Mal im Abstand von 2 Sekunden und stoppt dann. Prüfen Sie `DATABASE_URL`, die PostgreSQL-Regeln und `sslmode` (siehe [Erforderlich: Datenbank](#erforderlich-datenbank)). |
 | `[ENV] run mode: ...` | Wird immer ausgegeben. Zeigt den Modus, in dem die API läuft: `development`, `production` oder `unspecified`. |
 | `[ENV] APP_ENV is not set: production rules apply to links, browser origins and platform administration. Set APP_ENV=production (or development on a workstation).` | Wird im nicht angegebenen Modus ausgegeben (die Meldung zeigt den Wert, wenn `APP_ENV` auf etwas anderes gesetzt ist). Setzen Sie `APP_ENV=production`, wenn Benutzer KANAP über HTTPS erreichen. |
@@ -161,6 +164,7 @@ Die Zahl der Migrationen ändert sich von Version zu Version. Bei späteren Star
 | `[on-prem] Restored ... as an enabled administrator: the workspace had no active administrator (password unchanged)` | Eine Warnung. Es war kein aktiver Administrator mehr vorhanden, daher hat KANAP das Konto `ADMIN_EMAIL` wiederhergestellt. |
 | `[SECURITY] JWT_SECRET is shorter than 32 characters. ...` | Setzen Sie einen längeren Zufallswert (`openssl rand -hex 32`) und erstellen Sie die API neu: Alle Benutzer melden sich erneut an, und offene Links zur Passwortzurücksetzung funktionieren nicht mehr. |
 | `[SECURITY] The account of ADMIN_EMAIL still has the password from ADMIN_PASSWORD, which is an example value from the documentation or shorter than 12 characters. ...` | Ändern Sie das Passwort des Administrators in der Anwendung oder folgen Sie [Passwort zurücksetzen](operations.md#passwort-zurucksetzen). Die Zeile verschwindet, sobald das Passwort geändert ist. |
+| `[markdown] Text processing workers ready` | Zur Information. Die API kann formatierte Texte (Beschreibungen, Kommentare) speichern. Lautet die Zeile stattdessen `the text processing workers could not start`, lehnt die API das Speichern formatierter Texte ab und versucht es alle paar Sekunden erneut: Die Zeilen davor nennen den Grund. |
 | `LOG [EmailService] Email transport selected: smtp (<host>:<port>, secure=false)` | E-Mail ist aktiv, über das angezeigte SMTP-Relay. `secure=true` bedeutet implizites TLS (`SMTP_SECURE`). Mit Resend endet die Zeile mit `selected: resend`. Zum Testen siehe [E-Mail testen](#e-mail-testen). |
 | `WARN [EmailService] No outbound email transport configured; email sending is disabled.` | Kein E-Mail-Versandweg ist gesetzt. Einladungen, Passwortzurücksetzung und Benachrichtigungen versenden nichts. Siehe [Optional: E-Mail über SMTP](#optional-e-mail-uber-smtp-nur-single-tenant-on-premise). |
 | `[DB] pool budget: ...` | Zur Information. Eine Warnung `pool budget exceeded` bedeutet, dass `API_WORKERS` × `DB_POOL_MAX` für `max_connections` von PostgreSQL zu hoch ist. |

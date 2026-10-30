@@ -37,13 +37,15 @@ docker compose -f infra/compose.onprem.yml up -d
 
 `infra/compose.onprem.yml` names the images of the version you checked out. `pull` downloads them from `ghcr.io`, and `up -d` recreates the containers on them. If you build the images yourself (see [Build the images yourself](installation.md#build-the-images-yourself)), run the `build` and `up -d` commands of that section instead of `pull` and `up -d`.
 
-**First upgrade to a version with published images.** Versions up to 26.10.7 were built on the server. The procedure above is all you need to move to a later version. Once the new version runs and passes the checks of step 4, free the build cache and the old images (about 2.5 GB). Add `kanap-api-tools` to the second line if you built the maintenance tools image.
+**First upgrade to a version with published images.** Versions up to 26.10.7 were built on the server. The procedure above is all you need to move to a later version. Once the new version runs and passes the checks of step 4, free the build cache and the old images. On a server that built KANAP, they take several gigabytes, depending on how many builds it made. Add `kanap-api-tools` to the second line if you built the maintenance tools image.
 
 ```bash
-docker builder prune
+docker builder prune -a
 docker image rm infra-api infra-web
 docker image prune
 ```
+
+`docker builder prune -a` and `docker image prune` each ask for a confirmation: answer `y`. Without `-a`, `docker builder prune` leaves part of the build cache.
 
 From that version on, upgrades need outbound access to `ghcr.io` instead of `registry.npmjs.org` and the Alpine package mirrors (see [Firewall rules](configuration.md#outbound-installation-and-upgrades)).
 
@@ -101,11 +103,11 @@ curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 
 - `ps` shows `api` and `web` as `healthy` after about a minute.
 - The API log shows the migrations (`[entrypoint] Migrations complete (N executed).`) and then the start of the API (`Nest application successfully started`). Read the other start-up lines too: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains each one.
-- The health address answers `{"status":"ok"}`.
+- The health address answers `{"status":"ok","text_processing":"ready"}` (see [Monitoring](#monitoring)).
 
 **Data-scoped access.** After an upgrade to a version with [data access](../data-access.md), everyone keeps working with all data. To limit people to part of the budget and the contracts, run the optional step of [Data-scoped access](installation.md#optional-data-scoped-access) once, then restart the API. The step is done once per PostgreSQL server: later upgrades need nothing more, because the API sets the permissions of the role at each start.
 
-Then run the smoke test. It checks the database, the sign-in, the main lists and the exports through the public API. The server has no Node.js, so it runs in a container. The first run on a server downloads the `node:24-alpine` image from Docker Hub (about 240 MB) and keeps it: run the test once while outbound access is open (see [Firewall rules](configuration.md#outbound-installation-and-upgrades)). At the prompt, type the current password of the `ADMIN_EMAIL` account; nothing shows as you type. The `ADMIN_PASSWORD` of `.env` is read at the first start only, so it may no longer be the right one. Keep `-e KANAP_INSECURE_TLS=1` when the certificate is self-signed (the container does not trust it); remove it with a certificate from a public authority. With a certificate from your internal authority, keep it, or replace it with `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem` to let the container check the certificate against the authority's file in `/opt/kanap/infra/certs/` (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)). Do not add `-e KANAP_WRITE=1` on a production installation: that option creates a temporary task with an attachment to check the storage, which suits a new installation only.
+Then run the smoke test. It checks the database, the sign-in, the main lists and the exports through the public API. The server has no Node.js, so it runs in a container. The first run on a server downloads the `node:24-alpine` image from Docker Hub (about 65 MB, about 240 MB on disk) and keeps it: run the test once while outbound access is open (see [Firewall rules](configuration.md#outbound-installation-and-upgrades)). At the prompt, type the current password of the `ADMIN_EMAIL` account; nothing shows as you type. The `ADMIN_PASSWORD` of `.env` is read at the first start only, so it may no longer be the right one. Keep `-e KANAP_INSECURE_TLS=1` when the certificate is self-signed (the container does not trust it); remove it with a certificate from a public authority. With a certificate from your internal authority, keep it, or replace it with `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem` to let the container check the certificate against the authority's file in `/opt/kanap/infra/certs/` (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)). Do not add `-e KANAP_WRITE=1` on a production installation: that option creates a temporary task with an attachment to check the storage, which suits a new installation only.
 
 ```bash
 read -rsp 'Administrator password: ' KANAP_PASSWORD; echo; export KANAP_PASSWORD
@@ -208,7 +210,7 @@ EOF
 
 ### Before an upgrade
 
-Before each upgrade, take a full backup into a dated directory of its own, for example `/var/backups/kanap/before-upgrade-20261009-1400/`. It holds `db.dump`, `files/` and `config/`. The daily backup writes other names, so it never overwrites this one.
+Before each upgrade, take a full backup into a dated directory of its own, for example `/var/backups/kanap/before-upgrade-20261009-1400/`. It holds `db.dump`, `files/` and `config/`. The daily backup writes other names, so it never overwrites this one. On a server where `/var/backups/kanap` does not exist yet, [prepare the backup directory](#backup-and-restore) first.
 
 ```bash
 B=/var/backups/kanap/before-upgrade-$(date +%Y%m%d-%H%M)
@@ -306,6 +308,8 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml run --rm tools npm run typeorm -- migration:show
 ```
 
+It takes about half a minute before the list appears: the command first compiles the TypeScript sources.
+
 ## PostgreSQL settings
 
 PostgreSQL's defaults are sized for a small machine. `infra/postgres/kanap-pg-tune.sh` prints settings sized from your server's memory (memory, SSD costs, slow statement log, statement statistics). Run it on the PostgreSQL server and read the file before applying it: its header explains each value. The installation example applies it in [step 4](installation-example.md#size-postgresql-for-this-server).
@@ -339,12 +343,14 @@ KANAP's migrations also make autovacuum start earlier on the two largest tables 
 
 ## Monitoring
 
-**Health.** The API answers `GET /health` on its own port and `GET /api/health` through the reverse proxy. Both return `{"status":"ok"}`:
+**Health.** The API answers `GET /health` on its own port and `GET /api/health` through the reverse proxy. Both return `{"status":"ok","text_processing":"ready"}`:
 
 ```bash
 curl -sSk -w '\n' http://127.0.0.1:8080/health
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ```
+
+`text_processing` reads `starting` for a few seconds after a start. It reads `unavailable` when the API could not start the processing of formatted texts: the API keeps serving, refuses to save formatted texts (descriptions, comments) and tries again every few seconds. The API log gives the reason.
 
 **Containers.** `docker compose -f infra/compose.onprem.yml ps` shows `healthy` for `api` and `web` once they answer. Docker only reports it: nothing restarts on that status.
 
@@ -375,7 +381,7 @@ ss -ltn | grep 172.17.0.1:9000
 ```
 
 - `ps` shows `api` and `web` as `healthy`. During the first 30 seconds or so after the boot, it can still show `health: starting`: run it again.
-- The health address answers `{"status":"ok"}`.
+- The health address answers `{"status":"ok","text_processing":"ready"}`.
 - The last command shows one line with `172.17.0.1:9000`: the storage of the installation example listens. With another storage, check it your own way.
 
 ### API metrics for a monitoring tool

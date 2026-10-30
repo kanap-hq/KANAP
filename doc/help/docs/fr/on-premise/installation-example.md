@@ -206,7 +206,7 @@ MinIO ne publie plus de nouveaux téléchargements ni de nouvelles images : une 
 
 Le stockage écoute uniquement sur l'adresse du bridge Docker `172.17.0.1` : il n'est pas joignable depuis le réseau. La console est désactivée.
 
-**Installez RustFS et son outil en ligne de commande.** Les numéros de version figurent dans les deux premières lignes : utilisez la dernière version listée sur la [page des versions de RustFS](https://github.com/rustfs/rustfs/releases) et sur la [page des versions de RustFS CLI](https://github.com/rustfs/cli/releases). Si vous changez une version, vérifiez les noms de fichiers sur sa page de version. Chaque téléchargement est contrôlé avec le fichier `SHA256SUMS` de sa version ; la commande s'arrête si le contrôle échoue.
+**Installez RustFS et son outil en ligne de commande.** Les numéros de version figurent dans les deux premières lignes. Ce guide a été testé avec RustFS 1.0.1. Une version 1.0.x ultérieure, listée sur la [page des versions de RustFS](https://github.com/rustfs/rustfs/releases), fonctionne de la même façon. La [page des versions de RustFS CLI](https://github.com/rustfs/cli/releases) liste les versions de l'outil en ligne de commande. Si vous changez une version, vérifiez les noms de fichiers sur sa page de version. Chaque téléchargement est contrôlé avec le fichier `SHA256SUMS` de sa version ; la commande s'arrête si le contrôle échoue.
 
 ```bash
 RUSTFS_VERSION=1.0.1
@@ -382,7 +382,7 @@ Remarques sur le fichier :
 
 ## 7. Télécharger et démarrer
 
-Téléchargez les images de la version extraite et démarrez les conteneurs. `pull` télécharge environ 1,5 Go la première fois. `--wait` rend la main quand les deux conteneurs indiquent `healthy` ; le premier démarrage exécute les migrations de la base de données et prend de quelques secondes à une minute.
+Téléchargez les images de la version extraite et démarrez les conteneurs. `pull` télécharge environ 300 Mo la première fois, et les images occupent environ 1,4 Go de disque. `--wait` rend la main quand les deux conteneurs indiquent `healthy` ; le premier démarrage exécute les migrations de la base de données et prend de quelques secondes à une minute.
 
 ```bash
 cd /opt/kanap
@@ -399,7 +399,8 @@ Si `pull` n'atteint pas `ghcr.io`, ouvrez l'accès sortant des [Règles de pare-
 ```
 [entrypoint] Initializing DB (attempt 1/30) ...
 [entrypoint] DB initialized. Running migrations...
-[entrypoint] Migrations complete (330 executed).
+[entrypoint] Migrations complete (394 executed).
+[VERSION] KANAP 26.10.8
 [ENV] run mode: production
 [SECRETS] token families: password-reset=derived-key provisioning=jwt-secret entra-state=derived-key (...)
 [SECRETS] Access tokens must carry purpose="access" (legacy untyped access tokens: refused)
@@ -411,14 +412,15 @@ Si `pull` n'atteint pas `ghcr.io`, ouvrez l'accès sortant des [Règles de pare-
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
 [on-prem] Created default subscription (On-Prem)
 [DATA-ACCESS] data-scoped access not installed (no kanap_data_limited role): nobody can be limited
+[markdown] Text processing workers ready
 ... WARN [EmailService] No outbound email transport configured; email sending is disabled.
 ... Nest application successfully started
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
 ```
 
-Le nombre de migrations dépend de la version, et les chiffres du pool dépendent de votre PostgreSQL.
+Le nombre de migrations et la ligne `[VERSION]` dépendent de la version, et les chiffres du pool dépendent de votre PostgreSQL.
 
-Le bloc omet les lignes des migrations : environ 40 lignes qui commencent par `[Migration]` ou `[migration:` suivent `Running migrations...`. Elles sont informatives. Sur une base neuve, certaines signalent des modifications des données de référence intégrées ou citent un identifiant de tenant qui n'est pas le vôtre : KANAP conserve un tenant système pour les fonctions de la plateforme. Elles ne demandent aucune action. `...` remplace le préfixe `[Nest]` avec l'identifiant du processus et l'heure, ainsi que la source entre crochets (par exemple `LOG [NestApplication]`). Certaines de ces lignes se terminent par une durée comme `+0ms`. La dernière ligne de la sortie filtrée est `[DB] pool budget ...`. Un journal enregistré dans un fichier peut contenir des codes de couleur comme `[33m`.
+Le bloc omet les lignes des migrations : sur une nouvelle installation, quelques centaines de lignes qui commencent par `[Migration]` ou `[migration:` suivent `Running migrations...`. Quelques-unes commencent plutôt par le numéro de leur migration, par exemple `[1854170000000] ...` ou `[migration 1854350000000] ...`. Elles sont informatives. Sur une base neuve, certaines signalent des modifications des données de référence intégrées ou citent un identifiant de tenant qui n'est pas le vôtre : KANAP conserve un tenant système pour les fonctions de la plateforme. Elles ne demandent aucune action. `...` remplace le préfixe `[Nest]` avec l'identifiant du processus et l'heure, ainsi que la source entre crochets (par exemple `LOG [NestApplication]`). Certaines de ces lignes se terminent par une durée comme `+0ms`. La dernière ligne de la sortie filtrée est `[DB] pool budget ...`. Un journal enregistré dans un fichier peut contenir des codes de couleur comme `[33m`.
 
 Tant que vous n'avez pas configuré l'e-mail, l'avertissement `EmailService` est attendu et ne demande aucune action. La ligne `[DATA-ACCESS]` est attendue elle aussi : l'étape 10 l'explique. Un avertissement `[SECURITY]`, `[CONFIG]`, `[CORS]` ou `[ENV] APP_ENV is not set` signale un paramètre à revoir : [Configuration](configuration.md#ce-que-le-journal-de-lapi-affiche-au-demarrage) explique chaque ligne.
 
@@ -600,12 +602,12 @@ Vérifiez la santé de l'API et du front-end à travers nginx. `-S` fait affiche
 ```bash
 . ~/kanap-install.env
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
-# Attendu : {"status":"ok"}
+# Attendu : {"status":"ok","text_processing":"ready"}
 curl -sSk -o /dev/null -w "%{http_code}\n" "https://${KANAP_HOST}/"
 # Attendu : 200
 ```
 
-Lancez ensuite le test de recette. Il vérifie la base de données, le stockage, la connexion et les exports à travers l'API publique, comme le fait l'application web. Le serveur n'a pas Node.js : le test s'exécute donc dans un conteneur. La ligne qui commence par `KANAP_PASSWORD=` lit le mot de passe administrateur dans `.env` et le place dans l'environnement du test sans l'afficher. La première exécution télécharge l'image `node:24-alpine` depuis Docker Hub (environ 240 Mo) et la garde pour les exécutions suivantes. `KANAP_WRITE=1` crée aussi une tâche temporaire avec une pièce jointe, ce qui vérifie le stockage, puis la supprime. Utilisez-le uniquement juste après l'installation : il écrit dans les données. La tâche temporaire consomme une référence de tâche (`T-1` sur une nouvelle installation) : votre première tâche est donc `T-2`. `KANAP_INSECURE_TLS=1` accepte un certificat auquel le conteneur ne fait pas confiance : gardez-le avec un certificat auto-signé. Avec un certificat de votre autorité interne, vous pouvez le garder ou laisser le conteneur vérifier le certificat : placez le fichier de l'autorité dans `/opt/kanap/infra/certs/` (voir [Certificats d'une autorité interne](configuration.md#facultatif-certificats-dune-autorite-interne)) et remplacez `-e KANAP_INSECURE_TLS=1` par `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`. Avec Let's Encrypt, retirez `-e KANAP_INSECURE_TLS=1`.
+Lancez ensuite le test de recette. Il vérifie la base de données, le stockage, la connexion et les exports à travers l'API publique, comme le fait l'application web. Le serveur n'a pas Node.js : le test s'exécute donc dans un conteneur. La ligne qui commence par `KANAP_PASSWORD=` lit le mot de passe administrateur dans `.env` et le place dans l'environnement du test sans l'afficher. La première exécution télécharge l'image `node:24-alpine` depuis Docker Hub (environ 65 Mo, environ 240 Mo sur le disque) et la garde pour les exécutions suivantes. `KANAP_WRITE=1` crée aussi une tâche temporaire avec une pièce jointe, ce qui vérifie le stockage, puis la supprime. Utilisez-le uniquement juste après l'installation : il écrit dans les données. La tâche temporaire consomme une référence de tâche (`T-1` sur une nouvelle installation) : votre première tâche est donc `T-2`. `KANAP_INSECURE_TLS=1` accepte un certificat auquel le conteneur ne fait pas confiance : gardez-le avec un certificat auto-signé. Avec un certificat de votre autorité interne, vous pouvez le garder ou laisser le conteneur vérifier le certificat : placez le fichier de l'autorité dans `/opt/kanap/infra/certs/` (voir [Certificats d'une autorité interne](configuration.md#facultatif-certificats-dune-autorite-interne)) et remplacez `-e KANAP_INSECURE_TLS=1` par `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`. Avec Let's Encrypt, retirez `-e KANAP_INSECURE_TLS=1`.
 
 ```bash
 . ~/kanap-install.env
