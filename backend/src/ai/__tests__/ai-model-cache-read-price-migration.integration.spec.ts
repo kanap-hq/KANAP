@@ -75,4 +75,58 @@ async function testUpRerunDownUp() {
   });
 }
 
-runSpecs('ai-model-cache-read-price-migration.integration.spec', [testUpRerunDownUp]);
+async function constraintExists(runner: QueryRunner): Promise<boolean> {
+  const rows = await runner.query(
+    `SELECT 1 FROM pg_constraint
+      WHERE conname = 'chk_ai_model_configs_cache_read_price_non_negative'
+        AND conrelid = 'ai_model_configs'::regclass`,
+  );
+  return rows.length === 1;
+}
+
+// A negative price written while the check was missing is cleared by a rerun, then refused.
+async function testRerunRepairsNegativePriceThenRefusesIt() {
+  await withRollback(async (runner) => {
+    const tenantId = await seedTenant(runner, 'cache-read-price-repair');
+    await setCurrentTenant(runner, tenantId);
+
+    await migration.up(runner);
+    assert.equal(await constraintExists(runner), true, 'up() adds the check');
+
+    const [model] = await runner.query(
+      `INSERT INTO ai_model_configs (tenant_id, name, provider, model, price_input_eur_per_mtok, price_output_eur_per_mtok)
+       VALUES ($1, 'Dirty model', 'custom', 'dirty-model', 1, 2) RETURNING id`,
+      [tenantId],
+    );
+    await runner.query(`ALTER TABLE ai_model_configs DROP CONSTRAINT chk_ai_model_configs_cache_read_price_non_negative`);
+    await runner.query(
+      `UPDATE ai_model_configs SET price_cache_read_eur_per_mtok = -1 WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, model.id],
+    );
+
+    // Migrations run without a current tenant: under FORCE RLS the repair must still see the row.
+    await runner.query(`SELECT set_config('app.current_tenant', '', true)`);
+    await migration.up(runner);
+    await setCurrentTenant(runner, tenantId);
+    assert.equal(await constraintExists(runner), true, 'a rerun restores the check');
+    assert.equal((await prices(runner, tenantId, model.id)).price_cache_read_eur_per_mtok, null, 'the negative price is cleared');
+
+    await runner.query('SAVEPOINT negative_price');
+    await assert.rejects(
+      runner.query(
+        `UPDATE ai_model_configs SET price_cache_read_eur_per_mtok = -0.5 WHERE tenant_id = $1 AND id = $2`,
+        [tenantId, model.id],
+      ),
+      /chk_ai_model_configs_cache_read_price_non_negative/,
+      'a negative price is refused',
+    );
+    await runner.query('ROLLBACK TO SAVEPOINT negative_price');
+
+    const [rls] = await runner.query(
+      `SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE oid = 'ai_model_configs'::regclass`,
+    );
+    assert.deepEqual(rls, { relrowsecurity: true, relforcerowsecurity: true }, 'RLS is enabled and forced again');
+  });
+}
+
+runSpecs('ai-model-cache-read-price-migration.integration.spec', [testUpRerunDownUp, testRerunRepairsNegativePriceThenRefusesIt]);
