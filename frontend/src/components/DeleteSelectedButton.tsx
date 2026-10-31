@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Snackbar, Alert } from '@mui/material';
+import { Alert, Badge, Box, Button, Snackbar, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import DeleteConfirmDialog, { DeleteConfirmKept } from './DeleteConfirmDialog';
@@ -37,6 +37,7 @@ export interface DeleteSelectedButtonProps<T> {
   onDeleteSuccess: () => void;
   gridApi?: any; // AG Grid API to clear selection
   disabled?: boolean;
+  /** Replaces "Delete" in the tooltip and the accessible name ("Delete (n)"). */
   label?: string;
   /** Optional cascade delete option for related data */
   cascadeOption?: {
@@ -91,6 +92,23 @@ export interface DeleteSelectedButtonProps<T> {
 
 /** The names a success message lists before "and n more". */
 const NAMED_DELETES = 3;
+
+/** Count on the trash: 9px on a 14px badge, sitting on the icon's corner inside the pill. */
+const selectedCountBadgeSx = {
+  '& .MuiBadge-badge': {
+    bgcolor: 'kanap.danger',
+    color: 'kanap.tealForeground',
+    fontSize: 9,
+    fontWeight: 500,
+    fontVariantNumeric: 'tabular-nums',
+    height: 14,
+    minWidth: 14,
+    lineHeight: '14px',
+    padding: '0 3px',
+    top: 3,
+    right: 3,
+  },
+};
 
 type Item = { id: string; name: string };
 /** What the dialog shows, taken when it opens: it keeps saying it while it closes, after the selection is cleared. */
@@ -264,18 +282,34 @@ export default function DeleteSelectedButton<T>({
     : itemLabels?.title?.(named.length) ?? t('delete.deleteSelectedTitle', { count: named.length }));
   const titleCountsDeleted = itemLabels?.titleCountsDeleted === true;
   const onlyRefused = !!check && deletable.length === 0 && keptItems.length > 0 && liftable.length === 0;
+  const selectedCount = selectedRows.length;
+  // Same words as the old text pill, so the button keeps its accessible name.
+  const accessibleName = `${label || t('buttons.deleteSelected')} (${selectedCount})`;
 
   return (
     <>
-      {/* Neutral while nothing is selected, red once there is something to delete. */}
-      <Button
-        variant="action-danger"
-        startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
-        onClick={() => { void handleOpenConfirm(); }}
-        disabled={disabled || checking || selectedRows.length === 0}
-      >
-        {label || t('buttons.deleteSelected')} ({selectedRows.length})
-      </Button>
+      <Tooltip title={accessibleName} describeChild>
+        {/* A disabled button fires no events: the wrapper keeps the tooltip working. */}
+        <Box component="span" sx={{ display: 'inline-flex', flexShrink: 0 }}>
+          <Button
+            variant="action-danger"
+            aria-label={accessibleName}
+            onClick={() => { void handleOpenConfirm(); }}
+            disabled={disabled || checking || selectedCount === 0}
+            sx={{ px: '8px' }}
+          >
+            <Badge
+              badgeContent={selectedCount}
+              max={9999}
+              showZero
+              slotProps={{ badge: { 'aria-hidden': true } }}
+              sx={selectedCountBadgeSx}
+            >
+              <DeleteIcon sx={{ fontSize: '16px !important' }} />
+            </Badge>
+          </Button>
+        </Box>
+      </Tooltip>
 
       {onlyRefused ? (
         // Nothing left to delete: the refusal and why, as on a record page, with Close only.

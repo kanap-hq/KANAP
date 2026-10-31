@@ -36,6 +36,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { recordsInUseCheck } from '../../utils/deleteCheck';
 import ChipToggleBar, { ChipToggleContextLine } from '../../components/ChipToggleBar';
 import { KanapDialog, PropertyRow, StatusDot, useKanapDialogs } from '../../components/design';
@@ -1450,8 +1451,7 @@ export default function KnowledgePage() {
         saveDisabled={!librarySettingsName.trim() || !librarySettingsOwnerId || saveLibraryMutation.isPending || editingLibraryLoading}
         saveLoading={saveLibraryMutation.isPending}
         footerLeft={(
-          <Button
-            variant="action-danger"
+          <DeleteIconButton
             onClick={() => {
               // The default library cannot be deleted: say so, with nothing to confirm.
               if (editingLibraryDetail?.is_default) {
@@ -1464,9 +1464,7 @@ export default function KnowledgePage() {
               setDeleteLibraryConfirmOpen(true);
             }}
             disabled={!editingLibrary || deleteLibraryMutation.isPending || editingLibraryLoading}
-          >
-            {t('common:buttons.delete')}
-          </Button>
+          />
         )}
         sx={{ maxWidth: 720 }}
       >
