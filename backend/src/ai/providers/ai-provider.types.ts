@@ -80,6 +80,10 @@ export type AiStreamParams = {
   // built-in provider, used as configured).
   endpointSource?: 'tenant' | 'platform';
   systemPrompt: string;
+  // The start of `systemPrompt` that stays the same across turns (`BuiltSystemPrompt.cacheablePrefix`).
+  // Providers with explicit prompt-cache breakpoints (Anthropic) end one there; the others send
+  // `systemPrompt` as it is and cache its prefix by themselves.
+  systemPromptCacheablePrefix?: string;
   systemPromptRole?: AiSystemPromptRole;
   messages: AiProviderMessage[];
   tools: AiProviderToolDef[];
