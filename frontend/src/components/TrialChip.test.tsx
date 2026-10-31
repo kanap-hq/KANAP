@@ -1,8 +1,8 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import TrialChip from './TrialChip';
+import TrialChip, { TrialMenuLine } from './TrialChip';
 
 vi.mock('react-i18next', async () => {
   const { default: common } = await import('../locales/en/common.json');
@@ -117,6 +117,37 @@ describe('TrialChip', () => {
   it('shows nothing for a platform administrator', () => {
     state.claims = { isBillingAdmin: false, isPlatformAdmin: true };
     const { container } = renderChip();
+    expect(container.textContent).toBe('');
+  });
+});
+
+describe('TrialMenuLine', () => {
+  beforeEach(() => {
+    state.billing = true;
+    state.isLoading = false;
+    state.claims = { isBillingAdmin: false, isPlatformAdmin: false };
+    state.subscription = trial(9);
+  });
+
+  it('shows the days left in the account menu for a member, without a link', () => {
+    render(<MemoryRouter><TrialMenuLine /></MemoryRouter>);
+    expect(screen.getByText('Trial: 9 days')).toBeTruthy();
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('links a billing administrator to the billing page and closes the menu', () => {
+    state.claims = { isBillingAdmin: true, isPlatformAdmin: false };
+    const onNavigate = vi.fn();
+    render(<MemoryRouter><TrialMenuLine onNavigate={onNavigate} /></MemoryRouter>);
+    const link = screen.getByRole('link', { name: 'Trial: 9 days' });
+    expect(link.getAttribute('href')).toBe('/admin/billing');
+    fireEvent.click(link);
+    expect(onNavigate).toHaveBeenCalled();
+  });
+
+  it('shows nothing without a running trial', () => {
+    state.subscription = { status: 'active', is_subscription_healthy: true, trial_days_remaining: null };
+    const { container } = render(<MemoryRouter><TrialMenuLine /></MemoryRouter>);
     expect(container.textContent).toBe('');
   });
 });
