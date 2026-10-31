@@ -163,6 +163,10 @@ export const DATA_ACCESS_FUNCTIONS: Array<{ name: string; cls: DataAccessFunctio
   ].map((name) => ({ name: `search_index_sync_${name}`, cls: 'definer' as const, reason: 'search index family: trigger' })),
   { name: 'search_index_sync_link_incident_assets', cls: 'definer', reason: 'search index family: statement trigger, the incidents of a link change refreshed by batch of ids' },
   { name: 'search_index_sync_incident_assets_on_asset', cls: 'definer', reason: 'search index family: trigger, the incidents linked to a renamed asset refreshed by batch of ids' },
+  { name: 'search_index_sync_link_incident_applications', cls: 'definer', reason: 'search index family: statement trigger, the incidents of an application link change refreshed by batch of ids' },
+  { name: 'search_index_sync_link_incident_technologies', cls: 'definer', reason: 'search index family: statement trigger, the incidents of a technology link change refreshed by batch of ids' },
+  { name: 'search_index_sync_incident_applications_on_application', cls: 'definer', reason: 'search index family: trigger, the incidents linked to a renamed application refreshed by batch of ids' },
+  { name: 'search_index_sync_incident_technologies_on_technology', cls: 'definer', reason: 'search index family: trigger, the incidents linked to a renamed technology refreshed by batch of ids' },
 
   // Access functions (lots 1 and 2).
   { name: 'data_access_expected_policies', cls: 'access', reason: 'the expected policies (names the scoped tables)' },
