@@ -24,6 +24,7 @@ export type AiModelConfigView = {
   supports_vision: boolean;
   price_input_eur_per_mtok: number | null;
   price_output_eur_per_mtok: number | null;
+  price_cache_read_eur_per_mtok: number | null;
   llm_timeout_ms: number | null;
   status: 'active' | 'archived';
   is_default: boolean;
@@ -43,6 +44,7 @@ export type CreateAiModelConfigInput = {
   supports_vision?: boolean;
   price_input_eur_per_mtok?: number | null;
   price_output_eur_per_mtok?: number | null;
+  price_cache_read_eur_per_mtok?: number | null;
   llm_timeout_ms?: number | null;
   is_default?: boolean;
 };
@@ -372,6 +374,7 @@ export class AiModelConfigService {
       supports_vision: config.supports_vision !== false,
       price_input_eur_per_mtok: parsePrice(config.price_input_eur_per_mtok),
       price_output_eur_per_mtok: parsePrice(config.price_output_eur_per_mtok),
+      price_cache_read_eur_per_mtok: parsePrice(config.price_cache_read_eur_per_mtok ?? null),
       llm_timeout_ms: config.llm_timeout_ms ?? null,
       status: config.status,
       is_default: config.is_default,
@@ -451,6 +454,12 @@ export class AiModelConfigService {
     }
     if (Object.prototype.hasOwnProperty.call(input, 'price_output_eur_per_mtok')) {
       config.price_output_eur_per_mtok = normalizePrice(input.price_output_eur_per_mtok, 'price_output_eur_per_mtok');
+    }
+    if (Object.prototype.hasOwnProperty.call(input, 'price_cache_read_eur_per_mtok')) {
+      config.price_cache_read_eur_per_mtok = normalizePrice(
+        input.price_cache_read_eur_per_mtok,
+        'price_cache_read_eur_per_mtok',
+      );
     }
     if (Object.prototype.hasOwnProperty.call(input, 'llm_timeout_ms')) {
       const value = input.llm_timeout_ms;

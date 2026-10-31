@@ -8,6 +8,7 @@ export type AiMessageUsageModel = {
   source: 'builtin' | 'registry';
   priceInputEurPerMtok: number | null;
   priceOutputEurPerMtok: number | null;
+  priceCacheReadEurPerMtok: number | null;
   cacheCostFactors: LlmCacheCostFactors;
 };
 
@@ -40,10 +41,15 @@ export function buildMessageUsageJson(
   json.model_source = model.source;
   json.price_input_eur_per_mtok = model.priceInputEurPerMtok;
   json.price_output_eur_per_mtok = model.priceOutputEurPerMtok;
+  json.price_cache_read_eur_per_mtok = model.priceCacheReadEurPerMtok ?? null;
   json.cost_eur = llmCostEur(
     inputTokens,
     outputTokens,
-    { priceInputEurPerMtok: model.priceInputEurPerMtok, priceOutputEurPerMtok: model.priceOutputEurPerMtok },
+    {
+      priceInputEurPerMtok: model.priceInputEurPerMtok,
+      priceOutputEurPerMtok: model.priceOutputEurPerMtok,
+      priceCacheReadEurPerMtok: model.priceCacheReadEurPerMtok,
+    },
     {
       readTokens: usage.cache_read_input_tokens,
       writeTokens: usage.cache_write_input_tokens,

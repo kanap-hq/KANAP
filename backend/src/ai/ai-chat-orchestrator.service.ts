@@ -283,6 +283,7 @@ function messageUsageModel(resolved: ResolvedModel, adapter: AiProviderAdapter):
     source: resolved.source,
     priceInputEurPerMtok: resolved.priceInputEurPerMtok,
     priceOutputEurPerMtok: resolved.priceOutputEurPerMtok,
+    priceCacheReadEurPerMtok: resolved.priceCacheReadEurPerMtok,
     cacheCostFactors: adapter.cacheCostFactors ?? NO_CACHE_DISCOUNT,
   };
 }

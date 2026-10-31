@@ -37,7 +37,7 @@ function createOrchestrator(options?: {
   /** The person's stored locale (`users.locale`). */
   userLocale?: string | null;
   /** The registry model's prices (€/Mtok); null when omitted. */
-  modelPrices?: { input: number; output: number };
+  modelPrices?: { input: number; output: number; cacheRead?: number | null };
   /** The provider adapter's cache cost factors; absent when omitted. */
   cacheCostFactors?: { read: number; write: number };
 }) {
@@ -124,6 +124,7 @@ function createOrchestrator(options?: {
       supportsVision: true,
       priceInputEurPerMtok: 0,
       priceOutputEurPerMtok: 0,
+      priceCacheReadEurPerMtok: 0,
       timeoutMs: null,
       builtinRateLimits: { tenantPerMinute: 30, userPerHour: 60 },
     }
@@ -138,6 +139,7 @@ function createOrchestrator(options?: {
       supportsVision: true,
       priceInputEurPerMtok: options?.modelPrices?.input ?? null,
       priceOutputEurPerMtok: options?.modelPrices?.output ?? null,
+      priceCacheReadEurPerMtok: options?.modelPrices?.cacheRead ?? null,
       timeoutMs: null,
       builtinRateLimits: null,
     });
@@ -495,6 +497,7 @@ async function testAssistantMessagesRecordTheirModelPricesAndCost() {
     model_source: 'registry',
     price_input_eur_per_mtok: 3,
     price_output_eur_per_mtok: 15,
+    price_cache_read_eur_per_mtok: null,
     cost_eur: 2.265,
   });
   // The final answer: no cache reported, so no cache field.
@@ -506,6 +509,7 @@ async function testAssistantMessagesRecordTheirModelPricesAndCost() {
     model_source: 'registry',
     price_input_eur_per_mtok: 3,
     price_output_eur_per_mtok: 15,
+    price_cache_read_eur_per_mtok: null,
     cost_eur: 0.75,
   });
 
@@ -543,7 +547,47 @@ async function testIncludedModelMessagesRecordAZeroCost() {
     model_source: 'builtin',
     price_input_eur_per_mtok: 0,
     price_output_eur_per_mtok: 0,
+    price_cache_read_eur_per_mtok: 0,
     cost_eur: 0,
+  });
+}
+
+async function testAssistantMessagesPriceCachedTokensAtTheModelCacheReadPrice() {
+  // An OpenAI-compatible model (no known discount) with its own cache read price.
+  const { orchestrator, persistedMessages } = createOrchestrator({
+    providerId: 'openai',
+    model: 'mistral-medium-latest',
+    modelPrices: { input: 2, output: 6, cacheRead: 0.2 },
+    providerEvents: [
+      { type: 'text_delta', text: 'Hello there.' },
+      { type: 'done', usage: { input_tokens: 1_000_000, output_tokens: 10_000, cache_read_input_tokens: 990_000 } },
+    ],
+  });
+  await collectEvents(
+    orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      userMessage: 'Hello',
+    }),
+  );
+  const assistant = persistedMessages.find((message) => message.role === 'assistant');
+  // 10k uncached at 2 + 990k read at 0.2 + 10k output at 6.
+  assert.deepEqual(assistant?.usage, {
+    input_tokens: 1_000_000,
+    output_tokens: 10_000,
+    cache_read_input_tokens: 990_000,
+    provider: 'openai',
+    model: 'mistral-medium-latest',
+    model_source: 'registry',
+    price_input_eur_per_mtok: 2,
+    price_output_eur_per_mtok: 6,
+    price_cache_read_eur_per_mtok: 0.2,
+    cost_eur: 0.278,
   });
 }
 
@@ -4538,6 +4582,7 @@ async function run() {
   await testToolCallFlow();
   await testAssistantMessagesRecordTheirModelPricesAndCost();
   await testIncludedModelMessagesRecordAZeroCost();
+  await testAssistantMessagesPriceCachedTokensAtTheModelCacheReadPrice();
   await testToolResultDateTimesUseTheUserTimeZone();
   await testDeepSeekReasoningContentIsReplayedForToolContinuation();
   await testDeepSeekReasoningContentIsReplayedForEverySplitToolCall();

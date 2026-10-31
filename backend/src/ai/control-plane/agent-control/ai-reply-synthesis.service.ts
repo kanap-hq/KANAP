@@ -8,7 +8,7 @@ import {
   CompiledGuidance,
   RUNTIME_SAFETY_FLOOR_SYNTHESIS,
 } from './ai-agent-prompt-compiler.service';
-import { AiAgentLlmClient } from './ai-agent-llm-client';
+import { AiAgentLlmClient, agentCallCostEur } from './ai-agent-llm-client';
 import type { TicketImageEvidence } from './ai-ticket-need-representation.types';
 import { estimateJsonTokens } from './json-token-estimate';
 import { HTML_TAGS, SPACES_BEFORE_LINE_BREAKS, hasHtmlTag } from '../../../common/text-scan';
@@ -225,6 +225,7 @@ export function estimateReplySynthesisUsage(
   const inputTokens = estimateJsonTokens(input);
   return {
     estimatedTokens: inputTokens + maxOutputTokens,
+    // A ceiling for the run's cost cap: the whole input at the input price, since what the cache will serve is unknown.
     estimatedCostEur: llmCostEur(inputTokens, maxOutputTokens, prices),
   };
 }
@@ -446,7 +447,7 @@ export class AiReplySynthesisService {
       model: `${response.runtime.providerId}:${response.runtime.model}`,
       usage: response.usage,
       estimated_tokens: actualTokens,
-      estimated_cost_eur: llmCostEur(actualInputTokens, actualOutputTokens, response.runtime),
+      estimated_cost_eur: agentCallCostEur(actualInputTokens, actualOutputTokens, response.runtime, response.usage),
       latency_ms: response.latencyMs,
       fallback_reason: fallbackReason,
     };
