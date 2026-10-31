@@ -112,7 +112,12 @@ type Col = {
   valueGetter?: (p: unknown) => unknown;
   valueFormatter?: (p: unknown) => unknown;
   tooltipValueGetter?: (p: unknown) => unknown;
-  filterParams?: { getValues?: (p: unknown) => Promise<Array<{ value: string | null; label: string }>>; filterOptions?: string[] };
+  filterParams?: {
+    getValues?: (p: unknown) => Promise<Array<{ value: string | null; label?: string }>>;
+    filterOptions?: string[];
+    labelFormatter?: (value: string | null) => string;
+    sortComparator?: (a: { value: string | null; label?: string }, b: { value: string | null; label?: string }) => number;
+  };
   cellRenderer?: (p: unknown) => React.ReactElement;
   cellRendererSelector?: (p: unknown) => { component: unknown };
 };
@@ -699,11 +704,38 @@ describe('BudgetListPage', () => {
     expect(container.querySelector('a')).toBeNull();
   });
 
-  it('filters the allocation column with the values the server lists', async () => {
+  it('translates the allocation column and its filter, and keeps the server values', async () => {
     await renderPage();
-    const allocation = column('allocation_label');
-    expect(allocation?.filter).toBe(CheckboxSetFilter);
-    expect(allocation?.filterParams?.getValues).toBeTypeOf('function');
+    const allocation = column('allocation_label')!;
+    expect(allocation.filter).toBe(CheckboxSetFilter);
+    const format = allocation.valueFormatter!;
+    const label = allocation.filterParams!.labelFormatter!;
+    // The cell value stays the English constant the API filters and sorts on.
+    expect(allocation.valueGetter?.({ data: { allocation_method_label: 'Company' } })).toBe('Company');
+    expect(format({ value: 'Company' })).toBe('ops:opex.allocations.manualByCompany');
+    expect(format({ value: 'Headcount' })).toBe('ops:opex.allocations.headcount');
+    expect(format({ value: 'IT users' })).toBe('ops:opex.allocations.itUsers');
+    expect(format({ value: 'Turnover' })).toBe('ops:opex.allocations.turnover');
+    expect(format({ value: 'Department' })).toBe('ops:opex.allocations.manualByDepartment');
+    expect(format({ value: 'Manual %' })).toBe('ops:opex.allocations.manualByPct');
+    expect(format({ value: 'Default' })).toBe('ops:reports.shared.allocationMethodDefault');
+    expect(format({ value: '' })).toBe('');
+    expect(format({ value: 'Custom' })).toBe('Custom');
+    expect(allocation.tooltipValueGetter?.({ data: { allocation_method_label: 'IT users' } })).toBe('ops:opex.allocations.itUsers');
+    for (const raw of ['Company', 'Headcount', 'IT users', 'Turnover', 'Department', 'Manual %', 'Default']) {
+      expect(label(raw)).toBe(format({ value: raw }));
+    }
+    expect(label(null)).toBe('shared.blank');
+    expect(allocation.filterParams!.sortComparator!({ value: null, label: 'shared.blank' }, { value: 'Company', label: 'x' })).toBeGreaterThan(0);
+
+    get.mockImplementation(async (url: string, config?: { params?: { fields?: string } }) => {
+      if (url !== '/budget-lines/summary/filter-values') return { data: {} };
+      expect(config?.params?.fields).toBe('allocation_label');
+      return { data: { allocation_label: ['Headcount', null, 'Company'] } };
+    });
+    const options = await allocation.filterParams!.getValues!({ context: { getQueryState: () => ({}) } });
+    // Labels are left off so the filter's labelFormatter translates them. The values stay English.
+    expect(options).toEqual([{ value: 'Company' }, { value: 'Headcount' }, { value: null }]);
   });
 
   it('filters the status column with a checkbox list of the two statuses', async () => {
