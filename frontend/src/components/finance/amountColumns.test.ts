@@ -31,8 +31,8 @@ const Y = 2026;
 const ALL_ON = { planned: true, committed: true, forecast: true, actual: true, expected_landing: true };
 const setting = (over: Partial<BudgetColumnsSettings> = {}): BudgetColumnsSettings => ({ ...DEFAULT_BUDGET_COLUMNS, ...over });
 const columnsOf = (over: Partial<BudgetColumnsSettings> = {}) => resolveBudgetColumns(setting(over), t);
-const build = (over: Partial<BudgetColumnsSettings> = {}) =>
-  buildAmountColumnDefs({ t, currentYear: Y, cellRenderer: () => undefined, columns: columnsOf(over) });
+const build = (over: Partial<BudgetColumnsSettings> = {}, locale = 'en') =>
+  buildAmountColumnDefs({ t, currentYear: Y, locale, cellRenderer: () => undefined, columns: columnsOf(over) });
 
 describe('buildAmountColumnDefs', () => {
   const defs = build({ enabled: ALL_ON });
@@ -116,7 +116,7 @@ describe('amount helpers', () => {
     const localT = ((key: string, options?: { amount?: string; currency?: string; column?: string }) => (
       key === 'ops:shared.fxMissing.localAmount' ? `${options?.amount} ${options?.currency}` : options?.column ?? key
     )) as unknown as TFunction;
-    const defs = buildAmountColumnDefs({ t: localT, currentYear: Y, cellRenderer: () => undefined, columns: columnsOf() });
+    const defs = buildAmountColumnDefs({ t: localT, currentYear: Y, locale: 'en', cellRenderer: () => undefined, columns: columnsOf() });
     const yBudget = defs.find((d) => d.colId === 'yBudget')!;
     const row = {
       versions: {
@@ -131,7 +131,7 @@ describe('amount helpers', () => {
     const value = (yBudget.valueGetter as (p: unknown) => unknown)({ data: row });
     expect(value).toBeNull();
     const format = yBudget.valueFormatter as (p: unknown) => string;
-    expect(format({ data: row, value, node: {} })).toBe('12 000 USD');
+    expect(format({ data: row, value, node: {} })).toBe('12,000 USD');
     const converted = defs.find((d) => d.colId === 'yMinus1Budget')!;
     const convertedValue = (converted.valueGetter as (p: unknown) => unknown)({ data: row });
     expect(convertedValue).toBe(900);
@@ -139,6 +139,36 @@ describe('amount helpers', () => {
     expect(cellFxMissing(row, 'yBudget', Y)).toEqual({ currency: 'USD', year: 2026, amount: 12000 });
     expect(cellFxMissing(row, 'yMinus1Budget', Y)).toBeNull();
     expect(slotAmount({ totals: { budget: 50 }, reporting: { budget: null, fx_source: 'missing', currency: 'USD' } }, 'budget')).toBeNull();
+  });
+
+  it('writes 650000 with the separators of the interface language, in a cell, in the totals row and without an exchange rate', () => {
+    const localT = ((key: string, options?: { amount?: string; currency?: string }) => (
+      key === 'ops:shared.fxMissing.localAmount' ? `${options?.amount} ${options?.currency}` : key
+    )) as unknown as TFunction;
+    // French groups with a narrow no-break space, the same character Intl writes for the tiles.
+    const expected = {
+      en: '650,000',
+      de: '650.000',
+      es: '650.000',
+      fr: '650\u202f000',
+    } as const;
+    const missingRow = {
+      versions: {
+        y: {
+          year: 2026,
+          fx_missing: { currency: 'USD', amounts: { budget: 650000, revision: 0, forecast: 0, follow_up: 0, landing: 0 } },
+        },
+      },
+    };
+    for (const [locale, text] of Object.entries(expected)) {
+      const column = buildAmountColumnDefs({ t: localT, currentYear: Y, locale, cellRenderer: () => undefined, columns: columnsOf() })
+        .find((d) => d.colId === 'yBudget')!;
+      const format = column.valueFormatter as (p: { data: unknown; value: unknown; node: unknown }) => string;
+      expect(format({ data: {}, value: 650000, node: {} }), locale).toBe(text);
+      expect(format({ data: {}, value: 650000, node: { rowPinned: 'bottom' } }), locale).toBe(text);
+      expect(format({ data: missingRow, value: null, node: {} }), locale).toBe(`${text} USD`);
+      expect(format({ data: { amountsPending: ['yBudget'] }, value: 0, node: { rowPinned: 'bottom' } }), locale).toBe('…');
+    }
   });
 });
 
