@@ -5,7 +5,8 @@ portfolio) and a mode (discover with the sample data, start with their own data)
 first steps then follows each user's progress through that path.
 
 Code: `backend/src/onboarding/` (service, controller, paths). Migration: `1856010000000-onboarding.ts`.
-The API works the same in cloud and on-premise mode (on-premise, `sample_data.status` is `idle`).
+The API works the same in cloud and on-premise mode (on-premise, `sample_data.status` is `idle`
+and the mode has no effect on the workspace: see "Effect of the mode").
 
 ## Tables
 
@@ -79,7 +80,10 @@ Response:
   enabled account: `isTenantAdministrator`). Changing a field already set still takes an
   administrator.
 - `sample_data`: `status` and `step` of `tenants.metadata.demo` (`idle` when absent or
-  malformed). `reset_in_progress`: `status = 'resetting'`.
+  malformed). `reset_in_progress`: the workspace is being emptied: `status = 'resetting'`, or
+  `status = 'loading'` with a stop of the load asked for (`cancel_requested_at`). The answer to a
+  `PUT /choice` that started a reset or a stop says `true` even if the reset is already over;
+  the interface then polls `GET`.
 
 ### Rules
 
@@ -94,6 +98,48 @@ Response:
   same value, it answers `200` and writes nothing. With another value, it gets `403`
   `administrator_required` from a user who is not an administrator; from an administrator, it
   changes the value and logs its own event.
+
+### Effect of the mode
+
+A new mode acts on the sample data (`DemoDataService`) before the choice is written. Cloud only,
+never on a system tenant. On-premise there is no sample data: the choice is written and nothing
+else happens. The sample data load at trial activation takes 20 s to 2 min, so the user often
+answers while it runs.
+
+`own_data`, by the state of `tenants.metadata.demo`:
+
+| Status | Effect | Who |
+|---|---|---|
+| `loaded`, `failed` | Reset of the workspace (`startReset`, no name to type) | Administrator |
+| `loading` | Stop of the load, then reset; the status ends `idle`, not `failed` | Administrator |
+| `idle`, `resetting` | Nothing to erase | Anybody who may set the mode |
+
+- A user who is not an administrator gets `403` `administrator_required` when the workspace
+  holds sample data, even for the workspace's first choice, and nothing is written: only an
+  administrator empties a workspace.
+- In every case the sample data banner of the home page is hidden (`metadata.demo.dismissed_at`).
+  A load at trial activation still waiting for a free slot then gives up at its next try.
+- The reset keeps what the tenant reset keeps: the workspace name, the starting company
+  (created again from the trial sign-up), the AI settings, the real users and their names, the
+  language, and the onboarding tables. The administrators get no "workspace reset" e-mail for a
+  reset set off by this choice. The Administration page reset still sends it.
+- Stopping a load (`DemoDataService.cancelLoad`): `cancel_requested_at` and
+  `cancel_requested_by` are written in the state, only while the status is `loading`. The API
+  process that runs the loader kills it at once when it is the one that got the request, at its
+  next heartbeat (15 s) otherwise. The load then ends as a failed one does: reset once the
+  loader has exited, but final status `idle`, no error code, a "cancelled" line in the server log
+  and no e-mail. A loader that ends with success after the request is not marked loaded: it is
+  reset the same way. A load that finished before the request was written (`loaded`) is reset
+  as above. A load whose API process stopped, found with a stop asked for, ends `idle` as well.
+- The request's transaction keeps the tenant's onboarding row locked meanwhile, and the reset
+  waits for it to commit when the request created that row (first choice). The writes on the
+  tenant row through the sample data's own connections all happen before a reset can start.
+
+`example`: when the status is `idle` and the user is an administrator, the sample data load
+starts (`loadDemoData`, the tenant's seed language, the request's Host header as for the
+Administration page). A refused load (workspace not empty, subscription, too many loads at
+once) still writes the choice, with one warning in the server log; `sample_data` shows the state.
+Another user's choice is written and loads nothing.
 
 `POST /steps/:key/done`: `409` `no_choice` without an angle or a mode; `400` `unknown_step` when
 the key is not in the current path. A step already done is left as it is. `DELETE` removes the

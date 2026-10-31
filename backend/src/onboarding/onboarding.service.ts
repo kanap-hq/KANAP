@@ -1,7 +1,15 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { writeAuditLog } from '../audit/audit.service';
-import { DemoStatus, readDemoState } from '../demo-data/demo-data.service';
+import { Features } from '../config/features';
+import {
+  DemoDataService,
+  DemoDataState,
+  DemoStatus,
+  markSampleDataBannerDismissed,
+  readDemoState,
+} from '../demo-data/demo-data.service';
 import {
   isOnboardingAngle,
   isOnboardingMode,
@@ -26,6 +34,12 @@ import { isTenantAdministrator } from './tenant-administrator';
  * `onboarding.mode_chosen` `{ mode, previous }`, `onboarding.step_done`
  * `{ angle, mode, step_key }` and `onboarding.completed` `{ angle, mode }` (once per user, angle
  * and mode). Nothing for a step undone or for the list hidden.
+ *
+ * A new mode acts on the sample data (`DemoDataService`, cloud only, never on a system tenant),
+ * before the choice is written: `own_data` empties the workspace (stops a running load, resets
+ * a loaded or failed one, administrators only, no reset e-mail) and hides the sample data
+ * banner; `example` loads the sample data into an empty workspace when an administrator chooses
+ * it. A refused `own_data` writes nothing; a refused load still writes the choice.
  */
 
 export const ONBOARDING_AUDIT_TABLE = 'onboarding';
@@ -49,15 +63,8 @@ export type OnboardingState = {
   dismissed_at: string | null;
   /** The sample data state (`tenants.metadata.demo`): status and step only. */
   sample_data: { status: DemoStatus; step: string | null };
+  /** The workspace is being emptied: a reset runs, or a load is stopping before its reset. */
   reset_in_progress: boolean;
-};
-
-/** A change of the workspace's choice, as `setChoice` applied it. */
-export type OnboardingChoiceChange = {
-  tenantId: string;
-  userId: string;
-  angle: { value: OnboardingAngle; previous: OnboardingAngle | null } | null;
-  mode: { value: OnboardingMode; previous: OnboardingMode | null } | null;
 };
 
 type ChoiceRow = { angle: OnboardingAngle | null; mode: OnboardingMode | null; chosen_at: Date | string | null };
@@ -69,8 +76,25 @@ function iso(value: Date | string | null | undefined): string | null {
 
 const has = (body: object, key: string) => Object.prototype.hasOwnProperty.call(body, key);
 
+/** The `code` of an HTTP exception's answer, or the error message when it has none. */
+function errorCode(error: unknown): string {
+  const response = (error as { getResponse?: () => unknown })?.getResponse?.();
+  const code = response && typeof response === 'object' ? (response as { code?: unknown }).code : undefined;
+  return typeof code === 'string' ? code : error instanceof Error ? error.message : String(error);
+}
+
+/** A 409 of the sample data whose status, read when it was refused, is one of `statuses`. */
+function isStatusConflictIn(error: unknown, statuses: readonly DemoStatus[]): boolean {
+  const response = (error as { getResponse?: () => unknown })?.getResponse?.() as { code?: unknown; status?: unknown } | undefined;
+  return response?.code === 'demo_status_conflict' && statuses.includes(response.status as DemoStatus);
+}
+
 @Injectable()
 export class OnboardingService {
+  private readonly logger = new Logger(OnboardingService.name);
+
+  constructor(private readonly demo: DemoDataService) {}
+
   /** The state of the workspace's onboarding for `userId`. */
   async getState(manager: EntityManager, tenantId: string, userId: string): Promise<OnboardingState> {
     const choice = await this.readChoice(manager, tenantId);
@@ -110,7 +134,7 @@ export class OnboardingService {
       completed: steps.length > 0 && !next,
       dismissed_at: iso(dismissal?.dismissed_at),
       sample_data: { status: demo.status, step: demo.step },
-      reset_in_progress: demo.status === 'resetting',
+      reset_in_progress: demo.status === 'resetting' || (demo.status === 'loading' && !!demo.cancel_requested_at),
     };
   }
 
@@ -118,8 +142,16 @@ export class OnboardingService {
    * `PUT /onboarding/choice` with `{ angle?, mode? }`. A field left out keeps its value. Any user
    * may set a field still empty; changing a field already set takes an administrator. The
    * tenant's row is locked, so two first answers at the same time apply one after the other.
+   * A new mode acts on the sample data first (`applyMode`); `host` is the request's Host header,
+   * which a load of the sample data needs.
    */
-  async setChoice(manager: EntityManager, tenantId: string, userId: string, body: unknown): Promise<OnboardingState> {
+  async setChoice(
+    manager: EntityManager,
+    tenantId: string,
+    userId: string,
+    body: unknown,
+    opts: { host?: string } = {},
+  ): Promise<OnboardingState> {
     const input = body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
     const hasAngle = has(input, 'angle');
     const hasMode = has(input, 'mode');
@@ -158,6 +190,11 @@ export class OnboardingService {
     }
     if (!angleChanges && !modeChanges) return this.getState(manager, tenantId, userId);
 
+    // Before the write: a refused effect writes nothing.
+    const effect = modeChanges
+      ? await this.applyMode(manager, tenantId, userId, mode!, opts.host ?? '')
+      : { emptying: false };
+
     await manager.query(
       `INSERT INTO tenant_onboarding (tenant_id, angle, mode, chosen_at, chosen_by, updated_at)
        VALUES ($1, $2, $3, now(), $4, now())
@@ -172,21 +209,77 @@ export class OnboardingService {
     if (modeChanges) {
       await this.audit(manager, tenantId, userId, 'onboarding.mode_chosen', { mode, previous: previousMode });
     }
-    await this.afterChoice(manager, {
-      tenantId,
-      userId,
-      angle: angleChanges ? { value: angle!, previous: previousAngle } : null,
-      mode: modeChanges ? { value: mode!, previous: previousMode } : null,
-    });
-    return this.getState(manager, tenantId, userId);
+    const state = await this.getState(manager, tenantId, userId);
+    // A reset started here may be over already; the answer still says it was started.
+    return effect.emptying ? { ...state, reset_in_progress: true } : state;
   }
 
   /**
-   * What a new choice sets off, once written and logged, in the request's transaction. Nothing
-   * yet: the effect of `own_data` (resetting the workspace) comes here.
+   * What a new mode does to the sample data, before the choice is written. Nothing on-premise
+   * (no sample data there) or on a system tenant. `emptying`: a reset, or the stop of a load
+   * followed by a reset, was started.
+   *
+   * The sample data calls work on their own connections, while this request's transaction holds
+   * the tenant's onboarding row and possibly a key-share lock on the tenant row (from the first
+   * insert into `tenant_onboarding`). So every write on the tenant row through those connections
+   * happens before a reset can start (the reset locks the tenant row and would wait for this
+   * transaction), and the banner of an idle workspace is hidden through the request's manager.
    */
-  protected async afterChoice(_manager: EntityManager, _change: OnboardingChoiceChange): Promise<void> {
-    return;
+  private async applyMode(
+    manager: EntityManager,
+    tenantId: string,
+    userId: string,
+    mode: OnboardingMode,
+    host: string,
+  ): Promise<{ emptying: boolean }> {
+    if (Features.SINGLE_TENANT || (await this.demo.isSystemTenant(tenantId))) return { emptying: false };
+    if (mode === 'own_data') return this.emptyWorkspace(manager, tenantId, userId);
+    await this.loadExample(manager, tenantId, userId, host);
+    return { emptying: false };
+  }
+
+  /**
+   * `own_data`: a running load is stopped then reset, loaded or failed sample data is reset; both
+   * take an administrator (403 `administrator_required`), even for the workspace's first choice,
+   * and send no reset e-mail. Idle, or already resetting: nothing to erase. In every case the
+   * sample data banner is hidden.
+   */
+  private async emptyWorkspace(manager: EntityManager, tenantId: string, userId: string): Promise<{ emptying: boolean }> {
+    // getStatus takes over a load or a reset left by a stopped API process.
+    let state: DemoDataState = await this.demo.getStatus(tenantId);
+    if (state.status === 'loading') {
+      state = await this.demo.cancelLoad(tenantId, userId, { dismissBanner: true });
+      if (state.status === 'loading') return { emptying: true };
+      // The load ended before the stop was written: `loaded` or `failed` are reset below.
+    }
+    if (state.status === 'loaded' || state.status === 'failed') {
+      try {
+        await this.demo.startReset({ tenantId, actorId: userId, notify: false, dismissBanner: true });
+        return { emptying: true };
+      } catch (error) {
+        // Reset by someone else meanwhile (over, or still running): nothing left to erase.
+        if (!isStatusConflictIn(error, ['idle', 'resetting'])) throw error;
+      }
+    }
+    await markSampleDataBannerDismissed(manager, tenantId);
+    return { emptying: false };
+  }
+
+  /**
+   * `example`: an administrator's choice loads the sample data into an idle workspace, in the
+   * tenant's seed language, from the request's host. A refusal (workspace not empty,
+   * subscription, too many loads at once, ...) leaves the choice to be written, with a warning
+   * in the server log. Another user's choice loads nothing.
+   */
+  private async loadExample(manager: EntityManager, tenantId: string, userId: string, host: string): Promise<void> {
+    const state = await this.demo.getStatus(tenantId);
+    if (state.status !== 'idle' || !(await isTenantAdministrator(manager, tenantId, userId))) return;
+    const [tenant]: Array<{ metadata: unknown }> = await manager.query(`SELECT metadata FROM tenants WHERE id = $1`, [tenantId]);
+    try {
+      await this.demo.loadDemoData(tenantId, { language: tenantSeedLanguage(tenant?.metadata), actorId: userId, host });
+    } catch (error) {
+      this.logger.warn(`Sample data not loaded into tenant ${tenantId} for the onboarding choice: ${errorCode(error)}`);
+    }
   }
 
   /**

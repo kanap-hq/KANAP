@@ -19,16 +19,21 @@ import {
 } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
 import { buildAccessTokenPayload } from '../../auth/auth.service';
 import { accessTokenVerifyKey } from '../../auth/jwt-key';
+import { waitForBackgroundWork } from '../../common/background-work';
 import { ListContextsService } from '../../common/list-context/list-contexts.service';
 import { useRequestPipeline } from '../../common/request-pipeline';
 import { createRequestTenancyMiddleware } from '../../common/tenancy/request-tenancy.middleware';
+import { DemoDataService } from '../../demo-data/demo-data.service';
+import { buildDemoData } from './onboarding-test-helpers';
 import { OnboardingController } from '../onboarding.controller';
 import { ONBOARDING_PATHS } from '../onboarding-paths';
 import { OnboardingService } from '../onboarding.service';
 
 // The onboarding routes (`/onboarding`) over HTTP: the real controller behind JwtAuthGuard on
 // signed access tokens, the tenancy middleware and the request pipeline main.ts installs (the
-// request transaction carries the tenant), the real OnboardingService on the spec database.
+// request transaction carries the tenant), the real OnboardingService on the spec database
+// (the effects of the mode on the sample data: `onboarding-own-data.integration.spec.ts`; here
+// the loader is a double that never ends by itself).
 // - a new workspace has no choice, no steps, sample data `idle`, and anybody may choose;
 // - any user sets the angle or the mode while it is empty; changing a value already set takes
 //   an administrator (403 `administrator_required`); invalid input is a 400;
@@ -43,9 +48,15 @@ import { OnboardingService } from '../onboarding.service';
 type Served = { app: INestApplication; port: number; close: () => Promise<void> };
 
 async function serve(): Promise<Served> {
+  const demo = buildDemoData(buildServices());
   @Module({
     controllers: [OnboardingController],
-    providers: [ListContextsService, OnboardingService, { provide: DataSource, useValue: dataSource }],
+    providers: [
+      ListContextsService,
+      OnboardingService,
+      { provide: DataSource, useValue: dataSource },
+      { provide: DemoDataService, useValue: demo.service },
+    ],
   })
   class OnboardingProbeModule {}
 
@@ -60,7 +71,13 @@ async function serve(): Promise<Served> {
   useRequestPipeline(app, dataSource);
   await app.listen(0, '127.0.0.1');
   const port = (app.getHttpServer().address() as AddressInfo).port;
-  return { app, port, close: () => app.close() };
+  const close = async () => {
+    // A load an administrator's `example` started: ended, and its state written, before cleanup.
+    for (const { child } of demo.children) child.finish(0);
+    assert.equal(await waitForBackgroundWork(Date.now() + 60_000), 0, 'the background work ended');
+    await app.close();
+  };
+  return { app, port, close };
 }
 
 type Method = 'GET' | 'PUT' | 'POST' | 'DELETE';
