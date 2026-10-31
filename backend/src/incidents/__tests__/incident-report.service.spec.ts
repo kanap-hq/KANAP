@@ -252,28 +252,27 @@ function testTechnologyAndTaskLabelsInFourLanguages() {
 }
 
 /**
- * Date columns fit a numeric day and, on the next line, the time with its zone.
+ * Date columns hold a numeric day and the time with its zone, so a date wraps in two lines.
  * The content column stays wider than the two date columns together.
  */
 function testJournalDatesFitAndContentStaysWidest() {
   const markdown = buildMarkdown(fixture(), 'en', labelsFor('en'), 'Europe/Paris');
   const journalAt = markdown.indexOf('## Journal');
   const journal = markdown.slice(journalAt);
-  assert.ok(journal.includes('<!-- kanap:table-widths=12,12,5,5,26 -->'), 'the exporter carries the widths past Pandoc');
+  assert.ok(journal.includes('<!-- kanap:table-widths=10,10,6,8,22 -->'), 'the exporter carries the widths past Pandoc');
   const separator = journal.split('\n').find((line) => /^\| -+ \|/.test(line));
   assert.ok(separator, 'journal separator row');
   const widths = separator!.split('|').slice(1, -1).map((cell) => cell.trim().length);
   assert.equal(widths.length, 5);
   assert.ok(widths[4] > widths[0] + widths[1], `content column ${widths[4]} against the dates ${widths[0]}+${widths[1]}`);
 
-  // 10 Mar 2026 08:05 UTC is 09:05 in Paris. The day and the clock are two lines, not a long month name.
+  // 10 Mar 2026 08:05 UTC is 09:05 in Paris. A numeric day, not a long month name.
   const nextHeading = journal.indexOf('\n## ', 3);
   const table = nextHeading >= 0 ? journal.slice(0, nextHeading) : journal;
-  assert.match(table, /10\/03\/2026<br>09:05/);
+  assert.match(table, /10\/03\/2026 09:05/);
   assert.equal(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/.test(table), false);
   const properties = markdown.slice(0, journalAt);
   assert.match(properties, /Mar/);
-  assert.equal(properties.includes('<br>'), false);
 
   for (const lang of ['fr', 'de', 'es'] as const) {
     const labels = labelsFor(lang);
@@ -282,8 +281,7 @@ function testJournalDatesFitAndContentStaysWidest() {
     const section = local.slice(at);
     const end = section.indexOf('\n## ', 3);
     const rows = end >= 0 ? section.slice(0, end) : section;
-    assert.match(rows, /10[./]03[./]2026<br>09:05/, `${lang}: numeric day, then the time`);
-    assert.equal(local.slice(0, at).includes('<br>'), false, `${lang}: properties keep the long date`);
+    assert.match(rows, /10[./]03[./]2026 09:05/, `${lang}: numeric day, then the time`);
   }
 }
 

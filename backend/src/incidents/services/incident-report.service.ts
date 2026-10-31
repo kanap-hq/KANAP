@@ -476,12 +476,9 @@ export function formatDateTime(
 }
 
 /**
- * The journal's two date columns. A numeric day, then the time and its zone, so the cell is two
- * lines instead of a long month name wrapping once per word. The line separator is not a newline:
- * a newline would break the Markdown table. `table` turns it into a `<br>`.
+ * The journal's two date columns: a numeric day, then the time and its zone. The cell wraps
+ * between the day and the time, so a date takes two lines instead of one per word of a long month.
  */
-const JOURNAL_DATE_BREAK = '\u2028';
-
 export function formatJournalDateTime(
   value: Date | string | null | undefined,
   lang: ReportLang,
@@ -502,7 +499,7 @@ export function formatJournalDateTime(
     timeZone: zone,
     timeZoneName: 'short',
   }).format(date);
-  return `${day}${JOURNAL_DATE_BREAK}${clock}`;
+  return `${day} ${clock}`;
 }
 
 /**
@@ -670,19 +667,15 @@ function bulletList(items: string[]): string {
  * on the next (Europe, UTC, a one-digit GMT offset) on the PDF page. The content column stays
  * wider than those two date columns together.
  */
-const JOURNAL_COLUMN_WEIGHTS = [12, 12, 5, 5, 26];
-
-function escapeTableCell(value: string): string {
-  return String(value).split(JOURNAL_DATE_BREAK).map((part) => escapeMd(part, true)).join('<br>');
-}
+const JOURNAL_COLUMN_WEIGHTS = [10, 10, 6, 8, 22];
 
 function table(headers: string[], rows: string[][], weights?: number[]): string {
-  const head = `| ${headers.map((h) => escapeTableCell(h)).join(' | ')} |`;
+  const head = `| ${headers.map((h) => escapeMd(h, true)).join(' | ')} |`;
   const sep = `| ${headers.map((_, index) => {
     const weight = Math.max(1, Math.round(weights?.[index] ?? 1));
     return '-'.repeat(Math.max(3, weight * 3));
   }).join(' | ')} |`;
-  const body = rows.map((row) => `| ${row.map((cell) => escapeTableCell(cell)).join(' | ')} |`);
+  const body = rows.map((row) => `| ${row.map((cell) => escapeMd(cell, true)).join(' | ')} |`);
   // Pandoc's GFM reader does not keep the separator widths through its JSON AST; the
   // marker carries them past that boundary. It is an HTML comment, invisible in the PDF.
   const marker = weights ? `<!-- kanap:table-widths=${weights.join(',')} -->\n` : '';
