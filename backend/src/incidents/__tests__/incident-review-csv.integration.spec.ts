@@ -235,6 +235,16 @@ function cell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
+/** One record per data line, keyed by the file's header (French headers included). */
+function exportTable(content: string): Array<Record<string, string>> {
+  return parseCsvSync(content.replace(/^\uFEFF/, ''), {
+    delimiter: ';',
+    bom: true,
+    columns: true,
+    skip_empty_lines: true,
+  }) as Array<Record<string, string>>;
+}
+
 /** The titles of the data lines of an incident export, in file order (the title is the second column). */
 function exportTitles(content: string): string[] {
   const rows = parseCsvSync(content.replace(/^\uFEFF/, ''), {
@@ -382,6 +392,61 @@ async function testExportImportRoundTrip() {
  * WHERE builder. A restricted incident stays out for a viewer who may not see it, even when the
  * filter would match it. The template keeps its meaning and ignores the list query.
  */
+/**
+ * A French file writes a shipped category as the screen shows it (« Données ») and a name the
+ * tenant typed as stored. Importing that file keeps both codes.
+ */
+async function testFrenchCategoryRoundTrip() {
+  await withFixture(async (runner, f) => {
+    await runner.query(
+      `UPDATE tenants
+       SET metadata = jsonb_set(
+         jsonb_set(COALESCE(metadata, '{}'::jsonb), '{it_ops}', COALESCE(metadata->'it_ops', '{}'::jsonb), true),
+         '{it_ops,incident_categories}',
+         $2::jsonb,
+         true
+       )
+       WHERE id = $1`,
+      [f.tenantId, JSON.stringify([
+        { code: 'data', label: 'Data' },
+        { code: 'plant_stop', label: 'Arrêt usine' },
+      ])],
+    );
+    const services = createServices(runner.manager);
+    const viewer = { userId: f.users.admin, isAdmin: true };
+    const dataIncident = await createIncident(runner, f, services, { title: 'Data loss', category: 'data' });
+    const customIncident = await createIncident(runner, f, services, { title: 'Plant stop', category: 'plant_stop' });
+
+    const french = await services.csv.export({
+      manager: runner.manager,
+      tenantId: f.tenantId,
+      language: 'fr',
+      viewer,
+    });
+    const rows = exportTable(french.content);
+    const byTitle = new Map(rows.map((row) => [row.Titre, row]));
+    assert.equal(byTitle.get('Data loss')?.Catégorie, 'Données');
+    assert.equal(byTitle.get('Plant stop')?.Catégorie, 'Arrêt usine');
+    assert.equal(rows.some((row) => row.Catégorie === 'Data' || row.Catégorie === 'data'), false);
+
+    const result = await services.csv.import(
+      csvFile(french.content),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      importOpts(runner, f, f.users.admin),
+    );
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
+    assert.deepEqual(result.errors, []);
+    const stored = await runner.manager.query(
+      `SELECT title, category FROM incidents WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY title`,
+      [f.tenantId, [dataIncident.id, customIncident.id]],
+    );
+    assert.deepEqual(stored, [
+      { title: 'Data loss', category: 'data' },
+      { title: 'Plant stop', category: 'plant_stop' },
+    ]);
+  });
+}
+
 async function testExportFollowsTheList() {
   await withFixture(async (runner, f) => {
     const services = createServices(runner.manager);
@@ -1432,6 +1497,7 @@ async function run() {
   await dataSource.initialize();
   try {
     await testExportImportRoundTrip();
+    await testFrenchCategoryRoundTrip();
     await testExportFollowsTheList();
     await testDateTimesInTheExportersZone();
     await testXlsxDateTimeAsItsCsvText();
