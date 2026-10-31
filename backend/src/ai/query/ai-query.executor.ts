@@ -3737,8 +3737,8 @@ export class AiQueryExecutor {
     }
 
     if (entityType === 'budget_lines') {
-      // The unified read engine resolves BL-n, a legacy OPX-n or CPX-n, a bare number or a UUID,
-      // and answers the line of either nature (`resolveBudgetLine`).
+      // The unified read engine resolves BL-n, a bare number, a UUID, or OPX-n / CPX-n (the line
+      // number first, then the legacy number) and answers the line of either nature (`resolveBudgetLine`).
       const row: any = await this.budgetLines.get(entityId, { manager: context.manager });
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Budget line not found.');
       // The workspace's own read adds its picker references, its change-of-type lineage and, for a
