@@ -1,7 +1,10 @@
 import assert = require('assert');
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { RequestSupportInvoiceDto, SendContactDto, StartTrialDto } from '../public.controller';
+import { BadRequestException } from '@nestjs/common';
+import { Features } from '../../config/features';
+import { AI_SIGNUP_CONSENT_VERSIONS, CURRENT_AI_SIGNUP_CONSENT_VERSION } from '../ai-signup-consent';
+import { PublicController, RequestSupportInvoiceDto, SendContactDto, StartTrialDto } from '../public.controller';
 
 async function validatePayload<T extends object>(cls: new () => T, payload: Record<string, unknown>) {
   return validate(plainToInstance(cls, payload), { whitelist: true });
@@ -29,6 +32,81 @@ async function testStartTrialAcceptsLegacyMarketingAliases() {
   });
 
   assert.deepEqual(errors.map((error) => error.property), []);
+}
+
+// Names and consent: optional, names trimmed (an empty name is absent), 100 characters at most.
+async function testStartTrialNamesAndConsent() {
+  const base = { org: 'Acme IT', slug: 'acme-it', email: 'admin@example.com', country_iso: 'FR', captchaToken: 'captcha-token' };
+  const dto = plainToInstance(StartTrialDto, {
+    ...base,
+    first_name: '  Ada ',
+    last_name: ' ',
+    ai_consent: true,
+    ai_consent_version: CURRENT_AI_SIGNUP_CONSENT_VERSION,
+  });
+  assert.deepEqual((await validate(dto, { whitelist: true })).map((error) => error.property), []);
+  assert.equal(dto.first_name, 'Ada');
+  assert.equal(dto.last_name, undefined, 'an empty name is absent');
+  assert.equal(dto.ai_consent, true);
+
+  const errors = await validatePayload(StartTrialDto, {
+    ...base,
+    first_name: 'A'.repeat(101),
+    last_name: 42,
+    ai_consent: 'yes',
+    ai_consent_version: 20261101,
+  });
+  assert.deepEqual(errors.map((error) => error.property).sort(), ['ai_consent', 'ai_consent_version', 'first_name', 'last_name']);
+  assert.deepEqual(
+    (await validatePayload(StartTrialDto, { ...base, first_name: 'A'.repeat(100), last_name: 'Lovelace', ai_consent: false })).map((e) => e.property),
+    [],
+  );
+}
+
+// The consent versions: the current one is listed.
+function testConsentVersions() {
+  assert.ok((AI_SIGNUP_CONSENT_VERSIONS as readonly string[]).includes(CURRENT_AI_SIGNUP_CONSENT_VERSION));
+}
+
+// A ticked box with an unknown or missing version: 400 INVALID_CONSENT_VERSION, before the
+// CAPTCHA and any write or e-mail. An unticked box ignores the version.
+async function testStartTrialRefusesAnUnknownConsentVersion() {
+  const calls: string[] = [];
+  const controller = new PublicController(
+    { findBySlug: async () => null } as any,
+    {} as any, {} as any, {} as any,
+    { send: async () => { calls.push('email'); } } as any,
+    {} as any,
+    {
+      findOne: async () => null,
+      create: (row: any) => ({ ...row }),
+      save: async (row: any) => { calls.push('save'); return row; },
+    } as any,
+    { verifyOrThrow: async () => { calls.push('captcha'); } } as any,
+    {} as any, {} as any, {} as any, {} as any,
+  );
+  const body = { org: 'Acme IT', slug: 'acme-it', email: 'admin@example.com', country_iso: 'FR', captchaToken: 'captcha-token' };
+  const req = { protocol: 'https', ip: '127.0.0.1', headers: { host: 'kanap.example.test' } };
+  const savedUrl = process.env.MARKETING_BASE_URL;
+  const savedSingleTenant = Features.SINGLE_TENANT;
+  process.env.MARKETING_BASE_URL = 'https://www.kanap.example.test';
+  (Features as any).SINGLE_TENANT = false;
+  try {
+    for (const version of ['2025-01-01', undefined, '']) {
+      await assert.rejects(controller.startTrial({ ...body, ai_consent: true, ai_consent_version: version } as any, req), (error: unknown) => {
+        assert.ok(error instanceof BadRequestException);
+        assert.equal((error.getResponse() as any).code, 'INVALID_CONSENT_VERSION');
+        return true;
+      });
+    }
+    assert.deepEqual(calls, []);
+    assert.deepEqual(await controller.startTrial({ ...body, ai_consent: false, ai_consent_version: 'any' } as any, req), { ok: true });
+    assert.deepEqual(calls, ['captcha', 'save', 'email']);
+  } finally {
+    if (savedUrl === undefined) delete process.env.MARKETING_BASE_URL;
+    else process.env.MARKETING_BASE_URL = savedUrl;
+    (Features as any).SINGLE_TENANT = savedSingleTenant;
+  }
 }
 
 async function testContactAcceptsCaptchaAliases() {
@@ -84,6 +162,9 @@ async function testSupportInvoiceRequiresTheAddressAnIsoCountryAndTheTerms() {
 async function main() {
   await testStartTrialAcceptsCurrentMarketingPayload();
   await testStartTrialAcceptsLegacyMarketingAliases();
+  await testStartTrialNamesAndConsent();
+  testConsentVersions();
+  await testStartTrialRefusesAnUnknownConsentVersion();
   await testContactAcceptsCaptchaAliases();
   await testSupportInvoiceNormalisesTheCurrentMarketingPayload();
   await testSupportInvoiceRequiresTheAddressAnIsoCountryAndTheTerms();

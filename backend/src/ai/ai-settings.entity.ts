@@ -75,6 +75,18 @@ export class AiSettings {
   @Column('uuid', { nullable: true })
   builtin_accepted_by!: string | null;
 
+  // Consent to the included model given on the trial sign-up form, copied at activation
+  // (public/ai-signup-consent.ts): version of the text, moment, client address. The person is
+  // the administrator created at activation (builtin_accepted_by). Null for other workspaces.
+  @Column('text', { nullable: true })
+  signup_consent_version!: string | null;
+
+  @Column('timestamptz', { nullable: true })
+  signup_consent_at!: Date | null;
+
+  @Column('text', { nullable: true })
+  signup_consent_ip!: string | null;
+
   @Column('timestamptz', { default: () => 'now()' })
   created_at!: Date;
 

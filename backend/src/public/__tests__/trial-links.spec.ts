@@ -128,6 +128,7 @@ function buildController() {
     {} as any,
     {} as any,
     { provisionTrialSampleData: async () => undefined } as any,
+    {} as any,
   );
   return { controller, writes, sent };
 }

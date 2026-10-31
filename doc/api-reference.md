@@ -114,7 +114,10 @@ Rate limiting (default enabled):
   - `siteKey` is only returned when CAPTCHA is enabled and configured.
 
 - POST `/public/start-trial` → `{ ok: true } | { ok: true, activation_url }`
-  - Body: `{ org: string, slug: string, email: string, country_iso: string, captchaToken?: string }`
+  - Body: `{ org: string, slug: string, email: string, country_iso: string, captchaToken?: string, first_name?: string, last_name?: string, ai_consent?: boolean, ai_consent_version?: string }`
+    - `first_name`, `last_name`: trimmed, 100 characters at most; an empty string counts as absent. Given to the Administrator created at activation; the activation email greets by `first_name` when present.
+    - `ai_consent: true` is the sign-up box that turns Plaid on with the included model. It needs `ai_consent_version`, one of `AI_SIGNUP_CONSENT_VERSIONS` (`backend/src/public/ai-signup-consent.ts`, current `2026-11-01`); otherwise `400` `code: 'INVALID_CONSENT_VERSION'`, checked before the CAPTCHA, nothing saved or sent. The signup keeps the version, the moment and the client address (`trial_signups.ai_consent_*`); a new signup for the same slug without the box clears them.
+    - The new fields are optional: a form without them works as before.
     - `slug` must match `/^[a-z0-9-]+$/`.
     - Slug normalization/reservation is centralized in `backend/src/tenants/tenant-slug-policy.ts`.
     - Reserved slugs rejected as unavailable: `www`, `api`, `admin`, `billing`, `account`, `platform-admin`, `app`, `nextcloud`, `migration`, `example`.
@@ -137,6 +140,8 @@ Rate limiting (default enabled):
     - Creates the tenant and an Administrator user for the submitted email.
     - Creates an initial company named from the org/slug with `country_iso` from the signup.
     - Provisions the default global CoA into the tenant if a platform template is marked `loaded_by_default`.
+    - Gives the Administrator the signup's `first_name` and `last_name`.
+    - When the signup carries the consent (`ai_consent: true`): writes the tenant's `ai_settings` row with the consent (`signup_consent_version`, `signup_consent_at`, `signup_consent_ip`) and, when the platform has an included model, `chat_enabled = true` and the included model confirmed by the Administrator (`builtin_accepted_*`), audited with `source: 'system'`. Without an included model, the consent is kept and the assistant stays off. Without the consent, no `ai_settings` row is written.
     - Issues a password-reset token so the owner can set credentials inside the tenant.
     - `tenant_url` is the new tenant's address derived from the configured application address, as for password reset links (for example `https://acme.kanap.net`). Without a configured address: `400` `application URL is not configured: set APP_BASE_URL`, before the tenant is created.
     - Sends a non-blocking notification email to `admin@kanap.net` with the tenant name, slug, registered email, and `country_iso`. This notification does not affect the response if delivery fails.
