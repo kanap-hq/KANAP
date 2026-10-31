@@ -1,6 +1,6 @@
 import type { RecordHistoryRecord } from '../../record-history.inventory';
 import type { HistoryFields } from '../field-rules';
-import { hidden, shown } from '../field-rules';
+import { hidden, hiddenChanged, shown } from '../field-rules';
 
 /**
  * The contact: its page has a single overview tab and a History button in the header. Its own
@@ -41,10 +41,9 @@ export const contactsRecord = {
 } as const satisfies RecordHistoryRecord;
 
 /**
- * The contact itself. The e-mail, the phone and the mobile are personal data: the history names
- * people only, so the three never come out. The notes are free text of a person's record, which
- * may hold such details, and stay out too. `supplier_role` has no column of its own: the contact
- * writer adds it to the payload from the supplier link.
+ * The contact itself. The e-mail, the phone, the mobile and the notes are personal data: the
+ * history says that the field changed and never copies the value. `supplier_role` has no column
+ * of its own: the contact writer adds it to the payload from the supplier link.
  */
 const CONTACT_FIELDS: HistoryFields = {
   first_name: shown(),
@@ -56,10 +55,10 @@ const CONTACT_FIELDS: HistoryFields = {
   // role: the contact's own payload repeats both, so neither becomes a second entry.
   supplier_id: hidden('the supplier link row carries the supplier'),
   supplier_role: hidden('the supplier link row carries the role'),
-  email: hidden('personal data: the history names people only'),
-  phone: hidden('personal data: the history names people only'),
-  mobile: hidden('personal data: the history names people only'),
-  notes: hidden('free text of a person\'s record, which may hold contact details'),
+  email: hiddenChanged('personal data: the history names the change, never the address', 'emailChanged'),
+  phone: hiddenChanged('personal data: the history names the change, never the number', 'phoneChanged'),
+  mobile: hiddenChanged('personal data: the history names the change, never the number', 'mobileChanged'),
+  notes: hiddenChanged('free text of a person\'s record, which may hold contact details', 'notesChanged'),
   id: hidden('identity'),
   tenant_id: hidden('tenancy'),
   created_at: hidden('timestamp'),

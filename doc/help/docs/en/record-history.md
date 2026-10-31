@@ -53,7 +53,7 @@ On a contract, a project or a request, a person with limited data access sees th
 
 ## Values the history does not show
 
-- The email address, phone numbers and notes of a contact never appear.
+- A change of the email, phone, mobile or notes of a contact reads as **Email changed**, **Phone changed**, **Mobile changed** or **Notes changed**. The value stays out of the history.
 - For long content, the entry says only that it changed: **Content changed** for the body of a knowledge document, **Working days changed** for the days of a working-day calendar, **Description changed**, **Purpose changed** or **Current situation changed** for the long texts of the other records.
 
 ## Ask the assistant

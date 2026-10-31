@@ -276,6 +276,28 @@ describe('history lines', () => {
   });
 });
 
+describe('contact and mapping history lines', () => {
+  it('names a hidden contact field without its value, and a mapping group by its title', () => {
+    expect(historyLines(item({ kind: 'record' }, [
+      { field: 'email', text: 'emailChanged' },
+      { field: 'phone', text: 'phoneChanged' },
+      { field: 'mobile', text: 'mobileChanged' },
+      { field: 'notes', text: 'notesChanged' },
+    ]), context)).toEqual([
+      { text: 'Email changed' },
+      { text: 'Phone changed' },
+      { text: 'Mobile changed' },
+      { text: 'Notes changed' },
+    ]);
+    expect(historyLines(item({ kind: 'set' }, [
+      { field: 'mapping_group', event: 'added', after: 'Header' },
+    ]), context)).toEqual([{ text: 'Mapping group added: Header' }]);
+    expect(historyLines(item({ kind: 'set' }, [
+      { field: 'mapping_rule', event: 'removed', before: 'Customer id' },
+    ]), context)).toEqual([{ text: 'Mapping rule removed: Customer id' }]);
+  });
+});
+
 describe('contract history lines', () => {
   it('reads the renewal markers as sentences, with the contract screen labels', () => {
     expect(historyLines(item({ kind: 'record' }, [

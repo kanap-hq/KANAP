@@ -706,6 +706,11 @@
       "authentication_mode": "Autenticación",
       "monitoring_url": "URL de supervisión",
       "env_notes": "Notas del entorno",
+      "rule_key": "Clave de regla",
+      "operation_kind": "Operación",
+      "environment_scope": "Entornos",
+      "implementation_status": "Estado de implementación",
+      "test_status": "Estado de prueba",
       "integration_tool_application_id": "Herramienta de integración",
       "duration_months": "Duración (meses)",
       "auto_renewal": "Renovación tácita",
@@ -799,6 +804,17 @@
         "contentChanged": "Contenido modificado",
         "workingDaysChanged": "Días laborables modificados",
         "notesChanged": "Notas modificadas",
+        "emailChanged": "Correo modificado",
+        "phoneChanged": "Teléfono modificado",
+        "mobileChanged": "Móvil modificado",
+        "conditionChanged": "Condición modificada",
+        "businessRuleChanged": "Regla de negocio modificada",
+        "middlewareRuleChanged": "Regla de middleware modificada",
+        "remarksChanged": "Observaciones modificadas",
+        "exampleInputChanged": "Ejemplo de entrada modificado",
+        "exampleOutputChanged": "Ejemplo de salida modificado",
+        "sourceBindingsChanged": "Campos de origen modificados",
+        "targetBindingsChanged": "Campos de destino modificados",
         "renewalStopped": "Renovación detenida",
         "renewalResumed": "Renovación reanudada",
         "descriptionChanged": "Descripción modificada",
@@ -933,6 +949,14 @@
         "mapping_set": {
           "added": "Conjunto de mapeo añadido: {{label}}",
           "removed": "Conjunto de mapeo eliminado: {{label}}"
+        },
+        "mapping_group": {
+          "added": "Grupo de mapeo añadido: {{label}}",
+          "removed": "Grupo de mapeo eliminado: {{label}}"
+        },
+        "mapping_rule": {
+          "added": "Regla de mapeo añadida: {{label}}",
+          "removed": "Regla de mapeo eliminada: {{label}}"
         },
         "middleware": {
           "added": "Middleware añadido: {{label}}",
