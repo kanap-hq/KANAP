@@ -9,7 +9,7 @@ import { contractsParentRules } from './record-history/records/contracts';
 import { departmentsParentRules } from './record-history/records/departments';
 import { documentsParentRules } from './record-history/records/documents';
 import { incidentsParentRules } from './record-history/records/incidents';
-import { interfacesParentRules } from './record-history/records/interfaces';
+import { interfaceMappingDetailParentRules, interfacesParentRules } from './record-history/records/interfaces';
 import { locationsParentRules } from './record-history/records/locations';
 import { portfolioProjectsParentRules } from './record-history/records/portfolio_projects';
 import { portfolioRequestsParentRules } from './record-history/records/portfolio_requests';
@@ -116,6 +116,7 @@ const PARENT_RULE_SETS = [
   documentsParentRules,
   incidentsParentRules,
   interfacesParentRules,
+  interfaceMappingDetailParentRules,
   locationsParentRules,
   portfolioProjectsParentRules,
   portfolioRequestsParentRules,

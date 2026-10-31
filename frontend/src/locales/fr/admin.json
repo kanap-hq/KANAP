@@ -706,6 +706,11 @@
       "authentication_mode": "Authentification",
       "monitoring_url": "URL de supervision",
       "env_notes": "Notes d'environnement",
+      "rule_key": "Clé de règle",
+      "operation_kind": "Opération",
+      "environment_scope": "Environnements",
+      "implementation_status": "Statut d'implémentation",
+      "test_status": "Statut de test",
       "integration_tool_application_id": "Outil d'intégration",
       "duration_months": "Durée (mois)",
       "auto_renewal": "Reconduction tacite",
@@ -805,6 +810,17 @@
         "contentChanged": "Contenu modifié",
         "workingDaysChanged": "Jours ouvrés modifiés",
         "notesChanged": "Notes modifiées",
+        "emailChanged": "E-mail modifié",
+        "phoneChanged": "Téléphone modifié",
+        "mobileChanged": "Mobile modifié",
+        "conditionChanged": "Condition modifiée",
+        "businessRuleChanged": "Règle métier modifiée",
+        "middlewareRuleChanged": "Règle de middleware modifiée",
+        "remarksChanged": "Remarques modifiées",
+        "exampleInputChanged": "Exemple d'entrée modifié",
+        "exampleOutputChanged": "Exemple de sortie modifié",
+        "sourceBindingsChanged": "Champs source modifiés",
+        "targetBindingsChanged": "Champs cible modifiés",
         "renewalStopped": "Renouvellement arrêté",
         "renewalResumed": "Renouvellement repris",
         "descriptionChanged": "Description modifiée",
@@ -939,6 +955,14 @@
         "mapping_set": {
           "added": "Jeu de mappage ajouté : {{label}}",
           "removed": "Jeu de mappage retiré : {{label}}"
+        },
+        "mapping_group": {
+          "added": "Groupe de mappage ajouté : {{label}}",
+          "removed": "Groupe de mappage retiré : {{label}}"
+        },
+        "mapping_rule": {
+          "added": "Règle de mappage ajoutée : {{label}}",
+          "removed": "Règle de mappage retirée : {{label}}"
         },
         "middleware": {
           "added": "Middleware ajouté : {{label}}",

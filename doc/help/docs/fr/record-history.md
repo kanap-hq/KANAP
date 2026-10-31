@@ -53,7 +53,7 @@ Sur un contrat, un projet ou une demande, une personne à l'accès aux données 
 
 ## Valeurs que l'historique ne montre pas
 
-- L'adresse e-mail, les numéros de téléphone et les notes d'un contact n'apparaissent jamais.
+- Un changement de l'adresse e-mail, du téléphone, du mobile ou des notes d'un contact se lit **E-mail modifié**, **Téléphone modifié**, **Mobile modifié** ou **Notes modifiées**. La valeur reste hors de l'historique.
 - Pour un contenu long, l'entrée indique seulement qu'il a changé : **Contenu modifié** pour le corps d'un document de la base de connaissances, **Jours ouvrés modifiés** pour les jours d'un calendrier de jours ouvrés, **Description modifiée**, **Objectif modifié** ou **Situation actuelle modifiée** pour les textes longs des autres fiches.
 
 ## Demander à l'assistant
