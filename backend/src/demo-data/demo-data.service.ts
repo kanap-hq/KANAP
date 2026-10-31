@@ -26,6 +26,7 @@ import { StripeConfigService } from '../billing/stripe/stripe.config';
 import { Subscription } from '../billing/subscription.entity';
 import { evaluateSubscriptionAccess } from '../billing/subscription-freeze.util';
 import { trackBackgroundWork } from '../common/background-work';
+import { NeverRejects } from '../common/never-rejects';
 import { throwNotAvailableInMode } from '../common/feature-gates';
 import { tenantSlugFromHost } from '../common/tenancy/request-tenancy.middleware';
 import { withTenant } from '../common/tenant-runner';
@@ -69,6 +70,20 @@ export type DemoErrorCode =
   | 'load_interrupted' // the API process that ran the load stopped
   | 'reset_failed'; // the automatic reset after a failed load failed too
 
+/** The languages the sample data comes in. */
+export const DEMO_DATA_LANGUAGES = ['en'] as const;
+export type DemoDataLanguage = (typeof DEMO_DATA_LANGUAGES)[number];
+
+function isDemoDataLanguage(value: unknown): value is DemoDataLanguage {
+  return typeof value === 'string' && (DEMO_DATA_LANGUAGES as readonly string[]).includes(value);
+}
+
+/** The sample data language for a requested one (a tenant language): any other value gives `en`. */
+export function resolveDemoDataLanguage(language: unknown): DemoDataLanguage {
+  const requested = String(language ?? '').trim().toLowerCase();
+  return isDemoDataLanguage(requested) ? requested : 'en';
+}
+
 /** The state of the sample data of a tenant, as `getStatus` returns it. */
 export type DemoDataState = {
   status: DemoStatus;
@@ -87,6 +102,8 @@ export type DemoDataState = {
   ever_loaded_at: string | null;
   /** When the last reset an administrator asked for failed; cleared by the next load or reset. */
   reset_failed_at: string | null;
+  /** The sample data language of the last load that named one (the load at trial activation); absent otherwise. */
+  language?: DemoDataLanguage;
 };
 
 /**
@@ -211,6 +228,10 @@ export type DemoLoaderConfig = {
   staleMs: number;
   /** A load running longer is stopped and counts as failed (below the token lifetime). */
   timeoutMs: number;
+  /** At trial activation, a load refused for `demo_load_capacity` is tried again this often... */
+  provisionRetryMs: number;
+  /** ...for this long (`provisionTrialSampleData`). */
+  provisionRetryMaxMs: number;
   spawn: typeof nodeSpawn;
 };
 
@@ -253,6 +274,8 @@ export function readDemoLoaderConfig(env: NodeJS.ProcessEnv = process.env): Demo
     heartbeatMs: 15_000,
     staleMs: 2 * 60_000,
     timeoutMs: demoLoadTimeoutMs(env),
+    provisionRetryMs: 30_000,
+    provisionRetryMaxMs: 10 * 60_000,
     spawn: nodeSpawn,
   };
 }
@@ -447,6 +470,7 @@ export function readDemoState(raw: unknown): StoredDemoState {
     reset_failed_at: text(demo.reset_failed_at),
     run_id: text(demo.run_id),
     reset_by: text(demo.reset_by),
+    ...(isDemoDataLanguage(demo.language) ? { language: demo.language } : {}),
   };
 }
 
@@ -458,6 +482,13 @@ function publicState(state: StoredDemoState): DemoDataState {
 const nowIso = () => new Date().toISOString();
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+/** The `code` of an HTTP exception's answer, or the error message when it has none. */
+const errorCode = (error: unknown): string => {
+  const response = (error as { getResponse?: () => unknown })?.getResponse?.();
+  const code = response && typeof response === 'object' ? (response as { code?: unknown }).code : undefined;
+  return typeof code === 'string' ? code : errorMessage(error);
+};
 
 type TenantRow = { id: string; slug: string; name: string; status: string; is_system_tenant: boolean | null; demo: unknown };
 
@@ -602,6 +633,68 @@ export class DemoDataService implements OnApplicationShutdown {
    * `DEMO_LOAD_MAX_CONCURRENT` loads run over every tenant.
    */
   async load(params: { tenantId: string; actorId: string; host: string }): Promise<DemoDataState> {
+    return this.startLoad(params, { requireEmpty: true, language: null });
+  }
+
+  /**
+   * The load at trial activation (`provisionTrialSampleData`): the checks and the run of `load`,
+   * with the tenant's own host given by the caller (still checked against the tenant), into a
+   * workspace that may already hold data, and the sample data language recorded in the state.
+   */
+  async loadDemoData(
+    tenantId: string,
+    params: { language: unknown; actorId: string; host: string },
+  ): Promise<DemoDataState> {
+    // Recorded only: the loader is not told the language yet (one language, `en`, for now).
+    const language = resolveDemoDataLanguage(params.language);
+    return this.startLoad({ tenantId, actorId: params.actorId, host: params.host }, { requireEmpty: false, language });
+  }
+
+  /**
+   * Loads the sample data into a trial tenant just activated, in the background: started by the
+   * activation, never awaited. Refused for `demo_load_capacity`, the load is tried again every
+   * `provisionRetryMs` for `provisionRetryMaxMs`, until the API process stops; then the workspace
+   * stays `idle` and its administrators can load the sample data themselves. Any other refusal
+   * ends it at once. Each end without a load is one warning in the server log.
+   */
+  @NeverRejects()
+  async provisionTrialSampleData(params: { tenantId: string; actorId: string; host: string; language: unknown }): Promise<void> {
+    const giveUpAt = Date.now() + this.config.provisionRetryMaxMs;
+    for (;;) {
+      try {
+        await this.loadDemoData(params.tenantId, { language: params.language, actorId: params.actorId, host: params.host });
+        return;
+      } catch (error) {
+        const code = errorCode(error);
+        if (code !== 'demo_load_capacity') {
+          this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: ${code}`);
+          return;
+        }
+        if (this.stopping || Date.now() + this.config.provisionRetryMs > giveUpAt) {
+          this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: other loads kept running`);
+          return;
+        }
+      }
+      await this.waitUnlessStopping(this.config.provisionRetryMs);
+    }
+  }
+
+  /** Waits `ms`, or less when the API process starts stopping (checked every second at most). */
+  private async waitUnlessStopping(ms: number): Promise<void> {
+    const until = Date.now() + ms;
+    while (!this.stopping && Date.now() < until) {
+      await new Promise((resolve) => setTimeout(resolve, Math.min(1_000, until - Date.now())));
+    }
+  }
+
+  /**
+   * `load` and `loadDemoData`: `requireEmpty` refuses a workspace that holds data
+   * (`tenant_not_empty`); `language` is recorded in the state when given.
+   */
+  private async startLoad(
+    params: { tenantId: string; actorId: string; host: string },
+    opts: { requireEmpty: boolean; language: DemoDataLanguage | null },
+  ): Promise<DemoDataState> {
     const tenant = await this.readTenant(params.tenantId);
     // Who asks comes first: nothing else about the workspace is told to a non-administrator.
     const actor = await withTenant(this.dataSource, tenant.id, (manager) =>
@@ -627,7 +720,7 @@ export class DemoDataService implements OnApplicationShutdown {
 
     const startingCompany = await withTenant(this.dataSource, tenant.id, async (manager) => {
       await this.assertSubscriptionAllowsLoad(manager, tenant.id);
-      const content = await findTenantContent(manager, tenant.id);
+      const content = opts.requireEmpty ? await findTenantContent(manager, tenant.id) : [];
       if (content.length > 0) {
         throw new ConflictException({
           code: 'tenant_not_empty',
@@ -650,7 +743,7 @@ export class DemoDataService implements OnApplicationShutdown {
     // argument, never logged). Signed before the claim: a claimed load always starts its run.
     const token = this.auth.signToken({ id: actor.id, email: actor.email, role: actor.role, tenant_id: tenant.id }).access_token;
     const runId = randomUUID();
-    const claimed = await this.claim(tenant.id, actor.id, runId);
+    const claimed = await this.claim(tenant.id, actor.id, runId, opts.language);
     this.runInBackground(`load of tenant ${tenant.id}`, () => this.runLoad({
       tenantId: tenant.id,
       actorId: actor.id,
@@ -890,7 +983,7 @@ export class DemoDataService implements OnApplicationShutdown {
    * tenants, then move this tenant from `idle` or `failed` to `loading`. A double click, or two
    * API processes at once, get one claim; the other is refused.
    */
-  private async claim(tenantId: string, actorId: string, runId: string): Promise<StoredDemoState> {
+  private async claim(tenantId: string, actorId: string, runId: string, language: DemoDataLanguage | null = null): Promise<StoredDemoState> {
     return this.dataSource.transaction(async (manager) => {
       await manager.query(`SELECT pg_advisory_xact_lock($1::int, hashtext($2))`, [DEMO_LOCK_NAMESPACE, DEMO_CLAIM_LOCK_KEY]);
       const loading: Array<{ id: string; heartbeat_at: string | null }> = await manager.query(
@@ -915,6 +1008,7 @@ export class DemoDataService implements OnApplicationShutdown {
         failed_at: null,
         error_code: null,
         reset_failed_at: null,
+        ...(language ? { language } : {}),
       }, manager);
       if (!claimed) throw this.statusConflict((await this.readState(tenantId, manager)).status);
       return claimed;

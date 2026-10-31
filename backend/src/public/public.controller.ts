@@ -44,6 +44,7 @@ import {
 import { resolveEmailLocale } from '../i18n/email-i18n';
 import { resolveSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { developmentRequestOrigin, resolveTenantAppBaseUrl } from '../common/url';
+import { DemoDataService } from '../demo-data/demo-data.service';
 
 /** The answer of a trial sign-up when the address of the public website is not configured. */
 export const MARKETING_URL_NOT_CONFIGURED_MESSAGE = 'marketing URL is not configured: set MARKETING_BASE_URL';
@@ -204,6 +205,7 @@ export class PublicController {
     private readonly turnstile: TurnstileService,
     private readonly stripeClient: StripeClientService,
     private readonly storage: StorageService,
+    private readonly demoData: DemoDataService,
   ) {}
 
   @Get('tenant-info')
@@ -516,6 +518,8 @@ export class PublicController {
     }
     // The new tenant's address, from the configuration (common/url.ts), before anything is written.
     const tenantUrl = resolveTenantAppBaseUrl(req, signup.slug);
+    // The seeded dimensions take the language of the person who activates (their browser's).
+    const language = resolveSeedLanguage(this.resolveActivationEmailLocale(req));
 
     const runner = this.dataSource.createQueryRunner();
     await runner.connect();
@@ -527,8 +531,6 @@ export class PublicController {
       tenant = await this.tenants.findBySlug(signup.slug, { manager: runner.manager });
       if (tenant) throw new BadRequestException('Tenant already exists');
 
-      // The seeded dimensions take the language of the person who activates (their browser's).
-      const language = resolveSeedLanguage(this.resolveActivationEmailLocale(req));
       tenant = await this.tenants.createTenant({ slug: signup.slug, name: signup.org_name, language }, { manager: runner.manager });
 
       await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
@@ -605,6 +607,15 @@ export class PublicController {
     const resetToken = await withTenant(this.dataSource, tenant.id, (manager) =>
       this.auth.createPasswordResetToken({ id: owner.id, email: owner.email, tenant_id: tenant.id }, manager),
     );
+
+    // The sample data loads in the background (never rejects, not awaited): the person who sets
+    // the password signs in to a workspace ready or loading, as the home banner shows.
+    void this.demoData.provisionTrialSampleData({
+      tenantId: tenant.id,
+      actorId: owner.id,
+      host: new URL(tenantUrl).host,
+      language,
+    });
 
     return { tenant_url: tenantUrl, reset_token: resetToken };
   }
