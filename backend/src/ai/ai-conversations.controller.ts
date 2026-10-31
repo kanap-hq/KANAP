@@ -26,6 +26,7 @@ import { AiMutationPreviewService } from './ai-mutation-preview.service';
 import { AiPolicyService } from './ai-policy.service';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
 import { AiExecutionContext } from './ai.types';
+import { publicMessageUsage } from './ai-message-usage.util';
 
 @Controller('ai/conversations')
 @UseGuards(JwtAuthGuard)
@@ -147,7 +148,7 @@ export class AiConversationsController {
           role: m.role,
           content: m.content,
           tool_calls: m.tool_calls,
-          usage_json: m.usage_json,
+          usage_json: publicMessageUsage(m.usage_json),
           created_at: m.created_at?.toISOString(),
           attachments: (attachmentsByMessageId.get(m.id) || []).map((a) => ({
             id: a.id,

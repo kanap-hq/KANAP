@@ -52,3 +52,23 @@ export function buildMessageUsageJson(
   );
   return json;
 }
+
+const PUBLIC_USAGE_FIELDS = ['input_tokens', 'output_tokens', 'cache_read_input_tokens', 'cache_write_input_tokens'] as const;
+
+/**
+ * The part of a message's `usage_json` the chat screen receives: its tokens only. The model's prices
+ * and the cost stay on the server, where Admin › Usage and costs reads them.
+ */
+export function publicMessageUsage(usageJson: unknown): Record<string, number> | null {
+  if (!usageJson || typeof usageJson !== 'object') {
+    return null;
+  }
+  const source = usageJson as Record<string, unknown>;
+  const result: Record<string, number> = {};
+  for (const field of PUBLIC_USAGE_FIELDS) {
+    if (typeof source[field] === 'number') {
+      result[field] = source[field] as number;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
