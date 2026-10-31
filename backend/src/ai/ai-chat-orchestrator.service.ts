@@ -14,6 +14,7 @@ import { assertPublicHttpTarget } from '../common/ssrf-guard';
 import { getEnvMode, isDevelopmentEnv } from '../common/env';
 import { AiAttachmentService } from './ai-attachment.service';
 import { AiConversationService } from './ai-conversation.service';
+import { assistantMessageUsage } from './ai-llm-cost.util';
 import { AiModelResolutionError, AiModelResolverService, ResolvedModel } from './ai-model-resolver.service';
 import { AiMutationPreviewService } from './ai-mutation-preview.service';
 import { AiPolicyService } from './ai-policy.service';
@@ -292,7 +293,11 @@ type PreparedChatRequest = {
   approvalAction: ApprovalAction | null;
   providerSource: 'builtin' | 'custom';
   provider: AiProviderAdapter;
+  /** Provider id of the resolved model, the one this turn calls. */
+  providerId: string;
   model: string;
+  priceInputEurPerMtok: number | null;
+  priceOutputEurPerMtok: number | null;
   apiKey: string | null;
   endpointUrl: string | null;
   // Per-model timeout from the registry; null falls back to AI_CHAT_PROVIDER_TIMEOUT_MS.
@@ -1896,7 +1901,10 @@ export class AiChatOrchestratorService {
           approvalAction,
           providerSource: 'builtin',
           provider: adapter,
+          providerId: resolved.provider,
           model: resolved.model,
+          priceInputEurPerMtok: resolved.priceInputEurPerMtok,
+          priceOutputEurPerMtok: resolved.priceOutputEurPerMtok,
           apiKey: resolved.apiKey,
           endpointUrl: resolved.endpointUrl,
           modelTimeoutMs: null,
@@ -1924,7 +1932,10 @@ export class AiChatOrchestratorService {
         approvalAction,
         providerSource: 'custom',
         provider: adapter,
+        providerId: resolved.provider,
         model: resolved.model,
+        priceInputEurPerMtok: resolved.priceInputEurPerMtok,
+        priceOutputEurPerMtok: resolved.priceOutputEurPerMtok,
         apiKey: resolved.apiKey,
         endpointUrl: resolved.endpointUrl,
         modelTimeoutMs: resolved.timeoutMs,
@@ -2025,7 +2036,11 @@ export class AiChatOrchestratorService {
     prepared: PreparedChatRequest,
     opts?: { signal?: AbortSignal | null; requestStartedAt?: number },
   ): AsyncGenerator<ChatStreamEvent> {
-    const { context, userMessage, provider, model, apiKey, endpointUrl, modelTimeoutMs, tenantName, providerSource, timeZone } = prepared;
+    const {
+      context, userMessage, provider, providerId, model, priceInputEurPerMtok, priceOutputEurPerMtok,
+      apiKey, endpointUrl, modelTimeoutMs, tenantName, providerSource, timeZone,
+    } = prepared;
+    const recordedModel = { provider: providerId, model, priceInputEurPerMtok, priceOutputEurPerMtok };
     const replayDeepSeekReasoning = isOfficialDeepSeekEndpoint(endpointUrl);
     const abortSignal = opts?.signal ?? null;
     const requestStartedAt = opts?.requestStartedAt ?? Date.now();
@@ -2992,7 +3007,7 @@ export class AiChatOrchestratorService {
                   userId: null,
                   role: 'assistant',
                   content: skippedAssistantText,
-                  usage: assistantUsage,
+                  usage: assistantMessageUsage(assistantUsage, recordedModel),
                 },
                 { manager: ctx.manager },
               );
@@ -3019,7 +3034,7 @@ export class AiChatOrchestratorService {
                   userId: null,
                   role: 'assistant',
                   content: skippedAssistantText,
-                  usage: assistantUsage,
+                  usage: assistantMessageUsage(assistantUsage, recordedModel),
                 },
                 { manager: ctx.manager },
               );
@@ -3045,7 +3060,7 @@ export class AiChatOrchestratorService {
                   role: 'assistant',
                   content: assistantContent,
                   toolCalls: [tc],
-                  usage: assistantUsage,
+                  usage: assistantMessageUsage(assistantUsage, recordedModel),
                   providerMetadata: deepSeekReasoningMetadata(assistantReasoningContent),
                 },
                 { manager: ctx.manager },
@@ -3458,7 +3473,7 @@ export class AiChatOrchestratorService {
             userId: null,
             role: 'assistant',
             content: accumulatedText,
-            usage: iterationUsage ?? null,
+            usage: assistantMessageUsage(iterationUsage, recordedModel),
           },
           { manager: ctx.manager },
         );

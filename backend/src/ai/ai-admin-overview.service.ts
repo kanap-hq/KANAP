@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { llmCostEur } from './ai-llm-cost.util';
+import {
+  chatPricesArePositive,
+  type ChatMessageCostRow,
+  sumChatMessageCostsEur,
+} from './ai-llm-cost.util';
 import { AiModelResolverService } from './ai-model-resolver.service';
 
 export type AiAdminOverviewRecentActivityItem = {
@@ -37,9 +41,10 @@ export type AiAdminOverviewCosts = {
   last_30_days: { agents_eur: number; chat_eur: number; total_eur: number };
   by_agent: AiAdminOverviewAgentCost[];
   by_model: AiAdminOverviewModelCost[];
-  // Chat costs are estimated at the CURRENTLY assigned model's rates (chat
-  // messages predate per-call cost recording); false when no chat model with
-  // prices resolves, so the UI can label the number honestly.
+  // True when the chat figure can be priced: the current chat model has rates,
+  // or a message in the month stored its own. False when neither does, so the
+  // UI can say the assigned model has no cost. Messages that stored a model
+  // use those rates; only messages without one fall back on today's model.
   chat_priced: boolean;
 };
 
@@ -78,6 +83,31 @@ function toNumber(value: unknown): number {
 function toIsoDate(value: unknown): string {
   const date = value instanceof Date ? value : new Date(String(value));
   return date.toISOString();
+}
+
+function toPrice(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function asBoolean(value: unknown): boolean {
+  return value === true || value === 't' || value === 'true';
+}
+
+function toChatMessageCost(row: Record<string, unknown>): ChatMessageCostRow & {
+  inCurrentMonth: boolean;
+  inLast30Days: boolean;
+} {
+  return {
+    inputTokens: toNumber(row.input_tokens),
+    outputTokens: toNumber(row.output_tokens),
+    recorded: asBoolean(row.recorded),
+    priceInputEurPerMtok: toPrice(row.price_input_eur_per_mtok),
+    priceOutputEurPerMtok: toPrice(row.price_output_eur_per_mtok),
+    inCurrentMonth: asBoolean(row.in_current_month),
+    inLast30Days: asBoolean(row.in_last_30_days),
+  };
 }
 
 @Injectable()
@@ -210,6 +240,35 @@ export class AiAdminOverviewService {
       [tenantId],
     );
 
+    // One row per message in either cost window. A message that stored its
+    // model (`usage_json.model`) is priced at the rates stored with it, including
+    // a recorded zero. A message without that key falls back on today's model.
+    const chatUsageRows = await manager.query(
+      `
+      SELECT
+        COALESCE((usage_json->>'input_tokens')::numeric, 0) AS input_tokens,
+        COALESCE((usage_json->>'output_tokens')::numeric, 0) AS output_tokens,
+        (
+          usage_json ? 'model'
+          AND NULLIF(usage_json->>'model', '') IS NOT NULL
+        ) AS recorded,
+        CASE
+          WHEN usage_json ? 'price_input_eur_per_mtok'
+          THEN NULLIF(usage_json->>'price_input_eur_per_mtok', '')::numeric
+        END AS price_input_eur_per_mtok,
+        CASE
+          WHEN usage_json ? 'price_output_eur_per_mtok'
+          THEN NULLIF(usage_json->>'price_output_eur_per_mtok', '')::numeric
+        END AS price_output_eur_per_mtok,
+        (created_at >= date_trunc('month', now())) AS in_current_month,
+        (created_at >= now() - interval '30 days') AS in_last_30_days
+      FROM ai_messages
+      WHERE tenant_id = $1
+        AND created_at >= LEAST(date_trunc('month', now()), now() - interval '30 days')
+      `,
+      [tenantId],
+    );
+
     const recentActivityRows = await manager.query(
       `
       SELECT
@@ -231,15 +290,21 @@ export class AiAdminOverviewService {
     const currentMonth = currentMonthRows[0] ?? {};
     const last30Days = last30DaysRows[0] ?? {};
 
-    // Chat cost: estimated at the currently assigned chat model's rates —
-    // messages predate per-call cost recording, so this is an approximation
-    // the UI labels as such.
+    // Chat cost: each message at the rates stored with it. Messages written
+    // before that recording fall back on the model assigned today.
     const chatModel = await this.modelResolver.tryResolve(tenantId, { type: 'chat' }, manager);
     const chatPrices = chatModel
       ? { priceInputEurPerMtok: chatModel.priceInputEurPerMtok, priceOutputEurPerMtok: chatModel.priceOutputEurPerMtok }
       : null;
-    const chatCostMonth = llmCostEur(toNumber(currentMonth.input_tokens), toNumber(currentMonth.output_tokens), chatPrices);
-    const chatCost30d = llmCostEur(toNumber(last30Days.input_tokens), toNumber(last30Days.output_tokens), chatPrices);
+    const chatMessages = (chatUsageRows as Record<string, unknown>[]).map(toChatMessageCost);
+    const monthMessages = chatMessages.filter((row) => row.inCurrentMonth);
+    const last30Messages = chatMessages.filter((row) => row.inLast30Days);
+    const chatCostMonth = sumChatMessageCostsEur(monthMessages, chatPrices);
+    const chatCost30d = sumChatMessageCostsEur(last30Messages, chatPrices);
+    const monthHasRecordedPrice = monthMessages.some((row) => row.recorded && chatPricesArePositive({
+      priceInputEurPerMtok: row.priceInputEurPerMtok,
+      priceOutputEurPerMtok: row.priceOutputEurPerMtok,
+    }));
     const agentsCostMonth = agentCostRows.reduce((sum: number, row: Record<string, unknown>) => sum + toNumber(row.cost_current_month_eur), 0);
     const agentsCost30d = agentCostRows.reduce((sum: number, row: Record<string, unknown>) => sum + toNumber(row.cost_last_30_days_eur), 0);
 
@@ -300,7 +365,7 @@ export class AiAdminOverviewService {
           cost_current_month_eur: toNumber(row.cost_current_month_eur),
           cost_last_30_days_eur: toNumber(row.cost_last_30_days_eur),
         })),
-        chat_priced: !!chatPrices && ((chatPrices.priceInputEurPerMtok ?? 0) > 0 || (chatPrices.priceOutputEurPerMtok ?? 0) > 0),
+        chat_priced: chatPricesArePositive(chatPrices) || monthHasRecordedPrice,
       },
     };
   }
