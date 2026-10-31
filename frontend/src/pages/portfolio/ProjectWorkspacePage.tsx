@@ -853,10 +853,13 @@ export default function ProjectWorkspacePage() {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {!!error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{t('portfolio:workspace.project.messages.loadFailed')}</Alert>}
-      {!!saveError && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{saveError}</Alert>}
-
       <PortfolioDetailWorkspaceShell
+        notices={(error || saveError) ? (
+          <>
+            {!!error && <Alert severity="error">{t('portfolio:workspace.project.messages.loadFailed')}</Alert>}
+            {!!saveError && <Alert severity="error">{saveError}</Alert>}
+          </>
+        ) : undefined}
         activeTab={routeTab}
         tabs={tabs.map((tab) => ({
           ...tab,

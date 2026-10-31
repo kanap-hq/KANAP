@@ -120,7 +120,7 @@ vi.mock('./workspace/IncidentJournalTab', () => ({
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
   default: (props: any) => {
     shellProps.current = props;
-    const { children, actions, onBack, onTabChange, onSaveShortcut, nav, tabs, title, canEditTitle, onTitleSave, onTitleDraftChange, titleError, properties } = props;
+    const { children, notices, actions, onBack, onTabChange, onSaveShortcut, nav, tabs, title, canEditTitle, onTitleSave, onTitleDraftChange, titleError, properties } = props;
     return (
       <div>
         {tabs?.map((tab: any) => <span key={tab.key} data-testid={`tab-${tab.key}`}>{tab.badge ?? ''}</span>)}
@@ -137,6 +137,7 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
           />
         ) : null}
         {titleError ? <div role="alert">{titleError}</div> : null}
+        <div data-testid="workspace-notices">{notices}</div>
         <div>{properties}</div>
         <div>{actions}</div>
         <div>{children}</div>

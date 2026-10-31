@@ -1673,10 +1673,13 @@ export default function ApplicationWorkspacePage() {
   return (
     <ApplicationFeedbackProvider onError={setError} capture={feedbackRef}>
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {!!error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{error}</Alert>}
-      {!!appQuery.error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{t('messages.loadApplicationFailed')}</Alert>}
-
       <PortfolioDetailWorkspaceShell
+        notices={(error || appQuery.error) ? (
+          <>
+            {!!error && <Alert severity="error">{error}</Alert>}
+            {!!appQuery.error && <Alert severity="error">{t('messages.loadApplicationFailed')}</Alert>}
+          </>
+        ) : undefined}
         activeTab={routeTab}
         tabs={tabs}
         onTabChange={handleTabChange}

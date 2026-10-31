@@ -331,9 +331,13 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {!!loadError && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{t('contracts.messages.loadFailed')}</Alert>}
-      {!!saveError && <Alert severity="error" sx={{ mx: 2, mt: 1 }} onClose={() => setSaveError(null)}>{saveError}</Alert>}
       <PortfolioDetailWorkspaceShell
+        notices={(loadError || saveError) ? (
+          <>
+            {!!loadError && <Alert severity="error">{t('contracts.messages.loadFailed')}</Alert>}
+            {!!saveError && <Alert severity="error" onClose={() => setSaveError(null)}>{saveError}</Alert>}
+          </>
+        ) : undefined}
         activeTab={tab}
         tabs={tabs}
         onTabChange={(next) => { void go(`${LIST_PATH}/${id}/${next}`); }}

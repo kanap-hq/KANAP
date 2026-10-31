@@ -49,6 +49,8 @@ type PortfolioDetailWorkspaceShellProps = {
   history?: { table: string; recordId: string };
   itemReference?: string | null;
   metadata?: React.ReactNode;
+  /** Banners under the title row (a failed create, a load or save error), so the header stays where it is. */
+  notices?: React.ReactNode;
   nav?: PortfolioDetailWorkspaceNav;
   onBack: () => void;
   /** The person may read the record but not change it: a discreet "Read only" mention next to the title. */
@@ -181,6 +183,7 @@ export default function PortfolioDetailWorkspaceShell({
   history,
   itemReference,
   metadata,
+  notices,
   nav,
   onBack,
   readOnly = false,
@@ -450,6 +453,28 @@ export default function PortfolioDetailWorkspaceShell({
               </Box>
             )}
           </Box>
+
+          {notices ? (
+            <Box
+              data-testid="workspace-notices"
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                // The conflict banner keeps a hidden live region mounted. It is out of flow, so the
+                // slot stays flat until a visible notice arrives. The title row's own margin already
+                // separates it from the tabs; without a tab row the first notice opens that gap.
+                '& > :not([aria-live])': {
+                  mt: hasTabRow ? 0 : '12px',
+                  mb: '12px',
+                },
+                '& > :not([aria-live]) + :not([aria-live])': {
+                  mt: '12px',
+                },
+              }}
+            >
+              {notices}
+            </Box>
+          ) : null}
 
           {hasTabRow && (
             <WorkspaceTabs tabs={tabs} activeTab={activeTab} onTabChange={onTabChange} />

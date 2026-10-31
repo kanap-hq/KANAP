@@ -273,13 +273,25 @@ export default function EditConflictBanner(props: EditConflictBannerProps) {
  * One line on another item's workspace: the user left an item with a choice
  * waiting (the browser's back button), and it is still kept for the session.
  */
-export function OtherConflictsNotice({ items, onOpen }: { items: Array<{ id: string; label: string }>; onOpen: (id: string) => void }) {
+export function OtherConflictsNotice({
+  items,
+  onOpen,
+  sx,
+}: {
+  items: Array<{ id: string; label: string }>;
+  onOpen: (id: string) => void;
+  /** Extra styles of the line. The shell slot clears the page inset. */
+  sx?: SxProps<Theme>;
+}) {
   const { t } = useTranslation('common');
   if (items.length === 0) return null;
   return (
     <Box
       data-testid="edit-conflict-elsewhere"
-      sx={{ mx: 2, mt: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.5, fontSize: 12 }}
+      sx={[
+        { mx: 2, mt: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.5, fontSize: 12 },
+        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+      ]}
     >
       <StatusDot color="warning.main" size={6} />
       <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.secondary' }}>

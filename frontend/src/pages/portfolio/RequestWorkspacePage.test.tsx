@@ -37,6 +37,7 @@ vi.mock('./workspace/PortfolioDetailWorkspaceShell', () => ({
   default: (props: any) => (
     <div>
       <h1>{props.title || props.titleFallback}</h1>
+      <div data-testid="workspace-notices">{props.notices}</div>
       <div role="tablist">
         {props.tabs.map((tab: any) => <button key={tab.key} role="tab" disabled={tab.disabled}>{tab.label}</button>)}
       </div>

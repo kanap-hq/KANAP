@@ -205,12 +205,8 @@ export default function DepartmentWorkspacePage() {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {loadError && (
-        <Alert severity="error" sx={{ mx: 2, mt: 1 }}>
-          {t('departments.loadError')}
-        </Alert>
-      )}
       <PortfolioDetailWorkspaceShell
+        notices={loadError ? <Alert severity="error">{t('departments.loadError')}</Alert> : undefined}
         activeTab={tab}
         tabs={tabs}
         onTabChange={(next) => goTo(id, next as TabKey)}

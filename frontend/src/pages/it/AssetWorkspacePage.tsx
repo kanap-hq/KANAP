@@ -2111,8 +2111,8 @@ function AssetWorkspaceRoute() {
   return (
     <ApplicationFeedbackProvider onError={setError} capture={feedbackRef}>
     <Box sx={{ height: '100%', minHeight: 0, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      {error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{error.message}</Alert>}
       <PortfolioDetailWorkspaceShell
+        notices={error ? <Alert severity="error">{error.message}</Alert> : undefined}
         activeTab={validTab}
         tabs={workspaceTabs}
         onTabChange={handleTabChange}

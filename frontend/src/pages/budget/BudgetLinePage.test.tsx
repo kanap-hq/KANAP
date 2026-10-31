@@ -56,8 +56,8 @@ vi.mock('../../auth/AuthContext', () => ({
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchBudgetRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
-  default: ({ properties, actions, children, onTitleSave, onBack, onTabChange, metadata, itemReference, backLabel, nav: navigation, canEditTitle }: {
-    canEditTitle?: boolean; itemReference?: string | null; backLabel?: string; properties?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
+  default: ({ properties, actions, children, notices, onTitleSave, onBack, onTabChange, metadata, itemReference, backLabel, nav: navigation, canEditTitle }: {
+    canEditTitle?: boolean; itemReference?: string | null; backLabel?: string; properties?: React.ReactNode; actions?: React.ReactNode; notices?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
     onBack?: () => void; onTabChange?: (tab: string) => void; metadata?: React.ReactNode; nav?: { onNext?: () => void };
   }) => (
     <div data-testid="workspace-shell" data-can-edit-title={String(!!canEditTitle)}>
@@ -68,7 +68,7 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
       <button type="button" onClick={() => onTabChange?.('budget')}>budget tab</button>
       <button type="button" onClick={() => onTabChange?.('overview')}>overview tab</button>
       <button type="button" onClick={() => navigation?.onNext?.()}>next budget line</button>
-      {metadata}{actions}{properties}{children}
+      {metadata}{actions}<div data-testid="workspace-notices">{notices}</div>{properties}{children}
     </div>
   ),
 }));
@@ -505,7 +505,8 @@ describe('BudgetLinePage create', () => {
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText('opex.editor.productNameRequired')).toBeInTheDocument();
+    const refusal = await screen.findByText('opex.editor.productNameRequired');
+    expect(screen.getByTestId('workspace-notices')).toContainElement(refusal);
     expect(screen.queryByText('capex.editor.descriptionRequired')).not.toBeInTheDocument();
     expect(mocked.post).not.toHaveBeenCalled();
   });
