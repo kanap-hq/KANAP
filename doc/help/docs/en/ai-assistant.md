@@ -241,12 +241,11 @@ Nothing that mutates KANAP data is applied silently. The preview is the gate.
 
 ## Usage indicators
 
-Above the composer, two small indicators help you stay aware of cost and limits:
+Above the composer, a small indicator shows how much of the included monthly volume remains:
 
 - **Built-in usage**: when Plaid is running on the KANAP included model rather than one of your organization's own models, this shows how many messages remain in the current month and the date the quota resets. An administrator has confirmed that model beforehand (see [Plaid Settings](ai-settings.md#confirming-the-kanap-included-model)). When the limit is reached, the composer is disabled and a helper text invites administrators to switch to a model of their own; see [AI models](ai-models.md).
-- **Token usage**: a thin bar with input/output token counters for the current conversation, plus the size of the last request. Long conversations get more expensive over time; the bar makes that cost visible so you can decide when to start a fresh thread.
 
-The token usage bar only appears once the conversation has at least one exchange.
+People who can open **Admin > Plaid** also see a thin bar under the composer, once the conversation has at least one exchange. **Volume processed** adds the input and output tokens of every message in this conversation. Each question resends the earlier messages, so the volume grows faster than the number of turns. **Context of the last request** is the input of the latest question. The bar also shows the input tokens and the output tokens of the conversation.
 
 ## Tips
 

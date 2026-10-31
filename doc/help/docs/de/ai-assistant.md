@@ -241,12 +241,11 @@ Nichts, was KANAP-Daten verändert, wird stillschweigend angewendet. Die Vorscha
 
 ## Nutzungsanzeigen
 
-Über dem Eingabefeld helfen Ihnen zwei kleine Anzeigen, Kosten und Grenzen im Blick zu behalten:
+Über dem Eingabefeld zeigt eine kleine Anzeige, wie viel vom inkludierten Monatsvolumen noch bleibt:
 
 - **Integrierte Nutzung**: Wenn Plaid mit dem inklusiven KANAP-Modell arbeitet und nicht mit einem der eigenen Modelle Ihrer Organisation, zeigt dies, wie viele Nachrichten im aktuellen Monat verbleiben und an welchem Datum das Kontingent zurückgesetzt wird. Ein Administrator hat dieses Modell zuvor bestätigt (siehe [Plaid-Einstellungen](ai-settings.md#das-inklusive-kanap-modell-bestatigen)). Ist das Limit erreicht, wird das Eingabefeld deaktiviert und ein Hinweistext fordert Administratoren auf, auf ein eigenes Modell zu wechseln; siehe [KI-Modelle](ai-models.md).
-- **Token-Nutzung**: ein schmaler Balken mit Zählern für Eingabe-/Ausgabe-Tokens der aktuellen Konversation sowie der Größe der letzten Anfrage. Lange Konversationen werden mit der Zeit teurer; der Balken macht diese Kosten sichtbar, sodass Sie entscheiden können, wann Sie einen neuen Verlauf beginnen.
 
-Der Token-Nutzungsbalken erscheint erst, wenn die Konversation mindestens einen Austausch enthält.
+Personen, die **Administration > Plaid** öffnen können, sehen außerdem einen schmalen Balken unter dem Eingabefeld, sobald die Konversation mindestens einen Austausch enthält. **Verarbeitetes Volumen** zählt die Eingabe- und Ausgabe-Tokens aller Nachrichten dieser Konversation zusammen. Jede Frage sendet die früheren Nachrichten erneut, daher wächst das Volumen schneller als die Zahl der Durchgänge. **Kontext der letzten Anfrage** ist die Eingabe der letzten Frage. Der Balken zeigt außerdem die Eingabe-Tokens und die Ausgabe-Tokens der Konversation.
 
 ## Tipps
 
