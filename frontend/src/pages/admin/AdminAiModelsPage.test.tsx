@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -91,6 +91,16 @@ describe('AdminAiModelsPage cache read cost', () => {
                   requiresApiKey: true,
                   allowsCustomEndpoint: true,
                 },
+              }, {
+                id: 'ollama',
+                label: 'Ollama',
+                description: 'Local models',
+                capabilities: {
+                  supportsStreaming: true,
+                  supportsToolCalling: true,
+                  requiresApiKey: false,
+                  allowsCustomEndpoint: true,
+                },
               }],
             },
           });
@@ -141,5 +151,41 @@ describe('AdminAiModelsPage cache read cost', () => {
 
     fireEvent.change(field, { target: { value: '0' } });
     expect(save).toBeEnabled();
+  });
+
+  async function switchToOllama() {
+    const dialog = screen.getByRole('dialog');
+    fireEvent.mouseDown(within(dialog).getByText('OpenAI'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Ollama' }));
+  }
+
+  it('sets every empty cost to 0 when the provider becomes Ollama', async () => {
+    const cacheRead = await openEditDialog();
+    const input = screen.getByPlaceholderText('e.g., 3.00');
+    const output = screen.getByPlaceholderText('e.g., 15.00');
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.change(output, { target: { value: '' } });
+    fireEvent.change(cacheRead, { target: { value: '' } });
+
+    await switchToOllama();
+
+    expect(input).toHaveValue('0');
+    expect(output).toHaveValue('0');
+    expect(cacheRead).toHaveValue('0');
+  });
+
+  it('keeps a cache read cost already entered when the provider becomes Ollama', async () => {
+    const cacheRead = await openEditDialog();
+    const input = screen.getByPlaceholderText('e.g., 3.00');
+    const output = screen.getByPlaceholderText('e.g., 15.00');
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.change(output, { target: { value: '' } });
+    fireEvent.change(cacheRead, { target: { value: '0,05' } });
+
+    await switchToOllama();
+
+    expect(input).toHaveValue('0');
+    expect(output).toHaveValue('0');
+    expect(cacheRead).toHaveValue('0,05');
   });
 });

@@ -265,7 +265,7 @@ export default function AdminAiModelsPage() {
       provider,
       // A local model costs nothing — pre-fill so the cost engine treats it as free.
       ...(provider === 'ollama' && prev.price_input === '' && prev.price_output === ''
-        ? { price_input: '0', price_output: '0', price_cache_read: '0' }
+        ? { price_input: '0', price_output: '0', price_cache_read: prev.price_cache_read === '' ? '0' : prev.price_cache_read }
         : {}),
     }));
   };
