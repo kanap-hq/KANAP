@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
@@ -11,7 +11,6 @@ import { AiSecretCipherService } from './ai-secret-cipher.service';
 import { normalizeGlpiPathname } from './glpi/glpi-url';
 import { BuiltinProviderIdentity, PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
-import { aiSignupConsentLocation, consentLocationMatches } from '../public/ai-signup-consent';
 
 export type AiSettingsView = {
   id: string;
@@ -117,20 +116,8 @@ function normalizeHttpUrl(value: string | null | undefined, fieldName: string): 
   return parsed.toString();
 }
 
-/** The consent to the included model given on the trial sign-up form, copied at activation. */
-export type AiSignupConsentInput = {
-  tenantId: string;
-  /** The administrator created at activation: the person who ticked the box. */
-  ownerId: string;
-  version: string;
-  at: Date;
-  ip: string | null;
-};
-
 @Injectable()
 export class AiSettingsService {
-  private readonly logger = new Logger(AiSettingsService.name);
-
   constructor(
     @InjectRepository(AiSettings)
     private readonly repo: Repository<AiSettings>,
@@ -499,75 +486,6 @@ export class AiSettingsService {
       );
     }
     return saved;
-  }
-
-  /**
-   * Trial activation with the consent box ticked at sign-up: the workspace opens with Plaid on,
-   * as if its administrator had turned it on and confirmed the included model (the home card
-   * "Turn on Plaid"). The consent is kept as its proof (signup_consent_*). Without an included
-   * model on the platform (never on-premise), or when the included model is processed elsewhere
-   * than the place the ticked text names, the consent is kept and the assistant stays off.
-   * Runs in the activation transaction, with the new tenant set on `manager`.
-   */
-  async applySignupConsent(manager: EntityManager, input: AiSignupConsentInput): Promise<AiSettings> {
-    const repo = this.getRepo(manager);
-    const existing = await this.find(input.tenantId, { manager });
-    const beforeView = existing ? await this.auditView(existing, manager) : null;
-    const settings = existing ?? await this.get(input.tenantId, { manager });
-
-    settings.signup_consent_version = input.version;
-    settings.signup_consent_at = input.at;
-    settings.signup_consent_ip = input.ip;
-
-    const identity = await this.currentBuiltinIdentity();
-    if (identity && consentLocationMatches(input.version, identity.location)) {
-      settings.chat_enabled = true;
-      settings.builtin_accepted_key = identity.key;
-      settings.builtin_accepted_at = input.at;
-      settings.builtin_accepted_by = input.ownerId;
-    } else if (identity) {
-      // The text the person ticked names another place than the included model's.
-      this.logger.warn(
-        `Trial sign-up consent ${input.version} names ${aiSignupConsentLocation(input.version) ?? 'no known place'}, `
-        + `the included model is processed in ${identity.location ?? 'an unknown place'}; the assistant stays off.`,
-      );
-    } else {
-      this.logger.warn(
-        `Trial activation of tenant ${input.tenantId}: consent to the included model kept, `
-        + 'but the platform has no included model; the assistant stays off.',
-      );
-    }
-
-    settings.updated_at = new Date();
-    const saved = await repo.save(settings);
-    if (this.audit) {
-      await this.audit.log(
-        {
-          table: 'ai_settings',
-          recordId: saved.id,
-          action: beforeView ? 'update' : 'create',
-          before: beforeView,
-          after: await this.auditView(saved, manager),
-          userId: input.ownerId,
-          source: 'system',
-          sourceRef: 'trial_signup_consent',
-        },
-        { manager },
-      );
-    }
-    return saved;
-  }
-
-  /**
-   * The settings view, with the version and moment of the consent given at sign-up: what the
-   * audit of this write keeps. The client address stays in the `ai_settings` row only.
-   */
-  private async auditView(settings: AiSettings, manager: EntityManager) {
-    return {
-      ...(await this.toView(settings, { manager })),
-      signup_consent_version: settings.signup_consent_version ?? null,
-      signup_consent_at: settings.signup_consent_at ? new Date(settings.signup_consent_at).toISOString() : null,
-    };
   }
 
   async toView(settings: AiSettings, opts?: { manager?: EntityManager }): Promise<AiSettingsView> {

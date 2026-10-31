@@ -2,7 +2,7 @@ import { BadRequestException, Body, Controller, Get, InternalServerErrorExceptio
 import { Features } from '../config/features';
 import { throwNotAvailableInMode } from '../common/feature-gates';
 import { Throttle } from '@nestjs/throttler';
-import { IsBoolean, IsEmail, IsISO31661Alpha2, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsISO31661Alpha2, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomBytes, createHash } from 'crypto';
@@ -45,17 +45,12 @@ import { resolveEmailLocale } from '../i18n/email-i18n';
 import { resolveSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { developmentRequestOrigin, resolveTenantAppBaseUrl } from '../common/url';
 import { DemoDataService } from '../demo-data/demo-data.service';
-import { AiSettingsService } from '../ai/ai-settings.service';
-import { isKnownAiSignupConsentVersion } from './ai-signup-consent';
 
 /** The answer of a trial sign-up when the address of the public website is not configured. */
 export const MARKETING_URL_NOT_CONFIGURED_MESSAGE = 'marketing URL is not configured: set MARKETING_BASE_URL';
 
 const STRIPE_EU_BANK_TRANSFER_COUNTRIES = new Set<string>(['BE', 'DE', 'ES', 'FR', 'IE', 'NL']);
 const STRIPE_DEFAULT_EU_BANK_TRANSFER_COUNTRY = 'FR';
-
-/** Longest client address kept with a consent (an IPv6 address written with an IPv4 tail). */
-const CONSENT_IP_MAX_LENGTH = 45;
 
 /** Trims an optional text field; an empty string counts as absent. */
 const optionalText = ({ value }: { value: unknown }) => {
@@ -73,7 +68,7 @@ const optionalText = ({ value }: { value: unknown }) => {
 export const PERSON_NAME = /^[\p{L}\p{M}][\p{L}\p{M}'’-]*\.?(?: [\p{L}\p{M}'’-]+\.?)*$/u;
 
 /**
- * The trial sign-up form. The names and the consent are optional: the public website is
+ * The trial sign-up form. The names are optional: the public website is
  * deployed apart from the API, and a form without them keeps working.
  */
 export class StartTrialDto {
@@ -119,17 +114,6 @@ export class StartTrialDto {
   @MaxLength(100)
   @Matches(PERSON_NAME, { message: 'last_name must be a person name' })
   last_name?: string;
-
-  /** The consent box to the included model of Plaid; true needs a known `ai_consent_version`. */
-  @IsOptional()
-  @IsBoolean()
-  ai_consent?: boolean;
-
-  /** The version of the text of the box the person ticked (ai-signup-consent.ts). */
-  @IsOptional()
-  @IsString()
-  @MaxLength(32)
-  ai_consent_version?: string;
 }
 
 export class ActivateTrialDto {
@@ -255,7 +239,6 @@ export class PublicController {
     private readonly stripeClient: StripeClientService,
     private readonly storage: StorageService,
     private readonly demoData: DemoDataService,
-    private readonly aiSettings: AiSettingsService,
   ) {}
 
   @Get('tenant-info')
@@ -330,8 +313,6 @@ export class PublicController {
     // The activation link base comes from the configuration and is checked first: without it
     // nothing is saved or sent, and every sign-up gets the same answer.
     const marketingBaseUrl = this.resolveMarketingBaseUrl(req);
-    // Checked before the CAPTCHA (its token is single use): a refused consent writes nothing.
-    const aiConsentVersion = this.resolveAiConsentVersion(body);
     await this.turnstile.verifyOrThrow({
       token: this.resolveCaptchaToken(body),
       remoteIp: clientAddress(req),
@@ -367,10 +348,6 @@ export class PublicController {
     const hash = this.hashToken(token);
     const now = new Date();
     const expiresAt = new Date(now.getTime() + this.trialLinkTtlMs());
-    // A new sign-up without the box ticked clears the consent of an earlier one.
-    const consent = aiConsentVersion
-      ? { ai_consent_version: aiConsentVersion, ai_consent_at: now, ai_consent_ip: clientAddress(req)?.slice(0, CONSENT_IP_MAX_LENGTH) ?? null }
-      : { ai_consent_version: null, ai_consent_at: null, ai_consent_ip: null };
 
     if (!signup) {
       signup = this.trialSignups.create({
@@ -384,7 +361,6 @@ export class PublicController {
         activated_at: null,
         first_name: firstName,
         last_name: lastName,
-        ...consent,
       });
     } else {
       signup.org_name = org;
@@ -396,7 +372,6 @@ export class PublicController {
       signup.activated_at = null;
       signup.first_name = firstName;
       signup.last_name = lastName;
-      Object.assign(signup, consent);
     }
 
     await this.trialSignups.save(signup);
@@ -613,17 +588,6 @@ export class PublicController {
         last_name: signup.last_name ?? null,
       }, { manager: runner.manager });
 
-      // The consent box ticked at sign-up: Plaid on, the included model confirmed by the owner.
-      if (signup.ai_consent_at) {
-        await this.aiSettings.applySignupConsent(runner.manager, {
-          tenantId: tenant.id,
-          ownerId: owner.id,
-          version: signup.ai_consent_version ?? '',
-          at: signup.ai_consent_at,
-          ip: signup.ai_consent_ip ?? null,
-        });
-      }
-
       await this.baseline.createStartingCompany(runner.manager, {
         companyName: buildStartingCompanyName(signup),
         countryIso: signup.country_iso || 'FR',
@@ -707,21 +671,6 @@ export class PublicController {
     const devOrigin = developmentRequestOrigin(req);
     if (devOrigin) return devOrigin;
     throw new BadRequestException(MARKETING_URL_NOT_CONFIGURED_MESSAGE);
-  }
-
-  /**
-   * The version of the consent box when it is ticked, null when it is not. A ticked box needs a
-   * version this API knows (ai-signup-consent.ts).
-   */
-  private resolveAiConsentVersion(body: StartTrialDto): string | null {
-    if (body.ai_consent !== true) return null;
-    if (!isKnownAiSignupConsentVersion(body.ai_consent_version)) {
-      throw new BadRequestException({
-        code: 'INVALID_CONSENT_VERSION',
-        message: 'The consent text is not known: reload the page and sign up again.',
-      });
-    }
-    return body.ai_consent_version;
   }
 
   private optionalName(value: unknown): string | null {

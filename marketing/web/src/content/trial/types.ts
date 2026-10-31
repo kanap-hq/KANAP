@@ -30,11 +30,6 @@ export interface TrialFormCopy extends TrialPageCopy {
     errorRequired: string;
     errorEmail: string;
     errorSlug: string;
-    /** Text of the Plaid consent box; `{link}` marks where the link goes. */
-    aiConsentText: string;
-    aiConsentLinkLabel: string;
-    /** User manual page on the Plaid settings, in the page language. */
-    aiConsentLinkUrl: string;
     captchaLabel: string;
     privacyNote: string;
   };

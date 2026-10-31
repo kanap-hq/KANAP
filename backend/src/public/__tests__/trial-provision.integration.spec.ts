@@ -112,7 +112,6 @@ async function activate(svc: Services, demo: DemoDataService, opts: { acceptLang
     { send: async () => undefined } as any,
     svc.auth, dataSource.getRepository(TrialSignup), {} as any, {} as any, {} as any,
     demo,
-    {} as any,
   );
   const token = randomBytes(32).toString('hex');
   const slug = `rs-tp-${randomUUID().slice(0, 8)}`;

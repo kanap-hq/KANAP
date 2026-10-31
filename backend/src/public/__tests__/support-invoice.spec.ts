@@ -77,7 +77,6 @@ function buildController() {
     { getClient: () => stripe } as any,
     {} as any,
     {} as any,
-    {} as any,
   );
   return { controller, calls, state };
 }

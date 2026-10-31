@@ -43,7 +43,6 @@ function buildController() {
     {} as any,
     {} as any,
     {} as any,
-    {} as any,
   );
   return { controller, calls };
 }

@@ -37,17 +37,6 @@ export class TrialSignup {
   @Column({ type: 'text', nullable: true })
   last_name!: string | null;
 
-  // Consent to the included model of Plaid, given on the sign-up form (ai-signup-consent.ts):
-  // version of the text of the box, moment, client address. Null when the box was not ticked.
-  @Column({ type: 'text', nullable: true })
-  ai_consent_version!: string | null;
-
-  @Column({ type: 'timestamptz', nullable: true })
-  ai_consent_at!: Date | null;
-
-  @Column({ type: 'text', nullable: true })
-  ai_consent_ip!: string | null;
-
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 
