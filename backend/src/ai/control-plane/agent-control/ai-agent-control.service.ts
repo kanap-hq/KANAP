@@ -1754,6 +1754,13 @@ export class AiAgentControlService {
     return this.sharedContextProfiles.archive(context, id);
   }
 
+  async restoreSharedContextProfile(context: AiExecutionContextWithManager, id: string) {
+    if (!this.sharedContextProfiles) {
+      throw new ForbiddenException('Shared context profiles are not available.');
+    }
+    return this.sharedContextProfiles.restore(context, id);
+  }
+
   async getAgentEffectivePrompt(context: AiExecutionContextWithManager, id: string) {
     const definition = await context.manager.getRepository(AiAgentDefinition).findOne({
       where: { id, tenant_id: context.tenantId },

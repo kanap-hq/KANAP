@@ -467,6 +467,7 @@
     "loadFailed": "Profile für gemeinsamen Kontext konnten nicht geladen werden.",
     "saveFailed": "Das Profil konnte nicht gespeichert werden.",
     "archiveFailed": "Das Profil konnte nicht archiviert werden.",
+    "restoreFailed": "Das Profil konnte nicht wiederhergestellt werden.",
     "editTitle": "Profil für gemeinsamen Kontext bearbeiten",
     "save": "Änderungen speichern",
     "description": "Beschreibung",
@@ -476,6 +477,7 @@
     "archived": "Archiviert",
     "edit": "Bearbeiten",
     "archive": "Archivieren",
+    "restore": "Wiederherstellen",
     "archiveTitle": "Dieses Profil archivieren?",
     "archiveBody": "„{{name}}“ steht den Agenten nicht mehr zur Verfügung. Jeder Agent, der es derzeit verwendet, läuft ohne gemeinsamen Kontext, bis Sie ihn auf ein anderes Profil verweisen."
   },
