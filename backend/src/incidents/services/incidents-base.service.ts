@@ -21,7 +21,8 @@ export interface ServiceOpts {
   viewer?: IncidentViewer;
   /**
    * The caller reads the infrastructure. The Relations tab then lists assets and technologies,
-   * and the detail counts them (`counts.assets`, `counts.technologies`).
+   * and the detail counts them (`counts.assets`, `counts.technologies`). The list search matches
+   * the names and references of the linked assets and technologies.
    */
   technologies?: boolean;
   /**

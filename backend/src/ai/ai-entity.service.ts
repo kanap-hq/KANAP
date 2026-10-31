@@ -1566,6 +1566,37 @@ export class AiEntityService {
            OR COALESCE(i.severity, '') ILIKE $3
            OR COALESCE(i.status, '') ILIKE $3
            OR COALESCE(i.category, '') ILIKE $3
+           -- Names and references of linked assets, applications and technologies,
+           -- the same text the search index stores at weight C. The row is the incident.
+           OR EXISTS (
+             SELECT 1 FROM incident_assets ia
+             JOIN assets a ON a.id = ia.asset_id AND a.tenant_id = ia.tenant_id
+             WHERE ia.incident_id = i.id AND ia.tenant_id = i.tenant_id
+               AND (
+                 a.name ILIKE $3
+                 OR COALESCE(a.asset_reference, '') ILIKE $3
+                 OR COALESCE(a.hostname, '') ILIKE $3
+                 OR COALESCE(a.fqdn, '') ILIKE $3
+               )
+           )
+           OR EXISTS (
+             SELECT 1 FROM incident_applications iap
+             JOIN applications app ON app.id = iap.application_id AND app.tenant_id = iap.tenant_id
+             WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id
+               AND (
+                 app.name ILIKE $3
+                 OR COALESCE(app.sequential_id, '') ILIKE $3
+               )
+           )
+           OR EXISTS (
+             SELECT 1 FROM incident_technologies it
+             JOIN technologies tec ON tec.id = it.technology_id AND tec.tenant_id = it.tenant_id
+             WHERE it.incident_id = i.id AND it.tenant_id = i.tenant_id
+               AND (
+                 tec.name ILIKE $3
+                 OR ('TEC-' || tec.item_number::text) ILIKE $3
+               )
+           )
          )
        ORDER BY score DESC,
                 CASE WHEN $2::text IS NOT NULL AND i.item_number::text LIKE $2 || '%' THEN i.item_number ELSE NULL END ASC NULLS LAST,
