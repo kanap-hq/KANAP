@@ -92,8 +92,14 @@ plugins:
           link: /fr/
           nav_translations:
             Home: Accueil
+            "First steps": Premiers pas
+            "IT budget": Budget IT
+            "IT system map": Cartographie du SI
+            "Projects and requests": Projets et demandes
+            "Discover with the example": "Découvrir avec l'exemple"
+            "Start with my data": "Commencer avec mes données"
             Fast Track: Démarrage rapide
-            "Getting Started": Premiers pas
+            "Getting Started": Prise en main
             "From Request to Delivery": "De la demande à la livraison"
             "From Application to Server": "De l'application au serveur"
             "Run, Build & Tasks": "Run, Build & Tâches"
@@ -354,6 +360,17 @@ plugins:
 
 nav:
   - Home: index.md
+
+  - First steps:
+    - IT budget:
+      - "Discover with the example": first-steps/budget-example.md
+      - "Start with my data": first-steps/budget-own-data.md
+    - IT system map:
+      - "Discover with the example": first-steps/landscape-example.md
+      - "Start with my data": first-steps/landscape-own-data.md
+    - Projects and requests:
+      - "Discover with the example": first-steps/portfolio-example.md
+      - "Start with my data": first-steps/portfolio-own-data.md
 
   - Fast Track:
     - "Getting Started": fast-track/getting-started.md
