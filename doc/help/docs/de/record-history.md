@@ -53,7 +53,7 @@ Bei einem Vertrag, einem Projekt oder einer Anfrage sieht eine Person mit begren
 
 ## Werte, die der Verlauf nicht zeigt
 
-- E-Mail-Adresse, Telefonnummern und Notizen eines Kontakts erscheinen nie.
+- Eine Änderung der E-Mail, des Telefons, der Mobilnummer oder der Notizen eines Kontakts lautet **E-Mail geändert**, **Telefon geändert**, **Mobil geändert** oder **Notizen geändert**. Der Wert bleibt außerhalb des Verlaufs.
 - Bei langen Inhalten sagt der Eintrag nur, dass sie sich geändert haben: **Inhalt geändert** für den Text eines Dokuments der Wissensdatenbank, **Arbeitstage geändert** für die Tage eines Arbeitstagekalenders, **Beschreibung geändert**, **Zweck geändert** oder **Aktuelle Situation geändert** für die langen Texte der anderen Datensätze.
 
 ## Den Assistenten fragen

@@ -34,6 +34,8 @@ function createOrchestrator(options?: {
   availableTools?: any[];
   resolvedSource?: 'registry' | 'builtin';
   resolveError?: Error;
+  priceInputEurPerMtok?: number | null;
+  priceOutputEurPerMtok?: number | null;
   /** The person's stored locale (`users.locale`). */
   userLocale?: string | null;
 }) {
@@ -118,8 +120,8 @@ function createOrchestrator(options?: {
       endpointUrl: null,
       apiKey: 'platform-key',
       supportsVision: true,
-      priceInputEurPerMtok: 0,
-      priceOutputEurPerMtok: 0,
+      priceInputEurPerMtok: options?.priceInputEurPerMtok !== undefined ? options.priceInputEurPerMtok : 0,
+      priceOutputEurPerMtok: options?.priceOutputEurPerMtok !== undefined ? options.priceOutputEurPerMtok : 0,
       timeoutMs: null,
       builtinRateLimits: { tenantPerMinute: 30, userPerHour: 60 },
     }
@@ -132,8 +134,8 @@ function createOrchestrator(options?: {
       endpointUrl: options?.endpointUrl ?? null,
       apiKey: 'real-api-key',
       supportsVision: true,
-      priceInputEurPerMtok: null,
-      priceOutputEurPerMtok: null,
+      priceInputEurPerMtok: options?.priceInputEurPerMtok !== undefined ? options.priceInputEurPerMtok : null,
+      priceOutputEurPerMtok: options?.priceOutputEurPerMtok !== undefined ? options.priceOutputEurPerMtok : null,
       timeoutMs: null,
       builtinRateLimits: null,
     });
@@ -375,6 +377,40 @@ async function collectEvents(gen: AsyncGenerator<ChatStreamEvent>): Promise<Chat
   return events;
 }
 
+async function testAssistantMessageStoresProviderModelAndPrices() {
+  const { orchestrator, persistedMessages } = createOrchestrator({
+    providerId: 'anthropic',
+    model: 'claude-sonnet-4',
+    priceInputEurPerMtok: 3,
+    priceOutputEurPerMtok: 15,
+  });
+  await collectEvents(
+    orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      userMessage: 'Hello',
+    }),
+  );
+
+  const user = persistedMessages.find((message) => message.role === 'user');
+  assert.equal(user.usage, undefined, 'a person message does not carry model rates');
+
+  const assistant = persistedMessages.find((message) => message.role === 'assistant');
+  assert.deepEqual(assistant.usage, {
+    provider: 'anthropic',
+    model: 'claude-sonnet-4',
+    price_input_eur_per_mtok: 3,
+    price_output_eur_per_mtok: 15,
+    input_tokens: 100,
+    output_tokens: 50,
+  });
+}
+
 async function testSimpleTextResponse() {
   const { orchestrator, persistedMessages, recordedRequests } = createOrchestrator({
     providerContextWindow: 1000,
@@ -592,6 +628,11 @@ async function testDeepSeekReasoningContentIsReplayedForToolContinuation() {
     persistedAssistant.providerMetadata.deepseek.reasoning_content,
     'I need to search first.',
   );
+  assert.equal(persistedAssistant.usage.provider, 'custom');
+  assert.equal(persistedAssistant.usage.model, 'gpt-4o');
+  assert.equal(persistedAssistant.usage.input_tokens, 100);
+  assert.equal(persistedAssistant.usage.output_tokens, 50);
+  assert.equal(persistedAssistant.usage.price_input_eur_per_mtok, null);
 }
 
 async function testDeepSeekReasoningContentIsReplayedForEverySplitToolCall() {
@@ -4428,6 +4469,7 @@ async function run() {
     germanFollowUp,
     'Die genehmigte Änderung ist fehlgeschlagen. Fehler: Task changed.\n\nAbhängige Vorschauen bereit, die auf Ihre Genehmigung warten: 1.\n- T-7',
   );
+  await testAssistantMessageStoresProviderModelAndPrices();
   await testSimpleTextResponse();
   await testToolCallFlow();
   await testToolResultDateTimesUseTheUserTimeZone();

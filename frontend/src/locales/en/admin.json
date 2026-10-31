@@ -706,6 +706,11 @@
       "authentication_mode": "Authentication",
       "monitoring_url": "Monitoring URL",
       "env_notes": "Environment notes",
+      "rule_key": "Rule key",
+      "operation_kind": "Operation",
+      "environment_scope": "Environments",
+      "implementation_status": "Implementation status",
+      "test_status": "Test status",
       "integration_tool_application_id": "Integration tool",
       "duration_months": "Duration (months)",
       "auto_renewal": "Tacit renewal",
@@ -805,6 +810,17 @@
         "contentChanged": "Content changed",
         "workingDaysChanged": "Working days changed",
         "notesChanged": "Notes changed",
+        "emailChanged": "Email changed",
+        "phoneChanged": "Phone changed",
+        "mobileChanged": "Mobile changed",
+        "conditionChanged": "Condition changed",
+        "businessRuleChanged": "Business rule changed",
+        "middlewareRuleChanged": "Middleware rule changed",
+        "remarksChanged": "Remarks changed",
+        "exampleInputChanged": "Example input changed",
+        "exampleOutputChanged": "Example output changed",
+        "sourceBindingsChanged": "Source fields changed",
+        "targetBindingsChanged": "Target fields changed",
         "renewalStopped": "Renewal stopped",
         "renewalResumed": "Renewal resumed",
         "descriptionChanged": "Description changed",
@@ -939,6 +955,14 @@
         "mapping_set": {
           "added": "Mapping set added: {{label}}",
           "removed": "Mapping set removed: {{label}}"
+        },
+        "mapping_group": {
+          "added": "Mapping group added: {{label}}",
+          "removed": "Mapping group removed: {{label}}"
+        },
+        "mapping_rule": {
+          "added": "Mapping rule added: {{label}}",
+          "removed": "Mapping rule removed: {{label}}"
         },
         "middleware": {
           "added": "Middleware added: {{label}}",
@@ -2630,7 +2654,7 @@
       "totalMonth": "Total this month",
       "agentsMonth": "Agents this month",
       "chatMonth": "Plaid this month",
-      "chatEstimatedNote": "Estimated at the currently assigned model’s rates",
+      "chatEstimatedNote": "Rates recorded with each message. Older messages use the currently assigned model’s rates.",
       "chatFreeNote": "The assigned model has no cost",
       "byAgent": "Cost by agent",
       "byModel": "Cost by model",

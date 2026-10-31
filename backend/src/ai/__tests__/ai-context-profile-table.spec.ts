@@ -592,6 +592,19 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Change the owner column of TEC-3', profile: 'write_business', mode: 'write' },
   { prompt: 'Ajoute une colonne au budget de OPEX-12', profile: 'write_financial', mode: 'write' },
 
+  // Issue 1154: five writes the classifier sent to a read profile. A question beside each stays
+  // a read. Cancelling a request stays a read (no cancelled status; the rows above).
+  { prompt: 'Marque APP-3 comme retirée', profile: 'write_business', mode: 'write', tools: ['update_business_record'] },
+  { prompt: 'APP-3 est-elle retirée ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Annule le contrat CTR-2', profile: 'write_business', mode: 'write', tools: ['update_business_record'] },
+  { prompt: 'Le contrat CTR-2 est-il annulé ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Annule la ligne OPX-12', profile: 'write_business', mode: 'write', tools: ['update_business_record'] },
+  { prompt: 'La ligne OPX-12 est-elle annulée ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Indique que AST-12 a Redis 7 installé', profile: 'write_relation', mode: 'write', tools: ['update_technology_links'] },
+  { prompt: 'AST-12 a-t-il Redis 7 installé ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Make Jane Doe the main contact of Acme Corp', profile: 'write_relation', mode: 'write', tools: ['update_entity_relations'] },
+  { prompt: 'Who is the main contact of Acme Corp?', profile: 'read_query', mode: 'read' },
+
   // Plaid L8: the budget reports are reads of aggregate_entities (a change between two columns, FTE
   // by month, the consolidation account, a crossing of two fields, several columns or years) and
   // of the chargeback families, through the common read tools.
