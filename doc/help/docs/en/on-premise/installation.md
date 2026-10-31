@@ -9,7 +9,7 @@
 - Docker Compose plugin 2.20 or later (current releases are 5.x)
 - Git
 - 4 GB RAM minimum, 8 GB recommended when PostgreSQL runs on the same server. More API processes need more memory, see [Configuration](configuration.md#optional-capacity-and-performance).
-- 10 GB disk minimum. KANAP itself takes about 1.5 GB (its images). The database and the stored files grow over time.
+- 10 GB disk minimum. KANAP itself takes about 1.5 GB (its images), 2 GB with the maintenance tools image. The database and the stored files grow over time.
 - Outbound HTTPS access to `ghcr.io` at installation and at each upgrade, to download the images (see [Firewall rules](configuration.md#outbound-installation-and-upgrades)).
 
 **Customer-provided infrastructure:**
@@ -236,7 +236,7 @@ server {
 
 **`host.docker.internal`:** When PostgreSQL or S3 storage runs on the Docker host (not in a container), use `host.docker.internal` as the hostname in `DATABASE_URL` and `S3_ENDPOINT`. The `compose.onprem.yml` file includes the `extra_hosts` mapping that makes this work. It points to the Docker bridge address of the server (`172.17.0.1` by default), so the host services must accept connections from that network (see the [installation example](installation-example.md)).
 
-**Health.** The API answers `GET /health` on its own port (`http://127.0.0.1:8080/health`) and `GET /api/health` through the proxy. Both return `{"status":"ok"}`. `docker compose -f infra/compose.onprem.yml ps` shows `healthy` for the `api` and `web` containers once they answer.
+**Health.** The API answers `GET /health` on its own port (`http://127.0.0.1:8080/health`) and `GET /api/health` through the proxy. Both return `{"status":"ok","text_processing":"ready"}`. [Monitoring](operations.md#monitoring) explains the other values of `text_processing`. `docker compose -f infra/compose.onprem.yml ps` shows `healthy` for the `api` and `web` containers once they answer.
 
 ## Network architecture
 

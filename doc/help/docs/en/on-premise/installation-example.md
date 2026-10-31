@@ -206,7 +206,7 @@ MinIO no longer publishes new downloads or images, so a new installation uses an
 
 The storage listens on the Docker bridge address `172.17.0.1` only, so it is not reachable from the network. The console is switched off.
 
-**Install RustFS and its command-line tool.** The version numbers are in the first two lines: use the latest release listed on the [RustFS releases page](https://github.com/rustfs/rustfs/releases) and on the [RustFS CLI releases page](https://github.com/rustfs/cli/releases). If you change a version, check the file names on its release page. Each download is checked against the `SHA256SUMS` file of its release; the command stops if the check fails.
+**Install RustFS and its command-line tool.** The version numbers are in the first two lines. This guide was tested with RustFS 1.0.1. A later 1.0.x release, listed on the [RustFS releases page](https://github.com/rustfs/rustfs/releases), works the same way. The [RustFS CLI releases page](https://github.com/rustfs/cli/releases) lists the versions of the command-line tool. If you change a version, check the file names on its release page. Each download is checked against the `SHA256SUMS` file of its release; the command stops if the check fails.
 
 ```bash
 RUSTFS_VERSION=1.0.1
@@ -382,7 +382,7 @@ Notes on the file:
 
 ## 7. Pull and start
 
-Download the images of the version you checked out and start the containers. `pull` downloads about 1.5 GB the first time. `--wait` returns when both containers report `healthy`; the first start runs the database migrations and takes a few seconds to a minute.
+Download the images of the version you checked out and start the containers. `pull` downloads about 300 MB the first time, and the images take about 1.4 GB of disk. `--wait` returns when both containers report `healthy`; the first start runs the database migrations and takes a few seconds to a minute.
 
 ```bash
 cd /opt/kanap
@@ -399,7 +399,8 @@ If `pull` cannot reach `ghcr.io`, open the outbound access of [Firewall rules](c
 ```
 [entrypoint] Initializing DB (attempt 1/30) ...
 [entrypoint] DB initialized. Running migrations...
-[entrypoint] Migrations complete (330 executed).
+[entrypoint] Migrations complete (394 executed).
+[VERSION] KANAP 26.10.8
 [ENV] run mode: production
 [SECRETS] token families: password-reset=derived-key provisioning=jwt-secret entra-state=derived-key (...)
 [SECRETS] Access tokens must carry purpose="access" (legacy untyped access tokens: refused)
@@ -411,14 +412,15 @@ If `pull` cannot reach `ghcr.io`, open the outbound access of [Firewall rules](c
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
 [on-prem] Created default subscription (On-Prem)
 [DATA-ACCESS] data-scoped access not installed (no kanap_data_limited role): nobody can be limited
+[markdown] Text processing workers ready
 ... WARN [EmailService] No outbound email transport configured; email sending is disabled.
 ... Nest application successfully started
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
 ```
 
-The number of migrations depends on the version, and the pool figures on your PostgreSQL.
+The number of migrations and the `[VERSION]` line depend on the version, and the pool figures on your PostgreSQL.
 
-The block leaves out the migration lines: about 40 lines that start with `[Migration]` or `[migration:` follow `Running migrations...`. They are informational. On a new database some of them report changes to built-in reference data or name a tenant id that is not yours: KANAP keeps a system tenant for platform features. They need no action. `...` stands for the `[Nest]` prefix with the process id and the time, and for the source in brackets (for example `LOG [NestApplication]`). Some of these lines end with a duration such as `+0ms`. The last line of the filtered output is `[DB] pool budget ...`. Log output saved to a file can contain colour codes such as `[33m`.
+The block leaves out the migration lines: on a new installation, a few hundred lines that start with `[Migration]` or `[migration:` follow `Running migrations...`. A few of them start with the number of their migration instead, for example `[1854170000000] ...` or `[migration 1854350000000] ...`. They are informational. On a new database some of them report changes to built-in reference data or name a tenant id that is not yours: KANAP keeps a system tenant for platform features. They need no action. `...` stands for the `[Nest]` prefix with the process id and the time, and for the source in brackets (for example `LOG [NestApplication]`). Some of these lines end with a duration such as `+0ms`. The last line of the filtered output is `[DB] pool budget ...`. Log output saved to a file can contain colour codes such as `[33m`.
 
 Until you configure email, the `EmailService` warning is expected and needs no action. The `[DATA-ACCESS]` line is expected too: step 10 explains it. A `[SECURITY]`, `[CONFIG]`, `[CORS]` or `[ENV] APP_ENV is not set` warning means a setting needs attention: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains every line.
 
@@ -600,12 +602,12 @@ Check the health of the API and the front end through nginx. `-S` makes `curl` s
 ```bash
 . ~/kanap-install.env
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
-# Expected: {"status":"ok"}
+# Expected: {"status":"ok","text_processing":"ready"}
 curl -sSk -o /dev/null -w "%{http_code}\n" "https://${KANAP_HOST}/"
 # Expected: 200
 ```
 
-Then run the smoke test. It checks the database, the storage, the sign-in and the exports through the public API, the way the web app does. The server has no Node.js, so it runs in a container. The line that starts with `KANAP_PASSWORD=` reads the administrator password from `.env` into the environment of the test without showing it. The first run downloads the `node:24-alpine` image from Docker Hub (about 240 MB) and keeps it for later runs. `KANAP_WRITE=1` also creates a temporary task with an attachment, which checks the storage, and deletes it again. Use it right after installation only: it writes to the data. The temporary task uses one task reference (`T-1` on a new installation), so your first task is `T-2`. `KANAP_INSECURE_TLS=1` accepts a certificate the container does not trust: keep it with a self-signed certificate. With a certificate from your internal authority, you can keep it or let the container check the certificate: put the authority's file in `/opt/kanap/infra/certs/` (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)) and replace `-e KANAP_INSECURE_TLS=1` with `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`. With Let's Encrypt, remove `-e KANAP_INSECURE_TLS=1`.
+Then run the smoke test. It checks the database, the storage, the sign-in and the exports through the public API, the way the web app does. The server has no Node.js, so it runs in a container. The line that starts with `KANAP_PASSWORD=` reads the administrator password from `.env` into the environment of the test without showing it. The first run downloads the `node:24-alpine` image from Docker Hub (about 65 MB, about 240 MB on disk) and keeps it for later runs. `KANAP_WRITE=1` also creates a temporary task with an attachment, which checks the storage, and deletes it again. Use it right after installation only: it writes to the data. The temporary task uses one task reference (`T-1` on a new installation), so your first task is `T-2`. `KANAP_INSECURE_TLS=1` accepts a certificate the container does not trust: keep it with a self-signed certificate. With a certificate from your internal authority, you can keep it or let the container check the certificate: put the authority's file in `/opt/kanap/infra/certs/` (see [Certificates from an internal authority](configuration.md#optional-certificates-from-an-internal-authority)) and replace `-e KANAP_INSECURE_TLS=1` with `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`. With Let's Encrypt, remove `-e KANAP_INSECURE_TLS=1`.
 
 ```bash
 . ~/kanap-install.env

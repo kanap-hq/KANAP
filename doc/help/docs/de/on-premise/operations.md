@@ -37,13 +37,15 @@ docker compose -f infra/compose.onprem.yml up -d
 
 `infra/compose.onprem.yml` nennt die Images der ausgecheckten Version. `pull` lädt sie von `ghcr.io` herunter, und `up -d` erstellt die Container darauf neu. Wenn Sie die Images selbst bauen (siehe [Die Images selbst bauen](installation.md#build-the-images-yourself)), führen Sie statt `pull` und `up -d` die Befehle `build` und `up -d` dieses Abschnitts aus.
 
-**Erstes Upgrade auf eine Version mit veröffentlichten Images.** Versionen bis 26.10.7 wurden auf dem Server gebaut. Für den Wechsel auf eine spätere Version genügt das obige Verfahren. Sobald die neue Version läuft und die Prüfungen aus Schritt 4 besteht, geben Sie den Build-Cache und die alten Images frei (etwa 2,5 GB). Ergänzen Sie `kanap-api-tools` in der zweiten Zeile, wenn Sie das Image der Wartungswerkzeuge gebaut hatten.
+**Erstes Upgrade auf eine Version mit veröffentlichten Images.** Versionen bis 26.10.7 wurden auf dem Server gebaut. Für den Wechsel auf eine spätere Version genügt das obige Verfahren. Sobald die neue Version läuft und die Prüfungen aus Schritt 4 besteht, geben Sie den Build-Cache und die alten Images frei. Auf einem Server, der KANAP gebaut hat, belegen sie mehrere Gigabyte, je nachdem, wie viele Builds er ausgeführt hat. Ergänzen Sie `kanap-api-tools` in der zweiten Zeile, wenn Sie das Image der Wartungswerkzeuge gebaut hatten.
 
 ```bash
-docker builder prune
+docker builder prune -a
 docker image rm infra-api infra-web
 docker image prune
 ```
+
+`docker builder prune -a` und `docker image prune` fragen jeweils nach einer Bestätigung: Antworten Sie mit `y`. Ohne `-a` lässt `docker builder prune` einen Teil des Build-Caches stehen.
 
 Ab dieser Version brauchen Upgrades ausgehenden Zugang zu `ghcr.io` statt zu `registry.npmjs.org` und den Spiegeln der Alpine-Pakete (siehe [Firewall-Regeln](configuration.md#outbound-installation-and-upgrades)).
 
@@ -101,11 +103,11 @@ curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 
 - `ps` zeigt `api` und `web` nach etwa einer Minute als `healthy`.
 - Das API-Protokoll zeigt die Migrationen (`[entrypoint] Migrations complete (N executed).`) und dann den Start der API (`Nest application successfully started`). Lesen Sie auch die anderen Startzeilen: Die [Konfiguration](configuration.md#was-das-api-protokoll-beim-start-zeigt) erklärt jede davon.
-- Die Health-Adresse antwortet `{"status":"ok"}`.
+- Die Health-Adresse antwortet `{"status":"ok","text_processing":"ready"}` (siehe [Monitoring](#monitoring)).
 
 **Datenzugriff nach Bereich.** Nach einem Upgrade auf eine Version mit [Datenzugriff](../data-access.md) arbeiten alle weiterhin mit allen Daten. Um Personen auf einen Teil des Budgets und der Verträge zu begrenzen, führen Sie einmal den optionalen Schritt [Datenzugriff nach Bereich](installation.md#optional-data-scoped-access) aus und starten Sie dann die API neu. Der Schritt erfolgt einmal pro PostgreSQL-Server: Spätere Upgrades erfordern nichts weiter, denn die API setzt die Berechtigungen der Rolle bei jedem Start.
 
-Führen Sie dann den Smoke-Test aus. Er prüft die Datenbank, die Anmeldung, die wichtigsten Listen und die Exporte über die öffentliche API. Der Server hat kein Node.js, daher läuft der Test in einem Container. Der erste Lauf auf einem Server lädt das Image `node:24-alpine` von Docker Hub (etwa 240 MB) und behält es: Führen Sie den Test einmal aus, solange der ausgehende Zugriff offen ist (siehe [Firewall-Regeln](configuration.md#outbound-installation-and-upgrades)). Geben Sie an der Eingabeaufforderung das aktuelle Passwort des Kontos `ADMIN_EMAIL` ein; beim Tippen wird nichts angezeigt. Das `ADMIN_PASSWORD` aus `.env` wird nur beim ersten Start gelesen und ist daher möglicherweise nicht mehr das richtige. Behalten Sie `-e KANAP_INSECURE_TLS=1`, wenn das Zertifikat selbstsigniert ist (der Container vertraut ihm nicht); entfernen Sie es bei einem Zertifikat einer öffentlichen Zertifizierungsstelle. Bei einem Zertifikat Ihrer internen Zertifizierungsstelle behalten Sie es oder ersetzen es durch `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`, damit der Container das Zertifikat gegen die Datei der Zertifizierungsstelle in `/opt/kanap/infra/certs/` prüft (siehe [Zertifikate einer internen Zertifizierungsstelle](configuration.md#optional-zertifikate-einer-internen-zertifizierungsstelle)). Fügen Sie auf einer Produktionsinstallation nicht `-e KANAP_WRITE=1` hinzu: Diese Option legt eine temporäre Aufgabe mit einem Anhang an, um den Speicher zu prüfen, was nur zu einer neuen Installation passt.
+Führen Sie dann den Smoke-Test aus. Er prüft die Datenbank, die Anmeldung, die wichtigsten Listen und die Exporte über die öffentliche API. Der Server hat kein Node.js, daher läuft der Test in einem Container. Der erste Lauf auf einem Server lädt das Image `node:24-alpine` von Docker Hub (etwa 65 MB, etwa 240 MB auf der Festplatte) und behält es: Führen Sie den Test einmal aus, solange der ausgehende Zugriff offen ist (siehe [Firewall-Regeln](configuration.md#outbound-installation-and-upgrades)). Geben Sie an der Eingabeaufforderung das aktuelle Passwort des Kontos `ADMIN_EMAIL` ein; beim Tippen wird nichts angezeigt. Das `ADMIN_PASSWORD` aus `.env` wird nur beim ersten Start gelesen und ist daher möglicherweise nicht mehr das richtige. Behalten Sie `-e KANAP_INSECURE_TLS=1`, wenn das Zertifikat selbstsigniert ist (der Container vertraut ihm nicht); entfernen Sie es bei einem Zertifikat einer öffentlichen Zertifizierungsstelle. Bei einem Zertifikat Ihrer internen Zertifizierungsstelle behalten Sie es oder ersetzen es durch `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`, damit der Container das Zertifikat gegen die Datei der Zertifizierungsstelle in `/opt/kanap/infra/certs/` prüft (siehe [Zertifikate einer internen Zertifizierungsstelle](configuration.md#optional-zertifikate-einer-internen-zertifizierungsstelle)). Fügen Sie auf einer Produktionsinstallation nicht `-e KANAP_WRITE=1` hinzu: Diese Option legt eine temporäre Aufgabe mit einem Anhang an, um den Speicher zu prüfen, was nur zu einer neuen Installation passt.
 
 ```bash
 read -rsp 'Administrator password: ' KANAP_PASSWORD; echo; export KANAP_PASSWORD
@@ -208,7 +210,7 @@ EOF
 
 ### Vor einem Upgrade
 
-Erstellen Sie vor jedem Upgrade eine vollständige Sicherung in einem eigenen, datierten Verzeichnis, zum Beispiel `/var/backups/kanap/before-upgrade-20261009-1400/`. Es enthält `db.dump`, `files/` und `config/`. Die tägliche Sicherung schreibt andere Namen und überschreibt dieses Verzeichnis daher nie.
+Erstellen Sie vor jedem Upgrade eine vollständige Sicherung in einem eigenen, datierten Verzeichnis, zum Beispiel `/var/backups/kanap/before-upgrade-20261009-1400/`. Es enthält `db.dump`, `files/` und `config/`. Die tägliche Sicherung schreibt andere Namen und überschreibt dieses Verzeichnis daher nie. Auf einem Server, auf dem `/var/backups/kanap` noch nicht existiert, [bereiten Sie zuerst das Sicherungsverzeichnis vor](#sicherung-und-wiederherstellung).
 
 ```bash
 B=/var/backups/kanap/before-upgrade-$(date +%Y%m%d-%H%M)
@@ -306,6 +308,8 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml run --rm tools npm run typeorm -- migration:show
 ```
 
+Es dauert etwa eine halbe Minute, bis die Liste erscheint: Der Befehl kompiliert zuerst die TypeScript-Quellen.
+
 ## PostgreSQL-Einstellungen
 
 Die Standardwerte von PostgreSQL sind für eine kleine Maschine ausgelegt. `infra/postgres/kanap-pg-tune.sh` gibt Einstellungen passend zum Arbeitsspeicher Ihres Servers aus (Arbeitsspeicher, SSD-Kosten, Protokoll langsamer Anweisungen, Anweisungsstatistiken). Führen Sie es auf dem PostgreSQL-Server aus und lesen Sie die Datei, bevor Sie sie anwenden: Ihr Kopf erklärt jeden Wert. Das Installationsbeispiel wendet sie in [Schritt 4](installation-example.md#postgresql-fur-diesen-server-dimensionieren) an.
@@ -339,12 +343,14 @@ Die Migrationen von KANAP lassen außerdem den Autovacuum auf den beiden größt
 
 ## Monitoring
 
-**Health.** Die API antwortet auf `GET /health` an ihrem eigenen Port und auf `GET /api/health` über den Reverse Proxy. Beide liefern `{"status":"ok"}`:
+**Health.** Die API antwortet auf `GET /health` an ihrem eigenen Port und auf `GET /api/health` über den Reverse Proxy. Beide liefern `{"status":"ok","text_processing":"ready"}`:
 
 ```bash
 curl -sSk -w '\n' http://127.0.0.1:8080/health
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ```
+
+`text_processing` lautet nach einem Start einige Sekunden lang `starting`. Es lautet `unavailable`, wenn die API die Verarbeitung formatierter Texte nicht starten konnte: Die API arbeitet weiter, lehnt das Speichern formatierter Texte (Beschreibungen, Kommentare) ab und versucht es alle paar Sekunden erneut. Das API-Protokoll nennt den Grund.
 
 **Container.** `docker compose -f infra/compose.onprem.yml ps` zeigt `healthy` für `api` und `web`, sobald sie antworten. Docker meldet diesen Status nur: Er löst keinen Neustart aus.
 
@@ -375,7 +381,7 @@ ss -ltn | grep 172.17.0.1:9000
 ```
 
 - `ps` zeigt `api` und `web` als `healthy`. In den ersten etwa 30 Sekunden nach dem Hochfahren kann es noch `health: starting` zeigen: Führen Sie den Befehl erneut aus.
-- Die Health-Adresse antwortet `{"status":"ok"}`.
+- Die Health-Adresse antwortet `{"status":"ok","text_processing":"ready"}`.
 - Der letzte Befehl zeigt eine Zeile mit `172.17.0.1:9000`: Der Speicher des Installationsbeispiels lauscht. Bei einem anderen Speicher prüfen Sie ihn auf Ihre eigene Weise.
 
 ### API-Metriken für ein Monitoring-Tool

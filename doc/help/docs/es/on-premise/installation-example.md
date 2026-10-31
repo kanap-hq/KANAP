@@ -206,7 +206,7 @@ MinIO ya no publica nuevas descargas ni imágenes, así que una instalación nue
 
 El almacenamiento escucha únicamente en la dirección del puente Docker `172.17.0.1`, así que no es accesible desde la red. La consola está desactivada.
 
-**Instale RustFS y su herramienta de línea de comandos.** Los números de versión están en las dos primeras líneas: use la última versión que figura en la [página de versiones de RustFS](https://github.com/rustfs/rustfs/releases) y en la [página de versiones de RustFS CLI](https://github.com/rustfs/cli/releases). Si cambia una versión, compruebe los nombres de archivo en su página de versión. Cada descarga se verifica con el archivo `SHA256SUMS` de su versión; el comando se detiene si la verificación falla.
+**Instale RustFS y su herramienta de línea de comandos.** Los números de versión están en las dos primeras líneas. Esta guía se probó con RustFS 1.0.1. Una versión 1.0.x posterior, que figura en la [página de versiones de RustFS](https://github.com/rustfs/rustfs/releases), funciona del mismo modo. La [página de versiones de RustFS CLI](https://github.com/rustfs/cli/releases) lista las versiones de la herramienta de línea de comandos. Si cambia una versión, compruebe los nombres de archivo en su página de versión. Cada descarga se verifica con el archivo `SHA256SUMS` de su versión; el comando se detiene si la verificación falla.
 
 ```bash
 RUSTFS_VERSION=1.0.1
@@ -382,7 +382,7 @@ Notas sobre el archivo:
 
 ## 7. Descargar e iniciar
 
-Descargue las imágenes de la versión del checkout y arranque los contenedores. `pull` descarga unos 1,5 GB la primera vez. `--wait` termina cuando ambos contenedores indican `healthy`; el primer arranque ejecuta las migraciones de la base de datos y tarda entre unos segundos y un minuto.
+Descargue las imágenes de la versión del checkout y arranque los contenedores. `pull` descarga unos 300 MB la primera vez, y las imágenes ocupan unos 1,4 GB de disco. `--wait` termina cuando ambos contenedores indican `healthy`; el primer arranque ejecuta las migraciones de la base de datos y tarda entre unos segundos y un minuto.
 
 ```bash
 cd /opt/kanap
@@ -399,7 +399,8 @@ Si `pull` no alcanza `ghcr.io`, abra el acceso saliente de las [Reglas de cortaf
 ```
 [entrypoint] Initializing DB (attempt 1/30) ...
 [entrypoint] DB initialized. Running migrations...
-[entrypoint] Migrations complete (330 executed).
+[entrypoint] Migrations complete (394 executed).
+[VERSION] KANAP 26.10.8
 [ENV] run mode: production
 [SECRETS] token families: password-reset=derived-key provisioning=jwt-secret entra-state=derived-key (...)
 [SECRETS] Access tokens must carry purpose="access" (legacy untyped access tokens: refused)
@@ -411,14 +412,15 @@ Si `pull` no alcanza `ghcr.io`, abra el acceso saliente de las [Reglas de cortaf
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
 [on-prem] Created default subscription (On-Prem)
 [DATA-ACCESS] data-scoped access not installed (no kanap_data_limited role): nobody can be limited
+[markdown] Text processing workers ready
 ... WARN [EmailService] No outbound email transport configured; email sending is disabled.
 ... Nest application successfully started
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
 ```
 
-El número de migraciones depende de la versión, y las cifras del pool dependen de su PostgreSQL.
+El número de migraciones y la línea `[VERSION]` dependen de la versión, y las cifras del pool dependen de su PostgreSQL.
 
-El bloque omite las líneas de migración: unas 40 líneas que empiezan por `[Migration]` o `[migration:` siguen a `Running migrations...`. Son informativas. En una base de datos nueva, algunas indican cambios en datos de referencia integrados o nombran un identificador de espacio de trabajo que no es el suyo: KANAP mantiene un espacio de trabajo del sistema para las funciones de la plataforma. No requieren ninguna acción. `...` representa el prefijo `[Nest]` con el identificador del proceso y la hora, y el origen entre corchetes (por ejemplo `LOG [NestApplication]`). Algunas de estas líneas terminan con una duración como `+0ms`. La última línea de la salida filtrada es `[DB] pool budget ...`. Un registro guardado en un archivo puede contener códigos de color como `[33m`.
+El bloque omite las líneas de migración: en una instalación nueva, unos cientos de líneas que empiezan por `[Migration]` o `[migration:` siguen a `Running migrations...`. Algunas empiezan en cambio por el número de su migración, por ejemplo `[1854170000000] ...` o `[migration 1854350000000] ...`. Son informativas. En una base de datos nueva, algunas indican cambios en datos de referencia integrados o nombran un identificador de espacio de trabajo que no es el suyo: KANAP mantiene un espacio de trabajo del sistema para las funciones de la plataforma. No requieren ninguna acción. `...` representa el prefijo `[Nest]` con el identificador del proceso y la hora, y el origen entre corchetes (por ejemplo `LOG [NestApplication]`). Algunas de estas líneas terminan con una duración como `+0ms`. La última línea de la salida filtrada es `[DB] pool budget ...`. Un registro guardado en un archivo puede contener códigos de color como `[33m`.
 
 Mientras no configure el correo, la advertencia de `EmailService` es esperada y no requiere ninguna acción. La línea `[DATA-ACCESS]` también es esperada: el paso 10 la explica. Una advertencia `[SECURITY]`, `[CONFIG]`, `[CORS]` o `[ENV] APP_ENV is not set` indica que un parámetro requiere atención: [Configuración](configuration.md#que-muestra-el-registro-de-la-api-al-arrancar) explica cada línea.
 
@@ -600,12 +602,12 @@ Compruebe el estado de la API y del frontend a través de nginx. `-S` hace que `
 ```bash
 . ~/kanap-install.env
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
-# Esperado: {"status":"ok"}
+# Esperado: {"status":"ok","text_processing":"ready"}
 curl -sSk -o /dev/null -w "%{http_code}\n" "https://${KANAP_HOST}/"
 # Esperado: 200
 ```
 
-Después ejecute la prueba de humo. Comprueba la base de datos, el almacenamiento, el inicio de sesión y las exportaciones a través de la API pública, como lo hace la aplicación web. El servidor no tiene Node.js, así que la prueba se ejecuta en un contenedor. La línea que empieza por `KANAP_PASSWORD=` lee la contraseña del administrador de `.env` y la pasa al entorno de la prueba sin mostrarla. La primera ejecución descarga la imagen `node:24-alpine` de Docker Hub (unos 240 MB) y la conserva para las siguientes. `KANAP_WRITE=1` también crea una tarea temporal con un adjunto, lo que comprueba el almacenamiento, y después la elimina. Úselo solo justo después de la instalación: escribe en los datos. La tarea temporal consume una referencia de tarea (`T-1` en una instalación nueva), así que su primera tarea será `T-2`. `KANAP_INSECURE_TLS=1` acepta un certificado en el que el contenedor no confía: manténgalo con un certificado autofirmado. Con un certificado de su autoridad interna, puede mantenerlo o dejar que el contenedor verifique el certificado: ponga el archivo de la autoridad en `/opt/kanap/infra/certs/` (consulte [Certificados de una autoridad interna](configuration.md#opcional-certificados-de-una-autoridad-interna)) y sustituya `-e KANAP_INSECURE_TLS=1` por `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`. Con Let's Encrypt, quite `-e KANAP_INSECURE_TLS=1`.
+Después ejecute la prueba de humo. Comprueba la base de datos, el almacenamiento, el inicio de sesión y las exportaciones a través de la API pública, como lo hace la aplicación web. El servidor no tiene Node.js, así que la prueba se ejecuta en un contenedor. La línea que empieza por `KANAP_PASSWORD=` lee la contraseña del administrador de `.env` y la pasa al entorno de la prueba sin mostrarla. La primera ejecución descarga la imagen `node:24-alpine` de Docker Hub (unos 65 MB, unos 240 MB en disco) y la conserva para las siguientes. `KANAP_WRITE=1` también crea una tarea temporal con un adjunto, lo que comprueba el almacenamiento, y después la elimina. Úselo solo justo después de la instalación: escribe en los datos. La tarea temporal consume una referencia de tarea (`T-1` en una instalación nueva), así que su primera tarea será `T-2`. `KANAP_INSECURE_TLS=1` acepta un certificado en el que el contenedor no confía: manténgalo con un certificado autofirmado. Con un certificado de su autoridad interna, puede mantenerlo o dejar que el contenedor verifique el certificado: ponga el archivo de la autoridad en `/opt/kanap/infra/certs/` (consulte [Certificados de una autoridad interna](configuration.md#opcional-certificados-de-una-autoridad-interna)) y sustituya `-e KANAP_INSECURE_TLS=1` por `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`. Con Let's Encrypt, quite `-e KANAP_INSECURE_TLS=1`.
 
 ```bash
 . ~/kanap-install.env
