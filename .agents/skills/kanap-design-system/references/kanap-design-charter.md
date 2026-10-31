@@ -317,17 +317,27 @@ Disable (n), Move (n), Manage X, Edit, a "new" chip in a band, Send link, Conver
 (delete the selection once the selection is not empty, delete on a workspace):
 - Same dimensions as `action`
 - Background `kanap.pillDanger.bg`, border `kanap.pillDanger.border`, color `kanap.danger`
-- `DeleteSelectedButton` does this itself: `action-danger` always, disabled at 0 selected, label "Delete (n)"
+- `DeleteSelectedButton` does this itself: an icon-only `action-danger` pill, disabled at 0
+  selected. A small badge on the trash shows how many rows are selected, including 0. The
+  tooltip and the accessible name read "Delete (n)".
 
 **Disabled**: `action-primary` and `action` take the neutral pill, `kanap.pill.bg` /
 `kanap.pill.border`, text `kanap.text.tertiary`, no teal. A disabled `action-danger` keeps its red
-colours at 45 % opacity, so a delete always reads as a delete (maintainer, 2026-10-28).
+colours at 45 % opacity, so a delete always reads as a delete (maintainer, 2026-10-28). The
+count badge fades with the pill.
 
-**Icons on pills**: 14px (`sx={{ fontSize: '14px !important' }}` on the icon). Keep `+` on "new"
-actions and the trash on delete; import and export carry no icon.
-In a record page header, Delete is the trash icon alone (`DeleteIconButton`: an `action-danger` pill
-reduced to its icon, tooltip and accessible name "Delete"), so the header keeps one line; the
-confirmation is unchanged. Elsewhere (dialogs, tables, selections) Delete keeps its label.
+**Icons on pills**: 14px (`sx={{ fontSize: '14px !important' }}` on the icon) beside a label.
+Keep `+` on "new" actions. Import and export carry no icon. An icon-only Delete pill uses a
+16px trash, the same size as `DeleteIconButton`.
+
+Delete is an icon on a button, and a word in a menu or a confirmation:
+- A list's selection uses `DeleteSelectedButton`: the trash, with the selected count as a badge.
+  Tooltip and accessible name: "Delete (n)".
+- A record header, and any other standalone Delete button, uses `DeleteIconButton`: the trash
+  alone. Tooltip and accessible name: "Delete".
+- A menu item keeps the word Delete.
+- The confirm button of a delete dialog keeps the word Delete (or "Delete anyway" when the
+  delete also removes something else).
 
 **`variant="contained"`**: primary CTAs in create forms, composers and empty states (Submit, Save,
 "Create your first chart of accounts"):
@@ -690,7 +700,7 @@ analytics dimensions, knowledge libraries), the actions follow what they act on:
 ```
 PageHeader: title (no actions)
 ChipToggleBar: [collection] [collection] [collection] ........ [+ New] [Manage X]
-ChipToggleContextLine: <collection name> · <n> items ......... [New item] [Import] [Export] [Delete (n)]
+ChipToggleContextLine: <collection name> · <n> items ......... [New item] [Import] [Export] [trash, badge n]
                        optional secondary line (scope, access, description)
 Grid toolbar, column chooser, grid
 ```

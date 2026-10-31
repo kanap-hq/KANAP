@@ -15,13 +15,13 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { KanapDialog, PropertyRow } from '../../../components/design';
+import DeleteIconButton from '../../../components/workspace/DeleteIconButton';
 
 type DocumentTypeItem = {
   id: string;
@@ -245,15 +245,10 @@ export default function KnowledgeTypesManager() {
                           {t('common:buttons.save')}
                         </Button>
                         {!item.is_system && (
-                          <Button
-                            size="small"
-                            color="error"
-                            startIcon={<DeleteIcon />}
+                          <DeleteIconButton
                             onClick={() => setDeleteTypeCandidate(item)}
                             disabled={deleteMutation.isPending}
-                          >
-                            {t('common:buttons.delete')}
-                          </Button>
+                          />
                         )}
                       </Stack>
                     </TableCell>

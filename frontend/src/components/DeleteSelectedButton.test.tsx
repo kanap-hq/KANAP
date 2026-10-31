@@ -103,6 +103,52 @@ describe('DeleteSelectedButton', () => {
     expect(button).toHaveClass('MuiButton-action-danger');
   });
 
+  it('shows the selected count as a badge on the icon for 0, 1 and 12 rows', async () => {
+    const twelve = Array.from({ length: 12 }, (_, i) => ({ id: String(i), name: `Row ${i}` }));
+    const { rerender } = renderIdle([]);
+    const none = screen.getByRole('button', { name: 'buttons.deleteSelected (0)' });
+    expect(none.querySelector('.MuiBadge-badge')).toHaveTextContent('0');
+    expect(none.textContent?.replace(/\s/g, '')).toBe('0');
+    expect(none.querySelector('svg')).not.toBeNull();
+    expect(none).not.toHaveTextContent('buttons.deleteSelected');
+    fireEvent.mouseOver(none.parentElement as HTMLElement);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('buttons.deleteSelected (0)');
+
+    rerender(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <DeleteSelectedButton<Row>
+          selectedRows={[rows[0]]}
+          endpoint="/spend-items/bulk"
+          getItemId={(row) => row.id}
+          getItemName={(row) => row.name}
+          onDeleteSuccess={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+    const one = screen.getByRole('button', { name: 'buttons.deleteSelected (1)' });
+    expect(one.querySelector('.MuiBadge-badge')).toHaveTextContent('1');
+    expect(one.textContent?.replace(/\s/g, '')).toBe('1');
+
+    rerender(
+      <ThemeProvider theme={createAppTheme('dark')}>
+        <DeleteSelectedButton<Row>
+          selectedRows={twelve}
+          endpoint="/spend-items/bulk"
+          getItemId={(row) => row.id}
+          getItemName={(row) => row.name}
+          onDeleteSuccess={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+    const many = screen.getByRole('button', { name: 'buttons.deleteSelected (12)' });
+    const badge = many.querySelector('.MuiBadge-badge') as HTMLElement;
+    expect(badge).toHaveTextContent('12');
+    expect(many.textContent?.replace(/\s/g, '')).toBe('12');
+    expect(badge).toHaveStyle({ backgroundColor: 'rgb(248, 113, 113)', color: 'rgb(15, 17, 23)' });
+    fireEvent.mouseOver(many);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('buttons.deleteSelected (12)');
+  });
+
   it('shows the reason of each failed item when the others are deleted', async () => {
     vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['a'], failed: [{ id: 'b', name: 'Frozen', reason: FROZEN }] } } as any);
     const { onDeleteSuccess } = renderButton();

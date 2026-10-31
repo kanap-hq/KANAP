@@ -10,6 +10,7 @@ import { refusalCounts } from '../../utils/deleteRefusal';
 import { RESOURCE_LABELS } from '../../utils/permissionLabels';
 import { PERMISSION_GROUPS } from './rolePermissionGroups';
 import { roleDescription, roleLabel } from '../../utils/roleLabel';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 
 type Role = { id: string; role_name: string; role_description: string; is_system?: boolean; is_built_in?: boolean; user_count?: number };
 type PermissionLevel = 'reader'|'contributor'|'member'|'admin'|null;
@@ -245,7 +246,7 @@ export default function RolesPage() {
                   <Stack direction="row" spacing={1} alignItems="center">
                     {typeof selected.user_count === 'number' && <Typography variant="body2" color="text.secondary">{t('roles.userCount', { count: selected.user_count })}</Typography>}
                     {canEdit && !locked && (
-                      <Button size="small" color="error" onClick={openDelete}>{t('common:buttons.delete')}</Button>
+                      <DeleteIconButton onClick={openDelete} />
                     )}
                   </Stack>
                 </Stack>
