@@ -58,6 +58,7 @@ import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
+import { nameWithoutLeadingReference } from './name-without-leading-reference';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, INCIDENT_STATUS_RANK } from '../../incidents/incident.entity';
 import {
@@ -595,21 +596,6 @@ function textOrNull(value: unknown): string | null {
   if (value == null) return null;
   const normalized = String(value).trim();
   return normalized || null;
-}
-
-/**
- * A record's name without a reference it repeats at its start ("CON-1 - DB link" for CON-1):
- * the label prepends the reference for the screens, and prepending it to a name that already
- * carries it would show it twice ("CON-1 - CON-1 - DB link").
- */
-function nameWithoutLeadingReference(reference: string | null, name: string | null): string | null {
-  if (!name) return null;
-  if (!reference) return name;
-  const escaped = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const rest = name.replace(new RegExp(`^${escaped}(?:\\s*[-–—·:|]\\s*|\\s+)`, 'i'), '').trim();
-  if (rest && rest !== name) return rest;
-  // A name that is only the reference leaves the title to the reference the card already shows.
-  return name.toLowerCase() === reference.toLowerCase() ? null : name;
 }
 
 function formatPlainValue(value: unknown): string | null {
@@ -1540,10 +1526,14 @@ export class AiBusinessRecordMutationSupportService {
 
   private recordTitle(entityType: RelationTarget, row: Record<string, unknown>): string {
     switch (entityType) {
-      case 'applications':
-        return [row.sequential_id, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled application';
-      case 'assets':
-        return [row.asset_reference, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled asset';
+      case 'applications': {
+        const reference = textOrNull(row.sequential_id);
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled application';
+      }
+      case 'assets': {
+        const reference = textOrNull(row.asset_reference);
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled asset';
+      }
       case 'interfaces': {
         const reference = textOrNull(row.interface_reference) || textOrNull(row.interface_id);
         return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled interface';
@@ -1552,10 +1542,14 @@ export class AiBusinessRecordMutationSupportService {
         const reference = textOrNull(row.connection_reference);
         return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled connection';
       }
-      case 'projects':
-        return [row.item_number == null ? null : `PRJ-${row.item_number}`, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled project';
-      case 'requests':
-        return [row.item_number == null ? null : `REQ-${row.item_number}`, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled request';
+      case 'projects': {
+        const reference = row.item_number == null ? null : `PRJ-${row.item_number}`;
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled project';
+      }
+      case 'requests': {
+        const reference = row.item_number == null ? null : `REQ-${row.item_number}`;
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled request';
+      }
       case 'budget_lines':
         return textOrNull(row.product_name) || 'Untitled budget line';
       case 'incidents': {
