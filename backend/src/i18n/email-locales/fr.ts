@@ -192,10 +192,10 @@ export const fr: EmailStrings = {
     },
     activation: {
       subject: 'Confirmez votre espace de travail KANAP',
-      intro: "Merci de l'intérêt que vous portez à KANAP. Veuillez confirmer votre e-mail pour provisionner votre tenant.",
+      intro: "Merci de l'intérêt que vous portez à KANAP. Confirmez votre adresse e-mail pour créer votre espace de travail : le lien ci-dessous est valable 48 heures. Pendant la création, nous préparons un exemple complet d'entreprise ; à l'ouverture, vous choisirez de le découvrir ou de commencer avec vos données.",
       copyPaste: 'Si le bouton ci-dessus ne fonctionne pas, copiez et collez ce lien dans votre navigateur :',
-      expires: "Le lien expire dans 48 heures. Si vous n'avez pas demandé cet essai, vous pouvez ignorer ce message.",
-      textIntro: 'Merci de votre intérêt pour KANAP. Confirmez votre e-mail pour provisionner votre tenant.',
+      expires: "Si vous n'avez pas demandé cet essai, vous pouvez ignorer ce message.",
+      textIntro: "Merci de l'intérêt que vous portez à KANAP. Confirmez votre adresse e-mail pour créer votre espace de travail : le lien ci-dessous est valable 48 heures. Pendant la création, nous préparons un exemple complet d'entreprise ; à l'ouverture, vous choisirez de le découvrir ou de commencer avec vos données.",
       textAction: 'Activer votre espace de travail : {{url}}',
     },
     passwordReset: {
