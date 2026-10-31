@@ -225,7 +225,7 @@ export function estimateReplySynthesisUsage(
   const inputTokens = estimateJsonTokens(input);
   return {
     estimatedTokens: inputTokens + maxOutputTokens,
-    // A ceiling for the run's cost cap: the whole input at the input price, since what the cache will serve is unknown.
+    // For the run's cost cap, the whole input at the input price (cache unknown); with Anthropic, input written to the cache costs 1.25 times that.
     estimatedCostEur: llmCostEur(inputTokens, maxOutputTokens, prices),
   };
 }
