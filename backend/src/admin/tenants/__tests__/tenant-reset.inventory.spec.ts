@@ -27,6 +27,9 @@ const EXPECTED_KEEP = [
   'ai_external_mcp_servers',
   'ai_external_mcp_tool_snapshots',
   'audit_log',
+  'tenant_onboarding',
+  'onboarding_steps',
+  'onboarding_dismissals',
 ];
 
 function testConfigurationCoversEveryTenantTable() {
