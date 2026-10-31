@@ -27,6 +27,27 @@ export function allocationMethodLabel(t: TFunction, method: string | null | unde
 }
 
 /**
+ * The budget list shows the English constants `formatAllocationMethodLabel` builds
+ * (`Company`, `Headcount`, …). Those strings stay the filter values sent to the API.
+ * The cell and the filter checkboxes use the allocation tab's words instead.
+ */
+const LIST_LABEL_TO_METHOD: Record<string, string> = {
+  Headcount: 'headcount',
+  'IT users': 'it_users',
+  Turnover: 'turnover',
+  Company: 'manual_company',
+  Department: 'manual_department',
+  'Manual %': 'manual_pct',
+  Default: 'default',
+};
+
+export function allocationListLabel(t: TFunction, label: string | null | undefined): string {
+  if (!label) return '';
+  const method = LIST_LABEL_TO_METHOD[label];
+  return method ? allocationMethodLabel(t, method) : label;
+}
+
+/**
  * A chargeback department cell. No department id is the common-costs row. An id without a name
  * is a department that no longer exists.
  */

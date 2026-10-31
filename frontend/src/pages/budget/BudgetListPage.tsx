@@ -47,6 +47,7 @@ import BudgetTotalCell from './BudgetTotalCell';
 import { statusColumnProps } from '../../components/grid/statusColumn';
 import FxMissingNotice, { FxMissingMark } from '../../components/finance/FxMissingNotice';
 import { ImportLabel } from '../../components/csv/importFiles';
+import { allocationListLabel } from '../../utils/allocationLabels';
 
 /** A cell amount in the line currency (its year has no exchange rate): secondary text, visited or not. */
 const LOCAL_AMOUNT_LINK_SX = { color: 'kanap.text.secondary', '&:visited, &:hover': { color: 'kanap.text.secondary' } } as const;
@@ -614,11 +615,23 @@ function BudgetListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getBudgetFilterValues('allocation_label'),
+        // No label on the options: `labelFormatter` translates the checkbox, and the value
+        // sent to the API stays the server's English constant.
+        getValues: async (ctx: any) => {
+          const options = await getBudgetFilterValues('allocation_label')(ctx);
+          return options.map(({ value }) => ({ value }));
+        },
+        labelFormatter: (value: string | null) => (value ? allocationListLabel(t, value) : t('shared.blank')),
+        sortComparator: (a: { value: string | null; label?: string }, b: { value: string | null; label?: string }) => {
+          if (a.value == null) return b.value == null ? 0 : 1;
+          if (b.value == null) return -1;
+          return (a.label || '').localeCompare(b.label || '', locale);
+        },
         searchable: false,
       },
       valueGetter: (p) => p.data?.allocation_method_label ?? '',
-      tooltipValueGetter: (p) => p.data?.allocation_method_label ?? '',
+      valueFormatter: (p) => allocationListLabel(t, p.value == null ? '' : String(p.value)),
+      tooltipValueGetter: (p) => allocationListLabel(t, p.data?.allocation_method_label),
       width: 180,
       cellRenderer: (params: any) => (
         <LinkCellRenderer

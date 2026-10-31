@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '../i18n';
-import { allocationMethodLabel, chargebackDepartmentLabel } from './allocationLabels';
+import { allocationListLabel, allocationMethodLabel, chargebackDepartmentLabel } from './allocationLabels';
 import { allocationWarningKey, allocationWarningText, amountFxMissingOf, type ReportWarning } from './allocationWarnings';
 
 const warning = {
@@ -99,6 +99,23 @@ describe('allocation method and department labels', () => {
     expect(allocationMethodLabel(fr, 'manual_pct')).toBe('Pourcentages manuels');
     expect(allocationMethodLabel(fr, 'default')).toBe('Par défaut');
     expect(allocationMethodLabel(fr, null)).toBe('');
+    // The budget list receives the English constants and shows the same words.
+    expect(allocationListLabel(fr, 'Headcount')).toBe('Effectif');
+    expect(allocationListLabel(fr, 'IT users')).toBe('Utilisateurs IT');
+    expect(allocationListLabel(fr, 'Turnover')).toBe("Chiffre d'affaires");
+    expect(allocationListLabel(fr, 'Company')).toBe('Manuel par société');
+    expect(allocationListLabel(fr, 'Department')).toBe('Manuel par département');
+    expect(allocationListLabel(fr, 'Manual %')).toBe('Pourcentages manuels');
+    expect(allocationListLabel(fr, 'Default')).toBe('Par défaut');
+    expect(allocationListLabel(fr, null)).toBe('');
+    expect(allocationListLabel(fr, '')).toBe('');
+    expect(allocationListLabel(fr, 'Other')).toBe('Other');
+    expect(allocationListLabel(i18n.getFixedT('en'), 'Company')).toBe('Manual by company');
+    expect(allocationListLabel(i18n.getFixedT('en'), 'Manual %')).toBe('Manual percentages');
+    expect(allocationListLabel(i18n.getFixedT('de'), 'Headcount')).toBe('Mitarbeiterzahl');
+    expect(allocationListLabel(i18n.getFixedT('de'), 'Company')).toBe('Manuell nach Unternehmen');
+    expect(allocationListLabel(i18n.getFixedT('es'), 'IT users')).toBe('Usuarios IT');
+    expect(allocationListLabel(i18n.getFixedT('es'), 'Department')).toBe('Manual por departamento');
     expect(chargebackDepartmentLabel(fr, null, null)).toBe('Coûts communs');
     expect(chargebackDepartmentLabel(fr, 'dept-1', null)).toBe('Département inconnu');
     expect(chargebackDepartmentLabel(fr, 'dept-1', 'Finance')).toBe('Finance');
