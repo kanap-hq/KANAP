@@ -7,6 +7,7 @@ import { getTrialContent } from '../../content/resolve';
 
 const locale = getLocaleFromUrl(Astro.url);
 const c = getTrialContent(locale).start;
+const [aiConsentBefore, aiConsentAfter = ''] = c.form.aiConsentText.split('{link}');
 
 ---
 
@@ -27,6 +28,16 @@ const c = getTrialContent(locale).start;
       </aside>
 
       <form class="mk-trial-form" data-trial-form>
+        <div class="mk-tf__field">
+          <label for="tf-first-name">{c.form.firstNameLabel}</label>
+          <input id="tf-first-name" name="first_name" type="text" required maxlength="100" autocomplete="given-name" />
+        </div>
+
+        <div class="mk-tf__field">
+          <label for="tf-last-name">{c.form.lastNameLabel}</label>
+          <input id="tf-last-name" name="last_name" type="text" required maxlength="100" autocomplete="family-name" />
+        </div>
+
         <div class="mk-tf__field">
           <label for="tf-org">{c.form.orgLabel}</label>
           <input id="tf-org" name="org_name" type="text" required autocomplete="organization" />
@@ -66,6 +77,13 @@ const c = getTrialContent(locale).start;
           <p class="mk-tf__help">{c.form.emailHelp}</p>
         </div>
 
+        <div class="mk-tf__consent">
+          <input id="tf-ai-consent" name="ai_consent" type="checkbox" />
+          <label for="tf-ai-consent">
+            {aiConsentBefore}<a href={c.form.aiConsentLinkUrl} target="_blank" rel="noopener">{c.form.aiConsentLinkLabel}</a>{aiConsentAfter}
+          </label>
+        </div>
+
         <div class="mk-tf__field" data-turnstile-field hidden>
           <span class="mk-tf__label-spacer">{c.form.captchaLabel}</span>
           <div data-turnstile-container data-turnstile-action="start_trial"></div>
@@ -92,6 +110,11 @@ const c = getTrialContent(locale).start;
   errorSlug: c.form.errorSlug,
   checkEmailHref: localePath(locale, '/trial/check-email'),
 }}>
+  // Version of the Plaid consent text shown on this form. It must match
+  // CURRENT_AI_SIGNUP_CONSENT_VERSION in backend/src/public/ai-signup-consent.ts:
+  // changing the text of the box means adding a new version on both sides.
+  const AI_CONSENT_VERSION = '2026-11-01';
+
   const form = document.querySelector('[data-trial-form]');
   const btn = document.querySelector('[data-trial-submit]');
   const statusEl = document.querySelector('[data-trial-status]');
@@ -154,16 +177,21 @@ const c = getTrialContent(locale).start;
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
+      const aiConsent = fd.get('ai_consent') === 'on';
       const payload = {
+        first_name: String(fd.get('first_name') ?? '').trim(),
+        last_name: String(fd.get('last_name') ?? '').trim(),
         org: String(fd.get('org_name') ?? '').trim(),
         slug: String(fd.get('slug') ?? '').trim().toLowerCase(),
         email: String(fd.get('email') ?? '').trim(),
         country_iso: String(fd.get('country_iso') ?? ''),
         captchaToken: captcha.enabled ? captcha.token : undefined,
+        ai_consent: aiConsent,
+        ai_consent_version: aiConsent ? AI_CONSENT_VERSION : undefined,
       };
 
       // Client-side checks (backend revalidates everything)
-      if (!payload.org || !payload.email || !payload.slug || !payload.country_iso) {
+      if (!payload.first_name || !payload.last_name || !payload.org || !payload.email || !payload.slug || !payload.country_iso) {
         setStatus(errorRequired, 'error');
         return;
       }
@@ -338,6 +366,28 @@ const c = getTrialContent(locale).start;
     white-space: nowrap;
     display: flex;
     align-items: center;
+  }
+
+  .mk-tf__consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .mk-tf__consent input {
+    flex: none;
+    margin: 3px 0 0;
+    accent-color: var(--kanap-teal);
+  }
+
+  .mk-tf__consent label {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--kanap-text-secondary);
+  }
+
+  .mk-tf__consent a {
+    color: var(--kanap-teal);
   }
 
   .mk-tf__status {

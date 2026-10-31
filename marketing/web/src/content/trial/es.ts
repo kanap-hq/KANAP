@@ -14,6 +14,8 @@ const content: TrialContent = {
       'Alternativa de autoalojamiento disponible en cualquier momento',
     ],
     form: {
+      firstNameLabel: 'Nombre',
+      lastNameLabel: 'Apellidos',
       orgLabel: 'Nombre de la organización',
       orgHelp: 'El nombre que verá tu equipo en la parte superior de la aplicación.',
       countryLabel: 'País',
@@ -30,6 +32,9 @@ const content: TrialContent = {
       errorRequired: 'Este campo es obligatorio.',
       errorEmail: 'Introduce una dirección de email válida.',
       errorSlug: 'Solo letras minúsculas, números y guiones.',
+      aiConsentText: 'Acepto que Plaid, el asistente, utilice el modelo incluido; mis preguntas y los datos a los que se refieren los trata en Estados Unidos el proveedor del modelo ({link}). Podré desactivarlo o elegir mi propio proveedor en Administración › Plaid.',
+      aiConsentLinkLabel: 'más información',
+      aiConsentLinkUrl: 'https://doc.kanap.net/es/ai-settings/',
       captchaLabel: 'Comprobación de seguridad',
       privacyNote: 'Tu email solo se usa para enviarte el enlace de activación y la guía inicial. Sin newsletter.',
     },

@@ -14,6 +14,8 @@ const content: TrialContent = {
       'Alternative d\'auto-hébergement possible à tout moment',
     ],
     form: {
+      firstNameLabel: 'Prénom',
+      lastNameLabel: 'Nom',
       orgLabel: 'Nom de l\'organisation',
       orgHelp: 'Le nom affiché que votre équipe verra en haut de l\'application.',
       countryLabel: 'Pays',
@@ -30,6 +32,9 @@ const content: TrialContent = {
       errorRequired: 'Ce champ est requis.',
       errorEmail: 'Entrez une adresse email valide.',
       errorSlug: 'Uniquement lettres minuscules, chiffres et traits d\'union.',
+      aiConsentText: 'J\'accepte que Plaid, l\'assistant, utilise le modèle inclus ; mes questions et les données qu\'elles concernent sont traitées aux États-Unis par le fournisseur du modèle ({link}). Je pourrai le désactiver ou choisir mon propre fournisseur dans Administration › Plaid.',
+      aiConsentLinkLabel: 'en savoir plus',
+      aiConsentLinkUrl: 'https://doc.kanap.net/fr/ai-settings/',
       captchaLabel: 'Vérification de sécurité',
       privacyNote: 'Votre email ne sert qu\'à vous envoyer le lien d\'activation et les premiers conseils d\'usage. Aucune newsletter.',
     },

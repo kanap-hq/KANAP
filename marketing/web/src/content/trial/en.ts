@@ -14,6 +14,8 @@ const content: TrialContent = {
       'Self-hosting alternative available at any time',
     ],
     form: {
+      firstNameLabel: 'First name',
+      lastNameLabel: 'Last name',
       orgLabel: 'Organisation name',
       orgHelp: 'The display name your team will see at the top of the app.',
       countryLabel: 'Country',
@@ -30,6 +32,9 @@ const content: TrialContent = {
       errorRequired: 'This field is required.',
       errorEmail: 'Enter a valid email address.',
       errorSlug: 'Only lowercase letters, numbers and hyphens.',
+      aiConsentText: 'I agree that Plaid, the assistant, uses the included model; my questions and the data they concern are processed in the United States by the model provider ({link}). I can turn this off or choose my own provider in Admin › Plaid.',
+      aiConsentLinkLabel: 'learn more',
+      aiConsentLinkUrl: 'https://doc.kanap.net/ai-settings/',
       captchaLabel: 'Security check',
       privacyNote: 'We use the email only to send your activation link and first-use guidance. No newsletter.',
     },
