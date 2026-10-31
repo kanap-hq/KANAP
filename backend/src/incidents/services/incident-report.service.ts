@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DocumentExportService, ExportImageFetchOptions } from '../../common/document-export.service';
 import { normalizeReportTimeZone } from '../../common/report-period';
+import { shippedLabelIn } from '../../it-ops-settings/catalog-shipped-labels';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { isIncidentReviewSystemTemplate } from '../../knowledge/integrated-document.constants';
 import { incidentRef } from './incidents-base.service';
@@ -475,6 +476,36 @@ export function formatDateTime(
 }
 
 /**
+ * The journal's two date columns. A numeric day, then the time and its zone, so the cell is two
+ * lines instead of a long month name wrapping once per word. The line separator is not a newline:
+ * a newline would break the Markdown table. `table` turns it into a `<br>`.
+ */
+const JOURNAL_DATE_BREAK = '\u2028';
+
+export function formatJournalDateTime(
+  value: Date | string | null | undefined,
+  lang: ReportLang,
+  timeZone?: string | null,
+): string | null {
+  const date = toDate(value);
+  if (!date) return null;
+  const zone = normalizeReportTimeZone(timeZone);
+  const day = new Intl.DateTimeFormat(DATE_LOCALES[lang], {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: zone,
+  }).format(date);
+  const clock = new Intl.DateTimeFormat(DATE_LOCALES[lang], {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: zone,
+    timeZoneName: 'short',
+  }).format(date);
+  return `${day}${JOURNAL_DATE_BREAK}${clock}`;
+}
+
+/**
  * A calendar date without a time (`tasks.due_date` is a `date` column). The date part is read
  * as YYYY-MM-DD and formatted in UTC, so the time zone of the reader never shifts it by a day.
  * A full timestamp is still formatted as its UTC calendar date.
@@ -633,18 +664,25 @@ function bulletList(items: string[]): string {
  * Relative widths of the journal table, in Pandoc's order: occurrence, recording, author,
  * kind, content. Pandoc's GFM reader turns them into default-width columns in its JSON AST,
  * so the table helper also writes a raw HTML marker that `DocumentExportService` reads back
- * before the Typst pass. The content column gets 10 units against 3 for the others, instead
- * of the one fifth that hyphenated every entry.
+ * before the Typst pass.
+ *
+ * Each date column is wide enough for the numeric day on one line and the time with its zone
+ * on the next (Europe, UTC, a one-digit GMT offset) on the PDF page. The content column stays
+ * wider than those two date columns together.
  */
-const JOURNAL_COLUMN_WEIGHTS = [3, 3, 3, 3, 10];
+const JOURNAL_COLUMN_WEIGHTS = [12, 12, 5, 5, 26];
+
+function escapeTableCell(value: string): string {
+  return String(value).split(JOURNAL_DATE_BREAK).map((part) => escapeMd(part, true)).join('<br>');
+}
 
 function table(headers: string[], rows: string[][], weights?: number[]): string {
-  const head = `| ${headers.map((h) => escapeMd(h, true)).join(' | ')} |`;
+  const head = `| ${headers.map((h) => escapeTableCell(h)).join(' | ')} |`;
   const sep = `| ${headers.map((_, index) => {
     const weight = Math.max(1, Math.round(weights?.[index] ?? 1));
     return '-'.repeat(Math.max(3, weight * 3));
   }).join(' | ')} |`;
-  const body = rows.map((row) => `| ${row.map((cell) => escapeMd(cell, true)).join(' | ')} |`);
+  const body = rows.map((row) => `| ${row.map((cell) => escapeTableCell(cell)).join(' | ')} |`);
   // Pandoc's GFM reader does not keep the separator widths through its JSON AST; the
   // marker carries them past that boundary. It is an HTML comment, invisible in the PDF.
   const marker = weights ? `<!-- kanap:table-widths=${weights.join(',')} -->\n` : '';
@@ -707,9 +745,10 @@ export function buildMarkdown(
 
   const entries = record.entries || [];
   if (entries.length) {
+    const journalWhen = (value: Date | string | null | undefined) => formatJournalDateTime(value, lang, tz) || '';
     const rows = entries.map((entry) => [
-      when(entry.occurred_at) || '',
-      when(entry.created_at) || '',
+      journalWhen(entry.occurred_at),
+      journalWhen(entry.created_at),
       authorName(entry, labels),
       lookup(labels.kind, entry.kind || 'note'),
       journalContent(entry, labels, record.review),
@@ -799,12 +838,15 @@ export function buildMarkdown(
 
 function resolveCategoryLabel(
   code: string | null | undefined,
-  options: Array<{ code: string; label: string }>,
+  options: Array<{ code: string; label?: string | null }>,
+  language: ReportLang,
 ): string | null {
   const value = String(code || '').trim();
   if (!value) return null;
   const match = options.find((option) => option.code === value);
-  return match?.label || value;
+  if (!match) return value;
+  // Shipped catalogue text in the report's language. A name the tenant typed stays as stored.
+  return shippedLabelIn('incidentCategories', match, language) ?? (match.label || value);
 }
 
 /** Record options plus the request cookie, forwarded to inline image fetches. */
@@ -837,7 +879,7 @@ export class IncidentReportService {
     });
     const settings = await this.itOps.getSettings(String(opts.tenantId), { manager: opts.manager });
     const markdown = buildMarkdown(
-      { ...record, categoryLabel: resolveCategoryLabel(record.incident.category, settings.incidentCategories) },
+      { ...record, categoryLabel: resolveCategoryLabel(record.incident.category, settings.incidentCategories, locale) },
       locale,
       labels,
       timeZone,
