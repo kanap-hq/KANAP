@@ -30,12 +30,14 @@ import { OnboardingService } from '../onboarding.service';
 // signed access tokens, the tenancy middleware and the request pipeline main.ts installs (the
 // request transaction carries the tenant), the real OnboardingService on the spec database.
 // - a new workspace has no choice, no steps, sample data `idle`, and anybody may choose;
-// - the first user who answers sets the angle or the mode; changing a value already set takes
+// - any user sets the angle or the mode while it is empty; changing a value already set takes
 //   an administrator (403 `administrator_required`); invalid input is a 400;
 // - the steps belong to each user and to the current path; the audit log gets `angle_chosen`,
 //   `mode_chosen`, `step_done` and one `completed` per user, angle and mode;
 // - `sample_data` mirrors `tenants.metadata.demo`; hiding the list is per user;
-// - another workspace sees nothing; two first choices at once give one event each.
+// - a member may set a field still missing; the Administrator role counts as an additional role;
+// - another workspace sees nothing; eight first choices at once give one event each; two last
+//   steps at once give one `completed`; a deleted user's rows go with them.
 // @database-spec: opens the data-source and boots Nest, so run-ci-tests.js runs it on a database lane.
 
 type Served = { app: INestApplication; port: number; close: () => Promise<void> };
@@ -480,18 +482,23 @@ async function testIsolation() {
   }
 }
 
-// 9. Two (here three) first choices at the same time: no error, one event per field.
+// 9. Eight first choices at the same time, by eight users, with the same value: all answer 200,
+// one event per field, written by the first who answered.
 async function testConcurrentFirstChoice() {
   const svc = buildServices();
   const served = await serve();
   let t: ActivatedTenant | undefined;
   try {
     t = await createActivatedTenant(svc, { tag: 'onb-race', orgName: 'Onboarding Race' });
-    const a = await member(svc, t);
-    const b = await member(svc, t);
+    const tokens = [ownerToken(t)];
+    for (let i = 0; i < 7; i += 1) tokens.push((await member(svc, t)).token);
     const body = { angle: 'cartography', mode: 'example' };
-    const answers = await Promise.all([ownerToken(t), a.token, b.token].map((token) => client(served, t!, token).choose(body)));
-    answers.forEach((res, i) => ok(res, `concurrent choice ${i}`));
+    const answers = await Promise.all(tokens.map((token) => client(served, t!, token).choose(body)));
+    answers.forEach((res, i) => {
+      const state = ok(res, `concurrent choice ${i}`);
+      assert.equal(state.angle, 'cartography');
+      assert.equal(state.mode, 'example');
+    });
     const logged = await events(t.tenantId);
     assert.deepEqual(logged.map((e) => [e.action, e.after]), [
       ['onboarding.angle_chosen', { angle: 'cartography', previous: null }],
@@ -499,6 +506,125 @@ async function testConcurrentFirstChoice() {
     ]);
     assert.equal(logged[0].user_id, logged[1].user_id, 'both by the first who answered');
     assert.equal((await choiceRow(t.tenantId)).chosen_by, logged[0].user_id);
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
+// 10. The two last steps posted at the same time by one user: both 200, one `completed`.
+async function testConcurrentLastSteps() {
+  const svc = buildServices();
+  const served = await serve();
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'onb-last', orgName: 'Onboarding Last' });
+    const asOwner = client(served, t);
+    const path = ONBOARDING_PATHS.budget.example;
+    ok(await asOwner.choose({ angle: 'budget', mode: 'example' }), 'choice');
+    for (const key of path.slice(0, 3)) ok(await asOwner.done(key), `done ${key}`);
+    const answers = await Promise.all(path.slice(3).map((key) => asOwner.done(key)));
+    answers.forEach((res, i) => ok(res, `last step ${i}`));
+    const state = ok(await asOwner.get(), 'GET after');
+    assert.equal(state.completed, true);
+    assert.equal((await events(t.tenantId, 'onboarding.step_done')).length, 5);
+    const completed = await events(t.tenantId, 'onboarding.completed');
+    assert.deepEqual(completed.map((e) => [e.after, e.user_id]), [[{ angle: 'budget', mode: 'example' }, t.ownerId]]);
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
+// 11. The angle set alone by the administrator: a member may set the missing mode, not change
+// the angle.
+async function testMemberCompletesTheChoice() {
+  const svc = buildServices();
+  const served = await serve();
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'onb-fill', orgName: 'Onboarding Fill' });
+    const a = await member(svc, t);
+    const asMember = client(served, t, a.token);
+    ok(await client(served, t).choose({ angle: 'portfolio' }), 'owner sets the angle');
+    assert.equal(ok(await asMember.get(), 'member GET').can_choose, true, 'the mode is missing');
+    refused(await asMember.choose({ angle: 'budget' }), 403, 'administrator_required', 'member changes the angle, mode missing');
+    refused(await asMember.choose({ angle: 'budget', mode: 'example' }), 403, 'administrator_required', 'member changes the angle with the mode');
+    assert.equal((await choiceRow(t.tenantId)).mode, null, 'nothing written');
+    const filled = ok(await asMember.choose({ mode: 'own_data' }), 'member sets the mode');
+    assert.equal(filled.angle, 'portfolio');
+    assert.equal(filled.mode, 'own_data');
+    assert.equal(filled.can_choose, false, 'both set');
+    refused(await asMember.choose({ angle: 'budget' }), 403, 'administrator_required', 'member changes the angle, both set');
+    assert.deepEqual((await events(t.tenantId)).map((e) => [e.action, e.user_id]), [
+      ['onboarding.angle_chosen', t.ownerId],
+      ['onboarding.mode_chosen', a.id],
+    ]);
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
+// 12. The Administrator role as an additional role (`user_roles`) counts.
+async function testAdditionalAdministrator() {
+  const svc = buildServices();
+  const served = await serve();
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'onb-extra', orgName: 'Onboarding Extra' });
+    const a = await member(svc, t);
+    const asMember = client(served, t, a.token);
+    ok(await client(served, t).choose({ angle: 'budget', mode: 'example' }), 'owner chooses');
+    refused(await asMember.choose({ angle: 'cartography' }), 403, 'administrator_required', 'before the extra role');
+    await inTenant(t.tenantId, (m) => m.query(
+      `INSERT INTO user_roles (tenant_id, user_id, role_id, is_primary)
+       SELECT $1, $2, r.id, false FROM roles r WHERE r.tenant_id = $1 AND lower(r.role_name) = 'administrator'`,
+      [t!.tenantId, a.id],
+    ));
+    const [main] = await inTenant(t.tenantId, (m) => m.query(
+      `SELECT r.role_name FROM users u JOIN roles r ON r.id = u.role_id WHERE u.tenant_id = $1 AND u.id = $2`, [t!.tenantId, a.id]));
+    assert.notEqual(main.role_name.toLowerCase(), 'administrator', 'the main role is not Administrator');
+    assert.equal(ok(await asMember.get(), 'member GET').can_choose, true);
+    const changed = ok(await asMember.choose({ angle: 'cartography' }), 'member with the extra role changes the angle');
+    assert.equal(changed.angle, 'cartography');
+    const last = (await events(t.tenantId)).pop()!;
+    assert.deepEqual([last.action, last.after, last.user_id], ['onboarding.angle_chosen', { angle: 'cartography', previous: 'budget' }, a.id]);
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
+// 13. A deleted user's steps and dismissal go with them; the others stay.
+async function testUserDeleted() {
+  const svc = buildServices();
+  const served = await serve();
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'onb-gone', orgName: 'Onboarding Gone' });
+    const a = await member(svc, t);
+    const b = await member(svc, t);
+    ok(await client(served, t).choose({ angle: 'budget', mode: 'example' }), 'choice');
+    for (const user of [a, b]) {
+      const asUser = client(served, t, user.token);
+      ok(await asUser.done('budget_overview'), 'step one');
+      ok(await asUser.done('budget_line'), 'step two');
+      ok(await asUser.dismiss(), 'dismiss');
+    }
+    const counts = (userId: string) => inTenant(t!.tenantId, async (m) => {
+      const [row] = await m.query(
+        `SELECT (SELECT count(*)::int FROM onboarding_steps WHERE tenant_id = $1 AND user_id = $2) AS steps,
+                (SELECT count(*)::int FROM onboarding_dismissals WHERE tenant_id = $1 AND user_id = $2) AS dismissals`,
+        [t!.tenantId, userId],
+      );
+      return row;
+    });
+    assert.deepEqual(await counts(a.id), { steps: 2, dismissals: 1 });
+    await inTenant(t.tenantId, (m) => m.query(`DELETE FROM users WHERE tenant_id = $1 AND id = $2`, [t!.tenantId, a.id]));
+    assert.deepEqual(await counts(a.id), { steps: 0, dismissals: 0 }, 'the deleted user\'s rows are gone');
+    assert.deepEqual(await counts(b.id), { steps: 2, dismissals: 1 }, 'the other user\'s rows stay');
+    assert.ok(await choiceRow(t.tenantId), 'the workspace choice stays');
   } finally {
     await served.close();
     await cleanupTenants([t?.tenantId]);
@@ -514,6 +640,10 @@ runSpecs('onboarding.routes.integration.spec', [
   testDismiss,
   testIsolation,
   testConcurrentFirstChoice,
+  testConcurrentLastSteps,
+  testMemberCompletesTheChoice,
+  testAdditionalAdministrator,
+  testUserDeleted,
 ]).catch((error) => {
   console.error(error);
   process.exit(1);

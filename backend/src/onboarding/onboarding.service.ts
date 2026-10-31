@@ -36,7 +36,10 @@ export type OnboardingState = {
   angle: OnboardingAngle | null;
   mode: OnboardingMode | null;
   chosen_at: string | null;
-  /** True while nothing is chosen, and always for an administrator. */
+  /**
+   * True while the angle or the mode is missing (anybody may set the missing field), and always
+   * for an administrator (who may also change a field already set).
+   */
   can_choose: boolean;
   /** The five steps of the current path, in order; empty without an angle or a mode. */
   steps: OnboardingStep[];
@@ -101,7 +104,7 @@ export class OnboardingService {
       angle,
       mode,
       chosen_at: iso(choice?.chosen_at),
-      can_choose: (!angle && !mode) || (await isTenantAdministrator(manager, tenantId, userId)),
+      can_choose: !angle || !mode || (await isTenantAdministrator(manager, tenantId, userId)),
       steps,
       next_step: next?.key ?? null,
       completed: steps.length > 0 && !next,
@@ -112,8 +115,8 @@ export class OnboardingService {
   }
 
   /**
-   * `PUT /onboarding/choice` with `{ angle?, mode? }`. A field left out keeps its value. The first
-   * user who answers sets a field; changing a field already set takes an administrator. The
+   * `PUT /onboarding/choice` with `{ angle?, mode? }`. A field left out keeps its value. Any user
+   * may set a field still empty; changing a field already set takes an administrator. The
    * tenant's row is locked, so two first answers at the same time apply one after the other.
    */
   async setChoice(manager: EntityManager, tenantId: string, userId: string, body: unknown): Promise<OnboardingState> {
@@ -222,19 +225,24 @@ export class OnboardingService {
     );
     if (inserted.length > 0) {
       await this.audit(manager, tenantId, userId, 'onboarding.step_done', { angle, mode, step_key: key });
-      const [progress]: Array<{ done: number; logged: boolean }> = await manager.query(
-        `SELECT
-           (SELECT count(*)::int FROM onboarding_steps
-             WHERE tenant_id = $1 AND user_id = $2 AND angle = $3 AND mode = $4 AND step_key = ANY($5::text[])) AS done,
-           EXISTS (
+      const [progress]: Array<{ done: number }> = await manager.query(
+        `SELECT count(*)::int AS done FROM onboarding_steps
+          WHERE tenant_id = $1 AND user_id = $2 AND angle = $3 AND mode = $4 AND step_key = ANY($5::text[])`,
+        [tenantId, userId, angle, mode, [...path]],
+      );
+      // Only the step that completes the path looks for an earlier `onboarding.completed`.
+      if (progress && progress.done === path.length) {
+        const [previous]: Array<{ logged: boolean }> = await manager.query(
+          `SELECT EXISTS (
              SELECT 1 FROM audit_log
-              WHERE tenant_id = $1 AND record_id = $1 AND table_name = $6 AND action = 'onboarding.completed'
+              WHERE tenant_id = $1 AND record_id = $1 AND table_name = $5 AND action = 'onboarding.completed'
                 AND user_id = $2 AND after_json->>'angle' = $3 AND after_json->>'mode' = $4
            ) AS logged`,
-        [tenantId, userId, angle, mode, [...path], ONBOARDING_AUDIT_TABLE],
-      );
-      if (progress && progress.done === path.length && !progress.logged) {
-        await this.audit(manager, tenantId, userId, 'onboarding.completed', { angle, mode });
+          [tenantId, userId, angle, mode, ONBOARDING_AUDIT_TABLE],
+        );
+        if (!previous?.logged) {
+          await this.audit(manager, tenantId, userId, 'onboarding.completed', { angle, mode });
+        }
       }
     }
     return this.getState(manager, tenantId, userId);

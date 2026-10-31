@@ -20,8 +20,9 @@ resets the workspace. The operator's tenant export exports them.
 | `onboarding_steps` | `id`; unique `(tenant_id, user_id, angle, mode, step_key)` | `user_id`, `angle`, `mode`, `step_key`, `done_at` |
 | `onboarding_dismissals` | `(tenant_id, user_id)` | `dismissed_at` |
 
-`onboarding_steps` and `onboarding_dismissals` reference the user by `(tenant_id, user_id)` and
-go with the user.
+`onboarding_steps` and `onboarding_dismissals` reference the user by `(tenant_id, user_id)` with
+`ON DELETE CASCADE`: a deleted user's rows go with them. This includes the sample data accounts
+that the tenant reset deletes.
 
 ## Paths
 
@@ -73,8 +74,10 @@ Response:
   this path. `[]` without an angle or a mode. Steps done in another path are kept for it.
 - `next_step`: the first step not done; `null` when all are done or there is no path.
   `completed`: the five are done.
-- `can_choose`: true while neither an angle nor a mode is set, and always for an administrator
-  (the Administrator role, main or additional, on an enabled account: `isTenantAdministrator`).
+- `can_choose`: true while the angle or the mode is missing, so that any user can set the missing
+  field, and always for an administrator (the Administrator role, main or additional, on an
+  enabled account: `isTenantAdministrator`). Changing a field already set still takes an
+  administrator.
 - `sample_data`: `status` and `step` of `tenants.metadata.demo` (`idle` when absent or
   malformed). `reset_in_progress`: `status = 'resetting'`.
 
@@ -87,7 +90,10 @@ Response:
   `403` `administrator_required`, and nothing is written.
 - The same value as the current one writes nothing and logs nothing.
 - The tenant's row is created if missing, then locked (`FOR UPDATE`): two first answers at the
-  same time apply one after the other, and only the first logs events.
+  same time apply one after the other. The second one then meets a field already set. With the
+  same value, it answers `200` and writes nothing. With another value, it gets `403`
+  `administrator_required` from a user who is not an administrator; from an administrator, it
+  changes the value and logs its own event.
 
 `POST /steps/:key/done`: `409` `no_choice` without an angle or a mode; `400` `unknown_step` when
 the key is not in the current path. A step already done is left as it is. `DELETE` removes the
@@ -110,3 +116,8 @@ Written in the request's transaction: `table_name = 'onboarding'`, `record_id` =
 | `onboarding.completed` | that step completes the path for this user, and no `onboarding.completed` exists yet for this user, angle and mode | `{ angle, mode }` |
 
 Nothing is logged for a step undone or for the list hidden or shown.
+
+For the measures:
+- `onboarding.step_done` is logged again when a step undone is done again. Count the steps done
+  by distinct `step_key` per user, angle and mode, or read `onboarding_steps`.
+- `onboarding.completed` is logged once per user, angle and mode.
