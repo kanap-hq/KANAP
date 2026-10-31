@@ -269,6 +269,11 @@ async function* streamCompletion(
     // OpenAI-style field; OpenRouter accepts it as an alias for reasoning.effort.
     request.reasoning_effort = params.reasoningEffort;
   }
+  if (params.providerId === 'openai') {
+    // OpenAI reports a stream's usage only on request, in a last chunk with no choices. Other
+    // compatible servers may refuse the field (Mistral and DeepSeek report usage anyway).
+    request.stream_options = { include_usage: true };
+  }
 
   let stream: Awaited<ReturnType<typeof client.chat.completions.create>>;
   try {
@@ -298,7 +303,9 @@ async function* streamCompletion(
   }
 
   const pendingToolCalls = new Map<number, { id: string; name: string; args: string }>();
-  let emittedDone = false;
+  // `done` is sent once the stream ends: OpenAI reports the usage after the finishing chunk.
+  let finishReason: string | null = null;
+  let usage: StreamUsage | undefined;
   let firstRawChunkSeen = false;
   let firstTextDeltaSeen = false;
   let firstToolDeltaSeen = false;
@@ -325,6 +332,7 @@ async function* streamCompletion(
         yield { type: 'debug_trace', name: 'provider_first_raw_chunk' };
       }
 
+      usage = toUsage(chunk.usage) ?? usage;
       const choice = chunk.choices?.[0];
       if (!choice) {
         continue;
@@ -386,8 +394,7 @@ async function* streamCompletion(
           };
           return;
         }
-        yield { type: 'done', usage: toUsage(chunk.usage), finish_reason: 'length' };
-        emittedDone = true;
+        finishReason = 'length';
         continue;
       }
 
@@ -408,13 +415,7 @@ async function* streamCompletion(
           }
         }
         yield* emitPendingNativeToolCalls();
-
-        yield {
-          type: 'done',
-          usage: toUsage(chunk.usage),
-          finish_reason: choice.finish_reason,
-        };
-        emittedDone = true;
+        finishReason = choice.finish_reason;
       }
     }
   } catch (error) {
@@ -425,18 +426,20 @@ async function* streamCompletion(
     return;
   }
 
-  // Ensure done is always emitted even if no finish_reason was seen
-  if (!emittedDone) {
-    if (pendingToolCalls.size > 0) {
-      logger.warn(
-        `provider=${params.providerId ?? 'unknown'} model=${params.model} stream_ended_without_finish_reason pending_tool_calls=${pendingToolCalls.size}`,
-      );
-      yield {
-        type: 'error',
-        message: 'Model output ended before the tool call completed.',
-      };
-      return;
-    }
-    yield { type: 'done' };
+  if (finishReason) {
+    yield { type: 'done', usage, finish_reason: finishReason };
+    return;
   }
+  // Ensure done is always emitted even if no finish_reason was seen
+  if (pendingToolCalls.size > 0) {
+    logger.warn(
+      `provider=${params.providerId ?? 'unknown'} model=${params.model} stream_ended_without_finish_reason pending_tool_calls=${pendingToolCalls.size}`,
+    );
+    yield {
+      type: 'error',
+      message: 'Model output ended before the tool call completed.',
+    };
+    return;
+  }
+  yield { type: 'done', ...(usage ? { usage } : {}) };
 }
