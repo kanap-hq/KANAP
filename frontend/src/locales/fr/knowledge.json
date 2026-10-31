@@ -80,6 +80,11 @@
       "title": "Sélectionner un modèle"
     }
   },
+  "empty": {
+    "all": "Aucun document dans ces bibliothèques pour l'instant.",
+    "folder": "Aucun document dans ce dossier pour l'instant.",
+    "library": "Aucun document dans cette bibliothèque pour l'instant."
+  },
   "folderMoveDialog": {
     "actions": {
       "move": "Déplacer"

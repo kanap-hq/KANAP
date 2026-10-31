@@ -430,6 +430,7 @@
   "suppliers": {
     "title": "Lieferanten",
     "newSupplier": "Neuer Lieferant",
+    "empty": "Noch keine Lieferanten.",
     "supplierFallback": "Lieferant",
     "contactsTabHint": "Der Tab Kontakte wird nach dem Erstellen des Lieferanten verfügbar.",
     "loadError": "Fehler beim Laden des Lieferanten.",

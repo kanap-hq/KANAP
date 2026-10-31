@@ -5,7 +5,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { DATE_COLUMN_FILTER, EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
-import { Alert, Box, Button, MenuItem, Select, Stack, useTheme } from '@mui/material';
+import { Alert, Box, Button, MenuItem, Select, Stack, Typography, useTheme } from '@mui/material';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
@@ -720,6 +720,16 @@ export default function ContractsPage() {
         onGridApiReady={(api) => { gridApiRef.current = api; }}
         enableRowSelection={canAdmin && !limited}
         onSelectionChanged={setSelectedRows}
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="contracts-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('contracts.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={handleNew}>
+                {t('contracts.workspace.newContract')}
+              </Button>
+            )}
+          </Stack>
+        )}
         onQueryStateChange={(state) => {
           const filters = state.filterModel || {};
           const statusScope = state.statusScope ?? 'enabled';

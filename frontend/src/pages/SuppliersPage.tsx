@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
-import { Button, Stack } from '@mui/material';
+import { Button, Stack, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
@@ -106,6 +106,10 @@ export default function SuppliersPage() {
     },
   ], [getSupplierHref, locale, navigate, t]);
 
+  const openNewSupplier = () => {
+    const sp = buildWorkspaceSearch();
+    navigate(`/master-data/suppliers/new/overview?${sp.toString()}`);
+  };
   const canCreate = hasLevel('suppliers','manager');
   const canAdmin = hasLevel('suppliers','admin');
   // Importing over or deleting shared suppliers is reserved to people with access to all data (spec §2.7).
@@ -113,13 +117,7 @@ export default function SuppliersPage() {
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
-        <Button
-          variant="action-primary"
-          onClick={() => {
-            const sp = buildWorkspaceSearch();
-            navigate(`/master-data/suppliers/new/overview?${sp.toString()}`);
-          }}
-        >
+        <Button variant="action-primary" onClick={openNewSupplier}>
           {t('shared.labels.new')}
         </Button>
       )}
@@ -169,6 +167,16 @@ export default function SuppliersPage() {
           const scope = state.statusScope ?? 'enabled';
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {}, statusScope: scope };
         }}
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="suppliers-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('suppliers.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={openNewSupplier}>
+                {t('suppliers.newSupplier')}
+              </Button>
+            )}
+          </Stack>
+        )}
       />
       <CsvExportDialog listRequest={listRequest} entity="suppliers"
         open={exportOpen}

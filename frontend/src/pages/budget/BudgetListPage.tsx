@@ -1062,6 +1062,16 @@ function BudgetListPageView() {
         }}
         enableRowSelection={canDelete}
         onSelectionChanged={setSelectedRows}
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="budget-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('budget.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={() => openNew(natureScope === 'all' ? 'opex' : natureScope)}>
+                {t('budget.newLine')}
+              </Button>
+            )}
+          </Stack>
+        )}
         footer={fxMissing?.length ? <FxMissingNotice items={fxMissing} /> : undefined}
       />}
       <BudgetFileExportDialog
