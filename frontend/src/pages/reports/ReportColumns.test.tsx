@@ -399,6 +399,34 @@ describe('Chart tooltips', () => {
   });
 });
 
+describe('Top lines chart subtitle', () => {
+  const metric = 'ops:operations.budgetColumns.budget';
+
+  it('names the pie as a share of the lines drawn and the bars as a share of the annual total', async () => {
+    serverRows = [
+      { id: 'a', product_name: 'Large', versions: { y: slot(Y, { budget: 50 }) } },
+      { id: 'b', product_name: 'Mid', versions: { y: slot(Y, { budget: 30 }) } },
+      { id: 'c', product_name: 'Small', versions: { y: slot(Y, { budget: 20 }) } },
+    ];
+    renderReport(<TopOpexReport />);
+    await waitFor(() => expect(chart.options?.subtitle?.text).toBe(
+      `reports.topOpex.pieShareSubtitle ${JSON.stringify({ count: 3, metric })}`,
+    ));
+
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'reports.filters.topCount' }), { target: { value: '2' } });
+    await waitFor(() => expect(chart.options.subtitle.text).toBe(
+      `reports.topOpex.pieShareSubtitle ${JSON.stringify({ count: 2, metric })}`,
+    ));
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'reports.filters.chartType' }));
+    fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'reports.filters.horizontalBarChart' }));
+    await waitFor(() => expect(chart.options.subtitle.text).toBe(
+      `reports.topOpex.shareSubtitle ${JSON.stringify({ metric })}`,
+    ));
+    expect(chart.options.series[0].type).toBe('bar');
+  });
+});
+
 describe('OPEX delta shares', () => {
   const lines = [
     { id: 'a', product_name: 'Small', versions: { yMinus1: slot(Y - 1, { budget: 1000 }), y: slot(Y, { budget: 1123 }) } },

@@ -1512,6 +1512,7 @@
       "totalMetric": "{{metric}}, total",
       "ofFilteredMetric": "{{pct}} % del total filtrado",
       "shareSubtitle": "Participación en el total anual ({{metric}})",
+      "pieShareSubtitle": "Participación en el top {{count}} ({{metric}})",
       "shareOfAllLines": "Participación de todas las líneas",
       "chartTitle": "Top {{count}} {{type}} · {{metric}} {{year}}",
       "chartTitle_all": "Top {{count}} líneas · {{metric}} {{year}}"

@@ -117,7 +117,12 @@ export default function TopOpexReport() {
     const drawnTotal = drawnSliceTotal(chartData.map((row) => row.value));
     const base = {
       title: { text: t('reports.topOpex.chartTitle', { count: chartData.length, type: scopeLabel, context: scope, metric: metricLabel, year }) },
-      subtitle: { text: t('reports.topOpex.shareSubtitle', { metric: metricLabel }) },
+      // Slice labels are shares of the slices drawn. Bar tooltips stay shares of the annual total.
+      subtitle: {
+        text: chartType === 'pie'
+          ? t('reports.topOpex.pieShareSubtitle', { count: chartData.length, metric: metricLabel })
+          : t('reports.topOpex.shareSubtitle', { metric: metricLabel }),
+      },
       footnote: { text: `${t('reports.topOpex.totalMetric', { metric: metricLabel })}: ${formatNumber(knownTotal)}` },
       data: chartData,
       legend: { enabled: false },
