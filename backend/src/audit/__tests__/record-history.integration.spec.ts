@@ -172,6 +172,14 @@ async function testEntriesAndChildren(seedRow: Seeded) {
   assert.equal(dimension.change.before, 'Cloud');
   assert.equal(dimension.change.after, 'On premise');
 
+  const createdLine = page.items.find((item) => item.action === 'create' && item.subject.kind === 'record');
+  assert.ok(createdLine, 'the line creation is an entry');
+  const createdDimension = createdLine.changes.find((change) => change.field === 'dimension');
+  assert.ok(createdDimension, 'a created line names its dimensions');
+  assert.equal(Object.prototype.hasOwnProperty.call(createdDimension, 'before'), false, 'a creation names the value only');
+  assert.equal(createdDimension.dimension, 'Cost pool');
+  assert.equal(createdDimension.after, 'Cloud');
+
   console.log('  one entry per write, children attached, structured changes: OK');
 }
 
@@ -242,9 +250,11 @@ async function testTechnicalChildren(seedRow: Seeded) {
 
   const versionCreate = page.items.find((item) => item.subject.kind === 'version' && item.action === 'create');
   assert.ok(versionCreate, 'the version creation is an entry');
+  assert.equal(versionCreate.subject.label, String(YEAR), 'a version is named by its year');
   assert.deepEqual(versionCreate.changes, [], 'a version creation shows its title only');
   const versionUpdate = page.items.find((item) => item.subject.kind === 'version' && item.changes.some((change) => change.field === 'input_grain'));
   assert.ok(versionUpdate, 'the version update is an entry');
+  assert.equal(versionUpdate.subject.label, String(YEAR), 'an update names the year loaded with the version');
   assert.deepEqual(versionUpdate.changes.map((change) => change.field), ['input_grain'], 'a version update keeps its changed fields');
   assert.equal(versionUpdate.changes[0]?.after, 'annual');
 
