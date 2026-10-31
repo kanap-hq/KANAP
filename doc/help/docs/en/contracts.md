@@ -49,7 +49,7 @@ Each row opens the contract. Your search, filters and sort are kept when you com
 **Default columns**:
 
 - **Contract**, **Supplier**, **Company**
-- **Next due date**: the next cancellation deadline of a contract that renews tacitly, or the end of any other contract. The date is followed by "in n days". An ended contract shows the day it ended, greyed out
+- **Next due date**: "Cancellation possible until {date}" when that date is the cancellation deadline and it comes before the end of the term, or "Ends on {date}" when the date is the end of the contract. The line ends with "in n days". An ended contract shows the day it ended, greyed out
 - **State**: see below
 - **Yearly amount**: the amount at signature, followed by its currency
 - **Committed**, **Budget** and **Gap** for the chosen budget year. See [Budget columns](#budget-columns)
