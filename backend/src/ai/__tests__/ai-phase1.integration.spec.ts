@@ -4538,6 +4538,16 @@ async function testAiAdminOverviewChatCostsReadRecordedCostsAndMergeModels() {
     assert.equal(recorded.costs.current_month.chat_eur, 2.545);
     assert.equal(recorded.costs.chat_priced, true);
     assert.equal(recorded.costs.chat_estimated, false);
+
+    // A model priced only for the tokens read from the cache is priced too; one at 0 everywhere is not.
+    const cacheOnly = await new AiAdminOverviewService({
+      tryResolve: async () => ({ priceInputEurPerMtok: 0, priceOutputEurPerMtok: null, priceCacheReadEurPerMtok: 0.2 }),
+    } as any).getOverview(tenantId, runner.manager);
+    assert.equal(cacheOnly.costs.chat_priced, true);
+    const free = await new AiAdminOverviewService({
+      tryResolve: async () => ({ priceInputEurPerMtok: 0, priceOutputEurPerMtok: 0, priceCacheReadEurPerMtok: 0 }),
+    } as any).getOverview(tenantId, runner.manager);
+    assert.equal(free.costs.chat_priced, false);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

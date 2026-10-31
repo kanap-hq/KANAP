@@ -288,7 +288,11 @@ export class AiAdminOverviewService {
     // part of the month is estimated).
     const chatModel = await this.modelResolver.tryResolve(tenantId, { type: 'chat' }, manager);
     const chatPrices = chatModel
-      ? { priceInputEurPerMtok: chatModel.priceInputEurPerMtok, priceOutputEurPerMtok: chatModel.priceOutputEurPerMtok }
+      ? {
+        priceInputEurPerMtok: chatModel.priceInputEurPerMtok,
+        priceOutputEurPerMtok: chatModel.priceOutputEurPerMtok,
+        priceCacheReadEurPerMtok: chatModel.priceCacheReadEurPerMtok,
+      }
       : null;
     const estimatedChatMonth = llmCostEur(
       toNumber(currentMonth.unrecorded_input_tokens),
@@ -358,7 +362,11 @@ export class AiAdminOverviewService {
           cost_last_30_days_eur: toNumber(row.cost_last_30_days_eur),
         })),
         by_model: mergeModelCosts([...modelCostRows, ...chatModelCostRows]),
-        chat_priced: !!chatPrices && ((chatPrices.priceInputEurPerMtok ?? 0) > 0 || (chatPrices.priceOutputEurPerMtok ?? 0) > 0),
+        chat_priced: !!chatPrices && (
+          (chatPrices.priceInputEurPerMtok ?? 0) > 0
+          || (chatPrices.priceOutputEurPerMtok ?? 0) > 0
+          || (chatPrices.priceCacheReadEurPerMtok ?? 0) > 0
+        ),
         chat_estimated: estimatedChatMonth > 0,
       },
     };
