@@ -18,6 +18,9 @@ vi.mock('../../api', () => ({
   },
 }));
 
+const localeState = vi.hoisted(() => ({ current: 'en' }));
+vi.mock('../../i18n/useLocale', () => ({ useLocale: () => localeState.current }));
+
 vi.mock('../../config/FeaturesContext', () => ({
   useFeatures: () => ({
     config: { features: { aiSettings: true, builtinAiProvider: false } },
@@ -74,6 +77,7 @@ async function openEditDialog() {
 describe('AdminAiModelsPage cache read cost', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localeState.current = 'en';
     (api.get as any).mockImplementation((url: string) => {
       switch (url) {
         case '/ai/model-configs':
@@ -125,6 +129,21 @@ describe('AdminAiModelsPage cache read cost', () => {
       price_input_eur_per_mtok: 0.4,
       price_output_eur_per_mtok: 2,
       price_cache_read_eur_per_mtok: 0.05,
+    });
+  });
+
+  it('shows the stored prices with the decimal separator of the user language', async () => {
+    localeState.current = 'fr';
+    const field = await openEditDialog();
+    expect(field).toHaveValue('0,04');
+    expect(screen.getByDisplayValue('0,4')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    expect((api.patch as any).mock.calls[0][1]).toMatchObject({
+      price_input_eur_per_mtok: 0.4,
+      price_output_eur_per_mtok: 2,
+      price_cache_read_eur_per_mtok: 0.04,
     });
   });
 

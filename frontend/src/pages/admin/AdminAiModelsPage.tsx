@@ -72,7 +72,13 @@ function parsePriceInput(value: string): number | null | undefined {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
-function draftFromConfig(config: AiModelConfig): DraftState {
+// A stored price shown in the user's language (0,15 in French), without grouping so parsePriceInput reads it back.
+function priceDraft(value: number | string | null, locale: string): string {
+  if (value == null) return '';
+  return Number(value).toLocaleString(locale, { useGrouping: false, maximumFractionDigits: 4 });
+}
+
+function draftFromConfig(config: AiModelConfig, locale: string): DraftState {
   return {
     name: config.name,
     provider: config.provider,
@@ -80,9 +86,9 @@ function draftFromConfig(config: AiModelConfig): DraftState {
     endpoint_url: config.endpoint_url ?? '',
     api_key: '',
     supports_vision: config.supports_vision,
-    price_input: config.price_input_eur_per_mtok != null ? String(config.price_input_eur_per_mtok) : '',
-    price_output: config.price_output_eur_per_mtok != null ? String(config.price_output_eur_per_mtok) : '',
-    price_cache_read: config.price_cache_read_eur_per_mtok != null ? String(config.price_cache_read_eur_per_mtok) : '',
+    price_input: priceDraft(config.price_input_eur_per_mtok, locale),
+    price_output: priceDraft(config.price_output_eur_per_mtok, locale),
+    price_cache_read: priceDraft(config.price_cache_read_eur_per_mtok, locale),
     timeout_seconds: config.llm_timeout_ms != null ? String(Math.round(config.llm_timeout_ms / 1000)) : '',
   };
 }
@@ -252,7 +258,7 @@ export default function AdminAiModelsPage() {
   };
   const openEdit = (modelConfig: AiModelConfig) => {
     setEditingId(modelConfig.id);
-    setDraft(draftFromConfig(modelConfig));
+    setDraft(draftFromConfig(modelConfig, locale));
     setHasStoredKey(modelConfig.has_api_key);
     setError(null);
     setTestResult(null);
