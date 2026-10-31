@@ -7,6 +7,7 @@ import type { EntityManager, QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { RecordHistoryService } from '../../audit/record-history.service';
 import { audit, seedHistoryData, seedPerson, type HistorySeed, type Person } from '../../audit/__tests__/record-history.fixtures';
+import { resolveBudgetLine } from '../../common/resolve-item-id';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { createRaceTenant, dropRaceTenant, seed } from '../../spend/__tests__/race-harness';
 import { User } from '../../users/user.entity';
@@ -286,6 +287,69 @@ async function testOtherTenant(seeded: Seeded) {
 }
 
 /**
+ * An import is the source only, with no name, as the History tab shows it. A reference whose
+ * number is another line's legacy number names the same line in the history and in the detail
+ * (`resolveBudgetLine`, what `get_entity_detail` loads): the line number first, then the legacy
+ * number.
+ */
+async function testImportAndSharedBudgetReference(seeded: Seeded) {
+  await seed(seeded.data.tenantId, (runner) => audit(runner, {
+    table: 'spend_items', recordId: seeded.data.opexLine, action: 'update', userId: seeded.reader.id, source: 'budget_file',
+    before: { notes: 'before import' }, after: { notes: 'after import' },
+  }));
+  const importedPage = await read(seeded.data.tenantId, seeded.reader, { entity_type: 'budget_lines', entity_id: 'BL-1' });
+  const imported = importedPage.items.find((item) => item.changes.some((change: any) => change.after === 'after import'));
+  assert.deepEqual(imported?.actor, { kind: 'import', name: null }, 'an import has no name');
+  const author = importedPage.items.find((item) => item.actor.kind === 'user');
+  assert.equal(author?.actor.name, 'Una Unlimited', 'a person keeps their name');
+
+  const lines = await seed(seeded.data.tenantId, async (runner) => {
+    const insert = async (itemNumber: number, nature: 'opex' | 'capex', legacy: string, marker: string) => {
+      const [row] = await runner.query(
+        `INSERT INTO spend_items (tenant_id, item_number, nature, legacy_number, product_name, currency, effective_start, status, paying_company_id)
+         VALUES ($1, $2, $3, $4, $5, 'EUR', '2026-01-01', 'enabled', $6)
+         RETURNING id`,
+        [seeded.data.tenantId, itemNumber, nature, legacy, `Line ${itemNumber}`, seeded.data.companyA],
+      );
+      await audit(runner, {
+        table: nature === 'capex' ? 'capex_items' : 'spend_items', recordId: row.id, action: 'update', userId: seeded.reader.id,
+        before: { description: 'before' }, after: { description: marker },
+      });
+      return row.id as string;
+    };
+    return {
+      byNumber: await insert(120, 'opex', 'OPX-77', 'by-number-120'),
+      byLegacy: await insert(77, 'opex', 'OPX-120', 'by-number-77'),
+      capexByNumber: await insert(210, 'capex', 'CPX-88', 'by-number-210'),
+      capexByLegacy: await insert(88, 'capex', 'CPX-210', 'by-number-88'),
+      fallback: await insert(301, 'opex', 'OPX-401', 'fallback-301'),
+    };
+  });
+
+  const sameLine = async (ref: string, id: string, marker: string) => {
+    const page = await read(seeded.data.tenantId, seeded.reader, { entity_type: 'budget_lines', entity_id: ref });
+    const descriptions = page.items.flatMap((item) => item.changes)
+      .filter((change: any) => change.field === 'description')
+      .map((change: any) => change.after);
+    assert.deepEqual(descriptions, [marker], `${ref} history`);
+    // get_entity_detail loads OPX-n and CPX-n through resolveBudgetLine; OPEX-n and CAPEX-n are those references.
+    const detailRef = ref.replace(/^OPEX-/i, 'OPX-').replace(/^CAPEX-/i, 'CPX-');
+    const resolved = await inTransaction(seeded.data.tenantId, seeded.reader, {}, (context) => resolveBudgetLine(detailRef, context.manager));
+    assert.equal(resolved.id, id, `${ref} detail`);
+  };
+  await sameLine('OPX-120', lines.byNumber, 'by-number-120');
+  await sameLine('opx-120', lines.byNumber, 'by-number-120');
+  await sameLine('OPEX-120', lines.byNumber, 'by-number-120');
+  await sameLine('OPX-77', lines.byLegacy, 'by-number-77');
+  await sameLine('CPX-210', lines.capexByNumber, 'by-number-210');
+  await sameLine('CPX-88', lines.capexByLegacy, 'by-number-88');
+  await sameLine('CAPEX-210', lines.capexByNumber, 'by-number-210');
+  await sameLine('OPX-301', lines.fallback, 'fallback-301');
+  await sameLine('OPX-401', lines.fallback, 'fallback-301');
+  console.log('  an import has no name, and a line number wins over another line\'s legacy number: OK');
+}
+
+/**
  * A record whose newest entries are updates with no visible change (left out by the History tab):
  * the first page reads past them to the entry before (Plaid L7, lot E), within five pages.
  */
@@ -394,6 +458,7 @@ async function run() {
     await testPeopleByTheirNameOnly(seeded);
     await testLimitedPerson(seeded);
     await testOtherTenant(seeded);
+    await testImportAndSharedBudgetReference(seeded);
     await testEmptyPagesAreReadPast(seeded);
     console.log('ai-record-history.integration.spec: ok');
   } finally {
