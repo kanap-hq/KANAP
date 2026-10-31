@@ -1312,6 +1312,13 @@ export default function KnowledgePage() {
     || (!!activeLibrary && !activeLibrary.is_system && !!activeLibrary.can_manage)
     || (activeLibrary?.slug === TEMPLATE_LIBRARY_SLUG && canAdminLibraries);
 
+  const canCreateDocument = canManageDocuments && !!activeLibrary?.can_write;
+  // The sentence names the open folder, this library, or every library.
+  const emptyDocumentsKey = searchAllLibraries
+    ? 'empty.all'
+    : selectedFolderId
+      ? 'empty.folder'
+      : 'empty.library';
   const contextName = searchAllLibraries ? t('scope.allLibraries') : activeLibrary?.name;
   const contextTitle = contextName
     ? [contextName, documentTotal != null ? t('libraries.documentCount', { count: documentTotal }) : null]
@@ -1400,6 +1407,17 @@ export default function KnowledgePage() {
             onQueryStateChange={(state) => {
               lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
             }}
+            extraNarrows={docScope !== 'all'}
+            emptyState={(
+              <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="knowledge-empty">
+                <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t(emptyDocumentsKey)}</Typography>
+                {canCreateDocument && (
+                  <Button variant="contained" size="small" onClick={goToBlankDocument}>
+                    {t('actions.newDocument')}
+                  </Button>
+                )}
+              </Stack>
+            )}
           />
         </Box>
       </Stack>

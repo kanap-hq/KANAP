@@ -3,6 +3,7 @@
     "incidents": {
       "title": "Registre des incidents",
       "newIncident": "Nouvel incident",
+      "empty": "Aucun incident pour l'instant.",
       "importCsv": "Importer CSV",
       "importTitle": "Importer les incidents",
       "exportTitle": "Exporter les incidents",

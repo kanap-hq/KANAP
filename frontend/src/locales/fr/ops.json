@@ -370,6 +370,7 @@
       "deleted_other": "{{count}} contrats supprimés"
     },
     "title": "Contrats",
+    "empty": "Aucun contrat pour l'instant.",
     "newButton": "Nouveau",
     "importCsv": "Importer CSV",
     "exportTitle": "Exporter les contrats",
@@ -1903,6 +1904,7 @@
     "titleWithCurrency": "Lignes budgétaires ({{currency}})",
     "type": "Type",
     "newLine": "Nouvelle ligne",
+    "empty": "Aucune ligne budgétaire pour l'instant.",
     "opexLine": "Ligne OPEX",
     "capexLine": "Ligne CAPEX",
     "exportTitle": "Exporter le fichier budget",

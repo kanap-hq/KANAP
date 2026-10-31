@@ -430,6 +430,7 @@
   "suppliers": {
     "title": "Fournisseurs",
     "newSupplier": "Nouveau fournisseur",
+    "empty": "Aucun fournisseur pour l'instant.",
     "supplierFallback": "Fournisseur",
     "contactsTabHint": "L'onglet Contacts devient disponible après la création du fournisseur.",
     "loadError": "Échec du chargement du fournisseur.",

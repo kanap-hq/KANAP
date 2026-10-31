@@ -370,6 +370,7 @@
       "deleted_other": "{{count}} contratos eliminados"
     },
     "title": "Contratos",
+    "empty": "Todavía no hay contratos.",
     "newButton": "Nuevo",
     "importCsv": "Importar CSV",
     "exportTitle": "Exportar contratos",
@@ -1902,6 +1903,7 @@
     "titleWithCurrency": "Líneas presupuestarias ({{currency}})",
     "type": "Tipo",
     "newLine": "Nueva línea",
+    "empty": "Todavía no hay líneas presupuestarias.",
     "opexLine": "Línea OPEX",
     "capexLine": "Línea CAPEX",
     "exportTitle": "Exportar archivo presupuestario",
