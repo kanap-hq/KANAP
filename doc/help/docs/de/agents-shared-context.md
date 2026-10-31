@@ -14,10 +14,10 @@ Eines sollte von Anfang an klar sein, denn davon hängt jede sinnvolle Nutzung d
 - Route: `/agents/shared-context`
 - Berechtigungen:
   - `ai_agents:reader` ermöglicht das Öffnen der Seite und das Lesen der Profilliste
-  - `ai_agents:admin` (oder `ai_settings:admin`) ist erforderlich, um Profile zu erstellen, zu bearbeiten und zu archivieren
+  - `ai_agents:admin` (oder `ai_settings:admin`) ist erforderlich, um Profile zu erstellen, zu bearbeiten, zu archivieren und wiederherzustellen
 - Verfügbarkeit: Der gesamte Bereich KI-Agenten erscheint nur, wenn KI auf der Instanz aktiviert ist und Sie `ai_agents:reader` besitzen
 
-Ohne Administratorrechte sehen Sie zwar weiterhin die vollständige Profilliste, aber die Schaltfläche **Neues Profil** und die Steuerelemente zum Bearbeiten und Archivieren je Zeile sind ausgeblendet: die Seite ist für Sie schreibgeschützt.
+Ohne Administratorrechte sehen Sie zwar weiterhin die vollständige Profilliste, aber die Schaltfläche **Neues Profil** und die Steuerelemente zum Bearbeiten, Archivieren und Wiederherstellen je Zeile sind ausgeblendet: die Seite ist für Sie schreibgeschützt.
 
 ---
 
@@ -41,7 +41,7 @@ Der Abschnitt **Profile** listet jedes Profil auf der Instanz auf. Jede Zeile ze
 - Die **Beschreibung**, sofern eine angegeben wurde.
 - Eine Zusammenfassungszeile: **{n} Zeilen** und, sofern verfügbar, **Aktualisiert am {time}**, damit Sie sehen, wie viele Hinweiszeilen das Profil enthält und wann es zuletzt geändert wurde.
 
-Administratoren erhalten im Seitenkopf eine Schaltfläche **Neues Profil** sowie Steuerelemente zum Bearbeiten und Archivieren in jeder aktiven Zeile. Archivierte Profile sind schreibgeschützt: sie besitzen keine Steuerelemente zum Bearbeiten oder Archivieren, da es an einem Profil, das Agenten nicht mehr verwenden können, nichts mehr zu ändern gibt.
+Administratoren erhalten im Seitenkopf eine Schaltfläche **Neues Profil**, Steuerelemente zum Bearbeiten und Archivieren in jeder aktiven Zeile und ein Steuerelement zum Wiederherstellen in jeder archivierten Zeile. Ein archiviertes Profil bleibt schreibgeschützt, bis Sie es wiederherstellen: es besitzt kein Steuerelement zum Bearbeiten.
 
 ---
 
@@ -67,7 +67,13 @@ Das Archivieren dient dazu, ein Profil außer Dienst zu stellen, das Agenten nic
 
 Das ist die wichtige Konsequenz, die Sie verinnerlichen sollten: Das Archivieren verschiebt betroffene Agenten nicht automatisch auf ein Ersatzprofil. Jeder Agent, der auf das archivierte Profil verwiesen hat, läuft weiter, jedoch **ohne** gemeinsamen Kontext, bis Sie in die Einstellungen dieses Agenten gehen und ein anderes Profil auswählen. Wenn mehrere Agenten das Profil, das Sie archivieren, gemeinsam nutzen, planen Sie den Wechsel vorab.
 
-Archivierte Profile bleiben als Nachweis in der Liste, abgedunkelt und mit **Archiviert** markiert, aber sie können nicht mehr bearbeitet oder einem Agenten zugeordnet werden.
+Archivierte Profile bleiben in der Liste, abgedunkelt und mit **Archiviert** markiert. Sie können nicht mehr bearbeitet oder einem Agenten zugeordnet werden, bis Sie sie wiederherstellen.
+
+---
+
+## Ein Profil wiederherstellen
+
+**Wiederherstellen** steht in jeder archivierten Zeile, an derselben Stelle wie Archivieren in einer aktiven Zeile. Es setzt das Profil wieder auf aktiv und zeichnet die Änderung auf. Agenten, die noch auf das Profil verweisen, übernehmen seine Zeilen wieder, und Sie können es wie zuvor bearbeiten oder zuordnen. Das Profil behält seinen Schlüssel, solange es archiviert ist, daher wird ein neues Profil mit demselben Schlüssel abgelehnt. Stellen Sie das bestehende Profil wieder her, um diesen Schlüssel erneut zu verwenden.
 
 ---
 
@@ -97,4 +103,5 @@ Die praktische Regel: Wenn der Agent einen Fakt nennen und dafür einstehen soll
 - Bevorzugen Sie eine kleine Zahl breit einsetzbarer Profile (zum Beispiel eine unternehmensweite Grundlage) gegenüber vielen nahezu identischen Profilen. Wenige Profile lassen sich leichter aktuell halten, und Änderungen erreichen alle zugeordneten Agenten auf einmal.
 - Schmuggeln Sie hier keine zitierbaren Fakten ein. Alles, was ein Anfragender mit einer Quelle zitiert sehen soll, gehört in eine [Wissensbibliothek](knowledge.md).
 - Bevor Sie ein gemeinsam genutztes Profil archivieren, notieren Sie, welche Agenten es verwenden, und verweisen Sie diese zuerst um; sonst laufen sie nach dem Archivieren ohne gemeinsamen Kontext, bis Sie das erledigt haben.
+- **Wiederherstellen** setzt ein archiviertes Profil wieder auf aktiv. Agenten, die noch darauf verweisen, verwenden seine Zeilen wieder.
 - Die **Beschreibung** ist nur für Sie bestimmt und erreicht den Agenten nie; nutzen Sie sie, um festzuhalten, wer das Profil verantwortet oder wofür es dient, damit ein Kollege später nicht raten muss.
