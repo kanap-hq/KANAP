@@ -634,26 +634,26 @@ export default function AdminAiModelsPage() {
                   onChange={(event) => setDraft((prev) => ({ ...prev, price_cache_read: event.target.value }))}
                 />
               </PropertyRow>
-              <Box sx={{ flex: 1 }} />
-            </Stack>
-            <PropertyRow
-              label={(
-                <LabelWithInfo
-                  label={t('aiModels.dialog.timeout')}
-                  info={t('aiModels.dialog.timeoutHint')}
+              <PropertyRow
+                label={(
+                  <LabelWithInfo
+                    label={t('aiModels.dialog.timeout')}
+                    info={t('aiModels.dialog.timeoutHint')}
+                  />
+                )}
+                sx={{ flex: 1 }}
+              >
+                <TextField
+                  size="small"
+                  variant="standard"
+                  value={draft.timeout_seconds}
+                  placeholder={t('aiModels.dialog.timeoutPlaceholder')}
+                  error={timeoutInvalid}
+                  sx={drawerFieldValueSx}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, timeout_seconds: event.target.value }))}
                 />
-              )}
-            >
-              <TextField
-                size="small"
-                variant="standard"
-                value={draft.timeout_seconds}
-                placeholder={t('aiModels.dialog.timeoutPlaceholder')}
-                error={timeoutInvalid}
-                sx={drawerFieldValueSx}
-                onChange={(event) => setDraft((prev) => ({ ...prev, timeout_seconds: event.target.value }))}
-              />
-            </PropertyRow>
+              </PropertyRow>
+            </Stack>
             {editingId && (
               <Box>
                 <Button
