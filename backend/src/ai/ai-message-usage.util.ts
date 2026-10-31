@@ -1,11 +1,14 @@
 import { LlmCacheCostFactors, llmCostEur } from './ai-llm-cost.util';
+import { AiReasoningEffort } from './providers/ai-provider.types';
 import { StreamUsage } from './providers/streaming.util';
 
-/** The model that answered a chat turn, as resolved for that turn, with its prices and cache factors. */
+/** The model that answered a chat turn, as resolved for that turn, with its effort, prices and cache factors. */
 export type AiMessageUsageModel = {
   provider: string;
   model: string;
   source: 'builtin' | 'registry';
+  // The effort sent with the call; null when none was (the provider's default).
+  reasoningEffort: AiReasoningEffort | null;
   priceInputEurPerMtok: number | null;
   priceOutputEurPerMtok: number | null;
   priceCacheReadEurPerMtok: number | null;
@@ -13,8 +16,8 @@ export type AiMessageUsageModel = {
 };
 
 /**
- * The `usage_json` of an assistant message: its tokens, the model that produced them, that model's
- * prices and the cost they make. The cache fields appear only when the provider reported them.
+ * The `usage_json` of an assistant message: its tokens, the model that produced them, the reasoning
+ * effort sent (null when none was), that model's prices and the cost they make. The cache fields appear only when the provider reported them.
  * The included model has prices at 0, so its cost is 0.
  */
 export function buildMessageUsageJson(
@@ -39,6 +42,7 @@ export function buildMessageUsageJson(
   json.provider = model.provider;
   json.model = model.model;
   json.model_source = model.source;
+  json.reasoning_effort = model.reasoningEffort ?? null;
   json.price_input_eur_per_mtok = model.priceInputEurPerMtok;
   json.price_output_eur_per_mtok = model.priceOutputEurPerMtok;
   json.price_cache_read_eur_per_mtok = model.priceCacheReadEurPerMtok ?? null;

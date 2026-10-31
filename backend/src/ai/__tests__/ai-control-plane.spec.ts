@@ -6013,7 +6013,7 @@ async function callStructuredJsonTestHelper(client: AiAgentLlmClient, context: A
   });
 }
 
-async function testBuiltinRuntimeCapsReasoningEffortCustomDoesNot() {
+async function testAgentCallSendsTheRuntimeReasoningEffort() {
   const captured: any[] = [];
   const fakeProvider = {
     createStream: (params: any) => {
@@ -6025,13 +6025,14 @@ async function testBuiltinRuntimeCapsReasoningEffortCustomDoesNot() {
     },
   };
   const client = Object.create(AiAgentLlmClient.prototype) as AiAgentLlmClient;
-  const runtimeFor = (source: 'builtin' | 'custom') => ({
+  const runtimeFor = (source: 'builtin' | 'custom', reasoningEffort: string | null) => ({
     source,
     provider: fakeProvider,
     providerId: 'custom',
     model: 'xiaomi/mimo-v2.5',
     apiKey: 'key',
     endpointUrl: null,
+    reasoningEffort,
   });
   const callInput = {
     systemPrompt: 'Return JSON.',
@@ -6041,11 +6042,15 @@ async function testBuiltinRuntimeCapsReasoningEffortCustomDoesNot() {
     defaultTimeoutMs: 1000,
   };
 
-  await client.callJsonModel({} as any, { ...callInput, runtime: runtimeFor('builtin') as any });
+  await client.callJsonModel({} as any, { ...callInput, runtime: runtimeFor('builtin', 'low') as any });
   assert.equal(captured[0].reasoningEffort, 'low');
 
-  await client.callJsonModel({} as any, { ...callInput, runtime: runtimeFor('custom') as any });
-  assert.equal(captured[1].reasoningEffort, null);
+  // A registry model sends its own effort; none set sends nothing.
+  await client.callJsonModel({} as any, { ...callInput, runtime: runtimeFor('custom', 'max') as any });
+  assert.equal(captured[1].reasoningEffort, 'max');
+
+  await client.callJsonModel({} as any, { ...callInput, runtime: runtimeFor('custom', null) as any });
+  assert.equal(captured[2].reasoningEffort, null);
 }
 
 async function testAgentRunsConsumeBuiltinFreeMessageQuota() {
@@ -16728,7 +16733,7 @@ async function run() {
   await testHelpdeskAllOpenScopeStaleClosureEnqueuesStaleTickets();
   testStaleProposalSuppressionIgnoresExpired();
   testActionPlannerPromptCompilerIncludesVerbatimCandidates();
-  await testBuiltinRuntimeCapsReasoningEffortCustomDoesNot();
+  await testAgentCallSendsTheRuntimeReasoningEffort();
   await testAgentRunsConsumeBuiltinFreeMessageQuota();
   await testStructuredJsonHelperRetriesEmptyInvalidAndSchemaInvalid();
   await testStructuredJsonHelperLabelsTruncationAndHonoursMaxTokensEnv();

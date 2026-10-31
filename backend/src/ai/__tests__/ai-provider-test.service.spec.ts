@@ -147,11 +147,42 @@ async function testReturnsRuntimeFailureMessage() {
   assert.equal(typeof result.latency_ms, 'number');
 }
 
+// A registry model's test sends its reasoning effort; a provider that refuses the value fails the
+// test with its own message.
+async function testSendsTheReasoningEffortAndShowsARefusal() {
+  const captured: any[] = [];
+  const { service } = createService({
+    stream: async function* (params: any) {
+      captured.push(params);
+      // As the OpenAI-compatible stream does for a refused call (openai-stream.util.spec).
+      if (params.reasoningEffort === 'max') {
+        throw new Error('AI provider request failed (HTTP 400): unknown variant `max` for reasoning_effort');
+      }
+      yield { type: 'done', usage: { input_tokens: 1, output_tokens: 1 } };
+    },
+  });
+  const input = { llm_provider: 'openai', llm_model: 'deepseek-v4', llm_api_key: 'secret' };
+
+  const accepted = await service.testProvider('tenant-1', { ...input, reasoning_effort: 'high' }, { skipStoredFallback: true });
+  assert.equal(accepted.ok, true);
+  assert.equal(captured[0].reasoningEffort, 'high');
+
+  const refused = await service.testProvider('tenant-1', { ...input, reasoning_effort: 'max' }, { skipStoredFallback: true });
+  assert.equal(refused.ok, false);
+  assert.equal(refused.message, 'AI provider request failed (HTTP 400): unknown variant `max` for reasoning_effort');
+  assert.equal(captured[1].reasoningEffort, 'max');
+
+  // No effort set: nothing is sent, as before.
+  await service.testProvider('tenant-1', input, { skipStoredFallback: true });
+  assert.equal(captured[2].reasoningEffort, null);
+}
+
 async function run() {
   await testUsesPersistedSecretWhenApiKeyIsOmitted();
   await testReturnsValidationErrorsWithoutCallingProvider();
   await testRejectsInternalEndpointWithoutCallingProvider();
   await testReturnsRuntimeFailureMessage();
+  await testSendsTheReasoningEffortAndShowsARefusal();
 }
 
 void run();

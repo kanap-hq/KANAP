@@ -12,6 +12,7 @@ import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 import {
   AiProviderSettingsSnapshot,
   AiProviderTestResult,
+  AiReasoningEffort,
   AiStreamEvent,
 } from './providers/ai-provider.types';
 
@@ -20,6 +21,9 @@ export type AiProviderTestInput = {
   llm_model?: string | null;
   llm_endpoint_url?: string | null;
   llm_api_key?: string | null;
+  // The registry model's reasoning effort, sent as a chat call would send it, so the test shows a
+  // provider that refuses the value.
+  reasoning_effort?: AiReasoningEffort | null;
 };
 
 function normalizeNullableString(value: unknown): string | null {
@@ -123,6 +127,7 @@ export class AiProviderTestService {
         maxTokens: PROVIDER_TEST_MAX_TOKENS,
         timeoutMs: PROVIDER_TEST_TIMEOUT_MS,
         maxRetries: PROVIDER_TEST_MAX_RETRIES,
+        reasoningEffort: input.reasoning_effort ?? null,
       });
 
       const iterator = stream[Symbol.asyncIterator]();

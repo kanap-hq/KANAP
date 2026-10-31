@@ -12,18 +12,21 @@ import { isAbortError, parseToolCallArguments } from './streaming.util';
 import { LlmCacheCostFactors } from '../ai-llm-cost.util';
 import { describeProviderError, providerFetchOptions, toProviderError } from './provider-http.util';
 
-// Models that accept `output_config.effort`: Opus 4.5 and later, Sonnet 4.6 and later,
-// Fable and Mythos. Haiku, Sonnet 4.5 and older models reject the field with a 400.
+// Models that accept `output_config.effort`: Opus 4.5 and later, Sonnet 4.6 and later, Haiku 5.5
+// and later, Fable and Mythos. Haiku 4.5, Sonnet 4.5 and older models reject the field with a 400.
+// Every effort value is passed as set: a model that refuses one (an older model and `max`, say)
+// answers with an error, which the connection test shows.
 export function anthropicModelSupportsEffort(model: string): boolean {
   const id = model.trim().toLowerCase().replace(/^anthropic\./, '');
   if (/^claude-(fable|mythos)-/.test(id)) return true;
-  const match = /^claude-(opus|sonnet)-(\d+)(?:-(\d+))?/.exec(id);
+  const match = /^claude-(opus|sonnet|haiku)-(\d+)(?:-(\d+))?/.exec(id);
   if (!match) return false;
   const major = Number(match[2]);
   // A long numeric suffix is a snapshot date (claude-opus-4-20250514), not a minor version.
   const minor = match[3] && match[3].length <= 2 ? Number(match[3]) : 0;
   const version = major + minor / 10;
-  return match[1] === 'opus' ? version >= 4.5 : version >= 4.6;
+  const firstVersion = { opus: 4.5, sonnet: 4.6, haiku: 5.5 }[match[1] as 'opus' | 'sonnet' | 'haiku'];
+  return version >= firstVersion;
 }
 
 export function anthropicOutputConfig(

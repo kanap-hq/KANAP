@@ -219,6 +219,7 @@ export class AiModelConfigsController {
             llm_model: config.model,
             llm_endpoint_url: config.endpoint_url,
             llm_api_key: config.api_key_encrypted ? this.cipher.decrypt(config.api_key_encrypted) : null,
+            reasoning_effort: config.reasoning_effort ?? null,
           },
           { manager, skipStoredFallback: true },
         );

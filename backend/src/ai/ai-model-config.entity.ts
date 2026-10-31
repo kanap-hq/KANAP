@@ -1,4 +1,5 @@
 import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import { AiReasoningEffort } from './providers/ai-provider.types';
 
 export type AiModelProvider = 'anthropic' | 'openai' | 'ollama' | 'custom';
 export type AiModelConfigStatus = 'active' | 'archived';
@@ -52,6 +53,11 @@ export class AiModelConfig {
   // times the provider's cache read factor (ai-llm-cost.util.ts).
   @Column('numeric', { precision: 12, scale: 4, nullable: true })
   price_cache_read_eur_per_mtok!: string | null;
+
+  // How much a reasoning model thinks before answering (AI_REASONING_EFFORTS); null sends nothing,
+  // so the provider's own default applies.
+  @Column('varchar', { length: 10, nullable: true })
+  reasoning_effort!: AiReasoningEffort | null;
 
   // Max LLM response time for this model; null falls back to the per-stage env defaults.
   @Column('integer', { nullable: true })

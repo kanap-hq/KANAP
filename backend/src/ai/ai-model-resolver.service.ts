@@ -6,8 +6,9 @@ import { AiModelConfig } from './ai-model-config.entity';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
 import { AiSettings } from './ai-settings.entity';
 import { AiAgentDefinition } from './control-plane/entities/ai-agent-definition.entity';
-import { BuiltinProviderIdentity, PlatformAiConfigService } from './platform/platform-ai-config.service';
+import { BUILTIN_REASONING_EFFORT, BuiltinProviderIdentity, PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
+import { AiReasoningEffort } from './providers/ai-provider.types';
 
 export type AiModelConsumer = { type: 'chat' } | { type: 'agent'; agentId: string };
 
@@ -27,6 +28,9 @@ export type ResolvedModel = {
   priceOutputEurPerMtok: number | null;
   // Price of a token read from the provider's cache; null: the input price times the provider's factor.
   priceCacheReadEurPerMtok: number | null;
+  // The effort sent with each call: the included model's fixed cap, or the registry model's own
+  // setting; null sends nothing (the provider's default).
+  reasoningEffort: AiReasoningEffort | null;
   // Per-model LLM timeout; null falls back to the caller's per-stage env default.
   timeoutMs: number | null;
   // The included model's rate limits, from the same platform record as the runtime above;
@@ -210,6 +214,7 @@ export class AiModelResolverService {
         priceInputEurPerMtok: 0,
         priceOutputEurPerMtok: 0,
         priceCacheReadEurPerMtok: 0,
+        reasoningEffort: BUILTIN_REASONING_EFFORT,
         timeoutMs: null,
         builtinRateLimits: snapshot.rateLimits,
       };
@@ -338,6 +343,7 @@ export class AiModelResolverService {
       priceInputEurPerMtok: parsePriceEurPerMtok(config.price_input_eur_per_mtok),
       priceOutputEurPerMtok: parsePriceEurPerMtok(config.price_output_eur_per_mtok),
       priceCacheReadEurPerMtok: parsePriceEurPerMtok(config.price_cache_read_eur_per_mtok ?? null),
+      reasoningEffort: config.reasoning_effort ?? null,
       timeoutMs: config.llm_timeout_ms ?? null,
       builtinRateLimits: null,
     };

@@ -134,8 +134,8 @@ const CACHE_TTL_MS = 60_000;
 
 // The built-in (free-volume) provider runs reasoning models with capped thinking so
 // latency and cost stay bounded for the shared free tier. Hardwired by design: it is
-// applied wherever the built-in runtime is used and NEVER for tenant-provided
-// configurations (see AiStreamParams.reasoningEffort).
+// applied wherever the built-in runtime is used (ResolvedModel.reasoningEffort). Registry
+// models send their own setting instead, if any.
 export const BUILTIN_REASONING_EFFORT = 'low' as const;
 
 function normalizeNullableString(value: string | null | undefined): string | null {

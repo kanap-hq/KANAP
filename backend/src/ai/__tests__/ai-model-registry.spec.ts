@@ -45,6 +45,7 @@ function createConfig(overrides?: Partial<AiModelConfig>): AiModelConfig {
     price_input_eur_per_mtok: null,
     price_output_eur_per_mtok: null,
     price_cache_read_eur_per_mtok: null,
+    reasoning_effort: null,
     llm_timeout_ms: null,
     status: 'active',
     is_default: false,
@@ -232,6 +233,7 @@ async function testResolverExplicitChatAssignment() {
         price_input_eur_per_mtok: '1.2500',
         price_output_eur_per_mtok: '3.0000',
         price_cache_read_eur_per_mtok: '0.1250',
+        reasoning_effort: 'max',
         llm_timeout_ms: 60000,
         endpoint_url: 'https://api.example.com/v1',
       }),
@@ -254,6 +256,7 @@ async function testResolverExplicitChatAssignment() {
   assert.equal(resolved.priceInputEurPerMtok, 1.25);
   assert.equal(resolved.priceOutputEurPerMtok, 3);
   assert.equal(resolved.priceCacheReadEurPerMtok, 0.125);
+  assert.equal(resolved.reasoningEffort, 'max', 'a registry model carries its own effort');
   assert.equal(resolved.timeoutMs, 60000);
   assert.equal(resolved.supportsVision, true);
   assert.equal(warnings.length, 0);
@@ -318,6 +321,8 @@ async function testResolverBuiltinFallbackInMultiTenant() {
   assert.equal(resolved.priceInputEurPerMtok, 0);
   assert.equal(resolved.priceOutputEurPerMtok, 0);
   assert.equal(resolved.priceCacheReadEurPerMtok, 0);
+  // The included model keeps its fixed cap.
+  assert.equal(resolved.reasoningEffort, 'low');
   assert.equal(resolved.timeoutMs, null);
   assert.deepEqual(resolved.builtinRateLimits, { tenantPerMinute: 30, userPerHour: 60 });
 
@@ -442,6 +447,38 @@ async function testCreateEncryptsKeyAndNormalizesPrices() {
   const emptied = await service.update('tenant-1', stored.id, { price_cache_read_eur_per_mtok: null });
   assert.equal(emptied.price_cache_read_eur_per_mtok, null);
   assert.equal(state.configs[0].price_cache_read_eur_per_mtok, null);
+}
+
+async function testReasoningEffortIsStoredShownAndAudited() {
+  const state = createState();
+  const manager = createManager(state);
+  const audits: any[] = [];
+  const audit = { log: async (entry: any) => { audits.push(entry); } };
+  const service = new AiModelConfigService({ manager } as any, createRegistryMock() as any, mockCipher as any, audit as any);
+
+  const view = await service.create('tenant-1', { name: 'DeepSeek', provider: 'custom', model: 'deepseek-v4' });
+  assert.equal(view.reasoning_effort, null, 'no effort until one is chosen: the provider default');
+
+  const id = state.configs[0].id;
+  const high = await service.update('tenant-1', id, { reasoning_effort: 'high' });
+  assert.equal(high.reasoning_effort, 'high');
+  assert.equal(state.configs[0].reasoning_effort, 'high');
+  assert.equal(audits.at(-1).before.reasoning_effort, null, 'the audit entry records the value before');
+  assert.equal(audits.at(-1).after.reasoning_effort, 'high', 'and after');
+
+  const kept = await service.update('tenant-1', id, { price_input_eur_per_mtok: 0.5 });
+  assert.equal(kept.reasoning_effort, 'high', 'left out on update: kept');
+  for (const value of ['xhigh', 'max', 'low', 'medium'] as const) {
+    assert.equal((await service.update('tenant-1', id, { reasoning_effort: value })).reasoning_effort, value);
+  }
+  const cleared = await service.update('tenant-1', id, { reasoning_effort: null });
+  assert.equal(cleared.reasoning_effort, null, 'null: back to the provider default');
+
+  await assert.rejects(
+    () => service.update('tenant-1', id, { reasoning_effort: 'extreme' as any }),
+    /reasoning_effort must be one of low, medium, high, xhigh, max, or null/,
+  );
+  assert.equal(state.configs[0].reasoning_effort, null, 'a refused value changes nothing');
 }
 
 async function testCreateRejectsBadProviderAndEmptyFields() {
@@ -710,6 +747,7 @@ async function run() {
     testResolverValidationErrors,
     testCreateEncryptsKeyAndNormalizesPrices,
     testCreateRejectsBadProviderAndEmptyFields,
+    testReasoningEffortIsStoredShownAndAudited,
     testUpdateOnArchivedEntryRejected,
     testArchiveBlockedWhileAssigned,
     testArchiveSucceedsWhenUnassignedAndClearsDefault,

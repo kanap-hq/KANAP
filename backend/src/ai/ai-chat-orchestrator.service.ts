@@ -60,7 +60,6 @@ import {
 } from './ai.types';
 import { buildStructuredToolResultValidation } from './ai-tool-result-validation.util';
 import { formatToolResultDateTimes } from './ai-tool-result-date-times.util';
-import { BUILTIN_REASONING_EFFORT } from './platform/platform-ai-config.service';
 import { AiBuiltinUsageService } from './platform/ai-builtin-usage.service';
 import { AiApprovalService } from './control-plane/approval/ai-approval.service';
 import { AiCapabilityRegistry, EXECUTE_APPROVED_PREVIEW_CAPABILITY } from './control-plane/capability/ai-capability.registry';
@@ -282,6 +281,7 @@ function messageUsageModel(resolved: ResolvedModel, adapter: AiProviderAdapter):
     provider: resolved.provider,
     model: resolved.model,
     source: resolved.source,
+    reasoningEffort: resolved.reasoningEffort,
     priceInputEurPerMtok: resolved.priceInputEurPerMtok,
     priceOutputEurPerMtok: resolved.priceOutputEurPerMtok,
     priceCacheReadEurPerMtok: resolved.priceCacheReadEurPerMtok,
@@ -2855,7 +2855,7 @@ export class AiChatOrchestratorService {
         signal: abortSignal,
         timeoutMs: modelTimeoutMs ?? resolveChatProviderTimeoutMs(),
         debugTrace: AI_CHAT_DEBUG_TRACE_ENABLED,
-        reasoningEffort: providerSource === 'builtin' ? BUILTIN_REASONING_EFFORT : null,
+        reasoningEffort: prepared.usageModel.reasoningEffort,
       });
 
       try {
