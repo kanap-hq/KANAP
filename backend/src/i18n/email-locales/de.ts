@@ -37,7 +37,7 @@ export const de: EmailStrings = {
     },
     buttons: {
       goToKanap: 'Zu KANAP',
-      activateWorkspace: 'Workspace aktivieren',
+      activateWorkspace: 'Arbeitsbereich aktivieren',
       resetPassword: 'Passwort zurücksetzen',
       setPassword: 'Passwort festlegen',
     },
@@ -191,12 +191,12 @@ export const de: EmailStrings = {
       cta: 'Benutzerverwaltung öffnen',
     },
     activation: {
-      subject: 'Bestätigen Sie Ihren KANAP-Workspace',
-      intro: 'Vielen Dank für Ihr Interesse an KANAP. Bitte bestätigen Sie Ihre E-Mail-Adresse, damit Ihr Mandant eingerichtet werden kann.',
+      subject: 'Bestätigen Sie Ihren KANAP-Arbeitsbereich',
+      intro: "Vielen Dank für Ihr Interesse an KANAP. Bestätigen Sie Ihre E-Mail-Adresse, um Ihren Arbeitsbereich zu erstellen: Der Link unten ist 48 Stunden gültig. Während der Erstellung bereiten wir ein vollständiges Beispielunternehmen vor; beim ersten Öffnen wählen Sie, ob Sie es erkunden oder mit Ihren eigenen Daten beginnen.",
       copyPaste: 'Wenn die Schaltfläche oben nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:',
-      expires: 'Der Link läuft in 48 Stunden ab. Wenn Sie diese Testversion nicht angefordert haben, können Sie diese Nachricht ignorieren.',
-      textIntro: 'Vielen Dank für Ihr Interesse an KANAP. Bestätigen Sie Ihre E-Mail-Adresse, damit Ihr Mandant eingerichtet werden kann.',
-      textAction: 'Workspace aktivieren: {{url}}',
+      expires: "Wenn Sie diese Testversion nicht angefordert haben, können Sie diese Nachricht ignorieren.",
+      textIntro: "Vielen Dank für Ihr Interesse an KANAP. Bestätigen Sie Ihre E-Mail-Adresse, um Ihren Arbeitsbereich zu erstellen: Der Link unten ist 48 Stunden gültig. Während der Erstellung bereiten wir ein vollständiges Beispielunternehmen vor; beim ersten Öffnen wählen Sie, ob Sie es erkunden oder mit Ihren eigenen Daten beginnen.",
+      textAction: 'Arbeitsbereich aktivieren: {{url}}',
     },
     passwordReset: {
       subject: 'Setzen Sie Ihr KANAP-Passwort zurück',
