@@ -271,7 +271,7 @@ The journal also records calls made with a key that was revoked or has expired. 
 ## Tips
 
 - **Leave Plaid on the default model unless you have a reason not to.** Pinning chat to a specific model means it stops following the organization default. That is useful when chat and agents genuinely need different models, a nuisance otherwise.
-- **Chat volume is cheap to underestimate.** The [Usage & costs](ai-usage.md) page prices chat at the assigned model's rates; a busy assistant on an expensive model shows up there long before it shows up on an invoice.
+- **Chat volume is cheap to underestimate.** The [Usage & costs](ai-usage.md) page prices each chat message at the rates recorded with it; a busy assistant on an expensive model shows up there long before it shows up on an invoice.
 - **A vision model is an agent requirement, not a chat one.** If your triage agents need to read ticket screenshots, that belongs on *their* model: see **Understands images** on the [AI models](ai-models.md) page.
 - **Prefer connections for Claude.** Each person signs in with their own account and reads with their own access, so nobody shares a key. Keep keys for clients that need one, rotate them, and use **Key max lifetime (days)** to set a ceiling no request can exceed.
 - **Set a retention window.** Keeping conversations forever is convenient until the database grows large or a compliance review asks how long chat content is kept. A value of 90 or 180 days is a common starting point.

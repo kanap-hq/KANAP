@@ -269,7 +269,7 @@ El registro también guarda las llamadas hechas con una clave revocada o caducad
 ## Consejos
 
 - **Deje Plaid en el modelo predeterminado salvo que tenga un motivo para no hacerlo.** Fijar el chat a un modelo concreto significa que deja de seguir al predeterminado de la organización: útil cuando el chat y los agentes necesitan realmente modelos distintos, y una molestia el resto del tiempo.
-- **Es fácil subestimar el volumen del chat.** La página [Uso y costes](ai-usage.md) valora el chat a las tarifas del modelo asignado; un asistente muy usado con un modelo caro aparece allí mucho antes de aparecer en una factura.
+- **Es fácil subestimar el volumen del chat.** La página [Uso y costes](ai-usage.md) valora cada mensaje de chat a las tarifas registradas con él; un asistente muy usado con un modelo caro aparece allí mucho antes de aparecer en una factura.
 - **Un modelo con visión es un requisito de los agentes, no del chat.** Si sus agentes de triaje necesitan leer capturas de pantalla de los tickets, eso corresponde al modelo de *ellos*: consulte **Comprende imágenes** en la página [Modelos IA](ai-models.md).
 - **Prefiera las conexiones para Claude.** Cada persona inicia sesión con su propia cuenta y lee con su propio acceso, así que nadie comparte una clave. Reserve las claves para los clientes que las necesitan, rótelas y use **Vida útil máxima de la clave (días)** para imponer un tope que ninguna petición pueda superar.
 - **Establezca una ventana de retención.** Conservar las conversaciones para siempre es conveniente hasta que la base de datos crece demasiado o una revisión de conformidad pregunta cuánto tiempo se conserva el contenido del chat: 90 o 180 días es un punto de partida habitual.
