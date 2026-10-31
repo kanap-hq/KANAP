@@ -75,6 +75,18 @@ function createHarness() {
       if (sql.includes('FROM interfaces') && String(params[1]).toLowerCase() === 'int-7') {
         return [{ id: '44444444-4444-4444-8444-444444444444', interface_reference: 'INT-7', name: 'INT-7 - Orders' }];
       }
+      if (sql.includes('FROM applications') && String(params[1]).toLowerCase() === 'app-36') {
+        return [{ id: '55555555-5555-4555-8555-555555555555', sequential_id: 'APP-36', name: 'APP-36 - CheeseTrack' }];
+      }
+      if (sql.includes('FROM assets') && String(params[1]).toLowerCase() === 'ast-12') {
+        return [{ id: '66666666-6666-4666-8666-666666666666', asset_reference: 'AST-12', name: 'AST-12 - srv-cheese-01' }];
+      }
+      if (sql.includes('FROM portfolio_projects')) {
+        return [{ id: '77777777-7777-4777-8777-777777777777', item_number: 2, name: 'PRJ-2 - Affinage' }];
+      }
+      if (sql.includes('FROM portfolio_requests')) {
+        return [{ id: '88888888-8888-4888-8888-888888888888', item_number: 4, name: 'REQ-4 - New cave' }];
+      }
       return [];
     },
   };
@@ -225,6 +237,20 @@ async function testRecordLabelNamesTheReferenceOnce() {
   const iface = await service.resolveRecordReference(context, 'interfaces', 'INT-7');
   assert.equal(iface.ref, 'INT-7');
   assert.equal(iface.label, 'INT-7 - Orders');
+  const application = await service.resolveRecordReference(context, 'applications', 'APP-36');
+  assert.equal(application.ref, 'APP-36');
+  assert.equal(application.label, 'APP-36 - CheeseTrack');
+  const asset = await service.resolveRecordReference(context, 'assets', 'AST-12');
+  assert.equal(asset.ref, 'AST-12');
+  assert.equal(asset.label, 'AST-12 - srv-cheese-01');
+  const project = await service.resolveRecordReference(context, 'projects', 'PRJ-2');
+  assert.equal(project.ref, 'PRJ-2');
+  assert.equal(project.label, 'PRJ-2 - Affinage');
+  const request = await service.resolveRecordReference(context, 'requests', 'REQ-4');
+  assert.equal(request.ref, 'REQ-4');
+  assert.equal(request.label, 'REQ-4 - New cave');
+  const payroll = await service.resolveRecordReference(context, 'applications', 'Payroll');
+  assert.equal(payroll.label, 'APP-1 - Payroll', 'a name that does not start with the reference keeps it once');
   console.log('  reference label: OK');
 }
 

@@ -715,6 +715,11 @@
       "authentication_mode": "Authentifizierung",
       "monitoring_url": "Monitoring-URL",
       "env_notes": "Umgebungsnotizen",
+      "rule_key": "Regelschlüssel",
+      "operation_kind": "Vorgang",
+      "environment_scope": "Umgebungen",
+      "implementation_status": "Implementierungsstatus",
+      "test_status": "Teststatus",
       "integration_tool_application_id": "Integrationswerkzeug",
       "duration_months": "Laufzeit (Monate)",
       "auto_renewal": "Stillschweigende Verlängerung",
@@ -814,6 +819,17 @@
         "contentChanged": "Inhalt geändert",
         "workingDaysChanged": "Arbeitstage geändert",
         "notesChanged": "Notizen geändert",
+        "emailChanged": "E-Mail geändert",
+        "phoneChanged": "Telefon geändert",
+        "mobileChanged": "Mobil geändert",
+        "conditionChanged": "Bedingung geändert",
+        "businessRuleChanged": "Geschäftsregel geändert",
+        "middlewareRuleChanged": "Middleware-Regel geändert",
+        "remarksChanged": "Bemerkungen geändert",
+        "exampleInputChanged": "Eingabebeispiel geändert",
+        "exampleOutputChanged": "Ausgabebeispiel geändert",
+        "sourceBindingsChanged": "Quellfelder geändert",
+        "targetBindingsChanged": "Zielfelder geändert",
         "renewalStopped": "Verlängerung beendet",
         "renewalResumed": "Verlängerung wieder aufgenommen",
         "descriptionChanged": "Beschreibung geändert",
@@ -948,6 +964,14 @@
         "mapping_set": {
           "added": "Zuordnungssatz hinzugefügt: {{label}}",
           "removed": "Zuordnungssatz entfernt: {{label}}"
+        },
+        "mapping_group": {
+          "added": "Zuordnungsgruppe hinzugefügt: {{label}}",
+          "removed": "Zuordnungsgruppe entfernt: {{label}}"
+        },
+        "mapping_rule": {
+          "added": "Zuordnungsregel hinzugefügt: {{label}}",
+          "removed": "Zuordnungsregel entfernt: {{label}}"
         },
         "middleware": {
           "added": "Middleware hinzugefügt: {{label}}",
@@ -2639,7 +2663,7 @@
       "totalMonth": "Gesamt in diesem Monat",
       "agentsMonth": "Agenten in diesem Monat",
       "chatMonth": "Plaid in diesem Monat",
-      "chatEstimatedNote": "Geschätzt zu den Tarifen des aktuell zugewiesenen Modells",
+      "chatEstimatedNote": "Tarife, die mit jeder Nachricht gespeichert sind. Ältere Nachrichten verwenden die des aktuell zugewiesenen Modells.",
       "chatFreeNote": "Das zugewiesene Modell ist kostenfrei",
       "byAgent": "Kosten pro Agent",
       "byModel": "Kosten pro Modell",

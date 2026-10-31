@@ -49,7 +49,7 @@ Chaque ligne ouvre le contrat. Votre recherche, vos filtres et votre tri sont co
 **Colonnes par défaut** :
 
 - **Contrat**, **Fournisseur**, **Société**
-- **Prochaine échéance** : la prochaine date limite de résiliation d'un contrat à reconduction tacite, ou la fin de tout autre contrat. La date est suivie de « dans n jours ». Un contrat échu affiche le jour de sa fin, en grisé
+- **Prochaine échéance** : « Résiliation possible jusqu'au {date} » lorsque cette date est la date limite de résiliation et qu'elle précède la fin du terme, ou « Fin le {date} » lorsque la date est la fin du contrat. La ligne se termine par « dans n j ». Un contrat échu affiche le jour de sa fin, en grisé
 - **État** : voir plus bas
 - **Montant annuel** : le montant à la signature, suivi de sa devise
 - **Engagé**, **Budget** et **Écart** pour l'année budgétaire choisie. Voir [Colonnes budgétaires](#colonnes-budgetaires)

@@ -46,6 +46,10 @@ import { SuppliersService } from '../../suppliers/suppliers.service';
 import { User } from '../../users/user.entity';
 import { UsersService } from '../../users/users.service';
 import { AiAdminOverviewService } from '../ai-admin-overview.service';
+import { AiConversation } from '../ai-conversation.entity';
+import { AiConversationService } from '../ai-conversation.service';
+import { AiMessage } from '../ai-message.entity';
+import { assistantMessageUsage } from '../ai-llm-cost.util';
 import { AiEntityService } from '../ai-entity.service';
 import { AiToolRegistry } from '../ai-tool.registry';
 import { AiRecordHistoryService } from '../ai-record-history.service';
@@ -4443,12 +4447,130 @@ async function testAiAdminOverviewAggregatesUsageAndIsTenantScoped() {
     // Both user messages sit in the current month; the previous-month row is an
     // assistant message, so it never counts regardless of the 30-day boundary.
     assert.equal(overview.usage.last_30_days.message_count, 2);
+    // No stored model and no assigned model: the chat figure stays at zero.
+    assert.equal(overview.costs.current_month.chat_eur, 0);
+    assert.equal(overview.costs.last_30_days.chat_eur, 0);
+    assert.equal(overview.costs.chat_priced, false);
     assert.equal(overview.recent_activity.length, 3);
     assert.equal(overview.recent_activity[0].conversation_id, tenantAConversation1);
     assert.equal(
       overview.recent_activity.some((item) => item.conversation_id === tenantBConversation),
       false,
     );
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
+async function testAssistantMessagePersistsProviderModelAndPrices() {
+  const runner = dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+
+  const tenantId = randomUUID();
+  const userId = randomUUID();
+  const conversationId = randomUUID();
+
+  try {
+    await seedTenant(runner, tenantId, `ai-msg-price-${tenantId.slice(0, 8)}`, 'AI Message Price Tenant');
+    const roleId = await seedRole(runner, tenantId, 'AI Message Price Member');
+    await seedUser(runner, tenantId, userId, `msg-price-${tenantId.slice(0, 8)}@example.com`, roleId);
+    await setCurrentTenant(runner, tenantId);
+    await runner.query(
+      `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, created_at, updated_at)
+       VALUES ($1, $2, $3, 'Chat', 'openai', 'old-model', now(), now())`,
+      [conversationId, tenantId, userId],
+    );
+
+    const service = new AiConversationService(
+      dataSource.getRepository(AiConversation),
+      dataSource.getRepository(AiMessage),
+    );
+    const saved = await service.appendMessage({
+      conversationId,
+      tenantId,
+      conversationUserId: userId,
+      userId: null,
+      role: 'assistant',
+      content: 'Priced reply',
+      usage: assistantMessageUsage(
+        { input_tokens: 12, output_tokens: 7 },
+        { provider: 'anthropic', model: 'claude-sonnet-4', priceInputEurPerMtok: 3, priceOutputEurPerMtok: 15 },
+      ),
+    }, { manager: runner.manager });
+
+    const rows = await runner.query(
+      `SELECT usage_json FROM ai_messages WHERE id = $1 AND tenant_id = $2`,
+      [saved.id, tenantId],
+    );
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].usage_json.provider, 'anthropic');
+    assert.equal(rows[0].usage_json.model, 'claude-sonnet-4');
+    assert.equal(Number(rows[0].usage_json.price_input_eur_per_mtok), 3);
+    assert.equal(Number(rows[0].usage_json.price_output_eur_per_mtok), 15);
+    assert.equal(Number(rows[0].usage_json.input_tokens), 12);
+    assert.equal(Number(rows[0].usage_json.output_tokens), 7);
+
+    const conversations = await runner.query(
+      `SELECT provider, model FROM ai_conversations WHERE id = $1 AND tenant_id = $2`,
+      [conversationId, tenantId],
+    );
+    assert.equal(conversations[0].provider, 'openai');
+    assert.equal(conversations[0].model, 'old-model');
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
+async function testAiAdminOverviewPricesEachMessageAtItsOwnRates() {
+  const runner = dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+
+  const tenantId = randomUUID();
+  const userId = randomUUID();
+  const conversationId = randomUUID();
+
+  try {
+    await seedTenant(runner, tenantId, `ai-chat-cost-${tenantId.slice(0, 8)}`, 'AI Chat Cost Tenant');
+    const roleId = await seedRole(runner, tenantId, 'AI Chat Cost Member');
+    await seedUser(runner, tenantId, userId, `chat-cost-${tenantId.slice(0, 8)}@example.com`, roleId);
+    await setCurrentTenant(runner, tenantId);
+    await runner.query(
+      `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, created_at, updated_at)
+       VALUES ($1, $2, $3, 'Chat', 'openai', 'gpt-4o', now(), now())`,
+      [conversationId, tenantId, userId],
+    );
+    // Two models recorded this month, one free model recorded at 0, one old
+    // message with tokens and no model, and one priced message outside both windows.
+    await runner.query(
+      `INSERT INTO ai_messages (conversation_id, tenant_id, user_id, role, content, usage_json, created_at)
+       VALUES
+         ($1, $2, $3, 'assistant', 'OpenAI', '{"input_tokens":1000000,"output_tokens":0,"provider":"openai","model":"gpt-4o","price_input_eur_per_mtok":2,"price_output_eur_per_mtok":8}'::jsonb, now()),
+         ($1, $2, $3, 'assistant', 'Anthropic', '{"input_tokens":500000,"output_tokens":100000,"provider":"anthropic","model":"claude-sonnet-4","price_input_eur_per_mtok":3,"price_output_eur_per_mtok":15}'::jsonb, now()),
+         ($1, $2, $3, 'assistant', 'Local', '{"input_tokens":1000000,"output_tokens":0,"provider":"ollama","model":"mistral","price_input_eur_per_mtok":0,"price_output_eur_per_mtok":0}'::jsonb, now()),
+         ($1, $2, $3, 'assistant', 'Old', '{"input_tokens":1000000,"output_tokens":0}'::jsonb, now()),
+         ($1, $2, $3, 'assistant', 'Ancient', '{"input_tokens":9000000,"output_tokens":0,"provider":"openai","model":"gpt-4o","price_input_eur_per_mtok":100,"price_output_eur_per_mtok":100}'::jsonb, now() - interval '40 days')`,
+      [conversationId, tenantId, userId],
+    );
+
+    const today = { priceInputEurPerMtok: 10, priceOutputEurPerMtok: 20 };
+    const priced = new AiAdminOverviewService({ tryResolve: async () => today } as any);
+    const overview = await priced.getOverview(tenantId, runner.manager);
+    // 2 + 3 + 0 + 10 (the old message at today's input rate). The ancient row is outside both windows.
+    assert.equal(overview.costs.current_month.chat_eur, 15);
+    assert.equal(overview.costs.last_30_days.chat_eur, 15);
+    assert.equal(overview.costs.chat_priced, true);
+    assert.equal(overview.usage.current_month.input_tokens, 3_500_000);
+    assert.equal(overview.usage.current_month.output_tokens, 100_000);
+
+    const unassigned = new AiAdminOverviewService({ tryResolve: async () => null } as any);
+    const withoutModel = await unassigned.getOverview(tenantId, runner.manager);
+    // The old message has nothing to fall back on. The two recorded prices remain.
+    assert.equal(withoutModel.costs.current_month.chat_eur, 5);
+    assert.equal(withoutModel.costs.chat_priced, true);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
@@ -4601,6 +4723,8 @@ async function run() {
     await testSpendAndCapexEndOfValidityQueryField();
     await testAiAggregateExecutorSpendItemsSupportsSummaryMetricsAndProjectStreams();
     await testAiAdminOverviewAggregatesUsageAndIsTenantScoped();
+    await testAssistantMessagePersistsProviderModelAndPrices();
+    await testAiAdminOverviewPricesEachMessageAtItsOwnRates();
     await testAiConversationRetentionArchivesAndPurgesOldConversations();
     await testAiToolRegistryIsolationCoverageTracksRegisteredTools();
   } finally {

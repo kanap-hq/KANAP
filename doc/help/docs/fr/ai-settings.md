@@ -269,7 +269,7 @@ Le journal enregistre aussi les appels faits avec une clé révoquée ou expiré
 ## Conseils
 
 - **Laissez Plaid sur le modèle par défaut, sauf raison contraire.** Épingler le chat à un modèle précis signifie qu'il cesse de suivre le modèle par défaut de l'organisation. C'est utile lorsque le chat et les agents ont réellement besoin de modèles différents, gênant sinon.
-- **Le volume de chat est facile à sous-estimer.** La page [Utilisation & coûts](ai-usage.md) valorise le chat aux tarifs du modèle assigné ; un assistant très sollicité sur un modèle coûteux s'y voit bien avant d'apparaître sur une facture.
+- **Le volume de chat est facile à sous-estimer.** La page [Utilisation & coûts](ai-usage.md) valorise chaque message de chat aux tarifs enregistrés avec lui ; un assistant très sollicité sur un modèle coûteux s'y voit bien avant d'apparaître sur une facture.
 - **Un modèle vision est un besoin des agents, pas du chat.** Si vos agents de tri doivent lire les captures d'écran des tickets, cela relève de *leur* modèle : voir **Comprend les images** sur la page [Modèles IA](ai-models.md).
 - **Préférez les connexions pour Claude.** Chaque personne se connecte avec son propre compte et lit avec ses propres accès, donc personne ne partage de clé. Gardez les clés pour les clients qui en ont besoin, renouvelez-les, et utilisez **Durée de vie maximale de la clé (jours)** pour imposer un plafond qu'aucune requête ne peut dépasser.
 - **Définissez une fenêtre de conservation.** Conserver les conversations indéfiniment est pratique jusqu'à ce que la base de données devienne volumineuse ou qu'une revue de conformité demande combien de temps le contenu du chat est conservé : 90 ou 180 jours constituent un point de départ courant.
