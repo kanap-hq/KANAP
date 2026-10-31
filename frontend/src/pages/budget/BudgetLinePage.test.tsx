@@ -6,6 +6,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 
+vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('react-i18next', async () => {
   const React = await import('react');
   const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
@@ -15,7 +16,7 @@ vi.mock('react-i18next', async () => {
   );
   return { useTranslation: () => translation, Trans };
 });
-vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 // A limited data access that allows company-1 only through a cost center (null: unscoped, no filter).
 const placement = vi.hoisted(() => ({ centreOnly: false }));
 vi.mock('../../hooks/usePlacementOptions', () => ({
@@ -40,8 +41,18 @@ vi.mock('../../hooks/useBudgetLineNav', () => ({
 vi.mock('../../hooks/useCurrencySettings', () => ({ default: () => ({ data: { defaultSpendCurrency: 'EUR' } }) }));
 // The signed-in user: a conflict with their own change from another window is said so.
 // May the user change lines (the required dimensions asked before leaving, lot D2).
-const auth = vi.hoisted(() => ({ canEdit: true }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' }, hasLevel: () => auth.canEdit }) }));
+const auth = vi.hoisted(() => ({ canEdit: true, admin: true, limited: false }));
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({
+    profile: { id: 'me' },
+    dataAccess: auth.limited ? { available: true, mode: 'limited' as const, nodes: [], modules: ['budget'] } : null,
+    hasLevel: (_resource: string, level: string) => {
+      if (!auth.canEdit) return false;
+      if (level === 'admin') return auth.admin;
+      return true;
+    },
+  }),
+}));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchBudgetRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
@@ -154,6 +165,7 @@ vi.mock('../../components/finance/BudgetTab', async () => {
       waitingColumns: () => waiting.current,
       isSaving: () => false,
       hasPending: () => waiting.current.length > 0 || budgetStandIn.typed,
+      discard: () => { waiting.current = []; },
       reloadFromServer: async () => {
         if (budgetStandIn.failReload) throw new Error('offline');
         budgetStandIn.reloads += 1;
@@ -200,7 +212,7 @@ import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 import { resetListContextCache } from '../../lib/listContext';
 
 const mocked = api as unknown as {
-  get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; patch: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; patch: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn>;
 };
 
 const charts = vi.hoisted(() => ({ company2: 'coa-b' }));
@@ -214,7 +226,14 @@ const ITEM_ID = '11111111-2222-3333-4444-555555555555';
 const CHANGES_DAY = new Date('2026-10-02T12:04:00.000Z');
 
 // The edits a page keeps for the session (lot 3C review): each test starts without any.
-beforeEach(() => { resetSharedPatchBuffers(); nav.result = null; nav.unified = false; });
+beforeEach(() => {
+  resetSharedPatchBuffers();
+  nav.result = null;
+  nav.unified = false;
+  auth.canEdit = true;
+  auth.admin = true;
+  auth.limited = false;
+});
 
 /**
  * The PATCH bodies without their `base` (lot 3C), checking that each base
@@ -2313,6 +2332,112 @@ describe('BudgetLinePage type changed in place', () => {
     await waitFor(() => expect(screen.getByTestId('line-type')).toHaveTextContent(target));
     await waitFor(() => expect(screen.getByTestId('line-type').parentElement).toHaveAttribute('data-account', `account-${target}`));
     expect(screen.queryByTestId('change-type-dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('BudgetLinePage delete', () => {
+  const line = {
+    id: ITEM_ID, item_number: 7, product_name: 'Monitoring', supplier_id: 'supplier-1', notes: 'Renewal',
+    paying_company_id: 'company-1', account_id: 'account-1', currency: 'EUR', effective_start: '2026-01-01',
+  };
+
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.post.mockReset();
+    mocked.patch.mockReset();
+    mocked.delete.mockReset();
+    dialogs.confirm.mockReset();
+    dialogs.confirm.mockResolvedValue(true);
+    dialogs.alert.mockReset();
+    dialogs.alert.mockResolvedValue(undefined);
+    mocked.get.mockImplementation(async (url: string) => (
+      url === `/budget-lines/${ITEM_ID}` ? { data: line } : { data: {} }
+    ));
+    mocked.post.mockResolvedValue({ data: { refused: [] } });
+    mocked.delete.mockResolvedValue({ data: { deleted: [ITEM_ID], failed: [] } });
+    mocked.patch.mockResolvedValue({ data: {} });
+  });
+
+  async function openLine() {
+    const view = renderAt(`/ops/budget/${ITEM_ID}/overview?q=monitor&list=budget`);
+    await screen.findByDisplayValue('Renewal');
+    return view;
+  }
+
+  it('hides the icon without budget admin', async () => {
+    auth.admin = false;
+    await openLine();
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('Renewal')).toBeEnabled();
+  });
+
+  it('hides the icon when data access is limited', async () => {
+    auth.limited = true;
+    await openLine();
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).not.toBeInTheDocument();
+  });
+
+  it('hides the icon on a new line', () => {
+    renderAt('/ops/budget/new/overview');
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).not.toBeInTheDocument();
+  });
+
+  it('shows the refusal for a frozen line and does not delete it', async () => {
+    mocked.post.mockImplementation(async (url: string) => (
+      url === '/budget-lines/delete-check'
+        ? { data: { refused: [{ id: ITEM_ID, code: 'BUDGET_LINE_FROZEN', usages: [], params: { column: 'Budget', year: 2026 }, reason: 'English' }] } }
+        : { data: {} }
+    ));
+    await openLine();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(dialogs.alert).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'common:delete.recordTitle',
+      message: 'errors:BUDGET_LINE_FROZEN',
+    })));
+    expect(mocked.post).toHaveBeenCalledWith('/budget-lines/delete-check', { ids: [ITEM_ID] });
+    expect(mocked.delete).not.toHaveBeenCalled();
+    expect(dialogs.confirm).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('list-page')).not.toBeInTheDocument();
+  });
+
+  it('shows the refusal when the delete itself keeps a frozen line', async () => {
+    mocked.delete.mockResolvedValue({
+      data: {
+        deleted: [],
+        failed: [{ id: ITEM_ID, name: 'Monitoring', code: 'BUDGET_LINE_FROZEN', reason: 'English', params: { column: 'Budget', year: 2026 } }],
+      },
+    });
+    await openLine();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(dialogs.alert).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'errors:BUDGET_LINE_FROZEN',
+    })));
+    expect(mocked.delete).toHaveBeenCalledWith('/budget-lines/bulk', { data: { ids: [ITEM_ID] } });
+    expect(screen.queryByTestId('list-page')).not.toBeInTheDocument();
+  });
+
+  it('deletes the line through the bulk route, drops a pending edit and returns to the list', async () => {
+    const { queryClient } = await openLine();
+    seedDashboard(queryClient);
+    fireEvent.change(screen.getByDisplayValue('Renewal'), { target: { value: 'not saved' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
+    const list = await screen.findByTestId('list-page');
+    expect(mocked.post).toHaveBeenCalledWith('/budget-lines/delete-check', { ids: [ITEM_ID] });
+    expect(dialogs.confirm).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'common:delete.recordTitle',
+      message: 'common:delete.cannotUndo',
+      confirmLabel: 'common:buttons.delete',
+      intent: 'danger',
+    }));
+    expect(dialogs.confirm).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'common:autosave.leaveTitle' }));
+    expect(mocked.delete).toHaveBeenCalledWith('/budget-lines/bulk', { data: { ids: [ITEM_ID] } });
+    const search = new URLSearchParams(list.getAttribute('data-search') ?? '');
+    expect(search.get('q')).toBe('monitor');
+    expect(search.has('list')).toBe(false);
+    expect(mocked.patch).not.toHaveBeenCalled();
+    await expectDashboardInvalidated(queryClient);
+    await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 900); }); });
+    expect(mocked.patch).not.toHaveBeenCalled();
   });
 });
 

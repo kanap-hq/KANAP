@@ -32,6 +32,11 @@ type Props = {
   /** False for a record whose delete nothing refuses (no `delete-check` route): the confirmation comes first. */
   checkUsages?: boolean;
   /**
+   * Delete through the list's bulk route (`DELETE ${base}/bulk` with `{ ids: [id] }`) instead of
+   * `DELETE ${base}/${id}`. A record the server still refuses stays, with the reason.
+   */
+  bulk?: boolean;
+  /**
    * When the check refuses with one of `lifts`, the confirmation explains why and offers this
    * choice instead of the refusal. Other callers leave it unset: a refusal stays a refusal.
    */
@@ -53,7 +58,7 @@ function liftsRefusal(option: DeleteRelatedOption | undefined, refusal: DeleteFa
  * asks, deletes, and hands back so the page can return to the list without loading the deleted
  * record again.
  */
-export default function RecordDeleteButton({ base, id, name, deleteFailed, confirmMessage, checkUsages = true, deleteRelated, onDeleted }: Props) {
+export default function RecordDeleteButton({ base, id, name, deleteFailed, confirmMessage, checkUsages = true, bulk = false, deleteRelated, onDeleted }: Props) {
   const { t } = useTranslation(['master-data', 'common', 'errors']);
   const locale = useLocale();
   const dialogs = useKanapDialogs();
@@ -76,6 +81,32 @@ export default function RecordDeleteButton({ base, id, name, deleteFailed, confi
         ? deleteFailureReason(failure, t, locale)
         : getApiErrorMessage(err, t, t(deleteFailed)),
     });
+  };
+
+  /**
+   * Removes the record. With `bulk`, the list's route and one id; a refusal in the answer (a line
+   * frozen between the check and the delete) is returned and nothing is treated as deleted.
+   */
+  const removeRecord = async (extra?: Record<string, true>): Promise<DeleteFailure | null> => {
+    if (!bulk) {
+      // No second argument when the body is empty: the call stays `delete(url)`.
+      if (extra) await api.delete(`${base}/${id}`, { data: extra });
+      else await api.delete(`${base}/${id}`);
+      return null;
+    }
+    const res = await api.delete<{ deleted?: unknown; failed?: Array<DeleteFailure & { id?: string }> }>(
+      `${base}/bulk`,
+      { data: { ids: [id], ...extra } },
+    );
+    const deleted = new Set(Array.isArray(res.data?.deleted) ? res.data.deleted.map(String) : []);
+    if (deleted.has(id)) return null;
+    const failed = Array.isArray(res.data?.failed) ? res.data.failed : [];
+    return failed.find((item) => !item.id || item.id === id) ?? failed[0] ?? null;
+  };
+
+  const finishDeleted = () => {
+    onDeleted();
+    forgetRecord();
   };
 
   const handleClick = async () => {
@@ -104,9 +135,13 @@ export default function RecordDeleteButton({ base, id, name, deleteFailed, confi
         setBusy(false);
         return;
       }
-      await api.delete(`${base}/${id}`);
-      onDeleted();
-      forgetRecord();
+      const refused = await removeRecord();
+      if (refused) {
+        setBusy(false);
+        await dialogs.alert({ title, message: refused.code ? deleteFailureReason(refused, t, locale) : (refused.reason || t(deleteFailed)) });
+        return;
+      }
+      finishDeleted();
     } catch (err) {
       setBusy(false);
       await reportFailure(err, title);
@@ -123,10 +158,15 @@ export default function RecordDeleteButton({ base, id, name, deleteFailed, confi
     if (!deleteRelated || !checked || busy || !related) return;
     setBusy(true);
     try {
-      await api.delete(`${base}/${id}`, { data: { [deleteRelated.apiKey]: true } });
+      const refused = await removeRecord({ [deleteRelated.apiKey]: true });
+      if (refused) {
+        setBusy(false);
+        setRelated(null);
+        await dialogs.alert({ title: related.title, message: refused.code ? deleteFailureReason(refused, t, locale) : (refused.reason || t(deleteFailed)) });
+        return;
+      }
       setRelated(null);
-      onDeleted();
-      forgetRecord();
+      finishDeleted();
     } catch (err) {
       setBusy(false);
       setRelated(null);
