@@ -613,7 +613,7 @@ export class PublicController {
     void this.demoData.provisionTrialSampleData({
       tenantId: tenant.id,
       actorId: owner.id,
-      host: new URL(tenantUrl).host,
+      tenantUrl,
       language,
     });
 

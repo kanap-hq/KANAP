@@ -633,13 +633,15 @@ export class DemoDataService implements OnApplicationShutdown {
    * `DEMO_LOAD_MAX_CONCURRENT` loads run over every tenant.
    */
   async load(params: { tenantId: string; actorId: string; host: string }): Promise<DemoDataState> {
-    return this.startLoad(params, { requireEmpty: true, language: null });
+    return this.startLoad(params, { language: null });
   }
 
   /**
    * The load at trial activation (`provisionTrialSampleData`): the checks and the run of `load`,
-   * with the tenant's own host given by the caller (still checked against the tenant), into a
-   * workspace that may already hold data, and the sample data language recorded in the state.
+   * empty workspace check included, with the tenant's own host given by the caller (still checked
+   * against the tenant), and the sample data language recorded in the state. A tenant just
+   * activated is in its starting state; one whose administrator has started creating records is
+   * refused (`tenant_not_empty`), so nothing is loaded over them or reset.
    */
   async loadDemoData(
     tenantId: string,
@@ -647,7 +649,7 @@ export class DemoDataService implements OnApplicationShutdown {
   ): Promise<DemoDataState> {
     // Recorded only: the loader is not told the language yet (one language, `en`, for now).
     const language = resolveDemoDataLanguage(params.language);
-    return this.startLoad({ tenantId, actorId: params.actorId, host: params.host }, { requireEmpty: false, language });
+    return this.startLoad({ tenantId, actorId: params.actorId, host: params.host }, { language });
   }
 
   /**
@@ -655,14 +657,21 @@ export class DemoDataService implements OnApplicationShutdown {
    * activation, never awaited. Refused for `demo_load_capacity`, the load is tried again every
    * `provisionRetryMs` for `provisionRetryMaxMs`, until the API process stops; then the workspace
    * stays `idle` and its administrators can load the sample data themselves. Any other refusal
-   * ends it at once. Each end without a load is one warning in the server log.
+   * (`tenant_not_empty` included: the administrator started with their own records meanwhile)
+   * ends it at once. Each end without a load is one warning in the server log. `tenantUrl` is
+   * the tenant's address; its host is read here, inside the guard.
    */
   @NeverRejects()
-  async provisionTrialSampleData(params: { tenantId: string; actorId: string; host: string; language: unknown }): Promise<void> {
+  async provisionTrialSampleData(params: { tenantId: string; actorId: string; tenantUrl: string; language: unknown }): Promise<void> {
+    const host = new URL(params.tenantUrl).host;
     const giveUpAt = Date.now() + this.config.provisionRetryMaxMs;
     for (;;) {
+      if (this.stopping) {
+        this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: the server is stopping`);
+        return;
+      }
       try {
-        await this.loadDemoData(params.tenantId, { language: params.language, actorId: params.actorId, host: params.host });
+        await this.loadDemoData(params.tenantId, { language: params.language, actorId: params.actorId, host });
         return;
       } catch (error) {
         const code = errorCode(error);
@@ -670,7 +679,7 @@ export class DemoDataService implements OnApplicationShutdown {
           this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: ${code}`);
           return;
         }
-        if (this.stopping || Date.now() + this.config.provisionRetryMs > giveUpAt) {
+        if (Date.now() + this.config.provisionRetryMs > giveUpAt) {
           this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: other loads kept running`);
           return;
         }
@@ -688,12 +697,12 @@ export class DemoDataService implements OnApplicationShutdown {
   }
 
   /**
-   * `load` and `loadDemoData`: `requireEmpty` refuses a workspace that holds data
-   * (`tenant_not_empty`); `language` is recorded in the state when given.
+   * `load` and `loadDemoData`: a workspace that holds data is refused (`tenant_not_empty`);
+   * `language` is recorded in the state when given.
    */
   private async startLoad(
     params: { tenantId: string; actorId: string; host: string },
-    opts: { requireEmpty: boolean; language: DemoDataLanguage | null },
+    opts: { language: DemoDataLanguage | null },
   ): Promise<DemoDataState> {
     const tenant = await this.readTenant(params.tenantId);
     // Who asks comes first: nothing else about the workspace is told to a non-administrator.
@@ -720,7 +729,7 @@ export class DemoDataService implements OnApplicationShutdown {
 
     const startingCompany = await withTenant(this.dataSource, tenant.id, async (manager) => {
       await this.assertSubscriptionAllowsLoad(manager, tenant.id);
-      const content = opts.requireEmpty ? await findTenantContent(manager, tenant.id) : [];
+      const content = await findTenantContent(manager, tenant.id);
       if (content.length > 0) {
         throw new ConflictException({
           code: 'tenant_not_empty',

@@ -16,19 +16,22 @@ import {
 } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
 import { accessTokenVerifyKey } from '../../auth/jwt-key';
 import { waitForBackgroundWork } from '../../common/background-work';
+import { allocateItemNumbers } from '../../common/item-number.service';
 import { Features } from '../../config/features';
 import { DEMO_DATA_LANGUAGES, DemoDataService, readDemoState, resolveDemoDataLanguage } from '../../demo-data/demo-data.service';
 import { PublicController } from '../public.controller';
 import { TrialSignup } from '../trial-signup.entity';
 
 // Sample data at trial activation (DemoDataService.provisionTrialSampleData): the activation
-// answers as before, then the sample data loads in the background, with the checks of a manual
-// load but into a workspace that may hold data. Real activation, real DemoDataService and
-// tenant reset on the spec database; the loader process and the e-mails are doubles.
+// answers as before, then the sample data loads in the background, with every check of a manual
+// load (empty workspace included). Real activation, real DemoDataService and tenant reset on the
+// spec database; the loader process and the e-mails are doubles.
 // - the loader gets the tenant's host, its starting company and a token of the new administrator;
 // - the sample data language is recorded (`en` whatever the browser, for now);
 // - with every load slot taken, the load is tried again until a slot frees, or gives up `idle`;
 // - a missing loader leaves `idle` (as a manual load), a loader that fails leaves `failed`;
+// - a workspace holding a numbered record, before or during the wait, is refused with its counters intact;
+// - a server stopping, or a manual load, during the wait ends the provision without a second loader;
 // - a non-administrator is refused, and nothing starts.
 // @database-spec: opens the data-source, so run-ci-tests.js runs it on a database lane.
 
@@ -155,6 +158,27 @@ async function waitFor<T>(label: string, read: () => Promise<T> | T, done: (valu
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
 }
+
+/** A task, numbered through `item_sequences` as the task screen does. */
+async function createTask(tenantId: string, ownerId: string): Promise<number> {
+  return inTenant(tenantId, async (m) => {
+    const number = await allocateItemNumbers('task', tenantId, 1, m);
+    await m.query(
+      `INSERT INTO tasks (tenant_id, item_number, title, status, assignee_user_id, labels, owner_ids, viewer_ids, created_at, updated_at)
+       VALUES ($1, $2, 'Real task', 'open', $3, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, now(), now())`,
+      [tenantId, number, ownerId]);
+    return number;
+  });
+}
+
+/** The tenant's reference counters, by entity type. */
+async function sequencesOf(tenantId: string): Promise<Record<string, number>> {
+  const rows: Array<{ entity_type: string; next_val: number }> = await inTenant(tenantId, (m) =>
+    m.query(`SELECT entity_type, next_val FROM item_sequences WHERE tenant_id = $1 ORDER BY entity_type`, [tenantId]));
+  return Object.fromEntries(rows.map((row) => [row.entity_type, Number(row.next_val)]));
+}
+
+const tenantUrlOf = (slug: string) => `http://${slug}.lvh.me:8080`;
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -316,31 +340,140 @@ async function testMissingOrFailingLoader() {
   }
 }
 
-// A workspace that holds data: `loadDemoData` loads all the same; `load` still refuses it.
-async function testNonEmptyWorkspace() {
+// A numbered record (a task) created before the provision: refused (`tenant_not_empty`), no
+// loader, `idle`, and the `task` counter left as it was.
+async function testNumberedRecordBeforeProvision() {
   const svc = buildServices();
   const h = harness(svc);
   let t: ActivatedTenant | undefined;
   try {
     t = await createActivatedTenant(svc, { tag: 'tp-full', orgName: 'Full Org', signup: true });
-    await inTenant(t.tenantId, (m) => m.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Real supplier')`, [t!.tenantId]));
-    const host = `${t.slug}.lvh.me`;
-    await assert.rejects(h.service.load({ tenantId: t.tenantId, actorId: t.ownerId, host }), (error: any) => {
+    assert.equal(await createTask(t.tenantId, t.ownerId), 1);
+    const before = await sequencesOf(t.tenantId);
+    assert.equal(before.task, 2);
+    await assert.rejects(h.service.loadDemoData(t.tenantId, { language: 'en', actorId: t.ownerId, host: `${t.slug}.lvh.me` }), (error: any) => {
       assert.equal(error?.getResponse?.()?.code, 'tenant_not_empty');
       return true;
     });
-    assert.equal(h.children.length, 0);
 
-    const state = await h.service.loadDemoData(t.tenantId, { language: 'de', actorId: t.ownerId, host });
-    assert.equal(state.status, 'loading');
-    assert.equal(state.language, 'en');
+    const logged = h.logs.length;
+    await h.service.provisionTrialSampleData({ tenantId: t.tenantId, actorId: t.ownerId, tenantUrl: tenantUrlOf(t.slug), language: 'en' });
+    const warnings = h.logs.slice(logged).filter((line) => line.startsWith('warn'));
+    assert.equal(warnings.length, 1, JSON.stringify(warnings));
+    assert.match(warnings[0], /tenant_not_empty$/);
+    assert.equal(h.children.length, 0, 'no loader');
+    assert.equal((await demoOf(t.tenantId)).status, 'idle');
+    assert.deepEqual(await sequencesOf(t.tenantId), before, 'the counters are intact');
+  } finally {
+    await h.finishAll();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
+// Every slot taken at activation; the administrator creates a task during the wait: the next
+// try is refused (`tenant_not_empty`) even with a slot free, no loader, counters intact.
+async function testTaskCreatedDuringWait() {
+  const svc = buildServices();
+  const h = harness(svc);
+  h.service.config.maxConcurrent = 1;
+  h.service.config.provisionRetryMs = 150;
+  h.service.config.provisionRetryMaxMs = 5_000;
+  let busy: ActivatedTenant | undefined;
+  let a: Activated | undefined;
+  try {
+    busy = await createActivatedTenant(svc, { tag: 'tp-busy', orgName: 'Busy Org' });
+    await setDemo(busy.tenantId, { status: 'loading', run_id: randomUUID(), heartbeat_at: new Date().toISOString(), started_at: new Date().toISOString() });
+    const logged = h.logs.length;
+    a = await activate(svc, h.service);
+    await pause(400);
+    assert.equal(h.children.length, 0, 'no loader while every slot is taken');
+    await createTask(a.tenantId, a.ownerId);
+    const before = await sequencesOf(a.tenantId);
+    assert.equal(before.task, 2);
+    await setDemo(busy.tenantId, { status: 'loaded', run_id: null, heartbeat_at: null });
+
+    await settle();
+    assert.equal(h.children.length, 0, 'nothing loaded over the records');
+    assert.equal((await demoOf(a.tenantId)).status, 'idle');
+    assert.deepEqual(await sequencesOf(a.tenantId), before, 'the counters are intact');
+    const warnings = h.logs.slice(logged).filter((line) => line.startsWith('warn') && line.includes(a!.tenantId));
+    assert.equal(warnings.length, 1, JSON.stringify(warnings));
+    assert.match(warnings[0], /tenant_not_empty$/);
+  } finally {
+    await h.finishAll();
+    await cleanupActivated([a]);
+    await cleanupTenants([busy?.tenantId]);
+  }
+}
+
+// The API process stops during the wait: no further try, the provision resolves, one warning.
+async function testStopDuringWait() {
+  const svc = buildServices();
+  const h = harness(svc);
+  h.service.config.maxConcurrent = 1;
+  h.service.config.provisionRetryMs = 60_000;
+  h.service.config.provisionRetryMaxMs = 10 * 60_000;
+  let busy: ActivatedTenant | undefined;
+  let t: ActivatedTenant | undefined;
+  try {
+    busy = await createActivatedTenant(svc, { tag: 'tp-busy', orgName: 'Busy Org' });
+    await setDemo(busy.tenantId, { status: 'loading', run_id: randomUUID(), heartbeat_at: new Date().toISOString(), started_at: new Date().toISOString() });
+    t = await createActivatedTenant(svc, { tag: 'tp-stop', orgName: 'Stop Org', signup: true });
+    const logged = h.logs.length;
+    const run = h.service.provisionTrialSampleData({ tenantId: t.tenantId, actorId: t.ownerId, tenantUrl: tenantUrlOf(t.slug), language: 'en' });
+    await pause(300);
+    const tries = h.logs.length;
+    h.service.stop();
+    await setDemo(busy.tenantId, { status: 'loaded', run_id: null, heartbeat_at: null });
+    const ended = await Promise.race([run.then(() => true), pause(5_000).then(() => false)]);
+    assert.ok(ended, 'the provision resolves soon after the stop');
+    assert.equal(h.children.length, 0, 'no loader');
+    assert.equal((await demoOf(t.tenantId)).status, 'idle');
+    const warnings = h.logs.slice(logged).filter((line) => line.startsWith('warn'));
+    assert.equal(warnings.length, 1, JSON.stringify(warnings));
+    assert.match(warnings[0], /the server is stopping/);
+    assert.equal(h.logs.length, tries + 1, `no try after the stop: ${JSON.stringify(h.logs.slice(tries))}`);
+  } finally {
+    await h.finishAll();
+    await cleanupTenants([t?.tenantId, busy?.tenantId]);
+  }
+}
+
+// An administrator loads the sample data by hand during the wait: the next try is refused
+// (`demo_status_conflict`), the provision ends without a second loader.
+async function testManualLoadDuringWait() {
+  const svc = buildServices();
+  const h = harness(svc);
+  h.service.config.maxConcurrent = 1;
+  h.service.config.provisionRetryMs = 2_000;
+  h.service.config.provisionRetryMaxMs = 30_000;
+  let busy: ActivatedTenant | undefined;
+  let t: ActivatedTenant | undefined;
+  try {
+    busy = await createActivatedTenant(svc, { tag: 'tp-busy', orgName: 'Busy Org' });
+    await setDemo(busy.tenantId, { status: 'loading', run_id: randomUUID(), heartbeat_at: new Date().toISOString(), started_at: new Date().toISOString() });
+    t = await createActivatedTenant(svc, { tag: 'tp-manual', orgName: 'Manual Org', signup: true });
+    const logged = h.logs.length;
+    const run = h.service.provisionTrialSampleData({ tenantId: t.tenantId, actorId: t.ownerId, tenantUrl: tenantUrlOf(t.slug), language: 'en' });
+    await pause(300);
+    assert.equal(h.children.length, 0, 'no loader while every slot is taken');
+
+    await setDemo(busy.tenantId, { status: 'loaded', run_id: null, heartbeat_at: null });
+    const manual = await h.service.load({ tenantId: t.tenantId, actorId: t.ownerId, host: `${t.slug}.lvh.me` });
+    assert.equal(manual.status, 'loading');
     assert.equal(h.children.length, 1);
+
+    await run;
+    assert.equal(h.children.length, 1, 'no second loader');
+    const warnings = h.logs.slice(logged).filter((line) => line.startsWith('warn'));
+    assert.equal(warnings.length, 1, JSON.stringify(warnings));
+    assert.match(warnings[0], /demo_status_conflict$/);
     h.children[0].child.finish(0);
     await settle();
     assert.equal((await demoOf(t.tenantId)).status, 'loaded');
   } finally {
     await h.finishAll();
-    await cleanupTenants([t?.tenantId]);
+    await cleanupTenants([t?.tenantId, busy?.tenantId]);
   }
 }
 
@@ -367,7 +500,7 @@ async function testRefusals() {
     });
 
     const before = h.logs.length;
-    await h.service.provisionTrialSampleData({ tenantId: t.tenantId, actorId: member.id, host, language: 'en' });
+    await h.service.provisionTrialSampleData({ tenantId: t.tenantId, actorId: member.id, tenantUrl: tenantUrlOf(t.slug), language: 'en' });
     const warnings = h.logs.slice(before).filter((line) => line.startsWith('warn'));
     assert.equal(warnings.length, 1);
     assert.match(warnings[0], /administrator_required/);
@@ -384,7 +517,10 @@ runSpecs('trial-provision.integration.spec', [
   testLanguageIsRecorded,
   testCapacityRetries,
   testMissingOrFailingLoader,
-  testNonEmptyWorkspace,
+  testNumberedRecordBeforeProvision,
+  testTaskCreatedDuringWait,
+  testStopDuringWait,
+  testManualLoadDuringWait,
   testRefusals,
 ]).catch((err) => {
   console.error(err);
