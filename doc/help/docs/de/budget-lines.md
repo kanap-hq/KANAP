@@ -177,7 +177,7 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 - **Neue Zeile**: Eine Zeile erstellen (erfordert `budget:member`)
 - **Importieren**: Zeilen aus einer Budgetdatei in großer Zahl laden (erfordert `budget:admin`)
 - **Exportieren**: Die Zeilen in eine Budgetdatei exportieren (erfordert `budget:admin`)
-- **Auswahl löschen**: Massenlöschung ausgewählter Zeilen (erfordert `budget:admin`; Zeilen über Kontrollkästchen auswählen). Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden. Vor dem Löschen nennt die Bestätigung die behaltenen Zeilen mit der eingefrorenen Spalte. Die anderen werden gelöscht
+- **Auswahl löschen**: Massenlöschung ausgewählter Zeilen (erfordert `budget:admin`; Zeilen über Kontrollkästchen auswählen). Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden. Vor dem Löschen nennt die Bestätigung die behaltenen Zeilen mit der eingefrorenen Spalte. Die anderen werden gelöscht. Dieselbe Löschung gibt es auf der Zeile: **Löschen** (Papierkorbsymbol) in ihrer Kopfzeile, für eine Person mit `budget:admin`, deren Zugriff alle Daten umfasst. Die Prüfung ist dieselbe. Eine Zeile mit Beträgen in einer eingefrorenen Spalte zeigt die Ablehnung und ihren Grund. Wenn die Zeile gelöscht werden kann, bestätigen Sie, die Zeile wird gelöscht und die Liste öffnet sich wieder
 
 **Zurück/Weiter-Navigation**:
 
@@ -194,7 +194,7 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 
 Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen. Seine Adresse nennt die Zeile über ihre Referenz, zum Beispiel `/ops/budget/BL-12/overview`. Er besteht aus vier Teilen:
 
-- **Kopfzeile**: die Referenz der Zeile (z. B. `BL-12`) mit einer Kopierschaltfläche, der Titel der Zeile (anklicken, um die Zeile umzubenennen), **Zurück** / **Weiter**, **Teilen** und die Schaltfläche zum Schließen
+- **Kopfzeile**: die Referenz der Zeile (z. B. `BL-12`) mit einer Kopierschaltfläche, der Titel der Zeile (anklicken, um die Zeile umzubenennen), **Zurück** / **Weiter**, **Teilen**, **Löschen** (Papierkorbsymbol, `budget:admin`, Zugriff auf alle Daten) und die Schaltfläche zum Schließen
 - **Metadatenleiste** unter dem Titel: **Status**, **IT-Verantwortlicher** und **Fachbereichsverantwortlicher**, direkt bearbeitbar. Hat die Kostenstelle der Zeile einen Budgetverantwortlichen, folgt **Budgetverantwortlicher** danach. Er ist schreibgeschützt und aus der Kostenstelle abgeleitet, nicht auf der Zeile gespeichert: Fahren Sie mit der Maus darüber, um zu sehen, aus welcher Kostenstelle er stammt, und ändern Sie ihn auf der Kostenstelle (siehe [Kostenstellen](cost-centers.md#budgetverantwortlicher-auf-budgetzeilen))
 - **Fünf Tabs**: **Übersicht**, **Budget**, **Zuordnungen**, **Verknüpfungen** (der Tab Verknüpfungen zeigt die Anzahl der Verknüpfungen der Zeile) und **Verlauf**
 - **Bereich Eigenschaften** rechts: die Hauptfelder der Zeile, beginnend mit **Typ** (bei einer bestehenden Zeile mit **Typ ändern…** daneben, siehe [Typ ändern](#typ-andern)). Öffnen oder schließen Sie ihn mit der Eigenschaften-Schaltfläche; der Arbeitsbereich merkt sich Ihre Wahl
@@ -650,7 +650,7 @@ Jede Zeile hat einen **Status** (Aktiviert oder Deaktiviert) und ein optionales 
 
 - **Bevorzugen Sie das Deaktivieren**: Bewahrt die Historie, stellt konsistente Berichte sicher und unterstützt Audit-Trails
 - **Nur löschen, wenn**: Die Zeile versehentlich erstellt wurde
-- Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden. Heben Sie zuerst das Einfrieren der Spalte auf, oder setzen Sie stattdessen ein Ende der Gültigkeit
+- Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden. Heben Sie zuerst das Einfrieren der Spalte auf, oder setzen Sie stattdessen ein Ende der Gültigkeit. Sie löschen eine Zeile aus der Liste (**Auswahl löschen**) oder aus ihrer Kopfzeile (**Löschen**, Papierkorbsymbol)
 - Beim Löschen einer Zeile werden auch ihre Budgets, Zuordnungen, Aufgaben, relevanten Websites, Anhänge (mit ihren Dateien) und ihre Verknüpfungen zu Verträgen entfernt. Wurde eine ihrer Aufgaben in eine Anfrage umgewandelt, bleibt die Anfrage erhalten: Sie hat eine eigene Kopie von Titel, Beschreibung und Anhängen, und nur ihre Verknüpfung zur Aufgabe entfällt
 
 **Tipp**: Verwenden Sie das Ende der Gültigkeit, um Zeilen auslaufen zu lassen, wenn Verträge enden, Dienste eingestellt, Vermögenswerte veräußert oder Projekte abgeschlossen werden. Löschen Sie nur eine versehentlich erstellte Zeile.
@@ -716,7 +716,7 @@ Der Zugriff auf Budgetzeilen wird durch die Ressource Budget gesteuert, die für
 
 - `budget:reader`: Liste anzeigen, Zeilen öffnen, Budgets und Zuordnungen einsehen (schreibgeschützt), Anhänge herunterladen
 - `budget:member`: Zeilen erstellen und bearbeiten, ihren Typ ändern, Budgets und Zuordnungen aktualisieren, Anhänge hochladen und löschen, Beziehungen, Verknüpfungen und Kontakte verwalten
-- `budget:admin`: Alle Mitglied-Rechte plus Import und Export, Budget-Operationen (Budgetspalten kopieren, mit Beträgen und Zuordnungen, und Budgetspalte zurücksetzen) und Massenlöschung
+- `budget:admin`: Alle Mitglied-Rechte plus Import und Export, Budget-Operationen (Budgetspalten kopieren, mit Beträgen und Zuordnungen, und Budgetspalte zurücksetzen) und das Löschen von Zeilen aus der Liste oder von der Zeile
 
 Das Einfrieren von Budgetspalten erfordert die Budgetadministration (`budget_ops:admin`).
 
