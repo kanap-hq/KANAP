@@ -1580,8 +1580,11 @@ function scoringChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] 
   return changes;
 }
 
-/** One change per dimension whose category changed; a removed value shows as `null`. */
-function dimensionChanges(before: unknown, after: unknown, ctx: PageContext): RecordHistoryChange[] {
+/**
+ * One change per dimension whose category changed. A removed value shows as `null`.
+ * A creation names the value only: there is no before, as a criterion does.
+ */
+function dimensionChanges(before: unknown, after: unknown, ctx: PageContext, creating: boolean): RecordHistoryChange[] {
   const b = isPlainObject(before) ? before : {};
   const a = isPlainObject(after) ? after : {};
   const axes = new Set([...Object.keys(b), ...Object.keys(a)]);
@@ -1594,7 +1597,7 @@ function dimensionChanges(before: unknown, after: unknown, ctx: PageContext): Re
     changes.push({
       field: 'dimension',
       dimension: isUuid(axisId) ? ctx.dimensions.get(axisId.toLowerCase()) ?? null : null,
-      before: name(beforeCategory),
+      ...(creating ? {} : { before: name(beforeCategory) }),
       after: name(afterCategory),
     });
   }
@@ -1632,7 +1635,7 @@ function genericChanges(row: AuditRow, ctx: PageContext, options: GenericOptions
       continue;
     }
     if (field === 'analytics_values') {
-      changes.push(...dimensionChanges(b, a, ctx));
+      changes.push(...dimensionChanges(b, a, ctx, creating));
       continue;
     }
     if (isStructured(b) || isStructured(a)) continue;
@@ -1921,14 +1924,35 @@ function changesFor(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: Pag
   }
 }
 
+/** A budget year stored as a number or as its four digits. */
+function budgetYear(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isInteger(value)) return value;
+  if (typeof value === 'string' && /^\d{4}$/.test(value.trim())) return Number(value.trim());
+  return null;
+}
+
+/**
+ * The year a version entry names. The loaded row wins. A version deleted since is absent from
+ * that map, and the audit payload still carries `budget_year`.
+ */
+function versionYear(row: AuditRow, ctx: PageContext): number | null {
+  const stored = row.record_id ? ctx.versions.get(row.record_id.toLowerCase())?.year ?? null : null;
+  if (stored !== null && Number.isFinite(stored)) return stored;
+  for (const payload of [row.after_json, row.before_json]) {
+    if (!isPlainObject(payload)) continue;
+    const year = budgetYear(payload.budget_year);
+    if (year !== null) return year;
+  }
+  return null;
+}
+
 function subjectLabel(row: AuditRow, kind: RecordHistoryChildKind | null, ctx: PageContext, changes: RecordHistoryChange[]): string | null {
   if (kind === null) return null;
   switch (kind) {
     case 'version': {
-      const payload = isPlainObject(row.after_json) ? row.after_json : isPlainObject(row.before_json) ? row.before_json : null;
-      const name = payload && typeof payload.version_name === 'string' ? payload.version_name : null;
-      if (name) return name;
-      return row.record_id ? ctx.versions.get(row.record_id.toLowerCase())?.name ?? null : null;
+      // The screen names a budget year by its year ("Budget 2027"), never the stored version name.
+      const year = versionYear(row, ctx);
+      return year === null ? null : String(year);
     }
     case 'amounts':
     case 'allocations':

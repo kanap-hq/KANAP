@@ -246,7 +246,7 @@ export { historyActionText, historyActorText } from './recordHistoryActor';
 export function historySubjectText(subject: RecordHistorySubject, t: Translate, table?: string): string | null {
   if (subject.kind === 'version') {
     return subject.label
-      ? t('auditLogs.history.version', { name: subject.label })
+      ? t('auditLogs.history.version', { year: subject.label })
       : t('auditLogs.history.versionNoName');
   }
   if (subject.kind === 'round_input') {
@@ -269,7 +269,7 @@ export function historySubjectText(subject: RecordHistorySubject, t: Translate, 
   }
   if (subject.kind === 'technology_version') {
     return subject.label
-      ? t('auditLogs.history.version', { name: subject.label })
+      ? t('auditLogs.history.technologyVersion', { name: subject.label })
       : t('auditLogs.history.versionNoName');
   }
   if (subject.kind === 'hardware') return t('auditLogs.history.hardware');
@@ -315,7 +315,7 @@ export function historySubjectText(subject: RecordHistorySubject, t: Translate, 
 
 /**
  * The title line of a technical child's creation or deletion: its name and the event, with no
- * field list and no technical action ("Version Y2026 added", "Budget input Budget added").
+ * field list and no technical action ("Budget 2026 added", "Budget input Budget added").
  * A child update keeps its title in the header and its fields below, so it returns null here.
  */
 export function historyChildTitle(item: RecordHistoryItem, t: Translate, table?: string): string | null {
@@ -344,6 +344,12 @@ export function historyChildTitle(item: RecordHistoryItem, t: Translate, table?:
       environment: item.subject.label,
     });
   }
+  // A budget year is masculine in French and Spanish: "{{title}} added" would read "Budget 2027 ajoutée".
+  if (item.subject.kind === 'version' && item.subject.label) {
+    return t(item.action === 'create' ? 'auditLogs.history.versionCreated' : 'auditLogs.history.versionDeleted', {
+      year: item.subject.label,
+    });
+  }
   const title = historySubjectText(item.subject, t, table);
   if (!title) return null;
   return t(item.action === 'create' ? 'auditLogs.history.childCreated' : 'auditLogs.history.childDeleted', { title });
@@ -361,14 +367,84 @@ function monthText(month: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date);
 }
 
+type MonthPart = { year: number; month: number; index: number };
+
+function parseMonth(month: string): MonthPart | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(month.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const monthNumber = Number(match[2]);
+  if (monthNumber < 1 || monthNumber > 12) return null;
+  return { year, month: monthNumber, index: year * 12 + (monthNumber - 1) };
+}
+
+function longMonth(part: MonthPart, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { month: 'long', timeZone: 'UTC' })
+    .format(new Date(Date.UTC(part.year, part.month - 1, 1)));
+}
+
+/** French elides "de" before a vowel: « d'avril », « d'août », « d'octobre ». */
+const STARTS_WITH_VOWEL = /^[aeiouàâäéèêëîïôöùûü]/i;
+
+function monthRunText(from: MonthPart, to: MonthPart, locale: string, t: Translate): string {
+  if (from.index === to.index) {
+    return monthText(`${from.year}-${String(from.month).padStart(2, '0')}`, locale);
+  }
+  const fromName = longMonth(from, locale);
+  const toName = longMonth(to, locale);
+  if (from.year !== to.year) {
+    return t('auditLogs.history.monthRangeAcrossYears', {
+      from: fromName,
+      fromYear: from.year,
+      to: toName,
+      toYear: to.year,
+    });
+  }
+  const vowel = locale.toLowerCase().startsWith('fr') && STARTS_WITH_VOWEL.test(fromName);
+  return t('auditLogs.history.monthRange', {
+    from: fromName,
+    to: toName,
+    year: from.year,
+    ...(vowel ? { context: 'vowel' } : {}),
+  });
+}
+
+/**
+ * Consecutive months as one range ("January to December 2027", "March to May 2027").
+ * A month on its own keeps the short name it already had ("Jan 2027").
+ */
+function formatMonths(months: string[], locale: string, t: Translate): string {
+  const parsed: MonthPart[] = [];
+  const raw: string[] = [];
+  for (const month of months) {
+    const part = parseMonth(month);
+    if (part) parsed.push(part);
+    else if (month.trim()) raw.push(month.trim());
+  }
+  parsed.sort((a, b) => a.index - b.index);
+  const unique = parsed.filter((part, index) => index === 0 || part.index !== parsed[index - 1].index);
+  const runs: string[] = [];
+  let start = 0;
+  for (let index = 1; index <= unique.length; index += 1) {
+    const previous = unique[index - 1];
+    const next = unique[index];
+    if (next && next.index === previous.index + 1) continue;
+    runs.push(monthRunText(unique[start], unique[index - 1], locale, t));
+    start = index;
+  }
+  return [...runs, ...raw].join(', ');
+}
+
 /** The months a write touched, or the whole year, as the amount line's parenthesised detail. */
 function amountScope(change: RecordHistoryChange, context: HistoryTextContext): string | null {
-  if (change.wholeYear) return context.t('auditLogs.history.amountWholeYear');
   const months = (change.months ?? []).filter((month) => typeof month === 'string' && month.trim() !== '');
-  if (months.length === 0) return null;
-  return context.t('auditLogs.history.amountMonths', {
-    months: months.map((month) => monthText(month, context.locale)).join(', '),
-  });
+  if (months.length > 0) {
+    return context.t('auditLogs.history.amountMonths', {
+      months: formatMonths(months, context.locale, context.t),
+    });
+  }
+  if (change.wholeYear) return context.t('auditLogs.history.amountWholeYear');
+  return null;
 }
 
 function amountText(value: unknown): string {
@@ -455,8 +531,8 @@ function dimensionLine(change: RecordHistoryChange, context: HistoryTextContext)
     label: name
       ? context.t('auditLogs.history.dimension', { name })
       : context.t('auditLogs.history.dimensionNoName'),
-    before: historyValueText(change.before, 'dimension', context),
-    after: historyValueText(change.after, 'dimension', context),
+    ...(has(change, 'before') ? { before: historyValueText(change.before, 'dimension', context) } : {}),
+    ...(has(change, 'after') ? { after: historyValueText(change.after, 'dimension', context) } : {}),
   };
 }
 
