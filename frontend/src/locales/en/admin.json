@@ -2624,7 +2624,7 @@
       "totalMonth": "Total this month",
       "agentsMonth": "Agents this month",
       "chatMonth": "Plaid this month",
-      "chatEstimatedNote": "Estimated at the currently assigned model’s rates",
+      "chatEstimatedNote": "Partly estimated at the currently assigned model’s rates",
       "chatFreeNote": "The assigned model has no cost",
       "byAgent": "Cost by agent",
       "byModel": "Cost by model",

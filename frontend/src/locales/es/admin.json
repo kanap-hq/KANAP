@@ -2624,7 +2624,7 @@
       "totalMonth": "Total este mes",
       "agentsMonth": "Agentes este mes",
       "chatMonth": "Plaid este mes",
-      "chatEstimatedNote": "Estimado con las tarifas del modelo asignado actualmente",
+      "chatEstimatedNote": "Estimado en parte con las tarifas del modelo asignado actualmente",
       "chatFreeNote": "El modelo asignado no tiene coste",
       "byAgent": "Coste por agente",
       "byModel": "Coste por modelo",

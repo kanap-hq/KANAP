@@ -207,6 +207,7 @@ export type AiAdminOverview = {
       cost_last_30_days_eur: number;
     }>;
     chat_priced: boolean;
+    chat_estimated: boolean;
   };
 };
 
