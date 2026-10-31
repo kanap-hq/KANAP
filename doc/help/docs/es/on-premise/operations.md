@@ -37,7 +37,7 @@ docker compose -f infra/compose.onprem.yml up -d
 
 `infra/compose.onprem.yml` nombra las imágenes de la versión que tiene en el checkout. `pull` las descarga de `ghcr.io`, y `up -d` vuelve a crear los contenedores sobre ellas. Si compila las imágenes usted mismo (consulte [Compilar las imágenes usted mismo](installation.md#build-the-images-yourself)), ejecute los comandos `build` y `up -d` de esa sección en lugar de `pull` y `up -d`.
 
-**Primera actualización a una versión con imágenes publicadas.** Las versiones hasta la 26.10.7 se compilaban en el servidor. El procedimiento anterior basta para pasar a una versión posterior. Cuando la nueva versión esté en marcha y supere las comprobaciones del paso 4, libere la caché de compilación y las imágenes antiguas. En un servidor que compiló KANAP, ocupan varios gigabytes, según cuántas compilaciones haya hecho. Añada `kanap-api-tools` a la segunda línea si había compilado la imagen de herramientas de mantenimiento.
+**Primera actualización a una versión con imágenes publicadas.** Las versiones hasta la 26.10.7 se compilaban en el servidor. El procedimiento anterior basta para pasar a una versión posterior. Cuando la nueva versión esté en marcha y supere las comprobaciones del paso 4, libere la caché de compilación y las imágenes antiguas. En un servidor que compiló KANAP, suelen ocupar 20 GB o más, según cuántas compilaciones haya hecho. Añada `kanap-api-tools` a la segunda línea si había compilado la imagen de herramientas de mantenimiento.
 
 ```bash
 docker builder prune -a
@@ -45,7 +45,7 @@ docker image rm infra-api infra-web
 docker image prune
 ```
 
-`docker builder prune -a` y `docker image prune` piden cada uno una confirmación: responda `y`. Sin `-a`, `docker builder prune` deja una parte de la caché de compilación.
+`docker builder prune -a` y `docker image prune` piden cada uno una confirmación: responda `y`. Sin `-a`, `docker builder prune` deja una parte de la caché de compilación. Mantenga este orden: `docker image rm` por sí solo no libera casi nada, y el espacio vuelve con `docker image prune`. El total que muestra Docker es mayor que lo que gana el disco, porque las imágenes comparten capas: compare `df -h /` antes y después. `docker image rm` solo elimina la etiqueta `latest`: si `docker images "infra-*"` muestra otras etiquetas, elimine cada una.
 
 A partir de esa versión, las actualizaciones necesitan acceso saliente a `ghcr.io` en lugar de `registry.npmjs.org` y de los espejos de paquetes Alpine (consulte [Reglas de cortafuegos](configuration.md#outbound-installation-and-upgrades)).
 
