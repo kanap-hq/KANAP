@@ -402,6 +402,15 @@
       "skillsMatrix": "Kompetenzmatrix",
       "workingDayCalendars": "Arbeitstagekalender"
     },
+    "exportParams": {
+      "filters": "Filter",
+      "includeDisabled": "Beendete Zeilen einschließen",
+      "q": "Suche",
+      "scope": "Bereich",
+      "sort": "Sortierung",
+      "table": "Tabelle",
+      "tz": "Zeitzone"
+    },
     "fields": {
       "access_methods": "Zugriffsarten",
       "account_id": "Konto",
