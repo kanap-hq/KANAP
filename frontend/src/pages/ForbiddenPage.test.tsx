@@ -61,4 +61,21 @@ describe('ForbiddenPage', () => {
     renderPage();
     expect(screen.getByRole('button', { name: fr('buttons.back') })).toBeInTheDocument();
   });
+
+  it('centres the block in the content area and keeps its maximum width', () => {
+    renderPage();
+    const title = screen.getByRole('heading', { name: fr('forbidden.title') });
+    const block = title.parentElement as HTMLElement;
+    const frame = block.parentElement as HTMLElement;
+
+    expect(frame).toHaveStyle({
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexGrow: '1',
+      flexShrink: '0',
+    });
+    expect(block).toHaveStyle({ maxWidth: '560px', textAlign: 'center', width: '100%' });
+    expect(block.querySelector('.MuiStack-root')).toHaveStyle({ justifyContent: 'center' });
+  });
 });
