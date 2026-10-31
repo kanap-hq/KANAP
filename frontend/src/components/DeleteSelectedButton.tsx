@@ -93,7 +93,7 @@ export interface DeleteSelectedButtonProps<T> {
 /** The names a success message lists before "and n more". */
 const NAMED_DELETES = 3;
 
-/** Count on the trash: 9px on a 14px badge, sitting on the icon's corner inside the pill. */
+/** Count on the trash: 9px on a 14px badge, sitting on the icon's top-right corner, clear of the trash. */
 const selectedCountBadgeSx = {
   '& .MuiBadge-badge': {
     bgcolor: 'kanap.danger',
@@ -105,8 +105,8 @@ const selectedCountBadgeSx = {
     minWidth: 14,
     lineHeight: '14px',
     padding: '0 3px',
-    top: 3,
-    right: 3,
+    top: 1,
+    right: -2,
   },
 };
 
@@ -296,7 +296,7 @@ export default function DeleteSelectedButton<T>({
             aria-label={accessibleName}
             onClick={() => { void handleOpenConfirm(); }}
             disabled={disabled || checking || selectedCount === 0}
-            sx={{ px: '8px' }}
+            sx={{ px: '11px' }}
           >
             <Badge
               badgeContent={selectedCount}
