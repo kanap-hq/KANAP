@@ -387,11 +387,11 @@
     "lastInput": "Ultima entrada"
   },
   "usageIndicator": {
-    "limitReached": "Monthly limit reached. Resets {{resetDate}}.",
-    "limitReachedCta": "Monthly limit reached.",
-    "openSettings": "Configure your own provider",
-    "remaining_one": "{{count}} message remaining this month",
-    "remaining_other": "{{count}} messages remaining this month"
+    "limitReached": "Límite mensual alcanzado. Se restablece el {{resetDate}}.",
+    "limitReachedCta": "Límite mensual alcanzado.",
+    "openSettings": "Configurar su propio proveedor",
+    "remaining_one": "{{count}} mensaje restante este mes",
+    "remaining_other": "{{count}} mensajes restantes este mes"
   },
   "workspace": {
     "empty": {
