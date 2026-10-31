@@ -2653,6 +2653,16 @@
       "timeout": "Délai d'attente",
       "timeoutPlaceholder": "ex. 120",
       "timeoutHint": "Durée d'attente, en secondes, avant d'abandonner l'appel. Laissez vide pour la limite standard. Les modèles locaux ont souvent besoin de plus de temps.",
+      "reasoningEffort": "Effort de raisonnement",
+      "reasoningEffortDefault": "Par défaut du fournisseur",
+      "reasoningEffortHint": "Combien le modèle réfléchit avant de répondre. Plus d’effort : réponses plus soignées, plus lentes et plus chères. Toutes les valeurs ne sont pas acceptées par tous les fournisseurs : « Tester la connexion » le vérifie.",
+      "reasoningEffortValues": {
+        "low": "Faible",
+        "medium": "Moyen",
+        "high": "Élevé",
+        "xhigh": "Très élevé",
+        "max": "Maximal"
+      },
       "defaultLabel": "Utiliser comme modèle par défaut",
       "test": "Tester la connexion",
       "testing": "Test en cours…",

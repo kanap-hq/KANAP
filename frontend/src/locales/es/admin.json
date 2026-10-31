@@ -2653,6 +2653,16 @@
       "timeout": "Tiempo de espera",
       "timeoutPlaceholder": "p. ej., 120",
       "timeoutHint": "Cuántos segundos esperar a este modelo antes de desistir. Déjelo vacío para usar el límite estándar. Los modelos locales suelen necesitar más tiempo.",
+      "reasoningEffort": "Esfuerzo de razonamiento",
+      "reasoningEffortDefault": "Predeterminado del proveedor",
+      "reasoningEffortHint": "Cuánto piensa el modelo antes de responder. Más esfuerzo: respuestas más cuidadas, más lentas y más caras. No todos los proveedores aceptan todos los valores: «Probar conexión» lo comprueba.",
+      "reasoningEffortValues": {
+        "low": "Bajo",
+        "medium": "Medio",
+        "high": "Alto",
+        "xhigh": "Muy alto",
+        "max": "Máximo"
+      },
       "defaultLabel": "Usar como modelo predeterminado",
       "test": "Probar conexión",
       "testing": "Probando…",

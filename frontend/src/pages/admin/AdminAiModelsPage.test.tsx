@@ -42,6 +42,7 @@ const MODEL = {
   price_input_eur_per_mtok: 0.4,
   price_output_eur_per_mtok: 2,
   price_cache_read_eur_per_mtok: 0.04,
+  reasoning_effort: null,
   llm_timeout_ms: null,
   status: 'active',
   is_default: true,
@@ -74,7 +75,7 @@ async function openEditDialog() {
   return screen.findByPlaceholderText('e.g., 0.30');
 }
 
-describe('AdminAiModelsPage cache read cost', () => {
+describe('AdminAiModelsPage model dialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localeState.current = 'en';
@@ -170,6 +171,41 @@ describe('AdminAiModelsPage cache read cost', () => {
 
     fireEvent.change(field, { target: { value: '0' } });
     expect(save).toBeEnabled();
+  });
+
+  it('shows the reasoning effort at the provider default and sends the value chosen', async () => {
+    await openEditDialog();
+    expect(screen.getByText('Reasoning effort')).toBeInTheDocument();
+    const select = screen.getByRole('combobox', { name: 'Reasoning effort' });
+    expect(select).toHaveTextContent('Provider default');
+
+    fireEvent.mouseDown(select);
+    const options = await screen.findAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual([
+      'Provider default', 'Low', 'Medium', 'High', 'Very high', 'Maximum',
+    ]);
+    fireEvent.click(screen.getByRole('option', { name: 'Very high' }));
+    expect(select).toHaveTextContent('Very high');
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    expect((api.patch as any).mock.calls[0][1]).toMatchObject({ reasoning_effort: 'xhigh' });
+  });
+
+  it('sends the provider default as null', async () => {
+    (api.get as any).mockImplementation(((original) => (url: string) => (url === '/ai/model-configs'
+      ? Promise.resolve({ data: { model_configs: [{ ...MODEL, reasoning_effort: 'max' }], secret_writable: true } })
+      : original(url)))((api.get as any).getMockImplementation()));
+    await openEditDialog();
+    const select = screen.getByRole('combobox', { name: 'Reasoning effort' });
+    expect(select).toHaveTextContent('Maximum');
+
+    fireEvent.mouseDown(select);
+    fireEvent.click(await screen.findByRole('option', { name: 'Provider default' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    expect((api.patch as any).mock.calls[0][1]).toMatchObject({ reasoning_effort: null });
   });
 
   async function switchToOllama() {

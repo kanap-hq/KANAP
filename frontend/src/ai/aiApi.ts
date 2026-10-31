@@ -128,6 +128,7 @@ export type AiModelConfig = {
   price_input_eur_per_mtok: number | null;
   price_output_eur_per_mtok: number | null;
   price_cache_read_eur_per_mtok: number | null;
+  reasoning_effort: AiReasoningEffort | null;
   llm_timeout_ms: number | null;
   status: 'active' | 'archived';
   is_default: boolean;
@@ -148,6 +149,10 @@ export type AiModelAssignmentOption = {
   is_default: boolean;
 };
 
+// How much a reasoning model thinks before answering; null: the provider's default.
+export const AI_REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+export type AiReasoningEffort = (typeof AI_REASONING_EFFORTS)[number];
+
 export type AiModelConfigInput = {
   name?: string;
   provider?: string;
@@ -158,6 +163,7 @@ export type AiModelConfigInput = {
   price_input_eur_per_mtok?: number | null;
   price_output_eur_per_mtok?: number | null;
   price_cache_read_eur_per_mtok?: number | null;
+  reasoning_effort?: AiReasoningEffort | null;
   llm_timeout_ms?: number | null;
   is_default?: boolean;
 };

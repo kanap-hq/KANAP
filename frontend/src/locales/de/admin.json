@@ -2653,6 +2653,16 @@
       "timeout": "Zeitlimit",
       "timeoutPlaceholder": "z. B. 120",
       "timeoutHint": "Wie lange, in Sekunden, auf dieses Modell gewartet wird, bevor abgebrochen wird. Leer lassen für das Standardlimit. Lokale Modelle brauchen oft mehr Zeit.",
+      "reasoningEffort": "Denkaufwand",
+      "reasoningEffortDefault": "Standard des Anbieters",
+      "reasoningEffortHint": "Wie viel das Modell nachdenkt, bevor es antwortet. Mehr Aufwand: sorgfältigere, langsamere und teurere Antworten. Nicht jeder Anbieter akzeptiert jeden Wert: „Verbindung testen“ prüft es.",
+      "reasoningEffortValues": {
+        "low": "Niedrig",
+        "medium": "Mittel",
+        "high": "Hoch",
+        "xhigh": "Sehr hoch",
+        "max": "Maximal"
+      },
       "defaultLabel": "Als Standardmodell verwenden",
       "test": "Verbindung testen",
       "testing": "Test läuft…",
