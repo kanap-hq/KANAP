@@ -123,6 +123,26 @@ function parseXmlStyleToolCallsFromText(text: string): Array<{ id: string; name:
   return calls;
 }
 
+// Mistral sends `delta.content` as a list of blocks for its reasoning models:
+// `{ type: 'thinking', thinking: [{ type: 'text', text }] }` then `{ type: 'text', text }`.
+function readDeltaContent(content: unknown): { text: string; reasoning: string } {
+  if (typeof content === 'string') {
+    return { text: content, reasoning: '' };
+  }
+  let text = '';
+  let reasoning = '';
+  if (Array.isArray(content)) {
+    for (const block of content) {
+      if (block?.type === 'text' && typeof block.text === 'string') {
+        text += block.text;
+      } else if (block?.type === 'thinking') {
+        reasoning += readDeltaContent(block.thinking).text;
+      }
+    }
+  }
+  return { text, reasoning };
+}
+
 function shouldReplayReasoningContent(endpointUrl: string | null): boolean {
   if (!endpointUrl) {
     return false;
@@ -342,16 +362,18 @@ async function* streamCompletion(
       const reasoningContent = typeof (delta as { reasoning_content?: unknown } | undefined)?.reasoning_content === 'string'
         ? (delta as { reasoning_content: string }).reasoning_content
         : '';
-      if (reasoningContent) {
-        yield { type: 'reasoning_delta', text: reasoningContent };
+      const contentParts = readDeltaContent((delta as { content?: unknown } | undefined)?.content);
+      const reasoningText = reasoningContent + contentParts.reasoning;
+      if (reasoningText) {
+        yield { type: 'reasoning_delta', text: reasoningText };
       }
 
-      if (delta?.content) {
+      if (contentParts.text) {
         if (params.debugTrace && !firstTextDeltaSeen) {
           firstTextDeltaSeen = true;
           yield { type: 'debug_trace', name: 'provider_first_text_delta' };
         }
-        yield { type: 'text_delta', text: delta.content };
+        yield { type: 'text_delta', text: contentParts.text };
       }
 
       if (delta?.tool_calls) {

@@ -188,8 +188,27 @@ describe('history lines', () => {
     ]);
   });
 
+  it('reads a dimension set on creation as its value only', () => {
+    const lines = historyLines(item({ kind: 'record' }, [
+      { field: 'dimension', dimension: 'Cost pool', after: 'Cloud' },
+    ]), context);
+    expect(lines).toEqual([{ label: 'Dimension Cost pool', after: 'Cloud' }]);
+  });
+
+  it('compresses consecutive months into a range and keeps separate months', () => {
+    const amount = (months: string[], wholeYear?: boolean) => historyLines(item({ kind: 'amounts' }, [
+      { field: 'planned', before: '100.00', after: '150.00', year: 2027, column: 'planned', months, ...(wholeYear ? { wholeYear } : {}) },
+    ]), context);
+
+    const year = Array.from({ length: 12 }, (_, index) => `2027-${String(index + 1).padStart(2, '0')}`);
+    expect(amount(year, true)[0].suffix).toEqual(['months January to December 2027']);
+    expect(amount(['2027-05', '2027-03', '2027-04'])[0].suffix).toEqual(['months March to May 2027']);
+    expect(amount(['2027-03', '2027-01'])[0].suffix).toEqual(['months Jan 2027, Mar 2027']);
+    expect(amount(['2026-12', '2027-01', '2027-02'])[0].suffix).toEqual(['months December 2026 to February 2027']);
+  });
+
   it('names the version in the header and the budget column of a round input', () => {
-    expect(historySubjectText({ kind: 'version', label: 'Y2026' }, t)).toBe('Version Y2026');
+    expect(historySubjectText({ kind: 'version', label: '2026' }, t)).toBe('Budget 2026');
     expect(historySubjectText({ kind: 'round_input', label: 'planned' }, t)).toBe('Budget input Budget');
     expect(historySubjectText({ kind: 'allocations', label: 'Y2026' }, t)).toBe('Allocation Y2026');
     expect(historySubjectText({ kind: 'record' }, t)).toBeNull();
@@ -238,8 +257,8 @@ describe('history lines', () => {
   });
 
   it('reads a technical child creation and deletion by its title alone', () => {
-    const versionCreate = { ...item({ kind: 'version', label: 'Y2026' }, []), action: 'create' };
-    expect(historyChildTitle(versionCreate, t)).toBe('Version Y2026 added');
+    const versionCreate = { ...item({ kind: 'version', label: '2027' }, []), action: 'create' };
+    expect(historyChildTitle(versionCreate, t)).toBe('Budget 2027 added');
     expect(historyChildTitle({ ...item({ kind: 'technology_version', label: '2.1' }, []), action: 'create' }, t)).toBe('Version 2.1 added');
     expect(historyChildTitle({ ...item({ kind: 'hardware' }, []), action: 'create' }, t)).toBe('Hardware added');
     expect(historyChildTitle({ ...item({ kind: 'hardware' }, []), action: 'delete' }, t)).toBe('Hardware removed');
@@ -250,9 +269,9 @@ describe('history lines', () => {
     const allocationCreate = { ...item({ kind: 'allocations', label: 'Y2026' }, []), action: 'create' };
     expect(historyChildTitle(allocationCreate, t)).toBe('Allocation Y2026 added');
     const versionDelete = { ...versionCreate, action: 'delete' };
-    expect(historyChildTitle(versionDelete, t)).toBe('Version Y2026 deleted');
+    expect(historyChildTitle(versionDelete, t)).toBe('Budget 2027 deleted');
     expect(historyChildTitle({
-      ...item({ kind: 'version', label: 'Y2026' }, [{ field: 'input_grain', after: 'annual' }]),
+      ...item({ kind: 'version', label: '2027' }, [{ field: 'input_grain', after: 'annual' }]),
       action: 'create',
     }, t)).toBeNull();
     expect(historyChildTitle({ ...item({ kind: 'record' }, []), action: 'create' }, t)).toBeNull();

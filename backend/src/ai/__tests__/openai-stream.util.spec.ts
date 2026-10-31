@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 // The stream checks a tenant endpoint before the call (multi-tenant mode). The
 // endpoints below are stand-ins for the fake SDK: allowlisted, so none of them
 // is resolved.
-process.env.SSRF_ALLOWED_HOSTS = 'api.deepseek.com,openrouter.ai,local-llm.test,openrouter.example';
+process.env.SSRF_ALLOWED_HOSTS = 'api.deepseek.com,api.mistral.ai,openrouter.ai,local-llm.test,openrouter.example';
 
 const Module = require('node:module');
 const originalLoad = Module._load;
@@ -206,6 +206,41 @@ async function testReasoningContentDeltasAreEmittedButNotText() {
   assert.deepEqual(events, [
     { type: 'reasoning_delta', text: 'private reasoning' },
     { type: 'text_delta', text: 'public answer' },
+    { type: 'done', usage: undefined, finish_reason: 'stop' },
+  ]);
+}
+
+async function testMistralContentBlocksAreSplitIntoReasoningAndText() {
+  resetState([
+    {
+      choices: [{
+        delta: { content: [{ type: 'thinking', thinking: [{ type: 'text', text: 'checking tasks' }] }] },
+        finish_reason: null,
+      }],
+    },
+    {
+      choices: [{ delta: { content: [{ type: 'text', text: 'One task ' }] }, finish_reason: null }],
+    },
+    {
+      choices: [{ delta: { content: 'is late.' }, finish_reason: 'stop' }],
+    },
+  ]);
+
+  const events = await collectEvents(openaiCompatibleStream({
+    providerId: 'custom',
+    model: 'mistral-large-latest',
+    apiKey: 'test-key',
+    endpointUrl: 'https://api.mistral.ai/v1',
+    systemPrompt: 'Use tools.',
+    messages: [{ role: 'user', content: 'Hello' }],
+    tools: [],
+    maxTokens: 128,
+  }));
+
+  assert.deepEqual(events, [
+    { type: 'reasoning_delta', text: 'checking tasks' },
+    { type: 'text_delta', text: 'One task ' },
+    { type: 'text_delta', text: 'is late.' },
     { type: 'done', usage: undefined, finish_reason: 'stop' },
   ]);
 }
@@ -498,6 +533,7 @@ async function run() {
   await testLengthFinishReasonWithPendingToolCallEmitsError();
   await testCompletedNativeToolCallIsEmitted();
   await testReasoningContentDeltasAreEmittedButNotText();
+  await testMistralContentBlocksAreSplitIntoReasoningAndText();
   await testAssistantReasoningContentIsPassedThroughWhenPresent();
   await testAssistantReasoningContentIsNotSentToOtherEndpoints();
   await testUnsupportedParallelToolCallsFallback();
