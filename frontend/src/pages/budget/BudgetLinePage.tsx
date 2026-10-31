@@ -26,6 +26,7 @@ import EditConflictBanner, { OtherConflictsNotice } from '../../components/works
 import OthersChangesNotice from '../../components/workspace/OthersChangesNotice';
 import { useLineOthersChanges } from '../../components/finance/useLineOthersChanges';
 import { useAuth } from '../../auth/AuthContext';
+import { isDataAccessLimited } from '../../auth/dataAccess';
 import { PRIMARY_SCROLL_ATTR } from '../../components/appScroll';
 import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import { useKanapDialogs } from '../../components/design';
@@ -39,6 +40,7 @@ import {
 } from '../../constants/status';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
+import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import ChangeTypeDialog, { type ChangeTypeResult } from '../../components/finance/ChangeTypeDialog';
 import LineLineage, { type LineageLine } from '../../components/finance/LineLineage';
 import { budgetLinePath, openLineAfterTypeChange } from '../../components/finance/changeTypeNavigation';
@@ -272,6 +274,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   const idParam = String(params.ref || (location.pathname.endsWith('/new') ? 'new' : ''));
   const isCreate = idParam === 'new';
   const routeTab: TabKey = TAB_KEYS.includes(params.tab as TabKey) ? (params.tab as TabKey) : 'overview';
+  // Once deleted, the line is never loaded again, even while the page waits for the list.
+  const [deleted, setDeleted] = React.useState(false);
 
   // What others changed (lot 3G): set once the page's parts are known, below.
   const othersPendingRef = React.useRef<() => boolean>(() => false);
@@ -279,7 +283,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   const { data, error, isPlaceholderData, isFetchedAfterMount, isStale } = useQuery({
     // Shared with the neighbours' prefetch (previous / next show at once).
     ...budgetLineDetailQuery(idParam),
-    enabled: !isCreate,
+    enabled: !isCreate && !deleted,
     // Back on the tab, the line is read again when it is stale, unless something of the user is
     // pending (lot 3G): the poll below then says it changed elsewhere instead.
     refetchOnWindowFocus: () => !othersPendingRef.current(),
@@ -457,12 +461,14 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // ----- Autosave (overview metadata / drawer / notes / title) -----
   const dialogs = useKanapDialogs();
   const autosaveRegistry = useAutosaveRegistry();
-  const { profile, hasLevel } = useAuth();
+  const { profile, hasLevel, dataAccess } = useAuth();
   // A budget reader sees the line with no field, menu or tab control that writes; so does a person
   // whose data access leaves this line read only (`editable: false`, absent for unscoped persons).
   const lineEditable = isCreate || data?.editable !== false;
   const readOnlyInAccess = !isCreate && !!data && data.editable === false && hasLevel('budget', 'member');
   const canEdit = hasLevel('budget', 'member') && lineEditable;
+  // The same rule as the list: a budget administrator whose access is not limited.
+  const canDelete = hasLevel('budget', 'admin') && !isDataAccessLimited(dataAccess);
   // Fields edited and not saved yet, each with the line it was edited on (the page
   // stays mounted from one line to the next): a field only ever goes to its own line.
   // Each also keeps the value the screen showed when its edit began (its base, lot 3C):
@@ -846,6 +852,24 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     navigate(`/ops/budget${qs ? `?${qs}` : ''}`);
   }, [leaveLine, buildListContextParams, navigate]);
 
+  // The line is already gone: pending edits are dropped, not saved and not asked about, then the list opens.
+  const leaveAfterDelete = React.useCallback(() => {
+    setDeleted(true);
+    autosaveRegistry.discardAll();
+    budgetRef.current?.discard();
+    allocRef.current?.discard();
+    heldChoices.budget.current = null;
+    heldChoices.allocation.current = null;
+    heldChoices.openings.current = null;
+    patchBuffer.discard();
+    setSaveError(null);
+    invalidateBudgetLists(queryClient);
+    const sp = buildListContextParams();
+    sp.delete('list');
+    const qs = sp.toString();
+    navigate(`/ops/budget${qs ? `?${qs}` : ''}`);
+  }, [autosaveRegistry, heldChoices, patchBuffer, queryClient, buildListContextParams, navigate]);
+
   // ----- Change type (lot M): from the "…" menu; pending edits are saved first (the dialog sends the line's row_version) -----
   const [changeTypeOpen, setChangeTypeOpen] = React.useState(false);
   const canChangeType = !isCreate && !stale && !!uuid && canEdit;
@@ -1133,6 +1157,16 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
               <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={!canEdit || createSubmitting}>
                 {t('common:buttons.create')}
               </Button>
+            )}
+            {!isCreate && uuid && canDelete && (
+              <RecordDeleteButton
+                base="/budget-lines"
+                id={uuid}
+                name={form.product_name || t('budget.line')}
+                deleteFailed="ops:budget.delete.failed"
+                bulk
+                onDeleted={leaveAfterDelete}
+              />
             )}
             <IconButton aria-label={t('common:buttons.close')} title={t('common:buttons.close')} size="small" onClick={() => { void closeWorkspace(); }}>
               <CloseIcon />

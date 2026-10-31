@@ -1919,7 +1919,8 @@
       "kept_one": "{{count}} budget line cannot be deleted and is kept:",
       "kept_other": "{{count}} budget lines cannot be deleted and are kept:",
       "deleted_one": "{{count}} budget line deleted",
-      "deleted_other": "{{count}} budget lines deleted"
+      "deleted_other": "{{count}} budget lines deleted",
+      "failed": "The budget line could not be deleted."
     },
     "readOnlyInYourAccess": "Read only in your access"
   }

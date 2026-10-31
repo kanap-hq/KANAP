@@ -1920,7 +1920,8 @@
       "kept_one": "{{count}} ligne budgétaire ne peut pas être supprimée et est conservée :",
       "kept_other": "{{count}} lignes budgétaires ne peuvent pas être supprimées et sont conservées :",
       "deleted_one": "{{count}} ligne budgétaire supprimée",
-      "deleted_other": "{{count}} lignes budgétaires supprimées"
+      "deleted_other": "{{count}} lignes budgétaires supprimées",
+      "failed": "La ligne budgétaire n'a pas pu être supprimée."
     },
     "readOnlyInYourAccess": "Lecture seule dans votre accès"
   }
