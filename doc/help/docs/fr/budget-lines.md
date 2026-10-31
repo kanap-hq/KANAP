@@ -579,7 +579,7 @@ Vous ne voyez que les sections des modules que vous pouvez lire. Les technologie
 
 Une date de fin en orange signale un contrat dont la décision de renouvellement tombe dans votre fenêtre de décision des contrats. Un contrat désactivé, ou un actif retiré ou désactivé, reste affiché, son nom grisé. À partir de deux lignes, les contrats se terminent par un total par devise, sans les contrats désactivés.
 
-**Ajouter et retirer des liens** (`budget:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Lier demande aussi de pouvoir lire le module visé : **Ajouter** est absent d'une section que vous ne pouvez pas lire. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Les lecteurs voient les tableaux en lecture seule.
+**Ajouter et retirer des liens** (`budget:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Lier demande aussi de pouvoir lire le module visé : **Ajouter** est absent d'une section que vous ne pouvez pas lire. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Un message le confirme et propose **Annuler**. Retirer un lien ne supprime rien d'autre. Les lecteurs voient les tableaux en lecture seule.
 
 **Apparentés** : les applications et les contrats du fournisseur de la ligne qui ne sont pas encore liés, avec la raison « même fournisseur ». Cliquez sur **Lier** pour ajouter la suggestion à sa section. Les suggestions montrent :
 
@@ -595,7 +595,7 @@ La section est absente quand la ligne n'a pas de fournisseur ou qu'il n'y a rien
 
 - **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
 - **Joindre un fichier** ouvre le sélecteur de fichiers. Vous pouvez aussi déposer des fichiers sur la section.
-- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
+- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. Retirer un lien affiche un message et propose **Annuler**, qui recrée le lien. La suppression d'un fichier demande d'abord une confirmation.
 
 **Conseil** : Liez les contrats pour suivre les renouvellements sur plusieurs lignes. Joignez les devis et les factures pour garder tous les documents d'une ligne au même endroit.
 

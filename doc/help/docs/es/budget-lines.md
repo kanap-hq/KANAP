@@ -579,7 +579,7 @@ Solo ve las secciones de los módulos que puede leer. Las tecnologías y los act
 
 Una fecha de fin en naranja señala un contrato cuya decisión de renovación cae dentro de su ventana de decisión de contratos. Un contrato desactivado, o un activo retirado o desactivado, sigue en la lista con el nombre atenuado. A partir de dos filas, los contratos terminan con un total por moneda, sin los contratos desactivados.
 
-**Añadir y quitar vínculos** (`budget:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Vincular requiere también poder leer el módulo de destino: **Añadir** no aparece en una sección que no puede leer. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Los lectores ven las tablas en solo lectura.
+**Añadir y quitar vínculos** (`budget:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Vincular requiere también poder leer el módulo de destino: **Añadir** no aparece en una sección que no puede leer. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Un mensaje lo confirma y ofrece **Deshacer**. Quitar un vínculo no elimina nada más. Los lectores ven las tablas en solo lectura.
 
 **Relacionados**: las aplicaciones y los contratos del proveedor de la línea que aún no están vinculados, con el motivo «mismo proveedor». Haga clic en **Vincular** para añadir la sugerencia a su sección. Las sugerencias muestran:
 
@@ -595,7 +595,7 @@ La sección no aparece cuando la línea no tiene proveedor o no hay nada que sug
 
 - **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
 - **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos sobre la sección.
-- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Quitar un enlace muestra un mensaje y ofrece **Deshacer**, que vuelve a crear el enlace. Eliminar un archivo pide una confirmación antes.
 
 **Consejo**: Vincule los contratos para seguir las renovaciones en varias líneas. Adjunte presupuestos y facturas para tener todos los documentos de una línea en un solo lugar.
 
