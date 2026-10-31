@@ -19,9 +19,10 @@ export class OnboardingController {
   }
 
   /**
-   * `{ angle?, mode? }`: at least one; a field left out keeps its value. A new mode acts on the
-   * sample data (OnboardingService.applyMode); a load gets the request's Host header
-   * (`req.headers.host`, as the sample data routes).
+   * `{ angle?, mode?, confirm_reset? }`: an angle or a mode at least; a field left out keeps its
+   * value. A new mode acts on the sample data (OnboardingService.applyMode); `confirm_reset`
+   * (boolean) lets `own_data` erase objects created since the sample data load. A load gets the
+   * request's Host header (`req.headers.host`, as the sample data routes).
    */
   @Put('choice')
   choose(@Tenant() ctx: TenantRequest, @Body() body: unknown, @Req() req: any): Promise<OnboardingState> {

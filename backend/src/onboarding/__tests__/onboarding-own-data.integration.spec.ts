@@ -43,10 +43,17 @@ import { buildDemoData, DemoDataDouble, FakeChild } from './onboarding-test-help
 //   the stop is seen at once by the API process that runs the loader, at its next heartbeat
 //   when another process asked, and when the loader ends before seeing it; a load whose API
 //   process stopped with a stop asked for ends `idle` as well;
-// - a non-administrator never empties the workspace (403, nothing written);
-// - `example` loads into an idle workspace for an administrator only, and a refused load still
-//   writes the choice; `own_data` on an idle workspace resets nothing; on-premise neither acts;
-// - a load at activation still waiting for a free slot gives up once `own_data` is chosen.
+// - a non-administrator never empties the workspace (403, nothing written), and their choice on
+//   an idle workspace leaves the banner and the load at activation alone;
+// - `own_data` on loaded sample data with objects created since the load answers 409
+//   `sample_data_modified` (their number, nothing changed) unless `confirm_reset: true`;
+// - `own_data` on a failed load already reset goes back to `idle` with no reset; after a failed
+//   reset it resets; on a load whose API process stopped it ends `idle`;
+// - `example` loads into an idle or failed workspace for an administrator only, and a refused
+//   load still writes the choice; `own_data` on an idle workspace resets nothing; on-premise
+//   neither acts; `example` then `own_data` resets;
+// - a load at activation still waiting for a free slot gives up once `own_data` is chosen, also
+//   when it read the state before the choice (the claim checks the banner).
 // @database-spec: opens the data-source and boots Nest, so run-ci-tests.js runs it on a database lane.
 
 type Served = { app: INestApplication; port: number; demo: DemoDataDouble; close: () => Promise<void> };
@@ -547,6 +554,260 @@ async function testProvisioningStopsAfterOwnData() {
   }
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function supplierNames(tenantId: string): Promise<string[]> {
+  const rows = await inTenant(tenantId, (q) => q.query(`SELECT name FROM suppliers WHERE tenant_id = $1 ORDER BY name`, [tenantId]));
+  return rows.map((row: { name: string }) => row.name);
+}
+
+/** Sample data loaded (the set written in SQL), `loaded_at` just after it. */
+async function loadedSampleData(t: ActivatedTenant) {
+  await loadDemoSet(t.tenantId);
+  await sleep(20);
+  const now = new Date().toISOString();
+  await setDemo(t.tenantId, { status: 'loaded', run_id: 'loaded-run', loaded_at: now, ever_loaded_at: now, loaded_by: t.ownerId });
+  await sleep(20);
+}
+
+// 7. The load at activation read the state before the choice (its own check saw the banner
+//    shown), then waits for a slot; `own_data` on the idle workspace; once a slot is free, the
+//    claim itself refuses: no load, `idle`.
+async function testProvisionRaceWithOwnData() {
+  const svc = buildServices();
+  const served = await serve(svc);
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'onb-race', orgName: 'Race Org', signup: true });
+    const service = served.demo.service as any;
+    const readState = service.readState.bind(service);
+    // The provision's own check (one argument) reads the state as it was before the choice.
+    service.readState = async (id: string, ...rest: unknown[]) => {
+      const state = await readState(id, ...rest);
+      return rest.length === 0 ? { ...state, dismissed_at: null } : state;
+    };
+    const config = served.demo.service.config;
+    config.maxConcurrent = 0;
+    config.provisionRetryMs = 100;
+    config.provisionRetryMaxMs = 20_000;
+    const provisioning = served.demo.service.provisionTrialSampleData({
+      tenantId: t.tenantId, actorId: t.ownerId, tenantUrl: `http://${hostOf(t)}`, language: 'en',
+    });
+    await sleep(250);
+    const answer = ok(await client(served, t).choose({ angle: 'budget', mode: 'own_data' }), 'own_data while the load waits');
+    assert.equal(answer.reset_in_progress, false);
+    assert.ok((await demoOf(t.tenantId)).dismissed_at, 'the banner hidden and committed at once');
+    config.maxConcurrent = 2;
+    await provisioning;
+    assert.equal(served.demo.children.length, 0, 'no loader started');
+    const state = await demoOf(t.tenantId);
+    assert.equal(state.status, 'idle');
+    assert.ok(state.dismissed_at);
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
+// 8. Objects created since the load: `own_data` answers 409 `sample_data_modified` with their
+//    number and changes nothing; `confirm_reset` must be a boolean; with `confirm_reset: true`
+//    the workspace is reset.
+async function testOwnDataAfterChangesNeedsConfirmation() {
+  const svc = buildServices();
+  const served = await serve(svc);
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'onb-conf', orgName: 'Confirm Org', signup: true });
+    await loadedSampleData(t);
+    await inTenant(t.tenantId, (q) => q.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Tester supplier')`, [t!.tenantId]));
+
+    const refused = await client(served, t).choose({ angle: 'budget', mode: 'own_data' });
+    assert.equal(refused.status, 409, JSON.stringify(refused.body));
+    assert.equal(refused.body?.code, 'sample_data_modified');
+    assert.equal(refused.body?.created_since_load, 1, 'the number of objects created since the load');
+    assert.equal(await choiceRow(t.tenantId), null, 'no choice written');
+    assert.deepEqual(await modeEvents(t.tenantId), [], 'no event');
+    const kept = await demoOf(t.tenantId);
+    assert.equal(kept.status, 'loaded');
+    assert.equal(kept.dismissed_at, null, 'the banner left as it was');
+    assert.ok((await supplierNames(t.tenantId)).includes('Tester supplier'));
+    assert.equal(await exampleUsers(t.tenantId), 3);
+
+    const invalid = await client(served, t).choose({ angle: 'budget', mode: 'own_data', confirm_reset: 'yes' });
+    assert.equal(invalid.status, 400, JSON.stringify(invalid.body));
+    assert.equal(invalid.body?.code, 'invalid_confirm_reset');
+
+    const confirmed = ok(
+      await client(served, t).choose({ angle: 'budget', mode: 'own_data', confirm_reset: true }),
+      'own_data confirmed',
+    );
+    assert.equal(confirmed.reset_in_progress, true);
+    const after = await waitIdle(t);
+    assert.equal(await waitForBackgroundWork(Date.now() + 30_000), 0);
+    assert.ok(after.dismissed_at);
+    assert.ok(!(await supplierNames(t.tenantId)).includes('Tester supplier'), 'erased once confirmed');
+    assert.equal(await exampleUsers(t.tenantId), 0);
+    assert.deepEqual(await choiceRow(t.tenantId), { angle: 'budget', mode: 'own_data' });
+    assert.deepEqual(served.demo.emails, [], 'no reset e-mail');
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
+// 9. A failed load was reset when it failed: `own_data` goes back to `idle` with no reset (an
+//    object created after the failure survives). After a failed reset, `own_data` resets.
+async function testOwnDataAfterFailedLoad() {
+  const svc = buildServices();
+  const served = await serve(svc);
+  const ids: Array<string | undefined> = [];
+  try {
+    const t = await createActivatedTenant(svc, { tag: 'onb-fail', orgName: 'Failed Org', signup: true });
+    ids.push(t.tenantId);
+    const failedAt = new Date().toISOString();
+    await setDemo(t.tenantId, {
+      status: 'failed', run_id: 'failed-run', started_at: failedAt, failed_at: failedAt, error_code: 'load_failed', loaded_by: t.ownerId,
+    });
+    await inTenant(t.tenantId, (q) => q.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'After failure')`, [t.tenantId]));
+    const answer = ok(await client(served, t).choose({ angle: 'budget', mode: 'own_data' }), 'own_data after a failed load');
+    assert.equal(answer.reset_in_progress, false);
+    assert.deepEqual(answer.sample_data, { status: 'idle', step: null });
+    assert.equal(await waitForBackgroundWork(Date.now() + 30_000), 0);
+    const state = await demoOf(t.tenantId);
+    assert.equal(state.status, 'idle');
+    assert.equal(state.error_code, null);
+    assert.equal(state.failed_at, null);
+    assert.ok(state.dismissed_at, 'the banner is hidden');
+    assert.deepEqual(await supplierNames(t.tenantId), ['After failure'], 'no reset');
+    assert.deepEqual(await choiceRow(t.tenantId), { angle: 'budget', mode: 'own_data' });
+
+    const r = await createActivatedTenant(svc, { tag: 'onb-rfail', orgName: 'Reset Failed Org', signup: true });
+    ids.push(r.tenantId);
+    await loadDemoSet(r.tenantId);
+    await setDemo(r.tenantId, {
+      status: 'failed', run_id: 'reset-failed-run', failed_at: failedAt, error_code: 'reset_failed', loaded_by: r.ownerId,
+    });
+    const reset = ok(await client(served, r).choose({ angle: 'budget', mode: 'own_data' }), 'own_data after a failed reset');
+    assert.equal(reset.reset_in_progress, true);
+    const after = await waitIdle(r);
+    assert.equal(await waitForBackgroundWork(Date.now() + 30_000), 0);
+    assert.equal(after.error_code, null);
+    assert.equal(await exampleUsers(r.tenantId), 0, 'the sample data left by the failed reset is gone');
+    assert.deepEqual(served.demo.emails, [], 'no reset e-mail');
+  } finally {
+    await served.close();
+    await cleanupTenants(ids);
+  }
+}
+
+// 10. A load whose API process stopped (stale heartbeat, no stop asked for): `own_data` writes
+//     the stop first, the take-over then ends `idle`, not `failed` / `load_interrupted`.
+async function testOwnDataOnAbandonedLoad() {
+  const svc = buildServices();
+  const served = await serve(svc);
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'onb-aband', orgName: 'Abandoned Org', signup: true });
+    await loadDemoSet(t.tenantId);
+    const old = new Date(Date.now() - 10 * 60_000).toISOString();
+    await setDemo(t.tenantId, { status: 'loading', run_id: 'abandoned-run', started_at: old, heartbeat_at: old, loaded_by: t.ownerId });
+    const answer = ok(await client(served, t).choose({ angle: 'budget', mode: 'own_data' }), 'own_data on an abandoned load');
+    assert.equal(answer.reset_in_progress, true);
+    const after = await waitIdle(t);
+    assert.equal(await waitForBackgroundWork(Date.now() + 30_000), 0);
+    assert.equal(after.error_code, null, 'not load_interrupted');
+    assert.equal(after.failed_at, null);
+    assert.ok(after.dismissed_at);
+    assert.equal(await exampleUsers(t.tenantId), 0);
+    assert.deepEqual(served.demo.emails, []);
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
+// 11. `example` then `own_data` by the administrator (the onboarding row exists already, the
+//     path of the "About" page): the second choice resets the loaded sample data.
+async function testExampleThenOwnData() {
+  const svc = buildServices();
+  const served = await serve(svc);
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'onb-swap', orgName: 'Swap Org', signup: true });
+    await loadedSampleData(t);
+    const example = ok(await client(served, t).choose({ angle: 'budget', mode: 'example' }), 'example on loaded sample data');
+    assert.equal(example.sample_data.status, 'loaded');
+    assert.equal(served.demo.children.length, 0, 'nothing to load');
+    const own = ok(await client(served, t).choose({ mode: 'own_data' }), 'then own_data');
+    assert.equal(own.mode, 'own_data');
+    assert.equal(own.reset_in_progress, true);
+    await waitIdle(t);
+    assert.equal(await waitForBackgroundWork(Date.now() + 30_000), 0);
+    assert.equal(await exampleUsers(t.tenantId), 0);
+    assert.deepEqual(await choiceRow(t.tenantId), { angle: 'budget', mode: 'own_data' });
+    assert.deepEqual((await modeEvents(t.tenantId)).map((e) => e.after), [
+      { mode: 'example', previous: null },
+      { mode: 'own_data', previous: 'example' },
+    ]);
+    assert.deepEqual(served.demo.emails, []);
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
+// 12. A member's `own_data` on an idle workspace while the load at activation waits for a slot:
+//     the choice is written, the banner stays, and the load goes on once a slot is free.
+async function testMemberOwnDataLeavesProvision() {
+  const svc = buildServices();
+  const served = await serve(svc);
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'onb-mprov', orgName: 'Member Provision Org', signup: true });
+    const config = served.demo.service.config;
+    config.maxConcurrent = 0;
+    config.provisionRetryMs = 100;
+    config.provisionRetryMaxMs = 20_000;
+    const provisioning = served.demo.service.provisionTrialSampleData({
+      tenantId: t.tenantId, actorId: t.ownerId, tenantUrl: `http://${hostOf(t)}`, language: 'en',
+    });
+    await sleep(250);
+    const answer = ok(await client(served, t, await memberToken(svc, t)).choose({ angle: 'budget', mode: 'own_data' }), 'own_data by a member');
+    assert.equal(answer.mode, 'own_data');
+    assert.equal((await demoOf(t.tenantId)).dismissed_at, null, 'the banner stays');
+    config.maxConcurrent = 2;
+    await provisioning;
+    assert.equal(served.demo.children.length, 1, 'the load at activation started');
+    const state = await demoOf(t.tenantId);
+    assert.equal(state.status, 'loading');
+    assert.equal(state.dismissed_at, null);
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
+// 13. `example` by the administrator on a failed load (reset when it failed): the load starts.
+async function testExampleAfterFailedLoad() {
+  const svc = buildServices();
+  const served = await serve(svc);
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'onb-exfail', orgName: 'Example Failed Org', signup: true });
+    const failedAt = new Date().toISOString();
+    await setDemo(t.tenantId, {
+      status: 'failed', run_id: 'failed-run', failed_at: failedAt, error_code: 'load_timeout', loaded_by: t.ownerId,
+    });
+    const answer = ok(await client(served, t).choose({ angle: 'portfolio', mode: 'example' }), 'example after a failed load');
+    assert.equal(answer.sample_data.status, 'loading');
+    assert.equal(served.demo.children.length, 1, 'one loader started');
+    assert.equal((await demoOf(t.tenantId)).error_code, null);
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
 runSpecs('onboarding-own-data.integration.spec', [
   testOwnDataAfterLoad,
   testOwnDataDuringLoad,
@@ -557,6 +818,13 @@ runSpecs('onboarding-own-data.integration.spec', [
   testExample,
   testOwnDataIdleAndOnPremise,
   testProvisioningStopsAfterOwnData,
+  testProvisionRaceWithOwnData,
+  testOwnDataAfterChangesNeedsConfirmation,
+  testOwnDataAfterFailedLoad,
+  testOwnDataOnAbandonedLoad,
+  testExampleThenOwnData,
+  testMemberOwnDataLeavesProvision,
+  testExampleAfterFailedLoad,
 ]).catch((error) => {
   console.error(error);
   process.exit(1);

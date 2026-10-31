@@ -4,10 +4,10 @@ import { tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { writeAuditLog } from '../audit/audit.service';
 import { Features } from '../config/features';
 import {
+  countCreatedSinceLoad,
   DemoDataService,
   DemoDataState,
   DemoStatus,
-  markSampleDataBannerDismissed,
   readDemoState,
 } from '../demo-data/demo-data.service';
 import {
@@ -36,10 +36,12 @@ import { isTenantAdministrator } from './tenant-administrator';
  * and mode). Nothing for a step undone or for the list hidden.
  *
  * A new mode acts on the sample data (`DemoDataService`, cloud only, never on a system tenant),
- * before the choice is written: `own_data` empties the workspace (stops a running load, resets
- * a loaded or failed one, administrators only, no reset e-mail) and hides the sample data
- * banner; `example` loads the sample data into an empty workspace when an administrator chooses
- * it. A refused `own_data` writes nothing; a refused load still writes the choice.
+ * before the choice is written: `own_data` chosen by an administrator hides the sample data
+ * banner and empties the workspace (stops a running load, resets loaded sample data, asking for
+ * `confirm_reset` when objects were created since the load, no reset e-mail); a member's
+ * `own_data` changes nothing, and is refused while sample data is there. `example` loads the
+ * sample data into an empty workspace when an administrator chooses it. A refused `own_data`
+ * writes nothing; a refused load still writes the choice.
  */
 
 export const ONBOARDING_AUDIT_TABLE = 'onboarding';
@@ -139,11 +141,13 @@ export class OnboardingService {
   }
 
   /**
-   * `PUT /onboarding/choice` with `{ angle?, mode? }`. A field left out keeps its value. Any user
-   * may set a field still empty; changing a field already set takes an administrator. The
-   * tenant's row is locked, so two first answers at the same time apply one after the other.
-   * A new mode acts on the sample data first (`applyMode`); `host` is the request's Host header,
-   * which a load of the sample data needs.
+   * `PUT /onboarding/choice` with `{ angle?, mode?, confirm_reset? }`. A field left out keeps its
+   * value. Any user may set a field still empty; changing a field already set takes an
+   * administrator. The tenant's row is locked, so two first answers at the same time apply one
+   * after the other. A new mode acts on the sample data first (`applyMode`); `confirm_reset:
+   * true` lets `own_data` erase objects created since the sample data load (409
+   * `sample_data_modified` otherwise). `host` is the request's Host header, which a load of the
+   * sample data needs.
    */
   async setChoice(
     manager: EntityManager,
@@ -164,6 +168,10 @@ export class OnboardingService {
     if (hasMode && !isOnboardingMode(input.mode)) {
       throw new BadRequestException({ code: 'invalid_mode', message: 'The mode must be example or own_data.' });
     }
+    if (has(input, 'confirm_reset') && typeof input.confirm_reset !== 'boolean') {
+      throw new BadRequestException({ code: 'invalid_confirm_reset', message: 'confirm_reset must be true or false.' });
+    }
+    const confirmReset = input.confirm_reset === true;
 
     await manager.query(
       `INSERT INTO tenant_onboarding (tenant_id) VALUES ($1) ON CONFLICT (tenant_id) DO NOTHING`,
@@ -192,7 +200,7 @@ export class OnboardingService {
 
     // Before the write: a refused effect writes nothing.
     const effect = modeChanges
-      ? await this.applyMode(manager, tenantId, userId, mode!, opts.host ?? '')
+      ? await this.applyMode(manager, tenantId, userId, mode!, { host: opts.host ?? '', confirmReset })
       : { emptying: false };
 
     await manager.query(
@@ -219,61 +227,106 @@ export class OnboardingService {
    * (no sample data there) or on a system tenant. `emptying`: a reset, or the stop of a load
    * followed by a reset, was started.
    *
-   * The sample data calls work on their own connections, while this request's transaction holds
-   * the tenant's onboarding row and possibly a key-share lock on the tenant row (from the first
-   * insert into `tenant_onboarding`). So every write on the tenant row through those connections
-   * happens before a reset can start (the reset locks the tenant row and would wait for this
-   * transaction), and the banner of an idle workspace is hidden through the request's manager.
+   * The sample data calls work on their own connections, committed at once. This request's
+   * transaction holds the tenant's onboarding row and possibly a key-share lock on the tenant
+   * row (the first insert into `tenant_onboarding`), which the writes of the sample data state
+   * do not wait for; it never writes the tenant row itself, so a stop or a reset started here
+   * waits for no lock of this request (the reset's lock on the tenant row waits for its commit).
    */
   private async applyMode(
     manager: EntityManager,
     tenantId: string,
     userId: string,
     mode: OnboardingMode,
-    host: string,
+    opts: { host: string; confirmReset: boolean },
   ): Promise<{ emptying: boolean }> {
     if (Features.SINGLE_TENANT || (await this.demo.isSystemTenant(tenantId))) return { emptying: false };
-    if (mode === 'own_data') return this.emptyWorkspace(manager, tenantId, userId);
-    await this.loadExample(manager, tenantId, userId, host);
+    if (mode === 'own_data') return this.emptyWorkspace(manager, tenantId, userId, opts.confirmReset);
+    await this.loadExample(manager, tenantId, userId, opts.host);
     return { emptying: false };
   }
 
   /**
-   * `own_data`: a running load is stopped then reset, loaded or failed sample data is reset; both
-   * take an administrator (403 `administrator_required`), even for the workspace's first choice,
-   * and send no reset e-mail. Idle, or already resetting: nothing to erase. In every case the
-   * sample data banner is hidden.
+   * `own_data`. A member's choice changes nothing (sample data, banner, load at activation still
+   * waiting), and is refused (403 `administrator_required`, even for the workspace's first
+   * choice) while sample data is there: loaded, loading, or left by a failed reset.
+   *
+   * An administrator's choice first hides the sample data banner (unless the data is loaded),
+   * through the pool: a load at activation still waiting for its slot can no longer claim it.
+   * Then, by status: a running load is stopped then reset, and ends `idle`; loaded sample data is
+   * reset, after `confirm_reset` when objects were created since the load (409
+   * `sample_data_modified` with their number, nothing written otherwise); `failed` after a
+   * failed reset is reset again; any other `failed` was reset when it failed and goes back to
+   * `idle` with no reset; `idle` and `resetting`: nothing to erase. No reset e-mail.
    */
-  private async emptyWorkspace(manager: EntityManager, tenantId: string, userId: string): Promise<{ emptying: boolean }> {
-    // getStatus takes over a load or a reset left by a stopped API process.
-    let state: DemoDataState = await this.demo.getStatus(tenantId);
-    if (state.status === 'loading') {
-      state = await this.demo.cancelLoad(tenantId, userId, { dismissBanner: true });
-      if (state.status === 'loading') return { emptying: true };
-      // The load ended before the stop was written: `loaded` or `failed` are reset below.
-    }
-    if (state.status === 'loaded' || state.status === 'failed') {
-      try {
-        await this.demo.startReset({ tenantId, actorId: userId, notify: false, dismissBanner: true });
-        return { emptying: true };
-      } catch (error) {
-        // Reset by someone else meanwhile (over, or still running): nothing left to erase.
-        if (!isStatusConflictIn(error, ['idle', 'resetting'])) throw error;
+  private async emptyWorkspace(
+    manager: EntityManager,
+    tenantId: string,
+    userId: string,
+    confirmReset: boolean,
+  ): Promise<{ emptying: boolean }> {
+    if (!(await isTenantAdministrator(manager, tenantId, userId))) {
+      const { status, error_code } = await this.demo.getStatus(tenantId);
+      if (status === 'loaded' || status === 'loading' || (status === 'failed' && error_code === 'reset_failed')) {
+        throw new ForbiddenException({
+          code: 'administrator_required',
+          message: 'Only an administrator of this workspace can do this.',
+        });
       }
+      return { emptying: false };
     }
-    await markSampleDataBannerDismissed(manager, tenantId);
+
+    const first = await this.demo.hideBannerUnlessLoaded(tenantId);
+    let state: DemoDataState = first.state;
+    if (state.status === 'loading') {
+      const stop = await this.demo.cancelLoad(tenantId, userId);
+      if (stop.requested) return { emptying: true };
+      // The load ended before the stop was written: the rules of its new status apply.
+      state = stop.state;
+    }
+    if (state.status === 'loaded') {
+      if (!confirmReset && state.loaded_at) {
+        const created = await countCreatedSinceLoad(manager, tenantId, state.loaded_at);
+        if (created > 0) {
+          throw new ConflictException({
+            statusCode: 409,
+            code: 'sample_data_modified',
+            created_since_load: created,
+            message: 'Objects were created since the sample data was loaded. Confirm to erase them too.',
+          });
+        }
+      }
+      return this.resetSampleData(tenantId, userId);
+    }
+    if (state.status === 'failed' && state.error_code === 'reset_failed') return this.resetSampleData(tenantId, userId);
+    if (state.status === 'failed') await this.demo.clearFailedLoad(tenantId, userId);
+    if (!first.hidden) await this.demo.hideBannerUnlessLoaded(tenantId);
+    return { emptying: false };
+  }
+
+  /** The reset of `own_data`: no e-mail, the banner hidden in the same write. */
+  private async resetSampleData(tenantId: string, userId: string): Promise<{ emptying: boolean }> {
+    try {
+      await this.demo.startReset({ tenantId, actorId: userId, notify: false, dismissBanner: true });
+      return { emptying: true };
+    } catch (error) {
+      // Reset by someone else meanwhile (over, or still running): nothing left to erase.
+      if (!isStatusConflictIn(error, ['idle', 'resetting'])) throw error;
+    }
+    await this.demo.hideBannerUnlessLoaded(tenantId);
     return { emptying: false };
   }
 
   /**
-   * `example`: an administrator's choice loads the sample data into an idle workspace, in the
-   * tenant's seed language, from the request's host. A refusal (workspace not empty,
-   * subscription, too many loads at once, ...) leaves the choice to be written, with a warning
-   * in the server log. Another user's choice loads nothing.
+   * `example`: an administrator's choice loads the sample data into an empty workspace (`idle`,
+   * or `failed` once its reset is done), in the tenant's seed language, from the request's host.
+   * A refusal (workspace not empty, subscription, too many loads at once, ...) leaves the choice
+   * to be written, with a warning in the server log. Another user's choice loads nothing.
    */
   private async loadExample(manager: EntityManager, tenantId: string, userId: string, host: string): Promise<void> {
     const state = await this.demo.getStatus(tenantId);
-    if (state.status !== 'idle' || !(await isTenantAdministrator(manager, tenantId, userId))) return;
+    const empty = state.status === 'idle' || (state.status === 'failed' && state.error_code !== 'reset_failed');
+    if (!empty || !(await isTenantAdministrator(manager, tenantId, userId))) return;
     const [tenant]: Array<{ metadata: unknown }> = await manager.query(`SELECT metadata FROM tenants WHERE id = $1`, [tenantId]);
     try {
       await this.demo.loadDemoData(tenantId, { language: tenantSeedLanguage(tenant?.metadata), actorId: userId, host });

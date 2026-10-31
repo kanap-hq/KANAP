@@ -563,6 +563,8 @@ type StateCondition = {
   heartbeatAt?: string | null;
   /** Whether a stop of the load was asked for (`cancel_requested_at` set); undefined: either. */
   cancelRequested?: boolean;
+  /** True: only while the home banner is shown (`dismissed_at` absent); undefined: either. */
+  bannerShown?: true;
 };
 
 type ExitOutcome = { code: number | null; signal: NodeJS.Signals | null; error?: Error };
@@ -679,31 +681,76 @@ export class DemoDataService implements OnApplicationShutdown {
   }
 
   /**
+   * The onboarding choice "start with my own data" (OnboardingService): hides the home banner
+   * (`dismissed_at`, an earlier value kept) through the pool, committed at once, unless the
+   * status is `loaded` (then the reset hides it, or nothing is erased). From then on a load at
+   * activation that has not claimed its slot yet is refused (`claim`). Returns the state as it
+   * stands, not taken over (`cancelLoad` stops a load first), and whether the banner was hidden.
+   */
+  async hideBannerUnlessLoaded(tenantId: string): Promise<{ state: DemoDataState; hidden: boolean }> {
+    const tenant = await this.readTenant(tenantId);
+    const rows: Array<{ demo: unknown }> = await this.dataSource.query(
+      `WITH updated AS (
+         UPDATE tenants
+            SET metadata = jsonb_set(
+                  CASE WHEN jsonb_typeof(metadata) = 'object' THEN metadata ELSE '{}'::jsonb END,
+                  '{demo}',
+                  ${DEMO_SQL} || jsonb_build_object('dismissed_at', COALESCE(${DEMO_SQL}->>'dismissed_at', $2::text)),
+                  true)
+          WHERE id = $1 AND ${STATUS_SQL} <> 'loaded'
+          RETURNING metadata->'demo' AS demo
+       )
+       SELECT demo FROM updated`,
+      [tenant.id, nowIso()],
+    );
+    if (rows[0]) return { state: publicState(readDemoState(rows[0].demo)), hidden: true };
+    return { state: publicState(await this.readState(tenant.id)), hidden: false };
+  }
+
+  /**
    * Asks the running load of the tenant to stop, by one of its administrators (403
    * `administrator_required` otherwise): `cancel_requested_at` and `cancel_requested_by` in the
-   * state, written only while the status is `loading`. The API process that runs the loader
-   * sees the request at once when it is this one, at its next heartbeat otherwise, and kills the
-   * loader; the tenant is then reset and ends `idle`, with no error code and no e-mail. A load
-   * whose API process stopped is taken over by `reconcile`, which ends it `idle` as well.
-   * Returns the state as it stands: `loading` when the request is written, otherwise the status
-   * the load had already reached (`loaded`, `failed`, `resetting`, `idle`), and nothing was
-   * written. `dismissBanner` also hides the home banner, in the same write.
+   * state, written while the status is `loading` with the same run, whatever its heartbeat. The
+   * API process that runs the loader sees the request at once when it is this one, at its next
+   * heartbeat otherwise, and kills the loader; the tenant is then reset and ends `idle`, with no
+   * error code and no e-mail. A load whose API process stopped is then taken over here
+   * (`reconcile`) as a stopped one, and ends `idle` as well. `requested`: the request was
+   * written; otherwise nothing was, and `state` is the status the load had already reached
+   * (`loaded`, `failed`, `resetting`, `idle`), or a newer load.
    */
-  async cancelLoad(tenantId: string, actorId: string, opts: { dismissBanner?: boolean } = {}): Promise<DemoDataState> {
+  async cancelLoad(tenantId: string, actorId: string): Promise<{ state: DemoDataState; requested: boolean }> {
     const tenant = await this.readTenant(tenantId);
     await withTenant(this.dataSource, tenant.id, (manager) => this.requireAdministrator(manager, tenant.id, actorId));
-    const state = await this.reconcile(tenant.id, readDemoState(tenant.demo));
-    if (state.status !== 'loading') return publicState(state);
-    const now = nowIso();
-    const requested = await this.update(tenant.id, { statuses: ['loading'], runId: state.run_id }, {
-      cancel_requested_at: state.cancel_requested_at ?? now,
-      cancel_requested_by: state.cancel_requested_by ?? actorId,
-      ...(opts.dismissBanner && !state.dismissed_at ? { dismissed_at: now } : {}),
-    });
-    if (!requested) return publicState(await this.readState(tenant.id));
-    this.logger.log(`Stop of the sample data load of tenant ${tenant.id} asked for`);
-    this.stopCancelledRun(tenant.id, requested);
-    return publicState(requested);
+    const current = readDemoState(tenant.demo);
+    if (current.status === 'loading') {
+      const now = nowIso();
+      const requested = await this.update(tenant.id, { statuses: ['loading'], runId: current.run_id }, {
+        cancel_requested_at: current.cancel_requested_at ?? now,
+        cancel_requested_by: current.cancel_requested_by ?? actorId,
+      });
+      if (requested) {
+        this.logger.log(`Stop of the sample data load of tenant ${tenant.id} asked for`);
+        this.stopCancelledRun(tenant.id, requested);
+        return { state: publicState(await this.reconcile(tenant.id, requested)), requested: true };
+      }
+    }
+    return { state: publicState(await this.reconcile(tenant.id, await this.readState(tenant.id))), requested: false };
+  }
+
+  /**
+   * The onboarding choice "start with my own data" on a workspace whose load failed and was
+   * reset already (`failed`, any code but `reset_failed`): back to `idle` with no reset, the
+   * code and dates of the failure cleared. Written only while the status is `failed` with the
+   * same run; returns whether it was written. By one of its administrators.
+   */
+  async clearFailedLoad(tenantId: string, actorId: string): Promise<boolean> {
+    const tenant = await this.readTenant(tenantId);
+    await withTenant(this.dataSource, tenant.id, (manager) => this.requireAdministrator(manager, tenant.id, actorId));
+    const state = readDemoState(tenant.demo);
+    if (state.status !== 'failed' || state.error_code === 'reset_failed') return false;
+    const cleared = await this.update(tenant.id, { statuses: ['failed'], runId: state.run_id }, this.idleState());
+    if (cleared) this.logger.log(`Failed sample data load of tenant ${tenant.id} cleared: idle`);
+    return !!cleared;
   }
 
   /**
@@ -733,15 +780,20 @@ export class DemoDataService implements OnApplicationShutdown {
    * empty workspace check included, with the tenant's own host given by the caller (still checked
    * against the tenant), and the sample data language recorded in the state. A tenant just
    * activated is in its starting state; one whose administrator has started creating records is
-   * refused (`tenant_not_empty`), so nothing is loaded over them or reset.
+   * refused (`tenant_not_empty`), so nothing is loaded over them or reset. With
+   * `unlessBannerHidden` (the load at activation), a workspace whose home banner was hidden
+   * (`dismissed_at`) is refused as well, checked by the claim itself (409 `demo_load_declined`).
    */
   async loadDemoData(
     tenantId: string,
-    params: { language: unknown; actorId: string; host: string },
+    params: { language: unknown; actorId: string; host: string; unlessBannerHidden?: boolean },
   ): Promise<DemoDataState> {
     // Recorded only: the loader is not told the language yet (one language, `en`, for now).
     const language = resolveDemoDataLanguage(params.language);
-    return this.startLoad({ tenantId, actorId: params.actorId, host: params.host }, { language });
+    return this.startLoad(
+      { tenantId, actorId: params.actorId, host: params.host },
+      { language, unlessBannerHidden: params.unlessBannerHidden === true },
+    );
   }
 
   /**
@@ -768,7 +820,8 @@ export class DemoDataService implements OnApplicationShutdown {
           this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: declined meanwhile`);
           return;
         }
-        await this.loadDemoData(params.tenantId, { language: params.language, actorId: params.actorId, host });
+        // The claim checks the banner again: a choice made after the read above still counts.
+        await this.loadDemoData(params.tenantId, { language: params.language, actorId: params.actorId, host, unlessBannerHidden: true });
         return;
       } catch (error) {
         const code = errorCode(error);
@@ -799,7 +852,7 @@ export class DemoDataService implements OnApplicationShutdown {
    */
   private async startLoad(
     params: { tenantId: string; actorId: string; host: string },
-    opts: { language: DemoDataLanguage | null },
+    opts: { language: DemoDataLanguage | null; unlessBannerHidden?: boolean },
   ): Promise<DemoDataState> {
     const tenant = await this.readTenant(params.tenantId);
     // Who asks comes first: nothing else about the workspace is told to a non-administrator.
@@ -849,7 +902,7 @@ export class DemoDataService implements OnApplicationShutdown {
     // argument, never logged). Signed before the claim: a claimed load always starts its run.
     const token = this.auth.signToken({ id: actor.id, email: actor.email, role: actor.role, tenant_id: tenant.id }).access_token;
     const runId = randomUUID();
-    const claimed = await this.claim(tenant.id, actor.id, runId, opts.language);
+    const claimed = await this.claim(tenant.id, actor.id, runId, opts.language, opts.unlessBannerHidden === true);
     this.runInBackground(`load of tenant ${tenant.id}`, () => this.runLoad({
       tenantId: tenant.id,
       actorId: actor.id,
@@ -1072,6 +1125,7 @@ export class DemoDataService implements OnApplicationShutdown {
     if (condition.cancelRequested !== undefined) {
       where += ` AND (metadata->'demo'->>'cancel_requested_at') IS ${condition.cancelRequested ? 'NOT ' : ''}NULL`;
     }
+    if (condition.bannerShown) where += ` AND (metadata->'demo'->>'dismissed_at') IS NULL`;
     // In a CTE: TypeORM answers a bare UPDATE with [rows, count], a SELECT with its rows.
     const rows: Array<{ demo: unknown }> = await executor.query(
       `WITH updated AS (
@@ -1109,9 +1163,17 @@ export class DemoDataService implements OnApplicationShutdown {
   /**
    * The claim of a load: under a lock shared by every API process, count the live loads of all
    * tenants, then move this tenant from `idle` or `failed` to `loading`. A double click, or two
-   * API processes at once, get one claim; the other is refused.
+   * API processes at once, get one claim; the other is refused. `unlessBannerHidden`: only while
+   * the home banner is shown (`dismissed_at` absent), read by the move itself, after any wait
+   * for the tenant row; otherwise 409 `demo_load_declined`.
    */
-  private async claim(tenantId: string, actorId: string, runId: string, language: DemoDataLanguage | null = null): Promise<StoredDemoState> {
+  private async claim(
+    tenantId: string,
+    actorId: string,
+    runId: string,
+    language: DemoDataLanguage | null = null,
+    unlessBannerHidden = false,
+  ): Promise<StoredDemoState> {
     return this.dataSource.transaction(async (manager) => {
       await manager.query(`SELECT pg_advisory_xact_lock($1::int, hashtext($2))`, [DEMO_LOCK_NAMESPACE, DEMO_CLAIM_LOCK_KEY]);
       const loading: Array<{ id: string; heartbeat_at: string | null }> = await manager.query(
@@ -1125,7 +1187,8 @@ export class DemoDataService implements OnApplicationShutdown {
         });
       }
       const now = nowIso();
-      const claimed = await this.update(tenantId, { statuses: ['idle', 'failed'] }, {
+      const condition: StateCondition = { statuses: ['idle', 'failed'], ...(unlessBannerHidden ? { bannerShown: true } : {}) };
+      const claimed = await this.update(tenantId, condition, {
         status: 'loading',
         run_id: runId,
         step: null,
@@ -1141,7 +1204,16 @@ export class DemoDataService implements OnApplicationShutdown {
         reset_notify: null,
         ...(language ? { language } : {}),
       }, manager);
-      if (!claimed) throw this.statusConflict((await this.readState(tenantId, manager)).status);
+      if (!claimed) {
+        const current = await this.readState(tenantId, manager);
+        if (unlessBannerHidden && current.dismissed_at && (current.status === 'idle' || current.status === 'failed')) {
+          throw new ConflictException({
+            code: 'demo_load_declined',
+            message: 'The sample data was declined for this workspace.',
+          });
+        }
+        throw this.statusConflict(current.status);
+      }
       return claimed;
     });
   }
