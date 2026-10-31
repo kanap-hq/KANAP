@@ -13,6 +13,7 @@ import {
   type ImportReportError,
 } from '../common/csv-sheet';
 import { linkProvenance, SOURCE_REF_MAX, type LinkProvenance, type LinkSource } from '../common/link-provenance';
+import { parseItemNumber } from '../common/parse-item-number';
 import { fixMulterFilename, uploadedBytes } from '../common/upload';
 import { clustersWithMembers } from '../assets/asset-rules';
 import { OperatingSystemService } from './operating-system.service';
@@ -649,8 +650,7 @@ function importProvenance(originalName: string | undefined): LinkProvenance {
 function technologyItemNumber(reference: string): number | null {
   const match = reference.trim().match(TEC_REF_RE);
   if (!match) return null;
-  const number = Number(match[1]);
-  return Number.isSafeInteger(number) && number <= 2147483647 ? number : null;
+  return parseItemNumber(match[1]);
 }
 
 function unique(values: string[]): string[] {

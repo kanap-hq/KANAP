@@ -94,6 +94,7 @@ import { DocumentType } from './document-type.entity';
 import { DocumentVersion } from './document-version.entity';
 import { Document } from './document.entity';
 import { userNameSharedSql } from '../common/lookup/reference-lookups';
+import { parseItemNumber } from '../common/parse-item-number';
 import { trailingDigits } from '../common/text-scan';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
 import { textSortKey } from '../common/list-sort';
@@ -1644,8 +1645,8 @@ export class KnowledgeService {
     if (!value) return null;
     const digits = trailingDigits(value);
     if (!digits) return null;
-    const itemNumber = Number(digits);
-    return Number.isFinite(itemNumber) && itemNumber > 0 ? itemNumber : null;
+    const itemNumber = parseItemNumber(digits);
+    return itemNumber != null && itemNumber > 0 ? itemNumber : null;
   }
 
   private parseItemNumberPrefixQuery(input: string): string | null {
@@ -2023,8 +2024,8 @@ export class KnowledgeService {
     const out: number[] = [];
     const seen = new Set<number>();
     for (const match of matches) {
-      const num = Number(match[1]);
-      if (!Number.isFinite(num) || num <= 0 || seen.has(num)) continue;
+      const num = parseItemNumber(match[1]);
+      if (num == null || num <= 0 || seen.has(num)) continue;
       seen.add(num);
       out.push(num);
     }

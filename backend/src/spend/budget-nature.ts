@@ -21,6 +21,8 @@
  * The `/capex-items*` and `/capex-versions*` routes are aliases on the same services, with the
  * CAPEX contract of before (`budget-line-presentation.ts`).
  */
+import { parseItemNumber } from '../common/parse-item-number';
+
 export type BudgetNature = 'opex' | 'capex';
 
 /**
@@ -109,7 +111,7 @@ export function budgetLineReference(itemNumber: number | string | null | undefin
 /** The number of a legacy reference of `nature` (`CPX-12` gives 12), else null. */
 export function legacyNumberOf(nature: BudgetNature, legacy: string | null | undefined): number | null {
   const match = typeof legacy === 'string' ? legacy.match(/^([A-Z]+)-(\d+)$/) : null;
-  return match && match[1] === LEGACY_PREFIX[nature] ? Number.parseInt(match[2], 10) : null;
+  return match && match[1] === LEGACY_PREFIX[nature] ? parseItemNumber(match[2]) : null;
 }
 
 /**

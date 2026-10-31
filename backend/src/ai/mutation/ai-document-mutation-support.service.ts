@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { parseItemNumber } from '../../common/parse-item-number';
 import { loadLinkedReads } from '../../common/relations/linked-reads';
 import { validate as isUuid } from 'uuid';
 import { incidentVisibilitySql, resolveIncidentViewer } from '../../incidents/incident-visibility';
@@ -177,19 +178,19 @@ export class AiDocumentMutationSupportService {
     switch (entityType) {
       case 'projects': {
         const match = normalized.match(/^(?:PRJ-|project\s+#?|prj\s+#?|#)?(\d+)$/i);
-        return match ? Number(match[1]) : null;
+        return match ? parseItemNumber(match[1]) : null;
       }
       case 'requests': {
         const match = normalized.match(/^(?:REQ-|request\s+#?|req\s+#?|#)?(\d+)$/i);
-        return match ? Number(match[1]) : null;
+        return match ? parseItemNumber(match[1]) : null;
       }
       case 'tasks': {
         const match = normalized.match(/^(?:T-|task\s+#?|ticket\s+#?|#)?(\d+)$/i);
-        return match ? Number(match[1]) : null;
+        return match ? parseItemNumber(match[1]) : null;
       }
       case 'incidents': {
         const match = normalized.match(/^(?:INC[-\s]?)?(\d+)$/i);
-        return match ? Number(match[1]) : null;
+        return match ? parseItemNumber(match[1]) : null;
       }
       default:
         return null;
