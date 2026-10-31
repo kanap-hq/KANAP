@@ -41,10 +41,12 @@ const INDEX_TYPE: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_i
 const LINES: Record<Kind, string> = { opex: 'spend_items', capex: 'spend_items' };
 const LINKS: Record<Kind, string> = { opex: 'spend_item_analytics_values', capex: 'spend_item_analytics_values' };
 
-// Current native-reference functions. Keep the historical down() oracle below unchanged.
+// Current refresh bodies on a migrated database. spend_items is 1854020000000.
+// capex_items is that body after 1855960000000 (description, account, contracts at weight C).
+// Keep the historical down() oracle below unchanged.
 const NATIVE_BODIES = {
   spend_items: 'ba4c55c53c6bf8c1e30ef1bd8402c308',
-  capex_items: '6c6de8f464d72fe85b84098567a60834',
+  capex_items: '71f483f96bc14dc813e388809869bd71',
 };
 /** md5 of the refresh bodies of 1853000000000 (OPEX, generated) and 1853220000000 (CAPEX). */
 const PREVIOUS_BODIES = {
