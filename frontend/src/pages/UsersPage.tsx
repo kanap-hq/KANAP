@@ -4,6 +4,7 @@ import ServerDataGrid, { EnhancedColDef, type ListRequest } from '../components/
 import { ICellRendererParams } from 'ag-grid-community';
 import { Button, Stack, Box, IconButton, Menu, MenuItem, useTheme } from '@mui/material';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import { wholeCellLinkSx } from '../components/grid/renderers';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import api from '../api';
@@ -25,6 +26,70 @@ import { userAccessColumnText } from '../components/dataAccess/dataAccess';
 import UserDialog, { type UserDialogTab } from './users/UserDialog';
 import { roleLabel } from '../utils/roleLabel';
 import { ImportLabel } from '../components/csv/importFiles';
+
+/**
+ * Cells of the users grid. They stay at module level: a renderer declared in the page is a new
+ * component on every render, the column list follows it, and AG Grid remounts the cell under the
+ * pointer. A selection update between mouse down and mouse up then drops the click. Callbacks
+ * arrive through `cellRendererParams` and read the latest page handlers from a ref.
+ */
+type UserOpenParams = ICellRendererParams<any, any> & {
+  onOpen?: (row: any) => void;
+};
+
+function UserOpenCell(params: UserOpenParams) {
+  return (
+    <Box
+      component="span"
+      sx={{ cursor: 'pointer', ...wholeCellLinkSx }}
+      onClick={() => params.onOpen?.(params.data)}
+    >
+      {params.valueFormatted ?? params.value}
+    </Box>
+  );
+}
+
+type UserStatusParams = ICellRendererParams<any, any> & {
+  statusLabel?: (key: string) => string;
+  mode?: 'light' | 'dark';
+};
+
+function UserStatusCell(params: UserStatusParams) {
+  const row = params.data;
+  if (!row) return null;
+  const key = row.pending_access ? 'pending_access' : row.status;
+  const color = getDotColor(USER_ACCOUNT_STATUS_COLORS[key] ?? 'default', params.mode ?? 'light');
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', height: '100%' }}>
+      <StatusDot color={color} />
+      <Box component="span" sx={{ color, fontSize: 12.5, fontWeight: 500 }}>
+        {params.statusLabel?.(`users.status.${key}`) ?? ''}
+      </Box>
+    </Box>
+  );
+}
+
+type UserRowActionsParams = ICellRendererParams<any, any> & {
+  menuLabel?: string;
+  onOpenMenu?: (event: React.MouseEvent<HTMLButtonElement>, row: any) => void;
+};
+
+function UserRowActionsCell(params: UserRowActionsParams) {
+  return (
+    <IconButton
+      size="small"
+      aria-label={params.menuLabel}
+      onClick={(event) => params.onOpenMenu?.(event, params.data)}
+    >
+      <MoreHorizIcon fontSize="small" />
+    </IconButton>
+  );
+}
+
+type UsersPageActions = {
+  openUser: (row: any) => void;
+  openMenu: (event: React.MouseEvent<HTMLButtonElement>, row: any) => void;
+};
 
 export default function UsersPage() {
   const { t } = useTranslation(['admin', 'common']);
@@ -53,6 +118,7 @@ export default function UsersPage() {
   const [listRequest, setListRequest] = useState<ListRequest | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const gridApiRef = useRef<any>(null);
+  const pageRef = useRef<UsersPageActions>({ openUser: () => {}, openMenu: () => {} });
   const canManageUsers = hasLevel('users', 'admin');
   const dataAccessLimited = useDataAccessLimited();
   const canAdminDataAccess = canManageUsers && !dataAccessLimited;
@@ -157,48 +223,13 @@ export default function UsersPage() {
     if (!canManageUsers) return;
     setUserDialog({ mode: 'edit', id: row.id, name: userDisplayName(row), tab: 'identity' });
   };
-
-  const ClickableCell: React.FC<ICellRendererParams<any, any>> = (params) => (
-    <Box
-      component="span"
-      sx={{ cursor: 'pointer' }}
-      onClick={() => handleEdit(params.data)}
-    >
-      {params.value}
-    </Box>
-  );
-  const ClickableCellGeneric: React.FC<ICellRendererParams<any, any>> = (params) => (
-    <Box
-      component="span"
-      sx={{ cursor: 'pointer' }}
-      onClick={() => handleEdit(params.data)}
-    >
-      {params.valueFormatted ?? params.value}
-    </Box>
-  );
-  const UserStatusCell: React.FC<ICellRendererParams<any, any>> = (params) => {
-    const row = params.data;
-    if (!row) return null;
-    const key = row.pending_access ? 'pending_access' : row.status;
-    const color = getDotColor(USER_ACCOUNT_STATUS_COLORS[key] ?? 'default', theme.palette.mode);
-    return (
-      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', height: '100%' }}>
-        <StatusDot color={color} />
-        <Box component="span" sx={{ color, fontSize: 12.5, fontWeight: 500 }}>
-          {t(`users.status.${key}`)}
-        </Box>
-      </Box>
-    );
+  pageRef.current = {
+    openUser: handleEdit,
+    openMenu: (event, row) => {
+      setMenuPos({ top: event.clientY, left: event.clientX });
+      setMenuRow(row);
+    },
   };
-  const RowActionsCell: React.FC<ICellRendererParams<any, any>> = (params) => (
-    <IconButton
-      size="small"
-      aria-label={t('users.actions.rowMenu')}
-      onClick={(e) => { setMenuPos({ top: e.clientY, left: e.clientX }); setMenuRow(params.data); }}
-    >
-      <MoreHorizIcon fontSize="small" />
-    </IconButton>
-  );
 
   const dateFilterParams = useMemo(() => ({
     suppressAndOrCondition: true,
@@ -219,11 +250,18 @@ export default function UsersPage() {
     }
   }, [t]);
 
-  const columns: EnhancedColDef<any>[] = useMemo(() => [
-    { field: 'last_name', headerName: t('users.columns.lastName'), width: 150, cellRenderer: canManageUsers ? ClickableCellGeneric : undefined },
-    { field: 'first_name', headerName: t('users.columns.firstName'), width: 150, cellRenderer: canManageUsers ? ClickableCellGeneric : undefined },
-    { field: 'email', headerName: t('users.columns.email'), flex: 1, minWidth: 220, required: true, cellRenderer: canManageUsers ? ClickableCell : undefined },
-    { field: 'job_title', headerName: t('users.columns.jobTitle'), width: 200, cellRenderer: canManageUsers ? ClickableCellGeneric : undefined },
+  const columns: EnhancedColDef<any>[] = useMemo(() => {
+    const onOpen = (row: any) => pageRef.current.openUser(row);
+    const onOpenMenu = (event: React.MouseEvent<HTMLButtonElement>, row: any) => pageRef.current.openMenu(event, row);
+    // One object for every column that opens the user, so the hit area is the whole cell.
+    const openCell = canManageUsers
+      ? { cellRenderer: UserOpenCell, cellRendererParams: { onOpen } }
+      : {};
+    return [
+    { field: 'last_name', headerName: t('users.columns.lastName'), width: 150, ...openCell },
+    { field: 'first_name', headerName: t('users.columns.firstName'), width: 150, ...openCell },
+    { field: 'email', headerName: t('users.columns.email'), flex: 1, minWidth: 220, required: true, ...openCell },
+    { field: 'job_title', headerName: t('users.columns.jobTitle'), width: 200, ...openCell },
     {
       field: 'status',
       headerName: t('users.columns.status'),
@@ -240,6 +278,7 @@ export default function UsersPage() {
         searchable: false,
       },
       cellRenderer: UserStatusCell,
+      cellRendererParams: { statusLabel: (key: string) => t(key), mode: theme.palette.mode },
     },
     {
       field: 'last_login_at',
@@ -248,7 +287,7 @@ export default function UsersPage() {
       filter: 'agDateColumnFilter',
       filterParams: dateFilterParams,
       valueFormatter: (p: any) => (p.value ? formatShortDateTime(p.value as string, locale) : t('users.lastLogin.never')),
-      cellRenderer: canManageUsers ? ClickableCellGeneric : undefined,
+      ...openCell,
     },
     {
       colId: 'roles',
@@ -267,7 +306,7 @@ export default function UsersPage() {
           : [roleLabel({ role_name: params.data?.role?.role_name }, t)];
         return names.filter(Boolean).join(', ');
       },
-      cellRenderer: canManageUsers ? ClickableCellGeneric : undefined,
+      ...openCell,
     },
     ...(canAdminDataAccess && dataAccessAnyLimited
       ? [{
@@ -277,7 +316,7 @@ export default function UsersPage() {
           sortable: false,
           filter: false,
           valueGetter: (params: any) => userAccessColumnText(params.data?.data_access, t),
-          cellRenderer: canManageUsers ? ClickableCellGeneric : undefined,
+          ...openCell,
         } as EnhancedColDef<any>]
       : []),
     {
@@ -295,12 +334,12 @@ export default function UsersPage() {
         searchable: false,
       },
       valueGetter: (params) => (params.data?.external_auth_provider === 'entra' ? t('users.accountType.entra') : t('users.accountType.local')),
-      cellRenderer: canManageUsers ? ClickableCellGeneric : undefined,
+      ...openCell,
     },
-    { field: 'company', headerName: t('users.columns.company'), width: 200, valueGetter: (params) => params.data?.company?.name || '', cellRenderer: canManageUsers ? ClickableCellGeneric : undefined },
-    { field: 'department', headerName: t('users.columns.department'), width: 200, valueGetter: (params) => params.data?.department?.name || '', cellRenderer: canManageUsers ? ClickableCellGeneric : undefined },
-    { field: 'business_phone', headerName: t('users.columns.businessPhone'), width: 180, defaultHidden: true, cellRenderer: canManageUsers ? ClickableCellGeneric : undefined },
-    { field: 'mobile_phone', headerName: t('users.columns.mobilePhone'), width: 160, defaultHidden: true, cellRenderer: canManageUsers ? ClickableCellGeneric : undefined },
+    { field: 'company', headerName: t('users.columns.company'), width: 200, valueGetter: (params) => params.data?.company?.name || '', ...openCell },
+    { field: 'department', headerName: t('users.columns.department'), width: 200, valueGetter: (params) => params.data?.department?.name || '', ...openCell },
+    { field: 'business_phone', headerName: t('users.columns.businessPhone'), width: 180, defaultHidden: true, ...openCell },
+    { field: 'mobile_phone', headerName: t('users.columns.mobilePhone'), width: 160, defaultHidden: true, ...openCell },
     {
       field: 'mfa_enabled',
       headerName: t('users.columns.mfaEnabled'),
@@ -316,7 +355,7 @@ export default function UsersPage() {
         searchable: false,
       },
       valueGetter: (params) => params.data?.mfa_enabled ? t('users.mfaValues.yes') : t('users.mfaValues.no'),
-      cellRenderer: canManageUsers ? ClickableCellGeneric : undefined,
+      ...openCell,
     },
     {
       field: 'created_at',
@@ -326,12 +365,24 @@ export default function UsersPage() {
       filterParams: dateFilterParams,
       valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale),
       defaultHidden: true,
-      cellRenderer: canManageUsers ? ClickableCellGeneric : undefined,
+      ...openCell,
     },
     ...(canManageUsers
-      ? [{ colId: 'row_actions', headerName: '', width: 56, sortable: false, filter: false, resizable: false, pinned: 'right', suppressColumnsToolPanel: true, cellRenderer: RowActionsCell } as EnhancedColDef<any>]
+      ? [{
+          colId: 'row_actions',
+          headerName: '',
+          width: 56,
+          sortable: false,
+          filter: false,
+          resizable: false,
+          pinned: 'right',
+          suppressColumnsToolPanel: true,
+          cellRenderer: UserRowActionsCell,
+          cellRendererParams: { menuLabel: t('users.actions.rowMenu'), onOpenMenu },
+        } as EnhancedColDef<any>]
       : []),
-  ], [ClickableCell, ClickableCellGeneric, UserStatusCell, RowActionsCell, canAdminDataAccess, canManageUsers, dataAccessAnyLimited, dateFilterParams, getRoleFilterValues, locale, t]);
+    ];
+  }, [canAdminDataAccess, canManageUsers, dataAccessAnyLimited, dateFilterParams, getRoleFilterValues, locale, t, theme.palette.mode]);
 
   if (!hasLevel('users', 'reader')) {
     return <ForbiddenPage resource="users" level="reader" />;
