@@ -5,6 +5,7 @@ import { AuditService } from '../../audit/audit.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
 import { assertLinesEditable } from '../../data-access/line-write-checks';
 import { assertContractReadable, assertContractsEditable } from '../../data-access/contract-write-checks';
+import { parseItemNumber } from '../../common/parse-item-number';
 import { budgetLineReferenceNumbers } from '../../common/resolve-item-id';
 import { AiPolicyService } from '../ai-policy.service';
 import { auditTableOf, BUDGET_LINE_PREFIX, BUDGET_NATURES, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
@@ -1696,7 +1697,8 @@ export class AiRelationMutationSupportService {
     ref: string,
   ): Promise<Record<string, unknown>[]> {
     const uuid = isUuid(ref);
-    const itemNumber = Number((ref.match(/(?:^|[-\s])(\d+)$/)?.[1] ?? '').trim());
+    const rawDigits = ref.match(/(?:^|[-\s])(\d+)$/)?.[1];
+    const itemNumber = rawDigits == null ? 0 : (parseItemNumber(rawDigits) ?? -1);
     const { manager, tenantId } = context;
     switch (entityType) {
       case 'applications': {

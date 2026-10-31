@@ -123,6 +123,7 @@ import {
 } from '../../spend/reports/shared/reportAggregates';
 import type { AggregateSpec } from '../../common/list-engine/list-aggregate';
 import type { FxMissingPair } from '../../spend/budget-list/budget-list.service';
+import { parseItemNumber } from '../../common/parse-item-number';
 import { trailingDigits } from '../../common/text-scan';
 
 /** Connection fields grouped on their effective values (see aggregateConnectionsByEffectiveRisk). */
@@ -261,8 +262,8 @@ function parseDocumentItemNumberQuery(input: string): number | null {
   if (!value) return null;
   const digits = trailingDigits(value);
   if (!digits) return null;
-  const itemNumber = Number(digits);
-  return Number.isFinite(itemNumber) && itemNumber > 0 ? itemNumber : null;
+  const itemNumber = parseItemNumber(digits);
+  return itemNumber != null && itemNumber > 0 ? itemNumber : null;
 }
 
 function getDocumentSearchState(input?: string): DocumentSearchState | null {

@@ -32,6 +32,7 @@ import { AuditService } from '../audit/audit.service';
 import { resolveRecordCreators } from '../audit/record-creator.util';
 import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { ItemNumberService } from '../common/item-number.service';
+import { parseItemNumber } from '../common/parse-item-number';
 import { StorageService } from '../common/storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
@@ -425,9 +426,10 @@ export class PortfolioRequestsService {
     // Add exact item_number match for ref patterns (REQ-123 or plain number)
     if (q) {
       const refMatch = q.match(/^(?:REQ-)?(\d+)$/i);
-      if (refMatch) {
+      const itemNumber = refMatch ? parseItemNumber(refMatch[1]) : null;
+      if (itemNumber != null) {
         const param = nextParam();
-        quickSearch.push({ sql: `r.item_number = :${param}`, params: { [param]: parseInt(refMatch[1], 10) } });
+        quickSearch.push({ sql: `r.item_number = :${param}`, params: { [param]: itemNumber } });
       }
     }
 

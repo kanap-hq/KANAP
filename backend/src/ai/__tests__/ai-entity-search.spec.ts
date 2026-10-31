@@ -302,6 +302,64 @@ async function testIndexedRowsMapToTheBudgetLineFamily(applicationClassification
   assert.deepEqual(capex.metadata, { supplier: null, paying_company: null, account: null, contract: null, analytics: null, nature: 'capex' });
 }
 
+async function testOverflowNumberBindsNullInt() {
+  const bound: unknown[][] = [];
+  const service = createService();
+  const context = createContext(async (sql, params) => {
+    if (isIndexSearch(sql)) bound.push(params ?? []);
+    return [];
+  });
+
+  const overflow = await service.searchAll(context as any, {
+    query: '8149356107',
+    entity_types: ['budget_lines'],
+    limit: 10,
+  });
+  assert.deepEqual(overflow.failed_entity_types, []);
+  assert.equal(bound.length, 1);
+  assert.equal(bound[0][4], null, 'an int4 overflow is not bound as the record number');
+  assert.equal(bound[0][5], '8149356107', 'the digits stay a text prefix');
+
+  bound.length = 0;
+  const prefixed = await service.searchAll(context as any, {
+    query: 'T-8149356107',
+    entity_types: ['budget_lines'],
+    limit: 10,
+  });
+  assert.deepEqual(prefixed.failed_entity_types, []);
+  assert.equal(bound[0][4], null);
+  assert.equal(bound[0][5], '8149356107');
+  assert.equal(bound[0][6], 'T');
+
+  bound.length = 0;
+  await service.searchAll(context as any, {
+    query: '12',
+    entity_types: ['budget_lines'],
+    limit: 10,
+  });
+  assert.equal(bound[0][4], 12, 'a record number that fits is still matched exactly');
+}
+
+async function testLegacyOverflowNumberBindsNullInt() {
+  await withFlag('false', async () => {
+    const bound: unknown[][] = [];
+    const service = createService();
+    const context = createContext(async (sql, params) => {
+      if (sql.includes('i.item_number = $1')) bound.push(params ?? []);
+      return [];
+    });
+    const result = await service.searchAll(context as any, {
+      query: 'INC-8149356107',
+      entity_types: ['incidents'],
+      limit: 10,
+    });
+    assert.deepEqual(result.failed_entity_types, [], JSON.stringify(result.warnings));
+    assert.equal(bound.length, 1);
+    assert.equal(bound[0][0], null);
+    assert.equal(bound[0][1], '8149356107');
+  });
+}
+
 async function testIndexedBudgetLineReferences() {
   const service = createService();
   const context = createContext(async (sql) => {
@@ -341,6 +399,8 @@ async function run() {
     rpo_minutes: 0,
   });
   await testIndexedBudgetLineReferences();
+  await testOverflowNumberBindsNullInt();
+  await testLegacyOverflowNumberBindsNullInt();
 }
 
 void run();

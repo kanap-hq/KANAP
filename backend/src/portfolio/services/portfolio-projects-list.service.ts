@@ -17,6 +17,7 @@ import {
 import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
 import { projectInvolvesUsersSql } from './portfolio-report-filters';
 import { orderListQuery } from '../../common/list-sort';
+import { parseItemNumber } from '../../common/parse-item-number';
 
 type InvolvementScope = { involvedUserId?: string; involvedTeamId?: string };
 
@@ -337,9 +338,10 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
     // Add exact item_number match for ref patterns (PRJ-123 or plain number)
     if (q) {
       const refMatch = q.match(/^(?:PRJ-)?(\d+)$/i);
-      if (refMatch) {
+      const itemNumber = refMatch ? parseItemNumber(refMatch[1]) : null;
+      if (itemNumber != null) {
         const param = nextParam();
-        quickSearch.push({ sql: `p.item_number = :${param}`, params: { [param]: parseInt(refMatch[1], 10) } });
+        quickSearch.push({ sql: `p.item_number = :${param}`, params: { [param]: itemNumber } });
       }
     }
 

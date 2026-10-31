@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { bilingualDocumentTsQuerySql } from '../common/document-search-tsquery';
+import { parseItemNumber } from '../common/parse-item-number';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -612,10 +613,7 @@ export class AiEntityService {
   }
 
   private parseNumericRef(query: string): number | null {
-    const numericPrefix = this.parseNumericPrefix(query);
-    if (!numericPrefix) return null;
-    const value = Number(numericPrefix);
-    return Number.isSafeInteger(value) ? value : null;
+    return parseItemNumber(this.parseNumericPrefix(query));
   }
 
   private parseNumericPrefix(query: string): string | null {
@@ -2285,7 +2283,7 @@ export class AiEntityService {
     const legacyPrefix = prefixed && ['OPX', 'CPX', 'SI'].includes(prefixed[1].toUpperCase());
     const legacyRef = legacyPrefix ? `${prefixed![1].toUpperCase() === 'SI' ? 'OPX' : prefixed![1].toUpperCase()}-${Number(digits)}` : null;
     const numericPrefix = !legacyPrefix && digits && Number.isSafeInteger(Number(digits)) ? digits : null;
-    const ref = numericPrefix != null ? Number(numericPrefix) : null;
+    const ref = legacyPrefix || digits == null ? null : parseItemNumber(digits);
     const queryPrefix = prefixed ? prefixed[1].toUpperCase() : null;
     const refPrefix = queryPrefix
       ? (QUERY_PREFIX_TO_INDEX_REF_PREFIX[queryPrefix] ?? queryPrefix)

@@ -10,6 +10,7 @@ import {
 } from '../../incidents/incident-visibility';
 import { AiExecutionContextWithManager } from '../ai.types';
 import { AiPolicyService } from '../ai-policy.service';
+import { parseItemNumber } from '../../common/parse-item-number';
 import { resolveAiIncidentViewer, resolveAiParticipationAccessScope } from '../query/ai-query-scope.util';
 
 /** One incident as the Plaid incident writes read it, with the viewer's confidentiality applied. */
@@ -54,7 +55,7 @@ export class AiIncidentMutationSupportService {
     if (!raw) throw new NotFoundException('No incidents found matching "".');
     const viewer = await resolveAiIncidentViewer(context);
     const uuid = isUuid(raw);
-    const itemNumber = raw.match(/^INC-(\d+)$/i)?.[1] ?? null;
+    const itemNumber = parseItemNumber(raw.match(/^INC-(\d+)$/i)?.[1]);
     const params: unknown[] = [context.tenantId, raw, itemNumber];
     const visibility = incidentVisibilitySql('i', viewer, params);
     const rows: Array<{

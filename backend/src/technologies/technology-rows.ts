@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import type { AuditService, AuditSourceOptions } from '../audit/audit.service';
+import { parseItemNumber } from '../common/parse-item-number';
 import { UUID_RE } from '../common/relations/relation-target';
 import { vulnerabilityAlertsSql } from '../vulnerabilities/vulnerability-alerts';
 
@@ -83,8 +84,8 @@ export async function readTechnology(mg: EntityManager, tenantId: string, idOrRe
   const ref = raw.match(TEC_REF_RE);
   let rows: TechnologyRow[] = [];
   if (UUID_RE.test(raw) || ref) {
-    const number = ref ? Number(ref[1]) : null;
-    if (number != null && (!Number.isSafeInteger(number) || number > 2147483647)) throw technologyNotFound();
+    const number = ref ? parseItemNumber(ref[1]) : null;
+    if (ref && number == null) throw technologyNotFound();
     rows = await mg.query(
       `SELECT ${TECHNOLOGY_COLUMNS} FROM technologies t
         WHERE t.tenant_id = $1 AND ${ref ? 't.item_number = $2' : 't.id = $2'}${lock ? ' FOR NO KEY UPDATE' : ''}`,
