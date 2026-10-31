@@ -579,7 +579,7 @@ Sie sehen nur die Abschnitte der Module, die Sie lesen dürfen. Technologien und
 
 Ein orangefarbenes Enddatum kennzeichnet einen Vertrag, dessen Verlängerungsentscheidung in Ihr Entscheidungsfenster für Verträge fällt. Ein deaktivierter Vertrag oder ein ausgemustertes oder deaktiviertes Asset bleibt mit ausgegrautem Namen aufgeführt. Ab zwei Zeilen enden die Verträge mit einer Summe je Währung, ohne die deaktivierten Verträge.
 
-**Verknüpfungen hinzufügen und entfernen** (`budget:member`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Das Verknüpfen erfordert zusätzlich Leserechte auf das Zielmodul. **Hinzufügen** fehlt daher in einem Abschnitt, den Sie nicht lesen dürfen. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes. Leser sehen die Tabellen schreibgeschützt.
+**Verknüpfungen hinzufügen und entfernen** (`budget:member`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Das Verknüpfen erfordert zusätzlich Leserechte auf das Zielmodul. **Hinzufügen** fehlt daher in einem Abschnitt, den Sie nicht lesen dürfen. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Eine Meldung bestätigt es und bietet **Rückgängig** an. Das Entfernen einer Verknüpfung löscht nichts anderes. Leser sehen die Tabellen schreibgeschützt.
 
 **Verwandt**: die Anwendungen und Verträge des Lieferanten der Zeile, die noch nicht verknüpft sind, mit dem Grund „gleicher Lieferant“. Klicken Sie auf **Verknüpfen**, um den Vorschlag seinem Abschnitt hinzuzufügen. Die Vorschläge zeigen:
 
@@ -595,7 +595,7 @@ Der Abschnitt fehlt, wenn die Zeile keinen Lieferanten hat oder es nichts vorzus
 
 - **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
 - **Datei anhängen** öffnet die Dateiauswahl. Sie können Dateien auch auf den Abschnitt ziehen.
-- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
+- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Entfernen eines Links zeigt eine Meldung und bietet **Rückgängig** an, womit der Link wieder angelegt wird. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
 
 **Tipp**: Verknüpfen Sie Verträge, um Verlängerungen über mehrere Zeilen hinweg zu verfolgen. Hängen Sie Angebote und Rechnungen an, um alle Dokumente einer Zeile an einem Ort zu haben.
 

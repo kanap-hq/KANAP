@@ -373,6 +373,14 @@ describe.each(['opex', 'capex'] as const)('BudgetLineRelationsTab %s', (nature) 
     expect(onRelationsChange).not.toHaveBeenCalled();
   });
 
+  it('offers to put an unlinked application back', async () => {
+    renderTab(nature, relations());
+    fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.relations.remove(name=SAP S/4HANA)' }));
+    expect(await screen.findByText('workspace.application.relations.feedback.unlinked(name=SAP S/4HANA)')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/budget-lines/line-1/relations/applications', { id: 'app-1' }));
+  });
+
   it('links a suggestion and moves it into its section', async () => {
     const current = relations();
     const itemsApi = BUDGET_NATURE_CONFIG[nature].itemsApi;
@@ -516,6 +524,19 @@ describe.each(['opex', 'capex'] as const)('BudgetLineRelationsTab %s', (nature) 
     expect(await screen.findByText('ops:confirmations.deleteAttachment(name=contract.pdf)')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`${itemsApi}/attachments/a-1/delete`, {}));
+  });
+
+  it('offers to put a removed web link back with the same name and URL', async () => {
+    const { itemsApi } = renderTab(nature, relations());
+    fireEvent.click(await screen.findByRole('button', { name: 'linksAndFiles.removeNamed(name=Vendor portal)' }));
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith(`${itemsApi}/line-1/links/l-1`));
+    expect(await screen.findByText('common:linksAndFiles.removed(name=Vendor portal)')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(`${itemsApi}/line-1/links`, {
+      description: 'Vendor portal',
+      url: 'https://me.example.com',
+    }));
   });
 
   it('attaches a file', async () => {

@@ -7,6 +7,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import ItemContactsSection from '../../../components/contacts/ItemContactsSection';
 import { useKanapDialogs } from '../../../components/design';
 import LinksAndFilesSection, { type LinkDraft, type LinksAndFilesFile, type LinksAndFilesLink } from '../../../components/workspace/LinksAndFilesSection';
+import { removeWebLinkWithUndo, webLinkDraft, webLinkLabel } from '../../../components/workspace/removeWebLink';
 import {
   RelationSections,
   RelationSuggestions,
@@ -27,6 +28,7 @@ import { useRelationLabels } from '../../../components/workspace/relations/label
 import type { LineType } from '../../../constants/lineTypeUsage';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { buildItemPath } from '../../../utils/item-ref';
+import { EnsureApplicationFeedback, useApplicationFeedback } from '../../it/applicationFeedback';
 import { BUDGET_NATURE_CONFIG } from '../natureConfig';
 
 type Suggestion = {
@@ -73,7 +75,7 @@ const SECTION_READ: Record<string, string> = {
  * hover, each saved at once. A section the response leaves null is absent. Add is left out when the
  * caller cannot read that module. Technologies and assets also need a read of the infrastructure.
  */
-export default function BudgetLineRelationsTab({
+function BudgetLineRelationsTabView({
   lineId,
   nature,
   lineEditable = true,
@@ -87,6 +89,7 @@ export default function BudgetLineRelationsTab({
   onRelationsChange: () => void;
 }) {
   const { t, i18n } = useTranslation(['it', 'common', 'portfolio', 'ops']);
+  const feedback = useApplicationFeedback();
   const { hasLevel } = useAuth();
   const dialogs = useKanapDialogs();
   const queryClient = useQueryClient();
@@ -142,17 +145,20 @@ export default function BudgetLineRelationsTab({
 
   const removeLink = async (linkRow: LinksAndFilesLink) => {
     setError(null);
-    const previous = queryClient.getQueryData<WebLinkRow[]>(linksKey);
-    queryClient.setQueryData<WebLinkRow[]>(linksKey, (rows) => (rows ? rows.filter((row) => row.id !== linkRow.id) : rows));
-    try {
-      await api.delete(`${itemsApi}/${lineId}/links/${linkRow.id}`);
-    } catch (e) {
-      if (previous) queryClient.setQueryData(linksKey, previous);
-      failed(e);
-      return;
-    }
-    await queryClient.invalidateQueries({ queryKey: linksKey });
-    onRelationsChange();
+    await removeWebLinkWithUndo<WebLinkRow[]>({
+      queryClient,
+      queryKey: linksKey,
+      without: (rows) => rows.filter((row) => row.id !== linkRow.id),
+      commit: () => api.delete(`${itemsApi}/${lineId}/links/${linkRow.id}`),
+      refresh: async () => {
+        await queryClient.invalidateQueries({ queryKey: linksKey });
+        onRelationsChange();
+      },
+      restore: () => saveLink(null, webLinkDraft(linkRow)),
+      message: t('common:linksAndFiles.removed', { name: webLinkLabel(linkRow) }),
+      feedback,
+      onError: failed,
+    });
   };
 
   const uploadFiles = async (chosen: File[]) => {
@@ -239,6 +245,19 @@ export default function BudgetLineRelationsTab({
     })),
   ];
 
+  const nameOf = (kind: string, targetId: string) => {
+    const section = sections.find((item) => item.kind === kind);
+    const row = (section?.rows as Array<{ id: string }> | null | undefined)?.find((item) => item.id === targetId);
+    return section && row ? section.label(row) : '';
+  };
+  // Unlinking stays immediate. The message offers to put the row back. A removed web link does the same.
+  const handleUnlink = async (kind: string, targetId: string) => {
+    const name = nameOf(kind, targetId);
+    if (await unlink(kind, targetId)) {
+      feedback.undo(t('workspace.application.relations.feedback.unlinked', { name }), async () => { await link(kind, targetId); });
+    }
+  };
+
   return (
     <Stack spacing={3}>
       {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
@@ -249,7 +268,7 @@ export default function BudgetLineRelationsTab({
         canEdit={canEdit}
         searchKeyPrefix="budget-line"
         onLink={(kind, targetId) => { void link(kind, targetId); }}
-        onUnlink={(kind, targetId) => { void unlink(kind, targetId); }}
+        onUnlink={(kind, targetId) => { void handleUnlink(kind, targetId); }}
       />
 
       <RelationSuggestions
@@ -278,5 +297,14 @@ export default function BudgetLineRelationsTab({
         onRemoveFile={(file) => { void removeFile(file); }}
       />
     </Stack>
+  );
+}
+
+/** The tab, with the undo message when the page does not already show one. */
+export default function BudgetLineRelationsTab(props: React.ComponentProps<typeof BudgetLineRelationsTabView>) {
+  return (
+    <EnsureApplicationFeedback>
+      <BudgetLineRelationsTabView {...props} />
+    </EnsureApplicationFeedback>
   );
 }

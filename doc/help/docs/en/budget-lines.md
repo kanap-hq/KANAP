@@ -579,7 +579,7 @@ You only see the sections of the modules you can read. Technologies and assets n
 
 An end date in orange is a contract whose renewal decision is due within your contract decision window. A disabled contract, or a retired or disabled asset, stays listed with its name greyed out. From two rows on, the contracts end with one total per currency, without the disabled ones.
 
-**Adding and removing links** (`budget:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. Linking also needs a read of the target module, so **Add** is absent from a section you cannot read. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Readers see the tables read-only.
+**Adding and removing links** (`budget:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. Linking also needs a read of the target module, so **Add** is absent from a section you cannot read. To remove a link, hover the row and click the cross at its end. A message confirms it and offers **Undo**. Removing a link deletes nothing else. Readers see the tables read-only.
 
 **Related**: applications and contracts of the line's supplier that are not linked yet, with the reason "same supplier". Click **Link** to add the suggestion to its section. The suggestions show:
 
@@ -595,7 +595,7 @@ The section is absent when the line has no supplier or there is nothing to sugge
 
 - **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
 - **Attach file** opens the file chooser. You can also drop files on the section.
-- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
+- To remove a link or a file, hover the row and click the cross. Removing a link shows a message and offers **Undo**, which creates the link again. Deleting a file asks for confirmation first.
 
 **Tip**: Link contracts to track renewals across several lines. Attach quotes and invoices to keep all the documents of a line in one place.
 
