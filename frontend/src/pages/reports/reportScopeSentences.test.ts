@@ -39,8 +39,30 @@ describe('report sentences on All', () => {
     expect(t('reports.topOpex.subtitle', { type: 'All', context: 'all', metric: 'Budget' })).toBe('Largest budget lines by selected year (Budget)');
     expect(t('reports.costPerFte.subtitle', { type: 'All', context: 'all', group: 'cost center' })).toBe('Yearly cost of one FTE or average daily rate, by cost center');
     expect(t('reports.topOpex.chartTitle', { type: 'All', context: 'all', count: 10, metric: 'Budget', year: 2025 })).toBe('Top 10 lines · Budget 2025');
+    expect(t('reports.topOpex.pieShareSubtitle', { count: 10, metric: 'Budget' })).toBe('Share of the top 10 (Budget)');
+    expect(t('reports.topOpex.shareSubtitle', { metric: 'Budget' })).toBe('Share of annual total (Budget)');
     expect(t('reports.topOpex.subtitle', { type: 'OPEX', context: 'opex', metric: 'Budget' })).toBe('Largest OPEX lines by selected year (Budget)');
     expect(t('reports.budgetColumnsCompare.selectionsSubtitle', { type: 'OPEX', context: 'opex', count: 1 })).toBe('OPEX: 1 selection');
     expect(t('reports.budgetColumnsCompare.selectionsSubtitle', { type: 'All', context: 'all', count: 2 })).toBe('OPEX and CAPEX: 2 selections');
+  });
+
+  it('names a pie share as a share of the top lines, in the four languages', () => {
+    const pie = {
+      en: 'Share of the top {{count}} ({{metric}})',
+      fr: 'Part du top {{count}} ({{metric}})',
+      de: 'Anteil am Top {{count}} ({{metric}})',
+      es: 'Participación en el top {{count}} ({{metric}})',
+    };
+    const bars = {
+      en: 'Share of annual total ({{metric}})',
+      fr: 'Part du total annuel ({{metric}})',
+      de: 'Anteil an der Jahressumme ({{metric}})',
+      es: 'Participación en el total anual ({{metric}})',
+    };
+    for (const lang of Object.keys(locales)) {
+      const top = locales[lang].reports.topOpex as Record<string, string>;
+      expect(top.pieShareSubtitle, lang).toBe(pie[lang as keyof typeof pie]);
+      expect(top.shareSubtitle, lang).toBe(bars[lang as keyof typeof bars]);
+    }
   });
 });
