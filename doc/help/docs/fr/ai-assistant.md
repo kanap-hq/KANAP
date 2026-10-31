@@ -241,12 +241,11 @@ Rien de ce qui modifie les données de KANAP n'est appliqué en silence. L'aper�
 
 ## Indicateurs d'utilisation
 
-Au-dessus du composeur, deux petits indicateurs vous aident à garder à l'esprit les coûts et les limites :
+Au-dessus du composeur, un petit indicateur montre ce qu'il reste du volume mensuel inclus :
 
 - **Utilisation intégrée** : lorsque Plaid s'exécute sur le modèle inclus KANAP plutôt que sur l'un des modèles propres à votre organisation, cet indicateur montre combien de messages restent pour le mois en cours ainsi que la date de réinitialisation du quota. Un administrateur a confirmé ce modèle au préalable (voir [Paramètres Plaid](ai-settings.md#confirmer-le-modele-inclus-kanap)). Lorsque la limite est atteinte, le composeur est désactivé et un texte d'aide invite les administrateurs à basculer vers un modèle qui leur est propre ; voir [Modèles IA](ai-models.md).
-- **Utilisation des tokens** : une fine barre avec des compteurs de tokens en entrée/sortie pour la conversation en cours, ainsi que la taille de la dernière requête. Les longues conversations deviennent plus coûteuses avec le temps ; la barre rend ce coût visible afin que vous puissiez décider quand démarrer un nouveau fil.
 
-La barre d'utilisation des tokens n'apparaît qu'une fois que la conversation compte au moins un échange.
+Les personnes qui peuvent ouvrir **Administration > Plaid** voient aussi une fine barre sous le composeur, dès que la conversation compte au moins un échange. **Volume traité** additionne les tokens en entrée et en sortie de chaque message de cette conversation. Chaque question renvoie les messages précédents, si bien que le volume croît plus vite que le nombre de tours. **Contexte de la dernière requête** est l'entrée de la dernière question. La barre montre aussi les tokens en entrée et les tokens en sortie de la conversation.
 
 ## Conseils
 
