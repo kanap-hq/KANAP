@@ -38,6 +38,11 @@ export class CreateAiModelConfigDto {
   price_output_eur_per_mtok?: number | null;
 
   @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsNumber()
+  @Min(0)
+  price_cache_read_eur_per_mtok?: number | null;
+
+  @ValidateIf((_, value) => value !== undefined && value !== null)
   @IsInt()
   @Min(1)
   llm_timeout_ms?: number | null;
@@ -86,6 +91,11 @@ export class UpdateAiModelConfigDto {
   @IsNumber()
   @Min(0)
   price_output_eur_per_mtok?: number | null;
+
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsNumber()
+  @Min(0)
+  price_cache_read_eur_per_mtok?: number | null;
 
   @ValidateIf((_, value) => value !== undefined && value !== null)
   @IsInt()

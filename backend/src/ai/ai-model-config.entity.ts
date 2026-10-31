@@ -48,6 +48,11 @@ export class AiModelConfig {
   @Column('numeric', { precision: 12, scale: 4, nullable: true })
   price_output_eur_per_mtok!: string | null;
 
+  // Price of a prompt token read from the provider's cache; null falls back to the input price
+  // times the provider's cache read factor (ai-llm-cost.util.ts).
+  @Column('numeric', { precision: 12, scale: 4, nullable: true })
+  price_cache_read_eur_per_mtok!: string | null;
+
   // Max LLM response time for this model; null falls back to the per-stage env defaults.
   @Column('integer', { nullable: true })
   llm_timeout_ms!: number | null;

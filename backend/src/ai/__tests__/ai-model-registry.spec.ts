@@ -44,6 +44,7 @@ function createConfig(overrides?: Partial<AiModelConfig>): AiModelConfig {
     supports_vision: true,
     price_input_eur_per_mtok: null,
     price_output_eur_per_mtok: null,
+    price_cache_read_eur_per_mtok: null,
     llm_timeout_ms: null,
     status: 'active',
     is_default: false,
@@ -230,6 +231,7 @@ async function testResolverExplicitChatAssignment() {
         api_key_encrypted: 'enc:sk-secret',
         price_input_eur_per_mtok: '1.2500',
         price_output_eur_per_mtok: '3.0000',
+        price_cache_read_eur_per_mtok: '0.1250',
         llm_timeout_ms: 60000,
         endpoint_url: 'https://api.example.com/v1',
       }),
@@ -251,6 +253,7 @@ async function testResolverExplicitChatAssignment() {
   // Numeric columns come back as strings from TypeORM; resolver parses them.
   assert.equal(resolved.priceInputEurPerMtok, 1.25);
   assert.equal(resolved.priceOutputEurPerMtok, 3);
+  assert.equal(resolved.priceCacheReadEurPerMtok, 0.125);
   assert.equal(resolved.timeoutMs, 60000);
   assert.equal(resolved.supportsVision, true);
   assert.equal(warnings.length, 0);
@@ -314,6 +317,7 @@ async function testResolverBuiltinFallbackInMultiTenant() {
   // Builtin model is operator-billed: zero tenant-facing prices, not null.
   assert.equal(resolved.priceInputEurPerMtok, 0);
   assert.equal(resolved.priceOutputEurPerMtok, 0);
+  assert.equal(resolved.priceCacheReadEurPerMtok, 0);
   assert.equal(resolved.timeoutMs, null);
   assert.deepEqual(resolved.builtinRateLimits, { tenantPerMinute: 30, userPerHour: 60 });
 
@@ -413,6 +417,7 @@ async function testCreateEncryptsKeyAndNormalizesPrices() {
     api_key: 'sk-secret',
     price_input_eur_per_mtok: 1.25,
     price_output_eur_per_mtok: 0,
+    price_cache_read_eur_per_mtok: 0.3,
   });
 
   assert.equal(view.name, 'Team GPT');
@@ -422,12 +427,21 @@ async function testCreateEncryptsKeyAndNormalizesPrices() {
   // View exposes parsed numbers (0 = local/free model, kept distinct from null = unset).
   assert.equal(view.price_input_eur_per_mtok, 1.25);
   assert.equal(view.price_output_eur_per_mtok, 0);
+  assert.equal(view.price_cache_read_eur_per_mtok, 0.3);
 
   const stored = state.configs[0];
   assert.equal(stored.api_key_encrypted, 'enc:sk-secret');
   // Prices persisted as 4-decimal strings (numeric(12,4) convention).
   assert.equal(stored.price_input_eur_per_mtok, '1.2500');
   assert.equal(stored.price_output_eur_per_mtok, '0.0000');
+  assert.equal(stored.price_cache_read_eur_per_mtok, '0.3000');
+
+  // Left out on update: kept. Null: emptied.
+  const kept = await service.update('tenant-1', stored.id, { price_input_eur_per_mtok: 2 });
+  assert.equal(kept.price_cache_read_eur_per_mtok, 0.3);
+  const emptied = await service.update('tenant-1', stored.id, { price_cache_read_eur_per_mtok: null });
+  assert.equal(emptied.price_cache_read_eur_per_mtok, null);
+  assert.equal(state.configs[0].price_cache_read_eur_per_mtok, null);
 }
 
 async function testCreateRejectsBadProviderAndEmptyFields() {
@@ -448,6 +462,10 @@ async function testCreateRejectsBadProviderAndEmptyFields() {
   await assert.rejects(
     () => service.create('tenant-1', { name: 'X', provider: 'openai', model: 'm', price_input_eur_per_mtok: -1 }),
     /price_input_eur_per_mtok must be a non-negative number/,
+  );
+  await assert.rejects(
+    () => service.create('tenant-1', { name: 'X', provider: 'openai', model: 'm', price_cache_read_eur_per_mtok: -0.1 }),
+    /price_cache_read_eur_per_mtok must be a non-negative number/,
   );
 }
 

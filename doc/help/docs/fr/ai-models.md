@@ -78,17 +78,18 @@ Sur une installation on-premise, cette ligne n'apparaît pas du tout.
 
 - **Comprend les images** : désactivez-le pour un modèle texte seul. L'explication se trouve dans l'infobulle d'information à côté de **Capacités** : les captures d'écran jointes aux tickets sont alors *ignorées* au lieu d'être envoyées, et c'est bien ce que vous voulez : un modèle texte seul qui reçoit une image provoque un appel en échec au lieu de faire un travail utile. Laissez-le activé pour un modèle capable de vision, et vos agents de tri utiliseront les captures d'écran des tickets comme preuves.
 
-**Coût d'entrée** et **Coût de sortie** : l'infobulle d'information à côté de chaque libellé explique *Prix par million de tokens, tel qu'affiché sur la page tarifs de votre fournisseur* :
+**Coût d'entrée**, **Coût de sortie** et **Coût de lecture en cache** : prix par million de tokens, en euros. L'infobulle d'information à côté de chaque libellé indique où les trouver.
 
-- Recopiez les deux nombres directement depuis la page tarifs de votre fournisseur. Ils sont généralement différents, et KANAP les applique séparément.
-- **Laissez les deux champs vides ou à 0 pour un modèle local ou auto-hébergé.** Un modèle sans prix ne coûte rien, ce qui correspond à la réalité d'un modèle qui tourne sur votre propre matériel. Choisir un fournisseur Ollama pré-remplit les deux prix à 0 pour exactement cette raison.
-- Les coûts des agents sont valorisés au fil du travail puis conservés : modifier un prix change donc ce que coûtent les agents **à partir de maintenant** et laisse les chiffres passés inchangés. Le coût de Plaid est calculé autrement (voir [Utilisation & coûts](ai-usage.md)), et un changement de prix, lui, déplace bien ses chiffres historiques.
+- Recopiez les prix d'entrée et de sortie directement depuis la page tarifs de votre fournisseur. Ils sont généralement différents, et KANAP les applique séparément.
+- **Coût de lecture en cache** est le prix d'un token que le fournisseur relit depuis son cache de prompts. Les pages tarifs l'appellent souvent *cached input*. Ce champ est facultatif. S'il reste vide, un token en cache coûte un dixième du prix d'entrée chez Anthropic et le plein prix d'entrée chez les autres fournisseurs (voir [Utilisation & coûts](ai-usage.md)).
+- **Laissez les prix vides ou à 0 pour un modèle local ou auto-hébergé.** Un modèle sans prix ne coûte rien, ce qui correspond à la réalité d'un modèle qui tourne sur votre propre matériel. Choisir un fournisseur Ollama met à 0 les prix encore vides pour cette raison, et garde ceux déjà saisis.
+- KANAP valorise chaque réponse de Plaid et chaque appel d'un agent au moment où il a lieu, puis conserve le coût. Modifier un prix change donc les coûts **à partir de maintenant** et laisse les chiffres passés inchangés.
 
 **Délai d'attente** : combien de temps attendre ce modèle, en secondes, avant d'abandonner. L'explication se trouve dans l'infobulle d'information à côté du libellé : laissez le champ vide pour utiliser la limite standard. Les modèles locaux ont souvent besoin de plus de temps, d'où un réglage par modèle plutôt que par installation. Pour faire de ce modèle le modèle par défaut de l'organisation, marquez-le d'une étoile dans la colonne **Par défaut** de la liste après l'enregistrement. Ce choix n'est pas dans l'éditeur.
 
 **Tester la connexion** apparaît une fois le modèle enregistré. Ce bouton effectue un tout petit appel avec les paramètres tels qu'ils sont enregistrés et renvoie soit *Connexion réussie* avec le temps d'aller-retour, soit le message d'erreur du fournisseur lui-même. Il prouve que le fournisseur, l'identifiant du modèle, l'adresse et la clé fonctionnent ensemble. Il ne vérifie ni vos prix, ni le commutateur des images, ni le réglage du temps de réponse. Lancez-le après avoir ajouté un modèle et après chaque rotation de clé : une clé erronée reste sinon invisible jusqu'à ce qu'un vrai travail échoue, et elle échoue en silence (une réponse de chat en erreur, ou un agent qui saute une étape et poursuit).
 
-**Créer** / **Enregistrer** restent désactivés tant que le nom et l'identifiant du modèle ne sont pas renseignés et que les prix et le temps de réponse ne sont pas des nombres valides. Les noms doivent être uniques au sein de votre organisation.
+**Créer** / **Enregistrer** restent désactivés tant que le nom et l'identifiant du modèle ne sont pas renseignés et que les trois prix et le temps de réponse ne sont pas des nombres valides. Un prix ne peut pas être négatif. Les noms doivent être uniques au sein de votre organisation.
 
 ---
 

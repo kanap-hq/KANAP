@@ -8,7 +8,7 @@ import {
   CompiledGuidance,
   RUNTIME_SAFETY_FLOOR_PLANNER,
 } from './ai-agent-prompt-compiler.service';
-import { AgentLlmRuntime, AiAgentLlmClient } from './ai-agent-llm-client';
+import { AgentLlmRuntime, AiAgentLlmClient, agentCallCostEur, aggregateAgentUsage } from './ai-agent-llm-client';
 import { TicketImageEvidence } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
 import { estimateJsonTokens } from './json-token-estimate';
@@ -177,18 +177,6 @@ function normalizeParsedEvidence(ref: TicketAttachmentRef, parsed: ParsedVisionE
       ? Math.max(0, Math.min(1, parsed.confidence))
       : null,
     warnings: parsed.warnings ?? [],
-  };
-}
-
-function aggregateUsage(
-  left: TicketEvidenceExtractionResult['usage'],
-  right: TicketEvidenceExtractionResult['usage'],
-): TicketEvidenceExtractionResult['usage'] {
-  if (!left) return right;
-  if (!right) return left;
-  return {
-    input_tokens: left.input_tokens + right.input_tokens,
-    output_tokens: left.output_tokens + right.output_tokens,
   };
 }
 
@@ -428,12 +416,12 @@ export class AiTicketEvidenceExtractionService {
           continue;
         }
         model = result.runtime ? `${result.runtime.providerId}:${result.runtime.model}` : model;
-        usage = aggregateUsage(usage, result.usage);
+        usage = aggregateAgentUsage(usage, result.usage);
         latencyMs += result.latencyMs;
         const callInputTokens = result.usage ? result.usage.input_tokens : estimateJsonTokens(userPayload);
         const callOutputTokens = result.usage ? result.usage.output_tokens : estimateJsonTokens(result.text ?? '');
         estimatedTokens += callInputTokens + callOutputTokens;
-        estimatedCostEur += llmCostEur(callInputTokens, callOutputTokens, result.runtime);
+        estimatedCostEur += agentCallCostEur(callInputTokens, callOutputTokens, result.runtime, result.usage);
         if (!result.ok) {
           callErrored = true;
           const message = result.metadata.failure?.message ?? 'invalid structured JSON';

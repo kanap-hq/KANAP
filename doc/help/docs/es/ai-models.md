@@ -78,17 +78,18 @@ En una instalación local esta fila no aparece en absoluto.
 
 - **Comprende imágenes**: desactívelo para un modelo de solo texto. La explicación está en el tooltip de información junto a **Capacidades**: las capturas de pantalla adjuntas a los tickets se *omiten* en lugar de enviarse, que es justo lo que le interesa: un modelo de solo texto que recibe una imagen hace fallar la llamada en vez de trabajo útil. Déjelo activado para un modelo con capacidad de visión y sus agentes de triaje usarán las capturas de los tickets como evidencia.
 
-**Coste de entrada** y **Coste de salida**: el tooltip de información junto a cada etiqueta explica *Precio por millón de tokens, tal como figura en la página de precios de su proveedor*:
+**Coste de entrada**, **Coste de salida** y **Coste de lectura en caché**: precios por millón de tokens, en euros. El tooltip de información junto a cada etiqueta indica dónde encontrarlos.
 
-- Copie los dos números directamente de la página de precios de su proveedor. Suelen ser distintos, y KANAP los valora por separado.
-- **Déjelos vacíos o póngalos a 0 para un modelo local o autoalojado.** Un modelo sin precios no cuesta nada, que es la verdad para un modelo que se ejecuta en su propio hardware. Elegir un proveedor Ollama rellena ambos precios con 0 exactamente por ese motivo.
-- El coste de los agentes se calcula a medida que se hace el trabajo y luego se conserva, así que editar un precio cambia lo que cuestan los agentes **a partir de ahora** y deja intactas las cifras pasadas. El coste de Plaid se calcula de otra manera (consulte [Uso y costes](ai-usage.md)) y ahí un cambio de precio sí mueve las cifras históricas.
+- Copie los precios de entrada y de salida directamente de la página de precios de su proveedor. Suelen ser distintos, y KANAP los valora por separado.
+- **Coste de lectura en caché** es el precio de un token que el proveedor vuelve a leer de su caché de prompts. Las páginas de precios suelen llamarlo *cached input*. Es opcional. Si queda vacío, un token en caché cuesta una décima parte del precio de entrada con Anthropic y el precio de entrada completo con los demás proveedores (consulte [Uso y costes](ai-usage.md)).
+- **Deje los precios vacíos o póngalos a 0 para un modelo local o autoalojado.** Un modelo sin precios no cuesta nada, que es la verdad para un modelo que se ejecuta en su propio hardware. Elegir un proveedor Ollama pone a 0 los precios aún vacíos por ese motivo, y conserva los ya introducidos.
+- KANAP valora cada respuesta de Plaid y cada llamada de un agente en el momento en que se produce, y luego conserva el coste. Editar un precio cambia los costes **a partir de ahora** y deja intactas las cifras pasadas.
 
 **Tiempo de espera**: cuántos segundos esperar a este modelo antes de desistir. La explicación está en el tooltip de información junto a la etiqueta: déjelo vacío para usar el límite estándar. Los modelos locales suelen necesitar más tiempo, y por eso el ajuste vive en cada modelo y no en la instalación. Para convertir este modelo en el predeterminado de la organización, márquelo con la estrella en la columna **Predeterminado** de la lista después de guardar: esa elección no está en el editor.
 
 **Probar conexión** aparece una vez guardado el modelo. Hace una llamada mínima con la configuración tal como está almacenada e informa de *Conexión correcta* con el tiempo de ida y vuelta, o bien del mensaje de error del propio proveedor. Demuestra que el proveedor, el identificador del modelo, la dirección y la clave funcionan juntos; no comprueba sus precios, ni el conmutador de imágenes, ni el ajuste de tiempo de respuesta. Ejecútelo después de añadir un modelo y después de rotar una clave: de lo contrario, una clave incorrecta es invisible hasta que falla trabajo real, y falla en silencio (una respuesta de chat que da error, o un agente que se salta un paso y sigue adelante).
 
-**Crear** / **Guardar** permanecen deshabilitados hasta que el nombre y el identificador del modelo estén rellenos y los precios y el tiempo de respuesta sean números válidos. Los nombres deben ser únicos dentro de su organización.
+**Crear** / **Guardar** permanecen deshabilitados hasta que el nombre y el identificador del modelo estén rellenos y los tres precios y el tiempo de respuesta sean números válidos. Un precio no puede ser negativo. Los nombres deben ser únicos dentro de su organización.
 
 ---
 

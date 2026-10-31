@@ -25,6 +25,8 @@ export type ResolvedModel = {
   supportsVision: boolean;
   priceInputEurPerMtok: number | null;
   priceOutputEurPerMtok: number | null;
+  // Price of a token read from the provider's cache; null: the input price times the provider's factor.
+  priceCacheReadEurPerMtok: number | null;
   // Per-model LLM timeout; null falls back to the caller's per-stage env default.
   timeoutMs: number | null;
   // The included model's rate limits, from the same platform record as the runtime above;
@@ -207,6 +209,7 @@ export class AiModelResolverService {
         supportsVision: true,
         priceInputEurPerMtok: 0,
         priceOutputEurPerMtok: 0,
+        priceCacheReadEurPerMtok: 0,
         timeoutMs: null,
         builtinRateLimits: snapshot.rateLimits,
       };
@@ -334,6 +337,7 @@ export class AiModelResolverService {
       supportsVision: config.supports_vision !== false,
       priceInputEurPerMtok: parsePriceEurPerMtok(config.price_input_eur_per_mtok),
       priceOutputEurPerMtok: parsePriceEurPerMtok(config.price_output_eur_per_mtok),
+      priceCacheReadEurPerMtok: parsePriceEurPerMtok(config.price_cache_read_eur_per_mtok ?? null),
       timeoutMs: config.llm_timeout_ms ?? null,
       builtinRateLimits: null,
     };

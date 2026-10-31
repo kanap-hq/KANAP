@@ -965,7 +965,12 @@ export class AiAgentControlService {
     stageKey: RunUsageStageKey,
     runId: string,
     result: {
-      usage?: { input_tokens?: number | null; output_tokens?: number | null } | null;
+      usage?: {
+        input_tokens?: number | null;
+        output_tokens?: number | null;
+        cache_read_input_tokens?: number | null;
+        cache_write_input_tokens?: number | null;
+      } | null;
       estimated_tokens?: number | null;
       estimated_cost_eur?: number | null;
       model?: string | null;
@@ -984,6 +989,13 @@ export class AiAgentControlService {
       [stageKey]: {
         input_tokens: result?.usage?.input_tokens ?? null,
         output_tokens: result?.usage?.output_tokens ?? null,
+        // The cache fields only when the provider reported them, as on a chat message.
+        ...(result?.usage?.cache_read_input_tokens != null
+          ? { cache_read_input_tokens: result.usage.cache_read_input_tokens }
+          : {}),
+        ...(result?.usage?.cache_write_input_tokens != null
+          ? { cache_write_input_tokens: result.usage.cache_write_input_tokens }
+          : {}),
         estimated_tokens: result?.estimated_tokens,
       },
     };
