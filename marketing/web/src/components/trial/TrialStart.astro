@@ -30,12 +30,12 @@ const [aiConsentBefore, aiConsentAfter = ''] = c.form.aiConsentText.split('{link
       <form class="mk-trial-form" data-trial-form>
         <div class="mk-tf__field">
           <label for="tf-first-name">{c.form.firstNameLabel}</label>
-          <input id="tf-first-name" name="first_name" type="text" required maxlength="100" autocomplete="given-name" />
+          <input id="tf-first-name" name="first_name" type="text" required maxlength="100" pattern=" *[\p{L}\p{M}][\p{L}\p{M}'’\-]*\.?( [\p{L}\p{M}'’\-]+\.?)* *" autocomplete="given-name" />
         </div>
 
         <div class="mk-tf__field">
           <label for="tf-last-name">{c.form.lastNameLabel}</label>
-          <input id="tf-last-name" name="last_name" type="text" required maxlength="100" autocomplete="family-name" />
+          <input id="tf-last-name" name="last_name" type="text" required maxlength="100" pattern=" *[\p{L}\p{M}][\p{L}\p{M}'’\-]*\.?( [\p{L}\p{M}'’\-]+\.?)* *" autocomplete="family-name" />
         </div>
 
         <div class="mk-tf__field">

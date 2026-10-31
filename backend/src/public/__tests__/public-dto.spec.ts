@@ -3,7 +3,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { BadRequestException } from '@nestjs/common';
 import { Features } from '../../config/features';
-import { AI_SIGNUP_CONSENT_VERSIONS, CURRENT_AI_SIGNUP_CONSENT_VERSION } from '../ai-signup-consent';
+import { AI_SIGNUP_CONSENT_VERSIONS, CURRENT_AI_SIGNUP_CONSENT_VERSION, aiSignupConsentLocation, consentLocationMatches } from '../ai-signup-consent';
 import { PublicController, RequestSupportInvoiceDto, SendContactDto, StartTrialDto } from '../public.controller';
 
 async function validatePayload<T extends object>(cls: new () => T, payload: Record<string, unknown>) {
@@ -63,9 +63,32 @@ async function testStartTrialNamesAndConsent() {
   );
 }
 
-// The consent versions: the current one is listed.
+// The names take the form of a person name only: the first name greets the person in the
+// activation e-mail, sent to any address.
+async function testStartTrialNameForm() {
+  const base = { org: 'Acme IT', slug: 'acme-it', email: 'admin@example.com', country_iso: 'FR', captchaToken: 'captcha-token' };
+  for (const name of ['Jean-Luc', "O'Brien", 'Zoë', 'María José', 'Ngozi', 'D’Angelo', 'J. R.', '  Ada ']) {
+    const errors = await validatePayload(StartTrialDto, { ...base, first_name: name, last_name: name });
+    assert.deepEqual(errors.map((error) => error.property), [], `accepted: ${JSON.stringify(name)}`);
+  }
+  for (const name of ['www.example.com', 'http://x', 'a\nb', 'a\tb', 'Jean  Luc', '123', 'Ada1', 'ada@example', 'a/b', 'a:b']) {
+    const errors = await validatePayload(StartTrialDto, { ...base, first_name: name, last_name: name });
+    assert.deepEqual(errors.map((error) => error.property).sort(), ['first_name', 'last_name'], `refused: ${JSON.stringify(name)}`);
+  }
+}
+
+// The consent versions: the current one is listed, with the place its text names.
 function testConsentVersions() {
-  assert.ok((AI_SIGNUP_CONSENT_VERSIONS as readonly string[]).includes(CURRENT_AI_SIGNUP_CONSENT_VERSION));
+  assert.ok(Object.keys(AI_SIGNUP_CONSENT_VERSIONS).includes(CURRENT_AI_SIGNUP_CONSENT_VERSION));
+  assert.equal(aiSignupConsentLocation(CURRENT_AI_SIGNUP_CONSENT_VERSION), 'US');
+  assert.equal(aiSignupConsentLocation('1999-01-01'), null);
+  for (const place of ['US', 'usa', 'United States', 'United States of America', 'États-Unis', "États-Unis d'Amérique", ' U.S.A. ']) {
+    assert.equal(consentLocationMatches(CURRENT_AI_SIGNUP_CONSENT_VERSION, place), true, place);
+  }
+  for (const place of ['Germany', 'EU', '', null, 'US-East']) {
+    assert.equal(consentLocationMatches(CURRENT_AI_SIGNUP_CONSENT_VERSION, place), false, String(place));
+  }
+  assert.equal(consentLocationMatches('1999-01-01', 'US'), false);
 }
 
 // A ticked box with an unknown or missing version: 400 INVALID_CONSENT_VERSION, before the
@@ -163,6 +186,7 @@ async function main() {
   await testStartTrialAcceptsCurrentMarketingPayload();
   await testStartTrialAcceptsLegacyMarketingAliases();
   await testStartTrialNamesAndConsent();
+  await testStartTrialNameForm();
   testConsentVersions();
   await testStartTrialRefusesAnUnknownConsentVersion();
   await testContactAcceptsCaptchaAliases();

@@ -11,6 +11,7 @@ import { AiSecretCipherService } from './ai-secret-cipher.service';
 import { normalizeGlpiPathname } from './glpi/glpi-url';
 import { BuiltinProviderIdentity, PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
+import { aiSignupConsentLocation, consentLocationMatches } from '../public/ai-signup-consent';
 
 export type AiSettingsView = {
   id: string;
@@ -504,7 +505,8 @@ export class AiSettingsService {
    * Trial activation with the consent box ticked at sign-up: the workspace opens with Plaid on,
    * as if its administrator had turned it on and confirmed the included model (the home card
    * "Turn on Plaid"). The consent is kept as its proof (signup_consent_*). Without an included
-   * model on the platform (never on-premise), the consent is kept and the assistant stays off.
+   * model on the platform (never on-premise), or when the included model is processed elsewhere
+   * than the place the ticked text names, the consent is kept and the assistant stays off.
    * Runs in the activation transaction, with the new tenant set on `manager`.
    */
   async applySignupConsent(manager: EntityManager, input: AiSignupConsentInput): Promise<AiSettings> {
@@ -518,11 +520,17 @@ export class AiSettingsService {
     settings.signup_consent_ip = input.ip;
 
     const identity = await this.currentBuiltinIdentity();
-    if (identity) {
+    if (identity && consentLocationMatches(input.version, identity.location)) {
       settings.chat_enabled = true;
       settings.builtin_accepted_key = identity.key;
       settings.builtin_accepted_at = input.at;
       settings.builtin_accepted_by = input.ownerId;
+    } else if (identity) {
+      // The text the person ticked names another place than the included model's.
+      this.logger.warn(
+        `Trial sign-up consent ${input.version} names ${aiSignupConsentLocation(input.version) ?? 'no known place'}, `
+        + `the included model is processed in ${identity.location ?? 'an unknown place'}; the assistant stays off.`,
+      );
     } else {
       this.logger.warn(
         `Trial activation of tenant ${input.tenantId}: consent to the included model kept, `
@@ -550,13 +558,15 @@ export class AiSettingsService {
     return saved;
   }
 
-  /** The settings view, with the consent given at sign-up: what the audit of this write keeps. */
+  /**
+   * The settings view, with the version and moment of the consent given at sign-up: what the
+   * audit of this write keeps. The client address stays in the `ai_settings` row only.
+   */
   private async auditView(settings: AiSettings, manager: EntityManager) {
     return {
       ...(await this.toView(settings, { manager })),
       signup_consent_version: settings.signup_consent_version ?? null,
       signup_consent_at: settings.signup_consent_at ? new Date(settings.signup_consent_at).toISOString() : null,
-      signup_consent_ip: settings.signup_consent_ip ?? null,
     };
   }
 

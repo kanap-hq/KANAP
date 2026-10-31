@@ -21,7 +21,8 @@ import { TrialSignup } from '../trial-signup.entity';
 // are doubles.
 // - box ticked: the sign-up keeps the consent (version, moment, request address); the
 //   activation opens the workspace with Plaid on and the included model confirmed by the owner;
-// - box ticked, no included model on the platform: consent kept, Plaid off;
+// - box ticked, no included model on the platform, or one processed elsewhere than the place
+//   the ticked text names: consent kept, Plaid off;
 // - box not ticked, or an old form without the new fields: no `ai_settings` row, as before;
 // - unknown version: 400 INVALID_CONSENT_VERSION before the CAPTCHA, nothing written or sent;
 // - a new sign-up of the same slug without the box clears the earlier consent.
@@ -186,6 +187,8 @@ async function testConsentTurnsPlaidOn() {
     assert.equal(audits[0].source, 'system');
     assert.equal(audits[0].after_json.chat_enabled, true);
     assert.equal(audits[0].after_json.signup_consent_version, CURRENT_AI_SIGNUP_CONSENT_VERSION);
+    assert.ok(audits[0].after_json.signup_consent_at, 'the audit keeps the moment of the consent');
+    assert.equal('signup_consent_ip' in audits[0].after_json, false, 'the client address stays out of the audit');
   } finally {
     await cleanup([slug]);
   }
@@ -208,6 +211,31 @@ async function testConsentWithoutIncludedModel() {
     assert.equal(settings.signup_consent_ip, CLIENT_IP);
     assert.equal(h.warnings.length, 1);
     assert.match(h.warnings[0], new RegExp(tenantId));
+  } finally {
+    await cleanup([slug]);
+  }
+}
+
+// Box ticked, the included model processed elsewhere than the place the ticked text names
+// (the 2026-11-01 text says the United States): consent kept, Plaid off, one warning.
+async function testConsentForAnotherPlace() {
+  const svc = buildServices();
+  const h = harness(svc);
+  const runtime = builtinRuntime();
+  h.platform.runtime = { ...runtime, identity: { name: 'Anthropic', location: 'Germany', key: 'anthropic||Anthropic|Germany' } };
+  const slug = newSlug();
+  try {
+    const token = await signUp(h, signupBody(slug, { ai_consent: true, ai_consent_version: CURRENT_AI_SIGNUP_CONSENT_VERSION }));
+    const { tenantId } = await activate(h, token, slug);
+    const [settings] = await settingsRows(tenantId);
+    assert.equal(settings.chat_enabled, false);
+    assert.equal(settings.builtin_accepted_key, null);
+    assert.equal(settings.builtin_accepted_by, null);
+    assert.equal(settings.signup_consent_version, CURRENT_AI_SIGNUP_CONSENT_VERSION);
+    assert.equal(settings.signup_consent_ip, CLIENT_IP);
+    assert.equal(h.warnings.length, 1);
+    assert.match(h.warnings[0], /2026-11-01/);
+    assert.match(h.warnings[0], /Germany/);
   } finally {
     await cleanup([slug]);
   }
@@ -302,6 +330,7 @@ async function testSignUpAgainClearsConsent() {
 runSpecs('trial-signup-consent.integration.spec', [
   testConsentTurnsPlaidOn,
   testConsentWithoutIncludedModel,
+  testConsentForAnotherPlace,
   testNoConsent,
   testUnknownVersion,
   testOldForm,

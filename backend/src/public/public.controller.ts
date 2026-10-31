@@ -65,6 +65,14 @@ const optionalText = ({ value }: { value: unknown }) => {
 };
 
 /**
+ * A person name (first or last name of the trial sign-up): words of letters of any language,
+ * combining marks, straight or typographic apostrophes and hyphens, each word may end with a
+ * dot, words separated by single spaces. No digits, no `/`, `:` or `@`, no line break or tab:
+ * the first name greets the person in the activation e-mail, sent to any address.
+ */
+export const PERSON_NAME = /^[\p{L}\p{M}][\p{L}\p{M}'’-]*\.?(?: [\p{L}\p{M}'’-]+\.?)*$/u;
+
+/**
  * The trial sign-up form. The names and the consent are optional: the public website is
  * deployed apart from the API, and a form without them keeps working.
  */
@@ -102,12 +110,14 @@ export class StartTrialDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)
+  @Matches(PERSON_NAME, { message: 'first_name must be a person name' })
   first_name?: string;
 
   @Transform(optionalText)
   @IsOptional()
   @IsString()
   @MaxLength(100)
+  @Matches(PERSON_NAME, { message: 'last_name must be a person name' })
   last_name?: string;
 
   /** The consent box to the included model of Plaid; true needs a known `ai_consent_version`. */
