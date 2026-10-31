@@ -23,19 +23,19 @@ Three cards across the top:
 
 Costs are shown in euros to the cent, and to four decimals when the amount is under a cent. Early on, or with a cheap model, a real total genuinely can be `0.0034 €`.
 
-**Agent costs are measured.** Every model call an agent makes records its input and output tokens, priced there and then at the rates of the model that agent was using, and the result is kept. That is why the [AI models](ai-models.md) prices matter, why a model registered without prices contributes nothing here, and why editing a price later does not rewrite what agents already cost. (When a provider returns no token counts of its own, KANAP estimates them from the size of the exchange, so a small part of the figure can be approximate.)
+**Agent costs are measured.** Every model call an agent makes records its input and output tokens, priced there and then at the rates of the model that agent was using, and the result is kept. Tokens read from or written to the provider's cache follow the rule below, the same as for Plaid. That is why the [AI models](ai-models.md) prices matter, why a model registered without prices contributes nothing here, and why editing a price later does not rewrite what agents already cost. (When a provider returns no token counts of its own, KANAP estimates them from the size of the exchange, so a small part of the figure can be approximate.)
 
 **Plaid costs are measured too.** Each Plaid answer records the model that produced it, that model's prices at the time and what the answer cost. Switching Plaid to another model mid-month or correcting a price later leaves the recorded answers unchanged.
 
-The cost takes the provider's prompt cache into account. With Anthropic, a token read from the cache counts at 0.1 times the input price and a token written to it at 1.25 times. For other providers the cache discount is unknown, so cached tokens count at the full input price and the figure is an upper bound.
+Agent and Plaid costs take the provider's prompt cache into account with one rule. A token read from the cache costs the model's **Cache read cost** when one is entered. Without it, the token costs 0.1 times the input price with Anthropic and the full input price with other providers, so the figure is then an upper bound. A token written to the cache costs 1.25 times the input price with Anthropic and the input price elsewhere.
 
-Answers recorded before KANAP kept their cost are priced at the rates of the model assigned to Plaid today. When the month holds such answers, the card says *Partly estimated at the currently assigned model’s rates*. When the figure is zero because the assigned model has no prices, it says *The assigned model has no cost*. Otherwise the card shows no note.
+Answers recorded before KANAP kept their cost are priced at the rates of the model assigned to Plaid today. When the month holds such answers, the card says *Partly estimated at the currently assigned model’s rates*. When the figure is zero because the assigned model has no price at all (input, output or cache read), it says *The assigned model has no cost*. Otherwise the card shows no note.
 
 The **KANAP included model** costs 0 € by design: it is part of your subscription. An organization running entirely on the included model will see zeros here, and should watch the included-message allowance on the [AI models](ai-models.md) page instead.
 
 ### Cost by agent and Cost by model
 
-Two tables appear underneath as soon as there is activity to report, each with a **Current month** and a **Last 30 days** column.
+Each table appears underneath as soon as it has a row to show, with a **Current month** and a **Last 30 days** column. When only Plaid has been used, only **Cost by model** appears.
 
 - **Cost by agent**: one row per agent, so you can see which one is expensive. Pair it with the agent's own **Cost per run** cap on its [Settings tab](agents-workspace.md) if a number looks wrong.
 - **Cost by model**: agent and Plaid spend together, sliced by model and sorted with the most expensive over 30 days first. Rows are the provider and model identifiers that were actually called (`anthropic:claude-sonnet-5`, `ollama:mistral`), not the friendly names you gave them on the [AI models](ai-models.md) page. When agents and Plaid use the same model, they share one row. The KANAP included model shows at 0. A row labelled **Unknown model** is older agent activity recorded before per-call model attribution existed.
@@ -73,7 +73,7 @@ This is the per-organization view of what each agent's own workspace shows indiv
 ## Tips
 
 - **Compare the two windows, not just the totals.** *Current month* on the 3rd of the month looks tiny; the rolling 30-day figure next to it is what tells you whether anything actually changed.
-- **Prices in, costs out.** These figures are only as good as the prices on the [AI models](ai-models.md) page. If a cost looks impossibly low, check that the model has prices at all: an empty price field reads as free.
-- **Expect a gap with your provider's invoice.** The figures use the prices you entered on the [AI models](ai-models.md) page, and for providers other than Anthropic they count cached tokens at the full input price.
+- **Prices in, costs out.** These figures are only as good as the prices on the [AI models](ai-models.md) page. If a cost looks impossibly low, check that the model has prices at all: a model with no price reads as free.
+- **Expect a gap with your provider's invoice.** The figures use the prices you entered on the [AI models](ai-models.md) page. For a model without a **Cache read cost**, providers other than Anthropic count cached tokens at the full input price.
 - **Use Cost by model when you're weighing a change.** It shows what each model is really costing you across your agents and Plaid, which is the number to compare before moving work onto a cheaper one.
 - **Zero cost is not zero usage.** On the included model or a local one, every cost figure stays at €0. **Agent messages** is where agent load shows up, and the token table is where chat load does.
