@@ -693,14 +693,17 @@ export default function InterfaceWorkspacePage() {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {!!error && <Alert severity="error" sx={{ mx: 2, mt: 1 }} onClose={() => setError(null)}>{error}</Alert>}
-      {loading && !isCreate && !current && (
-        <Typography sx={{ mx: 3, mt: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>
-          {t('workspace.interface.loading')}
-        </Typography>
-      )}
-
       <PortfolioDetailWorkspaceShell
+        notices={(error || (loading && !isCreate && !current)) ? (
+          <>
+            {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
+            {loading && !isCreate && !current && (
+              <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
+                {t('workspace.interface.loading')}
+              </Typography>
+            )}
+          </>
+        ) : undefined}
         activeTab={routeTab}
         tabs={tabs}
         onTabChange={handleTabChange}

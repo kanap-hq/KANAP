@@ -188,12 +188,12 @@ export default function AnalyticsDimensionWorkspacePage() {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {(pageError || loadError) && (
-        <Alert severity="error" sx={{ mx: 2, mt: 1 }} onClose={pageError ? () => setPageError(null) : undefined}>
-          {pageError ?? t('analytics.messages.dimensionLoadFailed')}
-        </Alert>
-      )}
       <PortfolioDetailWorkspaceShell
+        notices={(pageError || loadError) ? (
+          <Alert severity="error" onClose={pageError ? () => setPageError(null) : undefined}>
+            {pageError ?? t('analytics.messages.dimensionLoadFailed')}
+          </Alert>
+        ) : undefined}
         activeTab="overview"
         tabs={[{ key: 'overview', label: t('shared.labels.overview') }]}
         onTabChange={() => undefined}

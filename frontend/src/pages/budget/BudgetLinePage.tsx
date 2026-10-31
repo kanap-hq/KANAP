@@ -1049,28 +1049,33 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
 
   return (
     <Box ref={rootRef} sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {!!error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{t('opex.workspace.failedToLoad')}</Alert>}
-      {!!saveError && <Alert severity="error" sx={{ mx: 2, mt: 1 }} onClose={() => setSaveError(null)}>{saveError}</Alert>}
-      {!isCreate && (
-        <EditConflictBanner
-          conflicts={conflicts}
-          fieldLabel={conflictFieldLabel}
-          formatValue={formatConflictValue}
-          isLongText={isLongTextField}
-          onResolve={resolveConflict}
-          busy={autosave.status === 'saving'}
-          currentUserId={profile?.id ?? null}
-          returnFocus={returnFocus}
-        />
-      )}
-      {!isCreate && (
-        <OtherConflictsNotice
-          items={otherConflictLines.map((lineId) => ({ id: lineId, label: lineRef(lineId) }))}
-          onOpen={(lineId) => { void openConflictLine(lineId); }}
-        />
-      )}
-
       <PortfolioDetailWorkspaceShell
+        notices={(!isCreate || !!error || !!saveError) ? (
+          <>
+            {!!error && <Alert severity="error">{t('opex.workspace.failedToLoad')}</Alert>}
+            {!!saveError && <Alert severity="error" onClose={() => setSaveError(null)}>{saveError}</Alert>}
+            {!isCreate && (
+              <EditConflictBanner
+                conflicts={conflicts}
+                fieldLabel={conflictFieldLabel}
+                formatValue={formatConflictValue}
+                isLongText={isLongTextField}
+                onResolve={resolveConflict}
+                busy={autosave.status === 'saving'}
+                currentUserId={profile?.id ?? null}
+                returnFocus={returnFocus}
+                sx={{ mx: 0, mt: 0 }}
+              />
+            )}
+            {!isCreate && (
+              <OtherConflictsNotice
+                items={otherConflictLines.map((lineId) => ({ id: lineId, label: lineRef(lineId) }))}
+                onOpen={(lineId) => { void openConflictLine(lineId); }}
+                sx={{ mx: 0, mt: 0 }}
+              />
+            )}
+          </>
+        ) : undefined}
         activeTab={routeTab}
         tabs={tabs.map((tab) => ({
           ...tab,

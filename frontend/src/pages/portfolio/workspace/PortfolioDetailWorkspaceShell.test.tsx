@@ -94,6 +94,25 @@ describe('PortfolioDetailWorkspaceShell', () => {
     expect(actions.parentElement).toBe(row);
     expect(actions).toHaveStyle({ flexShrink: '0', maxWidth: '100%' });
   });
+
+  // A failed create used to render its banner above the shell, so the title and the Create button jumped down.
+  it('renders a notice under the title row, so the header and the Create button stay above it', () => {
+    renderShell({
+      notices: <div role="alert">Could not create</div>,
+      actions: <button type="button">Create</button>,
+      tabs: [{ key: 'overview', label: 'Overview' }, { key: 'budget', label: 'Budget' }],
+    });
+    const title = screen.getByRole('heading', { level: 1 });
+    const titleRow = title.parentElement!.parentElement as HTMLElement;
+    const notice = screen.getByRole('alert');
+    const slot = screen.getByTestId('workspace-notices');
+
+    expect(titleRow).toContainElement(screen.getByRole('button', { name: 'Create' }));
+    expect(slot).toContainElement(notice);
+    expect(titleRow.nextElementSibling).toBe(slot);
+    expect(screen.getByRole('button', { name: 'Back' }).compareDocumentPosition(titleRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(notice.compareDocumentPosition(screen.getByRole('tab', { name: 'Budget' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });
 
 // Every breakpoint query answers `matches`: true renders the below-md (mobile) branch.

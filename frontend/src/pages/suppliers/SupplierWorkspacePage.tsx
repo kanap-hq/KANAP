@@ -279,10 +279,8 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {loadError && (
-        <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{t('suppliers.loadError')}</Alert>
-      )}
       <PortfolioDetailWorkspaceShell
+        notices={loadError ? <Alert severity="error">{t('suppliers.loadError')}</Alert> : undefined}
         activeTab={tab}
         tabs={[
           { key: 'overview', label: t('shared.labels.overview') },

@@ -51,6 +51,7 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
       <input aria-label="title" defaultValue={props.title} onChange={(event) => props.onTitleDraftChange?.(event.target.value)} />
       {props.titleError ? <div role="alert">{props.titleError}</div> : null}
       <div>{props.actions}</div>
+      <div data-testid="workspace-notices">{props.notices}</div>
       <aside>{props.properties}</aside>
       <main>{props.children}</main>
     </div>

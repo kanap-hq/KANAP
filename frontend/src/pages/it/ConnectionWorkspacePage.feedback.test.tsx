@@ -46,6 +46,7 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
       <nav>{props.tabs.map((tab: any) => <span key={tab.key}>{tab.label}</span>)}</nav>
       <h1>{props.title || props.titleFallback}</h1>
       <header>{props.actions}</header>
+      <div data-testid="workspace-notices">{props.notices}</div>
       <main>{props.children}</main>
     </div>
   ),
@@ -144,7 +145,8 @@ describe('ConnectionWorkspacePage: connection refusals and absorbed members', ()
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('The source and the destination are the same asset.');
-    // The page alert sits above the workspace, not at the bottom of the form.
+    // The refusal is in the shell's notice slot, under the title, and stays out of the form.
+    expect(screen.getByTestId('workspace-notices')).toContainElement(alert);
     expect(alert.closest('main')).toBeNull();
   });
 

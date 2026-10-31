@@ -710,13 +710,17 @@ export function IncidentWorkspacePage() {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {loadError && (
-        <Alert severity="error" sx={{ mx: 2, mt: 1 }}>
-          {getApiErrorMessage(loadError, t, t('workspace.incident.messages.loadFailed'))}
-        </Alert>
-      )}
-      {error && <Alert severity="error" sx={{ mx: 2, mt: 1 }} onClose={() => setError(null)}>{error}</Alert>}
       <PortfolioDetailWorkspaceShell
+        notices={(loadError || error) ? (
+          <>
+            {loadError && (
+              <Alert severity="error">
+                {getApiErrorMessage(loadError, t, t('workspace.incident.messages.loadFailed'))}
+              </Alert>
+            )}
+            {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
+          </>
+        ) : undefined}
         activeTab={validTab}
         tabs={tabs}
         onTabChange={(next) => { void handleTabChange(next); }}
