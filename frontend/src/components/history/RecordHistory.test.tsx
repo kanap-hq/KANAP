@@ -106,12 +106,12 @@ describe('RecordHistory', () => {
         }),
         item({
           id: 'system', action: 'update', actor: { kind: 'system', name: null },
-          subject: { kind: 'version', label: 'Y2026' },
+          subject: { kind: 'version', label: '2026' },
           changes: [{ field: 'budget_year', before: 2026, after: 2027 }],
         }),
         item({
           id: 'version-create', action: 'create',
-          subject: { kind: 'version', label: 'Y2027' },
+          subject: { kind: 'version', label: '2027' },
           changes: [],
         }),
         item({
@@ -136,8 +136,8 @@ describe('RecordHistory', () => {
     expect(screen.getByText('Link added: Spec link')).toBeInTheDocument();
     expect(screen.getByText('Attachment removed: note.txt')).toBeInTheDocument();
     expect(screen.getByText('Contact added: Cora Contact')).toBeInTheDocument();
-    expect(screen.getByText('Version Y2026')).toBeInTheDocument();
-    expect(screen.getByText('Version Y2027 added')).toBeInTheDocument();
+    expect(screen.getByText('Budget 2026')).toBeInTheDocument();
+    expect(screen.getByText('Budget 2027 added')).toBeInTheDocument();
     expect(screen.getByText('System')).toBeInTheDocument();
     expect(screen.getByText('Import')).toBeInTheDocument();
     expect(bodyText()).toContain('Amount 2026, Budget: 10 000 → 12 000');
