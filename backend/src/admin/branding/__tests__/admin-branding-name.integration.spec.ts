@@ -24,6 +24,7 @@ import { RolePermission } from '../../../permissions/role-permission.entity';
 import { UserPageRole } from '../../../permissions/user-page-role.entity';
 import { TrialSignup } from '../../../public/trial-signup.entity';
 import { TurnstileService } from '../../../public/turnstile.service';
+import { DemoDataService } from '../../../demo-data/demo-data.service';
 import { PublicController } from '../../../public/public.controller';
 import { TenantBaselineService } from '../../../tenants/tenant-baseline.service';
 import { TenantsService } from '../../../tenants/tenants.service';
@@ -76,6 +77,7 @@ const storageStub = {
     { provide: getRepositoryToken(TrialSignup), useValue: {} },
     { provide: TurnstileService, useValue: {} },
     { provide: StripeClientService, useValue: {} },
+    { provide: DemoDataService, useValue: {} },
   ],
 })
 class BrandingNameProbeModule {}
