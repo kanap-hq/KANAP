@@ -59,6 +59,12 @@ export function buildMessageUsageJson(
   return json;
 }
 
+/**
+ * The role of a row that only records the tokens of a turn stopped before its next assistant message
+ * (error, stop). Counted in the conversation's and the tenant's usage; never listed, shown or replayed.
+ */
+export const USAGE_ONLY_MESSAGE_ROLE = 'usage';
+
 const PUBLIC_USAGE_FIELDS = ['input_tokens', 'output_tokens', 'cache_read_input_tokens', 'cache_write_input_tokens'] as const;
 
 /**

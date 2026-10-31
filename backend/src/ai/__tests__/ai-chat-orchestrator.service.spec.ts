@@ -7,6 +7,7 @@ import {
   resolveProviderMaxTokens,
 } from '../ai-chat-orchestrator.service';
 import { estimateTokenCount } from '../ai-context-budget.helper';
+import { llmCostEur } from '../ai-llm-cost.util';
 import { AiModelResolutionError, BUILTIN_NOT_ACCEPTED_MESSAGE } from '../ai-model-resolver.service';
 import { AiSystemPromptService } from '../ai-system-prompt.service';
 import { ChatStreamEvent } from '../ai.types';
@@ -589,6 +590,71 @@ async function testAssistantMessagesPriceCachedTokensAtTheModelCacheReadPrice() 
     price_cache_read_eur_per_mtok: 0.2,
     cost_eur: 0.278,
   });
+}
+
+async function testRetriedIterationTokensGoWithTheNextAssistantMessage() {
+  const searchBatch = (id: string, usage: object) => [
+    { type: 'tool_call_start', id, name: 'search_all' },
+    { type: 'tool_call_delta', id, arguments: '{"query":"test"}' },
+    { type: 'tool_call_end', id },
+    { type: 'done', usage },
+  ];
+  const calls: Array<{ input_tokens: number; output_tokens: number; cache_read_input_tokens?: number }> = [
+    { input_tokens: 100_000, output_tokens: 10_000, cache_read_input_tokens: 40_000 },
+    // Repeats the same tool call: the turn retries it, but the provider bills it.
+    { input_tokens: 200_000, output_tokens: 20_000, cache_read_input_tokens: 150_000 },
+    { input_tokens: 300_000, output_tokens: 30_000 },
+  ];
+  const { orchestrator, persistedMessages, providerCallCount } = createOrchestrator({
+    providerId: 'openai',
+    model: 'gpt-5-mini',
+    modelPrices: { input: 2, output: 10 },
+    providerEventBatches: [
+      searchBatch('tc-1', calls[0]),
+      searchBatch('tc-2', calls[1]),
+      [
+        { type: 'text_delta', text: 'No matching results.' },
+        { type: 'done', usage: calls[2] },
+      ],
+    ],
+    toolResult: { items: [], total: 0 },
+  });
+
+  await collectEvents(
+    orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      userMessage: 'Search',
+    }),
+  );
+
+  assert.equal(providerCallCount.value, 3);
+  const assistantUsages = persistedMessages
+    .filter((message) => message.role === 'assistant' && message.usage)
+    .map((message) => message.usage);
+  assert.equal(assistantUsages.length, 2);
+  assert.equal(persistedMessages.some((message) => message.role === 'usage'), false);
+  // The final answer carries the retried call's tokens with its own.
+  assert.deepEqual(
+    [assistantUsages[1].input_tokens, assistantUsages[1].output_tokens, assistantUsages[1].cache_read_input_tokens],
+    [500_000, 50_000, 150_000],
+  );
+  const sum = (field: string) => assistantUsages.reduce((total, usage) => total + Number(usage[field] ?? 0), 0);
+  assert.equal(sum('input_tokens'), 600_000);
+  assert.equal(sum('output_tokens'), 60_000);
+  assert.equal(sum('cache_read_input_tokens'), 190_000);
+  const prices = { priceInputEurPerMtok: 2, priceOutputEurPerMtok: 10 };
+  const billed = calls.reduce(
+    (total, call) => total + llmCostEur(call.input_tokens, call.output_tokens, prices, { readTokens: call.cache_read_input_tokens }),
+    0,
+  );
+  assert.equal(Number(sum('cost_eur').toFixed(6)), Number(billed.toFixed(6)));
+  assert.equal(Number(billed.toFixed(6)), 1.8);
 }
 
 async function testToolCallFlow() {
@@ -3931,7 +3997,7 @@ async function testRepeatedToolCallsStopWithoutFurtherProgress() {
     { type: 'tool_call_end', id },
     { type: 'done', usage: { input_tokens: 100, output_tokens: 20 } },
   ];
-  const { orchestrator, providerCallCount, toolExecuteCount, recordedRequests } = createOrchestrator({
+  const { orchestrator, providerCallCount, toolExecuteCount, recordedRequests, persistedMessages } = createOrchestrator({
     providerEventBatches: [
       repeatedSearchBatch('tc-1'),
       repeatedSearchBatch('tc-2'),
@@ -3961,6 +4027,12 @@ async function testRepeatedToolCallsStopWithoutFurtherProgress() {
   assert.deepEqual(errorEvent?.conversation_usage, { input_tokens: 100, output_tokens: 20 });
   assert.equal(providerCallCount.value, 4);
   assert.equal(toolExecuteCount.value, 1);
+  // The three calls after the first one recorded no message: a usage-only row keeps their tokens.
+  const usageRows = persistedMessages.filter((message) => message.role === 'usage');
+  assert.equal(usageRows.length, 1);
+  assert.equal(usageRows[0].content, '');
+  assert.equal(usageRows[0].usage.input_tokens, 300);
+  assert.equal(usageRows[0].usage.output_tokens, 60);
 
   const finalRepairRequestMessages = recordedRequests[3].messages as any[];
   const repairMessages = finalRepairRequestMessages.filter((message) =>
@@ -4583,6 +4655,7 @@ async function run() {
   await testAssistantMessagesRecordTheirModelPricesAndCost();
   await testIncludedModelMessagesRecordAZeroCost();
   await testAssistantMessagesPriceCachedTokensAtTheModelCacheReadPrice();
+  await testRetriedIterationTokensGoWithTheNextAssistantMessage();
   await testToolResultDateTimesUseTheUserTimeZone();
   await testDeepSeekReasoningContentIsReplayedForToolContinuation();
   await testDeepSeekReasoningContentIsReplayedForEverySplitToolCall();

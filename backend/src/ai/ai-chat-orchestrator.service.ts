@@ -42,7 +42,7 @@ import {
   AiStreamEvent,
 } from './providers/ai-provider.types';
 import { addUsage, cloneUsage, isAbortError, StreamUsage, tryParseToolCallArguments } from './providers/streaming.util';
-import { AiMessageUsageModel, buildMessageUsageJson } from './ai-message-usage.util';
+import { AiMessageUsageModel, buildMessageUsageJson, USAGE_ONLY_MESSAGE_ROLE } from './ai-message-usage.util';
 import { NO_CACHE_DISCOUNT } from './ai-llm-cost.util';
 import { isOpenAiReasoningModel } from './providers/openai-stream.util';
 import {
@@ -2734,9 +2734,43 @@ export class AiChatOrchestratorService {
         });
       });
     };
+    // Tokens of provider calls no message has recorded yet. A call the turn retries (an answer held
+    // back, a repair) is billed too: its tokens go with the next assistant message recorded.
+    let unrecordedUsage: StreamUsage | undefined;
+    const takeUnrecordedUsageJson = (): Record<string, unknown> | null => {
+      const usageJson = buildMessageUsageJson(unrecordedUsage, prepared.usageModel);
+      unrecordedUsage = undefined;
+      return usageJson;
+    };
+    // A turn that stops before its next assistant message (error, stop) records them on a usage-only row.
+    const recordUnrecordedUsage = async (): Promise<void> => {
+      const usage = takeUnrecordedUsageJson();
+      if (!usage) {
+        return;
+      }
+      try {
+        await this.tenantExecutor.runWithContext(context, async (ctx) => {
+          await this.conversations.appendMessage(
+            {
+              conversationId,
+              tenantId: ctx.tenantId,
+              conversationUserId: ctx.userId,
+              userId: null,
+              role: USAGE_ONLY_MESSAGE_ROLE,
+              content: '',
+              usage,
+            },
+            { manager: ctx.manager },
+          );
+        });
+      } catch (error) {
+        this.logger.warn(`Could not record the usage of an interrupted turn: ${(error as Error)?.message ?? error}`);
+      }
+    };
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
       if (abortSignal?.aborted) {
+        await recordUnrecordedUsage();
         return;
       }
       completedIterations = iteration + 1;
@@ -2857,10 +2891,12 @@ export class AiChatOrchestratorService {
               iterationUsage = cloneUsage(event.usage);
               totalUsage = addUsage(totalUsage, iterationUsage);
               lastUsage = iterationUsage;
+              unrecordedUsage = addUsage(unrecordedUsage, iterationUsage);
               break;
 
             case 'error': {
               providerStreamMs += Math.max(0, Date.now() - providerCallStartedAt);
+              await recordUnrecordedUsage();
               const conversationUsage = await loadConversationUsage();
               yield { type: 'activity', phase: 'finalizing', status: 'failed' };
               yield { type: 'context', context: { timings: buildTimings(true) } };
@@ -2878,6 +2914,7 @@ export class AiChatOrchestratorService {
         providerStreamMs += Math.max(0, Date.now() - providerCallStartedAt);
       } catch (error) {
         providerStreamMs += Math.max(0, Date.now() - providerCallStartedAt);
+        await recordUnrecordedUsage();
         if (abortSignal?.aborted || isAbortError(error)) {
           return;
         }
@@ -2895,6 +2932,7 @@ export class AiChatOrchestratorService {
       }
 
       if (abortSignal?.aborted) {
+        await recordUnrecordedUsage();
         return;
       }
 
@@ -2928,6 +2966,7 @@ export class AiChatOrchestratorService {
             });
             continue;
           }
+          await recordUnrecordedUsage();
           const conversationUsage = await loadConversationUsage();
           yield { type: 'activity', phase: 'finalizing', status: 'failed' };
           yield { type: 'context', context: { timings: buildTimings(true) } };
@@ -2952,6 +2991,8 @@ export class AiChatOrchestratorService {
         }
 
         let searchAllNoProgressIntervention: SearchAllNoProgressIntervention | null = null;
+        // Recorded on the first tool call's message, with the tokens of the calls retried before it.
+        const toolTurnUsage = takeUnrecordedUsageJson();
 
         // Execute each tool call
         for (let toolCallIndex = 0; toolCallIndex < assistantToolCalls.length; toolCallIndex++) {
@@ -2960,9 +3001,7 @@ export class AiChatOrchestratorService {
           const assistantReasoningContent = replayDeepSeekReasoning
             ? accumulatedReasoningContent
             : '';
-          const assistantUsage = toolCallIndex === 0
-            ? buildMessageUsageJson(iterationUsage, prepared.usageModel)
-            : null;
+          const assistantUsage = toolCallIndex === 0 ? toolTurnUsage : null;
           const parsedArgsResult = tryParseToolCallArguments(tc.arguments || '{}');
           const parseErrorMessage = 'message' in parsedArgsResult ? parsedArgsResult.message : null;
           const parsedArgs = 'value' in parsedArgsResult ? parsedArgsResult.value : {};
@@ -3473,7 +3512,7 @@ export class AiChatOrchestratorService {
             userId: null,
             role: 'assistant',
             content: accumulatedText,
-            usage: buildMessageUsageJson(iterationUsage, prepared.usageModel),
+            usage: takeUnrecordedUsageJson(),
           },
           { manager: ctx.manager },
         );
@@ -3499,6 +3538,7 @@ export class AiChatOrchestratorService {
     }
 
     // Max iterations reached
+    await recordUnrecordedUsage();
     const conversationUsage = await loadConversationUsage();
     yield { type: 'activity', phase: 'finalizing', status: 'failed' };
     yield { type: 'context', context: { timings: buildTimings(true) } };
