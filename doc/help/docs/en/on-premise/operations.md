@@ -37,7 +37,7 @@ docker compose -f infra/compose.onprem.yml up -d
 
 `infra/compose.onprem.yml` names the images of the version you checked out. `pull` downloads them from `ghcr.io`, and `up -d` recreates the containers on them. If you build the images yourself (see [Build the images yourself](installation.md#build-the-images-yourself)), run the `build` and `up -d` commands of that section instead of `pull` and `up -d`.
 
-**First upgrade to a version with published images.** Versions up to 26.10.7 were built on the server. The procedure above is all you need to move to a later version. Once the new version runs and passes the checks of step 4, free the build cache and the old images. On a server that built KANAP, they take several gigabytes, depending on how many builds it made. Add `kanap-api-tools` to the second line if you built the maintenance tools image.
+**First upgrade to a version with published images.** Versions up to 26.10.7 were built on the server. The procedure above is all you need to move to a later version. Once the new version runs and passes the checks of step 4, free the build cache and the old images. On a server that built KANAP, they often take 20 GB or more, depending on how many builds it made. Add `kanap-api-tools` to the second line if you built the maintenance tools image.
 
 ```bash
 docker builder prune -a
@@ -45,7 +45,7 @@ docker image rm infra-api infra-web
 docker image prune
 ```
 
-`docker builder prune -a` and `docker image prune` each ask for a confirmation: answer `y`. Without `-a`, `docker builder prune` leaves part of the build cache.
+`docker builder prune -a` and `docker image prune` each ask for a confirmation: answer `y`. Without `-a`, `docker builder prune` leaves part of the build cache. Keep this order: `docker image rm` alone frees almost nothing, and the space comes back with `docker image prune`. The total that Docker prints is higher than what the disk gains, because images share layers: compare `df -h /` before and after. `docker image rm` removes only the `latest` tag: if `docker images "infra-*"` lists other tags, remove each one.
 
 From that version on, upgrades need outbound access to `ghcr.io` instead of `registry.npmjs.org` and the Alpine package mirrors (see [Firewall rules](configuration.md#outbound-installation-and-upgrades)).
 
