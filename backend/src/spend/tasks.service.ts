@@ -11,6 +11,7 @@ import {
 import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import { IncidentViewer, incidentRelatedLabelSql, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { textSortKey } from '../common/list-sort';
+import { parseItemNumber } from '../common/parse-item-number';
 import { resolveRecordCreators } from '../audit/record-creator.util';
 import type { LinkedModule, LinkedReads } from '../common/relations/linked-reads';
 import { assertSetFilterModes, bindPositional, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type CompiledCondition } from '../common/ag-grid-filtering';
@@ -604,8 +605,9 @@ function buildWhereConditions(
     ].filter(Boolean).join(' ');
     // Check if query matches item ref pattern (T-123 or plain number)
     const refMatch = q.match(/^(?:T-)?(\d+)$/i);
-    if (refMatch) {
-      params.push(parseInt(refMatch[1], 10));
+    const itemNumber = refMatch ? parseItemNumber(refMatch[1]) : null;
+    if (itemNumber != null) {
+      params.push(itemNumber);
       params.push(`%${q}%`);
       whereConditions += ` AND (
         t.item_number = $${params.length - 1} OR

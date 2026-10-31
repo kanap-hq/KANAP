@@ -177,7 +177,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 - **Nueva línea**: Crear una línea (requiere `budget:member`)
 - **Importar**: Carga masiva de líneas desde un archivo de presupuesto (requiere `budget:admin`)
 - **Exportar**: Exportar las líneas a un archivo de presupuesto (requiere `budget:admin`)
-- **Eliminar seleccionadas**: Eliminación masiva de líneas seleccionadas (requiere `budget:admin`; seleccione filas mediante casillas de verificación). Una línea con importes en una columna congelada no se puede eliminar. Antes de eliminar nada, la confirmación enumera las líneas que se conservan, con la columna congelada. Las demás se eliminan
+- **Eliminar seleccionadas**: Eliminación masiva de líneas seleccionadas (requiere `budget:admin`; seleccione filas mediante casillas de verificación). Una línea con importes en una columna congelada no se puede eliminar. Antes de eliminar nada, la confirmación enumera las líneas que se conservan, con la columna congelada. Las demás se eliminan. La misma eliminación está en la línea: **Eliminar** (icono de papelera) en su cabecera, para una persona con `budget:admin` cuyo acceso cubre todos los datos. La comprobación es la misma. Una línea con importes en una columna congelada muestra el rechazo y su motivo. Cuando la línea se puede eliminar, confirme: la línea se elimina y se abre de nuevo la lista
 
 **Navegación Anterior/Siguiente**:
 
@@ -194,7 +194,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 
 Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Su dirección nombra la línea por su referencia, por ejemplo `/ops/budget/BL-12/overview`. Tiene cuatro partes:
 
-- **Cabecera**: la referencia de la línea (p. ej., `BL-12`) con un botón para copiarla, el título de la línea (haga clic en él para cambiar el nombre de la línea), **Ant.** / **Sig.**, **Compartir** y el botón de cierre
+- **Cabecera**: la referencia de la línea (p. ej., `BL-12`) con un botón para copiarla, el título de la línea (haga clic en él para cambiar el nombre de la línea), **Ant.** / **Sig.**, **Compartir**, **Eliminar** (icono de papelera, `budget:admin`, acceso a todos los datos) y el botón de cierre
 - **Barra de metadatos** bajo el título: **Estado**, **Responsable de TI** y **Responsable de negocio**, editables en el sitio. Cuando el centro de coste de la línea tiene un responsable del presupuesto, **Responsable del presupuesto** aparece a continuación. Es de solo lectura y se deriva del centro de coste, no se almacena en la línea: pase el cursor por encima para ver de qué centro de coste procede, y cámbielo en el centro de coste (consulte [Centros de coste](cost-centers.md#responsable-del-presupuesto-en-las-lineas-de-presupuesto))
 - **Cinco pestañas**: **Vista general**, **Presupuesto**, **Asignaciones**, **Relaciones** (la pestaña Relaciones muestra cuántos vínculos tiene la línea) e **Historial**
 - **Panel Propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo** (con **Cambiar el tipo…** junto a él en una línea existente, consulte [Cambiar el tipo](#cambiar-el-tipo)). Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
@@ -650,7 +650,7 @@ Cada línea tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de valid
 
 - **Prefiera desactivar**: Mantiene el historial intacto, asegura que los informes permanezcan consistentes y soporta registros de auditoría
 - **Elimine solo si**: La línea se creó por error
-- Una línea con importes en una columna congelada no se puede eliminar. Primero descongele la columna, o fije en su lugar una fecha de fin de validez
+- Una línea con importes en una columna congelada no se puede eliminar. Primero descongele la columna, o fije en su lugar una fecha de fin de validez. Elimine una línea desde la lista (**Eliminar seleccionadas**) o desde su cabecera (**Eliminar**, icono de papelera)
 - Eliminar una línea también elimina sus presupuestos, asignaciones, tareas, sitios web relevantes, adjuntos (con sus archivos) y sus vínculos con contratos. Si una de sus tareas se convirtió en una solicitud, la solicitud se conserva: tiene su propia copia del título, la descripción y los adjuntos, y solo se pierde su vínculo con la tarea
 
 **Consejo**: Utilice el Fin de validez para retirar líneas cuando los contratos terminen, los servicios se detengan, los activos se den de baja o los proyectos concluyan. Elimine solo una línea creada por error.
@@ -716,7 +716,7 @@ El acceso a las líneas presupuestarias se controla con el recurso Presupuesto, 
 
 - `budget:reader`: Ver la lista, abrir líneas, ver presupuestos y asignaciones (solo lectura), descargar adjuntos
 - `budget:member`: Crear y editar líneas, cambiar su tipo, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones, enlaces y contactos
-- `budget:admin`: Todos los derechos de miembro más importación y exportación, operaciones presupuestarias (copiar columnas presupuestarias, con sus importes y asignaciones, y restablecer columna presupuestaria) y eliminación masiva
+- `budget:admin`: Todos los derechos de miembro más importación y exportación, operaciones presupuestarias (copiar columnas presupuestarias, con sus importes y asignaciones, y restablecer columna presupuestaria) y la eliminación de líneas desde la lista o desde la línea
 
 Congelar columnas presupuestarias requiere la administración presupuestaria (`budget_ops:admin`).
 

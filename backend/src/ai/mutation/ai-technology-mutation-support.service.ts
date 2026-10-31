@@ -12,6 +12,7 @@ import {
 } from '../../technologies/technology-links.service';
 import type { AiExecutionContextWithManager } from '../ai.types';
 import { AiPolicyService } from '../ai-policy.service';
+import { parseItemNumber } from '../../common/parse-item-number';
 import { resolveAiParticipationAccessScope } from '../query/ai-query-scope.util';
 
 /** A technology the link write resolved, with the reference and the screen's label. */
@@ -104,7 +105,7 @@ export class AiTechnologyMutationSupportService {
     if (!raw) throw new NotFoundException('Technology "" is not in this workspace.');
     const ref = raw.match(/^TEC-(\d+)$/i)?.[1] ?? null;
     const params: unknown[] = [context.tenantId, raw];
-    params.push(ref == null ? null : Number(ref));
+    params.push(ref == null ? null : parseItemNumber(ref));
     const rows: Array<{ id: string; item_number: number; name: string; family: string }> = await context.manager.query(
       `SELECT t.id, t.item_number, t.name, t.family
          FROM technologies t

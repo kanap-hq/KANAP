@@ -66,6 +66,8 @@ export type BudgetTabHandle = {
    * typed, not saved yet or waiting for a choice keeps its value and its base.
    */
   reloadFromServer: () => Promise<void>;
+  /** Drops pending saves without sending them: the line was deleted. */
+  discard: () => void;
 };
 
 export type BudgetTabProps = {
@@ -931,6 +933,8 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   const linesPendingRef = React.useRef<(() => boolean) | null>(null);
   // « Back to the opening values » is running (lot F2).
   const restoringRef = React.useRef(false);
+  // Set when the line is deleted: the unmount must not send the pending save, nor keep a choice.
+  const droppedRef = React.useRef(false);
   useImperativeHandle(ref, () => ({
     flush: flushAll,
     // A restore of the opening values under way is a save under way (its writes are queued one by one).
@@ -944,14 +948,26 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       // Not shown (a failed read, a write sent meanwhile): rejected, so the page does not count it as seen.
       if (!(await loadRef.current({ quietSince: editSeqRef.current, others: true }))) throw new Error('The year was not reloaded.');
     },
+    discard: () => {
+      droppedRef.current = true;
+      autosave.discard();
+      waitingRef.current = [];
+      parkedPanelRef.current = null;
+      restoreRef.current = null;
+      if (held) held.current = null;
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [autosave, flushAll, waitingLabels]);
+  }), [autosave, flushAll, waitingLabels, held]);
 
   // Leaving the tab with a choice waiting (another tab of the line): the item page keeps it for the
   // line (`heldChoices.ts`), and this tab takes it back when it comes back for the same year.
   React.useEffect(() => {
     if (held?.current?.lineId === id) held.current = null;
     return () => {
+      if (droppedRef.current) {
+        if (held) held.current = null;
+        return;
+      }
       if (!held) return;
       const waiting = waitingRef.current;
       const parked = parkedPanelRef.current;

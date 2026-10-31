@@ -177,7 +177,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 - **New line**: Create a line (requires `budget:member`)
 - **Import**: Bulk-load lines from a budget file (requires `budget:admin`)
 - **Export**: Export the lines to a budget file (requires `budget:admin`)
-- **Delete selected**: Bulk-delete selected lines (requires `budget:admin`; select rows via checkboxes). A line with amounts in a frozen column cannot be deleted. Before anything is deleted, the confirmation lists the lines kept, with the frozen column. The others are deleted
+- **Delete selected**: Bulk-delete selected lines (requires `budget:admin`; select rows via checkboxes). A line with amounts in a frozen column cannot be deleted. Before anything is deleted, the confirmation lists the lines kept, with the frozen column. The others are deleted. The same delete is on the line: **Delete** (trash icon) in its header, for someone with `budget:admin` whose access covers all data. The check is the same. A line with amounts in a frozen column shows the refusal and its reason. When the line can be deleted, you confirm, the line is deleted, and the list opens again
 
 **Prev/Next navigation**:
 
@@ -194,7 +194,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 
 Click any row in the list to open the workspace. Its address names the line by its reference, for example `/ops/budget/BL-12/overview`. It has four parts:
 
-- **Header**: the line reference (e.g., `BL-12`) with a copy button, the line's title (click it to rename the line), **Prev** / **Next**, **Share**, and the close button
+- **Header**: the line reference (e.g., `BL-12`) with a copy button, the line's title (click it to rename the line), **Prev** / **Next**, **Share**, **Delete** (trash icon, `budget:admin`, access to all data), and the close button
 - **Metadata bar** under the title: **Status**, **IT owner**, and **Business owner**, each editable in place. When the line's cost center has a budget holder, **Budget holder** follows them. It is read only and derived from the cost center, not stored on the line: hover it to see which cost center it comes from, and change it on the cost center (see [Cost centers](cost-centers.md#budget-holder-on-budget-lines))
 - **Five tabs**: **Overview**, **Budget**, **Allocations**, **Relations** (the Relations tab shows how many links the line has), and **History**
 - **Properties panel** on the right: the line's main fields, starting with **Type** (with **Change type...** next to it on an existing line, see [Changing the type](#changing-the-type)). Open or close it with the properties button; the workspace remembers your choice
@@ -650,7 +650,7 @@ Every line has a **status** (Enabled or Disabled) and an optional **End of valid
 
 - **Prefer disabling**: Keeps history intact, ensures reports remain consistent, and supports audit trails
 - **Delete only if**: The line was created by mistake
-- A line with amounts in a frozen column cannot be deleted. Unfreeze the column first, or set an end of validity date instead
+- A line with amounts in a frozen column cannot be deleted. Unfreeze the column first, or set an end of validity date instead. You delete a line from the list (**Delete selected**) or from its header (**Delete**, trash icon)
 - Deleting a line also removes its budgets, allocations, tasks, relevant websites, attachments (with their files), and its links to contracts. If one of its tasks was turned into a request, the request is kept: it has its own copy of the title, description, and attachments, and only its link to the task goes
 
 **Tip**: Use the End of validity to retire lines when contracts end, services stop, assets are disposed of or projects complete. Delete only a line created by mistake.
@@ -716,7 +716,7 @@ Access to budget lines is controlled by the Budget resource, which covers OPEX a
 
 - `budget:reader`: View the list, open lines, see budgets and allocations (read-only), download attachments
 - `budget:member`: Create and edit lines, change their type, update budgets and allocations, upload and delete attachments, manage relations, links and contacts
-- `budget:admin`: All member rights plus import and export, budget operations (copy budget columns, with their amounts and allocations, and reset budget column), and bulk delete
+- `budget:admin`: All member rights plus import and export, budget operations (copy budget columns, with their amounts and allocations, and reset budget column), and deleting lines from the list or from the line
 
 Freezing budget columns needs Budget administration (`budget_ops:admin`).
 

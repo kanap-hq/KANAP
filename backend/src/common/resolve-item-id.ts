@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { parseItemNumber } from './parse-item-number';
 
 export type EntityType = 'task' | 'request' | 'project' | 'document' | 'spend' | 'capex' | 'incident' | 'contributor' | 'technology';
 
@@ -35,6 +36,18 @@ export type ParsedItemRef =
   /** `prefix`: the reference's prefix in capitals; absent for a plain number. */
   | { type: 'item_number'; value: number; prefix?: string };
 
+/**
+ * A reference whose digits do not fit `item_number` names no row. Answer 404
+ * before the query: an integer cast of that value is a 500.
+ */
+function itemNumberOf(digits: string, expectedType: EntityType): number {
+  const number = parseItemNumber(digits);
+  if (number == null) {
+    throw expectedType === 'incident' ? incidentNotFound() : new NotFoundException('Item not found');
+  }
+  return number;
+}
+
 export function parseItemRef(raw: string, expectedType: EntityType): ParsedItemRef {
   if (UUID_RE.test(raw)) return { type: 'uuid', value: raw };
 
@@ -46,16 +59,16 @@ export function parseItemRef(raw: string, expectedType: EntityType): ParsedItemR
         `Invalid reference for ${expectedType}: expected ${EXPECTED_PREFIX[expectedType]}-N, got ${raw}`,
       );
     }
-    return { type: 'item_number', value: parseInt(m[2], 10), prefix };
+    return { type: 'item_number', value: itemNumberOf(m[2], expectedType), prefix };
   }
   const other = raw.match(OTHER_REF_RE);
   if (other && ALSO_ACCEPTED_PREFIXES[expectedType]?.includes(other[1].toUpperCase())) {
-    return { type: 'item_number', value: parseInt(other[2], 10), prefix: other[1].toUpperCase() };
+    return { type: 'item_number', value: itemNumberOf(other[2], expectedType), prefix: other[1].toUpperCase() };
   }
 
   // Also accept plain numbers
   if (/^\d+$/.test(raw)) {
-    return { type: 'item_number', value: parseInt(raw, 10) };
+    return { type: 'item_number', value: itemNumberOf(raw, expectedType) };
   }
 
   throw new BadRequestException(`Invalid item reference: ${raw}`);
@@ -171,8 +184,8 @@ export type BudgetLineReferenceNumbers = {
 export function budgetLineReferenceNumbers(raw: string): BudgetLineReferenceNumbers {
   const match = String(raw ?? '').match(/^(?:(BL|OPX|CPX)-)?(\d+)$/i);
   if (!match) return { itemNumber: null, legacyNumber: null };
-  const number = Number(match[2]);
-  if (!Number.isSafeInteger(number) || number > 2147483647) return { itemNumber: null, legacyNumber: null };
+  const number = parseItemNumber(match[2]);
+  if (number == null) return { itemNumber: null, legacyNumber: null };
   const prefix = match[1]?.toUpperCase();
   return prefix && prefix !== 'BL'
     ? { itemNumber: null, legacyNumber: `${prefix}-${number}` }

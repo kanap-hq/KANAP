@@ -177,7 +177,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 - **Nouvelle ligne** : Créer une ligne (nécessite `budget:member`)
 - **Importer** : Charger des lignes en masse depuis un fichier budgétaire (nécessite `budget:admin`)
 - **Exporter** : Exporter les lignes dans un fichier budgétaire (nécessite `budget:admin`)
-- **Supprimer la sélection** : Suppression en masse des lignes sélectionnées (nécessite `budget:admin` ; sélectionnez-les via les cases à cocher). Une ligne qui a des montants dans une colonne gelée ne peut pas être supprimée. Avant toute suppression, la confirmation liste les lignes conservées, avec la colonne gelée. Les autres sont supprimées
+- **Supprimer la sélection** : Suppression en masse des lignes sélectionnées (nécessite `budget:admin` ; sélectionnez-les via les cases à cocher). Une ligne qui a des montants dans une colonne gelée ne peut pas être supprimée. Avant toute suppression, la confirmation liste les lignes conservées, avec la colonne gelée. Les autres sont supprimées. La même suppression est sur la ligne : **Supprimer** (icône corbeille) dans son en-tête, pour une personne avec `budget:admin` dont l'accès couvre toutes les données. Le contrôle est le même. Une ligne qui a des montants dans une colonne gelée affiche le refus et sa raison. Lorsque la ligne peut être supprimée, vous confirmez, la ligne est supprimée et la liste se rouvre
 
 **Navigation Préc./Suiv.** :
 
@@ -194,7 +194,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 
 Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. Son adresse désigne la ligne par sa référence, par exemple `/ops/budget/BL-12/overview`. Il comporte quatre parties :
 
-- **En-tête** : la référence de la ligne (ex. : `BL-12`) avec un bouton de copie, le titre de la ligne (cliquez dessus pour la renommer), **Préc.** / **Suiv.**, **Partager** et le bouton de fermeture
+- **En-tête** : la référence de la ligne (ex. : `BL-12`) avec un bouton de copie, le titre de la ligne (cliquez dessus pour la renommer), **Préc.** / **Suiv.**, **Partager**, **Supprimer** (icône corbeille, `budget:admin`, accès à toutes les données) et le bouton de fermeture
 - **Barre de métadonnées** sous le titre : **Statut**, **Responsable IT** et **Responsable métier**, modifiables sur place. Lorsque le centre de coûts de la ligne a un responsable budgétaire, **Responsable budgétaire** vient ensuite. Il est en lecture seule. Il vient du centre de coûts, et la ligne ne l'enregistre pas : survolez-le pour voir de quel centre de coûts il provient, et modifiez-le sur le centre de coûts (voir [Centres de coûts](cost-centers.md#responsable-budgetaire-sur-les-lignes-budgetaires))
 - **Cinq onglets** : **Vue d'ensemble**, **Budget**, **Ventilations**, **Relations** (l'onglet Relations indique le nombre de liens de la ligne) et **Historique**
 - **Panneau Propriétés** à droite : les champs principaux de la ligne, en commençant par **Type** (avec **Changer le type...** à côté sur une ligne existante, voir [Changer le type](#changer-le-type)). Ouvrez-le ou fermez-le avec le bouton des propriétés ; l'espace de travail mémorise votre choix
@@ -650,7 +650,7 @@ Chaque ligne a un **statut** (Activé ou Désactivé) et une **Fin de validité*
 
 - **Privilégiez la désactivation** : Elle préserve l'historique, garantit la cohérence des rapports et conserve la piste d'audit
 - **Supprimez uniquement si** : La ligne a été créée par erreur
-- Une ligne qui a des montants dans une colonne gelée ne peut pas être supprimée. Dégelez d'abord la colonne, ou fixez plutôt une date de fin de validité
+- Une ligne qui a des montants dans une colonne gelée ne peut pas être supprimée. Dégelez d'abord la colonne, ou fixez plutôt une date de fin de validité. Vous supprimez une ligne depuis la liste (**Supprimer la sélection**) ou depuis son en-tête (**Supprimer**, icône corbeille)
 - Supprimer une ligne supprime aussi ses budgets, ventilations, tâches, sites web pertinents, pièces jointes (avec leurs fichiers) et ses liens vers des contrats. Si l'une de ses tâches a été transformée en demande, la demande est conservée : elle possède sa propre copie du titre, de la description et des pièces jointes, et seul son lien vers la tâche disparaît
 
 **Conseil** : Utilisez la Fin de validité pour clore les lignes lorsque les contrats se terminent, que les services s'arrêtent, que les actifs sont cédés ou que les projets s'achèvent. Ne supprimez qu'une ligne créée par erreur.
@@ -716,7 +716,7 @@ L'accès aux lignes budgétaires est contrôlé par la ressource Budget, qui cou
 
 - `budget:reader` : Consulter la liste, ouvrir les lignes, voir les budgets et ventilations (lecture seule), télécharger les pièces jointes
 - `budget:member` : Créer et modifier les lignes, changer leur type, mettre à jour les budgets et ventilations, téléverser et supprimer les pièces jointes, gérer les relations, liens et contacts
-- `budget:admin` : Tous les droits membre plus import et export, opérations budgétaires (copier les colonnes budgétaires, avec leurs montants et leurs ventilations, et réinitialiser une colonne budgétaire) et suppression en masse
+- `budget:admin` : Tous les droits membre plus import et export, opérations budgétaires (copier les colonnes budgétaires, avec leurs montants et leurs ventilations, et réinitialiser une colonne budgétaire) et la suppression des lignes depuis la liste ou depuis la ligne
 
 Le gel des colonnes budgétaires relève de l'administration budgétaire (`budget_ops:admin`).
 

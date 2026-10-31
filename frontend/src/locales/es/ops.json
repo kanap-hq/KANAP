@@ -1919,7 +1919,8 @@
       "kept_one": "{{count}} línea presupuestaria no se puede eliminar y se conserva:",
       "kept_other": "{{count}} líneas presupuestarias no se pueden eliminar y se conservan:",
       "deleted_one": "{{count}} línea presupuestaria eliminada",
-      "deleted_other": "{{count}} líneas presupuestarias eliminadas"
+      "deleted_other": "{{count}} líneas presupuestarias eliminadas",
+      "failed": "No se pudo eliminar la línea presupuestaria."
     },
     "readOnlyInYourAccess": "Solo lectura en su acceso"
   }

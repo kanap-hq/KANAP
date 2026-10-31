@@ -1919,7 +1919,8 @@
       "kept_one": "{{count}} Budgetzeile kann nicht gelöscht werden und bleibt erhalten:",
       "kept_other": "{{count}} Budgetzeilen können nicht gelöscht werden und bleiben erhalten:",
       "deleted_one": "{{count}} Budgetzeile gelöscht",
-      "deleted_other": "{{count}} Budgetzeilen gelöscht"
+      "deleted_other": "{{count}} Budgetzeilen gelöscht",
+      "failed": "Die Budgetzeile konnte nicht gelöscht werden."
     },
     "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff"
   }

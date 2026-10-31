@@ -22,6 +22,7 @@ import { PortfolioProjectsService } from '../../portfolio/services';
 import { BudgetLinesService } from '../../spend/budget-lines.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
 import { auditTableOf, BUDGET_LINE_PREFIX, BUDGET_NATURES, BudgetNature, naturesAnd } from '../../spend/budget-nature';
+import { parseItemNumber } from '../../common/parse-item-number';
 import { budgetLineReferenceNumbers, parseItemRef, resolveBudgetLine } from '../../common/resolve-item-id';
 import {
   DISABLED_VALUE_MESSAGE,
@@ -1292,7 +1293,8 @@ export class AiBusinessRecordMutationSupportService {
     ref: string,
   ): Promise<Record<string, unknown>[]> {
     const uuid = isUuid(ref);
-    const itemNumber = Number((ref.match(/(?:^|[-\s])(\d+)$/)?.[1] ?? '').trim());
+    const rawDigits = ref.match(/(?:^|[-\s])(\d+)$/)?.[1];
+    const itemNumber = rawDigits == null ? 0 : (parseItemNumber(rawDigits) ?? -1);
     const { manager, tenantId } = context;
     switch (entityType) {
       case 'applications': {
