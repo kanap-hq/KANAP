@@ -127,6 +127,7 @@ export type AiModelConfig = {
   supports_vision: boolean;
   price_input_eur_per_mtok: number | null;
   price_output_eur_per_mtok: number | null;
+  price_cache_read_eur_per_mtok: number | null;
   llm_timeout_ms: number | null;
   status: 'active' | 'archived';
   is_default: boolean;
@@ -156,6 +157,7 @@ export type AiModelConfigInput = {
   supports_vision?: boolean;
   price_input_eur_per_mtok?: number | null;
   price_output_eur_per_mtok?: number | null;
+  price_cache_read_eur_per_mtok?: number | null;
   llm_timeout_ms?: number | null;
   is_default?: boolean;
 };

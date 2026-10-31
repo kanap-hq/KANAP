@@ -48,6 +48,7 @@ type DraftState = {
   supports_vision: boolean;
   price_input: string;
   price_output: string;
+  price_cache_read: string;
   timeout_seconds: string;
 };
 
@@ -60,6 +61,7 @@ const EMPTY_DRAFT: DraftState = {
   supports_vision: true,
   price_input: '',
   price_output: '',
+  price_cache_read: '',
   timeout_seconds: '',
 };
 
@@ -80,6 +82,7 @@ function draftFromConfig(config: AiModelConfig): DraftState {
     supports_vision: config.supports_vision,
     price_input: config.price_input_eur_per_mtok != null ? String(config.price_input_eur_per_mtok) : '',
     price_output: config.price_output_eur_per_mtok != null ? String(config.price_output_eur_per_mtok) : '',
+    price_cache_read: config.price_cache_read_eur_per_mtok != null ? String(config.price_cache_read_eur_per_mtok) : '',
     timeout_seconds: config.llm_timeout_ms != null ? String(Math.round(config.llm_timeout_ms / 1000)) : '',
   };
 }
@@ -262,13 +265,14 @@ export default function AdminAiModelsPage() {
       provider,
       // A local model costs nothing — pre-fill so the cost engine treats it as free.
       ...(provider === 'ollama' && prev.price_input === '' && prev.price_output === ''
-        ? { price_input: '0', price_output: '0' }
+        ? { price_input: '0', price_output: '0', price_cache_read: '0' }
         : {}),
     }));
   };
 
   const priceInput = parsePriceInput(draft.price_input);
   const priceOutput = parsePriceInput(draft.price_output);
+  const priceCacheRead = parsePriceInput(draft.price_cache_read);
   const timeoutSeconds = draft.timeout_seconds.trim() === '' ? null : Number.parseInt(draft.timeout_seconds, 10);
   const timeoutInvalid = timeoutSeconds != null && (!Number.isInteger(timeoutSeconds) || timeoutSeconds <= 0);
   const showingStoredKey = Boolean(editingId && hasStoredKey && draft.api_key === '');
@@ -276,6 +280,7 @@ export default function AdminAiModelsPage() {
     || draft.model.trim() === ''
     || priceInput === undefined
     || priceOutput === undefined
+    || priceCacheRead === undefined
     || timeoutInvalid;
 
   const handleSave = () => {
@@ -288,6 +293,7 @@ export default function AdminAiModelsPage() {
       supports_vision: draft.supports_vision,
       price_input_eur_per_mtok: priceInput ?? null,
       price_output_eur_per_mtok: priceOutput ?? null,
+      price_cache_read_eur_per_mtok: priceCacheRead ?? null,
       llm_timeout_ms: timeoutSeconds != null ? timeoutSeconds * 1000 : null,
     };
     if (draft.api_key.trim() !== '') {
@@ -607,6 +613,28 @@ export default function AdminAiModelsPage() {
                   onChange={(event) => setDraft((prev) => ({ ...prev, price_output: event.target.value }))}
                 />
               </PropertyRow>
+            </Stack>
+            <Stack direction="row" spacing={2} alignItems="flex-start">
+              <PropertyRow
+                label={(
+                  <LabelWithInfo
+                    label={t('aiModels.dialog.priceCacheRead')}
+                    info={t('aiModels.dialog.cacheReadHint')}
+                  />
+                )}
+                sx={{ flex: 1 }}
+              >
+                <TextField
+                  size="small"
+                  variant="standard"
+                  value={draft.price_cache_read}
+                  placeholder={t('aiModels.dialog.priceCacheReadPlaceholder')}
+                  error={priceCacheRead === undefined}
+                  sx={drawerFieldValueSx}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, price_cache_read: event.target.value }))}
+                />
+              </PropertyRow>
+              <Box sx={{ flex: 1 }} />
             </Stack>
             <PropertyRow
               label={(
