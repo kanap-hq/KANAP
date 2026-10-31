@@ -41,7 +41,9 @@ import {
   AiProviderToolCall,
   AiStreamEvent,
 } from './providers/ai-provider.types';
-import { addUsage, cloneUsage, isAbortError, tryParseToolCallArguments } from './providers/streaming.util';
+import { addUsage, cloneUsage, isAbortError, StreamUsage, tryParseToolCallArguments } from './providers/streaming.util';
+import { AiMessageUsageModel, buildMessageUsageJson } from './ai-message-usage.util';
+import { NO_CACHE_DISCOUNT } from './ai-llm-cost.util';
 import { isOpenAiReasoningModel } from './providers/openai-stream.util';
 import {
   AI_QUERY_ENTITY_TYPES,
@@ -274,10 +276,16 @@ type CurrentUserPromptContext = {
   screenLanguage: AiScreenLanguage | null;
 };
 
-type StreamUsage = {
-  input_tokens: number;
-  output_tokens: number;
-};
+function messageUsageModel(resolved: ResolvedModel, adapter: AiProviderAdapter): AiMessageUsageModel {
+  return {
+    provider: resolved.provider,
+    model: resolved.model,
+    source: resolved.source,
+    priceInputEurPerMtok: resolved.priceInputEurPerMtok,
+    priceOutputEurPerMtok: resolved.priceOutputEurPerMtok,
+    cacheCostFactors: adapter.cacheCostFactors ?? NO_CACHE_DISCOUNT,
+  };
+}
 
 type ApprovalAction =
   | { action: 'approve'; previewIds: string[] }
@@ -293,6 +301,8 @@ type PreparedChatRequest = {
   providerSource: 'builtin' | 'custom';
   provider: AiProviderAdapter;
   model: string;
+  /** The model resolved for this turn, recorded with its prices on each assistant message. */
+  usageModel: AiMessageUsageModel;
   apiKey: string | null;
   endpointUrl: string | null;
   // Per-model timeout from the registry; null falls back to AI_CHAT_PROVIDER_TIMEOUT_MS.
@@ -1897,6 +1907,7 @@ export class AiChatOrchestratorService {
           providerSource: 'builtin',
           provider: adapter,
           model: resolved.model,
+          usageModel: messageUsageModel(resolved, adapter),
           apiKey: resolved.apiKey,
           endpointUrl: resolved.endpointUrl,
           modelTimeoutMs: null,
@@ -1925,6 +1936,7 @@ export class AiChatOrchestratorService {
         providerSource: 'custom',
         provider: adapter,
         model: resolved.model,
+        usageModel: messageUsageModel(resolved, adapter),
         apiKey: resolved.apiKey,
         endpointUrl: resolved.endpointUrl,
         modelTimeoutMs: resolved.timeoutMs,
@@ -2947,7 +2959,9 @@ export class AiChatOrchestratorService {
           const assistantReasoningContent = replayDeepSeekReasoning
             ? accumulatedReasoningContent
             : '';
-          const assistantUsage = toolCallIndex === 0 ? (iterationUsage ?? null) : null;
+          const assistantUsage = toolCallIndex === 0
+            ? buildMessageUsageJson(iterationUsage, prepared.usageModel)
+            : null;
           const parsedArgsResult = tryParseToolCallArguments(tc.arguments || '{}');
           const parseErrorMessage = 'message' in parsedArgsResult ? parsedArgsResult.message : null;
           const parsedArgs = 'value' in parsedArgsResult ? parsedArgsResult.value : {};
@@ -3458,7 +3472,7 @@ export class AiChatOrchestratorService {
             userId: null,
             role: 'assistant',
             content: accumulatedText,
-            usage: iterationUsage ?? null,
+            usage: buildMessageUsageJson(iterationUsage, prepared.usageModel),
           },
           { manager: ctx.manager },
         );

@@ -37,10 +37,13 @@ export type AiAdminOverviewCosts = {
   last_30_days: { agents_eur: number; chat_eur: number; total_eur: number };
   by_agent: AiAdminOverviewAgentCost[];
   by_model: AiAdminOverviewModelCost[];
-  // Chat costs are estimated at the CURRENTLY assigned model's rates (chat
-  // messages predate per-call cost recording); false when no chat model with
-  // prices resolves, so the UI can label the number honestly.
+  // Whether the currently assigned chat model has prices: false when none resolves
+  // or its prices are 0/null.
   chat_priced: boolean;
+  // The month's chat cost holds messages recorded without their own cost (written
+  // before each message recorded it), estimated at the currently assigned model's
+  // rates, and that estimate is not 0.
+  chat_estimated: boolean;
 };
 
 export type AiAdminOverviewResponse = {
@@ -80,6 +83,28 @@ function toIsoDate(value: unknown): string {
   return date.toISOString();
 }
 
+function roundCost(value: number): number {
+  return Number(value.toFixed(6));
+}
+
+// One row per model: an agent row and a chat row of the same `provider:model` add up.
+function mergeModelCosts(rows: Array<Record<string, unknown>>): AiAdminOverviewModelCost[] {
+  const byModel = new Map<string | null, AiAdminOverviewModelCost>();
+  for (const row of rows) {
+    const model = row.model == null ? null : String(row.model);
+    const current = byModel.get(model);
+    const month = toNumber(row.cost_current_month_eur);
+    const last30Days = toNumber(row.cost_last_30_days_eur);
+    if (current) {
+      current.cost_current_month_eur = roundCost(current.cost_current_month_eur + month);
+      current.cost_last_30_days_eur = roundCost(current.cost_last_30_days_eur + last30Days);
+    } else {
+      byModel.set(model, { model, cost_current_month_eur: month, cost_last_30_days_eur: last30Days });
+    }
+  }
+  return [...byModel.values()].sort((a, b) => b.cost_last_30_days_eur - a.cost_last_30_days_eur);
+}
+
 @Injectable()
 export class AiAdminOverviewService {
   constructor(private readonly modelResolver: AiModelResolverService) {}
@@ -101,6 +126,8 @@ export class AiAdminOverviewService {
       [tenantId],
     );
 
+    // Each window also splits the chat cost: the costs assistant messages recorded
+    // (usage_json.cost_eur) and the tokens of older messages that carry none.
     // message_count deliberately counts only user-sent messages — the unit the free
     // volume charges — not every persisted row (assistant replies and tool results
     // would triple the number and make it impossible to relate to the quota).
@@ -109,7 +136,10 @@ export class AiAdminOverviewService {
       SELECT
         COALESCE(SUM(COALESCE((usage_json->>'input_tokens')::bigint, 0)), 0)::bigint AS input_tokens,
         COALESCE(SUM(COALESCE((usage_json->>'output_tokens')::bigint, 0)), 0)::bigint AS output_tokens,
-        COUNT(*) FILTER (WHERE role = 'user')::bigint AS message_count
+        COUNT(*) FILTER (WHERE role = 'user')::bigint AS message_count,
+        COALESCE(SUM((usage_json->>'cost_eur')::numeric) FILTER (WHERE usage_json ? 'cost_eur'), 0) AS recorded_cost_eur,
+        COALESCE(SUM(COALESCE((usage_json->>'input_tokens')::bigint, 0)) FILTER (WHERE NOT COALESCE(usage_json ? 'cost_eur', false)), 0)::bigint AS unrecorded_input_tokens,
+        COALESCE(SUM(COALESCE((usage_json->>'output_tokens')::bigint, 0)) FILTER (WHERE NOT COALESCE(usage_json ? 'cost_eur', false)), 0)::bigint AS unrecorded_output_tokens
       FROM ai_messages
       WHERE tenant_id = $1
         AND created_at >= date_trunc('month', now())
@@ -122,7 +152,10 @@ export class AiAdminOverviewService {
       SELECT
         COALESCE(SUM(COALESCE((usage_json->>'input_tokens')::bigint, 0)), 0)::bigint AS input_tokens,
         COALESCE(SUM(COALESCE((usage_json->>'output_tokens')::bigint, 0)), 0)::bigint AS output_tokens,
-        COUNT(*) FILTER (WHERE role = 'user')::bigint AS message_count
+        COUNT(*) FILTER (WHERE role = 'user')::bigint AS message_count,
+        COALESCE(SUM((usage_json->>'cost_eur')::numeric) FILTER (WHERE usage_json ? 'cost_eur'), 0) AS recorded_cost_eur,
+        COALESCE(SUM(COALESCE((usage_json->>'input_tokens')::bigint, 0)) FILTER (WHERE NOT COALESCE(usage_json ? 'cost_eur', false)), 0)::bigint AS unrecorded_input_tokens,
+        COALESCE(SUM(COALESCE((usage_json->>'output_tokens')::bigint, 0)) FILTER (WHERE NOT COALESCE(usage_json ? 'cost_eur', false)), 0)::bigint AS unrecorded_output_tokens
       FROM ai_messages
       WHERE tenant_id = $1
         AND created_at >= now() - interval '30 days'
@@ -210,6 +243,25 @@ export class AiAdminOverviewService {
       [tenantId],
     );
 
+    // Chat costs per model, from the messages that recorded their provider, model and
+    // cost; the key is the agents' `provider:model` so both merge into one row.
+    const chatModelCostRows = await manager.query(
+      `
+      SELECT
+        (usage_json->>'provider') || ':' || (usage_json->>'model') AS model,
+        COALESCE(SUM((usage_json->>'cost_eur')::numeric) FILTER (WHERE created_at >= date_trunc('month', now())), 0) AS cost_current_month_eur,
+        COALESCE(SUM((usage_json->>'cost_eur')::numeric) FILTER (WHERE created_at >= now() - interval '30 days'), 0) AS cost_last_30_days_eur
+      FROM ai_messages
+      WHERE tenant_id = $1
+        AND created_at >= LEAST(date_trunc('month', now()), now() - interval '30 days')
+        AND usage_json ? 'cost_eur'
+        AND usage_json ? 'provider'
+        AND usage_json ? 'model'
+      GROUP BY 1
+      `,
+      [tenantId],
+    );
+
     const recentActivityRows = await manager.query(
       `
       SELECT
@@ -231,15 +283,25 @@ export class AiAdminOverviewService {
     const currentMonth = currentMonthRows[0] ?? {};
     const last30Days = last30DaysRows[0] ?? {};
 
-    // Chat cost: estimated at the currently assigned chat model's rates —
-    // messages predate per-call cost recording, so this is an approximation
-    // the UI labels as such.
+    // Chat cost: the costs the messages recorded, plus the older messages that carry
+    // none, estimated at the currently assigned chat model's rates (the UI says when
+    // part of the month is estimated).
     const chatModel = await this.modelResolver.tryResolve(tenantId, { type: 'chat' }, manager);
     const chatPrices = chatModel
       ? { priceInputEurPerMtok: chatModel.priceInputEurPerMtok, priceOutputEurPerMtok: chatModel.priceOutputEurPerMtok }
       : null;
-    const chatCostMonth = llmCostEur(toNumber(currentMonth.input_tokens), toNumber(currentMonth.output_tokens), chatPrices);
-    const chatCost30d = llmCostEur(toNumber(last30Days.input_tokens), toNumber(last30Days.output_tokens), chatPrices);
+    const estimatedChatMonth = llmCostEur(
+      toNumber(currentMonth.unrecorded_input_tokens),
+      toNumber(currentMonth.unrecorded_output_tokens),
+      chatPrices,
+    );
+    const estimatedChat30d = llmCostEur(
+      toNumber(last30Days.unrecorded_input_tokens),
+      toNumber(last30Days.unrecorded_output_tokens),
+      chatPrices,
+    );
+    const chatCostMonth = roundCost(toNumber(currentMonth.recorded_cost_eur) + estimatedChatMonth);
+    const chatCost30d = roundCost(toNumber(last30Days.recorded_cost_eur) + estimatedChat30d);
     const agentsCostMonth = agentCostRows.reduce((sum: number, row: Record<string, unknown>) => sum + toNumber(row.cost_current_month_eur), 0);
     const agentsCost30d = agentCostRows.reduce((sum: number, row: Record<string, unknown>) => sum + toNumber(row.cost_last_30_days_eur), 0);
 
@@ -295,12 +357,9 @@ export class AiAdminOverviewService {
           cost_current_month_eur: toNumber(row.cost_current_month_eur),
           cost_last_30_days_eur: toNumber(row.cost_last_30_days_eur),
         })),
-        by_model: modelCostRows.map((row: Record<string, unknown>) => ({
-          model: row.model == null ? null : String(row.model),
-          cost_current_month_eur: toNumber(row.cost_current_month_eur),
-          cost_last_30_days_eur: toNumber(row.cost_last_30_days_eur),
-        })),
+        by_model: mergeModelCosts([...modelCostRows, ...chatModelCostRows]),
         chat_priced: !!chatPrices && ((chatPrices.priceInputEurPerMtok ?? 0) > 0 || (chatPrices.priceOutputEurPerMtok ?? 0) > 0),
+        chat_estimated: estimatedChatMonth > 0,
       },
     };
   }

@@ -36,6 +36,10 @@ function createOrchestrator(options?: {
   resolveError?: Error;
   /** The person's stored locale (`users.locale`). */
   userLocale?: string | null;
+  /** The registry model's prices (€/Mtok); null when omitted. */
+  modelPrices?: { input: number; output: number };
+  /** The provider adapter's cache cost factors; absent when omitted. */
+  cacheCostFactors?: { read: number; write: number };
 }) {
   const persistedMessages: any[] = [];
   let conversationCreated = false;
@@ -132,8 +136,8 @@ function createOrchestrator(options?: {
       endpointUrl: options?.endpointUrl ?? null,
       apiKey: 'real-api-key',
       supportsVision: true,
-      priceInputEurPerMtok: null,
-      priceOutputEurPerMtok: null,
+      priceInputEurPerMtok: options?.modelPrices?.input ?? null,
+      priceOutputEurPerMtok: options?.modelPrices?.output ?? null,
       timeoutMs: null,
       builtinRateLimits: null,
     });
@@ -162,6 +166,7 @@ function createOrchestrator(options?: {
           contextWindow: options?.providerContextWindow ?? 128000,
         },
       },
+      ...(options?.cacheCostFactors ? { cacheCostFactors: options.cacheCostFactors } : {}),
       createStream: async function* (params: any) {
         recordedRequests.push(params);
         providerCallCount.value++;
@@ -439,6 +444,107 @@ async function testSimpleTextResponse() {
   ) as any;
   assert.ok(finalTimingEvent, 'Expected final timing context event.');
   assert.equal(finalTimingEvent.context.timings.iterations, 1);
+}
+
+async function testAssistantMessagesRecordTheirModelPricesAndCost() {
+  const { orchestrator, persistedMessages } = createOrchestrator({
+    providerId: 'anthropic',
+    model: 'claude-sonnet-5-5',
+    modelPrices: { input: 3, output: 15 },
+    cacheCostFactors: { read: 0.1, write: 1.25 },
+    providerEvents: [
+      { type: 'text_delta', text: 'Let me search.' },
+      { type: 'tool_call_start', id: 'tc-1', name: 'search_all' },
+      { type: 'tool_call_delta', id: 'tc-1', arguments: '{"query":"test"}' },
+      { type: 'tool_call_end', id: 'tc-1' },
+      {
+        type: 'done',
+        usage: { input_tokens: 500_000, output_tokens: 100_000, cache_read_input_tokens: 300_000, cache_write_input_tokens: 100_000 },
+      },
+    ],
+    providerToolEvents: [
+      { type: 'text_delta', text: 'Found results.' },
+      { type: 'done', usage: { input_tokens: 200_000, output_tokens: 10_000 } },
+    ],
+    toolResult: { items: [{ type: 'applications', id: 'app-1', label: 'CRM' }], total: 1 },
+  });
+
+  const events = await collectEvents(
+    orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      userMessage: 'Search for CRM',
+    }),
+  );
+
+  const assistantMessages = persistedMessages.filter((message) => message.role === 'assistant');
+  assert.equal(assistantMessages.length, 2);
+  // The tool-call turn: cache fields and the Anthropic cache factors in its cost.
+  assert.deepEqual(assistantMessages[0].usage, {
+    input_tokens: 500_000,
+    output_tokens: 100_000,
+    cache_read_input_tokens: 300_000,
+    cache_write_input_tokens: 100_000,
+    provider: 'anthropic',
+    model: 'claude-sonnet-5-5',
+    model_source: 'registry',
+    price_input_eur_per_mtok: 3,
+    price_output_eur_per_mtok: 15,
+    cost_eur: 2.265,
+  });
+  // The final answer: no cache reported, so no cache field.
+  assert.deepEqual(assistantMessages[1].usage, {
+    input_tokens: 200_000,
+    output_tokens: 10_000,
+    provider: 'anthropic',
+    model: 'claude-sonnet-5-5',
+    model_source: 'registry',
+    price_input_eur_per_mtok: 3,
+    price_output_eur_per_mtok: 15,
+    cost_eur: 0.75,
+  });
+
+  // The browser gets the cache fields, never a price or a cost.
+  const done = events.find((e) => e.type === 'done') as any;
+  assert.deepEqual(done.usage, {
+    input_tokens: 700_000,
+    output_tokens: 110_000,
+    cache_read_input_tokens: 300_000,
+    cache_write_input_tokens: 100_000,
+  });
+  assert.deepEqual(done.last_usage, { input_tokens: 200_000, output_tokens: 10_000 });
+}
+
+async function testIncludedModelMessagesRecordAZeroCost() {
+  const { orchestrator, persistedMessages } = createOrchestrator({ resolvedSource: 'builtin' });
+  await collectEvents(
+    orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      userMessage: 'Hello',
+    }),
+  );
+  const assistant = persistedMessages.find((message) => message.role === 'assistant');
+  assert.deepEqual(assistant?.usage, {
+    input_tokens: 100,
+    output_tokens: 50,
+    provider: 'openai',
+    model: 'gpt-4o-mini',
+    model_source: 'builtin',
+    price_input_eur_per_mtok: 0,
+    price_output_eur_per_mtok: 0,
+    cost_eur: 0,
+  });
 }
 
 async function testToolCallFlow() {
@@ -4430,6 +4536,8 @@ async function run() {
   );
   await testSimpleTextResponse();
   await testToolCallFlow();
+  await testAssistantMessagesRecordTheirModelPricesAndCost();
+  await testIncludedModelMessagesRecordAZeroCost();
   await testToolResultDateTimesUseTheUserTimeZone();
   await testDeepSeekReasoningContentIsReplayedForToolContinuation();
   await testDeepSeekReasoningContentIsReplayedForEverySplitToolCall();

@@ -2,19 +2,35 @@ import { Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import { openValidatedFetch, ValidatedFetchTarget } from '../../common/pinned-fetch';
 import { AiStreamEvent, AiStreamParams, AiSystemPromptRole } from './ai-provider.types';
-import { isAbortError } from './streaming.util';
+import { isAbortError, StreamUsage } from './streaming.util';
 import { providerFetchOptions, toProviderError } from './provider-http.util';
 
 const logger = new Logger('OpenAiCompatibleStream');
 
-function toUsage(usage?: { prompt_tokens?: number | null; completion_tokens?: number | null } | null) {
+type OpenAiCompatibleUsage = {
+  prompt_tokens?: number | null;
+  completion_tokens?: number | null;
+  // OpenAI and Mistral: the part of prompt_tokens read from the cache.
+  prompt_tokens_details?: { cached_tokens?: number | null } | null;
+  // DeepSeek: the same part under its own name.
+  prompt_cache_hit_tokens?: number | null;
+};
+
+// input_tokens stays prompt_tokens, which already counts the cached tokens on these APIs.
+// They report no cache writes.
+export function toUsage(usage?: OpenAiCompatibleUsage | null): StreamUsage | undefined {
   if (!usage) {
     return undefined;
   }
-  return {
+  const result: StreamUsage = {
     input_tokens: usage.prompt_tokens ?? 0,
     output_tokens: usage.completion_tokens ?? 0,
   };
+  const cacheRead = usage.prompt_tokens_details?.cached_tokens ?? usage.prompt_cache_hit_tokens;
+  if (typeof cacheRead === 'number' && Number.isFinite(cacheRead)) {
+    result.cache_read_input_tokens = cacheRead;
+  }
+  return result;
 }
 
 function isUnsupportedParallelToolCallsError(error: unknown): boolean {
