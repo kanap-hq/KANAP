@@ -125,21 +125,23 @@ function withoutRawIds(value: unknown): unknown {
   );
 }
 
-/** The author of an entry by their name only: a person without a name is not given by their email. */
+/**
+ * The author as the History tab shows them. An import is the source only, with no name, as a
+ * system change already is. A person is named, and a person without a name is not given by their
+ * email.
+ */
 function withoutActorEmail(actor: RecordHistoryActor): RecordHistoryActor {
+  if (actor.kind === 'import') return { kind: 'import', name: null };
   return actor.name ? { ...actor, name: personLabel(actor.name) as string } : actor;
 }
 
 /**
- * A budget line by the reference a screen shows: `OPX-n` (or `OPEX-n`) as the OPEX list reads it,
- * `CPX-n` (or `CAPEX-n`) as the CAPEX list reads it, `BL-n` and a bare number as the neutral
- * reference of either nature.
+ * A budget line by the reference a screen shows. `OPEX-n` and `CAPEX-n` are `OPX-n` and `CPX-n`.
+ * The detail reads the same reference (`resolveBudgetLine`): the line number first, then the
+ * legacy number.
  */
 async function budgetLineId(value: string, manager: EntityManager): Promise<string> {
   const ref = value.replace(/^OPEX-/i, 'OPX-').replace(/^CAPEX-/i, 'CPX-');
-  const prefix = ref.match(/^([A-Z]+)-\d+$/i)?.[1]?.toUpperCase();
-  if (prefix === 'OPX') return resolveToUuid(ref, 'spend', manager);
-  if (prefix === 'CPX') return resolveToUuid(ref, 'capex', manager);
   return (await resolveBudgetLine(ref, manager)).id;
 }
 
