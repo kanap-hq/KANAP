@@ -79,6 +79,9 @@ type PortfolioDetailWorkspaceShellProps = {
 /** The width the title keeps beside the actions; below it, the actions wrap under the title. */
 const TITLE_MIN_WIDTH = 280;
 
+/** The width of the "Properties" handle on the drawer's left edge. */
+const DRAWER_HANDLE_WIDTH = 26;
+
 function getStoredDrawerState(storageKey: string) {
   if (typeof window === 'undefined') return true;
   try {
@@ -219,6 +222,11 @@ export default function PortfolioDetailWorkspaceShell({
   const hasTabRow = tabs.length > 1;
   const drawerLift = hasTabRow ? Math.abs(taskDetailTokens.drawer.panelTop) : 0;
   const tabLift = hasTabRow ? Math.abs(taskDetailTokens.drawer.tabTop) : 0;
+  // The open drawer and its handle rise beside the tab row: the row keeps their width free
+  // (less the title block's own padding, plus a small gap) and scrolls when it still does not fit.
+  const tabRowDrawerReserve = hasProperties && effectiveDrawerOpen && !isMobile
+    ? taskDetailTokens.drawer.panelWidth + DRAWER_HANDLE_WIDTH - parseInt(taskDetailTokens.titleBlock.px, 10) + 8
+    : 0;
 
   React.useEffect(() => {
     if (drawerOpenRequest > 0) setDrawerOpen(true);
@@ -477,7 +485,9 @@ export default function PortfolioDetailWorkspaceShell({
           ) : null}
 
           {hasTabRow && (
-            <WorkspaceTabs tabs={tabs} activeTab={activeTab} onTabChange={onTabChange} />
+            <Box data-testid="workspace-tab-row" sx={{ minWidth: 0, mr: `${tabRowDrawerReserve}px` }}>
+              <WorkspaceTabs tabs={tabs} activeTab={activeTab} onTabChange={onTabChange} />
+            </Box>
           )}
         </Box>
       </Box>
@@ -530,7 +540,7 @@ export default function PortfolioDetailWorkspaceShell({
                 position: 'absolute',
                 top: -tabLift,
                 right: 0,
-                width: 26,
+                width: DRAWER_HANDLE_WIDTH,
                 height: 120,
                 bgcolor: effectiveDrawerOpen ? theme.palette.kanap.tab.bgActive : theme.palette.kanap.tab.bg,
                 border: `1px solid ${effectiveDrawerOpen ? theme.palette.kanap.tab.borderActive : theme.palette.kanap.tab.border}`,
