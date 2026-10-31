@@ -200,8 +200,8 @@ function lineNumberOfLegacy(legacyNumber: string): number | null {
 
 /**
  * The line a budget reference names, of either nature, in the request's tenant. `BL-n` and a bare
- * number are the line's own number. `OPX-n` and `CPX-n` are that number first, then the legacy
- * number (`spend_items.legacy_number`), so the detail and the history name the same line.
+ * number are the line's own number. `OPX-n` and `CPX-n` are that number among the lines of its nature
+ * first, then the legacy number (`spend_items.legacy_number`), so the detail and the history name the same line.
  */
 export async function resolveBudgetLine(raw: string, manager: EntityManager): Promise<{ id: string; nature: 'opex' | 'capex'; reference: string }> {
   let predicate: string;
@@ -216,8 +216,8 @@ export async function resolveBudgetLine(raw: string, manager: EntityManager): Pr
     if (numbers.legacyNumber) {
       const itemNumber = lineNumberOfLegacy(numbers.legacyNumber);
       if (itemNumber == null) throw new BadRequestException('Malformed budget line reference');
-      predicate = '(item_number = $1 OR legacy_number = $2)';
-      params = [itemNumber, numbers.legacyNumber];
+      predicate = '((item_number = $1 AND nature = $3) OR legacy_number = $2)';
+      params = [itemNumber, numbers.legacyNumber, numbers.legacyNumber.startsWith('CPX-') ? 'capex' : 'opex'];
       order = 'ORDER BY (item_number = $1) DESC';
     } else {
       predicate = 'item_number = $1';
