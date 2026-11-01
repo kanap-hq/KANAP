@@ -150,8 +150,9 @@ export const incidentsApi = {
   get: (idOrRef: string): Promise<Incident> =>
     api.get<Incident>(`/incidents/${idOrRef}`),
 
-  create: (data: CreateIncidentInput): Promise<Incident> =>
-    api.post<Incident, CreateIncidentInput>('/incidents', data),
+  /** The created incident, with the token that lets its creator cancel the creation (`DELETE /incidents/:id/creation`). */
+  create: (data: CreateIncidentInput): Promise<Incident & { creation_token: string }> =>
+    api.post<Incident & { creation_token: string }, CreateIncidentInput>('/incidents', data),
 
   update: (idOrRef: string, data: UpdateIncidentInput): Promise<Incident> =>
     api.patch<Incident, UpdateIncidentInput>(`/incidents/${idOrRef}`, data),

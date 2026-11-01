@@ -1732,7 +1732,11 @@
       "documents_one": "{{count}} document",
       "documents_other": "{{count}} documents",
       "description_one": "the description",
-      "description_other": "the description"
+      "description_other": "the description",
+      "timeEntries_one": "{{count}} time entry",
+      "timeEntries_other": "{{count}} time entries",
+      "journalEntries_one": "{{count}} journal entry",
+      "journalEntries_other": "{{count}} journal entries"
     }
   }
 }

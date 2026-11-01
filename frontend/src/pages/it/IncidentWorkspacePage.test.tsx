@@ -107,9 +107,7 @@ vi.mock('../../components/history/RecordHistoryTab', () => ({
 }));
 vi.mock('./workspace/IncidentMetadataBar', () => ({ default: () => null }));
 vi.mock('./workspace/IncidentPropertiesDrawer', () => ({
-  default: ({ onChange, isCreate }: { onChange?: (patch: { severity?: string }) => void; isCreate?: boolean }) => (
-    isCreate ? <button type="button" onClick={() => onChange?.({ severity: 'major' })}>set-severity</button> : null
-  ),
+  default: ({ values }: { values: { severity: string } }) => <div data-testid="incident-drawer">{values.severity}</div>,
 }));
 vi.mock('./workspace/IncidentRelationsTab', () => ({ default: () => null }));
 vi.mock('./workspace/IncidentJournalTab', () => ({
@@ -226,7 +224,7 @@ describe('IncidentWorkspacePage — new incident title', () => {
     shellProps.current = null;
   });
 
-  it('types the title in the header and keeps the description in the body', () => {
+  it('opens the title in the header and shows the incident to come, dimmed, with nothing else to fill', () => {
     renderNewIncident();
 
     expect(screen.getByLabelText('shell-title')).toHaveValue('');
@@ -234,70 +232,43 @@ describe('IncidentWorkspacePage — new incident title', () => {
       canEditTitle: true,
       title: '',
       titleFallback: 'workspace.incident.newTitle',
-      titleRequiredMessage: 'workspace.incident.create.titleRequired',
+      titleAutoEdit: true,
     });
-    expect(screen.queryByText('workspace.incident.create.title')).toBeNull();
-    expect(screen.getByPlaceholderText('workspace.incident.overview.descriptionPlaceholder')).toBeInTheDocument();
-    expect(screen.getByText('set-severity')).toBeInTheDocument();
+    const previews = screen.getAllByTestId('creation-preview');
+    expect(previews).toHaveLength(2);
+    // The drawer shows the severity the incident is created with.
+    expect(previews[0]).toHaveTextContent('minor');
+    expect(previews[1].querySelector('textarea[placeholder="workspace.incident.overview.descriptionPlaceholder"]')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.create' })).toBeNull();
   });
 
-  it('shows the required error in the header when creating without a title', () => {
+  it('creates the incident, severity minor, when the title is committed', async () => {
+    vi.mocked(incidentsApi.create).mockResolvedValue({ ...incident, title: 'Mail outage', item_number: 4, severity: 'minor', creation_token: 'token-1' });
     renderNewIncident();
 
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    const title = screen.getByLabelText('shell-title');
+    fireEvent.change(title, { target: { value: '  Mail outage  ' } });
+    fireEvent.blur(title);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('workspace.incident.create.titleRequired');
-    expect(screen.queryByText('workspace.incident.create.severityRequired')).toBeNull();
-    expect(incidentsApi.create).not.toHaveBeenCalled();
+    await waitFor(() => expect(incidentsApi.create).toHaveBeenCalledTimes(1));
+    const payload = vi.mocked(incidentsApi.create).mock.calls[0][0];
+    expect(payload).toMatchObject({ title: 'Mail outage', severity: 'minor', status: 'open', reporter_user_id: 'user-1' });
+    expect(typeof payload.detected_at).toBe('string');
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/it/incidents/INC-4/overview', { replace: true }));
+  });
+
+  it('shows a refused creation under the title, nothing created', async () => {
+    vi.mocked(incidentsApi.create).mockRejectedValue({ response: { status: 400, data: { message: 'Title is too long.' } } });
+    renderNewIncident();
 
     const title = screen.getByLabelText('shell-title');
     fireEvent.change(title, { target: { value: 'Mail outage' } });
     fireEvent.blur(title);
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
 
-    expect(screen.queryByText('workspace.incident.create.titleRequired')).toBeNull();
-    expect(screen.getByRole('alert')).toHaveTextContent('workspace.incident.create.severityRequired');
-    expect(incidentsApi.create).not.toHaveBeenCalled();
-  });
-
-  it('drops the title error as soon as a title is typed, and brings it back on Create', () => {
-    renderNewIncident();
-
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('workspace.incident.create.titleRequired');
-
-    const title = screen.getByLabelText('shell-title');
-    fireEvent.change(title, { target: { value: 'M' } });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Title is too long.');
+    expect(navigateMock).not.toHaveBeenCalled();
+    fireEvent.change(title, { target: { value: 'Mail' } });
     expect(screen.queryByRole('alert')).toBeNull();
-
-    fireEvent.change(title, { target: { value: '' } });
-    expect(screen.queryByRole('alert')).toBeNull();
-
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('workspace.incident.create.titleRequired');
-    expect(incidentsApi.create).not.toHaveBeenCalled();
-  });
-
-  it('creates the incident from the header title and the description', async () => {
-    vi.mocked(incidentsApi.create).mockResolvedValue({ ...incident, title: 'Mail outage', item_number: 4 });
-    renderNewIncident();
-
-    fireEvent.click(screen.getByText('set-severity'));
-    const title = screen.getByLabelText('shell-title');
-    fireEvent.change(title, { target: { value: '  Mail outage  ' } });
-    fireEvent.blur(title);
-    fireEvent.change(screen.getByPlaceholderText('workspace.incident.overview.descriptionPlaceholder'), {
-      target: { value: '  The Lyon office lost mail  ' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-
-    await waitFor(() => expect(incidentsApi.create).toHaveBeenCalledTimes(1));
-    expect(vi.mocked(incidentsApi.create).mock.calls[0][0]).toMatchObject({
-      title: 'Mail outage',
-      severity: 'major',
-      description: 'The Lyon office lost mail',
-    });
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/it/incidents/INC-4/overview', { replace: true }));
   });
 
   it('offers no header title to a reader', () => {
@@ -305,8 +276,8 @@ describe('IncidentWorkspacePage — new incident title', () => {
     renderNewIncident();
 
     expect(screen.queryByLabelText('shell-title')).toBeNull();
-    expect(shellProps.current).toMatchObject({ canEditTitle: false, titleRequiredMessage: undefined });
-    expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeDisabled();
+    expect(shellProps.current).toMatchObject({ canEditTitle: false });
+    expect(screen.queryByRole('button', { name: 'common:buttons.create' })).toBeNull();
   });
 
   it('keeps an existing incident title on the loaded record', async () => {
@@ -323,7 +294,6 @@ describe('IncidentWorkspacePage — new incident title', () => {
       canEditTitle: true,
       title: 'Router down',
       titleFallback: 'workspace.incident.untitled',
-      titleRequiredMessage: undefined,
       titleError: null,
     });
     expect(screen.queryByText('workspace.incident.create.description')).toBeNull();
