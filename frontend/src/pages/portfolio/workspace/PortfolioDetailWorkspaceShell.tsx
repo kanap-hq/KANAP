@@ -63,6 +63,13 @@ type PortfolioDetailWorkspaceShellProps = {
   onTitleDraftChange?: (draft: string) => void;
   /** The longest title the record accepts (the input stops there). */
   titleMaxLength?: number;
+  /**
+   * A new record: the title opens for typing, light blue while empty (`EditableTitle` `autoEdit`
+   * and `emphasizeEmpty`), and a committed name goes to `onTitleSave`, which creates the record.
+   */
+  titleAutoEdit?: boolean;
+  /** Escape in the empty title of `titleAutoEdit`: leave without creating anything. */
+  titleOnCancel?: () => void;
   /** Omitted (e.g. on a create page), the shell draws no Properties tab and no drawer. */
   properties?: React.ReactNode;
   tabs: PortfolioDetailWorkspaceTab[];
@@ -195,7 +202,9 @@ export default function PortfolioDetailWorkspaceShell({
   onTabChange,
   onTitleSave,
   onTitleDraftChange,
+  titleAutoEdit = false,
   titleMaxLength,
+  titleOnCancel,
   titleRequiredMessage,
   properties,
   tabs,
@@ -421,6 +430,9 @@ export default function PortfolioDetailWorkspaceShell({
                         onDraftChange={onTitleDraftChange}
                         requiredMessage={titleRequiredMessage}
                         error={titleError}
+                        autoEdit={titleAutoEdit}
+                        emphasizeEmpty={titleAutoEdit}
+                        onCancel={titleOnCancel}
                       />
                     </>
                   )}
