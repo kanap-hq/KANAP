@@ -23,6 +23,20 @@ EXPOSE 8080
 # typst and inkscape (document export) read it, and the exec-form CMD below starts no shell.
 ENV CHARSET=UTF-8 LANG=C.UTF-8 LC_COLLATE=C
 
+# The user manual (doc/help/docs), read by the assistant's manual tools: its Markdown pages
+# only, no images or downloads. The folder is the named build context `help-docs`, which
+# Compose (`additional_contexts`) and the CI workflows (`build-contexts`) pass; by hand:
+#   docker build --build-context help-docs=doc/help/docs backend
+# Without it, the build stops on `help-docs`, looked for as an image. (An empty stage of that
+# name as a default is no option: BuildKit then reuses the copy of the last build, with or
+# without the context.)
+FROM base AS manual
+COPY --from=help-docs en /manual/en
+COPY --from=help-docs fr /manual/fr
+COPY --from=help-docs de /manual/de
+COPY --from=help-docs es /manual/es
+RUN find /manual -type f ! -name '*.md' -delete && find /manual -depth -mindepth 1 -type d -empty -delete
+
 # Every dependency, the sources and the compiled dist/.
 FROM base AS build
 COPY package.json package-lock.json* ./
@@ -33,6 +47,8 @@ COPY scripts ./scripts
 # The demo data set and its loader (setup-tenant.mjs), run by the API to load demo data.
 COPY fixtures ./fixtures
 RUN npm run build
+# After the build: a change of the manual reuses the compiled layers.
+COPY --from=manual /manual ./help-docs
 
 # Production dependencies, pruned from the tree of the build stage (no second install).
 # `--omit=optional` also drops the development tools that a production package names as an
@@ -51,7 +67,7 @@ USER node
 CMD ["node", "./scripts/migrate-and-start.js"]
 
 # Runtime image: compiled code, production dependencies, the start-up script, the loader
-# helpers of the demo data and the demo data set. No sources, specs or development tools.
+# helpers of the demo data, the demo data set and the user manual. No sources, specs or development tools.
 FROM base AS runtime
 COPY --from=build /app/package.json /app/package-lock.json ./
 COPY --from=production-dependencies /app/node_modules ./node_modules
@@ -59,6 +75,7 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/scripts/migrate-and-start.js ./scripts/
 COPY --from=build /app/scripts/lib/*.mjs ./scripts/lib/
 COPY --from=build /app/fixtures ./fixtures
+COPY --from=build /app/help-docs ./help-docs
 USER node
 # Exec form: node receives SIGTERM itself and drains in-flight requests before it exits
 # (src/common/graceful-shutdown.ts). Through `sh -lc` the signal never reached node and every

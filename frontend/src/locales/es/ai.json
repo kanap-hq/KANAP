@@ -368,8 +368,10 @@
       "get_record_history": "Obtener historial",
       "import_ticket": "Importar ticket",
       "import_glpi_ticket": "Importar ticket GLPI",
+      "list_help_topics": "Explorar el manual de usuario",
       "prepare_mutation_plan": "Preparar plan de cambios",
       "query_entities": "Consultar entidades",
+      "read_help_section": "Leer el manual de usuario",
       "search_all": "Buscar todo",
       "search_knowledge": "Buscar en la base de conocimiento",
       "web_search": "Buscar en la web"
@@ -404,7 +406,8 @@
       "builtinNotAccepted": "Un administrador debe confirmar el proveedor de IA en Administración > Plaid."
     },
     "suggestions": {
-      "applicationMention": "Resume @APP-",
+      "applicationMention": "Resuma una aplicación: escriba @ para elegir una.",
+      "budgetLines": "¿Cuáles son mis cinco líneas presupuestarias más grandes este año?",
       "knowledgeSearch": "Encuentra documentos sobre copias de seguridad",
       "myProjects": "¿En qué proyectos estoy trabajando?",
       "overdueTasks": "Muéstrame mis tareas atrasadas"

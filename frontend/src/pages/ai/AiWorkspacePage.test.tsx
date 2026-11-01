@@ -128,6 +128,10 @@ vi.mock('../../ai/aiApi', () => ({
   },
 }));
 
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({ hasLevel: () => true }),
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,

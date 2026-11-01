@@ -5,7 +5,7 @@ import {
   type AiContextBudgetSectionBreakdown,
 } from './ai-context-budget.helper';
 import type { AiContextProfile } from './ai-context-profile';
-import type { budgetColumnsAiContext } from '../budget-columns/budget-columns.util';
+import type { LocalizedBudgetColumnAiContext } from '../budget-columns/budget-column-labels';
 import type { AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
 import { isoDateTimeInTimeZone, knownTimeZone } from '../common/csv-sheet';
 import { AI_PERSON_WITHOUT_NAME } from './query/ai-support.query';
@@ -27,7 +27,7 @@ type SystemPromptParams = {
   currentUser: CurrentUserPromptContext;
   contextProfile?: AiContextProfile;
   /** The tenant's budget columns, only for users who can read the budget lines. */
-  budgetColumns?: ReturnType<typeof budgetColumnsAiContext>;
+  budgetColumns?: LocalizedBudgetColumnAiContext[];
   /** The analytics dimensions budget lines may be given a value on, only for users who can read them. */
   analyticsDimensions?: AnalyticsDimensionsPromptContext;
   /** The user's IANA zone. Absent or unknown reads as UTC. */
@@ -57,6 +57,30 @@ export type BuiltSystemPrompt = {
   cacheablePrefix: string;
   sections: AiContextBudgetSectionBreakdown[];
 };
+
+/** One budget column in the prompt: the name to answer with, or the four names when the profile sets no language. */
+function budgetColumnPromptEntry(column: LocalizedBudgetColumnAiContext) {
+  const name = normalizePromptValue(column.name);
+  const translated = column.names && {
+    en: normalizePromptValue(column.names.en),
+    fr: normalizePromptValue(column.names.fr),
+    de: normalizePromptValue(column.names.de),
+    es: normalizePromptValue(column.names.es),
+  };
+  const label = name
+    ? { name }
+    : translated?.en && translated.fr && translated.de && translated.es
+      ? { names: { en: translated.en, fr: translated.fr, de: translated.de, es: translated.es } }
+      : { name: `Column ${column.column}` };
+  return {
+    column: column.column,
+    ai_field_suffix: column.ai_field_suffix,
+    measure: column.measure,
+    ...label,
+    shown: column.shown,
+    default: column.default,
+  };
+}
 
 function normalizePromptValue(value: string | null | undefined): string | null {
   if (value == null) {
@@ -145,6 +169,7 @@ function toolUsageGuidelines(mode: AiContextProfile['promptMode']): string {
     '- Discovery tools are ranked and incomplete. Authoritative query/aggregate tools can support exact answers when complete is true.',
     '- Prefer completeness over speed. Use generous limits and paginate when total exceeds returned or truncated is true before claiming "all".',
     '- Reference entities with readable refs such as PRJ-12, T-42, or INC-12. Never expose UUIDs.',
+    '- How to do something in KANAP (a screen, menu, button, setting or the steps of a task): read the user manual with list_help_topics and read_help_section before describing any screen, describe only what it says, and link the `url` of the section you read.',
   ];
 
   if (mode === 'knowledge') {
@@ -338,10 +363,7 @@ export class AiSystemPromptService {
       local_time: localTime,
       ...(params.budgetColumns?.length
         ? {
-          budget_columns: params.budgetColumns.map((column) => ({
-            ...column,
-            name: normalizePromptValue(column.name) ?? `Column ${column.column}`,
-          })),
+          budget_columns: params.budgetColumns.map(budgetColumnPromptEntry),
         }
         : {}),
       ...(analyticsDimensions ? { analytics_dimensions: analyticsDimensions } : {}),
@@ -354,9 +376,12 @@ export class AiSystemPromptService {
         `${JSON.stringify(currentUserContext, null, 2)}\n` +
         '```' +
         (params.budgetColumns?.length
-          ? '\n`budget_columns` lists the five amount columns of the budget lines as this tenant names them. ' +
+          ? '\n`budget_columns` lists the five amount columns of the budget lines. ' +
+            '`name` is the name to use: the workspace\'s own name when it set one, otherwise the product name in the user\'s language. ' +
+            'When the profile sets no language, a column without its own name lists `names` for en, fr, de and es: use the name in the language of the conversation. ' +
+            'Match a column the user names to that name, answer with that name only, with no English default in brackets, and use the `default` column when the user names none. ' +
             'Amount fields are `<year slot>_<ai_field_suffix>`, year slots y_minus2, y_minus1, y, y_plus1 and y_plus2; ' +
-            'financial-plan amounts use `measure`. Match a column the user names to `name`, answer with that name, and use the `default` column when the user names none. ' +
+            'financial-plan amounts use `measure`. ' +
             'Hidden columns (`shown: false`) still hold amounts.'
           : '') +
         (analyticsDimensions

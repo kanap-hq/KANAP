@@ -2159,6 +2159,11 @@ function buildToolIsolationCases(
     case 'web_search':
       return [];
 
+    // The user manual is public and holds no tenant data.
+    case 'list_help_topics':
+    case 'read_help_section':
+      return [];
+
     case 'import_glpi_ticket':
     case 'import_ticket':
     case 'create_task':

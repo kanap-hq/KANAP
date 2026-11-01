@@ -1532,6 +1532,10 @@ export const aiAgentControlApi = {
     const res = await api.post(`/ai/admin/control-plane/shared-context-profiles/${id}/archive`);
     return res.data;
   },
+  async restoreSharedContextProfile(id: string): Promise<{ profile: AiSharedContextProfile }> {
+    const res = await api.post(`/ai/admin/control-plane/shared-context-profiles/${id}/restore`);
+    return res.data;
+  },
   async listKnowledgeLibraries(): Promise<AiKnowledgeLibrary[]> {
     const res = await api.get('/knowledge-libraries');
     return Array.isArray(res.data) ? res.data : (res.data?.items ?? []);
