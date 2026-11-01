@@ -2,25 +2,24 @@ import { Fragment, useCallback, useMemo, useState } from 'react';
 import { Box, Typography, Stack, Button, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { useTheme, type Theme } from '@mui/material/styles';
 import SettingsIcon from '@mui/icons-material/Settings';
-import BudgetDashboardSettingsModal from './workspace/settings/BudgetDashboardSettingsModal';
-import { useBudgetDashboardConfig } from './workspace/hooks/useBudgetDashboardConfig';
+import BudgetDashboardSettingsModal from './settings/BudgetDashboardSettingsModal';
+import { useBudgetDashboardConfig } from './hooks/useBudgetDashboardConfig';
 import AddIcon from '@mui/icons-material/Add';
-import { getDotColor } from '../utils/statusColors';
+import { getDotColor } from '../../utils/statusColors';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import PageHeader from '../components/PageHeader';
-import api from '../api';
-import { useAuth } from '../auth/AuthContext';
-import { formatCompactAmount, formatThousandsAmount } from '../i18n/formatters';
-import { useLocale } from '../i18n/useLocale';
-import DashboardTile from './workspace/tiles/DashboardTile';
-import { AmountColumnKey, amountFieldKey, slotYear, YearSlot, yearSlotLabel } from '../components/finance/amountColumns';
-import { useBudgetColumns } from '../hooks/useBudgetColumns';
-import type { BudgetOperationScope as NatureScope } from '../services/budgetOperations';
-import { buildItemPath, formatItemRef } from '../utils/item-ref';
-import ItemScopeTabs from './operations/ItemScopeTabs';
-import type { BudgetSummaryRow } from './reports/useReportScope';
+import api from '../../api';
+import { useAuth } from '../../auth/AuthContext';
+import { formatCompactAmount, formatThousandsAmount } from '../../i18n/formatters';
+import { useLocale } from '../../i18n/useLocale';
+import DashboardTile from './tiles/DashboardTile';
+import { AmountColumnKey, amountFieldKey, slotYear, YearSlot, yearSlotLabel } from '../../components/finance/amountColumns';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import type { BudgetOperationScope as NatureScope } from '../../services/budgetOperations';
+import { buildItemPath, formatItemRef } from '../../utils/item-ref';
+import ItemScopeTabs from '../operations/ItemScopeTabs';
+import type { BudgetSummaryRow } from '../reports/useReportScope';
 import {
   type ColumnFilters,
   type BudgetScope,
@@ -34,11 +33,11 @@ import {
   readLineTotal,
   readTopIncreases,
   topIncreasesRequest,
-} from './reports/reportAggregates';
-import { ACTIVE_TASK_STATUSES } from './tasks/task.constants';
-import { useBudgetAggregate, useBudgetAggregates } from './reports/useBudgetAggregate';
-import FxMissingNotice, { FxMissingMark } from '../components/finance/FxMissingNotice';
-import { mergeFxMissing, type FxMissing } from '../components/finance/fxMissing';
+} from '../reports/reportAggregates';
+import { ACTIVE_TASK_STATUSES } from '../tasks/task.constants';
+import { useBudgetAggregate, useBudgetAggregates } from '../reports/useBudgetAggregate';
+import FxMissingNotice, { FxMissingMark } from '../../components/finance/FxMissingNotice';
+import { mergeFxMissing, type FxMissing } from '../../components/finance/fxMissing';
 
 type ServerListResponse<T> = { items: T[]; total: number; page: number; limit: number };
 
@@ -397,7 +396,14 @@ function useTileScope(tile: string): [BudgetScope, (next: BudgetScope) => void] 
   return [scope, setScope];
 }
 
-export default function DashboardPage() {
+/** The home page's My tasks tile already lists the person's tasks. */
+const ON_HOME_PAGE_ALREADY = new Set(['my-tasks']);
+
+/**
+ * The budget tiles of the home page, with their quick actions and their settings. `leading`
+ * comes first in the row (the first steps, when the budget section heads the home page).
+ */
+export default function BudgetSection({ leading }: { leading?: React.ReactNode }) {
   const navigate = useNavigate();
   const { hasLevel, profile } = useAuth();
   const { t } = useTranslation('common');
@@ -830,36 +836,42 @@ export default function DashboardPage() {
     ) : null,
   };
 
+  const shownTiles = dashboardSettings.config.tiles
+    .filter((tile) => tile.enabled && !ON_HOME_PAGE_ALREADY.has(tile.id) && tiles[tile.id])
+    .slice()
+    .sort((a, b) => a.order - b.order);
+  // Nothing of the budget for this person: no section at all.
+  if (!canOpex && !canContracts) return null;
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <PageHeader
-        title={t('dashboard.overview')}
-        actions={(
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ width: '100%' }}>
-            {canCreateLines && (
-              <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/budget/new?nature=opex')}>
-                {t('dashboard.newOpexLine')}
-              </Button>
-            )}
-            {canCreateLines && (
-              <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/budget/new?nature=capex')}>
-                {t('dashboard.newCapexLine')}
-              </Button>
-            )}
-            {canCreateContracts && (
-              <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/contracts/new/overview')}>
-                {t('dashboard.newContract')}
-              </Button>
-            )}
-            <Box sx={{ flex: 1 }} />
-            <Button variant="action" size="small" startIcon={<SettingsIcon />} onClick={() => setSettingsOpen(true)} disabled={dashboardSettings.isLoading}>
-              {t('dashboard.budgetSettings.customize')}
-            </Button>
-          </Stack>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Stack direction="row" alignItems="center" spacing={1.5} useFlexGap flexWrap="wrap">
+        <Typography component="h2" sx={{ fontSize: 16, fontWeight: 500, color: 'kanap.text.primary', mr: 0.5 }}>
+          {t('nav:workspaces.budgetManagement')}
+        </Typography>
+        {canCreateLines && (
+          <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/budget/new?nature=opex')}>
+            {t('dashboard.newOpexLine')}
+          </Button>
         )}
-      />
+        {canCreateLines && (
+          <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/budget/new?nature=capex')}>
+            {t('dashboard.newCapexLine')}
+          </Button>
+        )}
+        {canCreateContracts && (
+          <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/contracts/new/overview')}>
+            {t('dashboard.newContract')}
+          </Button>
+        )}
+        <Box sx={{ flex: 1 }} />
+        <Button variant="action" size="small" startIcon={<SettingsIcon />} onClick={() => setSettingsOpen(true)} disabled={dashboardSettings.isLoading}>
+          {t('dashboard.budgetSettings.customize')}
+        </Button>
+      </Stack>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'start' }}>
-        {dashboardSettings.config.tiles.filter((tile) => tile.enabled).slice().sort((a, b) => a.order - b.order).map((tile) => tiles[tile.id])}
+        {leading ? <Box sx={tileLayoutSx()}>{leading}</Box> : null}
+        {shownTiles.map((tile) => tiles[tile.id])}
       </Box>
       <BudgetDashboardSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={dashboardSettings} columns={budgetColumns} canViewTile={canViewTile} />
     </Box>

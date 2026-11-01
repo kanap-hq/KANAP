@@ -1,26 +1,4 @@
 {
-  "home": {
-    "title": "Stammdaten",
-    "subtitle": "Verwalten Sie die Organisationsstruktur, Lieferanten, Konten und Analysedimensionen.",
-    "cards": {
-      "companiesTitle": "Unternehmen",
-      "companiesDescription": "Verwalten Sie Unternehmenseinheiten und deren Kennzahlen",
-      "departmentsTitle": "Abteilungen",
-      "departmentsDescription": "Verwalten Sie Abteilungen über Unternehmen hinweg",
-      "costCentersTitle": "Kostenstellen",
-      "costCentersDescription": "Legen Sie fest, wer für jede Budgetzeile verantwortlich ist, über juristische Personen hinweg",
-      "suppliersTitle": "Lieferanten",
-      "suppliersDescription": "Verwalten Sie Lieferanteninformationen",
-      "coaTitle": "Kontenpläne",
-      "coaDescription": "Verwalten Sie Kontenpläne und Konten",
-      "workingDayCalendarsTitle": "Arbeitstagekalender",
-      "workingDayCalendarsDescription": "Legen Sie die Arbeitstage jedes Monats für Zeilen mit Preis pro Tag fest",
-      "businessProcessesTitle": "Geschäftsprozesse",
-      "businessProcessesDescription": "Verwalten Sie ISO 9001-konforme Geschäftsprozesse",
-      "analyticsDimensionsTitle": "Analysedimensionen",
-      "analyticsDimensionsDescription": "Konfigurieren Sie Analysedimensionen"
-    }
-  },
   "shared": {
     "columns": {
       "name": "Name",
@@ -55,8 +33,7 @@
       "prev": "Zurück",
       "next": "Weiter",
       "enabled": "Aktiviert",
-      "access": "Zugriff",
-      "history": "Verlauf"
+      "access": "Zugriff"
     },
     "workspace": {
       "itemCountOf": "{{entity}} {{current}} von {{total}}"

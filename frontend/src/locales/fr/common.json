@@ -294,7 +294,6 @@
     "failedToLogTime": "Échec de l'enregistrement du temps"
   },
   "dashboard": {
-    "overview": "Vue d'ensemble",
     "welcomeBack": "Bienvenue, {{name}}",
     "workOverview": "Voici un aperçu de votre travail",
     "createTask": "Créer une tâche",

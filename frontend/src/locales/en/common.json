@@ -294,7 +294,6 @@
     "failedToLogTime": "Failed to log time"
   },
   "dashboard": {
-    "overview": "Overview",
     "welcomeBack": "Welcome, {{name}}",
     "workOverview": "Here's an overview of your work",
     "createTask": "Create task",

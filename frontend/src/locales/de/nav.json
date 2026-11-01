@@ -25,14 +25,12 @@
   },
   "sidebar": {
     "ops": {
-      "overview": "Übersicht",
       "contracts": "Verträge",
       "reporting": "Berichte",
       "administration": "Administration",
       "budgetLines": "Budgetzeilen"
     },
     "masterData": {
-      "home": "Stammdaten-Startseite",
       "sections": {
         "organization": "Organisation",
         "externalParties": "Externe Parteien",

@@ -294,7 +294,6 @@
     "failedToLogTime": "Zeit konnte nicht erfasst werden"
   },
   "dashboard": {
-    "overview": "Übersicht",
     "welcomeBack": "Willkommen, {{name}}",
     "workOverview": "Hier ist eine Übersicht Ihrer Arbeit",
     "createTask": "Aufgabe erstellen",

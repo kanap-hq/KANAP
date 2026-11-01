@@ -4,7 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createAppTheme } from '../config/ThemeContext';
+import { createAppTheme } from '../../config/ThemeContext';
 
 vi.mock('react-i18next', () => {
   // The tile titles name the default column: show it next to the key.
@@ -12,42 +12,39 @@ vi.mock('react-i18next', () => {
   const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
-vi.mock('../hooks/useBudgetColumns', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../hooks/useBudgetColumns')>();
-  const state = await import('./reports/budgetColumnsTestState');
+vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../hooks/useBudgetColumns')>();
+  const state = await import('../reports/budgetColumnsTestState');
   return { ...actual, useBudgetColumns: () => state.mockedBudgetColumns(actual.resolveBudgetColumns) };
 });
-vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }));
 let interfaceLocale = 'en';
-vi.mock('../i18n/useLocale', () => ({ useLocale: () => interfaceLocale }));
+vi.mock('../../i18n/useLocale', () => ({ useLocale: () => interfaceLocale }));
 const readable: Record<string, boolean> = { budget: true };
 let budgetWriter = true;
 let contractsWriter = true;
 const PROFILE = { id: 'user-1', email: 'thomas.berger@example.com', first_name: 'Thomas', last_name: 'Berger' };
-vi.mock('../auth/AuthContext', () => ({
+vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
     hasLevel: (resource: string, level: string) => (readable[resource] ?? true)
       && (level !== 'manager' || (resource === 'budget' ? budgetWriter : resource === 'contracts' ? contractsWriter : true)),
     profile: PROFILE,
   }),
 }));
-vi.mock('../components/PageHeader', () => ({
-  default: ({ actions }: { actions?: React.ReactNode }) => <header aria-label="page header">{actions}</header>,
-}));
-vi.mock('./workspace/tiles/DashboardTile', () => ({
+vi.mock('./tiles/DashboardTile', () => ({
   default: ({ title, subtitle, currency, action, children }: { title: string; subtitle?: string; currency?: string; action?: React.ReactNode; children?: React.ReactNode }) => (
     <section aria-label={title}>{(subtitle || currency) && <p data-testid="tile-subtitle">{[subtitle, currency].filter(Boolean).join(' · ')}</p>}{action}{children}</section>
   ),
 }));
 
-import api from '../api';
-import { formatCompactAmount, formatThousandsAmount } from '../i18n/formatters';
-import DashboardPage from './DashboardPage';
-import { DEFAULT_BUDGET_TILES } from './workspace/hooks/useBudgetDashboardConfig';
+import api from '../../api';
+import { formatCompactAmount, formatThousandsAmount } from '../../i18n/formatters';
+import BudgetSection from './BudgetSection';
+import { DEFAULT_BUDGET_TILES } from './hooks/useBudgetDashboardConfig';
 let savedDashboard = { tiles: DEFAULT_BUDGET_TILES };
 beforeEach(() => { savedDashboard = { tiles: DEFAULT_BUDGET_TILES }; });
-import { setBudgetColumns } from './reports/budgetColumnsTestState';
-import { fakeAggregate } from '../test/fakeBudgetAggregate';
+import { setBudgetColumns } from '../reports/budgetColumnsTestState';
+import { fakeAggregate } from '../../test/fakeBudgetAggregate';
 
 const storage = new Map<string, string>();
 vi.stubGlobal('localStorage', {
@@ -70,7 +67,7 @@ function renderPage(mode: 'light' | 'dark' = 'light') {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme(mode)}>
         <MemoryRouter>
-          <DashboardPage />
+          <BudgetSection />
           <LocationProbe />
         </MemoryRouter>
       </ThemeProvider>
@@ -81,7 +78,11 @@ function renderPage(mode: 'light' | 'dark' = 'light') {
 const ALL_SHOWN = { planned: true, committed: true, forecast: true, actual: true, expected_landing: true };
 const TENANT_NAMES = { planned: 'A0', committed: 'A1', forecast: 'A2', actual: 'A3', expected_landing: 'Réel' };
 
-describe('DashboardPage budget snapshot', () => {
+
+/** The section's title row: its title, the creation buttons and the customization. */
+const sectionHeader = () => screen.getByRole('heading', { name: 'nav:workspaces.budgetManagement' }).parentElement as HTMLElement;
+
+describe('BudgetSection budget snapshot', () => {
   beforeEach(() => {
     setBudgetColumns();
     readable.budget = true;
@@ -359,7 +360,7 @@ const MY_BUDGET = 'dashboard.myBudget.title';
 const BY_COST_CENTER = 'dashboard.byCostCenter';
 const subtitleOf = (tile: HTMLElement) => within(tile).getByTestId('tile-subtitle').textContent;
 
-describe('DashboardPage budget tiles', () => {
+describe('BudgetSection budget tiles', () => {
   beforeEach(() => {
     interfaceLocale = 'en';
     setBudgetColumns();
@@ -416,7 +417,7 @@ describe('DashboardPage budget tiles', () => {
       expect(screen.getByRole('region', { name }).textContent?.match(/CHF/g)).toHaveLength(1);
     }
     // Counts, tasks, renewals and recent updates are not amounts.
-    for (const name of ['dashboard.dataHygiene', 'dashboard.myTasks', 'dashboard.nextRenewals', 'dashboard.recentUpdates']) {
+    for (const name of ['dashboard.dataHygiene', 'dashboard.nextRenewals', 'dashboard.recentUpdates']) {
       expect(within(screen.getByRole('region', { name })).queryByTestId('tile-subtitle')).not.toBeInTheDocument();
     }
   });
@@ -425,9 +426,9 @@ describe('DashboardPage budget tiles', () => {
     ['dashboard.newOpexLine', '/ops/budget/new?nature=opex'],
     ['dashboard.newCapexLine', '/ops/budget/new?nature=capex'],
     ['dashboard.newContract', '/ops/contracts/new/overview'],
-  ])('offers %s in the page header, opening its creation page', async (name, target) => {
+  ])('offers %s in the section title row, opening its creation page', async (name, target) => {
     renderPage();
-    const header = screen.getByRole('banner', { name: 'page header' });
+    const header = sectionHeader();
     expect(within(header).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newOpexLine', 'dashboard.newCapexLine', 'dashboard.newContract', 'dashboard.budgetSettings.customize']);
     fireEvent.click(within(header).getByRole('button', { name }));
     expect(screen.getByTestId('location')).toHaveTextContent(target);
@@ -438,19 +439,19 @@ describe('DashboardPage budget tiles', () => {
     budgetWriter = false;
     renderPage();
     await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
-    expect(within(screen.getByRole('banner', { name: 'page header' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newContract', 'dashboard.budgetSettings.customize']);
+    expect(within(sectionHeader()).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newContract', 'dashboard.budgetSettings.customize']);
   });
 
   it('keeps customization available when creation actions are hidden', async () => {
     contractsWriter = false;
     const view = renderPage();
     await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
-    expect(within(screen.getByRole('banner', { name: 'page header' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newOpexLine', 'dashboard.newCapexLine', 'dashboard.budgetSettings.customize']);
+    expect(within(sectionHeader()).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newOpexLine', 'dashboard.newCapexLine', 'dashboard.budgetSettings.customize']);
     view.unmount();
     budgetWriter = false;
     renderPage();
     await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
-    expect(within(screen.getByRole('banner', { name: 'page header' })).getAllByRole('button').map((button) => button.textContent)).toEqual(['dashboard.budgetSettings.customize']);
+    expect(within(sectionHeader()).getAllByRole('button').map((button) => button.textContent)).toEqual(['dashboard.budgetSettings.customize']);
   });
 
   it('orders the tiles: budget and hygiene, then the user\'s tiles, then the reports, recent updates last', async () => {
@@ -458,7 +459,7 @@ describe('DashboardPage budget tiles', () => {
     await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
     expect(screen.getAllByRole('region').map((tile) => tile.getAttribute('aria-label'))).toEqual([
       'dashboard.budgetSnapshot', 'dashboard.dataHygiene',
-      MY_BUDGET, 'dashboard.myTasks', 'dashboard.nextRenewals',
+      MY_BUDGET, 'dashboard.nextRenewals',
       TOP_ITEMS, TOP_INCREASES, BY_COST_CENTER,
       'dashboard.recentUpdates',
     ]);
@@ -539,20 +540,11 @@ describe('DashboardPage budget tiles', () => {
     expect(await within(tile).findByRole('link', { name: /Capex top/ })).toHaveAttribute('href', '/ops/budget/BL-12');
   });
 
-  it("counts the user's open tasks only and opens each task by its reference", async () => {
+  it("leaves the user's tasks to the home page's My tasks tile, and asks nothing for them", async () => {
     renderPage();
-    const tile = await screen.findByRole('region', { name: 'dashboard.myTasks' });
-    expect(await within(tile).findByText('7')).toBeInTheDocument();
-    expect(within(tile).getByRole('link', { name: /Renew licences/ })).toHaveAttribute('href', '/portfolio/tasks/T-4');
-    expect(within(tile).getByRole('link', { name: /Undated follow-up/ })).toHaveAttribute('href', '/portfolio/tasks/T-9');
-    const params = summaryCalls('/tasks')[0];
-    // The list scopes by the query parameter (a filter on the assignee id is ignored), open statuses only.
-    expect(params.assigneeUserId).toBe('user-1');
-    expect(params.sort).toBe('due_date:ASC');
-    expect(JSON.parse(params.filters)).toEqual({ status: { filterType: 'set', values: ['open', 'in_progress', 'pending', 'in_testing'] } });
-    // "View all" opens the task list on the user's tasks.
-    fireEvent.click(within(tile).getByRole('button', { name: 'buttons.viewAll' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/portfolio/tasks?taskScope=my');
+    await screen.findByRole('region', { name: 'dashboard.nextRenewals' });
+    expect(screen.queryByRole('region', { name: 'dashboard.myTasks' })).not.toBeInTheDocument();
+    expect(summaryCalls('/tasks')).toEqual([]);
   });
 
   it('opens each renewal on its contract', async () => {
@@ -630,7 +622,7 @@ describe('DashboardPage budget tiles', () => {
   it('hides every budget tile and sends no budget request without the budget right', async () => {
     readable.budget = false;
     renderPage();
-    await screen.findByRole('region', { name: 'dashboard.myTasks' });
+    await screen.findByRole('region', { name: 'dashboard.nextRenewals' });
     for (const name of ['dashboard.budgetSnapshot', 'dashboard.dataHygiene', TOP_ITEMS, TOP_INCREASES, MY_BUDGET, BY_COST_CENTER, 'dashboard.recentUpdates']) {
       expect(screen.queryByRole('region', { name })).not.toBeInTheDocument();
     }
@@ -822,7 +814,7 @@ describe('DashboardPage budget tiles', () => {
     await waitFor(() => expect(screen.queryByRole('region', { name: 'dashboard.dataHygiene' })).not.toBeInTheDocument());
     expect(screen.getAllByRole('region').map((tile) => tile.getAttribute('aria-label'))).toEqual([
       'dashboard.recentUpdates', BY_COST_CENTER, TOP_INCREASES, TOP_ITEMS,
-      'dashboard.nextRenewals', 'dashboard.myTasks', MY_BUDGET, 'dashboard.budgetSnapshot',
+      'dashboard.nextRenewals', MY_BUDGET, 'dashboard.budgetSnapshot',
     ]);
   });
 
