@@ -20,6 +20,10 @@
       "mobilePhone": "Mobiltelefon",
       "language": "Sprache"
     },
+    "placeholders": {
+      "businessPhone": "z. B. +49 30 1234567",
+      "mobilePhone": "z. B. +49 151 2345678"
+    },
     "locale": {
       "autoDetect": "Automatisch erkennen (Browser)"
     },

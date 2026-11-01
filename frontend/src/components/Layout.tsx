@@ -59,7 +59,7 @@ import { getDocUrl } from '../utils/docUrls';
 import AboutDialog from './about/AboutDialog';
 import { formatUserName } from '../utils/userDisplay';
 import SubscriptionBanner from './SubscriptionBanner';
-import TrialChip from './TrialChip';
+import TrialChip, { TrialMenuLine } from './TrialChip';
 import NamePromptDialog from './NamePromptDialog';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
@@ -483,6 +483,9 @@ export default function Layout() {
                 '& .MuiTabs-flexContainer > :last-of-type': { mr: 'auto' },
                 '& .MuiTabs-scrollButtons': { width: 28, flexShrink: 0, color: 'text.secondary' },
                 '& .MuiTab-root': {
+                  // Narrower tabs below xl: at 1280 px every section, Plaid included, fits without scrolling.
+                  px: { xs: 1.25, xl: 2 },
+                  minWidth: { xs: 0, xl: 90 },
                   color: 'text.secondary',
                   minHeight: 48,
                   whiteSpace: 'nowrap',
@@ -550,6 +553,7 @@ export default function Layout() {
                       {accountEmail}
                     </Typography>
                   ) : null}
+                  <TrialMenuLine onNavigate={closeMenu} />
                 </Box>
                 <Divider sx={{ my: 0.5 }} />
                 <MenuItem onClick={() => { closeMenu(); void guardedLeave(() => navigate('/settings')); }}>{t('nav:userMenu.myProfile')}</MenuItem>

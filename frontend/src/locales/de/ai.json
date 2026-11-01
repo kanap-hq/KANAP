@@ -381,17 +381,17 @@
     "aliases": "Aliasse: {{aliases}}"
   },
   "tokenUsage": {
-    "total": "Tokens",
-    "input": "Eingabe",
-    "output": "Ausgabe",
-    "lastInput": "Letzte Eingabe"
+    "total": "Verarbeitetes Volumen",
+    "input": "Eingabe-Tokens",
+    "output": "Ausgabe-Tokens",
+    "lastInput": "Kontext der letzten Anfrage"
   },
   "usageIndicator": {
-    "limitReached": "Monthly limit reached. Resets {{resetDate}}.",
-    "limitReachedCta": "Monthly limit reached.",
-    "openSettings": "Configure your own provider",
-    "remaining_one": "{{count}} message remaining this month",
-    "remaining_other": "{{count}} messages remaining this month"
+    "limitReached": "Monatliches Limit erreicht. Wird am {{resetDate}} zurückgesetzt.",
+    "limitReachedCta": "Monatliches Limit erreicht.",
+    "openSettings": "Eigenen Anbieter konfigurieren",
+    "remaining_one": "Noch {{count}} Nachricht in diesem Monat",
+    "remaining_other": "Noch {{count}} Nachrichten in diesem Monat"
   },
   "workspace": {
     "empty": {
@@ -406,7 +406,8 @@
       "builtinNotAccepted": "Ein Administrator muss den KI-Anbieter unter Administration > Plaid bestätigen."
     },
     "suggestions": {
-      "applicationMention": "Zusammenfassung für @APP-",
+      "applicationMention": "Fassen Sie eine Anwendung zusammen: Geben Sie @ ein, um eine auszuwählen.",
+      "budgetLines": "Was sind meine fünf größten Budgetzeilen in diesem Jahr?",
       "knowledgeSearch": "Finde Dokumente zu Backups",
       "myProjects": "An welchen Projekten arbeite ich?",
       "overdueTasks": "Zeige mir meine überfälligen Aufgaben"

@@ -14,10 +14,10 @@ One thing to be clear about from the start, because it drives every good use of 
 - Route: `/agents/shared-context`
 - Permissions:
   - `ai_agents:reader` lets you open the page and read the profile list
-  - `ai_agents:admin` (or `ai_settings:admin`) is required to create, edit, and archive profiles
+  - `ai_agents:admin` (or `ai_settings:admin`) is required to create, edit, archive, and restore profiles
 - Availability: the whole AI Agents section only appears when AI is enabled on the instance and you hold `ai_agents:reader`
 
-Without an admin level you still see the full list of profiles, but the **New profile** button and the per-row Edit and Archive controls are hidden. The page is read-only for you.
+Without an admin level you still see the full list of profiles, but the **New profile** button and the per-row Edit, Archive, and Restore controls are hidden. The page is read-only for you.
 
 ---
 
@@ -41,7 +41,7 @@ The **Profiles** section lists every profile on the instance. Each row shows:
 - The **Description**, when one was provided.
 - A summary line: **{n} lines** and, where available, **Updated {time}** so you can see how many guidance lines the profile carries and when it last changed.
 
-Admins get a **New profile** button in the page header, and Edit and Archive controls on each active row. Archived profiles are read-only. They carry no Edit or Archive controls, because there's nothing more to change on a profile that agents can no longer use.
+Admins get a **New profile** button in the page header, Edit and Archive controls on each active row, and a Restore control on each archived row. An archived profile stays read-only until you restore it: it carries no Edit control.
 
 ---
 
@@ -67,7 +67,13 @@ Archive is for retiring a profile you no longer want agents to use. Before it ta
 
 That's the important consequence to absorb: archiving does not automatically move affected agents to a replacement. Any agent that was pointed at the archived profile keeps running, but with **no** shared context, until you go into that agent's settings and select a different profile. If several agents share the profile you're archiving, plan the swap first.
 
-Archived profiles stay in the list, dimmed and tagged **Archived**, as a record, but they can no longer be edited or attached to an agent.
+Archived profiles stay in the list, dimmed and tagged **Archived**. They can no longer be edited or attached to an agent until you restore them.
+
+---
+
+## Restoring a profile
+
+**Restore** is on each archived row, in the same place as Archive on an active row. It sets the profile back to active and records the change. Agents that still point at the profile pick up its lines again, and you can edit it or attach it as before. The profile keeps its key the whole time it is archived, so a new profile with the same key is refused. Restore the existing profile to use that key again.
 
 ---
 
@@ -97,4 +103,5 @@ The practical rule: if you want the agent to state a fact and stand behind it (a
 - Prefer a small number of broadly-useful profiles (for example, one company-wide baseline) over many near-duplicates. Fewer profiles are easier to keep current, and edits reach every attached agent at once.
 - Don't smuggle citable facts in here. Anything you'd want a requester to see quoted with a source belongs in a [Knowledge library](knowledge.md).
 - Before archiving a shared profile, note which agents use it and repoint them first. Archiving leaves them running with no shared context until you do.
+- **Restore** brings an archived profile back. Agents that still point at it use its lines again.
 - The **Description** is only for you and never reaches the agent; use it to record who owns the profile or what it's for, so a teammate isn't guessing later.

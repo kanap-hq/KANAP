@@ -16,7 +16,8 @@ import { AI_BUDGET_DELTA_DEFAULT_LIMIT, AI_BUDGET_GROUP_LIMIT, AiAggregateExecut
 import { AI_QUERY_DEFAULT_LIMIT, AI_QUERY_FAMILY_MAX_LIMIT, AI_QUERY_MAX_LIMIT, AiQueryExecutor } from './query/ai-query.executor';
 import { describeAiEntityFilters } from './query/ai-filter-description.util';
 import { resolveAiEntityRegistry } from './query/registries';
-import { budgetColumnsAiContext, readBudgetColumns } from '../budget-columns/budget-columns.util';
+import { readBudgetColumns } from '../budget-columns/budget-columns.util';
+import { localizedBudgetColumnsAiContext } from '../budget-columns/budget-column-labels';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
 import { aiWriteRequirements } from './mutation/ai-write-levels';
 import { PermissionLevel } from '../permissions/permissions.service';
@@ -382,26 +383,31 @@ export class AiToolRegistry {
         {
           name: 'describe_entity_filters',
           category: 'authoritative',
-          description: 'Describes how one entity family can be filtered and sorted: each filter field with its aliases, expected value kinds, examples and lookup hints, plus `sort_fields` (every field query_entities sorts by, created_at and updated_at included, the keys of `field_families` aside) and `default_sort`. Useful before query_entities or aggregate_entities when field names or value formats are unknown. On budget lines, `budget_columns` gives the tenant\'s names for the amount columns, `field_families` lists the staff cost, staff FTE, day cost and days of every year and column once per family, and `metric_families` the cost per FTE, the day rate, the change between two columns and the FTE by month aggregate_entities computes. `families_not_read` lists what KANAP holds and these tools do not read, with the screen that shows it in the person\'s language (in four languages when their profile sets none). `fields_withheld` names each field of the family this person may not read, for lack of a right, with the reason: the field is withheld, which says nothing of its values (they are not empty). `roles`, `role_permissions` and `data_access` are described for an administrator of users with access to all data only, as their screens. ' + REFERENCE_DATA_FAMILIES_SENTENCE,
+          description: 'Describes how one entity family can be filtered and sorted: each filter field with its aliases, expected value kinds, examples and lookup hints, plus `sort_fields` (every field query_entities sorts by, created_at and updated_at included, the keys of `field_families` aside) and `default_sort`. Useful before query_entities or aggregate_entities when field names or value formats are unknown. On budget lines, `budget_columns` gives each amount column the name the answer uses: the workspace\'s own name when set, otherwise the product name in the person\'s language (`names` in en, fr, de and es when the profile sets none, the one in the language of the conversation). The answer uses that name on its own, without the English default in brackets. `field_families` lists the staff cost, staff FTE, day cost and days of every year and column once per family, and `metric_families` the cost per FTE, the day rate, the change between two columns and the FTE by month aggregate_entities computes. `families_not_read` lists what KANAP holds and these tools do not read, with the screen that shows it in the person\'s language (in four languages when their profile sets none). `fields_withheld` names each field of the family this person may not read, for lack of a right, with the reason: the field is withheld, which says nothing of its values (they are not empty). `roles`, `role_permissions` and `data_access` are described for an administrator of users with access to all data only, as their screens. ' + REFERENCE_DATA_FAMILIES_SENTENCE,
           inputSchema: DescribeEntityFiltersInputSchema,
           inputSummary: fieldDescriptions(DescribeEntityFiltersInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: async (context, input) => {
             await this.policy.assertEntityTypeReadAccess(context, input.entity_type, context.manager);
+            const screenLanguage = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
             // The budget lines list the tenant's analytics dimensions (`analytics:<code>`) among their fields.
             const description = {
               ...describeAiEntityFilters(input.entity_type, await resolveAiEntityRegistry(context, input.entity_type, (entityType) =>
                 this.policy.canReadEntityType(context, entityType, context.manager))),
               families_not_read: unreadFamilyLines(
-                await readAiScreenLanguage(context.manager, context.tenantId, context.userId),
+                screenLanguage,
                 await this.policy.adminFamiliesGap(context, context.manager),
                 await unreadFamiliesReachOf(this.policy, context, context.manager),
               ),
             };
             if (input.entity_type !== 'budget_lines') return description;
-            // Amount field descriptions are positional; the tenant's column names come with them (MCP clients have no system prompt).
-            return { ...description, budget_columns: budgetColumnsAiContext(await readBudgetColumns(context.manager, context.tenantId)) };
+            // Amount field descriptions are positional; the column names come with them, in the person's language
+            // (MCP clients have no system prompt). A workspace name wins over the product name.
+            return {
+              ...description,
+              budget_columns: localizedBudgetColumnsAiContext(await readBudgetColumns(context.manager, context.tenantId), screenLanguage),
+            };
           },
         },
       ],

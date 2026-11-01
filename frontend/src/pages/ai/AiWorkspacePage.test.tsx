@@ -129,6 +129,10 @@ vi.mock('../../ai/aiApi', () => ({
   },
 }));
 
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({ hasLevel: () => true }),
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -368,7 +372,7 @@ describe('AiWorkspacePage', () => {
     expect(chatState.sendMessage).toHaveBeenCalledWith('hello from mock');
   });
 
-  it('renders the token usage bar only when conversation usage exists', () => {
+  it('shows the token usage bar to an assistant administrator when conversation usage exists', () => {
     const client = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -376,6 +380,7 @@ describe('AiWorkspacePage', () => {
       },
     });
 
+    capabilitiesState = { data: chatCapabilities([], true) };
     chatState.messages = [{ id: 'msg-1', role: 'assistant', content: 'Hello' }];
     chatState.conversationUsage = { input_tokens: 12, output_tokens: 4 };
     chatState.lastRequestUsage = { input_tokens: 7, output_tokens: 2 };
@@ -383,6 +388,24 @@ describe('AiWorkspacePage', () => {
     renderPage(client);
 
     expect(screen.getByTestId('token-usage-bar')).toHaveTextContent('12/4/7');
+  });
+
+  it('hides the token usage bar from a user without the AI administration right', () => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    capabilitiesState = { data: chatCapabilities([]) };
+    chatState.messages = [{ id: 'msg-1', role: 'assistant', content: 'Hello' }];
+    chatState.conversationUsage = { input_tokens: 12, output_tokens: 4 };
+    chatState.lastRequestUsage = { input_tokens: 7, output_tokens: 2 };
+
+    renderPage(client);
+
+    expect(screen.queryByTestId('token-usage-bar')).not.toBeInTheDocument();
   });
 
   it('hides the token usage bar when no conversation usage is available', () => {
@@ -393,6 +416,7 @@ describe('AiWorkspacePage', () => {
       },
     });
 
+    capabilitiesState = { data: chatCapabilities([], true) };
     chatState.messages = [{ id: 'msg-1', role: 'assistant', content: 'Hello' }];
     chatState.conversationUsage = null;
     chatState.lastRequestUsage = null;

@@ -244,12 +244,11 @@ Nada que modifique los datos de KANAP se aplica de forma silenciosa. La vista pr
 
 ## Indicadores de uso
 
-Encima del cuadro de redacción, dos pequeños indicadores le ayudan a estar al tanto del coste y los límites:
+Encima del cuadro de redacción, un pequeño indicador muestra cuánto queda del volumen mensual incluido:
 
 - **Uso integrado**: cuando Plaid funciona con el modelo incluido de KANAP en lugar de con uno de los modelos propios de su organización, esto muestra cuántos mensajes quedan en el mes actual y la fecha en la que se restablece la cuota. Un administrador ha confirmado ese modelo antes (consulte [Configuración de Plaid](ai-settings.md#confirmar-el-modelo-incluido-de-kanap)). Cuando se alcanza el límite, el cuadro de redacción se desactiva y un texto de ayuda invita a los administradores a cambiar a un modelo propio; consulte [Modelos IA](ai-models.md).
-- **Uso de tokens**: una barra fina con contadores de tokens de entrada/salida para la conversación actual, además del tamaño de la última solicitud. Las conversaciones largas se vuelven más caras con el tiempo; la barra hace visible ese coste para que pueda decidir cuándo iniciar un nuevo hilo.
 
-La barra de uso de tokens solo aparece una vez que la conversación tiene al menos un intercambio.
+Las personas que pueden abrir **Administración > Plaid** ven también una barra fina bajo el cuadro de redacción, cuando la conversación tiene al menos un intercambio. **Volumen procesado** suma los tokens de entrada y de salida de cada mensaje de esta conversación. Cada pregunta reenvía los mensajes anteriores, de modo que el volumen crece más rápido que el número de turnos. **Contexto de la última solicitud** es la entrada de la última pregunta. La barra muestra también los tokens de entrada y los tokens de salida de la conversación.
 
 ## Consejos
 

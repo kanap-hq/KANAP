@@ -115,6 +115,8 @@ export default function AiWorkspacePage() {
   const inputRef = useRef<ChatInputHandle>(null);
   const builtinLimitReached = (chat.builtinUsage?.limit ?? 0) > 0
     && (chat.builtinUsage?.count ?? 0) >= (chat.builtinUsage?.limit ?? 0);
+  // Same right as Admin > Plaid. The counters are for people who configure the assistant.
+  const showTokenUsage = aiCapabilities.data?.surfaces.settings.available === true;
 
   const isEmpty = chat.messages.length === 0;
   const userMessageCount = chat.messages.filter((message) => message.role === 'user').length;
@@ -466,7 +468,7 @@ export default function AiWorkspacePage() {
                     <BuiltinUsageIndicator usage={chat.builtinUsage} />
                   </Stack>
                   {composer}
-                  {chat.conversationUsage && (
+                  {showTokenUsage && chat.conversationUsage && (
                     <Box sx={{ pt: 0.25 }}>
                       <TokenUsageBar usage={chat.conversationUsage} lastRequestUsage={chat.lastRequestUsage} />
                     </Box>

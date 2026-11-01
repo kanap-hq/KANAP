@@ -13,12 +13,12 @@ export function budgetAmountFields(): Record<string, AiFilterFieldDef> {
   for (const slot of FIXED_SLOTS) {
     SUMMARY_COLUMNS.forEach((column, index) => {
       const ai = `${slot.ai}_${column.ai}`;
-      // Tenants rename the columns: the description is positional; the tenant's names come with the context.
+      // Positional on purpose: the name to use travels with `budget_columns` (the person's language, or the workspace's own name).
       fields[ai] = {
         ai,
         grid: `${slot.key}${column.suffix}`,
         type: 'number',
-        description: `Total of column ${index + 1} (named ${column.label} by default) for ${slot.offset === 0 ? 'Y, the current year' : slot.label}, in the reporting currency.`,
+        description: `Total of column ${index + 1} for ${slot.offset === 0 ? 'Y, the current year' : slot.label}, in the reporting currency.`,
         sortable: true,
         groupable: false,
         aggregable: true,
@@ -48,7 +48,7 @@ export function budgetFteFields(): Record<string, AiFilterFieldDef> {
         ai,
         grid: fteFieldKey(`${slot.key}${column.suffix}`),
         type: 'number',
-        description: `FTE (full-time equivalents) of column ${index + 1} (named ${column.label} by default) for ${slot.offset === 0 ? 'Y, the current year' : slot.label}, `
+        description: `FTE (full-time equivalents) of column ${index + 1} for ${slot.offset === 0 ? 'Y, the current year' : slot.label}, `
           + 'from the quantity × price lines the column is computed from. Each month: people lines count their quantity (full time or priced per month), '
           + "or quantity × days per month ÷ the calendar's working days of that month; days lines (a bundle of days over a period) count the month's share "
           + "of the days ÷ the calendar's working days of that month; pieces lines count nothing. The twelve months summed and divided by 12 (2 decimals): "

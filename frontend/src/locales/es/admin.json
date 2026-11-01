@@ -402,6 +402,15 @@
       "skillsMatrix": "Matriz de competencias",
       "workingDayCalendars": "Calendarios laborales"
     },
+    "exportParams": {
+      "filters": "Filtros",
+      "includeDisabled": "Incluir líneas finalizadas",
+      "q": "Búsqueda",
+      "scope": "Ámbito",
+      "sort": "Orden",
+      "table": "Tabla",
+      "tz": "Zona horaria"
+    },
     "fields": {
       "access_methods": "Modos de acceso",
       "account_id": "Cuenta",

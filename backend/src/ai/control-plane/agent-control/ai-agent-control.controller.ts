@@ -313,6 +313,15 @@ export class AiAgentControlController {
     return this.runTransaction(context, 'admin', (tenantContext) => this.control.archiveSharedContextProfile(tenantContext, id));
   }
 
+  @Post('shared-context-profiles/:id/restore')
+  async restoreSharedContextProfile(
+    @Req() req: any,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    const context = this.buildContext(req);
+    return this.runTransaction(context, 'admin', (tenantContext) => this.control.restoreSharedContextProfile(tenantContext, id));
+  }
+
   @Get('agents/:id/autonomy')
   async getAgentAutonomy(
     @Req() req: any,

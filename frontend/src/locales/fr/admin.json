@@ -402,6 +402,15 @@
       "skillsMatrix": "Matrice de compétences",
       "workingDayCalendars": "Calendriers de jours ouvrés"
     },
+    "exportParams": {
+      "filters": "Filtres",
+      "includeDisabled": "Inclure les lignes terminées",
+      "q": "Recherche",
+      "scope": "Périmètre",
+      "sort": "Tri",
+      "table": "Table",
+      "tz": "Fuseau horaire"
+    },
     "fields": {
       "access_methods": "Modes d’accès",
       "account_id": "Compte",
@@ -1264,7 +1273,7 @@
       "asset_spend_items": "Lignes OPEX d'actif",
       "asset_support_contacts": "Contacts de support d'actif",
       "asset_support_info": "Informations de support d'actif",
-      "asset_technologies": "Technologies des assets",
+      "asset_technologies": "Technologies des actifs",
       "assets": "Actifs",
       "auth": "Connexion et session",
       "business_process_categories": "Catégories de processus métier",

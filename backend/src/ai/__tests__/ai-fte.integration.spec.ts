@@ -121,7 +121,7 @@ async function testRegistryListsFteFields() {
         assert.equal(registry.sortFields[key], `fte_${slot.key}${column.suffix}`);
       }
     }
-    assert.match(registry.fields.y_plus1_review_fte.description, /column 2 \(named Revision by default\) for Y\+1/);
+    assert.match(registry.fields.y_plus1_review_fte.description, /column 2 for Y\+1/);
     assert.match(registry.fields.y_budget_fte.description, /null \(unknown\) when the column has no lines for that year/);
   }
   assert.equal(Object.keys(budgetAmountFields()).length, 25, 'the amount fields are unchanged');
