@@ -183,6 +183,9 @@ describe('EditableTitle', () => {
     const emptyBackground = getComputedStyle(input).backgroundColor;
     expect(emptyBackground).toMatch(/^rgba\(.*0\.08\)$/);
     expect(getComputedStyle(input).borderRadius).toBe('6px');
+    // Its padding and border spill over the line, which keeps the height of the resting title.
+    expect(getComputedStyle(input).marginTop).toBe('-3px');
+    expect(getComputedStyle(input).marginBottom).toBe('-3px');
     fireEvent.change(input, { target: { value: 'B' } });
     expect(getComputedStyle(input).backgroundColor).toBe('rgba(0, 0, 0, 0)');
   });
@@ -202,6 +205,8 @@ describe('EditableTitle', () => {
   it('does not emphasize the field without emphasizeEmpty', () => {
     renderTitle({ value: '', autoEdit: true });
     expect(getComputedStyle(screen.getByRole('textbox')).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    // Only the underline spills below the line.
+    expect(getComputedStyle(screen.getByRole('textbox')).marginBottom).toBe('-1px');
   });
 
   it('draws no cue when the title cannot be edited', () => {

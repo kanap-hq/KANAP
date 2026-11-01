@@ -343,6 +343,8 @@ export default function EditableTitle({
           outline: 'none',
           p: 0,
           m: 0,
+          // The underline spills below the line, which keeps the height of the resting title.
+          mb: '-1px',
           width: '100%',
           '&::placeholder': { color: theme.palette.kanap.text.tertiary, opacity: 1 },
           // The look of a task title still to give (TaskWorkspacePage `titleBarSx`), plain once a
@@ -356,6 +358,9 @@ export default function EditableTitle({
               borderRadius: draft ? 0 : '6px',
               px: 1,
               py: 0.25,
+              // The padding and border spill over the line: the title line keeps its height, so
+              // the header does not move and the actions stay centred on it.
+              my: '-3px',
               boxSizing: 'border-box',
               transition: 'border-color 120ms ease, background-color 120ms ease',
             }

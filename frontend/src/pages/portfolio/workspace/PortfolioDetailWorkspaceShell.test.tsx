@@ -181,6 +181,38 @@ describe('PortfolioDetailWorkspaceShell scrolling', () => {
   });
 });
 
+// The actions sat 7px below the row top: about 10px under the title's centre, more beside the
+// taller field of a title being typed. Their first line is now centred on the title line, and the
+// title field keeps that line's height in every state.
+describe('PortfolioDetailWorkspaceShell title row', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  function actionsBox() {
+    return screen.getByRole('button', { name: 'Delete' }).parentElement as HTMLElement;
+  }
+
+  it('centres the first line of actions on the title line', () => {
+    stubMatchMedia(false);
+    renderShell({ actions: <button type="button">Delete</button> });
+    const style = getComputedStyle(actionsBox());
+    // One line of actions (34px) around the centre of a 22px * 1.3 title line, the box ending
+    // where it always did (41px under the row top), so the tabs keep their place.
+    expect(style.minHeight).toBe('34px');
+    expect(style.alignItems).toBe('center');
+    expect(parseFloat(style.marginTop)).toBeCloseTo((22 * 1.3 - 34) / 2, 5);
+    expect(parseFloat(style.marginBottom)).toBeCloseTo(7 - (22 * 1.3 - 34) / 2, 5);
+  });
+
+  it('keeps the actions at the row top in the compact layout', () => {
+    stubMatchMedia(true);
+    renderShell({ actions: <button type="button">Delete</button> });
+    const style = getComputedStyle(actionsBox());
+    expect(parseFloat(style.marginTop || '0')).toBe(0);
+    expect(parseFloat(style.marginBottom || '0')).toBe(0);
+    expect(style.minHeight).not.toBe('34px');
+  });
+});
+
 describe('PortfolioDetailWorkspaceShell Escape', () => {
   it('goes back on a plain Escape', () => {
     const onBack = vi.fn();
