@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AboutContent from './AboutContent';
 
+// The path line reads the onboarding API: covered by its own test.
+vi.mock('../onboarding/AboutOnboardingLine', () => ({ default: () => null }));
 vi.mock('react-i18next', async () => {
   const { default: settings } = await import('../../locales/en/settings.json');
   // One stable `t` that renders the English text of settings keys, with interpolation and plurals.

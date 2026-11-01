@@ -1532,5 +1532,40 @@
     "linksEmpty": "Ningún enlace web.",
     "removeFileNamed": "Eliminar el archivo {{name}}",
     "removed": "Enlace «{{name}}» retirado."
+  },
+  "onboarding": {
+    "choice": {
+      "angleTitle": "¿Qué le trae a KANAP?",
+      "modeTitle": "¿Cómo quiere empezar?",
+      "justLooking": "Solo estoy mirando",
+      "erasesExample": "El ejemplo se borra.",
+      "confirmTitle": "¿Borrar el ejemplo?",
+      "failed": "No se ha podido guardar su respuesta."
+    },
+    "angles": {
+      "budget": "El presupuesto de TI",
+      "cartography": "El mapa del SI",
+      "portfolio": "Los proyectos y las solicitudes"
+    },
+    "modes": {
+      "example": "Descubrir con el ejemplo completo",
+      "own_data": "Empezar con mis datos"
+    },
+    "about": {
+      "path": "Recorrido: {{path}}",
+      "angles": {
+        "budget": "Presupuesto de TI",
+        "cartography": "Mapa del SI",
+        "portfolio": "Proyectos y solicitudes",
+        "none": "Solo estoy mirando"
+      },
+      "modes": {
+        "example": "ejemplo",
+        "own_data": "mis datos"
+      },
+      "notChosen": "sin elegir",
+      "change": "Cambiar",
+      "choose": "Elegir"
+    }
   }
 }

@@ -41,6 +41,7 @@ import DashboardSettingsModal from './settings/DashboardSettingsModal';
 import QuickLogTimeModal from './actions/QuickLogTimeModal';
 import SampleDataBanner from '../admin/sample-data/SampleDataBanner';
 import EnablePlaidCard from './EnablePlaidCard';
+import OnboardingStatusLine from '../../components/onboarding/OnboardingStatusLine';
 
 // Create lazy-loaded tile components
 const tileComponents: Record<string, ReturnType<typeof lazy>> = {};
@@ -180,6 +181,7 @@ export default function WorkspaceDashboardPage() {
   return (
     <Box sx={{ p: 3 }}>
       <SampleDataBanner />
+      <OnboardingStatusLine />
       <EnablePlaidCard />
       <Paper
         variant="outlined"

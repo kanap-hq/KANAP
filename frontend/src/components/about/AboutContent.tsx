@@ -8,6 +8,7 @@ import { useFeatures } from '../../config/FeaturesContext';
 import { useLocale } from '../../i18n/useLocale';
 import { useTenant } from '../../tenant/TenantContext';
 import { getDocHomeUrl, getDocPageUrl } from '../../utils/docUrls';
+import AboutOnboardingLine from '../onboarding/AboutOnboardingLine';
 import {
   buildSupportInfo,
   buildSupportMailto,
@@ -119,6 +120,7 @@ export default function AboutContent({ onNavigate }: { onNavigate?: () => void }
             )}
           </Typography>
         )}
+        <AboutOnboardingLine />
         <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, pt: 0.5 }}>
           <ExternalLink href={releaseNotesUrl(config.version)}>{t('about.releaseNotes')}</ExternalLink>
           <ExternalLink href={getDocHomeUrl(locale)}>{t('about.docs')}</ExternalLink>

@@ -61,6 +61,7 @@ import { formatUserName } from '../utils/userDisplay';
 import SubscriptionBanner from './SubscriptionBanner';
 import TrialChip, { TrialMenuLine } from './TrialChip';
 import NamePromptDialog from './NamePromptDialog';
+import FirstOpenDialog from './onboarding/FirstOpenDialog';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
 import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
@@ -780,6 +781,8 @@ export default function Layout() {
           </React.Suspense>
         </Box>
       </Box>
+      {/* The name prompt is mounted last, so it comes first when both are open. */}
+      <FirstOpenDialog />
       <NamePromptDialog />
     </Box>
   );
