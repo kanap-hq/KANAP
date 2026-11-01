@@ -40,6 +40,9 @@ import { DemoDataService, DemoDataState } from '../demo-data.service';
 // with the administrator's token and the tenant's Host. Then:
 // - the load ends `loaded`, with the landscape (instances, interfaces, bindings, connections)
 //   and the `.example` users of the data set, and no e-mail sent;
+// - USD has a rate for years N-1 through N+2 and no currency in use is missing one.
+//   The rate sources are pointed at a closed port, so that rate is the loader's
+//   documented manual fallback, not a fetch;
 // - the tenant is French (activated from a French browser): its budget lines carry the
 //   recommended dimensions in French ("Matériel" for the files' "Hardware"), no English value is
 //   added next to them, and every line has a cost pool, an IT tower and a business domain;
@@ -60,6 +63,12 @@ process.env.STRIPE_SECRET_KEY = '';
 process.env.S3_ENDPOINT ||= 'http://127.0.0.1:9';
 process.env.S3_BUCKET ||= 'demo-data-spec';
 delete process.env.EMAIL_OVERRIDE;
+// No rate source answers. An empty cache directory, so a CSV left by another
+// run cannot supply a rate. The loader then stores its manual USD rate.
+process.env.WB_BASE_URL = 'http://127.0.0.1:9';
+process.env.WB_CSV_URL = 'http://127.0.0.1:9/wb.csv';
+process.env.FX_SPOT_BASE_URL = 'http://127.0.0.1:9/latest';
+process.env.WB_CACHE_DIR = path.join(os.tmpdir(), 'kanap-1190-wb-empty');
 
 const FIXTURES = backendPath('fixtures', 'fromage-co');
 
@@ -419,6 +428,27 @@ const OLD_CLUSTER_NOTES = 'vSphere cluster of PAR-ESX-01 and PAR-ESX-02 — HA a
 const OLD_SAN_NOTES = 'NetApp FAS2750 — 50TB usable, primary SAN for all VMs';
 const NEW_CLUSTER_NOTES = 'Paris vSphere cluster (HA and DRS), managed by PAR-VCENTER-01 — its VMs move between the hosts';
 const NEW_SAN_NOTES = 'NetApp FAS2750 — 50TB usable, shared storage of the Paris vSphere cluster hosts';
+
+/**
+ * After a load, every currency in use has a rate, and USD of years N-1 through
+ * N+2 carries the documented manual rate (the sources are closed in this spec).
+ * N+2 is the last year contract amounts are read for.
+ */
+async function checkExchangeRates(port: number, host: string, token: string) {
+  const year = new Date().getFullYear();
+  const missing = await request(port, { method: 'GET', path: '/currency/rates/missing', host, token });
+  assert.equal(missing.status, 200, JSON.stringify(missing.body));
+  assert.deepEqual(missing.body?.items, [], 'no amount is left out for lack of an exchange rate');
+
+  const matrix = await request(port, { method: 'GET', path: '/currency/rates', host, token });
+  assert.equal(matrix.status, 200, JSON.stringify(matrix.body));
+  for (const fiscalYear of [year - 1, year, year + 1, year + 2]) {
+    const row = (matrix.body?.rates ?? []).find((item: { fiscalYear?: number }) => item.fiscalYear === fiscalYear);
+    assert.ok(row, `a rate set for ${fiscalYear}`);
+    assert.equal(row.rates?.USD, 0.9, `USD ${fiscalYear} uses the documented manual rate`);
+    assert.equal(row.rateSources?.USD, 'manual', `USD ${fiscalYear} was stored by hand`);
+  }
+}
 
 /** The two notes the fixture replaces: only the old value is overwritten. */
 async function checkVmwareNotes(tenantId: string) {
@@ -826,6 +856,7 @@ async function testLoadResetAndFailure() {
     await checkIncidents(a.tenantId);
 
     const token = served.loaderEnvs[0].KANAP_DEMO_TOKEN;
+    await checkExchangeRates(served.port, hostA, token);
     await checkVmwareLandscape(served.port, a.tenantId, hostA, token);
     await checkVmwareNotes(a.tenantId);
     lap('VMware landscape checked');
@@ -843,6 +874,7 @@ async function testLoadResetAndFailure() {
     await runLoader(served.loaderEnvs[0]);
     lap('idempotence load ended');
     assert.deepEqual(await vmwareSnapshot(a.tenantId), snapshot, 'a second load changes nothing');
+    await checkExchangeRates(served.port, hostA, token);
 
     // ── The loader's token: refused on another tenant's host, accepted on its own ──
     assert.equal(served.loaderEnvs.length, 1);
