@@ -1704,7 +1704,7 @@
     },
     "application": {
       "title": "Aplicación / Servicio",
-      "newTitle": "Nueva aplicación / servicio",
+      "newTitle": "Nueva aplicación",
       "creation": {
         "record": "La aplicación"
       },
