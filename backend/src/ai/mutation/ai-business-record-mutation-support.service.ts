@@ -282,7 +282,8 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       cluster: { label: 'Cluster', kind: 'text', nullable: true },
       is_cluster: { label: 'Cluster Asset', kind: 'boolean' },
       operating_system: { label: 'Operating System', kind: 'text', nullable: true },
-      location_id: { label: 'Location', kind: 'relation', nullable: true, relationTarget: 'locations' as RelationTarget, aliases: ['location'] },
+      // Every asset has a site: required at creation, and an update cannot clear it.
+      location_id: { label: 'Location', kind: 'relation', requiredOnCreate: true, relationTarget: 'locations' as RelationTarget, aliases: ['location'] },
       sub_location_id: { label: 'Sub-location', kind: 'relation', nullable: true, relationTarget: 'location_sub_items' as RelationTarget, aliases: ['sub_location'] },
       status: { label: 'Status', kind: 'text' },
       go_live_date: { label: 'Go-Live Date', kind: 'date', nullable: true },

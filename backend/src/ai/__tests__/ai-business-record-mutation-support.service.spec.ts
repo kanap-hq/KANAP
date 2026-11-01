@@ -254,6 +254,26 @@ async function testRecordLabelNamesTheReferenceOnce() {
   console.log('  reference label: OK');
 }
 
+async function testAssetNeedsItsSite() {
+  const { service, context } = createHarness();
+  const base = { name: 'srv-new', kind: 'vm', provider: 'other', environment: 'prod' };
+  for (const location_id of [undefined, null, '']) {
+    await assert.rejects(
+      () => service.prepareCreatePreview(context, { entity_type: 'assets', fields: { ...base, location_id } }),
+      /Location (is required for asset creation|cannot be empty)/,
+      `create with location_id ${JSON.stringify(location_id)}`,
+    );
+  }
+  for (const location_id of [null, '']) {
+    await assert.rejects(
+      () => service.prepareUpdatePreview(context, { entity_type: 'assets', ref: 'AST-12', fields: { location_id } }),
+      /Location cannot be empty/,
+      `update with location_id ${JSON.stringify(location_id)}`,
+    );
+  }
+  console.log('  asset site required: OK');
+}
+
 async function main() {
   await testCreateAcceptsConfiguredCategoryCode();
   await testCreateResolvesConfiguredCategoryLabel();
@@ -262,6 +282,7 @@ async function main() {
   await testCreateDoesNotUseObservedApplicationValuesAsAllowedValues();
   await testEffectiveEndIsAnAliasOfTheEndOfValidity();
   await testRecordLabelNamesTheReferenceOnce();
+  await testAssetNeedsItsSite();
 }
 
 main().catch((error) => {
