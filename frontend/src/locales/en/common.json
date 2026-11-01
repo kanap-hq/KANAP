@@ -298,20 +298,18 @@
     "workOverview": "Here's an overview of your work",
     "createTask": "Create task",
     "logTime": "Log time",
-    "newRequest": "New request",
+    "newBudgetLine": "New budget line",
     "newApplication": "New application",
     "newAsset": "New asset",
     "newDocument": "New document",
     "dashboardSettings": "Dashboard settings",
     "noTilesEnabled": "No tiles enabled. Click the settings icon to configure your dashboard.",
+    "allTilesEmpty": "Your tiles have nothing to show yet.",
     "blankDocument": "Blank document",
     "fromTemplate": "From template…",
     "selectTemplate": "Select template",
     "useTemplate": "Use template",
     "noTemplatesAvailable": "No published templates are available.",
-    "newOpexLine": "New OPEX line",
-    "newCapexLine": "New CAPEX line",
-    "newContract": "New contract",
     "newOpex": "New OPEX",
     "newCapex": "New CAPEX",
     "recentUpdates": "Recent updates",
@@ -363,7 +361,8 @@
         "days": "Days to show",
         "scope": "Scope",
         "thresholdDays": "Threshold (days)"
-      }
+      },
+      "hideEmptyTiles": "Hide tiles without content"
     },
     "quickCreate": {
       "createTask": "Create task",
@@ -524,8 +523,6 @@
     },
     "welcome": "Welcome",
     "budgetSettings": {
-      "customize": "Customize",
-      "title": "Budget dashboard settings",
       "columns": "Amount columns",
       "tenantColumns": "Workspace columns",
       "atLeastOne": "Choose at least one amount column.",

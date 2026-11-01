@@ -298,20 +298,18 @@
     "workOverview": "Aquí tiene un resumen de su trabajo",
     "createTask": "Crear tarea",
     "logTime": "Registrar tiempo",
-    "newRequest": "Nueva solicitud",
+    "newBudgetLine": "Nueva línea presupuestaria",
     "newApplication": "Nueva aplicación",
     "newAsset": "Nuevo activo",
     "newDocument": "Nuevo documento",
     "dashboardSettings": "Configuración del panel",
     "noTilesEnabled": "No hay mosaicos activados. Haga clic en el icono de configuración para personalizar su panel.",
+    "allTilesEmpty": "Sus mosaicos todavía no tienen nada que mostrar.",
     "blankDocument": "Documento en blanco",
     "fromTemplate": "Desde plantilla…",
     "selectTemplate": "Seleccionar plantilla",
     "useTemplate": "Usar plantilla",
     "noTemplatesAvailable": "No hay plantillas publicadas disponibles.",
-    "newOpexLine": "Nueva línea OPEX",
-    "newCapexLine": "Nueva línea CAPEX",
-    "newContract": "Nuevo contrato",
     "newOpex": "Nuevo OPEX",
     "newCapex": "Nuevo CAPEX",
     "recentUpdates": "Actualizaciones recientes",
@@ -363,7 +361,8 @@
         "days": "Días mostrados",
         "scope": "Ámbito",
         "thresholdDays": "Umbral (días)"
-      }
+      },
+      "hideEmptyTiles": "Ocultar los mosaicos sin contenido"
     },
     "quickCreate": {
       "createTask": "Crear tarea",
@@ -524,8 +523,6 @@
     },
     "welcome": "Bienvenido",
     "budgetSettings": {
-      "customize": "Personalizar",
-      "title": "Configuración del panel de control del presupuesto",
       "columns": "Columnas de importes",
       "tenantColumns": "Columnas del espacio de trabajo",
       "atLeastOne": "Seleccione al menos una columna de importes.",

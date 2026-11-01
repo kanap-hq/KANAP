@@ -19,11 +19,13 @@ import {
   DialogTitle,
   ListSubheader,
   TextField,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AddTaskIcon from '@mui/icons-material/AddTask';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import InboxIcon from '@mui/icons-material/Inbox';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import DnsIcon from '@mui/icons-material/Dns';
 import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -45,7 +47,11 @@ import OnboardingStatusLine from '../../components/onboarding/OnboardingStatusLi
 import FirstStepsTile, { firstStepsShown } from '../../components/onboarding/FirstStepsTile';
 import { useOnboarding } from '../../components/onboarding/useOnboarding';
 import { orderTilesForAngle } from './angleLayout';
-import BudgetSection from './BudgetSection';
+import BudgetSection, { useBudgetTileAccess } from './BudgetSection';
+import { TileEmptyContext, useEmptyTiles } from './tiles/emptyTiles';
+
+/** The budget section's slot among the tiles that report being empty. */
+const BUDGET_SECTION = 'budget-section';
 
 // Create lazy-loaded tile components
 const tileComponents: Record<string, ReturnType<typeof lazy>> = {};
@@ -106,7 +112,8 @@ export default function WorkspaceDashboardPage() {
   const canCreateTask = hasLevel('tasks', 'member');
   // Same rules as the server for time entries (see QuickLogTimeModal)
   const canLogTime = hasLevel('portfolio_projects', 'contributor') || hasLevel('tasks', 'member');
-  const canCreateRequest = hasLevel('portfolio_requests', 'member');
+  // The creation right of the budget list, for both types of line.
+  const canCreateBudgetLine = hasLevel('budget', 'manager');
   const canCreateAsset = hasLevel('infrastructure', 'member');
   const canCreateApp = hasLevel('applications', 'member');
   const canCreateDocument = hasLevel('knowledge', 'member');
@@ -167,6 +174,41 @@ export default function WorkspaceDashboardPage() {
     () => orderTilesForAngle(filterVisibleTiles(config.tiles).filter((t) => t.enabled), angle),
     [angle, config.tiles, filterVisibleTiles],
   );
+
+  // A tile with nothing to show is left out while the option is on (the default).
+  const hideEmpty = config.hideEmptyTiles !== false;
+  const { empty, reporter } = useEmptyTiles();
+  const hidden = (id: string) => hideEmpty && empty.has(id);
+  const budgetAccess = useBudgetTileAccess();
+  const budgetSection = (
+    <TileEmptyContext.Provider value={reporter(BUDGET_SECTION)}>
+      <BudgetSection hideEmpty={hideEmpty} leading={budgetFirst && showFirstSteps ? <FirstStepsTile /> : undefined} />
+    </TileEmptyContext.Provider>
+  );
+
+  // Outside the budget path, the budget section comes right after the first row of home tiles.
+  const theme = useTheme();
+  const upXl = useMediaQuery(theme.breakpoints.up('xl'));
+  const upLg = useMediaQuery(theme.breakpoints.up('lg'));
+  const upMd = useMediaQuery(theme.breakpoints.up('md'));
+  const perRow = upXl ? 4 : upLg ? 3 : upMd ? 2 : 1;
+  // The first tile of the second row (hidden tiles take no room), or none when they fit on one row.
+  const budgetBefore = useMemo(() => {
+    if (budgetFirst) return null;
+    let room = perRow - (stepsInGrid ? 1 : 0);
+    for (const tile of visibleTiles) {
+      if (hideEmpty && empty.has(tile.id)) continue;
+      if (room <= 0) return tile.id;
+      room -= 1;
+    }
+    return null;
+  }, [budgetFirst, empty, hideEmpty, perRow, stepsInGrid, visibleTiles]);
+  const allEmpty = hideEmpty && !configLoading && !stepsInGrid && !(budgetFirst && showFirstSteps)
+    && visibleTiles.every((tile) => empty.has(tile.id))
+    && (!budgetAccess.anyBudget || empty.has(BUDGET_SECTION))
+    && (visibleTiles.length > 0 || budgetAccess.anyBudget);
+  // One grid, so that a tile keeps its state when the budget section moves around it.
+  const budgetItem = <Grid item xs={12} key={BUDGET_SECTION}>{budgetSection}</Grid>;
 
   const userName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
   const welcome = userName ? t('dashboard.welcomeBack', { name: profile?.first_name || userName }) : t('dashboard.welcome');
@@ -230,15 +272,16 @@ export default function WorkspaceDashboardPage() {
               {t('dashboard.logTime')}
             </Button>
           )}
-          {canCreateRequest && (
-          <Button
+          {canCreateBudgetLine && (
+            <Button
               variant="outlined"
-              startIcon={<InboxIcon />}
-              onClick={() => navigate('/portfolio/requests/new/summary')}
+              startIcon={<AccountBalanceWalletIcon />}
+              // The creation screen lets the person switch the line to CAPEX.
+              onClick={() => navigate('/ops/budget/new?nature=opex')}
               size="small"
               sx={quickActionSx}
             >
-              {t('dashboard.newRequest')}
+              {t('dashboard.newBudgetLine')}
             </Button>
           )}
           {canCreateApp && (
@@ -291,7 +334,7 @@ export default function WorkspaceDashboardPage() {
 
       {budgetFirst ? (
         <Box sx={{ mb: 3 }}>
-          <BudgetSection leading={showFirstSteps ? <FirstStepsTile /> : undefined} />
+          {budgetSection}
         </Box>
       ) : null}
 
@@ -305,11 +348,16 @@ export default function WorkspaceDashboardPage() {
           ))}
         </Grid>
       ) : visibleTiles.length === 0 && !stepsInGrid ? (
-        <Card sx={{ p: 4, textAlign: 'center' }}>
-          <Typography variant="body1" color="text.secondary">
-            {t('dashboard.noTilesEnabled')}
-          </Typography>
-        </Card>
+        budgetFirst ? null : (
+          <>
+            <Card sx={{ p: 4, textAlign: 'center' }}>
+              <Typography variant="body1" color="text.secondary">
+                {t('dashboard.noTilesEnabled')}
+              </Typography>
+            </Card>
+            <Box sx={{ mt: 3 }}>{budgetSection}</Box>
+          </>
+        )
       ) : (
         <Grid container spacing={3}>
           {stepsInGrid ? (
@@ -323,31 +371,35 @@ export default function WorkspaceDashboardPage() {
 
             if (!TileComponent || !tileInfo) return null;
 
-            return (
-              <Grid item xs={12} md={6} lg={4} xl={3} key={tile.id}>
-                <Suspense
-                  fallback={
-                    <DashboardTile
-                      title={t(tileInfo.titleKey)}
-                      icon={tileInfo.icon}
-                      isLoading
-                    >
-                      <div />
-                    </DashboardTile>
-                  }
-                >
-                  <TileComponent config={tile.config} />
-                </Suspense>
-              </Grid>
-            );
+            return [
+              tile.id === budgetBefore ? budgetItem : null,
+              <Grid item xs={12} md={6} lg={4} xl={3} key={tile.id} sx={hidden(tile.id) ? { display: 'none' } : undefined}>
+                <TileEmptyContext.Provider value={reporter(tile.id)}>
+                  <Suspense
+                    fallback={
+                      <DashboardTile
+                        title={t(tileInfo.titleKey)}
+                        icon={tileInfo.icon}
+                        isLoading
+                      >
+                        <div />
+                      </DashboardTile>
+                    }
+                  >
+                    <TileComponent config={tile.config} />
+                  </Suspense>
+                </TileEmptyContext.Provider>
+              </Grid>,
+            ];
           })}
+          {!budgetFirst && budgetBefore === null ? budgetItem : null}
         </Grid>
       )}
 
-      {!budgetFirst ? (
-        <Box sx={{ mt: 3 }}>
-          <BudgetSection />
-        </Box>
+      {allEmpty ? (
+        <Typography variant="body2" sx={{ color: 'kanap.text.tertiary', textAlign: 'center', py: 2 }}>
+          {t('dashboard.allTilesEmpty')}
+        </Typography>
       ) : null}
 
       {/* Modals */}

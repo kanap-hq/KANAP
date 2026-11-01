@@ -1,10 +1,8 @@
 import { Fragment, useCallback, useMemo, useState } from 'react';
 import { Box, Typography, Stack, Button, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { useTheme, type Theme } from '@mui/material/styles';
-import SettingsIcon from '@mui/icons-material/Settings';
-import BudgetDashboardSettingsModal from './settings/BudgetDashboardSettingsModal';
 import { useBudgetDashboardConfig } from './hooks/useBudgetDashboardConfig';
-import AddIcon from '@mui/icons-material/Add';
+import { TileEmptyContext, useEmptyTiles, useReportEmpty } from './tiles/emptyTiles';
 import { getDotColor } from '../../utils/statusColors';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -41,9 +39,6 @@ import { mergeFxMissing, type FxMissing } from '../../components/finance/fxMissi
 
 type ServerListResponse<T> = { items: T[]; total: number; page: number; limit: number };
 
-/** The header actions, styled as the main dashboard's quick actions. */
-const QUICK_ACTION_SX = { height: 30, borderRadius: '5px' } as const;
-
 // Small tiles fill the end of a row before a wide Budget tile, preserving the saved visual order.
 const tileLayoutSx = (wide = false) => (theme: Theme) => ({
   minWidth: 0,
@@ -53,6 +48,8 @@ const tileLayoutSx = (wide = false) => (theme: Theme) => ({
     xs: '100%',
     md: wide ? '100%' : `calc((100% - ${theme.spacing(3)}) / 2)`,
     lg: wide ? `calc((100% - ${theme.spacing(6)}) * 2 / 3 + ${theme.spacing(3)})` : `calc((100% - ${theme.spacing(6)}) / 3)`,
+    // Four columns, as the home tiles above.
+    xl: wide ? `calc((100% - ${theme.spacing(9)}) / 2 + ${theme.spacing(3)})` : `calc((100% - ${theme.spacing(9)}) / 4)`,
   },
 });
 
@@ -397,13 +394,26 @@ function useTileScope(tile: string): [BudgetScope, (next: BudgetScope) => void] 
 }
 
 /** The home page's My tasks tile already lists the person's tasks. */
-const ON_HOME_PAGE_ALREADY = new Set(['my-tasks']);
+export const ON_HOME_PAGE_ALREADY = new Set(['my-tasks']);
+
+/** Whether the person may read a budget tile: the tasks, the contracts, else the budget lines. */
+export function useBudgetTileAccess() {
+  const { hasLevel } = useAuth();
+  const canTasks = hasLevel('tasks', 'reader');
+  const canContracts = hasLevel('contracts', 'reader');
+  const canBudget = hasLevel('budget', 'reader');
+  return {
+    anyBudget: canBudget || canContracts,
+    canViewTile: (id: string) => (id === 'my-tasks' ? canTasks : id === 'renewals' ? canContracts : canBudget),
+  };
+}
 
 /**
- * The budget tiles of the home page, with their quick actions and their settings. `leading`
- * comes first in the row (the first steps, when the budget section heads the home page).
+ * The budget tiles of the home page. `leading` comes first in the row (the first steps, when the
+ * budget section heads the home page). With `hideEmpty`, a tile with nothing to show is left out,
+ * and the section with it when none is left.
  */
-export default function BudgetSection({ leading }: { leading?: React.ReactNode }) {
+export default function BudgetSection({ leading, hideEmpty = false }: { leading?: React.ReactNode; hideEmpty?: boolean }) {
   const navigate = useNavigate();
   const { hasLevel, profile } = useAuth();
   const { t } = useTranslation('common');
@@ -411,7 +421,6 @@ export default function BudgetSection({ leading }: { leading?: React.ReactNode }
   const Y = new Date().getFullYear();
 
   const dashboardSettings = useBudgetDashboardConfig();
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const tileEnabled = (id: string) => !dashboardSettings.isLoading && dashboardSettings.config.tiles.some((tile) => tile.id === id && tile.enabled);
 
   const mode = useTheme().palette.mode;
@@ -420,9 +429,6 @@ export default function BudgetSection({ leading }: { leading?: React.ReactNode }
   const canCapex = canOpex;
   const canTasks = hasLevel('tasks', 'reader');
   const canContracts = hasLevel('contracts', 'reader');
-  // The creation rights of the budget and contract lists.
-  const canCreateLines = hasLevel('budget', 'manager');
-  const canCreateContracts = hasLevel('contracts', 'manager');
   const { data: myTasks, isLoading: tasksLoading } = useMyTasksSummary(profile?.id, canTasks && tileEnabled('my-tasks'));
   const { data: nextContract, isLoading: contractsLoading } = useNextContractRenewal(canContracts && tileEnabled('renewals'));
   const readableScopes = (['opex', 'capex'] as const).filter((scope) => (scope === 'opex' ? canOpex : canCapex));
@@ -439,8 +445,10 @@ export default function BudgetSection({ leading }: { leading?: React.ReactNode }
   };
   const hygieneLoading = readableScopes.some((scope) => hygieneByScope[scope].isLoading);
   const hygieneError = readableScopes.some((scope) => hygieneByScope[scope].isError);
+  // Every check at zero on every type: nothing to fix.
+  const hygieneEmpty = readableScopes.every((scope) => Object.values(hygieneByScope[scope].data ?? {}).every((count) => !count));
 
-  const { data: recentUpdates = [] } = useRecentUpdates(canOpex && tileEnabled('recent-updates'));
+  const { data: recentUpdates = [], isLoading: recentLoading } = useRecentUpdates(canOpex && tileEnabled('recent-updates'));
 
   const [topScope, setTopScope] = useTileScope('topItems');
   // Both tiles wait for the default column so the list is not fetched twice.
@@ -491,389 +499,363 @@ export default function BudgetSection({ leading }: { leading?: React.ReactNode }
   const snapshotFxMissing = (snapshot.data?.fxMissing ?? []).filter((entry) => snapshotYears.has(entry.year));
   const snapshotColumns = budgetColumns.shown.filter((column) => chosenColumns == null || chosenColumns.includes(column.key)).filter((column) => snapshotRows.some((row) => row.values[column.key] !== 0));
 
-  const canViewTile = (id: string) => id === 'my-tasks' ? canTasks : id === 'renewals' ? canContracts : canOpex;
   const tiles: Record<string, React.ReactNode> = {
     'budget': (canOpex) ? (
-          <Box key="budget" sx={tileLayoutSx(true)}>
-            <DashboardTile
-              icon="AccountBalanceWallet"
-              title={t('dashboard.budgetSnapshot')}
-              currency={snapshot.data?.reportingCurrency ?? undefined}
-              action={<Button size="small" onClick={() => navigate(listHref('all', {}))}>{t('buttons.view')}</Button>}
-              isLoading={snapshot.isLoading || !budgetColumns.ready}
-              isError={snapshot.isError}
-              onRetry={snapshot.refetch}
-            >
-              {snapshotColumns.length === 0 ? (
-                <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
-              ) : (
-                <TableContainer>
-                  <Table size="small" sx={{ '& th, & td': { py: 0.75, whiteSpace: 'nowrap' }, '& td[rowspan]': { verticalAlign: 'top' } }}>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 500 }}>{t('labels.year')}</TableCell>
-                        <TableCell sx={{ fontWeight: 500 }}>{t('ops:budget.type')}</TableCell>
+          <DashboardTile
+            icon="AccountBalanceWallet"
+            isEmpty={snapshotColumns.length === 0}
+            title={t('dashboard.budgetSnapshot')}
+            currency={snapshot.data?.reportingCurrency ?? undefined}
+            action={<Button size="small" onClick={() => navigate(listHref('all', {}))}>{t('buttons.view')}</Button>}
+            isLoading={snapshot.isLoading || !budgetColumns.ready}
+            isError={snapshot.isError}
+            onRetry={snapshot.refetch}
+          >
+            {snapshotColumns.length === 0 ? (
+              <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
+            ) : (
+              <TableContainer>
+                <Table size="small" sx={{ '& th, & td': { py: 0.75, whiteSpace: 'nowrap' }, '& td[rowspan]': { verticalAlign: 'top' } }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 500 }}>{t('labels.year')}</TableCell>
+                      <TableCell sx={{ fontWeight: 500 }}>{t('ops:budget.type')}</TableCell>
+                      {snapshotColumns.map((column) => (
+                        <TableCell key={column.key} align="right" sx={{ fontWeight: 500, minWidth: 76 }}>{column.label}</TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {snapshotRows.map((row, index) => (
+                      <TableRow key={`${row.slot}-${row.scope}`}>
+                        {index % 3 === 0 && <TableCell rowSpan={3}>{row.year}</TableCell>}
+                        <TableCell sx={{ fontWeight: row.scope === 'all' ? 500 : 400 }}>{row.label}</TableCell>
                         {snapshotColumns.map((column) => (
-                          <TableCell key={column.key} align="right" sx={{ fontWeight: 500, minWidth: 76 }}>{column.label}</TableCell>
+                          <TableCell key={column.key} align="right">
+                            <Box component={RouterLink} to={listHref(row.scope, {})} sx={ROW_LINK_SX}>
+                              {formatThousandsAmount(row.values[column.key], locale)}
+                            </Box>
+                          </TableCell>
                         ))}
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {snapshotRows.map((row, index) => (
-                        <TableRow key={`${row.slot}-${row.scope}`}>
-                          {index % 3 === 0 && <TableCell rowSpan={3}>{row.year}</TableCell>}
-                          <TableCell sx={{ fontWeight: row.scope === 'all' ? 500 : 400 }}>{row.label}</TableCell>
-                          {snapshotColumns.map((column) => (
-                            <TableCell key={column.key} align="right">
-                              <Box component={RouterLink} to={listHref(row.scope, {})} sx={ROW_LINK_SX}>
-                                {formatThousandsAmount(row.values[column.key], locale)}
-                              </Box>
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-              <FxMissingNotice items={snapshotFxMissing} sx={{ mt: 1 }} />
-            </DashboardTile>
-          </Box>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+            <FxMissingNotice items={snapshotFxMissing} sx={{ mt: 1 }} />
+          </DashboardTile>
     ) : null,
     'hygiene': (readableScopes.length > 0) ? (
-          <Box key="hygiene" sx={tileLayoutSx()}>
-            <DashboardTile
-              icon="ReportProblemOutlined"
-              title={t('dashboard.dataHygiene')}
-              isLoading={hygieneLoading}
-              isError={hygieneError}
-              onRetry={() => readableScopes.forEach((scope) => { void hygieneByScope[scope].refetch(); })}
-            >
-              <Box sx={{ display: 'grid', gridTemplateColumns: `1fr repeat(${readableScopes.length}, 56px)`, columnGap: 1, rowGap: 0.5, alignItems: 'baseline', mt: 1 }}>
-                <span />
-                {readableScopes.map((scope) => (
-                  <Typography key={scope} sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', textAlign: 'right' }}>{scopeLabel(scope)}</Typography>
-                ))}
-                {(checks ?? []).map((check) => {
-                  // Next year's check names the tenant's default column.
-                  const name = check.key === 'noBudgetNextYear'
-                    ? t('dashboard.hygiene.noBudgetNextYear', { column: defaultColumn.label })
-                    : t(`dashboard.hygiene.${check.key}`);
-                  return (
-                    <Fragment key={check.key}>
-                      <Typography variant="body2">{name}</Typography>
-                      {readableScopes.map((scope) => {
-                        const count = hygieneByScope[scope].data?.[check.key] ?? 0;
-                        const label = `${name}, ${scopeLabel(scope)}: ${count}`;
-                        // A count opens the list filtered to exactly the lines it counts; none, nothing to open.
-                        return count ? (
-                          <Typography
-                            key={scope}
-                            component={RouterLink}
-                            to={listHref(scope, check.filter)}
-                            variant="body2"
-                            aria-label={label}
-                            sx={{ textAlign: 'right', fontWeight: 500, textDecoration: 'none', color: getDotColor(check.tone, mode), borderRadius: '5px', '&:hover': { bgcolor: 'kanap.bg.hover' } }}
-                          >
-                            {count}
-                          </Typography>
-                        ) : (
-                          <Typography key={scope} variant="body2" aria-label={label} sx={{ textAlign: 'right', fontWeight: 500, color: 'text.secondary' }}>
-                            {count}
-                          </Typography>
-                        );
-                      })}
-                    </Fragment>
-                  );
-                })}
-              </Box>
-            </DashboardTile>
-          </Box>
+          <DashboardTile
+            icon="ReportProblemOutlined"
+            isEmpty={hygieneEmpty}
+            title={t('dashboard.dataHygiene')}
+            isLoading={hygieneLoading}
+            isError={hygieneError}
+            onRetry={() => readableScopes.forEach((scope) => { void hygieneByScope[scope].refetch(); })}
+          >
+            <Box sx={{ display: 'grid', gridTemplateColumns: `1fr repeat(${readableScopes.length}, 56px)`, columnGap: 1, rowGap: 0.5, alignItems: 'baseline', mt: 1 }}>
+              <span />
+              {readableScopes.map((scope) => (
+                <Typography key={scope} sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', textAlign: 'right' }}>{scopeLabel(scope)}</Typography>
+              ))}
+              {(checks ?? []).map((check) => {
+                // Next year's check names the tenant's default column.
+                const name = check.key === 'noBudgetNextYear'
+                  ? t('dashboard.hygiene.noBudgetNextYear', { column: defaultColumn.label })
+                  : t(`dashboard.hygiene.${check.key}`);
+                return (
+                  <Fragment key={check.key}>
+                    <Typography variant="body2">{name}</Typography>
+                    {readableScopes.map((scope) => {
+                      const count = hygieneByScope[scope].data?.[check.key] ?? 0;
+                      const label = `${name}, ${scopeLabel(scope)}: ${count}`;
+                      // A count opens the list filtered to exactly the lines it counts; none, nothing to open.
+                      return count ? (
+                        <Typography
+                          key={scope}
+                          component={RouterLink}
+                          to={listHref(scope, check.filter)}
+                          variant="body2"
+                          aria-label={label}
+                          sx={{ textAlign: 'right', fontWeight: 500, textDecoration: 'none', color: getDotColor(check.tone, mode), borderRadius: '5px', '&:hover': { bgcolor: 'kanap.bg.hover' } }}
+                        >
+                          {count}
+                        </Typography>
+                      ) : (
+                        <Typography key={scope} variant="body2" aria-label={label} sx={{ textAlign: 'right', fontWeight: 500, color: 'text.secondary' }}>
+                          {count}
+                        </Typography>
+                      );
+                    })}
+                  </Fragment>
+                );
+              })}
+            </Box>
+          </DashboardTile>
     ) : null,
     'my-budget': (readableScopes.length > 0) ? (
-          <Box key="my-budget" sx={tileLayoutSx()}>
-            <DashboardTile
-              icon="VerifiedUser"
-              title={t('dashboard.myBudget.title')}
-              subtitle={columnY}
-              currency={myBudget.reportingCurrency ?? undefined}
-              isLoading={myBudgetLoading}
-              isError={myBudget.isError}
-              onRetry={myBudget.refetch}
-              action={<ItemScopeTabs allowAll value={myBudgetScope} onChange={setMyBudgetScope} />}
-            >
-              {myBudget.rows.every((r) => r.count === 0) ? (
-                <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>{t('dashboard.myBudget.none')}</Typography>
-              ) : (
-                <Stack spacing={0.5} sx={{ mt: 1 }}>
-                  {myBudget.rows.map((r) => {
-                    const label = t(`dashboard.myBudget.roles.${r.role}`);
-                    const lines = t('dashboard.myBudget.lineCount', { count: r.count });
-                    const cells = (
-                      <>
-                        <Typography variant="body1" noWrap sx={{ flex: 1, color: 'inherit' }}>{label}</Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>{lines}</Typography>
-                        <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right', color: 'inherit' }}>{formatThousandsAmount(r.value, locale)}</Typography>
-                      </>
-                    );
-                    // No line in that role: plain text, nothing to open.
-                    return r.count ? (
-                      <Stack key={r.role} component={RouterLink} to={listHref(myBudgetScope, r.filter)} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
-                        {cells}
-                      </Stack>
-                    ) : (
-                      <Stack key={r.role} direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary', mx: -0.5, px: 0.5 }}>
-                        {cells}
-                      </Stack>
-                    );
-                  })}
-                  {/* The user's three largest lines, whatever the role */}
-                  {myBudget.topLines.length > 0 && (
+          <DashboardTile
+            icon="VerifiedUser"
+            isEmpty={myBudget.rows.every((r) => r.count === 0)}
+            title={t('dashboard.myBudget.title')}
+            subtitle={columnY}
+            currency={myBudget.reportingCurrency ?? undefined}
+            isLoading={myBudgetLoading}
+            isError={myBudget.isError}
+            onRetry={myBudget.refetch}
+            action={<ItemScopeTabs allowAll value={myBudgetScope} onChange={setMyBudgetScope} />}
+          >
+            {myBudget.rows.every((r) => r.count === 0) ? (
+              <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>{t('dashboard.myBudget.none')}</Typography>
+            ) : (
+              <Stack spacing={0.5} sx={{ mt: 1 }}>
+                {myBudget.rows.map((r) => {
+                  const label = t(`dashboard.myBudget.roles.${r.role}`);
+                  const lines = t('dashboard.myBudget.lineCount', { count: r.count });
+                  const cells = (
                     <>
-                      <Divider sx={{ my: 0.5 }} />
-                      <Typography sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary' }}>{t('dashboard.myBudget.myLines')}</Typography>
-                      {myBudget.topLines.map((line) => (
-                        <Stack key={line.id} component={RouterLink} to={line.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
-                          {line.ref && (
-                            <Typography sx={{ fontFamily: 'monospace', fontSize: 11, color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>{line.ref}</Typography>
-                          )}
-                          <Typography variant="body1" noWrap title={line.name} sx={{ flex: 1, minWidth: 0 }}>{line.name}</Typography>
-                          <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsAmount(line.value, locale)}</Typography>
-                        </Stack>
-                      ))}
+                      <Typography variant="body1" noWrap sx={{ flex: 1, color: 'inherit' }}>{label}</Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>{lines}</Typography>
+                      <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right', color: 'inherit' }}>{formatThousandsAmount(r.value, locale)}</Typography>
                     </>
-                  )}
-                  <FxMissingNotice items={myBudget.fxMissing} sx={{ pt: 0.5 }} />
-                </Stack>
-              )}
-            </DashboardTile>
-          </Box>
-    ) : null,
-    'my-tasks': (canTasks) ? (
-          <Box key="my-tasks" sx={tileLayoutSx()}>
-            <DashboardTile icon="Assignment" title={t('dashboard.myTasks')} isLoading={tasksLoading} action={<Button size="small" onClick={() => navigate('/portfolio/tasks?taskScope=my')}>{t('buttons.viewAll')}</Button>}>
-              <Typography variant="h5">{openTasks}</Typography>
-              <Stack spacing={0.5} sx={{ mt: 1.5 }}>
-                {taskItems.map((tk) => {
-                  const due = tk.due_date ? new Date(tk.due_date) : null;
-                  const today = new Date();
-                  const overdue = due ? due < new Date(today.getFullYear(), today.getMonth(), today.getDate()) : false;
-                  return (
-                    <Stack
-                      key={tk.id}
-                      component={RouterLink}
-                      to={buildItemPath('task', tk.item_number != null ? formatItemRef('task', tk.item_number) : tk.id)}
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                      sx={ROW_LINK_SX}
-                    >
-                      <Typography variant="body2" sx={{ color: overdue ? getDotColor('error', mode) : 'text.secondary', fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{due ? due.toLocaleDateString(locale) : '\u2014'}</Typography>
-                      <Typography variant="body1" noWrap sx={{ flex: 1 }}>{tk.title || t('labels.task')}</Typography>
+                  );
+                  // No line in that role: plain text, nothing to open.
+                  return r.count ? (
+                    <Stack key={r.role} component={RouterLink} to={listHref(myBudgetScope, r.filter)} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
+                      {cells}
+                    </Stack>
+                  ) : (
+                    <Stack key={r.role} direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary', mx: -0.5, px: 0.5 }}>
+                      {cells}
                     </Stack>
                   );
                 })}
-                {(!tasksLoading && taskItems.length === 0) && (
-                  <Typography variant="body1" color="text.secondary">{t('dashboard.tiles.noTasksAssigned')}</Typography>
+                {/* The user's three largest lines, whatever the role */}
+                {myBudget.topLines.length > 0 && (
+                  <>
+                    <Divider sx={{ my: 0.5 }} />
+                    <Typography sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary' }}>{t('dashboard.myBudget.myLines')}</Typography>
+                    {myBudget.topLines.map((line) => (
+                      <Stack key={line.id} component={RouterLink} to={line.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
+                        {line.ref && (
+                          <Typography sx={{ fontFamily: 'monospace', fontSize: 11, color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>{line.ref}</Typography>
+                        )}
+                        <Typography variant="body1" noWrap title={line.name} sx={{ flex: 1, minWidth: 0 }}>{line.name}</Typography>
+                        <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsAmount(line.value, locale)}</Typography>
+                      </Stack>
+                    ))}
+                  </>
                 )}
+                <FxMissingNotice items={myBudget.fxMissing} sx={{ pt: 0.5 }} />
               </Stack>
-            </DashboardTile>
-          </Box>
+            )}
+          </DashboardTile>
+    ) : null,
+    'my-tasks': (canTasks) ? (
+          <DashboardTile icon="Assignment" title={t('dashboard.myTasks')} isLoading={tasksLoading} isEmpty={taskItems.length === 0} action={<Button size="small" onClick={() => navigate('/portfolio/tasks?taskScope=my')}>{t('buttons.viewAll')}</Button>}>
+            <Typography variant="h5">{openTasks}</Typography>
+            <Stack spacing={0.5} sx={{ mt: 1.5 }}>
+              {taskItems.map((tk) => {
+                const due = tk.due_date ? new Date(tk.due_date) : null;
+                const today = new Date();
+                const overdue = due ? due < new Date(today.getFullYear(), today.getMonth(), today.getDate()) : false;
+                return (
+                  <Stack
+                    key={tk.id}
+                    component={RouterLink}
+                    to={buildItemPath('task', tk.item_number != null ? formatItemRef('task', tk.item_number) : tk.id)}
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    sx={ROW_LINK_SX}
+                  >
+                    <Typography variant="body2" sx={{ color: overdue ? getDotColor('error', mode) : 'text.secondary', fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{due ? due.toLocaleDateString(locale) : '\u2014'}</Typography>
+                    <Typography variant="body1" noWrap sx={{ flex: 1 }}>{tk.title || t('labels.task')}</Typography>
+                  </Stack>
+                );
+              })}
+              {(!tasksLoading && taskItems.length === 0) && (
+                <Typography variant="body1" color="text.secondary">{t('dashboard.tiles.noTasksAssigned')}</Typography>
+              )}
+            </Stack>
+          </DashboardTile>
     ) : null,
     'renewals': (canContracts) ? (
-          <Box key="renewals" sx={tileLayoutSx()}>
-            <DashboardTile icon="EventAvailable" title={t('dashboard.nextRenewals')} isLoading={contractsLoading} action={<Button size="small" onClick={() => navigate('/ops/contracts')}>{t('buttons.viewAll')}</Button>}>
-              <Stack spacing={0.5}>
-                {upcomingRenewals.map((r) => (
-                  <Stack key={r.id} component={RouterLink} to={`/ops/contracts/${r.id}/overview`} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{r.next_due_date ? new Date(r.next_due_date).toLocaleDateString(locale) : '\u2014'}</Typography>
-                    <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
-                  </Stack>
-                ))}
-                {upcomingRenewals.length === 0 && (
-                  <Typography variant="body1" color="text.secondary">{t('dashboard.noUpcomingRenewals')}</Typography>
-                )}
-              </Stack>
-            </DashboardTile>
-          </Box>
+          <DashboardTile icon="EventAvailable" title={t('dashboard.nextRenewals')} isLoading={contractsLoading} isEmpty={upcomingRenewals.length === 0} action={<Button size="small" onClick={() => navigate('/ops/contracts')}>{t('buttons.viewAll')}</Button>}>
+            <Stack spacing={0.5}>
+              {upcomingRenewals.map((r) => (
+                <Stack key={r.id} component={RouterLink} to={`/ops/contracts/${r.id}/overview`} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{r.next_due_date ? new Date(r.next_due_date).toLocaleDateString(locale) : '\u2014'}</Typography>
+                  <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
+                </Stack>
+              ))}
+              {upcomingRenewals.length === 0 && (
+                <Typography variant="body1" color="text.secondary">{t('dashboard.noUpcomingRenewals')}</Typography>
+              )}
+            </Stack>
+          </DashboardTile>
     ) : null,
     'top-lines': (readableScopes.length > 0) ? (
-          <Box key="top-lines" sx={tileLayoutSx()}>
-            <DashboardTile
-              icon="Leaderboard"
-              title={t('dashboard.topItems')}
-              subtitle={columnY}
-              currency={topItemsResult?.reportingCurrency ?? undefined}
-              isLoading={topLoading}
-              action={(
-                <Stack direction="row" alignItems="center">
-                  <ItemScopeTabs allowAll value={topScope} onChange={setTopScope} />
-                  <Button size="small" onClick={() => navigate(`/ops/reports/top-opex?scope=${topScope}`)}>{t('buttons.open')}</Button>
-                </Stack>
-              )}
-            >
-              <Stack spacing={0.5} sx={{ mt: 1 }}>
-                {(topItems || []).map((r) => (
-                  <Stack key={r.id} component={RouterLink} to={r.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
-                    <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
-                    {r.yMissingRate ? (
-                      // No exchange rate this year: the amount in the line currency, marked.
-                      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 90, justifyContent: 'flex-end' }}>
-                        <Typography variant="body1" sx={{ color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>
-                          {t('ops:shared.fxMissing.localAmount', { amount: formatThousandsAmount(r.y, locale), currency: r.yMissingRate.currency })}
-                        </Typography>
-                        <FxMissingMark currency={r.yMissingRate.currency} year={r.yMissingRate.year} />
-                      </Stack>
-                    ) : (
-                      <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>{formatThousandsAmount(r.y, locale)}</Typography>
-                    )}
-                  </Stack>
-                ))}
-                {(topItems?.length || 0) === 0 && (
-                  <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
-                )}
-                <FxMissingNotice items={topFxMissing} sx={{ pt: 0.5 }} />
+          <DashboardTile
+            icon="Leaderboard"
+            isEmpty={(topItems?.length || 0) === 0}
+            title={t('dashboard.topItems')}
+            subtitle={columnY}
+            currency={topItemsResult?.reportingCurrency ?? undefined}
+            isLoading={topLoading}
+            action={(
+              <Stack direction="row" alignItems="center">
+                <ItemScopeTabs allowAll value={topScope} onChange={setTopScope} />
+                <Button size="small" onClick={() => navigate(`/ops/reports/top-opex?scope=${topScope}`)}>{t('buttons.open')}</Button>
               </Stack>
-            </DashboardTile>
-          </Box>
+            )}
+          >
+            <Stack spacing={0.5} sx={{ mt: 1 }}>
+              {(topItems || []).map((r) => (
+                <Stack key={r.id} component={RouterLink} to={r.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
+                  <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
+                  {r.yMissingRate ? (
+                    // No exchange rate this year: the amount in the line currency, marked.
+                    <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 90, justifyContent: 'flex-end' }}>
+                      <Typography variant="body1" sx={{ color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>
+                        {t('ops:shared.fxMissing.localAmount', { amount: formatThousandsAmount(r.y, locale), currency: r.yMissingRate.currency })}
+                      </Typography>
+                      <FxMissingMark currency={r.yMissingRate.currency} year={r.yMissingRate.year} />
+                    </Stack>
+                  ) : (
+                    <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>{formatThousandsAmount(r.y, locale)}</Typography>
+                  )}
+                </Stack>
+              ))}
+              {(topItems?.length || 0) === 0 && (
+                <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
+              )}
+              <FxMissingNotice items={topFxMissing} sx={{ pt: 0.5 }} />
+            </Stack>
+          </DashboardTile>
     ) : null,
     'top-increases': (readableScopes.length > 0) ? (
-          <Box key="top-increases" sx={tileLayoutSx()}>
-            <DashboardTile
-              icon="TrendingUp"
-              title={t('dashboard.topIncreases')}
-              subtitle={t('dashboard.columnYvsYminus1', { column: defaultColumn.label })}
-              currency={increasesCurrency ?? undefined}
-              isLoading={increasesLoading}
-              action={(
-                <Stack direction="row" alignItems="center">
-                  <ItemScopeTabs allowAll value={increaseScope} onChange={setIncreaseScope} />
-                  <Button size="small" onClick={() => navigate(`/ops/reports/opex-delta?scope=${increaseScope}`)}>{t('buttons.open')}</Button>
-                </Stack>
-              )}
-            >
-              <Stack spacing={0.5} sx={{ mt: 1 }}>
-                {topIncreases.map((r) => (
-                  <Stack key={r.id} component={RouterLink} to={r.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
-                    <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
-                    <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>+{formatCompactAmount(r.delta, locale)}</Typography>
-                  </Stack>
-                ))}
-                {topIncreases.length === 0 && (
-                  <Typography variant="body1" color="text.secondary">{t('dashboard.noIncreases')}</Typography>
-                )}
-                <FxMissingNotice items={increasesFxMissing} sx={{ pt: 0.5 }} />
+          <DashboardTile
+            icon="TrendingUp"
+            isEmpty={topIncreases.length === 0}
+            title={t('dashboard.topIncreases')}
+            subtitle={t('dashboard.columnYvsYminus1', { column: defaultColumn.label })}
+            currency={increasesCurrency ?? undefined}
+            isLoading={increasesLoading}
+            action={(
+              <Stack direction="row" alignItems="center">
+                <ItemScopeTabs allowAll value={increaseScope} onChange={setIncreaseScope} />
+                <Button size="small" onClick={() => navigate(`/ops/reports/opex-delta?scope=${increaseScope}`)}>{t('buttons.open')}</Button>
               </Stack>
-            </DashboardTile>
-          </Box>
+            )}
+          >
+            <Stack spacing={0.5} sx={{ mt: 1 }}>
+              {topIncreases.map((r) => (
+                <Stack key={r.id} component={RouterLink} to={r.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
+                  <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
+                  <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>+{formatCompactAmount(r.delta, locale)}</Typography>
+                </Stack>
+              ))}
+              {topIncreases.length === 0 && (
+                <Typography variant="body1" color="text.secondary">{t('dashboard.noIncreases')}</Typography>
+              )}
+              <FxMissingNotice items={increasesFxMissing} sx={{ pt: 0.5 }} />
+            </Stack>
+          </DashboardTile>
     ) : null,
     'cost-centers': (readableScopes.length > 0) ? (
-          <Box key="cost-centers" sx={tileLayoutSx()}>
-            <DashboardTile
-              icon="Groups"
-              title={t('dashboard.byCostCenter')}
-              subtitle={columnY}
-              currency={costCenters.reportingCurrency ?? undefined}
-              isLoading={costCentersLoading}
-              isError={costCenters.isError}
-              onRetry={costCenters.refetch}
-              action={<ItemScopeTabs allowAll value={costCenterScope} onChange={setCostCenterScope} />}
-            >
-              <Stack spacing={0.5} sx={{ mt: 1 }}>
-                {costCenters.rows.map((r) => (
-                  <Stack
-                    key={r.label ?? ''}
-                    component={RouterLink}
-                    to={listHref(costCenterScope, { cost_center_label: keepValues([r.label]) })}
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
-                    sx={ROW_LINK_SX}
-                  >
-                    <Typography variant="body1" noWrap title={r.label ?? undefined} sx={{ flex: '0 1 45%', minWidth: 0, color: r.label ? 'inherit' : 'text.secondary' }}>
-                      {r.label ?? t('dashboard.noCostCenter')}
-                    </Typography>
-                    <Box sx={{ flex: 1, minWidth: 24, height: 4, borderRadius: '2px', bgcolor: 'kanap.sliderTrack', overflow: 'hidden' }}>
-                      <Box sx={{ height: '100%', borderRadius: '2px', bgcolor: 'kanap.teal', width: `${largestCostCenter > 0 ? (r.value / largestCostCenter) * 100 : 0}%` }} />
-                    </Box>
-                    <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsAmount(r.value, locale)}</Typography>
-                  </Stack>
-                ))}
-                {costCenters.rows.length === 0 && (
-                  <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
-                )}
-                <FxMissingNotice items={costCenters.fxMissing} sx={{ pt: 0.5 }} />
-              </Stack>
-            </DashboardTile>
-          </Box>
+          <DashboardTile
+            icon="Groups"
+            isEmpty={costCenters.rows.length === 0}
+            title={t('dashboard.byCostCenter')}
+            subtitle={columnY}
+            currency={costCenters.reportingCurrency ?? undefined}
+            isLoading={costCentersLoading}
+            isError={costCenters.isError}
+            onRetry={costCenters.refetch}
+            action={<ItemScopeTabs allowAll value={costCenterScope} onChange={setCostCenterScope} />}
+          >
+            <Stack spacing={0.5} sx={{ mt: 1 }}>
+              {costCenters.rows.map((r) => (
+                <Stack
+                  key={r.label ?? ''}
+                  component={RouterLink}
+                  to={listHref(costCenterScope, { cost_center_label: keepValues([r.label]) })}
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  sx={ROW_LINK_SX}
+                >
+                  <Typography variant="body1" noWrap title={r.label ?? undefined} sx={{ flex: '0 1 45%', minWidth: 0, color: r.label ? 'inherit' : 'text.secondary' }}>
+                    {r.label ?? t('dashboard.noCostCenter')}
+                  </Typography>
+                  <Box sx={{ flex: 1, minWidth: 24, height: 4, borderRadius: '2px', bgcolor: 'kanap.sliderTrack', overflow: 'hidden' }}>
+                    <Box sx={{ height: '100%', borderRadius: '2px', bgcolor: 'kanap.teal', width: `${largestCostCenter > 0 ? (r.value / largestCostCenter) * 100 : 0}%` }} />
+                  </Box>
+                  <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsAmount(r.value, locale)}</Typography>
+                </Stack>
+              ))}
+              {costCenters.rows.length === 0 && (
+                <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
+              )}
+              <FxMissingNotice items={costCenters.fxMissing} sx={{ pt: 0.5 }} />
+            </Stack>
+          </DashboardTile>
     ) : null,
     'recent-updates': (readableScopes.length > 0) ? (
-          <Box key="recent-updates" sx={tileLayoutSx()}>
-            <DashboardTile icon="Update" title={t('dashboard.recentUpdates')}>
-              <Stack spacing={0.5} sx={{ mt: 1 }}>
-                {recentUpdates.map((r) => (
-                  <Stack
-                    key={`${r.scope}-${r.id}`}
-                    component={RouterLink}
-                    to={buildItemPath('budget', r.ref)}
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
-                    sx={ROW_LINK_SX}
-                  >
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{r.at ? new Date(r.at).toLocaleDateString(locale) : '\u2014'}</Typography>
-                    <Typography sx={{ fontFamily: 'monospace', fontSize: 11, color: 'kanap.text.tertiary' }}>{r.ref.startsWith('BL-') ? r.ref : ''}</Typography>
-                    <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
-                    <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', whiteSpace: 'nowrap' }}>{scopeLabel(r.scope)}</Typography>
-                  </Stack>
-                ))}
-                {recentUpdates.length === 0 && (
-                  <Typography variant="body1" color="text.secondary">{t('dashboard.noRecentUpdates')}</Typography>
-                )}
-              </Stack>
-            </DashboardTile>
-          </Box>
+          <DashboardTile icon="Update" title={t('dashboard.recentUpdates')} isLoading={recentLoading} isEmpty={recentUpdates.length === 0}>
+            <Stack spacing={0.5} sx={{ mt: 1 }}>
+              {recentUpdates.map((r) => (
+                <Stack
+                  key={`${r.scope}-${r.id}`}
+                  component={RouterLink}
+                  to={buildItemPath('budget', r.ref)}
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  sx={ROW_LINK_SX}
+                >
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>{r.at ? new Date(r.at).toLocaleDateString(locale) : '\u2014'}</Typography>
+                  <Typography sx={{ fontFamily: 'monospace', fontSize: 11, color: 'kanap.text.tertiary' }}>{r.ref.startsWith('BL-') ? r.ref : ''}</Typography>
+                  <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
+                  <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', whiteSpace: 'nowrap' }}>{scopeLabel(r.scope)}</Typography>
+                </Stack>
+              ))}
+              {recentUpdates.length === 0 && (
+                <Typography variant="body1" color="text.secondary">{t('dashboard.noRecentUpdates')}</Typography>
+              )}
+            </Stack>
+          </DashboardTile>
     ) : null,
   };
 
-  const shownTiles = dashboardSettings.config.tiles
+  // Nothing before the person's settings: the defaults would flash first.
+  const shownTiles = (dashboardSettings.isLoading ? [] : dashboardSettings.config.tiles)
     .filter((tile) => tile.enabled && !ON_HOME_PAGE_ALREADY.has(tile.id) && tiles[tile.id])
     .slice()
     .sort((a, b) => a.order - b.order);
+  const { empty, reporter } = useEmptyTiles();
+  useReportEmpty(shownTiles.every((tile) => empty.has(tile.id)));
   // Nothing of the budget for this person: no section at all.
   if (!canOpex && !canContracts) return null;
 
+  const visibleTiles = shownTiles.filter((tile) => !(hideEmpty && empty.has(tile.id)));
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Stack direction="row" alignItems="center" spacing={1.5} useFlexGap flexWrap="wrap">
-        <Typography component="h2" sx={{ fontSize: 16, fontWeight: 500, color: 'kanap.text.primary', mr: 0.5 }}>
-          {t('nav:workspaces.budgetManagement')}
-        </Typography>
-        {canCreateLines && (
-          <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/budget/new?nature=opex')}>
-            {t('dashboard.newOpexLine')}
-          </Button>
-        )}
-        {canCreateLines && (
-          <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/budget/new?nature=capex')}>
-            {t('dashboard.newCapexLine')}
-          </Button>
-        )}
-        {canCreateContracts && (
-          <Button variant="outlined" size="small" startIcon={<AddIcon />} sx={QUICK_ACTION_SX} onClick={() => navigate('/ops/contracts/new/overview')}>
-            {t('dashboard.newContract')}
-          </Button>
-        )}
-        <Box sx={{ flex: 1 }} />
-        <Button variant="action" size="small" startIcon={<SettingsIcon />} onClick={() => setSettingsOpen(true)} disabled={dashboardSettings.isLoading}>
-          {t('dashboard.budgetSettings.customize')}
-        </Button>
-      </Stack>
+    // Kept mounted when every tile is empty, so a tile that fills up comes back.
+    <Box sx={{ display: visibleTiles.length || leading ? 'flex' : 'none', flexDirection: 'column', gap: 2 }}>
+      <Typography component="h2" sx={{ fontSize: 16, fontWeight: 500, color: 'kanap.text.primary' }}>
+        {t('nav:workspaces.budgetManagement')}
+      </Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'start' }}>
         {leading ? <Box sx={tileLayoutSx()}>{leading}</Box> : null}
-        {shownTiles.map((tile) => tiles[tile.id])}
+        {shownTiles.map((tile) => (
+          <Box key={tile.id} sx={[tileLayoutSx(tile.id === 'budget'), hideEmpty && empty.has(tile.id) && { display: 'none' }]}>
+            <TileEmptyContext.Provider value={reporter(tile.id)}>{tiles[tile.id]}</TileEmptyContext.Provider>
+          </Box>
+        ))}
       </Box>
-      <BudgetDashboardSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={dashboardSettings} columns={budgetColumns} canViewTile={canViewTile} />
     </Box>
   );
 }

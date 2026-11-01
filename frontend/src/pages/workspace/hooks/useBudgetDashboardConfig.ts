@@ -8,10 +8,11 @@ interface DashboardTileConfig {
   config: Record<string, unknown>;
 }
 
+/** As the server's defaults (`DEFAULT_BUDGET_DASHBOARD_CONFIG`): the overview, the top lines and the hygiene checks. */
 export const DEFAULT_BUDGET_TILES: DashboardTileConfig[] = [
-  'budget', 'hygiene', 'my-budget', 'my-tasks', 'renewals',
-  'top-lines', 'top-increases', 'cost-centers', 'recent-updates',
-].map((id, index) => ({ id, enabled: true, order: index + 1, config: id === 'budget' ? { columns: null } : {} }));
+  'budget', 'top-lines', 'hygiene', 'my-budget', 'renewals',
+  'top-increases', 'cost-centers', 'recent-updates', 'my-tasks',
+].map((id, index) => ({ id, enabled: index < 3, order: index + 1, config: id === 'budget' ? { columns: null } : {} }));
 
 export interface DashboardConfig {
   tiles: DashboardTileConfig[];

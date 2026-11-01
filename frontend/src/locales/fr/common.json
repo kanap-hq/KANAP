@@ -298,20 +298,18 @@
     "workOverview": "Voici un aperçu de votre travail",
     "createTask": "Créer une tâche",
     "logTime": "Saisir du temps",
-    "newRequest": "Nouvelle demande",
+    "newBudgetLine": "Nouvelle ligne budgétaire",
     "newApplication": "Nouvelle application",
     "newAsset": "Nouvel actif",
     "newDocument": "Nouveau document",
     "dashboardSettings": "Paramètres du tableau de bord",
     "noTilesEnabled": "Aucune tuile activée. Cliquez sur l'icône de paramètres pour configurer votre tableau de bord.",
+    "allTilesEmpty": "Vos tuiles n'ont encore rien à afficher.",
     "blankDocument": "Document vierge",
     "fromTemplate": "À partir d'un modèle…",
     "selectTemplate": "Sélectionner un modèle",
     "useTemplate": "Utiliser le modèle",
     "noTemplatesAvailable": "Aucun modèle publié n'est disponible.",
-    "newOpexLine": "Nouvelle ligne OPEX",
-    "newCapexLine": "Nouvelle ligne CAPEX",
-    "newContract": "Nouveau contrat",
     "newOpex": "Nouvel OPEX",
     "newCapex": "Nouveau CAPEX",
     "recentUpdates": "Mises à jour récentes",
@@ -363,7 +361,8 @@
         "days": "Jours affichés",
         "scope": "Périmètre",
         "thresholdDays": "Seuil (jours)"
-      }
+      },
+      "hideEmptyTiles": "Masquer les tuiles sans contenu"
     },
     "quickCreate": {
       "createTask": "Créer une tâche",
@@ -524,8 +523,6 @@
     },
     "welcome": "Bienvenue",
     "budgetSettings": {
-      "customize": "Personnaliser",
-      "title": "Réglages du tableau de bord du budget",
       "columns": "Colonnes de montant",
       "tenantColumns": "Colonnes de l'espace de travail",
       "atLeastOne": "Choisissez au moins une colonne de montant.",

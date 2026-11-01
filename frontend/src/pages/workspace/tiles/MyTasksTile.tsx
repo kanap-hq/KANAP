@@ -142,6 +142,7 @@ export default function MyTasksTile({ config }: MyTasksTileProps) {
     <DashboardTile
       title={t('dashboard.myTasks')}
       icon="Task"
+      isEmpty={tasks.length === 0}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => { void refetch(); }}

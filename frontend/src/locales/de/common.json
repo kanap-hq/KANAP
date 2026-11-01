@@ -298,20 +298,18 @@
     "workOverview": "Hier ist eine Übersicht Ihrer Arbeit",
     "createTask": "Aufgabe erstellen",
     "logTime": "Zeit erfassen",
-    "newRequest": "Neue Anfrage",
+    "newBudgetLine": "Neue Budgetzeile",
     "newApplication": "Neue Anwendung",
     "newAsset": "Neues Asset",
     "newDocument": "Neues Dokument",
     "dashboardSettings": "Dashboard-Einstellungen",
     "noTilesEnabled": "Keine Kacheln aktiviert. Klicken Sie auf das Einstellungssymbol, um Ihr Dashboard zu konfigurieren.",
+    "allTilesEmpty": "Ihre Kacheln haben noch nichts anzuzeigen.",
     "blankDocument": "Leeres Dokument",
     "fromTemplate": "Aus Vorlage…",
     "selectTemplate": "Vorlage auswählen",
     "useTemplate": "Vorlage verwenden",
     "noTemplatesAvailable": "Keine veröffentlichten Vorlagen verfügbar.",
-    "newOpexLine": "Neue OPEX-Zeile",
-    "newCapexLine": "Neue CAPEX-Zeile",
-    "newContract": "Neuer Vertrag",
     "newOpex": "Neuer OPEX",
     "newCapex": "Neuer CAPEX",
     "recentUpdates": "Aktuelle Änderungen",
@@ -363,7 +361,8 @@
         "days": "Angezeigte Tage",
         "scope": "Bereich",
         "thresholdDays": "Schwelle (Tage)"
-      }
+      },
+      "hideEmptyTiles": "Kacheln ohne Inhalt ausblenden"
     },
     "quickCreate": {
       "createTask": "Aufgabe erstellen",
@@ -524,8 +523,6 @@
     },
     "welcome": "Willkommen",
     "budgetSettings": {
-      "customize": "Anpassen",
-      "title": "Einstellungen des Budget-Dashboards",
       "columns": "Betragsspalten",
       "tenantColumns": "Spalten des Arbeitsbereichs",
       "atLeastOne": "Wählen Sie mindestens eine Betragsspalte.",

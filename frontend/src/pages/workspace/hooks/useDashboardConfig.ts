@@ -10,6 +10,8 @@ export interface DashboardTileConfig {
 
 export interface DashboardConfig {
   tiles: DashboardTileConfig[];
+  /** Leave out the tiles with nothing to show; on unless the person turned it off. */
+  hideEmptyTiles?: boolean;
 }
 
 export function useDashboardConfig() {

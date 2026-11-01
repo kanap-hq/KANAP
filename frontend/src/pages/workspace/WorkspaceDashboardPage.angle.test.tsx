@@ -10,7 +10,18 @@ import { orderTilesForAngle } from './angleLayout';
 const env = vi.hoisted(() => ({
   onboarding: undefined as undefined | Record<string, unknown>,
   budgetReader: true,
+  tiles: ['my-tasks', 'projects-i-lead', 'application-compliance'],
+  empty: [] as string[],
+  budgetEmpty: false,
+  hideEmptyTiles: undefined as boolean | undefined,
+  width: 1920,
 }));
+
+// The breakpoints as the window width says: xl from 1536 px, lg from 1200 px, md from 900 px.
+window.matchMedia = ((query: string) => {
+  const min = Number(/min-width:\s*([\d.]+)px/.exec(query)?.[1] ?? 0);
+  return { matches: env.width >= min, media: query, onchange: null, addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false };
+}) as typeof window.matchMedia;
 
 vi.mock('react-i18next', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-i18next')>()),
@@ -33,23 +44,32 @@ vi.mock('../../components/onboarding/FirstStepsTile', () => ({
   firstStepsShown: (state: { steps?: unknown[] } | undefined) => !!state?.steps?.length,
 }));
 vi.mock('../admin/sample-data/SampleDataBanner', () => ({ default: () => null }));
-vi.mock('./BudgetSection', () => ({
-  default: ({ leading }: { leading?: React.ReactNode }) => (
-    <>{leading}<div data-testid="block">budget section</div></>
-  ),
-}));
+vi.mock('./BudgetSection', async () => {
+  const { useReportEmpty } = await import('./tiles/emptyTiles');
+  return {
+    default: function Section({ leading }: { leading?: React.ReactNode }) {
+      useReportEmpty(env.budgetEmpty);
+      return <>{leading}<div data-testid="block">budget section</div></>;
+    },
+    useBudgetTileAccess: () => ({ anyBudget: env.budgetReader, canViewTile: () => env.budgetReader }),
+  };
+});
 vi.mock('./hooks/useDashboardConfig', () => ({
   useDashboardConfig: () => ({
-    config: { tiles: ['my-tasks', 'projects-i-lead', 'application-compliance'].map((id, index) => ({ id, enabled: true, order: index + 1, config: {} })) },
+    config: { tiles: env.tiles.map((id, index) => ({ id, enabled: true, order: index + 1, config: {} })), hideEmptyTiles: env.hideEmptyTiles },
     isLoading: false,
   }),
 }));
 vi.mock('./hooks/useTilePermissions', () => ({
   useTilePermissions: () => ({ filterVisibleTiles: (tiles: unknown[]) => tiles, canViewTile: () => true }),
 }));
-vi.mock('./tiles/TileRegistry', () => {
-  const ids = ['my-tasks', 'projects-i-lead', 'application-compliance'];
-  const tile = (id: string) => () => <div data-testid="block">{id}</div>;
+vi.mock('./tiles/TileRegistry', async () => {
+  const { useReportEmpty } = await import('./tiles/emptyTiles');
+  const ids = ['my-tasks', 'projects-i-lead', 'application-compliance', 'vulnerabilities', 'recently-viewed'];
+  const tile = (id: string) => function Tile() {
+    useReportEmpty(env.empty.includes(id));
+    return <div data-testid="block">{id}</div>;
+  };
   return {
     TILE_REGISTRY: Object.fromEntries(ids.map((id) => [id, { titleKey: id, icon: 'Task' }])),
     TILE_LOADERS: Object.fromEntries(ids.map((id) => [id, async () => tile(id)])),
@@ -72,12 +92,19 @@ function renderHome() {
 }
 
 const blocks = () => screen.getAllByTestId('block').map((block) => block.textContent);
+/** The blocks a person sees: the hidden ones left out. */
+const shown = () => screen.getAllByTestId('block').filter((block) => block.closest('[class*="MuiGrid-item"]') === null || getComputedStyle(block.closest('[class*="MuiGrid-item"]')!).display !== 'none').map((block) => block.textContent);
 const steps = [{ key: 'x', done_at: null }];
 
 describe('home page by onboarding path', () => {
   beforeEach(() => {
     env.onboarding = undefined;
     env.budgetReader = true;
+    env.tiles = ['my-tasks', 'projects-i-lead', 'application-compliance'];
+    env.empty = [];
+    env.budgetEmpty = false;
+    env.hideEmptyTiles = undefined;
+    env.width = 1920;
   });
 
   it('keeps the saved order, then the budget section, without a path', async () => {
@@ -91,11 +118,58 @@ describe('home page by onboarding path', () => {
     await waitFor(() => expect(blocks()).toEqual(['first steps', 'budget section', 'my-tasks', 'projects-i-lead', 'application-compliance']));
   });
 
-  it('keeps the budget section after the tiles on the budget path for a person who cannot read the budget', async () => {
+  it('keeps the budget section after the first row on the budget path for a person who cannot read the budget', async () => {
     env.budgetReader = false;
     env.onboarding = { angle: 'budget', steps };
     renderHome();
     await waitFor(() => expect(blocks()).toEqual(['first steps', 'my-tasks', 'projects-i-lead', 'application-compliance', 'budget section']));
+  });
+
+  it('puts the budget section right after the first row: four tiles on a wide screen', async () => {
+    env.tiles = ['my-tasks', 'projects-i-lead', 'application-compliance', 'vulnerabilities', 'recently-viewed'];
+    renderHome();
+    await waitFor(() => expect(blocks()).toEqual(['my-tasks', 'projects-i-lead', 'application-compliance', 'vulnerabilities', 'budget section', 'recently-viewed']));
+  });
+
+  it('puts it after three tiles at 1280 pixels, the first steps counting as one', async () => {
+    env.width = 1280;
+    env.tiles = ['my-tasks', 'projects-i-lead', 'application-compliance', 'vulnerabilities'];
+    const view = renderHome();
+    await waitFor(() => expect(blocks()).toEqual(['my-tasks', 'projects-i-lead', 'application-compliance', 'budget section', 'vulnerabilities']));
+    view.unmount();
+    env.onboarding = { angle: 'portfolio', steps };
+    renderHome();
+    await waitFor(() => expect(blocks()).toEqual(['first steps', 'projects-i-lead', 'my-tasks', 'budget section', 'application-compliance', 'vulnerabilities']));
+  });
+
+  it('hides the empty tiles by default, and counts only the tiles shown in the first row', async () => {
+    env.tiles = ['my-tasks', 'projects-i-lead', 'application-compliance', 'vulnerabilities', 'recently-viewed'];
+    env.empty = ['projects-i-lead'];
+    renderHome();
+    await waitFor(() => expect(blocks()).toEqual(['my-tasks', 'projects-i-lead', 'application-compliance', 'vulnerabilities', 'recently-viewed', 'budget section']));
+    expect(shown()).toEqual(['my-tasks', 'application-compliance', 'vulnerabilities', 'recently-viewed', 'budget section']);
+  });
+
+  it('shows the empty tiles with the option off', async () => {
+    env.empty = ['projects-i-lead'];
+    env.hideEmptyTiles = false;
+    renderHome();
+    await waitFor(() => expect(blocks()).toEqual(['my-tasks', 'projects-i-lead', 'application-compliance', 'budget section']));
+    expect(shown()).toEqual(blocks());
+  });
+
+  it('says in one line that nothing is shown when every tile and the budget section are empty', async () => {
+    env.empty = ['my-tasks', 'projects-i-lead', 'application-compliance'];
+    env.budgetEmpty = true;
+    renderHome();
+    expect(await screen.findByText('dashboard.allTilesEmpty')).toBeInTheDocument();
+  });
+
+  it('offers one budget line action, without a request or a contract action', async () => {
+    renderHome();
+    await screen.findByText('my-tasks');
+    expect(screen.getByRole('button', { name: 'dashboard.newBudgetLine' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /newRequest|newContract|newOpexLine|newCapexLine/ })).not.toBeInTheDocument();
   });
 
   it('puts the IT landscape tiles first for the IT landscape path', async () => {

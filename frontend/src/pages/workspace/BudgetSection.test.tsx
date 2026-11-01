@@ -31,18 +31,24 @@ vi.mock('../../auth/AuthContext', () => ({
     profile: PROFILE,
   }),
 }));
-vi.mock('./tiles/DashboardTile', () => ({
-  default: ({ title, subtitle, currency, action, children }: { title: string; subtitle?: string; currency?: string; action?: React.ReactNode; children?: React.ReactNode }) => (
-    <section aria-label={title}>{(subtitle || currency) && <p data-testid="tile-subtitle">{[subtitle, currency].filter(Boolean).join(' · ')}</p>}{action}{children}</section>
-  ),
-}));
+vi.mock('./tiles/DashboardTile', async () => {
+  const { useReportEmpty } = await import('./tiles/emptyTiles');
+  return {
+    default: function Tile({ title, subtitle, currency, action, isLoading, isEmpty, children }: { title: string; subtitle?: string; currency?: string; action?: React.ReactNode; isLoading?: boolean; isEmpty?: boolean; children?: React.ReactNode }) {
+      useReportEmpty(!!isEmpty && !isLoading);
+      return <section aria-label={title}>{(subtitle || currency) && <p data-testid="tile-subtitle">{[subtitle, currency].filter(Boolean).join(' · ')}</p>}{action}{children}</section>;
+    },
+  };
+});
 
 import api from '../../api';
 import { formatCompactAmount, formatThousandsAmount } from '../../i18n/formatters';
 import BudgetSection from './BudgetSection';
 import { DEFAULT_BUDGET_TILES } from './hooks/useBudgetDashboardConfig';
-let savedDashboard = { tiles: DEFAULT_BUDGET_TILES };
-beforeEach(() => { savedDashboard = { tiles: DEFAULT_BUDGET_TILES }; });
+// Every tile on (My tasks is the home page's), so that each test reads the tile it is about; the defaults have their own test.
+const ALL_TILES = DEFAULT_BUDGET_TILES.map((tile) => ({ ...tile, enabled: tile.id !== 'my-tasks' }));
+let savedDashboard = { tiles: ALL_TILES };
+beforeEach(() => { savedDashboard = { tiles: ALL_TILES }; });
 import { setBudgetColumns } from '../reports/budgetColumnsTestState';
 import { fakeAggregate } from '../../test/fakeBudgetAggregate';
 
@@ -61,13 +67,13 @@ function LocationProbe() {
   return <output data-testid="location">{`${location.pathname}${location.search}`}</output>;
 }
 
-function renderPage(mode: 'light' | 'dark' = 'light') {
+function renderPage(mode: 'light' | 'dark' = 'light', hideEmpty = false) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme(mode)}>
         <MemoryRouter>
-          <BudgetSection />
+          <BudgetSection hideEmpty={hideEmpty} />
           <LocationProbe />
         </MemoryRouter>
       </ThemeProvider>
@@ -79,8 +85,6 @@ const ALL_SHOWN = { planned: true, committed: true, forecast: true, actual: true
 const TENANT_NAMES = { planned: 'A0', committed: 'A1', forecast: 'A2', actual: 'A3', expected_landing: 'Réel' };
 
 
-/** The section's title row: its title, the creation buttons and the customization. */
-const sectionHeader = () => screen.getByRole('heading', { name: 'nav:workspaces.budgetManagement' }).parentElement as HTMLElement;
 
 describe('BudgetSection budget snapshot', () => {
   beforeEach(() => {
@@ -274,6 +278,30 @@ describe('BudgetSection budget snapshot', () => {
     expect(get.mock.calls.filter(([url]) => String(url).endsWith('/summary/totals'))).toHaveLength(3);
     expect(post.mock.calls.filter(([url]) => String(url).endsWith('/summary/aggregate'))).toHaveLength(0);
   });
+
+  it('leaves out an empty tile with the option on, then the whole section when none has anything to show', async () => {
+    renderPage('light', true);
+    const renewals = await screen.findByRole('region', { name: 'dashboard.nextRenewals', hidden: true });
+    // No contract to renew, no line updated: nothing to show; the budget has amounts.
+    await waitFor(() => expect(renewals.parentElement).not.toBeVisible());
+    expect(screen.getByRole('region', { name: 'dashboard.recentUpdates', hidden: true }).parentElement).not.toBeVisible();
+    expect(screen.getByRole('region', { name: 'dashboard.budgetSnapshot' }).parentElement).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'nav:workspaces.budgetManagement' })).toBeVisible();
+  });
+
+  it('keeps the empty tiles with the option off', async () => {
+    renderPage('light', false);
+    const renewals = await screen.findByRole('region', { name: 'dashboard.nextRenewals', hidden: true });
+    await screen.findByText('dashboard.noUpcomingRenewals');
+    expect(renewals.parentElement).toBeVisible();
+  });
+
+  it('leaves out the section, its title included, when every tile shown is empty', async () => {
+    savedDashboard = { tiles: ALL_TILES.map((tile) => ({ ...tile, enabled: ['renewals', 'recent-updates'].includes(tile.id) })) };
+    renderPage('light', true);
+    await screen.findByRole('region', { name: 'dashboard.nextRenewals', hidden: true });
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'nav:workspaces.budgetManagement', hidden: true })).not.toBeVisible());
+  });
 });
 
 const compact = (n: number) => formatCompactAmount(n, 'en');
@@ -387,6 +415,7 @@ describe('BudgetSection budget tiles', () => {
     }
     view.unmount();
     renderPage();
+    await screen.findByRole('region', { name: titles[0] });
     titles.forEach((title) => expect(within(screen.getByRole('region', { name: title })).getByRole('tab', { name: 'operations.scope.all' })).toHaveAttribute('aria-selected', 'true'));
   });
 
@@ -422,47 +451,31 @@ describe('BudgetSection budget tiles', () => {
     }
   });
 
-  it.each([
-    ['dashboard.newOpexLine', '/ops/budget/new?nature=opex'],
-    ['dashboard.newCapexLine', '/ops/budget/new?nature=capex'],
-    ['dashboard.newContract', '/ops/contracts/new/overview'],
-  ])('offers %s in the section title row, opening its creation page', async (name, target) => {
-    renderPage();
-    const header = sectionHeader();
-    expect(within(header).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newOpexLine', 'dashboard.newCapexLine', 'dashboard.newContract', 'dashboard.budgetSettings.customize']);
-    fireEvent.click(within(header).getByRole('button', { name }));
-    expect(screen.getByTestId('location')).toHaveTextContent(target);
-    await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
-  });
-
-  it('keeps budget tiles available to a reader and shows each creation button with its right only', async () => {
-    budgetWriter = false;
+  it('keeps only its title in its title row: the creation actions and the settings are the home page\'s', async () => {
     renderPage();
     await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
-    expect(within(sectionHeader()).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newContract', 'dashboard.budgetSettings.customize']);
+    expect(screen.getByRole('heading', { name: 'nav:workspaces.budgetManagement' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /newOpexLine|newCapexLine|newContract|customize/ })).not.toBeInTheDocument();
   });
 
-  it('keeps customization available when creation actions are hidden', async () => {
-    contractsWriter = false;
-    const view = renderPage();
-    await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
-    expect(within(sectionHeader()).getAllByRole('button').map((b) => b.textContent)).toEqual(['dashboard.newOpexLine', 'dashboard.newCapexLine', 'dashboard.budgetSettings.customize']);
-    view.unmount();
-    budgetWriter = false;
-    renderPage();
-    await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
-    expect(within(sectionHeader()).getAllByRole('button').map((button) => button.textContent)).toEqual(['dashboard.budgetSettings.customize']);
-  });
-
-  it('orders the tiles: budget and hygiene, then the user\'s tiles, then the reports, recent updates last', async () => {
+  it('orders the tiles: the overview, the top lines and hygiene, then the user\'s tiles, then the reports, recent updates last', async () => {
     renderPage();
     await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
     expect(screen.getAllByRole('region').map((tile) => tile.getAttribute('aria-label'))).toEqual([
-      'dashboard.budgetSnapshot', 'dashboard.dataHygiene',
+      'dashboard.budgetSnapshot', TOP_ITEMS, 'dashboard.dataHygiene',
       MY_BUDGET, 'dashboard.nextRenewals',
-      TOP_ITEMS, TOP_INCREASES, BY_COST_CENTER,
+      TOP_INCREASES, BY_COST_CENTER,
       'dashboard.recentUpdates',
     ]);
+  });
+
+  it('shows the overview, the top lines and the hygiene checks only, by default', async () => {
+    savedDashboard = { tiles: DEFAULT_BUDGET_TILES };
+    renderPage();
+    await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
+    await waitFor(() => expect(screen.getAllByRole('region').map((tile) => tile.getAttribute('aria-label'))).toEqual([
+      'dashboard.budgetSnapshot', TOP_ITEMS, 'dashboard.dataHygiene',
+    ]));
   });
 
   it('switches the top items tile to CAPEX and opens the report on that type', async () => {
@@ -626,8 +639,6 @@ describe('BudgetSection budget tiles', () => {
     for (const name of ['dashboard.budgetSnapshot', 'dashboard.dataHygiene', TOP_ITEMS, TOP_INCREASES, MY_BUDGET, BY_COST_CENTER, 'dashboard.recentUpdates']) {
       expect(screen.queryByRole('region', { name })).not.toBeInTheDocument();
     }
-    expect(screen.queryByRole('button', { name: 'dashboard.newOpexLine' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'dashboard.newCapexLine' })).not.toBeInTheDocument();
     expect([...get.mock.calls, ...post.mock.calls].some(([url]) => /^\/(budget-lines|spend-items|capex-items)\//.test(url as string))).toBe(false);
   });
 
@@ -809,12 +820,13 @@ describe('BudgetSection budget tiles', () => {
     expect(summaryCalls('/budget-lines/summary').some((p) => /^y[A-Z]/.test(String(p.sort)))).toBe(false);
   });
   it('uses the saved order and omits a hidden tile after loading the server settings', async () => {
-    savedDashboard = { tiles: DEFAULT_BUDGET_TILES.map((tile) => ({ ...tile, enabled: tile.id !== 'hygiene', order: 10 - tile.order })) };
+    savedDashboard = { tiles: ALL_TILES.map((tile) => ({ ...tile, enabled: tile.id !== 'hygiene', order: 10 - tile.order })) };
     renderPage();
-    await waitFor(() => expect(screen.queryByRole('region', { name: 'dashboard.dataHygiene' })).not.toBeInTheDocument());
+    await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
+    expect(screen.queryByRole('region', { name: 'dashboard.dataHygiene' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('region').map((tile) => tile.getAttribute('aria-label'))).toEqual([
-      'dashboard.recentUpdates', BY_COST_CENTER, TOP_INCREASES, TOP_ITEMS,
-      'dashboard.nextRenewals', MY_BUDGET, 'dashboard.budgetSnapshot',
+      'dashboard.recentUpdates', BY_COST_CENTER, TOP_INCREASES,
+      'dashboard.nextRenewals', MY_BUDGET, TOP_ITEMS, 'dashboard.budgetSnapshot',
     ]);
   });
 
@@ -827,27 +839,6 @@ describe('BudgetSection budget tiles', () => {
     const tile = await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
     await within(tile).findByText('A0');
     expect(within(tile).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['labels.year', 'ops:budget.type', 'A0']);
-  });
-
-  it('saves customization through the budget hook and restores defaults through its reset route', async () => {
-    const put = vi.mocked(api.put);
-    put.mockImplementation(async (_url: any, value: any) => { savedDashboard = value; return { data: value } as any; });
-    renderPage();
-    const button = await screen.findByRole('button', { name: 'dashboard.budgetSettings.customize' });
-    await waitFor(() => expect(button).toBeEnabled());
-    fireEvent.click(button);
-    const dialog = await screen.findByRole('dialog');
-    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'dashboard.dataHygiene' }));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.save' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(put).toHaveBeenCalledWith('/dashboard/budget-config', expect.objectContaining({ tiles: expect.arrayContaining([expect.objectContaining({ id: 'hygiene', enabled: false })]) }));
-    expect(screen.queryByRole('region', { name: 'dashboard.dataHygiene' })).not.toBeInTheDocument();
-    const originalPost = post.getMockImplementation()! as (...args: any[]) => any;
-    post.mockImplementation((url: string, body?: any) => url === '/dashboard/budget-config/reset' ? Promise.resolve({ data: { tiles: DEFAULT_BUDGET_TILES } }) : originalPost(url, body));
-    fireEvent.click(button);
-    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'dashboard.settings.resetToDefaults' }));
-    await screen.findByRole('region', { name: 'dashboard.dataHygiene' });
-    expect(post).toHaveBeenCalledWith('/dashboard/budget-config/reset');
   });
 
 });
