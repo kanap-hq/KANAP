@@ -3,6 +3,8 @@ import { Box, Stack, Typography } from '@mui/material';
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
+import type { OnboardingAngle } from '../../components/onboarding/onboardingApi';
+import { useOnboarding } from '../../components/onboarding/useOnboarding';
 
 type ChatEmptyStateProps = {
   onSuggestion: (prompt: string) => void;
@@ -16,6 +18,15 @@ export const SUGGESTION_KEYS = [
   'applicationMention',
   'knowledgeSearch',
 ] as const;
+
+/** The two questions of each onboarding path, with the module each one reads. */
+export const ANGLE_SUGGESTIONS: Record<OnboardingAngle, Array<{ key: string; resource: string }>> = {
+  budget: [{ key: 'savings', resource: 'budget' }, { key: 'noOwner', resource: 'budget' }],
+  cartography: [{ key: 'endOfSupport', resource: 'applications' }, { key: 'noRecovery', resource: 'applications' }],
+  portfolio: [{ key: 'overBudget', resource: 'portfolio_projects' }, { key: 'awaitingDecision', resource: 'portfolio_requests' }],
+};
+
+const MAX_SUGGESTIONS = 5;
 
 /**
  * The chip explains the @ ("type @ to pick one"). The composer keeps the request,
@@ -35,8 +46,16 @@ export function suggestionPrompt(label: string): string {
 export default function ChatEmptyState({ onSuggestion, disabled }: ChatEmptyStateProps) {
   const { t } = useTranslation(['ai']);
   const { hasLevel } = useAuth();
+  const { state: onboarding } = useOnboarding();
   const canReadBudget = hasLevel('budget', 'reader');
-  const suggestionKeys = SUGGESTION_KEYS.filter((key) => key !== 'budgetLines' || canReadBudget);
+  // The questions of the workspace's path come first, those the person may read.
+  const angleKeys = onboarding?.angle
+    ? ANGLE_SUGGESTIONS[onboarding.angle].filter(({ resource }) => hasLevel(resource, 'reader')).map(({ key }) => key)
+    : [];
+  const suggestionKeys = [
+    ...angleKeys,
+    ...SUGGESTION_KEYS.filter((key) => !angleKeys.includes(key) && (key !== 'budgetLines' || canReadBudget)),
+  ].slice(0, MAX_SUGGESTIONS);
 
   return (
     <Stack

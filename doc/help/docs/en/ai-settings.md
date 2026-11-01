@@ -37,7 +37,7 @@ A confirmation covers what these features send to the provider: the questions pe
 
 - **Confirm** records your confirmation. It does not switch Plaid on.
 - **Enable chat** asks for the confirmation when it is still missing. Switch it on and save: a window shows the provider and the processing location. **Confirm and turn on** saves your changes and the confirmation together. If you close the window, nothing is saved. The window also links to the [AI models](ai-models.md) page, in case you prefer to use your own model.
-- During a cloud trial, the home page also offers to turn Plaid on, with the same confirmation window. See [My Dashboard](my-dashboard.md).
+- While the confirmation is missing, Plaid's page shows a box in place of the message field. Ticking it, as an administrator of the Plaid settings, records the confirmation and turns Plaid on. See [Plaid](ai-assistant.md#included-model-acceptance).
 - **Withdraw** removes the confirmation, after a second confirmation. AI features that use the included model stop until an administrator confirms again. Plaid stays switched on and shows a notice to its users.
 - You are asked again when the provider, its connection address, the name shown or the processing location changes. A new model from the same provider does not ask again. If the provider changes while your window is open, the window shows the new one and asks you to review it.
 - Plaid and agents that run on a model you added need no confirmation. External assistants connected over MCP do not depend on it either, because MCP sends nothing to the included model.

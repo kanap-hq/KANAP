@@ -405,20 +405,27 @@
       "disabled": "Plaid est désactivé pour cet espace de travail.",
       "tenantDisabledAdminLink": "Activez-le dans Administration › Plaid",
       "tenantDisabledAskAdmin": "Demandez à un administrateur de l'activer.",
-      "builtinNotAccepted": "Un administrateur doit confirmer le fournisseur d'IA dans Administration > Plaid."
+      "builtinNotAccepted": "Plaid attend qu'un administrateur l'active."
     },
     "suggestions": {
       "applicationMention": "Résume une application : tapez @ pour la choisir",
       "budgetLines": "Quelles sont mes cinq plus grosses lignes budgétaires cette année ?",
       "knowledgeSearch": "Trouve des documents sur les sauvegardes",
       "myProjects": "Quels projets me sont assignés ?",
-      "overdueTasks": "Liste mes tâches en retard"
+      "overdueTasks": "Liste mes tâches en retard",
+      "noOwner": "Quelles lignes n'ont pas de responsable ?",
+      "endOfSupport": "Quelles technologies arrivent en fin de support dans les six mois ?",
+      "noRecovery": "Quelles applications critiques n'ont pas de plan de reprise ?",
+      "overBudget": "Quels projets dépassent leur budget ?",
+      "awaitingDecision": "Quelles demandes attendent un arbitrage ?",
+      "savings": "Quelles sont les principales opportunités d'économies dans les OPEX IT ?"
     },
     "title": "Plaid"
   },
-  "enablePlaid": {
-    "text": "Plaid, l'assistant de KANAP, est désactivé.",
-    "action": "Activer",
-    "dismiss": "Masquer"
+  "consent": {
+    "accept": "J'accepte que {{name}} ({{place}}) traite mes questions et les données qu'elles concernent pour les réponses de Plaid. Elles ne servent pas à entraîner ses modèles.",
+    "otherModel": "Autre modèle ou désactivation :",
+    "otherModelLink": "Administration › Plaid",
+    "loading": "Chargement du fournisseur"
   }
 }

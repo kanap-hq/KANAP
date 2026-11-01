@@ -37,7 +37,7 @@ Una confirmación cubre lo que estas funciones envían al proveedor: las pregunt
 
 - **Confirmar** registra su confirmación. No activa Plaid.
 - **Habilitar chat** pide la confirmación cuando todavía falta. Actívelo y guarde: una ventana muestra el proveedor y el lugar de tratamiento. **Confirmar y activar** guarda sus cambios y la confirmación a la vez. Si cierra la ventana, no se guarda nada. La ventana también enlaza con la página [Modelos IA](ai-models.md), por si prefiere usar su propio modelo.
-- Durante una prueba en la nube, la página de inicio también propone activar Plaid, con la misma ventana de confirmación. Véase [Mi panel de control](my-dashboard.md).
+- Mientras falta la confirmación, la página de Plaid muestra una casilla en lugar del campo de mensaje. Marcarla, como administrador de la configuración de Plaid, registra la confirmación y activa Plaid. Véase [Plaid](ai-assistant.md#included-model-acceptance).
 - **Retirar** elimina la confirmación, tras una segunda confirmación. Las funciones de IA que usan el modelo incluido se detienen hasta que un administrador vuelva a confirmar. Plaid sigue activado y muestra un aviso a sus usuarios.
 - Se vuelve a pedir confirmación cuando cambia el proveedor, su dirección de conexión, el nombre mostrado o el lugar de tratamiento. Un modelo nuevo del mismo proveedor no la pide. Si el proveedor cambia mientras su ventana está abierta, la ventana muestra el nuevo y le pide que lo revise.
 - Plaid y los agentes que funcionan con un modelo que usted añadió no necesitan confirmación. Los asistentes externos conectados por MCP tampoco dependen de ella, porque MCP no envía nada al modelo incluido.

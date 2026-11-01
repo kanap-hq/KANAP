@@ -16,11 +16,19 @@ Plaid ne remplace pas le reste de l'application. C'est un moyen plus rapide de s
 
 L'espace de travail est également accessible aux administrateurs disposant de `ai_chat:admin`, qui peuvent voir et modérer tout ce que font les utilisateurs standard.
 
-!!! note "En attente d'un administrateur"
-    Sur le service hébergé, Plaid peut s'exécuter sur le modèle inclus KANAP. Avant cela, un administrateur confirme le fournisseur et le lieu où il traite les données. Jusque-là, l'espace de travail affiche *Un administrateur doit confirmer le fournisseur d'IA dans Administration > Plaid.* à la place du chat. Un administrateur le fait sur la page [Paramètres Plaid](ai-settings.md#confirmer-le-modele-inclus-kanap). Les organisations qui utilisent un modèle propre ne voient jamais cet avis.
+### Avant l'acceptation du modèle inclus { #included-model-acceptance }
+
+Sur le service hébergé, Plaid peut fonctionner avec le modèle inclus de KANAP. Avant cela, un administrateur accepte le fournisseur et le lieu où il traite les données. Les nouveaux espaces de travail en essai commencent dans cet état, avec Plaid désactivé.
+
+D'ici là, la page de Plaid s'ouvre normalement avec ses suggestions. Une case prend la place du champ de message : *J'accepte que {fournisseur} ({lieu}) traite mes questions et les données qu'elles concernent pour les réponses de Plaid. Elles ne servent pas à entraîner ses modèles.*, suivie de *Autre modèle ou désactivation : Administration › Plaid*.
+
+- Un administrateur des paramètres de Plaid coche la case. Cela active Plaid et enregistre l'acceptation, avec son auteur et sa date. Le champ de message apparaît alors.
+- Les autres personnes lisent *Plaid attend qu'un administrateur l'active.*
+
+Les administrateurs peuvent aussi accepter depuis la page [Paramètres Plaid](ai-settings.md#confirmer-le-modele-inclus-kanap). Les organisations qui utilisent leur propre modèle ne voient jamais cette case.
 
 !!! note "Chat désactivé"
-    Lorsqu'un administrateur désactive le chat dans **Administration › Plaid**, une personne autorisée à utiliser le chat ouvre toujours cette page, et l'entrée Plaid reste dans la navigation supérieure. La page indique *Plaid est désactivé pour cet espace de travail.* Un administrateur de l'assistant voit aussi *Activez-le dans Administration › Plaid*, qui ouvre les paramètres de Plaid. Les autres personnes voient *Demandez à un administrateur de l'activer.* Une personne sans le droit de chat voit la page d'accès refusé.
+    Lorsqu'un administrateur désactive le chat dans **Administration › Plaid**, une personne autorisée à utiliser le chat ouvre toujours cette page, et l'entrée Plaid reste dans la navigation supérieure. La page indique *Plaid est désactivé pour cet espace de travail.* Un administrateur de l'assistant voit aussi *Activez-le dans Administration › Plaid*, qui ouvre les paramètres de Plaid. Les autres personnes voient *Demandez à un administrateur de l'activer.* Une personne sans le droit de chat voit la page d'accès refusé. Tant que le modèle inclus attend son acceptation, la page affiche à la place la case d'acceptation, même avec le chat désactivé : voir [Avant l'acceptation du modèle inclus](#included-model-acceptance).
 
 ## Démarrer une conversation
 
@@ -31,6 +39,14 @@ Lorsque vous ouvrez Plaid pour la première fois, vous arrivez sur un écran d'a
 - Le composeur en bas, prêt à recevoir votre premier message
 
 Cliquez sur une suggestion pour l'envoyer directement ou, pour les requêtes contenant un espace réservé `@`, l'insérer dans le composeur afin de la compléter.
+
+Quand un parcours a été choisi pour l'espace de travail à sa première ouverture, pendant l'essai, les suggestions commencent par ses deux questions, parmi celles que vous pouvez lire, puis viennent les suggestions habituelles, cinq au plus :
+
+| Parcours | Questions |
+|---|---|
+| Budget IT | *Quelles sont les principales opportunités d'économies dans les OPEX IT ?*, *Quelles lignes n'ont pas de responsable ?* |
+| Cartographie du SI | *Quelles technologies arrivent en fin de support dans les six mois ?*, *Quelles applications critiques n'ont pas de plan de reprise ?* |
+| Projets et demandes | *Quels projets dépassent leur budget ?*, *Quelles demandes attendent un arbitrage ?* |
 
 Saisissez un message et appuyez sur **Entrée** pour l'envoyer. **Maj+Entrée** insère un retour à la ligne. Le bouton d'envoi est désactivé lorsqu'il n'y a rien à envoyer et se transforme en bouton rouge **Arrêter** pendant que Plaid répond.
 

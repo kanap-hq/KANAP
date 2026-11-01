@@ -82,7 +82,7 @@ describe('ProtectedRoute for the assistant', () => {
     expect(screen.getByText('assistant page')).toBeInTheDocument();
   });
 
-  it('opens the assistant page when chat is off, even if the included model is also unconfirmed', () => {
+  it('opens the assistant page while it is off and the included model waits (a new trial)', () => {
     chatReasons = ['tenant_disabled', 'builtin_not_accepted'];
     renderAssistant();
     expect(screen.getByText('assistant page')).toBeInTheDocument();

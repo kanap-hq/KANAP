@@ -77,6 +77,14 @@ vi.mock('../../ai/useChat', () => ({
   useChat: () => chatState,
 }));
 
+vi.mock('../../components/onboarding/PlaidConsent', () => ({
+  default: () => <div>consent box</div>,
+}));
+
+vi.mock('../../components/onboarding/useOnboarding', () => ({
+  useOnboarding: () => ({ state: undefined }),
+}));
+
 vi.mock('../../components/PageHeader', () => ({
   default: ({ title }: { title: string }) => <div>{title}</div>,
 }));
@@ -310,8 +318,11 @@ describe('AiWorkspacePage', () => {
     expect(screen.queryByText('Send message')).not.toBeInTheDocument();
   });
 
-  it('explains that chat is turned off when the included model is also unconfirmed', () => {
-    capabilitiesState = { data: chatCapabilities(['tenant_disabled', 'builtin_not_accepted'], true) };
+  it.each([
+    [['builtin_not_accepted']],
+    [['tenant_disabled', 'builtin_not_accepted']],
+  ])('opens the chat with the acceptance box in place of the composer while the included model waits (%j)', (reasons) => {
+    capabilitiesState = { data: chatCapabilities(reasons) };
     const client = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -321,23 +332,8 @@ describe('AiWorkspacePage', () => {
 
     renderPage(client);
 
-    expect(screen.getByText('workspace.messages.disabled')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'workspace.messages.tenantDisabledAdminLink' })).toBeInTheDocument();
-    expect(screen.queryByText('workspace.messages.builtinNotAccepted')).not.toBeInTheDocument();
-  });
-
-  it('says an administrator must confirm the AI provider when only that holds the assistant back', () => {
-    capabilitiesState = { data: chatCapabilities(['builtin_not_accepted']) };
-    const client = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
-
-    renderPage(client);
-
-    expect(screen.getByText('workspace.messages.builtinNotAccepted')).toBeInTheDocument();
+    expect(screen.getByText('consent box')).toBeInTheDocument();
+    expect(screen.getByText('workspace.empty.title')).toBeInTheDocument();
     expect(screen.queryByText('Send message')).not.toBeInTheDocument();
   });
 
@@ -351,7 +347,7 @@ describe('AiWorkspacePage', () => {
 
     renderPage(client);
 
-    expect(screen.queryByText('workspace.messages.builtinNotAccepted')).not.toBeInTheDocument();
+    expect(screen.queryByText('consent box')).not.toBeInTheDocument();
     expect(screen.getByText('Send message')).toBeInTheDocument();
   });
 

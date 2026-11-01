@@ -78,10 +78,6 @@ During a trial, the section of your path comes first, led by the first steps til
 
 Without a path, the sections keep their default order. Once you order the sections yourself, your order applies.
 
-## Turn on Plaid line
-
-During a cloud trial, administrators of the Plaid settings see one line under the sample data line while Plaid is turned off and the KANAP included model is offered: "Plaid, the KANAP assistant, is turned off." **Turn on** opens the usual confirmation of the included model. Confirming turns Plaid on. The close button (**×**) hides the line in this browser. The line does not appear after the switch to a paid plan, nor on-premise. See [Plaid Settings](ai-settings.md).
-
 ## Dashboard tiles
 
 The home page groups its tiles in four sections, each with its title. By default they come in this order:
