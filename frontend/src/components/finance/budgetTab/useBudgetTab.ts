@@ -1470,12 +1470,13 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     if (!record || record.method !== 'spread' || record.last_calculation?.kind === 'quarterly') return false;
     return isWholeYear(year, { start: record.period_start, end: record.period_end }) && (record.spread_profile_name ?? 'flat') === 'flat';
   };
-  const gridAuto = !loaded || !shown.every((c) => plainColumn(c.measure));
-  // « Show / Hide the detail »: the user's choice for the visit, else the rule above. Always open
-  // while a column waits for a choice (its months are shown there) or the active column is typed by month.
+  const allPlain = loaded && shown.every((c) => plainColumn(c.measure));
+  // « Show / Hide the detail »: folded until the user opens it for the visit, the months would hide
+  // the chart below. Always open while a column waits for a choice (its months are shown there) or
+  // the active column is typed by month.
   const [gridChoice, setGridChoice] = React.useState<boolean | null>(null);
   const gridForced = waitingColumns.length > 0 || activeMode === 'monthly';
-  const gridOpen = gridForced ? true : (gridChoice ?? gridAuto);
+  const gridOpen = gridForced ? true : (gridChoice ?? false);
   const toggleGrid = () => setGridChoice(!gridOpen);
   // Typed by month: the table opens, the months are typed there.
   function openGrid() { setGridChoice((prev) => (prev === false ? true : prev)); }
@@ -1916,6 +1917,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     gridForced,
     toggleGrid,
     allEmpty,
+    allPlain,
     diffCol,
     setDiffCol: setDiffPick,
     // « Back to the opening values ».

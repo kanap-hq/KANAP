@@ -683,13 +683,14 @@ describe('BudgetListPage', () => {
     expect(lastProps().defaultSort).toEqual({ field: 'yBudget', direction: 'DESC' });
   });
 
-  it('has a contract column, a project column hidden by default, and a visible task column', async () => {
+  it('keeps the contract, allocation, task and project columns out of the default view, in the chooser', async () => {
     await renderPage();
     expect(column('contract_name')?.headerName).toBe('opex.columns.contract');
     expect(column('contract_name')?.valueGetter?.({ data: { latest_contract_name: 'Support' } })).toBe('Support');
     expect(column('project_name')?.headerName).toBe('opex.columns.project');
-    expect(column('project_name')?.defaultHidden).toBe(true);
-    expect(column('latest_task_text')?.defaultHidden).toBeFalsy();
+    for (const colId of ['contract_name', 'allocation_label', 'latest_task_text', 'project_name']) {
+      expect(column(colId)?.defaultHidden, colId).toBe(true);
+    }
   });
 
   it('shows a contract outside the access by its label alone, without a link', async () => {
