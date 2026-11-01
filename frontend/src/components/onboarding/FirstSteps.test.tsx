@@ -302,7 +302,7 @@ describe('StepHint', () => {
     expect(filters).toEqual({ status: { filterType: 'set', values: ['converted'] } });
   });
 
-  it('opens your project on its Relations tab for its budget, and on its team for a contributor', async () => {
+  it('opens your project on its Relations tab for its budget, and your contributor profile last', async () => {
     env.server = createFakeOnboardingServer({ angle: 'portfolio', mode: 'own_data' });
     env.summary = async (_config, url) => (url === '/portfolio/projects'
       ? { data: { items: [{ id: 'p-1', item_number: 1, name: 'My project' }] } }
@@ -312,8 +312,7 @@ describe('StepHint', () => {
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/portfolio/projects/PRJ-1/relations?step=own_project_budget'));
     cleanup();
     renderAt('/', <FirstStepsTile />);
-    fireEvent.click(await screen.findByRole('button', { name: 'A contributor' }));
-    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/portfolio/projects/PRJ-1/team?step=own_invite'));
+    expect(await screen.findByRole('link', { name: 'Your contributor profile' })).toHaveAttribute('href', '/portfolio/contributors/me?step=own_invite');
   });
 
   it('opens the best-scored project when no request was converted', async () => {

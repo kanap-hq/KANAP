@@ -1632,11 +1632,11 @@
         },
         "own_invite": {
           "title": "Un collègue",
-          "portfolioTitle": "Un contributeur",
+          "portfolioTitle": "Votre fiche contributeur",
           "hint": {
             "budget": "Invitez vos collègues en créant leur compte utilisateur. Passez par le menu Authentification pour configurer le SSO avec Entra ID.",
             "cartography": "Invitez un responsable d'application ou d'actif.",
-            "portfolio": "Ajoutez un collègue aux contributeurs métier ou IT du projet. Pas encore de compte ? Créez-le dans Administration › Utilisateurs."
+            "portfolio": "Ajoutez-vous comme contributeur : équipe, disponibilité projet, compétences. Pas encore d'équipe ? Créez-la dans Paramètres › Équipes."
           }
         },
         "map_application": {

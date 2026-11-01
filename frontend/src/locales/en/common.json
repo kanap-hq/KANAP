@@ -1632,11 +1632,11 @@
         },
         "own_invite": {
           "title": "A colleague",
-          "portfolioTitle": "A contributor",
+          "portfolioTitle": "Your contributor profile",
           "hint": {
             "budget": "Invite your colleagues by creating their user accounts. Use the Authentication menu to set up SSO with Entra ID.",
             "cartography": "Invite an application or asset owner.",
-            "portfolio": "Add a colleague to the project's business or IT contributors. No account yet? Create one in Admin › Users."
+            "portfolio": "Add yourself as a contributor: team, project availability, skills. No team yet? Create one in Settings › Teams."
           }
         },
         "map_application": {

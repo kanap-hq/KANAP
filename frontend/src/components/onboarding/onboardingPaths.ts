@@ -52,9 +52,9 @@ export const STEP_SCREENS: Record<string, StepScreen> = {
   own_project_budget: { to: '/portfolio/projects', target: 'tabs', opensRecord: 'projectFromRequest', tab: 'relations' },
 };
 
-/** The screens a step opens on one path only: the portfolio's colleague joins the project's team. */
+/** The screens a step opens on one path only: on the portfolio, the person sets up their own contributor profile. */
 const ANGLE_SCREENS: Record<string, Partial<Record<OnboardingAngle, StepScreen>>> = {
-  own_invite: { portfolio: { to: '/portfolio/projects', target: 'title', opensRecord: 'projectFromRequest', tab: 'team' } },
+  own_invite: { portfolio: title('/portfolio/contributors/me') },
 };
 
 export function stepScreen(key: string, angle: OnboardingAngle | null): StepScreen | null {
@@ -69,7 +69,7 @@ export function stepHref(key: string, angle: OnboardingAngle | null = null): str
   return screen ? `${screen.to}?${STEP_PARAM}=${encodeURIComponent(key)}` : null;
 }
 
-/** The title of a step: the portfolio's colleague is a contributor. */
+/** The title of a step: on the portfolio, the last one is the person's own contributor profile. */
 export function stepTitleKey(key: string, angle: OnboardingAngle | null): string {
   return key === 'own_invite' && angle === 'portfolio'
     ? 'onboarding.firstSteps.steps.own_invite.portfolioTitle'

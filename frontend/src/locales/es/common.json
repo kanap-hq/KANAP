@@ -1632,11 +1632,11 @@
         },
         "own_invite": {
           "title": "Un colega",
-          "portfolioTitle": "Un colaborador",
+          "portfolioTitle": "Su perfil de colaborador",
           "hint": {
             "budget": "Invite a sus colegas creando sus cuentas de usuario. Use el menú Autenticación para configurar el SSO con Entra ID.",
             "cartography": "Invite a un responsable de aplicación o de activo.",
-            "portfolio": "Añada un colega a los colaboradores de negocio o de TI del proyecto. ¿Aún no tiene cuenta? Créela en Administración › Usuarios."
+            "portfolio": "Añádase como colaborador: equipo, disponibilidad para proyectos, competencias. ¿Aún no hay equipo? Créelo en Configuración › Equipos."
           }
         },
         "map_application": {
