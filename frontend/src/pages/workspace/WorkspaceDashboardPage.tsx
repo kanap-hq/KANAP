@@ -44,6 +44,8 @@ import EnablePlaidCard from './EnablePlaidCard';
 import OnboardingStatusLine from '../../components/onboarding/OnboardingStatusLine';
 import FirstStepsTile, { firstStepsShown } from '../../components/onboarding/FirstStepsTile';
 import { useOnboarding } from '../../components/onboarding/useOnboarding';
+import { orderTilesForAngle } from './angleLayout';
+import BudgetSection from './BudgetSection';
 
 // Create lazy-loaded tile components
 const tileComponents: Record<string, ReturnType<typeof lazy>> = {};
@@ -89,6 +91,10 @@ export default function WorkspaceDashboardPage() {
   const { filterVisibleTiles, canViewTile } = useTilePermissions();
   const { state: onboarding } = useOnboarding();
   const showFirstSteps = firstStepsShown(onboarding);
+  const angle = onboarding?.angle ?? null;
+  // The budget section heads the home page for whoever came for the budget and may read it.
+  const budgetFirst = angle === 'budget' && (hasLevel('budget', 'reader') || hasLevel('contracts', 'reader'));
+  const stepsInGrid = showFirstSteps && !budgetFirst;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [logTimeOpen, setLogTimeOpen] = useState(false);
@@ -156,12 +162,11 @@ export default function WorkspaceDashboardPage() {
     return groups;
   }, [templatesData?.items]);
 
-  // Filter tiles by permission AND enabled status
-  const visibleTiles = useMemo(() => {
-    return filterVisibleTiles(config.tiles)
-      .filter((t) => t.enabled)
-      .sort((a, b) => a.order - b.order);
-  }, [config.tiles, filterVisibleTiles]);
+  // Filter tiles by permission AND enabled status; the tiles of the workspace's path come first.
+  const visibleTiles = useMemo(
+    () => orderTilesForAngle(filterVisibleTiles(config.tiles).filter((t) => t.enabled), angle),
+    [angle, config.tiles, filterVisibleTiles],
+  );
 
   const userName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
   const welcome = userName ? t('dashboard.welcomeBack', { name: profile?.first_name || userName }) : t('dashboard.welcome');
@@ -284,6 +289,12 @@ export default function WorkspaceDashboardPage() {
         </Stack>
       </Paper>
 
+      {budgetFirst ? (
+        <Box sx={{ mb: 3 }}>
+          <BudgetSection leading={showFirstSteps ? <FirstStepsTile /> : undefined} />
+        </Box>
+      ) : null}
+
       {/* Tile Grid */}
       {configLoading ? (
         <Grid container spacing={3}>
@@ -293,7 +304,7 @@ export default function WorkspaceDashboardPage() {
             </Grid>
           ))}
         </Grid>
-      ) : visibleTiles.length === 0 && !showFirstSteps ? (
+      ) : visibleTiles.length === 0 && !stepsInGrid ? (
         <Card sx={{ p: 4, textAlign: 'center' }}>
           <Typography variant="body1" color="text.secondary">
             {t('dashboard.noTilesEnabled')}
@@ -301,7 +312,7 @@ export default function WorkspaceDashboardPage() {
         </Card>
       ) : (
         <Grid container spacing={3}>
-          {showFirstSteps ? (
+          {stepsInGrid ? (
             <Grid item xs={12} md={6} lg={4} xl={3}>
               <FirstStepsTile />
             </Grid>
@@ -332,6 +343,12 @@ export default function WorkspaceDashboardPage() {
           })}
         </Grid>
       )}
+
+      {!budgetFirst ? (
+        <Box sx={{ mt: 3 }}>
+          <BudgetSection />
+        </Box>
+      ) : null}
 
       {/* Modals */}
       <DashboardSettingsModal

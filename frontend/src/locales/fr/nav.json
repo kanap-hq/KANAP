@@ -25,14 +25,12 @@
   },
   "sidebar": {
     "ops": {
-      "overview": "Vue d'ensemble",
       "contracts": "Contrats",
       "reporting": "Rapports",
       "administration": "Administration",
       "budgetLines": "Lignes budgétaires"
     },
     "masterData": {
-      "home": "Accueil des données de référence",
       "sections": {
         "organization": "Organisation",
         "externalParties": "Parties externes",

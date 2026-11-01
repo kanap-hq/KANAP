@@ -68,6 +68,16 @@ Cuando los cinco pasos están hechos, el mosaico ofrece los otros dos recorridos
 | Mapa del SI | La lista de aplicaciones, Una ficha de aplicación, Los servidores, Tecnologías, fin de soporte y vulnerabilidades, Sus datos | Sus aplicaciones, Sus tecnologías, Sus servidores, Lo que KANAP ha encontrado, Un colega |
 | Proyectos y solicitudes | Una solicitud y su puntuación, El proyecto nacido de la solicitud, Las tareas, Los informes, Sus datos | Su primera solicitud, Su proyecto, Las primeras tareas, El presupuesto del proyecto, Un colega |
 
+### La página de inicio sigue su recorrido
+
+Durante una prueba, la página de inicio coloca primero los mosaicos de su recorrido:
+
+- **Presupuesto de TI**: la [sección Gestión presupuestaria](#budget-management-section) aparece primero, encabezada por el mosaico de los primeros pasos.
+- **Mapa del SI**: los mosaicos **Conformidad**, **Vulnerabilidades del parque** y **Sincronización con Netbox** aparecen primero.
+- **Proyectos y solicitudes**: los mosaicos de proyectos y solicitudes aparecen primero.
+
+Sin recorrido, los mosaicos mantienen su orden habitual.
+
 ## Línea para activar Plaid
 
 Durante una prueba en la nube, los administradores de la configuración de Plaid ven una línea bajo la línea de datos de ejemplo mientras Plaid está desactivado y se ofrece el modelo incluido de KANAP: «Plaid, el asistente de KANAP, está desactivado.» **Activar** abre la confirmación habitual del modelo incluido. Al confirmar, Plaid se activa. El botón de cierre (**×**) oculta la línea en este navegador. La línea no aparece tras el paso a un plan de pago, ni en instalaciones locales. Véase [Configuración de Plaid](ai-settings.md).
@@ -236,6 +246,97 @@ Muestra tareas que no se han actualizado durante mucho tiempo. Cada elemento mue
 **Configuración**: alcance (`mías`, `equipo`, `todas`) y umbral en días (30-365).
 
 **Requiere**: `tasks:reader`
+
+## Sección Gestión presupuestaria { #budget-management-section }
+
+Bajo los mosaicos, la sección **Gestión presupuestaria** muestra dónde se encuentra su gasto de TI: el presupuesto por tipo y año, sus propias líneas presupuestarias, las próximas renovaciones, la calidad de los datos y las líneas que merecen su atención. Aparece cuando puede leer las líneas presupuestarias o los contratos.
+
+### Acciones de la sección
+
+La cabecera de la sección contiene botones de acceso directo:
+
+- **Nueva línea OPEX** y **Nueva línea CAPEX** abren una nueva línea presupuestaria de ese tipo. Se muestran cuando su rol tiene al menos el nivel Miembro en Presupuesto (`budget:member`)
+- **Nuevo contrato** abre un nuevo contrato. Se muestra cuando su rol puede crear contratos
+- **Personalizar**, a la derecha, abre la configuración de esta sección. Consulte [Personalizar la sección](#customizing-the-budget-section)
+
+### Diseño de la sección
+
+Los mosaicos de la sección se disponen en una cuadrícula adaptable: tres columnas en pantalla ancha, dos en tableta y una sola columna en móvil. El mosaico **Presupuesto** es más ancho: dos columnas en pantalla ancha y todo el ancho en tableta. Cada mosaico tiene un icono, un título y generalmente un botón que le lleva a la página completa detrás de los datos.
+
+Varios mosaicos tienen las pestañas **Todo**, **OPEX** y **CAPEX** en su encabezado para elegir el tipo de líneas que cubren. Cada mosaico recuerda su elección en su navegador.
+
+Los mosaicos siguientes aparecen en su orden por defecto. Sus tareas abiertas están en el mosaico **Mis tareas** más arriba.
+
+### Presupuesto
+
+Una tabla que cubre tres ejercicios fiscales: el año anterior (A-1), el año actual (A) y el año siguiente (A+1). Cada año tiene tres filas: **OPEX**, **CAPEX** y **Total**. Las columnas de valores son las columnas presupuestarias que muestra su organización, con sus nombres (**Presupuesto**, **Revisión**, **Realizado** y **Aterrizaje previsto** con la configuración estándar, más **Previsión** cuando se muestra). Puede conservar menos en [Personalizar](#customizing-the-budget-section). Una columna se muestra cuando contiene un importe para al menos una fila. Las columnas ocultas nunca aparecen. Todos los importes se redondean al millar más cercano y se muestran con el sufijo "k" (por ejemplo, `7.846 k`). Los separadores siguen el idioma de la interfaz.
+
+Haga clic en un importe para abrir la [lista de líneas presupuestarias](budget-lines.md) en ese tipo. Un importe **Total** abre la lista con ambos tipos. Haga clic en **Ver** para abrir la lista.
+
+### Calidad de datos
+
+Controles que le ayudan a detectar líneas incompletas de un vistazo. El mosaico muestra una columna de recuentos por tipo: **OPEX** y **CAPEX** una junto a la otra. Los recuentos cubren las líneas que la lista muestra por defecto (**Mostrar: Activos**).
+
+- **Sin responsable IT**: líneas sin responsable IT
+- **Sin responsable de negocio**: líneas sin responsable de negocio
+- **Sin empresa pagadora**: líneas sin empresa pagadora
+- **Sin centro de coste**: líneas sin centro de coste
+- **Sin Presupuesto para el próximo año**: líneas cuya columna por defecto es cero o está vacía para el próximo año. El control nombra su columna por defecto
+- **Cuenta fuera del plan de la empresa**: líneas cuya cuenta no pertenece al plan de cuentas de la empresa pagadora
+
+Un recuento se vuelve naranja (rojo para el control del plan de cuentas) cuando es superior a cero. Haga clic en un recuento para abrir la lista exactamente en las líneas que cuenta.
+
+### Mi presupuesto
+
+Las líneas a su nombre, en la columna por defecto del año actual (el subtítulo la nombra, por ejemplo **Presupuesto, A**). Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo.
+
+- **Como responsable IT**, **Como responsable de negocio** y **Como responsable del presupuesto**: cuántas líneas tiene en cada rol, y su total. Haga clic en una fila para abrir la lista en esas líneas
+- **Mis líneas**: sus tres líneas más grandes, sea cual sea el rol, con su referencia. Haga clic en una para abrirla
+
+El mosaico indica «No hay líneas de presupuesto a su nombre» cuando no tiene ninguna línea.
+
+### Próximas renovaciones
+
+Lista los cinco contratos con el vencimiento más próximo, hoy incluido, en el orden de la columna **Próximo vencimiento** de la lista de contratos: un contrato con renovación tácita aparece con su próxima fecha límite de rescisión, cualquier otro contrato con su fin. Los contratos vencidos no aparecen.
+
+Haga clic en **Ver todo** para abrir la página de Contratos.
+
+### Top líneas
+
+Las cinco líneas más grandes para el año actual, clasificadas por la columna por defecto. El subtítulo nombra la columna, por ejemplo **Presupuesto, A**. Los importes se redondean a miles con sufijo "k", con los separadores del idioma de la interfaz.
+
+Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en **Abrir** para ver el informe completo Top líneas sobre el mismo tipo.
+
+### Mayores incrementos
+
+Las cinco líneas con el mayor incremento en la columna por defecto comparado con el año anterior. El subtítulo nombra la columna, por ejemplo **Presupuesto, A vs A-1**. Las líneas cuyo importe se mantuvo o bajó no aparecen. Un incremento pequeño aparece completo. Uno mayor se acorta, por ejemplo `340,1 k`.
+
+Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en **Abrir** para ver el informe completo Top aumento / disminución sobre el mismo tipo.
+
+### Por centro de coste
+
+Los cinco centros de coste con el mayor total en la columna por defecto del año actual, con una barra para cada uno. Las líneas sin centro de coste cuentan juntas como **Sin centro de coste**. Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en una fila para abrir la lista en las líneas de ese centro de coste.
+
+### Actualizaciones recientes
+
+Las cinco líneas presupuestarias modificadas más recientemente, OPEX y CAPEX juntas. Cada fila muestra la fecha de la última modificación, la referencia de la línea, su nombre y su tipo. Haga clic en una fila para abrir la línea.
+
+Sin acceso de lectura a las líneas presupuestarias (`budget:reader`), los mosaicos de presupuesto se ocultan. **Próximas renovaciones** requiere acceso de lectura a los contratos.
+
+### Importes sin tipo de cambio
+
+Cuando la moneda de una línea no tiene tipo de cambio para un año, su importe queda excluido de los totales de ese año. Los mosaicos **Presupuesto**, **Mayores incrementos**, **Mi presupuesto** y **Por centro de coste** muestran entonces un aviso de una línea, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas en el tipo faltante. Cuando el aviso solo cita una moneda y un año, el diálogo del tipo manual se abre directamente. En **Top líneas**, una línea así muestra su importe en su propia moneda con una pequeña marca naranja. Vea [Tipos manuales](currencies.md#tipos-manuales).
+
+### Personalizar la sección { #customizing-the-budget-section }
+
+Haga clic en **Personalizar** para abrir **Configuración del panel de control del presupuesto**. Sus elecciones solo se aplican a su propia página de inicio.
+
+- **Mostrar u ocultar un mosaico**: márquelo o desmárquelo. El diálogo lista los mosaicos que su rol puede ver
+- **Cambiar el orden**: arrastre un mosaico por su asa a la derecha
+- **Columnas de importes del mosaico Presupuesto**: **Columnas del espacio de trabajo**, marcada por defecto, sigue las columnas que muestra su espacio de trabajo. Desmárquela para elegir usted mismo las columnas. Conserve al menos una: si no, el diálogo indica «Seleccione al menos una columna de importes.»
+- **Guardar** aplica sus elecciones. **Restablecer valores predeterminados** vuelve a mostrar todos los mosaicos, en el orden por defecto, con las columnas de la organización
+
+Un administrador de presupuesto elige la columna por defecto y los nombres de las columnas en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Los mosaicos y los informes que abren siguen esa elección.
 
 ## Personalizar su panel
 

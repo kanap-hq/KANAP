@@ -294,7 +294,6 @@
     "failedToLogTime": "No se pudo registrar el tiempo"
   },
   "dashboard": {
-    "overview": "Vista general",
     "welcomeBack": "Bienvenido, {{name}}",
     "workOverview": "Aquí tiene un resumen de su trabajo",
     "createTask": "Crear tarea",

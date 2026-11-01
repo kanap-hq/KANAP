@@ -1,26 +1,4 @@
 {
-  "home": {
-    "title": "Master data",
-    "subtitle": "Manage organizational structure, suppliers, accounts, and analytics dimensions.",
-    "cards": {
-      "companiesTitle": "Companies",
-      "companiesDescription": "Manage company entities and their metrics",
-      "departmentsTitle": "Departments",
-      "departmentsDescription": "Manage departments across companies",
-      "costCentersTitle": "Cost centers",
-      "costCentersDescription": "Organize who owns each budget line, across legal entities",
-      "suppliersTitle": "Suppliers",
-      "suppliersDescription": "Manage supplier information",
-      "coaTitle": "Charts of accounts",
-      "coaDescription": "Manage charts of accounts and accounts",
-      "workingDayCalendarsTitle": "Working-day calendars",
-      "workingDayCalendarsDescription": "Set the working days of each month for lines priced per day",
-      "businessProcessesTitle": "Business processes",
-      "businessProcessesDescription": "Manage core ISO 9001-style business processes",
-      "analyticsDimensionsTitle": "Analytics dimensions",
-      "analyticsDimensionsDescription": "Configure analytics dimensions"
-    }
-  },
   "shared": {
     "columns": {
       "name": "Name",
@@ -55,8 +33,7 @@
       "prev": "Prev",
       "next": "Next",
       "enabled": "Enabled",
-      "access": "Access",
-      "history": "History"
+      "access": "Access"
     },
     "workspace": {
       "itemCountOf": "{{entity}} {{current}} of {{total}}"

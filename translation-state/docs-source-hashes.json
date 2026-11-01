@@ -58,7 +58,7 @@
 
     "csv-files.md": "3b53ca5e7027c526b7d2a9011b54ad4c",
 
-    "currencies.md": "24605c3d80e2d57a307ff5c41d7e365b",
+    "currencies.md": "78df5ca24ac4fe2b66fef4a2db9a5085",
 
     "data-access.md": "c7ebb08ad78f19cee9d65fe34ac1d6af",
 
@@ -76,7 +76,7 @@
 
     "incidents.md": "883ef3fd9b99bbde48170e5876dbbd72",
 
-    "index.md": "7c28083b0372bcfd83538debf0583621",
+    "index.md": "47dfc8580272a0a86ae3fe6d247b3744",
 
     "integrations.md": "f42bd7b0212ca2e774487ba79e567d0c",
 
@@ -92,7 +92,7 @@
 
     "master-data-operations.md": "35a9a7fb87e520baf0d6516a0d39e75c",
 
-    "my-dashboard.md": "14985ed2d94bb1abbfcd6b13046de63e",
+    "my-dashboard.md": "cca84e65c0fc23938943cfff5e035bed",
 
     "netbox.md": "b832db9f21cea4ffab9aa044cf714030",
 
@@ -109,8 +109,6 @@
     "on-premise/operations.md": "b968bff616dee983117cf42dd57058df",
 
     "on-premise/sso-entra.md": "64c4ba1183a02398aa122dd70f0fd9ba",
-
-    "operations-dashboard.md": "7663e88066118754f599ba95cc48ec9b",
 
     "portfolio-planning.md": "f588a7d40e52cce50fe1639a1cf22c02",
 
@@ -146,10 +144,10 @@
   "glossary_hash": "35b3514938a35b6d96534523d338e71d",
 
   "nav_hashes": {
-    "de": "7b71228e57ba7a377a0dd1f18955014b",
+    "de": "d208c512ac00e839e9cc344d43262bc0",
 
-    "es": "71b568861f1c61f09161c2ae2e29f3a0",
+    "es": "e891bfe75421a3f9aa35adc1f7009de4",
 
-    "fr": "bb887859b11e7f2d15fa4a8741ef0ff8"
+    "fr": "eb3314c5a3df22c6d0aff89edb5d3e9d"
   }
 }

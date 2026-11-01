@@ -9,7 +9,7 @@ This document tracks documentation coverage for the KANAP user manual.
 | Category | Total Pages | Documented | Gap |
 |----------|-------------|------------|-----|
 | Home | 1 | 1 | 0 |
-| Budget Management | 8 | 8 | 0 |
+| Budget Management | 7 | 7 | 0 |
 | IT Landscape | 14 | 14 | 0 |
 | Knowledge | 1 | 1 | 0 |
 | Master Data | 8 | 8 | 0 |
@@ -18,7 +18,7 @@ This document tracks documentation coverage for the KANAP user manual.
 | AI Agents | 5 | 5 | 0 |
 | Reports | 9 | 9 | 0 |
 | Portfolio | 10 | 10 | 0 |
-| **TOTAL** | **72** | **72** | **0** |
+| **TOTAL** | **71** | **71** | **0** |
 
 _Note: Supplemental Fast Track guides are excluded from these route-based counts. All tenant-facing routes have a manual. The classic product (through the 2026-05-10 sweep) is available in en/fr/de/es; the AI Agents section (added 2026-07-05) is also available in en/fr/de/es. The two AI model registry pages (added 2026-08-10) are available in en/fr/de/es._
 
@@ -28,6 +28,7 @@ _Note: Supplemental Fast Track guides are excluded from these route-based counts
 
 | Date | Doc File | Changes |
 |------|----------|---------|
+| 2026-11-01 | `my-dashboard.md` (en/fr/de/es) | Trial onboarding. The Budget management overview (`/ops`) and the Master data home page are gone: the budget tiles, their buttons and **Customize** form the new **Budget management section** of the home page (My tasks left out); `operations-dashboard.md` removed in every language, with its nav entry, its `index.md` links and its `doc-update-map.tsv` rows; `docUrls.ts` maps `/ops` to `my-dashboard`. New subsection on the trial path ordering the home page tiles. |
 | 2026-10-31 | `record-history.md` (en/fr/de/es) | A change of a contact's email, phone, mobile or notes reads as the field changed (**Email changed**, **Phone changed**, **Mobile changed**, **Notes changed**). The value stays out of the history. |
 | 2026-10-28 | `record-history.md` (en/fr/de/es) | The history now covers accounts, cost centers, companies, departments, working-day calendars, business processes, analytics dimensions and values, suppliers, contacts, locations, connections, interfaces, assets, technologies and knowledge documents. New "Where to find it" section (last **History** tab, **History** button opening a side panel, **History** tab in the knowledge document panel), deleted linked records ("a deleted contract"), values never shown (contact email, phones, notes; document body and calendar days only as changed). One line pointing to it on `chart-of-accounts.md`, `cost-centers.md`, `companies.md`, `departments.md`, `working-day-calendars.md`, `business-processes.md`, `analytics.md`, `suppliers.md`, `contacts.md`, `locations.md`, `connections.md`, `interfaces.md`, `assets.md`, `technologies.md`, `knowledge.md`, with the tab counts updated. `doc-update-map.tsv`: `backend/src/audit/record-history/**`. |
 | 2026-10-28 | `record-history.md` (en/fr/de/es) | New page for the **History** tab of a record, on budget lines today: who can read it (anyone who can open the record, limited to their data access), one entry per change with date, author (person, **System**, **Import**, **Plaid for**) and fields before and after, changes to the parts of the line, records from modules the reader cannot read named by their kind, link to the audit log. `budget-lines.md`: five tabs and a **History** section. mkdocs nav with fr/de/es labels, `index.md`, `doc-update-map.tsv`. The Help button opens the page from `/ops/budget/:ref/history` (`docUrls.ts`). |
@@ -130,13 +131,12 @@ These published pages are maintained alongside the user manual but are not tied 
 |-------|-----------|--------|----------|
 | `/` | WorkspaceDashboardPage | **DOCUMENTED** | `my-dashboard.md` |
 
-_Note: `/my/dashboard` redirects to `/`. `/my/tasks` and `/ops/tasks` redirect to `/portfolio/tasks`._
+_Note: the Budget management tiles are a section of `/` (`BudgetSection`). `/ops` opens Budget lines, or the first list of its menu the person may read; `/master-data` opens Companies the same way (`ModuleLanding`). `/my/dashboard` redirects to `/`. `/my/tasks` and `/ops/tasks` redirect to `/portfolio/tasks`._
 
 ### Budget Management
 
 | Route | Component | Status | Doc File |
 |-------|-----------|--------|----------|
-| `/ops` | DashboardPage (Overview) | **DOCUMENTED** | `operations-dashboard.md` |
 | `/ops/budget` | BudgetListPage + BudgetLinePage (`/ops/budget/:ref`) | **DOCUMENTED** | `budget-lines.md` |
 | `/ops/contracts` | ContractsPage + ContractWorkspacePage | **DOCUMENTED** | `contracts.md` |
 | `/ops/operations` | BudgetOperationsLandingPage (Administration) | **DOCUMENTED** | `budget-operations.md` |
@@ -318,7 +318,6 @@ No route-manual gaps remain. The classic product was swept 2026-05-10; the AI Ag
 Known minor staleness:
 - `portfolio-planning.md` — Roadmap Generator's drag-to-pin-start interaction is in code but not yet covered in the doc (LOW)
 - `agents-workspace.md` — written for the helpdesk agent. The monitoring/SRE agent (shipped in #120/#136/#137) has its own Monitor, targeting and Operating settings and is only referenced in passing; it has no section of its own (MEDIUM)
-- `/master-data` (MasterDataHomePage) — the Master Data hub landing page has no manual and no `docUrls.ts` mapping (LOW)
 
 ---
 

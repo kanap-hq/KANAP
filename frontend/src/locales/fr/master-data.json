@@ -1,26 +1,4 @@
 {
-  "home": {
-    "title": "Données de référence",
-    "subtitle": "Gérez la structure organisationnelle, les fournisseurs, les comptes et les dimensions analytiques.",
-    "cards": {
-      "companiesTitle": "Sociétés",
-      "companiesDescription": "Gérez les entités juridiques et leurs indicateurs",
-      "departmentsTitle": "Départements",
-      "departmentsDescription": "Gérez les départements au sein des sociétés",
-      "costCentersTitle": "Centres de coûts",
-      "costCentersDescription": "Organisez qui porte chaque ligne budgétaire, entre entités juridiques",
-      "suppliersTitle": "Fournisseurs",
-      "suppliersDescription": "Gérez les informations des fournisseurs",
-      "coaTitle": "Plans comptables",
-      "coaDescription": "Gérez les plans comptables et les comptes",
-      "workingDayCalendarsTitle": "Calendriers de jours ouvrés",
-      "workingDayCalendarsDescription": "Définissez les jours ouvrés de chaque mois pour les lignes au prix par jour",
-      "businessProcessesTitle": "Processus métier",
-      "businessProcessesDescription": "Gérez les processus métier de type ISO 9001",
-      "analyticsDimensionsTitle": "Dimensions analytiques",
-      "analyticsDimensionsDescription": "Configurez les dimensions analytiques"
-    }
-  },
   "shared": {
     "columns": {
       "name": "Nom",
@@ -55,8 +33,7 @@
       "prev": "Préc.",
       "next": "Suiv.",
       "enabled": "Activé",
-      "access": "Accès",
-      "history": "Historique"
+      "access": "Accès"
     },
     "workspace": {
       "itemCountOf": "{{entity}} {{current}} sur {{total}}"
