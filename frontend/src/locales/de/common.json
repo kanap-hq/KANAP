@@ -1532,5 +1532,40 @@
     "linksEmpty": "Kein Weblink.",
     "removeFileNamed": "Datei {{name}} löschen",
     "removed": "Link „{{name}}“ entfernt."
+  },
+  "onboarding": {
+    "choice": {
+      "angleTitle": "Was führt Sie zu KANAP?",
+      "modeTitle": "Wie möchten Sie beginnen?",
+      "justLooking": "Ich schaue mich um",
+      "erasesExample": "Das Beispiel wird gelöscht.",
+      "confirmTitle": "Beispiel löschen?",
+      "failed": "Ihre Antwort konnte nicht gespeichert werden."
+    },
+    "angles": {
+      "budget": "Das IT-Budget",
+      "cartography": "Die IT-Landkarte",
+      "portfolio": "Projekte und Anfragen"
+    },
+    "modes": {
+      "example": "Mit dem vollständigen Beispiel entdecken",
+      "own_data": "Mit meinen eigenen Daten beginnen"
+    },
+    "about": {
+      "path": "Pfad: {{path}}",
+      "angles": {
+        "budget": "IT-Budget",
+        "cartography": "IT-Landkarte",
+        "portfolio": "Projekte und Anfragen",
+        "none": "Ich schaue mich um"
+      },
+      "modes": {
+        "example": "Beispiel",
+        "own_data": "eigene Daten"
+      },
+      "notChosen": "nicht gewählt",
+      "change": "Ändern",
+      "choose": "Wählen"
+    }
   }
 }

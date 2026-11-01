@@ -1532,5 +1532,40 @@
     "linksEmpty": "No web link.",
     "removeFileNamed": "Delete file {{name}}",
     "removed": "Link \"{{name}}\" removed."
+  },
+  "onboarding": {
+    "choice": {
+      "angleTitle": "What brings you to KANAP?",
+      "modeTitle": "How do you want to start?",
+      "justLooking": "Just looking",
+      "erasesExample": "The example is erased.",
+      "confirmTitle": "Erase the example?",
+      "failed": "Your answer could not be saved."
+    },
+    "angles": {
+      "budget": "The IT budget",
+      "cartography": "The IT landscape map",
+      "portfolio": "Projects and requests"
+    },
+    "modes": {
+      "example": "Explore with the complete example",
+      "own_data": "Start with my own data"
+    },
+    "about": {
+      "path": "Path: {{path}}",
+      "angles": {
+        "budget": "IT budget",
+        "cartography": "IT landscape map",
+        "portfolio": "Projects and requests",
+        "none": "Just looking"
+      },
+      "modes": {
+        "example": "example",
+        "own_data": "my own data"
+      },
+      "notChosen": "not chosen",
+      "change": "Change",
+      "choose": "Choose"
+    }
   }
 }

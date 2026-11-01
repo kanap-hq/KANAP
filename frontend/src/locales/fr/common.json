@@ -1532,5 +1532,40 @@
     "linksEmpty": "Aucun lien web.",
     "removeFileNamed": "Supprimer le fichier {{name}}",
     "removed": "Lien « {{name}} » retiré."
+  },
+  "onboarding": {
+    "choice": {
+      "angleTitle": "Qu'est-ce qui vous amène ?",
+      "modeTitle": "Comment voulez-vous commencer ?",
+      "justLooking": "Je regarde",
+      "erasesExample": "L'exemple est effacé.",
+      "confirmTitle": "Effacer l'exemple ?",
+      "failed": "Votre réponse n'a pas pu être enregistrée."
+    },
+    "angles": {
+      "budget": "Le budget IT",
+      "cartography": "La cartographie du SI",
+      "portfolio": "Les projets et les demandes"
+    },
+    "modes": {
+      "example": "Découvrir avec l'exemple complet",
+      "own_data": "Commencer avec mes données"
+    },
+    "about": {
+      "path": "Parcours : {{path}}",
+      "angles": {
+        "budget": "Budget IT",
+        "cartography": "Cartographie du SI",
+        "portfolio": "Projets et demandes",
+        "none": "Je regarde"
+      },
+      "modes": {
+        "example": "exemple",
+        "own_data": "mes données"
+      },
+      "notChosen": "non choisi",
+      "change": "Changer",
+      "choose": "Choisir"
+    }
   }
 }
