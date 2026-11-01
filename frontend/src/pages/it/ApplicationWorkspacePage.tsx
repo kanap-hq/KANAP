@@ -1755,7 +1755,19 @@ export default function ApplicationWorkspacePage() {
           nextLabel: t('workspace.application.next'),
         } : undefined}
         onSaveShortcut={() => { void overviewEditorRef.current?.save(); }}
-        metadata={!isCreate && app ? (
+        metadata={isCreate ? (
+          // The metadata of the record to be, dimmed like the rest, so the page does not move when it is created.
+          <CreationPreview sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' }}>
+            <PortfolioMetadataItem>
+              <StatusDot color={getDotColor(LIFECYCLE_COLORS.active || 'default', theme.palette.mode)} size={8} />
+              {' '}{lifecycleOptions.find((option) => option.value === 'active')?.label || humanize('active', t('common:selects.notSet'))}
+            </PortfolioMetadataItem>
+            <ApplicationCriticalityMetadata criticality={null} disabled onCommit={ignoreDraftPatch} />
+            <PortfolioMetadataItem label={t('workspace.application.meta.goLive')}>
+              {t('common:selects.notSet')}
+            </PortfolioMetadataItem>
+          </CreationPreview>
+        ) : app ? (
           <PendingMetadata pending={metadataPending}>
             {canManage ? (
               <PortfolioStatusMetadata

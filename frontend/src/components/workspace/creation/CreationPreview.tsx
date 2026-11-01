@@ -1,8 +1,11 @@
 import React from 'react';
 import { Box } from '@mui/material';
+import type { SxProps, Theme } from '@mui/material/styles';
 
 type Props = {
   children: React.ReactNode;
+  /** Layout of the wrapper, for a preview inside a flex row (the metadata bar). */
+  sx?: SxProps<Theme>;
 };
 
 /**
@@ -12,7 +15,7 @@ type Props = {
  * Nothing in it says so: the blue title is the cue. The children must not read or write
  * anything that needs a record id.
  */
-export default function CreationPreview({ children }: Props) {
+export default function CreationPreview({ children, sx }: Props) {
   // `inert` takes the subtree out of the focus and accessibility order (React 18 passes the
   // attribute through as a string); `aria-hidden` and `pointer-events` cover what lacks it.
   const inertProps = { inert: '' } as React.HTMLAttributes<HTMLDivElement>;
@@ -21,7 +24,7 @@ export default function CreationPreview({ children }: Props) {
       data-testid="creation-preview"
       aria-hidden="true"
       {...inertProps}
-      sx={{ opacity: 0.45, pointerEvents: 'none', userSelect: 'none' }}
+      sx={[{ opacity: 0.45, pointerEvents: 'none', userSelect: 'none' }, ...(Array.isArray(sx) ? sx : [sx])]}
     >
       {children}
     </Box>

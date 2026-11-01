@@ -127,11 +127,12 @@ describe('Application creation at the title', () => {
   it('shows the application to come under the title, dimmed and out of reach, until the title creates it', async () => {
     renderPage(['/it/applications/new/overview']);
     const input = await screen.findByRole('textbox', { name: TITLE });
-    // The overview and the properties panel of an empty application.
+    // The metadata, the overview and the properties panel of an empty application.
     const previews = screen.getAllByTestId('creation-preview');
-    expect(previews).toHaveLength(2);
-    expect(within(previews[0]).getByTestId('description-editor')).toBeTruthy();
-    expect(within(previews[1]).getByText('workspace.application.overview.category')).toBeTruthy();
+    expect(previews).toHaveLength(3);
+    expect(within(previews[0]).getByText(/workspace.application.meta.goLive/)).toBeTruthy();
+    expect(within(previews[1]).getByTestId('description-editor')).toBeTruthy();
+    expect(within(previews[2]).getByText('workspace.application.overview.category')).toBeTruthy();
     for (const preview of previews) {
       expect(preview).toHaveAttribute('inert');
       expect(preview).toHaveAttribute('aria-hidden', 'true');
