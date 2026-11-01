@@ -4,7 +4,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The assistant page opens while it only waits for an administrator to confirm the KANAP
-// included model (the page then says so); any other reason still leads to the 403 page.
+// included model, and when an administrator turned chat off (the page then says so).
+// Any other reason still leads to the 403 page.
 
 let chatReasons: string[] = [];
 
@@ -81,8 +82,14 @@ describe('ProtectedRoute for the assistant', () => {
     expect(screen.getByText('assistant page')).toBeInTheDocument();
   });
 
-  it('keeps the 403 page for any other reason', () => {
+  it('opens the assistant page when chat is off, even if the included model is also unconfirmed', () => {
     chatReasons = ['tenant_disabled', 'builtin_not_accepted'];
+    renderAssistant();
+    expect(screen.getByText('assistant page')).toBeInTheDocument();
+  });
+
+  it('keeps the 403 page when the provider is not ready', () => {
+    chatReasons = ['provider_not_ready'];
     renderAssistant();
     expect(screen.getByText('forbidden page')).toBeInTheDocument();
   });

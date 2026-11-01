@@ -10,7 +10,7 @@ import { useFeatures } from '../../config/FeaturesContext';
 import { useChat, MAX_PENDING_ATTACHMENTS } from '../../ai/useChat';
 import { useStickToBottom } from '../../ai/useStickToBottom';
 import { aiConversationsApi } from '../../ai/aiApi';
-import { chatAwaitsIncludedModelConfirmation } from '../../ai/includedModel';
+import { chatAwaitsIncludedModelConfirmation, chatTurnedOffByAdmin } from '../../ai/includedModel';
 import { useAiCapabilities } from '../../ai/useAiCapabilities';
 import { AiMutationPreview, ChatConversation, ChatMessage } from '../../ai/aiTypes';
 import ArtifactPanel from '../../ai/components/ArtifactPanel';
@@ -291,12 +291,33 @@ export default function AiWorkspacePage() {
     void chat.regenerate(messageId);
   }, [chat.regenerate]);
 
-  if (!config.features.aiChat || chatAwaitsIncludedModelConfirmation(aiCapabilities.data)) {
+  const chatOff = chatTurnedOffByAdmin(aiCapabilities.data);
+  const awaitsIncludedModel = chatAwaitsIncludedModelConfirmation(aiCapabilities.data);
+  if (!config.features.aiChat || chatOff || awaitsIncludedModel) {
+    const administersAssistant = aiCapabilities.data?.surfaces.settings.available === true;
     return (
       <>
         <PageHeader title={t('workspace.title')} />
         <Alert severity="warning" sx={{ maxWidth: 600 }}>
-          {config.features.aiChat ? t('workspace.messages.builtinNotAccepted') : t('workspace.messages.disabled')}
+          {chatOff || !config.features.aiChat ? (
+            <>
+              {t('workspace.messages.disabled')}
+              {chatOff ? (
+                <>
+                  {' '}
+                  {administersAssistant ? (
+                    <Link component={RouterLink} to="/admin/ai" underline="hover">
+                      {t('workspace.messages.tenantDisabledAdminLink')}
+                    </Link>
+                  ) : (
+                    t('workspace.messages.tenantDisabledAskAdmin')
+                  )}
+                </>
+              ) : null}
+            </>
+          ) : (
+            t('workspace.messages.builtinNotAccepted')
+          )}
         </Alert>
       </>
     );

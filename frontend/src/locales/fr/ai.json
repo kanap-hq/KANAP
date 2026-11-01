@@ -402,7 +402,9 @@
       "title": "Plaid est prêt"
     },
     "messages": {
-      "disabled": "Le chat IA est désactivé pour cet espace de travail.",
+      "disabled": "Plaid est désactivé pour cet espace de travail.",
+      "tenantDisabledAdminLink": "Activez-le dans Administration › Plaid",
+      "tenantDisabledAskAdmin": "Demandez à un administrateur de l'activer.",
       "builtinNotAccepted": "Un administrateur doit confirmer le fournisseur d'IA dans Administration > Plaid."
     },
     "suggestions": {

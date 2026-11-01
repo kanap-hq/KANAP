@@ -402,7 +402,9 @@
       "title": "Plaid is ready"
     },
     "messages": {
-      "disabled": "AI chat is disabled for this workspace.",
+      "disabled": "Plaid is turned off for this workspace.",
+      "tenantDisabledAdminLink": "Turn it on in Administration › Plaid",
+      "tenantDisabledAskAdmin": "Ask an administrator to turn it on.",
       "builtinNotAccepted": "An administrator must confirm the AI provider in Admin > Plaid."
     },
     "suggestions": {

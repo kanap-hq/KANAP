@@ -717,3 +717,51 @@ describe('Layout IT menu', () => {
     }
   });
 });
+
+describe('Layout Plaid tab when chat is turned off', () => {
+  afterEach(() => {
+    access.aiChat = false;
+    access.aiData = undefined;
+  });
+
+  function plaidTab() {
+    const nav = screen.getByRole('tablist', { name: 'nav:topBar.sectionNav' });
+    return within(nav).queryByRole('tab', { name: 'nav:workspaces.ai' });
+  }
+
+  it('keeps the Plaid tab for someone who may use the chat', () => {
+    access.aiChat = true;
+    access.aiData = {
+      surfaces: {
+        chat: {
+          available: false,
+          permission_granted: true,
+          tenant_enabled: false,
+          reasons: ['tenant_disabled'],
+        },
+        settings: { available: true },
+      },
+      instance_features: { ai_settings: true },
+    };
+    renderShell();
+    expect(plaidTab()).toBeInTheDocument();
+  });
+
+  it('hides the Plaid tab when the chat right is missing', () => {
+    access.aiChat = true;
+    access.aiData = {
+      surfaces: {
+        chat: {
+          available: false,
+          permission_granted: false,
+          tenant_enabled: false,
+          reasons: ['tenant_disabled', 'permission_denied'],
+        },
+        settings: { available: false },
+      },
+      instance_features: { ai_settings: false },
+    };
+    renderShell();
+    expect(plaidTab()).not.toBeInTheDocument();
+  });
+});
