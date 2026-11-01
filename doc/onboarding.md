@@ -66,7 +66,7 @@ Response:
   "next_step": "budget_line",
   "completed": false,
   "dismissed_at": null,
-  "sample_data": { "status": "loading", "step": "companies" },
+  "sample_data": { "status": "loading", "step": "companies", "error_code": null },
   "reset_in_progress": false
 }
 ```
@@ -79,8 +79,9 @@ Response:
   field, and always for an administrator (the Administrator role, main or additional, on an
   enabled account: `isTenantAdministrator`). Changing a field already set still takes an
   administrator.
-- `sample_data`: `status` and `step` of `tenants.metadata.demo` (`idle` when absent or
-  malformed). `reset_in_progress`: the workspace is being emptied: `status = 'resetting'`, or
+- `sample_data`: `status`, `step` and `error_code` of `tenants.metadata.demo` (`idle` when absent or
+  malformed; `error_code` is null unless `status = 'failed'`, and `reset_failed` there means the
+  sample data is still in place, so only an administrator can choose `own_data`). `reset_in_progress`: the workspace is being emptied: `status = 'resetting'`, or
   `status = 'loading'` with a stop of the load asked for (`cancel_requested_at`). The answer to a
   `PUT /choice` that started a reset or a stop says `true` even if the reset is already over;
   the interface then polls `GET`.

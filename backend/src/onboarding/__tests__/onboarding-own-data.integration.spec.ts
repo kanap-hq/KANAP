@@ -275,7 +275,7 @@ async function testOwnDataAfterLoad() {
 
     const state = ok(await client(served, t).get(), 'GET after the reset');
     assert.equal(state.reset_in_progress, false);
-    assert.deepEqual(state.sample_data, { status: 'idle', step: null });
+    assert.deepEqual(state.sample_data, { status: 'idle', step: null, error_code: null });
   } finally {
     await served.close();
     await cleanupTenants([t?.tenantId]);
@@ -330,7 +330,7 @@ async function testStopSeenByHeartbeat() {
     const child = served.demo.children[0].child;
     await askStopFromElsewhere(t.tenantId, t.ownerId);
     const state = ok(await client(served, t).get(), 'GET while the stop is pending');
-    assert.deepEqual(state.sample_data, { status: 'loading', step: null });
+    assert.deepEqual(state.sample_data, { status: 'loading', step: null, error_code: null });
     assert.equal(state.reset_in_progress, true, 'a load with a stop asked for counts as emptying');
 
     await waitFor('loader killed', async () => child.killedWith, (signal) => signal === 'SIGKILL');
@@ -469,7 +469,7 @@ async function testExample() {
     await inTenant(full.tenantId, (q) => q.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Real supplier')`, [full.tenantId]));
     const refusedLoad = ok(await client(served, full).choose({ angle: 'budget', mode: 'example' }), 'example on a workspace with data');
     assert.equal(refusedLoad.mode, 'example', 'the choice is written');
-    assert.deepEqual(refusedLoad.sample_data, { status: 'idle', step: null }, 'the state says nothing loads');
+    assert.deepEqual(refusedLoad.sample_data, { status: 'idle', step: null, error_code: null }, 'the state says nothing loads');
     assert.equal(served.demo.children.length, 1, 'no loader');
     assert.deepEqual(await modeEvents(full.tenantId), [{ after: { mode: 'example', previous: null } }]);
   } finally {
@@ -671,7 +671,7 @@ async function testOwnDataAfterFailedLoad() {
     await inTenant(t.tenantId, (q) => q.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'After failure')`, [t.tenantId]));
     const answer = ok(await client(served, t).choose({ angle: 'budget', mode: 'own_data' }), 'own_data after a failed load');
     assert.equal(answer.reset_in_progress, false);
-    assert.deepEqual(answer.sample_data, { status: 'idle', step: null });
+    assert.deepEqual(answer.sample_data, { status: 'idle', step: null, error_code: null });
     assert.equal(await waitForBackgroundWork(Date.now() + 30_000), 0);
     const state = await demoOf(t.tenantId);
     assert.equal(state.status, 'idle');

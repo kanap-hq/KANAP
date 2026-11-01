@@ -7,6 +7,7 @@ import {
   countCreatedSinceLoad,
   DemoDataService,
   DemoDataState,
+  DemoErrorCode,
   DemoStatus,
   readDemoState,
 } from '../demo-data/demo-data.service';
@@ -64,7 +65,7 @@ export type OnboardingState = {
   completed: boolean;
   dismissed_at: string | null;
   /** The sample data state (`tenants.metadata.demo`): status and step only. */
-  sample_data: { status: DemoStatus; step: string | null };
+  sample_data: { status: DemoStatus; step: string | null; error_code: DemoErrorCode | null };
   /** The workspace is being emptied: a reset runs, or a load is stopping before its reset. */
   reset_in_progress: boolean;
 };
@@ -135,7 +136,7 @@ export class OnboardingService {
       next_step: next?.key ?? null,
       completed: steps.length > 0 && !next,
       dismissed_at: iso(dismissal?.dismissed_at),
-      sample_data: { status: demo.status, step: demo.step },
+      sample_data: { status: demo.status, step: demo.step, error_code: demo.status === 'failed' ? demo.error_code : null },
       reset_in_progress: demo.status === 'resetting' || (demo.status === 'loading' && !!demo.cancel_requested_at),
     };
   }

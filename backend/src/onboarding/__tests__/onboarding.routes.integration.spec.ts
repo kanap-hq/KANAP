@@ -193,7 +193,7 @@ async function testFreshWorkspace() {
         next_step: null,
         completed: false,
         dismissed_at: null,
-        sample_data: { status: 'idle', step: null },
+        sample_data: { status: 'idle', step: null, error_code: null },
         reset_in_progress: false,
       }, label);
     }
@@ -405,7 +405,7 @@ async function testSteps() {
   }
 }
 
-// 6. `sample_data` mirrors `tenants.metadata.demo` (status and step), for any user.
+// 6. `sample_data` mirrors `tenants.metadata.demo` (status, step, and the error code of a failure), for any user.
 async function testSampleData() {
   const svc = buildServices();
   const served = await serve();
@@ -416,18 +416,22 @@ async function testSampleData() {
     const asMember = client(served, t, a.token);
     await setDemo(t.tenantId, { status: 'loading', step: 'budget-lines', run_id: 'r1' });
     let state = ok(await asMember.get(), 'loading');
-    assert.deepEqual(state.sample_data, { status: 'loading', step: 'budget-lines' });
+    assert.deepEqual(state.sample_data, { status: 'loading', step: 'budget-lines', error_code: null });
     assert.equal(state.reset_in_progress, false);
     await setDemo(t.tenantId, { status: 'resetting' });
     state = ok(await asMember.get(), 'resetting');
-    assert.deepEqual(state.sample_data, { status: 'resetting', step: null });
+    assert.deepEqual(state.sample_data, { status: 'resetting', step: null, error_code: null });
     assert.equal(state.reset_in_progress, true);
     await setDemo(t.tenantId, { status: 'loaded' });
-    assert.deepEqual(ok(await asMember.get(), 'loaded').sample_data, { status: 'loaded', step: null });
+    assert.deepEqual(ok(await asMember.get(), 'loaded').sample_data, { status: 'loaded', step: null, error_code: null });
+    await setDemo(t.tenantId, { status: 'failed', error_code: 'reset_failed' });
+    assert.deepEqual(ok(await asMember.get(), 'failed').sample_data, { status: 'failed', step: null, error_code: 'reset_failed' });
+    await setDemo(t.tenantId, { status: 'idle', error_code: 'reset_failed' });
+    assert.deepEqual(ok(await asMember.get(), 'idle with a stale code').sample_data, { status: 'idle', step: null, error_code: null });
     await setDemo(t.tenantId, { status: 'whatever', step: 4 });
-    assert.deepEqual(ok(await asMember.get(), 'malformed').sample_data, { status: 'idle', step: null });
+    assert.deepEqual(ok(await asMember.get(), 'malformed').sample_data, { status: 'idle', step: null, error_code: null });
     await setDemo(t.tenantId, 'not an object');
-    assert.deepEqual(ok(await asMember.get(), 'not an object').sample_data, { status: 'idle', step: null });
+    assert.deepEqual(ok(await asMember.get(), 'not an object').sample_data, { status: 'idle', step: null, error_code: null });
   } finally {
     await served.close();
     await cleanupTenants([t?.tenantId]);
