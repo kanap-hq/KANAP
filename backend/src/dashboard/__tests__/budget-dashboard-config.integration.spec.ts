@@ -9,7 +9,7 @@ import { DashboardService } from '../dashboard.service';
 import { DashboardDataService } from '../dashboard-data.service';
 import { UserDashboardConfig, DEFAULT_DASHBOARD_CONFIG, DEFAULT_BUDGET_DASHBOARD_CONFIG } from '../user-dashboard-config.entity';
 import { BudgetDashboardConfig1854030000000 } from '../../migrations/1854030000000-budget-dashboard-config';
-import { DashboardHideEmptyTiles1856120000000 } from '../../migrations/1856120000000-dashboard-hide-empty-tiles';
+import { DashboardLayout1856130000000 } from '../../migrations/1856130000000-dashboard-layout';
 import { DataSource } from 'typeorm';
 import { UsersService } from '../../users/users.service';
 import { PermissionsService } from '../../permissions/permissions.service';
@@ -36,22 +36,22 @@ runSpecs('budget-dashboard-config.integration.spec', [
       assert.equal((await runner.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'user_dashboard_config' AND column_name = 'budget_tiles'`)).length, 0);
     });
   }],
-  ['hide empty tiles migration: on by default, rerun and rollback', async () => {
+  ['layout migration: empty by default, rerun and rollback', async () => {
     await inRolledBackTransaction(async (runner) => {
-      const migration = new DashboardHideEmptyTiles1856120000000();
+      const migration = new DashboardLayout1856130000000();
       await migration.down(runner);
       await migration.up(runner);
       await migration.up(runner);
-      const [column] = await runner.query(`SELECT is_nullable, column_default FROM information_schema.columns WHERE table_name = 'user_dashboard_config' AND column_name = 'hide_empty_tiles'`);
-      assert.deepEqual(column, { is_nullable: 'NO', column_default: 'true' });
+      const [column] = await runner.query(`SELECT is_nullable, column_default FROM information_schema.columns WHERE table_name = 'user_dashboard_config' AND column_name = 'layout'`);
+      assert.deepEqual(column, { is_nullable: 'NO', column_default: "'{}'::jsonb" });
       await migration.down(runner);
-      assert.equal((await runner.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'user_dashboard_config' AND column_name = 'hide_empty_tiles'`)).length, 0);
+      assert.equal((await runner.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'user_dashboard_config' AND column_name = 'layout'`)).length, 0);
     });
   }],
   ['HTTP defaults, persistence, independent writes/resets, validation, user and tenant isolation', async () => {
     await inRolledBackTransaction(async (runner) => {
       // Already applied on a migrated database; rolled back with the rest otherwise.
-      await new DashboardHideEmptyTiles1856120000000().up(runner);
+      await new DashboardLayout1856130000000().up(runner);
       const tenantA = await seedTenant(runner, 'dashboard-a');
       const seedUser = async (tenant: string) => {
         await setTenant(runner, tenant);
@@ -97,7 +97,7 @@ runSpecs('budget-dashboard-config.integration.spec', [
         assert.deepEqual((await request()).body, put.body);
         assert.equal(put.body.tiles[0].id, DEFAULT_BUDGET_DASHBOARD_CONFIG[DEFAULT_BUDGET_DASHBOARD_CONFIG.length - 1].id);
         assert.equal(put.body.tiles.find((tile: any) => tile.id === 'hygiene').enabled, false);
-        assert.deepEqual((await request('config')).body, { tiles: DEFAULT_DASHBOARD_CONFIG, hideEmptyTiles: true });
+        assert.deepEqual((await request('config')).body, { tiles: DEFAULT_DASHBOARD_CONFIG, hideEmptyTiles: true, sections: null });
         const main = { tiles: [{ id: 'my-tasks', enabled: true, order: 1, config: { limit: 8 } }] };
         assert.equal((await request('config', 'PUT', main)).status, 200);
         const mainRead = (await request('config')).body;
@@ -113,6 +113,16 @@ runSpecs('budget-dashboard-config.integration.spec', [
         assert.equal((await request('budget-config', 'PUT', { ...saved, hideEmptyTiles: false })).status, 400);
         assert.equal((await request('config/reset', 'POST')).body.hideEmptyTiles, true);
         assert.equal((await request('config')).body.hideEmptyTiles, true);
+        // The sections: kept when a save leaves them out, each named once, back to none at reset.
+        const sections = [{ id: 'budget', hidden: false }, { id: 'work', hidden: false }, { id: 'landscape', hidden: true }, { id: 'portfolio', hidden: false }];
+        assert.deepEqual((await request('config', 'PUT', { ...main, sections })).body.sections, sections);
+        assert.deepEqual((await request('config', 'PUT', { ...main, hideEmptyTiles: false })).body, { ...(await request('config')).body, sections, hideEmptyTiles: false });
+        assert.deepEqual((await request('config')).body.sections, sections);
+        assert.equal((await request('config', 'PUT', { ...main, sections: sections.slice(1) })).status, 400);
+        assert.equal((await request('config', 'PUT', { ...main, sections: [...sections.slice(1), sections[1]] })).status, 400);
+        assert.equal((await request('config', 'PUT', { ...main, sections: [...sections.slice(1), { id: 'other', hidden: false }] })).status, 400);
+        assert.equal((await request('config/reset', 'POST')).body.sections, null);
+        assert.equal((await request('config')).body.sections, null);
         assert.equal((await request('config', 'PUT', main)).status, 200);
         // DTO-supplied user and tenant ids cannot select another person's settings.
         assert.equal((await request('budget-config', 'PUT', { ...saved, user_id: bob })).status, 400);

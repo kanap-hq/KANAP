@@ -17,8 +17,8 @@ export interface DashboardTileConfig {
 }
 
 /**
- * What a person sees before choosing: four tiles, one row on a wide screen, with the budget section
- * right under them (frontend). The other tiles wait in the settings.
+ * What a person sees before choosing: four home tiles, one row on a wide screen, with the budget
+ * tiles under them. The other tiles wait in their section.
  */
 export const DEFAULT_DASHBOARD_CONFIG: DashboardTileConfig[] = [
   { id: 'my-tasks', enabled: true, order: 1, config: { limit: 5, showOverdue: true } },
@@ -39,13 +39,23 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardTileConfig[] = [
 
 export const BUDGET_AMOUNT_COLUMN_KEYS = ['budget', 'revision', 'forecast', 'follow_up', 'landing'] as const;
 
-/** The budget tiles on by default: the overview, the top lines and the hygiene checks, one row on a wide screen. */
-export const DEFAULT_BUDGET_TILE_IDS = ['budget', 'top-lines', 'hygiene'];
+/** The budget tiles on by default: the overview, the top lines and the recent updates, one row on a wide screen. */
+export const DEFAULT_BUDGET_TILE_IDS = ['budget', 'top-lines', 'recent-updates'];
 
 export const DEFAULT_BUDGET_DASHBOARD_CONFIG: DashboardTileConfig[] = [
-  'budget', 'top-lines', 'hygiene', 'my-budget', 'renewals',
-  'top-increases', 'cost-centers', 'recent-updates', 'my-tasks',
+  'budget', 'top-lines', 'recent-updates', 'hygiene', 'my-budget',
+  'renewals', 'cost-centers', 'my-tasks',
 ].map((id, index) => ({ id, enabled: DEFAULT_BUDGET_TILE_IDS.includes(id), order: index + 1, config: id === 'budget' ? { columns: null } : {} }));
+
+/** The sections of the home page, each holding its tiles (frontend `TILE_REGISTRY`). */
+export const DASHBOARD_SECTION_IDS = ['work', 'portfolio', 'landscape', 'budget'] as const;
+export type DashboardSectionId = typeof DASHBOARD_SECTION_IDS[number];
+
+export interface DashboardLayout {
+  hideEmptyTiles?: boolean;
+  /** Every section in the person's order; absent until they order them (the page then follows the onboarding path). */
+  sections?: Array<{ id: DashboardSectionId; hidden: boolean }>;
+}
 
 @Entity('user_dashboard_config')
 export class UserDashboardConfig {
@@ -65,9 +75,9 @@ export class UserDashboardConfig {
   @Column('jsonb', { default: '[]' })
   budget_tiles!: DashboardTileConfig[];
 
-  /** Leave out the home tiles with nothing to show. */
-  @Column('boolean', { default: true })
-  hide_empty_tiles!: boolean;
+  /** The page-level choices: the option that leaves out the empty tiles, the sections' order and visibility. */
+  @Column('jsonb', { default: () => "'{}'::jsonb" })
+  layout!: DashboardLayout;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
