@@ -44,7 +44,7 @@ Wurde beim ersten Öffnen des Arbeitsbereichs, während der Testphase, ein Pfad 
 
 | Pfad | Fragen |
 |---|---|
-| IT-Budget | *Was sind meine fünf größten Budgetzeilen in diesem Jahr?*, *Welche Budgetzeilen haben keine verantwortliche Person?* |
+| IT-Budget | *Wo liegen die größten Einsparpotenziale bei den IT-OPEX?*, *Welche Budgetzeilen haben keine verantwortliche Person?* |
 | IT-Landkarte | *Welche Technologien erreichen in den nächsten sechs Monaten ihr Supportende?*, *Welche kritischen Anwendungen haben keinen Wiederanlaufplan?* |
 | Projekte und Anfragen | *Welche Projekte überschreiten ihr Budget?*, *Welche Anfragen warten auf eine Entscheidung?* |
 

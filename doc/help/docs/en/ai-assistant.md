@@ -44,7 +44,7 @@ When a path was chosen for the workspace at its first opening, during the trial,
 
 | Path | Questions |
 |---|---|
-| IT budget | *What are my five largest budget lines this year?*, *Which budget lines have no owner?* |
+| IT budget | *What are the main savings opportunities in IT OPEX?*, *Which budget lines have no owner?* |
 | IT landscape map | *Which technologies reach their end of support within six months?*, *Which critical applications have no recovery plan?* |
 | Projects and requests | *Which projects are over budget?*, *Which requests are waiting for a decision?* |
 

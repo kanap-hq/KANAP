@@ -44,7 +44,7 @@ Quand un parcours a été choisi pour l'espace de travail à sa première ouvert
 
 | Parcours | Questions |
 |---|---|
-| Budget IT | *Quelles sont mes cinq plus grosses lignes budgétaires cette année ?*, *Quelles lignes n'ont pas de responsable ?* |
+| Budget IT | *Quelles sont les principales opportunités d'économies dans les OPEX IT ?*, *Quelles lignes n'ont pas de responsable ?* |
 | Cartographie du SI | *Quelles technologies arrivent en fin de support dans les six mois ?*, *Quelles applications critiques n'ont pas de plan de reprise ?* |
 | Projets et demandes | *Quels projets dépassent leur budget ?*, *Quelles demandes attendent un arbitrage ?* |
 

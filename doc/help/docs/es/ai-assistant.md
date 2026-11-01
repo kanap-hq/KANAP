@@ -44,7 +44,7 @@ Cuando se eligió un recorrido para el espacio de trabajo en su primera apertura
 
 | Recorrido | Preguntas |
 |---|---|
-| Presupuesto de TI | *¿Cuáles son mis cinco líneas presupuestarias más grandes este año?*, *¿Qué líneas presupuestarias no tienen responsable?* |
+| Presupuesto de TI | *¿Cuáles son las principales oportunidades de ahorro en el OPEX de TI?*, *¿Qué líneas presupuestarias no tienen responsable?* |
 | Mapa del SI | *¿Qué tecnologías llegan al fin de soporte en los próximos seis meses?*, *¿Qué aplicaciones críticas no tienen plan de recuperación?* |
 | Proyectos y solicitudes | *¿Qué proyectos superan su presupuesto?*, *¿Qué solicitudes esperan una decisión?* |
 
