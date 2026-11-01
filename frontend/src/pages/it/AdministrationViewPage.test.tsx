@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
+import { NotifyProvider } from '../../components/notify/NotifyProvider';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../api';
 import { createAppTheme } from '../../config/ThemeContext';
@@ -142,9 +143,11 @@ function renderPage(entry = '/it/administration') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
-      <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={[entry]}><AdministrationViewPage /><Address /></MemoryRouter>
-      </QueryClientProvider>
+      <NotifyProvider>
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={[entry]}><AdministrationViewPage /><Address /></MemoryRouter>
+        </QueryClientProvider>
+      </NotifyProvider>
     </ThemeProvider>,
   );
 }
@@ -504,7 +507,7 @@ describe('AdministrationViewPage', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(screen.queryByTestId('administration-selection')).toBeNull();
     // A short message gives the number of assets changed.
-    expect((await screen.findByRole('alert')).textContent).toContain('Zone changed on 1 asset.');
+    expect(await screen.findByText('Zone changed on 1 asset.')).toBeInTheDocument();
   });
 
   it('assigns No zone to every asset of the filter but the unticked ones, with the list request as scope', async () => {

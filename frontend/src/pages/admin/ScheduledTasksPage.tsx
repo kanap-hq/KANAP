@@ -5,7 +5,6 @@ import {
   CircularProgress,
   Drawer,
   IconButton,
-  Snackbar,
   Stack,
   Switch,
   Table,
@@ -28,6 +27,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNotify } from '../../components/notify/NotifyProvider';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../auth/AuthContext';
@@ -102,7 +102,8 @@ function ScheduledTasksContent() {
   const locale = useLocale();
   const { mode } = useTheme().palette;
   const queryClient = useQueryClient();
-  const [snack, setSnack] = useState<string | null>(null);
+  const notify = useNotify();
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [editingCron, setEditingCron] = useState<string | null>(null);
   const [cronDraft, setCronDraft] = useState('');
   const [drawerTask, setDrawerTask] = useState<string | null>(null);
@@ -127,15 +128,15 @@ function ScheduledTasksContent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduled-tasks'] });
       setEditingCron(null);
-      setSnack(t('scheduledTasks.messages.scheduleUpdated'));
+      setScheduleError(null);
     },
-    onError: (err: any) => setSnack(getApiErrorMessage(err, t, t('scheduledTasks.messages.invalidCronExpression'))),
+    onError: (err: any) => setScheduleError(getApiErrorMessage(err, t, t('scheduledTasks.messages.invalidCronExpression'))),
   });
 
   const triggerMutation = useMutation({
     mutationFn: (name: string) => triggerTask(name),
     onSuccess: (_, name) => {
-      setSnack(t('scheduledTasks.messages.taskTriggered', { name }));
+      notify({ message: t('scheduledTasks.messages.taskTriggered', { name }) });
       queryClient.invalidateQueries({ queryKey: ['scheduled-tasks'] });
     },
   });
@@ -163,6 +164,9 @@ function ScheduledTasksContent() {
   return (
     <Box>
       <PageHeader title={t('scheduledTasks.title')} />
+      {scheduleError && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setScheduleError(null)}>{scheduleError}</Alert>
+      )}
       <TableContainer>
         <Table size="small">
           <TableHead>
@@ -346,13 +350,6 @@ function ScheduledTasksContent() {
           )}
         </Box>
       </Drawer>
-
-      <Snackbar
-        open={!!snack}
-        autoHideDuration={4000}
-        onClose={() => setSnack(null)}
-        message={snack}
-      />
     </Box>
   );
 }

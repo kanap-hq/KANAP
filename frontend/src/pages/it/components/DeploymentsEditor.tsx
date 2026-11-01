@@ -39,7 +39,6 @@ import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { APPLICATION_ENVIRONMENTS, compareEnvironments, environmentLabelKey } from '../../../utils/applicationEnvironments';
-import { useApplicationFeedback } from '../applicationFeedback';
 import { invalidateTechnologyLinks } from './technologyLinkQueries';
 import ClusterGroupLine from './ClusterGroupLine';
 import useClusterAssignmentQuestion from './useClusterAssignmentQuestion';
@@ -155,7 +154,6 @@ export default function DeploymentsEditor({
   const { t } = useTranslation(['it', 'common', 'errors']);
   const locale = useLocale();
   const dialogs = useKanapDialogs();
-  const feedback = useApplicationFeedback();
   const queryClient = useQueryClient();
   const { byField, labelFor } = useItOpsEnumOptions();
   const envLabel = React.useCallback((value: string) => {
@@ -228,13 +226,12 @@ export default function DeploymentsEditor({
     setError(null);
     try {
       await api.patch(`/app-deployments/${deploymentId}`, patch);
-      feedback.info(t('workspace.application.deployments.updated'));
       await onRefresh();
       void invalidateTechnologyLinks(queryClient);
     } catch (err: any) {
       setError(getApiErrorMessage(err, t, t('workspace.application.deployments.updateFailed')));
     }
-  }, [feedback, onRefresh, queryClient, t]);
+  }, [onRefresh, queryClient, t]);
 
   const openCreateDeployment = React.useCallback(() => {
     const firstAvailable = ENV_OPTIONS.find((env) => !usedEnvironments.has(env.value));
@@ -273,10 +270,8 @@ export default function DeploymentsEditor({
       };
       if (deploymentDraft.id) {
         await api.patch(`/app-deployments/${deploymentDraft.id}`, payload);
-        feedback.info(t('workspace.application.deployments.updated'));
       } else {
         await api.post(`/applications/${applicationId}/deployments`, payload);
-        feedback.info(t('workspace.application.deployments.created'));
       }
       setDeploymentDialogOpen(false);
       await onRefresh();
@@ -286,7 +281,7 @@ export default function DeploymentsEditor({
     } finally {
       setSaving(false);
     }
-  }, [applicationId, deploymentDraft, feedback, onRefresh, queryClient, t]);
+  }, [applicationId, deploymentDraft, onRefresh, queryClient, t]);
 
   const deleteDeployment = React.useCallback(async (deployment: DeploymentRecord) => {
     if (!(await dialogs.confirm({
@@ -297,13 +292,12 @@ export default function DeploymentsEditor({
     setError(null);
     try {
       await api.delete(`/app-deployments/${deployment.id}`);
-      feedback.info(t('workspace.application.deployments.removed'));
       await onRefresh();
       void invalidateTechnologyLinks(queryClient);
     } catch (err: any) {
       setError(getApiErrorMessage(err, t, t('workspace.application.deployments.removeFailed')));
     }
-  }, [dialogs, envLabel, feedback, onRefresh, queryClient, t]);
+  }, [dialogs, envLabel, onRefresh, queryClient, t]);
 
   const openAssignmentDialog = React.useCallback((deploymentId: string, assignment?: Assignment) => {
     setAssignmentDraft({
@@ -353,10 +347,8 @@ export default function DeploymentsEditor({
       };
       if (assignmentDraft.assignmentId) {
         await api.patch(`/app-deployments/${assignmentDraft.deploymentId}/servers/${assignmentDraft.assignmentId}`, payload);
-        feedback.info(t('workspace.application.deployments.assignmentUpdated'));
       } else {
         await api.post(`/app-deployments/${assignmentDraft.deploymentId}/servers`, payload);
-        feedback.info(t('components.serverAssignments.serverAssigned'));
       }
       setAssignmentDialogOpen(false);
       await loadAssignments();
@@ -367,7 +359,7 @@ export default function DeploymentsEditor({
     } finally {
       setSaving(false);
     }
-  }, [applicationName, assignmentDraft, assignments, deployments, envLabel, feedback, labelFor, loadAssignments, onRefresh, queryClient, resolveTargets, t]);
+  }, [applicationName, assignmentDraft, assignments, deployments, envLabel, labelFor, loadAssignments, onRefresh, queryClient, resolveTargets, t]);
 
   /** A7: the cluster takes the assignment the members carry one by one (the server replaces their rows). */
   const assignGroupToCluster = React.useCallback(async (set: GroupableSet) => {
@@ -379,14 +371,13 @@ export default function DeploymentsEditor({
     setError(null);
     try {
       await api.post(`/app-deployments/${set.app_instance_id}/servers`, { server_id: set.cluster_id, role: set.role });
-      feedback.info(t('components.clusterAssignment.assignedToCluster'));
       await loadAssignments();
       await onRefresh();
       void invalidateTechnologyLinks(queryClient);
     } catch (err: any) {
       setError(getApiErrorMessage(err, t, t('workspace.application.deployments.saveAssignmentFailed')));
     }
-  }, [applicationName, dialogs, feedback, loadAssignments, onRefresh, queryClient, t]);
+  }, [applicationName, dialogs, loadAssignments, onRefresh, queryClient, t]);
 
   const deleteAssignment = React.useCallback(async (deploymentId: string, assignmentId: string) => {
     if (!(await dialogs.confirm({
@@ -397,14 +388,13 @@ export default function DeploymentsEditor({
     setError(null);
     try {
       await api.delete(`/app-deployments/${deploymentId}/servers/${assignmentId}`);
-      feedback.info(t('workspace.application.deployments.assignmentRemoved'));
       await loadAssignments();
       await onRefresh();
       void invalidateTechnologyLinks(queryClient);
     } catch (err: any) {
       setError(getApiErrorMessage(err, t, t('workspace.application.deployments.removeAssignmentFailed')));
     }
-  }, [dialogs, feedback, loadAssignments, onRefresh, queryClient, t]);
+  }, [dialogs, loadAssignments, onRefresh, queryClient, t]);
 
   return (
     <Stack spacing={2.75}>

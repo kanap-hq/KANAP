@@ -1,6 +1,6 @@
 import React from 'react';
 import PageHeader from '../../components/PageHeader';
-import { Alert, Box, Button, Card, CardContent, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, Grid, InputLabel, List, ListItemButton, ListItemText, MenuItem, Select, Snackbar, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, CardContent, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, Grid, InputLabel, List, ListItemButton, ListItemText, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
@@ -81,8 +81,6 @@ export default function RolesPage() {
   // When fetched, apply role permissions to draft
   React.useEffect(() => { setDraft((perms || {}) as any); }, [perms]);
 
-  const [snackOpen, setSnackOpen] = React.useState(false);
-  const [snackMessage, setSnackMessage] = React.useState(t('roles.messages.permissionsSaved'));
   const { mutateAsync: savePerms, isPending } = useMutation({
     mutationFn: async () => {
       if (!selected) return;
@@ -94,8 +92,7 @@ export default function RolesPage() {
         qc.setQueryData(['role-perms', selected.id], { ...(draft as any) });
         await qc.invalidateQueries({ queryKey: ['role-perms', selected.id] });
       }
-      setSnackMessage(t('roles.messages.permissionsSaved'));
-      setSnackOpen(true);
+      // The checkboxes stay as saved: the page already shows the result.
     },
   });
 
@@ -125,9 +122,8 @@ export default function RolesPage() {
     },
     onSuccess: async (created: Role | null) => {
       await qc.invalidateQueries({ queryKey: ['roles'] });
+      // The copy is selected, so its name and permissions are what the page shows.
       if (created?.id) setSelectedId(created.id);
-      setSnackMessage(t('roles.messages.duplicated'));
-      setSnackOpen(true);
     },
   });
 
@@ -352,15 +348,6 @@ export default function RolesPage() {
           )}
         </DialogActions>
       </Dialog>
-
-      {/* Saved Snackbar */}
-      <Snackbar
-        open={snackOpen}
-        onClose={() => setSnackOpen(false)}
-        autoHideDuration={1200}
-        message={snackMessage}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      />
     </>
   );
 }

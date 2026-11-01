@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../api';
 import DeleteSelectedButton from './DeleteSelectedButton';
 import { createAppTheme } from '../config/ThemeContext';
+import { NotifyProvider } from './notify/NotifyProvider';
 
 vi.mock('../api', () => ({
   default: { delete: vi.fn() },
@@ -217,14 +218,16 @@ describe('DeleteSelectedButton', () => {
     vi.mocked(api.delete).mockResolvedValue({ data: { deleted: many.map((row) => row.id), failed: [] } } as any);
     render(
       <ThemeProvider theme={createAppTheme('light')}>
-        <DeleteSelectedButton<Row>
-          selectedRows={many}
-          endpoint="/contracts/bulk"
-          getItemId={(row) => row.id}
-          getItemName={(row) => row.name}
-          onDeleteSuccess={vi.fn()}
-          itemLabels={{ toDelete: (n) => `to delete:${n}`, kept: (n) => `kept:${n}`, deleted: (n) => `contracts deleted:${n}` }}
-        />
+        <NotifyProvider>
+          <DeleteSelectedButton<Row>
+            selectedRows={many}
+            endpoint="/contracts/bulk"
+            getItemId={(row) => row.id}
+            getItemName={(row) => row.name}
+            onDeleteSuccess={vi.fn()}
+            itemLabels={{ toDelete: (n) => `to delete:${n}`, kept: (n) => `kept:${n}`, deleted: (n) => `contracts deleted:${n}` }}
+          />
+        </NotifyProvider>
       </ThemeProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: /buttons.deleteSelected/ }));
@@ -277,15 +280,17 @@ describe('DeleteSelectedButton', () => {
       const checkDelete = vi.fn(check);
       render(
         <ThemeProvider theme={createAppTheme('light')}>
-          <DeleteSelectedButton<Row>
-            selectedRows={selected}
-            endpoint="/contracts/bulk"
-            getItemId={(row) => row.id}
-            getItemName={(row) => row.name}
-            onDeleteSuccess={vi.fn()}
-            checkDelete={checkDelete}
-            itemLabels={labels as typeof itemLabels}
-          />
+          <NotifyProvider>
+            <DeleteSelectedButton<Row>
+              selectedRows={selected}
+              endpoint="/contracts/bulk"
+              getItemId={(row) => row.id}
+              getItemName={(row) => row.name}
+              onDeleteSuccess={vi.fn()}
+              checkDelete={checkDelete}
+              itemLabels={labels as typeof itemLabels}
+            />
+          </NotifyProvider>
         </ThemeProvider>,
       );
       fireEvent.click(screen.getByRole('button', { name: /buttons.deleteSelected/ }));

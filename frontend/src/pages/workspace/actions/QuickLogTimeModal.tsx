@@ -15,7 +15,6 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Typography,
-  Snackbar,
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +22,7 @@ import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import { localTodayYmd } from '../../../lib/datetime';
 import { ACTIVE_TASK_STATUSES } from '../../tasks/task.constants';
+import { useNotify } from '../../../components/notify/NotifyProvider';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
 interface QuickLogTimeModalProps {
@@ -51,6 +51,7 @@ export default function QuickLogTimeModal({
 }: QuickLogTimeModalProps) {
   const queryClient = useQueryClient();
   const { t } = useTranslation('common');
+  const notify = useNotify();
   const { profile, hasLevel } = useAuth();
   // Same rules as the server: project time and project task time need portfolio_projects:contributor
   // on that project, standalone task time needs tasks:member.
@@ -65,7 +66,6 @@ export default function QuickLogTimeModal({
   const [category, setCategory] = useState<'it' | 'business'>('it');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [snackOpen, setSnackOpen] = useState(false);
 
   // Projects the user may log time on
   const { data: projectsData } = useQuery({
@@ -153,7 +153,8 @@ export default function QuickLogTimeModal({
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
       }
       handleClose();
-      setSnackOpen(true);
+      // The dialog has closed. The home page does not show the entry that was just logged.
+      notify({ message: t('messages.timeLogged') });
     },
     onError: (err: any) => {
       setError(getApiErrorMessage(err, t, t('messages.failedToLogTime')));
@@ -194,14 +195,6 @@ export default function QuickLogTimeModal({
   };
 
   return (
-    <>
-    <Snackbar
-      open={snackOpen}
-      onClose={() => setSnackOpen(false)}
-      autoHideDuration={2000}
-      message={t('messages.timeLogged')}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-    />
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>{t('dashboard.quickLogTime.logTime')}</DialogTitle>
       <DialogContent>
@@ -318,6 +311,5 @@ export default function QuickLogTimeModal({
         </Button>
       </DialogActions>
     </Dialog>
-    </>
   );
 }

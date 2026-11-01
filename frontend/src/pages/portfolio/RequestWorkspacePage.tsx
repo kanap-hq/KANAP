@@ -3,11 +3,12 @@ import { useLocation, useNavigate, useParams, useSearchParams } from 'react-rout
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert, Box, Button,
-  IconButton, LinearProgress, Snackbar, Stack, Typography, useTheme,
+  IconButton, LinearProgress, Stack, Typography, useTheme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import TransformIcon from '@mui/icons-material/Transform';
 import api from '../../api';
+import { useNotify } from '../../components/notify/NotifyProvider';
 import { formatShortDate } from '../../lib/dateFormat';
 import { useRequestNav } from '../../hooks/useRequestNav';
 import { useClassificationDefaults } from '../../hooks/useClassificationDefaults';
@@ -246,7 +247,7 @@ export default function RequestWorkspacePage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = React.useState(false);
   const [recommendationDialogOpen, setRecommendationDialogOpen] = React.useState(false);
-  const [recommendationToast, setRecommendationToast] = React.useState<string | null>(null);
+  const notify = useNotify();
   const [highlightLatestRecommendation, setHighlightLatestRecommendation] = React.useState(false);
   const [pendingStatus, setPendingStatus] = React.useState<string | null>(null);
   const scoringEditorRef = React.useRef<RequestScoringEditorHandle>(null);
@@ -759,9 +760,9 @@ export default function RequestWorkspacePage() {
     const outcomeLabel = payload.decision_outcome
       ? getDecisionOutcomeLabel(t, payload.decision_outcome)
       : t('portfolio:workspace.request.messages.recommendationSubmittedFallback');
-    setRecommendationToast(t('portfolio:workspace.request.messages.recommendationSubmitted', { outcome: outcomeLabel }));
+    notify({ message: t('portfolio:workspace.request.messages.recommendationSubmitted', { outcome: outcomeLabel }) });
     setHighlightLatestRecommendation(true);
-  }, [handleAddComment, t]);
+  }, [handleAddComment, notify, t]);
 
   // Handle inline image upload for rich text fields
   const handleImageUpload = React.useCallback(async (file: File, sourceField: string): Promise<string> => {
@@ -1257,25 +1258,6 @@ export default function RequestWorkspacePage() {
         onConfirm={handleStatusDialogConfirm}
         onCancel={handleStatusDialogCancel}
       />
-
-      <Snackbar
-        open={!!recommendationToast}
-        autoHideDuration={4500}
-        onClose={(_, reason) => {
-          if (reason === 'clickaway') return;
-          setRecommendationToast(null);
-        }}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          severity="success"
-          variant="filled"
-          onClose={() => setRecommendationToast(null)}
-          sx={{ width: '100%' }}
-        >
-          {recommendationToast}
-        </Alert>
-      </Snackbar>
 
       <KanapDialog
         open={deleteConfirmOpen}

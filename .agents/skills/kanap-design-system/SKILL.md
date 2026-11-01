@@ -153,6 +153,19 @@ For plain HTML tables in workspace sections, use the same dense typography and h
 - If the same document appears as both direct and related, display it only in direct documents.
 - If the same related document is found through multiple paths, display it once and merge or summarize provenance instead of duplicating rows.
 
+## Confirmation messages
+
+One notice for the whole app, from `useNotify` (`frontend/src/components/notify/NotifyProvider.tsx`). The provider is mounted once in `Layout`. A screen does not render its own `Snackbar`.
+
+```tsx
+const notify = useNotify();
+notify({ message, undo });
+```
+
+Show a notice only when the person would otherwise miss the effect: a dialog that has closed, an action on another record, or a background job. Also show one when the action can be undone (`undo` puts it back). A save the person sees in place stays quiet. An error stays on the page, in the notices slot of the record shell or in the dialog's own error. It is not a notice.
+
+The notice sits at the bottom centre, on the surface colour with the default border (`kanap.bg.primary`, `kanap.border.default`), a small icon (teal for a completed action, neutral for information) and the message. Undo is a text button. It stays 4 seconds, or 8 when Undo is offered. One notice at a time: a new one replaces the previous. Dialogs cover it.
+
 ## Anti-Patterns To Block
 
 Block or refactor these during UI work:
@@ -169,6 +182,7 @@ Block or refactor these during UI work:
 - Auto-focus at page load.
 - Border radius above 12px except true pill chips.
 - Animations above 200ms.
+- A local MUI `Snackbar` for a confirmation. Use `useNotify`.
 
 ## Reference Loading
 

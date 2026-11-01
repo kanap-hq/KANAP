@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
+import { NotifyProvider } from '../../../components/notify/NotifyProvider';
 import api from '../../../api';
 import ApplicationRelationsTab, { type ApplicationRelationsData } from './ApplicationRelationsTab';
 import { ApplicationFeedbackProvider } from '../applicationFeedback';
@@ -91,11 +92,13 @@ function renderTab(data: ApplicationRelationsData | (() => Promise<unknown>)) {
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <NotifyProvider>
         <MemoryRouter initialEntries={['/it/applications/app-1/relations']}>
           <Routes>
             <Route path="*" element={<ApplicationFeedbackProvider onError={() => undefined}><ApplicationRelationsTab id="app-1" onRelationsChange={onRelationsChange} /><Location /></ApplicationFeedbackProvider>} />
           </Routes>
         </MemoryRouter>
+        </NotifyProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -216,7 +219,7 @@ describe('ApplicationRelationsTab', () => {
     renderTab(relations());
     fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.relations.remove(name=Mettre à jour le connecteur)' }));
     expect(await screen.findByText('workspace.application.relations.feedback.unlinked(name=Mettre à jour le connecteur)')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.undo' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/relations/tasks', { id: 't-118' }));
   });
 
@@ -227,7 +230,8 @@ describe('ApplicationRelationsTab', () => {
     const section = screen.getByRole('region', { name: 'workspace.application.relations.sections.projects' });
     fireEvent.click(within(section).getByText('workspace.application.relations.add'));
     fireEvent.click(await screen.findByRole('option', { name: /Refonte du datalake/ }));
-    expect(await screen.findByText('workspace.application.relations.feedback.linked(name=Refonte du datalake)')).toBeTruthy();
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/relations/projects', { id: 'prj-9' }));
+    expect(screen.queryByText(/feedback\.linked/)).toBeNull();
   });
 
   it('links a suggestion to its section', async () => {

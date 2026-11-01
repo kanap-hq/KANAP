@@ -275,8 +275,8 @@ describe('DeploymentsEditor: clusters', () => {
     expect(apiPost).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Assign to the cluster' }));
     await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/app-deployments/dep-1/servers', { server_id: 'cl-1', role: 'db' }));
-    // The toast says what happened to the cluster, not that a server was added.
-    expect(await screen.findByText('Assigned to the cluster')).toBeTruthy();
+    // The list shows the cluster row once it is read again: no notice.
+    expect(screen.queryByText('Assigned to the cluster')).toBeNull();
     expect(screen.queryByText('Server added')).toBeNull();
   });
 

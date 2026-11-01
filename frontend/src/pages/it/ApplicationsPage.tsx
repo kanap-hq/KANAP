@@ -1,6 +1,6 @@
 import { classificationText } from '../../utils/applicationClassification';
 import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
-import { Alert, Box, Button, Snackbar, Stack, Chip, Tooltip, Typography, RadioGroup, FormControlLabel, Radio, Link, useTheme } from '@mui/material';
+import { Alert, Box, Button, Stack, Chip, Tooltip, Typography, RadioGroup, FormControlLabel, Radio, Link, useTheme } from '@mui/material';
 import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, type ListRequest } from '../../components/ServerDataGrid';
 import type { CellStyle, ICellRendererParams } from 'ag-grid-community';
@@ -1127,6 +1127,9 @@ export default function ApplicationsPage() {
   return (
     <>
       <PageHeader title={t('pages.applications.title')} actions={actions} />
+      {notice && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setNotice(null)}>{notice}</Alert>
+      )}
       {/* Waits for filters saved as a context (a reload, a link in a new tab). */}
       {/* A filter on the Vulnerabilities column also waits for the column: the grid drops a filter on a column it does not have. */}
       {urlFilterState.ready && !(searchFilters?.[VULNERABILITIES_FIELD] && featuresLoading) && (
@@ -1205,14 +1208,6 @@ export default function ApplicationsPage() {
         note={t('pages.applications.importNote')}
         onImported={() => setRefreshKey((k) => k + 1)}
       />
-      <Snackbar
-        open={notice !== null}
-        autoHideDuration={8000}
-        onClose={() => setNotice(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setNotice(null)} severity="error" variant="filled">{notice}</Alert>
-      </Snackbar>
     </>
   );
 }

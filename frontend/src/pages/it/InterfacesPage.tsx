@@ -4,7 +4,6 @@ import {
   Alert,
   Box,
   Button,
-  Snackbar,
   Stack,
   Dialog,
   DialogTitle,
@@ -21,6 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import { ICellRendererParams } from 'ag-grid-community';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PageHeader from '../../components/PageHeader';
+import { useNotify } from '../../components/notify/NotifyProvider';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
 import CheckboxSetFilter, { type CheckboxSetFilterOption } from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
@@ -77,11 +77,8 @@ export default function InterfacesPage() {
   const [duplicating, setDuplicating] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [copyBindings, setCopyBindings] = useState(false);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error';
-  }>({ open: false, message: '', severity: 'success' });
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const notify = useNotify();
   const canCreate = hasLevel('applications', 'manager');
   const canAdmin = hasLevel('applications', 'admin');
 
@@ -118,6 +115,7 @@ export default function InterfacesPage() {
   const handleOpenDuplicateDialog = () => {
     if (selectedRows.length !== 1) return;
     setCopyBindings(false);
+    setDuplicateError(null);
     setDuplicateDialogOpen(true);
   };
 
@@ -130,33 +128,22 @@ export default function InterfacesPage() {
     if (selectedRows.length !== 1) return;
     const row = selectedRows[0];
     setDuplicating(true);
+    setDuplicateError(null);
     try {
       const response = await api.post<InterfaceRow>(`/interfaces/${row.id}/duplicate`, {
         copyBindings,
       });
       const newInterface = response.data;
-      setSnackbar({
-        open: true,
-        message: t('it:pages.interfaces.duplicated', { name: newInterface.name }),
-        severity: 'success',
-      });
+      notify({ message: t('it:pages.interfaces.duplicated', { name: newInterface.name }) });
       setRefreshKey((k) => k + 1);
       gridApiRef.current?.deselectAll?.();
       setDuplicateDialogOpen(false);
     } catch (error: any) {
       console.error('Duplicate error:', error);
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, t, t('messages.duplicateInterfaceFailed')),
-        severity: 'error',
-      });
+      setDuplicateError(getApiErrorMessage(error, t, t('messages.duplicateInterfaceFailed')));
     } finally {
       setDuplicating(false);
     }
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
   };
 
   const ClickToWorkspace = useMemo(() => {
@@ -410,21 +397,12 @@ export default function InterfacesPage() {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
         }}
       />
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant="filled">
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
 
       {/* Duplicate Interface Dialog */}
       <Dialog open={duplicateDialogOpen} onClose={handleCloseDuplicateDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{t('it:pages.interfaces.duplicateDialogTitle')}</DialogTitle>
         <DialogContent>
+          {duplicateError && <Alert severity="error" sx={{ mb: 2 }}>{duplicateError}</Alert>}
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             {t('it:pages.interfaces.duplicateDescription', { name: selectedRows[0]?.name || t('it:pages.interfaces.thisInterface') })}
           </Typography>

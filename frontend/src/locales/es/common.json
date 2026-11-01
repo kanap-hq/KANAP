@@ -34,7 +34,8 @@
     "browse": "Explorar",
     "loadMore": "Cargar más",
     "done": "Listo",
-    "moreActions": "Más acciones"
+    "moreActions": "Más acciones",
+    "undo": "Deshacer"
   },
   "status": {
     "loading": "Cargando…",
