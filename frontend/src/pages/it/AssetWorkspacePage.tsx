@@ -154,6 +154,9 @@ type ApplicationInstance = {
   environment: string;
 };
 
+/** The value of a deployment the assignment creates first, in the environment that follows. */
+const NEW_DEPLOYMENT = 'new:';
+
 type LocationDetails = {
   id: string;
   location_reference: string;
@@ -1175,7 +1178,8 @@ function AssetWorkspaceRoute() {
       return;
     }
     const instances = appInstancesRef.current[selectedAppId] || [];
-    if (!instanceId || !instances.some((i) => i.id === instanceId)) {
+    const newEnvironment = instanceId?.startsWith(NEW_DEPLOYMENT) ? instanceId.slice(NEW_DEPLOYMENT.length) : null;
+    if (!instanceId || (!newEnvironment && !instances.some((i) => i.id === instanceId))) {
       setAssignError(t('workspace.asset.assignments.environmentRequired'));
       return;
     }
@@ -1191,7 +1195,7 @@ function AssetWorkspaceRoute() {
       // say the members' rows it replaces (A4).
       {
         const deployment = (await api.get<{ items: Array<{ app_instance_id: string; server_id: string; role: string }> }>(`/applications/${selectedAppId}/deployment-servers`)).data?.items ?? [];
-        const environment = environmentLabel(instances.find((instance) => instance.id === instanceId)?.environment);
+        const environment = environmentLabel(newEnvironment ?? instances.find((instance) => instance.id === instanceId)?.environment);
         const outcome = await resolveTargets({
           assetIds: [id],
           subject: `${appNames[selectedAppId] || t('components.clusterAssignment.thisApplication')} (${environment}, ${labelFor('serverRole', assignRole) || assignRole})`,
@@ -1206,7 +1210,19 @@ function AssetWorkspaceRoute() {
         }
         serverId = outcome.targets[0];
       }
-      await api.post(`/app-instances/${instanceId}/assets`, {
+      let deploymentId = instanceId;
+      if (newEnvironment) {
+        // The application has no deployment in that environment yet: create it, then assign.
+        const created = (await api.post<{ id: string; environment: string }>(`/applications/${selectedAppId}/deployments`, { environment: newEnvironment })).data;
+        deploymentId = created.id;
+        appInstancesRef.current = {
+          ...appInstancesRef.current,
+          [selectedAppId]: [...instances, { id: created.id, environment: created.environment }],
+        };
+        setAppInstances(appInstancesRef.current);
+        setInstanceId(created.id);
+      }
+      await api.post(`/app-instances/${deploymentId}/assets`, {
         server_id: serverId,
         role: assignRole,
         since_date: assignSince || null,
@@ -2925,6 +2941,9 @@ function AssetWorkspaceRoute() {
                     const list = selectedAppId ? appInstances[selectedAppId] || [] : [];
                     const inst = list.find((item) => item.id === value);
                     if (inst) return environmentLabel(inst.environment);
+                    if (value.startsWith(NEW_DEPLOYMENT)) {
+                      return t('workspace.asset.assignments.createDeployment', { environment: environmentLabel(value.slice(NEW_DEPLOYMENT.length)) });
+                    }
                     return (
                       <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>
                         {selectedAppId ? t('workspace.asset.assignments.chooseEnvironment') : t('workspace.asset.assignments.selectAppForEnv')}
@@ -2936,9 +2955,13 @@ function AssetWorkspaceRoute() {
                 {(selectedAppId ? appInstances[selectedAppId] || [] : []).map((inst) => (
                   <MenuItem key={inst.id} value={inst.id} sx={drawerMenuItemSx}>{environmentLabel(inst.environment)}</MenuItem>
                 ))}
-                {selectedAppId && !instancesLoading && (appInstances[selectedAppId] || []).length === 0 && (
-                  <MenuItem value="" disabled sx={drawerMenuItemSx}>{t('workspace.asset.assignments.noInstances')}</MenuItem>
-                )}
+                {selectedAppId && !instancesLoading && ENV_OPTIONS
+                  .filter((option) => !(appInstances[selectedAppId] || []).some((inst) => inst.environment === option.value))
+                  .map((option) => (
+                    <MenuItem key={option.value} value={`${NEW_DEPLOYMENT}${option.value}`} sx={drawerMenuItemSx}>
+                      {t('workspace.asset.assignments.createDeployment', { environment: option.label })}
+                    </MenuItem>
+                  ))}
               </TextField>
             </PropertyRow>
             <PropertyRow label={t('workspace.asset.assignments.role')} required>
