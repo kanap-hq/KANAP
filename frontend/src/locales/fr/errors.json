@@ -228,6 +228,8 @@
   "KNOWLEDGE_LIBRARY_LAST": "C’est la dernière bibliothèque que vous pouvez utiliser. Créez une autre bibliothèque avant de la supprimer.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "Ce dossier contient encore {{usages}}. Déplacez-le ou supprimez-le d’abord.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_other": "Ce dossier contient encore {{usages}}. Déplacez-les ou supprimez-les d’abord.",
+  "LOCATION_IN_USE_one": "Ce site porte encore {{usages}} : rattachez-le à un autre site avant de supprimer celui-ci.",
+  "LOCATION_IN_USE_other": "Ce site porte encore {{usages}} : rattachez-les à un autre site avant de supprimer celui-ci.",
   "currency_invalid": "Code de devise inconnu : saisissez des codes ISO 4217 à trois lettres, par exemple EUR, USD, CHF.",
   "turnover_fx_missing_all": "Aucune des sociétés sélectionnées n'a de taux de change vers la devise de reporting. Leur chiffre d'affaires ne peut pas être comparé. Saisissez les taux, ou choisissez un autre critère de répartition.",
   "name_required": "Saisissez un nom.",

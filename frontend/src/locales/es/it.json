@@ -3108,7 +3108,6 @@
         "history": "Historial"
       },
       "deleteTitle": "¿Eliminar ubicación?",
-      "deleteMessage": "Esto eliminará permanentemente esta ubicación y desasignará automáticamente todos los activos vinculados.",
       "deleteUnsavedWarning": "También tiene cambios no guardados en este espacio. Esos cambios se perderán.",
       "subLocationsAfterCreate": "Las sub-ubicaciones están disponibles después de crear la ubicación.",
       "contactsAfterCreate": "Los contactos están disponibles después de crear la ubicación.",

@@ -134,9 +134,13 @@ describe('deleteFailureReason', () => {
     expect(deleteFailureReason(folder, i18n.fr.t, 'fr')).toBe('Ce dossier contient encore 1 sous-dossier. Déplacez-le ou supprimez-le d’abord.');
     const asset = { code: 'ASSET_IN_USE', usages: [{ type: 'connections', total: 1 }] };
     expect(deleteFailureReason(asset, i18n.fr.t, 'fr')).toBe('Cet actif est utilisé par 1 connexion. Retirez-le de là avant de le supprimer.');
+    const location = (total: number) => ({ code: 'LOCATION_IN_USE', usages: [{ type: 'assets', total }] });
+    expect(deleteFailureReason(location(1), i18n.en.t, 'en')).toBe('This location still holds 1 asset. Move it to another location before deleting this one.');
+    expect(deleteFailureReason(location(3), i18n.en.t, 'en')).toBe('This location still holds 3 assets. Move them to another location before deleting this one.');
+    expect(deleteFailureReason(location(3), i18n.fr.t, 'fr')).toBe('Ce site porte encore 3 actifs : rattachez-les à un autre site avant de supprimer celui-ci.');
     // Every sentence that points back at what holds the record has both forms, in each language.
     const codes = ['ASSET_IN_USE', 'COST_CENTER_HAS_NODES', 'CHART_OF_ACCOUNTS_IN_USE', 'ANALYTICS_DIMENSION_HAS_VALUES', 'TEAM_NOT_EMPTY',
-      'ROLE_IN_USE', 'DEPLOYMENT_IN_USE', 'INTERFACE_HAS_BINDINGS', 'KNOWLEDGE_FOLDER_HAS_SUBFOLDERS'];
+      'ROLE_IN_USE', 'DEPLOYMENT_IN_USE', 'INTERFACE_HAS_BINDINGS', 'KNOWLEDGE_FOLDER_HAS_SUBFOLDERS', 'LOCATION_IN_USE'];
     for (const language of LANGUAGES) {
       for (const code of codes) {
         expect(i18n[language].exists(`errors:${code}_one`), `${language} ${code}_one`).toBe(true);

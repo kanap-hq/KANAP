@@ -228,6 +228,8 @@
   "KNOWLEDGE_LIBRARY_LAST": "This is the last library you can use. Create another library before deleting it.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "This folder still has {{usages}}. Move or delete it first.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_other": "This folder still has {{usages}}. Move or delete them first.",
+  "LOCATION_IN_USE_one": "This location still holds {{usages}}. Move it to another location before deleting this one.",
+  "LOCATION_IN_USE_other": "This location still holds {{usages}}. Move them to another location before deleting this one.",
   "currency_invalid": "Unknown currency code: enter three-letter ISO 4217 codes, for example EUR, USD, CHF.",
   "turnover_fx_missing_all": "None of the selected companies has an exchange rate into the reporting currency. Their turnover cannot be compared. Enter the rates, or choose another allocation driver.",
   "name_required": "Enter a name.",

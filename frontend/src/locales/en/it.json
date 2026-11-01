@@ -3108,7 +3108,6 @@
         "history": "History"
       },
       "deleteTitle": "Delete location?",
-      "deleteMessage": "This will permanently delete this location and automatically unassign all linked assets.",
       "deleteUnsavedWarning": "You also have unsaved changes in this workspace. Those changes will be lost.",
       "subLocationsAfterCreate": "Sub-locations are available after you create the location.",
       "contactsAfterCreate": "Contacts are available after you create the location.",

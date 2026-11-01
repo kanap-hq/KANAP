@@ -3108,7 +3108,6 @@
         "history": "Historique"
       },
       "deleteTitle": "Supprimer le site ?",
-      "deleteMessage": "Cette action supprimera définitivement ce site et désaffectera automatiquement tous les actifs liés.",
       "deleteUnsavedWarning": "Vous avez également des modifications non enregistrées dans cet espace. Ces modifications seront perdues.",
       "subLocationsAfterCreate": "Les sous-sites sont disponibles après la création du site.",
       "contactsAfterCreate": "Les contacts sont disponibles après la création du site.",
