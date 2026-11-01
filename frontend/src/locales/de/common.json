@@ -1556,7 +1556,7 @@
       "angles": {
         "budget": "IT-Budget",
         "cartography": "IT-Landkarte",
-        "portfolio": "Projekte und Anfragen",
+        "portfolio": "Projektportfolio",
         "none": "Ich schaue mich um"
       },
       "modes": {
@@ -1577,7 +1577,7 @@
       "done": "Erledigt",
       "later": "Später",
       "end": {
-        "title": "Sie haben das Wesentliche von KANAP gesehen.",
+        "title": "Pfad {{path}} abgeschlossen!",
         "others": "Die beiden anderen Pfade:"
       },
       "showAgain": "Erste Schritte anzeigen",
@@ -1588,7 +1588,7 @@
         },
         "budget_line": {
           "title": "Eine Budgetzeile",
-          "hint": "Öffnen Sie eine Zeile: wer zahlt, welches Konto, welche Dimensionen. Der Reiter Budget enthält die Monate, der Reiter Verlauf jede Änderung."
+          "hint": "Öffnen Sie eine Zeile: wer zahlt, welches Konto, welche Dimensionen. Der Reiter Budget enthält die Monate, der Reiter Verlauf jede Änderung. Unter Beziehungen ihr Vertrag und ihre Anwendungen."
         },
         "budget_report": {
           "title": "Ein Bericht",
@@ -1626,25 +1626,17 @@
             "portfolio": "Laden Sie eine Projektleitung ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile."
           }
         },
-        "map_overview": {
-          "title": "Die Schnittstellenkarte",
-          "hint": "Jeder Pfeil ist ein Fluss zwischen zwei Anwendungen: Klicken Sie auf einen, um ihn zu lesen."
-        },
         "map_application": {
-          "title": "Eine Anwendung",
-          "hint": "Öffnen Sie eine Anwendung: Kritikalität, Verantwortliche, Beziehungen und wo sie läuft."
+          "title": "Ein Anwendungsdatensatz",
+          "hint": "Öffnen Sie eine Anwendung: Kritikalität, Verantwortliche und unter Beziehungen ihre Technologien, Server, Schnittstellen und Verträge. Hier hängt alles zusammen."
         },
         "map_technologies": {
-          "title": "Technologien und Supportende",
-          "hint": "Was in den kommenden Monaten sein Supportende erreicht, und die Quelle jedes Datums."
-        },
-        "map_vulnerabilities": {
-          "title": "Schwachstellen",
-          "hint": "Öffnen Sie eine CVE: ihr Status, die Technologie und die betroffenen Server."
+          "title": "Technologien, Supportende und Schwachstellen",
+          "hint": "Was in den kommenden Monaten sein Supportende erreicht, die Quelle jedes Datums und die CVEs, die diese Technologien betreffen."
         },
         "map_import": {
           "title": "Ihre Daten",
-          "hint": "Importieren Sie die Liste Ihrer Anwendungen: Supportende und Schwachstellen ihrer Technologien folgen."
+          "hint": "Exportieren Sie die Anwendungsliste des Beispiels, um ihr Format zu sehen, und importieren Sie dann Ihre eigene: Technologien, Supportende und Schwachstellen folgen."
         },
         "own_applications": {
           "title": "Ihre Anwendungen",
@@ -1652,51 +1644,59 @@
         },
         "own_technologies": {
           "title": "Ihre Technologien",
-          "hint": "Verknüpfen Sie Technologien mit Ihren Anwendungen und lesen Sie dann die gefundenen Supportenden."
+          "hint": "Verknüpfen Sie Technologien mit Ihren Anwendungen: KANAP ergänzt ihr Supportende."
         },
         "own_assets": {
           "title": "Ihre Server",
           "hint": "Importieren oder erstellen Sie Ihre Server und verknüpfen Sie sie mit Anwendungen."
         },
-        "own_map": {
-          "title": "Ihre erste Karte",
-          "hint": "Legen Sie eine Schnittstelle zwischen zwei Ihrer Anwendungen an: Sie erscheint auf der Karte."
-        },
-        "portfolio_overview": {
-          "title": "Das Portfolio",
-          "hint": "Ihre Projekte mit Status, Verantwortlichen und Terminen."
-        },
         "portfolio_request": {
           "title": "Eine Anfrage und ihre Bewertung",
-          "hint": "Öffnen Sie eine Anfrage: ihre Kriterien, ihre Punktzahl und, sobald genehmigt, ihre Umwandlung in ein Projekt."
-        },
-        "portfolio_planning": {
-          "title": "Die Planung",
-          "hint": "Ihre Projekte auf einer Zeitachse."
-        },
-        "portfolio_plaid": {
-          "title": "Eine Frage an Plaid",
-          "hint": "Fragen Sie „Welche Projekte überschreiten ihr Budget?“"
+          "hint": "Öffnen Sie eine Anfrage: der Bedarf, die Kriterien, die berechnete Punktzahl. Genehmigt wird sie mit einem Klick zum Projekt."
         },
         "portfolio_import": {
           "title": "Ihre Daten",
-          "hint": "Importieren Sie Ihre Projektliste."
+          "hint": "Exportieren Sie die Projektliste des Beispiels, um ihr Format zu sehen, und importieren Sie dann Ihre eigene."
         },
         "own_projects": {
-          "title": "Ihre Projekte",
-          "hint": "Importieren Sie Ihre Liste oder legen Sie das erste Projekt mit Verantwortlichen und Terminen an."
+          "title": "Ihr Projekt",
+          "hint": "Das aus der Anfrage entstandene Projekt: Verantwortliche, Termine, Team. Ihre bestehenden Projekte importieren Sie als Liste."
         },
         "own_request": {
-          "title": "Eine Anfrage",
-          "hint": "Legen Sie eine Anfrage an, bewerten Sie sie und wandeln Sie sie in ein Projekt um."
+          "title": "Ihre erste Anfrage",
+          "hint": "Legen Sie eine Anfrage an, bewerten und genehmigen Sie sie und wandeln Sie sie in ein Projekt um."
         },
         "own_project_budget": {
-          "title": "Das Budget eines Projekts",
-          "hint": "Verknüpfen Sie eine Budgetzeile mit einem Ihrer Projekte in dessen Beziehungen."
+          "title": "Das Budget des Projekts",
+          "hint": "Verknüpfen Sie eine Budgetzeile mit Ihrem Projekt in dessen Beziehungen: Die Ausgaben folgen."
         },
-        "own_planning": {
-          "title": "Ihre Planung",
-          "hint": "Ihre Projekte auf einer Zeitachse: Fügen Sie eine Abhängigkeit hinzu."
+        "map_applications": {
+          "title": "Die Anwendungsliste",
+          "hint": "Alle Anwendungen des Beispiels mit Kritikalität, verantwortlicher Person und Unternehmen. Das ist das Inventar: filtern, sortieren."
+        },
+        "map_assets": {
+          "title": "Die Server",
+          "hint": "Jeder Server zeigt, wo die Anwendungen laufen: Umgebung, Standort, installierte Technologien."
+        },
+        "own_findings": {
+          "title": "Was KANAP gefunden hat",
+          "hint": "Supportende und bekannte Schwachstellen Ihrer Technologien, ohne weitere Eingabe."
+        },
+        "portfolio_project": {
+          "title": "Das daraus entstandene Projekt",
+          "hint": "Öffnen Sie ein Projekt: Ziel, Team, Phasen und unter Beziehungen die ursprüngliche Anfrage, seine Anwendungen und seine Budgetzeilen."
+        },
+        "portfolio_tasks": {
+          "title": "Die Aufgaben",
+          "hint": "Die Aufgaben des Projekts und anderer Datensätze: Status, Priorität, Fälligkeit. Eine überfällige Aufgabe erscheint unter Meine Aufgaben auf der Startseite."
+        },
+        "portfolio_time": {
+          "title": "Zeit und Aufwand",
+          "hint": "In einem Projekt vergleicht der Reiter Aufwand den geplanten Aufwand mit der auf seinen Aufgaben erfassten Zeit. 80 % Fortschritt bei 20 % verbrauchtem Aufwand fällt sofort auf."
+        },
+        "own_tasks": {
+          "title": "Die ersten Aufgaben",
+          "hint": "Legen Sie die Aufgaben des Projekts an, weisen Sie sie zu und erfassen Sie die aufgewendete Zeit."
         }
       }
     }

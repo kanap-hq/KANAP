@@ -233,7 +233,7 @@ describe('AboutOnboardingLine', () => {
     env.administrator = false;
     env.server = createFakeOnboardingServer({ mode: 'example', administrator: false, angle: 'portfolio' });
     renderWith(<AboutOnboardingLine />);
-    expect(await screen.findByText('Path: Projects and requests · example')).toBeInTheDocument();
+    expect(await screen.findByText('Path: Project portfolio · example')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
   });
 });

@@ -1556,7 +1556,7 @@
       "angles": {
         "budget": "IT budget",
         "cartography": "IT landscape map",
-        "portfolio": "Projects and requests",
+        "portfolio": "Project portfolio",
         "none": "Just looking"
       },
       "modes": {
@@ -1577,7 +1577,7 @@
       "done": "Done",
       "later": "Later",
       "end": {
-        "title": "You have seen the essentials of KANAP.",
+        "title": "{{path}} path complete!",
         "others": "The other two paths:"
       },
       "showAgain": "Show the first steps",
@@ -1588,7 +1588,7 @@
         },
         "budget_line": {
           "title": "A budget line",
-          "hint": "Open a line: who pays, which account, which dimensions. Its Budget tab holds the months, its History tab every change."
+          "hint": "Open a line: who pays, which account, which dimensions. Its Budget tab holds the months, its History tab every change. Under Relations, its contract and its applications."
         },
         "budget_report": {
           "title": "A report",
@@ -1626,77 +1626,77 @@
             "portfolio": "Invite a project manager: create the user, then send the invitation from the row menu."
           }
         },
-        "map_overview": {
-          "title": "The interface map",
-          "hint": "Each arrow is a flow between two applications: click one to read it."
-        },
         "map_application": {
-          "title": "An application",
-          "hint": "Open an application: criticality, owners, relations and where it runs."
+          "title": "An application record",
+          "hint": "Open an application: criticality, owners, and under Relations its technologies, servers, interfaces and contracts. Everything links here."
         },
         "map_technologies": {
-          "title": "Technologies and end of support",
-          "hint": "What reaches its end of support in the coming months, and the source of each date."
-        },
-        "map_vulnerabilities": {
-          "title": "Vulnerabilities",
-          "hint": "Open a CVE: its state, the technology and the servers it affects."
+          "title": "Technologies, end of support and vulnerabilities",
+          "hint": "What reaches its end of support in the coming months, the source of each date, and the CVEs that affect these technologies."
         },
         "map_import": {
           "title": "Your data",
-          "hint": "Import the list of your applications: the end of support and the vulnerabilities of their technologies follow."
+          "hint": "Export the application list of the example to see its format, then import yours: technologies, end of support and vulnerabilities follow."
         },
         "own_applications": {
           "title": "Your applications",
-          "hint": "Import your list of applications, or create the first one."
+          "hint": "Import the list of your applications, or create the first one."
         },
         "own_technologies": {
           "title": "Your technologies",
-          "hint": "Link technologies to your applications, then read the end-of-support dates found."
+          "hint": "Link technologies to your applications: KANAP attaches their end of support."
         },
         "own_assets": {
           "title": "Your servers",
           "hint": "Import or create your servers, then link them to applications."
         },
-        "own_map": {
-          "title": "Your first map",
-          "hint": "Create an interface between two of your applications: it appears on the map."
-        },
-        "portfolio_overview": {
-          "title": "The portfolio",
-          "hint": "Your projects with their status, owners and dates."
-        },
         "portfolio_request": {
-          "title": "A request and its scoring",
-          "hint": "Open a request: its criteria, its score and, once approved, its conversion into a project."
-        },
-        "portfolio_planning": {
-          "title": "The planning",
-          "hint": "Your projects on a timeline."
-        },
-        "portfolio_plaid": {
-          "title": "A question for Plaid",
-          "hint": "Ask “Which projects are over budget?”"
+          "title": "A request and its score",
+          "hint": "Open a request: the need, the criteria, the computed score. Once approved, it becomes a project in one click."
         },
         "portfolio_import": {
           "title": "Your data",
-          "hint": "Import your list of projects."
+          "hint": "Export the project list of the example to see its format, then import yours."
         },
         "own_projects": {
-          "title": "Your projects",
-          "hint": "Import your list, or create the first project with its owner and dates."
+          "title": "Your project",
+          "hint": "The project born from the request: owner, dates, team. Your existing projects import as a list."
         },
         "own_request": {
-          "title": "A request",
-          "hint": "Create a request, score it, then convert it into a project."
+          "title": "Your first request",
+          "hint": "Create a request, score it, approve it, then convert it into a project."
         },
         "own_project_budget": {
-          "title": "A project's budget",
-          "hint": "Link a budget line to one of your projects in its relations."
+          "title": "The project's budget",
+          "hint": "Link a budget line to your project in its relations: spending follows."
         },
-        "own_planning": {
-          "title": "Your planning",
-          "hint": "Your projects on a timeline: add a dependency."
+        "map_applications": {
+          "title": "The application list",
+          "hint": "Every application of the example, with its criticality, its owner and its company. It is the inventory: filter, sort."
+        },
+        "map_assets": {
+          "title": "The servers",
+          "hint": "Each server tells where the applications run: environment, site, installed technologies."
+        },
+        "own_findings": {
+          "title": "What KANAP found",
+          "hint": "End of support and known vulnerabilities of your technologies, with nothing more to enter."
+        },
+        "portfolio_project": {
+          "title": "The project it became",
+          "hint": "Open a project: objective, team, phases, and under Relations the original request, its applications and its budget lines."
+        },
+        "portfolio_tasks": {
+          "title": "Tasks",
+          "hint": "The tasks of the project and of other records: status, priority, due date. A late task shows in My tasks on the home page."
+        },
+        "portfolio_time": {
+          "title": "Time and effort",
+          "hint": "In a project, the Effort tab compares the planned effort with the time logged on its tasks. 80% progress for 20% of the effort used shows at once."
+        },
+        "own_tasks": {
+          "title": "The first tasks",
+          "hint": "Create the project's tasks, assign them, log the time spent."
         }
       }
     }

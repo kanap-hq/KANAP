@@ -84,7 +84,7 @@ describe('FirstStepsTile', () => {
     renderAt('/', <FirstStepsTile />);
     const links = await screen.findAllByRole('link');
     expect(links.map((link) => link.textContent)).toEqual([
-      'Your applications', 'Your technologies', 'Your servers', 'Your first map', 'A colleague',
+      'Your applications', 'Your technologies', 'Your servers', 'What KANAP found', 'A colleague',
     ]);
     expect(links[4]).toHaveAttribute('href', '/admin/users?step=own_invite');
   });
@@ -92,10 +92,10 @@ describe('FirstStepsTile', () => {
   it('marks a step done and not done from its mark', async () => {
     env.server = createFakeOnboardingServer({ angle: 'portfolio', mode: 'own_data' });
     renderAt('/', <FirstStepsTile />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Mark as done: Your projects' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Mark as done: Your project' }));
     await waitFor(() => expect(screen.getByText('1/5')).toBeInTheDocument());
     expect(done('own_projects')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Mark as not done: Your projects' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mark as not done: Your project' }));
     await waitFor(() => expect(screen.getByText('0/5')).toBeInTheDocument());
     expect(done('own_projects')).toBeFalsy();
   });
@@ -114,12 +114,12 @@ describe('FirstStepsTile', () => {
       env.server.db.done.set(`budget/example/${key}`, '2026-11-02T09:20:00.000Z');
     }
     renderAt('/', <FirstStepsTile />);
-    expect(await screen.findByText('You have seen the essentials of KANAP.')).toBeInTheDocument();
+    expect(await screen.findByText('IT budget path complete!')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'IT budget' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'IT landscape map' }));
     await waitFor(() => expect(screen.getByText('0/5')).toBeInTheDocument());
     expect(env.server.db.angle).toBe('cartography');
-    expect(screen.getAllByRole('link')[0]).toHaveTextContent('The interface map');
+    expect(screen.getAllByRole('link')[0]).toHaveTextContent('The application list');
   });
 
   it('shows nothing without a path', async () => {
@@ -147,6 +147,7 @@ describe('StepHint', () => {
     renderAt('/ops/budget?step=budget_line', page);
     const hint = await screen.findByRole('dialog', { name: 'A budget line' });
     expect(hint).toHaveTextContent('Open a line: who pays, which account, which dimensions.');
+    expect(hint).toHaveTextContent('Under Relations, its contract and its applications.');
     await waitFor(() => expect(done('budget_line')).toBeTruthy());
     fireEvent.click(within(hint).getByRole('button', { name: 'Got it' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -170,5 +171,18 @@ describe('StepHint', () => {
     await waitFor(() => expect(env.server.calls.length).toBe(1));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(env.server.calls.filter((call) => call.method === 'post')).toEqual([]);
+  });
+
+  it('lists the portfolio path from the request to the project, its tasks and its time', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'portfolio', mode: 'example' });
+    renderAt('/', <FirstStepsTile />);
+    const links = await screen.findAllByRole('link');
+    expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+      ['A request and its score', '/portfolio/requests?step=portfolio_request'],
+      ['The project it became', '/portfolio/projects?step=portfolio_project'],
+      ['Tasks', '/portfolio/tasks?step=portfolio_tasks'],
+      ['Time and effort', '/portfolio/projects?step=portfolio_time'],
+      ['Your data', '/portfolio/projects?step=portfolio_import'],
+    ]);
   });
 });

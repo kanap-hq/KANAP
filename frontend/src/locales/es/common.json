@@ -1556,7 +1556,7 @@
       "angles": {
         "budget": "Presupuesto de TI",
         "cartography": "Mapa del SI",
-        "portfolio": "Proyectos y solicitudes",
+        "portfolio": "Cartera de proyectos",
         "none": "Solo estoy mirando"
       },
       "modes": {
@@ -1577,7 +1577,7 @@
       "done": "Hecho",
       "later": "Más tarde",
       "end": {
-        "title": "Ha visto lo esencial de KANAP.",
+        "title": "¡Recorrido {{path}} terminado!",
         "others": "Los otros dos recorridos:"
       },
       "showAgain": "Mostrar los primeros pasos",
@@ -1588,7 +1588,7 @@
         },
         "budget_line": {
           "title": "Una línea presupuestaria",
-          "hint": "Abra una línea: quién paga, qué cuenta, qué dimensiones. Su pestaña Presupuesto contiene los meses, su pestaña Historial cada cambio."
+          "hint": "Abra una línea: quién paga, qué cuenta, qué dimensiones. Su pestaña Presupuesto contiene los meses, su pestaña Historial cada cambio. En Relaciones, su contrato y sus aplicaciones."
         },
         "budget_report": {
           "title": "Un informe",
@@ -1626,25 +1626,17 @@
             "portfolio": "Invite a un jefe de proyecto: cree el usuario y envíe la invitación desde el menú de su fila."
           }
         },
-        "map_overview": {
-          "title": "El mapa de interfaces",
-          "hint": "Cada flecha es un flujo entre dos aplicaciones: haga clic en una para leerlo."
-        },
         "map_application": {
-          "title": "Una aplicación",
-          "hint": "Abra una aplicación: criticidad, responsables, relaciones y dónde se ejecuta."
+          "title": "Una ficha de aplicación",
+          "hint": "Abra una aplicación: criticidad, responsables y, en Relaciones, sus tecnologías, servidores, interfaces y contratos. Todo se vincula aquí."
         },
         "map_technologies": {
-          "title": "Tecnologías y fin de soporte",
-          "hint": "Lo que llega al fin de soporte en los próximos meses, y la fuente de cada fecha."
-        },
-        "map_vulnerabilities": {
-          "title": "Vulnerabilidades",
-          "hint": "Abra una CVE: su estado, la tecnología y los servidores afectados."
+          "title": "Tecnologías, fin de soporte y vulnerabilidades",
+          "hint": "Lo que llega al fin de soporte en los próximos meses, la fuente de cada fecha y las CVE que afectan a estas tecnologías."
         },
         "map_import": {
           "title": "Sus datos",
-          "hint": "Importe la lista de sus aplicaciones: el fin de soporte y las vulnerabilidades de sus tecnologías vienen después."
+          "hint": "Exporte la lista de aplicaciones del ejemplo para ver su formato y luego importe la suya: tecnologías, fin de soporte y vulnerabilidades vienen después."
         },
         "own_applications": {
           "title": "Sus aplicaciones",
@@ -1652,51 +1644,59 @@
         },
         "own_technologies": {
           "title": "Sus tecnologías",
-          "hint": "Vincule tecnologías a sus aplicaciones y lea las fechas de fin de soporte encontradas."
+          "hint": "Vincule tecnologías a sus aplicaciones: KANAP les asocia el fin de soporte."
         },
         "own_assets": {
           "title": "Sus servidores",
           "hint": "Importe o cree sus servidores y vincúlelos a las aplicaciones."
         },
-        "own_map": {
-          "title": "Su primer mapa",
-          "hint": "Cree una interfaz entre dos de sus aplicaciones: aparece en el mapa."
-        },
-        "portfolio_overview": {
-          "title": "La cartera",
-          "hint": "Sus proyectos con su estado, sus responsables y sus fechas."
-        },
         "portfolio_request": {
           "title": "Una solicitud y su puntuación",
-          "hint": "Abra una solicitud: sus criterios, su puntuación y, una vez aprobada, su conversión en proyecto."
-        },
-        "portfolio_planning": {
-          "title": "La planificación",
-          "hint": "Sus proyectos en una línea de tiempo."
-        },
-        "portfolio_plaid": {
-          "title": "Una pregunta a Plaid",
-          "hint": "Pregunte «¿Qué proyectos superan su presupuesto?»"
+          "hint": "Abra una solicitud: la necesidad, los criterios, la puntuación calculada. Una vez aprobada, se convierte en proyecto con un clic."
         },
         "portfolio_import": {
           "title": "Sus datos",
-          "hint": "Importe su lista de proyectos."
+          "hint": "Exporte la lista de proyectos del ejemplo para ver su formato y luego importe la suya."
         },
         "own_projects": {
-          "title": "Sus proyectos",
-          "hint": "Importe su lista o cree el primer proyecto con su responsable y sus fechas."
+          "title": "Su proyecto",
+          "hint": "El proyecto nacido de la solicitud: responsable, fechas, equipo. Sus proyectos existentes se importan como lista."
         },
         "own_request": {
-          "title": "Una solicitud",
-          "hint": "Cree una solicitud, puntúela y conviértala en proyecto."
+          "title": "Su primera solicitud",
+          "hint": "Cree una solicitud, puntúela, apruébela y conviértala en proyecto."
         },
         "own_project_budget": {
-          "title": "El presupuesto de un proyecto",
-          "hint": "Vincule una línea presupuestaria a uno de sus proyectos en sus relaciones."
+          "title": "El presupuesto del proyecto",
+          "hint": "Vincule una línea presupuestaria a su proyecto en sus relaciones: el gasto le sigue."
         },
-        "own_planning": {
-          "title": "Su planificación",
-          "hint": "Sus proyectos en una línea de tiempo: añada una dependencia."
+        "map_applications": {
+          "title": "La lista de aplicaciones",
+          "hint": "Todas las aplicaciones del ejemplo, con su criticidad, su responsable y su empresa. Es el inventario: filtre, ordene."
+        },
+        "map_assets": {
+          "title": "Los servidores",
+          "hint": "Cada servidor indica dónde se ejecutan las aplicaciones: entorno, ubicación, tecnologías instaladas."
+        },
+        "own_findings": {
+          "title": "Lo que KANAP ha encontrado",
+          "hint": "Fin de soporte y vulnerabilidades conocidas de sus tecnologías, sin introducir nada más."
+        },
+        "portfolio_project": {
+          "title": "El proyecto que nació de ella",
+          "hint": "Abra un proyecto: objetivo, equipo, fases y, en Relaciones, la solicitud de origen, sus aplicaciones y sus líneas presupuestarias."
+        },
+        "portfolio_tasks": {
+          "title": "Las tareas",
+          "hint": "Las tareas del proyecto y de otros objetos: estado, prioridad, vencimiento. Una tarea atrasada aparece en Mis tareas de la página de inicio."
+        },
+        "portfolio_time": {
+          "title": "El tiempo y el esfuerzo",
+          "hint": "En un proyecto, la pestaña Esfuerzo compara el esfuerzo planificado con el tiempo registrado en sus tareas. Un 80 % de avance con un 20 % del esfuerzo consumido salta a la vista."
+        },
+        "own_tasks": {
+          "title": "Las primeras tareas",
+          "hint": "Cree las tareas del proyecto, asígnelas y registre el tiempo dedicado."
         }
       }
     }

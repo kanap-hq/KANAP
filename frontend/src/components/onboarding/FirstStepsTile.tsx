@@ -65,7 +65,9 @@ function EndScreen({ state }: { state: OnboardingState }) {
   const others = ONBOARDING_ANGLES.filter((angle) => angle !== state.angle);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-      <Typography variant="body2" sx={{ fontWeight: 500 }}>{t('onboarding.firstSteps.end.title')}</Typography>
+      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+        {t('onboarding.firstSteps.end.title', { path: t(`onboarding.about.angles.${state.angle ?? 'none'}`) })}
+      </Typography>
       <Typography variant="body2">
         {t('onboarding.firstSteps.end.others')}{' '}
         {others.map((angle, index) => (
