@@ -1711,5 +1711,28 @@
         }
       }
     }
+  },
+  "creation": {
+    "cancel": "Erstellung abbrechen",
+    "confirmTitle": "Erstellung abbrechen",
+    "confirmMessage": "{{record}} und was Sie hinzugefügt haben ({{changes}}) werden gelöscht.",
+    "keep": "Behalten",
+    "cancelFailed": "Die Erstellung konnte nicht abgebrochen werden.",
+    "changes": {
+      "fields_one": "{{count}} Feld",
+      "fields_other": "{{count}} Felder",
+      "relations_one": "{{count}} Beziehung",
+      "relations_other": "{{count}} Beziehungen",
+      "deployments_one": "{{count}} Bereitstellung",
+      "deployments_other": "{{count}} Bereitstellungen",
+      "links_one": "{{count}} Link",
+      "links_other": "{{count}} Links",
+      "attachments_one": "{{count}} Anhang",
+      "attachments_other": "{{count}} Anhänge",
+      "documents_one": "{{count}} Dokument",
+      "documents_other": "{{count}} Dokumente",
+      "description_one": "die Beschreibung",
+      "description_other": "die Beschreibung"
+    }
   }
 }

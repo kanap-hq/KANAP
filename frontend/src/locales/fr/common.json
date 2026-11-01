@@ -1711,5 +1711,28 @@
         }
       }
     }
+  },
+  "creation": {
+    "cancel": "Annuler la création",
+    "confirmTitle": "Annuler la création",
+    "confirmMessage": "{{record}} et ce que vous avez ajouté ({{changes}}) seront supprimés.",
+    "keep": "Conserver",
+    "cancelFailed": "La création n’a pas pu être annulée.",
+    "changes": {
+      "fields_one": "{{count}} champ",
+      "fields_other": "{{count}} champs",
+      "relations_one": "{{count}} relation",
+      "relations_other": "{{count}} relations",
+      "deployments_one": "{{count}} déploiement",
+      "deployments_other": "{{count}} déploiements",
+      "links_one": "{{count}} lien",
+      "links_other": "{{count}} liens",
+      "attachments_one": "{{count}} pièce jointe",
+      "attachments_other": "{{count}} pièces jointes",
+      "documents_one": "{{count}} document",
+      "documents_other": "{{count}} documents",
+      "description_one": "la description",
+      "description_other": "la description"
+    }
   }
 }
