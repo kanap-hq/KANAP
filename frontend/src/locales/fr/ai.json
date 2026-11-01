@@ -404,7 +404,8 @@
       "builtinNotAccepted": "Un administrateur doit confirmer le fournisseur d'IA dans Administration > Plaid."
     },
     "suggestions": {
-      "applicationMention": "Résume @APP-",
+      "applicationMention": "Résume une application : tapez @ pour la choisir",
+      "budgetLines": "Quelles sont mes cinq plus grosses lignes budgétaires cette année ?",
       "knowledgeSearch": "Trouve des documents sur les sauvegardes",
       "myProjects": "Quels projets me sont assignés ?",
       "overdueTasks": "Liste mes tâches en retard"
