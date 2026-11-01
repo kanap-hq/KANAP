@@ -39,7 +39,6 @@ export const STEP_SCREENS: Record<string, StepScreen> = {
   own_applications: title('/it/applications'),
   own_technologies: title('/it/technologies'),
   own_assets: title('/it/assets'),
-  own_findings: title('/it/technologies/end-of-support'),
   portfolio_request: { to: '/portfolio/requests', target: 'tabs', opensRecord: 'topScoredRequest' },
   portfolio_project: { to: '/portfolio/projects', target: 'tabs', opensRecord: 'projectFromRequest' },
   portfolio_tasks: title('/portfolio/tasks'),

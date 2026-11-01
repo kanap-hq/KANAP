@@ -1694,10 +1694,6 @@
           "title": "Die Server",
           "hint": "Jeder Server zeigt, wo die Anwendungen laufen: Umgebung, Standort, installierte Technologien. Öffnen Sie einen Datensatz, um mehr zu erfahren."
         },
-        "own_findings": {
-          "title": "Was KANAP gefunden hat",
-          "hint": "Supportende und bekannte Schwachstellen Ihrer Technologien, ohne weitere Eingabe."
-        },
         "portfolio_project": {
           "title": "Das aus der Anfrage entstandene Projekt",
           "hint": "Hier ist ein aus einer Anfrage entstandenes Projekt: Ziel, Team, Phasen und unter Beziehungen die ursprüngliche Anfrage, seine Anwendungen und seine Budgetzeilen."

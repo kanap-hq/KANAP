@@ -1694,10 +1694,6 @@
           "title": "Les serveurs",
           "hint": "Chaque serveur dit où tournent les applications : environnement, site, technologies installées. Ouvrez une fiche pour en savoir plus."
         },
-        "own_findings": {
-          "title": "Ce que KANAP a trouvé",
-          "hint": "Fins de support et failles connues de vos technologies, sans rien saisir de plus."
-        },
         "portfolio_project": {
           "title": "Le projet issu de la demande",
           "hint": "Voici un projet issu d'une demande : objectif, équipe, phases, et dans Relations la demande d'origine, ses applications et ses lignes budgétaires."

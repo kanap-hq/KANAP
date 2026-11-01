@@ -1694,10 +1694,6 @@
           "title": "The servers",
           "hint": "Each server tells where the applications run: environment, site, installed technologies. Open a record to learn more."
         },
-        "own_findings": {
-          "title": "What KANAP found",
-          "hint": "End of support and known vulnerabilities of your technologies, with nothing more to enter."
-        },
         "portfolio_project": {
           "title": "The project born from the request",
           "hint": "Here is a project born from a request: objective, team, phases, and under Relations the original request, its applications and its budget lines."

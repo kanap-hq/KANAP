@@ -1694,10 +1694,6 @@
           "title": "Los servidores",
           "hint": "Cada servidor indica dónde se ejecutan las aplicaciones: entorno, ubicación, tecnologías instaladas. Abra una ficha para saber más."
         },
-        "own_findings": {
-          "title": "Lo que KANAP ha encontrado",
-          "hint": "Fin de soporte y vulnerabilidades conocidas de sus tecnologías, sin introducir nada más."
-        },
         "portfolio_project": {
           "title": "El proyecto nacido de la solicitud",
           "hint": "Este es un proyecto nacido de una solicitud: objetivo, equipo, fases y, en Relaciones, la solicitud de origen, sus aplicaciones y sus líneas presupuestarias."
