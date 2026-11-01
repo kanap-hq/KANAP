@@ -325,7 +325,7 @@ async function testSteps() {
     ok(await asOwner.choose({ angle: 'budget' }), 'angle only');
     refused(await asOwner.done('budget_overview'), 409, 'no_choice', 'done without a mode');
     ok(await asOwner.choose({ mode: 'example' }), 'mode');
-    refused(await asOwner.done('map_overview'), 400, 'unknown_step', 'a step of another path');
+    refused(await asOwner.done('map_applications'), 400, 'unknown_step', 'a step of another path');
     refused(await asOwner.done('nothing'), 400, 'unknown_step', 'an unknown step');
     refused(await asOwner.undo('own_company'), 400, 'unknown_step', 'undo a step of another path');
 
