@@ -70,43 +70,78 @@ const FeaturesContext = createContext<{ config: FeaturesConfig; isLoading: boole
   isLoading: true,
 });
 
+/** A read that does not answer within this delay is abandoned and retried. */
+const REQUEST_TIMEOUT_MS = 5000;
+/** Delay before the first retry, doubled after each failure up to RETRY_MAX_MS. */
+const RETRY_BASE_MS = 1000;
+const RETRY_MAX_MS = 30000;
+
 export function FeaturesProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<FeaturesConfig>(CLOUD_DEFAULTS);
+  // True until the server has answered once. A failed read is retried and never ends the loading:
+  // the defaults would hide the menus and routes of every feature they switch off (a deep link
+  // to one would fall to the catch-all), so nothing renders on them.
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // An effect torn down before its read answers (unmount, or the development double run) leaves
     // the state to the next one: marking it loaded here would show the routes with the defaults.
     let cancelled = false;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    let loaded = false;
+    let failures = 0;
+    let inFlight: AbortController | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
     const apiBase = (import.meta.env.VITE_API_URL as string | undefined) || '/api';
     const base = apiBase.replace(/\/$/, '');
 
-    fetch(`${base}/config/public`, { signal: controller.signal })
-      .then((res) => {
+    const stopListening = () => {
+      window.removeEventListener('focus', retryNow);
+      window.removeEventListener('online', retryNow);
+    };
+
+    const load = async () => {
+      if (cancelled || loaded || inFlight) return;
+      clearTimeout(retryTimer);
+      retryTimer = undefined;
+      const controller = new AbortController();
+      inFlight = controller;
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        const res = await fetch(`${base}/config/public`, { signal: controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data: FeaturesConfigResponse) => {
-        if (!cancelled) setConfig(normalizeFeaturesConfig(data));
-      })
-      .catch((err) => {
-        if (err.name !== 'AbortError') {
-          console.warn('[Features] Failed to fetch config, using cloud defaults:', err.message);
-        }
-        // fail-open: keep CLOUD_DEFAULTS
-      })
-      .finally(() => {
+        const data: FeaturesConfigResponse = await res.json();
+        if (cancelled) return;
+        loaded = true;
+        stopListening();
+        setConfig(normalizeFeaturesConfig(data));
+        setIsLoading(false);
+      } catch (err) {
+        if (cancelled) return;
+        const delay = Math.min(RETRY_BASE_MS * 2 ** failures, RETRY_MAX_MS);
+        failures += 1;
+        console.warn(`[Features] Failed to fetch config, retrying in ${delay / 1000} s:`, (err as Error)?.message);
+        retryTimer = setTimeout(() => void load(), delay);
+      } finally {
         clearTimeout(timeout);
-        if (!cancelled) setIsLoading(false);
-      });
+        if (inFlight === controller) inFlight = null;
+      }
+    };
+
+    // Back on the tab or the network: try again now instead of waiting for the next retry.
+    function retryNow() {
+      if (!loaded && !inFlight) void load();
+    }
+
+    window.addEventListener('focus', retryNow);
+    window.addEventListener('online', retryNow);
+    void load();
 
     return () => {
       cancelled = true;
-      clearTimeout(timeout);
-      controller.abort();
+      clearTimeout(retryTimer);
+      inFlight?.abort();
+      stopListening();
     };
   }, []);
 
