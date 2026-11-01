@@ -116,6 +116,9 @@ async function testProjectUpdateFields() {
     const error = await refusal(() => controller.update(PROJECT, body, contributor));
     assert.ok(error instanceof ForbiddenException, JSON.stringify(body));
     assert.match(error.message, /member level on projects/, 'names the missing right');
+    const response = error.getResponse() as { code?: string; params?: unknown };
+    assert.equal(response.code, 'MODULE_RIGHT_REQUIRED', 'the screen translates the right');
+    assert.deepEqual(response.params, { resource: 'portfolio_projects', level: 'member' });
     assert.match(error.message, new RegExp(`^Changing ${Object.keys(body).filter((k) => !['purpose', 'planned_end'].includes(k)).join(', ')} needs`), 'names the refused fields only');
   }
   assert.deepEqual(calls, ['update', 'update'], 'nothing written after a refusal');
