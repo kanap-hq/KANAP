@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { codedForbidden } from '../auth/module-right-required';
 import { EntityManager } from 'typeorm';
 import { resolveBudgetLine } from '../common/resolve-item-id';
 import { timeZoneOf } from '../common/csv-sheet';
@@ -1895,7 +1896,10 @@ export class AiChatOrchestratorService {
         // The model became unavailable after the access check above (for instance, the
         // included model's confirmation was withdrawn meanwhile): refused like that check.
         if (error instanceof AiModelResolutionError) {
-          throw new ForbiddenException(error.message);
+          throw codedForbidden(
+            error.code === 'builtin_not_accepted' ? 'AI_INCLUDED_MODEL_NOT_ACCEPTED' : 'AI_NOT_CONFIGURED',
+            error.message,
+          );
         }
         throw error;
       }

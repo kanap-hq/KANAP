@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   HttpException,
   Logger,
@@ -13,6 +12,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { codedForbidden } from '../auth/module-right-required';
 import { randomBytes } from 'node:crypto';
 import { Request, Response } from 'express';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -170,7 +170,7 @@ export class AiMcpController {
     );
 
     if (!keyPolicy.valid) {
-      throw new ForbiddenException('MCP API key policy is invalid.');
+      throw codedForbidden('AI_MCP_KEY_POLICY_INVALID', 'MCP API key policy is invalid.');
     }
     if (methods.has('tools/list') && methods.has('tools/call')) {
       throw new BadRequestException('MCP JSON-RPC batches must not mix tools/list and tools/call requests.');

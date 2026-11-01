@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { moduleRightRequired } from '../auth/module-right-required';
+import { codedForbidden, moduleRightRequired, requestContextMissing } from '../auth/module-right-required';
 import { throwFeatureDisabled } from '../common/feature-gates';
 import { StripeConfigService } from '../billing/stripe';
 import { Subscription } from '../billing/subscription.entity';
@@ -313,7 +313,7 @@ export class AiPolicyService {
   ): Promise<EffectivePermissionState> {
     const state = await this.getEffectivePermissionStateOrNull(userId, manager);
     if (!state) {
-      throw new ForbiddenException('User is not allowed to use AI.');
+      throw codedForbidden('AI_USER_NOT_ALLOWED', 'User is not allowed to use AI.');
     }
     return state;
   }
@@ -335,7 +335,7 @@ export class AiPolicyService {
 
   private assertPlatformHostAllowed(context: Pick<AiExecutionContext, 'isPlatformHost'>): void {
     if (context.isPlatformHost) {
-      throw new ForbiddenException('AI is not available on the platform host.');
+      throw codedForbidden('AI_PLATFORM_HOST', 'AI is not available on the platform host.');
     }
   }
 
@@ -355,10 +355,10 @@ export class AiPolicyService {
       where: { id: tenantId },
     });
     if (!tenant) {
-      throw new ForbiddenException('Tenant not found.');
+      throw requestContextMissing('Tenant not found.');
     }
     if (tenant.status !== TenantStatus.ACTIVE) {
-      throw new ForbiddenException('AI is not available for this tenant while it is inactive.');
+      throw codedForbidden('AI_TENANT_INACTIVE', 'AI is not available for this tenant while it is inactive.');
     }
   }
 
@@ -606,7 +606,7 @@ export class AiPolicyService {
     const settings = await this.aiSettings.get(context.tenantId, { manager });
     if (context.surface === 'chat') {
       if (!settings.chat_enabled) {
-        throw new ForbiddenException('AI chat is disabled for this tenant.');
+        throw codedForbidden('AI_CHAT_DISABLED', 'AI chat is disabled for this tenant.');
       }
       // Agent runs and system work pass here to use KANAP tools. Every model call they
       // make goes through the model resolver, which checks the included model's
@@ -618,16 +618,16 @@ export class AiPolicyService {
         ? await this.aiSettings.getProviderErrorsWithoutConfirmation(settings, manager)
         : await this.aiSettings.getProviderValidationErrors(settings, manager);
       if (providerErrors.length > 0) {
-        throw new ForbiddenException('AI chat is not fully configured for this tenant.');
+        throw codedForbidden('AI_NOT_CONFIGURED', 'AI chat is not fully configured for this tenant.');
       }
     }
     if (context.surface === 'mcp') {
       if (!settings.mcp_enabled) {
-        throw new ForbiddenException('AI MCP access is disabled for this tenant.');
+        throw codedForbidden('AI_MCP_DISABLED', 'AI MCP access is disabled for this tenant.');
       }
       // MCP sends KANAP data to the user's own client, never to the included model.
       if ((await this.aiSettings.getProviderErrorsWithoutConfirmation(settings, manager)).length > 0) {
-        throw new ForbiddenException('AI MCP is not fully configured for this tenant.');
+        throw codedForbidden('AI_MCP_NOT_CONFIGURED', 'AI MCP is not fully configured for this tenant.');
       }
     }
 
@@ -822,7 +822,7 @@ export class AiPolicyService {
     requirement: AiWriteAccessRequirement = {},
   ): Promise<void> {
     if (context.surface !== 'chat') {
-      throw new ForbiddenException('MCP write access is not available.');
+      throw codedForbidden('AI_MCP_WRITE_UNAVAILABLE', 'MCP write access is not available.');
     }
 
     const level = requirement.level ?? 'member';
@@ -835,10 +835,14 @@ export class AiPolicyService {
       if (refused.length > 0) {
         const state = await this.getEffectivePermissionState(context.userId, manager);
         if (!this.hasPermission(state, businessResource, 'member')) {
-          throw new ForbiddenException(contributorFieldsMessage(
+          throw moduleRightRequired(
             businessResource,
-            refused.map((field) => requirement.fields?.[field] || field),
-          ));
+            'member',
+            contributorFieldsMessage(
+              businessResource,
+              refused.map((field) => requirement.fields?.[field] || field),
+            ),
+          );
         }
       }
     }

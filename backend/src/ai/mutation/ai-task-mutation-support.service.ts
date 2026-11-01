@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { assertLinesEditable } from '../../data-access/line-write-checks';
 import { validate as isUuid } from 'uuid';
 import { RelatedType } from '../../tasks/tasks-unified.service';
@@ -10,7 +10,7 @@ import {
   resolveAiParticipationAccessScope,
 } from '../query/ai-query-scope.util';
 import {
-  INCIDENT_LOCKED_MESSAGE,
+  incidentLocked,
   incidentVisibilitySql,
   isFrozenIncidentStatus,
   taskIncidentVisibilitySql,
@@ -321,7 +321,7 @@ export class AiTaskMutationSupportService {
     if (rows.length === 0) throw new NotFoundException(`No incident found matching "${raw}".`);
     if (rows.length > 1) throw new BadRequestException(`Multiple incidents matched "${raw}". Use an INC reference.`);
     const row = rows[0];
-    if (isFrozenIncidentStatus(row.status)) throw new ForbiddenException(INCIDENT_LOCKED_MESSAGE);
+    if (isFrozenIncidentStatus(row.status)) throw incidentLocked();
     const ref = row.item_number == null ? raw : `INC-${row.item_number}`;
     return {
       mode: 'incident',
