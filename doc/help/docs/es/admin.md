@@ -678,6 +678,7 @@ Abra **Acerca de KANAP** desde el menú de usuario, bajo **Cerrar sesión**. La 
 
 - La versión y el despliegue (nube o instalación local)
 - En la nube, durante una prueba, los días restantes, con un enlace **Elegir un plan** para los administradores de facturación
+- Durante una prueba, el recorrido elegido en la primera apertura, con **Cambiar**, y **Mostrar los primeros pasos** cuando el mosaico de los primeros pasos está oculto. Véase [Mi panel de control](my-dashboard.md#trial-first-steps)
 - Enlaces a las notas de esta versión, la documentación, kanap.net y el código fuente (licencia AGPL-3.0)
 - En instalación local, un enlace a la guía de actualización
 

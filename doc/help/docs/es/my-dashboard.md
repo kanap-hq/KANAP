@@ -40,6 +40,34 @@ Después de guardar, el mosaico de resumen de tiempo del panel se actualiza auto
 
 En un espacio de trabajo en la nube vacío, que nunca ha tenido datos de ejemplo, los administradores ven una línea sobre los mosaicos: «Descubra KANAP con datos de ejemplo.» **Cargar** abre el cuadro de diálogo de datos de ejemplo y **Ocultar** elimina la línea de forma definitiva. La línea desaparece en cuanto el espacio de trabajo contiene datos y no vuelve tras un borrado. Véase [Datos de ejemplo](sample-data.md).
 
+## Prueba: su recorrido y sus primeros pasos { #trial-first-steps }
+
+En un espacio de trabajo en prueba, se abre un cuadro de diálogo la primera vez que abre KANAP. Hace una pregunta por pantalla:
+
+1. **¿Qué le trae a KANAP?** **El presupuesto de TI**, **El mapa del SI**, **Los proyectos y las solicitudes** o **Solo estoy mirando**.
+2. **¿Cómo quiere empezar?** **Descubrir con el ejemplo completo** o **Empezar con mis datos**.
+
+Empezar con sus datos borra el ejemplo. Si se crearon elementos desde la carga del ejemplo, una confirmación indica su número antes de borrar nada. Solo un administrador puede elegir sus propios datos mientras el espacio de trabajo contiene el ejemplo.
+
+Mientras se carga el ejemplo, o mientras se borra el espacio de trabajo, una línea de la página de inicio lo indica.
+
+Si cierra el cuadro de diálogo, la elección queda pendiente en **Acerca de KANAP**. La línea **Recorrido: … · Cambiar** muestra el recorrido elegido (**Elegir** mientras no se ha elegido nada). Cualquiera puede cambiarlo mientras falta una respuesta. Después, solo los administradores pueden hacerlo.
+
+### Sus cinco primeros pasos
+
+Una vez elegido el recorrido, el mosaico **Sus cinco primeros pasos** aparece primero en la página de inicio. Enumera los cinco pasos del recorrido y su progreso, por ejemplo **2/5**. Cada paso abre su pantalla, donde el título de la página se resalta con una frase de explicación.
+
+- Con el ejemplo, abrir un paso lo marca como hecho.
+- Con sus datos, haga clic en **Hecho** en la explicación, o en la marca junto al paso en el mosaico. La marca también deshace un paso.
+
+Cuando los cinco pasos están hechos, el mosaico ofrece los otros dos recorridos. El botón de cierre (**×**) oculta el mosaico. Para mostrarlo de nuevo, use **Mostrar los primeros pasos** en **Acerca de KANAP**.
+
+| Recorrido | Con el ejemplo | Con sus datos |
+|---|---|---|
+| Presupuesto de TI | La vista general, Una línea presupuestaria, Un informe, Una pregunta a Plaid, Sus datos | Su empresa, Sus líneas, Un contrato vinculado, Su primer informe, Un colega |
+| Mapa del SI | El mapa de interfaces, Una aplicación, Tecnologías y fin de soporte, Vulnerabilidades, Sus datos | Sus aplicaciones, Sus tecnologías, Sus servidores, Su primer mapa, Un colega |
+| Proyectos y solicitudes | La cartera, Una solicitud y su puntuación, La planificación, Una pregunta a Plaid, Sus datos | Sus proyectos, Una solicitud, El presupuesto de un proyecto, Su planificación, Un colega |
+
 ## Línea para activar Plaid
 
 Durante una prueba en la nube, los administradores de la configuración de Plaid ven una línea bajo la línea de datos de ejemplo mientras Plaid está desactivado y se ofrece el modelo incluido de KANAP: «Plaid, el asistente de KANAP, está desactivado.» **Activar** abre la confirmación habitual del modelo incluido. Al confirmar, Plaid se activa. El botón de cierre (**×**) oculta la línea en este navegador. La línea no aparece tras el paso a un plan de pago, ni en instalaciones locales. Véase [Configuración de Plaid](ai-settings.md).
