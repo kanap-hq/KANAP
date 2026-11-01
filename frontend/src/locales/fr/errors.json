@@ -265,6 +265,7 @@
   "deployment_environment_invalid": "Environnement inconnu : {{value}}. Choisissez un environnement de la liste.",
   "body_required": "La requête est vide.",
   "asset_required": "Choisissez un serveur.",
+  "asset_location_required": "Choisissez un site.",
   "asset_hostname_invalid": "« {{value}} » n'est pas un nom d'hôte valide.",
   "asset_ip_invalid": "« {{value}} » n'est pas une adresse IP valide.",
   "asset_ip_taken": "« {{value}} » est déjà utilisée par {{name}} dans le sous-réseau {{subnet}}.",

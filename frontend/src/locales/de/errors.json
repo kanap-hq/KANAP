@@ -265,6 +265,7 @@
   "deployment_environment_invalid": "Unbekannte Umgebung: {{value}}. Wählen Sie eine Umgebung aus der Liste.",
   "body_required": "Die Anfrage ist leer.",
   "asset_required": "Wählen Sie einen Server.",
+  "asset_location_required": "Wählen Sie einen Standort.",
   "asset_hostname_invalid": "„{{value}}“ ist kein gültiger Hostname.",
   "asset_ip_invalid": "„{{value}}“ ist keine gültige IP-Adresse.",
   "asset_ip_taken": "„{{value}}“ wird im Subnetz {{subnet}} bereits von {{name}} verwendet.",
