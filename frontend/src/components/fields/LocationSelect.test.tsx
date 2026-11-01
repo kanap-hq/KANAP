@@ -49,8 +49,11 @@ describe('LocationSelect', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('en');
     auth.create = true;
-    get.mockReset().mockResolvedValue({ data: { items: [{ id: 'loc-1', location_reference: 'LOC-1', name: 'Lyon' }] } });
-    post.mockReset().mockResolvedValue({ data: { id: 'loc-2', location_reference: 'LOC-2', name: 'Paris' } });
+    get.mockReset().mockImplementation(async (url: string) => (url === '/locations/loc-2'
+      ? { data: { id: 'loc-2', location_reference: 'LOC-2', name: 'Paris', hosting_type: 'on_prem' } }
+      : { data: { items: [{ id: 'loc-1', location_reference: 'LOC-1', name: 'Lyon' }] } }));
+    // The creation answers without the reference, as the API does.
+    post.mockReset().mockResolvedValue({ data: { id: 'loc-2', name: 'Paris' } });
   });
   afterEach(() => cleanup());
 

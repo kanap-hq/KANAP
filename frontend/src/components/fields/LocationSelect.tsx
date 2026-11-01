@@ -85,8 +85,9 @@ function CreateLocationDialog({
     setNameError(null);
     setServerError(null);
     try {
-      const res = await api.post('/locations', { name: trimmed, hosting_type: hostingType });
-      const saved = res.data as LocationOption;
+      const res = await api.post<{ id: string }>('/locations', { name: trimmed, hosting_type: hostingType });
+      // The creation answers the record without its reference (LOC-n): read the site as the picker shows it.
+      const saved = (await api.get<LocationOption>(`/locations/${res.data.id}`)).data;
       const option: LocationOption = { id: saved.id, location_reference: saved.location_reference, name: saved.name };
       queryClient.setQueryData<LocationOption[]>(LOCATION_OPTIONS_QUERY_KEY, (old) => [...(old ?? []), option]);
       void queryClient.invalidateQueries({ queryKey: ['locations'] });
