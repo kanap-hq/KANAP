@@ -298,20 +298,17 @@
     "workOverview": "Aquí tiene un resumen de su trabajo",
     "createTask": "Crear tarea",
     "logTime": "Registrar tiempo",
-    "newRequest": "Nueva solicitud",
+    "newBudgetLine": "Nueva línea presupuestaria",
     "newApplication": "Nueva aplicación",
     "newAsset": "Nuevo activo",
     "newDocument": "Nuevo documento",
-    "dashboardSettings": "Configuración del panel",
-    "noTilesEnabled": "No hay mosaicos activados. Haga clic en el icono de configuración para personalizar su panel.",
+    "noTilesEnabled": "No hay mosaicos activados. Elija sus mosaicos con «Personalizar la página de inicio».",
+    "allTilesEmpty": "Sus mosaicos todavía no tienen nada que mostrar.",
     "blankDocument": "Documento en blanco",
     "fromTemplate": "Desde plantilla…",
     "selectTemplate": "Seleccionar plantilla",
     "useTemplate": "Usar plantilla",
     "noTemplatesAvailable": "No hay plantillas publicadas disponibles.",
-    "newOpexLine": "Nueva línea OPEX",
-    "newCapexLine": "Nueva línea CAPEX",
-    "newContract": "Nuevo contrato",
     "newOpex": "Nuevo OPEX",
     "newCapex": "Nuevo CAPEX",
     "recentUpdates": "Actualizaciones recientes",
@@ -334,7 +331,6 @@
     },
     "topItems": "Top líneas",
     "columnY": "{{column}}, A",
-    "topIncreases": "Mayores incrementos",
     "columnYvsYminus1": "{{column}}, A vs A-1",
     "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "Sin incrementos",
@@ -353,8 +349,6 @@
     "byCostCenter": "Por centro de coste",
     "noCostCenter": "Sin centro de coste",
     "settings": {
-      "title": "Configuración del panel",
-      "description": "Active o desactive los mosaicos, ajuste sus opciones y arrástrelos para reordenarlos.",
       "resetToDefaults": "Restablecer valores predeterminados",
       "dragToReorder": "Arrastrar para reordenar",
       "options": {
@@ -363,7 +357,8 @@
         "days": "Días mostrados",
         "scope": "Ámbito",
         "thresholdDays": "Umbral (días)"
-      }
+      },
+      "hideEmptyTiles": "Ocultar los mosaicos sin contenido"
     },
     "quickCreate": {
       "createTask": "Crear tarea",
@@ -524,12 +519,27 @@
     },
     "welcome": "Bienvenido",
     "budgetSettings": {
-      "customize": "Personalizar",
-      "title": "Configuración del panel de control del presupuesto",
       "columns": "Columnas de importes",
       "tenantColumns": "Columnas del espacio de trabajo",
-      "atLeastOne": "Seleccione al menos una columna de importes.",
       "saveFailed": "No se pudo guardar la configuración del panel de control."
+    },
+    "sections": {
+      "work": "Mi trabajo"
+    },
+    "customize": {
+      "start": "Personalizar la página de inicio",
+      "done": "Listo",
+      "addTile": "Añadir un mosaico",
+      "hideTile": "Ocultar el mosaico",
+      "tileOptions": "Opciones del mosaico",
+      "moveSection": "Arrastrar para mover la sección",
+      "hideSection": "Ocultar la sección",
+      "showSection": "Mostrar la sección"
+    },
+    "topLinesMode": {
+      "label": "Clasificación",
+      "amount": "Importe",
+      "increase": "Aumento"
     }
   },
   "csv": {

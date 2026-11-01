@@ -298,20 +298,17 @@
     "workOverview": "Hier ist eine Übersicht Ihrer Arbeit",
     "createTask": "Aufgabe erstellen",
     "logTime": "Zeit erfassen",
-    "newRequest": "Neue Anfrage",
+    "newBudgetLine": "Neue Budgetzeile",
     "newApplication": "Neue Anwendung",
     "newAsset": "Neues Asset",
     "newDocument": "Neues Dokument",
-    "dashboardSettings": "Dashboard-Einstellungen",
-    "noTilesEnabled": "Keine Kacheln aktiviert. Klicken Sie auf das Einstellungssymbol, um Ihr Dashboard zu konfigurieren.",
+    "noTilesEnabled": "Keine Kacheln aktiviert. Wählen Sie Ihre Kacheln über „Startseite anpassen“.",
+    "allTilesEmpty": "Ihre Kacheln haben noch nichts anzuzeigen.",
     "blankDocument": "Leeres Dokument",
     "fromTemplate": "Aus Vorlage…",
     "selectTemplate": "Vorlage auswählen",
     "useTemplate": "Vorlage verwenden",
     "noTemplatesAvailable": "Keine veröffentlichten Vorlagen verfügbar.",
-    "newOpexLine": "Neue OPEX-Zeile",
-    "newCapexLine": "Neue CAPEX-Zeile",
-    "newContract": "Neuer Vertrag",
     "newOpex": "Neuer OPEX",
     "newCapex": "Neuer CAPEX",
     "recentUpdates": "Aktuelle Änderungen",
@@ -334,7 +331,6 @@
     },
     "topItems": "Top-Zeilen",
     "columnY": "{{column}}, J",
-    "topIncreases": "Stärkste Zuwächse",
     "columnYvsYminus1": "{{column}}, J vs J-1",
     "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "Keine Zuwächse",
@@ -353,8 +349,6 @@
     "byCostCenter": "Nach Kostenstelle",
     "noCostCenter": "Ohne Kostenstelle",
     "settings": {
-      "title": "Dashboard-Einstellungen",
-      "description": "Kacheln ein- oder ausschalten, ihre Optionen anpassen und per Ziehen neu anordnen.",
       "resetToDefaults": "Auf Standardwerte zurücksetzen",
       "dragToReorder": "Zum Neuanordnen ziehen",
       "options": {
@@ -363,7 +357,8 @@
         "days": "Angezeigte Tage",
         "scope": "Bereich",
         "thresholdDays": "Schwelle (Tage)"
-      }
+      },
+      "hideEmptyTiles": "Kacheln ohne Inhalt ausblenden"
     },
     "quickCreate": {
       "createTask": "Aufgabe erstellen",
@@ -524,12 +519,27 @@
     },
     "welcome": "Willkommen",
     "budgetSettings": {
-      "customize": "Anpassen",
-      "title": "Einstellungen des Budget-Dashboards",
       "columns": "Betragsspalten",
       "tenantColumns": "Spalten des Arbeitsbereichs",
-      "atLeastOne": "Wählen Sie mindestens eine Betragsspalte.",
       "saveFailed": "Die Dashboard-Einstellungen konnten nicht gespeichert werden."
+    },
+    "sections": {
+      "work": "Meine Arbeit"
+    },
+    "customize": {
+      "start": "Startseite anpassen",
+      "done": "Fertig",
+      "addTile": "Kachel hinzufügen",
+      "hideTile": "Kachel ausblenden",
+      "tileOptions": "Kacheloptionen",
+      "moveSection": "Ziehen, um den Abschnitt zu verschieben",
+      "hideSection": "Abschnitt ausblenden",
+      "showSection": "Abschnitt einblenden"
+    },
+    "topLinesMode": {
+      "label": "Rangfolge",
+      "amount": "Betrag",
+      "increase": "Anstieg"
     }
   },
   "csv": {

@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import type { FeaturesConfig } from '../../../config/FeaturesContext';
+import type { SectionId } from '../sections';
 
 /** A runtime feature flag of `GET /config/public`. */
 export type Features = FeaturesConfig['features'];
@@ -32,6 +33,8 @@ export interface TileDefinition {
   }>;
   /** The tile exists only while this feature flag is on (absent from the dashboard and its settings otherwise). */
   requiredFeature?: keyof Features;
+  /** The home page section that holds the tile. */
+  section: SectionId;
 }
 
 // Lazy load tile components to avoid circular imports
@@ -56,6 +59,7 @@ const Placeholder: ComponentType<any> = () => null;
 
 export const TILE_REGISTRY: Record<string, TileDefinition> = {
   'my-tasks': {
+    section: 'work',
     component: Placeholder, // Will be replaced
     title: 'My Tasks',
     titleKey: 'dashboard.myTasks',
@@ -68,6 +72,7 @@ export const TILE_REGISTRY: Record<string, TileDefinition> = {
     requiredPermissions: [{ resource: 'tasks', level: 'reader' }],
   },
   'projects-i-lead': {
+    section: 'portfolio',
     component: Placeholder,
     title: 'Projects I Lead',
     titleKey: 'dashboard.tiles.projectsILead',
@@ -79,6 +84,7 @@ export const TILE_REGISTRY: Record<string, TileDefinition> = {
     requiredPermissions: [{ resource: 'portfolio_projects', level: 'reader' }],
   },
   'projects-i-contribute': {
+    section: 'portfolio',
     component: Placeholder,
     title: 'Projects I Contribute To',
     titleKey: 'dashboard.tiles.projectsIContribute',
@@ -90,6 +96,7 @@ export const TILE_REGISTRY: Record<string, TileDefinition> = {
     requiredPermissions: [{ resource: 'portfolio_projects', level: 'reader' }],
   },
   'recently-viewed': {
+    section: 'work',
     component: Placeholder,
     title: 'Recently Viewed',
     titleKey: 'dashboard.tiles.recentlyViewed',
@@ -101,6 +108,7 @@ export const TILE_REGISTRY: Record<string, TileDefinition> = {
     // No requiredPermissions - always visible
   },
   'my-time-last-week': {
+    section: 'work',
     component: Placeholder,
     title: 'My Time Last Week',
     titleKey: 'dashboard.tiles.myTimeTitle',
@@ -112,6 +120,7 @@ export const TILE_REGISTRY: Record<string, TileDefinition> = {
     requiredPermissions: [{ resource: 'portfolio_projects', level: 'reader' }],
   },
   'new-requests': {
+    section: 'portfolio',
     component: Placeholder,
     title: 'New Requests',
     titleKey: 'dashboard.tiles.newRequestsTitle',
@@ -124,6 +133,7 @@ export const TILE_REGISTRY: Record<string, TileDefinition> = {
     requiredPermissions: [{ resource: 'portfolio_requests', level: 'reader' }],
   },
   'knowledge-overview': {
+    section: 'work',
     component: Placeholder,
     title: 'Knowledge',
     titleKey: 'dashboard.tiles.knowledge',
@@ -133,6 +143,7 @@ export const TILE_REGISTRY: Record<string, TileDefinition> = {
     requiredPermissions: [{ resource: 'knowledge', level: 'reader' }],
   },
   'application-compliance': {
+    section: 'landscape',
     component: Placeholder,
     title: 'Compliance',
     titleKey: 'dashboard.tiles.compliance',
@@ -142,6 +153,7 @@ export const TILE_REGISTRY: Record<string, TileDefinition> = {
     requiredPermissions: [{ resource: 'applications', level: 'reader' }],
   },
   'netbox-sync': {
+    section: 'landscape',
     component: Placeholder,
     title: 'Netbox synchronisation',
     titleKey: 'dashboard.tiles.netboxSync',
@@ -151,6 +163,7 @@ export const TILE_REGISTRY: Record<string, TileDefinition> = {
     requiredPermissions: [{ resource: 'infrastructure', level: 'admin' }],
   },
   vulnerabilities: {
+    section: 'landscape',
     component: Placeholder,
     title: 'Vulnerabilities in your estate',
     titleKey: 'dashboard.tiles.vulnerabilities',
@@ -162,6 +175,7 @@ export const TILE_REGISTRY: Record<string, TileDefinition> = {
   },
   // Phase 2 tiles
   'team-activity': {
+    section: 'portfolio',
     component: Placeholder,
     title: 'Team Activity',
     titleKey: 'dashboard.tiles.teamActivity',
@@ -174,6 +188,7 @@ export const TILE_REGISTRY: Record<string, TileDefinition> = {
     requiredPermissions: [{ resource: 'portfolio_projects', level: 'reader' }],
   },
   'global-status-changes': {
+    section: 'portfolio',
     component: Placeholder,
     title: 'Project Status Changes',
     titleKey: 'dashboard.tiles.statusChangesTitle',
@@ -185,6 +200,7 @@ export const TILE_REGISTRY: Record<string, TileDefinition> = {
     requiredPermissions: [{ resource: 'portfolio_projects', level: 'reader' }],
   },
   'stale-tasks': {
+    section: 'work',
     component: Placeholder,
     title: 'Stale Tasks',
     titleKey: 'dashboard.tiles.staleTasks',

@@ -298,20 +298,17 @@
     "workOverview": "Here's an overview of your work",
     "createTask": "Create task",
     "logTime": "Log time",
-    "newRequest": "New request",
+    "newBudgetLine": "New budget line",
     "newApplication": "New application",
     "newAsset": "New asset",
     "newDocument": "New document",
-    "dashboardSettings": "Dashboard settings",
-    "noTilesEnabled": "No tiles enabled. Click the settings icon to configure your dashboard.",
+    "noTilesEnabled": "No tiles enabled. Use Customize the home page to choose your tiles.",
+    "allTilesEmpty": "Your tiles have nothing to show yet.",
     "blankDocument": "Blank document",
     "fromTemplate": "From template…",
     "selectTemplate": "Select template",
     "useTemplate": "Use template",
     "noTemplatesAvailable": "No published templates are available.",
-    "newOpexLine": "New OPEX line",
-    "newCapexLine": "New CAPEX line",
-    "newContract": "New contract",
     "newOpex": "New OPEX",
     "newCapex": "New CAPEX",
     "recentUpdates": "Recent updates",
@@ -334,7 +331,6 @@
     },
     "topItems": "Top lines",
     "columnY": "{{column}}, Y",
-    "topIncreases": "Top increases",
     "columnYvsYminus1": "{{column}}, Y vs Y-1",
     "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "No increases",
@@ -353,8 +349,6 @@
     "byCostCenter": "By cost center",
     "noCostCenter": "No cost center",
     "settings": {
-      "title": "Dashboard settings",
-      "description": "Enable or disable tiles, adjust their options and drag them to reorder.",
       "resetToDefaults": "Reset to defaults",
       "dragToReorder": "Drag to reorder",
       "options": {
@@ -363,7 +357,8 @@
         "days": "Days to show",
         "scope": "Scope",
         "thresholdDays": "Threshold (days)"
-      }
+      },
+      "hideEmptyTiles": "Hide tiles without content"
     },
     "quickCreate": {
       "createTask": "Create task",
@@ -524,12 +519,27 @@
     },
     "welcome": "Welcome",
     "budgetSettings": {
-      "customize": "Customize",
-      "title": "Budget dashboard settings",
       "columns": "Amount columns",
       "tenantColumns": "Workspace columns",
-      "atLeastOne": "Choose at least one amount column.",
       "saveFailed": "Could not save the dashboard settings."
+    },
+    "sections": {
+      "work": "My work"
+    },
+    "customize": {
+      "start": "Customize the home page",
+      "done": "Done",
+      "addTile": "Add a tile",
+      "hideTile": "Hide the tile",
+      "tileOptions": "Tile options",
+      "moveSection": "Drag to move the section",
+      "hideSection": "Hide the section",
+      "showSection": "Show the section"
+    },
+    "topLinesMode": {
+      "label": "Ranking",
+      "amount": "Amount",
+      "increase": "Increase"
     }
   },
   "csv": {

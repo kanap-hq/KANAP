@@ -1,6 +1,6 @@
 # Mon tableau de bord
 
-Le Tableau de bord est votre page d'accueil personnelle dans KANAP. Il vous donne un aperçu rapide de vos tâches, projets, temps enregistré et activité récente, le tout en un seul endroit. Vous pouvez personnaliser les tuiles affichées, et le tableau de bord masque toute tuile que vous n'avez pas l'autorisation de voir.
+Le Tableau de bord est votre page d'accueil personnelle dans KANAP. Il vous donne un aperçu rapide de vos tâches, projets, applications et budget. Vous choisissez ses tuiles et leur ordre. Les tuiles que vous n'avez pas l'autorisation de voir sont masquées.
 
 ## Où le trouver
 
@@ -14,11 +14,11 @@ La bande d'en-tête en haut du tableau de bord fournit des boutons de raccourci 
 
 - **Créer une tâche** : ouvre le flux de création de tâche autonome. Nécessite `tasks:member` ou supérieur.
 - **Enregistrer du temps** : ouvre la boîte de dialogue **Enregistrement rapide du temps** (voir ci-dessous). Nécessite `portfolio_projects:contributor` ou `tasks:member`.
-- **Nouvelle demande** : ouvre le flux de création de demande. Nécessite `portfolio_requests:member` ou supérieur.
+- **Nouvelle ligne budgétaire** : ouvre une nouvelle ligne budgétaire. Elle démarre en OPEX, et la ligne **Type** de son panneau Propriétés la passe en CAPEX (voir [Lignes budgétaires](budget-lines.md#lespace-de-travail)). Nécessite `budget:member` ou supérieur.
 - **Nouvelle application** : ouvre le flux de création d'application. Nécessite `applications:member` ou supérieur.
 - **Nouvel actif** : ouvre le flux de création d'actif. Nécessite `infrastructure:member` ou supérieur.
 - **Nouveau document** (bouton à options) : crée un document de connaissances vierge, ou ouvre le sélecteur de modèles pour démarrer à partir d'un modèle publié. Nécessite `knowledge:member` ou supérieur.
-- **Paramètres** (icône engrenage) : ouvre la boîte de dialogue des paramètres du tableau de bord pour choisir les tuiles à afficher.
+- **Personnaliser l'accueil** (icône de curseurs, à droite) : fait passer la page en mode personnalisation. Voir [Personnaliser votre tableau de bord](#customizing-the-budget-section).
 
 ### Enregistrement rapide du temps
 
@@ -70,13 +70,13 @@ Quand les cinq étapes sont faites, la tuile propose les deux autres parcours. E
 
 ### La page d'accueil suit votre parcours
 
-Pendant un essai, la page d'accueil place en premier les tuiles de votre parcours :
+Pendant un essai, la section de votre parcours vient en premier, ouverte par la tuile des premiers pas :
 
-- **Budget IT** : la [section Gestion budgétaire](#budget-management-section) vient en premier, précédée de la tuile des premiers pas.
-- **Cartographie du SI** : les tuiles **Conformité**, **Vulnérabilités du parc** et **Synchronisation Netbox** viennent en premier.
-- **Projets et demandes** : les tuiles des projets et des demandes viennent en premier.
+- **Budget IT** : **Gestion budgétaire**.
+- **Cartographie du SI** : **Cartographie SI**.
+- **Projets et demandes** : **Portefeuille**.
 
-Sans parcours, les tuiles gardent leur ordre habituel.
+Sans parcours, les sections gardent leur ordre par défaut. Dès que vous ordonnez les sections vous-même, votre ordre s'applique.
 
 ## Ligne pour activer Plaid
 
@@ -84,7 +84,28 @@ Pendant un essai sur le cloud, les administrateurs des paramètres de Plaid voie
 
 ## Tuiles du tableau de bord
 
-Le tableau de bord affiche une grille de tuiles, chacune montrant un aspect différent de votre travail. Les tuiles sont disposées dans une grille responsive (trois colonnes sur les grands écrans, deux sur les moyens, une sur les petits). Les tuiles que vous n'avez pas l'autorisation de voir ne sont pas chargées du tout.
+La page d'accueil regroupe ses tuiles en quatre sections, chacune avec son titre. Par défaut, elles viennent dans cet ordre :
+
+- **Mon travail** : **Mes tâches**, **Récemment consultés**, **Mon temps la semaine dernière**, **Connaissances**, **Tâches en attente**.
+- **Portefeuille** : **Projets que je dirige**, **Projets auxquels je contribue**, **Nouvelles demandes**, **Activité de l'équipe**, **Changements de statut des projets**.
+- **Cartographie SI** : **Conformité**, **Vulnérabilités du parc**, **Synchronisation Netbox**.
+- **Gestion budgétaire** : les [tuiles du budget](#budget-management-section).
+
+Une section apparaît quand vous pouvez lire l'une de ses tuiles. Les tuiles que vous n'avez pas l'autorisation de voir ne sont pas chargées du tout.
+
+### Disposition
+
+Les tuiles partagent une même grille : quatre colonnes sur un écran très large, trois sur un grand écran, deux sur un écran moyen, une sur mobile. Une section occupe autant de colonnes qu'elle affiche de tuiles, jusqu'à une rangée entière : les sections courtes partagent ainsi une rangée. Une section plus longue s'étend sur plusieurs rangées.
+
+### Tuiles par défaut
+
+Tant que vous n'avez pas personnalisé la page, elle affiche **Mes tâches**, **Projets que je dirige**, **Conformité** et **Vulnérabilités du parc**, puis **Budget**, **Top lignes** et **Mises à jour récentes**. Les autres tuiles sont désactivées : activez-les en [mode personnalisation](#customizing-the-budget-section). Les paramètres que vous avez déjà enregistrés sont conservés.
+
+### Tuiles sans contenu
+
+Avec **Masquer les tuiles sans contenu** activé (par défaut), une tuile qui n'a rien à afficher est retirée de la page. C'est le cas d'une liste vide, de compteurs tous à zéro (par exemple **Hygiène des données** avec tous les contrôles à zéro, ou **Vulnérabilités du parc** avec toutes les lignes à zéro), de **Conformité** sans aucune application, et de **Synchronisation Netbox** quand Netbox n'est pas connecté ou qu'il n'y a rien à décider. Une tuile revient dès qu'elle a quelque chose à afficher. Une tuile encore en chargement ou dont le chargement a échoué reste visible. Une section sans plus aucune tuile disparaît.
+
+Quand toutes les sections sont vides, la page d'accueil affiche une seule ligne : « Vos tuiles n'ont encore rien à afficher. » Désactivez l'option pour voir les tuiles vides avec leur message habituel.
 
 ### Mes tâches
 
@@ -249,29 +270,32 @@ Affiche les tâches qui n'ont pas été mises à jour depuis longtemps. Chaque �
 
 ## Section Gestion budgétaire { #budget-management-section }
 
-Sous les tuiles, la section **Gestion budgétaire** montre où en sont vos dépenses IT : le budget par type et par année, vos propres lignes budgétaires, les prochains renouvellements, la qualité des données et les lignes qui méritent votre attention. Elle apparaît lorsque vous pouvez lire les lignes budgétaires ou les contrats.
+La section **Gestion budgétaire** montre où en sont vos dépenses IT : le budget par type et par année, vos propres lignes budgétaires, les prochains renouvellements, la qualité des données et les lignes qui méritent votre attention. Elle apparaît lorsque vous pouvez lire les lignes budgétaires ou les contrats. **Prochains renouvellements** nécessite l'accès en lecture aux contrats, les autres tuiles du budget nécessitent `budget:reader`.
 
-### Actions de la section
-
-L'en-tête de la section contient des boutons de raccourci :
-
-- **Nouvelle ligne OPEX** et **Nouvelle ligne CAPEX** ouvrent une nouvelle ligne budgétaire de ce type. Ils s'affichent lorsque votre rôle a au moins le niveau Membre sur Budget (`budget:member`)
-- **Nouveau contrat** ouvre un nouveau contrat. Il s'affiche lorsque votre rôle peut créer des contrats
-- **Personnaliser**, à droite, ouvre les réglages de cette section. Voir [Personnaliser la section](#customizing-the-budget-section)
-
-### Disposition de la section
-
-Les tuiles de la section sont disposées en grille responsive : trois colonnes sur un écran large, deux sur tablette et une seule colonne sur mobile. La tuile **Budget** est plus large : deux colonnes sur un écran large, toute la largeur sur tablette. Chaque tuile comporte une icône, un titre et généralement un bouton qui vous amène à la page complète derrière les données.
+La tuile **Budget** occupe deux colonnes quand elle affiche trois colonnes de montant ou plus, une colonne sinon. Chaque tuile comporte une icône, un titre et généralement un bouton qui vous amène à la page complète derrière les données.
 
 Plusieurs tuiles ont des onglets **Tous**, **OPEX** et **CAPEX** dans leur en-tête pour choisir le type de lignes qu'elles couvrent. Chaque tuile mémorise votre choix dans votre navigateur.
 
-Les tuiles ci-dessous sont présentées dans leur ordre par défaut. Vos tâches ouvertes sont dans la tuile **Mes tâches** plus haut.
+Les tuiles ci-dessous sont présentées dans leur ordre par défaut.
 
 ### Budget
 
-Un tableau couvrant trois exercices : l'année dernière (A-1), l'année en cours (A) et l'année prochaine (A+1). Chaque année a trois lignes : **OPEX**, **CAPEX** et **Total**. Les colonnes de valeurs sont les colonnes budgétaires affichées par votre organisation, sous leurs noms (**Budget**, **Révision**, **Réalisé** et **Atterrissage prévu** avec les réglages standard, plus **Prévision** quand elle est affichée). Vous pouvez en garder moins dans [Personnaliser](#customizing-the-budget-section). Une colonne s'affiche dès qu'elle contient un montant pour au moins une ligne. Les colonnes masquées n'apparaissent jamais. Tous les montants sont arrondis au millier le plus proche et affichés avec un suffixe « k » (par exemple, `7 846 k`). Les séparateurs suivent la langue de l'interface.
+Un tableau couvrant trois exercices : l'année dernière (A-1), l'année en cours (A) et l'année prochaine (A+1). Chaque année a trois lignes : **OPEX**, **CAPEX** et **Total**. Les colonnes de valeurs sont les colonnes budgétaires affichées par votre organisation, sous leurs noms (**Budget**, **Révision**, **Réalisé** et **Atterrissage prévu** avec les réglages standard, plus **Prévision** quand elle est affichée). Vous pouvez en garder moins dans les options de la tuile (voir [Personnaliser votre tableau de bord](#customizing-the-budget-section)). Une colonne s'affiche dès qu'elle contient un montant pour au moins une ligne. Les colonnes masquées n'apparaissent jamais. Tous les montants sont arrondis au millier le plus proche et affichés avec un suffixe « k » (par exemple, `7 846 k`). Les séparateurs suivent la langue de l'interface.
 
 Cliquez sur un montant pour ouvrir la [liste des lignes budgétaires](budget-lines.md) sur ce type. Un montant **Total** ouvre la liste sur les deux types. Cliquez sur **Voir** pour ouvrir la liste.
+
+### Top lignes
+
+Les cinq lignes qui ressortent sur la colonne par défaut. Deux petits onglets en haut de la tuile choisissent le classement, mémorisé dans votre navigateur :
+
+- **Montant** : les cinq plus grandes lignes de l'année en cours. Le sous-titre nomme la colonne, par exemple **Budget, A**. Les montants sont arrondis au millier avec un suffixe « k », avec les séparateurs de la langue de l'interface.
+- **Hausse** : les cinq lignes à la plus forte hausse par rapport à l'année dernière. Le sous-titre indique par exemple **Budget, A vs A-1**. Les lignes dont le montant est stable ou en baisse n'apparaissent pas. Une faible hausse s'affiche en entier. Une hausse plus importante est raccourcie, par exemple `340,1 k`.
+
+Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. **Ouvrir** ouvre le rapport Top lignes complet sur le même type, ou le rapport Top hausse / baisse quand vous classez par hausse.
+
+### Mises à jour récentes
+
+Les cinq lignes budgétaires modifiées le plus récemment, OPEX et CAPEX confondues. Chaque ligne du tableau affiche la date de la dernière modification, la référence de la ligne budgétaire, son nom et son type. Cliquez sur une ligne du tableau pour ouvrir la ligne budgétaire.
 
 ### Hygiène des données
 
@@ -301,59 +325,33 @@ Liste les cinq contrats dont l'échéance est la plus proche, aujourd'hui compri
 
 Cliquez sur **Tout voir** pour ouvrir la page Contrats.
 
-### Top lignes
-
-Les cinq plus grandes lignes de l'année en cours, classées selon la colonne par défaut. Le sous-titre nomme la colonne, par exemple **Budget, A**. Les montants sont arrondis au millier avec un suffixe « k », avec les séparateurs de la langue de l'interface.
-
-Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. Cliquez sur **Ouvrir** pour voir le rapport Top lignes complet sur le même type.
-
-### Plus fortes hausses
-
-Les cinq lignes avec la plus forte augmentation de la colonne par défaut par rapport à l'année précédente. Le sous-titre nomme la colonne, par exemple **Budget, A vs A-1**. Les lignes dont le montant est stable ou en baisse n'apparaissent pas. Une faible hausse s'affiche en entier. Une hausse plus importante est raccourcie, par exemple `340,1 k`.
-
-Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. Cliquez sur **Ouvrir** pour voir le rapport Top hausse / baisse complet sur le même type.
-
 ### Par centre de coûts
 
 Les cinq centres de coûts au total le plus élevé sur la colonne par défaut de l'année en cours, avec une barre pour chacun. Les lignes sans centre de coûts comptent ensemble sous **Sans centre de coûts**. Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. Cliquez sur une ligne du tableau pour ouvrir la liste sur les lignes budgétaires de ce centre de coûts.
 
-### Mises à jour récentes
-
-Les cinq lignes budgétaires modifiées le plus récemment, OPEX et CAPEX confondues. Chaque ligne du tableau affiche la date de la dernière modification, la référence de la ligne budgétaire, son nom et son type. Cliquez sur une ligne du tableau pour ouvrir la ligne budgétaire.
-
-Sans accès en lecture aux lignes budgétaires (`budget:reader`), les tuiles du budget sont masquées. **Prochains renouvellements** demande l'accès en lecture aux contrats.
-
 ### Montants sans taux de change
 
-Quand la devise d'une ligne n'a pas de taux de change pour une année, son montant est exclu des totaux de cette année. Les tuiles **Budget**, **Plus fortes hausses**, **Mon budget** et **Par centre de coûts** affichent alors un avertissement d'une ligne, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre les paramètres des devises sur le taux manquant. Quand l'avertissement ne cite qu'une devise et une année, la fenêtre de saisie du taux s'ouvre directement. Dans **Top lignes**, une telle ligne affiche son montant dans sa propre devise avec une petite marque orange. Voir [Taux manuels](currencies.md#taux-manuels).
+Quand la devise d'une ligne n'a pas de taux de change pour une année, son montant est exclu des totaux de cette année. Les tuiles **Budget**, **Mon budget** et **Par centre de coûts**, ainsi que **Top lignes** classée par hausse, affichent alors un avertissement d'une ligne, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre les paramètres des devises sur le taux manquant. Quand l'avertissement ne cite qu'une devise et une année, la fenêtre de saisie du taux s'ouvre directement. Dans **Top lignes** classée par montant, une telle ligne affiche son montant dans sa propre devise avec une petite marque orange. Voir [Taux manuels](currencies.md#taux-manuels).
 
-### Personnaliser la section { #customizing-the-budget-section }
+## Personnaliser votre tableau de bord { #customizing-the-budget-section }
 
-Cliquez sur **Personnaliser** pour ouvrir **Réglages du tableau de bord du budget**. Vos choix ne s'appliquent qu'à votre propre page d'accueil.
+Cliquez sur **Personnaliser l'accueil** (icône de curseurs, à droite des actions rapides). La page passe en mode personnalisation. Vos choix ne s'appliquent qu'à votre propre page d'accueil.
 
-- **Afficher ou masquer une tuile** : cochez-la ou décochez-la. La fenêtre liste les tuiles que votre rôle peut voir
-- **Changer l'ordre** : faites glisser une tuile par sa poignée, à droite
-- **Colonnes de montant de la tuile Budget** : **Colonnes de l'espace de travail**, cochée par défaut, suit les colonnes affichées par votre espace de travail. Décochez-la pour choisir les colonnes vous-même. Gardez-en au moins une : sinon, la fenêtre affiche « Choisissez au moins une colonne de montant. »
-- **Enregistrer** applique vos choix. **Rétablir les valeurs par défaut** affiche de nouveau toutes les tuiles, dans l'ordre par défaut, avec les colonnes de l'organisation
+- Les actions rapides laissent la place à une barre : **Masquer les tuiles sans contenu** (voir [Tuiles sans contenu](#tuiles-sans-contenu)), **Rétablir les valeurs par défaut**, **Annuler** et **Terminer**.
+- Chaque tuile activée s'affiche, y compris les tuiles vides. Faites glisser une tuile par sa poignée pour la déplacer dans sa section. Son bouton de réglages ouvre ses options (nombre d'éléments, jours, périmètre). Son bouton de masquage la désactive.
+- Pour la tuile **Budget**, les options contiennent **Colonnes de montant**. **Colonnes de l'espace de travail**, cochée par défaut, suit les colonnes affichées par votre organisation. Décochez-la pour choisir les colonnes vous-même. Au moins une colonne reste.
+- Faites glisser une section par sa poignée pour la déplacer parmi les sections. **Ajouter une tuile** (+) liste les tuiles désactivées de la section. Le bouton en forme d'œil masque ou affiche la section. Une section masquée reste visible, estompée, jusqu'à ce que vous terminiez.
+- Pendant la personnalisation, un clic sur une tuile n'ouvre pas ce qu'elle montre.
 
-Un administrateur budgétaire choisit la colonne par défaut et les noms des colonnes dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires). Les tuiles et les rapports qu'elles ouvrent suivent ce choix.
+**Terminer** enregistre tout sur votre compte, entre sessions et appareils. **Annuler** abandonne les modifications. **Rétablir les valeurs par défaut** remet les tuiles par défaut, l'ordre par défaut des sections et les colonnes de l'organisation, réactive **Masquer les tuiles sans contenu** et quitte le mode personnalisation.
 
-## Personnaliser votre tableau de bord
+Un administrateur budgétaire choisit la colonne par défaut et les noms des colonnes dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires). Les tuiles du budget et les rapports qu'elles ouvrent suivent ce choix.
 
-Cliquez sur l'icône **Paramètres** (engrenage) dans l'en-tête du tableau de bord pour ouvrir la boîte de dialogue des paramètres du tableau de bord.
-
-Depuis là, vous pouvez :
-
-- **Activer ou désactiver des tuiles** : cochez ou décochez chaque tuile pour contrôler ce qui apparaît sur votre tableau de bord.
-- **Réinitialiser par défaut** : restaurer la sélection de tuiles d'origine.
-
-Seules les tuiles que vous avez l'autorisation de voir apparaissent dans la liste des paramètres. Les modifications sont enregistrées sur votre compte et persistent entre sessions et appareils.
-
-Si toutes les tuiles sont désactivées, le tableau de bord affiche un message vous invitant à en activer.
+Quand toutes les tuiles sont désactivées, la page affiche : « Aucune tuile activée. Choisissez vos tuiles avec “Personnaliser l'accueil”. »
 
 ## Conseils
 
 - **Commencez avec les valeurs par défaut** : le tableau de bord est livré avec un ensemble utile de tuiles déjà activées. Essayez-le pendant quelques jours avant de personnaliser.
-- **Utilisez les actions rapides** : créer une tâche, demande ou document (ou enregistrer du temps) directement depuis le tableau de bord vous évite de naviguer.
+- **Utilisez les actions rapides** : créer une tâche, une ligne budgétaire ou un document (ou enregistrer du temps) directement depuis le tableau de bord vous évite de naviguer.
 - **Vérifiez les tâches en retard quotidiennement** : la tuile Mes tâches met en évidence les éléments en retard en rouge afin que rien ne passe entre les mailles du filet.
 - **Utilisez Tâches en attente au périmètre équipe** : avec `tasks:admin`, basculez la tuile Tâches en attente sur le périmètre `équipe` ou `tous` pour trouver le travail que personne ne met à jour à travers l'organisation.

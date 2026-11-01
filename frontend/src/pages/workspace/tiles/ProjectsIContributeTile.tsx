@@ -52,6 +52,7 @@ export default function ProjectsIContributeTile({ config }: ProjectsIContributeT
     <DashboardTile
       title={t('dashboard.tiles.projectsIContribute')}
       icon="Groups"
+      isEmpty={projects.length === 0}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => { void refetch(); }}

@@ -298,20 +298,17 @@
     "workOverview": "Voici un aperçu de votre travail",
     "createTask": "Créer une tâche",
     "logTime": "Saisir du temps",
-    "newRequest": "Nouvelle demande",
+    "newBudgetLine": "Nouvelle ligne budgétaire",
     "newApplication": "Nouvelle application",
     "newAsset": "Nouvel actif",
     "newDocument": "Nouveau document",
-    "dashboardSettings": "Paramètres du tableau de bord",
-    "noTilesEnabled": "Aucune tuile activée. Cliquez sur l'icône de paramètres pour configurer votre tableau de bord.",
+    "noTilesEnabled": "Aucune tuile activée. Choisissez vos tuiles avec « Personnaliser l'accueil ».",
+    "allTilesEmpty": "Vos tuiles n'ont encore rien à afficher.",
     "blankDocument": "Document vierge",
     "fromTemplate": "À partir d'un modèle…",
     "selectTemplate": "Sélectionner un modèle",
     "useTemplate": "Utiliser le modèle",
     "noTemplatesAvailable": "Aucun modèle publié n'est disponible.",
-    "newOpexLine": "Nouvelle ligne OPEX",
-    "newCapexLine": "Nouvelle ligne CAPEX",
-    "newContract": "Nouveau contrat",
     "newOpex": "Nouvel OPEX",
     "newCapex": "Nouveau CAPEX",
     "recentUpdates": "Mises à jour récentes",
@@ -334,7 +331,6 @@
     },
     "topItems": "Top lignes",
     "columnY": "{{column}}, A",
-    "topIncreases": "Plus fortes hausses",
     "columnYvsYminus1": "{{column}}, A vs A-1",
     "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "Aucune hausse",
@@ -353,8 +349,6 @@
     "byCostCenter": "Par centre de coûts",
     "noCostCenter": "Sans centre de coûts",
     "settings": {
-      "title": "Paramètres du tableau de bord",
-      "description": "Activez ou désactivez les tuiles, ajustez leurs options et glissez-les pour les réorganiser.",
       "resetToDefaults": "Rétablir les valeurs par défaut",
       "dragToReorder": "Glisser pour réorganiser",
       "options": {
@@ -363,7 +357,8 @@
         "days": "Jours affichés",
         "scope": "Périmètre",
         "thresholdDays": "Seuil (jours)"
-      }
+      },
+      "hideEmptyTiles": "Masquer les tuiles sans contenu"
     },
     "quickCreate": {
       "createTask": "Créer une tâche",
@@ -524,12 +519,27 @@
     },
     "welcome": "Bienvenue",
     "budgetSettings": {
-      "customize": "Personnaliser",
-      "title": "Réglages du tableau de bord du budget",
       "columns": "Colonnes de montant",
       "tenantColumns": "Colonnes de l'espace de travail",
-      "atLeastOne": "Choisissez au moins une colonne de montant.",
       "saveFailed": "Impossible d’enregistrer les réglages du tableau de bord."
+    },
+    "sections": {
+      "work": "Mon travail"
+    },
+    "customize": {
+      "start": "Personnaliser l'accueil",
+      "done": "Terminer",
+      "addTile": "Ajouter une tuile",
+      "hideTile": "Masquer la tuile",
+      "tileOptions": "Options de la tuile",
+      "moveSection": "Glisser pour déplacer la section",
+      "hideSection": "Masquer la section",
+      "showSection": "Afficher la section"
+    },
+    "topLinesMode": {
+      "label": "Classement",
+      "amount": "Montant",
+      "increase": "Hausse"
     }
   },
   "csv": {

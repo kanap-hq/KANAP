@@ -63,6 +63,7 @@ export default function NetboxSyncTile() {
     <DashboardTile
       title={t('dashboard.tiles.netboxSync')}
       icon="Dns"
+      isEmpty={!data || !data.configured || attention.length === 0}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => { void refetch(); }}
