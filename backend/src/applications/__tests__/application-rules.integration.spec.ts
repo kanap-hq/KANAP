@@ -155,9 +155,15 @@ async function testOwnersKeptByEmptyCells() {
 async function testUnknownCatalogValues() {
   await inTenant(async (ctx) => {
     await seedApp(ctx, 'Atlas');
-    let result = await importCsv(ctx, ['name;lifecycle;category', 'Atlas;Bogus;', 'Nova;;Nope'], { dryRun: true });
+    const lifecycleAllowed = 'proposed (Proposed), active (Active), deprecated (Deprecated), retired (Retired)';
+    const categoryAllowed = [
+      'line_of_business (Line-of-business)', 'productivity (Productivity)', 'security (Security)',
+      'analytics (Analytics)', 'development (Development)', 'integration (Integration)', 'infrastructure (Infrastructure)',
+    ].join(', ');
+    let result = await importCsv(ctx, ['name;lifecycle;category', 'Atlas;Bogus;', 'Nova;;business'], { dryRun: true });
     assert.deepEqual(rowCodes(result), [[2, 'lifecycle_invalid'], [3, 'category_invalid']]);
-    assert.deepEqual(result.errors[0].params, { value: 'Bogus' });
+    assert.deepEqual(result.errors[0].params, { value: 'Bogus', allowed: lifecycleAllowed });
+    assert.deepEqual(result.errors[1].params, { value: 'business', allowed: categoryAllowed });
 
     result = await importCsv(ctx, ['name;lifecycle', 'Atlas;Actif', 'Nova;RETIRED', 'Orion;Obsoleto', 'Vega;Vorgeschlagen']);
     assert.equal(result.ok, true, JSON.stringify(result.errors));
@@ -166,7 +172,10 @@ async function testUnknownCatalogValues() {
       ['Atlas', 'active'], ['Nova', 'retired'], ['Orion', 'deprecated'], ['Vega', 'proposed'],
     ], 'codes and shown labels in any language resolve to the code');
 
-    await refusal(ctx.crud.update((await seedApp(ctx, 'Lyra')), { lifecycle: 'bogus' } as any, null, opts(ctx)), 400, 'lifecycle_invalid');
+    const lifecycleParams = await refusal(ctx.crud.update((await seedApp(ctx, 'Lyra')), { lifecycle: 'bogus' } as any, null, opts(ctx)), 400, 'lifecycle_invalid');
+    assert.deepEqual(lifecycleParams, { value: 'bogus', allowed: lifecycleAllowed });
+    const categoryParams = await refusal(ctx.crud.update((await seedApp(ctx, 'Mira')), { category: 'business' } as any, null, opts(ctx)), 400, 'category_invalid');
+    assert.deepEqual(categoryParams, { value: 'business', allowed: categoryAllowed });
   });
 }
 
