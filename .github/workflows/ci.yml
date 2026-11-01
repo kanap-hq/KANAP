@@ -162,9 +162,9 @@ jobs:
       - name: Run the specs that read the user manual
         if: ${{ needs.changes.outputs.backend == 'docs' }}
         run: |
-          for spec in markdown-size markdown-worker admin-password-policy; do
-            echo "── src/common/__tests__/$spec.spec.ts"
-            node --enable-source-maps "ci-dist/backend/src/common/__tests__/$spec.spec.js"
+          for spec in common/__tests__/markdown-size common/__tests__/markdown-worker common/__tests__/admin-password-policy ai/__tests__/ai-help-manual; do
+            echo "── src/$spec.spec.ts"
+            node --enable-source-maps "ci-dist/backend/src/$spec.spec.js"
           done
 
   # The frontend check runs as one build job and three test shards in parallel; the
@@ -381,6 +381,7 @@ jobs:
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: backend
+          build-contexts: help-docs=doc/help/docs
           target: runtime
           tags: kanap-api:ci
           load: true
@@ -393,6 +394,7 @@ jobs:
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: backend
+          build-contexts: help-docs=doc/help/docs
           target: dev
           cache-from: |
             type=gha,scope=api-runtime

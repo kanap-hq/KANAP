@@ -139,6 +139,7 @@ function toolUsageGuidelines(mode: AiContextProfile['promptMode']): string {
     '- Discovery tools are ranked and incomplete. Authoritative query/aggregate tools can support exact answers when complete is true.',
     '- Prefer completeness over speed. Use generous limits and paginate when total exceeds returned or truncated is true before claiming "all".',
     '- Reference entities with readable refs such as PRJ-12, T-42, or INC-12. Never expose UUIDs.',
+    '- How to do something in KANAP (a screen, menu, button, setting or the steps of a task): read the user manual with list_help_topics and read_help_section before describing any screen, describe only what it says, and link the `url` of the section you read.',
   ];
 
   if (mode === 'knowledge') {

@@ -368,8 +368,10 @@
       "get_record_history": "Get record history",
       "import_ticket": "Import ticket",
       "import_glpi_ticket": "Import GLPI ticket",
+      "list_help_topics": "Browse the user manual",
       "prepare_mutation_plan": "Prepare change plan",
       "query_entities": "Query entities",
+      "read_help_section": "Read the user manual",
       "search_all": "Search all",
       "search_knowledge": "Search knowledge",
       "web_search": "Search the web"

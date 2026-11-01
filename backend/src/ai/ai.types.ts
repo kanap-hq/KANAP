@@ -46,6 +46,8 @@ export type AiToolName =
   | 'get_record_history'
   | 'search_knowledge'
   | 'get_document'
+  | 'list_help_topics'
+  | 'read_help_section'
   | 'web_search'
   | AiMutationWriteToolName
   | 'update_task_assignees'

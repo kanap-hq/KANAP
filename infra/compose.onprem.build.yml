@@ -12,6 +12,9 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+      # The user manual's pages, for the assistant (backend/Dockerfile, stage help-docs).
+      additional_contexts:
+        help-docs: ../doc/help/docs
       # The runtime stage: compiled code and production dependencies only.
       target: runtime
 
@@ -28,5 +31,8 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+      # The user manual's pages, for the assistant (backend/Dockerfile, stage help-docs).
+      additional_contexts:
+        help-docs: ../doc/help/docs
       # The dev stage: the full tree, for maintenance commands.
       target: dev

@@ -24,7 +24,7 @@ S=<scratch dir>            # holds perf-api.env, credentials, dataset, results
 W=<this worktree>
 
 # 1. API (one image build at a time; check `free -g` first)
-docker build -t kanap-perf-api -f $W/backend/Dockerfile $W/backend
+docker build -t kanap-perf-api --build-context help-docs=$W/doc/help/docs -f $W/backend/Dockerfile $W/backend
 docker run -d --name kanap-perf-api --network kanap_default -p 127.0.0.1:18080:8080 \
   --env-file $S/perf-api.env --memory=3g kanap-perf-api
 # later: docker start kanap-perf-api / docker stop kanap-perf-api
