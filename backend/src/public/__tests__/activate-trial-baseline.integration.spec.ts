@@ -13,6 +13,7 @@ import {
   countDifferences,
   countTenantRows,
   createActivatedTenant,
+  inTenant,
   runSpecs,
 } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
 
@@ -73,6 +74,15 @@ async function testActivationMatchesHelper() {
     const helped = await countTenantRows(helper.tenantId);
     assert.deepEqual(countDifferences(activated, helped), [], 'row counts per table, activation vs helper');
     assert.ok(activated.chart_of_accounts === 1 && activated.accounts > 0, 'activation provisioned the chart of accounts');
+    const technologies = await inTenant(activatedId!, (manager) => manager.query(
+      `SELECT catalog_key, family, vulnerability_alerts, cpe_products FROM technologies WHERE tenant_id = $1 ORDER BY catalog_key`,
+      [activatedId],
+    ));
+    assert.deepEqual(technologies.map((t: any) => [t.catalog_key, t.family, t.vulnerability_alerts]), [
+      ['ubuntu', 'operating_system', false],
+      ['windows-server', 'operating_system', false],
+    ], 'activation adopts the starting technologies, alerts off');
+    assert.ok(technologies.every((t: any) => t.cpe_products.length > 0), 'with their CPE identifiers');
     assert.deepEqual(await baselineSnapshot(helper.tenantId), await baselineSnapshot(activatedId!));
   } finally {
     const created = await dataSource.query(`SELECT id FROM tenants WHERE slug = $1`, [slug]);

@@ -52,6 +52,9 @@ async function testFirstStartProvisionsTheChart() {
     assert.equal(charts[0].is_global_default, true, 'default chart');
     assert.equal(charts[0].is_consolidation, true, 'consolidation chart');
     assert.ok(charts[0].accounts > 0, 'the accounts are loaded');
+    const technologies = await inTenant(tenantId!, (manager) => manager.query(
+      `SELECT catalog_key FROM technologies WHERE tenant_id = $1 ORDER BY catalog_key`, [tenantId]));
+    assert.deepEqual(technologies.map((t: { catalog_key: string }) => t.catalog_key), ['ubuntu', 'windows-server'], 'the starting technologies');
 
     // A second start: nothing more.
     const counts = await countTenantRows(tenantId!);
