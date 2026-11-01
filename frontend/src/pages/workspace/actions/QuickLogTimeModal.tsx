@@ -23,6 +23,7 @@ import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import { localTodayYmd } from '../../../lib/datetime';
 import { ACTIVE_TASK_STATUSES } from '../../tasks/task.constants';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
 interface QuickLogTimeModalProps {
   open: boolean;
@@ -155,7 +156,7 @@ export default function QuickLogTimeModal({
       setSnackOpen(true);
     },
     onError: (err: any) => {
-      setError(err?.response?.data?.message || err.message || t('messages.failedToLogTime'));
+      setError(getApiErrorMessage(err, t, t('messages.failedToLogTime')));
     },
   });
 

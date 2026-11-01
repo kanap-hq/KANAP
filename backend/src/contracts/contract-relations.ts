@@ -1,9 +1,9 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { outsideParticipation, moduleRightRequired } from '../auth/module-right-required';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { singleChangedId } from '../audit/audit-parent-rules';
 import { applicationParticipantCondition, resolveBusinessContributorScope, type ParticipationAccessScope } from '../auth/business-contributor-scope';
-import { moduleRightRequired } from '../auth/module-right-required';
 import { LINKED_MODULE_RESOURCES } from '../common/relations/linked-reads';
 import { setOwnedLink, type OwnedLinkAudit } from '../common/relations/owned-link';
 import { binder } from '../common/relations/related-objects';
@@ -241,7 +241,7 @@ export async function replaceContractRelations(
     if (set === 'budget_lines') await assertLinesEditable(manager, added);
     if (scope && added.length) {
       const inScope = await idsInScope(manager, 'applications', added, scope);
-      if (added.some((id) => !inScope.has(id))) throw new ForbiddenException(OUTSIDE_PARTICIPATION);
+      if (added.some((id) => !inScope.has(id))) throw outsideParticipation('applications', OUTSIDE_PARTICIPATION);
     }
   }
 

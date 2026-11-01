@@ -3,7 +3,8 @@ import { linkedLineOf } from '../../spend/budget-nature';
 import { hiddenLineCount } from '../../data-access/hidden-links';
 import { copyClassification } from './application-classification';
 import { classificationPatch, classificationReadState } from './application-classification';
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { requestContextMissing, businessContributorScope } from '../../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { assertMarkdownSize } from '../../common/markdown-limits';
@@ -140,7 +141,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
 
     const mg = this.getManager(opts);
     if (opts?.accessScope) {
-      throw new ForbiddenException('Business Contributor can only read assigned applications');
+      throw businessContributorScope('applications', 'Business Contributor can only read assigned applications');
     }
     const appId = await this.resolveApplicationIdentifier(applicationId, mg);
     const app = await mg.getRepository(Application).findOne({ where: { id: appId } });
@@ -191,7 +192,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
   }
 
   async reviewClassification(id: string, expectedRevision: number, userId: string | null, opts?: ServiceOpts) {
-    if (!userId) throw new ForbiddenException('A signed-in reviewer is required');
+    if (!userId) throw requestContextMissing('A signed-in reviewer is required');
     return this.getManager(opts).transaction(async (manager) => {
       const tenantId = await this.getCurrentTenantId(manager);
       const appId = await this.resolveApplicationIdentifier(id, manager);
@@ -203,7 +204,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       if (!Number.isInteger(expectedRevision) || app.classification_revision !== expectedRevision) throw new ConflictException('Classification changed; reload before marking as reviewed');
       if (classificationReadState(app).classification_review_state === 'incomplete') throw new BadRequestException('Set business criticality, cyber criticality, data confidentiality, recovery wave and a brief justification before review');
       const actor = await manager.query('SELECT id FROM users WHERE id = $1 AND tenant_id = $2', [userId, tenantId]);
-      if (!actor.length) throw new ForbiddenException('Reviewer must belong to this tenant');
+      if (!actor.length) throw requestContextMissing('Reviewer must belong to this tenant');
       const before = { ...app };
       app.classification_review = { user_id: userId, reviewed_at: new Date().toISOString(), revision: app.classification_revision };
       await repo.save(app);

@@ -346,7 +346,7 @@ const DocumentEditorForOneSlot = React.forwardRef<
         return;
       }
       if (!opts?.silentConflict) {
-        setError(e?.response?.data?.message || e?.message || 'Unable to acquire lock');
+        setError(getApiErrorMessage(e, t, 'Unable to acquire lock'));
       }
     } finally {
       startEditPendingRef.current = false;

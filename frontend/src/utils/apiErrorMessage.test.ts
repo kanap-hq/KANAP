@@ -181,6 +181,54 @@ describe('getApiErrorMessage', () => {
     );
   });
 
+  it('translates every coded 403 of the core modules in the four languages', () => {
+    const refusal = (code: string, params?: Record<string, unknown>) => ({
+      response: { status: 403, data: { statusCode: 403, error: 'Forbidden', code, message: 'English sentence of the server.', ...(params ? { params } : {}) } },
+    });
+    const cases: Array<[string, Record<string, unknown> | undefined, Record<string, string>]> = [
+      ['BRANDING_NOT_ON_PLATFORM_HOST', undefined, { en: 'Branding is set inside a workspace. Open a workspace to change it.', fr: "L'identité visuelle se règle dans un espace de travail. Ouvrez un espace pour la modifier." }],
+      ['BUSINESS_CONTRIBUTOR_NO_ACCESS', { family: 'interface_bindings' }, { en: 'Your role does not give access to interface bindings.', fr: "Votre rôle ne donne pas accès aux liaisons d'interface.", de: 'Ihre Rolle gibt keinen Zugriff auf Schnittstellen-Bindungen.', es: 'Su rol no da acceso a enlaces de interfaz.' }],
+      ['BUSINESS_CONTRIBUTOR_SCOPE', { family: 'applications' }, { en: 'Your role gives access only to the applications you are assigned to.', fr: 'Pour les applications, votre rôle donne accès uniquement aux éléments qui vous sont affectés.' }],
+      ['OUTSIDE_PARTICIPATION', { family: 'projects' }, { en: 'You can only link projects you take part in.', fr: 'Pour les projets, vous ne pouvez lier que les éléments auxquels vous participez.', de: 'Bei Projekte können Sie nur Einträge verknüpfen, an denen Sie beteiligt sind.', es: 'En proyectos, solo puede vincular los elementos en los que participa.' }],
+      ['LINKED_MODULE_NOT_READABLE', { resources: ['applications', 'infrastructure'] }, { en: 'You cannot change the links to Applications and Infrastructure: your role does not give you access to them.', fr: 'Vous ne pouvez pas modifier les liens vers Applications et Infrastructure\u00a0: votre rôle ne vous y donne pas accès.' }],
+      ['LINKED_MODULE_NOT_READABLE', { resources: ['incidents'] }, { en: 'You cannot change the links to Incidents: your role does not give you access to them.' }],
+      ['LIBRARY_NOT_MANAGEABLE', undefined, { en: 'You are not allowed to manage this library.', fr: "Vous n'avez pas le droit de gérer cette bibliothèque." }],
+      ['OWN_COMMENTS_ONLY', undefined, { en: 'You can only edit your own comments.', fr: 'Vous ne pouvez modifier que vos propres commentaires.' }],
+      ['TIME_ENTRY_CREATE_SELF_ONLY', undefined, { en: 'You can only create time entries for yourself.' }],
+      ['TIME_ENTRY_EDIT_OWN_ONLY', undefined, { en: 'You can only edit your own time entries.' }],
+      ['TIME_ENTRY_DELETE_OWN_ONLY', undefined, { en: 'You can only delete your own time entries.' }],
+      ['TIME_ENTRY_EDIT_OWN_OR_ASSIGNED', undefined, { en: 'You can only edit time entries you logged or that are assigned to you.' }],
+      ['TIME_ENTRY_DELETE_OWN_OR_ASSIGNED', undefined, { en: 'You can only delete time entries you logged or that are assigned to you.' }],
+      ['REQUEST_CONTEXT_MISSING', undefined, { en: 'Your session could not be identified. Reload the page or sign in again.', fr: "Votre session n'a pas pu être identifiée. Rechargez la page ou reconnectez-vous." }],
+      ['INCIDENT_LOCKED', undefined, { en: 'This incident is closed. Reopen it to make changes.', fr: 'Cet incident est clos. Rouvrez-le pour le modifier.' }],
+      ['INCIDENT_CONFIDENTIAL_LIFT', undefined, { en: 'Only a register administrator can lift this restriction.' }],
+      ['INCIDENT_REVIEW_LOCKED', undefined, { en: 'This incident is closed. Reopen it to change its review.' }],
+      ['TASK_OUTSIDE_SCOPE', undefined, { en: 'This task is outside the tasks you take part in.' }],
+      ['WORKFLOW_CANCEL_NOT_ALLOWED', undefined, { en: 'Only the owner, the requester or a participant can cancel this review.' }],
+      ['WORKFLOW_STAGE_NOT_ASSIGNED', undefined, { en: 'You are not assigned to the current stage of this review.' }],
+      ['DOCUMENT_SHARE_EXTERNAL_REFUSED', undefined, { en: 'This document belongs to an incident review and cannot be shared outside KANAP.' }],
+      ['DOCUMENT_RECIPIENT_NOT_ALLOWED', undefined, { en: 'One of the recipients cannot open this document, so nothing was shared.' }],
+      ['FEATURE_DISABLED', undefined, { en: 'This feature is turned off in this deployment.' }],
+      ['lookup_search_forbidden', undefined, { en: 'Your role can show the chosen values but cannot search this list.' }],
+      ['PROFILE_FIELD_FROM_ENTRA', undefined, { en: 'The job title comes from Microsoft Entra and cannot be changed here.' }],
+    ];
+    for (const [code, params, expected] of cases) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const text = getApiErrorMessage(refusal(code, params), i18n.getFixedT(language), 'fallback');
+        // Every language has its own sentence, never the English one of the server or the generic refusal.
+        expect(text, `${code} ${language}`).not.toBe('English sentence of the server.');
+        expect(text, `${code} ${language}`).not.toBe('fallback');
+        expect(text, `${code} ${language}`).not.toBe(i18n.getFixedT(language)('errors:forbidden'));
+        expect(text, `${code} ${language}`).not.toContain('{{');
+        expect(text, `${code} ${language}`).not.toContain('errors:');
+        if (expected[language]) expect(text, `${code} ${language}`).toBe(expected[language]);
+      }
+    }
+    // The list of modules follows the language of the screen.
+    expect(getApiErrorMessage(refusal('LINKED_MODULE_NOT_READABLE', { resources: ['applications', 'infrastructure', 'incidents'] }), t, 'fallback'))
+      .toBe('You cannot change the links to Applications, Infrastructure, and Incidents: your role does not give you access to them.');
+  });
+
   it('says why a refusal coded in its error field happened', () => {
     const trial = { response: { status: 403, data: { error: 'TRIAL_EXPIRED', message: 'Trial expired' } } };
     expect(getApiErrorMessage(trial, t, 'fallback')).toBe('Your trial has expired. Please choose a plan to continue.');

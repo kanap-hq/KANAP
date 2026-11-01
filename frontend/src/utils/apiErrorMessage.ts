@@ -181,6 +181,19 @@ export function isDataAccessRefusal(error: unknown): boolean {
   return response?.status === 403 && response.data?.code === 'DATA_ACCESS_LIMITED';
 }
 
+/** Names joined as a list of the screen language ("A, B and C"). */
+function formatNames(names: string[], language: string): string {
+  // Intl.ListFormat is in every supported browser; this TypeScript lib predates it.
+  type ListFormat = new (locale: string, options: { style: string; type: string }) => { format: (list: readonly string[]) => string };
+  const ListFormat = (Intl as unknown as { ListFormat?: ListFormat }).ListFormat;
+  if (!ListFormat) return names.join(', ');
+  try {
+    return new ListFormat(language, { style: 'long', type: 'conjunction' }).format(names);
+  } catch {
+    return names.join(', ');
+  }
+}
+
 export function getApiErrorMessage(error: unknown, t: TFunction, fallback: string): string {
   const apiError = error as ApiErrorLike | null | undefined;
   const payload = apiError?.response?.data;
@@ -241,6 +254,18 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
     // An environment the sentence names (`pre_prod`) is shown by its name (Pre-production).
     if (typeof params.environment === 'string' && params.environment) {
       params.environment = t(`it:pages.applications.environments.${params.environment}.name`, { defaultValue: params.environment });
+    }
+    // A family the sentence names (`applications`, `interface_bindings`) is shown by its plural name.
+    if (typeof params.family === 'string' && params.family) {
+      params.family = t(`errors:families.${params.family}`, { defaultValue: params.family });
+    }
+    // Modules the sentence names (`['applications', 'infrastructure']`) are shown as the roles screen
+    // shows them, in a list written in the language of the screen.
+    if (Array.isArray(params.resources)) {
+      const labels = params.resources
+        .filter((resource): resource is string => typeof resource === 'string' && resource !== '')
+        .map((resource) => moduleRightLabel(t, resource));
+      params.resources = formatNames(labels, language);
     }
     // A missing module right names its module and level as the roles screen shows them.
     if (code === 'MODULE_RIGHT_REQUIRED') {
