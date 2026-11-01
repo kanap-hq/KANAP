@@ -14,7 +14,7 @@ import {
 import { vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
 import { assertMarkdownSize } from '../common/markdown-limits';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
-import { ItOpsSettings } from '../it-ops-settings/it-ops-settings.service';
+import { formatApplicationCategoryOptions, ItOpsSettings } from '../it-ops-settings/it-ops-settings.service';
 
 const OWNER_COLUMN = /^(business|it)_owner_email_/;
 
@@ -101,6 +101,10 @@ async function validateApplicationRows(rows: CsvImportRow[], context: CsvImportC
     [context.tenantId, unsuited],
   );
   const childCount = new Map(children.map((row) => [row.suite_id, row.count]));
+  const catalogAllowed = {
+    lifecycle: formatApplicationCategoryOptions(settings.lifecycleStates),
+    category: formatApplicationCategoryOptions(settings.applicationCategories),
+  };
 
   for (const row of rows) {
     const name = String(row.raw.name ?? '').trim();
@@ -125,7 +129,10 @@ async function validateApplicationRows(rows: CsvImportRow[], context: CsvImportC
       if (!value) continue;
       let found = null;
       try { found = findCatalogOption(value, options as any[]); } catch { found = null; }
-      if (!found) fail(row, code, `Unknown ${column} "${value}"; use a code or a name of the catalog`, { value }, column);
+      if (!found) {
+        const allowed = catalogAllowed[column];
+        fail(row, code, `Unknown ${column} "${value}"; use a code or a name of the catalog: ${allowed}`, { value, allowed }, column);
+      }
     }
 
     for (const ownerType of OWNER_TYPES) {
