@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import { assert, inRolledBackTransaction, runSpecs, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { MAX_DEPTH } from '../technology-reach.service';
-import { application, asset, assign, contains, installed, member, seedGraph, services, technology, version } from './technologies.fixtures';
+import { application, asset, assign, contains, installed, member, seedGraph, services, technology, version, type AuditEntry } from './technologies.fixtures';
 
 // The deductions of the technology layer (lot S) against a real database, in transactions rolled
 // back at the end: host -> VM, member -> cluster, the depth limit, a `contains` cycle, the
@@ -103,6 +103,49 @@ async function testApplications() {
     await runner.query(`UPDATE app_instances SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE application_id = $1`, [g.apps.erp]);
     assert.deepEqual(await reach.applicationsOfTechnologies(runner.manager, g.tenantId, [g.tech.sql]), [], 'a disabled instance hosts nothing');
     assert.equal((await reach.countsOfTechnologies(runner.manager, g.tenantId, [g.tech.sql])).get(g.tech.sql)?.applications, 0);
+  });
+}
+
+// The Add of a technology's Applications tab names the version of its declarations, as the other
+// link writes do: an existing version, a label resolved or created, or none.
+async function testDeclareApplicationsAtVersion() {
+  await inRolledBackTransaction(async (runner) => {
+    const g = await seedGraph(runner, 'reach-declare');
+    const audit: AuditEntry[] = [];
+    const { links } = services(audit);
+    const opts = { manager: runner.manager, tenantId: g.tenantId, userId: null };
+    const crm = await application(runner, g.tenantId, 'CRM reach-declare');
+    const hr = await application(runner, g.tenantId, 'HR reach-declare');
+    const declared = async (appId: string) => (await runner.query(
+      `SELECT v.label FROM application_technologies l LEFT JOIN technology_versions v ON v.tenant_id = l.tenant_id AND v.id = l.technology_version_id
+        WHERE l.tenant_id = $1 AND l.application_id = $2 AND l.technology_id = $3 ORDER BY v.label NULLS FIRST`,
+      [g.tenantId, appId, g.tech.sql],
+    )).map((row: { label: string | null }) => row.label ?? 'unknown');
+
+    assert.deepEqual(await links.addApplications(g.tech.sql, [crm, hr], opts, {}, { technology_version_id: g.versions.sql2019 }), { ok: true, added: 2 });
+    assert.deepEqual(await declared(crm), ['2019']);
+    assert.deepEqual(await declared(hr), ['2019']);
+    const written = audit.filter((entry) => entry.table === 'application_technologies');
+    assert.deepEqual(written.map((entry) => entry.after), [crm, hr].sort().map((id) => ({ application_id: id, technology_version_id: g.versions.sql2019 })));
+
+    // A label is resolved without case, and created when missing.
+    await links.addApplications(g.tech.sql, [crm], opts, {}, { version_label: '2022' });
+    assert.deepEqual(await declared(crm), ['2019', '2022']);
+    const [{ count }] = await runner.query(`SELECT count(*)::int AS count FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND label = '2022'`, [g.tenantId, g.tech.sql]);
+    assert.equal(count, 1);
+    // No version: "version unknown", as before; the same declaration twice adds nothing.
+    await links.addApplications(g.tech.sql, [hr], opts, {});
+    assert.deepEqual(await declared(hr), ['unknown', '2019']);
+    assert.deepEqual(await links.addApplications(g.tech.sql, [hr], opts, {}, { technology_version_id: null }), { ok: true, added: 0 });
+
+    // A version of another technology is refused, and so is a label next to an unknown application.
+    await assert.rejects(links.addApplications(g.tech.sql, [crm], opts, {}, { technology_version_id: g.versions.v8 }), /Version not found/);
+    await assert.rejects(
+      links.addApplications(g.tech.sql, ['00000000-0000-4000-8000-000000000000'], opts, {}, { version_label: '2030' }),
+      /One or more applications not found/,
+    );
+    const [{ created }] = await runner.query(`SELECT count(*)::int AS created FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND label = '2030'`, [g.tenantId, g.tech.sql]);
+    assert.equal(created, 0, 'a refused add creates no version');
   });
 }
 
@@ -370,6 +413,7 @@ runSpecs('technology-reach.integration.spec', [
   ['forward traversal', testForwardTraversal],
   ['depth and cycle', testDepthAndCycle],
   ['applications both ways', testApplications],
+  ['declare applications at a version', testDeclareApplicationsAtVersion],
   ['list counters', testCounts],
   ['retired asset', testRetiredAsset],
   ['servers of a technology on a cluster', testClusterServers],
