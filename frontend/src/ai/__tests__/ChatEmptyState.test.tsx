@@ -146,14 +146,15 @@ describe.each(['en', 'fr', 'de', 'es'])('chat suggestions in %s', (lng) => {
     ]);
   });
 
-  it('asks the budget question once on the budget path', () => {
+  it('leads with the savings question on the budget path, then the usual budget question once', () => {
     angle = 'budget';
     readable = ['budget'];
     renderEmpty();
     const labels = screen.getAllByRole('button').map((button) => button.textContent);
-    expect(labels.slice(0, 2)).toEqual([
-      i18n.t('ai:workspace.suggestions.budgetLines'),
+    expect(labels.slice(0, 3)).toEqual([
+      i18n.t('ai:workspace.suggestions.savings'),
       i18n.t('ai:workspace.suggestions.noOwner'),
+      i18n.t('ai:workspace.suggestions.budgetLines'),
     ]);
     expect(labels.filter((label) => label === i18n.t('ai:workspace.suggestions.budgetLines'))).toHaveLength(1);
   });

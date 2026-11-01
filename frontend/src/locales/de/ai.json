@@ -417,7 +417,8 @@
       "endOfSupport": "Welche Technologien erreichen in den nächsten sechs Monaten ihr Supportende?",
       "noRecovery": "Welche kritischen Anwendungen haben keinen Wiederanlaufplan?",
       "overBudget": "Welche Projekte überschreiten ihr Budget?",
-      "awaitingDecision": "Welche Anfragen warten auf eine Entscheidung?"
+      "awaitingDecision": "Welche Anfragen warten auf eine Entscheidung?",
+      "savings": "Wo liegen die größten Einsparpotenziale bei den IT-OPEX?"
     },
     "title": "Plaid"
   },

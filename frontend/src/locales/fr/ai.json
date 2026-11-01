@@ -417,7 +417,8 @@
       "endOfSupport": "Quelles technologies arrivent en fin de support dans les six mois ?",
       "noRecovery": "Quelles applications critiques n'ont pas de plan de reprise ?",
       "overBudget": "Quels projets dépassent leur budget ?",
-      "awaitingDecision": "Quelles demandes attendent un arbitrage ?"
+      "awaitingDecision": "Quelles demandes attendent un arbitrage ?",
+      "savings": "Quelles sont les principales opportunités d'économies dans les OPEX IT ?"
     },
     "title": "Plaid"
   },

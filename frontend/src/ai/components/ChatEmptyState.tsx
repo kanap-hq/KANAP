@@ -21,7 +21,7 @@ export const SUGGESTION_KEYS = [
 
 /** The two questions of each onboarding path, with the module each one reads. */
 export const ANGLE_SUGGESTIONS: Record<OnboardingAngle, Array<{ key: string; resource: string }>> = {
-  budget: [{ key: 'budgetLines', resource: 'budget' }, { key: 'noOwner', resource: 'budget' }],
+  budget: [{ key: 'savings', resource: 'budget' }, { key: 'noOwner', resource: 'budget' }],
   cartography: [{ key: 'endOfSupport', resource: 'applications' }, { key: 'noRecovery', resource: 'applications' }],
   portfolio: [{ key: 'overBudget', resource: 'portfolio_projects' }, { key: 'awaitingDecision', resource: 'portfolio_requests' }],
 };

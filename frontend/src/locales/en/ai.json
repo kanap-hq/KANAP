@@ -417,7 +417,8 @@
       "endOfSupport": "Which technologies reach their end of support within six months?",
       "noRecovery": "Which critical applications have no recovery plan?",
       "overBudget": "Which projects are over budget?",
-      "awaitingDecision": "Which requests are waiting for a decision?"
+      "awaitingDecision": "Which requests are waiting for a decision?",
+      "savings": "What are the main savings opportunities in IT OPEX?"
     },
     "title": "Plaid"
   },
