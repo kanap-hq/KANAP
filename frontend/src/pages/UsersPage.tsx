@@ -151,11 +151,11 @@ export default function UsersPage() {
       intent: 'danger',
     });
     if (!okToGo) return;
-    try { await disableUser(row.id); } catch (e: any) { await dialogs.alert(e?.response?.data?.message || String(e)); }
+    try { await disableUser(row.id); } catch (e: any) { await dialogs.alert(getApiErrorMessage(e, t, String(e))); }
   };
   const handleRowEnable = async (row: any) => {
     closeRowMenu();
-    try { await enableUser(row.id); } catch (e: any) { await dialogs.alert(e?.response?.data?.message || String(e)); }
+    try { await enableUser(row.id); } catch (e: any) { await dialogs.alert(getApiErrorMessage(e, t, String(e))); }
   };
   const handleRowInvite = async (row: any) => {
     closeRowMenu();
@@ -163,14 +163,14 @@ export default function UsersPage() {
     try {
       await inviteUser(row.id);
       await dialogs.alert(t('users.messages.inviteSentOne', { email: row.email }));
-    } catch (e: any) { await dialogs.alert(e?.response?.data?.message || String(e)); }
+    } catch (e: any) { await dialogs.alert(getApiErrorMessage(e, t, String(e))); }
   };
   const handleRowReset = async (row: any) => {
     closeRowMenu();
     try {
       await api.post('/auth/password-reset/request', { email: row.email });
       await dialogs.alert(t('users.messages.resetSent', { email: row.email }));
-    } catch (e: any) { await dialogs.alert(e?.response?.data?.message || String(e)); }
+    } catch (e: any) { await dialogs.alert(getApiErrorMessage(e, t, String(e))); }
   };
   const handleRowDelete = async (row: any) => {
     closeRowMenu();

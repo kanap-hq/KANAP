@@ -950,9 +950,7 @@ function AssetWorkspaceRoute() {
             if (cancelled) return;
             setLocationCompanyName(null);
             setLocationInfoError(
-              companyError?.response?.data?.message ||
-                companyError?.message ||
-                t('messages.loadCompanyFailed'),
+              getApiErrorMessage(companyError, t, t('messages.loadCompanyFailed')),
             );
           }
         } else {
