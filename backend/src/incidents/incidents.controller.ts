@@ -1,6 +1,6 @@
 import { languageOf, timeZoneOf } from '../common/csv-sheet';
 import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res,
+  Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -55,6 +55,13 @@ import {
   parseIncidentReason,
 } from './dto';
 import { incidentViewerFromContext } from './incident-visibility';
+import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
+import {
+  countChangesSinceCreation,
+  countEditedManagedDocuments,
+  withChildCount,
+  type CreationChanges,
+} from '../common/creation/creation-changes';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
 
 @UseGuards(JwtAuthGuard)
@@ -757,11 +764,72 @@ export class IncidentsController {
     return this.svc.get(id, await this.viewOpts(ctx));
   }
 
+  /**
+   * Creates the incident and hands its creator a creation token (`common/creation`) beside the
+   * presented incident, which opens "Cancel creation" (`DELETE :id/creation`) for this record and
+   * this person only.
+   */
   @UseGuards(PermissionGuard)
   @RequireLevel('incidents', 'contributor')
   @Post()
   async create(@Body() body: CreateIncidentInput, @Tenant() ctx: TenantRequest) {
-    return this.svc.create(body, ctx.userId || null, await this.viewOpts(ctx));
+    const created = await this.svc.create(body, ctx.userId || null, await this.viewOpts(ctx));
+    const creation_token = issueCreationToken({ tenantId: ctx.tenantId, family: 'incidents', recordId: created.id, userId: ctx.userId });
+    return Object.assign(created, { creation_token });
+  }
+
+  /** The token of `POST /incidents` for this record, tenant and person, still valid; a 403 otherwise. */
+  private assertCreationToken(id: string, token: unknown, ctx: TenantRequest): void {
+    if (!verifyCreationToken(token, { tenantId: ctx.tenantId, family: 'incidents', recordId: String(id ?? ''), userId: ctx.userId })) {
+      throw creationCancelExpired();
+    }
+  }
+
+  /**
+   * Before "Cancel creation": what was written on the incident and its children since its creation
+   * (its history's audit rows), with the journal notes (the journal is no audit: its status,
+   * severity and link entries repeat changes the history counts, and "Incident logged" comes with
+   * the creation), the review document when its content changed, and the attachments as they
+   * stand. Nothing is written.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('incidents', 'contributor')
+  @Get(':id/creation')
+  async creationChanges(
+    @Param('id') id: string,
+    @Query('token') token: string,
+    @Tenant() ctx: TenantRequest,
+  ): Promise<{ changes: CreationChanges }> {
+    this.assertCreationToken(id, token, ctx);
+    const manager = ctx.manager as EntityManager;
+    const [counts]: Array<{ found: number; notes: number; attachments: number }> = await manager.query(
+      `SELECT (SELECT count(*)::int FROM incidents WHERE tenant_id = $1 AND id = $2) AS found,
+              (SELECT count(*)::int FROM incident_entries WHERE tenant_id = $1 AND incident_id = $2 AND kind = 'note') AS notes,
+              (SELECT count(*)::int FROM incident_attachments WHERE tenant_id = $1 AND incident_id = $2 AND deleted_at IS NULL) AS attachments`,
+      [ctx.tenantId, id],
+    );
+    if (!counts?.found) throw new NotFoundException('Incident not found.');
+    let changes = await countChangesSinceCreation(manager, ctx.tenantId, 'incidents', id);
+    changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, ctx.tenantId, 'incidents', id));
+    changes = withChildCount(changes, 'attachment', counts.attachments);
+    return { changes: withChildCount(changes, 'journal_entry', counts.notes) };
+  }
+
+  /**
+   * "Cancel creation": the creator deletes the incident they just created, with its token, at the
+   * create level instead of the delete right (admin). Same delete as `DELETE :id`: a closed or
+   * cancelled incident, or one holding regulatory reporting data, is refused with its 409.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('incidents', 'contributor')
+  @Delete(':id/creation')
+  async cancelCreation(
+    @Param('id') id: string,
+    @Body() body: { token?: string },
+    @Tenant() ctx: TenantRequest,
+  ): Promise<void> {
+    this.assertCreationToken(id, body?.token, ctx);
+    await this.deleteSvc.delete(id, { manager: ctx.manager as EntityManager, userId: ctx.userId || null });
   }
 
   @UseGuards(PermissionGuard)
