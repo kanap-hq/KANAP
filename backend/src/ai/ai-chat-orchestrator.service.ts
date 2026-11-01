@@ -318,6 +318,7 @@ type StreamPreparationResult = {
   providerMessages: AiProviderMessage[];
   tools: AiProviderToolDef[];
   systemPromptText: string;
+  systemPromptCacheablePrefix: string;
   systemPromptSections: AiContextBudgetSectionBreakdown[];
   preStreamEvents: ChatStreamEvent[];
   approvalAssistantText: string | null;
@@ -2093,6 +2094,7 @@ export class AiChatOrchestratorService {
       providerMessages,
       tools,
       systemPromptText,
+      systemPromptCacheablePrefix,
       systemPromptSections,
       preStreamEvents,
       approvalAssistantText,
@@ -2387,6 +2389,7 @@ export class AiChatOrchestratorService {
               providerMessages: msgs,
               tools: toolSchemas,
               systemPromptText: builtSystemPrompt.text,
+              systemPromptCacheablePrefix: builtSystemPrompt.cacheablePrefix,
               systemPromptSections: builtSystemPrompt.sections,
               preStreamEvents: streamEvents,
               approvalAssistantText: null,
@@ -2423,6 +2426,7 @@ export class AiChatOrchestratorService {
             providerMessages: [],
             tools: [],
             systemPromptText: '',
+            systemPromptCacheablePrefix: '',
             systemPromptSections: [],
             preStreamEvents: streamEvents,
             approvalAssistantText: await this.buildPreviewResultsAssistantText(
@@ -2602,6 +2606,7 @@ export class AiChatOrchestratorService {
           providerMessages: msgs,
           tools: toolSchemas,
           systemPromptText: sysPrompt,
+          systemPromptCacheablePrefix: builtSystemPrompt.cacheablePrefix,
           systemPromptSections: builtSystemPrompt.sections,
           preStreamEvents: streamEvents,
           approvalAssistantText: null,
@@ -2800,6 +2805,7 @@ export class AiChatOrchestratorService {
         endpointUrl,
         endpointSource: providerSource === 'builtin' ? 'platform' : 'tenant',
         systemPrompt: systemPromptText,
+        systemPromptCacheablePrefix,
         messages,
         tools,
         maxTokens: requestMaxTokens,
