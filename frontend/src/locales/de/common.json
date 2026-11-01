@@ -1636,7 +1636,7 @@
           "hint": {
             "budget": "Laden Sie Ihre Kolleginnen und Kollegen ein, indem Sie ihre Benutzerkonten anlegen. Über das Menü Authentifizierung richten Sie SSO mit Entra ID ein.",
             "cartography": "Laden Sie eine verantwortliche Person für eine Anwendung oder ein Asset ein.",
-            "portfolio": "Tragen Sie sich als Mitwirkende oder Mitwirkender ein: Team, Projektverfügbarkeit, Kompetenzen. Noch kein Team? Legen Sie es unter Einstellungen › Teams an."
+            "portfolio": "Tragen Sie sich als Mitwirkende oder Mitwirkender ein: Team, Projektverfügbarkeit. Noch kein Team? Legen Sie es unter Einstellungen › Teams an."
           }
         },
         "map_application": {
