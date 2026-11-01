@@ -2655,7 +2655,7 @@
       "timeoutHint": "Durée d'attente, en secondes, avant d'abandonner l'appel. Laissez vide pour la limite standard. Les modèles locaux ont souvent besoin de plus de temps.",
       "reasoningEffort": "Effort de raisonnement",
       "reasoningEffortDefault": "Par défaut du fournisseur",
-      "reasoningEffortHint": "Combien le modèle réfléchit avant de répondre. Plus d’effort : réponses plus soignées, plus lentes et plus chères. Toutes les valeurs ne sont pas acceptées par tous les fournisseurs : « Tester la connexion » le vérifie.",
+      "reasoningEffortHint": "Combien le modèle réfléchit avant de répondre. Plus d’effort : réponses plus soignées, plus lentes et plus chères. Les niveaux proposés dépendent du fournisseur et du modèle. « Tester la connexion » indique l’effort envoyé.",
       "reasoningEffortValues": {
         "low": "Faible",
         "medium": "Moyen",
@@ -2663,10 +2663,16 @@
         "xhigh": "Très élevé",
         "max": "Maximal"
       },
+      "reasoningEffortUnavailable": "Ce modèle ne prend pas d’effort de raisonnement.",
+      "reasoningEffortMayBeIgnored": "Ce serveur peut ignorer l’effort de raisonnement. « Tester la connexion » indique si le modèle a raisonné.",
       "defaultLabel": "Utiliser comme modèle par défaut",
       "test": "Tester la connexion",
       "testing": "Test en cours…",
-      "testOk": "Connexion réussie ({{latency}} ms)."
+      "testOk": "Connexion réussie ({{latency}} ms).",
+      "testEffortSent": "Effort envoyé : {{effort}}.",
+      "testEffortNotSent": "Aucun effort envoyé.",
+      "testReasoningTokens_one": "{{count}} token de raisonnement.",
+      "testReasoningTokens_other": "{{count}} tokens de raisonnement."
     }
   },
   "aiUsage": {

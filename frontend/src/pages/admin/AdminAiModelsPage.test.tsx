@@ -53,6 +53,25 @@ const MODEL = {
   updated_at: '2026-10-01T10:00:00.000Z',
 };
 
+// The levels the backend's reasoning-effort capability gives for these providers and models.
+const ALL_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
+function effortSupport(provider: string, model: string) {
+  if (provider === 'anthropic') {
+    const levels = model === 'claude-sonnet-4-6'
+      ? ['low', 'medium', 'high', 'max']
+      : model === 'claude-opus-5-5' ? ALL_LEVELS : [];
+    return { levels, server_may_ignore: false };
+  }
+  return { levels: ALL_LEVELS, server_may_ignore: provider !== 'openai' };
+}
+
+function withModel(overrides: Record<string, unknown>) {
+  const original = (api.get as any).getMockImplementation();
+  (api.get as any).mockImplementation((url: string, config?: any) => (url === '/ai/model-configs'
+    ? Promise.resolve({ data: { model_configs: [{ ...MODEL, ...overrides }], secret_writable: true } })
+    : original(url, config)));
+}
+
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(
@@ -79,14 +98,26 @@ describe('AdminAiModelsPage model dialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localeState.current = 'en';
-    (api.get as any).mockImplementation((url: string) => {
+    (api.get as any).mockImplementation((url: string, config?: { params?: { provider: string; model: string } }) => {
       switch (url) {
+        case '/ai/model-configs/reasoning-efforts':
+          return Promise.resolve({ data: effortSupport(config!.params!.provider, config!.params!.model) });
         case '/ai/model-configs':
           return Promise.resolve({ data: { model_configs: [MODEL], secret_writable: true } });
         case '/ai/settings':
           return Promise.resolve({
             data: {
               available_providers: [{
+                id: 'anthropic',
+                label: 'Anthropic',
+                description: 'Anthropic API',
+                capabilities: {
+                  supportsStreaming: true,
+                  supportsToolCalling: true,
+                  requiresApiKey: true,
+                  allowsCustomEndpoint: false,
+                },
+              }, {
                 id: 'openai',
                 label: 'OpenAI',
                 description: 'OpenAI API',
@@ -193,9 +224,7 @@ describe('AdminAiModelsPage model dialog', () => {
   });
 
   it('sends the provider default as null', async () => {
-    (api.get as any).mockImplementation(((original) => (url: string) => (url === '/ai/model-configs'
-      ? Promise.resolve({ data: { model_configs: [{ ...MODEL, reasoning_effort: 'max' }], secret_writable: true } })
-      : original(url)))((api.get as any).getMockImplementation()));
+    withModel({ reasoning_effort: 'max' });
     await openEditDialog();
     const select = screen.getByRole('combobox', { name: 'Reasoning effort' });
     expect(select).toHaveTextContent('Maximum');
@@ -206,6 +235,74 @@ describe('AdminAiModelsPage model dialog', () => {
 
     await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
     expect((api.patch as any).mock.calls[0][1]).toMatchObject({ reasoning_effort: null });
+  });
+
+  it('offers only the levels the Anthropic model accepts', async () => {
+    withModel({ provider: 'anthropic', model: 'claude-sonnet-4-6', endpoint_url: null });
+    await openEditDialog();
+    const select = screen.getByRole('combobox', { name: 'Reasoning effort' });
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith(
+      '/ai/model-configs/reasoning-efforts',
+      { params: { provider: 'anthropic', model: 'claude-sonnet-4-6' } },
+    ));
+
+    await waitFor(async () => {
+      fireEvent.mouseDown(select);
+      const options = await screen.findAllByRole('option');
+      expect(options.map((option) => option.textContent)).toEqual([
+        'Provider default', 'Low', 'Medium', 'High', 'Maximum',
+      ]);
+    });
+  });
+
+  it('disables the effort, with a tooltip, for a model that takes none', async () => {
+    withModel({ provider: 'anthropic', model: 'claude-haiku-4-5', endpoint_url: null });
+    await openEditDialog();
+    const select = screen.getByRole('combobox', { name: 'Reasoning effort' });
+    await waitFor(() => expect(select).toHaveAttribute('aria-disabled', 'true'));
+    expect(screen.getByLabelText('This model takes no reasoning effort.')).toBeInTheDocument();
+    expect(select).toHaveTextContent('Provider default');
+  });
+
+  it('clears a level the new model does not accept', async () => {
+    withModel({ provider: 'anthropic', model: 'claude-opus-5-5', endpoint_url: null, reasoning_effort: 'xhigh' });
+    await openEditDialog();
+    const select = screen.getByRole('combobox', { name: 'Reasoning effort' });
+    expect(select).toHaveTextContent('Very high');
+
+    fireEvent.change(screen.getByDisplayValue('claude-opus-5-5'), { target: { value: 'claude-sonnet-4-6' } });
+    await waitFor(() => expect(select).toHaveTextContent('Provider default'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    expect((api.patch as any).mock.calls[0][1]).toMatchObject({ model: 'claude-sonnet-4-6', reasoning_effort: null });
+  });
+
+  it('shows the effort sent and the reasoning tokens in the test result', async () => {
+    (api.post as any).mockResolvedValue({
+      data: {
+        ok: true,
+        provider: 'openai',
+        model: 'mistral-medium-latest',
+        latency_ms: 420,
+        message: 'Provider test succeeded.',
+        validation_errors: [],
+        reasoning_effort_sent: 'high',
+        reasoning_tokens: 12,
+      },
+    });
+    await openEditDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection' }));
+    expect(await screen.findByText('Connection successful (420 ms). Effort sent: High. 12 reasoning tokens.')).toBeInTheDocument();
+
+    (api.post as any).mockResolvedValue({
+      data: {
+        ok: true, provider: 'openai', model: 'mistral-medium-latest', latency_ms: 300,
+        message: 'Provider test succeeded.', validation_errors: [], reasoning_effort_sent: null, reasoning_tokens: null,
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Test connection' }));
+    expect(await screen.findByText('Connection successful (300 ms). No effort sent.')).toBeInTheDocument();
   });
 
   async function switchToOllama() {
@@ -242,5 +339,14 @@ describe('AdminAiModelsPage model dialog', () => {
     expect(input).toHaveValue('0');
     expect(output).toHaveValue('0');
     expect(cacheRead).toHaveValue('0,05');
+  });
+
+  it('keeps every level for Ollama, with a tooltip that the server may ignore it', async () => {
+    withModel({ reasoning_effort: 'max' });
+    await openEditDialog();
+    await switchToOllama();
+    expect(await screen.findByLabelText('This server may ignore the reasoning effort. “Test connection” shows whether the model reasoned.'))
+      .toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Reasoning effort' })).toHaveTextContent('Maximum');
   });
 });

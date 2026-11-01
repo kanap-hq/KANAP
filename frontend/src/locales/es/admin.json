@@ -2655,7 +2655,7 @@
       "timeoutHint": "Cuántos segundos esperar a este modelo antes de desistir. Déjelo vacío para usar el límite estándar. Los modelos locales suelen necesitar más tiempo.",
       "reasoningEffort": "Esfuerzo de razonamiento",
       "reasoningEffortDefault": "Predeterminado del proveedor",
-      "reasoningEffortHint": "Cuánto piensa el modelo antes de responder. Más esfuerzo: respuestas más cuidadas, más lentas y más caras. No todos los proveedores aceptan todos los valores: «Probar conexión» lo comprueba.",
+      "reasoningEffortHint": "Cuánto piensa el modelo antes de responder. Más esfuerzo: respuestas más cuidadas, más lentas y más caras. Los niveles ofrecidos dependen del proveedor y del modelo. «Probar conexión» muestra el esfuerzo enviado.",
       "reasoningEffortValues": {
         "low": "Bajo",
         "medium": "Medio",
@@ -2663,10 +2663,16 @@
         "xhigh": "Muy alto",
         "max": "Máximo"
       },
+      "reasoningEffortUnavailable": "Este modelo no admite esfuerzo de razonamiento.",
+      "reasoningEffortMayBeIgnored": "Este servidor puede ignorar el esfuerzo de razonamiento. «Probar conexión» muestra si el modelo razonó.",
       "defaultLabel": "Usar como modelo predeterminado",
       "test": "Probar conexión",
       "testing": "Probando…",
-      "testOk": "Conexión correcta ({{latency}} ms)."
+      "testOk": "Conexión correcta ({{latency}} ms).",
+      "testEffortSent": "Esfuerzo enviado: {{effort}}.",
+      "testEffortNotSent": "No se envió ningún esfuerzo.",
+      "testReasoningTokens_one": "{{count}} token de razonamiento.",
+      "testReasoningTokens_other": "{{count}} tokens de razonamiento."
     }
   },
   "aiUsage": {

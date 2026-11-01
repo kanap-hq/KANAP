@@ -110,6 +110,17 @@ export type AiProviderTestResult = {
   latency_ms: number | null;
   message: string;
   validation_errors: string[];
+  // The effort the test call sent; null when none was.
+  reasoning_effort_sent?: AiReasoningEffort | null;
+  // Reasoning tokens the response reported (OpenAI-compatible providers); null when not reported.
+  reasoning_tokens?: number | null;
+};
+
+// The reasoning efforts a provider and model accept (backend reasoning-effort.capability.ts).
+export type AiReasoningEffortSupport = {
+  levels: AiReasoningEffort[];
+  // True when the server may ignore the field (Ollama, custom endpoints).
+  server_may_ignore: boolean;
 };
 
 export type AiModelConfigUsage = {
@@ -1466,6 +1477,10 @@ export const aiModelConfigsApi = {
   },
   async test(id: string): Promise<AiProviderTestResult> {
     const res = await api.post(`/ai/model-configs/${id}/test`);
+    return res.data;
+  },
+  async reasoningEfforts(provider: string, model: string): Promise<AiReasoningEffortSupport> {
+    const res = await api.get('/ai/model-configs/reasoning-efforts', { params: { provider, model } });
     return res.data;
   },
 };
