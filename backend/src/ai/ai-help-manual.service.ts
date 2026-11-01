@@ -95,10 +95,19 @@ function headingText(raw: string): { title: string; id: string | null } {
   const text = (attr ? raw.slice(0, attr.index) : raw)
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/[*_`]/g, '')
-    .replace(/<[^>]+>/g, '')
-    .trim();
-  return { title: text, id: attr ? attr[1] : null };
+    .replace(/[*_`]/g, '');
+  return { title: stripRepeatedly(text, /<[^>]+>/g).trim(), id: attr ? attr[1] : null };
+}
+
+/** Removes every match of `pattern`, again until none is left: one removal can join two halves into a new match. */
+function stripRepeatedly(value: string, pattern: RegExp): string {
+  let previous: string;
+  let current = value;
+  do {
+    previous = current;
+    current = current.replace(pattern, '');
+  } while (current !== previous);
+  return current;
 }
 
 /** Python-Markdown's `unique`: a second "Overview" on a page is `overview_1`. */
@@ -199,10 +208,8 @@ export function cleanHelpMarkdown(language: AiScreenLanguage, pagePath: string, 
     }
     if (/^\s*--8<--/.test(line)) continue;
 
-    line = line
-      .replace(/<!--[\s\S]*?-->/g, '')
+    line = stripRepeatedly(stripRepeatedly(line, /<!--[\s\S]*?-->/g), /<\/?(?:div|span|p|figure|figcaption|img|details|summary|center)\b[^>]*>/gi)
       .replace(/!\[[^\]]*\]\([^)]*\)(\{[^}]*\})?/g, '')
-      .replace(/<\/?(?:div|span|p|figure|figcaption|img|details|summary|center)\b[^>]*>/gi, '')
       .replace(/<br\s*\/?>/gi, ' ')
       .replace(/\s*\{\s*[#.:][^}]*\}\s*$/, '')
       .replace(/\]\(([^)\s]+)\)/g, (_match, target: string) => `](${helpLinkTarget(language, pagePath, target)})`);

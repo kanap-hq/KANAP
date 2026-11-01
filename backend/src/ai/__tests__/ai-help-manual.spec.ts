@@ -164,6 +164,9 @@ function testMkDocsSyntaxIsRemoved() {
     '    See [Budget](budget-lines.md#import) and [above](#overview).',
     '',
     'After the tip. <div markdown>Wrapped</div>',
+    'Nested <!<!-- a -->-- b -->comment and <di<div>v>tag.',
+    '',
+    '### Heading <b<b>>bold',
     '',
     '```',
     '!!! not an admonition in code',
@@ -176,13 +179,15 @@ function testMkDocsSyntaxIsRemoved() {
   const page = parseHelpPage('fr', 'fast-track/index', markdown);
   assert.equal(page.title, 'Sample');
   assert.equal(page.url, 'https://doc.kanap.net/fr/fast-track/');
-  assert.deepEqual(page.sections.map((section) => section.id), ['renewals', 'overview', 'overview_1']);
+  assert.deepEqual(page.sections.map((section) => section.id), ['renewals', 'heading-bold', 'overview', 'overview_1']);
+  assert.doesNotMatch(page.sections[1].title, /</, 'a tag split by another is removed too');
   const text = cleanHelpMarkdown('fr', page.path, page.lines);
   assert.doesNotMatch(text, /!\[|png|<div|\{ #/);
   assert.match(text, /\*\*Prefer one page\*\*\nKeep it short\./);
   assert.match(text, /\[Budget\]\(https:\/\/doc\.kanap\.net\/fr\/fast-track\/budget-lines\/#import\)/);
   assert.match(text, /\[above\]\(https:\/\/doc\.kanap\.net\/fr\/fast-track\/#overview\)/);
   assert.match(text, /After the tip\. Wrapped/);
+  assert.match(text, /Nested comment and tag\./, 'a comment or tag split by another is removed too');
   assert.match(text, /```\n!!! not an admonition in code\n```/);
   assert.equal(helpHeadingSlug('Décisions de renouvellement'), 'decisions-de-renouvellement');
   assert.equal(helpHeadingSlug("L'espace de travail des Actifs"), 'lespace-de-travail-des-actifs');
