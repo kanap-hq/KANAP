@@ -174,6 +174,17 @@ async function setDemo(tenantId: string, demo: unknown) {
   );
 }
 
+/** Waits until the sample data state of the tenant has `status` (a reset runs in the background). */
+async function waitDemoStatus(tenantId: string, status: string, timeoutMs = 30_000) {
+  const until = Date.now() + timeoutMs;
+  for (;;) {
+    const [row] = await dataSource.query(`SELECT metadata->'demo'->>'status' AS status FROM tenants WHERE id = $1`, [tenantId]);
+    if (row?.status === status) return;
+    if (Date.now() > until) assert.fail(`sample data never reached ${status} (last: ${row?.status})`);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
 // 1. A new workspace: nothing chosen, nothing done, anybody may choose; no token, no answer.
 async function testFreshWorkspace() {
   const svc = buildServices();
@@ -392,6 +403,9 @@ async function testSteps() {
     assert.deepEqual(ownData.steps.map((s: any) => s.key), ONBOARDING_PATHS.budget.own_data);
     assert.equal(ownData.completed, false);
     assert.equal(ownData.next_step, 'own_company');
+    // The switch stopped the load the administrator's `example` started and emptied the
+    // workspace in the background; writes wait for the end of that reset (409 `tenant_resetting`).
+    await waitDemoStatus(t.tenantId, 'idle');
     assert.equal(ok(await asOwner.choose({ mode: 'example' }), 'back to example').completed, true);
 
     // The member completes too: their own `completed`.
