@@ -106,7 +106,12 @@ async function main() {
     assert.deepEqual(body.output_config, { effort: 'low' });
     const done = events.find((event) => event.type === 'done');
     assert.ok(done && done.type === 'done');
-    assert.deepEqual(done.usage, { input_tokens: 3210, output_tokens: 5 });
+    assert.deepEqual(done.usage, {
+      input_tokens: 3210,
+      output_tokens: 5,
+      cache_read_input_tokens: 3000,
+      cache_write_input_tokens: 200,
+    });
 
     await run({ reasoningEffort: null });
     assert.deepEqual(bodies.at(-1)!.cache_control, { type: 'ephemeral' });

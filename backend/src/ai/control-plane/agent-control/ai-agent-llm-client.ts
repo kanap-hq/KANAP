@@ -2,11 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { assertPublicHttpTarget } from '../../../common/ssrf-guard';
 import { AiExecutionContextWithManager } from '../../ai.types';
-import { LlmTokenPrices } from '../../ai-llm-cost.util';
+import { LlmCacheCostFactors, LlmTokenPrices, NO_CACHE_DISCOUNT, llmCostEur } from '../../ai-llm-cost.util';
 import { AiModelResolverService } from '../../ai-model-resolver.service';
 import { BUILTIN_REASONING_EFFORT } from '../../platform/platform-ai-config.service';
 import { AiProviderRegistry } from '../../providers/ai-provider-registry.service';
 import { AiProviderAdapter, AiProviderId, AiProviderImageAttachment, AiStreamEvent } from '../../providers/ai-provider.types';
+import { StreamUsage } from '../../providers/streaming.util';
 
 export type AgentLlmRuntime = {
   source: 'builtin' | 'custom';
@@ -23,12 +24,17 @@ export type AgentLlmRuntime = {
   // €/Mtok prices of the resolved model; null/0 = free (local, self-hosted, builtin).
   priceInputEurPerMtok: number | null;
   priceOutputEurPerMtok: number | null;
+  // Price of a token read from the provider's cache; null: the input price times cacheCostFactors.read.
+  priceCacheReadEurPerMtok: number | null;
+  // What a cached prompt token costs on this provider, as a multiple of the input price.
+  cacheCostFactors: LlmCacheCostFactors;
 };
 
 export type AgentJsonModelResult = {
   text: string;
   runtime: AgentLlmRuntime;
-  usage: { input_tokens: number; output_tokens: number } | null;
+  // The tokens the provider reported, the cached part of the prompt included when it reports it.
+  usage: StreamUsage | null;
   latencyMs: number;
   // Provider finish reason for the completion ('length' = truncated at max_tokens,
   // 'stop' = natural end, etc.). null when the provider did not report one.
@@ -106,16 +112,44 @@ function parsePositiveIntEnv(value: string | undefined, fallback: number): numbe
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-function aggregateUsage(
+/** The usage of two agent calls added up; a cache count appears when either call reported it. */
+export function aggregateAgentUsage(
   left: AgentJsonModelResult['usage'],
   right: AgentJsonModelResult['usage'],
 ): AgentJsonModelResult['usage'] {
   if (!left) return right;
   if (!right) return left;
-  return {
+  const sum: StreamUsage = {
     input_tokens: left.input_tokens + right.input_tokens,
     output_tokens: left.output_tokens + right.output_tokens,
   };
+  if (left.cache_read_input_tokens != null || right.cache_read_input_tokens != null) {
+    sum.cache_read_input_tokens = (left.cache_read_input_tokens ?? 0) + (right.cache_read_input_tokens ?? 0);
+  }
+  if (left.cache_write_input_tokens != null || right.cache_write_input_tokens != null) {
+    sum.cache_write_input_tokens = (left.cache_write_input_tokens ?? 0) + (right.cache_write_input_tokens ?? 0);
+  }
+  return sum;
+}
+
+/**
+ * What an agent call cost once it ran: the input and output tokens (reported, or estimated when the
+ * provider reported none) at the runtime's prices, the tokens read from or written to the provider's
+ * cache at their own price (ai-llm-cost.util.ts).
+ */
+export function agentCallCostEur(
+  inputTokens: number,
+  outputTokens: number,
+  runtime: AgentLlmRuntime | null | undefined,
+  usage: AgentJsonModelResult['usage'],
+): number {
+  return llmCostEur(inputTokens, outputTokens, runtime, usage
+    ? {
+      readTokens: usage.cache_read_input_tokens,
+      writeTokens: usage.cache_write_input_tokens,
+      factors: runtime?.cacheCostFactors ?? NO_CACHE_DISCOUNT,
+    }
+    : null);
 }
 
 function formatStructuredJsonError(error: unknown): AgentStructuredJsonFailure {
@@ -200,6 +234,8 @@ export class AiAgentLlmClient {
       modelTimeoutMs: resolved.timeoutMs,
       priceInputEurPerMtok: resolved.priceInputEurPerMtok,
       priceOutputEurPerMtok: resolved.priceOutputEurPerMtok,
+      priceCacheReadEurPerMtok: resolved.priceCacheReadEurPerMtok ?? null,
+      cacheCostFactors: provider.cacheCostFactors ?? NO_CACHE_DISCOUNT,
     };
   }
 
@@ -218,6 +254,7 @@ export class AiAgentLlmClient {
     return {
       priceInputEurPerMtok: resolved.priceInputEurPerMtok,
       priceOutputEurPerMtok: resolved.priceOutputEurPerMtok,
+      priceCacheReadEurPerMtok: resolved.priceCacheReadEurPerMtok ?? null,
     };
   }
 
@@ -354,7 +391,7 @@ export class AiAgentLlmClient {
       }
       runtime = response.runtime;
       text = response.text;
-      usage = aggregateUsage(usage, response.usage);
+      usage = aggregateAgentUsage(usage, response.usage);
       totalLatencyMs += response.latencyMs;
 
       // A timed-out call yields whatever partial text had streamed before the abort

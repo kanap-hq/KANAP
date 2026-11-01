@@ -541,6 +541,10 @@ export type AiMutationPlanPrepareResultDto = {
 export type AiTokenUsage = {
   input_tokens: number;
   output_tokens: number;
+  /** Part of input_tokens read from the provider's cache, when reported. */
+  cache_read_input_tokens?: number;
+  /** Part of input_tokens written to the provider's cache, when reported. */
+  cache_write_input_tokens?: number;
 };
 
 export type AiBuiltinUsageDto = {

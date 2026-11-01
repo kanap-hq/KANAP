@@ -14,7 +14,6 @@ import { assertPublicHttpTarget } from '../common/ssrf-guard';
 import { getEnvMode, isDevelopmentEnv } from '../common/env';
 import { AiAttachmentService } from './ai-attachment.service';
 import { AiConversationService } from './ai-conversation.service';
-import { assistantMessageUsage } from './ai-llm-cost.util';
 import { AiModelResolutionError, AiModelResolverService, ResolvedModel } from './ai-model-resolver.service';
 import { AiMutationPreviewService } from './ai-mutation-preview.service';
 import { AiPolicyService } from './ai-policy.service';
@@ -42,7 +41,9 @@ import {
   AiProviderToolCall,
   AiStreamEvent,
 } from './providers/ai-provider.types';
-import { addUsage, cloneUsage, isAbortError, tryParseToolCallArguments } from './providers/streaming.util';
+import { addUsage, cloneUsage, isAbortError, StreamUsage, tryParseToolCallArguments } from './providers/streaming.util';
+import { AiMessageUsageModel, buildMessageUsageJson, USAGE_ONLY_MESSAGE_ROLE } from './ai-message-usage.util';
+import { NO_CACHE_DISCOUNT } from './ai-llm-cost.util';
 import { isOpenAiReasoningModel } from './providers/openai-stream.util';
 import {
   AI_QUERY_ENTITY_TYPES,
@@ -276,10 +277,17 @@ type CurrentUserPromptContext = {
   screenLanguage: AiScreenLanguage | null;
 };
 
-type StreamUsage = {
-  input_tokens: number;
-  output_tokens: number;
-};
+function messageUsageModel(resolved: ResolvedModel, adapter: AiProviderAdapter): AiMessageUsageModel {
+  return {
+    provider: resolved.provider,
+    model: resolved.model,
+    source: resolved.source,
+    priceInputEurPerMtok: resolved.priceInputEurPerMtok,
+    priceOutputEurPerMtok: resolved.priceOutputEurPerMtok,
+    priceCacheReadEurPerMtok: resolved.priceCacheReadEurPerMtok,
+    cacheCostFactors: adapter.cacheCostFactors ?? NO_CACHE_DISCOUNT,
+  };
+}
 
 type ApprovalAction =
   | { action: 'approve'; previewIds: string[] }
@@ -294,11 +302,9 @@ type PreparedChatRequest = {
   approvalAction: ApprovalAction | null;
   providerSource: 'builtin' | 'custom';
   provider: AiProviderAdapter;
-  /** Provider id of the resolved model, the one this turn calls. */
-  providerId: string;
   model: string;
-  priceInputEurPerMtok: number | null;
-  priceOutputEurPerMtok: number | null;
+  /** The model resolved for this turn, recorded with its prices on each assistant message. */
+  usageModel: AiMessageUsageModel;
   apiKey: string | null;
   endpointUrl: string | null;
   // Per-model timeout from the registry; null falls back to AI_CHAT_PROVIDER_TIMEOUT_MS.
@@ -1910,10 +1916,8 @@ export class AiChatOrchestratorService {
           approvalAction,
           providerSource: 'builtin',
           provider: adapter,
-          providerId: resolved.provider,
           model: resolved.model,
-          priceInputEurPerMtok: resolved.priceInputEurPerMtok,
-          priceOutputEurPerMtok: resolved.priceOutputEurPerMtok,
+          usageModel: messageUsageModel(resolved, adapter),
           apiKey: resolved.apiKey,
           endpointUrl: resolved.endpointUrl,
           modelTimeoutMs: null,
@@ -1941,10 +1945,8 @@ export class AiChatOrchestratorService {
         approvalAction,
         providerSource: 'custom',
         provider: adapter,
-        providerId: resolved.provider,
         model: resolved.model,
-        priceInputEurPerMtok: resolved.priceInputEurPerMtok,
-        priceOutputEurPerMtok: resolved.priceOutputEurPerMtok,
+        usageModel: messageUsageModel(resolved, adapter),
         apiKey: resolved.apiKey,
         endpointUrl: resolved.endpointUrl,
         modelTimeoutMs: resolved.timeoutMs,
@@ -2046,11 +2048,7 @@ export class AiChatOrchestratorService {
     prepared: PreparedChatRequest,
     opts?: { signal?: AbortSignal | null; requestStartedAt?: number },
   ): AsyncGenerator<ChatStreamEvent> {
-    const {
-      context, userMessage, provider, providerId, model, priceInputEurPerMtok, priceOutputEurPerMtok,
-      apiKey, endpointUrl, modelTimeoutMs, tenantName, providerSource, timeZone,
-    } = prepared;
-    const recordedModel = { provider: providerId, model, priceInputEurPerMtok, priceOutputEurPerMtok };
+    const { context, userMessage, provider, model, apiKey, endpointUrl, modelTimeoutMs, tenantName, providerSource, timeZone } = prepared;
     const replayDeepSeekReasoning = isOfficialDeepSeekEndpoint(endpointUrl);
     const abortSignal = opts?.signal ?? null;
     const requestStartedAt = opts?.requestStartedAt ?? Date.now();
@@ -2754,9 +2752,43 @@ export class AiChatOrchestratorService {
         });
       });
     };
+    // Tokens of provider calls no message has recorded yet. A call the turn retries (an answer held
+    // back, a repair) is billed too: its tokens go with the next assistant message recorded.
+    let unrecordedUsage: StreamUsage | undefined;
+    const takeUnrecordedUsageJson = (): Record<string, unknown> | null => {
+      const usageJson = buildMessageUsageJson(unrecordedUsage, prepared.usageModel);
+      unrecordedUsage = undefined;
+      return usageJson;
+    };
+    // A turn that stops before its next assistant message (error, stop) records them on a usage-only row.
+    const recordUnrecordedUsage = async (): Promise<void> => {
+      const usage = takeUnrecordedUsageJson();
+      if (!usage) {
+        return;
+      }
+      try {
+        await this.tenantExecutor.runWithContext(context, async (ctx) => {
+          await this.conversations.appendMessage(
+            {
+              conversationId,
+              tenantId: ctx.tenantId,
+              conversationUserId: ctx.userId,
+              userId: null,
+              role: USAGE_ONLY_MESSAGE_ROLE,
+              content: '',
+              usage,
+            },
+            { manager: ctx.manager },
+          );
+        });
+      } catch (error) {
+        this.logger.warn(`Could not record the usage of an interrupted turn: ${(error as Error)?.message ?? error}`);
+      }
+    };
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
       if (abortSignal?.aborted) {
+        await recordUnrecordedUsage();
         return;
       }
       completedIterations = iteration + 1;
@@ -2878,10 +2910,12 @@ export class AiChatOrchestratorService {
               iterationUsage = cloneUsage(event.usage);
               totalUsage = addUsage(totalUsage, iterationUsage);
               lastUsage = iterationUsage;
+              unrecordedUsage = addUsage(unrecordedUsage, iterationUsage);
               break;
 
             case 'error': {
               providerStreamMs += Math.max(0, Date.now() - providerCallStartedAt);
+              await recordUnrecordedUsage();
               const conversationUsage = await loadConversationUsage();
               yield { type: 'activity', phase: 'finalizing', status: 'failed' };
               yield { type: 'context', context: { timings: buildTimings(true) } };
@@ -2899,6 +2933,7 @@ export class AiChatOrchestratorService {
         providerStreamMs += Math.max(0, Date.now() - providerCallStartedAt);
       } catch (error) {
         providerStreamMs += Math.max(0, Date.now() - providerCallStartedAt);
+        await recordUnrecordedUsage();
         if (abortSignal?.aborted || isAbortError(error)) {
           return;
         }
@@ -2916,6 +2951,7 @@ export class AiChatOrchestratorService {
       }
 
       if (abortSignal?.aborted) {
+        await recordUnrecordedUsage();
         return;
       }
 
@@ -2949,6 +2985,7 @@ export class AiChatOrchestratorService {
             });
             continue;
           }
+          await recordUnrecordedUsage();
           const conversationUsage = await loadConversationUsage();
           yield { type: 'activity', phase: 'finalizing', status: 'failed' };
           yield { type: 'context', context: { timings: buildTimings(true) } };
@@ -2973,6 +3010,8 @@ export class AiChatOrchestratorService {
         }
 
         let searchAllNoProgressIntervention: SearchAllNoProgressIntervention | null = null;
+        // Recorded on the first tool call's message, with the tokens of the calls retried before it.
+        const toolTurnUsage = takeUnrecordedUsageJson();
 
         // Execute each tool call
         for (let toolCallIndex = 0; toolCallIndex < assistantToolCalls.length; toolCallIndex++) {
@@ -2981,7 +3020,7 @@ export class AiChatOrchestratorService {
           const assistantReasoningContent = replayDeepSeekReasoning
             ? accumulatedReasoningContent
             : '';
-          const assistantUsage = toolCallIndex === 0 ? (iterationUsage ?? null) : null;
+          const assistantUsage = toolCallIndex === 0 ? toolTurnUsage : null;
           const parsedArgsResult = tryParseToolCallArguments(tc.arguments || '{}');
           const parseErrorMessage = 'message' in parsedArgsResult ? parsedArgsResult.message : null;
           const parsedArgs = 'value' in parsedArgsResult ? parsedArgsResult.value : {};
@@ -3026,7 +3065,7 @@ export class AiChatOrchestratorService {
                   userId: null,
                   role: 'assistant',
                   content: skippedAssistantText,
-                  usage: assistantMessageUsage(assistantUsage, recordedModel),
+                  usage: assistantUsage,
                 },
                 { manager: ctx.manager },
               );
@@ -3053,7 +3092,7 @@ export class AiChatOrchestratorService {
                   userId: null,
                   role: 'assistant',
                   content: skippedAssistantText,
-                  usage: assistantMessageUsage(assistantUsage, recordedModel),
+                  usage: assistantUsage,
                 },
                 { manager: ctx.manager },
               );
@@ -3079,7 +3118,7 @@ export class AiChatOrchestratorService {
                   role: 'assistant',
                   content: assistantContent,
                   toolCalls: [tc],
-                  usage: assistantMessageUsage(assistantUsage, recordedModel),
+                  usage: assistantUsage,
                   providerMetadata: deepSeekReasoningMetadata(assistantReasoningContent),
                 },
                 { manager: ctx.manager },
@@ -3506,7 +3545,7 @@ export class AiChatOrchestratorService {
             userId: null,
             role: 'assistant',
             content: accumulatedText,
-            usage: assistantMessageUsage(iterationUsage, recordedModel),
+            usage: takeUnrecordedUsageJson(),
           },
           { manager: ctx.manager },
         );
@@ -3532,6 +3571,7 @@ export class AiChatOrchestratorService {
     }
 
     // Max iterations reached
+    await recordUnrecordedUsage();
     const conversationUsage = await loadConversationUsage();
     yield { type: 'activity', phase: 'finalizing', status: 'failed' };
     yield { type: 'context', context: { timings: buildTimings(true) } };

@@ -78,17 +78,18 @@ In einer On-Premise-Installation erscheint diese Zeile überhaupt nicht.
 
 - **Versteht Bilder**: für ein reines Textmodell deaktivieren. Die Erklärung steht im Info-Tooltip neben **Fähigkeiten**: An Tickets angehängte Screenshots werden dann *übersprungen* statt gesendet, und genau das wollen Sie: ein reines Textmodell, das ein Bild erhält, lässt den Aufruf fehlschlagen, statt nützliche Arbeit zu leisten. Bei einem bildfähigen Modell lassen Sie den Schalter an, dann nutzen Ihre Triage-Agenten Ticket-Screenshots als Nachweis.
 
-**Eingabekosten** und **Ausgabekosten**: der Info-Tooltip neben jeder Beschriftung erklärt *Preis pro Million Tokens, wie auf der Preisseite Ihres Anbieters angegeben*:
+**Eingabekosten**, **Ausgabekosten** und **Kosten für Cache-Lesen**: Preise pro Million Tokens, in Euro. Der Info-Tooltip neben jeder Beschriftung sagt, wo Sie sie finden.
 
-- Übernehmen Sie die beiden Zahlen direkt von der Preisseite Ihres Anbieters. Sie unterscheiden sich in der Regel, und KANAP bewertet sie getrennt.
-- **Lassen Sie beide leer oder setzen Sie sie auf 0, wenn das Modell lokal oder selbst gehostet läuft.** Ein Modell ohne Preise kostet nichts: was für ein Modell auf Ihrer eigenen Hardware der Wahrheit entspricht. Die Wahl des Anbieters Ollama füllt genau deshalb beide Preise mit 0 vor.
-- Agentenkosten werden bewertet, während die Arbeit läuft, und dann festgehalten. Eine Preisänderung ändert also, was Agenten **ab jetzt** kosten, und lässt vergangene Zahlen unberührt. Plaids Kosten werden anders ermittelt (siehe [Nutzung & Kosten](ai-usage.md)) und dort verschiebt eine Preisänderung auch die historischen Werte.
+- Übernehmen Sie Eingabe- und Ausgabepreis direkt von der Preisseite Ihres Anbieters. Sie unterscheiden sich in der Regel, und KANAP bewertet sie getrennt.
+- **Kosten für Cache-Lesen** ist der Preis eines Tokens, das der Anbieter aus seinem Prompt-Cache liest. Preisseiten nennen ihn oft *cached input*. Das Feld ist optional. Bleibt es leer, kostet ein zwischengespeichertes Token bei Anthropic ein Zehntel des Eingabepreises und bei anderen Anbietern den vollen Eingabepreis (siehe [Nutzung & Kosten](ai-usage.md)).
+- **Lassen Sie die Preise leer oder setzen Sie sie auf 0, wenn das Modell lokal oder selbst gehostet läuft.** Ein Modell ohne Preise kostet nichts: was für ein Modell auf Ihrer eigenen Hardware der Wahrheit entspricht. Die Wahl des Anbieters Ollama setzt deshalb die noch leeren Preise auf 0 und behält bereits eingetragene Preise.
+- KANAP bewertet jede Plaid-Antwort und jeden Aufruf eines Agenten, sobald er stattfindet, und hält die Kosten dann fest. Eine Preisänderung ändert also die Kosten **ab jetzt** und lässt vergangene Zahlen unberührt.
 
 **Zeitlimit**: wie lange, in Sekunden, auf dieses Modell gewartet wird, bevor abgebrochen wird. Die Erklärung steht im Info-Tooltip neben der Beschriftung: leer lassen für das Standardlimit. Lokale Modelle brauchen oft mehr Zeit: deshalb sitzt die Einstellung am Modell und nicht an der Installation. Um dieses Modell zum Organisationsstandard zu machen, markieren Sie es nach dem Speichern in der Spalte **Standard** der Liste mit dem Stern. Diese Wahl steht nicht im Editor.
 
 **Verbindung testen** erscheint, sobald das Modell gespeichert ist. Die Schaltfläche macht einen winzigen Aufruf mit den Einstellungen, wie sie gespeichert sind, und meldet entweder *Verbindung erfolgreich* mit der Round-Trip-Zeit oder die Fehlermeldung des Anbieters selbst. Sie belegt, dass Anbieter, Modellkennung, Adresse und Schlüssel zusammenspielen. Sie prüft weder Ihre Preise noch den Bilder-Schalter oder die Antwortzeit. Führen Sie sie nach dem Anlegen eines Modells und nach jedem Schlüsselwechsel aus: Ein falscher Schlüssel bleibt sonst unsichtbar, bis echte Arbeit fehlschlägt, und sie schlägt leise fehl (eine Chat-Antwort, die mit einem Fehler endet, oder ein Agent, der einen Schritt überspringt und weitermacht).
 
-**Erstellen** / **Speichern** bleiben deaktiviert, bis Name und Modellkennung ausgefüllt sind und Preise sowie Antwortzeit gültige Zahlen ergeben. Namen müssen innerhalb Ihrer Organisation eindeutig sein.
+**Erstellen** / **Speichern** bleiben deaktiviert, bis Name und Modellkennung ausgefüllt sind und die drei Preise sowie die Antwortzeit gültige Zahlen ergeben. Ein Preis kann nicht negativ sein. Namen müssen innerhalb Ihrer Organisation eindeutig sein.
 
 ---
 

@@ -9,6 +9,7 @@ import {
   AiStreamParams,
 } from './ai-provider.types';
 import { isAbortError, parseToolCallArguments } from './streaming.util';
+import { LlmCacheCostFactors } from '../ai-llm-cost.util';
 import { describeProviderError, providerFetchOptions, toProviderError } from './provider-http.util';
 
 // Models that accept `output_config.effort`: Opus 4.5 and later, Sonnet 4.6 and later,
@@ -31,6 +32,9 @@ export function anthropicOutputConfig(
 ): { output_config: { effort: AiReasoningEffort } } | Record<string, never> {
   return effort && anthropicModelSupportsEffort(model) ? { output_config: { effort } } : {};
 }
+
+// Anthropic's 5-minute ephemeral cache (the `cache_control` below): a read costs 0.1 and a write 1.25 times the input price.
+export const ANTHROPIC_CACHE_COST_FACTORS: LlmCacheCostFactors = { read: 0.1, write: 1.25 };
 
 /**
  * The system prompt as Anthropic text blocks. The request renders tools, then system, then
@@ -56,6 +60,8 @@ export function anthropicSystemBlocks(
 @Injectable()
 export class AnthropicAiProviderAdapter implements AiProviderAdapter {
   private readonly logger = new Logger(AnthropicAiProviderAdapter.name);
+
+  readonly cacheCostFactors = ANTHROPIC_CACHE_COST_FACTORS;
 
   readonly descriptor: AiProviderDescriptor = {
     id: 'anthropic',
@@ -268,6 +274,8 @@ export class AnthropicAiProviderAdapter implements AiProviderAdapter {
           // The whole prompt, cached or not: callers read input_tokens as the prompt size.
           input_tokens: uncachedInput + cacheWrite + cacheRead,
           output_tokens: outputTokens,
+          cache_read_input_tokens: cacheRead,
+          cache_write_input_tokens: cacheWrite,
         },
         // Normalise Anthropic's stop_reason to the OpenAI-style finish_reason the
         // structured-JSON helper inspects: a max_tokens stop is a length truncation.

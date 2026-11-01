@@ -17,26 +17,30 @@ Todo lo de esta página es de solo lectura: es un informe, no un conjunto de con
 
 Tres tarjetas en la parte superior:
 
-- **Total este mes**: los agentes más Plaid, con la cifra de los últimos 30 días debajo. Los costes de los agentes se miden por llamada. Los costes de Plaid se miden por mensaje, y un mensaje que no registró sus tarifas se estima con el modelo de hoy (véase más abajo).
+- **Total este mes**: los agentes más Plaid, con la cifra de los últimos 30 días debajo.
 - **Agentes este mes**: lo que costó realmente la flota de agentes, con la cifra de los últimos 30 días debajo.
-- **Plaid este mes**: lo que costó el asistente de chat. Esta tarjeta usa su pie para la advertencia sobre la estimación que se explica más abajo, en lugar de para una cifra a 30 días.
+- **Plaid este mes**: lo que costó el asistente de chat. En lugar de una cifra a 30 días, su pie muestra las notas que se describen más abajo.
 
 Los costes se muestran en euros al céntimo, y con cuatro decimales cuando el importe es inferior a un céntimo: al principio, o con un modelo barato, un total real puede ser perfectamente `0,0034 €`.
 
-**El coste de los agentes se mide.** Cada llamada al modelo que hace un agente registra sus tokens de entrada y de salida, valorados en ese mismo momento a las tarifas del modelo que ese agente estaba usando, y el resultado se conserva. Por eso importan los precios de [Modelos IA](ai-models.md), por eso un modelo registrado sin precios no aporta nada aquí y por eso editar un precio más tarde no reescribe lo que los agentes ya costaron. (Cuando un proveedor no devuelve sus propios recuentos de tokens, KANAP los estima a partir del tamaño del intercambio, de modo que una pequeña parte de la cifra puede ser aproximada.)
+**El coste de los agentes se mide.** Cada llamada al modelo que hace un agente registra sus tokens de entrada y de salida, valorados en ese mismo momento a las tarifas del modelo que ese agente estaba usando, y el resultado se conserva. Los tokens leídos desde la caché del proveedor o escritos en ella siguen la regla de más abajo, la misma que para Plaid. Por eso importan los precios de [Modelos IA](ai-models.md), por eso un modelo registrado sin precios no aporta nada aquí y por eso editar un precio más tarde no reescribe lo que los agentes ya costaron. (Cuando un proveedor no devuelve sus propios recuentos de tokens, KANAP los estima a partir del tamaño del intercambio, de modo que una pequeña parte de la cifra puede ser aproximada.)
 
-**Plaid se valora mensaje a mensaje**, y la tarjeta lo dice: *Tarifas registradas con cada mensaje. Los mensajes anteriores usan las del modelo asignado actualmente.* Cada mensaje del asistente conserva el proveedor, el modelo y las tarifas aplicadas cuando se escribió, y el mes suma esos importes. Un mensaje escrito antes de ese registro no tiene tarifas propias: KANAP lo valora con el modelo asignado a Plaid hoy. Corregir un precio en la página [Modelos IA](ai-models.md) deja igual un mensaje que ya guardó sus tarifas, y solo mueve la cifra de esos mensajes anteriores. Si el modelo asignado es gratuito y ningún mensaje registró un precio, el pie cambia a *El modelo asignado no tiene coste* y la cifra es cero.
+**El coste de Plaid también se mide.** Cada respuesta de Plaid registra el modelo que la produjo, los precios de ese modelo en ese momento y lo que costó la respuesta. Cambiar Plaid a otro modelo a mitad de mes o corregir un precio más tarde no modifica las respuestas ya registradas.
+
+El coste de los agentes y el de Plaid tienen en cuenta la caché de prompts del proveedor con una sola regla. Un token leído de la caché cuesta el **Coste de lectura en caché** del modelo cuando está indicado. Si no, cuesta 0,1 veces el precio de entrada con Anthropic y el precio de entrada completo con los demás proveedores: la cifra es entonces un máximo. Un token escrito en la caché cuesta 1,25 veces el precio de entrada con Anthropic, y el precio de entrada con los demás.
+
+Las respuestas registradas antes de que KANAP guardara su coste se valoran a las tarifas del modelo asignado hoy a Plaid. Cuando el mes contiene respuestas así, la tarjeta indica *Estimado en parte con las tarifas del modelo asignado actualmente*. Cuando la cifra es cero porque el modelo asignado no tiene ningún precio (entrada, salida ni lectura en caché), indica *El modelo asignado no tiene coste*. En los demás casos, la tarjeta no muestra ninguna nota.
 
 El **Modelo incluido de KANAP** cuesta 0 € por diseño: forma parte de su suscripción. Una organización que funcione íntegramente con el modelo incluido verá ceros aquí, y en su lugar debería vigilar el volumen de mensajes incluidos en la página [Modelos IA](ai-models.md).
 
 ### Coste por agente y Coste por modelo
 
-Debajo aparecen dos tablas en cuanto hay actividad de agentes de la que informar, cada una con una columna **Mes actual** y otra **Últimos 30 días**.
+Cada tabla aparece debajo en cuanto tiene una fila que mostrar, con una columna **Mes actual** y otra **Últimos 30 días**. Cuando solo se ha usado Plaid, solo aparece **Coste por modelo**.
 
 - **Coste por agente**: una fila por agente, para que vea cuál sale caro. Combínela con el tope **Coste por ejecución** del propio agente, en su [pestaña Configuración](agents-workspace.md), si alguna cifra le parece rara.
-- **Coste por modelo**: el mismo gasto troceado por modelo, ordenado con el más caro de los últimos 30 días primero. Las filas son los identificadores de proveedor y modelo a los que se llamó realmente (`anthropic:claude-sonnet-5`, `ollama:mistral`), no los nombres amigables que usted les dio en la página [Modelos IA](ai-models.md). Una fila etiquetada como **Modelo desconocido** corresponde a actividad antigua, registrada antes de que existiera la atribución de modelo por llamada.
+- **Coste por modelo**: el gasto de los agentes y de Plaid juntos, troceado por modelo y ordenado con el más caro de los últimos 30 días primero. Las filas son los identificadores de proveedor y modelo a los que se llamó realmente (`anthropic:claude-sonnet-5`, `ollama:mistral`), no los nombres amigables que usted les dio en la página [Modelos IA](ai-models.md). Cuando los agentes y Plaid usan el mismo modelo, comparten una fila. El modelo incluido de KANAP aparece con 0. Una fila etiquetada como **Modelo desconocido** corresponde a actividad antigua de agentes, registrada antes de que existiera la atribución de modelo por llamada.
 
-Ambas tablas cubren las **ejecuciones de los agentes**. La cifra de Plaid no se desglosa aquí: aparece únicamente en la tarjeta **Plaid este mes**.
+**Coste por agente** cubre solo las ejecuciones de los agentes. **Coste por modelo** deja fuera las respuestas de Plaid registradas antes de que KANAP guardara su coste, por lo que su total puede ser inferior al de las tarjetas de arriba.
 
 ---
 
@@ -54,7 +58,7 @@ Entre las tablas de costes y la tabla de tokens hay cuatro tarjetas sin título,
 
 Una tabla, dos filas (**Mes actual** y **Últimos 30 días**) con **Tokens de entrada**, **Tokens de salida**, **Tokens totales** y **Mensajes de usuario** (el número de preguntas hechas en esa ventana).
 
-**Esta tabla trata del chat, no de los agentes.** Son los tokens del asistente Plaid. La tarjeta **Plaid este mes** valora cada mensaje a partir de estos tokens y de las tarifas registradas con ese mensaje. El consumo de los agentes no se cuenta aquí: aparece en **Coste por agente** y en **Mensajes de los agentes**, más abajo. Conviene recordarlo cuando funciona con el modelo incluido o con uno local, donde el coste siempre es cero pero el consumo sigue sin serlo.
+**Esta tabla trata del chat, no de los agentes.** Son los tokens del asistente Plaid: el recuento de entrada incluye los tokens servidos desde la caché del proveedor. El consumo de los agentes no se cuenta aquí: aparece en **Coste por agente** y en **Mensajes de los agentes**, más abajo. Conviene recordarlo cuando funciona con el modelo incluido o con uno local, donde el coste siempre es cero pero el consumo sigue sin serlo.
 
 ---
 
@@ -69,7 +73,7 @@ Esta es la vista, para toda la organización, de lo que el espacio de cada agent
 ## Consejos
 
 - **Compare las dos ventanas, no solo los totales.** *Mes actual* a día 3 del mes parece minúsculo; la cifra móvil de 30 días que tiene al lado es la que le dice si algo ha cambiado realmente.
-- **Precios dentro, costes fuera.** Estas cifras solo son tan buenas como los precios de la página [Modelos IA](ai-models.md). Si un coste parece imposiblemente bajo, compruebe que el modelo tenga precios: un campo de precio vacío se lee como gratuito.
-- **Lea la cifra de Plaid a partir de las tarifas registradas en cada mensaje.** Un mensaje del asistente conserva las tarifas aplicadas cuando se escribió. Un mensaje guardado antes usa el modelo asignado hoy, y la tarjeta lo dice. Cambiar un precio más tarde solo mueve esa parte anterior de la cifra.
-- **Use Coste por modelo cuando esté sopesando un cambio.** Muestra lo que le cuesta realmente cada modelo en el conjunto de sus agentes, que es la cifra que hay que comparar antes de mover trabajo a uno más barato.
+- **Precios dentro, costes fuera.** Estas cifras solo son tan buenas como los precios de la página [Modelos IA](ai-models.md). Si un coste parece imposiblemente bajo, compruebe que el modelo tenga precios: un modelo sin ningún precio se lee como gratuito.
+- **Cuente con una diferencia respecto a la factura de su proveedor.** Las cifras usan los precios que usted introdujo en la página [Modelos IA](ai-models.md). Para un modelo sin **Coste de lectura en caché**, los proveedores distintos de Anthropic cuentan los tokens en caché al precio de entrada completo.
+- **Use Coste por modelo cuando esté sopesando un cambio.** Muestra lo que le cuesta realmente cada modelo en sus agentes y en Plaid, que es la cifra que hay que comparar antes de mover trabajo a uno más barato.
 - **Coste cero no es uso cero.** Con el modelo incluido o con uno local, todas las cifras de coste se quedan en 0 €: **Mensajes de los agentes** es donde se ve la carga de los agentes, y la tabla de tokens es donde se ve la del chat.

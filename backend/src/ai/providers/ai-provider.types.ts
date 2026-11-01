@@ -1,3 +1,5 @@
+import type { LlmCacheCostFactors } from '../ai-llm-cost.util';
+import type { StreamUsage } from './streaming.util';
 export type AiProviderId = 'anthropic' | 'openai' | 'ollama' | 'custom';
 export type AiSystemPromptRole = 'system' | 'developer';
 export type AiMaxTokensParam = 'max_completion_tokens' | 'max_tokens';
@@ -114,11 +116,13 @@ export type AiStreamEvent =
   | { type: 'tool_call_delta'; id: string; arguments: string }
   | { type: 'tool_call_end'; id: string }
   | { type: 'debug_trace'; name: AiProviderDebugTraceName; tool_name?: string | null }
-  | { type: 'done'; usage?: { input_tokens: number; output_tokens: number }; finish_reason?: string }
+  | { type: 'done'; usage?: StreamUsage; finish_reason?: string }
   | { type: 'error'; message: string };
 
 export interface AiProviderAdapter {
   readonly descriptor: AiProviderDescriptor;
   validateConfiguration(settings: AiProviderSettingsSnapshot): string[];
   createStream(params: AiStreamParams): AsyncGenerator<AiStreamEvent>;
+  /** What a cached prompt token costs on this provider; absent: no known discount (`NO_CACHE_DISCOUNT`). */
+  readonly cacheCostFactors?: LlmCacheCostFactors;
 }
