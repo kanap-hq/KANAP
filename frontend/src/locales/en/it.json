@@ -1705,6 +1705,9 @@
     "application": {
       "title": "App / service",
       "newTitle": "New app / service",
+      "creation": {
+        "record": "The application"
+      },
       "indexOfTotal": "({{index}} of {{total}})",
       "tabs": {
         "overview": "Overview",

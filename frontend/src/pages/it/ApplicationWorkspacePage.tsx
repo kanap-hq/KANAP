@@ -28,7 +28,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
-import { KanapDialog, PropertyGroup, PropertyRow, StatusDot, unsavedConfirm, useKanapDialogs } from '../../components/design';
+import { KanapDialog, PropertyGroup, PropertyRow, StatusDot } from '../../components/design';
 import IntegratedDocumentEditor, { type IntegratedDocumentEditorHandle } from '../../components/IntegratedDocumentEditor';
 import DateEUField from '../../components/fields/DateEUField';
 import EntityKnowledgePanel from '../../components/EntityKnowledgePanel';
@@ -62,7 +62,6 @@ import ReachVulnerabilitiesSection, { reachVulnerabilitiesRefetchMs, type ReachV
 import VulnerabilitySevereBadge, { highestSevereOf } from './workspace/VulnerabilitySevereBadge';
 import PendingMetadata from './workspace/PendingMetadata';
 import { useFeatures } from '../../config/FeaturesContext';
-import ApplicationCreateEditor, { type ApplicationCreateEditorHandle } from './editors/ApplicationCreateEditor';
 import CreateVersionDialog from './components/CreateVersionDialog';
 import ApplicationConvertButton from './components/ApplicationConvertButton';
 import ApplicationDeleteButton from './components/ApplicationDeleteButton';
@@ -72,7 +71,7 @@ import { useLocale } from '../../i18n/useLocale';
 import ApplicationClassificationPanel, { HelpLabel, HelpTip, type RecoveryDependency } from './components/ApplicationClassificationPanel';
 import ApplicationCriticalityMetadata from './components/ApplicationCriticalityMetadata';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
-import { useLeaveGuard } from '../../hooks/leaveGuard';
+import { CancelCreationButton, useCreationReturn, useRecordCreation } from '../../components/workspace/creation';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
@@ -1447,14 +1446,10 @@ export default function ApplicationWorkspacePage() {
   const canConvert = canDelete && hasLevel('infrastructure', 'member');
   const canCreateKnowledge = hasLevel('knowledge', 'member');
   const overviewEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
-  const createRef = React.useRef<ApplicationCreateEditorHandle>(null);
-  const dialogs = useKanapDialogs();
   const [versionDialogOpen, setVersionDialogOpen] = React.useState(false);
-  const [savingCreate, setSavingCreate] = React.useState(false);
-  const [createDirty, setCreateDirty] = React.useState(false);
-  const [createName, setCreateName] = React.useState('');
-  const [propertiesHost, setPropertiesHost] = React.useState<HTMLDivElement | null>(null);
-  const [bodyHost, setBodyHost] = React.useState<HTMLDivElement | null>(null);
+  // A refusal of the name typed on a new application (a name another application has).
+  const [titleError, setTitleError] = React.useState<string | null>(null);
+  const creatingRef = React.useRef(false);
   const [error, setError] = React.useState<string | null>(null);
   const feedbackRef = React.useRef<ReturnType<typeof useApplicationFeedback>>({ error: () => undefined, undo: () => undefined, info: () => undefined });
 
@@ -1462,6 +1457,12 @@ export default function ApplicationWorkspacePage() {
   const sort = searchParams.get('sort') || 'name:ASC';
   const q = searchParams.get('q') || '';
   const filters = searchParams.get('filters') || '';
+  const listPath = React.useMemo(() => {
+    const qs = listContextParams.toString();
+    return `/it/applications${qs ? `?${qs}` : ''}`;
+  }, [listContextParams]);
+  // Where the creation started: a new application left empty, or cancelled, goes back there.
+  const creationReturn = useCreationReturn(listPath);
 
   const appQuery = useAppData(routeId, !isCreate && !!routeId);
   const app = appQuery.data || null;
@@ -1470,6 +1471,15 @@ export default function ApplicationWorkspacePage() {
     if (!isCreate && app?.id && app?.name) addToRecent('application', app.id, app.name, app.sequential_id || undefined);
   }, [addToRecent, app?.id, app?.name, app?.sequential_id, isCreate]);
   const nav = useApplicationNav({ id: app?.id || routeId, sort, q, filters });
+  const creation = useRecordCreation({
+    family: 'applications',
+    apiBase: '/applications',
+    recordId: isCreate ? null : app?.id ?? null,
+    listPath,
+    recordLabel: t('workspace.application.creation.record'),
+    queryKeyPrefixes: ['applications', 'app-filter-values'],
+    onError: setError,
+  });
 
   const interfacesQuery = useQuery({
     queryKey: ['application-workspace-interfaces', app?.id],
@@ -1527,18 +1537,11 @@ export default function ApplicationWorkspacePage() {
     window.history.replaceState(null, '', `/it/applications/${canonicalBase}/${routeTab}${qs ? `?${qs}` : ''}`);
   }, [app?.name, app?.sequential_id, isCreate, navigate, routeId, routeTab, searchParams]);
 
-  // True leaves and drops the draft. False stays. A menu link asks the same question.
-  const confirmLeaveCreate = React.useCallback(async () => {
-    if (!(isCreate && createDirty)) return true;
-    return dialogs.confirm(unsavedConfirm(t, 'leaveWithoutSaving'));
-  }, [createDirty, dialogs, isCreate, t]);
-  useLeaveGuard(() => isCreate && createDirty, confirmLeaveCreate);
-
-  const closeWorkspace = React.useCallback(async () => {
-    if (!(await confirmLeaveCreate())) return;
-    const qs = listContextParams.toString();
-    navigate(`/it/applications${qs ? `?${qs}` : ''}`);
-  }, [confirmLeaveCreate, listContextParams, navigate]);
+  // A new application left before it has a name goes back where the creation started; an
+  // existing one goes back to the list.
+  const closeWorkspace = React.useCallback(() => {
+    navigate(isCreate ? creationReturn : listPath);
+  }, [creationReturn, isCreate, listPath, navigate]);
 
   const canonicalPathFor = React.useCallback((targetId: string, tab: TabKey = routeTab) => {
     const qs = listContextParams.toString();
@@ -1591,20 +1594,35 @@ export default function ApplicationWorkspacePage() {
     return work;
   }, [queryClient, updateApplicationCache, t]);
 
-  const handleCreate = React.useCallback(async () => {
-    setSavingCreate(true);
+  // The name committed in the header creates the application at once (category and lifecycle
+  // take the server defaults); the page moves to it, every tab open, with "Cancel creation".
+  const createApplication = React.useCallback(async (name: string) => {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
+    setTitleError(null);
     setError(null);
     try {
-      const newId = await createRef.current?.save();
-      if (newId) {
-        navigate(`/it/applications/${newId}/overview${searchParams.toString() ? `?${searchParams.toString()}` : ''}`);
-      }
-    } catch (err: any) {
-      setError(getApiErrorMessage(err, t, t('messages.createApplicationFailed')));
+      // The created row: no child list yet (owners, audience, deployments).
+      const res = await api.post<Partial<ApplicationDetail> & { id: string; name: string; creation_token: string }>('/applications', { name });
+      const { creation_token: token, ...created } = res.data;
+      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
+      const target = created.sequential_id || created.id;
+      // The page keeps its header while the full record loads: the title button takes the focus.
+      queryClient.setQueryData<ApplicationDetail>(['application-workspace', target], {
+        owners: [], companies: [], departments: [], data_residency: [], access_methods: [], links: [], attachments: [], deployments: [],
+        ...created,
+      } as ApplicationDetail);
+      void queryClient.invalidateQueries({
+        predicate: (query) => ['applications', 'app-filter-values'].some((key) => String(query.queryKey[0]).startsWith(key)),
+        refetchType: 'none',
+      });
+      navigate(canonicalPathFor(target, 'overview'), { replace: true });
+    } catch (err) {
+      setTitleError(getApiErrorMessage(err, t, t('messages.createApplicationFailed')));
     } finally {
-      setSavingCreate(false);
+      creatingRef.current = false;
     }
-  }, [navigate, searchParams, t]);
+  }, [canonicalPathFor, creation, creationReturn, navigate, queryClient, t]);
 
   const copyReference = React.useCallback(async (reference: string) => {
     try {
@@ -1688,22 +1706,24 @@ export default function ApplicationWorkspacePage() {
         onBack={closeWorkspace}
         itemReference={appReference}
         onCopyReference={appReference ? () => { void copyReference(appReference); } : undefined}
-        title={isCreate ? createName : app?.name || ''}
+        title={isCreate ? '' : app?.name || ''}
         titleFallback={isCreate ? t('workspace.application.newTitle') : t('workspace.application.untitled')}
         canEditTitle={canManage}
         readOnly={!isCreate && !canManage}
         onTitleSave={(value) => {
           if (isCreate) {
-            createRef.current?.setName(value);
+            void createApplication(value);
             return;
           }
           void patchApplication({ name: value });
         }}
-        onTitleDraftChange={isCreate ? (draft) => { if (draft.trim()) createRef.current?.dismissNameError(); } : undefined}
+        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
+        titleError={isCreate ? titleError : undefined}
+        titleAutoEdit={isCreate}
+        titleOnCancel={isCreate ? closeWorkspace : undefined}
         titleRequiredMessage={t('messages.nameRequired')}
         titleMaxLength={APPLICATION_NAME_MAX}
         isCreate={isCreate}
-        forceDrawerOpen={isCreate}
         nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,
@@ -1753,6 +1773,13 @@ export default function ApplicationWorkspacePage() {
         ) : undefined}
         actions={(
           <>
+            {!isCreate && (
+              <CancelCreationButton
+                beingCreated={creation.beingCreated}
+                cancelling={creation.cancelling}
+                onCancel={() => { void creation.cancelCreation(); }}
+              />
+            )}
             {!isCreate && app && (
               <SendLinkButton
                 itemType="application"
@@ -1764,11 +1791,6 @@ export default function ApplicationWorkspacePage() {
             {!isCreate && canManage && (
               <Button variant="action" onClick={() => setVersionDialogOpen(true)} size="small">
                 {t('workspace.application.createNewVersion')}
-              </Button>
-            )}
-            {isCreate && (
-              <Button variant="contained" onClick={() => void handleCreate()} disabled={!createDirty || savingCreate} size="small">
-                {t('common:buttons.create')}
               </Button>
             )}
             {!isCreate && canConvert && app && (
@@ -1791,9 +1813,7 @@ export default function ApplicationWorkspacePage() {
             </IconButton>
           </>
         )}
-        properties={isCreate ? (
-          <Box ref={setPropertiesHost} />
-        ) : app ? (
+        properties={isCreate ? undefined : app ? (
           <ApplicationProperties
             app={app}
             canManage={canManage}
@@ -1802,18 +1822,6 @@ export default function ApplicationWorkspacePage() {
           />
         ) : <Box />}
       >
-        {isCreate && (
-          <ApplicationCreateEditor
-            ref={createRef}
-            onDirtyChange={setCreateDirty}
-            onNameChange={setCreateName}
-            presentation="split"
-            propertiesHost={propertiesHost}
-            bodyHost={bodyHost}
-          />
-        )}
-        {isCreate && routeTab === 'overview' && <Box ref={setBodyHost} />}
-
         {!isCreate && app && routeTab === 'overview' && (
           <OverviewTab
             app={app}

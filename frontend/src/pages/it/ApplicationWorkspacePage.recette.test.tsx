@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -8,7 +8,6 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 import api from '../../api';
 import ApplicationWorkspacePage from './ApplicationWorkspacePage';
-import { confirmLeave } from '../../hooks/leaveGuard';
 
 const auth = vi.hoisted(() => ({ rank: 2 }));
 const RANKS: Record<string, number> = { reader: 1, member: 2, manager: 3, admin: 4 };
@@ -44,37 +43,6 @@ vi.mock('../../components/fields/TeamMemberMultiSelect', () => ({
     <button type="button" onClick={() => { void onChange(['u-9']); }}>{`pick ${label}`}</button>
   ),
 }));
-const createEditor = vi.hoisted(() => ({ setName: vi.fn() }));
-vi.mock('./editors/ApplicationCreateEditor', async () => {
-  const React = await import('react');
-  const { createPortal } = await import('react-dom');
-  const Editor = React.forwardRef(function MockCreateEditor(props: {
-    onDirtyChange?: (dirty: boolean) => void;
-    onNameChange?: (name: string) => void;
-    propertiesHost?: HTMLElement | null;
-    bodyHost?: HTMLElement | null;
-  }, ref: React.ForwardedRef<unknown>) {
-    React.useImperativeHandle(ref, () => ({
-      isDirty: () => false,
-      save: async () => null,
-      reset: () => undefined,
-      setName: (name: string) => {
-        createEditor.setName(name);
-        props.onNameChange?.(name);
-        props.onDirtyChange?.(true);
-      },
-      dismissNameError: () => undefined,
-    }));
-    return (
-      <>
-        <div data-testid="create-editor" />
-        {props.propertiesHost ? createPortal(<div data-testid="create-properties" />, props.propertiesHost) : null}
-        {props.bodyHost ? createPortal(<div data-testid="create-body" />, props.bodyHost) : null}
-      </>
-    );
-  });
-  return { default: Editor };
-});
 vi.mock('../ForbiddenPage', () => ({ default: () => <div data-testid="forbidden" /> }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: (_resource: string, level: string) => auth.rank >= RANKS[level] }) }));
 vi.mock('../../components/IntegratedDocumentEditor', () => ({ default: () => <div data-testid="description-editor" /> }));
@@ -135,64 +103,7 @@ describe('Application workspace, recette C1a', () => {
     auth.rank = 1;
     renderPage('/it/applications/new/overview');
     expect(await screen.findByTestId('forbidden')).toBeTruthy();
-    expect(screen.queryByTestId('create-editor')).toBeNull();
-  });
-
-  it('edits the name in the header and shows the creation properties', async () => {
-    renderPage('/it/applications/new/overview');
-    expect(await screen.findByTestId('create-editor')).toBeTruthy();
-    expect(await screen.findByTestId('create-properties')).toBeTruthy();
-    expect(screen.getByTestId('create-body')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /businessOwners/ })).toBeNull();
-    const create = screen.getByRole('button', { name: 'common:buttons.create' });
-    expect(create).toBeDisabled();
-
-    fireEvent.click(screen.getByText('workspace.application.newTitle'));
-    const input = screen.getByRole('textbox');
-    fireEvent.change(input, { target: { value: '  ' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-    expect(screen.getByRole('alert').textContent).toBe('messages.nameRequired');
-    expect(createEditor.setName).not.toHaveBeenCalled();
-
-    fireEvent.change(input, { target: { value: 'Billing' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-    await waitFor(() => expect(create).toBeEnabled());
-    expect(createEditor.setName).toHaveBeenCalledWith('Billing');
-    expect(screen.getByText('Billing')).toBeTruthy();
-  });
-
-  it('asks before leaving a dirty new application, and leaving drops the draft', async () => {
-    renderPage('/it/applications/new/overview');
-    fireEvent.click(await screen.findByText('workspace.application.newTitle'));
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Billing' } });
-    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeEnabled());
-
-    fireEvent.click(screen.getByRole('button', { name: 'pages.applications.title' }));
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('common:unsaved.leaveWithoutSaving.message')).toBeTruthy();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(screen.getByText('Billing')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: 'pages.applications.title' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'common:unsaved.leaveWithoutSaving.confirm' }));
-    expect(await screen.findByTestId('application-list')).toBeTruthy();
-  });
-
-  it('asks the same question before a menu link leaves a dirty new application', async () => {
-    renderPage('/it/applications/new/overview');
-    fireEvent.click(await screen.findByText('workspace.application.newTitle'));
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Billing' } });
-    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeEnabled());
-
-    let answer!: Promise<boolean>;
-    await act(async () => { answer = confirmLeave(); });
-    const dialog = await screen.findByRole('dialog');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel' }));
-    await expect(answer).resolves.toBe(false);
-    expect(screen.getByText('Billing')).toBeTruthy();
+    expect(screen.queryByRole('textbox')).toBeNull();
   });
 
   it('shows a reader no new version button, no menu chips and no support notes hint', async () => {
