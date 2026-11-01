@@ -1634,7 +1634,7 @@
           "title": "Un colega",
           "hint": {
             "budget": "Invite a sus colegas creando sus cuentas de usuario. Use el menú Autenticación para configurar el SSO con Entra ID.",
-            "cartography": "Invite a un responsable de aplicación: cree el usuario y envíe la invitación desde el menú de su fila.",
+            "cartography": "Invite a un responsable de aplicación o de activo.",
             "portfolio": "Invite a un jefe de proyecto: cree el usuario y envíe la invitación desde el menú de su fila."
           }
         },
@@ -1652,11 +1652,11 @@
         },
         "own_applications": {
           "title": "Sus aplicaciones",
-          "hint": "Importe la lista de sus aplicaciones o cree la primera."
+          "hint": "Importe la lista de sus aplicaciones y luego compleméntelas, o créelas directamente en KANAP."
         },
         "own_technologies": {
           "title": "Sus tecnologías",
-          "hint": "Vincule tecnologías a sus aplicaciones: KANAP les asocia el fin de soporte."
+          "hint": "Active tecnologías y vincúlelas a sus aplicaciones. KANAP se encarga del resto."
         },
         "own_assets": {
           "title": "Sus servidores",

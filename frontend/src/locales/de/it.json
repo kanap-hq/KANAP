@@ -68,7 +68,7 @@
     },
     "applications": {
       "title": "Anwendungen",
-      "newAppService": "Neue Anwendung / Service",
+      "newAppService": "Neue Anwendung",
       "empty": "Noch keine Anwendungen.",
       "appService": "Anwendung / Service",
       "importCsv": "CSV importieren",

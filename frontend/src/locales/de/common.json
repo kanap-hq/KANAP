@@ -1634,7 +1634,7 @@
           "title": "Eine Kollegin, ein Kollege",
           "hint": {
             "budget": "Laden Sie Ihre Kolleginnen und Kollegen ein, indem Sie ihre Benutzerkonten anlegen. Über das Menü Authentifizierung richten Sie SSO mit Entra ID ein.",
-            "cartography": "Laden Sie eine verantwortliche Person einer Anwendung ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile.",
+            "cartography": "Laden Sie eine verantwortliche Person für eine Anwendung oder ein Asset ein.",
             "portfolio": "Laden Sie eine Projektleitung ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile."
           }
         },
@@ -1652,11 +1652,11 @@
         },
         "own_applications": {
           "title": "Ihre Anwendungen",
-          "hint": "Importieren Sie die Liste Ihrer Anwendungen oder legen Sie die erste an."
+          "hint": "Importieren Sie die Liste Ihrer Anwendungen und ergänzen Sie sie anschließend, oder legen Sie sie direkt in KANAP an."
         },
         "own_technologies": {
           "title": "Ihre Technologien",
-          "hint": "Verknüpfen Sie Technologien mit Ihren Anwendungen: KANAP ergänzt ihr Supportende."
+          "hint": "Aktivieren Sie Technologien und verknüpfen Sie sie mit Ihren Anwendungen. Um den Rest kümmert sich KANAP."
         },
         "own_assets": {
           "title": "Ihre Server",

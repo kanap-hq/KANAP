@@ -1634,7 +1634,7 @@
           "title": "A colleague",
           "hint": {
             "budget": "Invite your colleagues by creating their user accounts. Use the Authentication menu to set up SSO with Entra ID.",
-            "cartography": "Invite an application owner: create the user, then send the invitation from the row menu.",
+            "cartography": "Invite an application or asset owner.",
             "portfolio": "Invite a project manager: create the user, then send the invitation from the row menu."
           }
         },
@@ -1652,11 +1652,11 @@
         },
         "own_applications": {
           "title": "Your applications",
-          "hint": "Import the list of your applications, or create the first one."
+          "hint": "Import the list of your applications and then enrich them, or create them directly in KANAP."
         },
         "own_technologies": {
           "title": "Your technologies",
-          "hint": "Link technologies to your applications: KANAP attaches their end of support."
+          "hint": "Turn on technologies and link them to your applications. KANAP takes care of the rest."
         },
         "own_assets": {
           "title": "Your servers",
