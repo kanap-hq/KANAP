@@ -517,9 +517,17 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
         }),
       },
     },
+    // MUI paints a white elevation overlay (`backgroundImage`) on dialog paper
+    // in dark mode. Clear it so every dialog uses the app surface and the
+    // same border as KanapDialog. A dialog's own `PaperProps.sx` still wins.
     MuiDialog: {
       styleOverrides: {
-        paper: { borderRadius: 10 },
+        paper: ({ theme }) => ({
+          borderRadius: 10,
+          backgroundImage: 'none',
+          backgroundColor: theme.palette.kanap.bg.primary,
+          border: `0.5px solid ${theme.palette.kanap.border.default}`,
+        }),
       },
     },
     MuiPaper: {
