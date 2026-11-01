@@ -321,8 +321,8 @@ async function testResolverBuiltinFallbackInMultiTenant() {
   assert.equal(resolved.priceInputEurPerMtok, 0);
   assert.equal(resolved.priceOutputEurPerMtok, 0);
   assert.equal(resolved.priceCacheReadEurPerMtok, 0);
-  // The included model keeps its fixed cap.
-  assert.equal(resolved.reasoningEffort, 'low');
+  // The included model keeps its fixed effort.
+  assert.equal(resolved.reasoningEffort, 'medium');
   assert.equal(resolved.timeoutMs, null);
   assert.deepEqual(resolved.builtinRateLimits, { tenantPerMinute: 30, userPerHour: 60 });
 
