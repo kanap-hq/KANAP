@@ -98,6 +98,9 @@ async function testStructuredReadGuidancePrefersQueryLayerTools() {
   assert.match(prompt, /last_dr_test is the last recovery test date/);
   assert.match(prompt, /count \[null\] plus before the day after that date; they never overlap/);
   assert.match(prompt, /top business rank with recovery_wave \[null\]; top data class rank with the lowest cyber rank/);
+  assert.match(prompt, /An application's environments are the environments of its deployments/);
+  assert.match(prompt, /An application with no deployment has none/);
+  assert.match(prompt, /The legacy column environment defaults to prod and is absent from application reads/);
 }
 
 const baseParams = {
