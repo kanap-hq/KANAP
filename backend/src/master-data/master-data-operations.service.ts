@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { requestContextMissing } from '../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
 import { Company } from '../companies/company.entity';
@@ -158,7 +159,7 @@ export class MasterDataOperationsService {
     }
 
     if (!userId) {
-      throw new ForbiddenException('User context is required');
+      throw requestContextMissing('User context is required');
     }
 
     if (includeCompanies) {

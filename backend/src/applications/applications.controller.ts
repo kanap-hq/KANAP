@@ -1,5 +1,6 @@
 import { languageOf } from '../common/csv-sheet';
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { requestContextMissing, businessContributorNoAccess, businessContributorScope } from '../auth/module-right-required';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
@@ -73,7 +74,7 @@ export class ApplicationsController {
    */
   private requireManager(ctx: TenantRequest): EntityManager {
     if (!ctx.manager) {
-      throw new ForbiddenException('Tenant context is not available');
+      throw requestContextMissing('Tenant context is not available');
     }
     return ctx.manager;
   }
@@ -83,7 +84,7 @@ export class ApplicationsController {
     resource: string,
   ): Promise<ParticipationAccessScope | undefined> {
     if (!ctx.manager) {
-      throw new ForbiddenException('Access scope could not be resolved');
+      throw requestContextMissing('Access scope could not be resolved');
     }
     return resolveBusinessContributorScopeForUser({
       manager: ctx.manager,
@@ -308,7 +309,7 @@ export class ApplicationsController {
   @Get(':id/recovery-dependencies')
   async recoveryDependencies(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
     const opts = await this.readApplicationOpts(ctx);
-    if (opts.accessScope) throw new ForbiddenException('Business Contributor cannot access interfaces');
+    if (opts.accessScope) throw businessContributorNoAccess('interfaces', 'Business Contributor cannot access interfaces');
     return this.svc.listRecoveryDependencies(id, opts);
   }
 
@@ -334,7 +335,7 @@ export class ApplicationsController {
   ) {
     const opts = await this.readApplicationOpts(ctx);
     if (opts.accessScope) {
-      throw new ForbiddenException('Business Contributor can only read assigned applications');
+      throw businessContributorScope('applications', 'Business Contributor can only read assigned applications');
     }
     return this.svc.shareApplication(id, body, ctx.tenantId, ctx.userId || '', {
       manager: ctx.manager,

@@ -1,11 +1,11 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   HttpException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { codedForbidden } from '../auth/module-right-required';
 import { EntityManager } from 'typeorm';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import {
@@ -118,7 +118,7 @@ export class KnowledgeWorkflowService {
       return;
     }
 
-    throw new ForbiddenException('You are not allowed to cancel this review workflow');
+    throw codedForbidden('WORKFLOW_CANCEL_NOT_ALLOWED', 'You are not allowed to cancel this review workflow');
   }
 
   private async finalizeWorkflowApproved(

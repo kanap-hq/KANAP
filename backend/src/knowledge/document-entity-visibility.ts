@@ -1,6 +1,6 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { moduleRightRequired } from '../auth/module-right-required';
+import { codedForbidden, moduleRightRequired } from '../auth/module-right-required';
 import {
   INCIDENT_FROZEN_STATUSES,
   INCIDENT_LEVEL_RANK,
@@ -348,7 +348,7 @@ export function assertIncidentBindingWritable(
     throw moduleRightRequired('incidents', 'contributor', 'incidents:contributor permission is required');
   }
   if (!opts?.allowFrozenIncident && INCIDENT_FROZEN_STATUSES.has(String(binding.status || ''))) {
-    throw new ForbiddenException(INCIDENT_REVIEW_LOCKED_MESSAGE);
+    throw codedForbidden('INCIDENT_REVIEW_LOCKED', INCIDENT_REVIEW_LOCKED_MESSAGE);
   }
 }
 

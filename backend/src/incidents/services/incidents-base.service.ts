@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { EntityManager, Repository } from 'typeorm';
 import type { ParticipationAccessScope } from '../../auth/business-contributor-scope';
 import type { AuditSourceOptions } from '../../audit/audit.service';
@@ -7,6 +7,7 @@ import { incidentNotFound } from '../../common/resolve-item-id';
 import { IncidentChangedFields, IncidentEntry, IncidentEntryKind } from '../incident-entry.entity';
 import {
   INCIDENT_LOCKED_MESSAGE,
+  incidentLocked,
   IncidentViewer,
   incidentVisibleToViewer,
   isFrozenIncidentStatus,
@@ -91,7 +92,7 @@ export abstract class IncidentsBaseService {
    */
   protected assertEditable(incident: Incident): void {
     if (isFrozenIncidentStatus(incident.status)) {
-      throw new ForbiddenException(INCIDENT_LOCKED_MESSAGE);
+      throw incidentLocked();
     }
   }
 
