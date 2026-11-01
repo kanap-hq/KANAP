@@ -17,7 +17,7 @@ export const ONBOARDING_PATHS: Readonly<Record<OnboardingAngle, Readonly<Record<
   },
   cartography: {
     example: ['map_applications', 'map_application', 'map_assets', 'map_technologies', 'map_import'],
-    own_data: ['own_applications', 'own_technologies', 'own_assets', 'own_findings', 'own_invite'],
+    own_data: ['own_sites', 'own_applications', 'own_technologies', 'own_assets', 'own_invite'],
   },
   portfolio: {
     example: ['portfolio_request', 'portfolio_project', 'portfolio_tasks', 'portfolio_time', 'portfolio_import'],
