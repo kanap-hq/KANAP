@@ -120,6 +120,10 @@ async function testCreatorCancelsTheCreation() {
 
     const created = await controller.create({ name: 'Cancel creation spec' } as any, ctx(creatorId) as any);
     assert.equal(typeof created.creation_token, 'string', 'the create route hands a creation token');
+    // The reference the database gives on insert comes back with the row: the page opens it as APP-n.
+    const [{ sequential_id: storedRef }] = await runner.query(`SELECT sequential_id FROM applications WHERE tenant_id = $1 AND id = $2`, [tenantId, created.id]);
+    assert.match(String(storedRef ?? ''), /^APP-\d+$/, 'the database gives the reference');
+    assert.equal(created.sequential_id, storedRef, 'the create route returns the reference');
     const other = await controller.create({ name: 'Another application' } as any, ctx(creatorId) as any);
 
     const fresh = await controller.creationChanges(created.id, created.creation_token, ctx(creatorId) as any);
