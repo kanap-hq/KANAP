@@ -19,16 +19,21 @@ import {
 } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
 import { buildAccessTokenPayload } from '../../auth/auth.service';
 import { accessTokenVerifyKey } from '../../auth/jwt-key';
+import { waitForBackgroundWork } from '../../common/background-work';
 import { ListContextsService } from '../../common/list-context/list-contexts.service';
 import { useRequestPipeline } from '../../common/request-pipeline';
 import { createRequestTenancyMiddleware } from '../../common/tenancy/request-tenancy.middleware';
+import { DemoDataService } from '../../demo-data/demo-data.service';
+import { buildDemoData } from './onboarding-test-helpers';
 import { OnboardingController } from '../onboarding.controller';
 import { ONBOARDING_PATHS } from '../onboarding-paths';
 import { OnboardingService } from '../onboarding.service';
 
 // The onboarding routes (`/onboarding`) over HTTP: the real controller behind JwtAuthGuard on
 // signed access tokens, the tenancy middleware and the request pipeline main.ts installs (the
-// request transaction carries the tenant), the real OnboardingService on the spec database.
+// request transaction carries the tenant), the real OnboardingService on the spec database
+// (the effects of the mode on the sample data: `onboarding-own-data.integration.spec.ts`; here
+// the loader is a double that never ends by itself).
 // - a new workspace has no choice, no steps, sample data `idle`, and anybody may choose;
 // - any user sets the angle or the mode while it is empty; changing a value already set takes
 //   an administrator (403 `administrator_required`); invalid input is a 400;
@@ -43,9 +48,15 @@ import { OnboardingService } from '../onboarding.service';
 type Served = { app: INestApplication; port: number; close: () => Promise<void> };
 
 async function serve(): Promise<Served> {
+  const demo = buildDemoData(buildServices());
   @Module({
     controllers: [OnboardingController],
-    providers: [ListContextsService, OnboardingService, { provide: DataSource, useValue: dataSource }],
+    providers: [
+      ListContextsService,
+      OnboardingService,
+      { provide: DataSource, useValue: dataSource },
+      { provide: DemoDataService, useValue: demo.service },
+    ],
   })
   class OnboardingProbeModule {}
 
@@ -60,7 +71,13 @@ async function serve(): Promise<Served> {
   useRequestPipeline(app, dataSource);
   await app.listen(0, '127.0.0.1');
   const port = (app.getHttpServer().address() as AddressInfo).port;
-  return { app, port, close: () => app.close() };
+  const close = async () => {
+    // A load an administrator's `example` started: ended, and its state written, before cleanup.
+    for (const { child } of demo.children) child.finish(0);
+    assert.equal(await waitForBackgroundWork(Date.now() + 60_000), 0, 'the background work ended');
+    await app.close();
+  };
+  return { app, port, close };
 }
 
 type Method = 'GET' | 'PUT' | 'POST' | 'DELETE';
@@ -157,6 +174,17 @@ async function setDemo(tenantId: string, demo: unknown) {
   );
 }
 
+/** Waits until the sample data state of the tenant has `status` (a reset runs in the background). */
+async function waitDemoStatus(tenantId: string, status: string, timeoutMs = 30_000) {
+  const until = Date.now() + timeoutMs;
+  for (;;) {
+    const [row] = await dataSource.query(`SELECT metadata->'demo'->>'status' AS status FROM tenants WHERE id = $1`, [tenantId]);
+    if (row?.status === status) return;
+    if (Date.now() > until) assert.fail(`sample data never reached ${status} (last: ${row?.status})`);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
 // 1. A new workspace: nothing chosen, nothing done, anybody may choose; no token, no answer.
 async function testFreshWorkspace() {
   const svc = buildServices();
@@ -176,7 +204,7 @@ async function testFreshWorkspace() {
         next_step: null,
         completed: false,
         dismissed_at: null,
-        sample_data: { status: 'idle', step: null },
+        sample_data: { status: 'idle', step: null, error_code: null },
         reset_in_progress: false,
       }, label);
     }
@@ -375,6 +403,9 @@ async function testSteps() {
     assert.deepEqual(ownData.steps.map((s: any) => s.key), ONBOARDING_PATHS.budget.own_data);
     assert.equal(ownData.completed, false);
     assert.equal(ownData.next_step, 'own_company');
+    // The switch stopped the load the administrator's `example` started and emptied the
+    // workspace in the background; writes wait for the end of that reset (409 `tenant_resetting`).
+    await waitDemoStatus(t.tenantId, 'idle');
     assert.equal(ok(await asOwner.choose({ mode: 'example' }), 'back to example').completed, true);
 
     // The member completes too: their own `completed`.
@@ -388,7 +419,7 @@ async function testSteps() {
   }
 }
 
-// 6. `sample_data` mirrors `tenants.metadata.demo` (status and step), for any user.
+// 6. `sample_data` mirrors `tenants.metadata.demo` (status, step, and the error code of a failure), for any user.
 async function testSampleData() {
   const svc = buildServices();
   const served = await serve();
@@ -399,18 +430,22 @@ async function testSampleData() {
     const asMember = client(served, t, a.token);
     await setDemo(t.tenantId, { status: 'loading', step: 'budget-lines', run_id: 'r1' });
     let state = ok(await asMember.get(), 'loading');
-    assert.deepEqual(state.sample_data, { status: 'loading', step: 'budget-lines' });
+    assert.deepEqual(state.sample_data, { status: 'loading', step: 'budget-lines', error_code: null });
     assert.equal(state.reset_in_progress, false);
     await setDemo(t.tenantId, { status: 'resetting' });
     state = ok(await asMember.get(), 'resetting');
-    assert.deepEqual(state.sample_data, { status: 'resetting', step: null });
+    assert.deepEqual(state.sample_data, { status: 'resetting', step: null, error_code: null });
     assert.equal(state.reset_in_progress, true);
     await setDemo(t.tenantId, { status: 'loaded' });
-    assert.deepEqual(ok(await asMember.get(), 'loaded').sample_data, { status: 'loaded', step: null });
+    assert.deepEqual(ok(await asMember.get(), 'loaded').sample_data, { status: 'loaded', step: null, error_code: null });
+    await setDemo(t.tenantId, { status: 'failed', error_code: 'reset_failed' });
+    assert.deepEqual(ok(await asMember.get(), 'failed').sample_data, { status: 'failed', step: null, error_code: 'reset_failed' });
+    await setDemo(t.tenantId, { status: 'idle', error_code: 'reset_failed' });
+    assert.deepEqual(ok(await asMember.get(), 'idle with a stale code').sample_data, { status: 'idle', step: null, error_code: null });
     await setDemo(t.tenantId, { status: 'whatever', step: 4 });
-    assert.deepEqual(ok(await asMember.get(), 'malformed').sample_data, { status: 'idle', step: null });
+    assert.deepEqual(ok(await asMember.get(), 'malformed').sample_data, { status: 'idle', step: null, error_code: null });
     await setDemo(t.tenantId, 'not an object');
-    assert.deepEqual(ok(await asMember.get(), 'not an object').sample_data, { status: 'idle', step: null });
+    assert.deepEqual(ok(await asMember.get(), 'not an object').sample_data, { status: 'idle', step: null, error_code: null });
   } finally {
     await served.close();
     await cleanupTenants([t?.tenantId]);

@@ -244,6 +244,8 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'demo-data/demo-data.service.ts', member: 'dismissBanner', site: 'with_tenant', class: 'reserved', reason: 'sample data banner (Administrator only)' },
   { file: 'demo-data/demo-data.service.ts', member: 'startLoad', site: 'with_tenant', class: 'reserved', reason: 'sample data load (Administrator from the screen, the trial owner at activation): checks the workspace is empty, budget block included', count: 2 },
   { file: 'demo-data/demo-data.service.ts', member: 'startReset', site: 'with_tenant', class: 'reserved', reason: 'workspace reset (Administrator only)' },
+  { file: 'demo-data/demo-data.service.ts', member: 'cancelLoad', site: 'with_tenant', class: 'reserved', reason: 'stop of a sample data load (Administrator only, onboarding choice)' },
+  { file: 'demo-data/demo-data.service.ts', member: 'clearFailedLoad', site: 'with_tenant', class: 'reserved', reason: 'clearing a failed sample data load (Administrator only, onboarding choice)' },
   { file: 'admin/tenants/tenant-reset.service.ts', member: 'reset', site: 'with_tenant', class: 'reserved', reason: 'workspace reset started by an Administrator (sample data): erases the whole tenant, budget block included' },
 
   // Platform administration (PlatformAdminGuard): no person of the tenant.

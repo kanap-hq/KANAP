@@ -708,6 +708,7 @@ async function testManualReset() {
       status: 'idle', step: null, started_at: null, heartbeat_at: null, loaded_at: null, loaded_by: null,
       failed_at: null, error_code: null, dismissed_at: '2026-10-07T11:00:00.000Z', run_id: null,
       ever_loaded_at: '2026-10-07T10:00:00.000Z', reset_failed_at: null, reset_by: null,
+      cancel_requested_at: null, cancel_requested_by: null, reset_notify: null,
     });
     await settle();
     assert.deepEqual(h.emails, [{ tenantId: t.tenantId, actorId: t.ownerId }], 'the administrators are e-mailed');

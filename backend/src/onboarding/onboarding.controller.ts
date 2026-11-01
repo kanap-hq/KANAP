@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { OnboardingService, OnboardingState } from './onboarding.service';
@@ -18,10 +18,15 @@ export class OnboardingController {
     return this.onboarding.getState(ctx.manager!, ctx.tenantId, ctx.userId);
   }
 
-  /** `{ angle?, mode? }`: at least one; a field left out keeps its value. */
+  /**
+   * `{ angle?, mode?, confirm_reset? }`: an angle or a mode at least; a field left out keeps its
+   * value. A new mode acts on the sample data (OnboardingService.applyMode); `confirm_reset`
+   * (boolean) lets `own_data` erase objects created since the sample data load. A load gets the
+   * request's Host header (`req.headers.host`, as the sample data routes).
+   */
   @Put('choice')
-  choose(@Tenant() ctx: TenantRequest, @Body() body: unknown): Promise<OnboardingState> {
-    return this.onboarding.setChoice(ctx.manager!, ctx.tenantId, ctx.userId, body);
+  choose(@Tenant() ctx: TenantRequest, @Body() body: unknown, @Req() req: any): Promise<OnboardingState> {
+    return this.onboarding.setChoice(ctx.manager!, ctx.tenantId, ctx.userId, body, { host: String(req?.headers?.host ?? '') });
   }
 
   @Post('steps/:key/done')
