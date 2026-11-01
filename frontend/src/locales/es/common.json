@@ -1606,24 +1606,24 @@
         },
         "own_company": {
           "title": "Su empresa",
-          "hint": "Creada al registrarse con su nombre, país y moneda. Complete su plan de cuentas, su ciudad y su plantilla del año."
+          "hint": "Se creó una primera empresa con el entorno. Revise los datos y complete la información, en particular la moneda y el plan de cuentas. Si es necesario, añada el suyo desde la vista «Planes de cuentas». Cree otras empresas si lo necesita."
         },
         "own_budget_lines": {
           "title": "Sus líneas",
-          "hint": "Importe su archivo de presupuesto o cree su primera línea OPEX y su periodo."
+          "hint": "Importe su archivo de presupuesto (exporte primero para obtener la plantilla) o cree directamente su primera línea presupuestaria."
         },
         "own_contract": {
           "title": "Un contrato vinculado",
-          "hint": "El contrato principal de una línea: su vencimiento y su alerta de preaviso."
+          "hint": "Cree su primer contrato y, si procede, vincúlelo a la línea presupuestaria que acaba de crear."
         },
         "own_report": {
           "title": "Su primer informe",
-          "hint": "Líneas principales, con sus propias cifras."
+          "hint": "Compruebe que los filtros siguen sus entradas. ¡Cree más líneas para enriquecer los informes!"
         },
         "own_invite": {
           "title": "Un colega",
           "hint": {
-            "budget": "Invite a su control de gestión: cree el usuario y envíe la invitación desde el menú de su fila.",
+            "budget": "Invite a sus colegas creando sus cuentas de usuario. Use el menú Autenticación para configurar el SSO con Entra ID.",
             "cartography": "Invite a un responsable de aplicación: cree el usuario y envíe la invitación desde el menú de su fila.",
             "portfolio": "Invite a un jefe de proyecto: cree el usuario y envíe la invitación desde el menú de su fila."
           }

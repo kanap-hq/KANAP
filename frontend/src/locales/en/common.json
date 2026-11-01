@@ -1606,24 +1606,24 @@
         },
         "own_company": {
           "title": "Your company",
-          "hint": "Created at sign-up with its name, country and currency. Complete its chart of accounts, its city and its headcount for the year."
+          "hint": "A first company was created with the workspace. Check its data and complete it, especially its currency and chart of accounts. If needed, add your own chart in the Charts of accounts view. Create more companies as needed."
         },
         "own_budget_lines": {
           "title": "Your budget lines",
-          "hint": "Import your budget file, or create your first OPEX line and its period."
+          "hint": "Import your budget file (export first to get the template) or create your first budget line directly."
         },
         "own_contract": {
           "title": "A linked contract",
-          "hint": "The main contract of a line: its end date and its notice alert."
+          "hint": "Create your first contract and, where relevant, link it to the budget line you just created."
         },
         "own_report": {
           "title": "Your first report",
-          "hint": "Top lines, on your own figures."
+          "hint": "Check that the filters follow your entries. Create more lines to enrich the reports!"
         },
         "own_invite": {
           "title": "A colleague",
           "hint": {
-            "budget": "Invite your financial controller: create the user, then send the invitation from the row menu.",
+            "budget": "Invite your colleagues by creating their user accounts. Use the Authentication menu to set up SSO with Entra ID.",
             "cartography": "Invite an application owner: create the user, then send the invitation from the row menu.",
             "portfolio": "Invite a project manager: create the user, then send the invitation from the row menu."
           }

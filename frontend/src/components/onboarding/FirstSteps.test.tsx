@@ -241,11 +241,11 @@ describe('StepHint', () => {
     expect(hint).toHaveTextContent('Here is an application record. Explore the properties panel and the tabs');
   });
 
-  it('waits for "Done" with your own data, and names the colleague of the angle', async () => {
+  it('waits for "Done" with your own data, and gives the hint of the angle', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
     renderAt('/admin/users?step=own_invite', page);
     const hint = await screen.findByRole('dialog', { name: 'A colleague' });
-    expect(hint).toHaveTextContent('Invite your financial controller');
+    expect(hint).toHaveTextContent('Use the Authentication menu to set up SSO');
     expect(done('own_invite')).toBeFalsy();
     fireEvent.click(within(hint).getByRole('button', { name: 'Done' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());

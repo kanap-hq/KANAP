@@ -1606,24 +1606,24 @@
         },
         "own_company": {
           "title": "Votre société",
-          "hint": "Créée à l'inscription avec son nom, son pays et sa devise. Complétez son plan comptable, sa ville et son effectif de l'année."
+          "hint": "Une première société a été créée avec l'environnement. Vérifiez les données et complétez les informations, en particulier la devise et le plan comptable. Si nécessaire, passez par la vue « Plans comptables » pour ajouter le vôtre. Créez d'autres sociétés au besoin."
         },
         "own_budget_lines": {
           "title": "Vos lignes",
-          "hint": "Importez votre fichier budget, ou créez votre première ligne OPEX et sa période."
+          "hint": "Importez votre fichier budget (exportez d'abord pour récupérer le modèle) ou créez votre première ligne budgétaire directement."
         },
         "own_contract": {
           "title": "Un contrat lié",
-          "hint": "Le contrat principal d'une ligne : son échéance et l'alerte de préavis."
+          "hint": "Créez votre premier contrat et, le cas échéant, liez-le à la ligne de budget que vous venez de créer."
         },
         "own_report": {
           "title": "Votre premier rapport",
-          "hint": "Top lignes, sur vos propres chiffres."
+          "hint": "Vérifiez que les filtres suivent bien vos entrées. Créez plus de lignes pour enrichir les rapports !"
         },
         "own_invite": {
           "title": "Un collègue",
           "hint": {
-            "budget": "Invitez votre contrôle de gestion : créez l'utilisateur, puis envoyez l'invitation depuis le menu de sa ligne.",
+            "budget": "Invitez vos collègues en créant leur compte utilisateur. Passez par le menu Authentification pour configurer le SSO avec Entra ID.",
             "cartography": "Invitez un responsable d'application : créez l'utilisateur, puis envoyez l'invitation depuis le menu de sa ligne.",
             "portfolio": "Invitez un chef de projet : créez l'utilisateur, puis envoyez l'invitation depuis le menu de sa ligne."
           }

@@ -1606,24 +1606,24 @@
         },
         "own_company": {
           "title": "Ihr Unternehmen",
-          "hint": "Bei der Anmeldung mit Name, Land und Währung angelegt. Ergänzen Sie Kontenplan, Stadt und Mitarbeiterzahl des Jahres."
+          "hint": "Mit der Umgebung wurde ein erstes Unternehmen angelegt. Prüfen Sie die Daten und ergänzen Sie die Angaben, vor allem Währung und Kontenplan. Fügen Sie bei Bedarf Ihren eigenen über die Ansicht „Kontenpläne“ hinzu. Legen Sie bei Bedarf weitere Unternehmen an."
         },
         "own_budget_lines": {
           "title": "Ihre Budgetzeilen",
-          "hint": "Importieren Sie Ihre Budgetdatei oder legen Sie Ihre erste OPEX-Zeile mit ihrem Zeitraum an."
+          "hint": "Importieren Sie Ihre Budgetdatei (exportieren Sie zuerst, um die Vorlage zu erhalten) oder legen Sie Ihre erste Budgetzeile direkt an."
         },
         "own_contract": {
           "title": "Ein verknüpfter Vertrag",
-          "hint": "Der Hauptvertrag einer Zeile: sein Enddatum und die Kündigungsfrist-Erinnerung."
+          "hint": "Legen Sie Ihren ersten Vertrag an und verknüpfen Sie ihn gegebenenfalls mit der Budgetzeile, die Sie gerade angelegt haben."
         },
         "own_report": {
           "title": "Ihr erster Bericht",
-          "hint": "Top-Zeilen, mit Ihren eigenen Zahlen."
+          "hint": "Prüfen Sie, ob die Filter Ihren Einträgen folgen. Legen Sie weitere Zeilen an, um die Berichte zu bereichern!"
         },
         "own_invite": {
           "title": "Eine Kollegin, ein Kollege",
           "hint": {
-            "budget": "Laden Sie Ihr Controlling ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile.",
+            "budget": "Laden Sie Ihre Kolleginnen und Kollegen ein, indem Sie ihre Benutzerkonten anlegen. Über das Menü Authentifizierung richten Sie SSO mit Entra ID ein.",
             "cartography": "Laden Sie eine verantwortliche Person einer Anwendung ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile.",
             "portfolio": "Laden Sie eine Projektleitung ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile."
           }
