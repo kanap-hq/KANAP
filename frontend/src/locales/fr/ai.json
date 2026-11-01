@@ -381,21 +381,21 @@
     "aliases": "Alias : {{aliases}}"
   },
   "tokenUsage": {
-    "total": "Tokens",
-    "input": "Entrée",
-    "output": "Sortie",
-    "lastInput": "Dernière entrée"
+    "total": "Volume traité",
+    "input": "Tokens en entrée",
+    "output": "Tokens en sortie",
+    "lastInput": "Contexte de la dernière requête"
   },
   "usageIndicator": {
-    "limitReached": "Monthly limit reached. Resets {{resetDate}}.",
-    "limitReachedCta": "Monthly limit reached.",
-    "openSettings": "Configure your own provider",
-    "remaining_one": "{{count}} message remaining this month",
-    "remaining_other": "{{count}} messages remaining this month"
+    "limitReached": "Limite mensuelle atteinte. Réinitialisation le {{resetDate}}.",
+    "limitReachedCta": "Limite mensuelle atteinte.",
+    "openSettings": "Configurer votre propre fournisseur",
+    "remaining_one": "{{count}} message restant ce mois-ci",
+    "remaining_other": "{{count}} messages restants ce mois-ci"
   },
   "workspace": {
     "empty": {
-      "subtitle": "Posez n'importe quelle question sur vos tâches, projets, assets ou documents.",
+      "subtitle": "Posez n'importe quelle question sur vos tâches, projets, actifs ou documents.",
       "suggestionsTitle": "Pour démarrer",
       "title": "Plaid est prêt"
     },

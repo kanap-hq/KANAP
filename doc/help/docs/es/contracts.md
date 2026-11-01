@@ -49,7 +49,7 @@ Cada fila abre el contrato. Su búsqueda, sus filtros y su orden se conservan al
 **Columnas por defecto**:
 
 - **Contrato**, **Proveedor**, **Empresa**
-- **Próximo vencimiento**: la próxima fecha límite de rescisión de un contrato con renovación tácita, o el fin de cualquier otro contrato. La fecha va seguida de «dentro de n días». Un contrato vencido muestra en gris el día en que terminó
+- **Próximo vencimiento**: «Rescisión posible hasta el {date}» cuando esa fecha es la fecha límite de rescisión y es anterior al fin del periodo, o «Termina el {date}» cuando la fecha es el fin del contrato. La línea termina con «en n días». Un contrato vencido muestra en gris el día en que terminó
 - **Situación**: vea más abajo
 - **Importe anual**: el importe en la firma, seguido de su moneda
 - **Comprometido**, **Presupuesto** y **Diferencia** del año presupuestario elegido. Vea [Columnas de presupuesto](#columnas-de-presupuesto)

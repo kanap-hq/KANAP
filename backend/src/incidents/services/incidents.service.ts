@@ -197,7 +197,8 @@ type IncidentWhere = {
   viewer?: IncidentViewer;
   /**
    * False when the reader does not read the infrastructure, or applications: the search and the
-   * filters then never match the linked assets, or applications (`ServiceOpts`).
+   * filters then never match the linked assets and technologies, or the linked applications
+   * (`ServiceOpts`).
    */
   technologies?: boolean;
   applications?: boolean;
@@ -504,6 +505,15 @@ export class IncidentsService extends IncidentsBaseService {
               OR COALESCE(a.asset_reference, '') ILIKE $${idx}
               OR COALESCE(a.hostname, '') ILIKE $${idx}
               OR COALESCE(a.fqdn, '') ILIKE $${idx}
+            )
+        )
+        OR EXISTS (
+          SELECT 1 FROM incident_technologies it
+          JOIN technologies tec ON tec.id = it.technology_id AND tec.tenant_id = it.tenant_id
+          WHERE it.incident_id = i.id AND it.tenant_id = i.tenant_id
+            AND (
+              tec.name ILIKE $${idx}
+              OR ('TEC-' || tec.item_number::text) ILIKE $${idx}
             )
         )`}
         ${input.applications === false ? '' : `OR EXISTS (

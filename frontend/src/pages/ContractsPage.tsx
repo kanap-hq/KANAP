@@ -73,6 +73,8 @@ type ContractRow = {
   end_date?: string;
   current_term_end?: string;
   cancellation_deadline?: string;
+  /** The first cancellation deadline on or after today (`contract-terms.ts`). */
+  next_cancellation_deadline?: string | null;
   next_due_date?: string | null;
   term_state?: TermState;
   linked_lines_count?: number;
@@ -164,7 +166,23 @@ function termStateLabel(t: TFunction, row: Pick<ContractRow, 'term_state' | 'cur
 
 const tertiarySx = { color: 'kanap.text.tertiary' } as const;
 
-/** Next due date: the date, then "in n days" in tertiary; an ended contract shows its end in tertiary. */
+/** The calendar day of an API date, or null when there is none. */
+function calendarDay(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const day = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
+}
+
+/**
+ * The next due date is the cancellation deadline when it is that deadline and it is not also the
+ * end of the current term. A notice of zero months, or a contract that stops, falls on the end.
+ */
+function nextDueIsCancellation(row: Pick<ContractRow, 'next_due_date' | 'next_cancellation_deadline' | 'current_term_end'>): boolean {
+  const due = calendarDay(row.next_due_date);
+  return due !== null && due === calendarDay(row.next_cancellation_deadline) && due !== calendarDay(row.current_term_end);
+}
+
+/** Next due date: what the date is, then "in n days" in tertiary; an ended contract shows its end in tertiary. */
 function NextDueCell({ data }: { data?: ContractRow }) {
   const { t } = useTranslation('ops');
   const locale = useLocale();
@@ -173,13 +191,18 @@ function NextDueCell({ data }: { data?: ContractRow }) {
     const ended = endedOn(data);
     return ended ? <Box component="span" sx={tertiarySx}>{formatShortDate(ended, locale, { year: 'always' })}</Box> : null;
   }
+  const date = formatShortDate(data.next_due_date, locale, { year: 'always' });
+  const label = nextDueIsCancellation(data)
+    ? t('contracts.deadlines.cancelUntil', { date })
+    : t('contracts.deadlines.endsOn', { date });
   const days = daysFromToday(data.next_due_date);
+  const when = days === 0 ? t('contracts.list.dueToday') : t('contracts.list.dueIn', { count: days });
   return (
-    <Box component="span" sx={{ whiteSpace: 'nowrap' }}>
-      {formatShortDate(data.next_due_date, locale)}
+    <Box component="span" title={`${label} · ${when}`} sx={{ whiteSpace: 'nowrap' }}>
+      {label}
       <Box component="span" sx={tertiarySx}>
         {' · '}
-        {days === 0 ? t('contracts.list.dueToday') : t('contracts.list.dueIn', { count: days })}
+        {when}
       </Box>
     </Box>
   );
@@ -448,7 +471,8 @@ export default function ContractsPage() {
     {
       field: 'next_due_date',
       headerName: t('contracts.columns.nextDue'),
-      width: 215,
+      // "Cancellation possible until 30 Sep 2027 · in 211 days" is about 320px at 13px, plus the cell padding.
+      width: 360,
       ...DATE_COLUMN_FILTER,
       valueFormatter: (p) => (isPinned(p) ? '' : formatShortDate(p.value, locale)),
       cellRenderer: NextDueCell,

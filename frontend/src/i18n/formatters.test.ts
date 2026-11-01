@@ -1,7 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { formatCompactAmount, formatDecimal, formatEuro, formatPercentPoints, formatSharePercent, formatThousandsAmount } from './formatters';
+import { formatAmount, formatCompactAmount, formatDecimal, formatEuro, formatPercentPoints, formatSharePercent, formatThousandsAmount } from './formatters';
 
 const FR_GROUP = ' ';
+
+describe('formatAmount', () => {
+  it('keeps a space between thousands when no language is given', () => {
+    expect(formatAmount(18750)).toBe('18 750');
+    expect(formatAmount(650000.4)).toBe('650 000');
+    expect(formatAmount(-1400)).toBe('-1 400');
+    expect(formatAmount(null)).toBe('0');
+    expect(formatAmount(Number.NaN)).toBe('');
+  });
+
+  it('follows the language, and groups four digits too', () => {
+    expect(formatAmount(650000, 'en')).toBe('650,000');
+    expect(formatAmount(650000, 'de')).toBe('650.000');
+    expect(formatAmount(650000, 'es')).toBe('650.000');
+    expect(formatAmount(650000, 'fr')).toBe(`650${FR_GROUP}000`);
+    expect(formatAmount(7486, 'es')).toBe('7.486');
+    expect(formatAmount(7486, 'en')).toBe('7,486');
+    expect(formatAmount(650000.6, 'en')).toBe('650,001');
+    expect(formatAmount(1.5, 'fr')).toBe('2');
+  });
+});
 
 describe('formatEuro', () => {
   it('writes euro amounts with the separators and currency placement of the language', () => {

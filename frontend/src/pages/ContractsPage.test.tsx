@@ -68,6 +68,7 @@ type Col = {
   field?: string;
   colId?: string;
   headerName?: string;
+  width?: number;
   filter?: unknown;
   sortable?: boolean;
   defaultHidden?: boolean;
@@ -230,9 +231,57 @@ describe('ContractsPage', () => {
 
   it('shows the next due date with the days left, and the end of an ended contract', () => {
     renderPage();
+    expect(column('next_due_date').width).toBe(360);
     const due = isoDaysFromToday(19);
-    renderCell('next_due_date', { id: 'c-1', next_due_date: due, term_state: 'to_decide' });
-    expect(screen.getByText(/contracts\.list\.dueIn \{"count":19\}/)).toBeInTheDocument();
+    const deadline = isoDaysFromToday(40);
+    const termEnd = isoDaysFromToday(130);
+    // A contract that stops: the next due date is its end, even when a notice deadline is also known.
+    const stopping = renderCell('next_due_date', {
+      id: 'c-1',
+      next_due_date: due,
+      current_term_end: due,
+      next_cancellation_deadline: deadline,
+      term_state: 'to_decide',
+      auto_renewal: false,
+      notice_period_months: 3,
+    });
+    expect(within(stopping.container).getByText(/contracts\.deadlines\.endsOn \{"date":/)).toBeInTheDocument();
+    expect(within(stopping.container).queryByText(/contracts\.deadlines\.cancelUntil/)).toBeNull();
+    expect(within(stopping.container).getByText(/contracts\.list\.dueIn \{"count":19\}/)).toBeInTheDocument();
+    expect(stopping.container.querySelector('span')?.getAttribute('title')).toMatch(/contracts\.deadlines\.endsOn/);
+    expect(stopping.container.querySelector('span')?.getAttribute('title')).toMatch(/contracts\.list\.dueIn \{"count":19\}/);
+    // A tacit renewal with a notice period: the next due date is the cancellation deadline, before the term ends.
+    const renewing = renderCell('next_due_date', {
+      id: 'c-renew',
+      next_due_date: deadline,
+      next_cancellation_deadline: deadline,
+      current_term_end: termEnd,
+      term_state: 'to_decide',
+      auto_renewal: true,
+      notice_period_months: 3,
+    });
+    expect(within(renewing.container).getByText(/contracts\.deadlines\.cancelUntil \{"date":/)).toBeInTheDocument();
+    expect(within(renewing.container).queryByText(/contracts\.deadlines\.endsOn/)).toBeNull();
+    expect(within(renewing.container).getByText(/contracts\.list\.dueIn \{"count":40\}/)).toBeInTheDocument();
+    // No notice: the deadline is the term end, so the cell names the end.
+    const noNotice = renderCell('next_due_date', {
+      id: 'c-same',
+      next_due_date: due,
+      next_cancellation_deadline: due,
+      current_term_end: due,
+      term_state: 'in_progress',
+      auto_renewal: true,
+      notice_period_months: 0,
+    });
+    expect(within(noNotice.container).getByText(/contracts\.deadlines\.endsOn \{"date":/)).toBeInTheDocument();
+    expect(within(noNotice.container).queryByText(/contracts\.deadlines\.cancelUntil/)).toBeNull();
+    const today = renderCell('next_due_date', {
+      id: 'c-today',
+      next_due_date: isoDaysFromToday(0),
+      current_term_end: isoDaysFromToday(0),
+      term_state: 'ending',
+    });
+    expect(within(today.container).getByText(/contracts\.list\.dueToday/)).toBeInTheDocument();
     renderCell('next_due_date', { id: 'c-2', next_due_date: null, term_state: 'expired', current_term_end: '2026-05-31' });
     expect(screen.getByText('31 May 2026')).toBeInTheDocument();
     expect(daysFromToday(isoDaysFromToday(-3))).toBe(-3);
