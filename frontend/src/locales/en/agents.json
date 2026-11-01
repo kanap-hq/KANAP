@@ -467,6 +467,7 @@
     "loadFailed": "Couldn't load shared context profiles.",
     "saveFailed": "Couldn't save the profile.",
     "archiveFailed": "Couldn't archive the profile.",
+    "restoreFailed": "Couldn't restore the profile.",
     "editTitle": "Edit shared context profile",
     "save": "Save changes",
     "description": "Description",
@@ -476,6 +477,7 @@
     "archived": "Archived",
     "edit": "Edit",
     "archive": "Archive",
+    "restore": "Restore",
     "archiveTitle": "Archive this profile?",
     "archiveBody": "\"{{name}}\" will stop being available to agents. Any agent currently using it will run without shared context until you point it at another profile."
   },

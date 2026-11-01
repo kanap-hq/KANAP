@@ -316,6 +316,7 @@ Rules:
 | `url.ts` | 164 | `resolveConfiguredAppBaseUrl()` | Single-tenant: `APP_BASE_URL` (then `PUBLIC_APP_URL`) as configured, no subdomain substitution; nothing configured returns null and callers answer 400 or skip |
 | `portfolio-status-change-report.controller.ts` | 134 | Export base URL | Delegates to `resolveNotificationBaseUrl()` |
 | `feature-gates.ts` | 34 | `MultiTenantOnlyGuard` | Throws 404 when `SINGLE_TENANT` is true |
+| `ai/ai-help-manual.service.ts` | 310 | User manual of the assistant (`list_help_topics`, `read_help_section`) | The on-premise installation pages (`on-premise/*`) are listed and read in single-tenant mode only |
 
 #### Sample data (cloud only, `!Features.SINGLE_TENANT`)
 

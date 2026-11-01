@@ -1652,6 +1652,17 @@ function buildToolIsolationCases(
             assert.deepEqual(getRelatedIdsByRelation(result, 'linked_projects'), [fixtures.graphA.projectId]);
             assert.deepEqual(getPersonNames(result.entity.metadata.it_owners), [fixtures.peopleA.applicationItOwner.name]);
             assert.equal(result.entity.metadata.version, fixtures.graphA.applicationVersion);
+            assert.equal(result.entity.metadata.environment ?? null, null);
+            assert.equal(result.entity.metadata.environments, 'prod');
+          },
+        },
+        {
+          label: 'applications-without-deployment',
+          input: { entity_type: 'applications', entity_id: fixtures.graphA.suiteApplicationId },
+          assertResult: (result: any) => {
+            assert.equal(result.entity.id, fixtures.graphA.suiteApplicationId);
+            assert.equal(result.entity.metadata.environment ?? null, null);
+            assert.equal(result.entity.metadata.environments, null);
           },
         },
         {
@@ -1939,10 +1950,24 @@ function buildToolIsolationCases(
             assert.deepEqual(result.items.map((item: any) => item.id), [fixtures.graphA.applicationId]);
             assert.equal(String(result.items[0].metadata.it_owner).includes(fixtures.peopleA.applicationItOwner.name), true);
             assert.equal(result.items[0].metadata.version, fixtures.graphA.applicationVersion);
-            assert.equal(result.items[0].metadata.environment, 'prod');
+            assert.equal(result.items[0].metadata.environment ?? null, null);
             assert.equal(result.items[0].metadata.environments, 'prod');
             assert.equal(result.items[0].metadata.hosting_model, 'saas');
             assert.equal(result.items[0].metadata.users_mode, 'manual');
+          },
+        },
+        {
+          label: 'applications-without-deployment',
+          input: {
+            entity_type: 'applications',
+            q: 'Suite Application 5101',
+            limit: 10,
+          },
+          assertResult: (result: any) => {
+            const item = result.items.find((row: any) => row.id === fixtures.graphA.suiteApplicationId);
+            assert.ok(item, 'the application without a deployment is in the result');
+            assert.equal(item.metadata.environment ?? null, null);
+            assert.equal(item.metadata.environments, null);
           },
         },
         {
@@ -2153,6 +2178,11 @@ function buildToolIsolationCases(
       }];
 
     case 'web_search':
+      return [];
+
+    // The user manual is public and holds no tenant data.
+    case 'list_help_topics':
+    case 'read_help_section':
       return [];
 
     case 'import_glpi_ticket':

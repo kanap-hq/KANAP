@@ -26,6 +26,7 @@ import { StripeConfigService } from '../billing/stripe/stripe.config';
 import { Subscription } from '../billing/subscription.entity';
 import { evaluateSubscriptionAccess } from '../billing/subscription-freeze.util';
 import { trackBackgroundWork } from '../common/background-work';
+import { NeverRejects } from '../common/never-rejects';
 import { throwNotAvailableInMode } from '../common/feature-gates';
 import { tenantSlugFromHost } from '../common/tenancy/request-tenancy.middleware';
 import { withTenant } from '../common/tenant-runner';
@@ -69,6 +70,20 @@ export type DemoErrorCode =
   | 'load_interrupted' // the API process that ran the load stopped
   | 'reset_failed'; // the automatic reset after a failed load failed too
 
+/** The languages the sample data comes in. */
+export const DEMO_DATA_LANGUAGES = ['en'] as const;
+export type DemoDataLanguage = (typeof DEMO_DATA_LANGUAGES)[number];
+
+function isDemoDataLanguage(value: unknown): value is DemoDataLanguage {
+  return typeof value === 'string' && (DEMO_DATA_LANGUAGES as readonly string[]).includes(value);
+}
+
+/** The sample data language for a requested one (a tenant language): any other value gives `en`. */
+export function resolveDemoDataLanguage(language: unknown): DemoDataLanguage {
+  const requested = String(language ?? '').trim().toLowerCase();
+  return isDemoDataLanguage(requested) ? requested : 'en';
+}
+
 /** The state of the sample data of a tenant, as `getStatus` returns it. */
 export type DemoDataState = {
   status: DemoStatus;
@@ -87,6 +102,8 @@ export type DemoDataState = {
   ever_loaded_at: string | null;
   /** When the last reset an administrator asked for failed; cleared by the next load or reset. */
   reset_failed_at: string | null;
+  /** The sample data language of the last load that named one (the load at trial activation); absent otherwise. */
+  language?: DemoDataLanguage;
 };
 
 /**
@@ -211,6 +228,10 @@ export type DemoLoaderConfig = {
   staleMs: number;
   /** A load running longer is stopped and counts as failed (below the token lifetime). */
   timeoutMs: number;
+  /** At trial activation, a load refused for `demo_load_capacity` is tried again this often... */
+  provisionRetryMs: number;
+  /** ...for this long (`provisionTrialSampleData`). */
+  provisionRetryMaxMs: number;
   spawn: typeof nodeSpawn;
 };
 
@@ -253,6 +274,8 @@ export function readDemoLoaderConfig(env: NodeJS.ProcessEnv = process.env): Demo
     heartbeatMs: 15_000,
     staleMs: 2 * 60_000,
     timeoutMs: demoLoadTimeoutMs(env),
+    provisionRetryMs: 30_000,
+    provisionRetryMaxMs: 10 * 60_000,
     spawn: nodeSpawn,
   };
 }
@@ -326,17 +349,28 @@ export function startingDimensionValues(): Array<[string, string]> {
 export type TenantContentCount = { table: string; count: number };
 
 /**
+ * A document bound to a record (the description a page creates the first time it opens, an
+ * incident review) belongs to that record. It is left out of the blocker count and of the
+ * count of what was created since the load: the record is the object the page already lists,
+ * and opening that page does not create something of the user's own. `d` is the documents row.
+ * The link picker uses the same exclusion (`knowledge.service.ts`, `listLinkOptions`).
+ */
+const DOCUMENT_WITHOUT_BINDING_SQL =
+  `NOT EXISTS (SELECT 1 FROM integrated_document_bindings b WHERE b.tenant_id = d.tenant_id AND b.document_id = d.id)`;
+
+/**
  * The tables that hold more than activation leaves, each with how many rows are outside the
  * starting state (empty: the workspace is still in its starting state). Every table of
  * `DEMO_LOAD_EMPTY_TABLES` must be empty, so its count is every row. Activation also creates,
  * and these may hold only that: one company (the count is the companies beyond it); documents
- * in the templates library; the chart of accounts made from the default template, with that
- * template's accounts; one standard calendar of a country (region empty, code equal to the
- * country); the values of the recommended dimensions in any of the four languages
- * (`recommended-dimensions.seed.ts`, the cost pool on the default dimension or on `cost_pool`)
- * and those of the three CAPEX dimensions older tenants received (`capex-dimensions.seed.ts`),
- * by dimension code and value name: a value an administrator added, or renamed, counts. And no
- * `.example` user (sample data users). The counts are one query. Runs under the tenant's RLS context.
+ * in the templates library, and documents bound to a record (`DOCUMENT_WITHOUT_BINDING_SQL`);
+ * the chart of accounts made from the default template, with that template's accounts; one
+ * standard calendar of a country (region empty, code equal to the country); the values of the
+ * recommended dimensions in any of the four languages (`recommended-dimensions.seed.ts`, the
+ * cost pool on the default dimension or on `cost_pool`) and those of the three CAPEX dimensions
+ * older tenants received (`capex-dimensions.seed.ts`), by dimension code and value name: a value
+ * an administrator added, or renamed, counts. And no `.example` user (sample data users). The
+ * counts are one query. Runs under the tenant's RLS context.
  */
 export async function countTenantContent(manager: EntityManager, tenantId: string): Promise<TenantContentCount[]> {
   const [template]: Array<{ template_code: string; csv_payload: string | null }> = await manager.query(
@@ -352,7 +386,8 @@ export async function countTenantContent(manager: EntityManager, tenantId: strin
     `SELECT 'companies' AS t, GREATEST(count(*) - 1, 0)::int AS n FROM companies WHERE tenant_id = $1`,
     `SELECT 'documents' AS t, count(*)::int AS n
        FROM documents d LEFT JOIN document_libraries l ON l.id = d.library_id AND l.tenant_id = d.tenant_id
-      WHERE d.tenant_id = $1 AND l.slug IS DISTINCT FROM 'templates'`,
+      WHERE d.tenant_id = $1 AND l.slug IS DISTINCT FROM 'templates'
+        AND ${DOCUMENT_WITHOUT_BINDING_SQL}`,
     `SELECT 'chart_of_accounts' AS t, count(*)::int AS n
        FROM chart_of_accounts WHERE tenant_id = $1 AND id IS DISTINCT FROM $2::uuid`,
     `SELECT 'accounts' AS t, count(*)::int AS n FROM accounts WHERE tenant_id = $1
@@ -391,19 +426,23 @@ export async function findTenantContent(manager: EntityManager, tenantId: string
 /**
  * The tables `countCreatedSinceLoad` reads: the business and configuration tables of a workspace
  * that has data, its dimension values, its companies and its documents (the templates library
- * included: a reset puts back only the starting templates). Each has `created_at` (checked by the
- * spec). Users are not counted: the reset keeps the real ones.
+ * included: a reset puts back only the starting templates; a document bound to a record is left
+ * out, `DOCUMENT_WITHOUT_BINDING_SQL`). Each has `created_at` (checked by the spec). Users are
+ * not counted: the reset keeps the real ones.
  */
 export const DEMO_CREATED_SINCE_TABLES = [...DEMO_LOAD_EMPTY_TABLES, 'analytics_categories', 'companies', 'documents'] as const;
 
 /**
  * How many objects were created in the workspace after `since` (the end of the sample data
- * load), which a reset erases too: the rows of `DEMO_CREATED_SINCE_TABLES`. Runs under the
- * tenant's RLS context.
+ * load), which a reset erases too: the rows of `DEMO_CREATED_SINCE_TABLES`. A document bound to
+ * a record is that record's and is not counted. Runs under the tenant's RLS context.
  */
 export async function countCreatedSinceLoad(manager: EntityManager, tenantId: string, since: string): Promise<number> {
-  const counts = DEMO_CREATED_SINCE_TABLES.map((table) =>
-    `SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1 AND created_at > $2::timestamptz`);
+  const counts = DEMO_CREATED_SINCE_TABLES.map((table) => table === 'documents'
+    ? `SELECT count(*)::int AS n FROM documents d
+        WHERE d.tenant_id = $1 AND d.created_at > $2::timestamptz
+          AND ${DOCUMENT_WITHOUT_BINDING_SQL}`
+    : `SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1 AND created_at > $2::timestamptz`);
   const rows: Array<{ n: number }> = await manager.query(counts.join(' UNION ALL '), [tenantId, since]);
   return rows.reduce((sum, row) => sum + Number(row.n ?? 0), 0);
 }
@@ -447,6 +486,7 @@ export function readDemoState(raw: unknown): StoredDemoState {
     reset_failed_at: text(demo.reset_failed_at),
     run_id: text(demo.run_id),
     reset_by: text(demo.reset_by),
+    ...(isDemoDataLanguage(demo.language) ? { language: demo.language } : {}),
   };
 }
 
@@ -458,6 +498,13 @@ function publicState(state: StoredDemoState): DemoDataState {
 const nowIso = () => new Date().toISOString();
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+/** The `code` of an HTTP exception's answer, or the error message when it has none. */
+const errorCode = (error: unknown): string => {
+  const response = (error as { getResponse?: () => unknown })?.getResponse?.();
+  const code = response && typeof response === 'object' ? (response as { code?: unknown }).code : undefined;
+  return typeof code === 'string' ? code : errorMessage(error);
+};
 
 type TenantRow = { id: string; slug: string; name: string; status: string; is_system_tenant: boolean | null; demo: unknown };
 
@@ -602,6 +649,77 @@ export class DemoDataService implements OnApplicationShutdown {
    * `DEMO_LOAD_MAX_CONCURRENT` loads run over every tenant.
    */
   async load(params: { tenantId: string; actorId: string; host: string }): Promise<DemoDataState> {
+    return this.startLoad(params, { language: null });
+  }
+
+  /**
+   * The load at trial activation (`provisionTrialSampleData`): the checks and the run of `load`,
+   * empty workspace check included, with the tenant's own host given by the caller (still checked
+   * against the tenant), and the sample data language recorded in the state. A tenant just
+   * activated is in its starting state; one whose administrator has started creating records is
+   * refused (`tenant_not_empty`), so nothing is loaded over them or reset.
+   */
+  async loadDemoData(
+    tenantId: string,
+    params: { language: unknown; actorId: string; host: string },
+  ): Promise<DemoDataState> {
+    // Recorded only: the loader is not told the language yet (one language, `en`, for now).
+    const language = resolveDemoDataLanguage(params.language);
+    return this.startLoad({ tenantId, actorId: params.actorId, host: params.host }, { language });
+  }
+
+  /**
+   * Loads the sample data into a trial tenant just activated, in the background: started by the
+   * activation, never awaited. Refused for `demo_load_capacity`, the load is tried again every
+   * `provisionRetryMs` for `provisionRetryMaxMs`, until the API process stops; then the workspace
+   * stays `idle` and its administrators can load the sample data themselves. Any other refusal
+   * (`tenant_not_empty` included: the administrator started with their own records meanwhile)
+   * ends it at once. Each end without a load is one warning in the server log. `tenantUrl` is
+   * the tenant's address; its host is read here, inside the guard.
+   */
+  @NeverRejects()
+  async provisionTrialSampleData(params: { tenantId: string; actorId: string; tenantUrl: string; language: unknown }): Promise<void> {
+    const host = new URL(params.tenantUrl).host;
+    const giveUpAt = Date.now() + this.config.provisionRetryMaxMs;
+    for (;;) {
+      if (this.stopping) {
+        this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: the server is stopping`);
+        return;
+      }
+      try {
+        await this.loadDemoData(params.tenantId, { language: params.language, actorId: params.actorId, host });
+        return;
+      } catch (error) {
+        const code = errorCode(error);
+        if (code !== 'demo_load_capacity') {
+          this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: ${code}`);
+          return;
+        }
+        if (Date.now() + this.config.provisionRetryMs > giveUpAt) {
+          this.logger.warn(`Sample data not loaded into the new trial tenant ${params.tenantId}: other loads kept running`);
+          return;
+        }
+      }
+      await this.waitUnlessStopping(this.config.provisionRetryMs);
+    }
+  }
+
+  /** Waits `ms`, or less when the API process starts stopping (checked every second at most). */
+  private async waitUnlessStopping(ms: number): Promise<void> {
+    const until = Date.now() + ms;
+    while (!this.stopping && Date.now() < until) {
+      await new Promise((resolve) => setTimeout(resolve, Math.min(1_000, until - Date.now())));
+    }
+  }
+
+  /**
+   * `load` and `loadDemoData`: a workspace that holds data is refused (`tenant_not_empty`);
+   * `language` is recorded in the state when given.
+   */
+  private async startLoad(
+    params: { tenantId: string; actorId: string; host: string },
+    opts: { language: DemoDataLanguage | null },
+  ): Promise<DemoDataState> {
     const tenant = await this.readTenant(params.tenantId);
     // Who asks comes first: nothing else about the workspace is told to a non-administrator.
     const actor = await withTenant(this.dataSource, tenant.id, (manager) =>
@@ -650,7 +768,7 @@ export class DemoDataService implements OnApplicationShutdown {
     // argument, never logged). Signed before the claim: a claimed load always starts its run.
     const token = this.auth.signToken({ id: actor.id, email: actor.email, role: actor.role, tenant_id: tenant.id }).access_token;
     const runId = randomUUID();
-    const claimed = await this.claim(tenant.id, actor.id, runId);
+    const claimed = await this.claim(tenant.id, actor.id, runId, opts.language);
     this.runInBackground(`load of tenant ${tenant.id}`, () => this.runLoad({
       tenantId: tenant.id,
       actorId: actor.id,
@@ -890,7 +1008,7 @@ export class DemoDataService implements OnApplicationShutdown {
    * tenants, then move this tenant from `idle` or `failed` to `loading`. A double click, or two
    * API processes at once, get one claim; the other is refused.
    */
-  private async claim(tenantId: string, actorId: string, runId: string): Promise<StoredDemoState> {
+  private async claim(tenantId: string, actorId: string, runId: string, language: DemoDataLanguage | null = null): Promise<StoredDemoState> {
     return this.dataSource.transaction(async (manager) => {
       await manager.query(`SELECT pg_advisory_xact_lock($1::int, hashtext($2))`, [DEMO_LOCK_NAMESPACE, DEMO_CLAIM_LOCK_KEY]);
       const loading: Array<{ id: string; heartbeat_at: string | null }> = await manager.query(
@@ -915,6 +1033,7 @@ export class DemoDataService implements OnApplicationShutdown {
         failed_at: null,
         error_code: null,
         reset_failed_at: null,
+        ...(language ? { language } : {}),
       }, manager);
       if (!claimed) throw this.statusConflict((await this.readState(tenantId, manager)).status);
       return claimed;

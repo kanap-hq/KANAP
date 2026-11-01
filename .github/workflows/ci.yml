@@ -24,6 +24,7 @@ concurrency:
 # Actions are pinned to the full commit SHA of a release, its version in the comment
 # (Dependabot updates both). Each job's timeout-minutes is about three times its usual duration
 # (3 minutes at least), so a stuck job fails and frees the queue before its 30-minute limit.
+# The backend job (about 12 minutes) stays under the limit at 28 minutes instead of three times.
 permissions:
   contents: read
 
@@ -84,7 +85,7 @@ jobs:
     # Runs even when `changes` failed: with no answer from it, every spec runs.
     if: ${{ !cancelled() && github.event_name == 'merge_group' && needs.changes.outputs.backend != 'none' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 28
     services:
       postgres:
         image: postgres:16
@@ -162,9 +163,9 @@ jobs:
       - name: Run the specs that read the user manual
         if: ${{ needs.changes.outputs.backend == 'docs' }}
         run: |
-          for spec in markdown-size markdown-worker admin-password-policy; do
-            echo "── src/common/__tests__/$spec.spec.ts"
-            node --enable-source-maps "ci-dist/backend/src/common/__tests__/$spec.spec.js"
+          for spec in common/__tests__/markdown-size common/__tests__/markdown-worker common/__tests__/admin-password-policy ai/__tests__/ai-help-manual; do
+            echo "── src/$spec.spec.ts"
+            node --enable-source-maps "ci-dist/backend/src/$spec.spec.js"
           done
 
   # The frontend check runs as one build job and three test shards in parallel; the
@@ -196,7 +197,7 @@ jobs:
     needs: [ stack-order, changes ]
     if: ${{ github.event_name == 'merge_group' && needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 12
     strategy:
       # Every shard finishes, so one run lists every failing test.
       fail-fast: false
@@ -381,6 +382,7 @@ jobs:
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: backend
+          build-contexts: help-docs=doc/help/docs
           target: runtime
           tags: kanap-api:ci
           load: true
@@ -393,6 +395,7 @@ jobs:
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: backend
+          build-contexts: help-docs=doc/help/docs
           target: dev
           cache-from: |
             type=gha,scope=api-runtime

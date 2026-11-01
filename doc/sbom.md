@@ -37,7 +37,7 @@ package authors and the Alpine packages of the API image:
 1. Check out the release tag. To include package authors in the notices, run `npm ci` in
    `backend`, `frontend` and `marketing/web` first; without `node_modules` the notices give name,
    version and license only.
-2. Optional: build the API image of that tag (`docker build -t kanap-api:<version> backend`) to list
+2. Optional: build the API image of that tag (`docker build -t kanap-api:<version> --build-context help-docs=doc/help/docs backend`) to list
    its Alpine packages (pandoc, typst, inkscape, fonts and the base system).
 3. Generate the files in a folder outside the repository (the script refuses a folder inside it):
 

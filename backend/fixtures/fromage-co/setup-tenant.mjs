@@ -279,6 +279,10 @@ async function apiPatch(route, body) {
   return request('PATCH', route, body);
 }
 
+async function apiPut(route, body) {
+  return request('PUT', route, body);
+}
+
 async function apiDelete(route) {
   return request('DELETE', route);
 }
@@ -464,6 +468,91 @@ async function appIdsFromNames(names) {
 
 // ── Settings ─────────────────────────────────────────────────────────────────
 
+/**
+ * EUR for one USD when a refresh leaves a sample year without a rate.
+ * About 0.9, the order of magnitude of the euro-dollar rate. A manual rate
+ * wins over a later automatic fetch, so the sample amounts stay convertible
+ * on a machine that cannot reach the rate sources.
+ */
+const SAMPLE_USD_RATE_EUR = 0.9;
+
+/** Currencies the sample spends, and the manual rate used when no source provides one. USD only. */
+const SAMPLE_FX_FALLBACK = { USD: SAMPLE_USD_RATE_EUR };
+
+function usableStoredRate(rates, currency) {
+  if (!rates || typeof rates !== 'object') return null;
+  for (const [key, value] of Object.entries(rates)) {
+    if (key.toUpperCase() !== currency) continue;
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;
+  }
+  return null;
+}
+
+/**
+ * The sample spends USD in years N-1, N and N+1. The settings save refreshes
+ * the current year only, and the lines are imported later, so the refresh
+ * answer's still-missing list cannot name those USD years yet. N+2 is included
+ * as well: contract amounts are read through the year after next, and the USD
+ * contract renews on, so that year would stay missing. Each of these years
+ * without a usable USD rate, and each reported pair that has a documented
+ * rate, gets that manual rate. A failed or still-running refresh is logged
+ * with info: a warning would fail the load.
+ */
+async function ensureSampleExchangeRates() {
+  const years = [BUDGET_YEAR - 1, BUDGET_YEAR, BUDGET_YEAR + 1, BUDGET_YEAR + 2];
+  let reported = [];
+  try {
+    const refresh = await apiPost('/currency/rates/refresh', { years });
+    reported = Array.isArray(refresh?.stillMissing) ? refresh.stillMissing : [];
+    if (refresh?.completed === false) {
+      info('Exchange-rate refresh is still running; years without a rate get the documented manual rate');
+    } else if (refresh?.failed) {
+      info('Exchange rates were not fetched; years without a rate get the documented manual rate');
+    }
+  } catch (error) {
+    const reason = String(error?.message ?? error).split('\n')[0];
+    info(`Exchange-rate refresh did not answer (${reason}); years without a rate get the documented manual rate`);
+  }
+
+  let matrix = { rates: [] };
+  try {
+    matrix = await apiGet('/currency/rates');
+  } catch (error) {
+    const reason = String(error?.message ?? error).split('\n')[0];
+    info(`Exchange-rate list did not answer (${reason}); the documented manual rate is stored for each sample year`);
+  }
+
+  const rateFor = (year, currency) => {
+    const row = (matrix?.rates ?? []).find((item) => Number(item?.fiscalYear) === year);
+    return usableStoredRate(row?.rates, currency);
+  };
+
+  const pending = new Map();
+  for (const pair of reported) {
+    const currency = String(pair?.currency ?? '').trim().toUpperCase();
+    const year = Number(pair?.year);
+    if (!/^[A-Z]{3}$/.test(currency) || !Number.isInteger(year)) continue;
+    pending.set(`${currency}:${year}`, { currency, year });
+  }
+  for (const year of years) {
+    if (rateFor(year, 'USD') == null) pending.set(`USD:${year}`, { currency: 'USD', year });
+  }
+
+  const stored = [];
+  for (const pair of [...pending.values()].sort((a, b) => a.year - b.year || a.currency.localeCompare(b.currency))) {
+    if (rateFor(pair.year, pair.currency) != null) continue;
+    const rate = SAMPLE_FX_FALLBACK[pair.currency];
+    if (rate == null) {
+      info(`No documented fallback rate for ${pair.currency} ${pair.year}`);
+      continue;
+    }
+    await apiPut('/currency/rates/manual', { currency: pair.currency, year: pair.year, rate });
+    stored.push(`${pair.currency} ${pair.year}`);
+  }
+  if (stored.length) info(`Manual exchange rate ${SAMPLE_USD_RATE_EUR} EUR stored for ${stored.join(', ')}`);
+  else ok('Exchange rates cover USD for the sample years');
+}
+
 async function setupSettings() {
   info('Configuring base settings');
   await apiPatch('/currency/settings', {
@@ -472,6 +561,7 @@ async function setupSettings() {
     defaultCapexCurrency: 'EUR',
     allowedCurrencies: ['EUR', 'USD'],
   });
+  await ensureSampleExchangeRates();
 
   const current = await apiGet('/it-ops/settings');
   const mergeByCode = (existing, additions) => {

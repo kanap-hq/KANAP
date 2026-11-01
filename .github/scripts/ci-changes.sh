@@ -18,8 +18,9 @@
 #     spec);
 #   - infra/, any Dockerfile: backend full (container-images, admin-password-policy and
 #     data-access-role-script specs);
-#   - doc/help/docs/: backend docs (markdown-size, markdown-worker and admin-password-policy
-#     read the manual) and frontend (the noDashes locale test reads it), without the builds;
+#   - doc/help/docs/: backend docs (markdown-size, markdown-worker, admin-password-policy and
+#     ai-help-manual read the manual) and frontend (the noDashes locale test reads it), without
+#     the builds;
 #   - anything else (doc/, marketing/, scripts/, translation-state/, root files): no suite; the
 #     script checks of `build (onprem)` always run.
 # The images rule is the former `image files` job, unchanged. When the files cannot be listed

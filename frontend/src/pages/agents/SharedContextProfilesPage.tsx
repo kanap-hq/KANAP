@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Box, Button, CircularProgress, Divider, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import ArchiveIcon from '@mui/icons-material/Archive';
+import UnarchiveIcon from '@mui/icons-material/Unarchive';
 import PageHeader from '../../components/PageHeader';
 import { EmptyState, formatDateTime, Section } from '../../components/agents/agentControlPrimitives';
 import { PropertyRow } from '../../components/design';
@@ -61,6 +62,12 @@ export default function SharedContextProfilesPage() {
     mutationFn: (id: string) => aiAgentControlApi.archiveSharedContextProfile(id),
     onSuccess: () => { invalidate(); setArchiveTarget(null); setError(null); },
     onError: (err) => setError(readError(err, t('sharedContext.archiveFailed'))),
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (id: string) => aiAgentControlApi.restoreSharedContextProfile(id),
+    onSuccess: () => { invalidate(); setError(null); },
+    onError: (err) => setError(readError(err, t('sharedContext.restoreFailed'))),
   });
 
   const openCreate = () => {
@@ -140,6 +147,22 @@ export default function SharedContextProfilesPage() {
                             <IconButton size="small" aria-label={t('sharedContext.archive')} onClick={() => setArchiveTarget(profile)}>
                               <ArchiveIcon fontSize="small" />
                             </IconButton>
+                          </Tooltip>
+                        </Stack>
+                      )}
+                      {canAdmin && archived && (
+                        <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0 }}>
+                          <Tooltip title={t('sharedContext.restore')}>
+                            <span>
+                              <IconButton
+                                size="small"
+                                aria-label={t('sharedContext.restore')}
+                                disabled={restoreMutation.isPending}
+                                onClick={() => restoreMutation.mutate(profile.id)}
+                              >
+                                <UnarchiveIcon fontSize="small" />
+                              </IconButton>
+                            </span>
                           </Tooltip>
                         </Stack>
                       )}

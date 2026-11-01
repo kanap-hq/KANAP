@@ -225,7 +225,7 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header
 
 ### Verfügbare Werkzeuge
 
-Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und lesen, aber nichts ändern. Ein Schlüssel oder eine Verbindung erhält die zwölf Werkzeuge unten, und dreizehn, wenn die Websuche für Ihre Organisation eingeschaltet ist. Eine Person sieht nur die Werkzeuge für die Daten, die ihre Rolle sie lesen lässt.
+Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und lesen, aber nichts ändern. Ein Schlüssel oder eine Verbindung erhält die vierzehn Werkzeuge unten, und fünfzehn, wenn die Websuche für Ihre Organisation eingeschaltet ist. Eine Person sieht nur die Werkzeuge für die Daten, die ihre Rolle sie lesen lässt.
 
 | Werkzeug | Funktion |
 |---|---|
@@ -241,9 +241,11 @@ Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und
 | `get_record_history` | Liest den Verlauf eines Datensatzes, wie ihn sein Tab Verlauf zeigt |
 | `search_knowledge` | Durchsucht die Wissensdatenbank |
 | `get_document` | Liest ein Dokument der Wissensdatenbank |
+| `list_help_topics` | Listet die Seiten und Abschnitte des Benutzerhandbuchs auf |
+| `read_help_section` | Liest eine Seite oder einen Abschnitt des Benutzerhandbuchs, mit seinem Link |
 | `web_search` | Sucht im Web, wenn die Websuche für Ihre Organisation eingeschaltet ist |
 
-Wenn sich ein Client verbindet, teilt der Server ihm mit, welchen Arbeitsbereich er liest, dass er nur liest, dass er mit den Rechten der Person hinter dem Schlüssel oder der Verbindung liest, wie er sucht (Kostenstellen, Kalender und Dimensionen eingeschlossen), wo er die Wechselkurse liest und welche Daten er nicht liest (das Audit-Protokoll und KI-Agenten). Rollen und Einstellungen des Datenzugriffs liest er nur für eine Person, die Benutzer verwaltet und Zugriff auf alle Daten hat.
+Wenn sich ein Client verbindet, teilt der Server ihm mit, welchen Arbeitsbereich er liest, dass er nur liest, dass er mit den Rechten der Person hinter dem Schlüssel oder der Verbindung liest, wie er sucht (Kostenstellen, Kalender und Dimensionen eingeschlossen), wo er die Wechselkurse liest und welche Daten er nicht liest (das Audit-Protokoll und KI-Agenten). Rollen und Einstellungen des Datenzugriffs liest er nur für eine Person, die Benutzer verwaltet und Zugriff auf alle Daten hat. Außerdem weist er den Client an, Fragen zur Bedienung von KANAP anhand des Benutzerhandbuchs zu beantworten.
 
 Ein Aufruf, den der Server ablehnt, kommt mit seiner Ursache zurück, damit der Assistent sie erklären kann: ein unbekanntes Werkzeug, ein Werkzeug, das Daten ändern würde, ein Werkzeug, das der Schlüssel nicht erlaubt, oder Daten, die die Person nicht lesen darf.
 

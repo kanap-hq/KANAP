@@ -336,6 +336,7 @@ function createOrchestrator(options?: {
       systemPromptParams.push(params);
       return {
         text: 'You are Plaid.',
+        cacheablePrefix: 'You are Plaid.',
         sections: [{ key: 'identity', label: 'Assistant identity', size: 'You are Plaid.'.length }],
       };
     },
@@ -420,6 +421,7 @@ async function testSimpleTextResponse() {
   assert.equal(persistedMessages[0].role, 'user');
   assert.equal(persistedMessages[0].content, 'Hello');
   assert.equal(recordedRequests[0].systemPrompt, 'You are Plaid.');
+  assert.equal(recordedRequests[0].systemPromptCacheablePrefix, 'You are Plaid.', 'the provider learns where the fixed prompt ends');
   assert.deepEqual(recordedRequests[0].messages.map((message: any) => message.content), ['Hello']);
   assert.deepEqual(recordedRequests[0].tools, [], 'Minimal greeting profile should not send tools to the provider.');
 

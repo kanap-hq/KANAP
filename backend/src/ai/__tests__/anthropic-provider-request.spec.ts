@@ -8,7 +8,7 @@ import {
 import { AiStreamEvent, AiStreamParams } from '../providers/ai-provider.types';
 
 // The Anthropic adapter against a local stand-in server: every request turns on
-// automatic prompt caching, sends the reasoning effort only to models that accept it,
+// automatic prompt caching, ends a breakpoint after the fixed part of the system prompt, sends the reasoning effort only to models that accept it,
 // and reports input_tokens as the whole prompt (uncached + cache write + cache read).
 
 // The stand-in server listens on 127.0.0.1, which the request-time check blocks in
@@ -120,6 +120,36 @@ async function main() {
     await run({ model: 'claude-haiku-4-5', reasoningEffort: 'low' });
     assert.deepEqual(bodies.at(-1)!.cache_control, { type: 'ephemeral' });
     assert.equal('output_config' in bodies.at(-1)!, false);
+
+    // No cacheable prefix: the system prompt as it is, cached by the automatic breakpoint only.
+    assert.equal(bodies.at(-1)!.system, 'You are a test.');
+
+    // Tools, then the fixed part of the system prompt with its own breakpoint, then the person
+    // and the clock, then the history under the automatic breakpoint: two breakpoints of four.
+    await run({
+      systemPrompt: 'Fixed rules.\n\nTenant and current user context: Alex, 20:41.',
+      systemPromptCacheablePrefix: 'Fixed rules.',
+      tools: [{ name: 'query_entities', description: 'Query.', parameters: { type: 'object', properties: {} } }],
+    });
+    const cached = bodies.at(-1)!;
+    assert.deepEqual(cached.system, [
+      { type: 'text', text: 'Fixed rules.', cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: 'Tenant and current user context: Alex, 20:41.' },
+    ]);
+    assert.deepEqual(cached.cache_control, { type: 'ephemeral' });
+    assert.deepEqual((cached.tools as any[]).map((tool) => tool.name), ['query_entities']);
+    assert.equal(JSON.stringify(cached.tools).includes('cache_control'), false, 'the system breakpoint covers the tools');
+    assert.equal(JSON.stringify(cached.messages).includes('cache_control'), false, 'the automatic breakpoint places itself');
+
+    // A prefix the prompt does not start with is ignored, never sent as a second copy.
+    await run({ systemPrompt: 'Other prompt.', systemPromptCacheablePrefix: 'Fixed rules.' });
+    assert.equal(bodies.at(-1)!.system, 'Other prompt.');
+
+    // A prompt that is all prefix: one block, with the breakpoint.
+    await run({ systemPrompt: 'Fixed rules.', systemPromptCacheablePrefix: 'Fixed rules.' });
+    assert.deepEqual(bodies.at(-1)!.system, [
+      { type: 'text', text: 'Fixed rules.', cache_control: { type: 'ephemeral' } },
+    ]);
   } finally {
     if (previousBaseUrl === undefined) delete process.env.ANTHROPIC_BASE_URL;
     else process.env.ANTHROPIC_BASE_URL = previousBaseUrl;
