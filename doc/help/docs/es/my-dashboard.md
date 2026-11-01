@@ -65,7 +65,7 @@ Cuando los cinco pasos están hechos, el mosaico ofrece los otros dos recorridos
 | Recorrido | Con el ejemplo | Con sus datos |
 |---|---|---|
 | Presupuesto de TI | La vista general, Una línea presupuestaria, Un informe, Una pregunta a Plaid, Sus datos | Su empresa, Sus líneas, Un contrato vinculado, Su primer informe, Un colega |
-| Mapa del SI | La lista de aplicaciones, Una ficha de aplicación, Los servidores, Tecnologías, fin de soporte y vulnerabilidades, Sus datos | Sus aplicaciones, Sus tecnologías, Sus servidores, Lo que KANAP ha encontrado, Un colega |
+| Mapa del SI | La lista de aplicaciones, Una ficha de aplicación, Los servidores, Tecnologías, fin de soporte y vulnerabilidades, Sus datos | Sus ubicaciones, Sus aplicaciones, Sus tecnologías, Sus servidores, Un colega |
 | Proyectos y solicitudes | Una solicitud y su puntuación, El proyecto nacido de la solicitud, Las tareas, Los informes, Sus datos | Su primera solicitud, Su proyecto, Las primeras tareas, El presupuesto del proyecto, Un colega |
 
 ### La página de inicio sigue su recorrido
