@@ -60,13 +60,13 @@ Once a path is chosen, the **Your first five steps** tile comes first on the hom
 - With the example, opening a step marks it done.
 - With your own data, click **Done** in the guidance, or the mark next to the step in the tile. The mark also undoes a step.
 
-When the five steps are done, the tile offers the two other paths. The close button (**×**) hides the tile. To show it again, use **Show the first steps** in **About KANAP**.
+When the five steps are done, the tile offers the two other paths. It also offers **Restart this path**, which undoes the five steps of this path. The close button (**×**) hides the tile. To show it again, use **Show the first steps** in **About KANAP**.
 
 | Path | With the example | With your own data |
 |---|---|---|
 | IT budget | The overview, A budget line, A report, A question for Plaid, Your data | Your company, Your budget lines, A linked contract, Your first report, A colleague |
 | IT landscape map | The application list, An application record, The servers, Technologies, end of support and vulnerabilities, Your data | Your applications, Your technologies, Your servers, What KANAP found, A colleague |
-| Projects and requests | A request and its score, The project it became, Tasks, Time and effort, Your data | Your first request, Your project, The first tasks, The project's budget, A colleague |
+| Projects and requests | A request and its score, The project born from the request, Tasks, The reports, Your data | Your first request, Your project, The first tasks, The project's budget, A colleague |
 
 ## Turn on Plaid line
 

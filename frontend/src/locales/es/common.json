@@ -1578,7 +1578,8 @@
       "later": "Más tarde",
       "end": {
         "title": "¡Recorrido {{path}} terminado!",
-        "others": "Los otros dos recorridos:"
+        "others": "Los otros dos recorridos:",
+        "restart": "Reiniciar este recorrido"
       },
       "showAgain": "Mostrar los primeros pasos",
       "steps": {
@@ -1605,24 +1606,24 @@
         },
         "own_company": {
           "title": "Su empresa",
-          "hint": "Creada al registrarse con su nombre, país y moneda. Complete su plan de cuentas, su ciudad y su plantilla del año."
+          "hint": "Se creó una primera empresa con el entorno. Revise los datos y complete la información, en particular la moneda y el plan de cuentas. Si es necesario, añada el suyo desde la vista «Planes de cuentas». Cree otras empresas si lo necesita."
         },
         "own_budget_lines": {
           "title": "Sus líneas",
-          "hint": "Importe su archivo de presupuesto o cree su primera línea OPEX y su periodo."
+          "hint": "Importe su archivo de presupuesto (exporte primero para obtener la plantilla) o cree directamente su primera línea presupuestaria."
         },
         "own_contract": {
           "title": "Un contrato vinculado",
-          "hint": "El contrato principal de una línea: su vencimiento y su alerta de preaviso."
+          "hint": "Cree su primer contrato y, si procede, vincúlelo a la línea presupuestaria que acaba de crear."
         },
         "own_report": {
           "title": "Su primer informe",
-          "hint": "Líneas principales, con sus propias cifras."
+          "hint": "Compruebe que los filtros siguen sus entradas. ¡Cree más líneas para enriquecer los informes!"
         },
         "own_invite": {
           "title": "Un colega",
           "hint": {
-            "budget": "Invite a su control de gestión: cree el usuario y envíe la invitación desde el menú de su fila.",
+            "budget": "Invite a sus colegas creando sus cuentas de usuario. Use el menú Autenticación para configurar el SSO con Entra ID.",
             "cartography": "Invite a un responsable de aplicación: cree el usuario y envíe la invitación desde el menú de su fila.",
             "portfolio": "Invite a un jefe de proyecto: cree el usuario y envíe la invitación desde el menú de su fila."
           }
@@ -1653,11 +1654,11 @@
         },
         "portfolio_request": {
           "title": "Una solicitud y su puntuación",
-          "hint": "Abra una solicitud: la necesidad, los criterios, la puntuación calculada. Una vez aprobada, se convierte en proyecto con un clic."
+          "hint": "Esta es una solicitud, en su pestaña Evaluación: los criterios y la puntuación calculada. Una vez aprobada, se convierte en proyecto con un clic."
         },
         "portfolio_import": {
           "title": "Sus datos",
-          "hint": "Exporte la lista de proyectos del ejemplo para ver su formato y luego importe la suya."
+          "hint": "Exporte la lista de proyectos del ejemplo para ver su formato y luego importe la suya. Haga lo mismo con las solicitudes y las tareas."
         },
         "own_projects": {
           "title": "Su proyecto",
@@ -1684,16 +1685,16 @@
           "hint": "Fin de soporte y vulnerabilidades conocidas de sus tecnologías, sin introducir nada más."
         },
         "portfolio_project": {
-          "title": "El proyecto que nació de ella",
-          "hint": "Abra un proyecto: objetivo, equipo, fases y, en Relaciones, la solicitud de origen, sus aplicaciones y sus líneas presupuestarias."
+          "title": "El proyecto nacido de la solicitud",
+          "hint": "Este es un proyecto nacido de una solicitud: objetivo, equipo, fases y, en Relaciones, la solicitud de origen, sus aplicaciones y sus líneas presupuestarias."
         },
         "portfolio_tasks": {
           "title": "Las tareas",
-          "hint": "Las tareas del proyecto y de otros objetos: estado, prioridad, vencimiento. Una tarea atrasada aparece en Mis tareas de la página de inicio."
+          "hint": "Todas las tareas, vinculadas a un proyecto, al presupuesto o independientes. Pruebe los filtros y la búsqueda para encontrar rápidamente las tareas que le interesan."
         },
         "portfolio_time": {
-          "title": "El tiempo y el esfuerzo",
-          "hint": "En un proyecto, la pestaña Esfuerzo compara el esfuerzo planificado con el tiempo registrado en sus tareas. Un 80 % de avance con un 20 % del esfuerzo consumido salta a la vista."
+          "title": "Los informes",
+          "hint": "Siete informes para dirigir la cartera: lo que ha pasado, lo que está en curso, lo que viene. El Mapa de calor de capacidad compara la carga de cada colaborador con su capacidad."
         },
         "own_tasks": {
           "title": "Las primeras tareas",

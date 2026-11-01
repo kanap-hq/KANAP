@@ -18,7 +18,9 @@ const env = vi.hoisted(() => ({
 
 vi.mock('../../api', () => ({
   default: {
-    get: (url: string, config?: unknown) => (['/budget-lines/summary', '/applications'].includes(url) ? env.summary(config, url) : env.server.api.get(url)),
+    get: (url: string, config?: unknown) => (['/budget-lines/summary', '/applications'].includes(url) || url.startsWith('/portfolio/')
+      ? env.summary(config, url)
+      : env.server.api.get(url)),
     put: (url: string, body?: unknown) => env.server.api.put(url, body),
     post: (url: string, body?: unknown) => env.server.api.post(url, body),
     delete: (url: string) => env.server.api.delete(url),
@@ -157,6 +159,18 @@ describe('FirstStepsTile', () => {
     expect(screen.getAllByRole('link')[0]).toHaveTextContent('The application list');
   });
 
+  it('starts a finished path again by undoing its five steps', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    for (const key of ['budget_overview', 'budget_line', 'budget_report', 'budget_plaid', 'budget_import']) {
+      env.server.db.done.set(`budget/example/${key}`, '2026-11-02T09:20:00.000Z');
+    }
+    renderAt('/', <FirstStepsTile />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Restart this path' }));
+    await waitFor(() => expect(screen.getByText('0/5')).toBeInTheDocument());
+    expect(env.server.state().completed).toBe(false);
+    expect(screen.getByRole('link', { name: 'The overview' })).toBeInTheDocument();
+  });
+
   it('shows nothing without a path', async () => {
     env.server = createFakeOnboardingServer({ mode: 'example' });
     renderAt('/', <FirstStepsTile />);
@@ -227,11 +241,11 @@ describe('StepHint', () => {
     expect(hint).toHaveTextContent('Here is an application record. Explore the properties panel and the tabs');
   });
 
-  it('waits for "Done" with your own data, and names the colleague of the angle', async () => {
+  it('waits for "Done" with your own data, and gives the hint of the angle', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'own_data' });
     renderAt('/admin/users?step=own_invite', page);
     const hint = await screen.findByRole('dialog', { name: 'A colleague' });
-    expect(hint).toHaveTextContent('Invite your financial controller');
+    expect(hint).toHaveTextContent('Use the Authentication menu to set up SSO');
     expect(done('own_invite')).toBeFalsy();
     fireEvent.click(within(hint).getByRole('button', { name: 'Done' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -246,16 +260,55 @@ describe('StepHint', () => {
     expect(env.server.calls.filter((call) => call.method === 'post')).toEqual([]);
   });
 
-  it('lists the portfolio path from the request to the project, its tasks and its time', async () => {
+  it('lists the portfolio path: a request, its project, the tasks, the reports, your data', async () => {
     env.server = createFakeOnboardingServer({ angle: 'portfolio', mode: 'example' });
     renderAt('/', <FirstStepsTile />);
     const links = await screen.findAllByRole('link');
     expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
-      ['A request and its score', '/portfolio/requests?step=portfolio_request'],
-      ['The project it became', '/portfolio/projects?step=portfolio_project'],
       ['Tasks', '/portfolio/tasks?step=portfolio_tasks'],
-      ['Time and effort', '/portfolio/projects?step=portfolio_time'],
+      ['The reports', '/portfolio/reports?step=portfolio_time'],
       ['Your data', '/portfolio/projects?step=portfolio_import'],
     ]);
+    expect(screen.getByRole('button', { name: 'A request and its score' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'The project born from the request' })).toBeInTheDocument();
+  });
+
+  it('opens the best-scored request on its scoring tab', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'portfolio', mode: 'example' });
+    const asked: Array<{ url?: string; config?: unknown }> = [];
+    env.summary = async (config, url) => {
+      asked.push({ url, config });
+      return { data: { items: [{ id: 'r-3', item_number: 3, name: 'Cave Climate Digital Twin' }] } };
+    };
+    renderAt('/', <FirstStepsTile />);
+    fireEvent.click(await screen.findByRole('button', { name: 'A request and its score' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/portfolio/requests/REQ-3/scoring?step=portfolio_request'));
+    expect(asked[0]).toMatchObject({ url: '/portfolio/requests', config: { params: { limit: 1, sort: 'priority_score:DESC' } } });
+  });
+
+  it('opens the project resulting from the best-scored converted request', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'portfolio', mode: 'example' });
+    const asked: Array<{ url?: string; config?: unknown }> = [];
+    env.summary = async (config, url) => {
+      asked.push({ url, config });
+      if (url === '/portfolio/requests') return { data: { items: [{ id: 'r-5', item_number: 5, name: 'Converted' }] } };
+      if (url === '/portfolio/requests/r-5/relations') return { data: { resulting_projects: [{ id: 'p-9', item_number: 9, name: 'Born project' }] } };
+      return { data: { items: [] } };
+    };
+    renderAt('/', <FirstStepsTile />);
+    fireEvent.click(await screen.findByRole('button', { name: 'The project born from the request' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/portfolio/projects/PRJ-9/summary?step=portfolio_project'));
+    const filters = JSON.parse((asked[0].config as { params: { filters: string } }).params.filters);
+    expect(filters).toEqual({ status: { filterType: 'set', values: ['converted'] } });
+  });
+
+  it('opens the best-scored project when no request was converted', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'portfolio', mode: 'example' });
+    env.summary = async (_config, url) => (url === '/portfolio/projects'
+      ? { data: { items: [{ id: 'p-4', item_number: 4, name: 'Zero Trust Fromage' }] } }
+      : { data: { items: [] } });
+    renderAt('/', <FirstStepsTile />);
+    fireEvent.click(await screen.findByRole('button', { name: 'The project born from the request' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/portfolio/projects/PRJ-4/summary?step=portfolio_project'));
   });
 });

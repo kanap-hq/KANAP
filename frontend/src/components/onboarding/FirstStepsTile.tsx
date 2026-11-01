@@ -5,9 +5,10 @@ import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import DashboardTile from '../../pages/workspace/tiles/DashboardTile';
-import { ONBOARDING_ANGLES, type OnboardingState } from './onboardingApi';
+import { onboardingApi, ONBOARDING_ANGLES, type OnboardingState } from './onboardingApi';
 import api from '../../api';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { buildItemPath, formatItemRef } from '../../utils/item-ref';
@@ -23,6 +24,18 @@ const rowSx = {
 
 type TopLine = { id: string; item_number: number | null; product_name: string | null };
 type Application = { id: string; name: string | null };
+type PortfolioItem = { id: string; item_number: number | null; name: string | null };
+
+const portfolioRef = (type: 'request' | 'project', item: PortfolioItem) =>
+  (item.item_number != null ? formatItemRef(type, item.item_number) : item.id);
+
+/** The first of a portfolio list by priority score, with optional list filters. */
+async function topScored(path: string, filters?: Record<string, unknown>): Promise<PortfolioItem | null> {
+  const res = await api.get<{ items: PortfolioItem[] }>(path, {
+    params: { limit: 1, sort: 'priority_score:DESC', ...(filters ? { filters: JSON.stringify(filters) } : {}) },
+  });
+  return res.data.items?.[0] ?? null;
+}
 type Opened = { path: string; record: string | null };
 
 /**
@@ -48,6 +61,21 @@ function useOpenRecord(stepKey: string, kind: OpenedRecord) {
           path: buildItemPath('budget', ref),
           record: [line.item_number != null ? ref : null, line.product_name].filter(Boolean).join(' '),
         };
+      }
+      if (kind === 'topScoredRequest') {
+        const request = await topScored('/portfolio/requests');
+        return request ? { path: `${buildItemPath('request', portfolioRef('request', request))}/scoring`, record: request.name } : null;
+      }
+      if (kind === 'projectFromRequest') {
+        // The project of the best-scored converted request, else the best-scored project.
+        const request = await topScored('/portfolio/requests', { status: { filterType: 'set', values: ['converted'] } });
+        if (request) {
+          const relations = await api.get<{ resulting_projects?: PortfolioItem[] }>(`/portfolio/requests/${request.id}/relations`);
+          const project = relations.data.resulting_projects?.[0];
+          if (project) return { path: `${buildItemPath('project', portfolioRef('project', project))}/summary`, record: project.name };
+        }
+        const project = await topScored('/portfolio/projects');
+        return project ? { path: `${buildItemPath('project', portfolioRef('project', project))}/summary`, record: project.name } : null;
       }
       const res = await api.get<{ items: Application[] }>('/applications', { params: { limit: 1, sort: 'criticality:DESC' } });
       const application = res.data.items?.[0];
@@ -126,6 +154,18 @@ function StepRow({ stepKey, done, next, busy, onToggle }: {
 function EndScreen({ state }: { state: OnboardingState }) {
   const { t } = useTranslation('common');
   const { choose } = useOnboardingActions();
+  const { apply } = useOnboarding();
+  // The steps of a path are the user's own: undoing the five starts the path again.
+  const restart = useMutation({
+    mutationFn: async () => {
+      let next: OnboardingState = state;
+      for (const step of state.steps.filter((candidate) => candidate.done_at)) {
+        next = await onboardingApi.markUndone(step.key);
+      }
+      return next;
+    },
+    onSuccess: apply,
+  });
   const others = ONBOARDING_ANGLES.filter((angle) => angle !== state.angle);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -145,6 +185,11 @@ function EndScreen({ state }: { state: OnboardingState }) {
           </React.Fragment>
         ))}
       </Typography>
+      <Box>
+        <Link component="button" variant="body2" onClick={() => restart.mutate()} disabled={restart.isPending}>
+          {t('onboarding.firstSteps.end.restart')}
+        </Link>
+      </Box>
     </Box>
   );
 }

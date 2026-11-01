@@ -60,13 +60,13 @@ Sobald ein Pfad gewählt ist, steht die Kachel **Ihre ersten fünf Schritte** an
 - Mit dem Beispiel gilt ein Schritt als erledigt, sobald Sie ihn öffnen.
 - Mit Ihren eigenen Daten klicken Sie auf **Erledigt** in der Erklärung oder auf die Markierung neben dem Schritt in der Kachel. Die Markierung macht einen Schritt auch wieder rückgängig.
 
-Wenn die fünf Schritte erledigt sind, bietet die Kachel die beiden anderen Pfade an. Die Schaltfläche zum Schließen (**×**) blendet die Kachel aus. Um sie wieder anzuzeigen, verwenden Sie **Erste Schritte anzeigen** unter **Über KANAP**.
+Wenn die fünf Schritte erledigt sind, bietet die Kachel die beiden anderen Pfade an. Sie bietet auch **Diesen Pfad neu beginnen** an, womit die fünf Schritte dieses Pfads wieder als offen gelten. Die Schaltfläche zum Schließen (**×**) blendet die Kachel aus. Um sie wieder anzuzeigen, verwenden Sie **Erste Schritte anzeigen** unter **Über KANAP**.
 
 | Pfad | Mit dem Beispiel | Mit Ihren eigenen Daten |
 |---|---|---|
 | IT-Budget | Die Übersicht, Eine Budgetzeile, Ein Bericht, Eine Frage an Plaid, Ihre Daten | Ihr Unternehmen, Ihre Budgetzeilen, Ein verknüpfter Vertrag, Ihr erster Bericht, Eine Kollegin, ein Kollege |
 | IT-Landkarte | Die Anwendungsliste, Ein Anwendungsdatensatz, Die Server, Technologien, Supportende und Schwachstellen, Ihre Daten | Ihre Anwendungen, Ihre Technologien, Ihre Server, Was KANAP gefunden hat, Eine Kollegin, ein Kollege |
-| Projekte und Anfragen | Eine Anfrage und ihre Bewertung, Das daraus entstandene Projekt, Die Aufgaben, Zeit und Aufwand, Ihre Daten | Ihre erste Anfrage, Ihr Projekt, Die ersten Aufgaben, Das Budget des Projekts, Eine Kollegin, ein Kollege |
+| Projekte und Anfragen | Eine Anfrage und ihre Bewertung, Das aus der Anfrage entstandene Projekt, Die Aufgaben, Die Berichte, Ihre Daten | Ihre erste Anfrage, Ihr Projekt, Die ersten Aufgaben, Das Budget des Projekts, Eine Kollegin, ein Kollege |
 
 ## Zeile zum Einschalten von Plaid
 

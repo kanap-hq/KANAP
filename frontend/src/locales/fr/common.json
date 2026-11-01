@@ -1578,7 +1578,8 @@
       "later": "Plus tard",
       "end": {
         "title": "Parcours {{path}} terminé !",
-        "others": "Les deux autres parcours :"
+        "others": "Les deux autres parcours :",
+        "restart": "Recommencer ce parcours"
       },
       "showAgain": "Afficher les premiers pas",
       "steps": {
@@ -1605,24 +1606,24 @@
         },
         "own_company": {
           "title": "Votre société",
-          "hint": "Créée à l'inscription avec son nom, son pays et sa devise. Complétez son plan comptable, sa ville et son effectif de l'année."
+          "hint": "Une première société a été créée avec l'environnement. Vérifiez les données et complétez les informations, en particulier la devise et le plan comptable. Si nécessaire, passez par la vue « Plans comptables » pour ajouter le vôtre. Créez d'autres sociétés au besoin."
         },
         "own_budget_lines": {
           "title": "Vos lignes",
-          "hint": "Importez votre fichier budget, ou créez votre première ligne OPEX et sa période."
+          "hint": "Importez votre fichier budget (exportez d'abord pour récupérer le modèle) ou créez votre première ligne budgétaire directement."
         },
         "own_contract": {
           "title": "Un contrat lié",
-          "hint": "Le contrat principal d'une ligne : son échéance et l'alerte de préavis."
+          "hint": "Créez votre premier contrat et, le cas échéant, liez-le à la ligne de budget que vous venez de créer."
         },
         "own_report": {
           "title": "Votre premier rapport",
-          "hint": "Top lignes, sur vos propres chiffres."
+          "hint": "Vérifiez que les filtres suivent bien vos entrées. Créez plus de lignes pour enrichir les rapports !"
         },
         "own_invite": {
           "title": "Un collègue",
           "hint": {
-            "budget": "Invitez votre contrôle de gestion : créez l'utilisateur, puis envoyez l'invitation depuis le menu de sa ligne.",
+            "budget": "Invitez vos collègues en créant leur compte utilisateur. Passez par le menu Authentification pour configurer le SSO avec Entra ID.",
             "cartography": "Invitez un responsable d'application : créez l'utilisateur, puis envoyez l'invitation depuis le menu de sa ligne.",
             "portfolio": "Invitez un chef de projet : créez l'utilisateur, puis envoyez l'invitation depuis le menu de sa ligne."
           }
@@ -1653,11 +1654,11 @@
         },
         "portfolio_request": {
           "title": "Une demande et son score",
-          "hint": "Ouvrez une demande : le besoin, les critères, le score calculé. Approuvée, elle se convertit en projet d'un clic."
+          "hint": "Voici une demande, sur son onglet Évaluation : les critères et le score calculé. Approuvée, elle se convertit en projet d'un clic."
         },
         "portfolio_import": {
           "title": "Vos données",
-          "hint": "Exportez la liste des projets de l'exemple pour voir le format, puis importez la vôtre."
+          "hint": "Exportez la liste des projets de l'exemple pour voir le format, puis importez la vôtre. Faites de même avec les demandes et les tâches."
         },
         "own_projects": {
           "title": "Votre projet",
@@ -1684,16 +1685,16 @@
           "hint": "Fins de support et failles connues de vos technologies, sans rien saisir de plus."
         },
         "portfolio_project": {
-          "title": "Le projet qui en est né",
-          "hint": "Ouvrez un projet : objectif, équipe, phases, et dans Relations la demande d'origine, ses applications et ses lignes budgétaires."
+          "title": "Le projet issu de la demande",
+          "hint": "Voici un projet issu d'une demande : objectif, équipe, phases, et dans Relations la demande d'origine, ses applications et ses lignes budgétaires."
         },
         "portfolio_tasks": {
           "title": "Les tâches",
-          "hint": "Les tâches du projet et des autres objets : statut, priorité, échéance. Une tâche en retard remonte dans Mes tâches de l'accueil."
+          "hint": "La liste de toutes les tâches, qu'elles soient liées à un projet, au budget ou indépendantes. Testez les filtres et la recherche pour rapidement trouver les tâches qui vous intéressent."
         },
         "portfolio_time": {
-          "title": "Le temps et la charge",
-          "hint": "Dans un projet, l'onglet Charge compare la charge planifiée au temps saisi sur ses tâches. 80 % d'avancement pour 20 % de charge consommée, ça se voit."
+          "title": "Les rapports",
+          "hint": "Sept rapports pour piloter le portefeuille : ce qui s'est passé, ce qui est en cours, ce qui vient. Le Planning de capacité met la charge de chaque contributeur face à sa capacité."
         },
         "own_tasks": {
           "title": "Les premières tâches",
