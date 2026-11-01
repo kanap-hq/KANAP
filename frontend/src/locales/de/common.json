@@ -1556,7 +1556,7 @@
       "angles": {
         "budget": "IT-Budget",
         "cartography": "IT-Landkarte",
-        "portfolio": "Projekte und Anfragen",
+        "portfolio": "Projektportfolio",
         "none": "Ich schaue mich um"
       },
       "modes": {
@@ -1566,6 +1566,140 @@
       "notChosen": "nicht gewählt",
       "change": "Ändern",
       "choose": "Wählen"
+    },
+    "firstSteps": {
+      "title": "Ihre ersten fünf Schritte",
+      "progress": "{{done}}/{{total}}",
+      "hide": "Erste Schritte ausblenden",
+      "markDone": "Als erledigt markieren",
+      "markUndone": "Als nicht erledigt markieren",
+      "gotIt": "Verstanden",
+      "done": "Erledigt",
+      "later": "Später",
+      "end": {
+        "title": "Pfad {{path}} abgeschlossen!",
+        "others": "Die beiden anderen Pfade:"
+      },
+      "showAgain": "Erste Schritte anzeigen",
+      "steps": {
+        "budget_overview": {
+          "title": "Die Übersicht",
+          "hint": "Hier sind die Budgetzeilen, nach Budget des laufenden Jahres sortiert. Filtern Sie nach Typ oder Zahlendes Unternehmen, oder suchen Sie direkt im Schnellfilter."
+        },
+        "budget_line": {
+          "title": "Eine Budgetzeile",
+          "hint": "Öffnen Sie eine Zeile und erkunden Sie ihre Reiter. Budget, der Hauptreiter, zeigt 4 von 5 möglichen Spalten, alle unter „Administration“ einstellbar. Der Reiter Beziehungen verknüpft das Budget mit den Elementen, die es trägt.",
+          "hintRecord": "Sie sind im Datensatz {{record}}. Erkunden Sie die Reiter. Budget, der Hauptreiter, zeigt 4 von 5 möglichen Spalten, alle unter „Administration“ einstellbar. Der Reiter Beziehungen verknüpft das Budget mit den Elementen, die es trägt."
+        },
+        "budget_report": {
+          "title": "Ein Bericht",
+          "hint": "Alle Berichte lassen sich im Detail einstellen. Erkunden Sie die Filteroptionen. Öffnen Sie aus den Ergebnissen direkt die betroffenen Budgetzeilen. Exportieren Sie den Bericht als .pdf, .png oder .xlsx."
+        },
+        "budget_plaid": {
+          "title": "Eine Frage an Plaid",
+          "hint": "Fragen Sie „Wo liegen die größten Einsparpotenziale bei den IT-OPEX?“"
+        },
+        "budget_import": {
+          "title": "Ihre Daten",
+          "hint": "Probieren Sie den Export aus, um die Daten als csv oder xlsx zu erhalten. Diese Dateien dienen als Vorlagen, um Daten in großer Zahl zu aktualisieren oder neue zu importieren. Plaid hilft Ihnen auch, eine vorhandene Datei umzuwandeln."
+        },
+        "own_company": {
+          "title": "Ihr Unternehmen",
+          "hint": "Bei der Anmeldung mit Name, Land und Währung angelegt. Ergänzen Sie Kontenplan, Stadt und Mitarbeiterzahl des Jahres."
+        },
+        "own_budget_lines": {
+          "title": "Ihre Budgetzeilen",
+          "hint": "Importieren Sie Ihre Budgetdatei oder legen Sie Ihre erste OPEX-Zeile mit ihrem Zeitraum an."
+        },
+        "own_contract": {
+          "title": "Ein verknüpfter Vertrag",
+          "hint": "Der Hauptvertrag einer Zeile: sein Enddatum und die Kündigungsfrist-Erinnerung."
+        },
+        "own_report": {
+          "title": "Ihr erster Bericht",
+          "hint": "Top-Zeilen, mit Ihren eigenen Zahlen."
+        },
+        "own_invite": {
+          "title": "Eine Kollegin, ein Kollege",
+          "hint": {
+            "budget": "Laden Sie Ihr Controlling ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile.",
+            "cartography": "Laden Sie eine verantwortliche Person einer Anwendung ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile.",
+            "portfolio": "Laden Sie eine Projektleitung ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile."
+          }
+        },
+        "map_application": {
+          "title": "Ein Anwendungsdatensatz",
+          "hint": "Hier ist der Datensatz einer Anwendung. Erkunden Sie den Eigenschaftenbereich und die Reiter, um alle Facetten dieses zentralen KANAP-Objekts zu entdecken."
+        },
+        "map_technologies": {
+          "title": "Technologien, Supportende und Schwachstellen",
+          "hint": "Was in den kommenden Monaten sein Supportende erreicht, die Quelle jedes Datums und die CVEs, die diese Technologien betreffen."
+        },
+        "map_import": {
+          "title": "Ihre Daten",
+          "hint": "Exportieren Sie die Anwendungen als csv oder Excel und importieren Sie dann Ihre eigenen mit der Vorlage. Fahren Sie mit den Technologien fort, um ihnen Supportende und Schwachstellen zuzuordnen."
+        },
+        "own_applications": {
+          "title": "Ihre Anwendungen",
+          "hint": "Importieren Sie die Liste Ihrer Anwendungen oder legen Sie die erste an."
+        },
+        "own_technologies": {
+          "title": "Ihre Technologien",
+          "hint": "Verknüpfen Sie Technologien mit Ihren Anwendungen: KANAP ergänzt ihr Supportende."
+        },
+        "own_assets": {
+          "title": "Ihre Server",
+          "hint": "Importieren oder erstellen Sie Ihre Server und verknüpfen Sie sie mit Anwendungen."
+        },
+        "portfolio_request": {
+          "title": "Eine Anfrage und ihre Bewertung",
+          "hint": "Öffnen Sie eine Anfrage: der Bedarf, die Kriterien, die berechnete Punktzahl. Genehmigt wird sie mit einem Klick zum Projekt."
+        },
+        "portfolio_import": {
+          "title": "Ihre Daten",
+          "hint": "Exportieren Sie die Projektliste des Beispiels, um ihr Format zu sehen, und importieren Sie dann Ihre eigene."
+        },
+        "own_projects": {
+          "title": "Ihr Projekt",
+          "hint": "Das aus der Anfrage entstandene Projekt: Verantwortliche, Termine, Team. Ihre bestehenden Projekte importieren Sie als Liste."
+        },
+        "own_request": {
+          "title": "Ihre erste Anfrage",
+          "hint": "Legen Sie eine Anfrage an, bewerten und genehmigen Sie sie und wandeln Sie sie in ein Projekt um."
+        },
+        "own_project_budget": {
+          "title": "Das Budget des Projekts",
+          "hint": "Verknüpfen Sie eine Budgetzeile mit Ihrem Projekt in dessen Beziehungen: Die Ausgaben folgen."
+        },
+        "map_applications": {
+          "title": "Die Anwendungsliste",
+          "hint": "Alle Anwendungen des Beispiels mit Kritikalität, verantwortlicher Person und Unternehmen. Das ist das Inventar: filtern, sortieren, suchen."
+        },
+        "map_assets": {
+          "title": "Die Server",
+          "hint": "Jeder Server zeigt, wo die Anwendungen laufen: Umgebung, Standort, installierte Technologien. Öffnen Sie einen Datensatz, um mehr zu erfahren."
+        },
+        "own_findings": {
+          "title": "Was KANAP gefunden hat",
+          "hint": "Supportende und bekannte Schwachstellen Ihrer Technologien, ohne weitere Eingabe."
+        },
+        "portfolio_project": {
+          "title": "Das daraus entstandene Projekt",
+          "hint": "Öffnen Sie ein Projekt: Ziel, Team, Phasen und unter Beziehungen die ursprüngliche Anfrage, seine Anwendungen und seine Budgetzeilen."
+        },
+        "portfolio_tasks": {
+          "title": "Die Aufgaben",
+          "hint": "Die Aufgaben des Projekts und anderer Datensätze: Status, Priorität, Fälligkeit. Eine überfällige Aufgabe erscheint unter Meine Aufgaben auf der Startseite."
+        },
+        "portfolio_time": {
+          "title": "Zeit und Aufwand",
+          "hint": "In einem Projekt vergleicht der Reiter Aufwand den geplanten Aufwand mit der auf seinen Aufgaben erfassten Zeit. 80 % Fortschritt bei 20 % verbrauchtem Aufwand fällt sofort auf."
+        },
+        "own_tasks": {
+          "title": "Die ersten Aufgaben",
+          "hint": "Legen Sie die Aufgaben des Projekts an, weisen Sie sie zu und erfassen Sie die aufgewendete Zeit."
+        }
+      }
     }
   }
 }

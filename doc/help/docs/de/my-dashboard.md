@@ -40,6 +40,34 @@ Nach dem Speichern wird die Zeitzusammenfassungs-Kachel des Dashboards automatis
 
 In einem leeren Cloud-Arbeitsbereich, in den noch nie Beispieldaten geladen wurden, sehen Administratoren über den Kacheln eine Zeile: „Entdecken Sie KANAP mit Beispieldaten.“ **Laden** öffnet den Dialog für Beispieldaten, und **Ausblenden** entfernt die Zeile dauerhaft. Die Zeile verschwindet, sobald der Arbeitsbereich Daten enthält, und kehrt nach dem Löschen nicht zurück. Siehe [Beispieldaten](sample-data.md).
 
+## Testphase: Ihr Pfad und Ihre ersten Schritte { #trial-first-steps }
+
+In einem Arbeitsbereich in der Testphase öffnet sich beim ersten Öffnen von KANAP ein Dialog. Er stellt eine Frage pro Bildschirm:
+
+1. **Was führt Sie zu KANAP?** **Das IT-Budget**, **Die IT-Landkarte**, **Projekte und Anfragen** oder **Ich schaue mich um**.
+2. **Wie möchten Sie beginnen?** **Mit dem vollständigen Beispiel entdecken** oder **Mit meinen eigenen Daten beginnen**.
+
+Wer mit den eigenen Daten beginnt, löscht das Beispiel. Wurden seit dem Laden des Beispiels Elemente angelegt, nennt eine Bestätigung deren Anzahl, bevor etwas gelöscht wird. Solange der Arbeitsbereich das Beispiel enthält, kann nur ein Administrator die eigenen Daten wählen.
+
+Während das Beispiel geladen oder der Arbeitsbereich gelöscht wird, weist eine Zeile auf der Startseite darauf hin.
+
+Wenn Sie den Dialog schließen, wartet die Wahl unter **Über KANAP**. Die Zeile **Pfad: … · Ändern** zeigt den gewählten Pfad (**Wählen**, solange nichts gewählt ist). Solange eine Antwort fehlt, kann jede Person ihn ändern. Danach können es nur Administratoren.
+
+### Ihre ersten fünf Schritte
+
+Sobald ein Pfad gewählt ist, steht die Kachel **Ihre ersten fünf Schritte** an erster Stelle der Startseite. Sie listet die fünf Schritte des Pfads und Ihren Fortschritt, zum Beispiel **2/5**. Jeder Schritt öffnet seinen Bildschirm, auf dem der Seitentitel hervorgehoben ist, mit einem erklärenden Satz.
+
+- Mit dem Beispiel gilt ein Schritt als erledigt, sobald Sie ihn öffnen.
+- Mit Ihren eigenen Daten klicken Sie auf **Erledigt** in der Erklärung oder auf die Markierung neben dem Schritt in der Kachel. Die Markierung macht einen Schritt auch wieder rückgängig.
+
+Wenn die fünf Schritte erledigt sind, bietet die Kachel die beiden anderen Pfade an. Die Schaltfläche zum Schließen (**×**) blendet die Kachel aus. Um sie wieder anzuzeigen, verwenden Sie **Erste Schritte anzeigen** unter **Über KANAP**.
+
+| Pfad | Mit dem Beispiel | Mit Ihren eigenen Daten |
+|---|---|---|
+| IT-Budget | Die Übersicht, Eine Budgetzeile, Ein Bericht, Eine Frage an Plaid, Ihre Daten | Ihr Unternehmen, Ihre Budgetzeilen, Ein verknüpfter Vertrag, Ihr erster Bericht, Eine Kollegin, ein Kollege |
+| IT-Landkarte | Die Anwendungsliste, Ein Anwendungsdatensatz, Die Server, Technologien, Supportende und Schwachstellen, Ihre Daten | Ihre Anwendungen, Ihre Technologien, Ihre Server, Was KANAP gefunden hat, Eine Kollegin, ein Kollege |
+| Projekte und Anfragen | Eine Anfrage und ihre Bewertung, Das daraus entstandene Projekt, Die Aufgaben, Zeit und Aufwand, Ihre Daten | Ihre erste Anfrage, Ihr Projekt, Die ersten Aufgaben, Das Budget des Projekts, Eine Kollegin, ein Kollege |
+
 ## Zeile zum Einschalten von Plaid
 
 Während einer Cloud-Testphase sehen Administratoren der Plaid-Einstellungen unter der Zeile zu den Beispieldaten eine Zeile, solange Plaid ausgeschaltet ist und das inklusive KANAP-Modell angeboten wird: „Plaid, der KANAP-Assistent, ist ausgeschaltet.“ **Einschalten** öffnet die übliche Bestätigung des inklusiven Modells. Mit der Bestätigung wird Plaid eingeschaltet. Die Schaltfläche zum Schließen (**×**) blendet die Zeile in diesem Browser aus. Nach dem Wechsel zu einem kostenpflichtigen Tarif erscheint die Zeile nicht mehr, On-Premise ebenfalls nicht. Siehe [Plaid-Einstellungen](ai-settings.md).

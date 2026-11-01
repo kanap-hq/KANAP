@@ -62,6 +62,7 @@ import SubscriptionBanner from './SubscriptionBanner';
 import TrialChip, { TrialMenuLine } from './TrialChip';
 import NamePromptDialog from './NamePromptDialog';
 import FirstOpenDialog from './onboarding/FirstOpenDialog';
+import StepHint from './onboarding/StepHint';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
 import { chatAwaitsIncludedModelConfirmation, chatTurnedOffByAdmin } from '../ai/includedModel';
@@ -785,6 +786,7 @@ export default function Layout() {
       </Box>
       {/* The name prompt is mounted last, so it comes first when both are open. */}
       <FirstOpenDialog />
+      <StepHint />
       <NamePromptDialog />
     </Box>
   );

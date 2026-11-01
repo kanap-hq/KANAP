@@ -42,6 +42,8 @@ import QuickLogTimeModal from './actions/QuickLogTimeModal';
 import SampleDataBanner from '../admin/sample-data/SampleDataBanner';
 import EnablePlaidCard from './EnablePlaidCard';
 import OnboardingStatusLine from '../../components/onboarding/OnboardingStatusLine';
+import FirstStepsTile, { firstStepsShown } from '../../components/onboarding/FirstStepsTile';
+import { useOnboarding } from '../../components/onboarding/useOnboarding';
 
 // Create lazy-loaded tile components
 const tileComponents: Record<string, ReturnType<typeof lazy>> = {};
@@ -85,6 +87,8 @@ export default function WorkspaceDashboardPage() {
   const { t } = useTranslation('common');
   const { config, isLoading: configLoading } = useDashboardConfig();
   const { filterVisibleTiles, canViewTile } = useTilePermissions();
+  const { state: onboarding } = useOnboarding();
+  const showFirstSteps = firstStepsShown(onboarding);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [logTimeOpen, setLogTimeOpen] = useState(false);
@@ -289,7 +293,7 @@ export default function WorkspaceDashboardPage() {
             </Grid>
           ))}
         </Grid>
-      ) : visibleTiles.length === 0 ? (
+      ) : visibleTiles.length === 0 && !showFirstSteps ? (
         <Card sx={{ p: 4, textAlign: 'center' }}>
           <Typography variant="body1" color="text.secondary">
             {t('dashboard.noTilesEnabled')}
@@ -297,6 +301,11 @@ export default function WorkspaceDashboardPage() {
         </Card>
       ) : (
         <Grid container spacing={3}>
+          {showFirstSteps ? (
+            <Grid item xs={12} md={6} lg={4} xl={3}>
+              <FirstStepsTile />
+            </Grid>
+          ) : null}
           {visibleTiles.map((tile) => {
             const TileComponent = tileComponents[tile.id];
             const tileInfo = TILE_REGISTRY[tile.id];

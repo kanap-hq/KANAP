@@ -1556,7 +1556,7 @@
       "angles": {
         "budget": "Presupuesto de TI",
         "cartography": "Mapa del SI",
-        "portfolio": "Proyectos y solicitudes",
+        "portfolio": "Cartera de proyectos",
         "none": "Solo estoy mirando"
       },
       "modes": {
@@ -1566,6 +1566,140 @@
       "notChosen": "sin elegir",
       "change": "Cambiar",
       "choose": "Elegir"
+    },
+    "firstSteps": {
+      "title": "Sus cinco primeros pasos",
+      "progress": "{{done}}/{{total}}",
+      "hide": "Ocultar los primeros pasos",
+      "markDone": "Marcar como hecho",
+      "markUndone": "Marcar como no hecho",
+      "gotIt": "Entendido",
+      "done": "Hecho",
+      "later": "Más tarde",
+      "end": {
+        "title": "¡Recorrido {{path}} terminado!",
+        "others": "Los otros dos recorridos:"
+      },
+      "showAgain": "Mostrar los primeros pasos",
+      "steps": {
+        "budget_overview": {
+          "title": "La vista general",
+          "hint": "Estas son las líneas presupuestarias, ordenadas por presupuesto del año en curso. Filtre por Tipo o Empresa pagadora, o busque directamente en Filtro rápido."
+        },
+        "budget_line": {
+          "title": "Una línea presupuestaria",
+          "hint": "Abra una línea y explore sus pestañas. Presupuesto, la pestaña principal, muestra 4 columnas de 5 posibles, todas configurables en «Administración». La pestaña Relaciones vincula el presupuesto con los elementos que soporta.",
+          "hintRecord": "Está en la ficha {{record}}. Explore las pestañas. Presupuesto, la pestaña principal, muestra 4 columnas de 5 posibles, todas configurables en «Administración». La pestaña Relaciones vincula el presupuesto con los elementos que soporta."
+        },
+        "budget_report": {
+          "title": "Un informe",
+          "hint": "Todos los informes se configuran en detalle. Explore las opciones de filtrado. Desde los resultados, abra directamente las líneas presupuestarias correspondientes. Exporte el informe en .pdf, .png o .xlsx."
+        },
+        "budget_plaid": {
+          "title": "Una pregunta a Plaid",
+          "hint": "Pregunte «¿Cuáles son las principales oportunidades de ahorro en el OPEX de TI?»"
+        },
+        "budget_import": {
+          "title": "Sus datos",
+          "hint": "Pruebe la exportación para obtener los datos en csv o xlsx. Puede usar estos archivos como plantillas para actualizar en bloque o importar datos nuevos. Plaid también puede ayudarle a convertir un archivo existente."
+        },
+        "own_company": {
+          "title": "Su empresa",
+          "hint": "Creada al registrarse con su nombre, país y moneda. Complete su plan de cuentas, su ciudad y su plantilla del año."
+        },
+        "own_budget_lines": {
+          "title": "Sus líneas",
+          "hint": "Importe su archivo de presupuesto o cree su primera línea OPEX y su periodo."
+        },
+        "own_contract": {
+          "title": "Un contrato vinculado",
+          "hint": "El contrato principal de una línea: su vencimiento y su alerta de preaviso."
+        },
+        "own_report": {
+          "title": "Su primer informe",
+          "hint": "Líneas principales, con sus propias cifras."
+        },
+        "own_invite": {
+          "title": "Un colega",
+          "hint": {
+            "budget": "Invite a su control de gestión: cree el usuario y envíe la invitación desde el menú de su fila.",
+            "cartography": "Invite a un responsable de aplicación: cree el usuario y envíe la invitación desde el menú de su fila.",
+            "portfolio": "Invite a un jefe de proyecto: cree el usuario y envíe la invitación desde el menú de su fila."
+          }
+        },
+        "map_application": {
+          "title": "Una ficha de aplicación",
+          "hint": "Esta es la ficha de una aplicación. Explore el panel de propiedades y las distintas pestañas para descubrir todas las facetas de este objeto clave de KANAP."
+        },
+        "map_technologies": {
+          "title": "Tecnologías, fin de soporte y vulnerabilidades",
+          "hint": "Lo que llega al fin de soporte en los próximos meses, la fuente de cada fecha y las CVE que afectan a estas tecnologías."
+        },
+        "map_import": {
+          "title": "Sus datos",
+          "hint": "Exporte las aplicaciones en csv o Excel y use la plantilla para importar las suyas. Siga con las tecnologías para asociarles el fin de soporte y las vulnerabilidades."
+        },
+        "own_applications": {
+          "title": "Sus aplicaciones",
+          "hint": "Importe la lista de sus aplicaciones o cree la primera."
+        },
+        "own_technologies": {
+          "title": "Sus tecnologías",
+          "hint": "Vincule tecnologías a sus aplicaciones: KANAP les asocia el fin de soporte."
+        },
+        "own_assets": {
+          "title": "Sus servidores",
+          "hint": "Importe o cree sus servidores y vincúlelos a las aplicaciones."
+        },
+        "portfolio_request": {
+          "title": "Una solicitud y su puntuación",
+          "hint": "Abra una solicitud: la necesidad, los criterios, la puntuación calculada. Una vez aprobada, se convierte en proyecto con un clic."
+        },
+        "portfolio_import": {
+          "title": "Sus datos",
+          "hint": "Exporte la lista de proyectos del ejemplo para ver su formato y luego importe la suya."
+        },
+        "own_projects": {
+          "title": "Su proyecto",
+          "hint": "El proyecto nacido de la solicitud: responsable, fechas, equipo. Sus proyectos existentes se importan como lista."
+        },
+        "own_request": {
+          "title": "Su primera solicitud",
+          "hint": "Cree una solicitud, puntúela, apruébela y conviértala en proyecto."
+        },
+        "own_project_budget": {
+          "title": "El presupuesto del proyecto",
+          "hint": "Vincule una línea presupuestaria a su proyecto en sus relaciones: el gasto le sigue."
+        },
+        "map_applications": {
+          "title": "La lista de aplicaciones",
+          "hint": "Todas las aplicaciones del ejemplo, con su criticidad, su responsable y su empresa. Es el inventario: filtre, ordene, busque."
+        },
+        "map_assets": {
+          "title": "Los servidores",
+          "hint": "Cada servidor indica dónde se ejecutan las aplicaciones: entorno, ubicación, tecnologías instaladas. Abra una ficha para saber más."
+        },
+        "own_findings": {
+          "title": "Lo que KANAP ha encontrado",
+          "hint": "Fin de soporte y vulnerabilidades conocidas de sus tecnologías, sin introducir nada más."
+        },
+        "portfolio_project": {
+          "title": "El proyecto que nació de ella",
+          "hint": "Abra un proyecto: objetivo, equipo, fases y, en Relaciones, la solicitud de origen, sus aplicaciones y sus líneas presupuestarias."
+        },
+        "portfolio_tasks": {
+          "title": "Las tareas",
+          "hint": "Las tareas del proyecto y de otros objetos: estado, prioridad, vencimiento. Una tarea atrasada aparece en Mis tareas de la página de inicio."
+        },
+        "portfolio_time": {
+          "title": "El tiempo y el esfuerzo",
+          "hint": "En un proyecto, la pestaña Esfuerzo compara el esfuerzo planificado con el tiempo registrado en sus tareas. Un 80 % de avance con un 20 % del esfuerzo consumido salta a la vista."
+        },
+        "own_tasks": {
+          "title": "Las primeras tareas",
+          "hint": "Cree las tareas del proyecto, asígnelas y registre el tiempo dedicado."
+        }
+      }
     }
   }
 }

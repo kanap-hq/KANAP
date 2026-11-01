@@ -40,6 +40,34 @@ After save, the dashboard time-summary tile refreshes automatically.
 
 In a cloud workspace that is empty and has never held sample data, Administrators see one line above the tiles: "Discover KANAP with sample data." **Load** opens the sample data dialog and **Hide** removes the line for good. The line disappears once the workspace holds data and does not return after an erase. See [Sample data](sample-data.md).
 
+## Trial: your path and first steps { #trial-first-steps }
+
+In a trial workspace, a dialog opens the first time you open KANAP. It asks one question per screen:
+
+1. **What brings you to KANAP?** **The IT budget**, **The IT landscape map**, **Projects and requests**, or **Just looking**.
+2. **How do you want to start?** **Explore with the complete example**, or **Start with my own data**.
+
+Starting with your own data erases the example. When items were created since the example was loaded, a confirmation gives their number before anything is erased. Only an administrator can choose your own data while the workspace holds the example.
+
+While the example loads, or while the workspace is being erased, a line on the home page says so.
+
+If you close the dialog, the choice waits in **About KANAP**. The line **Path: … · Change** shows the chosen path (**Choose** while nothing is chosen). Anyone can change it while an answer is missing. Afterwards, only administrators can.
+
+### Your first five steps
+
+Once a path is chosen, the **Your first five steps** tile comes first on the home page. It lists the five steps of the path and your progress, for example **2/5**. Each step opens its screen, where the page title is outlined with one sentence of guidance.
+
+- With the example, opening a step marks it done.
+- With your own data, click **Done** in the guidance, or the mark next to the step in the tile. The mark also undoes a step.
+
+When the five steps are done, the tile offers the two other paths. The close button (**×**) hides the tile. To show it again, use **Show the first steps** in **About KANAP**.
+
+| Path | With the example | With your own data |
+|---|---|---|
+| IT budget | The overview, A budget line, A report, A question for Plaid, Your data | Your company, Your budget lines, A linked contract, Your first report, A colleague |
+| IT landscape map | The application list, An application record, The servers, Technologies, end of support and vulnerabilities, Your data | Your applications, Your technologies, Your servers, What KANAP found, A colleague |
+| Projects and requests | A request and its score, The project it became, Tasks, Time and effort, Your data | Your first request, Your project, The first tasks, The project's budget, A colleague |
+
 ## Turn on Plaid line
 
 During a cloud trial, administrators of the Plaid settings see one line under the sample data line while Plaid is turned off and the KANAP included model is offered: "Plaid, the KANAP assistant, is turned off." **Turn on** opens the usual confirmation of the included model. Confirming turns Plaid on. The close button (**×**) hides the line in this browser. The line does not appear after the switch to a paid plan, nor on-premise. See [Plaid Settings](ai-settings.md).

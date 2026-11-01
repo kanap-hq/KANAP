@@ -678,6 +678,7 @@ Ouvrez **À propos de KANAP** depuis le menu utilisateur, sous **Déconnexion**.
 
 - La version et le déploiement (cloud ou sur site)
 - Sur le cloud, pendant un essai, les jours restants, avec un lien **Choisir une offre** pour les administrateurs de la facturation
+- Pendant un essai, le parcours choisi à la première ouverture, avec **Changer**, et **Afficher les premiers pas** quand la tuile des premiers pas est masquée. Voir [Mon tableau de bord](my-dashboard.md#trial-first-steps)
 - Des liens vers les notes de version de cette version, la documentation, kanap.net et le code source (licence AGPL-3.0)
 - Sur site, un lien vers le guide de mise à jour
 

@@ -1556,7 +1556,7 @@
       "angles": {
         "budget": "IT budget",
         "cartography": "IT landscape map",
-        "portfolio": "Projects and requests",
+        "portfolio": "Project portfolio",
         "none": "Just looking"
       },
       "modes": {
@@ -1566,6 +1566,140 @@
       "notChosen": "not chosen",
       "change": "Change",
       "choose": "Choose"
+    },
+    "firstSteps": {
+      "title": "Your first five steps",
+      "progress": "{{done}}/{{total}}",
+      "hide": "Hide the first steps",
+      "markDone": "Mark as done",
+      "markUndone": "Mark as not done",
+      "gotIt": "Got it",
+      "done": "Done",
+      "later": "Later",
+      "end": {
+        "title": "{{path}} path complete!",
+        "others": "The other two paths:"
+      },
+      "showAgain": "Show the first steps",
+      "steps": {
+        "budget_overview": {
+          "title": "The overview",
+          "hint": "Here are the budget lines, sorted by budget for the current year. Filter by Type or Paying company, or search directly in Quick filter."
+        },
+        "budget_line": {
+          "title": "A budget line",
+          "hint": "Open a line and explore its tabs. Budget, the main tab, shows 4 columns out of 5 possible ones, all set in Administration. The Relations tab links the budget to the items it carries.",
+          "hintRecord": "You are in the record of {{record}}. Explore the tabs. Budget, the main tab, shows 4 columns out of 5 possible ones, all set in Administration. The Relations tab links the budget to the items it carries."
+        },
+        "budget_report": {
+          "title": "A report",
+          "hint": "Every report can be set in detail. Explore the filter options. From the results, open the budget lines concerned directly. Export the report as .pdf, .png or .xlsx."
+        },
+        "budget_plaid": {
+          "title": "A question for Plaid",
+          "hint": "Ask “What are the main savings opportunities in IT OPEX?”"
+        },
+        "budget_import": {
+          "title": "Your data",
+          "hint": "Try the export to get the data as csv or xlsx. You can use these files as templates to update in bulk or to import new data. Plaid can also help you convert an existing file."
+        },
+        "own_company": {
+          "title": "Your company",
+          "hint": "Created at sign-up with its name, country and currency. Complete its chart of accounts, its city and its headcount for the year."
+        },
+        "own_budget_lines": {
+          "title": "Your budget lines",
+          "hint": "Import your budget file, or create your first OPEX line and its period."
+        },
+        "own_contract": {
+          "title": "A linked contract",
+          "hint": "The main contract of a line: its end date and its notice alert."
+        },
+        "own_report": {
+          "title": "Your first report",
+          "hint": "Top lines, on your own figures."
+        },
+        "own_invite": {
+          "title": "A colleague",
+          "hint": {
+            "budget": "Invite your financial controller: create the user, then send the invitation from the row menu.",
+            "cartography": "Invite an application owner: create the user, then send the invitation from the row menu.",
+            "portfolio": "Invite a project manager: create the user, then send the invitation from the row menu."
+          }
+        },
+        "map_application": {
+          "title": "An application record",
+          "hint": "Here is an application record. Explore the properties panel and the tabs to discover every facet of this key object of KANAP."
+        },
+        "map_technologies": {
+          "title": "Technologies, end of support and vulnerabilities",
+          "hint": "What reaches its end of support in the coming months, the source of each date, and the CVEs that affect these technologies."
+        },
+        "map_import": {
+          "title": "Your data",
+          "hint": "Export the applications as csv or Excel, then use the template to import yours. Go on with the technologies to attach their end of support and vulnerabilities."
+        },
+        "own_applications": {
+          "title": "Your applications",
+          "hint": "Import the list of your applications, or create the first one."
+        },
+        "own_technologies": {
+          "title": "Your technologies",
+          "hint": "Link technologies to your applications: KANAP attaches their end of support."
+        },
+        "own_assets": {
+          "title": "Your servers",
+          "hint": "Import or create your servers, then link them to applications."
+        },
+        "portfolio_request": {
+          "title": "A request and its score",
+          "hint": "Open a request: the need, the criteria, the computed score. Once approved, it becomes a project in one click."
+        },
+        "portfolio_import": {
+          "title": "Your data",
+          "hint": "Export the project list of the example to see its format, then import yours."
+        },
+        "own_projects": {
+          "title": "Your project",
+          "hint": "The project born from the request: owner, dates, team. Your existing projects import as a list."
+        },
+        "own_request": {
+          "title": "Your first request",
+          "hint": "Create a request, score it, approve it, then convert it into a project."
+        },
+        "own_project_budget": {
+          "title": "The project's budget",
+          "hint": "Link a budget line to your project in its relations: spending follows."
+        },
+        "map_applications": {
+          "title": "The application list",
+          "hint": "Every application of the example, with its criticality, its owner and its company. It is the inventory: filter, sort, search."
+        },
+        "map_assets": {
+          "title": "The servers",
+          "hint": "Each server tells where the applications run: environment, site, installed technologies. Open a record to learn more."
+        },
+        "own_findings": {
+          "title": "What KANAP found",
+          "hint": "End of support and known vulnerabilities of your technologies, with nothing more to enter."
+        },
+        "portfolio_project": {
+          "title": "The project it became",
+          "hint": "Open a project: objective, team, phases, and under Relations the original request, its applications and its budget lines."
+        },
+        "portfolio_tasks": {
+          "title": "Tasks",
+          "hint": "The tasks of the project and of other records: status, priority, due date. A late task shows in My tasks on the home page."
+        },
+        "portfolio_time": {
+          "title": "Time and effort",
+          "hint": "In a project, the Effort tab compares the planned effort with the time logged on its tasks. 80% progress for 20% of the effort used shows at once."
+        },
+        "own_tasks": {
+          "title": "The first tasks",
+          "hint": "Create the project's tasks, assign them, log the time spent."
+        }
+      }
     }
   }
 }

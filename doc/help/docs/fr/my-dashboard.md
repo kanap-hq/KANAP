@@ -40,6 +40,34 @@ Après l'enregistrement, la tuile de synthèse du temps du tableau de bord se ra
 
 Dans un espace de travail cloud vide, qui n'a jamais reçu les données d'exemple, les administrateurs voient une ligne au-dessus des tuiles : « Découvrez KANAP avec des données d'exemple. » **Charger** ouvre la fenêtre des données d'exemple et **Masquer** supprime la ligne définitivement. La ligne disparaît dès que l'espace de travail contient des données et ne revient pas après un effacement. Voir [Données d'exemple](sample-data.md).
 
+## Essai : votre parcours et vos premiers pas { #trial-first-steps }
+
+Dans un espace de travail en essai, une fenêtre s'ouvre la première fois que vous ouvrez KANAP. Elle pose une question par écran :
+
+1. **Qu'est-ce qui vous amène ?** **Le budget IT**, **La cartographie du SI**, **Les projets et les demandes** ou **Je regarde**.
+2. **Comment voulez-vous commencer ?** **Découvrir avec l'exemple complet** ou **Commencer avec mes données**.
+
+Commencer avec vos données efface l'exemple. Si des éléments ont été créés depuis le chargement de l'exemple, une confirmation en donne le nombre avant tout effacement. Seul un administrateur peut choisir ses propres données tant que l'espace de travail contient l'exemple.
+
+Pendant le chargement de l'exemple, ou pendant l'effacement de l'espace de travail, une ligne de la page d'accueil l'indique.
+
+Si vous fermez la fenêtre, le choix vous attend dans **À propos de KANAP**. La ligne **Parcours : … · Changer** affiche le parcours choisi (**Choisir** tant que rien n'est choisi). Tout le monde peut le changer tant qu'une réponse manque. Ensuite, seuls les administrateurs le peuvent.
+
+### Vos cinq premiers pas
+
+Une fois le parcours choisi, la tuile **Vos cinq premiers pas** vient en premier sur la page d'accueil. Elle liste les cinq étapes du parcours et votre progression, par exemple **2/5**. Chaque étape ouvre son écran, où le titre de la page est mis en évidence avec une phrase d'explication.
+
+- Avec l'exemple, ouvrir une étape la marque comme faite.
+- Avec vos données, cliquez sur **Fait** dans l'explication, ou sur la marque à côté de l'étape dans la tuile. La marque annule aussi une étape.
+
+Quand les cinq étapes sont faites, la tuile propose les deux autres parcours. Le bouton de fermeture (**×**) masque la tuile. Pour l'afficher de nouveau, utilisez **Afficher les premiers pas** dans **À propos de KANAP**.
+
+| Parcours | Avec l'exemple | Avec vos données |
+|---|---|---|
+| Budget IT | La vue d'ensemble, Une ligne budgétaire, Un rapport, Une question à Plaid, Vos données | Votre société, Vos lignes, Un contrat lié, Votre premier rapport, Un collègue |
+| Cartographie du SI | La liste des applications, Une fiche d'application, Les serveurs, Les technologies, fins de support et failles, Vos données | Vos applications, Vos technologies, Vos serveurs, Ce que KANAP a trouvé, Un collègue |
+| Projets et demandes | Une demande et son score, Le projet qui en est né, Les tâches, Le temps et la charge, Vos données | Votre première demande, Votre projet, Les premières tâches, Le budget du projet, Un collègue |
+
 ## Ligne pour activer Plaid
 
 Pendant un essai sur le cloud, les administrateurs des paramètres de Plaid voient une ligne sous la ligne des données d'exemple tant que Plaid est désactivé et que le modèle inclus de KANAP est proposé : « Plaid, l'assistant de KANAP, est désactivé. » **Activer** ouvre la confirmation habituelle du modèle inclus. La confirmation active Plaid. Le bouton de fermeture (**×**) masque la ligne dans ce navigateur. La ligne n'apparaît plus après le passage à une offre payante, ni sur site. Voir [Paramètres Plaid](ai-settings.md).

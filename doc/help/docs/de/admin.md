@@ -678,6 +678,7 @@ Alle Änderungen werden automatisch gespeichert, sobald Sie Schalter umschalten 
 
 - Die Version und die Bereitstellung (Cloud oder On-Premise)
 - In der Cloud, während einer Testphase, die verbleibenden Tage, mit einem Link **Tarif wählen** für Abrechnungsadministratoren
+- Während einer Testphase der beim ersten Öffnen gewählte Pfad, mit **Ändern**, und **Erste Schritte anzeigen**, wenn die Kachel der ersten Schritte ausgeblendet ist. Siehe [Mein Dashboard](my-dashboard.md#trial-first-steps)
 - Links zu den Versionshinweisen dieser Version, zur Dokumentation, zu kanap.net und zum Quellcode (Lizenz AGPL-3.0)
 - On-Premise ein Link zur Upgrade-Anleitung
 

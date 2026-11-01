@@ -678,6 +678,7 @@ Open **About KANAP** from the user menu, below **Logout**. The menu entry also s
 
 - The version and the deployment (cloud or on-premise)
 - On the cloud service, during a trial, the days left, with a **Choose a plan** link for billing administrators
+- During a trial, the path chosen at the first opening, with **Change**, and **Show the first steps** when the first steps tile is hidden. See [My Dashboard](my-dashboard.md#trial-first-steps)
 - Links to the release notes of this version, the documentation, kanap.net and the source code (AGPL-3.0 license)
 - On-premise, a link to the upgrade guide
 

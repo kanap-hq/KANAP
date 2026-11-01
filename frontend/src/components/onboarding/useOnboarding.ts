@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery, useQueryClient, type Query } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type Query } from '@tanstack/react-query';
 import { useAuth } from '../../auth/AuthContext';
 import { useFeatures } from '../../config/FeaturesContext';
 import { useTenant } from '../../tenant/TenantContext';
@@ -67,4 +67,17 @@ export function useOnboarding() {
   }, [queryClient]);
 
   return { query, state: available ? data : undefined, apply };
+}
+
+/** The onboarding actions; each answer is the new state, put in the cache at once. */
+export function useOnboardingActions() {
+  const { apply } = useOnboarding();
+  const options = { onSuccess: apply };
+  return {
+    markDone: useMutation({ mutationFn: onboardingApi.markDone, ...options }),
+    markUndone: useMutation({ mutationFn: onboardingApi.markUndone, ...options }),
+    dismiss: useMutation({ mutationFn: onboardingApi.dismiss, ...options }),
+    undismiss: useMutation({ mutationFn: onboardingApi.undismiss, ...options }),
+    choose: useMutation({ mutationFn: onboardingApi.choose, ...options }),
+  };
 }
