@@ -65,8 +65,8 @@ When the five steps are done, the tile offers the two other paths. The close but
 | Path | With the example | With your own data |
 |---|---|---|
 | IT budget | The overview, A budget line, A report, A question for Plaid, Your data | Your company, Your budget lines, A linked contract, Your first report, A colleague |
-| IT landscape map | The interface map, An application, Technologies and end of support, Vulnerabilities, Your data | Your applications, Your technologies, Your servers, Your first map, A colleague |
-| Projects and requests | The portfolio, A request and its scoring, The planning, A question for Plaid, Your data | Your projects, A request, A project's budget, Your planning, A colleague |
+| IT landscape map | The application list, An application record, The servers, Technologies, end of support and vulnerabilities, Your data | Your applications, Your technologies, Your servers, What KANAP found, A colleague |
+| Projects and requests | A request and its score, The project it became, Tasks, Time and effort, Your data | Your first request, Your project, The first tasks, The project's budget, A colleague |
 
 ## Turn on Plaid line
 
