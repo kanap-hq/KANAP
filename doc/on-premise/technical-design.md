@@ -239,11 +239,12 @@ service reads the same rules).
 | Entra login handoff | `type: 'entra_login_handoff'` | idem SSO state | `EntraAuthService.verifyLoginHandoff` |
 | MCP OAuth authorization code | `purpose: 'kanap:v1:mcp-oauth-code'` | `MCP_OAUTH_CODE_SECRET`, else derived | `McpOAuthService` (token endpoint) |
 | MCP OAuth access token | `purpose: 'kanap:v1:mcp-access'` | `MCP_ACCESS_TOKEN_SECRET`, else derived | `McpApiKeyAuthGuard` (MCP endpoint only) |
+| Creation token (HMAC, not a JWT) | label `kanap:v1:creation`, signs tenant, family, record, creator, issue time | `CREATION_TOKEN_SECRET`, else derived | `verifyCreationToken` (`DELETE /applications/:id/creation`) |
 
 Rules:
 
 - A family with a configured key uses **only** that key — never a retry with `JWT_SECRET` after a
-  failure. Without its own variable, password-reset, SSO state and the two MCP OAuth families derive a key from `JWT_SECRET`
+  failure. Without its own variable, password-reset, SSO state, the two MCP OAuth families and the creation token derive a key from `JWT_SECRET`
   through HMAC-SHA256 with a stable, versioned label (`kanap:v1:<family>`, `token-secret.util.ts`).
   The label version is a contract: bumping it rotates that family's key material.
 - **Provisioning is the deliberate exception.** Its tokens are minted by a service outside this
