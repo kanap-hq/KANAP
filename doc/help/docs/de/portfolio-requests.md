@@ -80,16 +80,29 @@ Dies ist wichtig, weil nicht alles auf die gleiche Weise gespeichert wird:
 - Änderungen in **Zusammenfassung**, **Analyse** und **Bewertung** sind Arbeitsbereich-Bearbeitungen und verwenden **Speichern** / **Zurücksetzen**.
 - Die verwalteten Dokumente **Zweck** und **Risiken & Mitigationen** verwenden ebenfalls den Arbeitsbereich-Speicher-Fluss.
 
-Wenn Sie eine neue Anfrage erstellen, beginnt KANAP mit **Zusammenfassung**. Die anderen Reiter werden nützlich, nachdem die Anfrage als echter Datensatz statt als sehr aufrichtige Idee existiert.
-
 Die Arbeitsbereichs-Kopfzeile gibt Ihnen operativen Kontext, ohne die Seite zu verlassen:
 
 - eine kopierbare Anfragenreferenz wie `REQ-42`
 - eine Metadatenleiste mit **Status**, **Bewertung**, **Anforderer**, **IT-Verantwortlicher**, **Ziel-Lieferdatum** und (falls zutreffend) der **Quell-Aufgabe**, aus der die Anfrage erstellt wurde
 - **Teilen**, um einen Link zur Anfrage zu senden
 - **In Projekt umwandeln**, wenn die Anfrage **Genehmigt** oder **Konvertiert** ist
+- **Erstellung abbrechen**, solange Sie auf einer gerade erstellten Anfrage bleiben. Siehe [Erstellung abbrechen](#cancelling-a-creation)
 - **Löschen**, ein Papierkorbsymbol, für Administratoren (wenn die Anfrage noch nicht konvertiert ist). Eine konvertierte Anfrage bleibt der Ursprung ihres Projekts und kann nicht gelöscht werden
 - Vorherige/Nächste-Navigation basierend auf dem genauen Listenkontext, aus dem Sie kamen
+
+### Eine Anfrage erstellen { #creating-a-request }
+
+1. Klicken Sie auf **Neue Anfrage**. Die Seite der Anfrage öffnet sich auf **Zusammenfassung** mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
+2. Geben Sie den Namen der Anfrage ein.
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt die Anfrage sofort, mit dem Status **Prüfung ausstehend** und Ihnen als Anforderer. Ihre Referenz (`REQ-42`) erscheint und alle Reiter öffnen sich.
+
+Füllen Sie dann die Eigenschaftsleiste und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+
+### Erstellung abbrechen { #cancelling-a-creation }
+
+Solange Sie auf der gerade erstellten Anfrage bleiben, löscht **Erstellung abbrechen** in der Kopfzeile sie und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Anfragen abbrechen.
+
+Sobald Sie die Anfrage verlassen, bleibt sie bestehen. Ein Administrator kann sie dann mit **Löschen** löschen. Die Referenz einer abgebrochenen Anfrage wird nicht wiederverwendet.
 
 ### Eigenschaftsleiste
 
@@ -97,7 +110,6 @@ Behandeln Sie die Leiste als das strukturelle Rückgrat der Anfrage. Sie enthäl
 
 #### Kerneigenschaften
 
-- Anfragenname
 - Status
 - Quelle, Kategorie, Stream
 - Anforderer

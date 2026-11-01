@@ -70,16 +70,25 @@ Die Projektliste ist darauf ausgelegt, zwei Fragen schnell zu beantworten: „Wo
 
 Das Öffnen eines Projekts aus der Liste bewahrt den aktuellen Listenkontext. Der Projekt-Arbeitsbereich verwendet denselben Kontext für die **Vorherige**- und **Nächste**-Navigation, sodass Sie einen gefilterten Satz überprüfen können, ohne Ihren Platz zu verlieren.
 
-## Ein Projekt erstellen
+## Ein Projekt erstellen { #creating-a-project }
 
 Die direkte Projekterstellung ist für Arbeit gedacht, die ohne separate Anfragenaufzeichnung in die Ausführung gehen soll.
 
-- Neue Projekte öffnen sich nur auf **Zusammenfassung**
-- Bis das Projekt zum ersten Mal gespeichert wird, sind die anderen Reiter nicht verfügbar
-- Direkt erstellte Projekte verwenden die Herkunft **Schnellstart** oder **Legacy**
-- Projekte mit Anfragenherkunft behalten ihre Anfragenherkunft und Quellverknüpfung
+1. Klicken Sie auf **Neues Projekt**. Die Seite des Projekts öffnet sich auf **Zusammenfassung** mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
+2. Geben Sie den Namen des Projekts ein.
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt das Projekt sofort, mit der Herkunft **Fast-track**. Seine Referenz (`PRJ-12`) erscheint und alle Reiter öffnen sich.
 
-Verwenden Sie **Schnellstart** für Arbeit, die wirklich direkt in die Lieferung eingeführt wird. Verwenden Sie **Legacy** für Arbeit, die bereits außerhalb der normalen Erfassungshistorie existiert. Diese Unterscheidung wirkt sich auf die Berichterstattung aus und macht spätere Portfolio-Analysen weitaus weniger verwirrend.
+Füllen Sie dann die Eigenschaftsleiste und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
+
+Ein so erstelltes Projekt kann in der Eigenschaftsleiste zwischen **Fast-track** und **Altbestand** wechseln. Ein aus einer Anfrage umgewandeltes Projekt behält die Herkunft **Anfrage** und seine Quellverknüpfung.
+
+Verwenden Sie **Fast-track** für Arbeit, die wirklich direkt in die Lieferung eingeführt wird. Verwenden Sie **Altbestand** für Arbeit, die bereits außerhalb der normalen Erfassungshistorie existiert. Diese Unterscheidung wirkt sich auf die Berichterstattung aus und macht spätere Portfolio-Analysen weitaus weniger verwirrend.
+
+### Erstellung abbrechen { #cancelling-a-creation }
+
+Solange Sie auf dem gerade erstellten Projekt bleiben, löscht **Erstellung abbrechen** in der Kopfzeile es und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne jedes Löschrecht abbrechen.
+
+Nur so lässt sich ein Projekt löschen. Sobald Sie das Projekt verlassen, bleibt es bestehen: Setzen Sie seinen Status auf **Abgebrochen**, wenn es nicht zustande kommt. Ein mit einer Anfrage verknüpftes Projekt kann nicht gelöscht werden. Die Referenz eines abgebrochenen Projekts wird nicht wiederverwendet.
 
 ## Mentales Modell des Arbeitsbereichs
 
@@ -101,6 +110,7 @@ Die Arbeitsbereichs-Kopfzeile ist eine Steuerungsleiste, keine Dekoration.
 - Eine kompakte Metadatenzeile: **Status**, **Bewertung**, **Fortschritt**, **IT-Leiter**, **Geplantes Ende** und **Herkunft** (oder die Quell-Anfragen-Referenz für Projekte mit Anfragenherkunft)
 - **Vorherige** und **Nächste** bewegen sich durch das aktuelle Listenergebnis, nicht durch jedes Projekt im System
 - **Teilen** sendet die aktuelle Projekt-URL per E-Mail mit einer optionalen Nachricht
+- **Erstellung abbrechen**, solange Sie auf einem gerade erstellten Projekt bleiben. Siehe [Erstellung abbrechen](#cancelling-a-creation)
 
 Das Senden eines Links gewährt keinen Zugriff. Es teilt nur den Standort. Berechtigungen bleiben genau so, wie sie vor dem Versenden der E-Mail waren.
 
@@ -121,9 +131,8 @@ Behandeln Sie die Eigenschaftsleiste als die persistente Identitätskarte des Pr
 
 ### Kerneigenschaften
 
-- Projektname
 - Status
-- Herkunft (nur während der initialen Erstellung; danach gesperrt)
+- Herkunft: **Fast-track** oder **Altbestand** für ein direkt erstelltes Projekt. Ein aus einer Anfrage umgewandeltes Projekt behält die Herkunft **Anfrage**
 - Quelle, Kategorie, Stream
 - Unternehmen, Abteilung
 - Geplanter Start, Geplantes Ende

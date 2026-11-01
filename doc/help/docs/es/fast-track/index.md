@@ -39,23 +39,22 @@ Este flujo asegura que cada iniciativa sea evaluada de forma justa, priorizada c
 
 ## Paso 1: Enviar una solicitud
 
-Vaya a **Portafolio > Solicitudes** y haga clic en **+ Nueva solicitud**.
+Vaya a **Portafolio > Solicitudes** y haga clic en **Nueva solicitud**.
 
-Las nuevas solicitudes se abren en **Resumen** con la barra lateral de propiedades de la solicitud ya visible. Comience con los campos estructurales en la barra lateral, luego capture la narrativa en **Propósito**.
+Escriba en el encabezado un título claro y conciso para la iniciativa y pulse Intro. Su solicitud entra en el flujo con estado **Pendiente de revisión**, y se abren todas sus pestañas.
 
-Complete los detalles mínimos para empezar:
+Complete después los detalles mínimos en la barra lateral de propiedades:
 
 | Campo | Qué introducir |
 |-------|---------------|
-| **Nombre** | Un título claro y conciso para la iniciativa |
 | **Origen** | ¿De dónde vino? (Unidad de negocio, regulación, estrategia IT...) |
 | **Categoría** | El tipo de iniciativa (p. ej., Nueva aplicación, Infraestructura, Mejora de procesos) |
-| **Solicitante** | ¿Quién lo pide? |
+| **Solicitante** | ¿Quién lo pide? Usted, por defecto |
 | **Fecha de entrega objetivo** | ¿Cuándo se necesita idealmente? |
 
 Luego use el documento de **Propósito** en **Resumen** para explicar la necesidad de negocio y el resultado esperado en lenguaje llano. Si ya tiene un resumen en Word, use el botón **Importar** en el editor de Propósito para incorporar el archivo `.docx` directamente, sin necesidad de copiar y pegar.
 
-Haga clic en **Crear**. Su solicitud entra en el flujo con estado **Pendiente de revisión**.
+Mientras esté en su página, **Cancelar la creación** en el encabezado elimina la nueva solicitud.
 
 !!! tip "Consejo"
     Puede añadir análisis más profundo, conocimiento vinculado y evidencia de soporte después. El objetivo ahora es que la solicitud entre en el flujo de recepción gobernado.
@@ -329,7 +328,7 @@ Consulte la [referencia de Informes](../portfolio-reporting.md).
 
 | Quiero... | Ir a... |
 |-----------|---------|
-| Enviar una nueva idea | Portafolio > Solicitudes > + Nuevo |
+| Enviar una nueva idea | Portafolio > Solicitudes > Nueva solicitud |
 | Evaluar una solicitud | Abrir solicitud > pestaña Evaluación |
 | Evaluar viabilidad | Abrir solicitud > pestaña Análisis |
 | Establecer el equipo del proyecto | Abrir proyecto > barra lateral Propiedades del proyecto > Equipo |

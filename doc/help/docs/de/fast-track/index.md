@@ -39,23 +39,22 @@ Diese Pipeline stellt sicher, dass jede Initiative fair bewertet, transparent pr
 
 ## Schritt 1: Anfrage einreichen
 
-Gehen Sie zu **Portfolio > Anfragen** und klicken Sie auf **+ Neue Anfrage**.
+Gehen Sie zu **Portfolio > Anfragen** und klicken Sie auf **Neue Anfrage**.
 
-Neue Anfragen öffnen sich auf der **Zusammenfassung** mit der bereits sichtbaren Eigenschafts-Seitenleiste. Beginnen Sie mit den strukturellen Feldern in der Seitenleiste, dann erfassen Sie den Inhalt unter **Zweck**.
+Geben Sie in der Kopfzeile einen klaren, prägnanten Titel für die Initiative ein und drücken Sie die Eingabetaste. Ihre Anfrage geht mit dem Status **Prüfung ausstehend** in die Pipeline, und alle ihre Reiter öffnen sich.
 
-Füllen Sie die Mindestangaben zum Starten aus:
+Füllen Sie dann die Mindestangaben in der Eigenschafts-Seitenleiste aus:
 
 | Feld | Was eingeben |
 |------|-------------|
-| **Name** | Ein klarer, prägnanter Titel für die Initiative |
 | **Quelle** | Woher kommt das? (Fachbereich, Regulierung, IT-Strategie...) |
 | **Kategorie** | Die Art der Initiative (z. B. Neue Anwendung, Infrastruktur, Prozessverbesserung) |
-| **Antragsteller** | Wer bittet darum? |
+| **Antragsteller** | Wer bittet darum? Standardmäßig Sie |
 | **Ziel-Lieferdatum** | Wann wird das idealerweise benötigt? |
 
 Verwenden Sie dann das **Zweck**-Dokument auf der **Zusammenfassung**, um den Geschäftsbedarf und das erwartete Ergebnis in einfacher Sprache zu erklären. Wenn Sie bereits ein Briefing in Word haben, verwenden Sie die **Importieren**-Schaltfläche im Zweck-Editor, um die `.docx`-Datei direkt einzulesen. Kein Kopieren und Einfügen nötig.
 
-Klicken Sie auf **Erstellen**. Ihre Anfrage geht mit dem Status **Prüfung ausstehend** in die Pipeline.
+Solange Sie auf ihrer Seite sind, löscht **Erstellung abbrechen** in der Kopfzeile die neue Anfrage.
 
 !!! tip "Halten Sie es schlank"
     Sie können tiefere Analysen, verknüpfte Wissensdatenbank-Dokumente und Belege später hinzufügen. Das Ziel jetzt ist, die Anfrage in den gesteuerten Intake-Flow zu bekommen.
@@ -329,7 +328,7 @@ Siehe [Berichte-Referenz](../portfolio-reporting.md).
 
 | Ich möchte... | Gehe zu... |
 |---------------|------------|
-| Eine neue Idee einreichen | Portfolio > Anfragen > + Neu |
+| Eine neue Idee einreichen | Portfolio > Anfragen > Neue Anfrage |
 | Eine Anfrage bewerten | Anfrage öffnen > Bewertungs-Tab |
 | Machbarkeit bewerten | Anfrage öffnen > Analyse-Tab |
 | Das Projektteam festlegen | Projekt öffnen > Projekteigenschaften-Seitenleiste > Team |

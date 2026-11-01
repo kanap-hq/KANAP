@@ -70,16 +70,25 @@ La liste des projets est conçue pour répondre rapidement à deux questions : �
 
 Ouvrir un projet depuis la liste préserve le contexte de liste actuel. L'espace de travail du projet utilise le même contexte pour la navigation **Précédent** et **Suivant**, vous pouvez donc parcourir un ensemble filtré sans perdre votre place.
 
-## Créer un projet
+## Créer un projet { #creating-a-project }
 
 La création directe de projet est destinée au travail qui doit entrer en exécution sans enregistrement de demande séparé.
 
-- Les nouveaux projets s'ouvrent uniquement sur **Synthèse**
-- Tant que le projet n'est pas enregistré pour la première fois, les autres onglets sont indisponibles
-- Les projets créés directement utilisent une origine de **Fast-track** ou **Legacy**
-- Les projets d'origine demande conservent leur origine demande et le lien source
+1. Cliquez sur **Nouveau projet**. La page du projet s'ouvre sur **Synthèse** avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+2. Saisissez le nom du projet.
+3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée le projet aussitôt, avec l'origine **Fast-track**. Sa référence (`PRJ-12`) apparaît et tous les onglets s'ouvrent.
 
-Utilisez **Fast-track** pour le travail qui est réellement introduit directement en livraison. Utilisez **Legacy** pour le travail qui existe déjà en dehors de l'historique d'intake normal. Cette distinction affecte le reporting et rend l'analyse de portefeuille ultérieure beaucoup moins déroutante.
+Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+
+Un projet créé ainsi peut passer de **Fast-track** à **Historique** et inversement dans le tiroir Propriétés. Un projet converti depuis une demande garde l'origine **Demande** et son lien source.
+
+Utilisez **Fast-track** pour le travail qui est réellement introduit directement en livraison. Utilisez **Historique** pour le travail qui existe déjà en dehors de l'historique d'intake normal. Cette distinction affecte le reporting et rend l'analyse de portefeuille ultérieure beaucoup moins déroutante.
+
+### Annuler la création { #cancelling-a-creation }
+
+Tant que vous restez sur le projet que vous venez de créer, **Annuler la création** dans l'en-tête le supprime et vous ramène là où vous avez commencé : la liste ou l'écran précédent. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans aucun droit de suppression.
+
+C'est le seul moyen de supprimer un projet. Une fois que vous quittez le projet, il reste : passez son statut à **Annulé** s'il ne se fait pas. Un projet lié à une demande ne peut pas être supprimé. La référence d'un projet annulé n'est pas réutilisée.
 
 ## Modèle mental de l'espace de travail
 
@@ -101,6 +110,7 @@ L'en-tête de l'espace de travail est une bande de contrôle, pas de la décorat
 - Une rangée de métadonnées compacte : **Statut**, **Score**, **Avancement**, **Responsable IT**, **Fin planifiée** et **Origine** (ou la référence de la demande source pour les projets d'origine demande)
 - **Précédent** et **Suivant** parcourent l'ensemble de résultats de la liste actuelle, pas tous les projets du système
 - **Partager** envoie l'URL du projet courant par e-mail avec un message optionnel
+- **Annuler la création**, tant que vous restez sur un projet que vous venez de créer. Voir [Annuler la création](#cancelling-a-creation)
 
 Envoyer un lien n'accorde pas l'accès. Cela ne fait que partager l'emplacement. Les autorisations restent exactement comme elles étaient avant l'envoi de l'e-mail.
 
@@ -121,9 +131,8 @@ Traitez le tiroir Propriétés comme la carte d'identité persistante du projet.
 
 ### Propriétés principales
 
-- Nom du projet
 - Statut
-- Origine (uniquement pendant la création initiale ; verrouillée ensuite)
+- Origine : **Fast-track** ou **Historique** pour un projet créé directement. Un projet converti depuis une demande garde l'origine **Demande**
 - Source, Catégorie, Stream
 - Société, Département
 - Début planifié, Fin planifiée

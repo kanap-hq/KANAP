@@ -65,21 +65,30 @@ The project list is designed to answer two questions quickly: "what should I car
 
 **Bulk administration**
 
-- **New Project** is available with `portfolio_projects:member`
+- **New project** is available with `portfolio_projects:member`
 - **Import** and **Export** are available to administrators
 
 Opening a project from the list preserves the current list context. The project workspace uses the same context for **Previous** and **Next** navigation, so you can review a filtered set without losing your place.
 
-## Creating a project
+## Creating a project { #creating-a-project }
 
 Direct project creation is for work that should enter execution without a separate request record.
 
-- New projects open on **Summary** only
-- Until the project is saved the first time, the other tabs are unavailable
-- Directly created projects use an origin of **Fast-track** or **Legacy**
-- Request-origin projects keep their request origin and source linkage
+1. Click **New project**. The project page opens on **Summary** with an empty title in the header. The rest of the page is dimmed.
+2. Type the name of the project.
+3. Press Enter, or click outside the title. KANAP creates the project at once, with the origin **Fast-track**. Its reference (`PRJ-12`) shows and all tabs open.
+
+Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Press Escape on the empty title to leave without creating anything.
+
+A project created this way can switch between **Fast-track** and **Legacy** in the Properties drawer. A project converted from a request keeps the **Request** origin and its source linkage.
 
 Use **Fast-track** for work that is genuinely being introduced directly into delivery. Use **Legacy** for work that already exists outside the normal intake history. That distinction affects reporting and makes later portfolio analysis much less confusing.
+
+### Cancelling a creation { #cancelling-a-creation }
+
+While you stay on the project you just created, **Cancel creation** in the header deletes it and takes you back to where you started: the list or the previous screen. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without any delete right.
+
+This is the only way to delete a project. Once you leave the project, it stays: set its status to **Cancelled** if it does not go ahead. A project linked to a request cannot be deleted. The reference of a cancelled project is not used again.
 
 ## Workspace mental model
 
@@ -101,6 +110,7 @@ The workspace header is a control strip, not decoration.
 - A compact metadata row: **Status**, **Score**, **Progress**, **IT Lead**, **Planned End**, and **Origin** (or the source request reference for request-origin projects)
 - **Previous** and **Next** move through the current list result set, not through every project in the system
 - **Share** emails the current project URL with an optional message
+- **Cancel creation**, while you stay on a project you just created. See [Cancelling a creation](#cancelling-a-creation)
 
 Sending a link does not grant access. It only shares the location. Permissions remain exactly as they were before the email was sent.
 
@@ -121,9 +131,8 @@ Treat the Properties drawer as the project's persistent identity card. It is gro
 
 ### Core properties
 
-- Project name
 - Status
-- Origin (during initial creation only; locked afterward)
+- Origin: **Fast-track** or **Legacy** for a project created directly. A project converted from a request keeps the **Request** origin
 - Source, Category, Stream
 - Company, Department
 - Planned start, Planned end

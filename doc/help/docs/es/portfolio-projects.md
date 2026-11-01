@@ -70,16 +70,25 @@ La lista de proyectos está diseñada para responder rápidamente a dos pregunta
 
 Abrir un proyecto desde la lista preserva el contexto actual de la lista. El espacio de trabajo del proyecto utiliza el mismo contexto para la navegación **Anterior** y **Siguiente**, de modo que pueda revisar un conjunto filtrado sin perder su lugar.
 
-## Crear un proyecto
+## Crear un proyecto { #creating-a-project }
 
 La creación directa de proyectos es para trabajo que debe entrar en ejecución sin un registro de solicitud separado.
 
-- Los nuevos proyectos se abren solo en **Resumen**
-- Hasta que el proyecto se guarde por primera vez, las otras pestañas no están disponibles
-- Los proyectos creados directamente usan un origen de **Fast-track** o **Legacy**
-- Los proyectos de origen-solicitud conservan su origen de solicitud y vinculación de fuente
+1. Haga clic en **Nuevo proyecto**. La página del proyecto se abre en **Resumen** con un título vacío en el encabezado. El resto de la página aparece atenuado.
+2. Escriba el nombre del proyecto.
+3. Pulse Intro o haga clic fuera del título. KANAP crea el proyecto de inmediato, con el origen **Fast-track**. Su referencia (`PRJ-12`) aparece y se abren todas las pestañas.
 
-Use **Fast-track** para trabajo que se introduce genuinamente directo en la entrega. Use **Legacy** para trabajo que ya existe fuera del historial normal de captación. Esa distinción afecta a los informes y hace que el análisis posterior del portafolio sea mucho menos confuso.
+Complete después el panel de Propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulse Escape en el título vacío para salir sin crear nada.
+
+Un proyecto creado así puede pasar de **Fast-track** a **Histórico** y viceversa en el panel de Propiedades. Un proyecto convertido desde una solicitud conserva el origen **Solicitud** y su vinculación de fuente.
+
+Use **Fast-track** para trabajo que se introduce genuinamente directo en la entrega. Use **Histórico** para trabajo que ya existe fuera del historial normal de captación. Esa distinción afecta a los informes y hace que el análisis posterior del portafolio sea mucho menos confuso.
+
+### Cancelar la creación { #cancelling-a-creation }
+
+Mientras permanezca en el proyecto que acaba de crear, **Cancelar la creación** en el encabezado lo elimina y le devuelve al punto de partida: la lista o la pantalla anterior. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin ningún derecho de eliminación.
+
+Es la única forma de eliminar un proyecto. Una vez que sale del proyecto, este permanece: cambie su estado a **Cancelado** si no sigue adelante. Un proyecto vinculado a una solicitud no se puede eliminar. La referencia de un proyecto cancelado no se reutiliza.
 
 ## Modelo mental del espacio de trabajo
 
@@ -101,6 +110,7 @@ El encabezado del espacio de trabajo es una franja de control, no decoración.
 - Una fila de metadatos compacta: **Estado**, **Puntuación**, **Progreso**, **Responsable IT**, **Fin planificado** y **Origen** (o la referencia de la solicitud de origen para proyectos de origen-solicitud)
 - **Anterior** y **Siguiente** se mueven por el conjunto de resultados de la lista actual, no por todos los proyectos del sistema
 - **Compartir** envía por correo la URL actual del proyecto con un mensaje opcional
+- **Cancelar la creación**, mientras permanezca en un proyecto que acaba de crear. Consulte [Cancelar la creación](#cancelling-a-creation)
 
 Enviar un enlace no concede acceso. Solo comparte la ubicación. Los permisos permanecen exactamente como estaban antes de enviar el correo.
 
@@ -121,9 +131,8 @@ Trate el panel de Propiedades como la tarjeta de identidad persistente del proye
 
 ### Propiedades principales
 
-- Nombre del proyecto
 - Estado
-- Origen (solo durante la creación inicial; bloqueado después)
+- Origen: **Fast-track** o **Histórico** para un proyecto creado directamente. Un proyecto convertido desde una solicitud conserva el origen **Solicitud**
 - Origen, Categoría, Flujo
 - Empresa, Departamento
 - Inicio planificado, Fin planificado

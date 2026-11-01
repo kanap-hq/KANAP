@@ -80,16 +80,29 @@ Cela compte parce que tout n'est pas enregistré de la même manière :
 - Les modifications dans **Synthèse**, **Analyse** et **Évaluation** sont des modifications d'espace de travail et utilisent **Enregistrer** / **Réinitialiser**.
 - Les documents managés **Objectif** et **Risques et atténuations** utilisent également le flux d'enregistrement de l'espace de travail.
 
-Si vous créez une nouvelle demande, KANAP démarre sur **Synthèse**. Les autres onglets deviennent utiles après que la demande existe comme un véritable enregistrement plutôt que comme une idée très sincère.
-
 L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quitter la page :
 
 - une référence de demande copiable telle que `REQ-42`
 - une bande de métadonnées avec **Statut**, **Score**, **Demandeur**, **Responsable IT**, **Date de livraison cible** et (lorsque applicable) la **Tâche source** depuis laquelle la demande a été créée
 - **Partager** pour envoyer un lien vers la demande
 - **Convertir en projet** lorsque la demande est **Approuvée** ou **Convertie**
+- **Annuler la création**, tant que vous restez sur une demande que vous venez de créer. Voir [Annuler la création](#cancelling-a-creation)
 - **Supprimer**, une icône corbeille, pour les administrateurs (lorsque la demande n'est pas encore convertie). Une demande convertie reste l'origine de son projet et ne peut pas être supprimée
 - navigation précédent/suivant basée sur le contexte exact de la liste d'où vous venez
+
+### Créer une demande { #creating-a-request }
+
+1. Cliquez sur **Nouvelle demande**. La page de la demande s'ouvre sur **Synthèse** avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+2. Saisissez le nom de la demande.
+3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée la demande aussitôt, au statut **En attente de revue** et avec vous comme demandeur. Sa référence (`REQ-42`) apparaît et tous les onglets s'ouvrent.
+
+Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+
+### Annuler la création { #cancelling-a-creation }
+
+Tant que vous restez sur la demande que vous venez de créer, **Annuler la création** dans l'en-tête la supprime et vous ramène là où vous avez commencé : la liste ou l'écran précédent. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des demandes.
+
+Une fois que vous quittez la demande, elle reste. Un administrateur peut alors la supprimer avec **Supprimer**. La référence d'une demande annulée n'est pas réutilisée.
 
 ### Tiroir des propriétés
 
@@ -97,7 +110,6 @@ Traitez le tiroir comme la colonne vertébrale structurelle de la demande. Il co
 
 #### Propriétés principales
 
-- Nom de la demande
 - Statut
 - Source, Catégorie, Stream
 - Demandeur
