@@ -42,7 +42,8 @@ vi.mock('../../auth/AuthContext', () => ({
 }));
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'acme' }) }));
 vi.mock('../../hooks/useModuleItemNav', () => ({
-  useIncidentItemNav: () => ({ total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
+  // The register has other incidents: the previous/next chip stays hidden while one is being created.
+  useIncidentItemNav: () => ({ total: 13, index: 0, hasPrev: false, hasNext: true, prevId: null, nextId: 'INC-2' }),
 }));
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({ default: () => ({ byField: {}, labelFor: (_f: string, code: string) => code }) }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: () => undefined }) }));
@@ -50,7 +51,7 @@ vi.mock('../../components/fields/UserSelect', () => ({ default: () => null }));
 vi.mock('../../components/IntegratedDocumentEditor', () => ({ default: () => <div data-testid="review-editor" /> }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
 vi.mock('../../components/history/RecordHistoryTab', () => ({ default: () => null }));
-vi.mock('./workspace/IncidentMetadataBar', () => ({ default: () => null }));
+vi.mock('./workspace/IncidentMetadataBar', () => ({ default: ({ incident }: any) => <span>metadata {incident.severity}</span> }));
 vi.mock('./incidents/IncidentDeleteButton', () => ({ default: () => null }));
 
 const mocked = vi.mocked(api);
@@ -133,9 +134,10 @@ describe('Incident creation at the title', () => {
     // Tabs other than the overview wait for the incident.
     expect(screen.getByRole('tab', { name: 'workspace.incident.tabs.journal' })).toBeDisabled();
 
-    // The properties drawer, with severity "minor", and the description field.
+    // The metadata, the properties drawer, with severity "minor", and the description field.
     const previews = screen.getAllByTestId('creation-preview');
-    expect(previews).toHaveLength(2);
+    expect(previews).toHaveLength(3);
+    expect(previews.find((preview) => within(preview).queryByText('metadata minor'))).toBeTruthy();
     const drawer = previews.find((preview) => within(preview).queryByText('workspace.incident.drawer.severity'));
     expect(drawer).toBeTruthy();
     expect(drawer).toHaveTextContent(/minor/i);
@@ -171,6 +173,7 @@ describe('Incident creation at the title', () => {
     expect(screen.queryByTestId('creation-preview')).toBeNull();
     for (const tab of screen.getAllByRole('tab')) expect(tab).not.toBeDisabled();
     expect(screen.getByRole('button', { name: 'common:creation.cancel' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'workspace.incident.next' })).toBeNull();
   });
 
   it('cancels a creation with only its title at once, and goes back where it started', async () => {

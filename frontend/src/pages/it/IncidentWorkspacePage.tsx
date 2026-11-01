@@ -681,7 +681,18 @@ export function IncidentWorkspacePage() {
     <Box />
   );
 
-  const metadata = !isCreate && data ? (
+  const metadata = isCreate ? (
+    // The metadata of the incident to be, dimmed like the rest, so the page does not move when it is created.
+    <CreationPreview sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' }}>
+      <IncidentMetadataBar
+        incident={{ ...draftValues, confidential: false, owner_name: null } as unknown as Incident}
+        disabled
+        onSeverityChange={ignoreDraftChange}
+        onOwnerChange={ignoreDraftChange}
+        onDetectedAtChange={ignoreDraftChange}
+      />
+    </CreationPreview>
+  ) : data ? (
     <IncidentMetadataBar
       incident={data}
       disabled={!editable}
@@ -723,7 +734,8 @@ export function IncidentWorkspacePage() {
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
         onSaveShortcut={() => { if (!isCreate) void flushAll(); }}
-        nav={!isCreate && total > 0 ? {
+        // Hidden while the record is being created, so its page does not move once the title is typed.
+        nav={!isCreate && !creation.beingCreated && total > 0 ? {
           currentIndex: index + 1,
           totalCount: total,
           hasPrev,
