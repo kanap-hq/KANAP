@@ -179,6 +179,7 @@
   "APPLICATION_CONVERSION_REFUSED": "Diese Anwendung kann nicht in eine Technologie umgewandelt werden.",
   "APPLICATION_HAS_INTERFACES_one": "Diese Anwendung ist Quelle oder Ziel von {{usages}}. Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst diese Schnittstelle.",
   "APPLICATION_HAS_INTERFACES_other": "Diese Anwendung ist Quelle oder Ziel von {{usages}}. Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst diese Schnittstellen.",
+  "CREATION_CANCEL_EXPIRED": "Dieser Datensatz wird nicht mehr angelegt: Löschen Sie ihn stattdessen.",
   "COST_CENTER_IN_USE": "Diese Kostenstelle wird noch verwendet: {{usages}}. Deaktivieren Sie sie, statt sie zu löschen.",
   "COST_CENTER_HAS_NODES_one": "Diese Gruppe enthält {{usages}}. Verschieben oder löschen Sie es zuerst.",
   "COST_CENTER_HAS_NODES_other": "Diese Gruppe enthält {{usages}}. Verschieben oder löschen Sie diese zuerst.",

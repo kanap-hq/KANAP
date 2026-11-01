@@ -179,6 +179,7 @@
   "APPLICATION_CONVERSION_REFUSED": "Cette application ne peut pas être convertie en technologie.",
   "APPLICATION_HAS_INTERFACES_one": "Cette application est la source ou la cible de {{usages}}. Désactivez-la plutôt, ou supprimez d’abord cette interface.",
   "APPLICATION_HAS_INTERFACES_other": "Cette application est la source ou la cible de {{usages}}. Désactivez-la plutôt, ou supprimez d’abord ces interfaces.",
+  "CREATION_CANCEL_EXPIRED": "Cet enregistrement n’est plus en cours de création : supprimez-le plutôt.",
   "COST_CENTER_IN_USE": "Ce centre de coûts est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
   "COST_CENTER_HAS_NODES_one": "Ce groupe contient {{usages}}. Déplacez-le ou supprimez-le d’abord.",
   "COST_CENTER_HAS_NODES_other": "Ce groupe contient {{usages}}. Déplacez-les ou supprimez-les d’abord.",
