@@ -71,7 +71,7 @@ import { useLocale } from '../../i18n/useLocale';
 import ApplicationClassificationPanel, { HelpLabel, HelpTip, type RecoveryDependency } from './components/ApplicationClassificationPanel';
 import ApplicationCriticalityMetadata from './components/ApplicationCriticalityMetadata';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
-import { CancelCreationButton, useCreationReturn, useRecordCreation } from '../../components/workspace/creation';
+import { CancelCreationButton, CreationPreview, useCreationReturn, useRecordCreation } from '../../components/workspace/creation';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
@@ -201,6 +201,24 @@ type SupportContactRow = {
     mobile?: string | null;
   } | null;
 };
+
+/**
+ * A new application before its title: the creation preview shows its overview and properties
+ * from this empty draft (the server gives the category and lifecycle on creation). No id, so no
+ * section reads or writes anything.
+ */
+const DRAFT_APPLICATION: ApplicationDetail = {
+  id: '', name: '', category: '', supplier_id: null, editor: null, lifecycle: 'active',
+  criticality: null, cyber_criticality: null, recovery_wave: null, rto_minutes: null, rpo_minutes: null,
+  classification_justification: null, classification_revision: 0, version: null, go_live_date: null,
+  end_of_support_date: null, retired_date: null, external_facing: false, is_suite: false, etl_enabled: false,
+  contains_pii: false, data_class: null, last_dr_test: null, support_notes: null, access_methods: [],
+  users_mode: 'it_users', users_override: null, owners: [], companies: [], departments: [], data_residency: [],
+  support_contacts: [], deployments: [],
+};
+const NO_CONNECTIONS: ConnectionsResult = { type: 'none' };
+const ignoreDraftPatch = async () => undefined;
+const ignoreDraftUpdate = () => undefined;
 
 const VALID_TABS = new Set<TabKey>(['overview', 'deployments', 'interfaces', 'operations', 'compliance', 'relations', RECORD_HISTORY_TAB_KEY]);
 
@@ -1446,6 +1464,7 @@ export default function ApplicationWorkspacePage() {
   const canConvert = canDelete && hasLevel('infrastructure', 'member');
   const canCreateKnowledge = hasLevel('knowledge', 'member');
   const overviewEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
+  const previewEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
   const [versionDialogOpen, setVersionDialogOpen] = React.useState(false);
   // A refusal of the name typed on a new application (a name another application has).
   const [titleError, setTitleError] = React.useState<string | null>(null);
@@ -1724,6 +1743,7 @@ export default function ApplicationWorkspacePage() {
         titleRequiredMessage={t('messages.nameRequired')}
         titleMaxLength={APPLICATION_NAME_MAX}
         isCreate={isCreate}
+        forceDrawerOpen={isCreate}
         nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,
@@ -1813,7 +1833,11 @@ export default function ApplicationWorkspacePage() {
             </IconButton>
           </>
         )}
-        properties={isCreate ? undefined : app ? (
+        properties={isCreate ? (
+          <CreationPreview>
+            <ApplicationProperties app={DRAFT_APPLICATION} canManage={canManage} onPatch={ignoreDraftPatch} onLocalUpdate={ignoreDraftUpdate} />
+          </CreationPreview>
+        ) : app ? (
           <ApplicationProperties
             app={app}
             canManage={canManage}
@@ -1822,6 +1846,23 @@ export default function ApplicationWorkspacePage() {
           />
         ) : <Box />}
       >
+        {isCreate && (
+          <CreationPreview>
+            <OverviewTab
+              app={DRAFT_APPLICATION}
+              canEditManagedDocs={canManage}
+              canCreateKnowledge={canCreateKnowledge}
+              editorRef={previewEditorRef}
+              canManage={canManage}
+              connections={NO_CONNECTIONS}
+              onOpenApplication={() => undefined}
+              onShowInterfaces={() => undefined}
+              onPatch={ignoreDraftPatch}
+              onRefresh={async () => undefined}
+            />
+          </CreationPreview>
+        )}
+
         {!isCreate && app && routeTab === 'overview' && (
           <OverviewTab
             app={app}

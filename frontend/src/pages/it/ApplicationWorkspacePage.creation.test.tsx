@@ -121,9 +121,39 @@ describe('Application creation at the title', () => {
     expect(input).toHaveAttribute('placeholder', 'workspace.application.newTitle');
     expect(getComputedStyle(input).borderRadius).toBe('6px');
     expect(screen.queryByRole('button', { name: 'common:buttons.create' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'portfolio:workspace.openProperties' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'workspace.openProperties' })).toBeNull();
     expect(screen.queryByText('common:creation.cancel')).toBeNull();
+  });
+
+  it('shows the application to come under the title, dimmed and out of reach, until the title creates it', async () => {
+    renderPage(['/it/applications/new/overview']);
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    // The overview and the properties panel of an empty application.
+    const previews = screen.getAllByTestId('creation-preview');
+    expect(previews).toHaveLength(2);
+    expect(within(previews[0]).getByTestId('description-editor')).toBeTruthy();
+    expect(within(previews[1]).getByText('workspace.application.overview.category')).toBeTruthy();
+    for (const preview of previews) {
+      expect(preview).toHaveAttribute('inert');
+      expect(preview).toHaveAttribute('aria-hidden', 'true');
+      expect(getComputedStyle(preview).opacity).toBe('0.45');
+      expect(getComputedStyle(preview).pointerEvents).toBe('none');
+      // Nothing inside is in the accessibility tree: no field or button to reach.
+      expect(within(preview).queryAllByRole('button')).toHaveLength(0);
+      expect(within(preview).queryAllByRole('textbox')).toHaveLength(0);
+      expect(within(preview).queryAllByRole('combobox')).toHaveLength(0);
+    }
+    expect(input).toHaveFocus();
+    // Nothing read or written for a record that does not exist yet.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const urls = mocked.get.mock.calls.map(([url]) => String(url));
+    expect(urls.filter((url) => /undefined|null|\/\/|^\/applications\/(new\b|$)/.test(url))).toEqual([]);
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(mocked.patch).not.toHaveBeenCalled();
+
+    await createBilling();
+    expect(screen.queryByTestId('creation-preview')).toBeNull();
+    expect(await screen.findByTestId('description-editor')).toBeTruthy();
+    expect(screen.getByRole('button', { name: TITLE })).toHaveTextContent('Billing');
   });
 
   it('creates the application when the title is committed, then opens every tab with the focus on the title', async () => {

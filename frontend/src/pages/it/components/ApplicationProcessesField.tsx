@@ -43,7 +43,7 @@ export default function ApplicationProcessesField({ applicationId, canManage, te
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const { data } = useQuery({ queryKey: key, queryFn: () => fetchApplicationRelations(applicationId), enabled: canRead });
+  const { data } = useQuery({ queryKey: key, queryFn: () => fetchApplicationRelations(applicationId), enabled: canRead && !!applicationId });
   const processes = data?.processes ?? [];
   const linkedIds = React.useMemo(() => new Set(processes.map((row) => row.id)), [processes]);
   const picker = useLookupPicker<ProcessOption>({ endpoint: '/business-processes/lookup', value: [], enabled: editable });

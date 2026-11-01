@@ -22,6 +22,8 @@ export default function ApplicationVersionLinks({ applicationId }: { application
     queryKey: ['application-version-lineage', applicationId],
     queryFn: async () => (await api.get<LineageResponse>(`/applications/${applicationId}/version-lineage`)).data,
     retry: false,
+    // No id yet: the empty draft of a new application (its creation preview) has no version.
+    enabled: !!applicationId,
   });
   const previous = data?.predecessors?.[data.predecessors.length - 1] ?? null;
   const next = data?.successors ?? [];
