@@ -583,7 +583,7 @@ async function testRefusals() {
     const [classified] = await inTenant(t.tenantId, (m) => m.query(
       `SELECT (SELECT count(*) FROM portfolio_sources WHERE tenant_id = $1)::int AS sources,
               (SELECT count(*) FROM portfolio_categories WHERE tenant_id = $1)::int AS categories`, [t.tenantId]));
-    assert.deepEqual(classified, { sources: 6, categories: 4 }, 'English and French starting values');
+    assert.deepEqual(classified, { sources: 6, categories: 10 }, 'English and French starting values');
     assert.deepEqual(await inTenant(t.tenantId, (m) => findTenantContent(m, t.tenantId)), [], 'the starting classification: still loadable');
     // An older workspace also holds the 13 values of the three CAPEX dimensions (lot C1), and an
     // administrator may have added the optional pack in French: still loadable.
