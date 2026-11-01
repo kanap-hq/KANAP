@@ -21,3 +21,9 @@ export class UpdateDashboardConfigDto {
   @Type(() => TileConfigDto)
   tiles!: TileConfigDto[];
 }
+
+export class UpdateHomeDashboardConfigDto extends UpdateDashboardConfigDto {
+  @IsOptional()
+  @IsBoolean()
+  hideEmptyTiles?: boolean;
+}
