@@ -114,7 +114,9 @@ Rate limiting (default enabled):
   - `siteKey` is only returned when CAPTCHA is enabled and configured.
 
 - POST `/public/start-trial` → `{ ok: true } | { ok: true, activation_url }`
-  - Body: `{ org: string, slug: string, email: string, country_iso: string, captchaToken?: string }`
+  - Body: `{ org: string, slug: string, email: string, country_iso: string, captchaToken?: string, first_name?: string, last_name?: string }`
+    - `first_name`, `last_name`: trimmed, 100 characters at most; an empty string counts as absent. Given to the Administrator created at activation; the activation email greets by `first_name` when present.
+    - The names are optional: a form without them works as before. The signup keeps them (`trial_signups.first_name`, `last_name`); a new signup for the same slug replaces them, or clears them when absent.
     - `slug` must match `/^[a-z0-9-]+$/`.
     - Slug normalization/reservation is centralized in `backend/src/tenants/tenant-slug-policy.ts`.
     - Reserved slugs rejected as unavailable: `www`, `api`, `admin`, `billing`, `account`, `platform-admin`, `app`, `nextcloud`, `migration`, `example`.
@@ -137,6 +139,7 @@ Rate limiting (default enabled):
     - Creates the tenant and an Administrator user for the submitted email.
     - Creates an initial company named from the org/slug with `country_iso` from the signup.
     - Provisions the default global CoA into the tenant if a platform template is marked `loaded_by_default`.
+    - Gives the Administrator the signup's `first_name` and `last_name`.
     - Issues a password-reset token so the owner can set credentials inside the tenant.
     - `tenant_url` is the new tenant's address derived from the configured application address, as for password reset links (for example `https://acme.kanap.net`). Without a configured address: `400` `application URL is not configured: set APP_BASE_URL`, before the tenant is created.
     - Sends a non-blocking notification email to `admin@kanap.net` with the tenant name, slug, registered email, and `country_iso`. This notification does not affect the response if delivery fails.

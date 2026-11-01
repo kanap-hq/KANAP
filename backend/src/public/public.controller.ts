@@ -2,7 +2,7 @@ import { BadRequestException, Body, Controller, Get, InternalServerErrorExceptio
 import { Features } from '../config/features';
 import { throwNotAvailableInMode } from '../common/feature-gates';
 import { Throttle } from '@nestjs/throttler';
-import { IsEmail, IsISO31661Alpha2, IsNotEmpty, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsISO31661Alpha2, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomBytes, createHash } from 'crypto';
@@ -52,6 +52,25 @@ export const MARKETING_URL_NOT_CONFIGURED_MESSAGE = 'marketing URL is not config
 const STRIPE_EU_BANK_TRANSFER_COUNTRIES = new Set<string>(['BE', 'DE', 'ES', 'FR', 'IE', 'NL']);
 const STRIPE_DEFAULT_EU_BANK_TRANSFER_COUNTRY = 'FR';
 
+/** Trims an optional text field; an empty string counts as absent. */
+const optionalText = ({ value }: { value: unknown }) => {
+  if (typeof value !== 'string') return value;
+  const text = value.trim();
+  return text === '' ? undefined : text;
+};
+
+/**
+ * A person name (first or last name of the trial sign-up): words of letters of any language,
+ * combining marks, straight or typographic apostrophes and hyphens, each word may end with a
+ * dot, words separated by single spaces. No digits, no `/`, `:` or `@`, no line break or tab:
+ * the first name greets the person in the activation e-mail, sent to any address.
+ */
+export const PERSON_NAME = /^[\p{L}\p{M}][\p{L}\p{M}'’-]*\.?(?: [\p{L}\p{M}'’-]+\.?)*$/u;
+
+/**
+ * The trial sign-up form. The names are optional: the public website is
+ * deployed apart from the API, and a form without them keeps working.
+ */
 export class StartTrialDto {
   @IsString()
   @MinLength(2)
@@ -81,6 +100,20 @@ export class StartTrialDto {
   @IsString()
   @IsOptional()
   captcha_token?: string;
+
+  @Transform(optionalText)
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Matches(PERSON_NAME, { message: 'first_name must be a person name' })
+  first_name?: string;
+
+  @Transform(optionalText)
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Matches(PERSON_NAME, { message: 'last_name must be a person name' })
+  last_name?: string;
 }
 
 export class ActivateTrialDto {
@@ -294,6 +327,8 @@ export class PublicController {
     const email = body.email.trim().toLowerCase();
     const requestedCountryIso = body.country_iso.trim().toUpperCase();
     const countryIso = requestedCountryIso === 'OTHER' ? null : requestedCountryIso;
+    const firstName = this.optionalName(body.first_name);
+    const lastName = this.optionalName(body.last_name);
 
     if (isReservedTenantSlug(slug)) {
       throw new BadRequestException({ code: 'SUBDOMAIN_NOT_AVAILABLE', message: 'Slug not available' });
@@ -324,6 +359,8 @@ export class PublicController {
         expires_at: expiresAt,
         last_email_sent_at: now,
         activated_at: null,
+        first_name: firstName,
+        last_name: lastName,
       });
     } else {
       signup.org_name = org;
@@ -333,6 +370,8 @@ export class PublicController {
       signup.expires_at = expiresAt;
       signup.last_email_sent_at = now;
       signup.activated_at = null;
+      signup.first_name = firstName;
+      signup.last_name = lastName;
     }
 
     await this.trialSignups.save(signup);
@@ -342,7 +381,7 @@ export class PublicController {
 
     try {
       const activation = buildActivationEmail({
-        greeting: this.nameFromEmail(email, org),
+        greeting: firstName ?? this.nameFromEmail(email, org),
         activationUrl,
         locale: emailLocale,
       });
@@ -545,6 +584,8 @@ export class PublicController {
         password: provisionalPassword,
         role_name: 'Administrator',
         tenant_id: tenant.id,
+        first_name: signup.first_name ?? null,
+        last_name: signup.last_name ?? null,
       }, { manager: runner.manager });
 
       await this.baseline.createStartingCompany(runner.manager, {
@@ -630,6 +671,11 @@ export class PublicController {
     const devOrigin = developmentRequestOrigin(req);
     if (devOrigin) return devOrigin;
     throw new BadRequestException(MARKETING_URL_NOT_CONFIGURED_MESSAGE);
+  }
+
+  private optionalName(value: unknown): string | null {
+    const text = typeof value === 'string' ? value.trim() : '';
+    return text || null;
   }
 
   private resolveCaptchaToken(body: { captchaToken?: string | null; captcha_token?: string | null }): string | undefined {
