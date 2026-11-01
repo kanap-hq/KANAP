@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import OnboardingChoiceDialog from './OnboardingChoiceDialog';
-import { useOnboarding, useRunningTrial } from './useOnboarding';
+import { useOnboarding, useOnboardingActions, useRunningTrial } from './useOnboarding';
 
 /**
  * The workspace's path in About: angle and mode, and "Change" for whoever may change them
@@ -13,6 +13,7 @@ export default function AboutOnboardingLine() {
   const { t } = useTranslation('common');
   const runningTrial = useRunningTrial();
   const { state, apply } = useOnboarding();
+  const { undismiss } = useOnboardingActions();
   const [open, setOpen] = React.useState(false);
   if (!state) return null;
   const answered = state.angle !== null || state.mode !== null;
@@ -34,6 +35,14 @@ export default function AboutOnboardingLine() {
           {' · '}
           <Link component="button" variant="body2" onClick={() => setOpen(true)} sx={{ verticalAlign: 'baseline' }}>
             {answered ? t('onboarding.about.change') : t('onboarding.about.choose')}
+          </Link>
+        </>
+      ) : null}
+      {state.dismissed_at && state.steps.length > 0 ? (
+        <>
+          {' · '}
+          <Link component="button" variant="body2" onClick={() => undismiss.mutate()} disabled={undismiss.isPending} sx={{ verticalAlign: 'baseline' }}>
+            {t('onboarding.firstSteps.showAgain')}
           </Link>
         </>
       ) : null}

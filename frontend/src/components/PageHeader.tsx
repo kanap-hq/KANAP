@@ -24,7 +24,7 @@ export default function PageHeader({
     <Stack spacing={1} sx={{ mb: 2 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ flexWrap: 'wrap', gap: 1 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0, flex: 1 }}>
-          {titleContent ?? <Typography variant="h5">{title}</Typography>}
+          {titleContent ?? <Typography variant="h5" data-page-title>{title}</Typography>}
           {isAdmin && <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.8125rem' }}>{t('breadcrumbs.admin')}</Box>}
         </Stack>
         {actions}

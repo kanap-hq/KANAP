@@ -1566,6 +1566,139 @@
       "notChosen": "non choisi",
       "change": "Changer",
       "choose": "Choisir"
+    },
+    "firstSteps": {
+      "title": "Vos cinq premiers pas",
+      "progress": "{{done}}/{{total}}",
+      "hide": "Masquer les premiers pas",
+      "markDone": "Marquer comme fait",
+      "markUndone": "Marquer comme non fait",
+      "gotIt": "Compris",
+      "done": "Fait",
+      "later": "Plus tard",
+      "end": {
+        "title": "Vous avez vu l'essentiel de KANAP.",
+        "others": "Les deux autres parcours :"
+      },
+      "showAgain": "Afficher les premiers pas",
+      "steps": {
+        "budget_overview": {
+          "title": "La vue d'ensemble",
+          "hint": "Les lignes budgétaires de l'année et leurs cinq colonnes : budget, révision, réalisé, atterrissage prévu et prévision. Filtrez par société ou par centre de coûts pour lire son total."
+        },
+        "budget_line": {
+          "title": "Une ligne budgétaire",
+          "hint": "Ouvrez une ligne : qui paie, quel compte, quelles dimensions. Son onglet Budget porte les mois, son onglet Historique chaque modification."
+        },
+        "budget_report": {
+          "title": "Un rapport",
+          "hint": "Top lignes, puis Plus fortes hausses et baisses : depuis une hausse, ouvrez la ligne qui l'explique."
+        },
+        "budget_plaid": {
+          "title": "Une question à Plaid",
+          "hint": "Demandez « Quelles sont mes cinq plus grosses lignes cette année ? », puis vérifiez le chiffre dans le rapport Top lignes."
+        },
+        "budget_import": {
+          "title": "Vos données",
+          "hint": "Exportez le fichier budget de l'exemple pour voir son format, puis importez le vôtre : la validation avant chargement dit ce qui bloque."
+        },
+        "own_company": {
+          "title": "Votre société",
+          "hint": "Créée à l'inscription avec son nom, son pays et sa devise. Complétez son plan comptable, sa ville et son effectif de l'année."
+        },
+        "own_budget_lines": {
+          "title": "Vos lignes",
+          "hint": "Importez votre fichier budget, ou créez votre première ligne OPEX et sa période."
+        },
+        "own_contract": {
+          "title": "Un contrat lié",
+          "hint": "Le contrat principal d'une ligne : son échéance et l'alerte de préavis."
+        },
+        "own_report": {
+          "title": "Votre premier rapport",
+          "hint": "Top lignes, sur vos propres chiffres."
+        },
+        "own_invite": {
+          "title": "Un collègue",
+          "hint": {
+            "budget": "Invitez votre contrôle de gestion : créez l'utilisateur, puis envoyez l'invitation depuis le menu de sa ligne.",
+            "cartography": "Invitez un responsable d'application : créez l'utilisateur, puis envoyez l'invitation depuis le menu de sa ligne.",
+            "portfolio": "Invitez un chef de projet : créez l'utilisateur, puis envoyez l'invitation depuis le menu de sa ligne."
+          }
+        },
+        "map_overview": {
+          "title": "La carte des interfaces",
+          "hint": "Chaque flèche est un flux entre deux applications : cliquez-en une pour le lire."
+        },
+        "map_application": {
+          "title": "Une fiche d'application",
+          "hint": "Ouvrez une application : criticité, responsables, relations et où elle tourne."
+        },
+        "map_technologies": {
+          "title": "Les technologies et les fins de support",
+          "hint": "Ce qui arrive en fin de support dans les prochains mois, et la source de chaque date."
+        },
+        "map_vulnerabilities": {
+          "title": "Les vulnérabilités",
+          "hint": "Ouvrez une CVE : son état, la technologie et les serveurs touchés."
+        },
+        "map_import": {
+          "title": "Vos données",
+          "hint": "Importez la liste de vos applications : les fins de support et les failles de leurs technologies suivent."
+        },
+        "own_applications": {
+          "title": "Vos applications",
+          "hint": "Importez la liste de vos applications, ou créez la première."
+        },
+        "own_technologies": {
+          "title": "Vos technologies",
+          "hint": "Rattachez des technologies à vos applications, puis lisez les fins de support trouvées."
+        },
+        "own_assets": {
+          "title": "Vos serveurs",
+          "hint": "Importez ou créez vos serveurs, puis liez-les aux applications."
+        },
+        "own_map": {
+          "title": "Votre première carte",
+          "hint": "Créez une interface entre deux de vos applications : elle apparaît sur la carte."
+        },
+        "portfolio_overview": {
+          "title": "Le portefeuille",
+          "hint": "Vos projets avec leur statut, leurs responsables et leurs dates."
+        },
+        "portfolio_request": {
+          "title": "Une demande et son scoring",
+          "hint": "Ouvrez une demande : ses critères, son score et, une fois approuvée, sa conversion en projet."
+        },
+        "portfolio_planning": {
+          "title": "Le planning",
+          "hint": "Vos projets sur une frise."
+        },
+        "portfolio_plaid": {
+          "title": "Une question à Plaid",
+          "hint": "Demandez « Quels projets dépassent leur budget ? »"
+        },
+        "portfolio_import": {
+          "title": "Vos données",
+          "hint": "Importez votre liste de projets."
+        },
+        "own_projects": {
+          "title": "Vos projets",
+          "hint": "Importez votre liste, ou créez le premier projet avec son responsable et ses dates."
+        },
+        "own_request": {
+          "title": "Une demande",
+          "hint": "Créez une demande, scorez-la, puis convertissez-la en projet."
+        },
+        "own_project_budget": {
+          "title": "Le budget d'un projet",
+          "hint": "Liez une ligne budgétaire à l'un de vos projets dans ses relations."
+        },
+        "own_planning": {
+          "title": "Votre planning",
+          "hint": "Vos projets sur une frise : ajoutez une dépendance."
+        }
+      }
     }
   }
 }

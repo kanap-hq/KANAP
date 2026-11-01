@@ -1566,6 +1566,139 @@
       "notChosen": "not chosen",
       "change": "Change",
       "choose": "Choose"
+    },
+    "firstSteps": {
+      "title": "Your first five steps",
+      "progress": "{{done}}/{{total}}",
+      "hide": "Hide the first steps",
+      "markDone": "Mark as done",
+      "markUndone": "Mark as not done",
+      "gotIt": "Got it",
+      "done": "Done",
+      "later": "Later",
+      "end": {
+        "title": "You have seen the essentials of KANAP.",
+        "others": "The other two paths:"
+      },
+      "showAgain": "Show the first steps",
+      "steps": {
+        "budget_overview": {
+          "title": "The overview",
+          "hint": "Your budget lines for the year with their five columns: budget, revision, actuals, expected landing and forecast. Filter by company or cost center to read its total."
+        },
+        "budget_line": {
+          "title": "A budget line",
+          "hint": "Open a line: who pays, which account, which dimensions. Its Budget tab holds the months, its History tab every change."
+        },
+        "budget_report": {
+          "title": "A report",
+          "hint": "Top lines, then Top increase / decrease: from an increase, open the line behind it."
+        },
+        "budget_plaid": {
+          "title": "A question for Plaid",
+          "hint": "Ask “What are my five largest budget lines this year?”, then check the figure against the Top lines report."
+        },
+        "budget_import": {
+          "title": "Your data",
+          "hint": "Export the budget file of the example to see its format, then import your own: the check before loading says what blocks."
+        },
+        "own_company": {
+          "title": "Your company",
+          "hint": "Created at sign-up with its name, country and currency. Complete its chart of accounts, its city and its headcount for the year."
+        },
+        "own_budget_lines": {
+          "title": "Your budget lines",
+          "hint": "Import your budget file, or create your first OPEX line and its period."
+        },
+        "own_contract": {
+          "title": "A linked contract",
+          "hint": "The main contract of a line: its end date and its notice alert."
+        },
+        "own_report": {
+          "title": "Your first report",
+          "hint": "Top lines, on your own figures."
+        },
+        "own_invite": {
+          "title": "A colleague",
+          "hint": {
+            "budget": "Invite your financial controller: create the user, then send the invitation from the row menu.",
+            "cartography": "Invite an application owner: create the user, then send the invitation from the row menu.",
+            "portfolio": "Invite a project manager: create the user, then send the invitation from the row menu."
+          }
+        },
+        "map_overview": {
+          "title": "The interface map",
+          "hint": "Each arrow is a flow between two applications: click one to read it."
+        },
+        "map_application": {
+          "title": "An application",
+          "hint": "Open an application: criticality, owners, relations and where it runs."
+        },
+        "map_technologies": {
+          "title": "Technologies and end of support",
+          "hint": "What reaches its end of support in the coming months, and the source of each date."
+        },
+        "map_vulnerabilities": {
+          "title": "Vulnerabilities",
+          "hint": "Open a CVE: its state, the technology and the servers it affects."
+        },
+        "map_import": {
+          "title": "Your data",
+          "hint": "Import the list of your applications: the end of support and the vulnerabilities of their technologies follow."
+        },
+        "own_applications": {
+          "title": "Your applications",
+          "hint": "Import your list of applications, or create the first one."
+        },
+        "own_technologies": {
+          "title": "Your technologies",
+          "hint": "Link technologies to your applications, then read the end-of-support dates found."
+        },
+        "own_assets": {
+          "title": "Your servers",
+          "hint": "Import or create your servers, then link them to applications."
+        },
+        "own_map": {
+          "title": "Your first map",
+          "hint": "Create an interface between two of your applications: it appears on the map."
+        },
+        "portfolio_overview": {
+          "title": "The portfolio",
+          "hint": "Your projects with their status, owners and dates."
+        },
+        "portfolio_request": {
+          "title": "A request and its scoring",
+          "hint": "Open a request: its criteria, its score and, once approved, its conversion into a project."
+        },
+        "portfolio_planning": {
+          "title": "The planning",
+          "hint": "Your projects on a timeline."
+        },
+        "portfolio_plaid": {
+          "title": "A question for Plaid",
+          "hint": "Ask “Which projects are over budget?”"
+        },
+        "portfolio_import": {
+          "title": "Your data",
+          "hint": "Import your list of projects."
+        },
+        "own_projects": {
+          "title": "Your projects",
+          "hint": "Import your list, or create the first project with its owner and dates."
+        },
+        "own_request": {
+          "title": "A request",
+          "hint": "Create a request, score it, then convert it into a project."
+        },
+        "own_project_budget": {
+          "title": "A project's budget",
+          "hint": "Link a budget line to one of your projects in its relations."
+        },
+        "own_planning": {
+          "title": "Your planning",
+          "hint": "Your projects on a timeline: add a dependency."
+        }
+      }
     }
   }
 }

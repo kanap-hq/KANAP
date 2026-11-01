@@ -1566,6 +1566,139 @@
       "notChosen": "sin elegir",
       "change": "Cambiar",
       "choose": "Elegir"
+    },
+    "firstSteps": {
+      "title": "Sus cinco primeros pasos",
+      "progress": "{{done}}/{{total}}",
+      "hide": "Ocultar los primeros pasos",
+      "markDone": "Marcar como hecho",
+      "markUndone": "Marcar como no hecho",
+      "gotIt": "Entendido",
+      "done": "Hecho",
+      "later": "Más tarde",
+      "end": {
+        "title": "Ha visto lo esencial de KANAP.",
+        "others": "Los otros dos recorridos:"
+      },
+      "showAgain": "Mostrar los primeros pasos",
+      "steps": {
+        "budget_overview": {
+          "title": "La vista general",
+          "hint": "Las líneas presupuestarias del año con sus cinco columnas: presupuesto, revisión, realizado, aterrizaje previsto y previsión. Filtre por empresa o centro de coste para leer su total."
+        },
+        "budget_line": {
+          "title": "Una línea presupuestaria",
+          "hint": "Abra una línea: quién paga, qué cuenta, qué dimensiones. Su pestaña Presupuesto contiene los meses, su pestaña Historial cada cambio."
+        },
+        "budget_report": {
+          "title": "Un informe",
+          "hint": "Líneas principales, luego Mayores subidas y bajadas: desde una subida, abra la línea que la explica."
+        },
+        "budget_plaid": {
+          "title": "Una pregunta a Plaid",
+          "hint": "Pregunte «¿Cuáles son mis cinco líneas presupuestarias más grandes este año?» y compruebe la cifra en el informe de líneas principales."
+        },
+        "budget_import": {
+          "title": "Sus datos",
+          "hint": "Exporte el archivo de presupuesto del ejemplo para ver su formato y luego importe el suyo: la validación previa a la carga indica qué bloquea."
+        },
+        "own_company": {
+          "title": "Su empresa",
+          "hint": "Creada al registrarse con su nombre, país y moneda. Complete su plan de cuentas, su ciudad y su plantilla del año."
+        },
+        "own_budget_lines": {
+          "title": "Sus líneas",
+          "hint": "Importe su archivo de presupuesto o cree su primera línea OPEX y su periodo."
+        },
+        "own_contract": {
+          "title": "Un contrato vinculado",
+          "hint": "El contrato principal de una línea: su vencimiento y su alerta de preaviso."
+        },
+        "own_report": {
+          "title": "Su primer informe",
+          "hint": "Líneas principales, con sus propias cifras."
+        },
+        "own_invite": {
+          "title": "Un colega",
+          "hint": {
+            "budget": "Invite a su control de gestión: cree el usuario y envíe la invitación desde el menú de su fila.",
+            "cartography": "Invite a un responsable de aplicación: cree el usuario y envíe la invitación desde el menú de su fila.",
+            "portfolio": "Invite a un jefe de proyecto: cree el usuario y envíe la invitación desde el menú de su fila."
+          }
+        },
+        "map_overview": {
+          "title": "El mapa de interfaces",
+          "hint": "Cada flecha es un flujo entre dos aplicaciones: haga clic en una para leerlo."
+        },
+        "map_application": {
+          "title": "Una aplicación",
+          "hint": "Abra una aplicación: criticidad, responsables, relaciones y dónde se ejecuta."
+        },
+        "map_technologies": {
+          "title": "Tecnologías y fin de soporte",
+          "hint": "Lo que llega al fin de soporte en los próximos meses, y la fuente de cada fecha."
+        },
+        "map_vulnerabilities": {
+          "title": "Vulnerabilidades",
+          "hint": "Abra una CVE: su estado, la tecnología y los servidores afectados."
+        },
+        "map_import": {
+          "title": "Sus datos",
+          "hint": "Importe la lista de sus aplicaciones: el fin de soporte y las vulnerabilidades de sus tecnologías vienen después."
+        },
+        "own_applications": {
+          "title": "Sus aplicaciones",
+          "hint": "Importe la lista de sus aplicaciones o cree la primera."
+        },
+        "own_technologies": {
+          "title": "Sus tecnologías",
+          "hint": "Vincule tecnologías a sus aplicaciones y lea las fechas de fin de soporte encontradas."
+        },
+        "own_assets": {
+          "title": "Sus servidores",
+          "hint": "Importe o cree sus servidores y vincúlelos a las aplicaciones."
+        },
+        "own_map": {
+          "title": "Su primer mapa",
+          "hint": "Cree una interfaz entre dos de sus aplicaciones: aparece en el mapa."
+        },
+        "portfolio_overview": {
+          "title": "La cartera",
+          "hint": "Sus proyectos con su estado, sus responsables y sus fechas."
+        },
+        "portfolio_request": {
+          "title": "Una solicitud y su puntuación",
+          "hint": "Abra una solicitud: sus criterios, su puntuación y, una vez aprobada, su conversión en proyecto."
+        },
+        "portfolio_planning": {
+          "title": "La planificación",
+          "hint": "Sus proyectos en una línea de tiempo."
+        },
+        "portfolio_plaid": {
+          "title": "Una pregunta a Plaid",
+          "hint": "Pregunte «¿Qué proyectos superan su presupuesto?»"
+        },
+        "portfolio_import": {
+          "title": "Sus datos",
+          "hint": "Importe su lista de proyectos."
+        },
+        "own_projects": {
+          "title": "Sus proyectos",
+          "hint": "Importe su lista o cree el primer proyecto con su responsable y sus fechas."
+        },
+        "own_request": {
+          "title": "Una solicitud",
+          "hint": "Cree una solicitud, puntúela y conviértala en proyecto."
+        },
+        "own_project_budget": {
+          "title": "El presupuesto de un proyecto",
+          "hint": "Vincule una línea presupuestaria a uno de sus proyectos en sus relaciones."
+        },
+        "own_planning": {
+          "title": "Su planificación",
+          "hint": "Sus proyectos en una línea de tiempo: añada una dependencia."
+        }
+      }
     }
   }
 }

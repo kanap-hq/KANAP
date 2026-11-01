@@ -1566,6 +1566,139 @@
       "notChosen": "nicht gewählt",
       "change": "Ändern",
       "choose": "Wählen"
+    },
+    "firstSteps": {
+      "title": "Ihre ersten fünf Schritte",
+      "progress": "{{done}}/{{total}}",
+      "hide": "Erste Schritte ausblenden",
+      "markDone": "Als erledigt markieren",
+      "markUndone": "Als nicht erledigt markieren",
+      "gotIt": "Verstanden",
+      "done": "Erledigt",
+      "later": "Später",
+      "end": {
+        "title": "Sie haben das Wesentliche von KANAP gesehen.",
+        "others": "Die beiden anderen Pfade:"
+      },
+      "showAgain": "Erste Schritte anzeigen",
+      "steps": {
+        "budget_overview": {
+          "title": "Die Übersicht",
+          "hint": "Die Budgetzeilen des Jahres mit ihren fünf Spalten: Budget, Revision, Ist-Werte, erwarteter Endwert und Prognose. Filtern Sie nach Unternehmen oder Kostenstelle, um deren Summe zu lesen."
+        },
+        "budget_line": {
+          "title": "Eine Budgetzeile",
+          "hint": "Öffnen Sie eine Zeile: wer zahlt, welches Konto, welche Dimensionen. Der Reiter Budget enthält die Monate, der Reiter Verlauf jede Änderung."
+        },
+        "budget_report": {
+          "title": "Ein Bericht",
+          "hint": "Top-Zeilen, dann die stärksten Anstiege und Rückgänge: Öffnen Sie von einem Anstieg aus die Zeile dahinter."
+        },
+        "budget_plaid": {
+          "title": "Eine Frage an Plaid",
+          "hint": "Fragen Sie „Was sind meine fünf größten Budgetzeilen in diesem Jahr?“ und prüfen Sie die Zahl im Bericht Top-Zeilen."
+        },
+        "budget_import": {
+          "title": "Ihre Daten",
+          "hint": "Exportieren Sie die Budgetdatei des Beispiels, um ihr Format zu sehen, und importieren Sie dann Ihre eigene: Die Prüfung vor dem Laden nennt, was blockiert."
+        },
+        "own_company": {
+          "title": "Ihr Unternehmen",
+          "hint": "Bei der Anmeldung mit Name, Land und Währung angelegt. Ergänzen Sie Kontenplan, Stadt und Mitarbeiterzahl des Jahres."
+        },
+        "own_budget_lines": {
+          "title": "Ihre Budgetzeilen",
+          "hint": "Importieren Sie Ihre Budgetdatei oder legen Sie Ihre erste OPEX-Zeile mit ihrem Zeitraum an."
+        },
+        "own_contract": {
+          "title": "Ein verknüpfter Vertrag",
+          "hint": "Der Hauptvertrag einer Zeile: sein Enddatum und die Kündigungsfrist-Erinnerung."
+        },
+        "own_report": {
+          "title": "Ihr erster Bericht",
+          "hint": "Top-Zeilen, mit Ihren eigenen Zahlen."
+        },
+        "own_invite": {
+          "title": "Eine Kollegin, ein Kollege",
+          "hint": {
+            "budget": "Laden Sie Ihr Controlling ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile.",
+            "cartography": "Laden Sie eine verantwortliche Person einer Anwendung ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile.",
+            "portfolio": "Laden Sie eine Projektleitung ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile."
+          }
+        },
+        "map_overview": {
+          "title": "Die Schnittstellenkarte",
+          "hint": "Jeder Pfeil ist ein Fluss zwischen zwei Anwendungen: Klicken Sie auf einen, um ihn zu lesen."
+        },
+        "map_application": {
+          "title": "Eine Anwendung",
+          "hint": "Öffnen Sie eine Anwendung: Kritikalität, Verantwortliche, Beziehungen und wo sie läuft."
+        },
+        "map_technologies": {
+          "title": "Technologien und Supportende",
+          "hint": "Was in den kommenden Monaten sein Supportende erreicht, und die Quelle jedes Datums."
+        },
+        "map_vulnerabilities": {
+          "title": "Schwachstellen",
+          "hint": "Öffnen Sie eine CVE: ihr Status, die Technologie und die betroffenen Server."
+        },
+        "map_import": {
+          "title": "Ihre Daten",
+          "hint": "Importieren Sie die Liste Ihrer Anwendungen: Supportende und Schwachstellen ihrer Technologien folgen."
+        },
+        "own_applications": {
+          "title": "Ihre Anwendungen",
+          "hint": "Importieren Sie die Liste Ihrer Anwendungen oder legen Sie die erste an."
+        },
+        "own_technologies": {
+          "title": "Ihre Technologien",
+          "hint": "Verknüpfen Sie Technologien mit Ihren Anwendungen und lesen Sie dann die gefundenen Supportenden."
+        },
+        "own_assets": {
+          "title": "Ihre Server",
+          "hint": "Importieren oder erstellen Sie Ihre Server und verknüpfen Sie sie mit Anwendungen."
+        },
+        "own_map": {
+          "title": "Ihre erste Karte",
+          "hint": "Legen Sie eine Schnittstelle zwischen zwei Ihrer Anwendungen an: Sie erscheint auf der Karte."
+        },
+        "portfolio_overview": {
+          "title": "Das Portfolio",
+          "hint": "Ihre Projekte mit Status, Verantwortlichen und Terminen."
+        },
+        "portfolio_request": {
+          "title": "Eine Anfrage und ihre Bewertung",
+          "hint": "Öffnen Sie eine Anfrage: ihre Kriterien, ihre Punktzahl und, sobald genehmigt, ihre Umwandlung in ein Projekt."
+        },
+        "portfolio_planning": {
+          "title": "Die Planung",
+          "hint": "Ihre Projekte auf einer Zeitachse."
+        },
+        "portfolio_plaid": {
+          "title": "Eine Frage an Plaid",
+          "hint": "Fragen Sie „Welche Projekte überschreiten ihr Budget?“"
+        },
+        "portfolio_import": {
+          "title": "Ihre Daten",
+          "hint": "Importieren Sie Ihre Projektliste."
+        },
+        "own_projects": {
+          "title": "Ihre Projekte",
+          "hint": "Importieren Sie Ihre Liste oder legen Sie das erste Projekt mit Verantwortlichen und Terminen an."
+        },
+        "own_request": {
+          "title": "Eine Anfrage",
+          "hint": "Legen Sie eine Anfrage an, bewerten Sie sie und wandeln Sie sie in ein Projekt um."
+        },
+        "own_project_budget": {
+          "title": "Das Budget eines Projekts",
+          "hint": "Verknüpfen Sie eine Budgetzeile mit einem Ihrer Projekte in dessen Beziehungen."
+        },
+        "own_planning": {
+          "title": "Ihre Planung",
+          "hint": "Ihre Projekte auf einer Zeitachse: Fügen Sie eine Abhängigkeit hinzu."
+        }
+      }
     }
   }
 }
