@@ -7,6 +7,7 @@ import {
   PROVIDER_TEST_MAX_RETRIES,
   PROVIDER_TEST_MAX_TOKENS,
   PROVIDER_TEST_TIMEOUT_MS,
+  PROVIDER_TEST_USAGE_GRACE_MS,
 } from './provider-test.constants';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 import {
@@ -132,25 +133,42 @@ export class AiProviderTestService {
         reasoningEffort: effortSent,
       });
 
-      // The answer is read to its end (a few tokens): the usage that closes it says whether the
-      // model reasoned. The latency stays the time to the first event.
+      // The answer is read to its end (a few tokens) when it comes within a short grace after the
+      // first event: the usage that closes it says whether the model reasoned. A stream still open
+      // after that is a success without that figure. The latency stays the time to the first event,
+      // and closing the stream releases its connection.
+      const iterator = (stream as AsyncIterable<AiStreamEvent>)[Symbol.asyncIterator]();
       let latencyMs: number | null = null;
       let reasoningTokens: number | null = null;
-      for await (const event of stream as AsyncIterable<AiStreamEvent>) {
-        latencyMs ??= Date.now() - startedAt;
-        if (event.type === 'error') {
-          return this.fail({
-            provider,
-            model,
-            startedAt,
-            message: event.message || 'Provider test failed.',
-            validationErrors: [],
-          });
+      let graceTimer: NodeJS.Timeout | undefined;
+      try {
+        let deadline: Promise<'grace'> | null = null;
+        for (;;) {
+          const next = iterator.next();
+          const result = deadline ? await Promise.race([next, deadline]) : await next;
+          if (result === 'grace' || result.done) break;
+          const event = result.value;
+          if (latencyMs === null) {
+            latencyMs = Date.now() - startedAt;
+            deadline = new Promise((resolve) => { graceTimer = setTimeout(() => resolve('grace'), PROVIDER_TEST_USAGE_GRACE_MS); });
+          }
+          if (event.type === 'error') {
+            return this.fail({
+              provider,
+              model,
+              startedAt,
+              message: event.message || 'Provider test failed.',
+              validationErrors: [],
+            });
+          }
+          if (event.type === 'done') {
+            reasoningTokens = event.usage?.reasoning_tokens ?? null;
+            break;
+          }
         }
-        if (event.type === 'done') {
-          reasoningTokens = event.usage?.reasoning_tokens ?? null;
-          break;
-        }
+      } finally {
+        clearTimeout(graceTimer);
+        await iterator.return?.(undefined).catch(() => undefined);
       }
 
       return {
