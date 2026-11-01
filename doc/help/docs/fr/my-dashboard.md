@@ -78,10 +78,6 @@ Pendant un essai, la section de votre parcours vient en premier, ouverte par la 
 
 Sans parcours, les sections gardent leur ordre par défaut. Dès que vous ordonnez les sections vous-même, votre ordre s'applique.
 
-## Ligne pour activer Plaid
-
-Pendant un essai sur le cloud, les administrateurs des paramètres de Plaid voient une ligne sous la ligne des données d'exemple tant que Plaid est désactivé et que le modèle inclus de KANAP est proposé : « Plaid, l'assistant de KANAP, est désactivé. » **Activer** ouvre la confirmation habituelle du modèle inclus. La confirmation active Plaid. Le bouton de fermeture (**×**) masque la ligne dans ce navigateur. La ligne n'apparaît plus après le passage à une offre payante, ni sur site. Voir [Paramètres Plaid](ai-settings.md).
-
 ## Tuiles du tableau de bord
 
 La page d'accueil regroupe ses tuiles en quatre sections, chacune avec son titre. Par défaut, elles viennent dans cet ordre :

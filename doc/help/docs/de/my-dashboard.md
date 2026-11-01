@@ -78,10 +78,6 @@ Während einer Testphase steht der Bereich Ihres Pfads an erster Stelle, angefü
 
 Ohne Pfad behalten die Bereiche ihre Standardreihenfolge. Sobald Sie die Bereiche selbst ordnen, gilt Ihre Reihenfolge.
 
-## Zeile zum Einschalten von Plaid
-
-Während einer Cloud-Testphase sehen Administratoren der Plaid-Einstellungen unter der Zeile zu den Beispieldaten eine Zeile, solange Plaid ausgeschaltet ist und das inklusive KANAP-Modell angeboten wird: „Plaid, der KANAP-Assistent, ist ausgeschaltet.“ **Einschalten** öffnet die übliche Bestätigung des inklusiven Modells. Mit der Bestätigung wird Plaid eingeschaltet. Die Schaltfläche zum Schließen (**×**) blendet die Zeile in diesem Browser aus. Nach dem Wechsel zu einem kostenpflichtigen Tarif erscheint die Zeile nicht mehr, On-Premise ebenfalls nicht. Siehe [Plaid-Einstellungen](ai-settings.md).
-
 ## Dashboard-Kacheln
 
 Die Startseite gruppiert ihre Kacheln in vier Bereiche, jeder mit seinem Titel. Standardmäßig kommen sie in dieser Reihenfolge:

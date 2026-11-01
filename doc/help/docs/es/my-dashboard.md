@@ -78,10 +78,6 @@ Durante una prueba, la sección de su recorrido aparece primero, encabezada por 
 
 Sin recorrido, las secciones mantienen su orden predeterminado. En cuanto ordena usted mismo las secciones, se aplica su orden.
 
-## Línea para activar Plaid
-
-Durante una prueba en la nube, los administradores de la configuración de Plaid ven una línea bajo la línea de datos de ejemplo mientras Plaid está desactivado y se ofrece el modelo incluido de KANAP: «Plaid, el asistente de KANAP, está desactivado.» **Activar** abre la confirmación habitual del modelo incluido. Al confirmar, Plaid se activa. El botón de cierre (**×**) oculta la línea en este navegador. La línea no aparece tras el paso a un plan de pago, ni en instalaciones locales. Véase [Configuración de Plaid](ai-settings.md).
-
 ## Mosaicos del panel
 
 La página de inicio agrupa sus mosaicos en cuatro secciones, cada una con su título. Por defecto aparecen en este orden:

@@ -16,11 +16,19 @@ Plaid no reemplaza al resto de la aplicación. Es una forma más rápida de resu
 
 El espacio de trabajo también está disponible para los administradores con `ai_chat:admin`, que pueden ver y moderar todo lo que hacen los usuarios habituales.
 
-!!! note "A la espera de un administrador"
-    En el servicio alojado, Plaid puede funcionar con el modelo incluido de KANAP. Antes, un administrador confirma el proveedor y el lugar donde trata los datos. Hasta entonces, el espacio de trabajo muestra *Un administrador debe confirmar el proveedor de IA en Administración > Plaid.* en lugar del chat. Un administrador lo hace en la página [Configuración de Plaid](ai-settings.md#confirmar-el-modelo-incluido-de-kanap). Las organizaciones que usan un modelo propio nunca ven este aviso.
+### Antes de aceptar el modelo incluido { #included-model-acceptance }
+
+En el servicio alojado, Plaid puede funcionar con el modelo incluido de KANAP. Antes, un administrador acepta el proveedor y el lugar donde trata los datos. Los nuevos espacios de trabajo en prueba empiezan en este estado, con Plaid desactivado.
+
+Hasta entonces, la página de Plaid se abre con normalidad, con sus sugerencias. Una casilla ocupa el lugar del campo de mensaje: *Acepto que {proveedor} ({lugar}) trate mis preguntas y los datos a los que se refieren para las respuestas de Plaid. No se usan para entrenar sus modelos.*, seguida de *Otro modelo o desactivación: Administración › Plaid*.
+
+- Un administrador de la configuración de Plaid marca la casilla. Esto activa Plaid y registra la aceptación, con quién y cuándo. A continuación aparece el campo de mensaje.
+- Las demás personas leen *Plaid espera a que un administrador lo active.*
+
+Los administradores también pueden aceptar en la página [Configuración de Plaid](ai-settings.md#confirmar-el-modelo-incluido-de-kanap). Las organizaciones que usan un modelo propio nunca ven esta casilla.
 
 !!! note "Chat desactivado"
-    Cuando un administrador desactiva el chat en **Administración › Plaid**, una persona que puede usar el chat sigue abriendo esta página, y la entrada Plaid permanece en la navegación superior. La página dice *Plaid está desactivado para este espacio de trabajo.* Un administrador del asistente también ve *Actívelo en Administración › Plaid*, que abre la configuración de Plaid. Las demás personas ven *Pida a un administrador que lo active.* Una persona sin el permiso de chat ve la página de acceso denegado.
+    Cuando un administrador desactiva el chat en **Administración › Plaid**, una persona que puede usar el chat sigue abriendo esta página, y la entrada Plaid permanece en la navegación superior. La página dice *Plaid está desactivado para este espacio de trabajo.* Un administrador del asistente también ve *Actívelo en Administración › Plaid*, que abre la configuración de Plaid. Las demás personas ven *Pida a un administrador que lo active.* Una persona sin el permiso de chat ve la página de acceso denegado. Mientras el modelo incluido espera su aceptación, la página muestra en su lugar la casilla de aceptación, incluso con el chat desactivado: véase [Antes de aceptar el modelo incluido](#included-model-acceptance).
 
 ## Iniciar una conversación
 
@@ -31,6 +39,14 @@ Cuando abre Plaid por primera vez, llega a una pantalla de bienvenida con:
 - El cuadro de redacción en la parte inferior, listo para aceptar su primer mensaje
 
 Haga clic en cualquier sugerencia para enviarla directamente o, en el caso de las preguntas que contienen un marcador `@`, colocar la sugerencia en el cuadro de redacción para que pueda terminarla.
+
+Cuando se eligió un recorrido para el espacio de trabajo en su primera apertura, durante la prueba, las sugerencias empiezan por sus dos preguntas, entre las que usted puede leer, y luego las habituales, cinco como máximo:
+
+| Recorrido | Preguntas |
+|---|---|
+| Presupuesto de TI | *¿Cuáles son mis cinco líneas presupuestarias más grandes este año?*, *¿Qué líneas presupuestarias no tienen responsable?* |
+| Mapa del SI | *¿Qué tecnologías llegan al fin de soporte en los próximos seis meses?*, *¿Qué aplicaciones críticas no tienen plan de recuperación?* |
+| Proyectos y solicitudes | *¿Qué proyectos superan su presupuesto?*, *¿Qué solicitudes esperan una decisión?* |
 
 Escriba un mensaje y pulse **Intro** para enviarlo. **Mayús+Intro** inserta un salto de línea. El botón de enviar se desactiva cuando no hay nada que enviar y se transforma en un botón rojo **Detener** mientras Plaid responde.
 

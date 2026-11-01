@@ -16,11 +16,19 @@ Plaid does not replace the rest of the application. It is a faster way to summar
 
 The workspace is also available to administrators with `ai_chat:admin`, who can see and moderate everything regular users do.
 
-!!! note "Waiting for an administrator"
-    On the hosted service, Plaid can run on the KANAP included model. Before it does, an administrator confirms the provider and where it processes data. Until then the workspace shows *An administrator must confirm the AI provider in Admin > Plaid.* instead of the chat. An administrator does this on the [Plaid Settings](ai-settings.md#confirming-the-kanap-included-model) page. Organizations that use a model of their own never see this notice.
+### Before the included model is accepted { #included-model-acceptance }
+
+On the hosted service, Plaid can run on the KANAP included model. Before it does, an administrator accepts the provider and where it processes data. New trial workspaces start in this state, with Plaid turned off.
+
+Until then, Plaid's page opens normally with its suggestions. A box takes the place of the message field: *I agree that {provider} ({location}) processes my questions and the data they concern for Plaid's answers. They are not used to train its models.*, followed by *Another model, or turn it off: Admin › Plaid*.
+
+- An administrator of the Plaid settings ticks the box. This turns Plaid on and records the acceptance, with who accepted and when. The message field then appears.
+- Anyone else reads *Plaid is waiting for an administrator to turn it on.*
+
+Administrators can also accept on the [Plaid Settings](ai-settings.md#confirming-the-kanap-included-model) page. Organizations that use a model of their own never see this box.
 
 !!! note "Chat turned off"
-    When an administrator turns chat off under **Administration › Plaid**, a person who may use the chat still opens this page, and the Plaid entry stays in the top navigation. The page says *Plaid is turned off for this workspace.* An administrator of the assistant also sees *Turn it on in Administration › Plaid*, which opens the Plaid settings. Anyone else sees *Ask an administrator to turn it on.* A person without the chat right sees the access denied page.
+    When an administrator turns chat off under **Administration › Plaid**, a person who may use the chat still opens this page, and the Plaid entry stays in the top navigation. The page says *Plaid is turned off for this workspace.* An administrator of the assistant also sees *Turn it on in Administration › Plaid*, which opens the Plaid settings. Anyone else sees *Ask an administrator to turn it on.* A person without the chat right sees the access denied page. While the included model waits for its acceptance, the page shows the acceptance box instead, even with chat turned off: see [Before the included model is accepted](#included-model-acceptance).
 
 ## Starting a conversation
 
@@ -31,6 +39,14 @@ When you open Plaid for the first time, you land on a welcome screen with:
 - The composer at the bottom, ready to accept your first message
 
 Click any suggestion to either send it directly, or (for prompts that contain an `@` placeholder) drop the suggestion into the composer so you can finish it.
+
+When a path was chosen for the workspace at its first opening, during the trial, the suggestions start with its two questions, among those you may read, then the usual ones, five at most:
+
+| Path | Questions |
+|---|---|
+| IT budget | *What are my five largest budget lines this year?*, *Which budget lines have no owner?* |
+| IT landscape map | *Which technologies reach their end of support within six months?*, *Which critical applications have no recovery plan?* |
+| Projects and requests | *Which projects are over budget?*, *Which requests are waiting for a decision?* |
 
 Type a message and press **Enter** to send. **Shift+Enter** inserts a new line. The send button is disabled while there is nothing to send and morphs into a red **Stop** button while Plaid is responding.
 

@@ -16,11 +16,19 @@ Plaid ersetzt nicht den Rest der Anwendung. Es ist ein schnellerer Weg, um Konte
 
 Der Arbeitsbereich steht auch Administratoren mit `ai_chat:admin` zur Verfügung, die alles sehen und moderieren können, was normale Benutzer tun.
 
-!!! note "Wartet auf einen Administrator"
-    Im gehosteten Dienst kann Plaid auf dem inklusiven KANAP-Modell laufen. Zuvor bestätigt ein Administrator den Anbieter und den Ort, an dem er Daten verarbeitet. Bis dahin zeigt der Arbeitsbereich *Ein Administrator muss den KI-Anbieter unter Administration > Plaid bestätigen.* statt des Chats. Ein Administrator erledigt das auf der Seite [Plaid-Einstellungen](ai-settings.md#das-inklusive-kanap-modell-bestatigen). Organisationen, die ein eigenes Modell nutzen, sehen diesen Hinweis nie.
+### Bevor das inklusive Modell akzeptiert ist { #included-model-acceptance }
+
+Im gehosteten Dienst kann Plaid mit dem inklusiven KANAP-Modell arbeiten. Vorher akzeptiert ein Administrator den Anbieter und den Ort, an dem er die Daten verarbeitet. Neue Arbeitsbereiche in der Testphase beginnen in diesem Zustand, mit ausgeschaltetem Plaid.
+
+Bis dahin öffnet sich die Seite von Plaid wie gewohnt mit ihren Vorschlägen. Ein Kästchen nimmt den Platz des Nachrichtenfelds ein: *Ich bin einverstanden, dass {Anbieter} ({Ort}) meine Fragen und die Daten, die sie betreffen, für die Antworten von Plaid verarbeitet. Sie werden nicht zum Training seiner Modelle verwendet.*, gefolgt von *Anderes Modell oder Deaktivierung: Administration › Plaid*.
+
+- Ein Administrator der Plaid-Einstellungen setzt das Häkchen. Damit wird Plaid eingeschaltet und die Zustimmung gespeichert, mit Person und Zeitpunkt. Danach erscheint das Nachrichtenfeld.
+- Alle anderen lesen *Plaid wartet darauf, dass eine Administratorin oder ein Administrator es aktiviert.*
+
+Administratoren können auch auf der Seite [Plaid-Einstellungen](ai-settings.md#das-inklusive-kanap-modell-bestatigen) zustimmen. Organisationen mit einem eigenen Modell sehen dieses Kästchen nie.
 
 !!! note "Chat ausgeschaltet"
-    Wenn ein Administrator den Chat unter **Administration › Plaid** ausschaltet, öffnet eine Person mit dem Chat-Recht weiterhin diese Seite, und der Eintrag Plaid bleibt in der oberen Navigation. Die Seite zeigt *Plaid ist für diesen Arbeitsbereich ausgeschaltet.* Ein Administrator des Assistenten sieht außerdem *Schalten Sie ihn unter Administration › Plaid ein*, einen Link zu den Plaid-Einstellungen. Alle anderen sehen *Bitten Sie einen Administrator, ihn einzuschalten.* Eine Person ohne das Chat-Recht sieht die Seite Zugriff verweigert.
+    Wenn ein Administrator den Chat unter **Administration › Plaid** ausschaltet, öffnet eine Person mit dem Chat-Recht weiterhin diese Seite, und der Eintrag Plaid bleibt in der oberen Navigation. Die Seite zeigt *Plaid ist für diesen Arbeitsbereich ausgeschaltet.* Ein Administrator des Assistenten sieht außerdem *Schalten Sie ihn unter Administration › Plaid ein*, einen Link zu den Plaid-Einstellungen. Alle anderen sehen *Bitten Sie einen Administrator, ihn einzuschalten.* Eine Person ohne das Chat-Recht sieht die Seite Zugriff verweigert. Solange das inklusive Modell auf seine Zustimmung wartet, zeigt die Seite stattdessen das Kästchen zur Zustimmung, auch bei ausgeschaltetem Chat: siehe [Bevor das inklusive Modell akzeptiert ist](#included-model-acceptance).
 
 ## Eine Konversation beginnen
 
@@ -31,6 +39,14 @@ Wenn Sie Plaid zum ersten Mal öffnen, gelangen Sie auf einen Begrüßungsbildsc
 - Dem Eingabefeld am unteren Rand, bereit für Ihre erste Nachricht
 
 Klicken Sie auf einen beliebigen Vorschlag, um ihn entweder direkt zu senden oder (bei Prompts, die einen `@`-Platzhalter enthalten) den Vorschlag in das Eingabefeld einzufügen, damit Sie ihn vervollständigen können.
+
+Wurde beim ersten Öffnen des Arbeitsbereichs, während der Testphase, ein Pfad gewählt, beginnen die Vorschläge mit dessen zwei Fragen, soweit Sie sie lesen dürfen, dann folgen die üblichen, höchstens fünf:
+
+| Pfad | Fragen |
+|---|---|
+| IT-Budget | *Was sind meine fünf größten Budgetzeilen in diesem Jahr?*, *Welche Budgetzeilen haben keine verantwortliche Person?* |
+| IT-Landkarte | *Welche Technologien erreichen in den nächsten sechs Monaten ihr Supportende?*, *Welche kritischen Anwendungen haben keinen Wiederanlaufplan?* |
+| Projekte und Anfragen | *Welche Projekte überschreiten ihr Budget?*, *Welche Anfragen warten auf eine Entscheidung?* |
 
 Geben Sie eine Nachricht ein und drücken Sie **Eingabe** zum Senden. **Umschalt+Eingabe** fügt eine neue Zeile ein. Die Sende-Schaltfläche ist deaktiviert, solange nichts zu senden ist, und verwandelt sich in eine rote **Stopp**-Schaltfläche, während Plaid antwortet.
 
