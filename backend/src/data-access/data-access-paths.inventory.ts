@@ -168,6 +168,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
       'pollSreMonitoringIngestion',
       'previewAgentTargeting',
       'rejectAction',
+      'restoreSharedContextProfile',
       'revokeEmergencyPause',
       'revokeHelpdeskEmergencyPause',
       'runGlpiRead',

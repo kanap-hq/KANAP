@@ -1045,6 +1045,9 @@ async function testUnusableAnswers() {
         `UPDATE technology_catalog_products SET versions = versions || $1::jsonb WHERE catalog_key = 'postgresql'`,
         [JSON.stringify([{ key: '97', label: '97', cpe_version: null, build_prefixes: [], release_date: '2026-01-01', standard_support_end: '2031-02-30', extended_support_end: null }])],
       );
+      // The adoption reads the cache against the real clock: the sync ran on the spec's clock.
+      const [{ last_success_at: syncedAt }] = await dataSource.query(`SELECT last_success_at FROM technology_catalog_products WHERE catalog_key = 'postgresql'`);
+      await dataSource.query(`UPDATE technology_catalog_products SET last_success_at = now() WHERE catalog_key = 'postgresql'`);
       const [other] = await dataSource.query(
         `INSERT INTO tenants (slug, name, status, metadata, branding, created_at, updated_at)
          VALUES ('catalog-sync-spec-' || substr(md5(random()::text), 1, 8), 'Catalog sync spec', 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())
@@ -1058,6 +1061,7 @@ async function testUnusableAnswers() {
       } finally {
         await withTenant(dataSource, other.id, (mg) => mg.query(`DELETE FROM technologies WHERE tenant_id = $1`, [other.id]));
         await dataSource.query(`DELETE FROM tenants WHERE id = $1`, [other.id]);
+        await dataSource.query(`UPDATE technology_catalog_products SET last_success_at = $1 WHERE catalog_key = 'postgresql'`, [syncedAt]);
       }
 
       // An answer over 1 MB is refused, not retried, and the run says so.
