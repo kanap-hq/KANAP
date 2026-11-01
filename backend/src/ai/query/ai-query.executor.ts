@@ -950,7 +950,7 @@ export class AiQueryExecutor {
         last_dr_test: scalar(row.last_dr_test),
         category: scalar(row.category),
         editor: scalar(row.editor),
-        environment: scalar(row.environment),
+        // Deployments only. The legacy applications.environment column defaults to prod and is not a deployment.
         environments: scalar(Array.isArray(row.instances)
           ? row.instances.map((item: any) => item.environment).filter(Boolean).join(', ')
           : null),
@@ -3706,6 +3706,8 @@ export class AiQueryExecutor {
       Object.assign(row, vulnerabilityCountsOf((await applicationVulnerabilityCounts(context.manager, context.tenantId, [row.id])).get(row.id)));
       // The labels and ranks of the classification, as the list gives them.
       Object.assign(row, classificationLabels(row, await readClassificationCatalog(context)));
+      // The deprecated column defaults to prod on every application. The deployments keep their own environment.
+      delete row.environment;
       return this.toDetailResult(this.mapApplication(row), row);
     }
 

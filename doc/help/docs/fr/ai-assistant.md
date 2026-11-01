@@ -115,6 +115,8 @@ Les images stockées dans KANAP, comme les pièces jointes, s'affichent normalem
 
 Plaid utilise un petit ensemble d'outils internes pour répondre aux questions : `Search all`, `Search knowledge`, `Get document`, `Get entity context` et quelques autres. Chaque appel d'outil apparaît sous forme de ligne compacte sous le message (« a utilisé Search all · 8 résultats »). Vous n'avez généralement pas besoin de lire les détails de l'outil, mais ils sont là si vous voulez voir exactement sur quels enregistrements la réponse s'est appuyée.
 
+Lorsque vous demandez comment faire quelque chose dans KANAP, par exemple où se trouve un paramètre ou les étapes d'une tâche, Plaid lit le manuel utilisateur de votre version de KANAP, dans votre langue (`Parcourir le manuel utilisateur`, `Lire le manuel utilisateur`). Il décrit les écrans comme le fait le manuel et donne le lien de la section lue sur doc.kanap.net.
+
 `Search all` trouve les lignes budgétaires par le nom de leurs valeurs analytiques, et indique à Plaid les valeurs de chaque ligne. Plaid désigne une ligne budgétaire par sa référence `BL-12`, et ses liens ouvrent la ligne. Un nombre seul, comme 21, désigne `BL-21`. Les anciens numéros fonctionnent toujours : `OPX-12` ou `CPX-3` trouve sa ligne.
 
 Plaid lit les lignes OPEX et CAPEX ensemble. Une question qui ne nomme aucun des deux types porte sur les deux, et Plaid peut filtrer ou regrouper les lignes par type.

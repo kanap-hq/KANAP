@@ -115,6 +115,8 @@ In KANAP gespeicherte Bilder, etwa Anhänge, werden wie gewohnt angezeigt. Ein B
 
 Plaid verwendet eine kleine Auswahl interner Tools, um Fragen zu beantworten: `Search all`, `Search knowledge`, `Get document`, `Get entity context` und einige weitere. Jeder Tool-Aufruf erscheint als kompakte Zeile unter der Nachricht („Alles durchsuchen verwendet · 8 Ergebnisse“). In der Regel müssen Sie die Tool-Details nicht lesen, aber sie sind vorhanden, falls Sie genau sehen möchten, auf welchen Datensätzen die Antwort beruht.
 
+Wenn Sie fragen, wie etwas in KANAP geht, etwa wo sich eine Einstellung befindet oder welche Schritte eine Aufgabe hat, liest Plaid das Benutzerhandbuch Ihrer KANAP-Version in Ihrer Sprache (`Benutzerhandbuch durchsuchen`, `Benutzerhandbuch lesen`). Es beschreibt die Bildschirme so, wie das Handbuch es tut, und verlinkt den gelesenen Abschnitt auf doc.kanap.net.
+
 `Search all` findet Budgetzeilen über die Namen ihrer Analysewerte und teilt Plaid mit, welche Werte jede Zeile hat. Plaid nennt eine Budgetzeile mit ihrer Referenz `BL-12`, und seine Links öffnen die Zeile. Eine Zahl allein, etwa 21, bedeutet `BL-21`. Die früheren Nummern funktionieren weiterhin: `OPX-12` oder `CPX-3` findet seine Zeile.
 
 Plaid liest OPEX- und CAPEX-Zeilen zusammen. Eine Frage, die keinen der beiden Typen nennt, gilt für beide, und Plaid kann die Zeilen nach Typ filtern oder gruppieren.

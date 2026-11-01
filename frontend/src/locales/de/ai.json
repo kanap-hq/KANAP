@@ -368,8 +368,10 @@
       "get_record_history": "Verlauf abrufen",
       "import_ticket": "Ticket importieren",
       "import_glpi_ticket": "GLPI-Ticket importieren",
+      "list_help_topics": "Benutzerhandbuch durchsuchen",
       "prepare_mutation_plan": "Änderungsplan vorbereiten",
       "query_entities": "Entitäten abfragen",
+      "read_help_section": "Benutzerhandbuch lesen",
       "search_all": "Alles durchsuchen",
       "search_knowledge": "Wissensdatenbank durchsuchen",
       "web_search": "Web durchsuchen"

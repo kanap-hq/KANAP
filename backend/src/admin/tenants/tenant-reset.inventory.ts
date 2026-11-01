@@ -24,6 +24,9 @@ export const TENANT_RESET_KEEP_TABLES: Readonly<Record<string, string>> = {
   ai_external_mcp_servers: 'External tool servers are tenant settings an administrator made.',
   ai_external_mcp_tool_snapshots: 'The tool lists of the kept external tool servers go with them.',
   audit_log: 'The history is never erased: the reset adds its own entry to it.',
+  tenant_onboarding: 'The onboarding answers and steps outlive "start with my own data", which resets the workspace.',
+  onboarding_steps: 'The onboarding answers and steps outlive "start with my own data", which resets the workspace.',
+  onboarding_dismissals: 'The onboarding answers and steps outlive "start with my own data", which resets the workspace.',
 };
 
 /** Tables the reset purges: the tenant purge order without the kept tables, in the same order. */
