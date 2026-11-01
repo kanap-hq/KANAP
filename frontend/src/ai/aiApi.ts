@@ -110,6 +110,17 @@ export type AiProviderTestResult = {
   latency_ms: number | null;
   message: string;
   validation_errors: string[];
+  // The effort the test call sent; null when none was.
+  reasoning_effort_sent?: AiReasoningEffort | null;
+  // Reasoning tokens the response reported (OpenAI-compatible providers); null when not reported.
+  reasoning_tokens?: number | null;
+};
+
+// The reasoning efforts a provider and model accept (backend reasoning-effort.capability.ts).
+export type AiReasoningEffortSupport = {
+  levels: AiReasoningEffort[];
+  // True when the server may ignore the field (Ollama, custom endpoints).
+  server_may_ignore: boolean;
 };
 
 export type AiModelConfigUsage = {
@@ -128,6 +139,7 @@ export type AiModelConfig = {
   price_input_eur_per_mtok: number | null;
   price_output_eur_per_mtok: number | null;
   price_cache_read_eur_per_mtok: number | null;
+  reasoning_effort: AiReasoningEffort | null;
   llm_timeout_ms: number | null;
   status: 'active' | 'archived';
   is_default: boolean;
@@ -148,6 +160,10 @@ export type AiModelAssignmentOption = {
   is_default: boolean;
 };
 
+// How much a reasoning model thinks before answering; null: the provider's default.
+export const AI_REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+export type AiReasoningEffort = (typeof AI_REASONING_EFFORTS)[number];
+
 export type AiModelConfigInput = {
   name?: string;
   provider?: string;
@@ -158,6 +174,7 @@ export type AiModelConfigInput = {
   price_input_eur_per_mtok?: number | null;
   price_output_eur_per_mtok?: number | null;
   price_cache_read_eur_per_mtok?: number | null;
+  reasoning_effort?: AiReasoningEffort | null;
   llm_timeout_ms?: number | null;
   is_default?: boolean;
 };
@@ -1460,6 +1477,10 @@ export const aiModelConfigsApi = {
   },
   async test(id: string): Promise<AiProviderTestResult> {
     const res = await api.post(`/ai/model-configs/${id}/test`);
+    return res.data;
+  },
+  async reasoningEfforts(provider: string, model: string): Promise<AiReasoningEffortSupport> {
+    const res = await api.get('/ai/model-configs/reasoning-efforts', { params: { provider, model } });
     return res.data;
   },
 };

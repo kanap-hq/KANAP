@@ -4,9 +4,14 @@ import { assertPublicHttpTarget } from '../../../common/ssrf-guard';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { LlmCacheCostFactors, LlmTokenPrices, NO_CACHE_DISCOUNT, llmCostEur } from '../../ai-llm-cost.util';
 import { AiModelResolverService } from '../../ai-model-resolver.service';
-import { BUILTIN_REASONING_EFFORT } from '../../platform/platform-ai-config.service';
 import { AiProviderRegistry } from '../../providers/ai-provider-registry.service';
-import { AiProviderAdapter, AiProviderId, AiProviderImageAttachment, AiStreamEvent } from '../../providers/ai-provider.types';
+import {
+  AiProviderAdapter,
+  AiProviderId,
+  AiProviderImageAttachment,
+  AiReasoningEffort,
+  AiStreamEvent,
+} from '../../providers/ai-provider.types';
 import { StreamUsage } from '../../providers/streaming.util';
 
 export type AgentLlmRuntime = {
@@ -21,6 +26,9 @@ export type AgentLlmRuntime = {
   supportsVision: boolean;
   // Per-model timeout; null falls back to the caller's per-stage env default.
   modelTimeoutMs: number | null;
+  // The effort sent with each call: the included model's fixed cap, or the registry model's own
+  // setting; null sends nothing (the provider's default).
+  reasoningEffort: AiReasoningEffort | null;
   // €/Mtok prices of the resolved model; null/0 = free (local, self-hosted, builtin).
   priceInputEurPerMtok: number | null;
   priceOutputEurPerMtok: number | null;
@@ -232,6 +240,7 @@ export class AiAgentLlmClient {
       modelConfigId: resolved.configId,
       supportsVision: resolved.supportsVision,
       modelTimeoutMs: resolved.timeoutMs,
+      reasoningEffort: resolved.reasoningEffort,
       priceInputEurPerMtok: resolved.priceInputEurPerMtok,
       priceOutputEurPerMtok: resolved.priceOutputEurPerMtok,
       priceCacheReadEurPerMtok: resolved.priceCacheReadEurPerMtok ?? null,
@@ -300,7 +309,7 @@ export class AiAgentLlmClient {
         timeoutMs,
         maxRetries: 1,
         signal: controller.signal,
-        reasoningEffort: runtime.source === 'builtin' ? BUILTIN_REASONING_EFFORT : null,
+        reasoningEffort: runtime.reasoningEffort ?? null,
       });
 
       for await (const event of stream) {

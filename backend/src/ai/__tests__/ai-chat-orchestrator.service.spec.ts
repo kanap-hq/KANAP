@@ -39,6 +39,7 @@ function createOrchestrator(options?: {
   userLocale?: string | null;
   /** The registry model's prices (€/Mtok); null when omitted. */
   modelPrices?: { input: number; output: number; cacheRead?: number | null };
+  reasoningEffort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | null;
   /** The provider adapter's cache cost factors; absent when omitted. */
   cacheCostFactors?: { read: number; write: number };
 }) {
@@ -126,6 +127,7 @@ function createOrchestrator(options?: {
       priceInputEurPerMtok: 0,
       priceOutputEurPerMtok: 0,
       priceCacheReadEurPerMtok: 0,
+      reasoningEffort: 'low',
       timeoutMs: null,
       builtinRateLimits: { tenantPerMinute: 30, userPerHour: 60 },
     }
@@ -141,6 +143,7 @@ function createOrchestrator(options?: {
       priceInputEurPerMtok: options?.modelPrices?.input ?? null,
       priceOutputEurPerMtok: options?.modelPrices?.output ?? null,
       priceCacheReadEurPerMtok: options?.modelPrices?.cacheRead ?? null,
+      reasoningEffort: options?.reasoningEffort ?? null,
       timeoutMs: null,
       builtinRateLimits: null,
     });
@@ -498,6 +501,7 @@ async function testAssistantMessagesRecordTheirModelPricesAndCost() {
     provider: 'anthropic',
     model: 'claude-sonnet-5-5',
     model_source: 'registry',
+    reasoning_effort: null,
     price_input_eur_per_mtok: 3,
     price_output_eur_per_mtok: 15,
     price_cache_read_eur_per_mtok: null,
@@ -510,6 +514,7 @@ async function testAssistantMessagesRecordTheirModelPricesAndCost() {
     provider: 'anthropic',
     model: 'claude-sonnet-5-5',
     model_source: 'registry',
+    reasoning_effort: null,
     price_input_eur_per_mtok: 3,
     price_output_eur_per_mtok: 15,
     price_cache_read_eur_per_mtok: null,
@@ -528,7 +533,7 @@ async function testAssistantMessagesRecordTheirModelPricesAndCost() {
 }
 
 async function testIncludedModelMessagesRecordAZeroCost() {
-  const { orchestrator, persistedMessages } = createOrchestrator({ resolvedSource: 'builtin' });
+  const { orchestrator, persistedMessages, recordedRequests } = createOrchestrator({ resolvedSource: 'builtin' });
   await collectEvents(
     orchestrator.stream({
       context: {
@@ -548,19 +553,23 @@ async function testIncludedModelMessagesRecordAZeroCost() {
     provider: 'openai',
     model: 'gpt-4o-mini',
     model_source: 'builtin',
+    reasoning_effort: 'low',
     price_input_eur_per_mtok: 0,
     price_output_eur_per_mtok: 0,
     price_cache_read_eur_per_mtok: 0,
     cost_eur: 0,
   });
+  // The included model keeps its fixed cap.
+  assert.equal(recordedRequests[0].reasoningEffort, 'low');
 }
 
 async function testAssistantMessagesPriceCachedTokensAtTheModelCacheReadPrice() {
   // An OpenAI-compatible model (no known discount) with its own cache read price.
-  const { orchestrator, persistedMessages } = createOrchestrator({
+  const { orchestrator, persistedMessages, recordedRequests } = createOrchestrator({
     providerId: 'openai',
     model: 'mistral-medium-latest',
     modelPrices: { input: 2, output: 6, cacheRead: 0.2 },
+    reasoningEffort: 'max',
     providerEvents: [
       { type: 'text_delta', text: 'Hello there.' },
       { type: 'done', usage: { input_tokens: 1_000_000, output_tokens: 10_000, cache_read_input_tokens: 990_000 } },
@@ -587,11 +596,14 @@ async function testAssistantMessagesPriceCachedTokensAtTheModelCacheReadPrice() 
     provider: 'openai',
     model: 'mistral-medium-latest',
     model_source: 'registry',
+    reasoning_effort: 'max',
     price_input_eur_per_mtok: 2,
     price_output_eur_per_mtok: 6,
     price_cache_read_eur_per_mtok: 0.2,
     cost_eur: 0.278,
   });
+  // The registry model's own effort goes with the call and is recorded on the message.
+  assert.equal(recordedRequests[0].reasoningEffort, 'max');
 }
 
 async function testRetriedIterationTokensGoWithTheNextAssistantMessage() {

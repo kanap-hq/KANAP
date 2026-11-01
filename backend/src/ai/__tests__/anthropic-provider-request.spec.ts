@@ -81,7 +81,7 @@ async function run(params: Partial<AiStreamParams>): Promise<AiStreamEvent[]> {
 function testEffortModelGate() {
   for (const model of [
     'claude-opus-5-5', 'claude-opus-4-5', 'claude-opus-4-5-20251101', 'claude-sonnet-4-6',
-    'claude-sonnet-5-5', 'claude-fable-5-1', 'anthropic.claude-opus-4-8',
+    'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-1', 'anthropic.claude-opus-4-8',
   ]) {
     assert.equal(anthropicModelSupportsEffort(model), true, model);
   }
@@ -113,12 +113,26 @@ async function main() {
       cache_write_input_tokens: 200,
     });
 
+    // The values above high go out as set, for the models that take the field.
+    for (const [model, effort] of [
+      ['claude-opus-5-5', 'max'],
+      ['claude-sonnet-5-5', 'xhigh'],
+      ['claude-haiku-5-5', 'max'],
+    ] as const) {
+      await run({ model, reasoningEffort: effort });
+      assert.deepEqual(bodies.at(-1)!.output_config, { effort }, `${model} ${effort}`);
+    }
+
     await run({ reasoningEffort: null });
     assert.deepEqual(bodies.at(-1)!.cache_control, { type: 'ephemeral' });
     assert.equal('output_config' in bodies.at(-1)!, false);
 
     await run({ model: 'claude-haiku-4-5', reasoningEffort: 'low' });
     assert.deepEqual(bodies.at(-1)!.cache_control, { type: 'ephemeral' });
+    assert.equal('output_config' in bodies.at(-1)!, false);
+
+    // A level the model does not accept is not sent either (Sonnet 4.6 has no xhigh).
+    await run({ model: 'claude-sonnet-4-6', reasoningEffort: 'xhigh' });
     assert.equal('output_config' in bodies.at(-1)!, false);
 
     // No cacheable prefix: the system prompt as it is, cached by the automatic breakpoint only.

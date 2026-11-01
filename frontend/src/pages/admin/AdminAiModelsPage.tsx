@@ -28,10 +28,13 @@ import { PropertyRow } from '../../components/design';
 import KanapDialog from '../../components/design/KanapDialog';
 import { useFeatures } from '../../config/FeaturesContext';
 import { useLocale } from '../../i18n/useLocale';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
 import {
   AiModelConfig,
   AiModelConfigInput,
   AiProviderTestResult,
+  AiReasoningEffort,
+  AI_REASONING_EFFORTS,
   aiAdminApi,
   aiModelConfigsApi,
 } from '../../ai/aiApi';
@@ -49,6 +52,8 @@ type DraftState = {
   price_input: string;
   price_output: string;
   price_cache_read: string;
+  // '' = the provider's default (nothing sent).
+  reasoning_effort: AiReasoningEffort | '';
   timeout_seconds: string;
 };
 
@@ -62,6 +67,7 @@ const EMPTY_DRAFT: DraftState = {
   price_input: '',
   price_output: '',
   price_cache_read: '',
+  reasoning_effort: '',
   timeout_seconds: '',
 };
 
@@ -89,6 +95,7 @@ function draftFromConfig(config: AiModelConfig, locale: string): DraftState {
     price_input: priceDraft(config.price_input_eur_per_mtok, locale),
     price_output: priceDraft(config.price_output_eur_per_mtok, locale),
     price_cache_read: priceDraft(config.price_cache_read_eur_per_mtok, locale),
+    reasoning_effort: config.reasoning_effort ?? '',
     timeout_seconds: config.llm_timeout_ms != null ? String(Math.round(config.llm_timeout_ms / 1000)) : '',
   };
 }
@@ -234,6 +241,45 @@ export default function AdminAiModelsPage() {
     onError: (err) => setError(readError(err, t('aiModels.errors.testFailed'))),
   });
 
+  // The levels the chosen provider and model accept (backend reasoning-effort.capability.ts).
+  const debouncedModel = useDebouncedValue(draft.model.trim(), 300);
+  const effortQuery = useQuery({
+    queryKey: ['ai-model-reasoning-efforts', draft.provider, debouncedModel],
+    queryFn: () => aiModelConfigsApi.reasoningEfforts(draft.provider, debouncedModel),
+    enabled: dialogOpen && debouncedModel !== '',
+    staleTime: Infinity,
+  });
+  const effortSupport = debouncedModel === draft.model.trim() ? effortQuery.data : undefined;
+  const effortLevels: readonly AiReasoningEffort[] = effortSupport?.levels ?? AI_REASONING_EFFORTS;
+  const effortUnavailable = effortSupport !== undefined && effortSupport.levels.length === 0;
+  const effortTooltip = effortUnavailable
+    ? t('aiModels.dialog.reasoningEffortUnavailable')
+    : effortSupport?.server_may_ignore ? t('aiModels.dialog.reasoningEffortMayBeIgnored') : '';
+  const effortValue = draft.reasoning_effort !== '' && effortLevels.includes(draft.reasoning_effort)
+    ? draft.reasoning_effort
+    : '';
+  // A level the new provider or model does not accept goes back to the provider default.
+  React.useEffect(() => {
+    if (!effortSupport || draft.reasoning_effort === '') return;
+    if (!effortSupport.levels.includes(draft.reasoning_effort)) {
+      setDraft((prev) => ({ ...prev, reasoning_effort: '' }));
+    }
+  }, [effortSupport, draft.reasoning_effort]);
+
+  const testResultLine = (result: AiProviderTestResult): string => {
+    if (!result.ok) return result.message;
+    const parts = [t('aiModels.dialog.testOk', { latency: result.latency_ms ?? 0 })];
+    parts.push(result.reasoning_effort_sent
+      ? t('aiModels.dialog.testEffortSent', {
+        effort: t(`aiModels.dialog.reasoningEffortValues.${result.reasoning_effort_sent}`),
+      })
+      : t('aiModels.dialog.testEffortNotSent'));
+    if (result.reasoning_tokens != null) {
+      parts.push(t('aiModels.dialog.testReasoningTokens', { count: result.reasoning_tokens }));
+    }
+    return parts.join(' ');
+  };
+
   const providers = settingsQuery.data?.available_providers ?? [];
   const selectedProvider = providers.find((provider) => provider.id === draft.provider) ?? null;
   const models = modelsQuery.data?.model_configs ?? [];
@@ -300,6 +346,7 @@ export default function AdminAiModelsPage() {
       price_input_eur_per_mtok: priceInput ?? null,
       price_output_eur_per_mtok: priceOutput ?? null,
       price_cache_read_eur_per_mtok: priceCacheRead ?? null,
+      reasoning_effort: effortValue || null,
       llm_timeout_ms: timeoutSeconds != null ? timeoutSeconds * 1000 : null,
     };
     if (draft.api_key.trim() !== '') {
@@ -495,9 +542,7 @@ export default function AdminAiModelsPage() {
           <Stack spacing={1.5}>
             {testResult && (
               <Alert severity={testResult.ok ? 'success' : 'error'} onClose={() => setTestResult(null)}>
-                {testResult.ok
-                  ? t('aiModels.dialog.testOk', { latency: testResult.latency_ms ?? 0 })
-                  : testResult.message}
+                {testResultLine(testResult)}
               </Alert>
             )}
             <PropertyRow label={t('aiModels.dialog.name')}>
@@ -659,6 +704,42 @@ export default function AdminAiModelsPage() {
                   onChange={(event) => setDraft((prev) => ({ ...prev, timeout_seconds: event.target.value }))}
                 />
               </PropertyRow>
+            </Stack>
+            <Stack direction="row" spacing={2} alignItems="flex-start">
+              <PropertyRow
+                label={(
+                  <LabelWithInfo
+                    label={t('aiModels.dialog.reasoningEffort')}
+                    info={t('aiModels.dialog.reasoningEffortHint')}
+                  />
+                )}
+                sx={{ flex: 1 }}
+              >
+                <Tooltip title={effortTooltip} placement="top">
+                  <Box component="span" sx={{ display: 'block' }}>
+                    <Select
+                      variant="standard"
+                      displayEmpty
+                      value={effortValue}
+                      disabled={effortUnavailable}
+                      sx={drawerSelectSx}
+                      SelectDisplayProps={{ 'aria-label': t('aiModels.dialog.reasoningEffort') } as React.HTMLAttributes<HTMLDivElement>}
+                      onChange={(event) => setDraft((prev) => ({
+                        ...prev,
+                        reasoning_effort: event.target.value as AiReasoningEffort | '',
+                      }))}
+                    >
+                      <MenuItem value="" sx={drawerMenuItemSx}>{t('aiModels.dialog.reasoningEffortDefault')}</MenuItem>
+                      {effortLevels.map((effort) => (
+                        <MenuItem key={effort} value={effort} sx={drawerMenuItemSx}>
+                          {t(`aiModels.dialog.reasoningEffortValues.${effort}`)}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </Box>
+                </Tooltip>
+              </PropertyRow>
+              <Box sx={{ flex: 1 }} />
             </Stack>
             {editingId && (
               <Box>

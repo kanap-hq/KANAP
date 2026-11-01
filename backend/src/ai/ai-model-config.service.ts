@@ -8,6 +8,8 @@ import { AiSecretCipherService } from './ai-secret-cipher.service';
 import { AiSettings } from './ai-settings.entity';
 import { AiAgentDefinition } from './control-plane/entities/ai-agent-definition.entity';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
+import { AI_REASONING_EFFORTS, AiReasoningEffort } from './providers/ai-provider.types';
+import { reasoningEffortSupport } from './providers/reasoning-effort.capability';
 
 export type AiModelConfigUsage = {
   chat: boolean;
@@ -25,6 +27,7 @@ export type AiModelConfigView = {
   price_input_eur_per_mtok: number | null;
   price_output_eur_per_mtok: number | null;
   price_cache_read_eur_per_mtok: number | null;
+  reasoning_effort: AiReasoningEffort | null;
   llm_timeout_ms: number | null;
   status: 'active' | 'archived';
   is_default: boolean;
@@ -45,6 +48,7 @@ export type CreateAiModelConfigInput = {
   price_input_eur_per_mtok?: number | null;
   price_output_eur_per_mtok?: number | null;
   price_cache_read_eur_per_mtok?: number | null;
+  reasoning_effort?: AiReasoningEffort | null;
   llm_timeout_ms?: number | null;
   is_default?: boolean;
 };
@@ -375,6 +379,7 @@ export class AiModelConfigService {
       price_input_eur_per_mtok: parsePrice(config.price_input_eur_per_mtok),
       price_output_eur_per_mtok: parsePrice(config.price_output_eur_per_mtok),
       price_cache_read_eur_per_mtok: parsePrice(config.price_cache_read_eur_per_mtok ?? null),
+      reasoning_effort: config.reasoning_effort ?? null,
       llm_timeout_ms: config.llm_timeout_ms ?? null,
       status: config.status,
       is_default: config.is_default,
@@ -460,6 +465,27 @@ export class AiModelConfigService {
         input.price_cache_read_eur_per_mtok,
         'price_cache_read_eur_per_mtok',
       );
+    }
+    if (Object.prototype.hasOwnProperty.call(input, 'reasoning_effort')) {
+      const value = input.reasoning_effort ?? null;
+      if (value !== null && !AI_REASONING_EFFORTS.includes(value)) {
+        throw new BadRequestException(`reasoning_effort must be one of ${AI_REASONING_EFFORTS.join(', ')}, or null.`);
+      }
+      config.reasoning_effort = value;
+    }
+    if (
+      opts.isCreate
+      || ['provider', 'model', 'reasoning_effort'].some((key) => Object.prototype.hasOwnProperty.call(input, key))
+    ) {
+      const effort = config.reasoning_effort ?? null;
+      const accepted = reasoningEffortSupport(config.provider, config.model).levels;
+      if (effort !== null && !accepted.includes(effort)) {
+        throw new BadRequestException(
+          accepted.length === 0
+            ? `${config.model} takes no reasoning effort: leave it empty.`
+            : `${config.model} does not accept the reasoning effort ${effort}. Accepted: ${accepted.join(', ')}.`,
+        );
+      }
     }
     if (Object.prototype.hasOwnProperty.call(input, 'llm_timeout_ms')) {
       const value = input.llm_timeout_ms;

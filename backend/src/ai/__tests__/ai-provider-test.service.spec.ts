@@ -147,11 +147,97 @@ async function testReturnsRuntimeFailureMessage() {
   assert.equal(typeof result.latency_ms, 'number');
 }
 
+// A registry model's test sends its reasoning effort; a provider that refuses the value fails the
+// test with its own message.
+async function testSendsTheReasoningEffortAndShowsARefusal() {
+  const captured: any[] = [];
+  const { service } = createService({
+    stream: async function* (params: any) {
+      captured.push(params);
+      // As the OpenAI-compatible stream does for a refused call (openai-stream.util.spec).
+      if (params.reasoningEffort === 'max') {
+        throw new Error('AI provider request failed (HTTP 400): unknown variant `max` for reasoning_effort');
+      }
+      yield { type: 'done', usage: { input_tokens: 1, output_tokens: 1 } };
+    },
+  });
+  const input = { llm_provider: 'openai', llm_model: 'deepseek-v4', llm_api_key: 'secret' };
+
+  const accepted = await service.testProvider('tenant-1', { ...input, reasoning_effort: 'high' }, { skipStoredFallback: true });
+  assert.equal(accepted.ok, true);
+  assert.equal(captured[0].reasoningEffort, 'high');
+
+  const refused = await service.testProvider('tenant-1', { ...input, reasoning_effort: 'max' }, { skipStoredFallback: true });
+  assert.equal(refused.ok, false);
+  assert.equal(refused.message, 'AI provider request failed (HTTP 400): unknown variant `max` for reasoning_effort');
+  assert.equal(captured[1].reasoningEffort, 'max');
+
+  // No effort set: nothing is sent, as before.
+  await service.testProvider('tenant-1', input, { skipStoredFallback: true });
+  assert.equal(captured[2].reasoningEffort, null);
+}
+
+// The result says which effort went out and whether the response reported reasoning tokens; a
+// level the model does not accept is not sent, and the result says so.
+async function testResultShowsTheEffortSentAndTheReasoningTokens() {
+  const captured: any[] = [];
+  const { service } = createService({
+    stream: async function* (params: any) {
+      captured.push(params);
+      yield { type: 'text_delta', text: 'ok' };
+      yield {
+        type: 'done',
+        usage: { input_tokens: 5, output_tokens: 16, ...(params.reasoningEffort ? { reasoning_tokens: 14 } : {}) },
+      };
+    },
+  });
+
+  const reasoned = await service.testProvider(
+    'tenant-1',
+    { llm_provider: 'openai', llm_model: 'gpt-5.5', llm_api_key: 'secret', reasoning_effort: 'xhigh' },
+    { skipStoredFallback: true },
+  );
+  assert.equal(reasoned.ok, true);
+  assert.equal(reasoned.reasoning_effort_sent, 'xhigh');
+  assert.equal(reasoned.reasoning_tokens, 14);
+
+  const notSent = await service.testProvider(
+    'tenant-1',
+    { llm_provider: 'anthropic', llm_model: 'claude-haiku-4-5', llm_api_key: 'secret', reasoning_effort: 'low' },
+    { skipStoredFallback: true },
+  );
+  assert.equal(notSent.ok, true);
+  assert.equal(captured[1].reasoningEffort, null, 'a model without effort gets none');
+  assert.equal(notSent.reasoning_effort_sent, null);
+  assert.equal(notSent.reasoning_tokens, null);
+}
+
+// An error after the first event still fails the test: the answer is read to its end.
+async function testLateStreamErrorFailsTheTest() {
+  const { service } = createService({
+    stream: async function* () {
+      yield { type: 'text_delta', text: 'o' };
+      yield { type: 'error', message: 'stream broke' };
+    },
+  });
+  const result = await service.testProvider(
+    'tenant-1',
+    { llm_provider: 'openai', llm_model: 'gpt-5.5', llm_api_key: 'secret' },
+    { skipStoredFallback: true },
+  );
+  assert.equal(result.ok, false);
+  assert.equal(result.message, 'stream broke');
+}
+
 async function run() {
   await testUsesPersistedSecretWhenApiKeyIsOmitted();
   await testReturnsValidationErrorsWithoutCallingProvider();
   await testRejectsInternalEndpointWithoutCallingProvider();
   await testReturnsRuntimeFailureMessage();
+  await testSendsTheReasoningEffortAndShowsARefusal();
+  await testResultShowsTheEffortSentAndTheReasoningTokens();
+  await testLateStreamErrorFailsTheTest();
+  console.log('ai-provider-test.service.spec: all assertions passed');
 }
 
 void run();

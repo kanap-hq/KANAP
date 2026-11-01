@@ -1,4 +1,5 @@
 import * as assert from 'node:assert/strict';
+import { BadRequestException } from '@nestjs/common';
 import { llmCostEur } from '../ai-llm-cost.util';
 import { estimateReplySynthesisUsage } from '../control-plane/agent-control/ai-reply-synthesis.service';
 import { AiModelConfig } from '../ai-model-config.entity';
@@ -45,6 +46,7 @@ function createConfig(overrides?: Partial<AiModelConfig>): AiModelConfig {
     price_input_eur_per_mtok: null,
     price_output_eur_per_mtok: null,
     price_cache_read_eur_per_mtok: null,
+    reasoning_effort: null,
     llm_timeout_ms: null,
     status: 'active',
     is_default: false,
@@ -185,7 +187,8 @@ function createResolver(state: State, opts?: { platformConfigured?: boolean; reg
     getBuiltinRuntime: async (runtimeOpts?: { withSecrets?: boolean }) => (opts?.platformConfigured === false ? null : {
       identity: { name: 'Anthropic', location: 'US', key: 'anthropic||Anthropic|US' },
       provider: 'anthropic',
-      model: 'claude-builtin',
+      // The included model (Haiku 5.5), which accepts the effort it runs at.
+      model: 'claude-haiku-5-5',
       endpointUrl: null,
       apiKey: runtimeOpts?.withSecrets ? 'platform-key' : null,
       hasApiKey: true,
@@ -232,6 +235,7 @@ async function testResolverExplicitChatAssignment() {
         price_input_eur_per_mtok: '1.2500',
         price_output_eur_per_mtok: '3.0000',
         price_cache_read_eur_per_mtok: '0.1250',
+        reasoning_effort: 'max',
         llm_timeout_ms: 60000,
         endpoint_url: 'https://api.example.com/v1',
       }),
@@ -254,9 +258,28 @@ async function testResolverExplicitChatAssignment() {
   assert.equal(resolved.priceInputEurPerMtok, 1.25);
   assert.equal(resolved.priceOutputEurPerMtok, 3);
   assert.equal(resolved.priceCacheReadEurPerMtok, 0.125);
+  assert.equal(resolved.reasoningEffort, 'max', 'a registry model carries its own effort');
   assert.equal(resolved.timeoutMs, 60000);
   assert.equal(resolved.supportsVision, true);
   assert.equal(warnings.length, 0);
+}
+
+// The resolved effort is the one the call sends, which the message usage records: null when the
+// model does not accept the stored level (an Anthropic model without effort, a level it lacks).
+async function testResolverSendsOnlyAnEffortTheModelAccepts() {
+  for (const [model, stored, sent] of [
+    ['claude-haiku-4-5', 'low', null],
+    ['claude-sonnet-4-6', 'xhigh', null],
+    ['claude-sonnet-4-6', 'max', 'max'],
+    ['claude-opus-5-5', 'xhigh', 'xhigh'],
+  ] as const) {
+    const state = createState({
+      configs: [createConfig({ provider: 'anthropic', model, reasoning_effort: stored })],
+      settings: { tenant_id: 'tenant-1', chat_model_config_id: 'cfg-1' },
+    });
+    const resolved = await createResolver(state).resolver.resolve('tenant-1', { type: 'chat' });
+    assert.equal(resolved.reasoningEffort, sent, `${model} ${stored}`);
+  }
 }
 
 async function testResolverArchivedAssignmentFallsThroughToDefault() {
@@ -311,13 +334,15 @@ async function testResolverBuiltinFallbackInMultiTenant() {
   assert.equal(resolved.configId, null);
   assert.equal(resolved.configName, null);
   assert.equal(resolved.provider, 'anthropic');
-  assert.equal(resolved.model, 'claude-builtin');
+  assert.equal(resolved.model, 'claude-haiku-5-5');
   assert.equal(resolved.apiKey, 'platform-key');
   assert.equal(resolved.supportsVision, true);
   // Builtin model is operator-billed: zero tenant-facing prices, not null.
   assert.equal(resolved.priceInputEurPerMtok, 0);
   assert.equal(resolved.priceOutputEurPerMtok, 0);
   assert.equal(resolved.priceCacheReadEurPerMtok, 0);
+  // The included model keeps its fixed effort, which Haiku 5.5 accepts.
+  assert.equal(resolved.reasoningEffort, 'medium');
   assert.equal(resolved.timeoutMs, null);
   assert.deepEqual(resolved.builtinRateLimits, { tenantPerMinute: 30, userPerHour: 60 });
 
@@ -442,6 +467,74 @@ async function testCreateEncryptsKeyAndNormalizesPrices() {
   const emptied = await service.update('tenant-1', stored.id, { price_cache_read_eur_per_mtok: null });
   assert.equal(emptied.price_cache_read_eur_per_mtok, null);
   assert.equal(state.configs[0].price_cache_read_eur_per_mtok, null);
+}
+
+async function testReasoningEffortIsStoredShownAndAudited() {
+  const state = createState();
+  const manager = createManager(state);
+  const audits: any[] = [];
+  const audit = { log: async (entry: any) => { audits.push(entry); } };
+  const service = new AiModelConfigService({ manager } as any, createRegistryMock() as any, mockCipher as any, audit as any);
+
+  const view = await service.create('tenant-1', { name: 'DeepSeek', provider: 'custom', model: 'deepseek-v4' });
+  assert.equal(view.reasoning_effort, null, 'no effort until one is chosen: the provider default');
+
+  const id = state.configs[0].id;
+  const high = await service.update('tenant-1', id, { reasoning_effort: 'high' });
+  assert.equal(high.reasoning_effort, 'high');
+  assert.equal(state.configs[0].reasoning_effort, 'high');
+  assert.equal(audits.at(-1).before.reasoning_effort, null, 'the audit entry records the value before');
+  assert.equal(audits.at(-1).after.reasoning_effort, 'high', 'and after');
+
+  const kept = await service.update('tenant-1', id, { price_input_eur_per_mtok: 0.5 });
+  assert.equal(kept.reasoning_effort, 'high', 'left out on update: kept');
+  for (const value of ['xhigh', 'max', 'low', 'medium'] as const) {
+    assert.equal((await service.update('tenant-1', id, { reasoning_effort: value })).reasoning_effort, value);
+  }
+  const cleared = await service.update('tenant-1', id, { reasoning_effort: null });
+  assert.equal(cleared.reasoning_effort, null, 'null: back to the provider default');
+
+  await assert.rejects(
+    () => service.update('tenant-1', id, { reasoning_effort: 'extreme' as any }),
+    /reasoning_effort must be one of low, medium, high, xhigh, max, or null/,
+  );
+  assert.equal(state.configs[0].reasoning_effort, null, 'a refused value changes nothing');
+}
+
+// The effort must be one the provider and model accept (reasoning-effort.capability.ts): a 400
+// otherwise, on create and on update, also when only the model changes.
+async function testReasoningEffortMustSuitTheProviderAndModel() {
+  const state = createState();
+  const manager = createManager(state);
+  const audit = { log: async () => undefined };
+  const service = new AiModelConfigService({ manager } as any, createRegistryMock() as any, mockCipher as any, audit as any);
+
+  await assert.rejects(
+    () => service.create('tenant-1', { name: 'Old Haiku', provider: 'anthropic', model: 'claude-haiku-4-5', reasoning_effort: 'low' }),
+    (error: any) => error instanceof BadRequestException && /claude-haiku-4-5 takes no reasoning effort/.test(error.message),
+  );
+  await assert.rejects(
+    () => service.create('tenant-1', { name: 'Sonnet', provider: 'anthropic', model: 'claude-sonnet-4-6', reasoning_effort: 'xhigh' }),
+    (error: any) => error instanceof BadRequestException
+      && /does not accept the reasoning effort xhigh\. Accepted: low, medium, high, max\./.test(error.message),
+  );
+  assert.equal(state.configs.length, 0, 'a refused create stores nothing');
+
+  const view = await service.create('tenant-1', { name: 'Opus', provider: 'anthropic', model: 'claude-opus-5-5', reasoning_effort: 'xhigh' });
+  assert.equal(view.reasoning_effort, 'xhigh');
+  const id = state.configs[0].id;
+  await assert.rejects(
+    () => service.update('tenant-1', id, { model: 'claude-opus-4-5' }),
+    /claude-opus-4-5 does not accept the reasoning effort xhigh\. Accepted: low, medium, high\./,
+  );
+  const moved = await service.update('tenant-1', id, { model: 'claude-opus-4-5', reasoning_effort: 'high' });
+  assert.equal(moved.reasoning_effort, 'high');
+
+  // OpenAI, Ollama and custom endpoints take every level KANAP stores.
+  for (const provider of ['openai', 'ollama', 'custom']) {
+    const created = await service.create('tenant-1', { name: `M ${provider}`, provider, model: 'any-model', reasoning_effort: 'max' });
+    assert.equal(created.reasoning_effort, 'max', provider);
+  }
 }
 
 async function testCreateRejectsBadProviderAndEmptyFields() {
@@ -702,6 +795,7 @@ async function run() {
     testLlmCostEurMath,
     testEstimatorsPriceByAssignedModel,
     testResolverExplicitChatAssignment,
+    testResolverSendsOnlyAnEffortTheModelAccepts,
     testResolverArchivedAssignmentFallsThroughToDefault,
     testResolverNoAssignmentUsesActiveDefault,
     testResolverBuiltinFallbackInMultiTenant,
@@ -710,6 +804,8 @@ async function run() {
     testResolverValidationErrors,
     testCreateEncryptsKeyAndNormalizesPrices,
     testCreateRejectsBadProviderAndEmptyFields,
+    testReasoningEffortIsStoredShownAndAudited,
+    testReasoningEffortMustSuitTheProviderAndModel,
     testUpdateOnArchivedEntryRejected,
     testArchiveBlockedWhileAssigned,
     testArchiveSucceedsWhenUnassignedAndClearsDefault,

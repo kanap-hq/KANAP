@@ -134,9 +134,10 @@ const CACHE_TTL_MS = 60_000;
 
 // The built-in (free-volume) provider runs reasoning models with capped thinking so
 // latency and cost stay bounded for the shared free tier. Hardwired by design: it is
-// applied wherever the built-in runtime is used and NEVER for tenant-provided
-// configurations (see AiStreamParams.reasoningEffort).
-export const BUILTIN_REASONING_EFFORT = 'low' as const;
+// applied wherever the built-in runtime is used (ResolvedModel.reasoningEffort). Registry
+// models send their own setting instead, if any. Medium since the Plaid model bench of
+// 2026-11-01: Haiku 5.5 at medium matched Sonnet 5.5 at low, with a p90 of about 21 s.
+export const BUILTIN_REASONING_EFFORT = 'medium' as const;
 
 function normalizeNullableString(value: string | null | undefined): string | null {
   if (value == null) return null;

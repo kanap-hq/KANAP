@@ -2653,10 +2653,26 @@
       "timeout": "Zeitlimit",
       "timeoutPlaceholder": "z. B. 120",
       "timeoutHint": "Wie lange, in Sekunden, auf dieses Modell gewartet wird, bevor abgebrochen wird. Leer lassen für das Standardlimit. Lokale Modelle brauchen oft mehr Zeit.",
+      "reasoningEffort": "Denkaufwand",
+      "reasoningEffortDefault": "Standard des Anbieters",
+      "reasoningEffortHint": "Wie viel das Modell nachdenkt, bevor es antwortet. Mehr Aufwand: sorgfältigere, langsamere und teurere Antworten. Die angebotenen Stufen hängen von Anbieter und Modell ab. „Verbindung testen“ zeigt den gesendeten Aufwand.",
+      "reasoningEffortValues": {
+        "low": "Niedrig",
+        "medium": "Mittel",
+        "high": "Hoch",
+        "xhigh": "Sehr hoch",
+        "max": "Maximal"
+      },
+      "reasoningEffortUnavailable": "Dieses Modell nimmt keinen Denkaufwand an.",
+      "reasoningEffortMayBeIgnored": "Dieser Server kann den Denkaufwand ignorieren. „Verbindung testen“ zeigt, ob das Modell nachgedacht hat.",
       "defaultLabel": "Als Standardmodell verwenden",
       "test": "Verbindung testen",
       "testing": "Test läuft…",
-      "testOk": "Verbindung erfolgreich ({{latency}} ms)."
+      "testOk": "Verbindung erfolgreich ({{latency}} ms).",
+      "testEffortSent": "Gesendeter Aufwand: {{effort}}.",
+      "testEffortNotSent": "Kein Aufwand gesendet.",
+      "testReasoningTokens_one": "{{count}} Denk-Token.",
+      "testReasoningTokens_other": "{{count}} Denk-Tokens."
     }
   },
   "aiUsage": {

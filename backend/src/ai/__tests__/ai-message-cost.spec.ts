@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { z } from 'zod';
 import { llmCostEur, NO_CACHE_DISCOUNT } from '../ai-llm-cost.util';
-import { buildMessageUsageJson } from '../ai-message-usage.util';
+import { buildMessageUsageJson, publicMessageUsage } from '../ai-message-usage.util';
 import { ResolvedModel } from '../ai-model-resolver.service';
 import { agentCallCostEur, AiAgentLlmClient } from '../control-plane/agent-control/ai-agent-llm-client';
 import { AiProviderAdapter, AiStreamEvent } from '../providers/ai-provider.types';
@@ -105,6 +105,7 @@ function testMessageUsageJsonForIncludedModel() {
       provider: 'anthropic',
       model: 'claude-sonnet-5-5',
       source: 'builtin',
+      reasoningEffort: 'low',
       priceInputEurPerMtok: 0,
       priceOutputEurPerMtok: 0,
       priceCacheReadEurPerMtok: 0,
@@ -119,6 +120,7 @@ function testMessageUsageJsonForIncludedModel() {
     provider: 'anthropic',
     model: 'claude-sonnet-5-5',
     model_source: 'builtin',
+    reasoning_effort: 'low',
     price_input_eur_per_mtok: 0,
     price_output_eur_per_mtok: 0,
     price_cache_read_eur_per_mtok: 0,
@@ -128,6 +130,7 @@ function testMessageUsageJsonForIncludedModel() {
     provider: 'anthropic',
     model: 'claude-sonnet-5-5',
     source: 'builtin',
+    reasoningEffort: 'low',
     priceInputEurPerMtok: 0,
     priceOutputEurPerMtok: 0,
     priceCacheReadEurPerMtok: 0,
@@ -142,6 +145,7 @@ function testMessageUsageJsonForPricedModel() {
       provider: 'anthropic',
       model: 'claude-sonnet-5-5',
       source: 'registry',
+      reasoningEffort: 'xhigh',
       priceInputEurPerMtok: 3,
       priceOutputEurPerMtok: 15,
       priceCacheReadEurPerMtok: null,
@@ -149,6 +153,7 @@ function testMessageUsageJsonForPricedModel() {
     },
   );
   assert.equal(anthropic?.model_source, 'registry');
+  assert.equal(anthropic?.reasoning_effort, 'xhigh', 'the effort sent is recorded with the model');
   assert.equal(anthropic?.price_input_eur_per_mtok, 3);
   assert.equal(anthropic?.price_output_eur_per_mtok, 15);
   assert.equal(anthropic?.price_cache_read_eur_per_mtok, null);
@@ -161,6 +166,7 @@ function testMessageUsageJsonForPricedModel() {
       provider: 'openai',
       model: 'gpt-4o',
       source: 'registry',
+      reasoningEffort: null,
       priceInputEurPerMtok: 2,
       priceOutputEurPerMtok: 8,
       priceCacheReadEurPerMtok: null,
@@ -173,6 +179,7 @@ function testMessageUsageJsonForPricedModel() {
     provider: 'openai',
     model: 'gpt-4o',
     model_source: 'registry',
+    reasoning_effort: null,
     price_input_eur_per_mtok: 2,
     price_output_eur_per_mtok: 8,
     price_cache_read_eur_per_mtok: null,
@@ -187,6 +194,7 @@ function testMessageUsageJsonForPricedModel() {
       provider: 'openai',
       model: 'mistral-medium-latest',
       source: 'registry',
+      reasoningEffort: 'max',
       priceInputEurPerMtok: 2,
       priceOutputEurPerMtok: 6,
       priceCacheReadEurPerMtok: 0.2,
@@ -194,6 +202,9 @@ function testMessageUsageJsonForPricedModel() {
     },
   );
   assert.equal(mistral?.price_cache_read_eur_per_mtok, 0.2);
+  assert.equal(mistral?.reasoning_effort, 'max');
+  // The chat screen receives the tokens only: no effort, price or cost.
+  assert.deepEqual(publicMessageUsage(mistral), { input_tokens: 1_000_000, output_tokens: 10_000, cache_read_input_tokens: 990_000 });
   assert.equal(mistral?.cache_read_input_tokens, 990_000);
   assert.equal(mistral?.cost_eur, 0.278);
 }
@@ -267,6 +278,7 @@ async function testAgentCallCostUsesCacheReadPrice() {
     priceInputEurPerMtok: 2,
     priceOutputEurPerMtok: 6,
     priceCacheReadEurPerMtok: 0.2,
+    reasoningEffort: 'high',
     timeoutMs: null,
     builtinRateLimits: null,
   } as ResolvedModel;
@@ -297,6 +309,7 @@ async function testAgentCallCostUsesCacheReadPrice() {
   assert.ok(result?.ok, 'the second answer parses');
   assert.equal(adapter.calls, 2);
   assert.equal(result.runtime?.priceCacheReadEurPerMtok, 0.2);
+  assert.equal(result.runtime?.reasoningEffort, 'high', 'the agent runtime carries the model effort');
   assert.deepEqual(result.runtime?.cacheCostFactors, NO_CACHE_DISCOUNT);
   assert.deepEqual(result.usage, {
     input_tokens: 210_000,

@@ -7,19 +7,25 @@ import {
   PROVIDER_TEST_MAX_RETRIES,
   PROVIDER_TEST_MAX_TOKENS,
   PROVIDER_TEST_TIMEOUT_MS,
+  PROVIDER_TEST_USAGE_GRACE_MS,
 } from './provider-test.constants';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 import {
   AiProviderSettingsSnapshot,
   AiProviderTestResult,
+  AiReasoningEffort,
   AiStreamEvent,
 } from './providers/ai-provider.types';
+import { reasoningEffortToSend } from './providers/reasoning-effort.capability';
 
 export type AiProviderTestInput = {
   llm_provider?: string | null;
   llm_model?: string | null;
   llm_endpoint_url?: string | null;
   llm_api_key?: string | null;
+  // The registry model's reasoning effort, sent as a chat call would send it (not at all when the
+  // model does not accept it), so the test shows a provider that refuses the value.
+  reasoning_effort?: AiReasoningEffort | null;
 };
 
 function normalizeNullableString(value: unknown): string | null {
@@ -112,6 +118,7 @@ export class AiProviderTestService {
       };
     }
 
+    const effortSent = reasoningEffortToSend(provider, model, input.reasoning_effort);
     try {
       const stream = adapter.createStream({
         model: model!,
@@ -123,33 +130,57 @@ export class AiProviderTestService {
         maxTokens: PROVIDER_TEST_MAX_TOKENS,
         timeoutMs: PROVIDER_TEST_TIMEOUT_MS,
         maxRetries: PROVIDER_TEST_MAX_RETRIES,
+        reasoningEffort: effortSent,
       });
 
-      const iterator = stream[Symbol.asyncIterator]();
+      // The answer is read to its end (a few tokens) when it comes within a short grace after the
+      // first event: the usage that closes it says whether the model reasoned. A stream still open
+      // after that is a success without that figure. The latency stays the time to the first event,
+      // and closing the stream releases its connection.
+      const iterator = (stream as AsyncIterable<AiStreamEvent>)[Symbol.asyncIterator]();
+      let latencyMs: number | null = null;
+      let reasoningTokens: number | null = null;
+      let graceTimer: NodeJS.Timeout | undefined;
       try {
-        const first = await iterator.next();
-        if (!first.done && (first.value as AiStreamEvent | undefined)?.type === 'error') {
-          return this.fail({
-            provider,
-            model,
-            startedAt,
-            message: (first.value as { message?: string }).message || 'Provider test failed.',
-            validationErrors: [],
-          });
+        let deadline: Promise<'grace'> | null = null;
+        for (;;) {
+          const next = iterator.next();
+          const result = deadline ? await Promise.race([next, deadline]) : await next;
+          if (result === 'grace' || result.done) break;
+          const event = result.value;
+          if (latencyMs === null) {
+            latencyMs = Date.now() - startedAt;
+            deadline = new Promise((resolve) => { graceTimer = setTimeout(() => resolve('grace'), PROVIDER_TEST_USAGE_GRACE_MS); });
+          }
+          if (event.type === 'error') {
+            return this.fail({
+              provider,
+              model,
+              startedAt,
+              message: event.message || 'Provider test failed.',
+              validationErrors: [],
+            });
+          }
+          if (event.type === 'done') {
+            reasoningTokens = event.usage?.reasoning_tokens ?? null;
+            break;
+          }
         }
-
-        return {
-          ok: true,
-          provider,
-          model,
-          latency_ms: Date.now() - startedAt,
-          message: 'Provider test succeeded.',
-          validation_errors: [],
-        };
       } finally {
-        // Only the first event is read: closing the stream releases its connection.
+        clearTimeout(graceTimer);
         await iterator.return?.(undefined).catch(() => undefined);
       }
+
+      return {
+        ok: true,
+        provider,
+        model,
+        latency_ms: latencyMs ?? Date.now() - startedAt,
+        message: 'Provider test succeeded.',
+        validation_errors: [],
+        reasoning_effort_sent: effortSent,
+        reasoning_tokens: reasoningTokens,
+      };
     } catch (error) {
       return this.fail({
         provider,

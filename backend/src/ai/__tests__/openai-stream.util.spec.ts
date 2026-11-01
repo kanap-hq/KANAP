@@ -464,7 +464,14 @@ async function testReasoningEffortIsSentOnlyWhenRequested() {
   await collectEvents(openaiCompatibleStream({ ...baseParams, reasoningEffort: 'low' }));
   assert.equal(state.requests[0].reasoning_effort, 'low');
 
-  // Tenant-provided configurations never set the field — the request must not carry it.
+  // A registry model's effort goes out as set, the values above high included.
+  for (const effort of ['xhigh', 'max'] as const) {
+    resetState([{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }]);
+    await collectEvents(openaiCompatibleStream({ ...baseParams, model: 'deepseek-v4', reasoningEffort: effort }));
+    assert.equal(state.requests[0].reasoning_effort, effort);
+  }
+
+  // No effort set (the provider's default): the request does not carry the field.
   resetState([{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }]);
   await collectEvents(openaiCompatibleStream({ ...baseParams }));
   assert.equal('reasoning_effort' in state.requests[0], false);
@@ -472,6 +479,40 @@ async function testReasoningEffortIsSentOnlyWhenRequested() {
   resetState([{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }]);
   await collectEvents(openaiCompatibleStream({ ...baseParams, reasoningEffort: null }));
   assert.equal('reasoning_effort' in state.requests[0], false);
+}
+
+// A compatible server that does not take the value refuses the call: the stream fails with the
+// server's own message (the connection test shows it), without a retry that drops the field.
+async function testRefusedReasoningEffortFailsWithTheProviderMessage() {
+  resetState([]);
+  const refused = Object.assign(new Error('400 Bad Request'), {
+    status: 400,
+    error: { message: 'unknown variant `max`, expected one of `low`, `medium`, `high` for reasoning_effort' },
+  });
+  state.createErrors = [refused];
+
+  await assert.rejects(
+    collectEvents(openaiCompatibleStream({
+      providerId: 'custom',
+      model: 'some-model',
+      apiKey: 'test-key',
+      endpointUrl: null,
+      systemPrompt: 'Be precise.',
+      messages: [{ role: 'user', content: 'Hello' }],
+      tools: [],
+      maxTokens: 128,
+      reasoningEffort: 'max',
+    })),
+    (error: Error) => {
+      assert.equal(
+        error.message,
+        'AI provider request failed (HTTP 400): unknown variant `max`, expected one of `low`, `medium`, `high` for reasoning_effort',
+      );
+      return true;
+    },
+  );
+  assert.equal(state.requests.length, 1);
+  assert.equal(state.requests[0].reasoning_effort, 'max');
 }
 
 async function testOpenAiAsksForTheStreamUsageAndReadsItFromTheLastChunk() {
@@ -528,6 +569,38 @@ async function testOpenAiAsksForTheStreamUsageAndReadsItFromTheLastChunk() {
   ]);
 }
 
+// The reasoning tokens a response reports (completion_tokens_details) reach the usage, so the
+// connection test can say whether the model reasoned; absent, the usage has no such field.
+async function testReasoningTokensAreReadFromTheUsage() {
+  const baseParams = {
+    model: 'gpt-5-mini',
+    apiKey: 'test-key',
+    systemPrompt: 'Be precise.',
+    messages: [{ role: 'user', content: 'Hello' }],
+    tools: [],
+    maxTokens: 16,
+  };
+  resetState([
+    { choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] },
+    {
+      choices: [],
+      usage: { prompt_tokens: 20, completion_tokens: 14, completion_tokens_details: { reasoning_tokens: 12 } },
+    },
+  ]);
+  const events = await collectEvents(openaiCompatibleStream({ ...baseParams, providerId: 'openai', endpointUrl: null }));
+  assert.deepEqual(events.find((event) => event.type === 'done')?.usage, {
+    input_tokens: 20,
+    output_tokens: 14,
+    reasoning_tokens: 12,
+  });
+
+  resetState([
+    { choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }], usage: { prompt_tokens: 20, completion_tokens: 2, completion_tokens_details: null } },
+  ]);
+  const plain = await collectEvents(openaiCompatibleStream({ ...baseParams, providerId: 'custom', endpointUrl: 'https://openrouter.example/api/v1' }));
+  assert.deepEqual(plain.find((event) => event.type === 'done')?.usage, { input_tokens: 20, output_tokens: 2 });
+}
+
 async function run() {
   await testReasoningModelsPreferDeveloperRole();
   await testLengthFinishReasonWithPendingToolCallEmitsError();
@@ -542,7 +615,9 @@ async function run() {
   await testXmlStyleToolCallStreamErrorDiscardsPartialNativeToolCall();
   await testReasoningModelHelpers();
   await testReasoningEffortIsSentOnlyWhenRequested();
+  await testRefusedReasoningEffortFailsWithTheProviderMessage();
   await testOpenAiAsksForTheStreamUsageAndReadsItFromTheLastChunk();
+  await testReasoningTokensAreReadFromTheUsage();
 }
 
 void run();
