@@ -944,7 +944,7 @@ async function importCsv(name, route, extraQuery = '') {
 }
 
 /**
- * Fills the default English criteria of three demands, so the list shows distinct scores.
+ * Fills the default English criteria of every demand, so the list shows distinct scores.
  * The criterion ids belong to the tenant: they are resolved by name and label. A tenant
  * whose criteria are not that set is left as it is. A demand that already holds these
  * values is left as it is, so a re-run changes nothing.
@@ -981,6 +981,50 @@ async function scoreRequests() {
     }
   }
   ok(`Demand scores: ${updated} set, ${unchanged} already set`);
+}
+
+/**
+ * The best-scored demand (Cave Climate Digital Twin, already approved) becomes a project.
+ * A re-run finds the link the conversion wrote. The requests file still says approved, so
+ * a later import puts the status back: the link is kept and the status is set to converted
+ * again, without a second project.
+ */
+const CAVE_REQUEST_NAME = 'Cave Climate Digital Twin';
+
+async function caveProjectId() {
+  const requests = await getAll('/portfolio/requests?limit=1000&status=all');
+  const request = requests.find((item) => item.name === CAVE_REQUEST_NAME);
+  if (!request?.id) return '';
+  const detail = await apiGet(`/portfolio/requests/${request.id}?include=projects`);
+  const linked = Array.isArray(detail?.resulting_projects) ? detail.resulting_projects : [];
+  return linked[0]?.id ?? '';
+}
+
+async function ensureCaveRequestConverted() {
+  const requests = await getAll('/portfolio/requests?limit=1000&status=all');
+  const request = requests.find((item) => item.name === CAVE_REQUEST_NAME);
+  if (!request?.id) {
+    warn(`Demand '${CAVE_REQUEST_NAME}' not found; it was not converted`);
+    return;
+  }
+  const projectId = await caveProjectId();
+  if (projectId) {
+    if (request.status !== 'converted') {
+      await apiPatch(`/portfolio/requests/${request.id}`, { status: 'converted' });
+    }
+    return;
+  }
+  if (request.status !== 'approved') {
+    warn(`Demand '${CAVE_REQUEST_NAME}' is '${request.status}'; it was not converted`);
+    return;
+  }
+  await apiPost(`/portfolio/requests/${request.id}/convert`, {
+    planned_start: shiftedDate('2026-02-01'),
+    planned_end: shiftedDate('2027-09-30'),
+    estimated_effort_it: 35,
+    estimated_effort_business: 12,
+  });
+  ok(`Converted '${CAVE_REQUEST_NAME}' into a project`);
 }
 
 /** The data set's own dimension values, named in the tenant's seed language. English sends the file as it is. */
@@ -1736,12 +1780,24 @@ async function ensurePortfolioTeamsAndCapacity() {
     if (existingId) await apiPatch(`/portfolio/teams/${existingId}`, body);
     else await apiPost('/portfolio/teams', body);
   }
+  // Everyone who carries remaining effort on a project the capacity report counts
+  // (its lead or a member of its IT or business team). A person without a profile
+  // is a line with no capacity.
   const teamByEmail = [
     ['sophie.laurent@fromage-co.example', 'Business Applications'],
     ['marc.petit@fromage-co.example', 'Development'],
     ['pierre.martin@fromage-co.example', 'Infrastructure'],
     ['lucas.bernard@fromage-co.example', 'Infrastructure'],
     ['clara.dupont@fromage-co.example', 'Business Applications'],
+    ['amelie.rousseau@fromage-co.example', 'Development'],
+    ['hugo.mercier@fromage-co.example', 'Development'],
+    ['thomas.berger@fromage-co.example', 'Infrastructure'],
+    ['jan.bakker@kaasmeester.example', 'Business Applications'],
+    ['luca.ferrari@formaggio-supremo.example', 'Business Applications'],
+    ['maria.casanova@fromage-co.example', 'Business Applications'],
+    ['isabelle.moreau@fromage-co.example', 'Business Applications'],
+    ['jacques.dubois@fromage-co.example', 'Business Applications'],
+    ['catherine.blanc@fromage-co.example', 'Business Applications'],
   ];
   for (const [email, team] of teamByEmail) {
     const userId = await userIdByEmail(email);
@@ -1776,6 +1832,12 @@ const PROJECT_PHASES = {
     ['Italy Rollout', '2026-03-01', '2026-08-31', 'pending'],
     ['US Rollout', '2026-08-01', '2026-12-31', 'pending'],
   ],
+  'Cave Climate Digital Twin': [
+    ['Sensor history baseline', '2026-02-01', '2026-06-30', 'completed'],
+    ['Airflow and temperature model', '2026-05-01', '2026-12-31', 'in_progress'],
+    ['Cave master review', '2026-10-01', '2027-03-31', 'pending'],
+    ['Remote cave management', '2027-01-15', '2027-09-30', 'pending'],
+  ],
 };
 
 async function ensureProjectPhases() {
@@ -1804,6 +1866,7 @@ async function ensureProjectPhases() {
 
 const IT_TEAM_EMAILS = new Set([
   'sophie.laurent@fromage-co.example', 'lucas.bernard@fromage-co.example', 'pierre.martin@fromage-co.example',
+  'marc.petit@fromage-co.example',
   'thomas.berger@fromage-co.example', 'amelie.rousseau@fromage-co.example', 'clara.dupont@fromage-co.example',
   'jan.bakker@kaasmeester.example', 'luca.ferrari@formaggio-supremo.example', 'hugo.mercier@fromage-co.example',
 ]);
@@ -1819,6 +1882,7 @@ const PROJECT_TEAMS = {
   'Customer 360 Data Contracts': ['clara.dupont@fromage-co.example', 'jan.bakker@kaasmeester.example', 'luca.ferrari@formaggio-supremo.example'],
   'Branch Network Segmentation': ['lucas.bernard@fromage-co.example', 'pierre.martin@fromage-co.example', 'thomas.berger@fromage-co.example'],
   'Endpoint Compliance Automation': ['sophie.laurent@fromage-co.example', 'pierre.martin@fromage-co.example', 'lucas.bernard@fromage-co.example'],
+  'Cave Climate Digital Twin': ['marc.petit@fromage-co.example', 'jacques.dubois@fromage-co.example', 'catherine.blanc@fromage-co.example'],
 };
 
 async function ensureProjectTeams() {
@@ -1843,6 +1907,91 @@ async function ensureProjectTeams() {
     if (bizIds.length) await apiPost(`/portfolio/projects/${projectId}/business-team/bulk-replace`, { user_ids: [...new Set(bizIds)] });
   }
   ok('Project teams ensured');
+}
+
+// Time booked on the converted project, after its tasks exist. The note is the
+// identity of a row: a re-run that finds it adds nothing. Days stay in the past
+// of a load made in the dataset year (the project route refuses a future day).
+const CAVE_TASK_TIME = [
+  { title: 'Collect CaveGuard sensor history', email: 'marc.petit@fromage-co.example', category: 'it', hours: 16, day: '2026-06-12', notes: 'Sample data: CaveGuard history review' },
+  { title: 'Model cave airflow and temperature', email: 'marc.petit@fromage-co.example', category: 'it', hours: 24, day: '2026-09-18', notes: 'Sample data: airflow model' },
+  { title: 'Calibrate microbial activity with the cave masters', email: 'jacques.dubois@fromage-co.example', category: 'business', hours: 8, day: '2026-10-08', notes: 'Sample data: cave master calibration' },
+];
+
+const CAVE_PROJECT_TIME = [
+  { email: 'marc.petit@fromage-co.example', category: 'it', hours: 8, day: '2026-10-16', notes: 'Sample data: twin steering' },
+  { email: 'jacques.dubois@fromage-co.example', category: 'business', hours: 8, day: '2026-10-22', notes: 'Sample data: production workshop' },
+];
+
+async function ensureCaveProjectStory() {
+  const projectId = await caveProjectId();
+  if (!projectId) {
+    warn(`Project of '${CAVE_REQUEST_NAME}' not found; its effort and links were not set`);
+    return;
+  }
+  await apiPatch(`/portfolio/projects/${projectId}`, {
+    status: 'in_progress',
+    planned_start: shiftedDate('2026-02-01'),
+    planned_end: shiftedDate('2027-09-30'),
+    estimated_effort_it: 35,
+    estimated_effort_business: 12,
+    execution_progress: 30,
+  });
+
+  const appId = await appIdByName('CaveGuard IoT');
+  if (appId) await apiPost(`/portfolio/projects/${projectId}/applications/bulk-replace`, { application_ids: [appId] });
+  else warn(`Application 'CaveGuard IoT' not found for '${CAVE_REQUEST_NAME}'`);
+
+  const spendId = await spendIdByName('CaveGuard IoT Platform');
+  if (spendId) await apiPost(`/portfolio/projects/${projectId}/opex/bulk-replace`, { opex_ids: [spendId] });
+  else warn(`Spend item 'CaveGuard IoT Platform' not found for '${CAVE_REQUEST_NAME}'`);
+
+  const tasks = items(await apiGet(`/portfolio/projects/${projectId}/tasks`));
+  const taskIdByTitle = new Map(tasks.map((task) => [task.title, task.id]));
+  const userIds = new Map();
+  const userOf = async (email) => {
+    if (!userIds.has(email)) userIds.set(email, await userIdByEmail(email));
+    return userIds.get(email);
+  };
+
+  let booked = 0;
+  for (const entry of CAVE_TASK_TIME) {
+    const taskId = taskIdByTitle.get(entry.title);
+    const userId = await userOf(entry.email);
+    if (!taskId || !userId) {
+      warn(`Time entry '${entry.notes}' was not booked`);
+      continue;
+    }
+    const existing = items(await apiGet(`/portfolio/projects/${projectId}/tasks/${taskId}/time-entries`));
+    if (existing.some((row) => row.notes === entry.notes)) continue;
+    await apiPost(`/portfolio/projects/${projectId}/tasks/${taskId}/time-entries`, {
+      user_id: userId,
+      hours: entry.hours,
+      category: entry.category,
+      notes: entry.notes,
+      logged_at: shiftedDate(entry.day),
+    });
+    booked += 1;
+  }
+
+  const projectEntries = items(await apiGet(`/portfolio/projects/${projectId}/time-entries`));
+  for (const entry of CAVE_PROJECT_TIME) {
+    if (projectEntries.some((row) => row.notes === entry.notes)) continue;
+    const userId = await userOf(entry.email);
+    if (!userId) {
+      warn(`Time entry '${entry.notes}' was not booked`);
+      continue;
+    }
+    await apiPost(`/portfolio/projects/${projectId}/time-entries`, {
+      user_id: userId,
+      hours: entry.hours,
+      category: entry.category,
+      notes: entry.notes,
+      logged_at: shiftedDate(entry.day),
+    });
+    booked += 1;
+  }
+  ok(`'${CAVE_REQUEST_NAME}': effort and links ensured (${booked} time entries added)`);
 }
 
 const COMPANY_ALLOCATIONS = [
@@ -2157,6 +2306,7 @@ async function runImports(language) {
   await importCsv('16-portfolio-projects.csv', '/portfolio/projects/import');
   await importCsv('17-portfolio-requests.csv', '/portfolio/requests/import');
   await scoreRequests();
+  await ensureCaveRequestConverted();
   step('assets');
   const locationIdByFixtureCode = await ensureLocations();
   await ensureAssets(locationIdByFixtureCode);
@@ -2674,6 +2824,7 @@ async function runRelations() {
   await ensurePortfolioTeamsAndCapacity();
   await ensureProjectPhases();
   await ensureProjectTeams();
+  await ensureCaveProjectStory();
   step('allocations');
   await ensureCompanyAllocations();
 }

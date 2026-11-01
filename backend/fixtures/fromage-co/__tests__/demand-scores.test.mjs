@@ -1,4 +1,4 @@
-// The three Fromage demands resolve to distinct scores on the default criteria.
+// The Fromage demands resolve to distinct scores on the default criteria.
 //
 //   node --test backend/fixtures/fromage-co/__tests__/demand-scores.test.mjs
 
@@ -43,24 +43,23 @@ const REQUESTS = [
   { id: 'r-warehouse', name: 'Automated Warehouse Inventory', criteria_values: {} },
 ];
 
-test('the three demands are rows of the requests file and the warehouse is left out', () => {
+test('every demand of the requests file is scored', () => {
   const rows = parseCsv(readFileSync(path.join(DIR, '17-portfolio-requests.csv'), 'utf8'));
   const names = rows.map((row) => row.name);
   assert.deepEqual(DEMAND_SCORES.map((demand) => demand.name), [
     'Cave Climate Digital Twin',
     'AI Cheese Grading',
     'Smart Packaging Automation',
+    'Automated Warehouse Inventory',
   ]);
-  for (const demand of DEMAND_SCORES) assert.ok(names.includes(demand.name), demand.name);
-  assert.ok(names.includes('Automated Warehouse Inventory'));
-  assert.equal(DEMAND_SCORES.some((demand) => demand.name === 'Automated Warehouse Inventory'), false);
+  assert.deepEqual(names.slice().sort(), DEMAND_SCORES.map((demand) => demand.name).slice().sort());
 });
 
 test('an empty selection on the default criteria scores 50', () => {
   assert.equal(demandScore(criteriaFromDefaults(), {}), 50);
 });
 
-test('the three demands score about 64, 44 and 26, and a second plan is the same', () => {
+test('the four demands score about 64, 44, 26 and 38, and a second plan is the same', () => {
   const criteria = criteriaFromDefaults({ weight: '1.00' });
   const first = planDemandScores(criteria, REQUESTS);
   const second = planDemandScores(criteria, REQUESTS);
@@ -68,11 +67,12 @@ test('the three demands score about 64, 44 and 26, and a second plan is the same
   assert.deepEqual(first.missing, []);
   assert.deepEqual(second, first);
   assert.deepEqual(first.assignments.map((assignment) => assignment.name), DEMAND_SCORES.map((demand) => demand.name));
-  assert.equal(first.assignments.some((assignment) => assignment.requestId === 'r-warehouse'), false);
+  assert.equal(first.assignments.some((assignment) => assignment.requestId === 'r-warehouse'), true);
 
   const scores = first.assignments.map((assignment) => demandScore(criteria, assignment.criteria_values));
-  assert.deepEqual(scores, [63.75, 43.96, 26.46]);
-  assert.deepEqual(scores.map((score) => Math.round(score)), [64, 44, 26]);
+  assert.deepEqual(scores, [63.75, 43.96, 26.46, 37.92]);
+  assert.deepEqual(scores.map((score) => Math.round(score)), [64, 44, 26, 38]);
+  assert.equal(new Set(scores).size, scores.length, 'the scores are contrasted');
 
   const cave = first.assignments[0];
   assert.equal(cave.criteria_values['c-0'], 'c-0-v-3', 'business value 200-500k€');
@@ -107,5 +107,6 @@ test('a missing demand is reported and the others are still scored', () => {
   assert.deepEqual(plan.assignments.map((assignment) => assignment.name), [
     'Cave Climate Digital Twin',
     'Smart Packaging Automation',
+    'Automated Warehouse Inventory',
   ]);
 });

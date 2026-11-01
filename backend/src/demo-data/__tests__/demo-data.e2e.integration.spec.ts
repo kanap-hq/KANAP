@@ -48,6 +48,9 @@ import { DemoDataService, DemoDataState } from '../demo-data.service';
 //   added next to them, and every line has a cost pool, an IT tower and a business domain;
 //   business domain and budget reference are named in French too ("IT partagée" for "Shared IT");
 // - every contact has the supplier and contact type of 09b-contact-suppliers.csv;
+// - every portfolio request has a priority score, the scores differ, Cave Climate
+//   Digital Twin is converted into its project, and the capacity report has a
+//   contributor profile on every line;
 // - the loader's token is refused (401) on another tenant's host, accepted on its own;
 // - the reset brings the tenant back to the state of activation, table by table;
 // - a loader that fails half-way (an injected server error on the contracts import) ends
@@ -688,6 +691,105 @@ async function checkIncidents(tenantId: string) {
   assert.equal(clusters, 0, 'no incident linked to a cluster');
 }
 
+/** Counts that a second load of the portfolio story must leave unchanged. */
+async function portfolioFingerprint(tenantId: string): Promise<Record<string, number>> {
+  const [row] = await inTenant(tenantId, (m) => m.query(
+    `SELECT
+       (SELECT count(*)::int FROM portfolio_requests WHERE tenant_id = $1) AS requests,
+       (SELECT count(*)::int FROM portfolio_request_projects WHERE tenant_id = $1) AS links,
+       (SELECT count(*)::int FROM portfolio_projects WHERE tenant_id = $1 AND name = 'Cave Climate Digital Twin') AS cave_projects,
+       (SELECT count(*)::int FROM tasks t
+          JOIN portfolio_projects p ON p.id = t.related_object_id AND p.tenant_id = t.tenant_id
+         WHERE t.tenant_id = $1 AND t.related_object_type = 'project' AND p.name = 'Cave Climate Digital Twin') AS cave_tasks,
+       (SELECT count(*)::int FROM portfolio_project_phases ph
+          JOIN portfolio_projects p ON p.id = ph.project_id AND p.tenant_id = ph.tenant_id
+         WHERE ph.tenant_id = $1 AND p.name = 'Cave Climate Digital Twin') AS cave_phases,
+       (SELECT count(*)::int FROM portfolio_project_time_entries e
+          JOIN portfolio_projects p ON p.id = e.project_id AND p.tenant_id = e.tenant_id
+         WHERE e.tenant_id = $1 AND p.name = 'Cave Climate Digital Twin') AS project_time,
+       (SELECT count(*)::int FROM task_time_entries e
+          JOIN tasks t ON t.id = e.task_id AND t.tenant_id = e.tenant_id
+          JOIN portfolio_projects p ON p.id = t.related_object_id AND p.tenant_id = t.tenant_id
+         WHERE t.tenant_id = $1 AND t.related_object_type = 'project' AND p.name = 'Cave Climate Digital Twin') AS task_time,
+       (SELECT count(*)::int FROM portfolio_team_member_configs WHERE tenant_id = $1) AS contributors`,
+    [tenantId],
+  ));
+  return row;
+}
+
+/**
+ * The portfolio first steps: every request scored and contrasted, the best one
+ * converted into a full project, and a contributor profile behind every capacity line.
+ */
+async function checkPortfolioStory(port: number, host: string, token: string, tenantId: string): Promise<Record<string, number>> {
+  const requests: Array<{ name: string; status: string; priority_score: string | null; criteria: number }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT name, status, priority_score::text AS priority_score,
+            (SELECT count(*)::int FROM jsonb_object_keys(COALESCE(criteria_values, '{}'::jsonb))) AS criteria
+       FROM portfolio_requests
+      WHERE tenant_id = $1
+      ORDER BY name`,
+    [tenantId],
+  ));
+  assert.deepEqual(requests.map((row) => row.name), [
+    'AI Cheese Grading',
+    'Automated Warehouse Inventory',
+    'Cave Climate Digital Twin',
+    'Smart Packaging Automation',
+  ]);
+  const scores = requests.map((row) => Number(row.priority_score));
+  assert.ok(scores.every((score) => Number.isFinite(score)), `a request has no priority score (${JSON.stringify(requests)})`);
+  assert.equal(new Set(scores).size, scores.length, `the scores are not contrasted (${scores.join(', ')})`);
+  for (const row of requests) assert.equal(row.criteria, 8, `${row.name} has ${row.criteria} criteria`);
+  const cave = requests.find((row) => row.name === 'Cave Climate Digital Twin')!;
+  assert.equal(cave.status, 'converted');
+  assert.ok(scores.every((score) => Number(cave.priority_score) >= score), 'the converted request is the best scored');
+
+  const [project] = await inTenant(tenantId, (m) => m.query(
+    `SELECT p.id, p.status,
+            p.estimated_effort_it::float AS estimated_it,
+            p.estimated_effort_business::float AS estimated_business,
+            p.actual_effort_it::float AS actual_it,
+            p.actual_effort_business::float AS actual_business,
+            (SELECT count(*)::int FROM portfolio_request_projects rp WHERE rp.project_id = p.id AND rp.tenant_id = p.tenant_id) AS links,
+            (SELECT count(*)::int FROM tasks t WHERE t.tenant_id = p.tenant_id AND t.related_object_type = 'project' AND t.related_object_id = p.id) AS tasks,
+            (SELECT count(*)::int FROM tasks t WHERE t.tenant_id = p.tenant_id AND t.related_object_type = 'project' AND t.related_object_id = p.id
+               AND t.status NOT IN ('done', 'cancelled') AND t.due_date < CURRENT_DATE) AS overdue,
+            (SELECT count(*)::int FROM portfolio_project_phases ph WHERE ph.project_id = p.id AND ph.tenant_id = p.tenant_id) AS phases,
+            (SELECT count(*)::int FROM portfolio_project_team tm WHERE tm.project_id = p.id AND tm.tenant_id = p.tenant_id AND tm.role = 'it_team') AS it_team,
+            (SELECT count(*)::int FROM portfolio_project_team tm WHERE tm.project_id = p.id AND tm.tenant_id = p.tenant_id AND tm.role = 'business_team') AS business_team,
+            (SELECT count(*)::int FROM application_projects ap WHERE ap.project_id = p.id AND ap.tenant_id = p.tenant_id) AS applications,
+            (SELECT count(*)::int FROM portfolio_project_opex o WHERE o.project_id = p.id AND o.tenant_id = p.tenant_id) AS budget_lines,
+            (SELECT count(*)::int FROM portfolio_project_time_entries e WHERE e.project_id = p.id AND e.tenant_id = p.tenant_id) AS project_time,
+            (SELECT count(*)::int FROM task_time_entries e
+               JOIN tasks t ON t.id = e.task_id AND t.tenant_id = e.tenant_id
+              WHERE t.related_object_id = p.id AND t.related_object_type = 'project' AND t.tenant_id = p.tenant_id) AS task_time
+       FROM portfolio_projects p
+      WHERE p.tenant_id = $1 AND p.name = 'Cave Climate Digital Twin'`,
+    [tenantId],
+  ));
+  assert.ok(project, 'the converted request has its project');
+  assert.equal(project.links, 1);
+  assert.equal(project.status, 'in_progress');
+  assert.ok(project.estimated_it > 0 && project.estimated_business > 0, 'planned effort');
+  assert.ok(project.actual_it > 0 && project.actual_business > 0, 'consumed effort');
+  assert.ok(project.tasks >= 6, `${project.tasks} tasks`);
+  assert.ok(project.overdue >= 1, 'one task is overdue');
+  assert.ok(project.phases >= 4, `${project.phases} phases`);
+  assert.ok(project.it_team >= 1 && project.business_team >= 1, 'both teams');
+  assert.ok(project.applications >= 1, 'an application');
+  assert.ok(project.budget_lines >= 1, 'a budget line');
+  assert.ok(project.project_time >= 1 && project.task_time >= 1, 'time on the project and on its tasks');
+
+  const heatmap = await request(port, { method: 'GET', path: '/portfolio/reports/capacity-heatmap', host, token });
+  assert.equal(heatmap.status, 200, `capacity report (${JSON.stringify(heatmap.body)})`);
+  const contributors = heatmap.body?.contributors ?? [];
+  assert.ok(contributors.length > 0, 'the capacity report has lines');
+  const withoutProfile = contributors.filter((row: { hasContributorProfile?: boolean; contributorName?: string }) => row.hasContributorProfile === false);
+  assert.deepEqual(withoutProfile.map((row: { contributorName?: string }) => row.contributorName), [], 'every capacity line has a contributor profile');
+
+  return portfolioFingerprint(tenantId);
+}
+
 async function serve(): Promise<Served> {
   // Loaded after the environment above: the modules read it when they load.
   const { AppModule } = require('../../app.module');
@@ -854,6 +956,8 @@ async function testLoadResetAndFailure() {
     await checkDimensions(a.tenantId);
     await checkContactSuppliers(a.tenantId);
     await checkIncidents(a.tenantId);
+    const portfolio = await checkPortfolioStory(served.port, hostA, served.loaderEnvs[0].KANAP_DEMO_TOKEN, a.tenantId);
+    lap('portfolio story checked');
 
     const token = served.loaderEnvs[0].KANAP_DEMO_TOKEN;
     await checkExchangeRates(served.port, hostA, token);
@@ -874,6 +978,8 @@ async function testLoadResetAndFailure() {
     await runLoader(served.loaderEnvs[0]);
     lap('idempotence load ended');
     assert.deepEqual(await vmwareSnapshot(a.tenantId), snapshot, 'a second load changes nothing');
+    assert.deepEqual(await portfolioFingerprint(a.tenantId), portfolio, 'a second load changes nothing in the portfolio story');
+    await checkPortfolioStory(served.port, hostA, token, a.tenantId);
     await checkExchangeRates(served.port, hostA, token);
 
     // ── The loader's token: refused on another tenant's host, accepted on its own ──

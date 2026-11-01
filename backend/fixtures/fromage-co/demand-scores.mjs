@@ -57,9 +57,10 @@ export const DEFAULT_CRITERIA = [
 ];
 
 /**
- * The three demands that receive a score. Automated Warehouse Inventory stays
- * empty. The labels are positions on DEFAULT_CRITERIA. The engine then stores
- * about 63.75, 43.96 and 26.46, which the demand list rounds to 64, 44 and 26.
+ * Every demand of 17-portfolio-requests.csv. The labels are positions on
+ * DEFAULT_CRITERIA. The engine then stores about 63.75, 43.96, 26.46 and
+ * 37.92, which the demand list rounds to 64, 44, 26 and 38. Cave Climate
+ * Digital Twin is the highest, and the loader converts that one.
  */
 export const DEMAND_SCORES = [
   {
@@ -99,6 +100,19 @@ export const DEMAND_SCORES = [
       Urgency: 'Low',
       'Time estimation IT': '>50 MD',
       'Time estimation Business': '>50 MD',
+    },
+  },
+  {
+    name: 'Automated Warehouse Inventory',
+    values: {
+      'Business value': '50-200k€',
+      'Strategic alignment': 'Medium',
+      'Project costs': '200-500k€',
+      ROI: '2-5y',
+      'Risk level': 'Medium',
+      Urgency: 'Low',
+      'Time estimation IT': '10-20 MD',
+      'Time estimation Business': '20-50 MD',
     },
   },
 ];
