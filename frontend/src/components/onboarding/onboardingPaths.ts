@@ -9,9 +9,11 @@ export type StepTarget = 'title' | 'composer' | 'tabs' | 'export';
 
 /**
  * `opensRecord`: the step opens one record of its list rather than the list (the largest budget
- * line of the year, the first of the most critical applications), the list when there is none.
+ * line of the year, the first of the most critical applications, the best-scored request on its
+ * scoring tab, the project resulting from the best-scored converted request), the list when there
+ * is none.
  */
-export type OpenedRecord = 'topBudgetLine' | 'mostCriticalApplication';
+export type OpenedRecord = 'topBudgetLine' | 'mostCriticalApplication' | 'topScoredRequest' | 'projectFromRequest';
 
 export type StepScreen = { to: string; target: StepTarget; opensRecord?: OpenedRecord };
 
@@ -37,11 +39,12 @@ export const STEP_SCREENS: Record<string, StepScreen> = {
   own_technologies: title('/it/technologies'),
   own_assets: title('/it/assets'),
   own_findings: title('/it/technologies/end-of-support'),
-  portfolio_request: title('/portfolio/requests'),
-  portfolio_project: title('/portfolio/projects'),
+  portfolio_request: { to: '/portfolio/requests', target: 'tabs', opensRecord: 'topScoredRequest' },
+  portfolio_project: { to: '/portfolio/projects', target: 'tabs', opensRecord: 'projectFromRequest' },
   portfolio_tasks: title('/portfolio/tasks'),
-  portfolio_time: title('/portfolio/projects'),
-  portfolio_import: title('/portfolio/projects'),
+  // The key stays (it is stored): the step now shows the portfolio reports.
+  portfolio_time: title('/portfolio/reports'),
+  portfolio_import: { to: '/portfolio/projects', target: 'export' },
   own_request: title('/portfolio/requests'),
   own_projects: title('/portfolio/projects'),
   own_tasks: title('/portfolio/tasks'),

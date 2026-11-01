@@ -1654,11 +1654,11 @@
         },
         "portfolio_request": {
           "title": "Una solicitud y su puntuación",
-          "hint": "Abra una solicitud: la necesidad, los criterios, la puntuación calculada. Una vez aprobada, se convierte en proyecto con un clic."
+          "hint": "Esta es una solicitud, en su pestaña Evaluación: los criterios y la puntuación calculada. Una vez aprobada, se convierte en proyecto con un clic."
         },
         "portfolio_import": {
           "title": "Sus datos",
-          "hint": "Exporte la lista de proyectos del ejemplo para ver su formato y luego importe la suya."
+          "hint": "Exporte la lista de proyectos del ejemplo para ver su formato y luego importe la suya. Haga lo mismo con las solicitudes y las tareas."
         },
         "own_projects": {
           "title": "Su proyecto",
@@ -1685,16 +1685,16 @@
           "hint": "Fin de soporte y vulnerabilidades conocidas de sus tecnologías, sin introducir nada más."
         },
         "portfolio_project": {
-          "title": "El proyecto que nació de ella",
-          "hint": "Abra un proyecto: objetivo, equipo, fases y, en Relaciones, la solicitud de origen, sus aplicaciones y sus líneas presupuestarias."
+          "title": "El proyecto nacido de la solicitud",
+          "hint": "Este es un proyecto nacido de una solicitud: objetivo, equipo, fases y, en Relaciones, la solicitud de origen, sus aplicaciones y sus líneas presupuestarias."
         },
         "portfolio_tasks": {
           "title": "Las tareas",
-          "hint": "Las tareas del proyecto y de otros objetos: estado, prioridad, vencimiento. Una tarea atrasada aparece en Mis tareas de la página de inicio."
+          "hint": "Todas las tareas, vinculadas a un proyecto, al presupuesto o independientes. Pruebe los filtros y la búsqueda para encontrar rápidamente las tareas que le interesan."
         },
         "portfolio_time": {
-          "title": "El tiempo y el esfuerzo",
-          "hint": "En un proyecto, la pestaña Esfuerzo compara el esfuerzo planificado con el tiempo registrado en sus tareas. Un 80 % de avance con un 20 % del esfuerzo consumido salta a la vista."
+          "title": "Los informes",
+          "hint": "Siete informes para dirigir la cartera: lo que ha pasado, lo que está en curso, lo que viene. El Mapa de calor de capacidad compara la carga de cada colaborador con su capacidad."
         },
         "own_tasks": {
           "title": "Las primeras tareas",

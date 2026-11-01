@@ -1654,11 +1654,11 @@
         },
         "portfolio_request": {
           "title": "Eine Anfrage und ihre Bewertung",
-          "hint": "Öffnen Sie eine Anfrage: der Bedarf, die Kriterien, die berechnete Punktzahl. Genehmigt wird sie mit einem Klick zum Projekt."
+          "hint": "Hier ist eine Anfrage auf ihrem Reiter Bewertung: die Kriterien und die berechnete Punktzahl. Genehmigt wird sie mit einem Klick zum Projekt."
         },
         "portfolio_import": {
           "title": "Ihre Daten",
-          "hint": "Exportieren Sie die Projektliste des Beispiels, um ihr Format zu sehen, und importieren Sie dann Ihre eigene."
+          "hint": "Exportieren Sie die Projektliste des Beispiels, um ihr Format zu sehen, und importieren Sie dann Ihre eigene. Machen Sie dasselbe mit Anfragen und Aufgaben."
         },
         "own_projects": {
           "title": "Ihr Projekt",
@@ -1685,16 +1685,16 @@
           "hint": "Supportende und bekannte Schwachstellen Ihrer Technologien, ohne weitere Eingabe."
         },
         "portfolio_project": {
-          "title": "Das daraus entstandene Projekt",
-          "hint": "Öffnen Sie ein Projekt: Ziel, Team, Phasen und unter Beziehungen die ursprüngliche Anfrage, seine Anwendungen und seine Budgetzeilen."
+          "title": "Das aus der Anfrage entstandene Projekt",
+          "hint": "Hier ist ein aus einer Anfrage entstandenes Projekt: Ziel, Team, Phasen und unter Beziehungen die ursprüngliche Anfrage, seine Anwendungen und seine Budgetzeilen."
         },
         "portfolio_tasks": {
           "title": "Die Aufgaben",
-          "hint": "Die Aufgaben des Projekts und anderer Datensätze: Status, Priorität, Fälligkeit. Eine überfällige Aufgabe erscheint unter Meine Aufgaben auf der Startseite."
+          "hint": "Alle Aufgaben, ob mit einem Projekt oder dem Budget verknüpft oder eigenständig. Probieren Sie Filter und Suche aus, um schnell die Aufgaben zu finden, die Sie interessieren."
         },
         "portfolio_time": {
-          "title": "Zeit und Aufwand",
-          "hint": "In einem Projekt vergleicht der Reiter Aufwand den geplanten Aufwand mit der auf seinen Aufgaben erfassten Zeit. 80 % Fortschritt bei 20 % verbrauchtem Aufwand fällt sofort auf."
+          "title": "Die Berichte",
+          "hint": "Sieben Berichte zur Steuerung des Portfolios: was geschehen ist, was läuft, was kommt. Die Kapazitäts-Heatmap stellt die Last jeder mitwirkenden Person ihrer Kapazität gegenüber."
         },
         "own_tasks": {
           "title": "Die ersten Aufgaben",

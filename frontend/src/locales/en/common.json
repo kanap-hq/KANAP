@@ -1654,11 +1654,11 @@
         },
         "portfolio_request": {
           "title": "A request and its score",
-          "hint": "Open a request: the need, the criteria, the computed score. Once approved, it becomes a project in one click."
+          "hint": "Here is a request, on its Scoring tab: the criteria and the computed score. Once approved, it becomes a project in one click."
         },
         "portfolio_import": {
           "title": "Your data",
-          "hint": "Export the project list of the example to see its format, then import yours."
+          "hint": "Export the project list of the example to see its format, then import yours. Do the same with requests and tasks."
         },
         "own_projects": {
           "title": "Your project",
@@ -1685,16 +1685,16 @@
           "hint": "End of support and known vulnerabilities of your technologies, with nothing more to enter."
         },
         "portfolio_project": {
-          "title": "The project it became",
-          "hint": "Open a project: objective, team, phases, and under Relations the original request, its applications and its budget lines."
+          "title": "The project born from the request",
+          "hint": "Here is a project born from a request: objective, team, phases, and under Relations the original request, its applications and its budget lines."
         },
         "portfolio_tasks": {
           "title": "Tasks",
-          "hint": "The tasks of the project and of other records: status, priority, due date. A late task shows in My tasks on the home page."
+          "hint": "Every task, whether linked to a project, to the budget or standing alone. Try the filters and the search to find the tasks you care about quickly."
         },
         "portfolio_time": {
-          "title": "Time and effort",
-          "hint": "In a project, the Effort tab compares the planned effort with the time logged on its tasks. 80% progress for 20% of the effort used shows at once."
+          "title": "The reports",
+          "hint": "Seven reports to steer the portfolio: what happened, what is under way, what comes next. The Capacity heatmap sets each contributor's workload against their capacity."
         },
         "own_tasks": {
           "title": "The first tasks",

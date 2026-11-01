@@ -1654,11 +1654,11 @@
         },
         "portfolio_request": {
           "title": "Une demande et son score",
-          "hint": "Ouvrez une demande : le besoin, les critères, le score calculé. Approuvée, elle se convertit en projet d'un clic."
+          "hint": "Voici une demande, sur son onglet Évaluation : les critères et le score calculé. Approuvée, elle se convertit en projet d'un clic."
         },
         "portfolio_import": {
           "title": "Vos données",
-          "hint": "Exportez la liste des projets de l'exemple pour voir le format, puis importez la vôtre."
+          "hint": "Exportez la liste des projets de l'exemple pour voir le format, puis importez la vôtre. Faites de même avec les demandes et les tâches."
         },
         "own_projects": {
           "title": "Votre projet",
@@ -1685,16 +1685,16 @@
           "hint": "Fins de support et failles connues de vos technologies, sans rien saisir de plus."
         },
         "portfolio_project": {
-          "title": "Le projet qui en est né",
-          "hint": "Ouvrez un projet : objectif, équipe, phases, et dans Relations la demande d'origine, ses applications et ses lignes budgétaires."
+          "title": "Le projet issu de la demande",
+          "hint": "Voici un projet issu d'une demande : objectif, équipe, phases, et dans Relations la demande d'origine, ses applications et ses lignes budgétaires."
         },
         "portfolio_tasks": {
           "title": "Les tâches",
-          "hint": "Les tâches du projet et des autres objets : statut, priorité, échéance. Une tâche en retard remonte dans Mes tâches de l'accueil."
+          "hint": "La liste de toutes les tâches, qu'elles soient liées à un projet, au budget ou indépendantes. Testez les filtres et la recherche pour rapidement trouver les tâches qui vous intéressent."
         },
         "portfolio_time": {
-          "title": "Le temps et la charge",
-          "hint": "Dans un projet, l'onglet Charge compare la charge planifiée au temps saisi sur ses tâches. 80 % d'avancement pour 20 % de charge consommée, ça se voit."
+          "title": "Les rapports",
+          "hint": "Sept rapports pour piloter le portefeuille : ce qui s'est passé, ce qui est en cours, ce qui vient. Le Planning de capacité met la charge de chaque contributeur face à sa capacité."
         },
         "own_tasks": {
           "title": "Les premières tâches",
