@@ -302,8 +302,7 @@
     "newApplication": "New application",
     "newAsset": "New asset",
     "newDocument": "New document",
-    "dashboardSettings": "Dashboard settings",
-    "noTilesEnabled": "No tiles enabled. Click the settings icon to configure your dashboard.",
+    "noTilesEnabled": "No tiles enabled. Use Customize the home page to choose your tiles.",
     "allTilesEmpty": "Your tiles have nothing to show yet.",
     "blankDocument": "Blank document",
     "fromTemplate": "From template…",
@@ -332,7 +331,6 @@
     },
     "topItems": "Top lines",
     "columnY": "{{column}}, Y",
-    "topIncreases": "Top increases",
     "columnYvsYminus1": "{{column}}, Y vs Y-1",
     "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "No increases",
@@ -351,8 +349,6 @@
     "byCostCenter": "By cost center",
     "noCostCenter": "No cost center",
     "settings": {
-      "title": "Dashboard settings",
-      "description": "Enable or disable tiles, adjust their options and drag them to reorder.",
       "resetToDefaults": "Reset to defaults",
       "dragToReorder": "Drag to reorder",
       "options": {
@@ -525,8 +521,25 @@
     "budgetSettings": {
       "columns": "Amount columns",
       "tenantColumns": "Workspace columns",
-      "atLeastOne": "Choose at least one amount column.",
       "saveFailed": "Could not save the dashboard settings."
+    },
+    "sections": {
+      "work": "My work"
+    },
+    "customize": {
+      "start": "Customize the home page",
+      "done": "Done",
+      "addTile": "Add a tile",
+      "hideTile": "Hide the tile",
+      "tileOptions": "Tile options",
+      "moveSection": "Drag to move the section",
+      "hideSection": "Hide the section",
+      "showSection": "Show the section"
+    },
+    "topLinesMode": {
+      "label": "Ranking",
+      "amount": "Amount",
+      "increase": "Increase"
     }
   },
   "csv": {

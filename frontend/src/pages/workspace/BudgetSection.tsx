@@ -1,8 +1,10 @@
 import { Fragment, useCallback, useMemo, useState } from 'react';
-import { Box, Typography, Stack, Button, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Box, Typography, Stack, Button, Checkbox, Divider, FormControlLabel, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs } from '@mui/material';
 import { useTheme, type Theme } from '@mui/material/styles';
-import { useBudgetDashboardConfig } from './hooks/useBudgetDashboardConfig';
-import { TileEmptyContext, useEmptyTiles, useReportEmpty } from './tiles/emptyTiles';
+import type { DashboardTileConfig } from './hooks/useDashboardConfig';
+import TileSection, { type SectionEditing, type SectionEntry } from './TileSection';
+import { editTileList } from './tileListEditing';
+import { textTabSx, textTabsSx } from '../../theme/formSx';
 import { getDotColor } from '../../utils/statusColors';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -38,20 +40,6 @@ import FxMissingNotice, { FxMissingMark } from '../../components/finance/FxMissi
 import { mergeFxMissing, type FxMissing } from '../../components/finance/fxMissing';
 
 type ServerListResponse<T> = { items: T[]; total: number; page: number; limit: number };
-
-// Small tiles fill the end of a row before a wide Budget tile, preserving the saved visual order.
-const tileLayoutSx = (wide = false) => (theme: Theme) => ({
-  minWidth: 0,
-  flexGrow: wide ? 0 : 1,
-  flexShrink: 0,
-  flexBasis: {
-    xs: '100%',
-    md: wide ? '100%' : `calc((100% - ${theme.spacing(3)}) / 2)`,
-    lg: wide ? `calc((100% - ${theme.spacing(6)}) * 2 / 3 + ${theme.spacing(3)})` : `calc((100% - ${theme.spacing(6)}) / 3)`,
-    // Four columns, as the home tiles above.
-    xl: wide ? `calc((100% - ${theme.spacing(9)}) / 2 + ${theme.spacing(3)})` : `calc((100% - ${theme.spacing(9)}) / 4)`,
-  },
-});
 
 /** A tile row that opens what it names: neutral text, the hover background only. */
 const ROW_LINK_SX = { color: 'inherit', textDecoration: 'none', borderRadius: '5px', mx: -0.5, px: 0.5, '&:hover': { bgcolor: 'kanap.bg.hover' } } as const;
@@ -393,35 +381,76 @@ function useTileScope(tile: string): [BudgetScope, (next: BudgetScope) => void] 
   return [scope, setScope];
 }
 
+type TopLinesMode = 'amount' | 'increase';
+
+/** The Top lines ranking, by amount or by increase over last year, remembered in the browser. */
+function useTopLinesMode(): [TopLinesMode, (next: TopLinesMode) => void] {
+  const storageKey = 'kanap.dashboard.topLines.mode';
+  const [mode, setMode] = useState<TopLinesMode>(() => {
+    try {
+      return window.localStorage.getItem(storageKey) === 'increase' ? 'increase' : 'amount';
+    } catch {
+      return 'amount';
+    }
+  });
+  const choose = useCallback((next: TopLinesMode) => {
+    setMode(next);
+    try {
+      window.localStorage.setItem(storageKey, next);
+    } catch {
+      // Remembering the choice is a convenience; the tile works without storage.
+    }
+  }, []);
+  return [mode, choose];
+}
+
+/** The budget tiles: their name, as the customize menu lists them. */
+export const BUDGET_TILE_TITLE_KEYS: Record<string, string> = {
+  budget: 'dashboard.budgetSnapshot',
+  'top-lines': 'dashboard.topItems',
+  'recent-updates': 'dashboard.recentUpdates',
+  hygiene: 'dashboard.dataHygiene',
+  'my-budget': 'dashboard.myBudget.title',
+  renewals: 'dashboard.nextRenewals',
+  'cost-centers': 'dashboard.byCostCenter',
+};
+
 /** The home page's My tasks tile already lists the person's tasks. */
 export const ON_HOME_PAGE_ALREADY = new Set(['my-tasks']);
 
-/** Whether the person may read a budget tile: the tasks, the contracts, else the budget lines. */
-export function useBudgetTileAccess() {
-  const { hasLevel } = useAuth();
-  const canTasks = hasLevel('tasks', 'reader');
-  const canContracts = hasLevel('contracts', 'reader');
-  const canBudget = hasLevel('budget', 'reader');
+function budgetTileAccess(canTasks: boolean, canContracts: boolean, canBudget: boolean) {
   return {
     anyBudget: canBudget || canContracts,
     canViewTile: (id: string) => (id === 'my-tasks' ? canTasks : id === 'renewals' ? canContracts : canBudget),
   };
 }
 
+/** Whether the person may read a budget tile: the tasks, the contracts, else the budget lines. */
+export function useBudgetTileAccess() {
+  const { hasLevel } = useAuth();
+  return budgetTileAccess(hasLevel('tasks', 'reader'), hasLevel('contracts', 'reader'), hasLevel('budget', 'reader'));
+}
+
 /**
- * The budget tiles of the home page. `leading` comes first in the row (the first steps, when the
- * budget section heads the home page). With `hideEmpty`, a tile with nothing to show is left out,
- * and the section with it when none is left.
+ * The budget section of the home page, from the person's budget tiles (`tiles`, saved or being
+ * customized). `leading` comes first (the first steps, when the section heads the page). The Budget
+ * tile takes two columns when it shows three amount columns or more.
  */
-export default function BudgetSection({ leading, hideEmpty = false }: { leading?: React.ReactNode; hideEmpty?: boolean }) {
+export default function BudgetSection({ tiles: tilesConfig, loading = false, leading, hideEmpty = false, perRow, editing }: {
+  tiles: DashboardTileConfig[];
+  loading?: boolean;
+  leading?: React.ReactNode;
+  hideEmpty?: boolean;
+  perRow: number;
+  editing?: { section: Pick<SectionEditing, 'hidden' | 'onToggleHidden'>; onChange: (tiles: DashboardTileConfig[]) => void } | null;
+}) {
   const navigate = useNavigate();
   const { hasLevel, profile } = useAuth();
   const { t } = useTranslation('common');
   const locale = useLocale();
   const Y = new Date().getFullYear();
 
-  const dashboardSettings = useBudgetDashboardConfig();
-  const tileEnabled = (id: string) => !dashboardSettings.isLoading && dashboardSettings.config.tiles.some((tile) => tile.id === id && tile.enabled);
+  const tileEnabled = (id: string) => !loading && tilesConfig.some((tile) => tile.id === id && tile.enabled);
 
   const mode = useTheme().palette.mode;
   // One right for both types of budget line (lot R).
@@ -462,8 +491,8 @@ export default function BudgetSection({ leading, hideEmpty = false }: { leading?
   const topItems = topItemsResult?.items;
   const topFxMissing = topItemsResult?.fxMissing;
   const topLoading = topQueryLoading || (readableScopes.length > 0 && !budgetColumns.ready);
-  const [increaseScope, setIncreaseScope] = useTileScope('topIncreases');
-  const { items: topIncreases, fxMissing: increasesFxMissing, reportingCurrency: increasesCurrency, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0 && tileEnabled('top-increases'), defaultColumn.key, budgetColumns.ready, 5);
+  const [topMode, setTopMode] = useTopLinesMode();
+  const { items: topIncreases, fxMissing: increasesFxMissing, reportingCurrency: increasesCurrency, isLoading: increasesLoading } = useTopIncreases(topScope, readableScopes.length > 0 && tileEnabled('top-lines') && topMode === 'increase', defaultColumn.key, budgetColumns.ready, 5);
 
   const [myBudgetScope, setMyBudgetScope] = useTileScope('myBudget');
   const myBudget = useMyBudget(myBudgetScope, profile, defaultColumn.key, readableScopes.length > 0 && tileEnabled('my-budget') && budgetColumns.ready);
@@ -493,7 +522,7 @@ export default function BudgetSection({ leading, hideEmpty = false }: { leading?
     })) as Record<AmountColumnKey, number>,
   })));
   // Keep a column if either nature has a value, even when the combined total is zero.
-  const chosenColumns = dashboardSettings.config.tiles.find((tile) => tile.id === 'budget')?.config.columns as AmountColumnKey[] | null | undefined;
+  const chosenColumns = tilesConfig.find((tile) => tile.id === 'budget')?.config.columns as AmountColumnKey[] | null | undefined;
   // The tile shows Y-1 to Y+1: the amounts left out of those years only.
   const snapshotYears = new Set(snapshotSlots.map((slot) => slotYear(slot, Y)));
   const snapshotFxMissing = (snapshot.data?.fxMissing ?? []).filter((entry) => snapshotYears.has(entry.year));
@@ -700,69 +729,65 @@ export default function BudgetSection({ leading, hideEmpty = false }: { leading?
     'top-lines': (readableScopes.length > 0) ? (
           <DashboardTile
             icon="Leaderboard"
+            // Empty when the type has no line: the ranking by increase is a view of the same lines.
             isEmpty={(topItems?.length || 0) === 0}
             title={t('dashboard.topItems')}
-            subtitle={columnY}
-            currency={topItemsResult?.reportingCurrency ?? undefined}
+            subtitle={topMode === 'increase' ? t('dashboard.columnYvsYminus1', { column: defaultColumn.label }) : columnY}
+            currency={(topMode === 'increase' ? increasesCurrency : topItemsResult?.reportingCurrency) ?? undefined}
             isLoading={topLoading}
             action={(
               <Stack direction="row" alignItems="center">
                 <ItemScopeTabs allowAll value={topScope} onChange={setTopScope} />
-                <Button size="small" onClick={() => navigate(`/ops/reports/top-opex?scope=${topScope}`)}>{t('buttons.open')}</Button>
+                <Button size="small" onClick={() => navigate(topMode === 'increase' ? `/ops/reports/opex-delta?scope=${topScope}` : `/ops/reports/top-opex?scope=${topScope}`)}>{t('buttons.open')}</Button>
               </Stack>
             )}
           >
-            <Stack spacing={0.5} sx={{ mt: 1 }}>
-              {(topItems || []).map((r) => (
-                <Stack key={r.id} component={RouterLink} to={r.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
-                  <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
-                  {r.yMissingRate ? (
-                    // No exchange rate this year: the amount in the line currency, marked.
-                    <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 90, justifyContent: 'flex-end' }}>
-                      <Typography variant="body1" sx={{ color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>
-                        {t('ops:shared.fxMissing.localAmount', { amount: formatThousandsAmount(r.y, locale), currency: r.yMissingRate.currency })}
-                      </Typography>
-                      <FxMissingMark currency={r.yMissingRate.currency} year={r.yMissingRate.year} />
-                    </Stack>
-                  ) : (
-                    <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>{formatThousandsAmount(r.y, locale)}</Typography>
-                  )}
-                </Stack>
-              ))}
-              {(topItems?.length || 0) === 0 && (
-                <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
-              )}
-              <FxMissingNotice items={topFxMissing} sx={{ pt: 0.5 }} />
-            </Stack>
-          </DashboardTile>
-    ) : null,
-    'top-increases': (readableScopes.length > 0) ? (
-          <DashboardTile
-            icon="TrendingUp"
-            isEmpty={topIncreases.length === 0}
-            title={t('dashboard.topIncreases')}
-            subtitle={t('dashboard.columnYvsYminus1', { column: defaultColumn.label })}
-            currency={increasesCurrency ?? undefined}
-            isLoading={increasesLoading}
-            action={(
-              <Stack direction="row" alignItems="center">
-                <ItemScopeTabs allowAll value={increaseScope} onChange={setIncreaseScope} />
-                <Button size="small" onClick={() => navigate(`/ops/reports/opex-delta?scope=${increaseScope}`)}>{t('buttons.open')}</Button>
+            <Tabs
+              value={topMode}
+              onChange={(_, next: TopLinesMode) => setTopMode(next)}
+              aria-label={t('dashboard.topLinesMode.label')}
+              sx={[textTabsSx, { mt: 0.5 }]}
+            >
+              <Tab value="amount" label={t('dashboard.topLinesMode.amount')} sx={textTabSx(topMode === 'amount')} />
+              <Tab value="increase" label={t('dashboard.topLinesMode.increase')} sx={textTabSx(topMode === 'increase')} />
+            </Tabs>
+            {topMode === 'increase' ? (
+              <Stack spacing={0.5} sx={{ mt: 1 }}>
+                {increasesLoading ? null : topIncreases.map((r) => (
+                  <Stack key={r.id} component={RouterLink} to={r.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
+                    <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
+                    <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>+{formatCompactAmount(r.delta, locale)}</Typography>
+                  </Stack>
+                ))}
+                {!increasesLoading && topIncreases.length === 0 && (
+                  <Typography variant="body1" color="text.secondary">{t('dashboard.noIncreases')}</Typography>
+                )}
+                <FxMissingNotice items={increasesFxMissing} sx={{ pt: 0.5 }} />
+              </Stack>
+            ) : (
+              <Stack spacing={0.5} sx={{ mt: 1 }}>
+                {(topItems || []).map((r) => (
+                  <Stack key={r.id} component={RouterLink} to={r.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
+                    <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
+                    {r.yMissingRate ? (
+                      // No exchange rate this year: the amount in the line currency, marked.
+                      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 90, justifyContent: 'flex-end' }}>
+                        <Typography variant="body1" sx={{ color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>
+                          {t('ops:shared.fxMissing.localAmount', { amount: formatThousandsAmount(r.y, locale), currency: r.yMissingRate.currency })}
+                        </Typography>
+                        <FxMissingMark currency={r.yMissingRate.currency} year={r.yMissingRate.year} />
+                      </Stack>
+                    ) : (
+                      <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>{formatThousandsAmount(r.y, locale)}</Typography>
+                    )}
+                  </Stack>
+                ))}
+                {(topItems?.length || 0) === 0 && (
+                  <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
+                )}
+                <FxMissingNotice items={topFxMissing} sx={{ pt: 0.5 }} />
               </Stack>
             )}
-          >
-            <Stack spacing={0.5} sx={{ mt: 1 }}>
-              {topIncreases.map((r) => (
-                <Stack key={r.id} component={RouterLink} to={r.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
-                  <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
-                  <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>+{formatCompactAmount(r.delta, locale)}</Typography>
-                </Stack>
-              ))}
-              {topIncreases.length === 0 && (
-                <Typography variant="body1" color="text.secondary">{t('dashboard.noIncreases')}</Typography>
-              )}
-              <FxMissingNotice items={increasesFxMissing} sx={{ pt: 0.5 }} />
-            </Stack>
           </DashboardTile>
     ) : null,
     'cost-centers': (readableScopes.length > 0) ? (
@@ -831,31 +856,71 @@ export default function BudgetSection({ leading, hideEmpty = false }: { leading?
     ) : null,
   };
 
+  // The Budget tile's amount columns, as the person chose them: three or more take two columns.
+  const budgetSpan = budgetColumns.shown.filter((column) => chosenColumns == null || chosenColumns.includes(column.key)).length <= 2 ? 1 : 2;
+  const setChosenColumns = (value: string[] | null) => editing?.onChange(tilesConfig.map((tile) => (tile.id === 'budget' ? { ...tile, config: { ...tile.config, columns: value } } : tile)));
+  const selectedColumns = budgetColumns.shown.filter((column) => chosenColumns == null || chosenColumns.includes(column.key));
+  const columnOptions = (
+    <Box>
+      <Typography variant="caption" sx={{ color: 'kanap.text.tertiary', fontSize: 12 }}>{t('dashboard.budgetSettings.columns')}</Typography>
+      <FormControlLabel
+        sx={{ display: 'flex' }}
+        control={<Checkbox size="small" checked={chosenColumns == null} onChange={(event) => setChosenColumns(event.target.checked ? null : budgetColumns.shown.map((column) => column.key))} />}
+        label={<Typography variant="body2">{t('dashboard.budgetSettings.tenantColumns')}</Typography>}
+      />
+      {budgetColumns.shown.map((column) => {
+        const checked = selectedColumns.some((entry) => entry.key === column.key);
+        return (
+          <FormControlLabel
+            key={column.key}
+            sx={{ display: 'flex' }}
+            label={<Typography variant="body2">{column.label}</Typography>}
+            control={(
+              <Checkbox
+                size="small"
+                checked={checked}
+                // At least one column: the last one stays.
+                disabled={chosenColumns == null || (checked && selectedColumns.length === 1)}
+                onChange={(event) => setChosenColumns(event.target.checked
+                  ? [...selectedColumns.map((entry) => entry.key), column.key]
+                  : selectedColumns.filter((entry) => entry.key !== column.key).map((entry) => entry.key))}
+              />
+            )}
+          />
+        );
+      })}
+    </Box>
+  );
+
   // Nothing before the person's settings: the defaults would flash first.
-  const shownTiles = (dashboardSettings.isLoading ? [] : dashboardSettings.config.tiles)
+  const shownTiles = (loading ? [] : tilesConfig)
     .filter((tile) => tile.enabled && !ON_HOME_PAGE_ALREADY.has(tile.id) && tiles[tile.id])
     .slice()
     .sort((a, b) => a.order - b.order);
-  const { empty, reporter } = useEmptyTiles();
-  useReportEmpty(shownTiles.every((tile) => empty.has(tile.id)));
+  const entries: SectionEntry[] = [
+    ...(leading ? [{ id: 'first-steps', node: leading, fixed: true }] : []),
+    ...shownTiles.map((tile) => ({
+      id: tile.id,
+      node: tiles[tile.id],
+      span: tile.id === 'budget' ? budgetSpan : 1,
+      options: tile.id === 'budget' && budgetColumns.shown.length > 1 ? columnOptions : undefined,
+    })),
+  ];
   // Nothing of the budget for this person: no section at all.
   if (!canOpex && !canContracts) return null;
 
-  const visibleTiles = shownTiles.filter((tile) => !(hideEmpty && empty.has(tile.id)));
+  const { canViewTile } = budgetTileAccess(canTasks, canContracts, canOpex);
   return (
-    // Kept mounted when every tile is empty, so a tile that fills up comes back.
-    <Box sx={{ display: visibleTiles.length || leading ? 'flex' : 'none', flexDirection: 'column', gap: 2 }}>
-      <Typography component="h2" sx={{ fontSize: 16, fontWeight: 500, color: 'kanap.text.primary' }}>
-        {t('nav:workspaces.budgetManagement')}
-      </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'start' }}>
-        {leading ? <Box sx={tileLayoutSx()}>{leading}</Box> : null}
-        {shownTiles.map((tile) => (
-          <Box key={tile.id} sx={[tileLayoutSx(tile.id === 'budget'), hideEmpty && empty.has(tile.id) && { display: 'none' }]}>
-            <TileEmptyContext.Provider value={reporter(tile.id)}>{tiles[tile.id]}</TileEmptyContext.Provider>
-          </Box>
-        ))}
-      </Box>
-    </Box>
+    <TileSection
+      id="budget"
+      title={t('nav:workspaces.budgetManagement')}
+      entries={entries}
+      perRow={perRow}
+      hideEmpty={hideEmpty}
+      editing={editing ? {
+        ...editing.section,
+        ...editTileList(tilesConfig, editing.onChange, (id) => !ON_HOME_PAGE_ALREADY.has(id) && !!BUDGET_TILE_TITLE_KEYS[id] && canViewTile(id), (id) => t(BUDGET_TILE_TITLE_KEYS[id])),
+      } : null}
+    />
   );
 }
