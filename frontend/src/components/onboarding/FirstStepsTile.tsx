@@ -5,9 +5,10 @@ import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import DashboardTile from '../../pages/workspace/tiles/DashboardTile';
-import { ONBOARDING_ANGLES, type OnboardingState } from './onboardingApi';
+import { onboardingApi, ONBOARDING_ANGLES, type OnboardingState } from './onboardingApi';
 import api from '../../api';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { buildItemPath, formatItemRef } from '../../utils/item-ref';
@@ -126,6 +127,18 @@ function StepRow({ stepKey, done, next, busy, onToggle }: {
 function EndScreen({ state }: { state: OnboardingState }) {
   const { t } = useTranslation('common');
   const { choose } = useOnboardingActions();
+  const { apply } = useOnboarding();
+  // The steps of a path are the user's own: undoing the five starts the path again.
+  const restart = useMutation({
+    mutationFn: async () => {
+      let next: OnboardingState = state;
+      for (const step of state.steps.filter((candidate) => candidate.done_at)) {
+        next = await onboardingApi.markUndone(step.key);
+      }
+      return next;
+    },
+    onSuccess: apply,
+  });
   const others = ONBOARDING_ANGLES.filter((angle) => angle !== state.angle);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -145,6 +158,11 @@ function EndScreen({ state }: { state: OnboardingState }) {
           </React.Fragment>
         ))}
       </Typography>
+      <Box>
+        <Link component="button" variant="body2" onClick={() => restart.mutate()} disabled={restart.isPending}>
+          {t('onboarding.firstSteps.end.restart')}
+        </Link>
+      </Box>
     </Box>
   );
 }

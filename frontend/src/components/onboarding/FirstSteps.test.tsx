@@ -157,6 +157,18 @@ describe('FirstStepsTile', () => {
     expect(screen.getAllByRole('link')[0]).toHaveTextContent('The application list');
   });
 
+  it('starts a finished path again by undoing its five steps', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    for (const key of ['budget_overview', 'budget_line', 'budget_report', 'budget_plaid', 'budget_import']) {
+      env.server.db.done.set(`budget/example/${key}`, '2026-11-02T09:20:00.000Z');
+    }
+    renderAt('/', <FirstStepsTile />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Restart this path' }));
+    await waitFor(() => expect(screen.getByText('0/5')).toBeInTheDocument());
+    expect(env.server.state().completed).toBe(false);
+    expect(screen.getByRole('link', { name: 'The overview' })).toBeInTheDocument();
+  });
+
   it('shows nothing without a path', async () => {
     env.server = createFakeOnboardingServer({ mode: 'example' });
     renderAt('/', <FirstStepsTile />);

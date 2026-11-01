@@ -1578,7 +1578,8 @@
       "later": "Later",
       "end": {
         "title": "{{path}} path complete!",
-        "others": "The other two paths:"
+        "others": "The other two paths:",
+        "restart": "Restart this path"
       },
       "showAgain": "Show the first steps",
       "steps": {

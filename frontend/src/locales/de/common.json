@@ -1578,7 +1578,8 @@
       "later": "Später",
       "end": {
         "title": "Pfad {{path}} abgeschlossen!",
-        "others": "Die beiden anderen Pfade:"
+        "others": "Die beiden anderen Pfade:",
+        "restart": "Diesen Pfad neu beginnen"
       },
       "showAgain": "Erste Schritte anzeigen",
       "steps": {

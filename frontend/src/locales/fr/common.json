@@ -1578,7 +1578,8 @@
       "later": "Plus tard",
       "end": {
         "title": "Parcours {{path}} terminé !",
-        "others": "Les deux autres parcours :"
+        "others": "Les deux autres parcours :",
+        "restart": "Recommencer ce parcours"
       },
       "showAgain": "Afficher les premiers pas",
       "steps": {

@@ -1578,7 +1578,8 @@
       "later": "Más tarde",
       "end": {
         "title": "¡Recorrido {{path}} terminado!",
-        "others": "Los otros dos recorridos:"
+        "others": "Los otros dos recorridos:",
+        "restart": "Reiniciar este recorrido"
       },
       "showAgain": "Mostrar los primeros pasos",
       "steps": {
