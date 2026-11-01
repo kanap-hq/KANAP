@@ -16,12 +16,12 @@ export const ONBOARDING_PATHS: Readonly<Record<OnboardingAngle, Readonly<Record<
     own_data: ['own_company', 'own_budget_lines', 'own_contract', 'own_report', 'own_invite'],
   },
   cartography: {
-    example: ['map_overview', 'map_application', 'map_technologies', 'map_vulnerabilities', 'map_import'],
-    own_data: ['own_applications', 'own_technologies', 'own_assets', 'own_map', 'own_invite'],
+    example: ['map_applications', 'map_application', 'map_assets', 'map_technologies', 'map_import'],
+    own_data: ['own_applications', 'own_technologies', 'own_assets', 'own_findings', 'own_invite'],
   },
   portfolio: {
-    example: ['portfolio_overview', 'portfolio_request', 'portfolio_planning', 'portfolio_plaid', 'portfolio_import'],
-    own_data: ['own_projects', 'own_request', 'own_project_budget', 'own_planning', 'own_invite'],
+    example: ['portfolio_request', 'portfolio_project', 'portfolio_tasks', 'portfolio_time', 'portfolio_import'],
+    own_data: ['own_request', 'own_projects', 'own_tasks', 'own_project_budget', 'own_invite'],
   },
 };
 
