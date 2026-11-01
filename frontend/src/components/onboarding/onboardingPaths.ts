@@ -15,7 +15,8 @@ export type StepTarget = 'title' | 'composer' | 'tabs' | 'export';
  */
 export type OpenedRecord = 'topBudgetLine' | 'mostCriticalApplication' | 'topScoredRequest' | 'projectFromRequest';
 
-export type StepScreen = { to: string; target: StepTarget; opensRecord?: OpenedRecord };
+/** `tab`: the tab (or the properties panel section, `team`) the opened project shows; its summary by default. */
+export type StepScreen = { to: string; target: StepTarget; opensRecord?: OpenedRecord; tab?: string };
 
 const title = (to: string): StepScreen => ({ to, target: 'title' });
 
@@ -46,17 +47,33 @@ export const STEP_SCREENS: Record<string, StepScreen> = {
   portfolio_time: title('/portfolio/reports'),
   portfolio_import: { to: '/portfolio/projects', target: 'export' },
   own_request: title('/portfolio/requests'),
-  own_projects: title('/portfolio/projects'),
+  own_projects: { to: '/portfolio/projects', target: 'tabs', opensRecord: 'projectFromRequest' },
   own_tasks: title('/portfolio/tasks'),
-  own_project_budget: title('/portfolio/projects'),
+  own_project_budget: { to: '/portfolio/projects', target: 'tabs', opensRecord: 'projectFromRequest', tab: 'relations' },
 };
+
+/** The screens a step opens on one path only: the portfolio's colleague joins the project's team. */
+const ANGLE_SCREENS: Record<string, Partial<Record<OnboardingAngle, StepScreen>>> = {
+  own_invite: { portfolio: { to: '/portfolio/projects', target: 'title', opensRecord: 'projectFromRequest', tab: 'team' } },
+};
+
+export function stepScreen(key: string, angle: OnboardingAngle | null): StepScreen | null {
+  return (angle ? ANGLE_SCREENS[key]?.[angle] : undefined) ?? STEP_SCREENS[key] ?? null;
+}
 
 /** The query parameter that carries a step to its screen. */
 export const STEP_PARAM = 'step';
 
-export function stepHref(key: string): string | null {
-  const screen = STEP_SCREENS[key];
+export function stepHref(key: string, angle: OnboardingAngle | null = null): string | null {
+  const screen = stepScreen(key, angle);
   return screen ? `${screen.to}?${STEP_PARAM}=${encodeURIComponent(key)}` : null;
+}
+
+/** The title of a step: the portfolio's colleague is a contributor. */
+export function stepTitleKey(key: string, angle: OnboardingAngle | null): string {
+  return key === 'own_invite' && angle === 'portfolio'
+    ? 'onboarding.firstSteps.steps.own_invite.portfolioTitle'
+    : `onboarding.firstSteps.steps.${key}.title`;
 }
 
 /** The hint of a step: `own_invite` names a different colleague for each angle. */

@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Button, Paper, Popper, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { STEP_PARAM, STEP_SCREENS, stepHintKey, type StepLocationState, type StepTarget } from './onboardingPaths';
+import { STEP_PARAM, stepHintKey, stepScreen, stepTitleKey, type StepLocationState, type StepTarget } from './onboardingPaths';
 import { useOnboarding, useOnboardingActions } from './useOnboarding';
 
 /** `data-page-title`: the title of `PageHeader` and `ReportLayout`. */
@@ -88,7 +88,7 @@ export default function StepHint() {
 
   const key = new URLSearchParams(location.search).get(STEP_PARAM);
   const step = key && state ? state.steps.find((candidate) => candidate.key === key) ?? null : null;
-  const screen = step ? STEP_SCREENS[step.key] ?? null : null;
+  const screen = step && state ? stepScreen(step.key, state.angle) : null;
   const element = useTargetElement(screen?.target ?? null);
   const rect = useRect(element);
   const discover = state?.mode === 'example';
@@ -142,7 +142,7 @@ export default function StepHint() {
       >
         <Paper
           role="dialog"
-          aria-label={t(`onboarding.firstSteps.steps.${step.key}.title`)}
+          aria-label={t(stepTitleKey(step.key, state.angle))}
           sx={(theme) => ({
             maxWidth: 360,
             p: 1.5,

@@ -1632,10 +1632,11 @@
         },
         "own_invite": {
           "title": "Un colega",
+          "portfolioTitle": "Un colaborador",
           "hint": {
             "budget": "Invite a sus colegas creando sus cuentas de usuario. Use el menú Autenticación para configurar el SSO con Entra ID.",
             "cartography": "Invite a un responsable de aplicación o de activo.",
-            "portfolio": "Invite a un jefe de proyecto: cree el usuario y envíe la invitación desde el menú de su fila."
+            "portfolio": "Añada un colega a los colaboradores de negocio o de TI del proyecto. ¿Aún no tiene cuenta? Créela en Administración › Usuarios."
           }
         },
         "map_application": {
@@ -1676,7 +1677,7 @@
         },
         "own_projects": {
           "title": "Su proyecto",
-          "hint": "El proyecto nacido de la solicitud: responsable, fechas, equipo. Sus proyectos existentes se importan como lista."
+          "hint": "El proyecto surgido de la solicitud está creado. Descubra sus detalles: responsables, equipo del proyecto, fases, carga…"
         },
         "own_request": {
           "title": "Su primera solicitud",
@@ -1684,7 +1685,7 @@
         },
         "own_project_budget": {
           "title": "El presupuesto del proyecto",
-          "hint": "Vincule una línea presupuestaria a su proyecto en sus relaciones: el gasto le sigue."
+          "hint": "En la pestaña Relaciones, vincule una o varias líneas presupuestarias a su proyecto para ver sus costes."
         },
         "map_applications": {
           "title": "La lista de aplicaciones",
@@ -1708,7 +1709,7 @@
         },
         "own_tasks": {
           "title": "Las primeras tareas",
-          "hint": "Cree las tareas del proyecto, asígnelas y registre el tiempo dedicado."
+          "hint": "Cree una tarea y vincúlela al proyecto. Asígnesela y añada un comentario; también puede cambiar su estado y registrar tiempo."
         }
       }
     }

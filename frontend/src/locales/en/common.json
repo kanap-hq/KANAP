@@ -1632,10 +1632,11 @@
         },
         "own_invite": {
           "title": "A colleague",
+          "portfolioTitle": "A contributor",
           "hint": {
             "budget": "Invite your colleagues by creating their user accounts. Use the Authentication menu to set up SSO with Entra ID.",
             "cartography": "Invite an application or asset owner.",
-            "portfolio": "Invite a project manager: create the user, then send the invitation from the row menu."
+            "portfolio": "Add a colleague to the project's business or IT contributors. No account yet? Create one in Admin › Users."
           }
         },
         "map_application": {
@@ -1676,7 +1677,7 @@
         },
         "own_projects": {
           "title": "Your project",
-          "hint": "The project born from the request: owner, dates, team. Your existing projects import as a list."
+          "hint": "The project from the request is created. Explore its details: owners, project team, phases, effort…"
         },
         "own_request": {
           "title": "Your first request",
@@ -1684,7 +1685,7 @@
         },
         "own_project_budget": {
           "title": "The project's budget",
-          "hint": "Link a budget line to your project in its relations: spending follows."
+          "hint": "In the Relations tab, link one or more budget lines to your project to see its costs."
         },
         "map_applications": {
           "title": "The application list",
@@ -1708,7 +1709,7 @@
         },
         "own_tasks": {
           "title": "The first tasks",
-          "hint": "Create the project's tasks, assign them, log the time spent."
+          "hint": "Create a task and link it to the project. Assign it to yourself and add a comment; you can also change its status and log time."
         }
       }
     }

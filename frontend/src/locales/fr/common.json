@@ -1632,10 +1632,11 @@
         },
         "own_invite": {
           "title": "Un collègue",
+          "portfolioTitle": "Un contributeur",
           "hint": {
             "budget": "Invitez vos collègues en créant leur compte utilisateur. Passez par le menu Authentification pour configurer le SSO avec Entra ID.",
             "cartography": "Invitez un responsable d'application ou d'actif.",
-            "portfolio": "Invitez un chef de projet : créez l'utilisateur, puis envoyez l'invitation depuis le menu de sa ligne."
+            "portfolio": "Ajoutez un collègue aux contributeurs métier ou IT du projet. Pas encore de compte ? Créez-le dans Administration › Utilisateurs."
           }
         },
         "map_application": {
@@ -1676,7 +1677,7 @@
         },
         "own_projects": {
           "title": "Votre projet",
-          "hint": "Le projet né de la demande : responsable, dates, équipe. Vos projets existants s'importent en liste."
+          "hint": "Le projet issu de la demande est créé. Découvrez ses détails : responsables, équipe projet, phases, charge…"
         },
         "own_request": {
           "title": "Votre première demande",
@@ -1684,7 +1685,7 @@
         },
         "own_project_budget": {
           "title": "Le budget du projet",
-          "hint": "Liez une ligne budgétaire à votre projet dans ses relations : la dépense suit."
+          "hint": "Dans l'onglet Relations, liez une ou plusieurs lignes budgétaires à votre projet pour en voir les coûts."
         },
         "map_applications": {
           "title": "La liste des applications",
@@ -1708,7 +1709,7 @@
         },
         "own_tasks": {
           "title": "Les premières tâches",
-          "hint": "Créez les tâches du projet, affectez-les, saisissez le temps passé."
+          "hint": "Créez une tâche et liez-la au projet. Affectez-vous la tâche et ajoutez un commentaire ; vous pouvez aussi modifier son statut et enregistrer du temps."
         }
       }
     }

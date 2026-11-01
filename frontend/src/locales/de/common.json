@@ -1632,10 +1632,11 @@
         },
         "own_invite": {
           "title": "Eine Kollegin, ein Kollege",
+          "portfolioTitle": "Eine Mitwirkende, ein Mitwirkender",
           "hint": {
             "budget": "Laden Sie Ihre Kolleginnen und Kollegen ein, indem Sie ihre Benutzerkonten anlegen. Über das Menü Authentifizierung richten Sie SSO mit Entra ID ein.",
             "cartography": "Laden Sie eine verantwortliche Person für eine Anwendung oder ein Asset ein.",
-            "portfolio": "Laden Sie eine Projektleitung ein: Legen Sie den Benutzer an und senden Sie die Einladung über das Menü seiner Zeile."
+            "portfolio": "Fügen Sie eine Kollegin oder einen Kollegen zu den Mitwirkenden aus Fachbereich oder IT des Projekts hinzu. Noch kein Konto? Legen Sie es unter Administration › Benutzer an."
           }
         },
         "map_application": {
@@ -1676,7 +1677,7 @@
         },
         "own_projects": {
           "title": "Ihr Projekt",
-          "hint": "Das aus der Anfrage entstandene Projekt: Verantwortliche, Termine, Team. Ihre bestehenden Projekte importieren Sie als Liste."
+          "hint": "Das Projekt aus der Anfrage ist angelegt. Entdecken Sie seine Details: Verantwortliche, Projektteam, Phasen, Aufwand…"
         },
         "own_request": {
           "title": "Ihre erste Anfrage",
@@ -1684,7 +1685,7 @@
         },
         "own_project_budget": {
           "title": "Das Budget des Projekts",
-          "hint": "Verknüpfen Sie eine Budgetzeile mit Ihrem Projekt in dessen Beziehungen: Die Ausgaben folgen."
+          "hint": "Verknüpfen Sie im Tab Beziehungen eine oder mehrere Budgetzeilen mit Ihrem Projekt, um seine Kosten zu sehen."
         },
         "map_applications": {
           "title": "Die Anwendungsliste",
@@ -1708,7 +1709,7 @@
         },
         "own_tasks": {
           "title": "Die ersten Aufgaben",
-          "hint": "Legen Sie die Aufgaben des Projekts an, weisen Sie sie zu und erfassen Sie die aufgewendete Zeit."
+          "hint": "Legen Sie eine Aufgabe an und verknüpfen Sie sie mit dem Projekt. Weisen Sie sie sich selbst zu und fügen Sie einen Kommentar hinzu; Sie können auch ihren Status ändern und Zeit erfassen."
         }
       }
     }

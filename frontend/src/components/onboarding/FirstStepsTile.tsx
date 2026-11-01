@@ -8,11 +8,11 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import DashboardTile from '../../pages/workspace/tiles/DashboardTile';
-import { onboardingApi, ONBOARDING_ANGLES, type OnboardingState } from './onboardingApi';
+import { onboardingApi, ONBOARDING_ANGLES, type OnboardingAngle, type OnboardingState } from './onboardingApi';
 import api from '../../api';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { buildItemPath, formatItemRef } from '../../utils/item-ref';
-import { STEP_PARAM, STEP_SCREENS, stepHref, type OpenedRecord, type StepLocationState } from './onboardingPaths';
+import { STEP_PARAM, stepHref, stepScreen, stepTitleKey, type StepLocationState, type StepScreen } from './onboardingPaths';
 import { useOnboarding, useOnboardingActions } from './useOnboarding';
 
 const rowSx = {
@@ -43,11 +43,13 @@ type Opened = { path: string; record: string | null };
  * applications), named in the hint. Without a record, or when the list cannot be read, the step
  * opens the list.
  */
-function useOpenRecord(stepKey: string, kind: OpenedRecord) {
+function useOpenRecord(stepKey: string, screen: StepScreen) {
   const navigate = useNavigate();
   const { defaultSort } = useBudgetColumns();
+  const kind = screen.opensRecord;
+  const projectTab = screen.tab ?? 'summary';
   return React.useCallback(async () => {
-    const fallback = stepHref(stepKey) ?? '/';
+    const fallback = `${screen.to}?${STEP_PARAM}=${encodeURIComponent(stepKey)}`;
     const find = async (): Promise<Opened | null> => {
       if (kind === 'topBudgetLine') {
         const year = new Date().getFullYear();
@@ -72,10 +74,10 @@ function useOpenRecord(stepKey: string, kind: OpenedRecord) {
         if (request) {
           const relations = await api.get<{ resulting_projects?: PortfolioItem[] }>(`/portfolio/requests/${request.id}/relations`);
           const project = relations.data.resulting_projects?.[0];
-          if (project) return { path: `${buildItemPath('project', portfolioRef('project', project))}/summary`, record: project.name };
+          if (project) return { path: `${buildItemPath('project', portfolioRef('project', project))}/${projectTab}`, record: project.name };
         }
         const project = await topScored('/portfolio/projects');
-        return project ? { path: `${buildItemPath('project', portfolioRef('project', project))}/summary`, record: project.name } : null;
+        return project ? { path: `${buildItemPath('project', portfolioRef('project', project))}/${projectTab}`, record: project.name } : null;
       }
       const res = await api.get<{ items: Application[] }>('/applications', { params: { limit: 1, sort: 'criticality:DESC' } });
       const application = res.data.items?.[0];
@@ -89,11 +91,11 @@ function useOpenRecord(stepKey: string, kind: OpenedRecord) {
     } catch {
       navigate(fallback);
     }
-  }, [defaultSort, kind, navigate, stepKey]);
+  }, [defaultSort, kind, navigate, projectTab, screen.to, stepKey]);
 }
 
-function RecordStepLink({ stepKey, kind, children, sx }: { stepKey: string; kind: OpenedRecord; children: React.ReactNode; sx: object }) {
-  const openRecord = useOpenRecord(stepKey, kind);
+function RecordStepLink({ stepKey, screen, children, sx }: { stepKey: string; screen: StepScreen; children: React.ReactNode; sx: object }) {
+  const openRecord = useOpenRecord(stepKey, screen);
   return (
     <Link
       component="button"
@@ -107,16 +109,18 @@ function RecordStepLink({ stepKey, kind, children, sx }: { stepKey: string; kind
   );
 }
 
-function StepRow({ stepKey, done, next, busy, onToggle }: {
+function StepRow({ stepKey, angle, done, next, busy, onToggle }: {
   stepKey: string;
+  angle: OnboardingAngle | null;
   done: boolean;
   next: boolean;
   busy: boolean;
   onToggle: () => void;
 }) {
   const { t } = useTranslation('common');
-  const href = stepHref(stepKey);
-  const label = t(`onboarding.firstSteps.steps.${stepKey}.title`);
+  const screen = stepScreen(stepKey, angle);
+  const href = stepHref(stepKey, angle);
+  const label = t(stepTitleKey(stepKey, angle));
   const toggleLabel = done ? t('onboarding.firstSteps.markUndone') : t('onboarding.firstSteps.markDone');
   const linkSx = {
     flex: 1,
@@ -142,8 +146,8 @@ function StepRow({ stepKey, done, next, busy, onToggle }: {
             : <RadioButtonUncheckedIcon sx={{ fontSize: 18, color: 'text.disabled' }} />}
         </IconButton>
       </Tooltip>
-      {STEP_SCREENS[stepKey]?.opensRecord ? (
-        <RecordStepLink stepKey={stepKey} kind={STEP_SCREENS[stepKey].opensRecord!} sx={linkSx}>{content}</RecordStepLink>
+      {screen?.opensRecord ? (
+        <RecordStepLink stepKey={stepKey} screen={screen} sx={linkSx}>{content}</RecordStepLink>
       ) : (
         <Link component={RouterLink} to={href ?? '#'} underline="hover" sx={linkSx}>{content}</Link>
       )}
@@ -237,6 +241,7 @@ export default function FirstStepsTile() {
             <StepRow
               key={step.key}
               stepKey={step.key}
+              angle={state.angle}
               done={!!step.done_at}
               next={step.key === state.next_step}
               busy={busy}
