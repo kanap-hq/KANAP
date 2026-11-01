@@ -405,20 +405,26 @@
       "disabled": "Plaid is turned off for this workspace.",
       "tenantDisabledAdminLink": "Turn it on in Administration › Plaid",
       "tenantDisabledAskAdmin": "Ask an administrator to turn it on.",
-      "builtinNotAccepted": "An administrator must confirm the AI provider in Admin > Plaid."
+      "builtinNotAccepted": "Plaid is waiting for an administrator to turn it on."
     },
     "suggestions": {
       "applicationMention": "Summarize an application: type @ to pick one",
       "budgetLines": "What are my five largest budget lines this year?",
       "knowledgeSearch": "Find documents about backups",
       "myProjects": "Which projects am I working on?",
-      "overdueTasks": "Show me my overdue tasks"
+      "overdueTasks": "Show me my overdue tasks",
+      "noOwner": "Which budget lines have no owner?",
+      "endOfSupport": "Which technologies reach their end of support within six months?",
+      "noRecovery": "Which critical applications have no recovery plan?",
+      "overBudget": "Which projects are over budget?",
+      "awaitingDecision": "Which requests are waiting for a decision?"
     },
     "title": "Plaid"
   },
-  "enablePlaid": {
-    "text": "Plaid, the KANAP assistant, is turned off.",
-    "action": "Turn on",
-    "dismiss": "Hide"
+  "consent": {
+    "accept": "I agree that {{name}} ({{place}}) processes my questions and the data they concern for Plaid's answers. They are not used to train its models.",
+    "otherModel": "Another model, or turn it off:",
+    "otherModelLink": "Admin › Plaid",
+    "loading": "Loading the provider"
   }
 }

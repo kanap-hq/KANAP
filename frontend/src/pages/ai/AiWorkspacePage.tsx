@@ -20,6 +20,7 @@ import ChatInput, { ChatInputHandle } from '../../ai/components/ChatInput';
 import ChatConversationList from '../../ai/components/ChatConversationList';
 import ChatEmptyState from '../../ai/components/ChatEmptyState';
 import TokenUsageBar from '../../ai/components/TokenUsageBar';
+import PlaidConsent from '../../components/onboarding/PlaidConsent';
 
 const SIDEBAR_WIDTH = 260;
 const CONTENT_MAX_WIDTH = 760;
@@ -291,33 +292,30 @@ export default function AiWorkspacePage() {
     void chat.regenerate(messageId);
   }, [chat.regenerate]);
 
-  const chatOff = chatTurnedOffByAdmin(aiCapabilities.data);
-  const awaitsIncludedModel = chatAwaitsIncludedModelConfirmation(aiCapabilities.data);
-  if (!config.features.aiChat || chatOff || awaitsIncludedModel) {
+  // The included model waits for its acceptance (a new trial, Plaid off too): the page opens as
+  // usual, the acceptance box in place of the composer; ticking it also turns Plaid on. Turned off
+  // by an administrator once the model is accepted: the page says so.
+  const awaitsConsent = chatAwaitsIncludedModelConfirmation(aiCapabilities.data);
+  const chatOff = !awaitsConsent && chatTurnedOffByAdmin(aiCapabilities.data);
+  if (!config.features.aiChat || chatOff) {
     const administersAssistant = aiCapabilities.data?.surfaces.settings.available === true;
     return (
       <>
         <PageHeader title={t('workspace.title')} />
         <Alert severity="warning" sx={{ maxWidth: 600 }}>
-          {chatOff || !config.features.aiChat ? (
+          {t('workspace.messages.disabled')}
+          {chatOff ? (
             <>
-              {t('workspace.messages.disabled')}
-              {chatOff ? (
-                <>
-                  {' '}
-                  {administersAssistant ? (
-                    <Link component={RouterLink} to="/admin/ai" underline="hover">
-                      {t('workspace.messages.tenantDisabledAdminLink')}
-                    </Link>
-                  ) : (
-                    t('workspace.messages.tenantDisabledAskAdmin')
-                  )}
-                </>
-              ) : null}
+              {' '}
+              {administersAssistant ? (
+                <Link component={RouterLink} to="/admin/ai" underline="hover">
+                  {t('workspace.messages.tenantDisabledAdminLink')}
+                </Link>
+              ) : (
+                t('workspace.messages.tenantDisabledAskAdmin')
+              )}
             </>
-          ) : (
-            t('workspace.messages.builtinNotAccepted')
-          )}
+          ) : null}
         </Alert>
       </>
     );
@@ -334,7 +332,7 @@ export default function AiWorkspacePage() {
     </Typography>
   ) : null;
 
-  const composer = (
+  const composer = awaitsConsent ? <PlaidConsent /> : (
     <ChatInput
       ref={inputRef}
       onSend={handleSend}
@@ -405,7 +403,7 @@ export default function AiWorkspacePage() {
               <Stack spacing={4}>
                 <ChatEmptyState
                   onSuggestion={handleSuggestion}
-                  disabled={chat.isStreaming || builtinLimitReached}
+                  disabled={chat.isStreaming || builtinLimitReached || awaitsConsent}
                 />
                 <Stack spacing={1}>
                   <BuiltinUsageIndicator usage={chat.builtinUsage} />

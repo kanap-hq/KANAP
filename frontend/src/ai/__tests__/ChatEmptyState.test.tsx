@@ -2,17 +2,24 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import ChatEmptyState, { SUGGESTION_KEYS, suggestionPrompt } from '../components/ChatEmptyState';
+import ChatEmptyState, { ANGLE_SUGGESTIONS, SUGGESTION_KEYS, suggestionPrompt } from '../components/ChatEmptyState';
 import { createAppTheme } from '../../config/ThemeContext';
 import i18n from '../../i18n';
 
 // Keys are built as `workspace.suggestions.${key}`, so translationKeys.test.ts never sees them.
 let budgetReader = true;
+let readable: string[] | null = null;
+let angle: string | null = null;
 
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
-    hasLevel: (resource: string, level: string) => budgetReader && resource === 'budget' && level === 'reader',
+    hasLevel: (resource: string, level: string) => level === 'reader'
+      && (readable ? readable.includes(resource) : budgetReader && resource === 'budget'),
   }),
+}));
+
+vi.mock('../../components/onboarding/useOnboarding', () => ({
+  useOnboarding: () => ({ state: angle ? { angle } : undefined }),
 }));
 
 const LABELS: Record<string, { budgetLines: string; applicationMention: string }> = {
@@ -71,7 +78,16 @@ describe.each(['en', 'fr', 'de', 'es'])('chat suggestions in %s', (lng) => {
   afterEach(async () => {
     cleanup();
     budgetReader = true;
+    readable = null;
+    angle = null;
     await i18n.changeLanguage('en');
+  });
+
+  it('has the questions of every path in this locale', () => {
+    for (const { key } of Object.values(ANGLE_SUGGESTIONS).flat()) {
+      const raw = i18n.getResource(lng, 'ai', `workspace.suggestions.${key}`);
+      expect(typeof raw, `${lng} workspace.suggestions.${key}`).toBe('string');
+    }
   });
 
   it('has every suggestion key in this locale', () => {
@@ -114,5 +130,39 @@ describe.each(['en', 'fr', 'de', 'es'])('chat suggestions in %s', (lng) => {
     expect(screen.queryByRole('button', { name: i18n.t('ai:workspace.suggestions.budgetLines') })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: i18n.t('ai:workspace.suggestions.applicationMention') })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: i18n.t('ai:workspace.suggestions.overdueTasks') })).toBeInTheDocument();
+  });
+
+  it('puts the questions of the workspace path first, then the usual ones, five at most', () => {
+    angle = 'cartography';
+    readable = ['applications', 'budget'];
+    renderEmpty();
+    const labels = screen.getAllByRole('button').map((button) => button.textContent);
+    expect(labels).toEqual([
+      i18n.t('ai:workspace.suggestions.endOfSupport'),
+      i18n.t('ai:workspace.suggestions.noRecovery'),
+      i18n.t('ai:workspace.suggestions.budgetLines'),
+      i18n.t('ai:workspace.suggestions.overdueTasks'),
+      i18n.t('ai:workspace.suggestions.myProjects'),
+    ]);
+  });
+
+  it('asks the budget question once on the budget path', () => {
+    angle = 'budget';
+    readable = ['budget'];
+    renderEmpty();
+    const labels = screen.getAllByRole('button').map((button) => button.textContent);
+    expect(labels.slice(0, 2)).toEqual([
+      i18n.t('ai:workspace.suggestions.budgetLines'),
+      i18n.t('ai:workspace.suggestions.noOwner'),
+    ]);
+    expect(labels.filter((label) => label === i18n.t('ai:workspace.suggestions.budgetLines'))).toHaveLength(1);
+  });
+
+  it('leaves out a path question the person may not read', () => {
+    angle = 'portfolio';
+    readable = ['portfolio_projects'];
+    renderEmpty();
+    expect(screen.getByRole('button', { name: i18n.t('ai:workspace.suggestions.overBudget') })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: i18n.t('ai:workspace.suggestions.awaitingDecision') })).not.toBeInTheDocument();
   });
 });

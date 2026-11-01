@@ -405,20 +405,26 @@
       "disabled": "Plaid ist für diesen Arbeitsbereich ausgeschaltet.",
       "tenantDisabledAdminLink": "Schalten Sie ihn unter Administration › Plaid ein",
       "tenantDisabledAskAdmin": "Bitten Sie einen Administrator, ihn einzuschalten.",
-      "builtinNotAccepted": "Ein Administrator muss den KI-Anbieter unter Administration > Plaid bestätigen."
+      "builtinNotAccepted": "Plaid wartet darauf, dass eine Administratorin oder ein Administrator es aktiviert."
     },
     "suggestions": {
       "applicationMention": "Fassen Sie eine Anwendung zusammen: Geben Sie @ ein, um eine auszuwählen.",
       "budgetLines": "Was sind meine fünf größten Budgetzeilen in diesem Jahr?",
       "knowledgeSearch": "Finde Dokumente zu Backups",
       "myProjects": "An welchen Projekten arbeite ich?",
-      "overdueTasks": "Zeige mir meine überfälligen Aufgaben"
+      "overdueTasks": "Zeige mir meine überfälligen Aufgaben",
+      "noOwner": "Welche Budgetzeilen haben keine verantwortliche Person?",
+      "endOfSupport": "Welche Technologien erreichen in den nächsten sechs Monaten ihr Supportende?",
+      "noRecovery": "Welche kritischen Anwendungen haben keinen Wiederanlaufplan?",
+      "overBudget": "Welche Projekte überschreiten ihr Budget?",
+      "awaitingDecision": "Welche Anfragen warten auf eine Entscheidung?"
     },
     "title": "Plaid"
   },
-  "enablePlaid": {
-    "text": "Plaid, der KANAP-Assistent, ist ausgeschaltet.",
-    "action": "Einschalten",
-    "dismiss": "Ausblenden"
+  "consent": {
+    "accept": "Ich bin einverstanden, dass {{name}} ({{place}}) meine Fragen und die Daten, die sie betreffen, für die Antworten von Plaid verarbeitet. Sie werden nicht zum Training seiner Modelle verwendet.",
+    "otherModel": "Anderes Modell oder Deaktivierung:",
+    "otherModelLink": "Administration › Plaid",
+    "loading": "Anbieter wird geladen"
   }
 }

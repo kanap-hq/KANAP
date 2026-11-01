@@ -46,7 +46,6 @@ import DashboardTile from './tiles/DashboardTile';
 import TileOption from './settings/TileOption';
 import QuickLogTimeModal from './actions/QuickLogTimeModal';
 import SampleDataBanner from '../admin/sample-data/SampleDataBanner';
-import EnablePlaidCard from './EnablePlaidCard';
 import OnboardingStatusLine from '../../components/onboarding/OnboardingStatusLine';
 import FirstStepsTile, { firstStepsShown } from '../../components/onboarding/FirstStepsTile';
 import { useOnboarding } from '../../components/onboarding/useOnboarding';
@@ -355,7 +354,6 @@ export default function WorkspaceDashboardPage() {
     <Box sx={{ p: 3 }}>
       <SampleDataBanner />
       <OnboardingStatusLine />
-      <EnablePlaidCard />
       <Paper
         variant="outlined"
         sx={{ mb: 3, p: 2.5, borderRadius: '8px', bgcolor: 'kanap.bg.drawer' }}
