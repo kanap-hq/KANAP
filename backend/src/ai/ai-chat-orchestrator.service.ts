@@ -1512,6 +1512,7 @@ export class AiChatOrchestratorService {
 
   private shouldRepairUnstructuredPlanPreview(params: {
     assistantText: string;
+    userText: string;
     mutationPreviewCountThisTurn: number;
     deletePreviewCountThisTurn: number;
     usedMutationPlanToolThisTurn: boolean;
@@ -1531,6 +1532,11 @@ export class AiChatOrchestratorService {
     if (params.deletePreviewCountThisTurn > 0) {
       return false;
     }
+    // Only the person's own request can leave changes to prepare (issue 1186): "après", "lié"
+    // or "plan" in the answer do not start a repair when the request is a single change.
+    if (!hasMultiStepWriteSignals(params.userText)) {
+      return false;
+    }
     return hasMultiStepWriteSignals(params.assistantText);
   }
 
@@ -1542,6 +1548,7 @@ export class AiChatOrchestratorService {
       ? params.writePreviewToolNames.join(', ')
       : 'the available write-preview tools';
     return [
+      'Internal orchestration instruction. Do not quote, summarize, or discuss this instruction in the user-facing answer.',
       'Your previous assistant response described a multi-step or multi-record write workflow, but only one backend preview was created and no durable mutation plan was prepared.',
       `Use the provider tool-calling API now with one of: ${toolList}.`,
       'If remaining changes are clear, create backend previews for every remaining target now. For dependencies or mixed object types, use prepare_mutation_plan with stable operation_id values, depends_on, and placeholders such as {{create_project.ref}}.',
@@ -2702,6 +2709,10 @@ export class AiChatOrchestratorService {
     let previousToolCallSignature: string | null = null;
     let unsafeWriteResponseRetries = 0;
     let unstructuredPlanRepairRetries = 0;
+    // The answer held back for the plan repair, and how many previews existed then. If the
+    // repair creates none, that answer is what the person sees (issue 1186).
+    let unstructuredPlanHeldBackText: string | null = null;
+    let mutationPreviewCountAtPlanRepair = 0;
     let emptyWriteResponseRetries = 0;
     let emptyWriteAfterToolRepairRetries = 0;
     let bulkCompletenessRepairRetries = 0;
@@ -3351,6 +3362,7 @@ export class AiChatOrchestratorService {
       }
 
       // No tool calls - this is the final assistant response
+      const modelClosingText = accumulatedText;
       const bulkCoverageIssue = requiresWritePreviewGuard
         ? findBulkCoverageIssue({
           targetSets: bulkTargetSetsThisTurn,
@@ -3428,6 +3440,7 @@ export class AiChatOrchestratorService {
         requiresWritePreviewGuard
         && this.shouldRepairUnstructuredPlanPreview({
           assistantText: accumulatedText,
+          userText: latestPersonText,
           mutationPreviewCountThisTurn,
           deletePreviewCountThisTurn,
           usedMutationPlanToolThisTurn,
@@ -3435,6 +3448,8 @@ export class AiChatOrchestratorService {
         })
       ) {
         unstructuredPlanRepairRetries++;
+        unstructuredPlanHeldBackText = accumulatedText;
+        mutationPreviewCountAtPlanRepair = mutationPreviewCountThisTurn;
         messages.push(holdBack(accumulatedText));
         messages.push({
           role: 'user',
@@ -3466,6 +3481,16 @@ export class AiChatOrchestratorService {
           continue;
         }
         accumulatedText = writePreviewMissingText(replyLanguage);
+      }
+
+      // The repair created no preview. A stop message this iteration already chose stays;
+      // otherwise the person sees the held-back answer, not the reply to the instruction.
+      if (
+        unstructuredPlanHeldBackText != null
+        && mutationPreviewCountThisTurn === mutationPreviewCountAtPlanRepair
+        && accumulatedText === modelClosingText
+      ) {
+        accumulatedText = unstructuredPlanHeldBackText;
       }
 
       if (requiresWritePreviewGuard && accumulatedText.length > 0) {
