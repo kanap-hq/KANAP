@@ -193,7 +193,8 @@ async function companies(tenantId: string): Promise<Array<{ name: string; countr
 async function modeEvents(tenantId: string): Promise<any[]> {
   return inTenant(tenantId, (m) => m.query(
     `SELECT after_json AS after FROM audit_log
-      WHERE tenant_id = $1 AND table_name = 'onboarding' AND action = 'onboarding.mode_chosen'`,
+      WHERE tenant_id = $1 AND table_name = 'onboarding' AND action = 'onboarding.mode_chosen'
+      ORDER BY created_at, id`,
     [tenantId],
   ));
 }
