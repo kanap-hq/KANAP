@@ -645,6 +645,7 @@ function BudgetListPageView() {
     ...buildAmountColumnDefs<SummaryRow>({
       t,
       currentYear: Y,
+      locale,
       columns: budgetColumns,
       cellRenderer: (colId) => (params: any) => {
         // No exchange rate that year: the amount in the line currency, marked, left out of the totals.

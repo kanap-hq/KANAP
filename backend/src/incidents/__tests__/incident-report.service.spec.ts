@@ -251,16 +251,38 @@ function testTechnologyAndTaskLabelsInFourLanguages() {
   }
 }
 
-/** The journal's content column gets a wider share than the four short columns. */
-function testJournalContentColumnIsWidest() {
-  const markdown = buildMarkdown(fixture(), 'en', labelsFor('en'));
-  const journal = markdown.slice(markdown.indexOf('## Journal'));
-  assert.ok(journal.includes('<!-- kanap:table-widths=3,3,3,3,10 -->'), 'the exporter carries the widths past Pandoc');
+/**
+ * Date columns hold a numeric day and the time with its zone, so a date wraps in two lines.
+ * The content column stays wider than the two date columns together.
+ */
+function testJournalDatesFitAndContentStaysWidest() {
+  const markdown = buildMarkdown(fixture(), 'en', labelsFor('en'), 'Europe/Paris');
+  const journalAt = markdown.indexOf('## Journal');
+  const journal = markdown.slice(journalAt);
+  assert.ok(journal.includes('<!-- kanap:table-widths=10,10,6,8,22 -->'), 'the exporter carries the widths past Pandoc');
   const separator = journal.split('\n').find((line) => /^\| -+ \|/.test(line));
   assert.ok(separator, 'journal separator row');
   const widths = separator!.split('|').slice(1, -1).map((cell) => cell.trim().length);
   assert.equal(widths.length, 5);
-  assert.ok(widths[4] >= widths[0] * 3, `content column ${widths[4]} against ${widths[0]}`);
+  assert.ok(widths[4] > widths[0] + widths[1], `content column ${widths[4]} against the dates ${widths[0]}+${widths[1]}`);
+
+  // 10 Mar 2026 08:05 UTC is 09:05 in Paris. A numeric day, not a long month name.
+  const nextHeading = journal.indexOf('\n## ', 3);
+  const table = nextHeading >= 0 ? journal.slice(0, nextHeading) : journal;
+  assert.match(table, /10\/03\/2026 09:05/);
+  assert.equal(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/.test(table), false);
+  const properties = markdown.slice(0, journalAt);
+  assert.match(properties, /Mar/);
+
+  for (const lang of ['fr', 'de', 'es'] as const) {
+    const labels = labelsFor(lang);
+    const local = buildMarkdown(fixture(), lang, labels, 'Europe/Paris');
+    const at = local.indexOf(`## ${labels.journal}`);
+    const section = local.slice(at);
+    const end = section.indexOf('\n## ', 3);
+    const rows = end >= 0 ? section.slice(0, end) : section;
+    assert.match(rows, /10[./]03[./]2026 09:05/, `${lang}: numeric day, then the time`);
+  }
 }
 
 function testMarkdownEscaping() {
@@ -493,6 +515,52 @@ function testClosureVersionReferenceInJournal() {
   assert.equal(orphan.includes(REVIEW_DOC_ID), false);
 }
 
+/** Shipped categories follow the report language. A name the tenant typed, or an unknown code, stays. */
+async function testPdfCategoryFollowsTheReportLanguage() {
+  const exportCalls: any[][] = [];
+  let category = 'data';
+  const records = {
+    load: async () => {
+      const record = fixture();
+      record.incident.category = category;
+      return record;
+    },
+  };
+  const documentExport = {
+    exportMarkdown: async (...args: any[]) => {
+      exportCalls.push(args);
+      return { buffer: Buffer.from('pdf'), contentType: 'application/pdf' };
+    },
+  };
+  const itOps = {
+    getSettings: async () => ({
+      incidentCategories: [
+        { code: 'data', label: 'Data' },
+        { code: 'plant_stop', label: 'Arrêt usine' },
+        { code: 'security', label: 'Security renamed' },
+      ],
+    }),
+  };
+  const service = new IncidentReportService(records as any, documentExport as any, itOps as any);
+  const opts = { manager: {} as any, tenantId: 'tenant-1', userId: 'u1' };
+
+  const expectCategory = async (lang: string, code: string, line: string) => {
+    category = code;
+    await service.exportPdf(UUID, lang, opts);
+    const markdown = String(exportCalls.at(-1)?.[0] ?? '');
+    assert.ok(markdown.includes(line), `${lang} ${code}: missing "${line}"`);
+  };
+
+  await expectCategory('fr', 'data', '**Catégorie:** Données');
+  await expectCategory('de', 'data', '**Kategorie:** Daten');
+  await expectCategory('es', 'data', '**Categoría:** Datos');
+  await expectCategory('en', 'data', '**Category:** Data');
+  await expectCategory('fr', 'plant_stop', '**Catégorie:** Arrêt usine');
+  await expectCategory('fr', 'security', '**Catégorie:** Security renamed');
+  await expectCategory('fr', 'legacy-free-text', '**Catégorie:** legacy-free-text');
+  assert.equal(String(exportCalls[0][0]).includes('**Catégorie:** Data'), false);
+}
+
 async function testExportPdfForwardsViewerAndCookie() {
   const captured: Array<{ viewer?: unknown }> = [];
   const exportCalls: any[][] = [];
@@ -560,7 +628,7 @@ async function run() {
   testEmptySectionsOmitted();
   testLinkedTechnologiesAndTaskFollowUp();
   testTechnologyAndTaskLabelsInFourLanguages();
-  testJournalContentColumnIsWidest();
+  testJournalDatesFitAndContentStaysWidest();
   testMarkdownEscaping();
   testMarkdownLinkAndFenceEscaping();
   testReportTimestampsUseTimezone();
@@ -573,6 +641,7 @@ async function run() {
   testReviewOmissionIsConservative();
   testTemplateChangeDoesNotAffectOmission();
   testClosureVersionReferenceInJournal();
+  await testPdfCategoryFollowsTheReportLanguage();
   await testExportPdfForwardsViewerAndCookie();
   console.log('incident-report.service.spec.ts: ok');
 }

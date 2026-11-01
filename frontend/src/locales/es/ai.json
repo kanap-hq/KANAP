@@ -381,10 +381,10 @@
     "aliases": "Alias: {{aliases}}"
   },
   "tokenUsage": {
-    "total": "Tokens",
-    "input": "Entrada",
-    "output": "Salida",
-    "lastInput": "Ultima entrada"
+    "total": "Volumen procesado",
+    "input": "Tokens de entrada",
+    "output": "Tokens de salida",
+    "lastInput": "Contexto de la última solicitud"
   },
   "usageIndicator": {
     "limitReached": "Monthly limit reached. Resets {{resetDate}}.",

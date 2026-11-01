@@ -20,6 +20,10 @@
       "mobilePhone": "Téléphone portable",
       "language": "Langue"
     },
+    "placeholders": {
+      "businessPhone": "ex. +33 1 23 45 67 89",
+      "mobilePhone": "ex. +33 6 12 34 56 78"
+    },
     "locale": {
       "autoDetect": "Détection automatique (navigateur)"
     },
