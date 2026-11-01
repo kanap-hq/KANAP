@@ -126,7 +126,7 @@ Der Reiter Beziehungen zeigt die Assets an diesem Standort und die Anwendungen, 
 Klicken Sie in der Arbeitsbereich-Kopfzeile auf **Löschen** (Papierkorbsymbol), um einen Standort zu entfernen.
 
 - Erfordert die Berechtigung `locations:member`.
-- Verknüpfte Assets werden nicht gelöscht. Sie werden automatisch entkoppelt (ihre Standortreferenz wird gelöscht).
+- Ein Standort, dem noch Assets zugeordnet sind, kann nicht gelöscht werden: Die Meldung nennt ihre Anzahl. Ordnen Sie die Assets zuerst einem anderen Standort zu.
 - Wenn Sie ungespeicherte Änderungen im Arbeitsbereich haben, gehen diese bei der Löschung verloren.
 
 ---
