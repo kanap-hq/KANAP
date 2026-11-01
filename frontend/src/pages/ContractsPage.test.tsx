@@ -17,10 +17,14 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
   useTranslation: () => ({ t: i18n.t, i18n: { language: 'en', resolvedLanguage: 'en' } }),
 }));
-const auth = vi.hoisted(() => ({ budget: true, limited: false }));
+const auth = vi.hoisted(() => ({ budget: true, limited: false, level: 'admin' as 'admin' | 'reader' }));
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({
-    hasLevel: (resource: string) => resource !== 'budget' || auth.budget,
+    hasLevel: (resource: string, level: string) => {
+      if (auth.level === 'reader' && level !== 'reader') return false;
+      if (resource === 'budget') return auth.budget;
+      return true;
+    },
     profile: { id: 'user-1' },
     dataAccess: auth.limited ? { available: true, mode: 'limited', nodes: [], modules: ['contracts'] } : null,
   }),
@@ -151,6 +155,7 @@ describe('ContractsPage', () => {
     grid.props = null;
     auth.budget = true;
     auth.limited = false;
+    auth.level = 'admin';
     stubStorage();
     api.get.mockReset();
     api.get.mockResolvedValue({ data: TOTALS });
@@ -588,5 +593,23 @@ describe('ContractsPage', () => {
     expect(columns().some((c) => (c.field ?? '').startsWith('budget_'))).toBe(false);
     expect(screen.queryByRole('button', { name: /contracts\.list\.noBudgetLine/ })).toBeNull();
     expect(screen.queryByRole('combobox', { name: 'contracts.list.budgetYear' })).toBeNull();
+  });
+
+  it('says the list is empty in one line, with the creation for someone who may create', () => {
+    renderPage();
+    const emptyState = grid.props?.emptyState as React.ReactElement;
+    render(<ThemeProvider theme={createAppTheme('light')}>{emptyState}</ThemeProvider>);
+    const empty = screen.getByTestId('contracts-empty');
+    expect(empty.textContent).toContain('contracts.empty');
+    expect(empty.querySelector('button')?.textContent).toBe('contracts.workspace.newContract');
+  });
+
+  it('leaves the creation out of the empty list for a reader', () => {
+    auth.level = 'reader';
+    renderPage();
+    const emptyState = grid.props?.emptyState as React.ReactElement;
+    render(<ThemeProvider theme={createAppTheme('light')}>{emptyState}</ThemeProvider>);
+    expect(screen.getByTestId('contracts-empty').textContent).toBe('contracts.empty');
+    expect(screen.getByTestId('contracts-empty').querySelector('button')).toBeNull();
   });
 });

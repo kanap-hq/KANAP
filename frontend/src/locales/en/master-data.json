@@ -407,6 +407,7 @@
   "suppliers": {
     "title": "Suppliers",
     "newSupplier": "New supplier",
+    "empty": "No suppliers yet.",
     "supplierFallback": "Supplier",
     "contactsTabHint": "The contacts tab becomes available after you create the supplier.",
     "loadError": "Failed to load supplier.",

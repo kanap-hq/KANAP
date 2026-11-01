@@ -370,6 +370,7 @@
       "deleted_other": "{{count}} Verträge gelöscht"
     },
     "title": "Verträge",
+    "empty": "Noch keine Verträge.",
     "newButton": "Neu",
     "importCsv": "CSV importieren",
     "exportTitle": "Verträge exportieren",
@@ -1902,6 +1903,7 @@
     "titleWithCurrency": "Budgetzeilen ({{currency}})",
     "type": "Typ",
     "newLine": "Neue Zeile",
+    "empty": "Noch keine Budgetzeilen.",
     "opexLine": "OPEX-Zeile",
     "capexLine": "CAPEX-Zeile",
     "exportTitle": "Budgetdatei exportieren",

@@ -2,7 +2,9 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createAppTheme } from '../../config/ThemeContext';
 
 vi.mock('react-i18next', () => {
   const translation = { t: (key: string, opts?: any) => key === 'budget.titleWithCurrency' ? `${key}:${opts.currency}` : key === 'budget.totalWithCount' ? `${key}:${opts.count}` : key, i18n: { language: 'en', resolvedLanguage: 'en' } };
@@ -1031,6 +1033,27 @@ describe('BudgetListPage', () => {
     expect(amounts.length + fte.length).toBeGreaterThan(8);
     expect(lastProps().pinnedBottomRowData).toHaveLength(1);
     expect((api as any).post).not.toHaveBeenCalled();
+  });
+
+  it('says the list is empty in one line, with the creation for someone who may create', async () => {
+    await renderPage();
+    const emptyState = (lastProps() as { emptyState?: React.ReactElement }).emptyState;
+    render(<ThemeProvider theme={createAppTheme('light')}>{emptyState}</ThemeProvider>);
+    const empty = screen.getByTestId('budget-empty');
+    expect(empty.textContent).toContain('budget.empty');
+    expect(empty.querySelector('button')?.textContent).toBe('budget.newLine');
+    fireEvent.click(empty.querySelector('button')!);
+    await waitFor(() => expect(location.pathname).toBe('/ops/budget/new'));
+    expect(new URLSearchParams(location.search).get('nature')).toBe('opex');
+  });
+
+  it('leaves the creation out of the empty list for a reader', async () => {
+    auth.level = 'reader';
+    await renderPage();
+    const emptyState = (lastProps() as { emptyState?: React.ReactElement }).emptyState;
+    render(<ThemeProvider theme={createAppTheme('light')}>{emptyState}</ThemeProvider>);
+    expect(screen.getByTestId('budget-empty').textContent).toBe('budget.empty');
+    expect(screen.getByTestId('budget-empty').querySelector('button')).toBeNull();
   });
 
 });

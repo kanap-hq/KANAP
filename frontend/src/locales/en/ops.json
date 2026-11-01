@@ -370,6 +370,7 @@
       "deleted_other": "{{count}} contracts deleted"
     },
     "title": "Contracts",
+    "empty": "No contracts yet.",
     "newButton": "New",
     "importCsv": "Import CSV",
     "exportTitle": "Export contracts",
@@ -1902,6 +1903,7 @@
     "titleWithCurrency": "Budget lines ({{currency}})",
     "type": "Type",
     "newLine": "New line",
+    "empty": "No budget lines yet.",
     "opexLine": "OPEX line",
     "capexLine": "CAPEX line",
     "exportTitle": "Export budget file",

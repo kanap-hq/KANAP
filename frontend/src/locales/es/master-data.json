@@ -407,6 +407,7 @@
   "suppliers": {
     "title": "Proveedores",
     "newSupplier": "Nuevo proveedor",
+    "empty": "Todavía no hay proveedores.",
     "supplierFallback": "Proveedor",
     "contactsTabHint": "La pestaña Contactos estará disponible después de crear el proveedor.",
     "loadError": "Error al cargar el proveedor.",

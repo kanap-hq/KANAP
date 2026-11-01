@@ -80,6 +80,11 @@
       "title": "Seleccionar plantilla"
     }
   },
+  "empty": {
+    "all": "Todavía no hay documentos en estas bibliotecas.",
+    "folder": "Todavía no hay documentos en esta carpeta.",
+    "library": "Todavía no hay documentos en esta biblioteca."
+  },
   "folderMoveDialog": {
     "actions": {
       "move": "Mover"
