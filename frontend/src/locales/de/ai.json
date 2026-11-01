@@ -387,11 +387,11 @@
     "lastInput": "Kontext der letzten Anfrage"
   },
   "usageIndicator": {
-    "limitReached": "Monthly limit reached. Resets {{resetDate}}.",
-    "limitReachedCta": "Monthly limit reached.",
-    "openSettings": "Configure your own provider",
-    "remaining_one": "{{count}} message remaining this month",
-    "remaining_other": "{{count}} messages remaining this month"
+    "limitReached": "Monatliches Limit erreicht. Wird am {{resetDate}} zurückgesetzt.",
+    "limitReachedCta": "Monatliches Limit erreicht.",
+    "openSettings": "Eigenen Anbieter konfigurieren",
+    "remaining_one": "Noch {{count}} Nachricht in diesem Monat",
+    "remaining_other": "Noch {{count}} Nachrichten in diesem Monat"
   },
   "workspace": {
     "empty": {
