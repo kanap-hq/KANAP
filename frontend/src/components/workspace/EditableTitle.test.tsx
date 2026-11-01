@@ -187,6 +187,18 @@ describe('EditableTitle', () => {
     expect(getComputedStyle(input).backgroundColor).toBe('rgba(0, 0, 0, 0)');
   });
 
+  it('gives the empty field a stronger blue on the dark theme', () => {
+    render(
+      <ThemeProvider theme={createAppTheme('dark')}>
+        <EditableTitle value="" fallback="New incident" canEdit autoEdit emphasizeEmpty onSave={vi.fn()} />
+      </ThemeProvider>,
+    );
+    const style = getComputedStyle(screen.getByRole('textbox'));
+    // alpha(info.main, 0.16) and alpha(info.main, 0.4) of the dark theme.
+    expect(style.backgroundColor).toMatch(/^rgba\(.*0\.16\)$/);
+    expect(style.borderTopColor).toMatch(/^rgba\(.*0\.4\)$/);
+  });
+
   it('does not emphasize the field without emphasizeEmpty', () => {
     renderTitle({ value: '', autoEdit: true });
     expect(getComputedStyle(screen.getByRole('textbox')).backgroundColor).toBe('rgba(0, 0, 0, 0)');

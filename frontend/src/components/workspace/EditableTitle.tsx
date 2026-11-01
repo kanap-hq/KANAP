@@ -31,6 +31,11 @@ type EditableTitleDisplayProps = {
   children: React.ReactNode;
 };
 
+/** Strength of the light blue of an empty title to give, fill and border. */
+function emptyTint(theme: Theme) {
+  return theme.palette.mode === 'dark' ? { fill: 0.16, border: 0.4 } : { fill: 0.08, border: 0.25 };
+}
+
 function titleColor(theme: Theme, placeholder: boolean, muted: boolean) {
   if (placeholder) return theme.palette.kanap.text.tertiary;
   if (muted) return theme.palette.kanap.text.secondary;
@@ -341,12 +346,13 @@ export default function EditableTitle({
           width: '100%',
           '&::placeholder': { color: theme.palette.kanap.text.tertiary, opacity: 1 },
           // The look of a task title still to give (TaskWorkspacePage `titleBarSx`), plain once a
-          // character is typed. The box keeps its size, so the text does not move.
+          // character is typed. The box keeps its size, so the text does not move. On the dark
+          // background the same blue needs about twice the strength to show.
           ...(emphasizeEmpty
             ? {
-              bgcolor: draft ? 'transparent' : alpha(theme.palette.info.main, 0.08),
-              border: `1px solid ${draft ? 'transparent' : alpha(theme.palette.info.main, 0.25)}`,
-              borderBottomColor: draft ? theme.palette.kanap.border.default : alpha(theme.palette.info.main, 0.25),
+              bgcolor: draft ? 'transparent' : alpha(theme.palette.info.main, emptyTint(theme).fill),
+              border: `1px solid ${draft ? 'transparent' : alpha(theme.palette.info.main, emptyTint(theme).border)}`,
+              borderBottomColor: draft ? theme.palette.kanap.border.default : alpha(theme.palette.info.main, emptyTint(theme).border),
               borderRadius: draft ? 0 : '6px',
               px: 1,
               py: 0.25,
