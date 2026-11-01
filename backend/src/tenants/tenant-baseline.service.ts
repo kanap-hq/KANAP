@@ -5,6 +5,7 @@ import { CompaniesService } from '../companies/companies.service';
 import { StatusState } from '../common/status';
 import { withSavepoint } from '../common/savepoint.util';
 import { SeedLanguage, tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
+import { ensureStartingPortfolioClassification } from '../portfolio/starting-classification.seed';
 import { TechnologyCatalogService } from '../technologies/catalog/technology-catalog.service';
 import { TenantsService } from './tenants.service';
 
@@ -63,7 +64,8 @@ export const STARTING_TECHNOLOGY_KEYS = ['windows-server', 'ubuntu'] as const;
 /**
  * The state of a tenant right after a trial activation, apart from its users and subscription:
  * the tenant defaults (TenantsService.seedTenantDefaults), the default global chart of accounts,
- * the starting company with its standard calendar, and the starting technologies. Trial activation, the reset to that state
+ * the starting company with its standard calendar, the starting technologies and the starting
+ * portfolio classification. Trial activation, the reset to that state
  * and the first start of a single-tenant installation share these steps.
  *
  * Every step runs on the given manager, inside the caller's transaction, with
@@ -80,7 +82,7 @@ export class TenantBaselineService {
 
   /**
    * The tenant defaults, then the default global chart of accounts, then the starting company,
-   * then the starting technologies.
+   * then the starting technologies and portfolio classification.
    * `language` names the seeded dimensions (English when absent). Returns what happened to the
    * chart of accounts.
    */
@@ -95,6 +97,7 @@ export class TenantBaselineService {
     const chartOfAccounts = await this.provisionDefaultGlobalCoa(manager);
     await this.createStartingCompany(manager, company);
     await this.adoptStartingTechnologies(manager, tenantId, opts?.language);
+    await this.seedStartingClassification(manager, tenantId, opts?.language);
     return { chartOfAccounts };
   }
 
@@ -106,9 +109,8 @@ export class TenantBaselineService {
   async adoptStartingTechnologies(manager: EntityManager, tenantId: string, language?: SeedLanguage): Promise<void> {
     try {
       await withSavepoint(manager, async () => {
-        // The descriptions are written in the seed language, the tenant's own when none is given.
-        const [tenant] = language ? [] : await manager.query(`SELECT metadata FROM tenants WHERE id = $1`, [tenantId]);
-        const descriptionLanguage = language ?? tenantSeedLanguage(tenant?.metadata);
+        // The descriptions are written in the seed language.
+        const descriptionLanguage = await this.seedLanguage(manager, tenantId, language);
         for (const key of STARTING_TECHNOLOGY_KEYS) {
           await this.technologyCatalog.adopt(key, { manager, tenantId, userId: null, language: descriptionLanguage, audit: { source: 'system' } });
         }
@@ -116,6 +118,28 @@ export class TenantBaselineService {
     } catch (e) {
       console.warn('[provisioning] Starting technologies skipped:', (e as Error)?.message);
     }
+  }
+
+  /**
+   * The starting request sources and categories of the portfolio, in the seed language
+   * (`STARTING_PORTFOLIO_SOURCES`, `STARTING_PORTFOLIO_CATEGORIES`); a value of the same name is
+   * kept. Under its own savepoint, logged and skipped on failure, like the technologies.
+   */
+  async seedStartingClassification(manager: EntityManager, tenantId: string, language?: SeedLanguage): Promise<void> {
+    try {
+      await withSavepoint(manager, async () => {
+        await ensureStartingPortfolioClassification(manager, tenantId, await this.seedLanguage(manager, tenantId, language));
+      });
+    } catch (e) {
+      console.warn('[provisioning] Starting portfolio classification skipped:', (e as Error)?.message);
+    }
+  }
+
+  /** The language given, else the tenant's own seed language. */
+  private async seedLanguage(manager: EntityManager, tenantId: string, language?: SeedLanguage): Promise<SeedLanguage> {
+    if (language) return language;
+    const [tenant] = await manager.query(`SELECT metadata FROM tenants WHERE id = $1`, [tenantId]);
+    return tenantSeedLanguage(tenant?.metadata);
   }
 
   /**

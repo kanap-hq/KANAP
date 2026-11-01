@@ -477,6 +477,8 @@ export async function baselineSnapshot(tenantId: string): Promise<Record<string,
     working_day_profiles: `SELECT * FROM working_day_profiles WHERE tenant_id = $1`,
     item_sequences: `SELECT * FROM item_sequences WHERE tenant_id = $1`,
     technologies: `SELECT * FROM technologies WHERE tenant_id = $1`,
+    portfolio_sources: `SELECT * FROM portfolio_sources WHERE tenant_id = $1`,
+    portfolio_categories: `SELECT * FROM portfolio_categories WHERE tenant_id = $1`,
   };
   return inTenant(tenantId, async (manager) => {
     const snapshot: Record<string, string[]> = {};

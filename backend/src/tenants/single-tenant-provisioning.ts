@@ -22,7 +22,7 @@ export function defaultTenantLanguage(env: NodeJS.ProcessEnv = process.env): See
  * First start of a single-tenant installation: creates the tenant when no tenant has its slug
  * yet, with the tenant defaults (the recommended dimensions in `language`, from
  * `DEFAULT_TENANT_LANGUAGE`), the default global chart of accounts (the one a cloud tenant
- * receives at activation) and the starting technologies, in one transaction. An existing installation is never changed.
+ * receives at activation) and the starting technologies and portfolio classification, in one transaction. An existing installation is never changed.
  * Returns whether the tenant was created.
  */
 export async function createSingleTenantOnFirstStart(
@@ -38,6 +38,7 @@ export async function createSingleTenantOnFirstStart(
     await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
     const outcome = await baseline.provisionDefaultGlobalCoa(manager);
     await baseline.adoptStartingTechnologies(manager, tenant.id, params.language);
+    await baseline.seedStartingClassification(manager, tenant.id, params.language);
     return outcome;
   });
   // eslint-disable-next-line no-console

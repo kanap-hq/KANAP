@@ -89,6 +89,7 @@ function buildController() {
     provisionDefaultGlobalCoa: async () => { writes.push('chart of accounts'); },
     createStartingCompany: async () => { writes.push('company'); },
     adoptStartingTechnologies: async () => { writes.push('technologies'); },
+    seedStartingClassification: async () => { writes.push('classification'); },
   };
   const runnerManager = {
     query: async () => [],

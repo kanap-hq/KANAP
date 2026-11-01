@@ -31,6 +31,7 @@ import { throwNotAvailableInMode } from '../common/feature-gates';
 import { tenantSlugFromHost } from '../common/tenancy/request-tenancy.middleware';
 import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
+import { startingClassificationNames } from '../portfolio/starting-classification.seed';
 import { TenantBaselineService } from '../tenants/tenant-baseline.service';
 import { TenantStatus } from '../tenants/tenant.entity';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -192,13 +193,22 @@ export const DEMO_LOAD_EMPTY_TABLES = [
   'spend_items',
   'suppliers',
   'tasks',
-  // Configuration: portfolio classification, AI integrations and agents.
+  // Configuration: portfolio classification (the starting sources and categories left out),
+  // AI integrations and agents.
   'portfolio_sources',
   'portfolio_categories',
   'portfolio_streams',
   'ai_adapter_configs',
   'ai_agent_definitions',
 ] as const;
+
+type SeededClassificationTable = 'portfolio_sources' | 'portfolio_categories';
+
+/** The query parameter that holds the seeded names of a classification table (`countTenantContent`). */
+const SEEDED_CLASSIFICATION_PARAM: Record<SeededClassificationTable, string> = {
+  portfolio_sources: '$6',
+  portfolio_categories: '$7',
+};
 
 /** The loader, from the backend directory (`src/`, `dist/` and `ci-dist/` all sit below it). */
 export const DEMO_SCRIPT_RELATIVE_PATH = path.join('fixtures', 'fromage-co', 'setup-tenant.mjs');
@@ -390,8 +400,11 @@ export async function countTenantContent(manager: EntityManager, tenantId: strin
     : [];
   const templateNumbers = baselineChart && template?.csv_payload ? await templateAccountNumbers(template.csv_payload) : [];
   const checks = [
-    ...DEMO_LOAD_EMPTY_TABLES.map((table) =>
-      `SELECT '${table}' AS t, count(*)::int AS n FROM ${table} WHERE tenant_id = $1`),
+    ...DEMO_LOAD_EMPTY_TABLES.map((table) => SEEDED_CLASSIFICATION_PARAM[table as SeededClassificationTable]
+      // The starting sources and categories (TenantBaselineService) do not count, in any seed language.
+      ? `SELECT '${table}' AS t, count(*)::int AS n FROM ${table}
+           WHERE tenant_id = $1 AND NOT (lower(name) = ANY(${SEEDED_CLASSIFICATION_PARAM[table as SeededClassificationTable]}::text[]))`
+      : `SELECT '${table}' AS t, count(*)::int AS n FROM ${table} WHERE tenant_id = $1`),
     `SELECT 'companies' AS t, GREATEST(count(*) - 1, 0)::int AS n FROM companies WHERE tenant_id = $1`,
     `SELECT 'documents' AS t, count(*)::int AS n
        FROM documents d LEFT JOIN document_libraries l ON l.id = d.library_id AND l.tenant_id = d.tenant_id
@@ -421,6 +434,8 @@ export async function countTenantContent(manager: EntityManager, tenantId: strin
     templateNumbers,
     seeded.map(([code]) => code),
     seeded.map(([, name]) => name),
+    startingClassificationNames('portfolio_sources'),
+    startingClassificationNames('portfolio_categories'),
   ]);
   return rows
     .map((row) => ({ table: row.t, count: Number(row.n) }))

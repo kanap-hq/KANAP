@@ -1,9 +1,11 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
-import { PortfolioSource, DEFAULT_SOURCES } from './portfolio-source.entity';
-import { PortfolioCategory, DEFAULT_CATEGORIES } from './portfolio-category.entity';
-import { PortfolioStream, DEFAULT_STREAMS } from './portfolio-stream.entity';
+import { PortfolioSource } from './portfolio-source.entity';
+import { PortfolioCategory } from './portfolio-category.entity';
+import { PortfolioStream } from './portfolio-stream.entity';
+import { ensureStartingPortfolioClassification } from './starting-classification.seed';
+import { tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { PortfolioTaskType, DEFAULT_TASK_TYPES } from './portfolio-task-type.entity';
 import { checkIds, RecordInUseException, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
 
@@ -263,23 +265,6 @@ export class PortfolioClassificationService {
     return usages;
   }
 
-  async seedDefaultSources(tenantId: string, manager?: EntityManager): Promise<void> {
-    const repo = manager ? manager.getRepository(PortfolioSource) : this.sourceRepo;
-
-    for (const def of DEFAULT_SOURCES) {
-      const existing = await repo.findOne({
-        where: { tenant_id: tenantId, name: def.name },
-      });
-      if (!existing) {
-        const source = repo.create({
-          tenant_id: tenantId,
-          ...def,
-        });
-        await repo.save(source);
-      }
-    }
-  }
-
   // ============================================
   // Categories
   // ============================================
@@ -377,23 +362,6 @@ export class PortfolioClassificationService {
 
     // Streams will be cascade deleted
     await repo.delete(id);
-  }
-
-  async seedDefaultCategories(tenantId: string, manager?: EntityManager): Promise<void> {
-    const repo = manager ? manager.getRepository(PortfolioCategory) : this.categoryRepo;
-
-    for (const def of DEFAULT_CATEGORIES) {
-      const existing = await repo.findOne({
-        where: { tenant_id: tenantId, name: def.name },
-      });
-      if (!existing) {
-        const category = repo.create({
-          tenant_id: tenantId,
-          ...def,
-        });
-        await repo.save(category);
-      }
-    }
   }
 
   // ============================================
@@ -529,36 +497,6 @@ export class PortfolioClassificationService {
     await repo.delete(id);
   }
 
-  async seedDefaultStreams(tenantId: string, manager?: EntityManager): Promise<void> {
-    const catRepo = manager ? manager.getRepository(PortfolioCategory) : this.categoryRepo;
-    const streamRepoToUse = manager ? manager.getRepository(PortfolioStream) : this.streamRepo;
-
-    // Get categories for this tenant
-    const categories = await catRepo.find({ where: { tenant_id: tenantId } });
-    const categoryMap: Record<string, string> = {};
-    for (const cat of categories) {
-      categoryMap[cat.name] = cat.id;
-    }
-
-    for (const def of DEFAULT_STREAMS) {
-      const categoryId = categoryMap[def.category_name];
-      if (!categoryId) continue;
-
-      const existing = await streamRepoToUse.findOne({
-        where: { tenant_id: tenantId, category_id: categoryId, name: def.name },
-      });
-      if (!existing) {
-        const stream = streamRepoToUse.create({
-          tenant_id: tenantId,
-          category_id: categoryId,
-          name: def.name,
-          display_order: def.display_order,
-        });
-        await streamRepoToUse.save(stream);
-      }
-    }
-  }
-
   // ============================================
   // Task Types
   // ============================================
@@ -684,10 +622,15 @@ export class PortfolioClassificationService {
   // Combined Operations
   // ============================================
 
+  /**
+   * The starting sources and categories of a new workspace (`starting-classification.seed.ts`), in
+   * the workspace seed language, as ordinary values, then the task types. No stream: the user
+   * creates their own.
+   */
   async seedAllDefaults(tenantId: string, manager?: EntityManager): Promise<void> {
-    await this.seedDefaultSources(tenantId, manager);
-    await this.seedDefaultCategories(tenantId, manager);
-    await this.seedDefaultStreams(tenantId, manager);
+    const mg = manager ?? this.sourceRepo.manager;
+    const [tenant] = await mg.query(`SELECT metadata FROM tenants WHERE id = $1`, [tenantId]);
+    await ensureStartingPortfolioClassification(mg, tenantId, tenantSeedLanguage(tenant?.metadata));
     await this.seedDefaultTaskTypes(tenantId, manager);
   }
 

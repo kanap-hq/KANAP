@@ -136,6 +136,8 @@ Phasenvorlagen bieten:
 
 Konfigurieren Sie Typen, Kategorien und Streams zur Organisation von Anfragen und Projekten.
 
+Ein neuer Arbeitsbereich beginnt mit drei Quellen (IT, Fachbereich, Compliance) und fünf Kategorien mit je einer kurzen Beschreibung (Geschäftsanwendungen, Arbeitsplatz und Anwenderservices, Infrastruktur und Betrieb, Innovation und digitale Transformation, Cybersicherheit), ohne Stream. Ihre Namen folgen der Sprache des Arbeitsbereichs. Sie können sie wie jeden anderen Wert umbenennen, deaktivieren oder löschen.
+
 ### Typen
 
 Typen beschreiben die Art der Arbeit:
