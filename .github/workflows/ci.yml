@@ -24,6 +24,7 @@ concurrency:
 # Actions are pinned to the full commit SHA of a release, its version in the comment
 # (Dependabot updates both). Each job's timeout-minutes is about three times its usual duration
 # (3 minutes at least), so a stuck job fails and frees the queue before its 30-minute limit.
+# The backend job (about 12 minutes) stays under the limit at 28 minutes instead of three times.
 permissions:
   contents: read
 
@@ -84,7 +85,7 @@ jobs:
     # Runs even when `changes` failed: with no answer from it, every spec runs.
     if: ${{ !cancelled() && github.event_name == 'merge_group' && needs.changes.outputs.backend != 'none' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 28
     services:
       postgres:
         image: postgres:16
@@ -196,7 +197,7 @@ jobs:
     needs: [ stack-order, changes ]
     if: ${{ github.event_name == 'merge_group' && needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 12
     strategy:
       # Every shard finishes, so one run lists every failing test.
       fail-fast: false
