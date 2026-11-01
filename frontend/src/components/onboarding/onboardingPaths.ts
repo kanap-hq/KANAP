@@ -35,6 +35,7 @@ export const STEP_SCREENS: Record<string, StepScreen> = {
   map_assets: title('/it/assets'),
   map_technologies: title('/it/technologies/end-of-support'),
   map_import: { to: '/it/applications', target: 'export' },
+  own_sites: title('/it/locations'),
   own_applications: title('/it/applications'),
   own_technologies: title('/it/technologies'),
   own_assets: title('/it/assets'),

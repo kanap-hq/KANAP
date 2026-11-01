@@ -1650,6 +1650,10 @@
           "title": "Your data",
           "hint": "Export the applications as csv or Excel, then use the template to import yours. Go on with the technologies to attach their end of support and vulnerabilities."
         },
+        "own_sites": {
+          "title": "Your locations",
+          "hint": "Create your locations: server rooms, data centers or clouds. Every server belongs to one."
+        },
         "own_applications": {
           "title": "Your applications",
           "hint": "Import the list of your applications and then enrich them, or create them directly in KANAP."

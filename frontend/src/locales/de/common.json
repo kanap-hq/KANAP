@@ -1650,6 +1650,10 @@
           "title": "Ihre Daten",
           "hint": "Exportieren Sie die Anwendungen als csv oder Excel und importieren Sie dann Ihre eigenen mit der Vorlage. Fahren Sie mit den Technologien fort, um ihnen Supportende und Schwachstellen zuzuordnen."
         },
+        "own_sites": {
+          "title": "Ihre Standorte",
+          "hint": "Legen Sie Ihre Standorte an: Serverräume, Rechenzentren oder Clouds. Jeder Server gehört zu einem davon."
+        },
         "own_applications": {
           "title": "Ihre Anwendungen",
           "hint": "Importieren Sie die Liste Ihrer Anwendungen und ergänzen Sie sie anschließend, oder legen Sie sie direkt in KANAP an."

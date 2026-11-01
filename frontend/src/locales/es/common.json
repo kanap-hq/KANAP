@@ -1650,6 +1650,10 @@
           "title": "Sus datos",
           "hint": "Exporte las aplicaciones en csv o Excel y use la plantilla para importar las suyas. Siga con las tecnologías para asociarles el fin de soporte y las vulnerabilidades."
         },
+        "own_sites": {
+          "title": "Sus ubicaciones",
+          "hint": "Cree sus ubicaciones: salas de servidores, centros de datos o nubes. Cada servidor pertenece a una."
+        },
         "own_applications": {
           "title": "Sus aplicaciones",
           "hint": "Importe la lista de sus aplicaciones y luego compleméntelas, o créelas directamente en KANAP."
