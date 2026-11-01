@@ -207,8 +207,8 @@ function toolActivityPhase(toolName: string): ChatActivityPhase {
   if (['get_entity_detail', 'get_entity_context', 'get_entity_comments', 'get_record_history'].includes(toolName)) {
     return 'reading_context';
   }
-  if (toolName === 'search_knowledge') return 'searching_knowledge';
-  if (toolName === 'get_document') return 'reading_document';
+  if (toolName === 'search_knowledge' || toolName === 'list_help_topics') return 'searching_knowledge';
+  if (toolName === 'get_document' || toolName === 'read_help_section') return 'reading_document';
   if (toolName === 'web_search') return 'searching_web';
   if (
     toolName === 'undo_preview'

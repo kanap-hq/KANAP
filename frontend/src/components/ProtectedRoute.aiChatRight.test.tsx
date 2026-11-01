@@ -95,8 +95,23 @@ describe('403 page for the assistant', () => {
     expect(screen.getByText('forbidden.aiChatRight')).toBeInTheDocument();
   });
 
-  it('keeps the generic text when the assistant is unavailable for another reason', () => {
+  it('opens the assistant when an administrator turned chat off', () => {
     chatReasons = ['tenant_disabled'];
+    renderAt('/ai');
+    expect(screen.getByText('assistant page')).toBeInTheDocument();
+    expect(screen.queryByText('forbidden.message')).not.toBeInTheDocument();
+  });
+
+  it('names the AI chat permission when chat is turned off and the right is missing', () => {
+    chatReasons = ['tenant_disabled', 'permission_denied'];
+    grantedResources = [];
+    renderAt('/ai');
+    expect(screen.getByText('forbidden.aiChatRight')).toBeInTheDocument();
+    expect(screen.queryByText('assistant page')).not.toBeInTheDocument();
+  });
+
+  it('keeps the generic text when the provider is not ready', () => {
+    chatReasons = ['provider_not_ready'];
     renderAt('/ai');
     expect(screen.getByText('forbidden.message')).toBeInTheDocument();
     expect(screen.queryByText('forbidden.aiChatRight')).not.toBeInTheDocument();

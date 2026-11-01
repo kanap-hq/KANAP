@@ -31,6 +31,44 @@ async function testStartTrialAcceptsLegacyMarketingAliases() {
   assert.deepEqual(errors.map((error) => error.property), []);
 }
 
+// Names: optional, names trimmed (an empty name is absent), 100 characters at most.
+async function testStartTrialNames() {
+  const base = { org: 'Acme IT', slug: 'acme-it', email: 'admin@example.com', country_iso: 'FR', captchaToken: 'captcha-token' };
+  const dto = plainToInstance(StartTrialDto, {
+    ...base,
+    first_name: '  Ada ',
+    last_name: ' ',
+  });
+  assert.deepEqual((await validate(dto, { whitelist: true })).map((error) => error.property), []);
+  assert.equal(dto.first_name, 'Ada');
+  assert.equal(dto.last_name, undefined, 'an empty name is absent');
+
+  const errors = await validatePayload(StartTrialDto, {
+    ...base,
+    first_name: 'A'.repeat(101),
+    last_name: 42,
+  });
+  assert.deepEqual(errors.map((error) => error.property).sort(), ['first_name', 'last_name']);
+  assert.deepEqual(
+    (await validatePayload(StartTrialDto, { ...base, first_name: 'A'.repeat(100), last_name: 'Lovelace' })).map((e) => e.property),
+    [],
+  );
+}
+
+// The names take the form of a person name only: the first name greets the person in the
+// activation e-mail, sent to any address.
+async function testStartTrialNameForm() {
+  const base = { org: 'Acme IT', slug: 'acme-it', email: 'admin@example.com', country_iso: 'FR', captchaToken: 'captcha-token' };
+  for (const name of ['Jean-Luc', "O'Brien", 'Zoë', 'María José', 'Ngozi', 'D’Angelo', 'J. R.', '  Ada ']) {
+    const errors = await validatePayload(StartTrialDto, { ...base, first_name: name, last_name: name });
+    assert.deepEqual(errors.map((error) => error.property), [], `accepted: ${JSON.stringify(name)}`);
+  }
+  for (const name of ['www.example.com', 'http://x', 'a\nb', 'a\tb', 'Jean  Luc', '123', 'Ada1', 'ada@example', 'a/b', 'a:b']) {
+    const errors = await validatePayload(StartTrialDto, { ...base, first_name: name, last_name: name });
+    assert.deepEqual(errors.map((error) => error.property).sort(), ['first_name', 'last_name'], `refused: ${JSON.stringify(name)}`);
+  }
+}
+
 async function testContactAcceptsCaptchaAliases() {
   for (const captchaField of ['captchaToken', 'captcha_token']) {
     const errors = await validatePayload(SendContactDto, {
@@ -84,6 +122,8 @@ async function testSupportInvoiceRequiresTheAddressAnIsoCountryAndTheTerms() {
 async function main() {
   await testStartTrialAcceptsCurrentMarketingPayload();
   await testStartTrialAcceptsLegacyMarketingAliases();
+  await testStartTrialNames();
+  await testStartTrialNameForm();
   await testContactAcceptsCaptchaAliases();
   await testSupportInvoiceNormalisesTheCurrentMarketingPayload();
   await testSupportInvoiceRequiresTheAddressAnIsoCountryAndTheTerms();

@@ -19,6 +19,9 @@ Der Arbeitsbereich steht auch Administratoren mit `ai_chat:admin` zur Verfügung
 !!! note "Wartet auf einen Administrator"
     Im gehosteten Dienst kann Plaid auf dem inklusiven KANAP-Modell laufen. Zuvor bestätigt ein Administrator den Anbieter und den Ort, an dem er Daten verarbeitet. Bis dahin zeigt der Arbeitsbereich *Ein Administrator muss den KI-Anbieter unter Administration > Plaid bestätigen.* statt des Chats. Ein Administrator erledigt das auf der Seite [Plaid-Einstellungen](ai-settings.md#das-inklusive-kanap-modell-bestatigen). Organisationen, die ein eigenes Modell nutzen, sehen diesen Hinweis nie.
 
+!!! note "Chat ausgeschaltet"
+    Wenn ein Administrator den Chat unter **Administration › Plaid** ausschaltet, öffnet eine Person mit dem Chat-Recht weiterhin diese Seite, und der Eintrag Plaid bleibt in der oberen Navigation. Die Seite zeigt *Plaid ist für diesen Arbeitsbereich ausgeschaltet.* Ein Administrator des Assistenten sieht außerdem *Schalten Sie ihn unter Administration › Plaid ein*, einen Link zu den Plaid-Einstellungen. Alle anderen sehen *Bitten Sie einen Administrator, ihn einzuschalten.* Eine Person ohne das Chat-Recht sieht die Seite Zugriff verweigert.
+
 ## Eine Konversation beginnen
 
 Wenn Sie Plaid zum ersten Mal öffnen, gelangen Sie auf einen Begrüßungsbildschirm mit:
@@ -111,6 +114,8 @@ In KANAP gespeicherte Bilder, etwa Anhänge, werden wie gewohnt angezeigt. Ein B
 ### Tool-Aufrufe { #tool-calls }
 
 Plaid verwendet eine kleine Auswahl interner Tools, um Fragen zu beantworten: `Search all`, `Search knowledge`, `Get document`, `Get entity context` und einige weitere. Jeder Tool-Aufruf erscheint als kompakte Zeile unter der Nachricht („Alles durchsuchen verwendet · 8 Ergebnisse“). In der Regel müssen Sie die Tool-Details nicht lesen, aber sie sind vorhanden, falls Sie genau sehen möchten, auf welchen Datensätzen die Antwort beruht.
+
+Wenn Sie fragen, wie etwas in KANAP geht, etwa wo sich eine Einstellung befindet oder welche Schritte eine Aufgabe hat, liest Plaid das Benutzerhandbuch Ihrer KANAP-Version in Ihrer Sprache (`Benutzerhandbuch durchsuchen`, `Benutzerhandbuch lesen`). Es beschreibt die Bildschirme so, wie das Handbuch es tut, und verlinkt den gelesenen Abschnitt auf doc.kanap.net.
 
 `Search all` findet Budgetzeilen über die Namen ihrer Analysewerte und teilt Plaid mit, welche Werte jede Zeile hat. Plaid nennt eine Budgetzeile mit ihrer Referenz `BL-12`, und seine Links öffnen die Zeile. Eine Zahl allein, etwa 21, bedeutet `BL-21`. Die früheren Nummern funktionieren weiterhin: `OPX-12` oder `CPX-3` findet seine Zeile.
 

@@ -48,6 +48,7 @@ async function testActivationMatchesHelper() {
     {} as any,
     {} as any,
     {} as any,
+    { provisionTrialSampleData: async () => undefined } as any,
   );
   const token = randomBytes(32).toString('hex');
   const slug = `rs-act-${randomUUID().slice(0, 8)}`;
@@ -87,6 +88,7 @@ async function testActivationInBrowserLanguage() {
     svc.tenants, svc.users, svc.baseline, dataSource,
     { send: async () => undefined } as any,
     svc.auth, dataSource.getRepository(TrialSignup), {} as any, {} as any, {} as any,
+    { provisionTrialSampleData: async () => undefined } as any,
   );
   const token = randomBytes(32).toString('hex');
   const slug = `rs-actfr-${randomUUID().slice(0, 8)}`;

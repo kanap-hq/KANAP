@@ -19,6 +19,9 @@ The workspace is also available to administrators with `ai_chat:admin`, who can 
 !!! note "Waiting for an administrator"
     On the hosted service, Plaid can run on the KANAP included model. Before it does, an administrator confirms the provider and where it processes data. Until then the workspace shows *An administrator must confirm the AI provider in Admin > Plaid.* instead of the chat. An administrator does this on the [Plaid Settings](ai-settings.md#confirming-the-kanap-included-model) page. Organizations that use a model of their own never see this notice.
 
+!!! note "Chat turned off"
+    When an administrator turns chat off under **Administration › Plaid**, a person who may use the chat still opens this page, and the Plaid entry stays in the top navigation. The page says *Plaid is turned off for this workspace.* An administrator of the assistant also sees *Turn it on in Administration › Plaid*, which opens the Plaid settings. Anyone else sees *Ask an administrator to turn it on.* A person without the chat right sees the access denied page.
+
 ## Starting a conversation
 
 When you open Plaid for the first time, you land on a welcome screen with:
@@ -111,6 +114,8 @@ Images stored in KANAP, such as attachments, display as usual. An image hosted o
 ### Tool calls { #tool-calls }
 
 Plaid uses a small set of internal tools to answer questions: `Search all`, `Search knowledge`, `Get document`, `Get entity context`, and a handful of others. Each tool call shows up as a compact line under the message ("used Search all · 8 results"). You usually do not need to read the tool details, but they are there if you want to see exactly which records the answer was based on.
+
+When you ask how to do something in KANAP, such as where a setting is or the steps of a task, Plaid reads the user manual of your KANAP version, in your language (`Browse the user manual`, `Read the user manual`). It describes the screens as the manual does and links the section it read on doc.kanap.net.
 
 `Search all` finds budget lines by the names of their analytics values, and tells Plaid which values each line holds. Plaid names a budget line by its `BL-12` reference, and its links open the line. A number alone, such as 21, means `BL-21`. The former numbers still work: `OPX-12` or `CPX-3` finds its line.
 

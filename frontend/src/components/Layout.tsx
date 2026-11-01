@@ -3,7 +3,6 @@ import { AppBar, Box, CircularProgress, Divider, Drawer, IconButton, LinearProgr
 import { useQuery } from '@tanstack/react-query';
 import { keyframes } from '@emotion/react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import DashboardIcon from '@mui/icons-material/Dashboard';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
@@ -30,7 +29,6 @@ import InsightsIcon from '@mui/icons-material/Insights';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import StorageIcon from '@mui/icons-material/Storage';
-import HomeIcon from '@mui/icons-material/Home';
 import LocationCityIcon from '@mui/icons-material/LocationCity';
 import InboxIcon from '@mui/icons-material/Inbox';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
@@ -61,9 +59,11 @@ import { formatUserName } from '../utils/userDisplay';
 import SubscriptionBanner from './SubscriptionBanner';
 import TrialChip, { TrialMenuLine } from './TrialChip';
 import NamePromptDialog from './NamePromptDialog';
+import FirstOpenDialog from './onboarding/FirstOpenDialog';
+import StepHint from './onboarding/StepHint';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
-import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
+import { chatAwaitsIncludedModelConfirmation, chatTurnedOffByAdmin } from '../ai/includedModel';
 import { aiAgentControlApi } from '../ai/aiApi';
 import { useTranslation } from 'react-i18next';
 import { PagePendingContext } from '../lib/deferredPage';
@@ -181,7 +181,6 @@ export default function Layout() {
   } = applicationVisibility;
 
   const operations: NavEntry[] = [
-    { to: '/ops', label: t('nav:sidebar.ops.overview'), icon: <DashboardIcon /> },
     { to: '/ops/budget', label: t('nav:sidebar.ops.budgetLines'), icon: <AccountBalanceWalletIcon />, resource: 'budget' },
     { to: '/ops/contracts', label: t('nav:sidebar.ops.contracts'), icon: <DescriptionIcon />, resource: 'contracts' },
     { to: '/ops/reports', label: t('nav:sidebar.ops.reporting'), icon: <BarChartIcon />, resource: 'reporting' },
@@ -189,7 +188,6 @@ export default function Layout() {
   ];
 
   const masterData: NavEntry[] = [
-    { to: '/master-data', label: t('nav:sidebar.masterData.home'), icon: <HomeIcon /> },
     { divider: t('nav:sidebar.masterData.sections.organization') },
     { to: '/master-data/companies', label: t('nav:sidebar.masterData.companies'), icon: <BusinessIcon />, resource: 'companies' },
     { to: '/master-data/departments', label: t('nav:sidebar.masterData.departments'), icon: <AccountTreeIcon />, resource: 'departments' },
@@ -306,9 +304,11 @@ export default function Layout() {
   const hasWorkspaceAccess = React.useCallback((ws: string): boolean => {
     if (ws === 'ai') {
       if (!config.features.aiChat) return false;
-      // Still listed while it waits for the included model's confirmation: the page says why.
+      // Still listed while the page can say why: the included model waits for a confirmation,
+      // or an administrator turned chat off.
       return aiCapabilities.data?.surfaces.chat.available === true
-        || chatAwaitsIncludedModelConfirmation(aiCapabilities.data);
+        || chatAwaitsIncludedModelConfirmation(aiCapabilities.data)
+        || chatTurnedOffByAdmin(aiCapabilities.data);
     }
     if (ws === 'agents') {
       return canShowAgents;
@@ -780,6 +780,9 @@ export default function Layout() {
           </React.Suspense>
         </Box>
       </Box>
+      {/* The name prompt is mounted last, so it comes first when both are open. */}
+      <FirstOpenDialog />
+      <StepHint />
       <NamePromptDialog />
     </Box>
   );

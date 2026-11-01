@@ -244,7 +244,7 @@ Una aplicación aparece de dos maneras:
 - **Alojada**: uno de sus despliegues se ejecuta en un servidor que lleva la tecnología. KANAP deduce la fila de los servidores; cambie el servidor o el despliegue para modificarla.
 - **Declarada**: la aplicación depende de la tecnología sin ejecutarse a su lado, por ejemplo una aplicación cuyos usuarios inician sesión con Entra ID. Cambie la versión en el sitio, o quite la declaración. Quitarla retira todas las versiones declaradas de esa aplicación.
 
-**Añadir** (`infrastructure:member`) abre una búsqueda en la que puede marcar varias aplicaciones y añadirlas de una vez. Se declaran con una versión desconocida: indíquela después en cada fila. Las aplicaciones y los despliegues desactivados no cuentan.
+**Añadir** (`infrastructure:member`) abre una búsqueda en la que puede marcar varias aplicaciones y luego pide su versión: elija una, escriba una nueva o elija **Versión desconocida**. Todas se declaran con esa versión. Haga clic en la versión de una fila declarada para cambiarla. Las aplicaciones y los despliegues desactivados no cuentan.
 
 **Exportar** descarga las filas como archivo CSV o Excel, en el idioma de su pantalla.
 

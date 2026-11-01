@@ -212,9 +212,16 @@ describe('getApiErrorMessage', () => {
       .toBe('The recovery point objective (RPO) must be a whole number of minutes.');
     const owner = { response: { status: 400, data: { code: 'owner_email_unknown', message: 'No user', params: { email: 'x@example.com' } } } };
     expect(getApiErrorMessage(owner, fr, 'fallback')).toBe('Aucun utilisateur avec le courriel x@example.com.');
+    const allowed = 'line_of_business (Line-of-business), productivity (Productivity)';
+    const category = { response: { status: 400, data: { code: 'category_invalid', message: 'server words', params: { value: 'business', allowed } } } };
+    expect(getApiErrorMessage(category, t, 'fallback')).toBe(`Unknown category: business. Use a category from the list, by its name or its code. Use one of: ${allowed}.`);
+    expect(getApiErrorMessage(category, fr, 'fallback')).toBe(`Catégorie inconnue\u00a0: business. Utilisez une catégorie de la liste, par son nom ou son code. Valeurs possibles\u00a0: ${allowed}.`);
+    const lifecycle = { response: { status: 400, data: { code: 'lifecycle_invalid', message: 'server words', params: { value: 'Bogus', allowed: 'active (Active), retired (Retired)' } } } };
+    expect(getApiErrorMessage(lifecycle, i18n.getFixedT('de'), 'fallback')).toBe('Unbekannter Lebenszyklus: Bogus. Verwenden Sie einen Lebenszyklus aus der Liste, mit Namen oder Code. Mögliche Werte: active (Active), retired (Retired).');
+    expect(getApiErrorMessage(lifecycle, i18n.getFixedT('es'), 'fallback')).toBe('Ciclo de vida desconocido: Bogus. Use un ciclo de vida de la lista, por su nombre o su código. Valores posibles: active (Active), retired (Retired).');
     for (const code of ['name_required', 'name_ambiguous', 'name_too_long', 'lifecycle_invalid', 'category_invalid', 'classification_unknown', 'duration_invalid', 'dates_inconsistent', 'suite_has_children', 'suite_cycle']) {
       for (const language of ['en', 'fr', 'de', 'es']) {
-        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', name: 'n', count: 2, max: 200, field: 'rto_minutes' } } } }, i18n.getFixedT(language), 'fallback');
+        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', name: 'n', count: 2, max: 200, field: 'rto_minutes', allowed: 'active (Active)' } } } }, i18n.getFixedT(language), 'fallback');
         expect(text, `${code} in ${language}`).not.toBe('server words');
         expect(text).not.toMatch(/{{|rto_minutes/);
       }

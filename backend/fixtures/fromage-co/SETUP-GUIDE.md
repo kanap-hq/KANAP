@@ -59,8 +59,11 @@ its own: load the current dataset on a new tenant instead.
 1. **Tenant bootstrap** (if login fails): `POST /public/start-trial` →
    `POST /public/activate-trial` → sets the admin password. See
    "Tenant creation and CAPTCHA" below.
-2. **Settings**: currencies (EUR/USD), IT Ops server kinds, operating systems,
-   DNS domains, connection entities.
+2. **Settings**: currencies (EUR reporting, USD allowed) and a USD rate for
+   years N-1 through N+2 (fetched, or the documented manual rate of 0.9 EUR
+   per USD when the sources cannot be reached; N+2 covers the renewing USD
+   contract), IT Ops server kinds, operating systems, DNS domains, connection
+   entities.
 3. **Portfolio classification** (sources, categories, streams) and the
    **analytics dimensions**: the recommended ones the tenant lacks, then the
    data set's own two (see "Analytics dimensions" below).

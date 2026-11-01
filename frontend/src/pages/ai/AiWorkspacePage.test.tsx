@@ -2,6 +2,7 @@ import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AiWorkspacePage from './AiWorkspacePage';
 import { aiConversationsApi } from '../../ai/aiApi';
@@ -53,7 +54,7 @@ function chatCapabilities(reasons: string[], settingsAvailable = false) {
     surfaces: {
       chat: {
         feature_enabled: true,
-        tenant_enabled: true,
+        tenant_enabled: !reasons.includes('tenant_disabled'),
         permission_granted: true,
         provider_ready: !reasons.includes('builtin_not_accepted'),
         available: reasons.length === 0,
@@ -128,6 +129,10 @@ vi.mock('../../ai/aiApi', () => ({
   },
 }));
 
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({ hasLevel: () => true }),
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -139,17 +144,22 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-function renderPage(client: QueryClient) {
-  const theme = createAppTheme('light');
-  return render(
-    <ThemeProvider theme={theme}>
-      <QueryClientProvider client={client}>
-        <KanapDialogProvider>
-          <AiWorkspacePage />
-        </KanapDialogProvider>
-      </QueryClientProvider>
-    </ThemeProvider>,
+function pageTree(client: QueryClient) {
+  return (
+    <MemoryRouter>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <QueryClientProvider client={client}>
+          <KanapDialogProvider>
+            <AiWorkspacePage />
+          </KanapDialogProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </MemoryRouter>
   );
+}
+
+function renderPage(client: QueryClient) {
+  return render(pageTree(client));
 }
 
 function createLocalStorageMock(): Storage {
@@ -263,6 +273,57 @@ describe('AiWorkspacePage', () => {
 
     expect(screen.getByText('workspace.title')).toBeInTheDocument();
     expect(screen.getByText('workspace.messages.disabled')).toBeInTheDocument();
+  });
+
+  it('says Plaid is turned off and links an administrator of the assistant to Administration › Plaid', () => {
+    capabilitiesState = { data: chatCapabilities(['tenant_disabled'], true) };
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    renderPage(client);
+
+    expect(screen.getByText('workspace.messages.disabled')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'workspace.messages.tenantDisabledAdminLink' })).toHaveAttribute('href', '/admin/ai');
+    expect(screen.queryByText('workspace.messages.tenantDisabledAskAdmin')).not.toBeInTheDocument();
+    expect(screen.queryByText('Send message')).not.toBeInTheDocument();
+  });
+
+  it('says Plaid is turned off without a settings link when the person cannot administer the assistant', () => {
+    capabilitiesState = { data: chatCapabilities(['tenant_disabled']) };
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    renderPage(client);
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('workspace.messages.disabled');
+    expect(alert).toHaveTextContent('workspace.messages.tenantDisabledAskAdmin');
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.queryByText('Send message')).not.toBeInTheDocument();
+  });
+
+  it('explains that chat is turned off when the included model is also unconfirmed', () => {
+    capabilitiesState = { data: chatCapabilities(['tenant_disabled', 'builtin_not_accepted'], true) };
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    renderPage(client);
+
+    expect(screen.getByText('workspace.messages.disabled')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'workspace.messages.tenantDisabledAdminLink' })).toBeInTheDocument();
+    expect(screen.queryByText('workspace.messages.builtinNotAccepted')).not.toBeInTheDocument();
   });
 
   it('says an administrator must confirm the AI provider when only that holds the assistant back', () => {
@@ -454,15 +515,7 @@ describe('AiWorkspacePage', () => {
       },
     ];
 
-    view.rerender(
-      <ThemeProvider theme={createAppTheme('light')}>
-        <QueryClientProvider client={client}>
-          <KanapDialogProvider>
-            <AiWorkspacePage />
-          </KanapDialogProvider>
-        </QueryClientProvider>
-      </ThemeProvider>,
-    );
+    view.rerender(pageTree(client));
 
     await waitFor(() => {
       expect(screen.getByTestId('artifact-panel')).toHaveTextContent('preview-1');

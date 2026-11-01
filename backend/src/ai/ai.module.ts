@@ -191,6 +191,7 @@ import { AiQueryExecutor } from './query/ai-query.executor';
 import { PlatformAiModule } from './platform/platform-ai.module';
 import { BraveSearchService } from './web-search/brave-search.service';
 import { AiRecordHistoryService } from './ai-record-history.service';
+import { AiHelpManualService } from './ai-help-manual.service';
 
 @Module({
   imports: [
@@ -349,6 +350,8 @@ import { AiRecordHistoryService } from './ai-record-history.service';
     AiAggregateExecutor,
     AiToolRegistry,
     AiRecordHistoryService,
+    // The user manual, read by list_help_topics and read_help_section.
+    AiHelpManualService,
     AiCapabilityRegistry,
     AiCapabilityDispatcherService,
     AiEvidenceService,

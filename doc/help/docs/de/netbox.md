@@ -263,7 +263,7 @@ Zwei Sicherungen greifen. Es wird nichts als fehlend gemeldet, wenn der Aufruf a
 
 ## Die Kachel auf der Startseite
 
-Für Ihr persönliches Dashboard steht eine Kachel **Netbox-Synchronisierung** bereit. Sie ist standardmäßig aus. Schalten Sie sie in den Dashboard-Einstellungen ein, über das Zahnradsymbol auf **Dashboard**, und setzen Sie den Haken bei **Netbox-Synchronisierung**. Die Kachel benötigt `infrastructure:admin`, wie der Rest der Integration.
+Für Ihr persönliches Dashboard steht eine Kachel **Netbox-Synchronisierung** bereit. Sie ist standardmäßig aus. Zum Einschalten klicken Sie auf **Startseite anpassen**, dann im Abschnitt **IT-Landschaft** auf **Kachel hinzufügen**, und wählen Sie **Netbox-Synchronisierung**. Siehe [Ihr Dashboard anpassen](my-dashboard.md#customizing-the-budget-section). Die Kachel benötigt `infrastructure:admin`, wie der Rest der Integration.
 
 Die Kachel hält sich zurück, wenn es nichts zu tun gibt: eine Zeile, dass die Synchronisierung aktuell ist, mit dem Zeitpunkt des letzten Laufs. Gibt es etwas zu prüfen, listet sie nur das auf: Objekte zu entscheiden, Assets, die in Netbox fehlen, Fehler oder einen fehlgeschlagenen Lauf. Jede Zeile öffnet die passende gefilterte Liste.
 

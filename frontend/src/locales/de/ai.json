@@ -368,8 +368,10 @@
       "get_record_history": "Verlauf abrufen",
       "import_ticket": "Ticket importieren",
       "import_glpi_ticket": "GLPI-Ticket importieren",
+      "list_help_topics": "Benutzerhandbuch durchsuchen",
       "prepare_mutation_plan": "Änderungsplan vorbereiten",
       "query_entities": "Entitäten abfragen",
+      "read_help_section": "Benutzerhandbuch lesen",
       "search_all": "Alles durchsuchen",
       "search_knowledge": "Wissensdatenbank durchsuchen",
       "web_search": "Web durchsuchen"
@@ -400,11 +402,14 @@
       "title": "Plaid ist bereit"
     },
     "messages": {
-      "disabled": "Der KI-Chat ist für diesen Arbeitsbereich deaktiviert.",
+      "disabled": "Plaid ist für diesen Arbeitsbereich ausgeschaltet.",
+      "tenantDisabledAdminLink": "Schalten Sie ihn unter Administration › Plaid ein",
+      "tenantDisabledAskAdmin": "Bitten Sie einen Administrator, ihn einzuschalten.",
       "builtinNotAccepted": "Ein Administrator muss den KI-Anbieter unter Administration > Plaid bestätigen."
     },
     "suggestions": {
-      "applicationMention": "Zusammenfassung für @APP-",
+      "applicationMention": "Fassen Sie eine Anwendung zusammen: Geben Sie @ ein, um eine auszuwählen.",
+      "budgetLines": "Was sind meine fünf größten Budgetzeilen in diesem Jahr?",
       "knowledgeSearch": "Finde Dokumente zu Backups",
       "myProjects": "An welchen Projekten arbeite ich?",
       "overdueTasks": "Zeige mir meine überfälligen Aufgaben"

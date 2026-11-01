@@ -25,14 +25,12 @@
   },
   "sidebar": {
     "ops": {
-      "overview": "Vista general",
       "contracts": "Contratos",
       "reporting": "Informes",
       "administration": "Administración",
       "budgetLines": "Líneas presupuestarias"
     },
     "masterData": {
-      "home": "Inicio datos maestros",
       "sections": {
         "organization": "Organización",
         "externalParties": "Partes externas",

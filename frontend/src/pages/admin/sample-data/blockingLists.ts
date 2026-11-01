@@ -23,7 +23,7 @@ export const SAMPLE_DATA_BLOCKING_LISTS: Readonly<Record<string, SampleDataBlock
   contracts: { labelKey: 'auditLogs.tableNames.contracts', to: '/ops/contracts' },
   cost_centers: { labelKey: 'auditLogs.tableNames.cost_centers', to: '/master-data/cost-centers' },
   departments: { labelKey: 'auditLogs.tableNames.departments', to: '/master-data/departments' },
-  documents: { labelKey: 'auditLogs.tableNames.documents', to: '/knowledge' },
+  documents: { labelKey: 'auditLogs.tableNames.documents', to: '/knowledge?allLibraries=1' },
   incidents: { labelKey: 'auditLogs.tableNames.incidents', to: '/it/incidents' },
   interfaces: { labelKey: 'auditLogs.tableNames.interfaces', to: '/it/interfaces' },
   locations: { labelKey: 'auditLogs.tableNames.locations', to: '/it/locations' },

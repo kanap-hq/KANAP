@@ -19,6 +19,9 @@ L'espace de travail est également accessible aux administrateurs disposant de `
 !!! note "En attente d'un administrateur"
     Sur le service hébergé, Plaid peut s'exécuter sur le modèle inclus KANAP. Avant cela, un administrateur confirme le fournisseur et le lieu où il traite les données. Jusque-là, l'espace de travail affiche *Un administrateur doit confirmer le fournisseur d'IA dans Administration > Plaid.* à la place du chat. Un administrateur le fait sur la page [Paramètres Plaid](ai-settings.md#confirmer-le-modele-inclus-kanap). Les organisations qui utilisent un modèle propre ne voient jamais cet avis.
 
+!!! note "Chat désactivé"
+    Lorsqu'un administrateur désactive le chat dans **Administration › Plaid**, une personne autorisée à utiliser le chat ouvre toujours cette page, et l'entrée Plaid reste dans la navigation supérieure. La page indique *Plaid est désactivé pour cet espace de travail.* Un administrateur de l'assistant voit aussi *Activez-le dans Administration › Plaid*, qui ouvre les paramètres de Plaid. Les autres personnes voient *Demandez à un administrateur de l'activer.* Une personne sans le droit de chat voit la page d'accès refusé.
+
 ## Démarrer une conversation
 
 Lorsque vous ouvrez Plaid pour la première fois, vous arrivez sur un écran d'accueil comportant :
@@ -111,6 +114,8 @@ Les images stockées dans KANAP, comme les pièces jointes, s'affichent normalem
 ### Appels d'outils { #tool-calls }
 
 Plaid utilise un petit ensemble d'outils internes pour répondre aux questions : `Search all`, `Search knowledge`, `Get document`, `Get entity context` et quelques autres. Chaque appel d'outil apparaît sous forme de ligne compacte sous le message (« a utilisé Search all · 8 résultats »). Vous n'avez généralement pas besoin de lire les détails de l'outil, mais ils sont là si vous voulez voir exactement sur quels enregistrements la réponse s'est appuyée.
+
+Lorsque vous demandez comment faire quelque chose dans KANAP, par exemple où se trouve un paramètre ou les étapes d'une tâche, Plaid lit le manuel utilisateur de votre version de KANAP, dans votre langue (`Parcourir le manuel utilisateur`, `Lire le manuel utilisateur`). Il décrit les écrans comme le fait le manuel et donne le lien de la section lue sur doc.kanap.net.
 
 `Search all` trouve les lignes budgétaires par le nom de leurs valeurs analytiques, et indique à Plaid les valeurs de chaque ligne. Plaid désigne une ligne budgétaire par sa référence `BL-12`, et ses liens ouvrent la ligne. Un nombre seul, comme 21, désigne `BL-21`. Les anciens numéros fonctionnent toujours : `OPX-12` ou `CPX-3` trouve sa ligne.
 

@@ -48,6 +48,7 @@ type DraftState = {
   supports_vision: boolean;
   price_input: string;
   price_output: string;
+  price_cache_read: string;
   timeout_seconds: string;
 };
 
@@ -60,6 +61,7 @@ const EMPTY_DRAFT: DraftState = {
   supports_vision: true,
   price_input: '',
   price_output: '',
+  price_cache_read: '',
   timeout_seconds: '',
 };
 
@@ -70,7 +72,13 @@ function parsePriceInput(value: string): number | null | undefined {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
-function draftFromConfig(config: AiModelConfig): DraftState {
+// A stored price shown in the user's language (0,15 in French), without grouping so parsePriceInput reads it back.
+function priceDraft(value: number | string | null, locale: string): string {
+  if (value == null) return '';
+  return Number(value).toLocaleString(locale, { useGrouping: false, maximumFractionDigits: 4 });
+}
+
+function draftFromConfig(config: AiModelConfig, locale: string): DraftState {
   return {
     name: config.name,
     provider: config.provider,
@@ -78,8 +86,9 @@ function draftFromConfig(config: AiModelConfig): DraftState {
     endpoint_url: config.endpoint_url ?? '',
     api_key: '',
     supports_vision: config.supports_vision,
-    price_input: config.price_input_eur_per_mtok != null ? String(config.price_input_eur_per_mtok) : '',
-    price_output: config.price_output_eur_per_mtok != null ? String(config.price_output_eur_per_mtok) : '',
+    price_input: priceDraft(config.price_input_eur_per_mtok, locale),
+    price_output: priceDraft(config.price_output_eur_per_mtok, locale),
+    price_cache_read: priceDraft(config.price_cache_read_eur_per_mtok, locale),
     timeout_seconds: config.llm_timeout_ms != null ? String(Math.round(config.llm_timeout_ms / 1000)) : '',
   };
 }
@@ -249,7 +258,7 @@ export default function AdminAiModelsPage() {
   };
   const openEdit = (modelConfig: AiModelConfig) => {
     setEditingId(modelConfig.id);
-    setDraft(draftFromConfig(modelConfig));
+    setDraft(draftFromConfig(modelConfig, locale));
     setHasStoredKey(modelConfig.has_api_key);
     setError(null);
     setTestResult(null);
@@ -262,13 +271,14 @@ export default function AdminAiModelsPage() {
       provider,
       // A local model costs nothing — pre-fill so the cost engine treats it as free.
       ...(provider === 'ollama' && prev.price_input === '' && prev.price_output === ''
-        ? { price_input: '0', price_output: '0' }
+        ? { price_input: '0', price_output: '0', price_cache_read: prev.price_cache_read === '' ? '0' : prev.price_cache_read }
         : {}),
     }));
   };
 
   const priceInput = parsePriceInput(draft.price_input);
   const priceOutput = parsePriceInput(draft.price_output);
+  const priceCacheRead = parsePriceInput(draft.price_cache_read);
   const timeoutSeconds = draft.timeout_seconds.trim() === '' ? null : Number.parseInt(draft.timeout_seconds, 10);
   const timeoutInvalid = timeoutSeconds != null && (!Number.isInteger(timeoutSeconds) || timeoutSeconds <= 0);
   const showingStoredKey = Boolean(editingId && hasStoredKey && draft.api_key === '');
@@ -276,6 +286,7 @@ export default function AdminAiModelsPage() {
     || draft.model.trim() === ''
     || priceInput === undefined
     || priceOutput === undefined
+    || priceCacheRead === undefined
     || timeoutInvalid;
 
   const handleSave = () => {
@@ -288,6 +299,7 @@ export default function AdminAiModelsPage() {
       supports_vision: draft.supports_vision,
       price_input_eur_per_mtok: priceInput ?? null,
       price_output_eur_per_mtok: priceOutput ?? null,
+      price_cache_read_eur_per_mtok: priceCacheRead ?? null,
       llm_timeout_ms: timeoutSeconds != null ? timeoutSeconds * 1000 : null,
     };
     if (draft.api_key.trim() !== '') {
@@ -608,24 +620,46 @@ export default function AdminAiModelsPage() {
                 />
               </PropertyRow>
             </Stack>
-            <PropertyRow
-              label={(
-                <LabelWithInfo
-                  label={t('aiModels.dialog.timeout')}
-                  info={t('aiModels.dialog.timeoutHint')}
+            <Stack direction="row" spacing={2} alignItems="flex-start">
+              <PropertyRow
+                label={(
+                  <LabelWithInfo
+                    label={t('aiModels.dialog.priceCacheRead')}
+                    info={t('aiModels.dialog.cacheReadHint')}
+                  />
+                )}
+                sx={{ flex: 1 }}
+              >
+                <TextField
+                  size="small"
+                  variant="standard"
+                  value={draft.price_cache_read}
+                  placeholder={t('aiModels.dialog.priceCacheReadPlaceholder')}
+                  error={priceCacheRead === undefined}
+                  sx={drawerFieldValueSx}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, price_cache_read: event.target.value }))}
                 />
-              )}
-            >
-              <TextField
-                size="small"
-                variant="standard"
-                value={draft.timeout_seconds}
-                placeholder={t('aiModels.dialog.timeoutPlaceholder')}
-                error={timeoutInvalid}
-                sx={drawerFieldValueSx}
-                onChange={(event) => setDraft((prev) => ({ ...prev, timeout_seconds: event.target.value }))}
-              />
-            </PropertyRow>
+              </PropertyRow>
+              <PropertyRow
+                label={(
+                  <LabelWithInfo
+                    label={t('aiModels.dialog.timeout')}
+                    info={t('aiModels.dialog.timeoutHint')}
+                  />
+                )}
+                sx={{ flex: 1 }}
+              >
+                <TextField
+                  size="small"
+                  variant="standard"
+                  value={draft.timeout_seconds}
+                  placeholder={t('aiModels.dialog.timeoutPlaceholder')}
+                  error={timeoutInvalid}
+                  sx={drawerFieldValueSx}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, timeout_seconds: event.target.value }))}
+                />
+              </PropertyRow>
+            </Stack>
             {editingId && (
               <Box>
                 <Button

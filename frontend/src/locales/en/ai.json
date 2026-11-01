@@ -368,8 +368,10 @@
       "get_record_history": "Get record history",
       "import_ticket": "Import ticket",
       "import_glpi_ticket": "Import GLPI ticket",
+      "list_help_topics": "Browse the user manual",
       "prepare_mutation_plan": "Prepare change plan",
       "query_entities": "Query entities",
+      "read_help_section": "Read the user manual",
       "search_all": "Search all",
       "search_knowledge": "Search knowledge",
       "web_search": "Search the web"
@@ -400,11 +402,14 @@
       "title": "Plaid is ready"
     },
     "messages": {
-      "disabled": "AI chat is disabled for this workspace.",
+      "disabled": "Plaid is turned off for this workspace.",
+      "tenantDisabledAdminLink": "Turn it on in Administration › Plaid",
+      "tenantDisabledAskAdmin": "Ask an administrator to turn it on.",
       "builtinNotAccepted": "An administrator must confirm the AI provider in Admin > Plaid."
     },
     "suggestions": {
-      "applicationMention": "Summarize @APP-",
+      "applicationMention": "Summarize an application: type @ to pick one",
+      "budgetLines": "What are my five largest budget lines this year?",
       "knowledgeSearch": "Find documents about backups",
       "myProjects": "Which projects am I working on?",
       "overdueTasks": "Show me my overdue tasks"

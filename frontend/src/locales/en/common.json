@@ -294,25 +294,21 @@
     "failedToLogTime": "Failed to log time"
   },
   "dashboard": {
-    "overview": "Overview",
     "welcomeBack": "Welcome, {{name}}",
     "workOverview": "Here's an overview of your work",
     "createTask": "Create task",
     "logTime": "Log time",
-    "newRequest": "New request",
+    "newBudgetLine": "New budget line",
     "newApplication": "New application",
     "newAsset": "New asset",
     "newDocument": "New document",
-    "dashboardSettings": "Dashboard settings",
-    "noTilesEnabled": "No tiles enabled. Click the settings icon to configure your dashboard.",
+    "noTilesEnabled": "No tiles enabled. Use Customize the home page to choose your tiles.",
+    "allTilesEmpty": "Your tiles have nothing to show yet.",
     "blankDocument": "Blank document",
     "fromTemplate": "From template…",
     "selectTemplate": "Select template",
     "useTemplate": "Use template",
     "noTemplatesAvailable": "No published templates are available.",
-    "newOpexLine": "New OPEX line",
-    "newCapexLine": "New CAPEX line",
-    "newContract": "New contract",
     "newOpex": "New OPEX",
     "newCapex": "New CAPEX",
     "recentUpdates": "Recent updates",
@@ -335,7 +331,6 @@
     },
     "topItems": "Top lines",
     "columnY": "{{column}}, Y",
-    "topIncreases": "Top increases",
     "columnYvsYminus1": "{{column}}, Y vs Y-1",
     "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "No increases",
@@ -354,8 +349,6 @@
     "byCostCenter": "By cost center",
     "noCostCenter": "No cost center",
     "settings": {
-      "title": "Dashboard settings",
-      "description": "Enable or disable tiles, adjust their options and drag them to reorder.",
       "resetToDefaults": "Reset to defaults",
       "dragToReorder": "Drag to reorder",
       "options": {
@@ -364,7 +357,8 @@
         "days": "Days to show",
         "scope": "Scope",
         "thresholdDays": "Threshold (days)"
-      }
+      },
+      "hideEmptyTiles": "Hide tiles without content"
     },
     "quickCreate": {
       "createTask": "Create task",
@@ -525,12 +519,27 @@
     },
     "welcome": "Welcome",
     "budgetSettings": {
-      "customize": "Customize",
-      "title": "Budget dashboard settings",
       "columns": "Amount columns",
       "tenantColumns": "Workspace columns",
-      "atLeastOne": "Choose at least one amount column.",
       "saveFailed": "Could not save the dashboard settings."
+    },
+    "sections": {
+      "work": "My work"
+    },
+    "customize": {
+      "start": "Customize the home page",
+      "done": "Done",
+      "addTile": "Add a tile",
+      "hideTile": "Hide the tile",
+      "tileOptions": "Tile options",
+      "moveSection": "Drag to move the section",
+      "hideSection": "Hide the section",
+      "showSection": "Show the section"
+    },
+    "topLinesMode": {
+      "label": "Ranking",
+      "amount": "Amount",
+      "increase": "Increase"
     }
   },
   "csv": {
@@ -1532,5 +1541,175 @@
     "linksEmpty": "No web link.",
     "removeFileNamed": "Delete file {{name}}",
     "removed": "Link \"{{name}}\" removed."
+  },
+  "onboarding": {
+    "choice": {
+      "angleTitle": "What brings you to KANAP?",
+      "modeTitle": "How do you want to start?",
+      "justLooking": "Just looking",
+      "erasesExample": "The example is erased.",
+      "confirmTitle": "Erase the example?",
+      "failed": "Your answer could not be saved."
+    },
+    "angles": {
+      "budget": "The IT budget",
+      "cartography": "The IT landscape map",
+      "portfolio": "Projects and requests"
+    },
+    "modes": {
+      "example": "Explore with the complete example",
+      "own_data": "Start with my own data"
+    },
+    "about": {
+      "path": "Path: {{path}}",
+      "angles": {
+        "budget": "IT budget",
+        "cartography": "IT landscape map",
+        "portfolio": "Project portfolio",
+        "none": "Just looking"
+      },
+      "modes": {
+        "example": "example",
+        "own_data": "my own data"
+      },
+      "notChosen": "not chosen",
+      "change": "Change",
+      "choose": "Choose"
+    },
+    "firstSteps": {
+      "title": "Your first five steps",
+      "progress": "{{done}}/{{total}}",
+      "hide": "Hide the first steps",
+      "markDone": "Mark as done",
+      "markUndone": "Mark as not done",
+      "gotIt": "Got it",
+      "done": "Done",
+      "later": "Later",
+      "end": {
+        "title": "{{path}} path complete!",
+        "others": "The other two paths:",
+        "restart": "Restart this path"
+      },
+      "showAgain": "Show the first steps",
+      "steps": {
+        "budget_overview": {
+          "title": "The overview",
+          "hint": "Here are the budget lines, sorted by budget for the current year. Filter by Type or Paying company, or search directly in Quick filter."
+        },
+        "budget_line": {
+          "title": "A budget line",
+          "hint": "Open a line and explore its tabs. Budget, the main tab, shows 4 columns out of 5 possible ones, all set in Administration. The Relations tab links the budget to the items it carries.",
+          "hintRecord": "You are in the record of {{record}}. Explore the tabs. Budget, the main tab, shows 4 columns out of 5 possible ones, all set in Administration. The Relations tab links the budget to the items it carries."
+        },
+        "budget_report": {
+          "title": "A report",
+          "hint": "Every report can be set in detail. Explore the filter options. From the results, open the budget lines concerned directly. Export the report as .pdf, .png or .xlsx."
+        },
+        "budget_plaid": {
+          "title": "A question for Plaid",
+          "hint": "Ask “What are the main savings opportunities in IT OPEX?”"
+        },
+        "budget_import": {
+          "title": "Your data",
+          "hint": "Try the export to get the data as csv or xlsx. You can use these files as templates to update in bulk or to import new data. Plaid can also help you convert an existing file."
+        },
+        "own_company": {
+          "title": "Your company",
+          "hint": "A first company was created with the workspace. Check its data and complete it, especially its currency and chart of accounts. If needed, add your own chart in the Charts of accounts view. Create more companies as needed."
+        },
+        "own_budget_lines": {
+          "title": "Your budget lines",
+          "hint": "Import your budget file (export first to get the template) or create your first budget line directly."
+        },
+        "own_contract": {
+          "title": "A linked contract",
+          "hint": "Create your first contract and, where relevant, link it to the budget line you just created."
+        },
+        "own_report": {
+          "title": "Your first report",
+          "hint": "Check that the filters follow your entries. Create more lines to enrich the reports!"
+        },
+        "own_invite": {
+          "title": "A colleague",
+          "hint": {
+            "budget": "Invite your colleagues by creating their user accounts. Use the Authentication menu to set up SSO with Entra ID.",
+            "cartography": "Invite an application owner: create the user, then send the invitation from the row menu.",
+            "portfolio": "Invite a project manager: create the user, then send the invitation from the row menu."
+          }
+        },
+        "map_application": {
+          "title": "An application record",
+          "hint": "Here is an application record. Explore the properties panel and the tabs to discover every facet of this key object of KANAP."
+        },
+        "map_technologies": {
+          "title": "Technologies, end of support and vulnerabilities",
+          "hint": "What reaches its end of support in the coming months, the source of each date, and the CVEs that affect these technologies."
+        },
+        "map_import": {
+          "title": "Your data",
+          "hint": "Export the applications as csv or Excel, then use the template to import yours. Go on with the technologies to attach their end of support and vulnerabilities."
+        },
+        "own_applications": {
+          "title": "Your applications",
+          "hint": "Import the list of your applications, or create the first one."
+        },
+        "own_technologies": {
+          "title": "Your technologies",
+          "hint": "Link technologies to your applications: KANAP attaches their end of support."
+        },
+        "own_assets": {
+          "title": "Your servers",
+          "hint": "Import or create your servers, then link them to applications."
+        },
+        "portfolio_request": {
+          "title": "A request and its score",
+          "hint": "Here is a request, on its Scoring tab: the criteria and the computed score. Once approved, it becomes a project in one click."
+        },
+        "portfolio_import": {
+          "title": "Your data",
+          "hint": "Export the project list of the example to see its format, then import yours. Do the same with requests and tasks."
+        },
+        "own_projects": {
+          "title": "Your project",
+          "hint": "The project born from the request: owner, dates, team. Your existing projects import as a list."
+        },
+        "own_request": {
+          "title": "Your first request",
+          "hint": "Create a request, score it, approve it, then convert it into a project."
+        },
+        "own_project_budget": {
+          "title": "The project's budget",
+          "hint": "Link a budget line to your project in its relations: spending follows."
+        },
+        "map_applications": {
+          "title": "The application list",
+          "hint": "Every application of the example, with its criticality, its owner and its company. It is the inventory: filter, sort, search."
+        },
+        "map_assets": {
+          "title": "The servers",
+          "hint": "Each server tells where the applications run: environment, site, installed technologies. Open a record to learn more."
+        },
+        "own_findings": {
+          "title": "What KANAP found",
+          "hint": "End of support and known vulnerabilities of your technologies, with nothing more to enter."
+        },
+        "portfolio_project": {
+          "title": "The project born from the request",
+          "hint": "Here is a project born from a request: objective, team, phases, and under Relations the original request, its applications and its budget lines."
+        },
+        "portfolio_tasks": {
+          "title": "Tasks",
+          "hint": "Every task, whether linked to a project, to the budget or standing alone. Try the filters and the search to find the tasks you care about quickly."
+        },
+        "portfolio_time": {
+          "title": "The reports",
+          "hint": "Seven reports to steer the portfolio: what happened, what is under way, what comes next. The Capacity heatmap sets each contributor's workload against their capacity."
+        },
+        "own_tasks": {
+          "title": "The first tasks",
+          "hint": "Create the project's tasks, assign them, log the time spent."
+        }
+      }
+    }
   }
 }

@@ -588,7 +588,7 @@ KANAP begrenzt wiederholte Anmeldeanfragen:
 
 Die Limits pro Adresse sind hoch, weil die Beschäftigten einer Organisation KANAP oft über dieselbe ausgehende Adresse erreichen. Ist ein Limit pro Adresse erreicht, wartet die Person eine Minute und versucht es erneut. Hinter einem Reverse Proxy zählt KANAP die IP-Adresse jeder Person, sofern der Proxy sie weitergibt.
 
-Anmeldungen und fehlgeschlagene Anmeldungen erscheinen im [Audit-Protokoll](#audit-protokoll). Wenn 5 Fehlversuche ein Konto von einer Adresse sperren, wird eine fehlgeschlagene Anmeldung mit dem Grund **Zu viele Anmeldeversuche** aufgezeichnet. Versuche, die in den folgenden 15 Minuten abgelehnt werden, werden nicht aufgezeichnet, ebenso wenig Anfragen, die ein Limit pro Adresse stoppt.
+Anmeldungen und fehlgeschlagene Anmeldungen erscheinen im [Audit-Protokoll](#audit-protokoll). Wenn 5 Fehlversuche ein Konto von einer Adresse sperren, wird eine fehlgeschlagene Anmeldung mit dem Grund **Zu viele Anmeldeversuche** aufgezeichnet. Wer das Passwort über **Passwort vergessen** zurücksetzt, hebt die Sperre sofort auf. Versuche, die in den folgenden 15 Minuten abgelehnt werden, werden nicht aufgezeichnet, ebenso wenig Anfragen, die ein Limit pro Adresse stoppt.
 
 ---
 
@@ -678,6 +678,7 @@ Alle Änderungen werden automatisch gespeichert, sobald Sie Schalter umschalten 
 
 - Die Version und die Bereitstellung (Cloud oder On-Premise)
 - In der Cloud, während einer Testphase, die verbleibenden Tage, mit einem Link **Tarif wählen** für Abrechnungsadministratoren
+- Während einer Testphase der beim ersten Öffnen gewählte Pfad, mit **Ändern**, und **Erste Schritte anzeigen**, wenn die Kachel der ersten Schritte ausgeblendet ist. Siehe [Mein Dashboard](my-dashboard.md#trial-first-steps)
 - Links zu den Versionshinweisen dieser Version, zur Dokumentation, zu kanap.net und zum Quellcode (Lizenz AGPL-3.0)
 - On-Premise ein Link zur Upgrade-Anleitung
 

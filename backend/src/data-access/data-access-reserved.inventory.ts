@@ -587,7 +587,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
         'listActivity', 'listAgentMonitoringAlertDiagnoses', 'listAgents', 'listGlpiReadTargets', 'listRuns',
         'listSharedContextProfiles', 'listTicketingReadTargets', 'pollHelpdeskGlpiIngestion',
         'pollHelpdeskTicketingIngestion', 'pollSreMonitoringIngestion', 'previewAgentTargeting', 'rejectAction',
-        'revokeEmergencyPause', 'revokeHelpdeskEmergencyPause', 'runGlpiRead', 'runMockTriage',
+        'restoreSharedContextProfile', 'revokeEmergencyPause', 'revokeHelpdeskEmergencyPause', 'runGlpiRead', 'runMockTriage',
         'runTicketingRead', 'runTicketingTriage', 'setAgentAutonomy', 'testAgentMonitoringDiagnosis',
         'updateAgent', 'updateAgentStatus', 'updateSharedContextProfile',
     ],

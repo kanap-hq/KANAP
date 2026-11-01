@@ -14,6 +14,8 @@ const content: TrialContent = {
       'Alternativa de autoalojamiento disponible en cualquier momento',
     ],
     form: {
+      firstNameLabel: 'Nombre',
+      lastNameLabel: 'Apellidos',
       orgLabel: 'Nombre de la organización',
       orgHelp: 'El nombre que verá tu equipo en la parte superior de la aplicación.',
       countryLabel: 'País',

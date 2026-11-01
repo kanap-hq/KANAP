@@ -3,8 +3,9 @@ import { AiSystemPromptService } from '../ai-system-prompt.service';
 import { AiChatOrchestratorService } from '../ai-chat-orchestrator.service';
 import { AiFinancialPlanMutationSupportService } from '../mutation/ai-financial-plan-mutation-support.service';
 import { AiToolRegistry } from '../ai-tool.registry';
-import { budgetAmountFields } from '../query/registries/budget-amount-fields';
-import { budgetColumnsAiContext, normalizeBudgetColumns } from '../../budget-columns/budget-columns.util';
+import { budgetAmountFields, budgetFteFields } from '../query/registries/budget-amount-fields';
+import { normalizeBudgetColumns } from '../../budget-columns/budget-columns.util';
+import { localizedBudgetColumnsAiContext } from '../../budget-columns/budget-column-labels';
 
 // The AI keeps its keys; the tenant's column names reach it through the
 // prompt context, and the approval card shows them.
@@ -17,19 +18,36 @@ const SETTINGS = normalizeBudgetColumns({
 
 function testFieldDescriptionsAreNeutral() {
   const fields = budgetAmountFields();
-  assert.equal(fields.y_plus1_review.description, 'Total of column 2 (named Revision by default) for Y+1, in the reporting currency.');
-  assert.equal(fields.y_forecast.description, 'Total of column 3 (named Forecast by default) for Y, the current year, in the reporting currency.');
+  assert.equal(fields.y_plus1_review.description, 'Total of column 2 for Y+1, in the reporting currency.');
+  assert.equal(fields.y_forecast.description, 'Total of column 3 for Y, the current year, in the reporting currency.');
   assert.equal(Object.keys(fields).length, 25, 'AI keys unchanged');
+  assert.match(budgetFteFields().y_plus1_review_fte.description, /^FTE \(full-time equivalents\) of column 2 for Y\+1, /);
+  assert.doesNotMatch(`${JSON.stringify(fields)} ${JSON.stringify(budgetFteFields())}`, /Actuals|Expected landing|named \w+ by default/);
 }
 
 function testAiContext() {
-  assert.deepEqual(budgetColumnsAiContext(SETTINGS), [
+  const defaults = normalizeBudgetColumns(undefined);
+  assert.deepEqual(localizedBudgetColumnsAiContext(defaults, 'fr'), [
+    { column: 1, ai_field_suffix: 'budget', measure: 'planned', name: 'Budget', shown: true, default: true },
+    { column: 2, ai_field_suffix: 'review', measure: 'committed', name: 'Révision', shown: true, default: false },
+    { column: 3, ai_field_suffix: 'forecast', measure: 'forecast', name: 'Prévision', shown: false, default: false },
+    { column: 4, ai_field_suffix: 'actual', measure: 'actual', name: 'Réalisé', shown: true, default: false },
+    { column: 5, ai_field_suffix: 'landing', measure: 'expected_landing', name: 'Atterrissage prévu', shown: true, default: false },
+  ]);
+  assert.doesNotMatch(JSON.stringify(localizedBudgetColumnsAiContext(defaults, 'fr')), /Actuals|Expected landing/);
+  assert.deepEqual(localizedBudgetColumnsAiContext(SETTINGS, 'fr'), [
     { column: 1, ai_field_suffix: 'budget', measure: 'planned', name: 'A0', shown: true, default: false },
     { column: 2, ai_field_suffix: 'review', measure: 'committed', name: 'A1', shown: true, default: true },
     { column: 3, ai_field_suffix: 'forecast', measure: 'forecast', name: 'A2', shown: true, default: false },
     { column: 4, ai_field_suffix: 'actual', measure: 'actual', name: 'A3', shown: true, default: false },
     { column: 5, ai_field_suffix: 'landing', measure: 'expected_landing', name: 'Réel', shown: true, default: false },
-  ]);
+  ], 'a workspace name wins over the language');
+  const open = localizedBudgetColumnsAiContext(defaults, null);
+  assert.equal(open[3].name, undefined);
+  assert.deepEqual(open[3].names, { en: 'Actuals', fr: 'Réalisé', de: 'Ist-Werte', es: 'Realizado' });
+  assert.deepEqual(open[4].names, { en: 'Expected landing', fr: 'Atterrissage prévu', de: 'Erwarteter Endwert', es: 'Aterrizaje previsto' });
+  assert.equal(localizedBudgetColumnsAiContext(SETTINGS, null)[4].name, 'Réel', 'a workspace name wins when the profile sets no language');
+  assert.equal(localizedBudgetColumnsAiContext(SETTINGS, null)[4].names, undefined);
 }
 
 async function testPromptBlockFollowsOpexOrCapexRead() {
@@ -43,10 +61,16 @@ async function testPromptBlockFollowsOpexOrCapexRead() {
   const ctx = { tenantId: 'tenant-1', userId: 'user-1', manager } as any;
   const load = (AiChatOrchestratorService.prototype as any).loadBudgetColumnsPromptContext;
 
-  const forReader = await load.call({}, ctx, ['tasks', 'budget_lines']);
+  const forReader = await load.call({}, ctx, ['tasks', 'budget_lines'], 'fr');
   assert.equal(forReader[0].name, 'A0', 'a budget line reader gets the tenant names');
-  assert.ok((await load.call({}, ctx, ['budget_lines'])).length === 5, 'the one family covers both natures');
-  assert.equal(await load.call({}, ctx, ['tasks', 'projects']), undefined, 'no budget line read: no block');
+  assert.equal(forReader[3].name, 'Réalisé', 'a column the workspace left unnamed uses the user\'s language');
+  assert.equal(forReader[4].name, 'Atterrissage prévu');
+  assert.doesNotMatch(JSON.stringify(forReader), /Actuals/);
+  const openLanguage = await load.call({}, ctx, ['budget_lines'], null);
+  assert.equal(openLanguage[0].name, 'A0', 'a workspace name wins');
+  assert.deepEqual(openLanguage[3].names, { en: 'Actuals', fr: 'Réalisé', de: 'Ist-Werte', es: 'Realizado' });
+  assert.equal(openLanguage.length, 5, 'the one family covers both natures');
+  assert.equal(await load.call({}, ctx, ['tasks', 'projects'], 'fr'), undefined, 'no budget line read: no block');
   assert.equal(queries.length, 2, 'settings are read only for budget line readers');
 
   const service = new AiSystemPromptService();
@@ -54,12 +78,25 @@ async function testPromptBlockFollowsOpexOrCapexRead() {
     tenantName: 'Test Tenant',
     availableTools: [],
     readableEntityTypes: ['budget_lines'],
-    currentUser: { displayName: 'Alex', email: null, roleNames: [], teamName: null },
+    currentUser: { displayName: 'Alex', email: null, roleNames: [], teamName: null, screenLanguage: 'fr' as const },
   };
-  const withColumns = service.build({ ...base, budgetColumns: budgetColumnsAiContext(SETTINGS) });
+  const withColumns = service.build({ ...base, budgetColumns: localizedBudgetColumnsAiContext(SETTINGS, 'fr') });
   assert.match(withColumns, /"budget_columns": \[/);
   assert.match(withColumns, /"name": "Réel"/);
   assert.match(withColumns, /`budget_columns` lists the five amount columns/);
+  assert.match(withColumns, /answer with that name only, with no English default in brackets/);
+  const french = service.build({ ...base, budgetColumns: localizedBudgetColumnsAiContext(normalizeBudgetColumns(undefined), 'fr') });
+  assert.match(french, /Réalisé/);
+  assert.match(french, /Atterrissage prévu/);
+  assert.doesNotMatch(french, /Actuals|Expected landing/);
+  const unnamed = service.build({
+    ...base,
+    currentUser: { ...base.currentUser, screenLanguage: null },
+    budgetColumns: localizedBudgetColumnsAiContext(normalizeBudgetColumns(undefined), null),
+  });
+  assert.match(unnamed, /"names": \{/);
+  assert.match(unnamed, /"fr": "Réalisé"/);
+  assert.match(unnamed, /use the name in the language of the conversation/);
   const without = service.build(base);
   assert.doesNotMatch(without, /budget_columns/);
 }
@@ -80,6 +117,7 @@ async function testDescribeEntityFiltersCarriesColumns() {
   const describe = (registry as any).definitions.get('describe_entity_filters');
   const queries: unknown[][] = [];
   const axisQueries: unknown[][] = [];
+  let locale: string | null = 'fr';
   const nature = { id: '00000000-0000-4000-8000-000000000002', code: 'nature', name: 'Nature', is_default: false, status: 'enabled', disabled_at: null, sort_order: 1 };
   const context = {
     tenantId: 'tenant-1',
@@ -89,7 +127,7 @@ async function testDescribeEntityFiltersCarriesColumns() {
         // The tenant's analytics dimensions (the registry is resolved per tenant), then the budget column settings.
         if (/analytics_axes/.test(String(params[0]))) { axisQueries.push(params); return [nature]; }
         // The language of the person's menus, for the screens of `families_not_read`.
-        if (/FROM users/.test(String(params[0]))) return [{ locale: 'fr' }];
+        if (/FROM users/.test(String(params[0]))) return [{ locale }];
         queries.push(params);
         return [{ value: { labels: { committed: 'A1' } } }];
       },
@@ -101,7 +139,11 @@ async function testDescribeEntityFiltersCarriesColumns() {
     assert.ok(result.fields.some((field: any) => field.field === 'y_plus1_review'), `${entityType}: fields kept`);
     assert.ok(result.fields.some((field: any) => field.field === 'analytics:nature' && field.groupable), `${entityType}: the tenant's dimension listed`);
     assert.deepEqual(result.budget_columns[1], { column: 2, ai_field_suffix: 'review', measure: 'committed', name: 'A1', shown: true, default: false });
+    assert.deepEqual(result.budget_columns[3], { column: 4, ai_field_suffix: 'actual', measure: 'actual', name: 'Réalisé', shown: true, default: false });
+    assert.equal(result.budget_columns[4].name, 'Atterrissage prévu');
+    assert.doesNotMatch(JSON.stringify(result.budget_columns), /Actuals|Expected landing/);
     assert.equal(result.budget_columns.length, 5);
+    assert.match(describe.description, /without the English default in brackets/);
     assert.ok(result.families_not_read.includes('audit log (Administration › Journal d\'audit)'), `${entityType}: screens in the profile's language`);
     // This caller reads everything: the reference data are read, not listed (Plaid L9).
     assert.equal(result.families_not_read.some((line: string) => line.startsWith('cost centers (')), false, `${entityType}: cost centers read`);
@@ -113,6 +155,19 @@ async function testDescribeEntityFiltersCarriesColumns() {
   assert.equal(queries.length, 1);
   assert.equal(axisQueries.length, 1, 'no dimension read for other entity types');
   assert.deepEqual(checked, ['budget_lines', 'tasks'], 'read access checked first');
+
+  locale = null;
+  const open = await describe.execute(context, { entity_type: 'budget_lines' });
+  assert.equal(open.budget_columns[1].name, 'A1', 'a workspace name wins');
+  assert.deepEqual(open.budget_columns[3], {
+    column: 4,
+    ai_field_suffix: 'actual',
+    measure: 'actual',
+    names: { en: 'Actuals', fr: 'Réalisé', de: 'Ist-Werte', es: 'Realizado' },
+    shown: true,
+    default: false,
+  }, 'no single name: the four product names');
+  assert.equal(queries.length, 2, 'the open language reads the same settings');
 }
 
 function testApprovalCardUsesNames() {

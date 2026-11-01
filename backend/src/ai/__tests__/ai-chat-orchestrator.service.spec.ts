@@ -7,6 +7,7 @@ import {
   resolveProviderMaxTokens,
 } from '../ai-chat-orchestrator.service';
 import { estimateTokenCount } from '../ai-context-budget.helper';
+import { llmCostEur } from '../ai-llm-cost.util';
 import { AiModelResolutionError, BUILTIN_NOT_ACCEPTED_MESSAGE } from '../ai-model-resolver.service';
 import { AiSystemPromptService } from '../ai-system-prompt.service';
 import { ChatStreamEvent } from '../ai.types';
@@ -34,10 +35,12 @@ function createOrchestrator(options?: {
   availableTools?: any[];
   resolvedSource?: 'registry' | 'builtin';
   resolveError?: Error;
-  priceInputEurPerMtok?: number | null;
-  priceOutputEurPerMtok?: number | null;
   /** The person's stored locale (`users.locale`). */
   userLocale?: string | null;
+  /** The registry model's prices (€/Mtok); null when omitted. */
+  modelPrices?: { input: number; output: number; cacheRead?: number | null };
+  /** The provider adapter's cache cost factors; absent when omitted. */
+  cacheCostFactors?: { read: number; write: number };
 }) {
   const persistedMessages: any[] = [];
   let conversationCreated = false;
@@ -120,8 +123,9 @@ function createOrchestrator(options?: {
       endpointUrl: null,
       apiKey: 'platform-key',
       supportsVision: true,
-      priceInputEurPerMtok: options?.priceInputEurPerMtok !== undefined ? options.priceInputEurPerMtok : 0,
-      priceOutputEurPerMtok: options?.priceOutputEurPerMtok !== undefined ? options.priceOutputEurPerMtok : 0,
+      priceInputEurPerMtok: 0,
+      priceOutputEurPerMtok: 0,
+      priceCacheReadEurPerMtok: 0,
       timeoutMs: null,
       builtinRateLimits: { tenantPerMinute: 30, userPerHour: 60 },
     }
@@ -134,8 +138,9 @@ function createOrchestrator(options?: {
       endpointUrl: options?.endpointUrl ?? null,
       apiKey: 'real-api-key',
       supportsVision: true,
-      priceInputEurPerMtok: options?.priceInputEurPerMtok !== undefined ? options.priceInputEurPerMtok : null,
-      priceOutputEurPerMtok: options?.priceOutputEurPerMtok !== undefined ? options.priceOutputEurPerMtok : null,
+      priceInputEurPerMtok: options?.modelPrices?.input ?? null,
+      priceOutputEurPerMtok: options?.modelPrices?.output ?? null,
+      priceCacheReadEurPerMtok: options?.modelPrices?.cacheRead ?? null,
       timeoutMs: null,
       builtinRateLimits: null,
     });
@@ -164,6 +169,7 @@ function createOrchestrator(options?: {
           contextWindow: options?.providerContextWindow ?? 128000,
         },
       },
+      ...(options?.cacheCostFactors ? { cacheCostFactors: options.cacheCostFactors } : {}),
       createStream: async function* (params: any) {
         recordedRequests.push(params);
         providerCallCount.value++;
@@ -330,6 +336,7 @@ function createOrchestrator(options?: {
       systemPromptParams.push(params);
       return {
         text: 'You are Plaid.',
+        cacheablePrefix: 'You are Plaid.',
         sections: [{ key: 'identity', label: 'Assistant identity', size: 'You are Plaid.'.length }],
       };
     },
@@ -377,40 +384,6 @@ async function collectEvents(gen: AsyncGenerator<ChatStreamEvent>): Promise<Chat
   return events;
 }
 
-async function testAssistantMessageStoresProviderModelAndPrices() {
-  const { orchestrator, persistedMessages } = createOrchestrator({
-    providerId: 'anthropic',
-    model: 'claude-sonnet-4',
-    priceInputEurPerMtok: 3,
-    priceOutputEurPerMtok: 15,
-  });
-  await collectEvents(
-    orchestrator.stream({
-      context: {
-        tenantId: 'tenant-1',
-        userId: 'user-1',
-        isPlatformHost: false,
-        surface: 'chat',
-        authMethod: 'jwt',
-      },
-      userMessage: 'Hello',
-    }),
-  );
-
-  const user = persistedMessages.find((message) => message.role === 'user');
-  assert.equal(user.usage, undefined, 'a person message does not carry model rates');
-
-  const assistant = persistedMessages.find((message) => message.role === 'assistant');
-  assert.deepEqual(assistant.usage, {
-    provider: 'anthropic',
-    model: 'claude-sonnet-4',
-    price_input_eur_per_mtok: 3,
-    price_output_eur_per_mtok: 15,
-    input_tokens: 100,
-    output_tokens: 50,
-  });
-}
-
 async function testSimpleTextResponse() {
   const { orchestrator, persistedMessages, recordedRequests } = createOrchestrator({
     providerContextWindow: 1000,
@@ -448,6 +421,7 @@ async function testSimpleTextResponse() {
   assert.equal(persistedMessages[0].role, 'user');
   assert.equal(persistedMessages[0].content, 'Hello');
   assert.equal(recordedRequests[0].systemPrompt, 'You are Plaid.');
+  assert.equal(recordedRequests[0].systemPromptCacheablePrefix, 'You are Plaid.', 'the provider learns where the fixed prompt ends');
   assert.deepEqual(recordedRequests[0].messages.map((message: any) => message.content), ['Hello']);
   assert.deepEqual(recordedRequests[0].tools, [], 'Minimal greeting profile should not send tools to the provider.');
 
@@ -475,6 +449,214 @@ async function testSimpleTextResponse() {
   ) as any;
   assert.ok(finalTimingEvent, 'Expected final timing context event.');
   assert.equal(finalTimingEvent.context.timings.iterations, 1);
+}
+
+async function testAssistantMessagesRecordTheirModelPricesAndCost() {
+  const { orchestrator, persistedMessages } = createOrchestrator({
+    providerId: 'anthropic',
+    model: 'claude-sonnet-5-5',
+    modelPrices: { input: 3, output: 15 },
+    cacheCostFactors: { read: 0.1, write: 1.25 },
+    providerEvents: [
+      { type: 'text_delta', text: 'Let me search.' },
+      { type: 'tool_call_start', id: 'tc-1', name: 'search_all' },
+      { type: 'tool_call_delta', id: 'tc-1', arguments: '{"query":"test"}' },
+      { type: 'tool_call_end', id: 'tc-1' },
+      {
+        type: 'done',
+        usage: { input_tokens: 500_000, output_tokens: 100_000, cache_read_input_tokens: 300_000, cache_write_input_tokens: 100_000 },
+      },
+    ],
+    providerToolEvents: [
+      { type: 'text_delta', text: 'Found results.' },
+      { type: 'done', usage: { input_tokens: 200_000, output_tokens: 10_000 } },
+    ],
+    toolResult: { items: [{ type: 'applications', id: 'app-1', label: 'CRM' }], total: 1 },
+  });
+
+  const events = await collectEvents(
+    orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      userMessage: 'Search for CRM',
+    }),
+  );
+
+  const assistantMessages = persistedMessages.filter((message) => message.role === 'assistant');
+  assert.equal(assistantMessages.length, 2);
+  // The tool-call turn: cache fields and the Anthropic cache factors in its cost.
+  assert.deepEqual(assistantMessages[0].usage, {
+    input_tokens: 500_000,
+    output_tokens: 100_000,
+    cache_read_input_tokens: 300_000,
+    cache_write_input_tokens: 100_000,
+    provider: 'anthropic',
+    model: 'claude-sonnet-5-5',
+    model_source: 'registry',
+    price_input_eur_per_mtok: 3,
+    price_output_eur_per_mtok: 15,
+    price_cache_read_eur_per_mtok: null,
+    cost_eur: 2.265,
+  });
+  // The final answer: no cache reported, so no cache field.
+  assert.deepEqual(assistantMessages[1].usage, {
+    input_tokens: 200_000,
+    output_tokens: 10_000,
+    provider: 'anthropic',
+    model: 'claude-sonnet-5-5',
+    model_source: 'registry',
+    price_input_eur_per_mtok: 3,
+    price_output_eur_per_mtok: 15,
+    price_cache_read_eur_per_mtok: null,
+    cost_eur: 0.75,
+  });
+
+  // The browser gets the cache fields, never a price or a cost.
+  const done = events.find((e) => e.type === 'done') as any;
+  assert.deepEqual(done.usage, {
+    input_tokens: 700_000,
+    output_tokens: 110_000,
+    cache_read_input_tokens: 300_000,
+    cache_write_input_tokens: 100_000,
+  });
+  assert.deepEqual(done.last_usage, { input_tokens: 200_000, output_tokens: 10_000 });
+}
+
+async function testIncludedModelMessagesRecordAZeroCost() {
+  const { orchestrator, persistedMessages } = createOrchestrator({ resolvedSource: 'builtin' });
+  await collectEvents(
+    orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      userMessage: 'Hello',
+    }),
+  );
+  const assistant = persistedMessages.find((message) => message.role === 'assistant');
+  assert.deepEqual(assistant?.usage, {
+    input_tokens: 100,
+    output_tokens: 50,
+    provider: 'openai',
+    model: 'gpt-4o-mini',
+    model_source: 'builtin',
+    price_input_eur_per_mtok: 0,
+    price_output_eur_per_mtok: 0,
+    price_cache_read_eur_per_mtok: 0,
+    cost_eur: 0,
+  });
+}
+
+async function testAssistantMessagesPriceCachedTokensAtTheModelCacheReadPrice() {
+  // An OpenAI-compatible model (no known discount) with its own cache read price.
+  const { orchestrator, persistedMessages } = createOrchestrator({
+    providerId: 'openai',
+    model: 'mistral-medium-latest',
+    modelPrices: { input: 2, output: 6, cacheRead: 0.2 },
+    providerEvents: [
+      { type: 'text_delta', text: 'Hello there.' },
+      { type: 'done', usage: { input_tokens: 1_000_000, output_tokens: 10_000, cache_read_input_tokens: 990_000 } },
+    ],
+  });
+  await collectEvents(
+    orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      userMessage: 'Hello',
+    }),
+  );
+  const assistant = persistedMessages.find((message) => message.role === 'assistant');
+  // 10k uncached at 2 + 990k read at 0.2 + 10k output at 6.
+  assert.deepEqual(assistant?.usage, {
+    input_tokens: 1_000_000,
+    output_tokens: 10_000,
+    cache_read_input_tokens: 990_000,
+    provider: 'openai',
+    model: 'mistral-medium-latest',
+    model_source: 'registry',
+    price_input_eur_per_mtok: 2,
+    price_output_eur_per_mtok: 6,
+    price_cache_read_eur_per_mtok: 0.2,
+    cost_eur: 0.278,
+  });
+}
+
+async function testRetriedIterationTokensGoWithTheNextAssistantMessage() {
+  const searchBatch = (id: string, usage: object) => [
+    { type: 'tool_call_start', id, name: 'search_all' },
+    { type: 'tool_call_delta', id, arguments: '{"query":"test"}' },
+    { type: 'tool_call_end', id },
+    { type: 'done', usage },
+  ];
+  const calls: Array<{ input_tokens: number; output_tokens: number; cache_read_input_tokens?: number }> = [
+    { input_tokens: 100_000, output_tokens: 10_000, cache_read_input_tokens: 40_000 },
+    // Repeats the same tool call: the turn retries it, but the provider bills it.
+    { input_tokens: 200_000, output_tokens: 20_000, cache_read_input_tokens: 150_000 },
+    { input_tokens: 300_000, output_tokens: 30_000 },
+  ];
+  const { orchestrator, persistedMessages, providerCallCount } = createOrchestrator({
+    providerId: 'openai',
+    model: 'gpt-5-mini',
+    modelPrices: { input: 2, output: 10 },
+    providerEventBatches: [
+      searchBatch('tc-1', calls[0]),
+      searchBatch('tc-2', calls[1]),
+      [
+        { type: 'text_delta', text: 'No matching results.' },
+        { type: 'done', usage: calls[2] },
+      ],
+    ],
+    toolResult: { items: [], total: 0 },
+  });
+
+  await collectEvents(
+    orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      userMessage: 'Search',
+    }),
+  );
+
+  assert.equal(providerCallCount.value, 3);
+  const assistantUsages = persistedMessages
+    .filter((message) => message.role === 'assistant' && message.usage)
+    .map((message) => message.usage);
+  assert.equal(assistantUsages.length, 2);
+  assert.equal(persistedMessages.some((message) => message.role === 'usage'), false);
+  // The final answer carries the retried call's tokens with its own.
+  assert.deepEqual(
+    [assistantUsages[1].input_tokens, assistantUsages[1].output_tokens, assistantUsages[1].cache_read_input_tokens],
+    [500_000, 50_000, 150_000],
+  );
+  const sum = (field: string) => assistantUsages.reduce((total, usage) => total + Number(usage[field] ?? 0), 0);
+  assert.equal(sum('input_tokens'), 600_000);
+  assert.equal(sum('output_tokens'), 60_000);
+  assert.equal(sum('cache_read_input_tokens'), 190_000);
+  const prices = { priceInputEurPerMtok: 2, priceOutputEurPerMtok: 10 };
+  const billed = calls.reduce(
+    (total, call) => total + llmCostEur(call.input_tokens, call.output_tokens, prices, { readTokens: call.cache_read_input_tokens }),
+    0,
+  );
+  assert.equal(Number(sum('cost_eur').toFixed(6)), Number(billed.toFixed(6)));
+  assert.equal(Number(billed.toFixed(6)), 1.8);
 }
 
 async function testToolCallFlow() {
@@ -628,11 +810,6 @@ async function testDeepSeekReasoningContentIsReplayedForToolContinuation() {
     persistedAssistant.providerMetadata.deepseek.reasoning_content,
     'I need to search first.',
   );
-  assert.equal(persistedAssistant.usage.provider, 'custom');
-  assert.equal(persistedAssistant.usage.model, 'gpt-4o');
-  assert.equal(persistedAssistant.usage.input_tokens, 100);
-  assert.equal(persistedAssistant.usage.output_tokens, 50);
-  assert.equal(persistedAssistant.usage.price_input_eur_per_mtok, null);
 }
 
 async function testDeepSeekReasoningContentIsReplayedForEverySplitToolCall() {
@@ -2011,8 +2188,8 @@ const READ_TOOLS = [
 
 /**
  * A delete is never repaired into a plan or a bulk target set: its one card is the answer. The
- * same words after an update preview still ask for the plan repair (issue: Plaid answered the
- * repair instruction after deleting a task).
+ * same words after a single update are not a plan either: only the person's own request can
+ * leave changes to prepare (issue 1186, the same defect as a single task creation).
  */
 async function testDeletePreviewDoesNotTriggerThePlanRepair() {
   const deleteTurn = createOrchestrator({
@@ -2200,7 +2377,8 @@ async function testDeletePreviewDoesNotTriggerThePlanRepair() {
     'an update preview next to a delete is still checked against the queried target set',
   );
 
-  // The same words after an update preview are still repaired: only a delete is exempt.
+  // The same words after a single update are the answer: the request is one change, so the
+  // repair reply prepared below is never asked for.
   const updateTurn = createOrchestrator({
     historyMessages: [{ role: 'user', content: 'Change le statut de la tâche 39 en terminée.' }],
     availableTools: [
@@ -2219,7 +2397,7 @@ async function testDeletePreviewDoesNotTriggerThePlanRepair() {
         { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
       ],
       [
-        { type: 'text_delta', text: 'La tâche 39 est prête à être marquée terminée.' },
+        { type: 'text_delta', text: 'Je n\'ai pas d\'autre changement à préparer.' },
         { type: 'done', usage: { input_tokens: 140, output_tokens: 20 } },
       ],
     ],
@@ -2245,16 +2423,227 @@ async function testDeletePreviewDoesNotTriggerThePlanRepair() {
     }),
   );
 
-  assert.equal(updateTurn.providerCallCount.value, 3, 'an update preview still asks for the plan repair');
+  assert.equal(updateTurn.providerCallCount.value, 2, 'a single update preview is not repaired');
   assert.ok(
-    updateTurn.recordedRequests[2].messages.some((message: any) =>
-      message.role === 'user' && /multi-step or multi-record/i.test(String(message.content || '')),
+    !updateTurn.recordedRequests.some((request: any) =>
+      request.messages.some((message: any) =>
+        message.role === 'user' && /multi-step or multi-record/i.test(String(message.content || '')),
+      ),
     ),
   );
   assert.equal(
     updateEvents.filter((event) => event.type === 'text_delta').map((event: any) => event.text).join(''),
-    'La tâche 39 est prête à être marquée terminée.',
+    DELETE_TURN_TEXT,
   );
+}
+
+const SINGLE_TASK_REQUEST = 'Crée une tâche pour renouveler le contrat Caisse Pro.';
+const SINGLE_TASK_ANSWER = 'Voici l\'aperçu. Approuvez-le pour créer la tâche après votre approbation.';
+const MULTI_STEP_REQUEST = 'Crée le projet Caisse Pro puis une tâche pour renouveler le contrat.';
+const MULTI_STEP_ANSWER = 'Voici l\'aperçu du projet. La suite arrive ensuite, après votre approbation.';
+const PLAN_REPAIR_REPLY = 'Je n\'ai pas d\'autre changement à préparer. Votre demande portait sur une seule tâche et son aperçu existe déjà.';
+
+function planRepairInstructions(recordedRequests: any[]): string[] {
+  // Later calls keep the same messages array the orchestrator mutates, so count the
+  // instruction on the last request: that history is the one the repair was sent in.
+  const last = recordedRequests.at(-1);
+  return (last?.messages ?? [])
+    .filter((message: any) => message.role === 'user' && /multi-step or multi-record/i.test(String(message.content || '')))
+    .map((message: any) => String(message.content || ''));
+}
+
+function storedAssistantAnswer(messages: any[]): string {
+  const answers = messages.filter((message) => message.role === 'assistant' && !message.toolCalls);
+  return String(answers.at(-1)?.content ?? '');
+}
+
+/**
+ * Issue 1186: one task creation whose answer says "après votre approbation" streams that answer.
+ * A request that really has several steps still gets the plan repair. When the repair creates
+ * no new preview, the held-back answer is shown and stored instead of the reply to the instruction.
+ */
+async function testSingleWritePreviewDoesNotAnswerThePlanRepair() {
+  const createTurn = createOrchestrator({
+    historyMessages: [{ role: 'user', content: SINGLE_TASK_REQUEST }],
+    availableTools: [
+      ...READ_TOOLS,
+      writeTool('create_task', 'tasks', ['title']),
+    ],
+    providerEventBatches: [
+      [
+        { type: 'tool_call_start', id: 'tc-create', name: 'create_task' },
+        { type: 'tool_call_delta', id: 'tc-create', arguments: '{"title":"Renouveler le contrat Caisse Pro"}' },
+        { type: 'tool_call_end', id: 'tc-create' },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 20 } },
+      ],
+      [
+        { type: 'text_delta', text: SINGLE_TASK_ANSWER },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
+      ],
+      [
+        { type: 'text_delta', text: PLAN_REPAIR_REPLY },
+        { type: 'done', usage: { input_tokens: 140, output_tokens: 20 } },
+      ],
+    ],
+    toolResultsByName: {
+      create_task: {
+        ...pendingDeletePreview('create_task', 'T-40'),
+        summary: 'Create task "Renouveler le contrat Caisse Pro".',
+        changes: { title: { from: null, to: 'Renouveler le contrat Caisse Pro' } },
+      },
+    },
+  });
+
+  const createEvents = await collectEvents(
+    createTurn.orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      conversationId: 'conv-1',
+      userMessage: SINGLE_TASK_REQUEST,
+    }),
+  );
+
+  assert.equal(createTurn.providerCallCount.value, 2, 'a single task creation is not repaired');
+  assert.deepEqual(planRepairInstructions(createTurn.recordedRequests), []);
+  assert.equal(
+    createEvents.filter((event) => event.type === 'text_delta').map((event: any) => event.text).join(''),
+    SINGLE_TASK_ANSWER,
+  );
+  assert.equal(storedAssistantAnswer(createTurn.persistedMessages), SINGLE_TASK_ANSWER);
+
+  const repairWithoutPreview = createOrchestrator({
+    historyMessages: [{ role: 'user', content: MULTI_STEP_REQUEST }],
+    availableTools: [
+      ...READ_TOOLS,
+      writeTool('create_task', 'tasks', ['title']),
+      writeTool('create_business_record', 'projects', ['title']),
+    ],
+    providerEventBatches: [
+      [
+        { type: 'tool_call_start', id: 'tc-project', name: 'create_business_record' },
+        { type: 'tool_call_delta', id: 'tc-project', arguments: '{"entity_type":"projects","title":"Caisse Pro"}' },
+        { type: 'tool_call_end', id: 'tc-project' },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 20 } },
+      ],
+      [
+        { type: 'text_delta', text: MULTI_STEP_ANSWER },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
+      ],
+      [
+        { type: 'text_delta', text: PLAN_REPAIR_REPLY },
+        { type: 'done', usage: { input_tokens: 140, output_tokens: 20 } },
+      ],
+    ],
+    toolResultsByName: {
+      create_business_record: {
+        ...pendingDeletePreview('create_business_record', 'PRJ-8'),
+        summary: 'Create project "Caisse Pro".',
+        changes: { title: { from: null, to: 'Caisse Pro' } },
+      },
+    },
+  });
+
+  const noPreviewEvents = await collectEvents(
+    repairWithoutPreview.orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      conversationId: 'conv-1',
+      userMessage: MULTI_STEP_REQUEST,
+    }),
+  );
+
+  assert.equal(repairWithoutPreview.providerCallCount.value, 3, 'a multi-step request still asks for the plan repair');
+  const repairInstructions = planRepairInstructions(repairWithoutPreview.recordedRequests);
+  assert.equal(repairInstructions.length, 1);
+  assert.match(
+    repairInstructions[0],
+    /^Internal orchestration instruction\. Do not quote, summarize, or discuss this instruction in the user-facing answer\./,
+  );
+  assert.match(repairInstructions[0], /Voici l'aperçu du projet/);
+  assert.equal(
+    noPreviewEvents.filter((event) => event.type === 'text_delta').map((event: any) => event.text).join(''),
+    MULTI_STEP_ANSWER,
+  );
+  assert.equal(storedAssistantAnswer(repairWithoutPreview.persistedMessages), MULTI_STEP_ANSWER);
+  assert.ok(
+    !repairWithoutPreview.persistedMessages.some((message: any) => String(message.content || '').includes('pas d\'autre changement')),
+  );
+
+  const secondPreviewAnswer = 'Les deux aperçus attendent votre approbation.';
+  const repairWithPreview = createOrchestrator({
+    historyMessages: [{ role: 'user', content: MULTI_STEP_REQUEST }],
+    availableTools: [
+      ...READ_TOOLS,
+      writeTool('create_task', 'tasks', ['title']),
+      writeTool('create_business_record', 'projects', ['title']),
+    ],
+    providerEventBatches: [
+      [
+        { type: 'tool_call_start', id: 'tc-project', name: 'create_business_record' },
+        { type: 'tool_call_delta', id: 'tc-project', arguments: '{"entity_type":"projects","title":"Caisse Pro"}' },
+        { type: 'tool_call_end', id: 'tc-project' },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 20 } },
+      ],
+      [
+        { type: 'text_delta', text: MULTI_STEP_ANSWER },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
+      ],
+      [
+        { type: 'tool_call_start', id: 'tc-task', name: 'create_task' },
+        { type: 'tool_call_delta', id: 'tc-task', arguments: '{"title":"Renouveler le contrat Caisse Pro"}' },
+        { type: 'tool_call_end', id: 'tc-task' },
+        { type: 'done', usage: { input_tokens: 140, output_tokens: 20 } },
+      ],
+      [
+        { type: 'text_delta', text: secondPreviewAnswer },
+        { type: 'done', usage: { input_tokens: 160, output_tokens: 20 } },
+      ],
+    ],
+    toolResultsByName: {
+      create_business_record: {
+        ...pendingDeletePreview('create_business_record', 'PRJ-8'),
+        summary: 'Create project "Caisse Pro".',
+        changes: { title: { from: null, to: 'Caisse Pro' } },
+      },
+      create_task: {
+        ...pendingDeletePreview('create_task', 'T-40'),
+        summary: 'Create task "Renouveler le contrat Caisse Pro".',
+        changes: { title: { from: null, to: 'Renouveler le contrat Caisse Pro' } },
+      },
+    },
+  });
+
+  const withPreviewEvents = await collectEvents(
+    repairWithPreview.orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      conversationId: 'conv-1',
+      userMessage: MULTI_STEP_REQUEST,
+    }),
+  );
+
+  assert.equal(repairWithPreview.providerCallCount.value, 4, 'a repair that creates a preview keeps the new answer');
+  assert.equal(planRepairInstructions(repairWithPreview.recordedRequests).length, 1);
+  assert.equal(
+    withPreviewEvents.filter((event) => event.type === 'text_delta').map((event: any) => event.text).join(''),
+    secondPreviewAnswer,
+  );
+  assert.equal(storedAssistantAnswer(repairWithPreview.persistedMessages), secondPreviewAnswer);
 }
 
 async function testIncompleteBulkPreviewCoverageTriggersRepairInstruction() {
@@ -3822,7 +4211,7 @@ async function testRepeatedToolCallsStopWithoutFurtherProgress() {
     { type: 'tool_call_end', id },
     { type: 'done', usage: { input_tokens: 100, output_tokens: 20 } },
   ];
-  const { orchestrator, providerCallCount, toolExecuteCount, recordedRequests } = createOrchestrator({
+  const { orchestrator, providerCallCount, toolExecuteCount, recordedRequests, persistedMessages } = createOrchestrator({
     providerEventBatches: [
       repeatedSearchBatch('tc-1'),
       repeatedSearchBatch('tc-2'),
@@ -3852,6 +4241,12 @@ async function testRepeatedToolCallsStopWithoutFurtherProgress() {
   assert.deepEqual(errorEvent?.conversation_usage, { input_tokens: 100, output_tokens: 20 });
   assert.equal(providerCallCount.value, 4);
   assert.equal(toolExecuteCount.value, 1);
+  // The three calls after the first one recorded no message: a usage-only row keeps their tokens.
+  const usageRows = persistedMessages.filter((message) => message.role === 'usage');
+  assert.equal(usageRows.length, 1);
+  assert.equal(usageRows[0].content, '');
+  assert.equal(usageRows[0].usage.input_tokens, 300);
+  assert.equal(usageRows[0].usage.output_tokens, 60);
 
   const finalRepairRequestMessages = recordedRequests[3].messages as any[];
   const repairMessages = finalRepairRequestMessages.filter((message) =>
@@ -4469,9 +4864,12 @@ async function run() {
     germanFollowUp,
     'Die genehmigte Änderung ist fehlgeschlagen. Fehler: Task changed.\n\nAbhängige Vorschauen bereit, die auf Ihre Genehmigung warten: 1.\n- T-7',
   );
-  await testAssistantMessageStoresProviderModelAndPrices();
   await testSimpleTextResponse();
   await testToolCallFlow();
+  await testAssistantMessagesRecordTheirModelPricesAndCost();
+  await testIncludedModelMessagesRecordAZeroCost();
+  await testAssistantMessagesPriceCachedTokensAtTheModelCacheReadPrice();
+  await testRetriedIterationTokensGoWithTheNextAssistantMessage();
   await testToolResultDateTimesUseTheUserTimeZone();
   await testDeepSeekReasoningContentIsReplayedForToolContinuation();
   await testDeepSeekReasoningContentIsReplayedForEverySplitToolCall();
@@ -4496,6 +4894,7 @@ async function run() {
   await testEmptyWriteCorrectionResponseIsRepairedIntoPreviews();
   await testIncompleteBulkPreviewCoverageTriggersRepairInstruction();
   await testDeletePreviewDoesNotTriggerThePlanRepair();
+  await testSingleWritePreviewDoesNotAnswerThePlanRepair();
   await testSingleRefBulkRepairIsAutoplannedForMissingRefs();
   await testSingleRefBulkContinuationUsesTextualTargetSet();
   await testPartialMutationPlanUsesCurrentTextualTargetSet();

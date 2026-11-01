@@ -66,6 +66,7 @@ export default function TeamActivityTile({ config }: TeamActivityTileProps) {
     <DashboardTile
       title={t('dashboard.tiles.teamActivityDays', { days })}
       icon="Update"
+      isEmpty={items.length === 0}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => { void refetch(); }}

@@ -474,6 +474,60 @@ async function testReasoningEffortIsSentOnlyWhenRequested() {
   assert.equal('reasoning_effort' in state.requests[0], false);
 }
 
+async function testOpenAiAsksForTheStreamUsageAndReadsItFromTheLastChunk() {
+  const baseParams = {
+    model: 'gpt-5-mini',
+    apiKey: 'test-key',
+    systemPrompt: 'Be precise.',
+    messages: [{ role: 'user', content: 'Hello' }],
+    tools: [],
+    maxTokens: 128,
+  };
+  const chunks = [
+    { choices: [{ delta: { content: 'ok' }, finish_reason: null }] },
+    { choices: [{ delta: {}, finish_reason: 'stop' }], usage: null },
+    // OpenAI's usage chunk: no choices.
+    {
+      choices: [],
+      usage: { prompt_tokens: 1000, completion_tokens: 50, prompt_tokens_details: { cached_tokens: 800 } },
+    },
+  ];
+
+  resetState(chunks);
+  const events = await collectEvents(openaiCompatibleStream({ ...baseParams, providerId: 'openai', endpointUrl: null }));
+  assert.deepEqual(state.requests[0].stream_options, { include_usage: true });
+  assert.deepEqual(events, [
+    { type: 'text_delta', text: 'ok' },
+    {
+      type: 'done',
+      usage: { input_tokens: 1000, output_tokens: 50, cache_read_input_tokens: 800 },
+      finish_reason: 'stop',
+    },
+  ]);
+
+  // A custom endpoint may refuse the field: it is never sent there.
+  resetState(chunks);
+  await collectEvents(openaiCompatibleStream({
+    ...baseParams,
+    providerId: 'custom',
+    endpointUrl: 'https://openrouter.example/api/v1',
+  }));
+  assert.equal('stream_options' in state.requests[0], false);
+
+  // Mistral and DeepSeek send the usage on the finishing chunk: still one done, with it.
+  resetState([
+    { choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }], usage: { prompt_tokens: 10, completion_tokens: 2 } },
+  ]);
+  const customEvents = await collectEvents(openaiCompatibleStream({
+    ...baseParams,
+    providerId: 'custom',
+    endpointUrl: 'https://openrouter.example/api/v1',
+  }));
+  assert.deepEqual(customEvents.filter((event) => event.type === 'done'), [
+    { type: 'done', usage: { input_tokens: 10, output_tokens: 2 }, finish_reason: 'stop' },
+  ]);
+}
+
 async function run() {
   await testReasoningModelsPreferDeveloperRole();
   await testLengthFinishReasonWithPendingToolCallEmitsError();
@@ -488,6 +542,7 @@ async function run() {
   await testXmlStyleToolCallStreamErrorDiscardsPartialNativeToolCall();
   await testReasoningModelHelpers();
   await testReasoningEffortIsSentOnlyWhenRequested();
+  await testOpenAiAsksForTheStreamUsageAndReadsItFromTheLastChunk();
 }
 
 void run();

@@ -363,6 +363,7 @@ async function testOverviewAndLoad() {
 
     // Created after the load: a company and a document of the templates library count (the reset
     // erases them); users do not (the reset keeps the real ones, the sample data ones are its own).
+    // A document bound to a record is that record's (viewing its page creates one) and is not counted.
     await new Promise((resolve) => setTimeout(resolve, 20));
     await inTenant(t.tenantId, async (m) => {
       await m.query(`INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Created After', 'FR', 'Paris')`, [t!.tenantId]);
@@ -374,6 +375,19 @@ async function testOverviewAndLoad() {
         `INSERT INTO documents (tenant_id, item_number, title, library_id)
          VALUES ($1, (SELECT COALESCE(max(item_number), 0) + 1 FROM documents WHERE tenant_id = $1), 'Template after load', $2)`,
         [t!.tenantId, library.id],
+      );
+      const [bound] = await m.query(
+        `INSERT INTO documents (tenant_id, item_number, title, library_id)
+         SELECT $1, (SELECT COALESCE(max(item_number), 0) + 1 FROM documents WHERE tenant_id = $1), 'Bound after load', id
+           FROM document_libraries WHERE tenant_id = $1 AND slug = 'documents'
+         RETURNING id`,
+        [t!.tenantId],
+      );
+      await m.query(
+        `INSERT INTO integrated_document_bindings
+           (tenant_id, source_entity_type, source_entity_id, slot_key, document_id)
+         VALUES ($1, 'applications', gen_random_uuid(), 'overview', $2)`,
+        [t!.tenantId, bound.id],
       );
       await svc.users.createUser({
         email: `demo-${randomUUID().slice(0, 8)}@fromage-co.example`,

@@ -103,6 +103,23 @@ async function testHitCounterSharedAndCleared(a: DataSource, b: DataSource) {
   assert.equal((await one.hit(other, ATTEMPTS)).blocked, true);
 }
 
+/** `clearPrefix` forgets, on every process, the keys that start with the prefix, and only those. */
+async function testHitCounterClearPrefix(a: DataSource, b: DataSource) {
+  const one = new DatabaseHitCounter(a);
+  const two = new DatabaseHitCounter(b);
+  const account = `spec-${randomUUID()}`;
+  const keys = [`${account}.1`, `${account}.2`, `${account}x.1`];
+  for (const key of keys) {
+    for (let i = 0; i < 5; i += 1) await one.hit(key, ATTEMPTS);
+    await one.block(key, ATTEMPTS.blockDuration);
+  }
+  await two.clearPrefix(`${account}.`);
+  assert.equal((await one.hit(keys[0], ATTEMPTS)).hits, 1, 'cleared');
+  assert.equal((await two.hit(keys[1], ATTEMPTS)).hits, 1, 'cleared for every key of the prefix');
+  assert.equal((await one.hit(keys[2], ATTEMPTS)).blocked, true, 'another prefix stays blocked');
+  await one.clearPrefix(account);
+}
+
 /** A block set by one process refuses the key on every process, past the end of the window. */
 async function testHitCounterBlockIsShared(a: DataSource, b: DataSource) {
   const one = new DatabaseHitCounter(a);
@@ -206,6 +223,7 @@ async function main() {
       ['testFallsBackWhenTheDatabaseFails', () => testFallsBackWhenTheDatabaseFails()],
       ['testDoesNotWaitForASaturatedPool', () => testDoesNotWaitForASaturatedPool()],
       ['testHitCounterSharedAndCleared', () => testHitCounterSharedAndCleared(dataSource, other)],
+      ['testHitCounterClearPrefix', () => testHitCounterClearPrefix(dataSource, other)],
       ['testHitCounterBlockIsShared', () => testHitCounterBlockIsShared(dataSource, other)],
       ['testHitCounterMemoryStaysBounded', () => testHitCounterMemoryStaysBounded(dataSource)],
       ['testHitCounterRelease', () => testHitCounterRelease(dataSource, other)],

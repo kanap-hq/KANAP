@@ -294,25 +294,21 @@
     "failedToLogTime": "No se pudo registrar el tiempo"
   },
   "dashboard": {
-    "overview": "Vista general",
     "welcomeBack": "Bienvenido, {{name}}",
     "workOverview": "Aquí tiene un resumen de su trabajo",
     "createTask": "Crear tarea",
     "logTime": "Registrar tiempo",
-    "newRequest": "Nueva solicitud",
+    "newBudgetLine": "Nueva línea presupuestaria",
     "newApplication": "Nueva aplicación",
     "newAsset": "Nuevo activo",
     "newDocument": "Nuevo documento",
-    "dashboardSettings": "Configuración del panel",
-    "noTilesEnabled": "No hay mosaicos activados. Haga clic en el icono de configuración para personalizar su panel.",
+    "noTilesEnabled": "No hay mosaicos activados. Elija sus mosaicos con «Personalizar la página de inicio».",
+    "allTilesEmpty": "Sus mosaicos todavía no tienen nada que mostrar.",
     "blankDocument": "Documento en blanco",
     "fromTemplate": "Desde plantilla…",
     "selectTemplate": "Seleccionar plantilla",
     "useTemplate": "Usar plantilla",
     "noTemplatesAvailable": "No hay plantillas publicadas disponibles.",
-    "newOpexLine": "Nueva línea OPEX",
-    "newCapexLine": "Nueva línea CAPEX",
-    "newContract": "Nuevo contrato",
     "newOpex": "Nuevo OPEX",
     "newCapex": "Nuevo CAPEX",
     "recentUpdates": "Actualizaciones recientes",
@@ -335,7 +331,6 @@
     },
     "topItems": "Top líneas",
     "columnY": "{{column}}, A",
-    "topIncreases": "Mayores incrementos",
     "columnYvsYminus1": "{{column}}, A vs A-1",
     "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "Sin incrementos",
@@ -354,8 +349,6 @@
     "byCostCenter": "Por centro de coste",
     "noCostCenter": "Sin centro de coste",
     "settings": {
-      "title": "Configuración del panel",
-      "description": "Active o desactive los mosaicos, ajuste sus opciones y arrástrelos para reordenarlos.",
       "resetToDefaults": "Restablecer valores predeterminados",
       "dragToReorder": "Arrastrar para reordenar",
       "options": {
@@ -364,7 +357,8 @@
         "days": "Días mostrados",
         "scope": "Ámbito",
         "thresholdDays": "Umbral (días)"
-      }
+      },
+      "hideEmptyTiles": "Ocultar los mosaicos sin contenido"
     },
     "quickCreate": {
       "createTask": "Crear tarea",
@@ -525,12 +519,27 @@
     },
     "welcome": "Bienvenido",
     "budgetSettings": {
-      "customize": "Personalizar",
-      "title": "Configuración del panel de control del presupuesto",
       "columns": "Columnas de importes",
       "tenantColumns": "Columnas del espacio de trabajo",
-      "atLeastOne": "Seleccione al menos una columna de importes.",
       "saveFailed": "No se pudo guardar la configuración del panel de control."
+    },
+    "sections": {
+      "work": "Mi trabajo"
+    },
+    "customize": {
+      "start": "Personalizar la página de inicio",
+      "done": "Listo",
+      "addTile": "Añadir un mosaico",
+      "hideTile": "Ocultar el mosaico",
+      "tileOptions": "Opciones del mosaico",
+      "moveSection": "Arrastrar para mover la sección",
+      "hideSection": "Ocultar la sección",
+      "showSection": "Mostrar la sección"
+    },
+    "topLinesMode": {
+      "label": "Clasificación",
+      "amount": "Importe",
+      "increase": "Aumento"
     }
   },
   "csv": {
@@ -1532,5 +1541,175 @@
     "linksEmpty": "Ningún enlace web.",
     "removeFileNamed": "Eliminar el archivo {{name}}",
     "removed": "Enlace «{{name}}» retirado."
+  },
+  "onboarding": {
+    "choice": {
+      "angleTitle": "¿Qué le trae a KANAP?",
+      "modeTitle": "¿Cómo quiere empezar?",
+      "justLooking": "Solo estoy mirando",
+      "erasesExample": "El ejemplo se borra.",
+      "confirmTitle": "¿Borrar el ejemplo?",
+      "failed": "No se ha podido guardar su respuesta."
+    },
+    "angles": {
+      "budget": "El presupuesto de TI",
+      "cartography": "El mapa del SI",
+      "portfolio": "Los proyectos y las solicitudes"
+    },
+    "modes": {
+      "example": "Descubrir con el ejemplo completo",
+      "own_data": "Empezar con mis datos"
+    },
+    "about": {
+      "path": "Recorrido: {{path}}",
+      "angles": {
+        "budget": "Presupuesto de TI",
+        "cartography": "Mapa del SI",
+        "portfolio": "Cartera de proyectos",
+        "none": "Solo estoy mirando"
+      },
+      "modes": {
+        "example": "ejemplo",
+        "own_data": "mis datos"
+      },
+      "notChosen": "sin elegir",
+      "change": "Cambiar",
+      "choose": "Elegir"
+    },
+    "firstSteps": {
+      "title": "Sus cinco primeros pasos",
+      "progress": "{{done}}/{{total}}",
+      "hide": "Ocultar los primeros pasos",
+      "markDone": "Marcar como hecho",
+      "markUndone": "Marcar como no hecho",
+      "gotIt": "Entendido",
+      "done": "Hecho",
+      "later": "Más tarde",
+      "end": {
+        "title": "¡Recorrido {{path}} terminado!",
+        "others": "Los otros dos recorridos:",
+        "restart": "Reiniciar este recorrido"
+      },
+      "showAgain": "Mostrar los primeros pasos",
+      "steps": {
+        "budget_overview": {
+          "title": "La vista general",
+          "hint": "Estas son las líneas presupuestarias, ordenadas por presupuesto del año en curso. Filtre por Tipo o Empresa pagadora, o busque directamente en Filtro rápido."
+        },
+        "budget_line": {
+          "title": "Una línea presupuestaria",
+          "hint": "Abra una línea y explore sus pestañas. Presupuesto, la pestaña principal, muestra 4 columnas de 5 posibles, todas configurables en «Administración». La pestaña Relaciones vincula el presupuesto con los elementos que soporta.",
+          "hintRecord": "Está en la ficha {{record}}. Explore las pestañas. Presupuesto, la pestaña principal, muestra 4 columnas de 5 posibles, todas configurables en «Administración». La pestaña Relaciones vincula el presupuesto con los elementos que soporta."
+        },
+        "budget_report": {
+          "title": "Un informe",
+          "hint": "Todos los informes se configuran en detalle. Explore las opciones de filtrado. Desde los resultados, abra directamente las líneas presupuestarias correspondientes. Exporte el informe en .pdf, .png o .xlsx."
+        },
+        "budget_plaid": {
+          "title": "Una pregunta a Plaid",
+          "hint": "Pregunte «¿Cuáles son las principales oportunidades de ahorro en el OPEX de TI?»"
+        },
+        "budget_import": {
+          "title": "Sus datos",
+          "hint": "Pruebe la exportación para obtener los datos en csv o xlsx. Puede usar estos archivos como plantillas para actualizar en bloque o importar datos nuevos. Plaid también puede ayudarle a convertir un archivo existente."
+        },
+        "own_company": {
+          "title": "Su empresa",
+          "hint": "Se creó una primera empresa con el entorno. Revise los datos y complete la información, en particular la moneda y el plan de cuentas. Si es necesario, añada el suyo desde la vista «Planes de cuentas». Cree otras empresas si lo necesita."
+        },
+        "own_budget_lines": {
+          "title": "Sus líneas",
+          "hint": "Importe su archivo de presupuesto (exporte primero para obtener la plantilla) o cree directamente su primera línea presupuestaria."
+        },
+        "own_contract": {
+          "title": "Un contrato vinculado",
+          "hint": "Cree su primer contrato y, si procede, vincúlelo a la línea presupuestaria que acaba de crear."
+        },
+        "own_report": {
+          "title": "Su primer informe",
+          "hint": "Compruebe que los filtros siguen sus entradas. ¡Cree más líneas para enriquecer los informes!"
+        },
+        "own_invite": {
+          "title": "Un colega",
+          "hint": {
+            "budget": "Invite a sus colegas creando sus cuentas de usuario. Use el menú Autenticación para configurar el SSO con Entra ID.",
+            "cartography": "Invite a un responsable de aplicación: cree el usuario y envíe la invitación desde el menú de su fila.",
+            "portfolio": "Invite a un jefe de proyecto: cree el usuario y envíe la invitación desde el menú de su fila."
+          }
+        },
+        "map_application": {
+          "title": "Una ficha de aplicación",
+          "hint": "Esta es la ficha de una aplicación. Explore el panel de propiedades y las distintas pestañas para descubrir todas las facetas de este objeto clave de KANAP."
+        },
+        "map_technologies": {
+          "title": "Tecnologías, fin de soporte y vulnerabilidades",
+          "hint": "Lo que llega al fin de soporte en los próximos meses, la fuente de cada fecha y las CVE que afectan a estas tecnologías."
+        },
+        "map_import": {
+          "title": "Sus datos",
+          "hint": "Exporte las aplicaciones en csv o Excel y use la plantilla para importar las suyas. Siga con las tecnologías para asociarles el fin de soporte y las vulnerabilidades."
+        },
+        "own_applications": {
+          "title": "Sus aplicaciones",
+          "hint": "Importe la lista de sus aplicaciones o cree la primera."
+        },
+        "own_technologies": {
+          "title": "Sus tecnologías",
+          "hint": "Vincule tecnologías a sus aplicaciones: KANAP les asocia el fin de soporte."
+        },
+        "own_assets": {
+          "title": "Sus servidores",
+          "hint": "Importe o cree sus servidores y vincúlelos a las aplicaciones."
+        },
+        "portfolio_request": {
+          "title": "Una solicitud y su puntuación",
+          "hint": "Esta es una solicitud, en su pestaña Evaluación: los criterios y la puntuación calculada. Una vez aprobada, se convierte en proyecto con un clic."
+        },
+        "portfolio_import": {
+          "title": "Sus datos",
+          "hint": "Exporte la lista de proyectos del ejemplo para ver su formato y luego importe la suya. Haga lo mismo con las solicitudes y las tareas."
+        },
+        "own_projects": {
+          "title": "Su proyecto",
+          "hint": "El proyecto nacido de la solicitud: responsable, fechas, equipo. Sus proyectos existentes se importan como lista."
+        },
+        "own_request": {
+          "title": "Su primera solicitud",
+          "hint": "Cree una solicitud, puntúela, apruébela y conviértala en proyecto."
+        },
+        "own_project_budget": {
+          "title": "El presupuesto del proyecto",
+          "hint": "Vincule una línea presupuestaria a su proyecto en sus relaciones: el gasto le sigue."
+        },
+        "map_applications": {
+          "title": "La lista de aplicaciones",
+          "hint": "Todas las aplicaciones del ejemplo, con su criticidad, su responsable y su empresa. Es el inventario: filtre, ordene, busque."
+        },
+        "map_assets": {
+          "title": "Los servidores",
+          "hint": "Cada servidor indica dónde se ejecutan las aplicaciones: entorno, ubicación, tecnologías instaladas. Abra una ficha para saber más."
+        },
+        "own_findings": {
+          "title": "Lo que KANAP ha encontrado",
+          "hint": "Fin de soporte y vulnerabilidades conocidas de sus tecnologías, sin introducir nada más."
+        },
+        "portfolio_project": {
+          "title": "El proyecto nacido de la solicitud",
+          "hint": "Este es un proyecto nacido de una solicitud: objetivo, equipo, fases y, en Relaciones, la solicitud de origen, sus aplicaciones y sus líneas presupuestarias."
+        },
+        "portfolio_tasks": {
+          "title": "Las tareas",
+          "hint": "Todas las tareas, vinculadas a un proyecto, al presupuesto o independientes. Pruebe los filtros y la búsqueda para encontrar rápidamente las tareas que le interesan."
+        },
+        "portfolio_time": {
+          "title": "Los informes",
+          "hint": "Siete informes para dirigir la cartera: lo que ha pasado, lo que está en curso, lo que viene. El Mapa de calor de capacidad compara la carga de cada colaborador con su capacidad."
+        },
+        "own_tasks": {
+          "title": "Las primeras tareas",
+          "hint": "Cree las tareas del proyecto, asígnelas y registre el tiempo dedicado."
+        }
+      }
+    }
   }
 }

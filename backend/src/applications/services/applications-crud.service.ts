@@ -16,7 +16,7 @@ import { ApplicationLink } from '../application-link.entity';
 import { ApplicationAttachment } from '../application-attachment.entity';
 import { ApplicationDataResidency } from '../application-data-residency.entity';
 import { AuditService } from '../../audit/audit.service';
-import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { formatApplicationCategoryOptions, ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { StorageService } from '../../common/storage/storage.service';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
@@ -557,14 +557,15 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     fallback?: string,
   ): Promise<string> {
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
-    const allowed = (settings.lifecycleStates || []).map((item: any) => item.code);
-    const fallbackCode = this.pickLifecycleFallback(fallback ?? 'active', allowed);
+    const codes = (settings.lifecycleStates || []).map((item: any) => item.code);
+    const fallbackCode = this.pickLifecycleFallback(fallback ?? 'active', codes);
     if (value === undefined || value === null || String(value).trim() === '') {
       return fallbackCode;
     }
     const normalized = String(value).trim().toLowerCase();
-    if (!allowed.includes(normalized)) {
-      throw applicationBadRequest('lifecycle_invalid', `Invalid lifecycle "${value}"`, { value: String(value) });
+    if (!codes.includes(normalized)) {
+      const allowed = formatApplicationCategoryOptions(settings.lifecycleStates || []);
+      throw applicationBadRequest('lifecycle_invalid', `Invalid lifecycle "${value}". Use one of: ${allowed}.`, { value: String(value), allowed });
     }
     return normalized;
   }
@@ -592,7 +593,11 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
         useDefaultForEmpty: opts?.useDefaultForEmpty,
       });
     } catch (error) {
-      if (error instanceof BadRequestException) throw applicationBadRequest('category_invalid', error.message, { value: String(value ?? '') });
+      if (error instanceof BadRequestException) {
+        const options = await this.itOpsSettings.getApplicationCategoryOptions(tenantId, { manager });
+        const allowed = formatApplicationCategoryOptions(options);
+        throw applicationBadRequest('category_invalid', error.message, { value: String(value ?? ''), allowed });
+      }
       throw error;
     }
   }

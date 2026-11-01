@@ -11,6 +11,8 @@ export interface TrialPageCopy {
 export interface TrialFormCopy extends TrialPageCopy {
   benefits: string[];
   form: {
+    firstNameLabel: string;
+    lastNameLabel: string;
     orgLabel: string;
     orgHelp: string;
     countryLabel: string;

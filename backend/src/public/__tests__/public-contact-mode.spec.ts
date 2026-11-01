@@ -42,6 +42,7 @@ function buildController() {
     turnstile as any,
     {} as any,
     {} as any,
+    {} as any,
   );
   return { controller, calls };
 }

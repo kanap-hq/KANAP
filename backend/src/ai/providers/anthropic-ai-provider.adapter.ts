@@ -9,6 +9,7 @@ import {
   AiStreamParams,
 } from './ai-provider.types';
 import { isAbortError, parseToolCallArguments } from './streaming.util';
+import { LlmCacheCostFactors } from '../ai-llm-cost.util';
 import { describeProviderError, providerFetchOptions, toProviderError } from './provider-http.util';
 
 // Models that accept `output_config.effort`: Opus 4.5 and later, Sonnet 4.6 and later,
@@ -32,9 +33,35 @@ export function anthropicOutputConfig(
   return effort && anthropicModelSupportsEffort(model) ? { output_config: { effort } } : {};
 }
 
+// Anthropic's 5-minute ephemeral cache (the `cache_control` below): a read costs 0.1 and a write 1.25 times the input price.
+export const ANTHROPIC_CACHE_COST_FACTORS: LlmCacheCostFactors = { read: 0.1, write: 1.25 };
+
+/**
+ * The system prompt as Anthropic text blocks. The request renders tools, then system, then
+ * messages; an explicit breakpoint at the end of the cacheable prefix caches the tools and the
+ * fixed part of the prompt, which the next turn and the next conversation read even though the
+ * rest (the person, the clock) differs. With the automatic breakpoint on the last message, a
+ * request uses two of the four breakpoints Anthropic allows.
+ */
+export function anthropicSystemBlocks(
+  systemPrompt: string,
+  cacheablePrefix: string | undefined,
+): string | Anthropic.TextBlockParam[] {
+  if (!cacheablePrefix || !systemPrompt.startsWith(cacheablePrefix)) {
+    return systemPrompt;
+  }
+  const rest = systemPrompt.slice(cacheablePrefix.length).replace(/^\s+/, '');
+  return [
+    { type: 'text', text: cacheablePrefix, cache_control: { type: 'ephemeral' } },
+    ...(rest ? [{ type: 'text' as const, text: rest }] : []),
+  ];
+}
+
 @Injectable()
 export class AnthropicAiProviderAdapter implements AiProviderAdapter {
   private readonly logger = new Logger(AnthropicAiProviderAdapter.name);
+
+  readonly cacheCostFactors = ANTHROPIC_CACHE_COST_FACTORS;
 
   readonly descriptor: AiProviderDescriptor = {
     id: 'anthropic',
@@ -131,7 +158,7 @@ export class AnthropicAiProviderAdapter implements AiProviderAdapter {
     const stream = client.messages.stream({
       model: params.model,
       max_tokens: params.maxTokens,
-      system: params.systemPrompt,
+      system: anthropicSystemBlocks(params.systemPrompt, params.systemPromptCacheablePrefix),
       messages,
       ...(tools.length > 0 ? { tools } : {}),
       ...anthropicOutputConfig(params.model, params.reasoningEffort),
@@ -247,6 +274,8 @@ export class AnthropicAiProviderAdapter implements AiProviderAdapter {
           // The whole prompt, cached or not: callers read input_tokens as the prompt size.
           input_tokens: uncachedInput + cacheWrite + cacheRead,
           output_tokens: outputTokens,
+          cache_read_input_tokens: cacheRead,
+          cache_write_input_tokens: cacheWrite,
         },
         // Normalise Anthropic's stop_reason to the OpenAI-style finish_reason the
         // structured-JSON helper inspects: a max_tokens stop is a length truncation.

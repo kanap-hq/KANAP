@@ -1,6 +1,6 @@
 {
   "files": {
-    "admin.md": "9da48436b2dbc410d3c203b469380f97",
+    "admin.md": "5036740da39f7f47b386e5ae4f702b1c",
 
     "administration-view.md": "50d7154af364743f12afb56174c4745c",
 
@@ -10,17 +10,17 @@
 
     "agents-overview.md": "ebdee80ff050c339bcc09f2c4ae3816a",
 
-    "agents-shared-context.md": "1ee33015c1a9ab8056ab07f0c299e29b",
+    "agents-shared-context.md": "4a838559078994204ca847b5c7b7fa16",
 
     "agents-workspace.md": "bc03c7ba888a280217ff31e28f013bfb",
 
-    "ai-assistant.md": "d2bf88481d7ea4f0047823294d390691",
+    "ai-assistant.md": "0b61758e0c8ba29af037b48fddd8c54b",
 
-    "ai-models.md": "dd41b5b504573ad8a51d75cedcdc1c92",
+    "ai-models.md": "c554ce45d7bfca05ca67787a3a255209",
 
-    "ai-settings.md": "ae754915ced391fae0201e18d9e9f869",
+    "ai-settings.md": "625105f4ccdef8b9d181ebd016801f27",
 
-    "ai-usage.md": "a67173eeb0ea232d2ea350b164d64847",
+    "ai-usage.md": "ebb89789c742f81fca1c2b4715144193",
 
     "analytics.md": "0217a17822d0a498c3e46e55496d6ec8",
 
@@ -36,7 +36,7 @@
 
     "budget-lines.md": "de51959cda6bf06d7752f7216453dc4b",
 
-    "budget-operations.md": "449be16d51ad61544225d42a1f976bcb",
+    "budget-operations.md": "cfa3051cbff2482d54da1834e210281d",
 
     "business-processes.md": "7d802e4831f95c6c4bbd69ac56f1e19a",
 
@@ -58,7 +58,7 @@
 
     "csv-files.md": "3b53ca5e7027c526b7d2a9011b54ad4c",
 
-    "currencies.md": "24605c3d80e2d57a307ff5c41d7e365b",
+    "currencies.md": "78df5ca24ac4fe2b66fef4a2db9a5085",
 
     "data-access.md": "c7ebb08ad78f19cee9d65fe34ac1d6af",
 
@@ -76,7 +76,7 @@
 
     "incidents.md": "883ef3fd9b99bbde48170e5876dbbd72",
 
-    "index.md": "7c28083b0372bcfd83538debf0583621",
+    "index.md": "47dfc8580272a0a86ae3fe6d247b3744",
 
     "integrations.md": "f42bd7b0212ca2e774487ba79e567d0c",
 
@@ -92,9 +92,9 @@
 
     "master-data-operations.md": "35a9a7fb87e520baf0d6516a0d39e75c",
 
-    "my-dashboard.md": "6a3c6a395791ef1bc2c736e8a6e66794",
+    "my-dashboard.md": "176366602ee2dc51db85dc19d0a18172",
 
-    "netbox.md": "b832db9f21cea4ffab9aa044cf714030",
+    "netbox.md": "79fc1424cc479c962658af0636a73467",
 
     "on-premise/configuration.md": "1ef4098d054bef9e3e53b842e00928b7",
 
@@ -109,8 +109,6 @@
     "on-premise/operations.md": "b968bff616dee983117cf42dd57058df",
 
     "on-premise/sso-entra.md": "64c4ba1183a02398aa122dd70f0fd9ba",
-
-    "operations-dashboard.md": "7663e88066118754f599ba95cc48ec9b",
 
     "portfolio-planning.md": "f588a7d40e52cce50fe1639a1cf22c02",
 
@@ -136,7 +134,7 @@
 
     "tasks.md": "86b5109a0fa4cbc45b9522387e496573",
 
-    "technologies.md": "8b8a4ea1c453a0ac35b09d33be7478e9",
+    "technologies.md": "2c74b599e326446540a3bb2165da6884",
 
     "vulnerabilities.md": "13d961080e447fb2604fd0433988288a",
 
@@ -146,10 +144,10 @@
   "glossary_hash": "35b3514938a35b6d96534523d338e71d",
 
   "nav_hashes": {
-    "de": "7b71228e57ba7a377a0dd1f18955014b",
+    "de": "d208c512ac00e839e9cc344d43262bc0",
 
-    "es": "71b568861f1c61f09161c2ae2e29f3a0",
+    "es": "e891bfe75421a3f9aa35adc1f7009de4",
 
-    "fr": "bb887859b11e7f2d15fa4a8741ef0ff8"
+    "fr": "eb3314c5a3df22c6d0aff89edb5d3e9d"
   }
 }
