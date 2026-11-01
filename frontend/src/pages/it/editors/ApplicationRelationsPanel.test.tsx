@@ -60,17 +60,17 @@ describe('ApplicationRelationsPanel', () => {
     expect(screen.getByTestId('location').textContent).toBe('/it/applications/APP-2/overview');
   });
 
-  it('says a web link was added', async () => {
+  it('saves a web link and leaves the list to show it', async () => {
     mocked.post.mockResolvedValue({ data: {} } as never);
     renderPanel();
     fireEvent.click(await screen.findByText('Add link'));
     fireEvent.change(await screen.findByLabelText('URL'), { target: { value: 'https://docs.example.com' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/links', { description: null, url: 'https://docs.example.com' }));
-    expect(await screen.findByText('Link added.')).toBeTruthy();
+    expect(screen.queryByText('Link added.')).toBeNull();
   });
 
-  it('says when a file is attached and when it is deleted', async () => {
+  it('shows a file once it is attached, and drops it once it is deleted', async () => {
     renderPanel();
     let stored = false;
     mocked.get.mockImplementation(async (url: string) => {
@@ -79,13 +79,15 @@ describe('ApplicationRelationsPanel', () => {
       return { data: { items: [] } } as never;
     });
     mocked.post.mockImplementation(async () => { stored = true; return { data: {} } as never; });
-    mocked.patch.mockResolvedValue({ data: {} } as never);
+    mocked.patch.mockImplementation(async () => { stored = false; return { data: {} } as never; });
     fireEvent.change(await screen.findByLabelText('Attach file'), { target: { files: [new File(['x'], 'Architecture.pdf', { type: 'application/pdf' })] } });
-    expect(await screen.findByText('File attached.')).toBeTruthy();
+    expect(await screen.findByText('Architecture.pdf')).toBeTruthy();
+    expect(screen.queryByText('File attached.')).toBeNull();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Delete file Architecture.pdf' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/applications/attachments/f-1/delete', {}));
-    expect(await screen.findByText('File deleted.')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText('Architecture.pdf')).toBeNull());
+    expect(screen.queryByText('File deleted.')).toBeNull();
   });
 });

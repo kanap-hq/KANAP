@@ -81,13 +81,11 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
   const links: LinksAndFilesLink[] = (linksQuery.data ?? []).map((row) => ({ id: row.id, name: row.description, url: row.url, added_at: row.created_at }));
   const files: LinksAndFilesFile[] = (attachmentsQuery.data ?? []).map((row) => ({ id: row.id, name: row.original_filename, size: row.size, added_at: row.uploaded_at }));
 
-  const saveLink = async (link: LinksAndFilesLink | null, draft: LinkDraft, quiet = false) => {
+  const saveLink = async (link: LinksAndFilesLink | null, draft: LinkDraft) => {
     setError(null);
     const body = { description: draft.name, url: draft.url };
     if (link) await api.patch(`/applications/${id}/links/${link.id}`, body);
     else await api.post(`/applications/${id}/links`, body);
-    // Undo recreates the link through this same write, without a second message.
-    if (!quiet) feedback.info(t(link ? 'workspace.application.relations.feedback.linkUpdated' : 'workspace.application.relations.feedback.linkAdded'));
     await refresh(linksKey);
   };
 
@@ -99,7 +97,7 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
       without: (rows) => rows.filter((row) => row.id !== link.id),
       commit: () => api.delete(`/applications/${id}/links/${link.id}`),
       refresh: () => refresh(linksKey),
-      restore: () => saveLink(null, webLinkDraft(link), true),
+      restore: () => saveLink(null, webLinkDraft(link)),
       message: t('common:linksAndFiles.removed', { name: webLinkLabel(link) }),
       feedback,
       onError: failed,
@@ -109,15 +107,12 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
   const uploadFiles = async (chosen: File[]) => {
     setError(null);
     setUploading(chosen.length);
-    let attached = 0;
     try {
       for (const file of chosen) {
         const form = new FormData();
         form.append('file', file);
         await api.post(`/applications/${id}/attachments`, form);
-        attached += 1;
       }
-      feedback.info(t('workspace.application.relations.feedback.fileAttached', { count: attached }));
     } catch (e) {
       failed(e);
     } finally {
@@ -151,7 +146,6 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
     setError(null);
     try {
       await api.patch(`/applications/attachments/${file.id}/delete`, {});
-      feedback.info(t('workspace.application.relations.feedback.fileDeleted'));
     } catch (e) {
       failed(e);
     }

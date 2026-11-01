@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Box, Button, Checkbox, Link as MLink, MenuItem, Snackbar, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, Link as MLink, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import type { CellStyle, ICellRendererParams } from 'ag-grid-community';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -11,6 +11,7 @@ import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import ChipToggleBar from '../../components/ChipToggleBar';
 import PageHeader from '../../components/PageHeader';
+import { useNotify } from '../../components/notify/NotifyProvider';
 import ReportDataStatus from '../../components/reports/ReportDataStatus';
 import { reportFilterMenuProps } from '../../components/reports/ReportLayout';
 import ServerDataGrid, { type EnhancedColDef, type ListRequest } from '../../components/ServerDataGrid';
@@ -790,6 +791,7 @@ export default function AdministrationViewPage() {
     return params;
   }, { replace: true });
   const queryClient = useQueryClient();
+  const notify = useNotify();
   const { byField, labelFor } = useItOpsEnumOptions();
   const zoneNameOf = useZoneName();
   const canEdit = hasLevel('infrastructure', 'member');
@@ -798,7 +800,6 @@ export default function AdministrationViewPage() {
   const [selection, setSelection] = useState<Selection>(NO_SELECTION);
   const [refreshKey, setRefreshKey] = useState(0);
   const [assignOpen, setAssignOpen] = useState(false);
-  const [assigned, setAssigned] = useState<number | null>(null);
   const [request, setRequest] = useState<ListRequest | null>(null);
   const requestRef = useRef<ListRequest | null>(null);
   // The filters (and search) of the rows on screen: a change clears the selection.
@@ -1152,7 +1153,7 @@ export default function AdministrationViewPage() {
               zones={assignable}
               onDone={(changed) => {
                 setAssignOpen(false);
-                setAssigned(changed);
+                notify({ message: t('pages.administrationView.bulk.done', { count: changed }) });
                 setSelection(NO_SELECTION);
                 setRefreshKey((k) => k + 1);
                 // The band and the toggles count again.
@@ -1160,16 +1161,6 @@ export default function AdministrationViewPage() {
               }}
             />
           )}
-          <Snackbar
-            open={assigned !== null}
-            autoHideDuration={6000}
-            onClose={() => setAssigned(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          >
-            <Alert onClose={() => setAssigned(null)} severity="success" variant="filled">
-              {t('pages.administrationView.bulk.done', { count: assigned ?? 0 })}
-            </Alert>
-          </Snackbar>
         </Box>
       </ZoneNameContext.Provider>
     </SelectionContext.Provider>

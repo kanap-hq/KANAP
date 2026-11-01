@@ -34,7 +34,8 @@
     "browse": "Browse",
     "loadMore": "Load more",
     "done": "Done",
-    "moreActions": "More actions"
+    "moreActions": "More actions",
+    "undo": "Undo"
   },
   "status": {
     "loading": "Loading…",

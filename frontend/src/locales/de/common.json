@@ -34,7 +34,8 @@
     "browse": "Durchsuchen",
     "loadMore": "Mehr laden",
     "done": "Fertig",
-    "moreActions": "Weitere Aktionen"
+    "moreActions": "Weitere Aktionen",
+    "undo": "Rückgängig"
   },
   "status": {
     "loading": "Wird geladen…",

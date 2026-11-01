@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { NotifyProvider } from '../../components/notify/NotifyProvider';
 import { KanapDialogProvider } from '../../components/design';
 import { confirmLeave } from '../../hooks/leaveGuard';
 import AssetWorkspacePage from './AssetWorkspacePage';
@@ -155,6 +156,7 @@ function renderAt(path: string, reach: unknown = REACH, asset: typeof ASSET | ((
   });
   const ui = (
     <ThemeProvider theme={createAppTheme('light')}>
+      <NotifyProvider>
       <QueryClientProvider client={queryClient}>
         <KanapDialogProvider>
           <MemoryRouter initialEntries={[path]}>
@@ -165,6 +167,7 @@ function renderAt(path: string, reach: unknown = REACH, asset: typeof ASSET | ((
           </MemoryRouter>
         </KanapDialogProvider>
       </QueryClientProvider>
+      </NotifyProvider>
     </ThemeProvider>
   );
   const view = render(ui);
@@ -316,7 +319,7 @@ describe('Asset workspace: section placement', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.remove' }));
     await waitFor(() => expect(del).toHaveBeenCalledWith('/app-instances/inst-1/assets/asg-1'));
     expect(await screen.findByText('workspace.asset.assignments.removed(Payroll)')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.undo' }));
     await waitFor(() => expect(post).toHaveBeenCalledWith('/app-instances/inst-1/assets', {
       server_id: 'asset-1',
       role: 'domain_controller',
@@ -335,7 +338,7 @@ describe('Asset workspace: section placement', () => {
     renderAt('/it/assets/asset-1/operations');
     fireEvent.click(await screen.findByRole('button', { name: 'workspace.asset.assignments.removeAssignment' }));
     fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.remove' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.undo.undo' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'buttons.undo' }));
     expect(await screen.findByText('Assignment already exists.')).toBeInTheDocument();
   });
 

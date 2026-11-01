@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
+import { NotifyProvider } from '../../../components/notify/NotifyProvider';
 import { KanapDialogProvider } from '../../../components/design';
 import api from '../../../api';
 import AssetRelationsTab from './AssetRelationsTab';
@@ -105,6 +106,7 @@ function renderTab(data: AssetRelationsData) {
   render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <NotifyProvider>
         <KanapDialogProvider>
           <MemoryRouter>
             <ApplicationFeedbackProvider onError={() => undefined}>
@@ -113,6 +115,7 @@ function renderTab(data: AssetRelationsData) {
             </ApplicationFeedbackProvider>
           </MemoryRouter>
         </KanapDialogProvider>
+        </NotifyProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -222,7 +225,7 @@ describe('AssetRelationsTab', () => {
     renderTab(relations());
     fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.relations.remove(name=Patch the host)' }));
     expect(await screen.findByText('workspace.asset.relations.feedback.unlinked(name=Patch the host)')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.undo' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/tasks', { id: 'tsk-1' }));
   });
 
@@ -308,7 +311,7 @@ describe('AssetRelationsTab', () => {
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/assets/as-1/links/l-1'));
     expect(await screen.findByText('common:linksAndFiles.removed(name=Console)')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.undo' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/links', {
       description: 'Console',
       url: 'https://console.example.com',

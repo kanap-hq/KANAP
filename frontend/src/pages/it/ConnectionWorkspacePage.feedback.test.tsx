@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
+import { NotifyProvider } from '../../components/notify/NotifyProvider';
 import ConnectionWorkspacePage from './ConnectionWorkspacePage';
 
 const apiGet = vi.hoisted(() => vi.fn());
@@ -92,6 +93,7 @@ const CONNECTION = {
 function renderPage(route = '/it/connections/c-1/overview') {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
+      <NotifyProvider>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <MemoryRouter initialEntries={[route]}>
           <Routes>
@@ -99,6 +101,7 @@ function renderPage(route = '/it/connections/c-1/overview') {
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
+      </NotifyProvider>
     </ThemeProvider>,
   );
 }

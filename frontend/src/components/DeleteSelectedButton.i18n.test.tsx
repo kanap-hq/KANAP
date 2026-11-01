@@ -7,6 +7,7 @@ import i18n from '../i18n';
 import api from '../api';
 import DeleteSelectedButton from './DeleteSelectedButton';
 import { createAppTheme } from '../config/ThemeContext';
+import { NotifyProvider } from './notify/NotifyProvider';
 
 vi.mock('../api', () => ({ default: { delete: vi.fn() } }));
 
@@ -22,14 +23,16 @@ async function openIn(lng: string, rows: Row[], checkDelete?: (ids: string[]) =>
   const view = render(
     <I18nextProvider i18n={i18n}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <DeleteSelectedButton<Row>
-          selectedRows={rows}
-          endpoint="/things/bulk"
-          getItemId={(row) => row.id}
-          getItemName={(row) => row.name}
-          onDeleteSuccess={() => undefined}
-          checkDelete={checkDelete}
-        />
+        <NotifyProvider>
+          <DeleteSelectedButton<Row>
+            selectedRows={rows}
+            endpoint="/things/bulk"
+            getItemId={(row) => row.id}
+            getItemName={(row) => row.name}
+            onDeleteSuccess={() => undefined}
+            checkDelete={checkDelete}
+          />
+        </NotifyProvider>
       </ThemeProvider>
     </I18nextProvider>,
   );
@@ -97,6 +100,7 @@ describe('DeleteSelectedButton in each language', () => {
     render(
       <I18nextProvider i18n={i18n}>
         <ThemeProvider theme={createAppTheme('light')}>
+          <NotifyProvider>
           <DeleteSelectedButton<Row>
             selectedRows={rowsOf(2)}
             endpoint="/companies/bulk"
@@ -112,6 +116,7 @@ describe('DeleteSelectedButton in each language', () => {
               keptDone: (count) => i18n.t('master-data:companies.delete.keptDone', { count }),
             }}
           />
+          </NotifyProvider>
         </ThemeProvider>
       </I18nextProvider>,
     );

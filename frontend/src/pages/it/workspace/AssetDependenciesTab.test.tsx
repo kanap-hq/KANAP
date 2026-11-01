@@ -4,6 +4,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
+import { NotifyProvider } from '../../../components/notify/NotifyProvider';
 import api from '../../../api';
 import AssetDependenciesTab from './AssetDependenciesTab';
 import { ApplicationFeedbackProvider } from '../applicationFeedback';
@@ -127,12 +128,14 @@ function renderTab({ relations: data = relations(), clusters = {}, members = {},
   render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <NotifyProvider>
         <MemoryRouter>
           <ApplicationFeedbackProvider onError={() => undefined}>
             <AssetDependenciesTab assetId="as-1" />
             <Location />
           </ApplicationFeedbackProvider>
         </MemoryRouter>
+        </NotifyProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -274,7 +277,7 @@ describe('AssetDependenciesTab', () => {
     renderTab();
     fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.relations.remove(name=san-01)' }));
     expect(await screen.findByText('workspace.asset.relations.feedback.unlinked(name=san-01)')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.undo' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/depends_on', { id: 'as-4' }));
   });
 

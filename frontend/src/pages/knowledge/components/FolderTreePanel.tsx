@@ -5,7 +5,6 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Snackbar,
   Stack,
   TextField,
   Tooltip,
@@ -388,11 +387,7 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
   const [rootMenuAnchorEl, setRootMenuAnchorEl] = React.useState<HTMLElement | null>(null);
   const [draggedFolder, setDraggedFolder] = React.useState<DraggedFolderState | null>(null);
   const [folderHoverTargetId, setFolderHoverTargetId] = React.useState<string | null>(null);
-  const [folderMoveSnackbar, setFolderMoveSnackbar] = React.useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error';
-  }>({ open: false, message: '', severity: 'success' });
+  const [treeError, setTreeError] = React.useState<string | null>(null);
 
   const { data: folderTree } = useQuery({
     queryKey: ['knowledge-folders-tree', libraryId],
@@ -490,16 +485,13 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
       await api.delete(`/knowledge-folders/${id}`);
     },
     onSuccess: async () => {
+      setTreeError(null);
       await qc.invalidateQueries({ queryKey: ['knowledge-folders-tree', libraryId] });
       if (selectedFolderId) onSelectFolder(null);
     },
     // A refused delete (a folder with subfolders) says why, in the interface language.
     onError: (error: any) => {
-      setFolderMoveSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, t, t('folderTree.messages.deleteFailed')),
-        severity: 'error',
-      });
+      setTreeError(getApiErrorMessage(error, t, t('folderTree.messages.deleteFailed')));
     },
   });
 
@@ -535,22 +527,14 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
       setDraggedFolder(null);
       setFolderHoverTargetId(null);
       folderExternalDragAndDrop?.onDragEnd();
+      setTreeError(null);
       await qc.invalidateQueries({ queryKey: ['knowledge-folders-tree', libraryId] });
-      setFolderMoveSnackbar({
-        open: true,
-        message: t('folderTree.messages.folderMoved'),
-        severity: 'success',
-      });
     },
     onError: (error: any) => {
       setDraggedFolder(null);
       setFolderHoverTargetId(null);
       folderExternalDragAndDrop?.onDragEnd();
-      setFolderMoveSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, t, t('folderTree.messages.moveFailed')),
-        severity: 'error',
-      });
+      setTreeError(getApiErrorMessage(error, t, t('folderTree.messages.moveFailed')));
     },
   });
 
@@ -631,6 +615,9 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
     >
       <Box sx={{ p: 1.5 }}>
         <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('folderTree.title')}</Typography>
+        {treeError && (
+          <Alert severity="error" sx={{ mb: 1 }} onClose={() => setTreeError(null)}>{treeError}</Alert>
+        )}
 
         <Box
           sx={{
@@ -785,21 +772,6 @@ const FolderTreePanel = React.memo(function FolderTreePanel({
           </Typography>
         </Stack>
       </KanapDialog>
-
-      <Snackbar
-        open={folderMoveSnackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setFolderMoveSnackbar((prev) => ({ ...prev, open: false }))}
-      >
-        <Alert
-          severity={folderMoveSnackbar.severity}
-          onClose={() => setFolderMoveSnackbar((prev) => ({ ...prev, open: false }))}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {folderMoveSnackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 });

@@ -34,7 +34,8 @@
     "browse": "Parcourir",
     "loadMore": "Charger plus",
     "done": "Terminé",
-    "moreActions": "Plus d'actions"
+    "moreActions": "Plus d'actions",
+    "undo": "Annuler"
   },
   "status": {
     "loading": "Chargement…",

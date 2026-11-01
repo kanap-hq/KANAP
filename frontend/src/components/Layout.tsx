@@ -71,6 +71,7 @@ import { useLocale } from '../i18n/useLocale';
 import { useBusinessContributorApplicationVisibility } from '../hooks/useBusinessContributorApplicationVisibility';
 import { useGuardedLeave, useInAppLinkGuard } from '../hooks/leaveGuard';
 import { canUseAnyOperation } from '../pages/operations/operationAccess';
+import { NotifyProvider } from './notify/NotifyProvider';
 
 /** The pending page bar appears only once a move to another page has lasted a moment. */
 const appearLater = keyframes({ to: { opacity: 1 } });
@@ -423,6 +424,7 @@ export default function Layout() {
   // workspace is derived from route; no sync to localStorage required
 
   return (
+    <NotifyProvider>
     <Box sx={{ display: 'flex' }}>
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
         <Toolbar>
@@ -785,5 +787,6 @@ export default function Layout() {
       <StepHint />
       <NamePromptDialog />
     </Box>
+    </NotifyProvider>
   );
 }

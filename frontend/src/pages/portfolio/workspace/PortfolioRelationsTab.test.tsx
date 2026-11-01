@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
+import { NotifyProvider } from '../../../components/notify/NotifyProvider';
 import { KanapDialogProvider } from '../../../components/design';
 import api from '../../../api';
 import type {
@@ -165,12 +166,14 @@ function renderTab(
   render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <NotifyProvider>
         <KanapDialogProvider>
           <MemoryRouter>
             <PortfolioRelationsTab entity={entity} id={id} onRelationsChange={onRelationsChange} />
             <Location />
           </MemoryRouter>
         </KanapDialogProvider>
+        </NotifyProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -429,7 +432,7 @@ describe('PortfolioRelationsTab', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/portfolio/projects/p-1/urls', { urls: [] }));
     expect(await screen.findByText('common:linksAndFiles.removed(name=Vendor portal)')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.undo' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/portfolio/projects/p-1/urls', {
       urls: [{ url: 'https://me.example.com', label: 'Vendor portal' }],
     }));

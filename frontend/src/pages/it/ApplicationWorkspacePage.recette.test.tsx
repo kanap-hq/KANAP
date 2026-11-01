@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { NotifyProvider } from '../../components/notify/NotifyProvider';
 import { KanapDialogProvider } from '../../components/design';
 import api from '../../api';
 import ApplicationWorkspacePage from './ApplicationWorkspacePage';
@@ -110,6 +111,7 @@ function renderPage(path = '/it/applications/app-1/overview', detail: () => unkn
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <NotifyProvider>
         <KanapDialogProvider>
           <MemoryRouter initialEntries={[path]}>
             <Routes>
@@ -118,6 +120,7 @@ function renderPage(path = '/it/applications/app-1/overview', detail: () => unkn
             </Routes>
           </MemoryRouter>
         </KanapDialogProvider>
+        </NotifyProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -219,7 +222,7 @@ describe('Application workspace, recette C1a', () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.relations.remove(name=Office suite)' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/suites/bulk-replace', { suite_ids: [] }));
-    fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.undo.undo' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'buttons.undo' }));
     await waitFor(() => expect(mocked.post).toHaveBeenLastCalledWith('/applications/app-1/suites/bulk-replace', { suite_ids: ['su-1'] }));
   });
 
@@ -237,7 +240,7 @@ describe('Application workspace, recette C1a', () => {
     fireEvent.click(within(row).getByRole('button', { name: /removeContact/ }));
     expect(await screen.findByText('workspace.application.undo.contactRemoved')).toBeTruthy();
     mocked.post.mockResolvedValueOnce({ data: [] } as never);
-    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.undo' }));
     await waitFor(() => expect(mocked.post).toHaveBeenLastCalledWith('/applications/app-1/support-contacts/bulk-replace', { contacts: [{ contact_id: 'c-1', role: 'Vendor' }] }));
 
     mocked.post.mockRejectedValueOnce(SERVER_ERROR);
