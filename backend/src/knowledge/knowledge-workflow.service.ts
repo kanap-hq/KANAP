@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  HttpException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -62,7 +61,7 @@ export class KnowledgeWorkflowService {
       } as any,
     });
     if (!participant) {
-      throw new HttpException('You are not assigned to the active workflow stage', 403);
+      throw codedForbidden('WORKFLOW_STAGE_NOT_ASSIGNED', 'You are not assigned to the active workflow stage');
     }
     if (participant.decision !== 'pending') {
       throw new BadRequestException('You have already acted on this workflow stage');

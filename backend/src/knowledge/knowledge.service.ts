@@ -6089,7 +6089,7 @@ export class KnowledgeService {
     if (!existing) throw new NotFoundException('Activity not found');
 
     if (existing.author_id !== userId) {
-      throw new HttpException('Only the author can edit this comment', 403);
+      throw codedForbidden('OWN_COMMENTS_ONLY', 'Only the author can edit this comment');
     }
     if (existing.type !== 'comment') {
       throw new BadRequestException('Only comments can be edited via this endpoint');
