@@ -19,6 +19,9 @@ L'espace de travail est également accessible aux administrateurs disposant de `
 !!! note "En attente d'un administrateur"
     Sur le service hébergé, Plaid peut s'exécuter sur le modèle inclus KANAP. Avant cela, un administrateur confirme le fournisseur et le lieu où il traite les données. Jusque-là, l'espace de travail affiche *Un administrateur doit confirmer le fournisseur d'IA dans Administration > Plaid.* à la place du chat. Un administrateur le fait sur la page [Paramètres Plaid](ai-settings.md#confirmer-le-modele-inclus-kanap). Les organisations qui utilisent un modèle propre ne voient jamais cet avis.
 
+!!! note "Chat désactivé"
+    Lorsqu'un administrateur désactive le chat dans **Administration › Plaid**, une personne autorisée à utiliser le chat ouvre toujours cette page, et l'entrée Plaid reste dans la navigation supérieure. La page indique *Plaid est désactivé pour cet espace de travail.* Un administrateur de l'assistant voit aussi *Activez-le dans Administration › Plaid*, qui ouvre les paramètres de Plaid. Les autres personnes voient *Demandez à un administrateur de l'activer.* Une personne sans le droit de chat voit la page d'accès refusé.
+
 ## Démarrer une conversation
 
 Lorsque vous ouvrez Plaid pour la première fois, vous arrivez sur un écran d'accueil comportant :

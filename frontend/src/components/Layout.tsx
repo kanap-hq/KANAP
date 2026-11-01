@@ -63,7 +63,7 @@ import TrialChip from './TrialChip';
 import NamePromptDialog from './NamePromptDialog';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
-import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
+import { chatAwaitsIncludedModelConfirmation, chatTurnedOffByAdmin } from '../ai/includedModel';
 import { aiAgentControlApi } from '../ai/aiApi';
 import { useTranslation } from 'react-i18next';
 import { PagePendingContext } from '../lib/deferredPage';
@@ -306,9 +306,11 @@ export default function Layout() {
   const hasWorkspaceAccess = React.useCallback((ws: string): boolean => {
     if (ws === 'ai') {
       if (!config.features.aiChat) return false;
-      // Still listed while it waits for the included model's confirmation: the page says why.
+      // Still listed while the page can say why: the included model waits for a confirmation,
+      // or an administrator turned chat off.
       return aiCapabilities.data?.surfaces.chat.available === true
-        || chatAwaitsIncludedModelConfirmation(aiCapabilities.data);
+        || chatAwaitsIncludedModelConfirmation(aiCapabilities.data)
+        || chatTurnedOffByAdmin(aiCapabilities.data);
     }
     if (ws === 'agents') {
       return canShowAgents;

@@ -19,6 +19,9 @@ The workspace is also available to administrators with `ai_chat:admin`, who can 
 !!! note "Waiting for an administrator"
     On the hosted service, Plaid can run on the KANAP included model. Before it does, an administrator confirms the provider and where it processes data. Until then the workspace shows *An administrator must confirm the AI provider in Admin > Plaid.* instead of the chat. An administrator does this on the [Plaid Settings](ai-settings.md#confirming-the-kanap-included-model) page. Organizations that use a model of their own never see this notice.
 
+!!! note "Chat turned off"
+    When an administrator turns chat off under **Administration › Plaid**, a person who may use the chat still opens this page, and the Plaid entry stays in the top navigation. The page says *Plaid is turned off for this workspace.* An administrator of the assistant also sees *Turn it on in Administration › Plaid*, which opens the Plaid settings. Anyone else sees *Ask an administrator to turn it on.* A person without the chat right sees the access denied page.
+
 ## Starting a conversation
 
 When you open Plaid for the first time, you land on a welcome screen with:

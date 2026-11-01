@@ -19,6 +19,9 @@ Der Arbeitsbereich steht auch Administratoren mit `ai_chat:admin` zur Verfügung
 !!! note "Wartet auf einen Administrator"
     Im gehosteten Dienst kann Plaid auf dem inklusiven KANAP-Modell laufen. Zuvor bestätigt ein Administrator den Anbieter und den Ort, an dem er Daten verarbeitet. Bis dahin zeigt der Arbeitsbereich *Ein Administrator muss den KI-Anbieter unter Administration > Plaid bestätigen.* statt des Chats. Ein Administrator erledigt das auf der Seite [Plaid-Einstellungen](ai-settings.md#das-inklusive-kanap-modell-bestatigen). Organisationen, die ein eigenes Modell nutzen, sehen diesen Hinweis nie.
 
+!!! note "Chat ausgeschaltet"
+    Wenn ein Administrator den Chat unter **Administration › Plaid** ausschaltet, öffnet eine Person mit dem Chat-Recht weiterhin diese Seite, und der Eintrag Plaid bleibt in der oberen Navigation. Die Seite zeigt *Plaid ist für diesen Arbeitsbereich ausgeschaltet.* Ein Administrator des Assistenten sieht außerdem *Schalten Sie ihn unter Administration › Plaid ein*, einen Link zu den Plaid-Einstellungen. Alle anderen sehen *Bitten Sie einen Administrator, ihn einzuschalten.* Eine Person ohne das Chat-Recht sieht die Seite Zugriff verweigert.
+
 ## Eine Konversation beginnen
 
 Wenn Sie Plaid zum ersten Mal öffnen, gelangen Sie auf einen Begrüßungsbildschirm mit:

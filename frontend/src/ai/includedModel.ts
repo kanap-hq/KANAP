@@ -54,3 +54,16 @@ export function chatAwaitsIncludedModelConfirmation(capabilities: AiCapabilities
   const reasons = capabilities?.surfaces.chat.reasons ?? [];
   return reasons.length > 0 && reasons.every((reason) => reason === 'builtin_not_accepted');
 }
+
+/**
+ * Chat is off because an administrator turned it off. The person still has the chat right,
+ * so the page says so. A missing model confirmation may sit beside that switch. Any other
+ * reason (a provider that is not ready, a missing right) keeps the usual refusal.
+ */
+export function chatTurnedOffByAdmin(capabilities: AiCapabilities | null | undefined): boolean {
+  const chat = capabilities?.surfaces.chat;
+  if (!chat || chat.permission_granted !== true || chat.tenant_enabled !== false) return false;
+  const reasons = chat.reasons ?? [];
+  return reasons.length > 0
+    && reasons.every((reason) => reason === 'tenant_disabled' || reason === 'builtin_not_accepted');
+}
