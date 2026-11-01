@@ -1,5 +1,5 @@
 import { languageOf } from '../common/csv-sheet';
-import { Body, Controller, Delete, ForbiddenException, Get, NotFoundException, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
@@ -51,7 +51,8 @@ import { ApplicationLink } from './application-link.entity';
 import { ApplicationAttachment } from './application-attachment.entity';
 import { ApplicationDataResidency } from './application-data-residency.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
-import { issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
+import { NotFoundException } from '@nestjs/common';
+import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
 import { countChangesSinceCreation, type CreationChanges } from '../common/creation/creation-changes';
 
 @UseGuards(JwtAuthGuard)
@@ -623,7 +624,7 @@ export class ApplicationsController {
   /** The token of `POST /applications` for this record, tenant and person, still valid; a 403 otherwise. */
   private assertCreationToken(id: string, token: unknown, ctx: TenantRequest): void {
     if (!verifyCreationToken(token, { tenantId: ctx.tenantId, family: 'applications', recordId: String(id ?? ''), userId: ctx.userId })) {
-      throw new ForbiddenException({ code: 'CREATION_CANCEL_EXPIRED', message: 'This record is no longer being created.' });
+      throw creationCancelExpired();
     }
   }
 

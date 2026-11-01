@@ -1,3 +1,4 @@
+import { ForbiddenException } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { getCreationTokenSecret } from '../../auth/token-secret.util';
 
@@ -69,4 +70,9 @@ export function verifyCreationToken(
   const expected = sign(subject, issuedAt, options.env ?? process.env);
   const given = Buffer.from(match[2], 'base64url');
   return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
+/** 403 `CREATION_CANCEL_EXPIRED`: the token is missing, foreign or expired, so the record is deleted as any other. */
+export function creationCancelExpired(): ForbiddenException {
+  return new ForbiddenException({ code: 'CREATION_CANCEL_EXPIRED', message: 'This record is no longer being created.' });
 }
