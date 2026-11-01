@@ -168,7 +168,7 @@ Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modific
 - **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine et l'hyperviseur qui le fait tourner. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**, ou **Sans zone**. L'actif apparaît alors dans cette zone sur la page [Zones d'administration](administration-view.md)
 
 **Site** :
-- **Site** (obligatoire). Quand le site n'existe pas encore, tapez son nom et choisissez **+ Créer le site « … »** : indiquez son type d'hébergement, et le nouveau site se place dans le champ. Il faut `locations:member`
+- **Site** (obligatoire) : chaque actif en a un, qu'il vienne de l'écran, d'un import ou de l'assistant. Quand le site n'existe pas encore, tapez son nom et choisissez **+ Créer le site « … »** : indiquez son type d'hébergement, et le nouveau site se place dans le champ. Il faut `locations:member`
 - **Sous-site** (lorsque le site a des sous-sites définis)
 - **Type d'hébergement**, **Société exploitante** ou **Fournisseur cloud**, **Pays**, **Ville** : en lecture seule, dérivés du site. Ils suivent quand vous changez de site
 
@@ -512,7 +512,7 @@ Certains champs sont calculés et ne peuvent pas être importés :
 ### Limitations
 
 - **Maximum 4 adresses IP** : Les actifs prennent en charge jusqu'à 4 entrées d'adresse IP dans un fichier
-- **Site obligatoire** : Chaque actif doit avoir le code d'un site existant
+- **Site obligatoire** : Chaque actif doit avoir le code d'un site existant. La **Vérification préalable** signale une erreur sur une ligne dont la cellule `location_reference` est vide et refuse un fichier sans cette colonne
 - **Relations non incluses** : Les affectations d'applications, connexions, liens financiers, projets, tâches et pièces jointes doivent être gérés dans l'espace de travail
 
 ### Résolution de problèmes

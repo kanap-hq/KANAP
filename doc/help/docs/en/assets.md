@@ -168,7 +168,7 @@ The drawer shows the asset's identity card on every tab. Edits save automaticall
 - **Administration zone**: The zone of your administration model the asset belongs to, for example Tier 0 for a domain controller and the hypervisor that runs it. Choose from the zones configured in **IT Landscape > Settings**, or **No zone**. The asset then appears in that zone on the [Administration zones](administration-view.md) page
 
 **Location**:
-- **Location** (required). When the location does not exist yet, type its name and choose **+ Create location "…"**: give its hosting type, and the new location goes into the field. This needs `locations:member`
+- **Location** (required): every asset has one, whether it comes from the screen, an import or the assistant. When the location does not exist yet, type its name and choose **+ Create location "…"**: give its hosting type, and the new location goes into the field. This needs `locations:member`
 - **Sub-location** (when the location has sub-locations defined)
 - **Hosting type**, **Operating company** or **Cloud provider**, **Country**, **City**: read-only, derived from the location. They follow when you change the location
 
@@ -512,7 +512,7 @@ Some fields are computed and cannot be imported:
 ### Limitations
 
 - **Maximum 4 IP addresses**: Assets support up to 4 IP address entries in a file
-- **Location required**: Every asset must have the code of an existing location
+- **Location required**: Every asset must have the code of an existing location. **Preflight** reports an error on a row with an empty `location_reference` cell and refuses a file without that column
 - **Relations not included**: Application assignments, connections, financial links, projects, tasks, and attachments must be managed in the workspace
 
 ### Troubleshooting

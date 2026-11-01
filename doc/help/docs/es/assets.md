@@ -168,7 +168,7 @@ El panel muestra la tarjeta de identidad del activo en cada pestaña. Las edicio
 - **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo, por ejemplo el Tier 0 para un controlador de dominio y el hipervisor que lo ejecuta. Elija entre las zonas configuradas en **Panorama IT > Configuración**, o **Sin zona**. El activo aparece entonces en esa zona en la página [Zonas de administración](administration-view.md)
 
 **Ubicación**:
-- **Ubicación** (obligatorio). Si la ubicación aún no existe, escriba su nombre y elija **+ Crear la ubicación «…»**: indique su tipo de alojamiento y la nueva ubicación pasa al campo. Requiere `locations:member`
+- **Ubicación** (obligatorio): cada activo tiene una, venga de la pantalla, de una importación o del asistente. Si la ubicación aún no existe, escriba su nombre y elija **+ Crear la ubicación «…»**: indique su tipo de alojamiento y la nueva ubicación pasa al campo. Requiere `locations:member`
 - **Sub-ubicación** (cuando la ubicación tiene sub-ubicaciones definidas)
 - **Tipo de alojamiento**, **Empresa operadora** o **Proveedor cloud**, **País**, **Ciudad**: de solo lectura, derivados de la ubicación. Se actualizan cuando cambia la ubicación
 
@@ -512,7 +512,7 @@ Algunos campos se calculan y no pueden importarse:
 ### Limitaciones
 
 - **Máximo 4 direcciones IP**: Los activos admiten hasta 4 entradas de direcciones IP en un archivo
-- **Ubicación obligatoria**: Cada activo debe tener el código de una ubicación existente
+- **Ubicación obligatoria**: Cada activo debe tener el código de una ubicación existente. La **Verificación previa** señala un error en una fila con la celda `location_reference` vacía y rechaza un archivo sin esa columna
 - **Relaciones no incluidas**: Las asignaciones de aplicaciones, conexiones, vínculos financieros, proyectos, tareas y adjuntos deben gestionarse en el espacio de trabajo
 
 ### Solución de problemas

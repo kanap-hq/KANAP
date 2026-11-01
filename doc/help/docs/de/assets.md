@@ -168,7 +168,7 @@ Die Leiste zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen 
 - **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört, zum Beispiel Tier 0 für einen Domänencontroller und den Hypervisor, auf dem er läuft. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Zonen oder **Keine Zone**. Das Asset erscheint dann in dieser Zone auf der Seite [Administrationszonen](administration-view.md)
 
 **Standort**:
-- **Standort** (erforderlich). Gibt es den Standort noch nicht, geben Sie seinen Namen ein und wählen Sie **+ Standort „…“ anlegen**: Geben Sie die Hosting-Art an, und der neue Standort wird ins Feld übernommen. Dafür ist `locations:member` nötig
+- **Standort** (erforderlich): Jedes Asset hat einen, ob es über den Bildschirm, einen Import oder den Assistenten angelegt wird. Gibt es den Standort noch nicht, geben Sie seinen Namen ein und wählen Sie **+ Standort „…“ anlegen**: Geben Sie die Hosting-Art an, und der neue Standort wird ins Feld übernommen. Dafür ist `locations:member` nötig
 - **Unterstandort** (wenn der Standort definierte Unterstandorte hat)
 - **Hosting-Typ**, **Betreiberunternehmen** oder **Cloud-Anbieter**, **Land**, **Stadt**: schreibgeschützt, vom Standort abgeleitet. Sie folgen, wenn Sie den Standort ändern
 
@@ -512,7 +512,7 @@ Einige Felder werden berechnet und können nicht importiert werden:
 ### Einschränkungen
 
 - **Maximal 4 IP-Adressen**: Assets unterstützen bis zu 4 IP-Adresseinträge in einer Datei
-- **Standort erforderlich**: Jedes Asset muss den Code eines vorhandenen Standorts haben
+- **Standort erforderlich**: Jedes Asset muss den Code eines vorhandenen Standorts haben. **Preflight** meldet einen Fehler in einer Zeile mit leerer `location_reference`-Zelle und lehnt eine Datei ohne diese Spalte ab
 - **Verknüpfungen nicht enthalten**: Anwendungszuweisungen, Verbindungen, Finanzverknüpfungen, Projekte, Aufgaben und Anhänge müssen im Arbeitsbereich verwaltet werden
 
 ### Fehlerbehebung
