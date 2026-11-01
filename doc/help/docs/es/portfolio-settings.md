@@ -136,6 +136,8 @@ Las plantillas de fases proporcionan:
 
 Configure tipos, categorías y flujos para organizar solicitudes y proyectos.
 
+Un nuevo espacio de trabajo empieza con tres orígenes (TI, Negocio, Cumplimiento) y tres categorías (Aplicaciones, Ciberseguridad, Infraestructura), sin línea. Sus nombres siguen el idioma del espacio de trabajo. Puede cambiarles el nombre, desactivarlos o eliminarlos como cualquier otro valor.
+
 ### Tipos
 
 Los tipos describen la naturaleza del trabajo:

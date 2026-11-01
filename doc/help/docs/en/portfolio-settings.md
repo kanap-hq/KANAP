@@ -136,6 +136,8 @@ Phase templates provide:
 
 Configure types, categories, and streams for organizing requests and projects.
 
+A new workspace starts with three sources (IT, Business, Compliance) and three categories (Applications, Cybersecurity, Infrastructure), with no stream. Their names follow the workspace language. You can rename, disable or delete them like any other value.
+
 ### Types
 
 Types describe the nature of the work:
