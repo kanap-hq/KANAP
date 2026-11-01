@@ -39,19 +39,20 @@ Die Kette ist einfach: **Anwendung → Umgebung → Server**. Am Ende dieses Lei
 
 ## Schritt 1: Ihre Anwendung erstellen
 
-Gehen Sie zu **IT-Landschaft > Anwendungen** und klicken Sie auf **Neue App / Neuer Dienst**.
+Gehen Sie zu **IT-Landschaft > Anwendungen** und klicken Sie auf **Neue Anwendung / Service**.
 
-Füllen Sie das Wesentliche aus:
+Geben Sie den Namen in den Titel ein, zum Beispiel `Salesforce CRM`, und drücken Sie die Eingabetaste. Ihre Anwendung ist jetzt im Register, und ihre sechs Tabs öffnen sich für die detaillierte Dokumentation: **Übersicht**, **Bereitstellungen**, **Schnittstellen**, **Betrieb**, **Compliance** und **Beziehungen**.
+
+Füllen Sie dann das Wesentliche in der Kopfzeile und der Eigenschaftsleiste aus:
 
 | Feld | Was eingeben | Beispiel |
 |------|-------------|---------|
-| **Name** | Ein klarer, wiedererkennbarer Name | `Salesforce CRM` |
 | **Kategorie** | Der primäre Zweck | `Fachbereichsanwendung` |
 | **Lieferant** | Der Lieferant (aus Ihren Stammdaten) | `Salesforce Inc` |
 | **Geschäftskritikalität** | Geschäftliche Bedeutung | `Geschäftskritisch` |
-| **Lebenszyklus** | Aktueller Status | `Aktiv` |
+| **Lebenszyklus** | Aktueller Status (bei der Erstellung Aktiv) | `Aktiv` |
 
-Klicken Sie auf **Erstellen**. Ihre Anwendung ist jetzt im Register, und der vollständige Arbeitsbereich öffnet sich mit sechs Tabs für die detaillierte Dokumentation: **Übersicht**, **Bereitstellungen**, **Schnittstellen**, **Betrieb**, **Compliance** und **Beziehungen**.
+Solange Sie auf ihrer Seite sind, löscht **Erstellung abbrechen** in der Kopfzeile die neue Anwendung.
 
 !!! tip "Beginnen Sie mit dem, was Sie wissen"
     Beschreibung, Herausgeber, Version, Lizenzierung: alles nützlich, aber in diesem Stadium optional. Sie können später anreichern. Das Ziel ist, die App ins System zu bekommen.
@@ -290,7 +291,7 @@ Verwenden Sie dann die [Schnittstellenkarte](../interface-map.md), um den vollst
 
 | Ich möchte... | Gehe zu... |
 |---------------|------------|
-| Eine Anwendung erstellen | IT-Landschaft > Anwendungen > Neue App / Neuer Dienst |
+| Eine Anwendung erstellen | IT-Landschaft > Anwendungen > Neue Anwendung / Service |
 | Umgebungen hinzufügen | App öffnen > Tab Bereitstellungen > Bereitstellung hinzufügen |
 | Verantwortliche zuweisen | App öffnen > Bereich Eigenschaften |
 | Zugriffsmethoden festlegen | App öffnen > Tab Betrieb |

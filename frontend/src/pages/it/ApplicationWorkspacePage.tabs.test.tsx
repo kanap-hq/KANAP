@@ -35,7 +35,6 @@ vi.mock('../../components/fields/ContactSelect', () => ({ default: () => null })
 vi.mock('../../components/fields/CompanySelect', () => ({ default: () => null }));
 vi.mock('../../components/fields/DepartmentMultiSelect', () => ({ default: () => null }));
 vi.mock('../../components/fields/TeamMemberMultiSelect', () => ({ default: () => null }));
-vi.mock('./editors/ApplicationCreateEditor', () => ({ default: () => <div data-testid="create-editor" /> }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 vi.mock('../../components/IntegratedDocumentEditor', () => ({ default: () => <div data-testid="description-editor" /> }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => <div data-testid="knowledge-panel" /> }));
@@ -449,7 +448,7 @@ describe('Application workspace vulnerabilities', () => {
 
   it('keeps the History tab disabled while creating an application', async () => {
     renderPage('/it/applications/new/overview');
-    await screen.findByTestId('create-editor');
+    await screen.findByRole('textbox', { name: 'common:buttons.editTitle' });
     const history = screen.getByRole('tab', { name: /workspace\.application\.tabs\.history/ });
     expect(history).toBeDisabled();
     expect(screen.queryByTestId('record-history')).toBeNull();
@@ -457,7 +456,7 @@ describe('Application workspace vulnerabilities', () => {
 
   it('reads nothing while creating an application', async () => {
     renderPage('/it/applications/new/overview');
-    await screen.findByTestId('create-editor');
+    await screen.findByRole('textbox', { name: 'common:buttons.editTitle' });
     expect(vulnerabilityCalls()).toHaveLength(0);
     expect(screen.queryByTestId('vulnerability-severe-badge')).toBeNull();
   });

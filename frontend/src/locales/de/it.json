@@ -1705,7 +1705,10 @@
     },
     "application": {
       "title": "Anwendung / Service",
-      "newTitle": "Neue Anwendung / Service",
+      "newTitle": "Neue Anwendung",
+      "creation": {
+        "record": "Die Anwendung"
+      },
       "indexOfTotal": "({{index}} von {{total}})",
       "tabs": {
         "overview": "Übersicht",

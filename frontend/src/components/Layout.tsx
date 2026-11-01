@@ -60,6 +60,7 @@ import SubscriptionBanner from './SubscriptionBanner';
 import TrialChip, { TrialMenuLine } from './TrialChip';
 import NamePromptDialog from './NamePromptDialog';
 import FirstOpenDialog from './onboarding/FirstOpenDialog';
+import NavigationTracker from './navigation/NavigationTracker';
 import StepHint from './onboarding/StepHint';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
@@ -780,6 +781,8 @@ export default function Layout() {
           </React.Suspense>
         </Box>
       </Box>
+      {/* The previous in-app address, where a cancelled creation returns. */}
+      <NavigationTracker />
       {/* The name prompt is mounted last, so it comes first when both are open. */}
       <FirstOpenDialog />
       <StepHint />

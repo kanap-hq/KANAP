@@ -34,34 +34,33 @@ Diferentes equipos pueden usar categorías para centrarse en su área de respons
 
 ---
 
-## Primeros pasos
+## Primeros pasos { #getting-started }
 
-Navegue a **Panorama IT > Aplicaciones** para ver su lista. Haga clic en **Nueva App / Servicio** para crear su primera entrada.
+Navegue a **Panorama IT > Aplicaciones** para ver su lista. Para crear una aplicación:
 
-**Campos obligatorios**:
-- **Nombre**: Un nombre reconocible para la aplicación o servicio, de 200 caracteres como máximo. Consulte [Nombres únicos](#unique-names)
-- **Categoría**: El propósito principal de esta aplicación (ver categorías arriba)
-- **Ciclo de vida**: Estado actual (Activo, Propuesto, Obsoleto, Retirado, o cualquier código personalizado definido en Configuración)
+1. Haga clic en **Nueva aplicación / servicio**. La página de la aplicación se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
+2. Escriba el nombre de la aplicación o servicio, de 200 caracteres como máximo. Consulte [Nombres únicos](#unique-names).
+3. Pulse Intro o haga clic fuera del título. KANAP crea la aplicación de inmediato. Su referencia (`APP-12`) aparece y se abren todas las pestañas.
 
-**Muy recomendados**:
-- **Proveedor**: El proveedor que proporciona el software (vinculado a sus datos maestros de Proveedores)
-- **Editor**: El editor del software (p. ej., Microsoft, SAP, Oracle)
-- **Descripción**: Qué hace esta aplicación
+La nueva aplicación está **Activa**, en la categoría por defecto. Cámbielas en el encabezado y el panel de propiedades, y complete el resto:
 
-Los campos de clasificación son opcionales al crear una aplicación. La **Criticidad de negocio**, la criticidad cibernética, la confidencialidad de los datos y la ola de recuperación se eligen entre los niveles que su organización definió en **Panorama IT > Configuración**; cada opción muestra la definición del nivel. Los valores permanecen sin definir hasta que usted los seleccione.
+- **Categoría**: el propósito principal de esta aplicación (ver categorías arriba)
+- **Ciclo de vida**: Activo, Propuesto, Obsoleto, Retirado, o cualquier código personalizado definido en Configuración
+- **Proveedor**: el proveedor que proporciona el software (vinculado a sus datos maestros de Proveedores)
+- **Editor**: el editor del software (p. ej., Microsoft, SAP, Oracle)
+- **Descripción**: qué hace esta aplicación
+- **Clasificación**: la **Criticidad de negocio**, la criticidad cibernética, la confidencialidad de los datos y la ola de recuperación se eligen entre los niveles que su organización definió en **Panorama IT > Configuración**. Cada opción muestra la definición del nivel. Permanecen sin definir hasta que usted los seleccione
+- **Versión**, **Puesta en marcha**, **Fin de soporte**, **Fecha de retiro**: la versión actual y sus fechas. El **Fin de soporte** y la **Fecha de retiro** no pueden ser anteriores a la **Puesta en marcha**
+- **Licencia** y **Notas**: términos de licencia y notas internas de texto libre
+- **Puede tener apps hijas**: usar esta aplicación como una "suite" que agrupa otras aplicaciones
 
-**Opcionales pero útiles**:
-- **Versión**: Identificador de versión actual (texto libre, p. ej., "4.2.1", "2023", "T1 2024")
-- **Fecha de puesta en marcha**: Cuándo esta versión entró o entrará en producción
-- **Fin de soporte**: Cuándo finaliza el soporte del proveedor para esta versión
-- **Fecha de retiro**: Cuándo esta versión fue efectivamente decomisionada
-- **Licencia**: Términos y notas de licencia
-- **Notas**: Notas internas de texto libre
-- **Puede tener apps hijas**: Active esto para usar esta aplicación como una "suite" que agrupa otras aplicaciones
+Pulse Escape en el título vacío para salir sin crear nada. Un nombre que ya usa otra aplicación se rechaza, con un mensaje bajo el título.
 
-El **Fin de soporte** y la **Fecha de retiro** no pueden ser anteriores a la **Puesta en marcha**.
+### Cancelar una creación { #cancelling-a-creation }
 
-Una vez que guarde, el espacio de trabajo desbloquea todas las pestañas para documentación detallada.
+Mientras permanezca en la aplicación que acaba de crear, **Cancelar la creación** en el encabezado la elimina y le devuelve al punto de partida: la lista o la pantalla anterior. Si introdujo algo más que el nombre, una confirmación indica lo que se eliminará. Puede cancelar su propia creación sin el derecho de eliminar aplicaciones.
+
+Una vez que sale de la aplicación, esta se conserva. Elimínela como cualquier otra aplicación. La referencia de una aplicación cancelada no se reutiliza.
 
 ### Nombres únicos { #unique-names }
 
@@ -126,7 +125,7 @@ Una celda sin valor muestra un guion.
 - **Vulnerabilidades por revisar** filtra por **Con vulnerabilidades graves**, **Con vulnerabilidades** o **Sin**, y ordena por las vulnerabilidades críticas o altas y luego por el total. Las aplicaciones desactivadas van al final y no entran en ningún valor del filtro.
 
 **Acciones**:
-- **Nueva App / Servicio**: Crear una nueva entrada (`applications:member`)
+- **Nueva aplicación / servicio**: Crear una nueva entrada (`applications:member`). Consulte [Primeros pasos](#getting-started)
 - **Importar**: Importación masiva desde un archivo CSV o un libro de Excel (`applications:admin`)
 - **Exportar**: Exportar las aplicaciones que muestra la lista a un archivo CSV o un libro de Excel (`applications:admin`). Consulte [Opciones de exportación](#export-options).
 - **Copiar elemento**: Duplicar una aplicación seleccionada con todas sus relaciones principales (`applications:member`). Consulte [Copiar aplicaciones](#copiar-aplicaciones) para saber qué se copia y qué no.
@@ -153,6 +152,7 @@ El encabezado muestra:
 - **Compartir**: copiar un enlace compartible a este espacio de trabajo
 - **Nueva versión**: lanzar el asistente de migración de versión (consulte [Gestión de versiones](#gestion-de-versiones))
 - **Convertir en tecnología** (`applications:admin` e `infrastructure:member`): consulte [Convertir una aplicación en tecnología](#convertir-una-aplicacion-en-tecnologia)
+- **Cancelar la creación**: visible mientras permanece en una aplicación que acaba de crear. Consulte [Cancelar una creación](#cancelling-a-creation)
 - **Eliminar**, un icono de papelera con su nombre en una información emergente (`applications:admin`): una aplicación con interfaces recibe el rechazo y el motivo, solo con Cerrar. Si no, la confirmación nombra la aplicación y cuenta los despliegues eliminados con ella, junto con sus vínculos con otros elementos
 - **Anterior / Siguiente**: recorrer la lista filtrada sin volver a la cuadrícula
 
@@ -398,12 +398,12 @@ KANAP ofrece **dos formas de gestionar versiones de aplicaciones**, dependiendo 
 
 | Enfoque | Ideal para | Qué sucede |
 |---------|------------|------------|
-| **Simple** | La mayoría de aplicaciones | Actualice los campos de versión en el panel de propiedades o en el formulario de creación: mismo registro, nuevo número de versión |
+| **Simple** | La mayoría de aplicaciones | Actualice los campos de versión en el panel de propiedades: mismo registro, nuevo número de versión |
 | **Sofisticado** | Migraciones mayores | Use **Nueva versión** para crear un nuevo registro de aplicación con seguimiento de linaje. Ejecute las versiones antigua y nueva en paralelo |
 
 ### Seguimiento simple de versiones (actualizaciones in situ)
 
-Para la mayoría de aplicaciones (donde actualiza y la versión anterior simplemente desaparece), actualice los campos **Versión**, **Puesta en marcha**, **Fin de soporte** y **Fecha de retiro** en el formulario de creación o en el panel de propiedades. El chip de versión del encabezado y los metadatos de **Puesta en marcha** reflejan lo que defina.
+Para la mayoría de aplicaciones (donde actualiza y la versión anterior simplemente desaparece), actualice los campos **Versión**, **Puesta en marcha**, **Fin de soporte** y **Fecha de retiro** en el panel de propiedades. El chip de versión del encabezado y los metadatos de **Puesta en marcha** reflejan lo que defina.
 
 Este enfoque mantiene todo en un solo registro. Cuando actualiza, modifique los campos de versión y listo. La pestaña **Historial** conserva los valores anteriores.
 

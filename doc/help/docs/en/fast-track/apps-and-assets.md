@@ -39,19 +39,20 @@ The chain is simple: **Application → Environment → Server**. By the end of t
 
 ## Step 1: Create Your Application
 
-Go to **IT Landscape → Applications** and click **New App / Service**.
+Go to **IT Landscape → Applications** and click **New app / service**.
 
-Fill in the essentials:
+Type the name in the title, for example `Salesforce CRM`, and press Enter. Your application is now in the registry, and its six tabs open for detailed documentation: **Overview**, **Deployments**, **Interfaces**, **Operations**, **Compliance**, and **Relations**.
+
+Then fill in the essentials in the header and the properties drawer:
 
 | Field | What to enter | Example |
 |-------|--------------|---------|
-| **Name** | A clear, recognizable name | `Salesforce CRM` |
 | **Category** | The primary purpose | `Line-of-business` |
 | **Supplier** | The supplier (from your master data) | `Salesforce Inc` |
 | **Business criticality** | Business importance | `Business critical` |
-| **Lifecycle** | Current status | `Active` |
+| **Lifecycle** | Current status (Active when created) | `Active` |
 
-Click **Create**. Your application is now in the registry, and the full workspace opens with six tabs for detailed documentation: **Overview**, **Deployments**, **Interfaces**, **Operations**, **Compliance**, and **Relations**.
+While you are still on its page, **Cancel creation** in the header deletes the new application.
 
 !!! tip "Start with what you know"
     Description, publisher, version, licensing: all useful, but optional at this stage. You can enrich later. The goal is to get the app into the system.
@@ -290,7 +291,7 @@ Then use the [Interface Map](../interface-map.md) to visualize the full applicat
 
 | I want to... | Go to... |
 |------------|--------|
-| Create an application | IT Landscape → Applications → New App / Service |
+| Create an application | IT Landscape → Applications → New app / service |
 | Add environments | Open app → Deployments tab → Add deployment |
 | Assign owners | Open app → Properties panel |
 | Set access methods | Open app → Operations tab |

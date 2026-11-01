@@ -39,19 +39,20 @@ La cadena es simple: **Aplicación → Entorno → Servidor**. Al final de esta 
 
 ## Paso 1: Crear su aplicación
 
-Vaya a **Panorama IT > Aplicaciones** y haga clic en **Nueva App / Servicio**.
+Vaya a **Panorama IT > Aplicaciones** y haga clic en **Nueva aplicación / servicio**.
 
-Complete lo esencial:
+Escriba el nombre en el título, por ejemplo `Salesforce CRM`, y pulse Intro. Su aplicación está ahora en el registro, y sus seis pestañas se abren para documentación detallada: **Vista general**, **Despliegues**, **Interfaces**, **Operaciones**, **Conformidad** y **Relaciones**.
+
+Luego complete lo esencial en el encabezado y el panel de propiedades:
 
 | Campo | Qué introducir | Ejemplo |
 |-------|----------------|---------|
-| **Nombre** | Un nombre claro y reconocible | `Salesforce CRM` |
 | **Categoría** | El propósito principal | `Línea de negocio` |
 | **Proveedor** | El proveedor (de sus datos maestros) | `Salesforce Inc` |
 | **Criticidad de negocio** | Importancia para el negocio | `Crítica para el negocio` |
-| **Ciclo de vida** | Estado actual | `Activo` |
+| **Ciclo de vida** | Estado actual (Activo al crearla) | `Activo` |
 
-Haga clic en **Crear**. Su aplicación está ahora en el registro, y el espacio de trabajo completo se abre con seis pestañas para documentación detallada: **Vista general**, **Despliegues**, **Interfaces**, **Operaciones**, **Conformidad** y **Relaciones**.
+Mientras siga en su página, **Cancelar la creación** en el encabezado elimina la nueva aplicación.
 
 !!! tip "Empiece con lo que sabe"
     Descripción, editor, versión, licencia: todo útil, pero opcional en esta etapa. Puede enriquecer más tarde. El objetivo es tener la app en el sistema.
@@ -290,7 +291,7 @@ Luego utilice el [Mapa de interfaces](../interface-map.md) para visualizar el fl
 
 | Quiero... | Ir a... |
 |-----------|---------|
-| Crear una aplicación | Panorama IT > Aplicaciones > Nueva App / Servicio |
+| Crear una aplicación | Panorama IT > Aplicaciones > Nueva aplicación / servicio |
 | Añadir entornos | Abrir app > pestaña Despliegues > Agregar despliegue |
 | Asignar responsables | Abrir app > panel Propiedades |
 | Configurar métodos de acceso | Abrir app > pestaña Operaciones |

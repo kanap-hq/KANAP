@@ -179,6 +179,7 @@
   "APPLICATION_CONVERSION_REFUSED": "This application cannot be converted to a technology.",
   "APPLICATION_HAS_INTERFACES_one": "This application is the source or target of {{usages}}. Disable it instead, or delete that interface first.",
   "APPLICATION_HAS_INTERFACES_other": "This application is the source or target of {{usages}}. Disable it instead, or delete those interfaces first.",
+  "CREATION_CANCEL_EXPIRED": "This record is no longer being created: delete it instead.",
   "COST_CENTER_IN_USE": "This cost center is used by {{usages}}. Disable it instead of deleting it.",
   "COST_CENTER_HAS_NODES_one": "This group contains {{usages}}. Move or delete it first.",
   "COST_CENTER_HAS_NODES_other": "This group contains {{usages}}. Move or delete them first.",

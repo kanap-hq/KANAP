@@ -274,6 +274,10 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       disabled_at: null,
     });
     const saved = (await repo.save(entity as any)) as Application;
+    // The reference (`APP-n`) is given by the database on insert: the page opens the new
+    // application under it, with the reference in its header.
+    const [{ sequential_id }] = await mg.query(`SELECT sequential_id FROM applications WHERE id = $1 AND tenant_id = $2`, [saved.id, tenantId]);
+    saved.sequential_id = sequential_id;
     await this.audit.log({ table: 'applications', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
     return Object.assign(saved, classificationReadState(saved));
   }

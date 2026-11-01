@@ -34,34 +34,33 @@ Different teams can use categories to focus on their area of responsibility:
 
 ---
 
-## Getting started
+## Getting started { #getting-started }
 
-Navigate to **IT Landscape > Applications** to see your list. Click **New App / Service** to create your first entry.
+Navigate to **IT Landscape > Applications** to see your list. To create an application:
 
-**Required fields**:
-- **Name**: A recognizable name for the application or service, up to 200 characters. See [Unique names](#unique-names)
-- **Category**: The primary purpose of this application (see categories above)
-- **Lifecycle**: Current status (Active, Proposed, Deprecated, Retired, or any custom code defined in Settings)
+1. Click **New app / service**. The application page opens with an empty title in the header. The rest of the page is dimmed.
+2. Type the name of the application or service, up to 200 characters. See [Unique names](#unique-names).
+3. Press Enter, or click outside the title. KANAP creates the application at once. Its reference (`APP-12`) shows and all tabs open.
 
-**Strongly recommended**:
-- **Supplier**: The supplier providing the software (links to your Suppliers master data)
-- **Publisher**: The software publisher (e.g., Microsoft, SAP, Oracle)
-- **Description**: What this application does
+The new application is **Active**, in the default category. Change them in the header and the properties drawer, then fill in the rest:
 
-Classification fields are optional when you create an application. **Business criticality**, cyber criticality, data confidentiality and recovery wave are chosen among the levels your organization defined in **IT Landscape > Settings**; each option shows the level's definition. Values remain unset until you choose them.
+- **Category**: the primary purpose of this application (see categories above)
+- **Lifecycle**: Active, Proposed, Deprecated, Retired, or any custom code defined in Settings
+- **Supplier**: the supplier providing the software (links to your Suppliers master data)
+- **Publisher**: the software publisher (e.g., Microsoft, SAP, Oracle)
+- **Description**: what this application does
+- **Classification**: **Business criticality**, cyber criticality, data confidentiality and recovery wave are chosen among the levels your organization defined in **IT Landscape > Settings**. Each option shows the level's definition. They stay unset until you choose them
+- **Version**, **Go live**, **End of support**, **Retired date**: the current version and its dates. **End of support** and **Retired date** cannot be earlier than **Go live**
+- **Licensing** and **Notes**: license terms and free-form internal notes
+- **Can have child apps**: use this application as a "suite" that groups other applications
 
-**Optional but useful**:
-- **Version**: Current version identifier (free text, e.g., "4.2.1", "2023", "Q1 2024")
-- **Go live**: When this version went or will go live
-- **End of support**: When vendor support ends for this version
-- **Retired date**: When this version was actually decommissioned
-- **Licensing**: License terms and notes
-- **Notes**: Free-form internal notes
-- **Can have child apps**: Enable to use this application as a "suite" that groups other applications
+Press Escape on the empty title to leave without creating anything. A name that another application already uses is refused, with a message under the title.
 
-**End of support** and **Retired date** cannot be earlier than **Go live**.
+### Cancelling a creation { #cancelling-a-creation }
 
-Once you save, the workspace unlocks all tabs for detailed documentation.
+While you stay on the application you just created, **Cancel creation** in the header deletes it and takes you back to where you started: the list or the previous screen. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete applications.
+
+Once you leave the application, it stays. Delete it like any other application. The reference of a cancelled application is not used again.
 
 ### Unique names { #unique-names }
 
@@ -126,7 +125,7 @@ A cell with no value shows a dash.
 - **Vulnerabilities to review** filters on **With severe vulnerabilities**, **With vulnerabilities** or **Without**, and sorts by the critical or high vulnerabilities, then by the total. Disabled applications come last and are in none of the filter values.
 
 **Actions**:
-- **New App / Service**: Create a new entry (`applications:member`)
+- **New app / service**: Create a new entry (`applications:member`). See [Getting started](#getting-started)
 - **Import**: Bulk import from a CSV file or an Excel workbook (`applications:admin`)
 - **Export**: Export the applications the list shows to a CSV file or an Excel workbook (`applications:admin`). See [Export options](#export-options).
 - **Copy item**: Duplicate a selected application with all its core relations (`applications:member`). See [Copying applications](#copying-applications) for what is and is not copied.
@@ -153,6 +152,7 @@ The header shows:
 - **Share**: copy a shareable link to this workspace
 - **New version**: launch the version migration wizard (see [Version management](#version-management))
 - **Convert to technology** (`applications:admin` and `infrastructure:member`): see [Converting an application to a technology](#converting-an-application-to-a-technology)
+- **Cancel creation**: shown while you stay on an application you just created. See [Cancelling a creation](#cancelling-a-creation)
 - **Delete**, a trash icon with its name in a tooltip (`applications:admin`): an application with interfaces gets the refusal and why, with Close only. Otherwise the confirmation names the application and counts the deployments deleted with it, along with its links to other records
 - **Previous / Next**: walk through the filtered list without returning to the grid
 
@@ -398,12 +398,12 @@ KANAP offers **two ways to manage application versions**, depending on how your 
 
 | Approach | Best for | What happens |
 |----------|----------|--------------|
-| **Simple** | Most applications | Update the version fields in the properties drawer or in the create form: same record, new version number |
+| **Simple** | Most applications | Update the version fields in the properties drawer: same record, new version number |
 | **Sophisticated** | Major migrations | Use **New version** to create a new application record with lineage tracking. Run old and new versions side by side |
 
 ### Simple version tracking (in-place updates)
 
-For most applications (where you upgrade and the old version simply goes away), update **Version**, **Go live**, **End of support** and **Retired date** in the create form or the properties drawer. The header version chip and the **Go live** metadata reflect what you set.
+For most applications (where you upgrade and the old version simply goes away), update **Version**, **Go live**, **End of support** and **Retired date** in the properties drawer. The header version chip and the **Go live** metadata reflect what you set.
 
 This approach keeps everything in a single record. When you upgrade, update the version fields and you're done. The **History** tab keeps the earlier values.
 

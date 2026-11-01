@@ -179,6 +179,7 @@
   "APPLICATION_CONVERSION_REFUSED": "Esta aplicación no se puede convertir en tecnología.",
   "APPLICATION_HAS_INTERFACES_one": "Esta aplicación es el origen o el destino de {{usages}}. Desactívela en su lugar, o elimine primero esa interfaz.",
   "APPLICATION_HAS_INTERFACES_other": "Esta aplicación es el origen o el destino de {{usages}}. Desactívela en su lugar, o elimine primero esas interfaces.",
+  "CREATION_CANCEL_EXPIRED": "Este registro ya no está en creación: elimínelo en su lugar.",
   "COST_CENTER_IN_USE": "Este centro de coste se usa en {{usages}}. Desactívelo en lugar de eliminarlo.",
   "COST_CENTER_HAS_NODES_one": "Este grupo contiene {{usages}}. Muévalo o elimínelo primero.",
   "COST_CENTER_HAS_NODES_other": "Este grupo contiene {{usages}}. Muévalos o elimínelos primero.",

@@ -34,34 +34,33 @@ Les différentes équipes peuvent utiliser les catégories pour se concentrer su
 
 ---
 
-## Premiers pas
+## Premiers pas { #getting-started }
 
-Rendez-vous dans **Cartographie SI > Applications** pour voir votre liste. Cliquez sur **Nouvelle app / Service** pour créer votre première entrée.
+Rendez-vous dans **Cartographie SI > Applications** pour voir votre liste. Pour créer une application :
 
-**Champs obligatoires** :
-- **Nom** : Un nom reconnaissable pour l'application ou le service, de 200 caractères au plus. Voir [Noms uniques](#unique-names)
-- **Catégorie** : L'objectif principal de cette application (voir les catégories ci-dessus)
-- **Cycle de vie** : Statut actuel (Actif, Proposé, Obsolète, Retiré, ou tout code personnalisé défini dans les Paramètres)
+1. Cliquez sur **Nouvelle application / service**. La page de l'application s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+2. Saisissez le nom de l'application ou du service, de 200 caractères au plus. Voir [Noms uniques](#unique-names).
+3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée l'application aussitôt. Sa référence (`APP-12`) s'affiche et tous les onglets s'ouvrent.
 
-**Fortement recommandé** :
-- **Fournisseur** : Le fournisseur du logiciel (lié à vos données de référence Fournisseurs)
-- **Éditeur** : L'éditeur du logiciel (ex. : Microsoft, SAP, Oracle)
-- **Description** : Ce que fait cette application
+La nouvelle application est **Active**, dans la catégorie par défaut. Modifiez-les dans l'en-tête et le tiroir des propriétés, puis complétez le reste :
 
-Les champs de classification sont facultatifs à la création. La **Criticité business**, la criticité cyber, la confidentialité des données et la vague de reprise se choisissent parmi les niveaux définis par votre organisation dans **Cartographie SI > Paramètres** ; chaque option affiche la définition du niveau. Les valeurs restent non définies tant que vous ne les choisissez pas.
+- **Catégorie** : l'objectif principal de cette application (voir les catégories ci-dessus)
+- **Cycle de vie** : Actif, Proposé, Obsolète, Retiré, ou tout code personnalisé défini dans les Paramètres
+- **Fournisseur** : le fournisseur du logiciel (lié à vos données de référence Fournisseurs)
+- **Éditeur** : l'éditeur du logiciel (ex. : Microsoft, SAP, Oracle)
+- **Description** : ce que fait cette application
+- **Classification** : la **Criticité business**, la criticité cyber, la confidentialité des données et la vague de reprise se choisissent parmi les niveaux définis par votre organisation dans **Cartographie SI > Paramètres**. Chaque option affiche la définition du niveau. Elles restent non définies tant que vous ne les choisissez pas
+- **Version**, **Mise en production**, **Fin de support**, **Date de retrait** : la version actuelle et ses dates. La **Fin de support** et la **Date de retrait** ne peuvent pas précéder la **Mise en production**
+- **Licences** et **Notes** : conditions de licence et notes internes libres
+- **Peut avoir des apps enfants** : utiliser cette application comme une « suite » regroupant d'autres applications
 
-**Optionnel mais utile** :
-- **Version** : Numéro de version actuel (texte libre, ex. : « 4.2.1 », « 2023 », « Q1 2024 »)
-- **Mise en production** : Quand cette version a été ou sera mise en service
-- **Fin de support** : Quand le support éditeur prend fin pour cette version
-- **Date de retrait** : Quand cette version a été effectivement mise hors service
-- **Licences** : Conditions de licence et notes
-- **Notes** : Notes internes libres
-- **Peut avoir des apps enfants** : Activez cette option pour utiliser cette application comme une « suite » regroupant d'autres applications
+Appuyez sur Échap dans le titre vide pour partir sans rien créer. Un nom déjà utilisé par une autre application est refusé, avec un message sous le titre.
 
-La **Fin de support** et la **Date de retrait** ne peuvent pas précéder la **Mise en production**.
+### Annuler une création { #cancelling-a-creation }
 
-Une fois enregistré, l'espace de travail déverrouille tous les onglets pour une documentation détaillée.
+Tant que vous restez sur l'application que vous venez de créer, **Annuler la création** dans l'en-tête la supprime et vous ramène à votre point de départ : la liste ou l'écran précédent. Si vous avez saisi plus que le nom, une confirmation indique ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des applications.
+
+Une fois que vous quittez l'application, elle est conservée. Supprimez-la comme toute autre application. La référence d'une application annulée n'est pas réutilisée.
 
 ### Noms uniques { #unique-names }
 
@@ -126,7 +125,7 @@ Une cellule sans valeur affiche un tiret.
 - **Vulnérabilités à traiter** filtre sur **Avec des vulnérabilités graves**, **Avec des vulnérabilités** ou **Sans**, et trie par les vulnérabilités critiques ou élevées, puis par le total. Les applications désactivées viennent en dernier et n'entrent dans aucune valeur du filtre.
 
 **Actions** :
-- **Nouvelle app / Service** : Créer une nouvelle entrée (`applications:member`)
+- **Nouvelle application / service** : Créer une nouvelle entrée (`applications:member`). Voir [Premiers pas](#getting-started)
 - **Importer** : Import en masse depuis un fichier CSV ou un classeur Excel (`applications:admin`)
 - **Exporter** : Exporter les applications que la liste affiche dans un fichier CSV ou un classeur Excel (`applications:admin`). Voir [Options d'export](#export-options).
 - **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:member`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
@@ -153,6 +152,7 @@ L'en-tête affiche :
 - **Partager** : copier un lien partageable vers cet espace de travail
 - **Nouvelle version** : lancer l'assistant de migration de version (voir [Gestion des versions](#gestion-des-versions))
 - **Convertir en technologie** (`applications:admin` et `infrastructure:member`) : voir [Convertir une application en technologie](#convertir-une-application-en-technologie)
+- **Annuler la création** : affiché tant que vous restez sur une application que vous venez de créer. Voir [Annuler une création](#cancelling-a-creation)
 - **Supprimer**, une icône corbeille avec son nom en infobulle (`applications:admin`) : une application qui a des interfaces reçoit le refus et sa raison, avec seulement Fermer. Sinon, la confirmation nomme l’application et compte les déploiements supprimés avec elle, ainsi que ses liens vers d’autres éléments
 - **Précédent / Suivant** : parcourir la liste filtrée sans revenir à la grille
 
@@ -398,12 +398,12 @@ KANAP propose **deux approches pour gérer les versions d'applications**, selon 
 
 | Approche | Idéale pour | Ce qui se passe |
 |----------|-------------|-----------------|
-| **Simple** | La plupart des applications | Mettez à jour les champs de version dans le tiroir des propriétés ou le formulaire de création : même enregistrement, nouveau numéro de version |
+| **Simple** | La plupart des applications | Mettez à jour les champs de version dans le tiroir des propriétés : même enregistrement, nouveau numéro de version |
 | **Avancée** | Migrations majeures | Utilisez **Nouvelle version** pour créer un nouvel enregistrement d'application avec suivi de lignée : exécutez ancienne et nouvelle versions côte à côte |
 
 ### Suivi de version simple (mise à jour en place)
 
-Pour la plupart des applications (où vous mettez à niveau et l'ancienne version disparaît simplement), mettez à jour **Version**, **Mise en production**, **Fin de support** et **Date de retrait** dans le formulaire de création ou le tiroir des propriétés. La pastille de version dans l'en-tête et les métadonnées **Mise en production** reflètent ce que vous avez défini.
+Pour la plupart des applications (où vous mettez à niveau et l'ancienne version disparaît simplement), mettez à jour **Version**, **Mise en production**, **Fin de support** et **Date de retrait** dans le tiroir des propriétés. La pastille de version dans l'en-tête et les métadonnées **Mise en production** reflètent ce que vous avez défini.
 
 Cette approche garde tout dans un seul enregistrement. Lors d'une mise à niveau, mettez à jour les champs de version et c'est fait. L'onglet **Historique** garde les valeurs précédentes.
 

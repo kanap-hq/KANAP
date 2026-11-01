@@ -52,6 +52,9 @@ import { ApplicationLink } from './application-link.entity';
 import { ApplicationAttachment } from './application-attachment.entity';
 import { ApplicationDataResidency } from './application-data-residency.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { NotFoundException } from '@nestjs/common';
+import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
+import { countChangesSinceCreation, type CreationChanges } from '../common/creation/creation-changes';
 
 @UseGuards(JwtAuthGuard)
 @Controller('applications')
@@ -602,15 +605,70 @@ export class ApplicationsController {
     );
   }
 
+  /**
+   * Creates the application and hands its creator a creation token (`common/creation`), which
+   * opens "Cancel creation" (`DELETE :id/creation`) for this record and this person only.
+   */
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Post()
-  create(
+  async create(
     @Body() body: CreateApplicationInput,
     @Tenant() ctx: TenantRequest,
-  ): Promise<Application> {
+  ): Promise<Application & { creation_token: string }> {
     // The service handles date conversion from strings
-    return this.svc.create(body as Record<string, unknown>, ctx.userId || null, { manager: ctx.manager });
+    const created = await this.svc.create(body as Record<string, unknown>, ctx.userId || null, { manager: ctx.manager });
+    const creation_token = issueCreationToken({ tenantId: ctx.tenantId, family: 'applications', recordId: created.id, userId: ctx.userId });
+    return Object.assign(created, { creation_token });
+  }
+
+  /** The token of `POST /applications` for this record, tenant and person, still valid; a 403 otherwise. */
+  private assertCreationToken(id: string, token: unknown, ctx: TenantRequest): void {
+    if (!verifyCreationToken(token, { tenantId: ctx.tenantId, family: 'applications', recordId: String(id ?? ''), userId: ctx.userId })) {
+      throw creationCancelExpired();
+    }
+  }
+
+  /**
+   * Before "Cancel creation": what was written on the application and its children since its
+   * creation (its history's audit rows), plus its written description and managed documents, which
+   * their own audit labels record. Nothing is written.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'member')
+  @Get(':id/creation')
+  async creationChanges(
+    @Param('id') id: string,
+    @Query('token') token: string,
+    @Tenant() ctx: TenantRequest,
+  ): Promise<{ changes: CreationChanges }> {
+    this.assertCreationToken(id, token, ctx);
+    const manager = this.requireManager(ctx);
+    const found = await manager.query('SELECT 1 FROM applications WHERE id = $1 AND tenant_id = $2', [id, ctx.tenantId]);
+    if (!found.length) throw new NotFoundException('Application not found');
+    const changes = await countChangesSinceCreation(manager, ctx.tenantId, 'applications', id);
+    const { removes } = await this.deleteSvc.deleteCheck([id], { manager });
+    for (const removed of removes) {
+      const kind = removed.type === 'descriptions' ? 'description' : removed.type === 'documents' ? 'document' : null;
+      if (kind && removed.total > 0) changes.children[kind] = (changes.children[kind] ?? 0) + removed.total;
+    }
+    return { changes };
+  }
+
+  /**
+   * "Cancel creation": the creator deletes the application they just created, with its token,
+   * even without the delete right. Same delete as `DELETE :id` (cascades, refusals, audit entry).
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'member')
+  @Delete(':id/creation')
+  async cancelCreation(
+    @Param('id') id: string,
+    @Body() body: { token?: string },
+    @Tenant() ctx: TenantRequest,
+  ): Promise<void> {
+    this.assertCreationToken(id, body?.token, ctx);
+    await this.deleteSvc.delete(id, { manager: ctx.manager, userId: ctx.userId || null });
   }
 
   @UseGuards(PermissionGuard)

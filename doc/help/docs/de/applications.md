@@ -34,34 +34,33 @@ Verschiedene Teams können Kategorien verwenden, um sich auf ihren Verantwortung
 
 ---
 
-## Erste Schritte
+## Erste Schritte { #getting-started }
 
-Navigieren Sie zu **IT-Landschaft > Anwendungen**, um Ihre Liste zu sehen. Klicken Sie auf **Neue App / Dienst**, um Ihren ersten Eintrag zu erstellen.
+Navigieren Sie zu **IT-Landschaft > Anwendungen**, um Ihre Liste zu sehen. So erstellen Sie eine Anwendung:
 
-**Pflichtfelder**:
-- **Name**: Ein wiedererkennbarer Name für die Anwendung oder den Dienst, höchstens 200 Zeichen. Siehe [Eindeutige Namen](#unique-names)
-- **Kategorie**: Der Hauptzweck dieser Anwendung (siehe Kategorien oben)
-- **Lebenszyklus**: Aktueller Status (Aktiv, Vorgeschlagen, Veraltet, Außer Betrieb oder ein in den Einstellungen definierter benutzerdefinierter Code)
+1. Klicken Sie auf **Neue Anwendung / Service**. Die Seite der Anwendung öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
+2. Geben Sie den Namen der Anwendung oder des Dienstes ein, höchstens 200 Zeichen. Siehe [Eindeutige Namen](#unique-names).
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erstellt die Anwendung sofort. Ihre Referenz (`APP-12`) erscheint und alle Reiter öffnen sich.
 
-**Dringend empfohlen**:
-- **Lieferant**: Der Lieferant, der die Software bereitstellt (verknüpft mit Ihren Lieferanten-Stammdaten)
-- **Herausgeber**: Der Software-Herausgeber (z. B. Microsoft, SAP, Oracle)
-- **Beschreibung**: Was diese Anwendung tut
+Die neue Anwendung ist **Aktiv**, in der Standardkategorie. Ändern Sie beides in der Kopfzeile und der Eigenschaftsleiste, dann füllen Sie den Rest aus:
 
-Klassifizierungsfelder sind beim Anlegen optional. **Geschäftskritikalität**, Cyberkritikalität, Datenvertraulichkeit und Wiederanlaufwelle werden aus den Stufen gewählt, die Ihre Organisation unter **IT-Landschaft > Einstellungen** definiert hat; jede Option zeigt die Definition der Stufe. Die Werte bleiben offen, bis Sie sie auswählen.
+- **Kategorie**: der Hauptzweck dieser Anwendung (siehe Kategorien oben)
+- **Lebenszyklus**: Aktiv, Vorgeschlagen, Veraltet, Außer Betrieb oder ein in den Einstellungen definierter benutzerdefinierter Code
+- **Lieferant**: der Lieferant, der die Software bereitstellt (verknüpft mit Ihren Lieferanten-Stammdaten)
+- **Herausgeber**: der Software-Herausgeber (z. B. Microsoft, SAP, Oracle)
+- **Beschreibung**: was diese Anwendung tut
+- **Klassifizierung**: **Geschäftskritikalität**, Cyberkritikalität, Datenvertraulichkeit und Wiederanlaufwelle werden aus den Stufen gewählt, die Ihre Organisation unter **IT-Landschaft > Einstellungen** definiert hat. Jede Option zeigt die Definition der Stufe. Sie bleiben offen, bis Sie sie auswählen
+- **Version**, **Go-Live**, **Support-Ende**, **Außerbetriebnahmedatum**: die aktuelle Version und ihre Daten. **Support-Ende** und **Außerbetriebnahmedatum** dürfen nicht vor dem **Go-Live** liegen
+- **Lizenzierung** und **Notizen**: Lizenzbedingungen und interne Freitext-Notizen
+- **Kann Unteranwendungen haben**: diese Anwendung als „Suite" verwenden, die andere Anwendungen gruppiert
 
-**Optional aber nützlich**:
-- **Version**: Aktuelle Versionskennung (Freitext, z. B. „4.2.1", „2023", „Q1 2024")
-- **Go-Live**: Wann diese Version live ging oder gehen wird
-- **Support-Ende**: Wann der Herstellersupport für diese Version endet
-- **Außerbetriebnahmedatum**: Wann diese Version tatsächlich außer Betrieb genommen wurde
-- **Lizenzierung**: Lizenzbedingungen und Hinweise
-- **Notizen**: Freitext-interne Notizen
-- **Kann Unteranwendungen haben**: Aktivieren, um diese Anwendung als „Suite" zu verwenden, die andere Anwendungen gruppiert
+Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen. Ein Name, den bereits eine andere Anwendung trägt, wird abgelehnt, mit einer Meldung unter dem Titel.
 
-**Support-Ende** und **Außerbetriebnahmedatum** dürfen nicht vor dem **Go-Live** liegen.
+### Erstellung abbrechen { #cancelling-a-creation }
 
-Nach dem Speichern schaltet der Arbeitsbereich alle Reiter für die detaillierte Dokumentation frei.
+Solange Sie auf der gerade erstellten Anwendung bleiben, löscht **Erstellung abbrechen** in der Kopfzeile sie und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Anwendungen abbrechen.
+
+Sobald Sie die Anwendung verlassen, bleibt sie bestehen. Löschen Sie sie dann wie jede andere Anwendung. Die Referenz einer abgebrochenen Anwendung wird nicht wiederverwendet.
 
 ### Eindeutige Namen { #unique-names }
 
@@ -126,7 +125,7 @@ Eine Zelle ohne Wert zeigt einen Strich.
 - **Zu prüfende Schwachstellen** filtert nach **Mit schwerwiegenden Schwachstellen**, **Mit Schwachstellen** oder **Ohne** und sortiert nach den kritischen oder hohen Schwachstellen, dann nach der Gesamtzahl. Deaktivierte Anwendungen stehen zuletzt und fallen unter keinen Filterwert.
 
 **Aktionen**:
-- **Neue App / Dienst**: Einen neuen Eintrag erstellen (`applications:member`)
+- **Neue Anwendung / Service**: Einen neuen Eintrag erstellen (`applications:member`). Siehe [Erste Schritte](#getting-started)
 - **Importieren**: Massenimport aus einer CSV-Datei oder Excel-Arbeitsmappe (`applications:admin`)
 - **Exportieren**: Die Anwendungen, die die Liste anzeigt, in eine CSV-Datei oder Excel-Arbeitsmappe exportieren (`applications:admin`). Siehe [Exportoptionen](#export-options).
 - **Element kopieren**: Eine ausgewählte Anwendung mit allen Kernbeziehungen duplizieren (`applications:member`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.
@@ -153,6 +152,7 @@ Die Kopfzeile zeigt:
 - **Teilen**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
 - **Neue Version**: Den Versionsmigrations-Assistenten starten (siehe [Versionsverwaltung](#versionsverwaltung))
 - **In Technologie umwandeln** (`applications:admin` und `infrastructure:member`): siehe [Eine Anwendung in eine Technologie umwandeln](#eine-anwendung-in-eine-technologie-umwandeln)
+- **Erstellung abbrechen**: sichtbar, solange Sie auf einer gerade erstellten Anwendung bleiben. Siehe [Erstellung abbrechen](#cancelling-a-creation)
 - **Löschen**, ein Papierkorbsymbol mit seinem Namen im Tooltip (`applications:admin`): eine Anwendung mit Schnittstellen erhält die Ablehnung und den Grund, nur mit Schließen. Sonst nennt die Bestätigung die Anwendung und zählt die Bereitstellungen, die mit ihr gelöscht werden, zusammen mit ihren Verknüpfungen zu anderen Einträgen
 - **Vorherige / Nächste**: Durch die gefilterte Liste navigieren, ohne zum Raster zurückzukehren
 
@@ -398,12 +398,12 @@ KANAP bietet **zwei Wege zur Verwaltung von Anwendungsversionen**, je nachdem, w
 
 | Ansatz | Am besten für | Was passiert |
 |----------|----------|--------------|
-| **Einfach** | Die meisten Anwendungen | Versionsfelder in der Eigenschaftsleiste oder im Erstellungsformular aktualisieren: gleicher Datensatz, neue Versionsnummer |
+| **Einfach** | Die meisten Anwendungen | Versionsfelder in der Eigenschaftsleiste aktualisieren: gleicher Datensatz, neue Versionsnummer |
 | **Erweitert** | Große Migrationen | **Neue Version** verwenden, um einen neuen Anwendungsdatensatz mit Versionsnachverfolgung zu erstellen: alte und neue Versionen parallel betreiben |
 
 ### Einfache Versionsverfolgung (In-Place-Updates)
 
-Für die meisten Anwendungen (bei denen Sie upgraden und die alte Version einfach verschwindet) aktualisieren Sie **Version**, **Go-Live**, **Support-Ende** und **Außerbetriebnahmedatum** im Erstellungsformular oder in der Eigenschaftsleiste. Der Versions-Chip in der Kopfzeile und die **Go-Live**-Metadaten spiegeln Ihre Einstellungen wider.
+Für die meisten Anwendungen (bei denen Sie upgraden und die alte Version einfach verschwindet) aktualisieren Sie **Version**, **Go-Live**, **Support-Ende** und **Außerbetriebnahmedatum** in der Eigenschaftsleiste. Der Versions-Chip in der Kopfzeile und die **Go-Live**-Metadaten spiegeln Ihre Einstellungen wider.
 
 Dieser Ansatz hält alles in einem einzigen Datensatz. Wenn Sie ein Upgrade durchführen, aktualisieren Sie die Versionsfelder und Sie sind fertig. Der Reiter **Verlauf** bewahrt die früheren Werte.
 
