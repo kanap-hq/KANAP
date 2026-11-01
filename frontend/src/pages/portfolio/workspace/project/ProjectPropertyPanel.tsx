@@ -45,6 +45,8 @@ type ProjectPropertyPanelProps = {
 };
 
 
+const DIRECT_ORIGINS = ['fast_track', 'legacy'] as const;
+
 export default function ProjectPropertyPanel({
   canManage,
   categories,
@@ -124,9 +126,25 @@ export default function ProjectPropertyPanel({
         </PropertyRow>
 
         <PropertyRow label={t('workspace.project.fields.origin')}>
-          <Typography variant="body2" sx={{ fontSize: 13 }}>
-            {originLabels[form?.origin] || form?.origin || noneLabel}
-          </Typography>
+          {form?.origin && form.origin !== 'standard' ? (
+            <Select
+              value={form.origin}
+              onChange={(event) => onUpdate({ origin: String(event.target.value) })}
+              disabled={coreFieldsDisabled}
+              variant="standard"
+              sx={drawerSelectSx}
+            >
+              {DIRECT_ORIGINS.map((origin) => (
+                <MenuItem key={origin} value={origin} sx={drawerMenuItemSx}>
+                  {originLabels[origin] || origin}
+                </MenuItem>
+              ))}
+            </Select>
+          ) : (
+            <Typography variant="body2" sx={{ fontSize: 13 }}>
+              {originLabels[form?.origin] || form?.origin || noneLabel}
+            </Typography>
+          )}
         </PropertyRow>
 
         <PropertyRow label={t('workspace.project.fields.source')}>
