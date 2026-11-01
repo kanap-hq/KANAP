@@ -515,7 +515,7 @@ const TECHNOLOGY_WRITE_VERBS = new Set([
   'adopte', 'adoptez', 'adopter', 'adopt',
   'efface', 'effacez', 'effacer', 'erase', 'clear',
   'désactive', 'désactivez', 'désactiver', 'desactive', 'disable',
-  'active', 'activez', 'activer', 'enable',
+  'active', 'activez', 'activer', 'activate', 'enable',
   'exclus', 'excluez', 'exclure', 'exclude',
   'indique', 'indiquez', 'indiquer', 'indicate',
   'turn',
@@ -544,9 +544,11 @@ function isTechnologyQuestion(rawText: string): boolean {
  * The state verbs that only write a technology with a write complement: "Désactive les alertes de
  * failles de TEC-3" writes, "Active applications using PostgreSQL" reads. The complement is an
  * alert setting, a version number, a TEC reference or a named exception, as for `upgrade`.
+ * "Active alerts" names the alerts that are on, and "Clear version history" asks for the history.
+ * "Activate" and "Clear the version history" keep the write.
  */
 const TECHNOLOGY_STATE_WRITE_VERBS = new Set([
-  'active', 'activez', 'activer', 'enable',
+  'active', 'activez', 'activer', 'activate', 'enable',
   'efface', 'effacez', 'effacer', 'erase', 'clear',
   'exclus', 'excluez', 'exclure', 'exclude',
   'désactive', 'désactivez', 'désactiver', 'desactive', 'disable',
@@ -558,6 +560,41 @@ function hasTechnologyStateWriteComplement(rawText: string, text: string): boole
     || /\bversions?\s+\S*\d/.test(text)
     || /\bTEC-\d+\b/i.test(rawText)
     || /\b(?:service packs?|exceptions? de version)\b/.test(text);
+}
+
+/**
+ * "Active vulnerability alerts" and "Active alerts on TEC-3" describe the alerts that are on.
+ * The French imperative keeps its article: "Active les alertes de failles de TEC-3". "Activate"
+ * is a different word and stays a write.
+ */
+function isActiveAlertReading(text: string): boolean {
+  return /\bactive\s+(?:vulnerability\s+)?alerts?\b/.test(text);
+}
+
+/**
+ * "Clear version history of TEC-3 please" asks to read the history, as "Clear summary" and
+ * "Clear list" ask for a report. "Clear the version history" erases it.
+ */
+function isClearHistoryReading(text: string): boolean {
+  return /\bclear\s+(?:version\s+)?history\b/.test(text)
+    || /\bclear\s+(?:summary|list|overview)\b/.test(text);
+}
+
+/**
+ * A column added to a list, or a change of sort, reshapes the answer. A column of a record
+ * ("Change the owner column of TEC-3", "Ajoute une colonne au budget de OPEX-12") has no list
+ * word and stays a write.
+ */
+function isAnswerShapeRequest(text: string): boolean {
+  const columnOnList = wordsInOrder(
+    /\b(?:column|columns|colonne|colonnes)\b/,
+    /\b(?:list|liste|listes)\b/,
+  ).test(text);
+  const changesSort = wordsInOrder(
+    /\b(?:change|changer|changez)\b/,
+    /\b(?:sort|tri)\b/,
+  ).test(text);
+  return columnOnList || changesSort;
 }
 
 /**
@@ -640,7 +677,9 @@ function hasTechnologyWriteIntent(rawText: string, text: string): boolean {
   }
   // A bare state verb here is a report or a screen word ("Active technologies with no IT owner",
   // "Clear summary of PostgreSQL versions in use"): it needs an alert, a version or a TEC.
+  // "Active alerts" and "Clear version history" are readings even when a TEC follows.
   if (TECHNOLOGY_STATE_WRITE_VERBS.has(first)) {
+    if (isActiveAlertReading(text) || isClearHistoryReading(text)) return false;
     return hasTechnologyStateWriteComplement(rawText, text);
   }
   // A bare verb here is a noun or a report ("Upgrade path", "Replace candidates", "Install base",
@@ -904,6 +943,11 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     && /^(?:qui a|who has|who changed|who modified|qui a modifie)\b[\s\S]{0,60}\b(?:change|modifie|updated?|edited?)\b/.test(text)) {
     return { profile: withWebCapability(PROFILES.read_query, needsWeb), explicitIntent: true };
   }
+  // A column on a list, or a new sort, reshapes the answer. "Web links" here is the column,
+  // so the word "web" stays a data read.
+  if (isAnswerShapeRequest(text)) {
+    return { profile: PROFILES.read_query, explicitIntent: true };
+  }
 
   if (isMinimalDirectRequest(raw)) {
     return { profile: PROFILES.minimal, explicitIntent: true };
@@ -1016,7 +1060,8 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     || hasApplicationRetirement || hasContractCancellationIntent || hasBudgetLineCancellationIntent
     || hasInstalledDeclaration || hasMainContactRelation
     || containsAny(writeText, [
-    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|passe|passer|publish|publier|mark|set)\b/,
+    // "Set up :" names the subject of the question that follows. "Set" and "Set up Redis" still write.
+    /\b(create|creer|cree|add|ajoute|ajouter|change|changer|update|mets? a jour|mettre a jour|modifie|modifier|delete|supprime|(?:re)?assign(?:e|er|es|ez|ed|ing|s)?|link|lier|lie|lies|relie|relier|unlink|delier|delie|delies|delier|detache|detaches|detacher|retire|retires|retirer|enleve|enleves|enlever|associe|associes|rattache|rattaches|convert|convertir|import|passe|passer|publish|publier|mark|set(?!\s+up\s*:))\b/,
     wordsInOrder(/\b(?:add|ajoute|ajouter)\b/, /\b(?:comment|commentaire)\b/),
     // A status or lifecycle word with an incident reference is an incident change: "clos INC-7",
     // "Résous INC-3", "Rouvre INC-3", "Annule INC-3", "Lève la confidentialité de INC-3".
@@ -1035,7 +1080,7 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     ...(hasDocumentPublishIntent ? [/\b(?:publie|publier|publish)\b/] : []),
     ...(hasDocumentPublicationIntent ? [/\b(?:public|publique|publics|publiques)\b/] : []),
     ...(hasTechnologyWrite || hasTechnologyChange
-      ? [/\b(?:installe|installer|install|declare|declarer|desinstalle|uninstall|remove|detach|replace|remplace|renomme|renommer|rename|enregistre|upgrade|mets|mettez|mettre|utilise|uses|runs|tourne|maintenant|now|finit|finira|termine|terminera|ends?|marque|marquez|marquer|mark|adopte|adopter|adopt|efface|effacer|erase|clear|desactive|desactiver|disable|active|activer|enable|exclus|exclure|exclude|indique|indiquer|indicate|turn|reactive|reactivate|stop|remets|remettez|remettre)\b/]
+      ? [/\b(?:installe|installer|install|declare|declarer|desinstalle|uninstall|remove|detach|replace|remplace|renomme|renommer|rename|enregistre|upgrade|mets|mettez|mettre|utilise|uses|runs|tourne|maintenant|now|finit|finira|termine|terminera|ends?|marque|marquez|marquer|mark|adopte|adopter|adopt|efface|effacer|erase|clear|desactive|desactiver|disable|active|activate|activer|enable|exclus|exclure|exclude|indique|indiquer|indicate|turn|reactive|reactivate|stop|remets|remettez|remettre)\b/]
       : []),
     ...(createsIncident(text, raw) ? [/\bincident\b/] : []),
   ]);
