@@ -221,6 +221,7 @@
   "MAPPING_SET_DEFAULT": "The default mapping set cannot be deleted. Make another set the default first.",
   "MAPPING_GROUP_DEFAULT": "Default mapping groups cannot be deleted. Leave the group empty if you do not need it.",
   "REQUEST_CONVERTED": "This request became a project and stays as its origin. It cannot be deleted.",
+  "PROJECT_FROM_REQUEST": "This project came from a request, which keeps it as its outcome. It cannot be deleted.",
   "TASK_REQUEST_ORIGIN": "Request {{reference}} was created from this task. Close the task instead of deleting it.",
   "KNOWLEDGE_DOCUMENT_MANAGED": "This document belongs to a record's page and is deleted with that record. It cannot be deleted from Knowledge.",
   "KNOWLEDGE_DOCUMENT_MANAGED_RELATIONS": "This document belongs to a record's page. It cannot be linked to another record or unlinked from its own.",

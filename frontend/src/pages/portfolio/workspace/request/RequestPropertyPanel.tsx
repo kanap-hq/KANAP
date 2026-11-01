@@ -5,7 +5,6 @@ import {
   MenuItem,
   Select,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
@@ -28,11 +27,9 @@ type RequestPropertyPanelProps = {
   categories: Array<{ id: string; name: string }>;
   form: any;
   focusSection?: Exclude<PanelSection, 'core'> | null;
-  isCreate: boolean;
   onCategoryChange: (value: string) => void;
   onCompanyChange: (value: string | null) => void;
   onLocalUpdate: (updater: (prev: any) => any) => void;
-  onNameChange: (value: string) => void;
   onRefetch: () => Promise<unknown>;
   onRequestorChange: (value: string | null) => void;
   onSourceChange: (value: string) => void;
@@ -49,11 +46,9 @@ export default function RequestPropertyPanel({
   canManage,
   categories,
   form,
-  isCreate,
   onCategoryChange,
   onCompanyChange,
   onLocalUpdate,
-  onNameChange,
   onRefetch,
   onRequestorChange,
   onSourceChange,
@@ -66,14 +61,9 @@ export default function RequestPropertyPanel({
 }: RequestPropertyPanelProps) {
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
   const navigate = useNavigate();
-  const [nameDraft, setNameDraft] = React.useState(form?.name || '');
-  const coreFieldsDisabled = !isCreate && !canManage;
+  const coreFieldsDisabled = !canManage;
   const [panelError, setPanelError] = React.useState<string | null>(null);
   const noneLabel = t('common:labels.none');
-
-  React.useEffect(() => {
-    setNameDraft(form?.name || '');
-  }, [form?.id, form?.name]);
 
   const handleImmediateSave = React.useCallback(async (
     action: () => Promise<void>,
@@ -111,45 +101,21 @@ export default function RequestPropertyPanel({
       )}
 
       <PropertyGroup>
-        <PropertyRow label={t('workspace.request.fields.requestName')} required>
-          <TextField
-            value={nameDraft}
+        <PropertyRow label={t('workspace.request.fields.status')}>
+          <Select
+            value={form?.status || 'pending_review'}
+            onChange={(event) => onStatusChange(String(event.target.value))}
             disabled={coreFieldsDisabled}
-            onChange={(event) => {
-              const nextValue = event.target.value;
-              setNameDraft(nextValue);
-              if (isCreate) {
-                onNameChange(nextValue);
-              }
-            }}
-            onBlur={() => {
-              if (!coreFieldsDisabled && !isCreate && nameDraft !== (form?.name || '')) {
-                onNameChange(nameDraft);
-              }
-            }}
             variant="standard"
-            required
-            fullWidth
-          />
+            sx={drawerSelectSx}
+          >
+            {statusOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
         </PropertyRow>
-
-        {!isCreate && (
-          <PropertyRow label={t('workspace.request.fields.status')}>
-            <Select
-              value={form?.status || 'pending_review'}
-              onChange={(event) => onStatusChange(String(event.target.value))}
-              disabled={coreFieldsDisabled}
-              variant="standard"
-              sx={drawerSelectSx}
-            >
-              {statusOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </PropertyRow>
-        )}
 
         <PropertyRow label={t('workspace.request.fields.source')}>
           <Select
@@ -253,102 +219,100 @@ export default function RequestPropertyPanel({
         </PropertyRow>
       </PropertyGroup>
 
-      {!isCreate && (
-        <PropertyGroup>
-          <PropertyRow label={t('workspace.request.fields.businessSponsor')}>
-            <UserSelect
-              hideLabel
-              label={t('workspace.request.fields.businessSponsor')}
-              value={form?.business_sponsor_id || null}
-              onChange={(value) => handleImmediateSave(
-                () => api.patch(`/portfolio/requests/${form.id}`, { business_sponsor_id: value }),
-                (prev) => ({ ...prev, business_sponsor_id: value }),
-              )}
-              disabled={!canManage}
-              size="small"
-            />
-          </PropertyRow>
+      <PropertyGroup>
+        <PropertyRow label={t('workspace.request.fields.businessSponsor')}>
+          <UserSelect
+            hideLabel
+            label={t('workspace.request.fields.businessSponsor')}
+            value={form?.business_sponsor_id || null}
+            onChange={(value) => handleImmediateSave(
+              () => api.patch(`/portfolio/requests/${form.id}`, { business_sponsor_id: value }),
+              (prev) => ({ ...prev, business_sponsor_id: value }),
+            )}
+            disabled={!canManage}
+            size="small"
+          />
+        </PropertyRow>
 
-          <PropertyRow label={t('workspace.request.fields.businessLead')}>
-            <UserSelect
-              hideLabel
-              label={t('workspace.request.fields.businessLead')}
-              value={form?.business_lead_id || null}
-              onChange={(value) => handleImmediateSave(
-                () => api.patch(`/portfolio/requests/${form.id}`, { business_lead_id: value }),
-                (prev) => ({ ...prev, business_lead_id: value }),
-              )}
-              disabled={!canManage}
-              size="small"
-            />
-          </PropertyRow>
+        <PropertyRow label={t('workspace.request.fields.businessLead')}>
+          <UserSelect
+            hideLabel
+            label={t('workspace.request.fields.businessLead')}
+            value={form?.business_lead_id || null}
+            onChange={(value) => handleImmediateSave(
+              () => api.patch(`/portfolio/requests/${form.id}`, { business_lead_id: value }),
+              (prev) => ({ ...prev, business_lead_id: value }),
+            )}
+            disabled={!canManage}
+            size="small"
+          />
+        </PropertyRow>
 
-          <PropertyRow label={t('workspace.request.fields.itSponsor')}>
-            <UserSelect
-              hideLabel
-              label={t('workspace.request.fields.itSponsor')}
-              value={form?.it_sponsor_id || null}
-              onChange={(value) => handleImmediateSave(
-                () => api.patch(`/portfolio/requests/${form.id}`, { it_sponsor_id: value }),
-                (prev) => ({ ...prev, it_sponsor_id: value }),
-              )}
-              disabled={!canManage}
-              size="small"
-            />
-          </PropertyRow>
+        <PropertyRow label={t('workspace.request.fields.itSponsor')}>
+          <UserSelect
+            hideLabel
+            label={t('workspace.request.fields.itSponsor')}
+            value={form?.it_sponsor_id || null}
+            onChange={(value) => handleImmediateSave(
+              () => api.patch(`/portfolio/requests/${form.id}`, { it_sponsor_id: value }),
+              (prev) => ({ ...prev, it_sponsor_id: value }),
+            )}
+            disabled={!canManage}
+            size="small"
+          />
+        </PropertyRow>
 
-          <PropertyRow label={t('workspace.request.fields.itLead')}>
-            <UserSelect
-              hideLabel
-              label={t('workspace.request.fields.itLead')}
-              value={form?.it_lead_id || null}
-              onChange={(value) => handleImmediateSave(
-                () => api.patch(`/portfolio/requests/${form.id}`, { it_lead_id: value }),
-                (prev) => ({ ...prev, it_lead_id: value }),
-              )}
-              disabled={!canManage}
-              size="small"
-            />
-          </PropertyRow>
+        <PropertyRow label={t('workspace.request.fields.itLead')}>
+          <UserSelect
+            hideLabel
+            label={t('workspace.request.fields.itLead')}
+            value={form?.it_lead_id || null}
+            onChange={(value) => handleImmediateSave(
+              () => api.patch(`/portfolio/requests/${form.id}`, { it_lead_id: value }),
+              (prev) => ({ ...prev, it_lead_id: value }),
+            )}
+            disabled={!canManage}
+            size="small"
+          />
+        </PropertyRow>
 
-          <PropertyRow label={t('workspace.request.fields.businessContributors')}>
-            <TeamMemberMultiSelect
-              label={t('workspace.request.fields.businessContributors')}
-              value={form?.business_team || []}
-              onChange={(userIds) => handleImmediateSave(
-                () => api.post(`/portfolio/requests/${form.id}/business-team/bulk-replace`, {
-                  user_ids: userIds,
-                }),
-                undefined,
-                true,
-              )}
-              disabled={!canManage}
-              hideLabel
-              textFieldSx={drawerFieldValueSx}
-            />
-          </PropertyRow>
+        <PropertyRow label={t('workspace.request.fields.businessContributors')}>
+          <TeamMemberMultiSelect
+            label={t('workspace.request.fields.businessContributors')}
+            value={form?.business_team || []}
+            onChange={(userIds) => handleImmediateSave(
+              () => api.post(`/portfolio/requests/${form.id}/business-team/bulk-replace`, {
+                user_ids: userIds,
+              }),
+              undefined,
+              true,
+            )}
+            disabled={!canManage}
+            hideLabel
+            textFieldSx={drawerFieldValueSx}
+          />
+        </PropertyRow>
 
-          <PropertyRow label={t('workspace.request.fields.itContributors')}>
-            <TeamMemberMultiSelect
-              label={t('workspace.request.fields.itContributors')}
-              value={form?.it_team || []}
-              onChange={(userIds) => handleImmediateSave(
-                () => api.post(`/portfolio/requests/${form.id}/it-team/bulk-replace`, {
-                  user_ids: userIds,
-                }),
-                undefined,
-                true,
-              )}
-              disabled={!canManage}
-              hideLabel
-              textFieldSx={drawerFieldValueSx}
-            />
-          </PropertyRow>
-        </PropertyGroup>
-      )}
+        <PropertyRow label={t('workspace.request.fields.itContributors')}>
+          <TeamMemberMultiSelect
+            label={t('workspace.request.fields.itContributors')}
+            value={form?.it_team || []}
+            onChange={(userIds) => handleImmediateSave(
+              () => api.post(`/portfolio/requests/${form.id}/it-team/bulk-replace`, {
+                user_ids: userIds,
+              }),
+              undefined,
+              true,
+            )}
+            disabled={!canManage}
+            hideLabel
+            textFieldSx={drawerFieldValueSx}
+          />
+        </PropertyRow>
+      </PropertyGroup>
 
       {/* Null for a person who does not read projects: the row is not shown. */}
-      {!isCreate && form?.id && form?.resulting_projects !== null && (
+      {form?.id && form?.resulting_projects !== null && (
         <PropertyGroup>
           <PropertyRow label={t('workspace.request.sections.resultingProjects')} valueSx={{ minHeight: 0 }}>
             {form?.resulting_projects?.length > 0 ? (

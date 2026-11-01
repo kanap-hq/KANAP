@@ -51,6 +51,7 @@ import { KanapDialog, unsavedConfirm, useKanapDialogs } from '../../components/d
 import { carryListFilters } from '../../lib/listContext';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { CancelCreationButton, CreationPreview, useCreationReturn, useRecordCreation } from '../../components/workspace/creation';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
 type TabKey = 'summary' | 'analysis' | 'scoring' | 'relations' | 'knowledge' | typeof RECORD_HISTORY_TAB_KEY;
@@ -100,6 +101,10 @@ const DECISION_OUTCOME_COLORS: Record<string, 'default' | 'success' | 'error' | 
 function formatDate(locale: string, value?: string | null) {
   return formatShortDate(value, locale, { year: 'always' }) || null;
 }
+
+/** The preview of a new request (`CreationPreview`) is out of reach: its handlers never run. */
+const ignoreDraftChange = () => undefined;
+const ignoreDraftRefetch = async () => undefined;
 
 const RequestAnalysisTab = React.lazy(() => import('./workspace/request/RequestAnalysisTab'));
 const RequestActivityTab = React.lazy(() => import('./workspace/request/RequestActivityTab'));
@@ -210,7 +215,7 @@ export default function RequestWorkspacePage() {
   }, [data?.id, data?.item_number, idParam]);
 
   // Fetch classification data (types, categories, streams)
-  const { data: classificationData } = useQuery({
+  const { data: classificationData, isError: classificationFailed } = useQuery({
     queryKey: ['portfolio-classification'],
     queryFn: async () => {
       const res = await api.get('/portfolio/classification/all');
@@ -276,8 +281,6 @@ export default function RequestWorkspacePage() {
   const hasTabDirtyChanges = tabDirty || scoringDirty;
   const hasManagedDocumentChanges = purposeDirty || risksDirty;
   const hasUnsavedChanges = hasTabDirtyChanges || hasManagedDocumentChanges;
-  const canSaveManagedDocsOnly = !hasTabDirtyChanges && hasManagedDocumentChanges && canEditManagedDocs;
-  const saveDisabled = !hasUnsavedChanges || (!canManage && !canSaveManagedDocsOnly);
   const classificationTouchedRef = React.useRef({
     source_id: false,
     category_id: false,
@@ -477,111 +480,104 @@ export default function RequestWorkspacePage() {
     }, 700);
   }, [canManage, id, isCreate, queryClient, refetch, t]);
 
+  // The classification a new request takes from the tenant's defaults (source, category, stream,
+  // company), on the fields the person has not set: what the create sends besides the name.
+  const withClassificationDefaults = React.useCallback((prev: any) => {
+    const next = { ...(prev || {}) } as any;
+    const isUnset = (value: any) => value === undefined || value === null || value === '';
+    let changed = false;
+
+    const applyField = (
+      field: 'source_id' | 'category_id' | 'company_id',
+      value: string | null,
+    ) => {
+      if (!value) return;
+      if (classificationTouchedRef.current[field]) return;
+      if (!isUnset(next[field])) return;
+      next[field] = value;
+      changed = true;
+    };
+
+    applyField('source_id', classificationDefaults?.source_id ?? null);
+    applyField('category_id', classificationDefaults?.category_id ?? null);
+    applyField('company_id', classificationDefaults?.company_id ?? null);
+
+    const defaultStreamId = classificationDefaults?.stream_id ?? null;
+    if (
+      defaultStreamId &&
+      !classificationTouchedRef.current.stream_id &&
+      isUnset(next.stream_id)
+    ) {
+      const effectiveCategory = isUnset(next.category_id) ? null : next.category_id;
+      const stream = streams.find((s) => s.id === defaultStreamId);
+      const matchesCategory = !stream || !effectiveCategory || stream.category_id === effectiveCategory;
+      if (matchesCategory) {
+        next.stream_id = defaultStreamId;
+        changed = true;
+      }
+    }
+
+    return changed ? next : prev;
+  }, [classificationDefaults, streams]);
+  // The defaults are read (or could not be): a title committed before waits for this.
+  const classificationReady = !classificationDefaultsLoading && (!!classificationData || classificationFailed);
+
   React.useEffect(() => {
     if (!isCreate || defaultsAppliedRef.current || classificationDefaultsLoading) return;
     if (!classificationData) return;
-
-    setForm((prev: any) => {
-      const next = { ...(prev || {}) } as any;
-      const isUnset = (value: any) => value === undefined || value === null || value === '';
-      let changed = false;
-
-      const applyField = (
-        field: 'source_id' | 'category_id' | 'company_id',
-        value: string | null,
-      ) => {
-        if (!value) return;
-        if (classificationTouchedRef.current[field]) return;
-        if (!isUnset(next[field])) return;
-        next[field] = value;
-        changed = true;
-      };
-
-      applyField('source_id', classificationDefaults?.source_id ?? null);
-      applyField('category_id', classificationDefaults?.category_id ?? null);
-      applyField('company_id', classificationDefaults?.company_id ?? null);
-
-      const defaultStreamId = classificationDefaults?.stream_id ?? null;
-      if (
-        defaultStreamId &&
-        !classificationTouchedRef.current.stream_id &&
-        isUnset(next.stream_id)
-      ) {
-        const effectiveCategory = isUnset(next.category_id) ? null : next.category_id;
-        const stream = streams.find((s) => s.id === defaultStreamId);
-        const matchesCategory = !stream || !effectiveCategory || stream.category_id === effectiveCategory;
-        if (matchesCategory) {
-          next.stream_id = defaultStreamId;
-          changed = true;
-        }
-      }
-
-      return changed ? next : prev;
-    });
-
+    setForm(withClassificationDefaults);
     defaultsAppliedRef.current = true;
   }, [
     isCreate,
     classificationDefaultsLoading,
-    classificationDefaults,
     classificationData,
-    streams,
+    withClassificationDefaults,
   ]);
 
   const handleSave = async (): Promise<boolean> => {
     setSaveError(null);
+    if (isCreate) return false;
     try {
-      if (isCreate) {
-        const res = await api.post('/portfolio/requests', form);
-        const newId = res.data?.id;
-        if (newId) {
-          setTabDirty(false);
-          navigate(`/portfolio/requests/${newId}/summary?${searchParams.toString()}`);
-          return true;
-        }
+      if (!canManage && hasTabDirtyChanges) {
+        setSaveError(t('portfolio:workspace.request.messages.permissionSaveWorkspace'));
         return false;
-      } else {
-        if (!canManage && hasTabDirtyChanges) {
-          setSaveError(t('portfolio:workspace.request.messages.permissionSaveWorkspace'));
-          return false;
-        }
-
-        if (canManage) {
-          const requestPayload: Record<string, any> = {};
-          const editableFields = ['feasibility_review'];
-          for (const field of editableFields) {
-            if (Object.prototype.hasOwnProperty.call(form, field)) {
-              requestPayload[field] = form[field];
-            }
-          }
-          if (Object.keys(requestPayload).length > 0) {
-            await api.patch(`/portfolio/requests/${id}`, requestPayload);
-          }
-
-          // Save scoring data if the editor is dirty and store the score for the useEffect.
-          if (scoringEditorRef.current?.isDirty()) {
-            savedScoreRef.current = await scoringEditorRef.current.save();
-          }
-        }
-
-        if (purposeEditorRef.current?.isDirty()) {
-          const ok = await purposeEditorRef.current.save();
-          if (!ok) return false;
-        }
-        if (risksEditorRef.current?.isDirty()) {
-          const ok = await risksEditorRef.current.save();
-          if (!ok) return false;
-        }
-
-        setTabDirty(false);
-        setScoringDirty(false);
-        setPurposeDirty(false);
-        setRisksDirty(false);
-        await refetch();
-
-        queryClient.invalidateQueries({ queryKey: ['portfolio-requests'] });
-        return true;
       }
+
+      if (canManage) {
+        const requestPayload: Record<string, any> = {};
+        const editableFields = ['feasibility_review'];
+        for (const field of editableFields) {
+          if (Object.prototype.hasOwnProperty.call(form, field)) {
+            requestPayload[field] = form[field];
+          }
+        }
+        if (Object.keys(requestPayload).length > 0) {
+          await api.patch(`/portfolio/requests/${id}`, requestPayload);
+        }
+
+        // Save scoring data if the editor is dirty and store the score for the useEffect.
+        if (scoringEditorRef.current?.isDirty()) {
+          savedScoreRef.current = await scoringEditorRef.current.save();
+        }
+      }
+
+      if (purposeEditorRef.current?.isDirty()) {
+        const ok = await purposeEditorRef.current.save();
+        if (!ok) return false;
+      }
+      if (risksEditorRef.current?.isDirty()) {
+        const ok = await risksEditorRef.current.save();
+        if (!ok) return false;
+      }
+
+      setTabDirty(false);
+      setScoringDirty(false);
+      setPurposeDirty(false);
+      setRisksDirty(false);
+      await refetch();
+
+      queryClient.invalidateQueries({ queryKey: ['portfolio-requests'] });
+      return true;
     } catch (error) {
       setSaveError(getApiErrorMessage(error, t, t('portfolio:workspace.request.messages.saveFailed')));
       return false;
@@ -845,7 +841,68 @@ export default function RequestWorkspacePage() {
     navigate(`/portfolio/requests/${targetId}/${routeTab}${qs ? `?${qs}` : ''}`);
   }, [dialogs, handleSave, handleReset, hasUnsavedChanges, listContextParams, navigate, routeTab, t]);
 
+  const listPath = React.useMemo(() => {
+    const qs = listContextParams.toString();
+    return `/portfolio/requests${qs ? `?${qs}` : ''}`;
+  }, [listContextParams]);
+  // Where the creation started: a new request left empty, or cancelled, goes back there.
+  const creationReturn = useCreationReturn(listPath);
+  const creation = useRecordCreation({
+    family: 'requests',
+    apiBase: '/portfolio/requests',
+    recordId: !isCreate && requestMatchesCurrentRoute ? data?.id ?? null : null,
+    listPath,
+    recordLabel: t('portfolio:workspace.request.creation.record'),
+    queryKeyPrefixes: ['portfolio-requests'],
+    onError: setSaveError,
+  });
+  // "Cancel creation" counts what was written: a purpose still typed is saved first.
+  const cancelCreation = React.useCallback(async () => {
+    if (purposeEditorRef.current?.isDirty() && !(await purposeEditorRef.current.save())) return;
+    await creation.cancelCreation();
+  }, [creation]);
+  // A refusal of the name typed on a new request.
+  const [titleError, setTitleError] = React.useState<string | null>(null);
+  // The name committed before the classification defaults were read: created once they are.
+  const [pendingName, setPendingName] = React.useState<string | null>(null);
+  const creatingRef = React.useRef(false);
+
+  // The name committed in the header creates the request at once, with the classification
+  // defaults the form would have sent; the page moves to it, every tab open, with "Cancel creation".
+  const createRequest = React.useCallback(async (name: string) => {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
+    setTitleError(null);
+    setSaveError(null);
+    try {
+      const res = await api.post('/portfolio/requests', { ...withClassificationDefaults(form), name });
+      const { creation_token: token, ...created } = res.data;
+      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
+      const reference = formatItemRef('request', created.item_number);
+      // The page keeps its header while the full request loads.
+      queryClient.setQueryData(['portfolio-request', reference, getRequestWorkspaceInclude('summary')], { activities: [], ...created });
+      void queryClient.invalidateQueries({ queryKey: ['portfolio-requests'], refetchType: 'none' });
+      const qs = searchParams.toString();
+      navigate(`/portfolio/requests/${reference}/summary${qs ? `?${qs}` : ''}`, { replace: true });
+    } catch (err) {
+      setTitleError(getApiErrorMessage(err, t, t('portfolio:workspace.request.messages.saveFailed')));
+    } finally {
+      creatingRef.current = false;
+    }
+  }, [creation, creationReturn, form, navigate, queryClient, searchParams, t, withClassificationDefaults]);
+
+  React.useEffect(() => {
+    if (!isCreate || pendingName === null || !classificationReady) return;
+    setPendingName(null);
+    void createRequest(pendingName);
+  }, [classificationReady, createRequest, isCreate, pendingName]);
+
   const closeWorkspace = React.useCallback(async () => {
+    // A new request left before it has a name goes back where the creation started.
+    if (isCreate) {
+      navigate(creationReturn);
+      return;
+    }
     if (hasUnsavedChanges) {
       const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndLeave'));
       if (proceed) {
@@ -855,9 +912,8 @@ export default function RequestWorkspacePage() {
         await handleReset();
       }
     }
-    const qs = listContextParams.toString();
-    navigate(`/portfolio/requests${qs ? `?${qs}` : ''}`);
-  }, [dialogs, handleSave, handleReset, hasUnsavedChanges, listContextParams, navigate, t]);
+    navigate(listPath);
+  }, [creationReturn, dialogs, handleSave, handleReset, hasUnsavedChanges, isCreate, listPath, navigate, t]);
 
   const statusLabel = form?.status ? getRequestStatusLabel(t, form.status) : '';
   const statusColor = (REQUEST_STATUS_COLORS[form?.status] || 'default') as 'default' | 'primary' | 'success' | 'error' | 'warning' | 'info';
@@ -875,7 +931,6 @@ export default function RequestWorkspacePage() {
   const originTaskLabel = form?.origin_task?.item_number
     ? `T-${form.origin_task.item_number}`
     : form?.origin_task?.title || null;
-  const createDisabled = !String(form?.name || '').trim() || saveDisabled;
   const categoryName = classificationData?.categories?.find((c) => c.id === form?.category_id)?.name;
   const streamName = classificationData?.streams?.find((s) => s.id === form?.stream_id)?.name;
   const analysisRecommendations = React.useMemo(() => {
@@ -949,10 +1004,22 @@ export default function RequestWorkspacePage() {
         onBack={() => { void closeWorkspace(); }}
         itemReference={requestReference}
         onCopyReference={requestReference ? () => { void navigator.clipboard?.writeText(requestReference); } : undefined}
-        title={form?.name || ''}
+        title={isCreate ? '' : form?.name || ''}
         titleFallback={isCreate ? t('portfolio:workspace.request.title.new') : t('portfolio:workspace.request.title.fallback')}
         canEditTitle={isCreate || (canManage && form?.status !== 'converted')}
-        onTitleSave={(value) => { void persistPanelPatch({ name: value }); }}
+        onTitleSave={(value) => {
+          if (isCreate) {
+            setTitleError(null);
+            setPendingName(value);
+            return;
+          }
+          void persistPanelPatch({ name: value });
+        }}
+        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
+        titleError={isCreate ? titleError : undefined}
+        titleAutoEdit={isCreate}
+        titleOnCancel={isCreate ? () => { void closeWorkspace(); } : undefined}
+        isCreate={isCreate}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,
           totalCount: total,
@@ -963,8 +1030,38 @@ export default function RequestWorkspacePage() {
           previousLabel: t('portfolio:actions.previous'),
           nextLabel: t('portfolio:actions.next'),
         } : undefined}
-        onSaveShortcut={hasUnsavedChanges ? () => { void handleSave(); } : undefined}
-        metadata={!isCreate ? (
+        onSaveShortcut={isCreate ? ignoreDraftChange : hasUnsavedChanges ? () => { void handleSave(); } : undefined}
+        metadata={isCreate ? (
+          // The metadata of the request to be, dimmed like the rest, so the page does not move when it is created.
+          <CreationPreview sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' }}>
+            <PortfolioStatusMetadata
+              value="pending_review"
+              label={getRequestStatusLabel(t, 'pending_review')}
+              color={getDotColor((REQUEST_STATUS_COLORS.pending_review || 'default') as 'default', theme.palette.mode)}
+              options={statusMenuOptions}
+              onChange={() => undefined}
+              disabled
+            />
+            <MetadataUserPicker
+              label={t('portfolio:workspace.request.fields.requestor')}
+              value={null}
+              displayName={formatMetadataUserName(profile) || null}
+              placeholder={t('portfolio:workspace.request.values.requestorMissing', 'Requestor missing')}
+              searchPlaceholder={t('portfolio:workspace.request.fields.requestor')}
+              disabled
+              onChange={() => undefined}
+            />
+            <MetadataUserPicker
+              label={t('portfolio:workspace.request.fields.itLead', 'IT owner')}
+              value={null}
+              displayName={null}
+              placeholder={t('portfolio:workspace.request.values.itOwnerMissing')}
+              searchPlaceholder={t('portfolio:workspace.request.fields.itLead', 'IT owner')}
+              disabled
+              onChange={() => undefined}
+            />
+          </CreationPreview>
+        ) : (
           <>
             {form?.status && (
               <PortfolioStatusMetadata
@@ -1023,9 +1120,16 @@ export default function RequestWorkspacePage() {
               </PortfolioMetadataItem>
             )}
           </>
-        ) : undefined}
+        )}
         actions={(
           <>
+            {!isCreate && (
+              <CancelCreationButton
+                beingCreated={creation.beingCreated}
+                cancelling={creation.cancelling}
+                onCancel={() => { void cancelCreation(); }}
+              />
+            )}
             {!isCreate && (
               <SendLinkButton
                 itemType="request"
@@ -1044,11 +1148,6 @@ export default function RequestWorkspacePage() {
                 {t('portfolio:actions.convertToProject')}
               </Button>
             )}
-            {isCreate && (
-              <Button variant="contained" onClick={() => void handleSave()} disabled={createDisabled} size="small">
-                {t('common:buttons.create')}
-              </Button>
-            )}
             {!isCreate && canAdmin && form?.status !== 'converted' && (
               <DeleteIconButton onClick={() => setDeleteConfirmOpen(true)} />
             )}
@@ -1062,13 +1161,32 @@ export default function RequestWorkspacePage() {
             </IconButton>
           </>
         )}
-        properties={(
+        properties={isCreate ? (
+          <CreationPreview>
+            <RequestPropertyPanel
+              canManage={canManage}
+              categories={categories}
+              form={{ status: 'pending_review', requestor_id: profile?.id ?? null, ...form }}
+              onCategoryChange={ignoreDraftChange}
+              onCompanyChange={ignoreDraftChange}
+              onLocalUpdate={ignoreDraftChange}
+              onRefetch={ignoreDraftRefetch}
+              onRequestorChange={ignoreDraftChange}
+              onSourceChange={ignoreDraftChange}
+              onStatusChange={ignoreDraftChange}
+              onStreamChange={ignoreDraftChange}
+              onUpdate={ignoreDraftChange}
+              sources={sources}
+              statusOptions={statusOptions}
+              streams={streams}
+            />
+          </CreationPreview>
+        ) : (
           <RequestPropertyPanel
             canManage={canManage}
             categories={categories}
             form={form}
             focusSection={propertyPanelFocusSection}
-            isCreate={isCreate}
             onCategoryChange={(value) => {
               classificationTouchedRef.current.category_id = true;
               classificationTouchedRef.current.stream_id = true;
@@ -1079,7 +1197,6 @@ export default function RequestWorkspacePage() {
               void persistPanelPatch({ company_id: value });
             }}
             onLocalUpdate={applyPanelLocalUpdate}
-            onNameChange={(value) => { void persistPanelPatch({ name: value }); }}
             onRefetch={refetch}
             onRequestorChange={(value) => { void persistPanelPatch({ requestor_id: value }); }}
             onSourceChange={(value) => {
@@ -1098,7 +1215,20 @@ export default function RequestWorkspacePage() {
           />
         )}
       >
-        {routeTab === 'summary' && (
+        {isCreate && (
+          <CreationPreview>
+            <RequestSummaryTab
+              canEditManagedDocs={canEditManagedDocs}
+              form={form}
+              id={id}
+              isCreate
+              onPurposeDirtyChange={ignoreDraftChange}
+              onPurposeDraftChange={ignoreDraftChange}
+              purposeEditorRef={purposeEditorRef}
+            />
+          </CreationPreview>
+        )}
+        {routeTab === 'summary' && !isCreate && (
           <Stack spacing={3}>
             <RequestSummaryTab
               canEditManagedDocs={canEditManagedDocs}

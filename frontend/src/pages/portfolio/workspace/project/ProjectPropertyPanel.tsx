@@ -5,7 +5,6 @@ import {
   MenuItem,
   Select,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
@@ -29,12 +28,9 @@ type ProjectPropertyPanelProps = {
   categories: Array<{ id: string; name: string }>;
   form: any;
   focusSection?: Exclude<PanelSection, 'core'> | null;
-  isCreate: boolean;
   onCategoryChange: (value: string) => void;
   onCompanyChange: (value: string | null) => void;
   onLocalUpdate: (updater: (prev: any) => any) => void;
-  onNameChange: (value: string) => void;
-  onOriginChange: (value: string) => void;
   onPlannedEndChange: (value: string) => void;
   onPlannedStartChange: (value: string) => void;
   onRefetch: () => Promise<unknown>;
@@ -42,7 +38,6 @@ type ProjectPropertyPanelProps = {
   onStatusChange: (value: string) => void;
   onStreamChange: (value: string) => void;
   onUpdate: (patch: any) => void;
-  originOptions: Array<{ value: string; label: string }>;
   originLabels: Record<string, string>;
   sources: Array<{ id: string; name: string }>;
   statusOptions: Array<{ value: string; label: string }>;
@@ -54,12 +49,9 @@ export default function ProjectPropertyPanel({
   canManage,
   categories,
   form,
-  isCreate,
   onCategoryChange,
   onCompanyChange,
   onLocalUpdate,
-  onNameChange,
-  onOriginChange,
   onPlannedEndChange,
   onPlannedStartChange,
   onRefetch,
@@ -67,7 +59,6 @@ export default function ProjectPropertyPanel({
   onStatusChange,
   onStreamChange,
   onUpdate,
-  originOptions,
   originLabels,
   sources,
   statusOptions,
@@ -76,14 +67,9 @@ export default function ProjectPropertyPanel({
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [nameDraft, setNameDraft] = React.useState(form?.name || '');
-  const coreFieldsDisabled = !isCreate && !canManage;
+  const coreFieldsDisabled = !canManage;
   const [panelError, setPanelError] = React.useState<string | null>(null);
   const noneLabel = t('common:labels.none');
-
-  React.useEffect(() => {
-    setNameDraft(form?.name || '');
-  }, [form?.id, form?.name]);
 
   const handleImmediateSave = React.useCallback(async (
     action: () => Promise<void>,
@@ -121,66 +107,26 @@ export default function ProjectPropertyPanel({
       )}
 
       <PropertyGroup>
-        <PropertyRow label={t('workspace.project.fields.projectName')} required>
-          <TextField
-            value={nameDraft}
+        <PropertyRow label={t('workspace.project.fields.status')}>
+          <Select
+            value={form?.status || 'waiting_list'}
+            onChange={(event) => onStatusChange(String(event.target.value))}
             disabled={coreFieldsDisabled}
-            onChange={(event) => {
-              const nextValue = event.target.value;
-              setNameDraft(nextValue);
-              if (isCreate) {
-                onNameChange(nextValue);
-              }
-            }}
-            onBlur={() => {
-              if (!coreFieldsDisabled && !isCreate && nameDraft !== (form?.name || '')) {
-                onNameChange(nameDraft);
-              }
-            }}
             variant="standard"
-            required
-            fullWidth
-          />
+            sx={drawerSelectSx}
+          >
+            {statusOptions.map((option) => (
+              <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
         </PropertyRow>
 
-        {!isCreate && (
-          <PropertyRow label={t('workspace.project.fields.status')}>
-            <Select
-              value={form?.status || 'waiting_list'}
-              onChange={(event) => onStatusChange(String(event.target.value))}
-              disabled={coreFieldsDisabled}
-              variant="standard"
-              sx={drawerSelectSx}
-            >
-              {statusOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </PropertyRow>
-        )}
-
         <PropertyRow label={t('workspace.project.fields.origin')}>
-          {isCreate ? (
-            <Select
-              value={form?.origin || 'fast_track'}
-              onChange={(event) => onOriginChange(String(event.target.value))}
-              disabled={coreFieldsDisabled}
-              variant="standard"
-              sx={drawerSelectSx}
-            >
-              {originOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          ) : (
-            <Typography variant="body2" sx={{ fontSize: 13 }}>
-              {originLabels[form?.origin] || form?.origin || noneLabel}
-            </Typography>
-          )}
+          <Typography variant="body2" sx={{ fontSize: 13 }}>
+            {originLabels[form?.origin] || form?.origin || noneLabel}
+          </Typography>
         </PropertyRow>
 
         <PropertyRow label={t('workspace.project.fields.source')}>
@@ -284,114 +230,112 @@ export default function ProjectPropertyPanel({
         </PropertyRow>
       </PropertyGroup>
 
-      {!isCreate && (
-        <PropertyGroup>
-          <PropertyRow label={t('workspace.project.fields.businessSponsor')}>
-            <UserSelect
-              hideLabel
-              label={t('workspace.project.fields.businessSponsor')}
-              value={form?.business_sponsor_id || null}
-              onChange={(value) => handleImmediateSave(
-                () => api.patch(`/portfolio/projects/${form.id}`, { business_sponsor_id: value }),
-                (prev) => ({ ...prev, business_sponsor_id: value }),
-              )}
-              disabled={!canManage}
-              size="small"
-            />
-          </PropertyRow>
+      <PropertyGroup>
+        <PropertyRow label={t('workspace.project.fields.businessSponsor')}>
+          <UserSelect
+            hideLabel
+            label={t('workspace.project.fields.businessSponsor')}
+            value={form?.business_sponsor_id || null}
+            onChange={(value) => handleImmediateSave(
+              () => api.patch(`/portfolio/projects/${form.id}`, { business_sponsor_id: value }),
+              (prev) => ({ ...prev, business_sponsor_id: value }),
+            )}
+            disabled={!canManage}
+            size="small"
+          />
+        </PropertyRow>
 
-          <PropertyRow label={t('workspace.project.fields.businessLead')}>
-            <UserSelect
-              hideLabel
-              label={t('workspace.project.fields.businessLead')}
-              value={form?.business_lead_id || null}
-              onChange={(value) => handleImmediateSave(
-                async () => {
-                  await api.patch(`/portfolio/projects/${form.id}`, { business_lead_id: value });
-                  await queryClient.invalidateQueries({ queryKey: ['project-effort-allocations', form.id, 'business'] });
-                },
-                (prev) => ({ ...prev, business_lead_id: value }),
-              )}
-              disabled={!canManage}
-              size="small"
-            />
-          </PropertyRow>
+        <PropertyRow label={t('workspace.project.fields.businessLead')}>
+          <UserSelect
+            hideLabel
+            label={t('workspace.project.fields.businessLead')}
+            value={form?.business_lead_id || null}
+            onChange={(value) => handleImmediateSave(
+              async () => {
+                await api.patch(`/portfolio/projects/${form.id}`, { business_lead_id: value });
+                await queryClient.invalidateQueries({ queryKey: ['project-effort-allocations', form.id, 'business'] });
+              },
+              (prev) => ({ ...prev, business_lead_id: value }),
+            )}
+            disabled={!canManage}
+            size="small"
+          />
+        </PropertyRow>
 
-          <PropertyRow label={t('workspace.project.fields.itSponsor')}>
-            <UserSelect
-              hideLabel
-              label={t('workspace.project.fields.itSponsor')}
-              value={form?.it_sponsor_id || null}
-              onChange={(value) => handleImmediateSave(
-                () => api.patch(`/portfolio/projects/${form.id}`, { it_sponsor_id: value }),
-                (prev) => ({ ...prev, it_sponsor_id: value }),
-              )}
-              disabled={!canManage}
-              size="small"
-            />
-          </PropertyRow>
+        <PropertyRow label={t('workspace.project.fields.itSponsor')}>
+          <UserSelect
+            hideLabel
+            label={t('workspace.project.fields.itSponsor')}
+            value={form?.it_sponsor_id || null}
+            onChange={(value) => handleImmediateSave(
+              () => api.patch(`/portfolio/projects/${form.id}`, { it_sponsor_id: value }),
+              (prev) => ({ ...prev, it_sponsor_id: value }),
+            )}
+            disabled={!canManage}
+            size="small"
+          />
+        </PropertyRow>
 
-          <PropertyRow label={t('workspace.project.fields.itLead')}>
-            <UserSelect
-              hideLabel
-              label={t('workspace.project.fields.itLead')}
-              value={form?.it_lead_id || null}
-              onChange={(value) => handleImmediateSave(
-                async () => {
-                  await api.patch(`/portfolio/projects/${form.id}`, { it_lead_id: value });
-                  await queryClient.invalidateQueries({ queryKey: ['project-effort-allocations', form.id, 'it'] });
-                },
-                (prev) => ({ ...prev, it_lead_id: value }),
-              )}
-              disabled={!canManage}
-              size="small"
-            />
-          </PropertyRow>
+        <PropertyRow label={t('workspace.project.fields.itLead')}>
+          <UserSelect
+            hideLabel
+            label={t('workspace.project.fields.itLead')}
+            value={form?.it_lead_id || null}
+            onChange={(value) => handleImmediateSave(
+              async () => {
+                await api.patch(`/portfolio/projects/${form.id}`, { it_lead_id: value });
+                await queryClient.invalidateQueries({ queryKey: ['project-effort-allocations', form.id, 'it'] });
+              },
+              (prev) => ({ ...prev, it_lead_id: value }),
+            )}
+            disabled={!canManage}
+            size="small"
+          />
+        </PropertyRow>
 
-          <PropertyRow label={t('workspace.project.fields.businessContributors')}>
-            <TeamMemberMultiSelect
-              label={t('workspace.project.fields.businessContributors')}
-              value={form?.business_team || []}
-              onChange={(userIds) => handleImmediateSave(
-                async () => {
-                  await api.post(`/portfolio/projects/${form.id}/business-team/bulk-replace`, {
-                    user_ids: userIds,
-                  });
-                  await queryClient.invalidateQueries({ queryKey: ['project-effort-allocations', form.id, 'business'] });
-                },
-                undefined,
-                true,
-              )}
-              disabled={!canManage}
-              hideLabel
-              textFieldSx={drawerFieldValueSx}
-            />
-          </PropertyRow>
+        <PropertyRow label={t('workspace.project.fields.businessContributors')}>
+          <TeamMemberMultiSelect
+            label={t('workspace.project.fields.businessContributors')}
+            value={form?.business_team || []}
+            onChange={(userIds) => handleImmediateSave(
+              async () => {
+                await api.post(`/portfolio/projects/${form.id}/business-team/bulk-replace`, {
+                  user_ids: userIds,
+                });
+                await queryClient.invalidateQueries({ queryKey: ['project-effort-allocations', form.id, 'business'] });
+              },
+              undefined,
+              true,
+            )}
+            disabled={!canManage}
+            hideLabel
+            textFieldSx={drawerFieldValueSx}
+          />
+        </PropertyRow>
 
-          <PropertyRow label={t('workspace.project.fields.itContributors')}>
-            <TeamMemberMultiSelect
-              label={t('workspace.project.fields.itContributors')}
-              value={form?.it_team || []}
-              onChange={(userIds) => handleImmediateSave(
-                async () => {
-                  await api.post(`/portfolio/projects/${form.id}/it-team/bulk-replace`, {
-                    user_ids: userIds,
-                  });
-                  await queryClient.invalidateQueries({ queryKey: ['project-effort-allocations', form.id, 'it'] });
-                },
-                undefined,
-                true,
-              )}
-              disabled={!canManage}
-              hideLabel
-              textFieldSx={drawerFieldValueSx}
-            />
-          </PropertyRow>
-        </PropertyGroup>
-      )}
+        <PropertyRow label={t('workspace.project.fields.itContributors')}>
+          <TeamMemberMultiSelect
+            label={t('workspace.project.fields.itContributors')}
+            value={form?.it_team || []}
+            onChange={(userIds) => handleImmediateSave(
+              async () => {
+                await api.post(`/portfolio/projects/${form.id}/it-team/bulk-replace`, {
+                  user_ids: userIds,
+                });
+                await queryClient.invalidateQueries({ queryKey: ['project-effort-allocations', form.id, 'it'] });
+              },
+              undefined,
+              true,
+            )}
+            disabled={!canManage}
+            hideLabel
+            textFieldSx={drawerFieldValueSx}
+          />
+        </PropertyRow>
+      </PropertyGroup>
 
       {/* Null for a person who does not read requests: the row is not shown. */}
-      {!isCreate && form?.id && form?.source_requests !== null && (
+      {form?.id && form?.source_requests !== null && (
         <PropertyGroup>
           <PropertyRow label={t('workspace.project.sections.sourceRequests')} valueSx={{ minHeight: 0 }}>
             {form?.source_requests?.length > 0 ? (
