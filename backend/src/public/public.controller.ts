@@ -594,6 +594,7 @@ export class PublicController {
         actorId: owner.id,
       });
       await this.baseline.adoptStartingTechnologies(runner.manager, tenant.id, language);
+      await this.baseline.seedStartingClassification(runner.manager, tenant.id, language);
 
       await runner.manager.getRepository(TrialSignup).update(signup.id, {
         activated_at: new Date(),

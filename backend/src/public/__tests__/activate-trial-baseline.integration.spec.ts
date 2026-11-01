@@ -83,6 +83,17 @@ async function testActivationMatchesHelper() {
       ['windows-server', 'operating_system', false],
     ], 'activation adopts the starting technologies, alerts off');
     assert.ok(technologies.every((t: any) => t.cpe_products.length > 0), 'with their CPE identifiers');
+    const classification = await inTenant(activatedId!, (manager) => manager.query(
+      `SELECT 'source' AS kind, name FROM portfolio_sources WHERE tenant_id = $1
+       UNION ALL SELECT 'category', name FROM portfolio_categories WHERE tenant_id = $1
+       UNION ALL SELECT 'stream', name FROM portfolio_streams WHERE tenant_id = $1
+       ORDER BY 1, 2`,
+      [activatedId],
+    ));
+    assert.deepEqual(classification.map((r: any) => [r.kind, r.name]), [
+      ['category', 'Applications'], ['category', 'Cybersecurity'], ['category', 'Infrastructure'],
+      ['source', 'Business'], ['source', 'Compliance'], ['source', 'IT'],
+    ], 'activation seeds the starting sources and categories, no stream');
     assert.deepEqual(await baselineSnapshot(helper.tenantId), await baselineSnapshot(activatedId!));
   } finally {
     const created = await dataSource.query(`SELECT id FROM tenants WHERE slug = $1`, [slug]);
@@ -116,9 +127,15 @@ async function testActivationInBrowserLanguage() {
     const names = await dataSource.transaction(async (manager) => {
       await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
       const rows = await manager.query(`SELECT name FROM analytics_axes WHERE tenant_id = $1 ORDER BY sort_order`, [tenant.id]);
-      return rows.map((row: { name: string }) => row.name);
+      const sources = await manager.query(`SELECT name FROM portfolio_sources WHERE tenant_id = $1 ORDER BY display_order`, [tenant.id]);
+      const categories = await manager.query(`SELECT name FROM portfolio_categories WHERE tenant_id = $1 ORDER BY display_order`, [tenant.id]);
+      return [rows, sources, categories].map((list) => list.map((row: { name: string }) => row.name));
     });
-    assert.deepEqual(names, ['Nature de coût', 'Domaine IT', 'Motif', 'Priorité']);
+    assert.deepEqual(names, [
+      ['Nature de coût', 'Domaine IT', 'Motif', 'Priorité'],
+      ['Informatique', 'Métier', 'Conformité'],
+      ['Applications', 'Cybersécurité', 'Infrastructure'],
+    ]);
   } finally {
     const created = await dataSource.query(`SELECT id FROM tenants WHERE slug = $1`, [slug]);
     await cleanupTenants(created.map((row: { id: string }) => row.id));
