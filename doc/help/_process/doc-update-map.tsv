@@ -1,8 +1,9 @@
 # doc_file	code_pattern
 my-dashboard.md	frontend/src/pages/workspace/WorkspaceDashboardPage.tsx
 my-dashboard.md	frontend/src/pages/workspace/**/*.tsx
-operations-dashboard.md	frontend/src/pages/DashboardPage.tsx
-operations-dashboard.md	frontend/src/pages/workspace/settings/BudgetDashboardSettingsModal.tsx
+my-dashboard.md	frontend/src/pages/workspace/settings/BudgetDashboardSettingsModal.tsx
+my-dashboard.md	frontend/src/components/onboarding/**/*.tsx
+my-dashboard.md	frontend/src/components/onboarding/**/*.ts
 budget-lines.md	frontend/src/pages/budget/**/*.tsx
 budget-lines.md	frontend/src/components/finance/**/*.tsx
 budget-lines.md	frontend/src/components/finance/**/*.ts

@@ -19,7 +19,7 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 
 ### Dashboard
 
-- [Dashboard](my-dashboard.md): Persönliche Übersicht mit konfigurierbaren Kacheln (klicken Sie auf das KANAP-Logo)
+- [Dashboard](my-dashboard.md): Persönliche Übersicht mit konfigurierbaren Kacheln und dem Bereich Budgetverwaltung (klicken Sie auf das KANAP-Logo)
 
 ### Portfolio-Management
 
@@ -124,7 +124,6 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 - [Nutzung & Kosten](ai-usage.md): KI-Nutzung und reale Kosten über Chat und Agenten hinweg, pro Agent und pro Modell
 - [Integrationen](integrations.md): GLPI für Ticketimport und für Agenten verbinden
 - [Geplante Aufgaben](scheduled-tasks.md): Wiederkehrende Hintergrundjobs prüfen und verwalten
-- [Budgetverwaltung: Übersicht](operations-dashboard.md): OPEX- und CAPEX-Überblick, Fristen und Schnellaktionen
 
 ### Bereitstellung & Betrieb
 

@@ -68,6 +68,16 @@ When the five steps are done, the tile offers the two other paths. It also offer
 | IT landscape map | The application list, An application record, The servers, Technologies, end of support and vulnerabilities, Your data | Your applications, Your technologies, Your servers, What KANAP found, A colleague |
 | Projects and requests | A request and its score, The project born from the request, Tasks, The reports, Your data | Your first request, Your project, The first tasks, The project's budget, A colleague |
 
+### The home page follows your path
+
+During a trial, the home page puts the tiles of your path first:
+
+- **IT budget**: the [Budget management section](#budget-management-section) comes first, led by the first steps tile.
+- **IT landscape map**: the **Compliance**, **Vulnerabilities in your estate** and **Netbox synchronisation** tiles come first.
+- **Projects and requests**: the project and request tiles come first.
+
+Without a path, the tiles keep their usual order.
+
 ## Turn on Plaid line
 
 During a cloud trial, administrators of the Plaid settings see one line under the sample data line while Plaid is turned off and the KANAP included model is offered: "Plaid, the KANAP assistant, is turned off." **Turn on** opens the usual confirmation of the included model. Confirming turns Plaid on. The close button (**×**) hides the line in this browser. The line does not appear after the switch to a paid plan, nor on-premise. See [Plaid Settings](ai-settings.md).
@@ -236,6 +246,97 @@ Shows tasks that have not been updated for a long time. Each item shows the days
 **Settings**: scope (`my`, `team`, `all`) and threshold in days (30 to 365).
 
 **Requires**: `tasks:reader`
+
+## Budget management section { #budget-management-section }
+
+Below the tiles, the **Budget management** section shows where your IT spend stands: the budget by type and year, your own budget lines, upcoming renewals, data quality, and the lines that deserve your attention. It appears when you can read budget lines or contracts.
+
+### Section actions
+
+The section header holds shortcut buttons:
+
+- **New OPEX line** and **New CAPEX line** open a new budget line of that type. They show when your role has at least the Member level on Budget (`budget:member`)
+- **New contract** opens a new contract. It shows when your role can create contracts
+- **Customize**, on the right, opens the settings of this section. See [Customizing the section](#customizing-the-budget-section)
+
+### Section layout
+
+The section's tiles are arranged in a responsive grid: three columns on a wide screen, two on a tablet, and a single column on mobile. The **Budget** tile is wider: two columns on a wide screen, the full width on a tablet. Each tile has an icon, a title, and usually a button that takes you to the full page behind the data.
+
+Several tiles have **All**, **OPEX** and **CAPEX** tabs in their header to choose the type of lines they cover. Each tile remembers your choice in your browser.
+
+The tiles below are listed in their default order. Your open tasks are in the **My Tasks** tile above.
+
+### Budget
+
+A table covering three fiscal years: last year (Y-1), the current year (Y) and next year (Y+1). Each year has three rows: **OPEX**, **CAPEX** and **Total**. The value columns are the budget columns your organisation shows, under their names (**Budget**, **Revision**, **Actuals** and **Expected landing** with the standard settings, plus **Forecast** when it is shown). You can keep fewer of them in [Customize](#customizing-the-budget-section). A column shows when it holds an amount for at least one row. Hidden columns never appear. All amounts are rounded to the nearest thousand and displayed with a "k" suffix (for example, `7,846k`). Separators follow the interface language.
+
+Click an amount to open the [budget lines list](budget-lines.md) on that type. A **Total** amount opens the list on both types. Click **View** to open the list.
+
+### Data hygiene
+
+Checks that help you spot incomplete lines at a glance. The tile shows one column of counts per type: **OPEX** and **CAPEX** side by side. The counts cover the lines the list shows by default (**Show: Enabled**).
+
+- **No IT owner**: lines missing an IT owner
+- **No business owner**: lines missing a business owner
+- **No paying company**: lines without a paying company
+- **No cost center**: lines without a cost center
+- **No Budget for next year**: lines whose default column is zero or empty for next year. The check names your default column
+- **Account not in the company's chart**: lines whose account does not belong to the paying company's chart of accounts
+
+A count turns orange (red for the chart check) when it is above zero. Click a count to open the list on exactly the lines it counts.
+
+### My budget
+
+The lines in your name, on the default column of the current year (the subtitle names it, for example **Budget, Y**). Use the **All** / **OPEX** / **CAPEX** tabs to choose the type.
+
+- **As IT owner**, **As business owner** and **As budget holder**: how many lines you hold in each role, and their total. Click a row to open the list on those lines
+- **My lines**: your three largest lines, whatever the role, with their reference. Click one to open it
+
+The tile reads "No budget lines in your name" when you hold no line.
+
+### Next renewals
+
+Lists the five contracts due next, today included, in the order of the **Next due date** column of the Contracts list: a contract that renews tacitly appears on its next cancellation deadline, any other contract on its end. Ended contracts do not appear.
+
+Click **View all** to open the Contracts page.
+
+### Top lines
+
+The five largest lines for the current year, ranked by the default column. The subtitle names the column, for example **Budget, Y**. Amounts are rounded to thousands with a "k" suffix, with the separators of the interface language.
+
+Use the **All** / **OPEX** / **CAPEX** tabs to choose the type. Click **Open** to view the full Top items report on the same type.
+
+### Top increases
+
+The five lines with the largest increase in the default column compared to the previous year. The subtitle names the column, for example **Budget, Y vs Y-1**. Lines whose amount stayed flat or went down do not appear. A small increase stays in full. A larger one is shortened, for example `340.1k`.
+
+Use the **All** / **OPEX** / **CAPEX** tabs to choose the type. Click **Open** to view the full Top increase / decrease report on the same type.
+
+### By cost center
+
+The five cost centers with the largest total on the default column of the current year, with a bar for each. Lines without a cost center count together as **No cost center**. Use the **All** / **OPEX** / **CAPEX** tabs to choose the type. Click a row to open the list on that cost center's lines.
+
+### Recent updates
+
+The five most recently edited budget lines, OPEX and CAPEX together. Each row shows the date of the last edit, the line's reference, its name and its type. Click a row to open the line.
+
+Without read access to budget lines (`budget:reader`), the budget tiles are hidden. **Next renewals** needs read access to contracts.
+
+### Amounts without an exchange rate
+
+When a line's currency has no exchange rate for a year, its amount is left out of the totals of that year. The **Budget**, **Top increases**, **My budget** and **By cost center** tiles then show a one-line warning, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings on the missing rate. When the warning names a single currency and year, the manual rate dialog opens directly. In **Top lines**, such a line shows its amount in its own currency with a small orange mark. See [Manual rates](currencies.md#manual-rates).
+
+### Customizing the section { #customizing-the-budget-section }
+
+Click **Customize** to open **Budget dashboard settings**. Your choices apply to your own home page only.
+
+- **Show or hide a tile**: tick or untick it. The dialog lists the tiles your role can see
+- **Change the order**: drag a tile by its handle on the right
+- **Amount columns of the Budget tile**: **Workspace columns**, ticked by default, follows the columns your organisation shows. Untick it to choose the columns yourself. Keep at least one: the dialog says "Choose at least one amount column." otherwise
+- **Save** applies your choices. **Reset to defaults** shows every tile again, in the default order, with the organisation's columns
+
+A budget administrator chooses the default column and the column names in [Budget columns](budget-operations.md#budget-columns). The tiles and the reports they open follow that choice.
 
 ## Customizing your dashboard
 

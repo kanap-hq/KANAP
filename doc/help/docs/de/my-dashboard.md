@@ -68,6 +68,16 @@ Wenn die fünf Schritte erledigt sind, bietet die Kachel die beiden anderen Pfad
 | IT-Landkarte | Die Anwendungsliste, Ein Anwendungsdatensatz, Die Server, Technologien, Supportende und Schwachstellen, Ihre Daten | Ihre Anwendungen, Ihre Technologien, Ihre Server, Was KANAP gefunden hat, Eine Kollegin, ein Kollege |
 | Projekte und Anfragen | Eine Anfrage und ihre Bewertung, Das aus der Anfrage entstandene Projekt, Die Aufgaben, Die Berichte, Ihre Daten | Ihre erste Anfrage, Ihr Projekt, Die ersten Aufgaben, Das Budget des Projekts, Eine Kollegin, ein Kollege |
 
+### Die Startseite folgt Ihrem Pfad
+
+Während einer Testphase stellt die Startseite die Kacheln Ihres Pfads an den Anfang:
+
+- **IT-Budget**: Der [Bereich Budgetverwaltung](#budget-management-section) steht an erster Stelle, angeführt von der Kachel der ersten Schritte.
+- **IT-Landkarte**: Die Kacheln **Compliance**, **Schwachstellen im Bestand** und **Netbox-Synchronisierung** stehen an erster Stelle.
+- **Projekte und Anfragen**: Die Kacheln zu Projekten und Anfragen stehen an erster Stelle.
+
+Ohne Pfad behalten die Kacheln ihre gewohnte Reihenfolge.
+
 ## Zeile zum Einschalten von Plaid
 
 Während einer Cloud-Testphase sehen Administratoren der Plaid-Einstellungen unter der Zeile zu den Beispieldaten eine Zeile, solange Plaid ausgeschaltet ist und das inklusive KANAP-Modell angeboten wird: „Plaid, der KANAP-Assistent, ist ausgeschaltet.“ **Einschalten** öffnet die übliche Bestätigung des inklusiven Modells. Mit der Bestätigung wird Plaid eingeschaltet. Die Schaltfläche zum Schließen (**×**) blendet die Zeile in diesem Browser aus. Nach dem Wechsel zu einem kostenpflichtigen Tarif erscheint die Zeile nicht mehr, On-Premise ebenfalls nicht. Siehe [Plaid-Einstellungen](ai-settings.md).
@@ -236,6 +246,97 @@ Zeigt Aufgaben an, die seit langem nicht aktualisiert wurden. Jedes Element zeig
 **Einstellungen**: Bereich (`my`, `team`, `all`) und Schwellenwert in Tagen (30 bis 365).
 
 **Erfordert**: `tasks:reader`
+
+## Bereich Budgetverwaltung { #budget-management-section }
+
+Unter den Kacheln zeigt der Bereich **Budgetverwaltung**, wo Ihre IT-Ausgaben stehen: das Budget nach Art und Jahr, Ihre eigenen Budgetzeilen, die nächsten Verlängerungen, die Datenqualität und die Zeilen, die Ihre Aufmerksamkeit verdienen. Er erscheint, wenn Sie Budgetzeilen oder Verträge lesen können.
+
+### Aktionen des Bereichs
+
+Die Kopfzeile des Bereichs enthält Schaltflächen für schnelle Aktionen:
+
+- **Neue OPEX-Zeile** und **Neue CAPEX-Zeile** öffnen eine neue Budgetzeile dieses Typs. Sie erscheinen, wenn Ihre Rolle mindestens die Stufe Mitglied auf Budget hat (`budget:member`)
+- **Neuer Vertrag** öffnet einen neuen Vertrag. Die Schaltfläche erscheint, wenn Ihre Rolle Verträge anlegen darf
+- **Anpassen**, rechts, öffnet die Einstellungen dieses Bereichs. Siehe [Den Bereich anpassen](#customizing-the-budget-section)
+
+### Layout des Bereichs
+
+Die Kacheln des Bereichs sind in einem responsiven Raster angeordnet: drei Spalten auf einem breiten Bildschirm, zwei auf einem Tablet und eine einzelne Spalte auf dem Mobilgerät. Die Kachel **Budget** ist breiter: zwei Spalten auf einem breiten Bildschirm, die volle Breite auf einem Tablet. Jede Kachel hat ein Symbol, einen Titel und in der Regel eine Schaltfläche, die Sie zur vollständigen Seite hinter den Daten führt.
+
+Mehrere Kacheln haben in ihrem Kopf die Tabs **Alle**, **OPEX** und **CAPEX**, mit denen Sie den Typ der Zeilen wählen, die sie abdecken. Jede Kachel merkt sich Ihre Wahl in Ihrem Browser.
+
+Die Kacheln sind unten in ihrer Standardreihenfolge aufgeführt. Ihre offenen Aufgaben stehen oben in der Kachel **Meine Aufgaben**.
+
+### Budget
+
+Eine Tabelle, die drei Geschäftsjahre abdeckt: Vorjahr (J-1), aktuelles Jahr (J) und nächstes Jahr (J+1). Jedes Jahr hat drei Zeilen: **OPEX**, **CAPEX** und **Gesamt**. Die Wertspalten sind die Budgetspalten, die Ihre Organisation anzeigt, unter ihren Namen (**Budget**, **Revision**, **Ist-Werte** und **Erwarteter Endwert** mit den Standardeinstellungen, dazu **Prognose**, wenn sie angezeigt wird). Unter [Anpassen](#customizing-the-budget-section) können Sie weniger davon behalten. Eine Spalte erscheint, sobald sie für mindestens eine Zeile einen Betrag enthält. Ausgeblendete Spalten erscheinen nie. Alle Beträge sind auf den nächsten Tausender gerundet und mit dem Suffix „k“ angezeigt (z. B. `7.846 k`). Die Trennzeichen folgen der Sprache der Oberfläche.
+
+Klicken Sie auf einen Betrag, um die [Liste der Budgetzeilen](budget-lines.md) auf diesem Typ zu öffnen. Ein Betrag in **Gesamt** öffnet die Liste auf beiden Typen. Klicken Sie auf **Ansehen**, um die Liste zu öffnen.
+
+### Datenqualität
+
+Prüfungen, die Ihnen helfen, unvollständige Zeilen auf einen Blick zu erkennen. Die Kachel zeigt eine Spalte mit Zählern pro Typ: **OPEX** und **CAPEX** nebeneinander. Die Zähler umfassen die Zeilen, die die Liste standardmäßig zeigt (**Anzeigen: Aktiv**).
+
+- **Ohne IT-Verantwortlichen**: Zeilen ohne IT-Verantwortlichen
+- **Ohne Fachbereichsverantwortlichen**: Zeilen ohne Fachbereichsverantwortlichen
+- **Ohne zahlendes Unternehmen**: Zeilen ohne zahlendes Unternehmen
+- **Ohne Kostenstelle**: Zeilen ohne Kostenstelle
+- **Ohne Budget im nächsten Jahr**: Zeilen, deren Standardspalte für das nächste Jahr null oder leer ist. Die Prüfung nennt Ihre Standardspalte
+- **Konto nicht im Kontenplan des Unternehmens**: Zeilen, deren Konto nicht zum Kontenplan des zahlenden Unternehmens gehört
+
+Ein Zähler wird orange (rot bei der Kontenplan-Prüfung), wenn er über null liegt. Klicken Sie auf einen Zähler, um die Liste genau mit den Zeilen zu öffnen, die er zählt.
+
+### Mein Budget
+
+Die Zeilen auf Ihren Namen, in der Standardspalte des aktuellen Jahres (der Untertitel nennt sie, zum Beispiel **Budget, J**). Wählen Sie den Typ mit den Tabs **Alle** / **OPEX** / **CAPEX**.
+
+- **Als IT-Verantwortlicher**, **Als Fachbereichsverantwortlicher** und **Als Budgetverantwortlicher**: wie viele Zeilen Sie in jeder Rolle halten, und ihre Summe. Klicken Sie auf eine Zeile, um die Liste mit diesen Zeilen zu öffnen
+- **Meine Zeilen**: Ihre drei größten Zeilen, unabhängig von der Rolle, mit ihrer Referenz. Klicken Sie auf eine, um sie zu öffnen
+
+Halten Sie keine Zeile, zeigt die Kachel „Keine Budgetzeilen auf Ihren Namen“.
+
+### Nächste Verlängerungen
+
+Listet die fünf Verträge, die als Nächstes fällig sind, heute eingeschlossen, in der Reihenfolge der Spalte **Nächste Frist** der Vertragsliste: Ein Vertrag mit stillschweigender Verlängerung erscheint mit seinem nächsten Kündigungstermin, jeder andere Vertrag mit seinem Ende. Abgelaufene Verträge erscheinen nicht.
+
+Klicken Sie auf **Alle anzeigen**, um die Verträge-Seite zu öffnen.
+
+### Top-Zeilen
+
+Die fünf größten Zeilen für das aktuelle Jahr, nach der Standardspalte sortiert. Der Untertitel nennt die Spalte, zum Beispiel **Budget, J**. Beträge sind auf Tausender gerundet mit dem Suffix „k“, mit den Trennzeichen der Sprache der Oberfläche.
+
+Wählen Sie den Typ mit den Tabs **Alle** / **OPEX** / **CAPEX**. Klicken Sie auf **Öffnen**, um den vollständigen Bericht **Top-Zeilen** für denselben Typ anzuzeigen.
+
+### Stärkste Zuwächse
+
+Die fünf Zeilen mit dem größten Anstieg in der Standardspalte im Vergleich zum Vorjahr. Der Untertitel nennt die Spalte, zum Beispiel **Budget, J vs J-1**. Zeilen, deren Betrag gleich geblieben oder gesunken ist, erscheinen nicht. Ein kleiner Anstieg erscheint in voller Höhe. Ein größerer wird verkürzt, zum Beispiel `340,1 k`.
+
+Wählen Sie den Typ mit den Tabs **Alle** / **OPEX** / **CAPEX**. Klicken Sie auf **Öffnen**, um den vollständigen Bericht **Top Anstieg / Rückgang** für denselben Typ anzuzeigen.
+
+### Nach Kostenstelle
+
+Die fünf Kostenstellen mit der größten Summe in der Standardspalte des aktuellen Jahres, mit einem Balken für jede. Zeilen ohne Kostenstelle zählen zusammen als **Ohne Kostenstelle**. Wählen Sie den Typ mit den Tabs **Alle** / **OPEX** / **CAPEX**. Klicken Sie auf eine Zeile, um die Liste mit den Zeilen dieser Kostenstelle zu öffnen.
+
+### Aktuelle Änderungen
+
+Die fünf zuletzt bearbeiteten Budgetzeilen, OPEX und CAPEX zusammen. Jede Zeile zeigt das Datum der letzten Bearbeitung, die Referenz der Zeile, ihren Namen und ihren Typ. Klicken Sie auf eine Zeile, um die Budgetzeile zu öffnen.
+
+Ohne Lesezugriff auf Budgetzeilen (`budget:reader`) sind die Budget-Kacheln ausgeblendet. **Nächste Verlängerungen** erfordert Lesezugriff auf Verträge.
+
+### Beträge ohne Wechselkurs
+
+Hat die Währung einer Zeile für ein Jahr keinen Wechselkurs, ist ihr Betrag nicht in den Summen dieses Jahres enthalten. Die Kacheln **Budget**, **Stärkste Zuwächse**, **Mein Budget** und **Nach Kostenstelle** zeigen dann einen einzeiligen Hinweis, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen beim fehlenden Kurs öffnet. Nennt der Hinweis nur eine Währung und ein Jahr, öffnet sich direkt der Dialog für den manuellen Kurs. In **Top-Zeilen** zeigt eine solche Zeile ihren Betrag in ihrer eigenen Währung mit einer kleinen orangefarbenen Markierung. Siehe [Manuelle Kurse](currencies.md#manuelle-kurse).
+
+### Den Bereich anpassen { #customizing-the-budget-section }
+
+Klicken Sie auf **Anpassen**, um **Einstellungen des Budget-Dashboards** zu öffnen. Ihre Wahl gilt nur für Ihre eigene Startseite.
+
+- **Eine Kachel anzeigen oder ausblenden**: Haken Sie sie an oder ab. Der Dialog listet die Kacheln, die Ihre Rolle sehen darf
+- **Die Reihenfolge ändern**: Ziehen Sie eine Kachel an ihrem Griff rechts
+- **Betragsspalten der Kachel Budget**: **Spalten des Mandanten**, standardmäßig angehakt, folgt den Spalten, die Ihre Organisation anzeigt. Haken Sie es ab, um die Spalten selbst zu wählen. Behalten Sie mindestens eine, sonst zeigt der Dialog „Wählen Sie mindestens eine Betragsspalte.“
+- **Speichern** übernimmt Ihre Wahl. **Auf Standardwerte zurücksetzen** zeigt wieder jede Kachel an, in der Standardreihenfolge und mit den Spalten der Organisation
+
+Ein Budgetadministrator wählt die Standardspalte und die Spaltennamen unter [Budgetspalten](budget-operations.md#budgetspalten). Die Kacheln und die Berichte, die sie öffnen, folgen dieser Wahl.
 
 ## Ihr Dashboard anpassen
 
