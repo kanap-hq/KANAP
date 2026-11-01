@@ -60,13 +60,13 @@ Une fois le parcours choisi, la tuile **Vos cinq premiers pas** vient en premier
 - Avec l'exemple, ouvrir une étape la marque comme faite.
 - Avec vos données, cliquez sur **Fait** dans l'explication, ou sur la marque à côté de l'étape dans la tuile. La marque annule aussi une étape.
 
-Quand les cinq étapes sont faites, la tuile propose les deux autres parcours. Le bouton de fermeture (**×**) masque la tuile. Pour l'afficher de nouveau, utilisez **Afficher les premiers pas** dans **À propos de KANAP**.
+Quand les cinq étapes sont faites, la tuile propose les deux autres parcours. Elle propose aussi **Recommencer ce parcours**, qui défait les cinq étapes de ce parcours. Le bouton de fermeture (**×**) masque la tuile. Pour l'afficher de nouveau, utilisez **Afficher les premiers pas** dans **À propos de KANAP**.
 
 | Parcours | Avec l'exemple | Avec vos données |
 |---|---|---|
 | Budget IT | La vue d'ensemble, Une ligne budgétaire, Un rapport, Une question à Plaid, Vos données | Votre société, Vos lignes, Un contrat lié, Votre premier rapport, Un collègue |
 | Cartographie du SI | La liste des applications, Une fiche d'application, Les serveurs, Les technologies, fins de support et failles, Vos données | Vos applications, Vos technologies, Vos serveurs, Ce que KANAP a trouvé, Un collègue |
-| Projets et demandes | Une demande et son score, Le projet qui en est né, Les tâches, Le temps et la charge, Vos données | Votre première demande, Votre projet, Les premières tâches, Le budget du projet, Un collègue |
+| Projets et demandes | Une demande et son score, Le projet issu de la demande, Les tâches, Les rapports, Vos données | Votre première demande, Votre projet, Les premières tâches, Le budget du projet, Un collègue |
 
 ## Ligne pour activer Plaid
 

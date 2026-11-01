@@ -60,13 +60,13 @@ Una vez elegido el recorrido, el mosaico **Sus cinco primeros pasos** aparece pr
 - Con el ejemplo, abrir un paso lo marca como hecho.
 - Con sus datos, haga clic en **Hecho** en la explicación, o en la marca junto al paso en el mosaico. La marca también deshace un paso.
 
-Cuando los cinco pasos están hechos, el mosaico ofrece los otros dos recorridos. El botón de cierre (**×**) oculta el mosaico. Para mostrarlo de nuevo, use **Mostrar los primeros pasos** en **Acerca de KANAP**.
+Cuando los cinco pasos están hechos, el mosaico ofrece los otros dos recorridos. También ofrece **Reiniciar este recorrido**, que deshace los cinco pasos de este recorrido. El botón de cierre (**×**) oculta el mosaico. Para mostrarlo de nuevo, use **Mostrar los primeros pasos** en **Acerca de KANAP**.
 
 | Recorrido | Con el ejemplo | Con sus datos |
 |---|---|---|
 | Presupuesto de TI | La vista general, Una línea presupuestaria, Un informe, Una pregunta a Plaid, Sus datos | Su empresa, Sus líneas, Un contrato vinculado, Su primer informe, Un colega |
 | Mapa del SI | La lista de aplicaciones, Una ficha de aplicación, Los servidores, Tecnologías, fin de soporte y vulnerabilidades, Sus datos | Sus aplicaciones, Sus tecnologías, Sus servidores, Lo que KANAP ha encontrado, Un colega |
-| Proyectos y solicitudes | Una solicitud y su puntuación, El proyecto que nació de ella, Las tareas, El tiempo y el esfuerzo, Sus datos | Su primera solicitud, Su proyecto, Las primeras tareas, El presupuesto del proyecto, Un colega |
+| Proyectos y solicitudes | Una solicitud y su puntuación, El proyecto nacido de la solicitud, Las tareas, Los informes, Sus datos | Su primera solicitud, Su proyecto, Las primeras tareas, El presupuesto del proyecto, Un colega |
 
 ## Línea para activar Plaid
 
