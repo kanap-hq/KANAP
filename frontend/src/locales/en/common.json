@@ -1629,7 +1629,7 @@
         },
         "map_application": {
           "title": "An application record",
-          "hint": "Open an application: criticality, owners, and under Relations its technologies, servers, interfaces and contracts. Everything links here."
+          "hint": "Here is an application record. Explore the properties panel and the tabs to discover every facet of this key object of KANAP."
         },
         "map_technologies": {
           "title": "Technologies, end of support and vulnerabilities",
@@ -1637,7 +1637,7 @@
         },
         "map_import": {
           "title": "Your data",
-          "hint": "Export the application list of the example to see its format, then import yours: technologies, end of support and vulnerabilities follow."
+          "hint": "Export the applications as csv or Excel, then use the template to import yours. Go on with the technologies to attach their end of support and vulnerabilities."
         },
         "own_applications": {
           "title": "Your applications",
@@ -1673,11 +1673,11 @@
         },
         "map_applications": {
           "title": "The application list",
-          "hint": "Every application of the example, with its criticality, its owner and its company. It is the inventory: filter, sort."
+          "hint": "Every application of the example, with its criticality, its owner and its company. It is the inventory: filter, sort, search."
         },
         "map_assets": {
           "title": "The servers",
-          "hint": "Each server tells where the applications run: environment, site, installed technologies."
+          "hint": "Each server tells where the applications run: environment, site, installed technologies. Open a record to learn more."
         },
         "own_findings": {
           "title": "What KANAP found",

@@ -11,7 +11,7 @@ import { ONBOARDING_ANGLES, type OnboardingState } from './onboardingApi';
 import api from '../../api';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { buildItemPath, formatItemRef } from '../../utils/item-ref';
-import { STEP_PARAM, STEP_SCREENS, stepHref, type StepLocationState } from './onboardingPaths';
+import { STEP_PARAM, STEP_SCREENS, stepHref, type OpenedRecord, type StepLocationState } from './onboardingPaths';
 import { useOnboarding, useOnboardingActions } from './useOnboarding';
 
 const rowSx = {
@@ -22,40 +22,56 @@ const rowSx = {
 } as const;
 
 type TopLine = { id: string; item_number: number | null; product_name: string | null };
+type Application = { id: string; name: string | null };
+type Opened = { path: string; record: string | null };
 
 /**
- * Opens the largest budget line of the year (the first of the list), named in the hint. Without
- * a line, or when the list cannot be read, the step opens the list.
+ * Opens the record of a step (the largest budget line of the year, the first of the most critical
+ * applications), named in the hint. Without a record, or when the list cannot be read, the step
+ * opens the list.
  */
-function useOpenTopLine(stepKey: string) {
+function useOpenRecord(stepKey: string, kind: OpenedRecord) {
   const navigate = useNavigate();
   const { defaultSort } = useBudgetColumns();
   return React.useCallback(async () => {
-    const year = new Date().getFullYear();
-    const fallback = stepHref(stepKey) ?? '/ops/budget';
+    const fallback = stepHref(stepKey) ?? '/';
+    const find = async (): Promise<Opened | null> => {
+      if (kind === 'topBudgetLine') {
+        const year = new Date().getFullYear();
+        const res = await api.get<{ items: TopLine[] }>('/budget-lines/summary', {
+          params: { limit: 1, sort: defaultSort, years: [year - 1, year].join(',') },
+        });
+        const line = res.data.items?.[0];
+        if (!line) return null;
+        const ref = line.item_number != null ? formatItemRef('budget', line.item_number) : line.id;
+        return {
+          path: buildItemPath('budget', ref),
+          record: [line.item_number != null ? ref : null, line.product_name].filter(Boolean).join(' '),
+        };
+      }
+      const res = await api.get<{ items: Application[] }>('/applications', { params: { limit: 1, sort: 'criticality:DESC' } });
+      const application = res.data.items?.[0];
+      return application ? { path: buildItemPath('application', application.id), record: application.name } : null;
+    };
     try {
-      const res = await api.get<{ items: TopLine[] }>('/budget-lines/summary', {
-        params: { limit: 1, sort: defaultSort, years: [year - 1, year].join(',') },
-      });
-      const line = res.data.items?.[0];
-      if (!line) { navigate(fallback); return; }
-      const ref = line.item_number != null ? formatItemRef('budget', line.item_number) : line.id;
-      const state: StepLocationState = { onboardingRecord: [line.item_number != null ? ref : null, line.product_name].filter(Boolean).join(' ') };
-      navigate(`${buildItemPath('budget', ref)}?${STEP_PARAM}=${encodeURIComponent(stepKey)}`, { state });
+      const opened = await find();
+      if (!opened) { navigate(fallback); return; }
+      const state: StepLocationState = { onboardingRecord: opened.record ?? undefined };
+      navigate(`${opened.path}?${STEP_PARAM}=${encodeURIComponent(stepKey)}`, { state });
     } catch {
       navigate(fallback);
     }
-  }, [defaultSort, navigate, stepKey]);
+  }, [defaultSort, kind, navigate, stepKey]);
 }
 
-function TopLineStepLink({ stepKey, children, sx }: { stepKey: string; children: React.ReactNode; sx: object }) {
-  const openTopLine = useOpenTopLine(stepKey);
+function RecordStepLink({ stepKey, kind, children, sx }: { stepKey: string; kind: OpenedRecord; children: React.ReactNode; sx: object }) {
+  const openRecord = useOpenRecord(stepKey, kind);
   return (
     <Link
       component="button"
       type="button"
       underline="hover"
-      onClick={() => { void openTopLine(); }}
+      onClick={() => { void openRecord(); }}
       sx={{ ...sx, textAlign: 'left', font: 'inherit' }}
     >
       {children}
@@ -98,8 +114,8 @@ function StepRow({ stepKey, done, next, busy, onToggle }: {
             : <RadioButtonUncheckedIcon sx={{ fontSize: 18, color: 'text.disabled' }} />}
         </IconButton>
       </Tooltip>
-      {STEP_SCREENS[stepKey]?.opensTopLine ? (
-        <TopLineStepLink stepKey={stepKey} sx={linkSx}>{content}</TopLineStepLink>
+      {STEP_SCREENS[stepKey]?.opensRecord ? (
+        <RecordStepLink stepKey={stepKey} kind={STEP_SCREENS[stepKey].opensRecord!} sx={linkSx}>{content}</RecordStepLink>
       ) : (
         <Link component={RouterLink} to={href ?? '#'} underline="hover" sx={linkSx}>{content}</Link>
       )}

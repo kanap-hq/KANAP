@@ -7,14 +7,19 @@ import type { OnboardingAngle } from './onboardingApi';
  */
 export type StepTarget = 'title' | 'composer' | 'tabs' | 'export';
 
-/** `opensTopLine`: the step opens the largest budget line of the year, its list when there is none. */
-export type StepScreen = { to: string; target: StepTarget; opensTopLine?: boolean };
+/**
+ * `opensRecord`: the step opens one record of its list rather than the list (the largest budget
+ * line of the year, the first of the most critical applications), the list when there is none.
+ */
+export type OpenedRecord = 'topBudgetLine' | 'mostCriticalApplication';
+
+export type StepScreen = { to: string; target: StepTarget; opensRecord?: OpenedRecord };
 
 const title = (to: string): StepScreen => ({ to, target: 'title' });
 
 export const STEP_SCREENS: Record<string, StepScreen> = {
   budget_overview: title('/ops/budget'),
-  budget_line: { to: '/ops/budget', target: 'tabs', opensTopLine: true },
+  budget_line: { to: '/ops/budget', target: 'tabs', opensRecord: 'topBudgetLine' },
   budget_report: title('/ops/reports/top-opex'),
   budget_plaid: { to: '/ai', target: 'composer' },
   budget_import: { to: '/ops/budget', target: 'export' },
@@ -24,10 +29,10 @@ export const STEP_SCREENS: Record<string, StepScreen> = {
   own_report: title('/ops/reports/top-opex'),
   own_invite: title('/admin/users'),
   map_applications: title('/it/applications'),
-  map_application: title('/it/applications'),
+  map_application: { to: '/it/applications', target: 'tabs', opensRecord: 'mostCriticalApplication' },
   map_assets: title('/it/assets'),
   map_technologies: title('/it/technologies/end-of-support'),
-  map_import: title('/it/applications'),
+  map_import: { to: '/it/applications', target: 'export' },
   own_applications: title('/it/applications'),
   own_technologies: title('/it/technologies'),
   own_assets: title('/it/assets'),

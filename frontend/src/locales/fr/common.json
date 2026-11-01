@@ -1629,7 +1629,7 @@
         },
         "map_application": {
           "title": "Une fiche d'application",
-          "hint": "Ouvrez une application : criticité, responsables, et dans Relations ses technologies, ses serveurs, ses interfaces et ses contrats. Tout se relie ici."
+          "hint": "Voici la fiche d'une application. Explorez le panneau des propriétés et les différents onglets pour découvrir toutes les facettes de cet objet clé de KANAP."
         },
         "map_technologies": {
           "title": "Les technologies, fins de support et failles",
@@ -1637,7 +1637,7 @@
         },
         "map_import": {
           "title": "Vos données",
-          "hint": "Exportez la liste des applications de l'exemple pour voir le format, puis importez la vôtre : technologies, fins de support et failles suivent."
+          "hint": "Exportez les applications en csv ou en Excel, puis utilisez le modèle pour importer les vôtres. Poursuivez avec les technologies pour y associer les fins de support et les vulnérabilités."
         },
         "own_applications": {
           "title": "Vos applications",
@@ -1673,11 +1673,11 @@
         },
         "map_applications": {
           "title": "La liste des applications",
-          "hint": "Toutes les applications de l'exemple, avec leur criticité, leur responsable et leur société. C'est l'inventaire : filtrez, triez."
+          "hint": "Toutes les applications de l'exemple, avec leur criticité, leur responsable et leur société. C'est l'inventaire : filtrez, triez, recherchez."
         },
         "map_assets": {
           "title": "Les serveurs",
-          "hint": "Chaque serveur dit où tournent les applications : environnement, site, technologies installées."
+          "hint": "Chaque serveur dit où tournent les applications : environnement, site, technologies installées. Ouvrez une fiche pour en savoir plus."
         },
         "own_findings": {
           "title": "Ce que KANAP a trouvé",

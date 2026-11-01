@@ -12,13 +12,13 @@ import FirstStepsTile from './FirstStepsTile';
 import StepHint from './StepHint';
 
 const env = vi.hoisted(() => ({
-  summary: (() => Promise.resolve({ data: { items: [] } })) as (config?: unknown) => Promise<unknown>,
+  summary: (() => Promise.resolve({ data: { items: [] } })) as (config?: unknown, url?: string) => Promise<unknown>,
   server: null as unknown as ReturnType<typeof import('../../test/fakeOnboardingServer').createFakeOnboardingServer>,
 }));
 
 vi.mock('../../api', () => ({
   default: {
-    get: (url: string, config?: unknown) => (url === '/budget-lines/summary' ? env.summary(config) : env.server.api.get(url)),
+    get: (url: string, config?: unknown) => (['/budget-lines/summary', '/applications'].includes(url) ? env.summary(config, url) : env.server.api.get(url)),
     put: (url: string, body?: unknown) => env.server.api.put(url, body),
     post: (url: string, body?: unknown) => env.server.api.post(url, body),
     delete: (url: string) => env.server.api.delete(url),
@@ -90,6 +90,20 @@ describe('FirstStepsTile', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'A budget line' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/ops/budget/BL-7?step=budget_line'));
     expect((asked as { params: { limit: number; sort: string } }).params).toMatchObject({ limit: 1, sort: expect.stringMatching(/:DESC$/) });
+  });
+
+  it('opens the first of the most critical applications for the application step', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'cartography', mode: 'example' });
+    let asked: { url?: string; config?: unknown } = {};
+    env.summary = async (config, url) => {
+      asked = { url, config };
+      return { data: { items: [{ id: 'app-1', name: 'SAP S/4HANA' }] } };
+    };
+    renderAt('/', <FirstStepsTile />);
+    fireEvent.click(await screen.findByRole('button', { name: 'An application record' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/applications/app-1?step=map_application'));
+    expect(asked.url).toBe('/applications');
+    expect((asked.config as { params: unknown }).params).toEqual({ limit: 1, sort: 'criticality:DESC' });
   });
 
   it('opens the list for the budget line step when there is no line', async () => {
@@ -198,6 +212,19 @@ describe('StepHint', () => {
     ));
     const hint = await screen.findByRole('dialog', { name: 'Your data' });
     expect(hint).toHaveTextContent('Try the export to get the data as csv or xlsx.');
+  });
+
+  it('names no record in the application step: its sentence speaks of an application record', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'cartography', mode: 'example' });
+    renderAt({ pathname: '/it/applications/app-1', search: '?step=map_application', state: { onboardingRecord: 'SAP S/4HANA' } }, (
+      <main>
+        <h5 className="MuiTypography-h5">SAP S/4HANA</h5>
+        <div role="tablist" aria-label="tabs" />
+        <StepHint />
+      </main>
+    ));
+    const hint = await screen.findByRole('dialog', { name: 'An application record' });
+    expect(hint).toHaveTextContent('Here is an application record. Explore the properties panel and the tabs');
   });
 
   it('waits for "Done" with your own data, and names the colleague of the angle', async () => {
