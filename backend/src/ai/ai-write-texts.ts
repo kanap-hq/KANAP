@@ -1199,7 +1199,6 @@ const DELETE_IMPACT_ROWS: Record<string, ReadonlyArray<DeleteImpactRow>> = {
     { key: 'requests', link: true, labels: { en: 'Links to requests', fr: 'Liens aux demandes', de: 'Verknüpfungen mit Anfragen', es: 'Vínculos con solicitudes' } },
   ],
   locations: [
-    { key: 'assets', link: true, labels: { en: 'Assets that will lose their location', fr: 'Actifs qui perdront leur site', de: 'Assets, die ihren Standort verlieren', es: 'Activos que perderán su ubicación' } },
     { key: 'contacts', link: true, labels: { en: 'Links to contacts', fr: 'Liens aux contacts', de: 'Verknüpfungen mit Kontakten', es: 'Vínculos con contactos' } },
     { key: 'links', labels: { en: 'Links', fr: 'Liens', de: 'Verknüpfungen', es: 'Vínculos' } },
     { key: 'sub_items', labels: { en: 'Sub-items', fr: 'Sous-éléments', de: 'Unterelemente', es: 'Subelementos' } },
