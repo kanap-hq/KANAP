@@ -94,7 +94,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'ai/oauth/mcp-oauth.service.ts', member: 'revoke', site: 'tenant_executor_run', class: 'no_scoped_table', reason: 'MCP OAuth revocation: grants' },
 
   // Model configurations: the list serves every chat user, the rest is AI settings.
-  { file: 'ai/ai-model-configs.controller.ts', member: 'AiModelConfigsController', site: 'skip_tenant_transaction', class: 'no_scoped_table', reason: 'model configurations only (ai_model_configs); the settings routes are listed as reserved' , routes: ['archive', 'clearDefault', 'create', 'list', 'restore', 'setDefault', 'test', 'update'] },
+  { file: 'ai/ai-model-configs.controller.ts', member: 'AiModelConfigsController', site: 'skip_tenant_transaction', class: 'no_scoped_table', reason: 'model configurations only (ai_model_configs); the settings routes are listed as reserved' , routes: ['archive', 'clearDefault', 'create', 'list', 'reasoningEfforts', 'restore', 'setDefault', 'test', 'update'] },
   { file: 'ai/ai-model-configs.controller.ts', member: 'list', site: 'tenant_executor_run', class: 'no_scoped_table', reason: 'lists the model configurations a person may pick' },
   { file: 'ai/ai-model-configs.controller.ts', member: 'create', site: 'tenant_executor_run', class: 'reserved', reason: AI_SETTINGS },
   { file: 'ai/ai-model-configs.controller.ts', member: 'update', site: 'tenant_executor_run', class: 'reserved', reason: AI_SETTINGS },

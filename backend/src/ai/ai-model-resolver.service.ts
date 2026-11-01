@@ -9,6 +9,7 @@ import { AiAgentDefinition } from './control-plane/entities/ai-agent-definition.
 import { BUILTIN_REASONING_EFFORT, BuiltinProviderIdentity, PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 import { AiReasoningEffort } from './providers/ai-provider.types';
+import { reasoningEffortToSend } from './providers/reasoning-effort.capability';
 
 export type AiModelConsumer = { type: 'chat' } | { type: 'agent'; agentId: string };
 
@@ -29,7 +30,8 @@ export type ResolvedModel = {
   // Price of a token read from the provider's cache; null: the input price times the provider's factor.
   priceCacheReadEurPerMtok: number | null;
   // The effort sent with each call: the included model's fixed cap, or the registry model's own
-  // setting; null sends nothing (the provider's default).
+  // setting, when the model accepts it (reasoningEffortToSend); null sends nothing (the
+  // provider's default). The message usage records this value.
   reasoningEffort: AiReasoningEffort | null;
   // Per-model LLM timeout; null falls back to the caller's per-stage env default.
   timeoutMs: number | null;
@@ -214,7 +216,7 @@ export class AiModelResolverService {
         priceInputEurPerMtok: 0,
         priceOutputEurPerMtok: 0,
         priceCacheReadEurPerMtok: 0,
-        reasoningEffort: BUILTIN_REASONING_EFFORT,
+        reasoningEffort: reasoningEffortToSend(snapshot.provider, snapshot.model, BUILTIN_REASONING_EFFORT),
         timeoutMs: null,
         builtinRateLimits: snapshot.rateLimits,
       };
@@ -343,7 +345,7 @@ export class AiModelResolverService {
       priceInputEurPerMtok: parsePriceEurPerMtok(config.price_input_eur_per_mtok),
       priceOutputEurPerMtok: parsePriceEurPerMtok(config.price_output_eur_per_mtok),
       priceCacheReadEurPerMtok: parsePriceEurPerMtok(config.price_cache_read_eur_per_mtok ?? null),
-      reasoningEffort: config.reasoning_effort ?? null,
+      reasoningEffort: reasoningEffortToSend(config.provider, config.model, config.reasoning_effort),
       timeoutMs: config.llm_timeout_ms ?? null,
       builtinRateLimits: null,
     };

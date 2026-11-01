@@ -131,6 +131,10 @@ async function main() {
     assert.deepEqual(bodies.at(-1)!.cache_control, { type: 'ephemeral' });
     assert.equal('output_config' in bodies.at(-1)!, false);
 
+    // A level the model does not accept is not sent either (Sonnet 4.6 has no xhigh).
+    await run({ model: 'claude-sonnet-4-6', reasoningEffort: 'xhigh' });
+    assert.equal('output_config' in bodies.at(-1)!, false);
+
     // No cacheable prefix: the system prompt as it is, cached by the automatic breakpoint only.
     assert.equal(bodies.at(-1)!.system, 'You are a test.');
 

@@ -569,6 +569,38 @@ async function testOpenAiAsksForTheStreamUsageAndReadsItFromTheLastChunk() {
   ]);
 }
 
+// The reasoning tokens a response reports (completion_tokens_details) reach the usage, so the
+// connection test can say whether the model reasoned; absent, the usage has no such field.
+async function testReasoningTokensAreReadFromTheUsage() {
+  const baseParams = {
+    model: 'gpt-5-mini',
+    apiKey: 'test-key',
+    systemPrompt: 'Be precise.',
+    messages: [{ role: 'user', content: 'Hello' }],
+    tools: [],
+    maxTokens: 16,
+  };
+  resetState([
+    { choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] },
+    {
+      choices: [],
+      usage: { prompt_tokens: 20, completion_tokens: 14, completion_tokens_details: { reasoning_tokens: 12 } },
+    },
+  ]);
+  const events = await collectEvents(openaiCompatibleStream({ ...baseParams, providerId: 'openai', endpointUrl: null }));
+  assert.deepEqual(events.find((event) => event.type === 'done')?.usage, {
+    input_tokens: 20,
+    output_tokens: 14,
+    reasoning_tokens: 12,
+  });
+
+  resetState([
+    { choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }], usage: { prompt_tokens: 20, completion_tokens: 2, completion_tokens_details: null } },
+  ]);
+  const plain = await collectEvents(openaiCompatibleStream({ ...baseParams, providerId: 'custom', endpointUrl: 'https://openrouter.example/api/v1' }));
+  assert.deepEqual(plain.find((event) => event.type === 'done')?.usage, { input_tokens: 20, output_tokens: 2 });
+}
+
 async function run() {
   await testReasoningModelsPreferDeveloperRole();
   await testLengthFinishReasonWithPendingToolCallEmitsError();
@@ -585,6 +617,7 @@ async function run() {
   await testReasoningEffortIsSentOnlyWhenRequested();
   await testRefusedReasoningEffortFailsWithTheProviderMessage();
   await testOpenAiAsksForTheStreamUsageAndReadsItFromTheLastChunk();
+  await testReasoningTokensAreReadFromTheUsage();
 }
 
 void run();

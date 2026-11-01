@@ -9,6 +9,7 @@ import { AiSettings } from './ai-settings.entity';
 import { AiAgentDefinition } from './control-plane/entities/ai-agent-definition.entity';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 import { AI_REASONING_EFFORTS, AiReasoningEffort } from './providers/ai-provider.types';
+import { reasoningEffortSupport } from './providers/reasoning-effort.capability';
 
 export type AiModelConfigUsage = {
   chat: boolean;
@@ -471,6 +472,20 @@ export class AiModelConfigService {
         throw new BadRequestException(`reasoning_effort must be one of ${AI_REASONING_EFFORTS.join(', ')}, or null.`);
       }
       config.reasoning_effort = value;
+    }
+    if (
+      opts.isCreate
+      || ['provider', 'model', 'reasoning_effort'].some((key) => Object.prototype.hasOwnProperty.call(input, key))
+    ) {
+      const effort = config.reasoning_effort ?? null;
+      const accepted = reasoningEffortSupport(config.provider, config.model).levels;
+      if (effort !== null && !accepted.includes(effort)) {
+        throw new BadRequestException(
+          accepted.length === 0
+            ? `${config.model} takes no reasoning effort: leave it empty.`
+            : `${config.model} does not accept the reasoning effort ${effort}. Accepted: ${accepted.join(', ')}.`,
+        );
+      }
     }
     if (Object.prototype.hasOwnProperty.call(input, 'llm_timeout_ms')) {
       const value = input.llm_timeout_ms;

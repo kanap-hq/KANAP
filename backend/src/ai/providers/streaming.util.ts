@@ -6,6 +6,8 @@ export type StreamUsage = {
   cache_read_input_tokens?: number;
   /** Prompt tokens written to the provider's cache, when the provider reports them. */
   cache_write_input_tokens?: number;
+  /** Output tokens spent reasoning, when an OpenAI-compatible provider reports them. */
+  reasoning_tokens?: number;
 };
 
 export function isAbortError(error: unknown): boolean {

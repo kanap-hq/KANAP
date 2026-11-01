@@ -14,6 +14,8 @@ type OpenAiCompatibleUsage = {
   prompt_tokens_details?: { cached_tokens?: number | null } | null;
   // DeepSeek: the same part under its own name.
   prompt_cache_hit_tokens?: number | null;
+  // OpenAI, DeepSeek and others: the part of completion_tokens spent reasoning.
+  completion_tokens_details?: { reasoning_tokens?: number | null } | null;
 };
 
 // input_tokens stays prompt_tokens, which already counts the cached tokens on these APIs.
@@ -29,6 +31,10 @@ export function toUsage(usage?: OpenAiCompatibleUsage | null): StreamUsage | und
   const cacheRead = usage.prompt_tokens_details?.cached_tokens ?? usage.prompt_cache_hit_tokens;
   if (typeof cacheRead === 'number' && Number.isFinite(cacheRead)) {
     result.cache_read_input_tokens = cacheRead;
+  }
+  const reasoningTokens = usage.completion_tokens_details?.reasoning_tokens;
+  if (typeof reasoningTokens === 'number' && Number.isFinite(reasoningTokens)) {
+    result.reasoning_tokens = reasoningTokens;
   }
   return result;
 }
@@ -286,7 +292,8 @@ async function* streamCompletion(
   }
   request[params.maxTokensParam ?? 'max_completion_tokens'] = params.maxTokens;
   if (params.reasoningEffort) {
-    // OpenAI-style field; OpenRouter accepts it as an alias for reasoning.effort.
+    // OpenAI-style field, sent as set (reasoning-effort.capability.ts); OpenRouter accepts it as
+    // an alias for reasoning.effort.
     request.reasoning_effort = params.reasoningEffort;
   }
   if (params.providerId === 'openai') {

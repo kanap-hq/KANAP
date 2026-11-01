@@ -599,6 +599,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     reserved: ['archive', 'clearDefault', 'create', 'restore', 'setDefault', 'test', 'update'],
     allowed: {
       list: MODEL_CONFIGS_LIST, // GET (root)
+      reasoningEfforts: 'the reasoning efforts a provider and model accept: fixed rules, no tenant data', // GET reasoning-efforts
     },
   },
   {

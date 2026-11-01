@@ -15,14 +15,15 @@ import {
   AiReasoningEffort,
   AiStreamEvent,
 } from './providers/ai-provider.types';
+import { reasoningEffortToSend } from './providers/reasoning-effort.capability';
 
 export type AiProviderTestInput = {
   llm_provider?: string | null;
   llm_model?: string | null;
   llm_endpoint_url?: string | null;
   llm_api_key?: string | null;
-  // The registry model's reasoning effort, sent as a chat call would send it, so the test shows a
-  // provider that refuses the value.
+  // The registry model's reasoning effort, sent as a chat call would send it (not at all when the
+  // model does not accept it), so the test shows a provider that refuses the value.
   reasoning_effort?: AiReasoningEffort | null;
 };
 
@@ -116,6 +117,7 @@ export class AiProviderTestService {
       };
     }
 
+    const effortSent = reasoningEffortToSend(provider, model, input.reasoning_effort);
     try {
       const stream = adapter.createStream({
         model: model!,
@@ -127,34 +129,40 @@ export class AiProviderTestService {
         maxTokens: PROVIDER_TEST_MAX_TOKENS,
         timeoutMs: PROVIDER_TEST_TIMEOUT_MS,
         maxRetries: PROVIDER_TEST_MAX_RETRIES,
-        reasoningEffort: input.reasoning_effort ?? null,
+        reasoningEffort: effortSent,
       });
 
-      const iterator = stream[Symbol.asyncIterator]();
-      try {
-        const first = await iterator.next();
-        if (!first.done && (first.value as AiStreamEvent | undefined)?.type === 'error') {
+      // The answer is read to its end (a few tokens): the usage that closes it says whether the
+      // model reasoned. The latency stays the time to the first event.
+      let latencyMs: number | null = null;
+      let reasoningTokens: number | null = null;
+      for await (const event of stream as AsyncIterable<AiStreamEvent>) {
+        latencyMs ??= Date.now() - startedAt;
+        if (event.type === 'error') {
           return this.fail({
             provider,
             model,
             startedAt,
-            message: (first.value as { message?: string }).message || 'Provider test failed.',
+            message: event.message || 'Provider test failed.',
             validationErrors: [],
           });
         }
-
-        return {
-          ok: true,
-          provider,
-          model,
-          latency_ms: Date.now() - startedAt,
-          message: 'Provider test succeeded.',
-          validation_errors: [],
-        };
-      } finally {
-        // Only the first event is read: closing the stream releases its connection.
-        await iterator.return?.(undefined).catch(() => undefined);
+        if (event.type === 'done') {
+          reasoningTokens = event.usage?.reasoning_tokens ?? null;
+          break;
+        }
       }
+
+      return {
+        ok: true,
+        provider,
+        model,
+        latency_ms: latencyMs ?? Date.now() - startedAt,
+        message: 'Provider test succeeded.',
+        validation_errors: [],
+        reasoning_effort_sent: effortSent,
+        reasoning_tokens: reasoningTokens,
+      };
     } catch (error) {
       return this.fail({
         provider,

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { validate as isUuid } from 'uuid';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorator';
@@ -8,6 +8,7 @@ import { AiProviderTestService } from './ai-provider-test.service';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
 import { CreateAiModelConfigDto, UpdateAiModelConfigDto } from './dto/ai-model-config.dto';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
+import { reasoningEffortSupport } from './providers/reasoning-effort.capability';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 type AiModelConfigsRequest = {
@@ -75,6 +76,13 @@ export class AiModelConfigsController {
         };
       },
     );
+  }
+
+  // The reasoning efforts a provider and model accept, for the model dialog. Reads no tenant data.
+  @Get('reasoning-efforts')
+  reasoningEfforts(@Query('provider') provider?: string, @Query('model') model?: string) {
+    const support = reasoningEffortSupport(provider ?? null, model ?? null);
+    return { levels: support.levels, server_may_ignore: support.serverMayIgnore };
   }
 
   @ReservedToUnscopedDataAccess()

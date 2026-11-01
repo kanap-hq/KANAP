@@ -33,6 +33,10 @@ export type AiProviderTestResult = {
   latency_ms: number | null;
   message: string;
   validation_errors: string[];
+  // The effort the test call sent; null when none was (not set, or not accepted by the model).
+  reasoning_effort_sent?: AiReasoningEffort | null;
+  // Reasoning tokens the response reported (OpenAI-compatible providers); null when not reported.
+  reasoning_tokens?: number | null;
 };
 
 export type AiProviderImageAttachment = {
@@ -99,8 +103,9 @@ export type AiStreamParams = {
   parallelToolCalls?: boolean;
   debugTrace?: boolean;
   // How much a reasoning model may think before answering: the included model's fixed cap, or
-  // the effort an administrator set on a registry model. Null sends nothing (the provider's
-  // default). A server that refuses the value answers with an error, which the connection test shows.
+  // the effort an administrator set on a registry model, as reasoningEffortToSend() gives it.
+  // Null sends nothing (the provider's default). A server that refuses the value answers with an
+  // error, which the connection test shows.
   reasoningEffort?: AiReasoningEffort | null;
 };
 
