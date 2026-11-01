@@ -227,6 +227,8 @@
   "KNOWLEDGE_LIBRARY_LAST": "Es la última biblioteca que puede usar. Cree otra biblioteca antes de eliminarla.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "Esta carpeta todavía contiene {{usages}}. Muévala o elimínela primero.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_other": "Esta carpeta todavía contiene {{usages}}. Muévalas o elimínelas primero.",
+  "LOCATION_IN_USE_one": "Esta ubicación todavía tiene {{usages}}. Asígnelo a otra ubicación antes de eliminarla.",
+  "LOCATION_IN_USE_other": "Esta ubicación todavía tiene {{usages}}. Asígnelos a otra ubicación antes de eliminarla.",
   "currency_invalid": "Código de moneda desconocido: introduzca códigos ISO 4217 de tres letras, por ejemplo EUR, USD, CHF.",
   "turnover_fx_missing_all": "Ninguna de las empresas seleccionadas tiene un tipo de cambio hacia la moneda de reporting. Su facturación no se puede comparar. Introduzca los tipos, o elija otro criterio de asignación.",
   "name_required": "Introduzca un nombre.",

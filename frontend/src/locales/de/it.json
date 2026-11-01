@@ -3105,7 +3105,6 @@
         "history": "Verlauf"
       },
       "deleteTitle": "Standort löschen?",
-      "deleteMessage": "Dies löscht den Standort dauerhaft und hebt automatisch die Zuordnung aller verknüpften Assets auf.",
       "deleteUnsavedWarning": "Sie haben auch nicht gespeicherte Änderungen in diesem Bereich. Diese Änderungen gehen verloren.",
       "subLocationsAfterCreate": "Unterstandorte sind verfügbar, nachdem Sie den Standort erstellt haben.",
       "contactsAfterCreate": "Kontakte sind verfügbar, nachdem Sie den Standort erstellt haben.",

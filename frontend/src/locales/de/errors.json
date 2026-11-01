@@ -227,6 +227,8 @@
   "KNOWLEDGE_LIBRARY_LAST": "Dies ist die letzte Bibliothek, die Sie nutzen können. Erstellen Sie eine weitere Bibliothek, bevor Sie sie löschen.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "Dieser Ordner enthält noch {{usages}}. Verschieben oder löschen Sie ihn zuerst.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_other": "Dieser Ordner enthält noch {{usages}}. Verschieben oder löschen Sie sie zuerst.",
+  "LOCATION_IN_USE_one": "Dieser Standort hat noch {{usages}}. Ordnen Sie es einem anderen Standort zu, bevor Sie diesen löschen.",
+  "LOCATION_IN_USE_other": "Dieser Standort hat noch {{usages}}. Ordnen Sie sie einem anderen Standort zu, bevor Sie diesen löschen.",
   "currency_invalid": "Unbekannter Währungscode: Geben Sie dreistellige ISO-4217-Codes ein, zum Beispiel EUR, USD, CHF.",
   "turnover_fx_missing_all": "Keines der ausgewählten Unternehmen hat einen Wechselkurs in die Reporting-Währung. Ihr Umsatz kann nicht verglichen werden. Geben Sie die Kurse ein, oder wählen Sie ein anderes Zuordnungskriterium.",
   "name_required": "Geben Sie einen Namen ein.",
