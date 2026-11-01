@@ -248,6 +248,8 @@ TENANT_TABLES=(
   location_sub_items
   location_user_contacts
   locations
+  onboarding_dismissals
+  onboarding_steps
   portfolio_activities
   portfolio_categories
   portfolio_criteria
@@ -317,6 +319,7 @@ TENANT_TABLES=(
   technology_support_contacts
   technology_versions
   technology_vulnerabilities
+  tenant_onboarding
   user_dashboard_config
   user_data_access_nodes
   user_notification_preferences

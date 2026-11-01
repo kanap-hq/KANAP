@@ -575,6 +575,23 @@ const FIXTURE_ROWS: Row[] = [
   // The product named Access stays a technology write.
   { prompt: 'Ajoute Microsoft Access à AST-3', profile: 'write_business', mode: 'write' },
 
+  // Issue 1153: readings that the state verbs and the list verbs used to send to a write.
+  // "Active … alerts" names the alerts that are on, "Clear version history … please" asks for
+  // the history, and a column or a sort reshapes the answer. The nearest writes stay writes.
+  { prompt: 'Set up : quelles technologies n\'ont aucune version ?', profile: 'read_query', mode: 'read' },
+  { prompt: 'Active vulnerability alerts per technology', profile: 'read_query', mode: 'read' },
+  { prompt: 'Active alerts on TEC-3', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Clear version history of TEC-3 please', profile: 'entity_inspection', mode: 'entity', tools: ['get_record_history'] },
+  { prompt: 'Add a column with the IT owner to the technology list', profile: 'read_query', mode: 'read' },
+  { prompt: 'Ajoute une colonne responsable IT à la liste des technologies', profile: 'read_query', mode: 'read' },
+  { prompt: 'Change the sort to show owners of PostgreSQL first', profile: 'read_query', mode: 'read' },
+  { prompt: 'Add the web links https://… column to the list of technologies', profile: 'read_query', mode: 'read' },
+  { prompt: 'Activate vulnerability alerts on TEC-3', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+  { prompt: 'Active les alertes de failles de TEC-3', profile: 'write_business', mode: 'write', tools: ['set_technology_vulnerability_alerts'] },
+  { prompt: 'Clear the version history of TEC-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Change the owner column of TEC-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Ajoute une colonne au budget de OPEX-12', profile: 'write_financial', mode: 'write' },
+
   // Issue 1154: five writes the classifier sent to a read profile. A question beside each stays
   // a read. Cancelling a request stays a read (no cancelled status; the rows above).
   { prompt: 'Marque APP-3 comme retirée', profile: 'write_business', mode: 'write', tools: ['update_business_record'] },

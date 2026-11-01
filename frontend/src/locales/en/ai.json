@@ -368,8 +368,10 @@
       "get_record_history": "Get record history",
       "import_ticket": "Import ticket",
       "import_glpi_ticket": "Import GLPI ticket",
+      "list_help_topics": "Browse the user manual",
       "prepare_mutation_plan": "Prepare change plan",
       "query_entities": "Query entities",
+      "read_help_section": "Read the user manual",
       "search_all": "Search all",
       "search_knowledge": "Search knowledge",
       "web_search": "Search the web"
@@ -381,10 +383,10 @@
     "aliases": "Aliases: {{aliases}}"
   },
   "tokenUsage": {
-    "total": "Tokens",
-    "input": "In",
-    "output": "Out",
-    "lastInput": "Last input"
+    "total": "Volume processed",
+    "input": "Input tokens",
+    "output": "Output tokens",
+    "lastInput": "Context of the last request"
   },
   "usageIndicator": {
     "limitReached": "Monthly limit reached. Resets {{resetDate}}.",
@@ -404,7 +406,8 @@
       "builtinNotAccepted": "An administrator must confirm the AI provider in Admin > Plaid."
     },
     "suggestions": {
-      "applicationMention": "Summarize @APP-",
+      "applicationMention": "Summarize an application: type @ to pick one",
+      "budgetLines": "What are my five largest budget lines this year?",
       "knowledgeSearch": "Find documents about backups",
       "myProjects": "Which projects am I working on?",
       "overdueTasks": "Show me my overdue tasks"

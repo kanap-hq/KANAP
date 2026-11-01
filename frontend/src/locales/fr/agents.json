@@ -467,6 +467,7 @@
     "loadFailed": "Impossible de charger les profils de contexte partagé.",
     "saveFailed": "Impossible d'enregistrer le profil.",
     "archiveFailed": "Impossible d'archiver le profil.",
+    "restoreFailed": "Impossible de restaurer le profil.",
     "editTitle": "Modifier le profil de contexte partagé",
     "save": "Enregistrer les modifications",
     "description": "Description",
@@ -476,6 +477,7 @@
     "archived": "Archivé",
     "edit": "Modifier",
     "archive": "Archiver",
+    "restore": "Restaurer",
     "archiveTitle": "Archiver ce profil ?",
     "archiveBody": "« {{name}} » ne sera plus disponible pour les agents. Tout agent qui l'utilise actuellement fonctionnera sans contexte partagé jusqu'à ce que vous le pointiez vers un autre profil."
   },

@@ -14,10 +14,10 @@ Hay algo que conviene dejar claro desde el principio, porque condiciona todo bue
 - Ruta URL: `/agents/shared-context`
 - Permisos:
   - `ai_agents:reader` le permite abrir la página y leer la lista de perfiles
-  - `ai_agents:admin` (o `ai_settings:admin`) es necesario para crear, editar y archivar perfiles
+  - `ai_agents:admin` (o `ai_settings:admin`) es necesario para crear, editar, archivar y restaurar perfiles
 - Disponibilidad: toda la sección Agentes IA solo aparece cuando la IA está habilitada en la instancia y usted tiene `ai_agents:reader`
 
-Sin un nivel de administrador sigue viendo la lista completa de perfiles, pero el botón **Nuevo perfil** y los controles Editar y Archivar de cada fila quedan ocultos: la página es de solo lectura para usted.
+Sin un nivel de administrador sigue viendo la lista completa de perfiles, pero el botón **Nuevo perfil** y los controles Editar, Archivar y Restaurar de cada fila quedan ocultos: la página es de solo lectura para usted.
 
 ---
 
@@ -41,7 +41,7 @@ La sección **Perfiles** enumera todos los perfiles de la instancia. Cada fila m
 - La **Descripción**, cuando se ha proporcionado una.
 - Una línea de resumen: **{n} líneas** y, cuando esté disponible, **Actualizado el {time}**, para que pueda ver cuántas líneas de guía contiene el perfil y cuándo cambió por última vez.
 
-Los administradores disponen de un botón **Nuevo perfil** en la cabecera de la página, y de controles Editar y Archivar en cada fila activa. Los perfiles archivados son de solo lectura: no llevan controles Editar ni Archivar, porque no hay nada más que cambiar en un perfil que los agentes ya no pueden usar.
+Los administradores disponen de un botón **Nuevo perfil** en la cabecera de la página, de controles Editar y Archivar en cada fila activa, y de un control Restaurar en cada fila archivada. Un perfil archivado permanece en solo lectura hasta que lo restaure: no lleva control Editar.
 
 ---
 
@@ -67,7 +67,13 @@ Archivar sirve para retirar un perfil que ya no quiere que los agentes usen. Ant
 
 Esa es la consecuencia importante que hay que asimilar: archivar no traslada automáticamente los agentes afectados a un reemplazo. Cualquier agente que apuntaba al perfil archivado sigue funcionando, pero **sin** contexto compartido, hasta que entre en la configuración de ese agente y seleccione un perfil diferente. Si varios agentes comparten el perfil que va a archivar, planifique el cambio antes.
 
-Los perfiles archivados permanecen en la lista, atenuados y con la etiqueta **Archivado**, como registro, pero ya no pueden editarse ni adjuntarse a un agente.
+Los perfiles archivados permanecen en la lista, atenuados y con la etiqueta **Archivado**. Ya no pueden editarse ni adjuntarse a un agente hasta que los restaure.
+
+---
+
+## Restaurar un perfil
+
+**Restaurar** está en cada fila archivada, en el mismo lugar que Archivar en una fila activa. Vuelve a poner el perfil en activo y registra el cambio. Los agentes que siguen apuntando al perfil recuperan sus líneas, y usted puede volver a editarlo o adjuntarlo. El perfil conserva su clave mientras está archivado, así que un perfil nuevo con la misma clave se rechaza. Restaure el perfil existente para volver a usar esa clave.
 
 ---
 
@@ -97,4 +103,5 @@ La regla práctica: si quiere que el agente afirme un hecho y lo respalde (una p
 - Prefiera un número reducido de perfiles de amplia utilidad (por ejemplo, una base común para toda la empresa) en lugar de muchos casi duplicados. Cuantos menos perfiles, más fácil es mantenerlos al día, y las ediciones alcanzan a la vez a todos los agentes vinculados.
 - No cuele aquí hechos citables. Todo lo que quiera que un solicitante vea citado con una fuente pertenece a una [biblioteca de conocimiento](knowledge.md).
 - Antes de archivar un perfil compartido, anote qué agentes lo usan y reasígnelos primero: archivar los deja funcionando sin contexto compartido hasta que lo haga.
+- **Restaurar** vuelve a poner en activo un perfil archivado. Los agentes que siguen apuntando a él usan sus líneas de nuevo.
 - La **Descripción** es solo para usted y nunca llega al agente; úsela para anotar quién es responsable del perfil o para qué sirve, de modo que un compañero no tenga que adivinarlo más tarde.

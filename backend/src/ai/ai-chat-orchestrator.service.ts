@@ -64,7 +64,8 @@ import { AiBuiltinUsageService } from './platform/ai-builtin-usage.service';
 import { AiApprovalService } from './control-plane/approval/ai-approval.service';
 import { AiCapabilityRegistry, EXECUTE_APPROVED_PREVIEW_CAPABILITY } from './control-plane/capability/ai-capability.registry';
 import { AiCapabilityDispatcherService } from './control-plane/dispatcher/ai-capability-dispatcher.service';
-import { budgetColumnsAiContext, readBudgetColumns } from '../budget-columns/budget-columns.util';
+import { readBudgetColumns } from '../budget-columns/budget-columns.util';
+import { localizedBudgetColumnsAiContext, type LocalizedBudgetColumnAiContext } from '../budget-columns/budget-column-labels';
 import { loadAnalyticsAxes } from '../analytics/analytics-axes.util';
 import { analyticsDimensionsAiContext, AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
 import { findMarkdownPathLinks, replaceDataImageTags, replaceMarkdownDataImages } from '../common/text-scan';
@@ -1153,10 +1154,10 @@ function toolActivityPhase(toolName: string): AiChatActivityPhase {
   if (['get_entity_detail', 'get_entity_context', 'get_entity_comments', 'get_record_history'].includes(toolName)) {
     return 'reading_context';
   }
-  if (toolName === 'search_knowledge') {
+  if (toolName === 'search_knowledge' || toolName === 'list_help_topics') {
     return 'searching_knowledge';
   }
-  if (toolName === 'get_document') {
+  if (toolName === 'get_document' || toolName === 'read_help_section') {
     return 'reading_document';
   }
   if (toolName === 'web_search') {
@@ -1965,9 +1966,10 @@ export class AiChatOrchestratorService {
   private async loadBudgetColumnsPromptContext(
     ctx: AiExecutionContext & { manager: any },
     readableTypes: readonly string[],
-  ): Promise<ReturnType<typeof budgetColumnsAiContext> | undefined> {
+    screenLanguage: AiScreenLanguage | null,
+  ): Promise<LocalizedBudgetColumnAiContext[] | undefined> {
     if (!readableTypes.includes('budget_lines')) return undefined;
-    return budgetColumnsAiContext(await readBudgetColumns(ctx.manager, ctx.tenantId));
+    return localizedBudgetColumnsAiContext(await readBudgetColumns(ctx.manager, ctx.tenantId), screenLanguage);
   }
 
   /** The analytics dimensions budget lines may hold, for users who can read those lines; none otherwise. */
@@ -2368,7 +2370,7 @@ export class AiChatOrchestratorService {
               )
               : [];
             const currentUser = await this.loadCurrentUserPromptContext(ctx);
-            const budgetColumns = await this.loadBudgetColumnsPromptContext(ctx, readableTypes);
+            const budgetColumns = await this.loadBudgetColumnsPromptContext(ctx, readableTypes, currentUser.screenLanguage);
             const analyticsDimensions = await this.loadAnalyticsDimensionsPromptContext(ctx, readableTypes);
             const builtSystemPrompt = this.systemPrompt.buildWithMetadata({
               tenantName,
@@ -2584,7 +2586,7 @@ export class AiChatOrchestratorService {
           )
           : [];
         const currentUser = await this.loadCurrentUserPromptContext(ctx);
-        const budgetColumns = await this.loadBudgetColumnsPromptContext(ctx, readableTypes);
+        const budgetColumns = await this.loadBudgetColumnsPromptContext(ctx, readableTypes, currentUser.screenLanguage);
         const analyticsDimensions = await this.loadAnalyticsDimensionsPromptContext(ctx, readableTypes);
 
         const builtSystemPrompt = this.systemPrompt.buildWithMetadata({

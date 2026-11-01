@@ -1566,6 +1566,37 @@ export class AiEntityService {
            OR COALESCE(i.severity, '') ILIKE $3
            OR COALESCE(i.status, '') ILIKE $3
            OR COALESCE(i.category, '') ILIKE $3
+           -- Names and references of linked assets, applications and technologies,
+           -- the same text the search index stores at weight C. The row is the incident.
+           OR EXISTS (
+             SELECT 1 FROM incident_assets ia
+             JOIN assets a ON a.id = ia.asset_id AND a.tenant_id = ia.tenant_id
+             WHERE ia.incident_id = i.id AND ia.tenant_id = i.tenant_id
+               AND (
+                 a.name ILIKE $3
+                 OR COALESCE(a.asset_reference, '') ILIKE $3
+                 OR COALESCE(a.hostname, '') ILIKE $3
+                 OR COALESCE(a.fqdn, '') ILIKE $3
+               )
+           )
+           OR EXISTS (
+             SELECT 1 FROM incident_applications iap
+             JOIN applications app ON app.id = iap.application_id AND app.tenant_id = iap.tenant_id
+             WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id
+               AND (
+                 app.name ILIKE $3
+                 OR COALESCE(app.sequential_id, '') ILIKE $3
+               )
+           )
+           OR EXISTS (
+             SELECT 1 FROM incident_technologies it
+             JOIN technologies tec ON tec.id = it.technology_id AND tec.tenant_id = it.tenant_id
+             WHERE it.incident_id = i.id AND it.tenant_id = i.tenant_id
+               AND (
+                 tec.name ILIKE $3
+                 OR ('TEC-' || tec.item_number::text) ILIKE $3
+               )
+           )
          )
        ORDER BY score DESC,
                 CASE WHEN $2::text IS NOT NULL AND i.item_number::text LIKE $2 || '%' THEN i.item_number ELSE NULL END ASC NULLS LAST,
@@ -2988,7 +3019,7 @@ export class AiEntityService {
     const applicationRootParams: unknown[] = [applicationId, tenantId];
     const applicationRootScopeSql = appendParticipationScopeSql('applications', 'a', applicationRootParams, applicationAccessScope);
     const applications = await manager.query<any[]>(
-      `SELECT a.id, a.sequential_id, a.name, a.description, a.status, a.updated_at, a.lifecycle, a.environment, a.editor, a.criticality, a.hosting_model, a.data_class, a.version,
+      `SELECT a.id, a.sequential_id, a.name, a.description, a.status, a.updated_at, a.lifecycle, a.editor, a.criticality, a.hosting_model, a.data_class, a.version,
               a.cyber_criticality, a.recovery_wave, a.rto_minutes, a.rpo_minutes,
               -- Calendar days, as text: a date never shifts with the time zone.
               a.last_dr_test::text AS last_dr_test, a.go_live_date::text AS go_live_date, a.end_of_support_date::text AS end_of_support_date, a.retired_date::text AS retired_date
@@ -3013,7 +3044,7 @@ export class AiEntityService {
     const relatedApplicationParams: unknown[] = [applicationId, tenantId];
     const relatedApplicationScopeSql = appendParticipationScopeSql('applications', 'a', relatedApplicationParams, applicationAccessScope);
 
-    const [requestRows, projectRows, relatedApplicationRows, assetRows, ownerRows] = await Promise.all([
+    const [requestRows, projectRows, relatedApplicationRows, assetRows, ownerRows, instanceRows] = await Promise.all([
       manager.query<SearchRow[]>(
         `SELECT r.id, r.item_number, r.name AS label, ${requestSummarySql} AS summary, r.status, r.updated_at
          FROM portfolio_request_applications l
@@ -3071,6 +3102,15 @@ export class AiEntityService {
          ORDER BY ao.owner_type ASC, u.last_name ASC NULLS LAST, u.first_name ASC NULLS LAST, u.email ASC NULLS LAST`,
         [applicationId, tenantId],
       ),
+      // The environments of the deployments. The legacy applications.environment column is not read.
+      manager.query<Array<{ environment: string | null }>>(
+        `SELECT ai.environment
+         FROM app_instances ai
+         WHERE ai.application_id = $1
+           AND ai.tenant_id = $2
+         ORDER BY ai.environment ASC`,
+        [applicationId, tenantId],
+      ),
     ]);
 
     const businessOwners = ownerRows.filter((row) => row.owner_type === 'business').map((row) => toPersonMetadata(row));
@@ -3088,7 +3128,7 @@ export class AiEntityService {
         }),
         metadata: {
           lifecycle: application.lifecycle,
-          environment: application.environment,
+          environments: joinedDistinct(instanceRows.map((row) => row.environment)),
           editor: application.editor,
           criticality: application.criticality,
           cyber_criticality: application.cyber_criticality,

@@ -368,8 +368,10 @@
       "get_record_history": "Obtener historial",
       "import_ticket": "Importar ticket",
       "import_glpi_ticket": "Importar ticket GLPI",
+      "list_help_topics": "Explorar el manual de usuario",
       "prepare_mutation_plan": "Preparar plan de cambios",
       "query_entities": "Consultar entidades",
+      "read_help_section": "Leer el manual de usuario",
       "search_all": "Buscar todo",
       "search_knowledge": "Buscar en la base de conocimiento",
       "web_search": "Buscar en la web"
@@ -381,17 +383,17 @@
     "aliases": "Alias: {{aliases}}"
   },
   "tokenUsage": {
-    "total": "Tokens",
-    "input": "Entrada",
-    "output": "Salida",
-    "lastInput": "Ultima entrada"
+    "total": "Volumen procesado",
+    "input": "Tokens de entrada",
+    "output": "Tokens de salida",
+    "lastInput": "Contexto de la última solicitud"
   },
   "usageIndicator": {
-    "limitReached": "Monthly limit reached. Resets {{resetDate}}.",
-    "limitReachedCta": "Monthly limit reached.",
-    "openSettings": "Configure your own provider",
-    "remaining_one": "{{count}} message remaining this month",
-    "remaining_other": "{{count}} messages remaining this month"
+    "limitReached": "Límite mensual alcanzado. Se restablece el {{resetDate}}.",
+    "limitReachedCta": "Límite mensual alcanzado.",
+    "openSettings": "Configurar su propio proveedor",
+    "remaining_one": "{{count}} mensaje restante este mes",
+    "remaining_other": "{{count}} mensajes restantes este mes"
   },
   "workspace": {
     "empty": {
@@ -404,7 +406,8 @@
       "builtinNotAccepted": "Un administrador debe confirmar el proveedor de IA en Administración > Plaid."
     },
     "suggestions": {
-      "applicationMention": "Resume @APP-",
+      "applicationMention": "Resuma una aplicación: escriba @ para elegir una.",
+      "budgetLines": "¿Cuáles son mis cinco líneas presupuestarias más grandes este año?",
       "knowledgeSearch": "Encuentra documentos sobre copias de seguridad",
       "myProjects": "¿En qué proyectos estoy trabajando?",
       "overdueTasks": "Muéstrame mis tareas atrasadas"

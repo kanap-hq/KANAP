@@ -112,6 +112,8 @@ Les images stockées dans KANAP, comme les pièces jointes, s'affichent normalem
 
 Plaid utilise un petit ensemble d'outils internes pour répondre aux questions : `Search all`, `Search knowledge`, `Get document`, `Get entity context` et quelques autres. Chaque appel d'outil apparaît sous forme de ligne compacte sous le message (« a utilisé Search all · 8 résultats »). Vous n'avez généralement pas besoin de lire les détails de l'outil, mais ils sont là si vous voulez voir exactement sur quels enregistrements la réponse s'est appuyée.
 
+Lorsque vous demandez comment faire quelque chose dans KANAP, par exemple où se trouve un paramètre ou les étapes d'une tâche, Plaid lit le manuel utilisateur de votre version de KANAP, dans votre langue (`Parcourir le manuel utilisateur`, `Lire le manuel utilisateur`). Il décrit les écrans comme le fait le manuel et donne le lien de la section lue sur doc.kanap.net.
+
 `Search all` trouve les lignes budgétaires par le nom de leurs valeurs analytiques, et indique à Plaid les valeurs de chaque ligne. Plaid désigne une ligne budgétaire par sa référence `BL-12`, et ses liens ouvrent la ligne. Un nombre seul, comme 21, désigne `BL-21`. Les anciens numéros fonctionnent toujours : `OPX-12` ou `CPX-3` trouve sa ligne.
 
 Plaid lit les lignes OPEX et CAPEX ensemble. Une question qui ne nomme aucun des deux types porte sur les deux, et Plaid peut filtrer ou regrouper les lignes par type.
@@ -241,12 +243,11 @@ Rien de ce qui modifie les données de KANAP n'est appliqué en silence. L'aper�
 
 ## Indicateurs d'utilisation
 
-Au-dessus du composeur, deux petits indicateurs vous aident à garder à l'esprit les coûts et les limites :
+Au-dessus du composeur, un petit indicateur montre ce qu'il reste du volume mensuel inclus :
 
 - **Utilisation intégrée** : lorsque Plaid s'exécute sur le modèle inclus KANAP plutôt que sur l'un des modèles propres à votre organisation, cet indicateur montre combien de messages restent pour le mois en cours ainsi que la date de réinitialisation du quota. Un administrateur a confirmé ce modèle au préalable (voir [Paramètres Plaid](ai-settings.md#confirmer-le-modele-inclus-kanap)). Lorsque la limite est atteinte, le composeur est désactivé et un texte d'aide invite les administrateurs à basculer vers un modèle qui leur est propre ; voir [Modèles IA](ai-models.md).
-- **Utilisation des tokens** : une fine barre avec des compteurs de tokens en entrée/sortie pour la conversation en cours, ainsi que la taille de la dernière requête. Les longues conversations deviennent plus coûteuses avec le temps ; la barre rend ce coût visible afin que vous puissiez décider quand démarrer un nouveau fil.
 
-La barre d'utilisation des tokens n'apparaît qu'une fois que la conversation compte au moins un échange.
+Les personnes qui peuvent ouvrir **Administration > Plaid** voient aussi une fine barre sous le composeur, dès que la conversation compte au moins un échange. **Volume traité** additionne les tokens en entrée et en sortie de chaque message de cette conversation. Chaque question renvoie les messages précédents, si bien que le volume croît plus vite que le nombre de tours. **Contexte de la dernière requête** est l'entrée de la dernière question. La barre montre aussi les tokens en entrée et les tokens en sortie de la conversation.
 
 ## Conseils
 

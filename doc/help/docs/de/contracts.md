@@ -49,7 +49,7 @@ Jede Zeile öffnet den Vertrag. Ihre Suche, Filter und Sortierung bleiben bei de
 **Standardspalten**:
 
 - **Vertrag**, **Lieferant**, **Unternehmen**
-- **Nächste Frist**: der nächste Kündigungstermin eines Vertrags mit stillschweigender Verlängerung, oder das Ende jedes anderen Vertrags. Auf das Datum folgt „in n Tagen“. Ein abgelaufener Vertrag zeigt ausgegraut den Tag, an dem er endete
+- **Nächste Frist**: „Kündigung möglich bis {date}“, wenn dieses Datum der Kündigungstermin ist und vor dem Ende der Laufzeit liegt, oder „Endet am {date}“, wenn das Datum das Vertragsende ist. Die Zeile endet mit „in n Tagen“. Ein abgelaufener Vertrag zeigt ausgegraut den Tag, an dem er endete
 - **Stand**: siehe unten
 - **Jahresbetrag**: der Betrag bei Unterzeichnung, gefolgt von seiner Währung
 - **Verpflichtet**, **Budget** und **Abweichung** für das gewählte Budgetjahr. Siehe [Budgetspalten](#budgetspalten)

@@ -764,6 +764,8 @@ async function testListRegisteredToolsExposesRuntimeRegistry() {
       'get_record_history',
       'search_knowledge',
       'get_document',
+      'list_help_topics',
+      'read_help_section',
       'prepare_mutation_plan',
       'update_task_assignees',
       'undo_preview',

@@ -112,6 +112,8 @@ In KANAP gespeicherte Bilder, etwa Anhänge, werden wie gewohnt angezeigt. Ein B
 
 Plaid verwendet eine kleine Auswahl interner Tools, um Fragen zu beantworten: `Search all`, `Search knowledge`, `Get document`, `Get entity context` und einige weitere. Jeder Tool-Aufruf erscheint als kompakte Zeile unter der Nachricht („Alles durchsuchen verwendet · 8 Ergebnisse“). In der Regel müssen Sie die Tool-Details nicht lesen, aber sie sind vorhanden, falls Sie genau sehen möchten, auf welchen Datensätzen die Antwort beruht.
 
+Wenn Sie fragen, wie etwas in KANAP geht, etwa wo sich eine Einstellung befindet oder welche Schritte eine Aufgabe hat, liest Plaid das Benutzerhandbuch Ihrer KANAP-Version in Ihrer Sprache (`Benutzerhandbuch durchsuchen`, `Benutzerhandbuch lesen`). Es beschreibt die Bildschirme so, wie das Handbuch es tut, und verlinkt den gelesenen Abschnitt auf doc.kanap.net.
+
 `Search all` findet Budgetzeilen über die Namen ihrer Analysewerte und teilt Plaid mit, welche Werte jede Zeile hat. Plaid nennt eine Budgetzeile mit ihrer Referenz `BL-12`, und seine Links öffnen die Zeile. Eine Zahl allein, etwa 21, bedeutet `BL-21`. Die früheren Nummern funktionieren weiterhin: `OPX-12` oder `CPX-3` findet seine Zeile.
 
 Plaid liest OPEX- und CAPEX-Zeilen zusammen. Eine Frage, die keinen der beiden Typen nennt, gilt für beide, und Plaid kann die Zeilen nach Typ filtern oder gruppieren.
@@ -241,12 +243,11 @@ Nichts, was KANAP-Daten verändert, wird stillschweigend angewendet. Die Vorscha
 
 ## Nutzungsanzeigen
 
-Über dem Eingabefeld helfen Ihnen zwei kleine Anzeigen, Kosten und Grenzen im Blick zu behalten:
+Über dem Eingabefeld zeigt eine kleine Anzeige, wie viel vom inkludierten Monatsvolumen noch bleibt:
 
 - **Integrierte Nutzung**: Wenn Plaid mit dem inklusiven KANAP-Modell arbeitet und nicht mit einem der eigenen Modelle Ihrer Organisation, zeigt dies, wie viele Nachrichten im aktuellen Monat verbleiben und an welchem Datum das Kontingent zurückgesetzt wird. Ein Administrator hat dieses Modell zuvor bestätigt (siehe [Plaid-Einstellungen](ai-settings.md#das-inklusive-kanap-modell-bestatigen)). Ist das Limit erreicht, wird das Eingabefeld deaktiviert und ein Hinweistext fordert Administratoren auf, auf ein eigenes Modell zu wechseln; siehe [KI-Modelle](ai-models.md).
-- **Token-Nutzung**: ein schmaler Balken mit Zählern für Eingabe-/Ausgabe-Tokens der aktuellen Konversation sowie der Größe der letzten Anfrage. Lange Konversationen werden mit der Zeit teurer; der Balken macht diese Kosten sichtbar, sodass Sie entscheiden können, wann Sie einen neuen Verlauf beginnen.
 
-Der Token-Nutzungsbalken erscheint erst, wenn die Konversation mindestens einen Austausch enthält.
+Personen, die **Administration > Plaid** öffnen können, sehen außerdem einen schmalen Balken unter dem Eingabefeld, sobald die Konversation mindestens einen Austausch enthält. **Verarbeitetes Volumen** zählt die Eingabe- und Ausgabe-Tokens aller Nachrichten dieser Konversation zusammen. Jede Frage sendet die früheren Nachrichten erneut, daher wächst das Volumen schneller als die Zahl der Durchgänge. **Kontext der letzten Anfrage** ist die Eingabe der letzten Frage. Der Balken zeigt außerdem die Eingabe-Tokens und die Ausgabe-Tokens der Konversation.
 
 ## Tipps
 

@@ -5,7 +5,7 @@ import {
   type AiContextBudgetSectionBreakdown,
 } from './ai-context-budget.helper';
 import type { AiContextProfile } from './ai-context-profile';
-import type { budgetColumnsAiContext } from '../budget-columns/budget-columns.util';
+import type { LocalizedBudgetColumnAiContext } from '../budget-columns/budget-column-labels';
 import type { AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
 import { isoDateTimeInTimeZone, knownTimeZone } from '../common/csv-sheet';
 import { AI_PERSON_WITHOUT_NAME } from './query/ai-support.query';
@@ -27,7 +27,7 @@ type SystemPromptParams = {
   currentUser: CurrentUserPromptContext;
   contextProfile?: AiContextProfile;
   /** The tenant's budget columns, only for users who can read the budget lines. */
-  budgetColumns?: ReturnType<typeof budgetColumnsAiContext>;
+  budgetColumns?: LocalizedBudgetColumnAiContext[];
   /** The analytics dimensions budget lines may be given a value on, only for users who can read them. */
   analyticsDimensions?: AnalyticsDimensionsPromptContext;
   /** The user's IANA zone. Absent or unknown reads as UTC. */
@@ -51,6 +51,30 @@ export type BuiltSystemPrompt = {
   text: string;
   sections: AiContextBudgetSectionBreakdown[];
 };
+
+/** One budget column in the prompt: the name to answer with, or the four names when the profile sets no language. */
+function budgetColumnPromptEntry(column: LocalizedBudgetColumnAiContext) {
+  const name = normalizePromptValue(column.name);
+  const translated = column.names && {
+    en: normalizePromptValue(column.names.en),
+    fr: normalizePromptValue(column.names.fr),
+    de: normalizePromptValue(column.names.de),
+    es: normalizePromptValue(column.names.es),
+  };
+  const label = name
+    ? { name }
+    : translated?.en && translated.fr && translated.de && translated.es
+      ? { names: { en: translated.en, fr: translated.fr, de: translated.de, es: translated.es } }
+      : { name: `Column ${column.column}` };
+  return {
+    column: column.column,
+    ai_field_suffix: column.ai_field_suffix,
+    measure: column.measure,
+    ...label,
+    shown: column.shown,
+    default: column.default,
+  };
+}
 
 function normalizePromptValue(value: string | null | undefined): string | null {
   if (value == null) {
@@ -124,6 +148,7 @@ function toolUsageGuidelines(mode: AiContextProfile['promptMode']): string {
     '- Use describe_entity_filters/get_filter_values only when filter names or exact allowed values are uncertain.',
     '- Application classifications: read get_application_classification_catalog for complete tenant codes, labels, definitions, severity ranks and recovery order. get_filter_values returns observed values, not the catalog. Use maximum catalog rank (including deprecated historical levels for reads, active levels only for new assignments); return zero when no accessible application has that level, without falling back to the observed maximum. Use exact query filters, combined criteria and aggregate_entities counts, and paginate before claiming a complete list. Link applications to their /compliance tab.',
     '- Application reads include retired applications; the Applications list and the Compliance tile leave them out: add lifecycle {"not":["retired"]} to match them. last_dr_test is the last recovery test date. Tile attention points, on active catalog levels only: top business rank with last_dr_test [null] or on or before the same date last year (count [null] plus before the day after that date; they never overlap); top business rank with recovery_wave [null]; top data class rank with the lowest cyber rank.',
+    '- An application\'s environments are the environments of its deployments. An application with no deployment has none (environments is empty): do not describe an environment for it. The legacy column environment defaults to prod and is absent from application reads. A filter that still names that column does not state the application\'s environment.',
     '- Business criticality is chosen directly among the tenant levels of get_application_classification_catalog (code or exact label). The maximum tolerable downtime (MTD/DMIA) is an attribute of a level, never a field of an application: when a user mentions a downtime, pick the level whose definition covers it and never invent a downtime field. Cyber is a manual consequence assessment; confidentiality and recovery wave are independent. An unspecified classification stays null. If criticality is ambiguous between business and cyber, reuse an explicit conversational axis or ask which axis. Never fabricate justification or review.',
     '- Application create/update previews accept criticality, cyber_criticality, data_class, recovery_wave, rto_minutes (whole minutes; one day is 1440), rpo_minutes and classification_justification, including explicit null to clear one field. Use tenant codes. A preview shows whether an existing human review becomes stale. Catalog changes and human review are not AI write capabilities.',
 
@@ -139,6 +164,7 @@ function toolUsageGuidelines(mode: AiContextProfile['promptMode']): string {
     '- Discovery tools are ranked and incomplete. Authoritative query/aggregate tools can support exact answers when complete is true.',
     '- Prefer completeness over speed. Use generous limits and paginate when total exceeds returned or truncated is true before claiming "all".',
     '- Reference entities with readable refs such as PRJ-12, T-42, or INC-12. Never expose UUIDs.',
+    '- How to do something in KANAP (a screen, menu, button, setting or the steps of a task): read the user manual with list_help_topics and read_help_section before describing any screen, describe only what it says, and link the `url` of the section you read.',
   ];
 
   if (mode === 'knowledge') {
@@ -325,10 +351,7 @@ export class AiSystemPromptService {
       local_time: localTime,
       ...(params.budgetColumns?.length
         ? {
-          budget_columns: params.budgetColumns.map((column) => ({
-            ...column,
-            name: normalizePromptValue(column.name) ?? `Column ${column.column}`,
-          })),
+          budget_columns: params.budgetColumns.map(budgetColumnPromptEntry),
         }
         : {}),
       ...(analyticsDimensions ? { analytics_dimensions: analyticsDimensions } : {}),
@@ -341,9 +364,12 @@ export class AiSystemPromptService {
       `${JSON.stringify(currentUserContext, null, 2)}\n` +
       '```' +
       (params.budgetColumns?.length
-        ? '\n`budget_columns` lists the five amount columns of the budget lines as this tenant names them. ' +
+        ? '\n`budget_columns` lists the five amount columns of the budget lines. ' +
+          '`name` is the name to use: the workspace\'s own name when it set one, otherwise the product name in the user\'s language. ' +
+          'When the profile sets no language, a column without its own name lists `names` for en, fr, de and es: use the name in the language of the conversation. ' +
+          'Match a column the user names to that name, answer with that name only, with no English default in brackets, and use the `default` column when the user names none. ' +
           'Amount fields are `<year slot>_<ai_field_suffix>`, year slots y_minus2, y_minus1, y, y_plus1 and y_plus2; ' +
-          'financial-plan amounts use `measure`. Match a column the user names to `name`, answer with that name, and use the `default` column when the user names none. ' +
+          'financial-plan amounts use `measure`. ' +
           'Hidden columns (`shown: false`) still hold amounts.'
         : '') +
       (analyticsDimensions

@@ -207,8 +207,12 @@ export async function readBudgetColumns(manager: EntityManager, tenantId: string
 }
 
 /**
- * The columns as the AI sees them, in the fixed order: position, AI field
- * suffix (`y_plus1_<suffix>`), financial-plan measure key, name, shown, default.
+ * The columns in the fixed order: position, AI field suffix (`y_plus1_<suffix>`),
+ * financial-plan measure key, the workspace name or the English product name,
+ * shown, default. The assistant does not send this `name` as it stands: it uses
+ * `localizedBudgetColumnsAiContext` (`budget-column-labels.ts`), which keeps a
+ * workspace name and otherwise uses the person's language. This file does not
+ * import that one (it would cycle through `amounts-write.util`).
  */
 export function budgetColumnsAiContext(settings: BudgetColumnsSettings) {
   return SUMMARY_COLUMNS.map((column, index) => ({

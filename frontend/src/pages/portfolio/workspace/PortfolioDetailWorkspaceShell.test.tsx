@@ -74,6 +74,23 @@ describe('PortfolioDetailWorkspaceShell', () => {
     expect(screen.getByRole('button', { name: 'workspace.closeProperties' })).toHaveStyle({ top: '-48px' });
   });
 
+  // At 1280px the open drawer's handle covered the last tab ("Historiq"): the row keeps the
+  // drawer and handle width free (280 + 26 - 32 of title padding + 8 of gap), and only while open.
+  it('keeps the open drawer width free beside the tab row', () => {
+    renderShell({
+      tabs: [{ key: 'overview', label: 'Overview' }, { key: 'history', label: 'History' }],
+      properties: <div>drawer fields</div>,
+      initialDrawerOpen: true,
+      drawerStorageKey: 'kanap.test.tabRowReserve',
+    });
+    const row = screen.getByTestId('workspace-tab-row');
+    expect(row).toContainElement(screen.getByRole('tab', { name: 'History' }));
+    expect(row).toHaveStyle({ marginRight: '282px' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.closeProperties' }));
+    expect(row).toHaveStyle({ marginRight: '0px' });
+  });
+
   it('starts the drawer and its tab at the content top without a tab row', () => {
     renderShell({ properties: <div>drawer fields</div>, actions: <button type="button">Delete</button> });
     expect(screen.queryByRole('tab')).toBeNull();
