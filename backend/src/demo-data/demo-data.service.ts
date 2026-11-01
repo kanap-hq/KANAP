@@ -326,17 +326,28 @@ export function startingDimensionValues(): Array<[string, string]> {
 export type TenantContentCount = { table: string; count: number };
 
 /**
+ * A document bound to a record (the description a page creates the first time it opens, an
+ * incident review) belongs to that record. It is left out of the blocker count and of the
+ * count of what was created since the load: the record is the object the page already lists,
+ * and opening that page does not create something of the user's own. `d` is the documents row.
+ * The link picker uses the same exclusion (`knowledge.service.ts`, `listLinkOptions`).
+ */
+const DOCUMENT_WITHOUT_BINDING_SQL =
+  `NOT EXISTS (SELECT 1 FROM integrated_document_bindings b WHERE b.tenant_id = d.tenant_id AND b.document_id = d.id)`;
+
+/**
  * The tables that hold more than activation leaves, each with how many rows are outside the
  * starting state (empty: the workspace is still in its starting state). Every table of
  * `DEMO_LOAD_EMPTY_TABLES` must be empty, so its count is every row. Activation also creates,
  * and these may hold only that: one company (the count is the companies beyond it); documents
- * in the templates library; the chart of accounts made from the default template, with that
- * template's accounts; one standard calendar of a country (region empty, code equal to the
- * country); the values of the recommended dimensions in any of the four languages
- * (`recommended-dimensions.seed.ts`, the cost pool on the default dimension or on `cost_pool`)
- * and those of the three CAPEX dimensions older tenants received (`capex-dimensions.seed.ts`),
- * by dimension code and value name: a value an administrator added, or renamed, counts. And no
- * `.example` user (sample data users). The counts are one query. Runs under the tenant's RLS context.
+ * in the templates library, and documents bound to a record (`DOCUMENT_WITHOUT_BINDING_SQL`);
+ * the chart of accounts made from the default template, with that template's accounts; one
+ * standard calendar of a country (region empty, code equal to the country); the values of the
+ * recommended dimensions in any of the four languages (`recommended-dimensions.seed.ts`, the
+ * cost pool on the default dimension or on `cost_pool`) and those of the three CAPEX dimensions
+ * older tenants received (`capex-dimensions.seed.ts`), by dimension code and value name: a value
+ * an administrator added, or renamed, counts. And no `.example` user (sample data users). The
+ * counts are one query. Runs under the tenant's RLS context.
  */
 export async function countTenantContent(manager: EntityManager, tenantId: string): Promise<TenantContentCount[]> {
   const [template]: Array<{ template_code: string; csv_payload: string | null }> = await manager.query(
@@ -352,7 +363,8 @@ export async function countTenantContent(manager: EntityManager, tenantId: strin
     `SELECT 'companies' AS t, GREATEST(count(*) - 1, 0)::int AS n FROM companies WHERE tenant_id = $1`,
     `SELECT 'documents' AS t, count(*)::int AS n
        FROM documents d LEFT JOIN document_libraries l ON l.id = d.library_id AND l.tenant_id = d.tenant_id
-      WHERE d.tenant_id = $1 AND l.slug IS DISTINCT FROM 'templates'`,
+      WHERE d.tenant_id = $1 AND l.slug IS DISTINCT FROM 'templates'
+        AND ${DOCUMENT_WITHOUT_BINDING_SQL}`,
     `SELECT 'chart_of_accounts' AS t, count(*)::int AS n
        FROM chart_of_accounts WHERE tenant_id = $1 AND id IS DISTINCT FROM $2::uuid`,
     `SELECT 'accounts' AS t, count(*)::int AS n FROM accounts WHERE tenant_id = $1
@@ -391,19 +403,23 @@ export async function findTenantContent(manager: EntityManager, tenantId: string
 /**
  * The tables `countCreatedSinceLoad` reads: the business and configuration tables of a workspace
  * that has data, its dimension values, its companies and its documents (the templates library
- * included: a reset puts back only the starting templates). Each has `created_at` (checked by the
- * spec). Users are not counted: the reset keeps the real ones.
+ * included: a reset puts back only the starting templates; a document bound to a record is left
+ * out, `DOCUMENT_WITHOUT_BINDING_SQL`). Each has `created_at` (checked by the spec). Users are
+ * not counted: the reset keeps the real ones.
  */
 export const DEMO_CREATED_SINCE_TABLES = [...DEMO_LOAD_EMPTY_TABLES, 'analytics_categories', 'companies', 'documents'] as const;
 
 /**
  * How many objects were created in the workspace after `since` (the end of the sample data
- * load), which a reset erases too: the rows of `DEMO_CREATED_SINCE_TABLES`. Runs under the
- * tenant's RLS context.
+ * load), which a reset erases too: the rows of `DEMO_CREATED_SINCE_TABLES`. A document bound to
+ * a record is that record's and is not counted. Runs under the tenant's RLS context.
  */
 export async function countCreatedSinceLoad(manager: EntityManager, tenantId: string, since: string): Promise<number> {
-  const counts = DEMO_CREATED_SINCE_TABLES.map((table) =>
-    `SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1 AND created_at > $2::timestamptz`);
+  const counts = DEMO_CREATED_SINCE_TABLES.map((table) => table === 'documents'
+    ? `SELECT count(*)::int AS n FROM documents d
+        WHERE d.tenant_id = $1 AND d.created_at > $2::timestamptz
+          AND ${DOCUMENT_WITHOUT_BINDING_SQL}`
+    : `SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1 AND created_at > $2::timestamptz`);
   const rows: Array<{ n: number }> = await manager.query(counts.join(' UNION ALL '), [tenantId, since]);
   return rows.reduce((sum, row) => sum + Number(row.n ?? 0), 0);
 }
