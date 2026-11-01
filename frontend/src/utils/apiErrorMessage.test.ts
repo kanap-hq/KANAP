@@ -229,6 +229,43 @@ describe('getApiErrorMessage', () => {
       .toBe('You cannot change the links to Applications, Infrastructure, and Incidents: your role does not give you access to them.');
   });
 
+  it('translates every coded 403 of the AI module in the four languages', () => {
+    const refusal = (code: string, params?: Record<string, unknown>) => ({
+      response: { status: 403, data: { statusCode: 403, error: 'Forbidden', code, message: 'English sentence of the server.', ...(params ? { params } : {}) } },
+    });
+    const cases: Array<[string, Record<string, unknown> | undefined, Record<string, string>]> = [
+      ['AI_USER_NOT_ALLOWED', undefined, { en: 'Your account cannot use Plaid. Ask an administrator of your workspace.' }],
+      ['AI_PLATFORM_HOST', undefined, { en: 'Plaid is available inside a workspace only. Open a workspace to use it.' }],
+      ['AI_TENANT_INACTIVE', undefined, { en: 'Plaid is not available while this workspace is inactive.' }],
+      ['AI_CHAT_DISABLED', undefined, { en: 'Plaid is turned off for this workspace. An administrator can turn it on in Admin > Plaid.', fr: "Plaid est désactivé pour cet espace de travail. Un administrateur peut l'activer dans Administration › Plaid." }],
+      ['AI_NOT_CONFIGURED', undefined, { en: 'Plaid is not fully set up for this workspace. An administrator can finish the setup in Admin > Plaid.' }],
+      ['AI_MCP_DISABLED', undefined, { en: 'MCP access is turned off for this workspace. An administrator can turn it on in Admin > Plaid.' }],
+      ['AI_MCP_NOT_CONFIGURED', undefined, { en: 'MCP access is not fully set up for this workspace. An administrator can finish the setup in Admin > Plaid.' }],
+      ['AI_MCP_WRITE_UNAVAILABLE', undefined, { en: 'MCP access is read only. Make changes in KANAP or with Plaid.' }],
+      ['AI_INCLUDED_MODEL_NOT_ACCEPTED', undefined, { en: "The included model needs an administrator's confirmation in Admin > Plaid before it can be used." }],
+      ['AI_INCLUDED_QUOTA_USED', undefined, { en: 'The included messages of this month are used up. They are available again next month.' }],
+      ['AI_API_KEY_NOT_FOUND', undefined, { en: 'This key does not exist, or you cannot manage it.' }],
+      ['AI_CONVERSATION_NOT_YOURS', undefined, { en: 'This conversation belongs to someone else.' }],
+      ['AI_ATTACHMENT_NOT_YOURS', undefined, { en: 'This attachment belongs to someone else.' }],
+      ['AI_PREVIEW_NOT_IN_CONVERSATION', undefined, { en: 'This preview belongs to another conversation.' }],
+      ['AI_MCP_KEY_POLICY_INVALID', undefined, { en: 'The settings of this MCP key are not valid. Create a new key.' }],
+      ['AI_FIELD_WITHHELD', undefined, { en: 'This field is not available with your current rights.' }],
+      ['AI_ROLES_UNAVAILABLE', undefined, { en: 'The roles cannot be read here.' }],
+      ['MODULE_RIGHT_REQUIRED', { resource: 'ai_chat', level: 'member' }, {}],
+    ];
+    for (const [code, params, expected] of cases) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const text = getApiErrorMessage(refusal(code, params), i18n.getFixedT(language), 'fallback');
+        expect(text, `${code} ${language}`).not.toBe('English sentence of the server.');
+        expect(text, `${code} ${language}`).not.toBe('fallback');
+        expect(text, `${code} ${language}`).not.toBe(i18n.getFixedT(language)('errors:forbidden'));
+        expect(text, `${code} ${language}`).not.toContain('{{');
+        expect(text, `${code} ${language}`).not.toContain('errors:');
+        if (expected[language]) expect(text, `${code} ${language}`).toBe(expected[language]);
+      }
+    }
+  });
+
   it('says why a refusal coded in its error field happened', () => {
     const trial = { response: { status: 403, data: { error: 'TRIAL_EXPIRED', message: 'Trial expired' } } };
     expect(getApiErrorMessage(trial, t, 'fallback')).toBe('Your trial has expired. Please choose a plan to continue.');
