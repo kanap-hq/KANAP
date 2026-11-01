@@ -690,8 +690,8 @@ doc.kanap.net address. The language is the one asked for, else the person's inte
 language, else English. In multi-tenant mode the on-premise installation pages are
 left out. The manual is public: the tools need no right and are offered whenever the
 pages were found. The fixed part of the chat prompt (tool usage guidelines) says to
-read the manual before describing a screen; for MCP clients, the description of
-`list_help_topics` says it (the `initialize` instructions stay under 1,200 characters).
+read the manual before describing a screen, and the MCP `initialize` instructions
+say it to MCP clients (they stay under 1,200 characters, `ai-mcp-transport.spec.ts`).
 
 ### Budget reports and chargeback
 

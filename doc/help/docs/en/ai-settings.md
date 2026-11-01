@@ -247,7 +247,7 @@ The MCP server is read only. A client can search and read your data but cannot c
 | `read_help_section` | Reads one page or section of the user manual, with its link |
 | `web_search` | Searches the web, when web search is switched on for your organization |
 
-When a client connects, the server tells it which workspace it reads, that it only reads, that it reads with the rights of the person behind the key or the connection, how to search (cost centers, calendars and dimensions included), where to read the exchange rates, and which data it does not read (the audit log and AI agents). It reads roles and data access settings only for a person who administers users with access to all data.
+When a client connects, the server tells it which workspace it reads, that it only reads, that it reads with the rights of the person behind the key or the connection, how to search (cost centers, calendars and dimensions included), where to read the exchange rates, and which data it does not read (the audit log and AI agents). It reads roles and data access settings only for a person who administers users with access to all data. It also tells the client to answer questions on how to use KANAP from the user manual.
 
 A call the server refuses comes back with its cause, so that the assistant can explain it: an unknown tool, a tool that would change data, a tool the key does not allow, or data the person cannot read.
 

@@ -245,7 +245,7 @@ Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos donn�
 | `read_help_section` | Lit une page ou une section du manuel utilisateur, avec son lien |
 | `web_search` | Recherche sur le web, lorsque la recherche web est activée pour votre organisation |
 
-Lorsqu'un client se connecte, le serveur lui indique quel espace de travail il lit, qu'il ne fait que lire, qu'il lit avec les droits de la personne derrière la clé ou la connexion, comment rechercher (centres de coûts, calendriers et dimensions compris), où lire les taux de change, et quelles données il ne lit pas (journal d'audit et agents IA). Il ne lit les rôles et les paramètres d'accès aux données que pour une personne qui administre les utilisateurs et accède à toutes les données.
+Lorsqu'un client se connecte, le serveur lui indique quel espace de travail il lit, qu'il ne fait que lire, qu'il lit avec les droits de la personne derrière la clé ou la connexion, comment rechercher (centres de coûts, calendriers et dimensions compris), où lire les taux de change, et quelles données il ne lit pas (journal d'audit et agents IA). Il ne lit les rôles et les paramètres d'accès aux données que pour une personne qui administre les utilisateurs et accède à toutes les données. Il lui indique aussi de répondre aux questions sur l'utilisation de KANAP à partir du manuel utilisateur.
 
 Un appel refusé par le serveur revient avec sa cause, pour que l'assistant puisse l'expliquer : un outil inconnu, un outil qui modifierait des données, un outil que la clé n'autorise pas, ou des données que la personne ne peut pas lire.
 
