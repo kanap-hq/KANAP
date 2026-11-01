@@ -35,7 +35,7 @@ keys are stored: never rename one.
 | `budget` / `example` | `budget_overview`, `budget_line`, `budget_report`, `budget_plaid`, `budget_import` |
 | `budget` / `own_data` | `own_company`, `own_budget_lines`, `own_contract`, `own_report`, `own_invite` |
 | `cartography` / `example` | `map_applications`, `map_application`, `map_assets`, `map_technologies`, `map_import` |
-| `cartography` / `own_data` | `own_applications`, `own_technologies`, `own_assets`, `own_findings`, `own_invite` |
+| `cartography` / `own_data` | `own_sites`, `own_applications`, `own_technologies`, `own_assets`, `own_invite` |
 | `portfolio` / `example` | `portfolio_request`, `portfolio_project`, `portfolio_tasks`, `portfolio_time`, `portfolio_import` |
 | `portfolio` / `own_data` | `own_request`, `own_projects`, `own_tasks`, `own_project_budget`, `own_invite` |
 
