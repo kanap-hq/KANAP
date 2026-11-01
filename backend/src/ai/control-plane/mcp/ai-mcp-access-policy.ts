@@ -41,6 +41,8 @@ const MCP_CORE_READ_CAPABILITIES = [
   'get_record_history',
   'search_knowledge',
   'get_document',
+  'list_help_topics',
+  'read_help_section',
   'web_search',
 ] as const;
 

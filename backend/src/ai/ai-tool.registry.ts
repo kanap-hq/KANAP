@@ -28,7 +28,8 @@ import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/pr
 import { dataAccessRefusalMessage } from '../common/filters/database-error.mapping';
 import { resolveConfiguredAppBaseUrl } from '../common/url';
 import { AI_PAGE_URL_NOTE, withAiPageUrls } from './ai-page-urls';
-import { AI_UNREAD_FAMILIES_SENTENCE, readAiScreenLanguage, unreadFamiliesReachOf, unreadFamilyLines } from './ai-unread-families';
+import { AI_UNREAD_FAMILIES_SENTENCE, type AiScreenLanguage, readAiScreenLanguage, unreadFamiliesReachOf, unreadFamilyLines } from './ai-unread-families';
+import { AiHelpManualService, HELP_SECTION_MAX_CHARS } from './ai-help-manual.service';
 import {
   AI_CONTEXT_ENTITY_TYPES,
   AI_DETAIL_ENTITY_TYPES,
@@ -100,6 +101,21 @@ const SearchKnowledgeInputSchema = z.object({
 
 const GetDocumentInputSchema = z.object({
   document_id: z.string().trim().min(1).describe('The document UUID or DOC reference, such as DOC-123.'),
+});
+
+const HELP_LANGUAGE_DESCRIPTION = 'Optional language of the manual: en, fr, de or es. Defaults to the language of the person\'s interface, else English; pass the language of the conversation.';
+
+const ListHelpTopicsInputSchema = z.object({
+  query: z.string().trim().max(200).optional()
+    .describe('Optional words to look for in the manual, in its language (contrat application, budget line import). Without words, every page with its main sections.'),
+  language: z.enum(['en', 'fr', 'de', 'es']).optional().describe(HELP_LANGUAGE_DESCRIPTION),
+});
+
+const ReadHelpSectionInputSchema = z.object({
+  page: z.string().trim().min(1).max(300).describe('The page path list_help_topics gives, such as contracts or on-premise/installation.'),
+  section: z.string().trim().min(1).max(300).optional()
+    .describe('Optional section title as list_help_topics writes it (Relations, or Parent › Child when a title repeats). Without it, the whole page.'),
+  language: z.enum(['en', 'fr', 'de', 'es']).optional().describe(HELP_LANGUAGE_DESCRIPTION),
 });
 
 const AiFilterValueSchema = z.union([
@@ -363,6 +379,7 @@ export class AiToolRegistry {
     private readonly mutationOperations: AiMutationOperationRegistry,
     @Optional() private readonly itOpsSettings?: ItOpsSettingsService,
     @Optional() private readonly recordHistory?: AiRecordHistoryService,
+    @Optional() private readonly helpManual?: AiHelpManualService,
   ) {
     this.definitions = new Map<AiToolName, AiToolDefinition<any, any>>([
       [
@@ -641,6 +658,32 @@ export class AiToolRegistry {
         },
       ],
       [
+        'list_help_topics',
+        {
+          name: 'list_help_topics',
+          category: 'discovery',
+          description: 'Lists the pages of the KANAP user manual, the manual of this version, with their path, title, doc.kanap.net address and sections. Without words, every page with its main sections; with words, the pages that hold them, best first, with the sections and subsections where they appear (`Parent › Child`). read_help_section reads a page or a section. The manual describes the screens, menus, buttons and steps of KANAP as they are in this version.',
+          inputSchema: ListHelpTopicsInputSchema,
+          inputSummary: fieldDescriptions(ListHelpTopicsInputSchema),
+          surfaces: ['chat', 'mcp'],
+          readOnly: true,
+          execute: async (context, input) => this.helpManual!.listTopics(await this.helpLanguage(context, input.language), input.query),
+        },
+      ],
+      [
+        'read_help_section',
+        {
+          name: 'read_help_section',
+          category: 'inspection',
+          description: `Returns one page of the KANAP user manual, or one of its sections, as Markdown text with its doc.kanap.net address (\`url\`, with the section's anchor) to give the person as the link. \`subsections\` names the sections inside it. The text holds at most ${HELP_SECTION_MAX_CHARS.toLocaleString('en-US')} characters: when \`truncated\` is true, read one of its sections. Links in the text point to doc.kanap.net.`,
+          inputSchema: ReadHelpSectionInputSchema,
+          inputSummary: fieldDescriptions(ReadHelpSectionInputSchema),
+          surfaces: ['chat', 'mcp'],
+          readOnly: true,
+          execute: async (context, input) => this.helpManual!.readSection(await this.helpLanguage(context, input.language), input.page, input.section),
+        },
+      ],
+      [
         'prepare_mutation_plan',
         {
           name: 'prepare_mutation_plan',
@@ -856,6 +899,10 @@ export class AiToolRegistry {
       case 'search_knowledge':
       case 'get_document':
         return avail.canReadKnowledge;
+      case 'list_help_topics':
+      case 'read_help_section':
+        // The manual is public: every person who may use the assistant reads it.
+        return this.helpManual?.available() === true;
       case 'prepare_mutation_plan':
         return avail.writableMutationToolNames.size > 0;
       case 'update_task_assignees':
@@ -1029,6 +1076,13 @@ export class AiToolRegistry {
         return resolveConfiguredAppBaseUrl(tenant?.slug ?? null);
       },
     });
+  }
+
+  /** The language a manual tool reads: the one asked for, else the person's interface language, else English. */
+  private async helpLanguage(context: AiExecutionContextWithManager, language: string | undefined) {
+    return (language as AiScreenLanguage | undefined)
+      ?? await readAiScreenLanguage(context.manager, context.tenantId, context.userId)
+      ?? 'en';
   }
 
   async execute(
