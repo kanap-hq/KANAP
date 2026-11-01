@@ -187,11 +187,12 @@ The state lives in `tenants.metadata.demo` (no table of its own). Status values:
 
 - GET `/admin/sample-data`
   - Returns the state plus what the page needs:
-    - `{ status, step, started_at, heartbeat_at, loaded_at, loaded_by, failed_at, error_code, dismissed_at, ever_loaded_at, reset_failed_at, can_load, load_refusal, blocking, created_since_load, workspace_name, loaded_by_name }`
+    - `{ status, step, started_at, heartbeat_at, loaded_at, loaded_by, failed_at, error_code, dismissed_at, ever_loaded_at, reset_failed_at, language, can_load, load_refusal, blocking, created_since_load, workspace_name, loaded_by_name }`
   - `?view=banner` returns the light view the home banner polls: no `created_since_load`, no `loaded_by_name`, and no check of the workspace content once the banner can no longer show (hidden, or sample data loaded once): `can_load` is then `false`. The page uses the full view.
   - `ever_loaded_at` is set when a load completes and is kept by a reset. The home banner never shows again once it is set.
   - `reset_failed_at` is set when a reset an Administrator asked for failed (nothing was changed). The next load or reset clears it.
   - `step` is the loader step of a running load (for example `companies`), `null` otherwise.
+  - `language` is the sample data language of the last load that named one: the load trial activation starts by itself (`en`, the only one so far). Absent when no such load ran.
   - `error_code` when `status = failed`: `load_failed`, `load_timeout`, `load_not_started`, `load_interrupted` or `reset_failed` (the automatic reset after the failed load failed too).
   - `can_load` is true when the status is `idle` or `failed`, the subscription is in good standing and the workspace is still in its starting state (no business data, no added configuration; what activation creates does not count).
   - `load_refusal` says why a load would be refused now (status `idle` or `failed` only): `SUBSCRIPTION_FROZEN`, `TRIAL_EXPIRED` or `tenant_not_empty`. `null` when it would not be. The page shows that reason, and no Load button.

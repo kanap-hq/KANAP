@@ -127,6 +127,7 @@ function buildController() {
     turnstile as any,
     {} as any,
     {} as any,
+    { provisionTrialSampleData: async () => undefined } as any,
   );
   return { controller, writes, sent };
 }

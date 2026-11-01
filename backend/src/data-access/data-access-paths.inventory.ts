@@ -242,7 +242,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   // Sample data and workspace reset: Administrator only (always unscoped).
   { file: 'demo-data/demo-data.service.ts', member: 'getOverview', site: 'with_tenant', class: 'reserved', reason: 'sample data overview (Administrator only): checks whether the workspace holds data, budget block included', count: 2 },
   { file: 'demo-data/demo-data.service.ts', member: 'dismissBanner', site: 'with_tenant', class: 'reserved', reason: 'sample data banner (Administrator only)' },
-  { file: 'demo-data/demo-data.service.ts', member: 'load', site: 'with_tenant', class: 'reserved', reason: 'sample data load (Administrator only): checks the workspace is empty, budget block included', count: 2 },
+  { file: 'demo-data/demo-data.service.ts', member: 'startLoad', site: 'with_tenant', class: 'reserved', reason: 'sample data load (Administrator from the screen, the trial owner at activation): checks the workspace is empty, budget block included', count: 2 },
   { file: 'demo-data/demo-data.service.ts', member: 'startReset', site: 'with_tenant', class: 'reserved', reason: 'workspace reset (Administrator only)' },
   { file: 'admin/tenants/tenant-reset.service.ts', member: 'reset', site: 'with_tenant', class: 'reserved', reason: 'workspace reset started by an Administrator (sample data): erases the whole tenant, budget block included' },
 
