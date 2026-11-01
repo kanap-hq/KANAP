@@ -2207,7 +2207,7 @@
         "assignmentAdded": "Asignación añadida",
         "removed": "{{name}} eliminado.",
         "application": "Aplicación",
-        "environment": "Entorno",
+        "environment": "Despliegue",
         "role": "Rol",
         "since": "Desde",
         "notes": "Notas",
@@ -2216,13 +2216,13 @@
         "removeAssignment": "Eliminar asignación",
         "addAssignmentDialog": "Añadir asignación",
         "applicationRequired": "La aplicación es obligatoria",
-        "environmentRequired": "El entorno (instancia) es obligatorio",
+        "environmentRequired": "Elija un despliegue.",
         "roleRequired": "El rol es obligatorio",
-        "selectAppForEnv": "Seleccione una aplicación para elegir un entorno.",
-        "chooseEnvironment": "Elija un entorno.",
-        "noInstances": "No hay instancias para esta aplicación",
+        "selectAppForEnv": "Seleccione una aplicación para elegir un despliegue.",
+        "chooseEnvironment": "Elija un despliegue.",
         "noServerRoles": "No hay roles de servidor configurados; actualice la configuración del panorama IT.",
-        "assign": "Asignar"
+        "assign": "Asignar",
+        "createDeployment": "+ Crear el despliegue {{environment}}"
       },
       "connections": {
         "loadingConnections": "Cargando conexiones…",
@@ -3182,7 +3182,9 @@
         "deleteUsage_other": "<strong>{{count}} activos están</strong> asignados actualmente a <strong>{{name}}</strong>. Al eliminar esta sub-ubicación, quedarán sin sub-ubicación asignada.",
         "deleteKeepsAssets": "Los registros de los activos se conservan; solo se borra su vínculo con la sub-ubicación.",
         "deleteAnyway": "Eliminar de todos modos"
-      }
+      },
+      "createOption": "+ Crear la ubicación «{{name}}»",
+      "createNew": "+ Nueva ubicación"
     }
   },
   "components": {

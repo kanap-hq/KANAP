@@ -241,7 +241,7 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(inUse, t, 'fallback')).toMatch(/^This deployment still has 2 .+\. Remove them first\.$/);
     const inherited = { response: { status: 409, data: { code: 'assignment_inherited', message: 'Already inherited', params: { cluster: 'ESX Paris' } } } };
     expect(getApiErrorMessage(inherited, fr, 'fallback')).toBe('Déjà hébergée par ce serveur via ESX Paris.');
-    for (const code of ['assignment_duplicate', 'assignment_inherited', 'assignment_role_invalid', 'deployment_environment_taken', 'deployment_lifecycle_invalid', 'date_invalid']) {
+    for (const code of ['assignment_duplicate', 'assignment_inherited', 'assignment_role_invalid', 'deployment_environment_taken', 'deployment_lifecycle_invalid', 'date_invalid', 'asset_location_required']) {
       for (const language of ['en', 'fr', 'de', 'es']) {
         const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', environment: 'prod', field: 'since_date', cluster: 'ESX Paris' } } } }, i18n.getFixedT(language), 'fallback');
         expect(text, `${code} in ${language}`).not.toBe('server words');

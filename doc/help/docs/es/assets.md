@@ -168,7 +168,7 @@ El panel muestra la tarjeta de identidad del activo en cada pestaña. Las edicio
 - **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo, por ejemplo el Tier 0 para un controlador de dominio y el hipervisor que lo ejecuta. Elija entre las zonas configuradas en **Panorama IT > Configuración**, o **Sin zona**. El activo aparece entonces en esa zona en la página [Zonas de administración](administration-view.md)
 
 **Ubicación**:
-- **Ubicación** (obligatorio)
+- **Ubicación** (obligatorio): cada activo tiene una, venga de la pantalla, de una importación o del asistente. Si la ubicación aún no existe, escriba su nombre y elija **+ Crear la ubicación «…»**: indique su tipo de alojamiento y la nueva ubicación pasa al campo. Requiere `locations:member`
 - **Sub-ubicación** (cuando la ubicación tiene sub-ubicaciones definidas)
 - **Tipo de alojamiento**, **Empresa operadora** o **Proveedor cloud**, **País**, **Ciudad**: de solo lectura, derivados de la ubicación. Se actualizan cuando cambia la ubicación
 
@@ -217,12 +217,12 @@ La pestaña Operaciones muestra el clúster del activo y lo que se ejecuta en é
 | Columna | Qué muestra |
 |---------|-------------|
 | **Aplicación** | Nombre de la aplicación. Haga clic en él para abrir la aplicación en su pestaña **Despliegues** |
-| **Entorno** | El entorno de despliegue al que pertenece la asignación |
+| **Despliegue** | El despliegue de la aplicación al que sirve el activo, con el nombre de su entorno |
 | **Rol** | Rol del servidor (Web, Base de datos, Aplicación, etc.) |
 | **Desde** | Fecha en que se asignó el servidor |
 | **Notas** | Notas de texto libre |
 
-Haga clic en **Añadir asignación** para vincular este activo a un despliegue de aplicación. Elija la aplicación, luego el entorno (la aplicación ya debe tener un despliegue en ese entorno), luego el rol y la fecha / notas opcionales. En un miembro de un clúster, KANAP pregunta primero si asignar el clúster o solo este servidor. Consulte [Aplicaciones en un clúster](#applications-on-a-cluster). El lápiz al final de una fila abre la aplicación: la asignación se edita en su pestaña **Despliegues**. El icono de papelera quita la asignación, tras una confirmación. **Añadir asignación** no está disponible mientras no haya ningún rol de servidor configurado en **Panorama IT > Configuración**. Estos comandos requieren `infrastructure:member` y `applications:member`. Sin ambos, la tabla es de solo lectura.
+Haga clic en **Añadir asignación** para vincular este activo a un despliegue de aplicación. Elija la aplicación y luego su despliegue. Si la aplicación aún no tiene despliegue en un entorno, **+ Crear el despliegue …** lo crea junto con la asignación. Luego elija el rol y la fecha / notas opcionales. En un miembro de un clúster, KANAP pregunta primero si asignar el clúster o solo este servidor. Consulte [Aplicaciones en un clúster](#applications-on-a-cluster). El lápiz al final de una fila abre la aplicación: la asignación se edita en su pestaña **Despliegues**. El icono de papelera quita la asignación, tras una confirmación. **Añadir asignación** no está disponible mientras no haya ningún rol de servidor configurado en **Panorama IT > Configuración**. Estos comandos requieren `infrastructure:member` y `applications:member`. Sin ambos, la tabla es de solo lectura.
 
 En un miembro, una aplicación asignada a su clúster se muestra «vía» el nombre del clúster, sin lápiz ni papelera: modifíquela en el clúster.
 
@@ -512,7 +512,7 @@ Algunos campos se calculan y no pueden importarse:
 ### Limitaciones
 
 - **Máximo 4 direcciones IP**: Los activos admiten hasta 4 entradas de direcciones IP en un archivo
-- **Ubicación obligatoria**: Cada activo debe tener el código de una ubicación existente
+- **Ubicación obligatoria**: Cada activo debe tener el código de una ubicación existente. La **Verificación previa** señala un error en una fila con la celda `location_reference` vacía y rechaza un archivo sin esa columna
 - **Relaciones no incluidas**: Las asignaciones de aplicaciones, conexiones, vínculos financieros, proyectos, tareas y adjuntos deben gestionarse en el espacio de trabajo
 
 ### Solución de problemas

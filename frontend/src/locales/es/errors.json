@@ -265,6 +265,7 @@
   "deployment_environment_invalid": "Entorno desconocido: {{value}}. Elija un entorno de la lista.",
   "body_required": "La solicitud está vacía.",
   "asset_required": "Elija un servidor.",
+  "asset_location_required": "Elija una ubicación.",
   "asset_hostname_invalid": "«{{value}}» no es un nombre de host válido.",
   "asset_ip_invalid": "«{{value}}» no es una dirección IP válida.",
   "asset_ip_taken": "«{{value}}» ya la usa {{name}} en la subred {{subnet}}.",

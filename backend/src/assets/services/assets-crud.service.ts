@@ -14,13 +14,18 @@ import {
 import { LinkSource } from '../../common/link-provenance';
 import { operatingSystemLabelSql } from '../../technologies/operating-system-codes';
 import { OperatingSystemService } from '../../technologies/operating-system.service';
-import { assertAssetFqdnFree, assertAssetNameFree, assetNameKey, lockAssetNames } from '../asset-rules';
+import { assertAssetFqdnFree, assertAssetNameFree, assetBadRequest, assetNameKey, lockAssetNames } from '../asset-rules';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
 import { AssetsValidationService } from './assets-validation.service';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { displayName } from '../../common/display-name';
 import { NotificationsService } from '../../notifications/notifications.service';
+
+/** Every asset has a site: a create without one, or an update that clears it, is refused. */
+function locationRequired() {
+  return assetBadRequest('asset_location_required', 'location_id is required');
+}
 
 /**
  * Service for core CRUD operations on assets.
@@ -200,6 +205,7 @@ export class AssetsCrudService extends AssetsBaseService {
     const provider = await this.validation.resolveProvider(body.provider, tenant, opts?.manager);
     const status = await this.validation.normalizeLifecycleStatus(body.status, tenant, opts?.manager, 'active');
     const location_id = await this.resolveLocationId((body as any).location_id, tenant, opts?.manager);
+    if (!location_id) throw locationRequired();
     const sub_location_id = await this.resolveSubLocationId((body as any).sub_location_id, location_id, tenant, opts?.manager);
     const setsOperatingSystem = Object.prototype.hasOwnProperty.call(body, 'operating_system');
     const is_cluster = body.is_cluster === undefined ? false : this.normalizeBooleanFlag((body as any).is_cluster, 'is_cluster');
@@ -375,6 +381,7 @@ export class AssetsCrudService extends AssetsBaseService {
     }
     if (has('location_id')) {
       const newLocationId = await this.resolveLocationId((body as any).location_id, tenant, opts?.manager);
+      if (!newLocationId) throw locationRequired();
       const locationChanged = newLocationId !== existing.location_id;
       existing.location_id = newLocationId;
 

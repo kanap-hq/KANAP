@@ -134,8 +134,10 @@ async function testSwitch() {
     assert.equal(await os.labelOf(runner.manager, tenantId, plain), 'Amazon Linux 2023');
 
     // A new cluster is a member of nothing: created with its operating system.
+    const siteId = randomUUID();
+    await runner.query(`INSERT INTO locations (id, tenant_id, location_reference, name, hosting_type) VALUES ($1, $2, 'LOC-0', 'Site', 'on_prem')`, [siteId, tenantId]);
     const created = await crud.create(
-      { name: 'new-asg', kind: 'physical_server', provider: 'other', environment: 'prod', is_cluster: true, operating_system: 'Ubuntu 22.04' } as any,
+      { name: 'new-asg', kind: 'physical_server', provider: 'other', environment: 'prod', is_cluster: true, operating_system: 'Ubuntu 22.04', location_id: siteId } as any,
       tenantId, null, opts,
     );
     assert.equal(created.is_cluster, true);

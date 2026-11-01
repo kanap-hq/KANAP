@@ -168,7 +168,7 @@ Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modific
 - **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine et l'hyperviseur qui le fait tourner. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**, ou **Sans zone**. L'actif apparaît alors dans cette zone sur la page [Zones d'administration](administration-view.md)
 
 **Site** :
-- **Site** (obligatoire)
+- **Site** (obligatoire) : chaque actif en a un, qu'il vienne de l'écran, d'un import ou de l'assistant. Quand le site n'existe pas encore, tapez son nom et choisissez **+ Créer le site « … »** : indiquez son type d'hébergement, et le nouveau site se place dans le champ. Il faut `locations:member`
 - **Sous-site** (lorsque le site a des sous-sites définis)
 - **Type d'hébergement**, **Société exploitante** ou **Fournisseur cloud**, **Pays**, **Ville** : en lecture seule, dérivés du site. Ils suivent quand vous changez de site
 
@@ -217,12 +217,12 @@ L'onglet Exploitation montre le cluster de l'actif et ce qui tourne sur lui : le
 | Colonne | Ce qu'elle affiche |
 |---------|--------------------|
 | **Application** | Nom de l'application. Cliquez dessus pour ouvrir l'application sur son onglet **Déploiements** |
-| **Environnement** | L'environnement de déploiement auquel l'affectation appartient |
+| **Déploiement** | Le déploiement de l'application que l'actif sert, nommé d'après son environnement |
 | **Rôle** | Rôle serveur (Web, Base de données, Application, etc.) |
 | **Depuis** | Date à laquelle le serveur a été affecté |
 | **Notes** | Notes en texte libre |
 
-Cliquez sur **Ajouter une affectation** pour rattacher cet actif à un déploiement d'application. Choisissez l'application, puis l'environnement (l'application doit déjà avoir un déploiement dans cet environnement), puis le rôle et la date / les notes optionnelles. Sur un membre d'un cluster, KANAP demande d'abord s'il faut affecter le cluster ou ce serveur seulement. Voir [Applications sur un cluster](#applications-on-a-cluster). Le crayon en fin de ligne ouvre l'application : l'affectation se modifie dans son onglet **Déploiements**. L'icône corbeille retire l'affectation, après une confirmation. **Ajouter une affectation** est indisponible tant qu'aucun rôle serveur n'est configuré dans **Cartographie SI > Paramètres**. Ces commandes demandent `infrastructure:member` et `applications:member`. Sans les deux, le tableau est en lecture seule.
+Cliquez sur **Ajouter une affectation** pour rattacher cet actif à un déploiement d'application. Choisissez l'application, puis son déploiement. Quand l'application n'a pas encore de déploiement dans un environnement, **+ Créer le déploiement …** le crée avec l'affectation. Choisissez ensuite le rôle et la date / les notes optionnelles. Sur un membre d'un cluster, KANAP demande d'abord s'il faut affecter le cluster ou ce serveur seulement. Voir [Applications sur un cluster](#applications-on-a-cluster). Le crayon en fin de ligne ouvre l'application : l'affectation se modifie dans son onglet **Déploiements**. L'icône corbeille retire l'affectation, après une confirmation. **Ajouter une affectation** est indisponible tant qu'aucun rôle serveur n'est configuré dans **Cartographie SI > Paramètres**. Ces commandes demandent `infrastructure:member` et `applications:member`. Sans les deux, le tableau est en lecture seule.
 
 Sur un membre, une application affectée à son cluster s'affiche « via » le nom du cluster, sans crayon ni corbeille : modifiez-la sur le cluster.
 
@@ -512,7 +512,7 @@ Certains champs sont calculés et ne peuvent pas être importés :
 ### Limitations
 
 - **Maximum 4 adresses IP** : Les actifs prennent en charge jusqu'à 4 entrées d'adresse IP dans un fichier
-- **Site obligatoire** : Chaque actif doit avoir le code d'un site existant
+- **Site obligatoire** : Chaque actif doit avoir le code d'un site existant. La **Vérification préalable** signale une erreur sur une ligne dont la cellule `location_reference` est vide et refuse un fichier sans cette colonne
 - **Relations non incluses** : Les affectations d'applications, connexions, liens financiers, projets, tâches et pièces jointes doivent être gérés dans l'espace de travail
 
 ### Résolution de problèmes
