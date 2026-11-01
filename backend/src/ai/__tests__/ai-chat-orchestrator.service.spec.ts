@@ -2011,8 +2011,8 @@ const READ_TOOLS = [
 
 /**
  * A delete is never repaired into a plan or a bulk target set: its one card is the answer. The
- * same words after an update preview still ask for the plan repair (issue: Plaid answered the
- * repair instruction after deleting a task).
+ * same words after a single update are not a plan either: only the person's own request can
+ * leave changes to prepare (issue 1186, the same defect as a single task creation).
  */
 async function testDeletePreviewDoesNotTriggerThePlanRepair() {
   const deleteTurn = createOrchestrator({
@@ -2200,7 +2200,8 @@ async function testDeletePreviewDoesNotTriggerThePlanRepair() {
     'an update preview next to a delete is still checked against the queried target set',
   );
 
-  // The same words after an update preview are still repaired: only a delete is exempt.
+  // The same words after a single update are the answer: the request is one change, so the
+  // repair reply prepared below is never asked for.
   const updateTurn = createOrchestrator({
     historyMessages: [{ role: 'user', content: 'Change le statut de la tâche 39 en terminée.' }],
     availableTools: [
@@ -2219,7 +2220,7 @@ async function testDeletePreviewDoesNotTriggerThePlanRepair() {
         { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
       ],
       [
-        { type: 'text_delta', text: 'La tâche 39 est prête à être marquée terminée.' },
+        { type: 'text_delta', text: 'Je n\'ai pas d\'autre changement à préparer.' },
         { type: 'done', usage: { input_tokens: 140, output_tokens: 20 } },
       ],
     ],
@@ -2245,16 +2246,227 @@ async function testDeletePreviewDoesNotTriggerThePlanRepair() {
     }),
   );
 
-  assert.equal(updateTurn.providerCallCount.value, 3, 'an update preview still asks for the plan repair');
+  assert.equal(updateTurn.providerCallCount.value, 2, 'a single update preview is not repaired');
   assert.ok(
-    updateTurn.recordedRequests[2].messages.some((message: any) =>
-      message.role === 'user' && /multi-step or multi-record/i.test(String(message.content || '')),
+    !updateTurn.recordedRequests.some((request: any) =>
+      request.messages.some((message: any) =>
+        message.role === 'user' && /multi-step or multi-record/i.test(String(message.content || '')),
+      ),
     ),
   );
   assert.equal(
     updateEvents.filter((event) => event.type === 'text_delta').map((event: any) => event.text).join(''),
-    'La tâche 39 est prête à être marquée terminée.',
+    DELETE_TURN_TEXT,
   );
+}
+
+const SINGLE_TASK_REQUEST = 'Crée une tâche pour renouveler le contrat Caisse Pro.';
+const SINGLE_TASK_ANSWER = 'Voici l\'aperçu. Approuvez-le pour créer la tâche après votre approbation.';
+const MULTI_STEP_REQUEST = 'Crée le projet Caisse Pro puis une tâche pour renouveler le contrat.';
+const MULTI_STEP_ANSWER = 'Voici l\'aperçu du projet. La suite arrive ensuite, après votre approbation.';
+const PLAN_REPAIR_REPLY = 'Je n\'ai pas d\'autre changement à préparer. Votre demande portait sur une seule tâche et son aperçu existe déjà.';
+
+function planRepairInstructions(recordedRequests: any[]): string[] {
+  // Later calls keep the same messages array the orchestrator mutates, so count the
+  // instruction on the last request: that history is the one the repair was sent in.
+  const last = recordedRequests.at(-1);
+  return (last?.messages ?? [])
+    .filter((message: any) => message.role === 'user' && /multi-step or multi-record/i.test(String(message.content || '')))
+    .map((message: any) => String(message.content || ''));
+}
+
+function storedAssistantAnswer(messages: any[]): string {
+  const answers = messages.filter((message) => message.role === 'assistant' && !message.toolCalls);
+  return String(answers.at(-1)?.content ?? '');
+}
+
+/**
+ * Issue 1186: one task creation whose answer says "après votre approbation" streams that answer.
+ * A request that really has several steps still gets the plan repair. When the repair creates
+ * no new preview, the held-back answer is shown and stored instead of the reply to the instruction.
+ */
+async function testSingleWritePreviewDoesNotAnswerThePlanRepair() {
+  const createTurn = createOrchestrator({
+    historyMessages: [{ role: 'user', content: SINGLE_TASK_REQUEST }],
+    availableTools: [
+      ...READ_TOOLS,
+      writeTool('create_task', 'tasks', ['title']),
+    ],
+    providerEventBatches: [
+      [
+        { type: 'tool_call_start', id: 'tc-create', name: 'create_task' },
+        { type: 'tool_call_delta', id: 'tc-create', arguments: '{"title":"Renouveler le contrat Caisse Pro"}' },
+        { type: 'tool_call_end', id: 'tc-create' },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 20 } },
+      ],
+      [
+        { type: 'text_delta', text: SINGLE_TASK_ANSWER },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
+      ],
+      [
+        { type: 'text_delta', text: PLAN_REPAIR_REPLY },
+        { type: 'done', usage: { input_tokens: 140, output_tokens: 20 } },
+      ],
+    ],
+    toolResultsByName: {
+      create_task: {
+        ...pendingDeletePreview('create_task', 'T-40'),
+        summary: 'Create task "Renouveler le contrat Caisse Pro".',
+        changes: { title: { from: null, to: 'Renouveler le contrat Caisse Pro' } },
+      },
+    },
+  });
+
+  const createEvents = await collectEvents(
+    createTurn.orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      conversationId: 'conv-1',
+      userMessage: SINGLE_TASK_REQUEST,
+    }),
+  );
+
+  assert.equal(createTurn.providerCallCount.value, 2, 'a single task creation is not repaired');
+  assert.deepEqual(planRepairInstructions(createTurn.recordedRequests), []);
+  assert.equal(
+    createEvents.filter((event) => event.type === 'text_delta').map((event: any) => event.text).join(''),
+    SINGLE_TASK_ANSWER,
+  );
+  assert.equal(storedAssistantAnswer(createTurn.persistedMessages), SINGLE_TASK_ANSWER);
+
+  const repairWithoutPreview = createOrchestrator({
+    historyMessages: [{ role: 'user', content: MULTI_STEP_REQUEST }],
+    availableTools: [
+      ...READ_TOOLS,
+      writeTool('create_task', 'tasks', ['title']),
+      writeTool('create_business_record', 'projects', ['title']),
+    ],
+    providerEventBatches: [
+      [
+        { type: 'tool_call_start', id: 'tc-project', name: 'create_business_record' },
+        { type: 'tool_call_delta', id: 'tc-project', arguments: '{"entity_type":"projects","title":"Caisse Pro"}' },
+        { type: 'tool_call_end', id: 'tc-project' },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 20 } },
+      ],
+      [
+        { type: 'text_delta', text: MULTI_STEP_ANSWER },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
+      ],
+      [
+        { type: 'text_delta', text: PLAN_REPAIR_REPLY },
+        { type: 'done', usage: { input_tokens: 140, output_tokens: 20 } },
+      ],
+    ],
+    toolResultsByName: {
+      create_business_record: {
+        ...pendingDeletePreview('create_business_record', 'PRJ-8'),
+        summary: 'Create project "Caisse Pro".',
+        changes: { title: { from: null, to: 'Caisse Pro' } },
+      },
+    },
+  });
+
+  const noPreviewEvents = await collectEvents(
+    repairWithoutPreview.orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      conversationId: 'conv-1',
+      userMessage: MULTI_STEP_REQUEST,
+    }),
+  );
+
+  assert.equal(repairWithoutPreview.providerCallCount.value, 3, 'a multi-step request still asks for the plan repair');
+  const repairInstructions = planRepairInstructions(repairWithoutPreview.recordedRequests);
+  assert.equal(repairInstructions.length, 1);
+  assert.match(
+    repairInstructions[0],
+    /^Internal orchestration instruction\. Do not quote, summarize, or discuss this instruction in the user-facing answer\./,
+  );
+  assert.match(repairInstructions[0], /Voici l'aperçu du projet/);
+  assert.equal(
+    noPreviewEvents.filter((event) => event.type === 'text_delta').map((event: any) => event.text).join(''),
+    MULTI_STEP_ANSWER,
+  );
+  assert.equal(storedAssistantAnswer(repairWithoutPreview.persistedMessages), MULTI_STEP_ANSWER);
+  assert.ok(
+    !repairWithoutPreview.persistedMessages.some((message: any) => String(message.content || '').includes('pas d\'autre changement')),
+  );
+
+  const secondPreviewAnswer = 'Les deux aperçus attendent votre approbation.';
+  const repairWithPreview = createOrchestrator({
+    historyMessages: [{ role: 'user', content: MULTI_STEP_REQUEST }],
+    availableTools: [
+      ...READ_TOOLS,
+      writeTool('create_task', 'tasks', ['title']),
+      writeTool('create_business_record', 'projects', ['title']),
+    ],
+    providerEventBatches: [
+      [
+        { type: 'tool_call_start', id: 'tc-project', name: 'create_business_record' },
+        { type: 'tool_call_delta', id: 'tc-project', arguments: '{"entity_type":"projects","title":"Caisse Pro"}' },
+        { type: 'tool_call_end', id: 'tc-project' },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 20 } },
+      ],
+      [
+        { type: 'text_delta', text: MULTI_STEP_ANSWER },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
+      ],
+      [
+        { type: 'tool_call_start', id: 'tc-task', name: 'create_task' },
+        { type: 'tool_call_delta', id: 'tc-task', arguments: '{"title":"Renouveler le contrat Caisse Pro"}' },
+        { type: 'tool_call_end', id: 'tc-task' },
+        { type: 'done', usage: { input_tokens: 140, output_tokens: 20 } },
+      ],
+      [
+        { type: 'text_delta', text: secondPreviewAnswer },
+        { type: 'done', usage: { input_tokens: 160, output_tokens: 20 } },
+      ],
+    ],
+    toolResultsByName: {
+      create_business_record: {
+        ...pendingDeletePreview('create_business_record', 'PRJ-8'),
+        summary: 'Create project "Caisse Pro".',
+        changes: { title: { from: null, to: 'Caisse Pro' } },
+      },
+      create_task: {
+        ...pendingDeletePreview('create_task', 'T-40'),
+        summary: 'Create task "Renouveler le contrat Caisse Pro".',
+        changes: { title: { from: null, to: 'Renouveler le contrat Caisse Pro' } },
+      },
+    },
+  });
+
+  const withPreviewEvents = await collectEvents(
+    repairWithPreview.orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      conversationId: 'conv-1',
+      userMessage: MULTI_STEP_REQUEST,
+    }),
+  );
+
+  assert.equal(repairWithPreview.providerCallCount.value, 4, 'a repair that creates a preview keeps the new answer');
+  assert.equal(planRepairInstructions(repairWithPreview.recordedRequests).length, 1);
+  assert.equal(
+    withPreviewEvents.filter((event) => event.type === 'text_delta').map((event: any) => event.text).join(''),
+    secondPreviewAnswer,
+  );
+  assert.equal(storedAssistantAnswer(repairWithPreview.persistedMessages), secondPreviewAnswer);
 }
 
 async function testIncompleteBulkPreviewCoverageTriggersRepairInstruction() {
@@ -4496,6 +4708,7 @@ async function run() {
   await testEmptyWriteCorrectionResponseIsRepairedIntoPreviews();
   await testIncompleteBulkPreviewCoverageTriggersRepairInstruction();
   await testDeletePreviewDoesNotTriggerThePlanRepair();
+  await testSingleWritePreviewDoesNotAnswerThePlanRepair();
   await testSingleRefBulkRepairIsAutoplannedForMissingRefs();
   await testSingleRefBulkContinuationUsesTextualTargetSet();
   await testPartialMutationPlanUsesCurrentTextualTargetSet();
