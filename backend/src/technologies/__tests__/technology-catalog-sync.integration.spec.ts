@@ -1053,6 +1053,10 @@ async function testUnusableAnswers() {
          VALUES ('catalog-sync-spec-' || substr(md5(random()::text), 1, 8), 'Catalog sync spec', 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())
          RETURNING id`,
       );
+      // An adoption reads the cache at the real time, and the cache was read at the spec's clock:
+      // the adoption takes that clock too, or the row is a week old once the real date moves on.
+      const read = catalog.effectiveProducts.bind(catalog);
+      catalog.effectiveProducts = (manager, keys, opts = {}) => read(manager, keys, { now: clock, ...opts });
       try {
         const adopted = await withTenant(dataSource, other.id, (mg) => catalog.adopt('postgresql', { manager: mg, tenantId: other.id }));
         assert.equal(adopted.created, true, 'the adoption never fails because of the cache');
