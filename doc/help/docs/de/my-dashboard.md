@@ -14,11 +14,11 @@ Der Kopfbereich oben im Dashboard bietet Schnellzugriffsschaltflächen für gew�
 
 - **Aufgabe erstellen**: öffnet den Erstellungsfluss für eigenständige Aufgaben. Erfordert `tasks:member` oder höher.
 - **Zeit erfassen**: öffnet den Dialog **Schnelle Zeiterfassung** (siehe unten). Erfordert `portfolio_projects:contributor` oder `tasks:member`.
-- **Neue Anfrage**: öffnet den Erstellungsfluss für Anfragen. Erfordert `portfolio_requests:member` oder höher.
+- **Neue Budgetzeile**: öffnet eine neue Budgetzeile. Sie beginnt als OPEX, und die Zeile **Typ** in ihrem Bereich Eigenschaften stellt sie auf CAPEX um (siehe [Budgetzeilen](budget-lines.md#der-arbeitsbereich)). Erfordert `budget:member` oder höher.
 - **Neue Anwendung**: öffnet den Erstellungsfluss für Anwendungen. Erfordert `applications:member` oder höher.
 - **Neues Asset**: öffnet den Erstellungsfluss für Assets. Erfordert `infrastructure:member` oder höher.
 - **Neues Dokument** (Split-Schaltfläche): erstellt ein leeres Wissensdokument oder öffnet den Vorlagen-Picker, um aus einer veröffentlichten Vorlage zu beginnen. Erfordert `knowledge:member` oder höher.
-- **Einstellungen** (Zahnrad-Symbol): öffnet den Dashboard-Einstellungs-Dialog, um auszuwählen, welche Kacheln angezeigt werden sollen.
+- **Einstellungen** (Zahnrad-Symbol): öffnet den Dialog der Dashboard-Einstellungen. Siehe [Ihr Dashboard anpassen](#customizing-the-budget-section).
 
 ### Schnelle Zeiterfassung
 
@@ -84,7 +84,17 @@ Während einer Cloud-Testphase sehen Administratoren der Plaid-Einstellungen unt
 
 ## Dashboard-Kacheln
 
-Das Dashboard zeigt ein Raster von Kacheln, die jeweils einen anderen Aspekt Ihrer Arbeit zeigen. Kacheln sind in einem responsiven Raster angeordnet (drei Spalten auf großen Bildschirmen, zwei auf mittleren, eine auf kleinen). Kacheln, für die Sie keine Anzeigeberechtigung haben, werden überhaupt nicht geladen.
+Das Dashboard zeigt ein Raster von Kacheln, die jeweils einen anderen Aspekt Ihrer Arbeit zeigen. Kacheln sind in einem responsiven Raster angeordnet: vier Spalten auf einem sehr breiten Bildschirm, drei auf einem großen, zwei auf einem mittleren, eine auf Mobilgeräten. Kacheln, für die Sie keine Anzeigeberechtigung haben, werden überhaupt nicht geladen.
+
+### Standardkacheln
+
+Solange Sie keine eigenen Einstellungen gespeichert haben, zeigt die Startseite **Meine Aufgaben**, **Projekte, die ich leite**, **Compliance** und **Schwachstellen im Bestand**, gefolgt von den Kacheln **Budget**, **Top-Zeilen** und **Datenqualität** des [Bereichs Budgetverwaltung](#budget-management-section). Diese Auswahl passt auf einem breiten Bildschirm auf eine Seite. Die anderen Kacheln sind ausgeschaltet: Schalten Sie sie in den [Dashboard-Einstellungen](#customizing-the-budget-section) ein. Bereits gespeicherte Einstellungen bleiben erhalten.
+
+### Kacheln ohne Inhalt
+
+Mit **Kacheln ohne Inhalt ausblenden** (standardmäßig eingeschaltet) wird eine Kachel, die nichts anzuzeigen hat, von der Seite weggelassen. Das gilt für eine leere Liste, für Zähler, die alle bei null stehen (zum Beispiel **Datenqualität** mit allen Prüfungen bei null oder **Schwachstellen im Bestand** mit allen Zeilen bei null), für **Compliance** ohne Anwendung und für **Netbox-Synchronisierung**, wenn Netbox nicht verbunden ist oder nichts zu entscheiden ist. Eine Kachel kommt zurück, sobald sie etwas anzuzeigen hat. Eine Kachel, die noch lädt oder deren Laden fehlgeschlagen ist, bleibt sichtbar.
+
+Wenn alle Kacheln leer sind, zeigt die Startseite eine einzige Zeile: „Ihre Kacheln haben noch nichts anzuzeigen.“ Schalten Sie die Option aus, um die leeren Kacheln mit ihrer üblichen Meldung zu sehen.
 
 ### Meine Aufgaben
 
@@ -249,29 +259,29 @@ Zeigt Aufgaben an, die seit langem nicht aktualisiert wurden. Jedes Element zeig
 
 ## Bereich Budgetverwaltung { #budget-management-section }
 
-Unter den Kacheln zeigt der Bereich **Budgetverwaltung**, wo Ihre IT-Ausgaben stehen: das Budget nach Art und Jahr, Ihre eigenen Budgetzeilen, die nächsten Verlängerungen, die Datenqualität und die Zeilen, die Ihre Aufmerksamkeit verdienen. Er erscheint, wenn Sie Budgetzeilen oder Verträge lesen können.
+Der Bereich **Budgetverwaltung** zeigt, wo Ihre IT-Ausgaben stehen: das Budget nach Art und Jahr, Ihre eigenen Budgetzeilen, die nächsten Verlängerungen, die Datenqualität und die Zeilen, die Ihre Aufmerksamkeit verdienen. Er erscheint, wenn Sie Budgetzeilen oder Verträge lesen können. Mit **Kacheln ohne Inhalt ausblenden** verschwindet er, wenn keine seiner Kacheln etwas anzuzeigen hat.
 
-### Aktionen des Bereichs
-
-Die Kopfzeile des Bereichs enthält Schaltflächen für schnelle Aktionen:
-
-- **Neue OPEX-Zeile** und **Neue CAPEX-Zeile** öffnen eine neue Budgetzeile dieses Typs. Sie erscheinen, wenn Ihre Rolle mindestens die Stufe Mitglied auf Budget hat (`budget:member`)
-- **Neuer Vertrag** öffnet einen neuen Vertrag. Die Schaltfläche erscheint, wenn Ihre Rolle Verträge anlegen darf
-- **Anpassen**, rechts, öffnet die Einstellungen dieses Bereichs. Siehe [Den Bereich anpassen](#customizing-the-budget-section)
+Der Bereich folgt direkt auf die erste Reihe der Startseitenkacheln. Kacheln, die weggelassen werden, weil sie leer sind, belegen in dieser Reihe keinen Platz. Die übrigen Startseitenkacheln folgen auf den Bereich. Im Testphasen-Pfad IT-Budget steht der Bereich an erster Stelle (siehe [Die Startseite folgt Ihrem Pfad](#die-startseite-folgt-ihrem-pfad)).
 
 ### Layout des Bereichs
 
-Die Kacheln des Bereichs sind in einem responsiven Raster angeordnet: drei Spalten auf einem breiten Bildschirm, zwei auf einem Tablet und eine einzelne Spalte auf dem Mobilgerät. Die Kachel **Budget** ist breiter: zwei Spalten auf einem breiten Bildschirm, die volle Breite auf einem Tablet. Jede Kachel hat ein Symbol, einen Titel und in der Regel eine Schaltfläche, die Sie zur vollständigen Seite hinter den Daten führt.
+Die Kacheln des Bereichs verwenden dieselben Spalten wie die Startseitenkacheln. Die Kachel **Budget** ist breiter: zwei Spalten auf einem sehr breiten oder großen Bildschirm, die volle Breite auf einem Tablet. Jede Kachel hat ein Symbol, einen Titel und meist eine Schaltfläche, die Sie zur vollständigen Seite hinter den Daten bringt.
 
 Mehrere Kacheln haben in ihrem Kopf die Tabs **Alle**, **OPEX** und **CAPEX**, mit denen Sie den Typ der Zeilen wählen, die sie abdecken. Jede Kachel merkt sich Ihre Wahl in Ihrem Browser.
 
-Die Kacheln sind unten in ihrer Standardreihenfolge aufgeführt. Ihre offenen Aufgaben stehen oben in der Kachel **Meine Aufgaben**.
+Die Kacheln sind unten in ihrer Standardreihenfolge aufgeführt. Der Bereich hat keine Aufgabenkachel: Ihre offenen Aufgaben stehen in der Kachel **Meine Aufgaben**.
 
 ### Budget
 
-Eine Tabelle, die drei Geschäftsjahre abdeckt: Vorjahr (J-1), aktuelles Jahr (J) und nächstes Jahr (J+1). Jedes Jahr hat drei Zeilen: **OPEX**, **CAPEX** und **Gesamt**. Die Wertspalten sind die Budgetspalten, die Ihre Organisation anzeigt, unter ihren Namen (**Budget**, **Revision**, **Ist-Werte** und **Erwarteter Endwert** mit den Standardeinstellungen, dazu **Prognose**, wenn sie angezeigt wird). Unter [Anpassen](#customizing-the-budget-section) können Sie weniger davon behalten. Eine Spalte erscheint, sobald sie für mindestens eine Zeile einen Betrag enthält. Ausgeblendete Spalten erscheinen nie. Alle Beträge sind auf den nächsten Tausender gerundet und mit dem Suffix „k“ angezeigt (z. B. `7.846 k`). Die Trennzeichen folgen der Sprache der Oberfläche.
+Eine Tabelle, die drei Geschäftsjahre abdeckt: Vorjahr (J-1), aktuelles Jahr (J) und nächstes Jahr (J+1). Jedes Jahr hat drei Zeilen: **OPEX**, **CAPEX** und **Gesamt**. Die Wertspalten sind die Budgetspalten, die Ihre Organisation anzeigt, unter ihren Namen (**Budget**, **Revision**, **Ist-Werte** und **Erwarteter Endwert** mit den Standardeinstellungen, dazu **Prognose**, wenn sie angezeigt wird). In den [Dashboard-Einstellungen](#customizing-the-budget-section) können Sie weniger davon behalten. Eine Spalte erscheint, sobald sie für mindestens eine Zeile einen Betrag enthält. Ausgeblendete Spalten erscheinen nie. Alle Beträge sind auf den nächsten Tausender gerundet und mit dem Suffix „k“ angezeigt (z. B. `7.846 k`). Die Trennzeichen folgen der Sprache der Oberfläche.
 
 Klicken Sie auf einen Betrag, um die [Liste der Budgetzeilen](budget-lines.md) auf diesem Typ zu öffnen. Ein Betrag in **Gesamt** öffnet die Liste auf beiden Typen. Klicken Sie auf **Ansehen**, um die Liste zu öffnen.
+
+### Top-Zeilen
+
+Die fünf größten Zeilen für das aktuelle Jahr, nach der Standardspalte sortiert. Der Untertitel nennt die Spalte, zum Beispiel **Budget, J**. Beträge sind auf Tausender gerundet mit dem Suffix „k“, mit den Trennzeichen der Sprache der Oberfläche.
+
+Wählen Sie den Typ mit den Tabs **Alle** / **OPEX** / **CAPEX**. Klicken Sie auf **Öffnen**, um den vollständigen Bericht **Top-Zeilen** für denselben Typ anzuzeigen.
 
 ### Datenqualität
 
@@ -301,12 +311,6 @@ Listet die fünf Verträge, die als Nächstes fällig sind, heute eingeschlossen
 
 Klicken Sie auf **Alle anzeigen**, um die Verträge-Seite zu öffnen.
 
-### Top-Zeilen
-
-Die fünf größten Zeilen für das aktuelle Jahr, nach der Standardspalte sortiert. Der Untertitel nennt die Spalte, zum Beispiel **Budget, J**. Beträge sind auf Tausender gerundet mit dem Suffix „k“, mit den Trennzeichen der Sprache der Oberfläche.
-
-Wählen Sie den Typ mit den Tabs **Alle** / **OPEX** / **CAPEX**. Klicken Sie auf **Öffnen**, um den vollständigen Bericht **Top-Zeilen** für denselben Typ anzuzeigen.
-
 ### Stärkste Zuwächse
 
 Die fünf Zeilen mit dem größten Anstieg in der Standardspalte im Vergleich zum Vorjahr. Der Untertitel nennt die Spalte, zum Beispiel **Budget, J vs J-1**. Zeilen, deren Betrag gleich geblieben oder gesunken ist, erscheinen nicht. Ein kleiner Anstieg erscheint in voller Höhe. Ein größerer wird verkürzt, zum Beispiel `340,1 k`.
@@ -327,33 +331,24 @@ Ohne Lesezugriff auf Budgetzeilen (`budget:reader`) sind die Budget-Kacheln ausg
 
 Hat die Währung einer Zeile für ein Jahr keinen Wechselkurs, ist ihr Betrag nicht in den Summen dieses Jahres enthalten. Die Kacheln **Budget**, **Stärkste Zuwächse**, **Mein Budget** und **Nach Kostenstelle** zeigen dann einen einzeiligen Hinweis, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen beim fehlenden Kurs öffnet. Nennt der Hinweis nur eine Währung und ein Jahr, öffnet sich direkt der Dialog für den manuellen Kurs. In **Top-Zeilen** zeigt eine solche Zeile ihren Betrag in ihrer eigenen Währung mit einer kleinen orangefarbenen Markierung. Siehe [Manuelle Kurse](currencies.md#manuelle-kurse).
 
-### Den Bereich anpassen { #customizing-the-budget-section }
+## Ihr Dashboard anpassen { #customizing-the-budget-section }
 
-Klicken Sie auf **Anpassen**, um **Einstellungen des Budget-Dashboards** zu öffnen. Ihre Wahl gilt nur für Ihre eigene Startseite.
+Klicken Sie auf das Symbol **Einstellungen** (Zahnrad) im Dashboard-Header, um **Dashboard-Einstellungen** zu öffnen. Der Dialog umfasst alle Kacheln der Startseite. Ihre Wahl gilt nur für Ihre eigene Startseite.
 
-- **Eine Kachel anzeigen oder ausblenden**: Haken Sie sie an oder ab. Der Dialog listet die Kacheln, die Ihre Rolle sehen darf
-- **Die Reihenfolge ändern**: Ziehen Sie eine Kachel an ihrem Griff rechts
-- **Betragsspalten der Kachel Budget**: **Spalten des Mandanten**, standardmäßig angehakt, folgt den Spalten, die Ihre Organisation anzeigt. Haken Sie es ab, um die Spalten selbst zu wählen. Behalten Sie mindestens eine, sonst zeigt der Dialog „Wählen Sie mindestens eine Betragsspalte.“
-- **Speichern** übernimmt Ihre Wahl. **Auf Standardwerte zurücksetzen** zeigt wieder jede Kachel an, in der Standardreihenfolge und mit den Spalten der Organisation
+- **Kacheln ohne Inhalt ausblenden**: oben, standardmäßig eingeschaltet. Siehe [Kacheln ohne Inhalt](#kacheln-ohne-inhalt)
+- **Startseitenkacheln**: Haken Sie eine Kachel an, um sie anzuzeigen, und ziehen Sie sie an ihrem Griff, um die Reihenfolge zu ändern. Solange eine Kachel eingeschaltet ist, erscheinen ihre Optionen (max. Einträge, Tage, Bereich) darunter
+- **Budgetverwaltung**: Wenn Sie Budgetzeilen oder Verträge lesen können, listet eine zweite Gruppe die Budgetkacheln. Haken Sie sie an und ziehen Sie sie auf dieselbe Weise. Unter der Kachel **Budget** legt **Betragsspalten** ihre Spalten fest: **Spalten des Arbeitsbereichs**, standardmäßig angehakt, folgt den Spalten, die Ihre Organisation anzeigt. Haken Sie es ab, um die Spalten selbst zu wählen. Behalten Sie mindestens eine, sonst zeigt der Dialog „Wählen Sie mindestens eine Betragsspalte.“ **Nächste Verlängerungen** erfordert Lesezugriff auf Verträge, die anderen Budgetkacheln erfordern `budget:reader`
+- **Speichern** übernimmt alles. **Auf Standardwerte zurücksetzen** stellt beide Listen auf die Standardkacheln und -reihenfolge zurück, mit den Spalten der Organisation, und schaltet **Kacheln ohne Inhalt ausblenden** wieder ein
 
-Ein Budgetadministrator wählt die Standardspalte und die Spaltennamen unter [Budgetspalten](budget-operations.md#budgetspalten). Die Kacheln und die Berichte, die sie öffnen, folgen dieser Wahl.
+Nur Kacheln, für die Sie eine Anzeigeberechtigung haben, erscheinen im Dialog. Änderungen werden in Ihrem Konto gespeichert und bleiben über Sitzungen und Geräte hinweg bestehen.
 
-## Ihr Dashboard anpassen
-
-Klicken Sie auf das Symbol **Einstellungen** (Zahnrad) im Dashboard-Header, um den Dashboard-Einstellungs-Dialog zu öffnen.
-
-Von hier aus können Sie:
-
-- **Kacheln aktivieren oder deaktivieren**: markieren oder demarkieren Sie jede Kachel, um zu steuern, was auf Ihrem Dashboard erscheint.
-- **Auf Standardeinstellungen zurücksetzen**: die ursprüngliche Kachelauswahl wiederherstellen.
-
-Nur Kacheln, für die Sie eine Anzeigeberechtigung haben, erscheinen in der Einstellungsliste. Änderungen werden in Ihrem Konto gespeichert und bleiben über Sitzungen und Geräte hinweg bestehen.
+Ein Budgetadministrator wählt die Standardspalte und die Spaltennamen unter [Budgetspalten](budget-operations.md#budgetspalten). Die Budgetkacheln und die Berichte, die sie öffnen, folgen dieser Wahl.
 
 Wenn alle Kacheln deaktiviert sind, zeigt das Dashboard eine Meldung an, die Sie auffordert, einige zu aktivieren.
 
 ## Tipps
 
 - **Beginnen Sie mit den Standardeinstellungen**: Das Dashboard wird mit einem nützlichen Satz von Kacheln bereits aktiviert ausgeliefert. Probieren Sie es einige Tage aus, bevor Sie es anpassen.
-- **Verwenden Sie die Schnellaktionen**: Eine Aufgabe, Anfrage oder ein Dokument zu erstellen (oder Zeit zu erfassen) direkt vom Dashboard aus erspart Ihnen das Navigieren.
+- **Verwenden Sie die Schnellaktionen**: Eine Aufgabe, eine Budgetzeile oder ein Dokument zu erstellen (oder Zeit zu erfassen) direkt vom Dashboard aus erspart Ihnen das Navigieren.
 - **Überprüfen Sie überfällige Aufgaben täglich**: Die Kachel Meine Aufgaben hebt überfällige Elemente in Rot hervor, damit nichts durch die Maschen fällt.
 - **Verwenden Sie veraltete Aufgaben im Team-Bereich**: Mit `tasks:admin` schalten Sie die Kachel Veraltete Aufgaben auf den Bereich `team` oder `all` um, um Arbeit zu finden, die in der gesamten Organisation niemand aktualisiert.

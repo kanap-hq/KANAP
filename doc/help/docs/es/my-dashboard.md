@@ -14,11 +14,11 @@ La franja del encabezado en la parte superior del panel proporciona botones de a
 
 - **Crear tarea**: abre el flujo de creación de tarea independiente. Requiere `tasks:member` o superior.
 - **Registrar tiempo**: abre el diálogo **Registro rápido de tiempo** (vea más abajo). Requiere `portfolio_projects:contributor` o `tasks:member`.
-- **Nueva solicitud**: abre el flujo de creación de solicitud. Requiere `portfolio_requests:member` o superior.
+- **Nueva línea presupuestaria**: abre una nueva línea presupuestaria. Empieza como OPEX, y la fila **Tipo** de su panel Propiedades la cambia a CAPEX (consulte [Líneas presupuestarias](budget-lines.md#el-espacio-de-trabajo)). Requiere `budget:member` o superior.
 - **Nueva aplicación**: abre el flujo de creación de aplicación. Requiere `applications:member` o superior.
 - **Nuevo activo**: abre el flujo de creación de activo. Requiere `infrastructure:member` o superior.
 - **Nuevo documento** (botón dividido): crea un documento de Base de conocimiento en blanco, o abre el selector de plantillas para empezar desde una plantilla publicada. Requiere `knowledge:member` o superior.
-- **Configuración** (icono de engranaje): abre el diálogo de configuración del panel para elegir qué mosaicos mostrar.
+- **Configuración** (icono de engranaje): abre el diálogo de configuración del panel. Consulte [Personalizar su panel](#customizing-the-budget-section).
 
 ### Registro rápido de tiempo
 
@@ -84,7 +84,17 @@ Durante una prueba en la nube, los administradores de la configuración de Plaid
 
 ## Mosaicos del panel
 
-El panel muestra una cuadrícula de mosaicos, cada uno mostrando un aspecto diferente de su trabajo. Los mosaicos se distribuyen en una cuadrícula adaptable (tres columnas en pantallas grandes, dos en medianas, una en pequeñas). Los mosaicos para los que no tiene permiso de visualización no se cargan en absoluto.
+El panel muestra una cuadrícula de mosaicos, cada uno mostrando un aspecto diferente de su trabajo. Los mosaicos se distribuyen en una cuadrícula adaptable: cuatro columnas en una pantalla muy ancha, tres en una pantalla grande, dos en una mediana, una en el móvil. Los mosaicos para los que no tiene permiso de visualización no se cargan en absoluto.
+
+### Mosaicos predeterminados
+
+Mientras no haya guardado su propia configuración, la página de inicio muestra **Mis tareas**, **Proyectos que lidero**, **Conformidad** y **Vulnerabilidades del parque**, seguidos de los mosaicos **Presupuesto**, **Top líneas** y **Calidad de datos** de la [sección Gestión presupuestaria](#budget-management-section). Esta selección cabe en una sola pantalla en un monitor ancho. Los demás mosaicos están desactivados: actívelos en la [configuración del panel](#customizing-the-budget-section). La configuración que ya haya guardado se conserva.
+
+### Mosaicos sin contenido
+
+Con **Ocultar los mosaicos sin contenido** activado (por defecto), un mosaico que no tiene nada que mostrar queda fuera de la página. Es el caso de una lista vacía, de contadores todos a cero (por ejemplo **Calidad de datos** con todos los controles a cero, o **Vulnerabilidades del parque** con todas las líneas a cero), de **Conformidad** sin ninguna aplicación y de **Sincronización con Netbox** cuando Netbox no está conectado o no hay nada que decidir. Un mosaico vuelve en cuanto tiene algo que mostrar. Un mosaico que todavía se está cargando o cuya carga ha fallado sigue visible.
+
+Cuando todos los mosaicos están vacíos, la página de inicio muestra una sola línea: «Sus mosaicos todavía no tienen nada que mostrar.» Desactive la opción para ver los mosaicos vacíos con su mensaje habitual.
 
 ### Mis tareas
 
@@ -249,29 +259,29 @@ Muestra tareas que no se han actualizado durante mucho tiempo. Cada elemento mue
 
 ## Sección Gestión presupuestaria { #budget-management-section }
 
-Bajo los mosaicos, la sección **Gestión presupuestaria** muestra dónde se encuentra su gasto de TI: el presupuesto por tipo y año, sus propias líneas presupuestarias, las próximas renovaciones, la calidad de los datos y las líneas que merecen su atención. Aparece cuando puede leer las líneas presupuestarias o los contratos.
+La sección **Gestión presupuestaria** muestra dónde se encuentra su gasto de TI: el presupuesto por tipo y año, sus propias líneas presupuestarias, las próximas renovaciones, la calidad de los datos y las líneas que merecen su atención. Aparece cuando puede leer las líneas presupuestarias o los contratos. Con **Ocultar los mosaicos sin contenido** activado, desaparece cuando ninguno de sus mosaicos tiene nada que mostrar.
 
-### Acciones de la sección
-
-La cabecera de la sección contiene botones de acceso directo:
-
-- **Nueva línea OPEX** y **Nueva línea CAPEX** abren una nueva línea presupuestaria de ese tipo. Se muestran cuando su rol tiene al menos el nivel Miembro en Presupuesto (`budget:member`)
-- **Nuevo contrato** abre un nuevo contrato. Se muestra cuando su rol puede crear contratos
-- **Personalizar**, a la derecha, abre la configuración de esta sección. Consulte [Personalizar la sección](#customizing-the-budget-section)
+La sección aparece justo después de la primera fila de mosaicos de inicio. Los mosaicos que quedan fuera por estar vacíos no ocupan sitio en esa fila. Los demás mosaicos de inicio siguen a la sección. En el recorrido de prueba Presupuesto de TI, la sección aparece primero (consulte [La página de inicio sigue su recorrido](#la-pagina-de-inicio-sigue-su-recorrido)).
 
 ### Diseño de la sección
 
-Los mosaicos de la sección se disponen en una cuadrícula adaptable: tres columnas en pantalla ancha, dos en tableta y una sola columna en móvil. El mosaico **Presupuesto** es más ancho: dos columnas en pantalla ancha y todo el ancho en tableta. Cada mosaico tiene un icono, un título y generalmente un botón que le lleva a la página completa detrás de los datos.
+Los mosaicos de la sección usan las mismas columnas que los mosaicos de inicio. El mosaico **Presupuesto** es más ancho: dos columnas en una pantalla muy ancha o grande, todo el ancho en una tableta. Cada mosaico tiene un icono, un título y normalmente un botón que le lleva a la página completa detrás de los datos.
 
 Varios mosaicos tienen las pestañas **Todo**, **OPEX** y **CAPEX** en su encabezado para elegir el tipo de líneas que cubren. Cada mosaico recuerda su elección en su navegador.
 
-Los mosaicos siguientes aparecen en su orden por defecto. Sus tareas abiertas están en el mosaico **Mis tareas** más arriba.
+Los mosaicos siguientes aparecen en su orden por defecto. La sección no tiene mosaico de tareas: sus tareas abiertas están en el mosaico **Mis tareas**.
 
 ### Presupuesto
 
-Una tabla que cubre tres ejercicios fiscales: el año anterior (A-1), el año actual (A) y el año siguiente (A+1). Cada año tiene tres filas: **OPEX**, **CAPEX** y **Total**. Las columnas de valores son las columnas presupuestarias que muestra su organización, con sus nombres (**Presupuesto**, **Revisión**, **Realizado** y **Aterrizaje previsto** con la configuración estándar, más **Previsión** cuando se muestra). Puede conservar menos en [Personalizar](#customizing-the-budget-section). Una columna se muestra cuando contiene un importe para al menos una fila. Las columnas ocultas nunca aparecen. Todos los importes se redondean al millar más cercano y se muestran con el sufijo "k" (por ejemplo, `7.846 k`). Los separadores siguen el idioma de la interfaz.
+Una tabla que cubre tres ejercicios fiscales: el año anterior (A-1), el año actual (A) y el año siguiente (A+1). Cada año tiene tres filas: **OPEX**, **CAPEX** y **Total**. Las columnas de valores son las columnas presupuestarias que muestra su organización, con sus nombres (**Presupuesto**, **Revisión**, **Realizado** y **Aterrizaje previsto** con la configuración estándar, más **Previsión** cuando se muestra). Puede conservar menos en la [configuración del panel](#customizing-the-budget-section). Una columna se muestra cuando contiene un importe para al menos una fila. Las columnas ocultas nunca aparecen. Todos los importes se redondean al millar más cercano y se muestran con el sufijo "k" (por ejemplo, `7.846 k`). Los separadores siguen el idioma de la interfaz.
 
 Haga clic en un importe para abrir la [lista de líneas presupuestarias](budget-lines.md) en ese tipo. Un importe **Total** abre la lista con ambos tipos. Haga clic en **Ver** para abrir la lista.
+
+### Top líneas
+
+Las cinco líneas más grandes para el año actual, clasificadas por la columna por defecto. El subtítulo nombra la columna, por ejemplo **Presupuesto, A**. Los importes se redondean a miles con sufijo "k", con los separadores del idioma de la interfaz.
+
+Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en **Abrir** para ver el informe completo Top líneas sobre el mismo tipo.
 
 ### Calidad de datos
 
@@ -301,12 +311,6 @@ Lista los cinco contratos con el vencimiento más próximo, hoy incluido, en el 
 
 Haga clic en **Ver todo** para abrir la página de Contratos.
 
-### Top líneas
-
-Las cinco líneas más grandes para el año actual, clasificadas por la columna por defecto. El subtítulo nombra la columna, por ejemplo **Presupuesto, A**. Los importes se redondean a miles con sufijo "k", con los separadores del idioma de la interfaz.
-
-Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en **Abrir** para ver el informe completo Top líneas sobre el mismo tipo.
-
 ### Mayores incrementos
 
 Las cinco líneas con el mayor incremento en la columna por defecto comparado con el año anterior. El subtítulo nombra la columna, por ejemplo **Presupuesto, A vs A-1**. Las líneas cuyo importe se mantuvo o bajó no aparecen. Un incremento pequeño aparece completo. Uno mayor se acorta, por ejemplo `340,1 k`.
@@ -327,33 +331,24 @@ Sin acceso de lectura a las líneas presupuestarias (`budget:reader`), los mosai
 
 Cuando la moneda de una línea no tiene tipo de cambio para un año, su importe queda excluido de los totales de ese año. Los mosaicos **Presupuesto**, **Mayores incrementos**, **Mi presupuesto** y **Por centro de coste** muestran entonces un aviso de una línea, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas en el tipo faltante. Cuando el aviso solo cita una moneda y un año, el diálogo del tipo manual se abre directamente. En **Top líneas**, una línea así muestra su importe en su propia moneda con una pequeña marca naranja. Vea [Tipos manuales](currencies.md#tipos-manuales).
 
-### Personalizar la sección { #customizing-the-budget-section }
+## Personalizar su panel { #customizing-the-budget-section }
 
-Haga clic en **Personalizar** para abrir **Configuración del panel de control del presupuesto**. Sus elecciones solo se aplican a su propia página de inicio.
+Haga clic en el icono de **Configuración** (engranaje) en el encabezado del panel para abrir **Configuración del panel**. El diálogo cubre todos los mosaicos de la página de inicio. Sus elecciones solo se aplican a su propia página de inicio.
 
-- **Mostrar u ocultar un mosaico**: márquelo o desmárquelo. El diálogo lista los mosaicos que su rol puede ver
-- **Cambiar el orden**: arrastre un mosaico por su asa a la derecha
-- **Columnas de importes del mosaico Presupuesto**: **Columnas del espacio de trabajo**, marcada por defecto, sigue las columnas que muestra su espacio de trabajo. Desmárquela para elegir usted mismo las columnas. Conserve al menos una: si no, el diálogo indica «Seleccione al menos una columna de importes.»
-- **Guardar** aplica sus elecciones. **Restablecer valores predeterminados** vuelve a mostrar todos los mosaicos, en el orden por defecto, con las columnas de la organización
+- **Ocultar los mosaicos sin contenido**: arriba, activado por defecto. Consulte [Mosaicos sin contenido](#mosaicos-sin-contenido)
+- **Mosaicos de inicio**: marque un mosaico para mostrarlo y arrástrelo por su asa para cambiar el orden. Mientras un mosaico está activado, sus opciones (máx. elementos, días, ámbito) aparecen debajo
+- **Gestión presupuestaria**: cuando puede leer las líneas presupuestarias o los contratos, un segundo grupo lista los mosaicos del presupuesto. Márquelos y arrástrelos de la misma forma. Bajo el mosaico **Presupuesto**, **Columnas de importes** fija sus columnas: **Columnas del espacio de trabajo**, marcada por defecto, sigue las columnas que muestra su organización. Desmárquela para elegir usted mismo las columnas. Conserve al menos una: si no, el diálogo indica «Seleccione al menos una columna de importes.» **Próximas renovaciones** requiere acceso de lectura a los contratos, los demás mosaicos del presupuesto requieren `budget:reader`
+- **Guardar** lo aplica todo. **Restablecer valores predeterminados** devuelve las dos listas a los mosaicos y el orden por defecto, con las columnas de la organización, y vuelve a activar **Ocultar los mosaicos sin contenido**
 
-Un administrador de presupuesto elige la columna por defecto y los nombres de las columnas en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Los mosaicos y los informes que abren siguen esa elección.
+Solo aparecen en el diálogo los mosaicos para los que tiene permiso de visualización. Los cambios se guardan en su cuenta y persisten entre sesiones y dispositivos.
 
-## Personalizar su panel
-
-Haga clic en el icono de **Configuración** (engranaje) en el encabezado del panel para abrir el diálogo de configuración del panel.
-
-Desde aquí puede:
-
-- **Activar o desactivar mosaicos**: marque o desmarque cada mosaico para controlar qué aparece en su panel.
-- **Restablecer a valores predeterminados**: restaurar la selección original de mosaicos.
-
-Solo aparecen en la lista de configuración los mosaicos para los que tiene permiso de visualización. Los cambios se guardan en su cuenta y persisten entre sesiones y dispositivos.
+Un administrador de presupuesto elige la columna por defecto y los nombres de las columnas en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Los mosaicos del presupuesto y los informes que abren siguen esa elección.
 
 Si todos los mosaicos están desactivados, el panel muestra un mensaje invitándole a activar algunos.
 
 ## Consejos
 
 - **Empiece con los valores predeterminados**: el panel viene con un conjunto útil de mosaicos ya activados. Pruébelo durante unos días antes de personalizarlo.
-- **Use las acciones rápidas**: crear una tarea, solicitud o documento (o registrar tiempo) directamente desde el panel le ahorra tener que navegar.
+- **Use las acciones rápidas**: crear una tarea, una línea presupuestaria o un documento (o registrar tiempo) directamente desde el panel le ahorra tener que navegar.
 - **Revise las tareas vencidas a diario**: el mosaico Mis tareas resalta los elementos vencidos en rojo para que nada se le escape.
 - **Use Tareas obsoletas con alcance de equipo**: con `tasks:admin`, cambie el mosaico Tareas obsoletas a alcance `equipo` o `todas` para encontrar trabajo que nadie está actualizando en toda la organización.

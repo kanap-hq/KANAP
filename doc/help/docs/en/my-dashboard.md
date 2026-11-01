@@ -14,11 +14,11 @@ The header strip at the top of the dashboard provides shortcut buttons for commo
 
 - **Create Task**: opens the standalone task creation flow. Requires `tasks:member` or higher.
 - **Log Time**: opens the **Quick Log Time** dialog (see below). Requires `portfolio_projects:contributor` or `tasks:member`.
-- **New Request**: opens the request creation flow. Requires `portfolio_requests:member` or higher.
+- **New budget line**: opens a new budget line. It starts as OPEX, and the **Type** row of its Properties panel switches it to CAPEX (see [Budget lines](budget-lines.md#the-workspace)). Requires `budget:member` or higher.
 - **New Application**: opens the application creation flow. Requires `applications:member` or higher.
 - **New Asset**: opens the asset creation flow. Requires `infrastructure:member` or higher.
 - **New Document** (split button): creates a blank Knowledge document, or opens the template picker to start from a published template. Requires `knowledge:member` or higher.
-- **Settings** (gear icon): opens the dashboard settings dialog to choose which tiles to show.
+- **Settings** (gear icon): opens the dashboard settings dialog. See [Customizing your dashboard](#customizing-the-budget-section).
 
 ### Quick Log Time
 
@@ -84,7 +84,17 @@ During a cloud trial, administrators of the Plaid settings see one line under th
 
 ## Dashboard tiles
 
-The dashboard displays a grid of tiles, each showing a different aspect of your work. Tiles are laid out in a responsive grid (three columns on large screens, two on medium, one on small). Tiles you do not have permission to view are not loaded at all.
+The dashboard displays a grid of tiles, each showing a different aspect of your work. Tiles are laid out in a responsive grid: four columns on a wide screen, three on a large screen, two on a medium one, one on mobile. Tiles you do not have permission to view are not loaded at all.
+
+### Default tiles
+
+Until you save your own settings, the home page shows **My Tasks**, **Projects I Lead**, **Compliance** and **Vulnerabilities in your estate**, followed by the **Budget**, **Top lines** and **Data hygiene** tiles of the [Budget management section](#budget-management-section). This selection fits on one screen on a wide display. The other tiles are off: turn them on in the [dashboard settings](#customizing-the-budget-section). Settings you already saved are kept.
+
+### Tiles without content
+
+With **Hide tiles without content** on (the default), a tile with nothing to show is left out of the page. That is the case for an empty list, counts all at zero (for example **Data hygiene** with every check at zero, or **Vulnerabilities in your estate** with every line at zero), **Compliance** with no application, and **Netbox synchronisation** when Netbox is not connected or there is nothing to decide. A tile comes back as soon as it has something to show. A tile that is still loading or that failed to load stays visible.
+
+When every tile is empty, the home page shows one line: "Your tiles have nothing to show yet." Turn the option off to see the empty tiles with their usual empty message.
 
 ### My Tasks
 
@@ -249,29 +259,29 @@ Shows tasks that have not been updated for a long time. Each item shows the days
 
 ## Budget management section { #budget-management-section }
 
-Below the tiles, the **Budget management** section shows where your IT spend stands: the budget by type and year, your own budget lines, upcoming renewals, data quality, and the lines that deserve your attention. It appears when you can read budget lines or contracts.
+The **Budget management** section shows where your IT spend stands: the budget by type and year, your own budget lines, upcoming renewals, data quality, and the lines that deserve your attention. It appears when you can read budget lines or contracts. With **Hide tiles without content** on, it disappears when none of its tiles has anything to show.
 
-### Section actions
-
-The section header holds shortcut buttons:
-
-- **New OPEX line** and **New CAPEX line** open a new budget line of that type. They show when your role has at least the Member level on Budget (`budget:member`)
-- **New contract** opens a new contract. It shows when your role can create contracts
-- **Customize**, on the right, opens the settings of this section. See [Customizing the section](#customizing-the-budget-section)
+The section comes right after the first row of home tiles. Tiles left out because they are empty take no place in that row. The other home tiles follow the section. On the IT budget trial path, the section comes first (see [The home page follows your path](#the-home-page-follows-your-path)).
 
 ### Section layout
 
-The section's tiles are arranged in a responsive grid: three columns on a wide screen, two on a tablet, and a single column on mobile. The **Budget** tile is wider: two columns on a wide screen, the full width on a tablet. Each tile has an icon, a title, and usually a button that takes you to the full page behind the data.
+The section's tiles use the same columns as the home tiles. The **Budget** tile is wider: two columns on a wide or large screen, the full width on a tablet. Each tile has an icon, a title, and usually a button that takes you to the full page behind the data.
 
 Several tiles have **All**, **OPEX** and **CAPEX** tabs in their header to choose the type of lines they cover. Each tile remembers your choice in your browser.
 
-The tiles below are listed in their default order. Your open tasks are in the **My Tasks** tile above.
+The tiles below are listed in their default order. The section has no tasks tile: your open tasks are in the **My Tasks** tile.
 
 ### Budget
 
-A table covering three fiscal years: last year (Y-1), the current year (Y) and next year (Y+1). Each year has three rows: **OPEX**, **CAPEX** and **Total**. The value columns are the budget columns your organisation shows, under their names (**Budget**, **Revision**, **Actuals** and **Expected landing** with the standard settings, plus **Forecast** when it is shown). You can keep fewer of them in [Customize](#customizing-the-budget-section). A column shows when it holds an amount for at least one row. Hidden columns never appear. All amounts are rounded to the nearest thousand and displayed with a "k" suffix (for example, `7,846k`). Separators follow the interface language.
+A table covering three fiscal years: last year (Y-1), the current year (Y) and next year (Y+1). Each year has three rows: **OPEX**, **CAPEX** and **Total**. The value columns are the budget columns your organisation shows, under their names (**Budget**, **Revision**, **Actuals** and **Expected landing** with the standard settings, plus **Forecast** when it is shown). You can keep fewer of them in the [dashboard settings](#customizing-the-budget-section). A column shows when it holds an amount for at least one row. Hidden columns never appear. All amounts are rounded to the nearest thousand and displayed with a "k" suffix (for example, `7,846k`). Separators follow the interface language.
 
 Click an amount to open the [budget lines list](budget-lines.md) on that type. A **Total** amount opens the list on both types. Click **View** to open the list.
+
+### Top lines
+
+The five largest lines for the current year, ranked by the default column. The subtitle names the column, for example **Budget, Y**. Amounts are rounded to thousands with a "k" suffix, with the separators of the interface language.
+
+Use the **All** / **OPEX** / **CAPEX** tabs to choose the type. Click **Open** to view the full Top items report on the same type.
 
 ### Data hygiene
 
@@ -301,12 +311,6 @@ Lists the five contracts due next, today included, in the order of the **Next du
 
 Click **View all** to open the Contracts page.
 
-### Top lines
-
-The five largest lines for the current year, ranked by the default column. The subtitle names the column, for example **Budget, Y**. Amounts are rounded to thousands with a "k" suffix, with the separators of the interface language.
-
-Use the **All** / **OPEX** / **CAPEX** tabs to choose the type. Click **Open** to view the full Top items report on the same type.
-
 ### Top increases
 
 The five lines with the largest increase in the default column compared to the previous year. The subtitle names the column, for example **Budget, Y vs Y-1**. Lines whose amount stayed flat or went down do not appear. A small increase stays in full. A larger one is shortened, for example `340.1k`.
@@ -327,33 +331,24 @@ Without read access to budget lines (`budget:reader`), the budget tiles are hidd
 
 When a line's currency has no exchange rate for a year, its amount is left out of the totals of that year. The **Budget**, **Top increases**, **My budget** and **By cost center** tiles then show a one-line warning, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings on the missing rate. When the warning names a single currency and year, the manual rate dialog opens directly. In **Top lines**, such a line shows its amount in its own currency with a small orange mark. See [Manual rates](currencies.md#manual-rates).
 
-### Customizing the section { #customizing-the-budget-section }
+## Customizing your dashboard { #customizing-the-budget-section }
 
-Click **Customize** to open **Budget dashboard settings**. Your choices apply to your own home page only.
+Click the **Settings** icon (gear) in the dashboard header to open **Dashboard settings**. The dialog covers every tile of the home page. Your choices apply to your own home page only.
 
-- **Show or hide a tile**: tick or untick it. The dialog lists the tiles your role can see
-- **Change the order**: drag a tile by its handle on the right
-- **Amount columns of the Budget tile**: **Workspace columns**, ticked by default, follows the columns your organisation shows. Untick it to choose the columns yourself. Keep at least one: the dialog says "Choose at least one amount column." otherwise
-- **Save** applies your choices. **Reset to defaults** shows every tile again, in the default order, with the organisation's columns
+- **Hide tiles without content**: at the top, on by default. See [Tiles without content](#tiles-without-content)
+- **Home tiles**: tick a tile to show it, drag it by its handle to change the order. While a tile is on, its options (max items, days, scope) show under it
+- **Budget management**: when you can read budget lines or contracts, a second group lists the budget tiles. Tick and drag them the same way. Under the **Budget** tile, **Amount columns** sets its columns: **Workspace columns**, ticked by default, follows the columns your organisation shows. Untick it to choose the columns yourself. Keep at least one: the dialog says "Choose at least one amount column." otherwise. **Next renewals** needs read access to contracts, the other budget tiles need `budget:reader`
+- **Save** applies everything. **Reset to defaults** restores both lists to the default tiles and order, with the organisation's columns, and turns **Hide tiles without content** back on
 
-A budget administrator chooses the default column and the column names in [Budget columns](budget-operations.md#budget-columns). The tiles and the reports they open follow that choice.
+Only tiles you have permission to view appear in the dialog. Changes are saved to your account and persist across sessions and devices.
 
-## Customizing your dashboard
-
-Click the **Settings** icon (gear) in the dashboard header to open the dashboard settings dialog.
-
-From here you can:
-
-- **Enable or disable tiles**: check or uncheck each tile to control what appears on your dashboard.
-- **Reset to Defaults**: restore the original tile selection.
-
-Only tiles you have permission to view appear in the settings list. Changes are saved to your account and persist across sessions and devices.
+A budget administrator chooses the default column and the column names in [Budget columns](budget-operations.md#budget-columns). The budget tiles and the reports they open follow that choice.
 
 If all tiles are disabled, the dashboard shows a message prompting you to enable some.
 
 ## Tips
 
 - **Start with the defaults**: the dashboard ships with a useful set of tiles already enabled. Try it for a few days before customizing.
-- **Use the quick actions**: creating a task, request, or document (or logging time) straight from the dashboard saves you navigating around.
+- **Use the quick actions**: creating a task, a budget line or a document (or logging time) straight from the dashboard saves you navigating around.
 - **Check overdue tasks daily**: the My Tasks tile highlights overdue items in red so nothing slips through the cracks.
 - **Use Stale Tasks at team scope**: with `tasks:admin`, switch the Stale Tasks tile to `team` or `all` scope to find work nobody is updating across the organization.
