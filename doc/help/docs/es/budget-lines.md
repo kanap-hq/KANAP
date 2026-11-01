@@ -94,15 +94,15 @@ La lista (en **Gestión presupuestaria > Líneas presupuestarias**) reúne las l
 - **Nombre del producto**: El título de la línea (enlaza a la pestaña **Vista general**)
 - **Proveedor**: El nombre del proveedor
 - **Empresa pagadora**: Qué empresa paga esta línea
-- **Contrato**: El nombre del último contrato vinculado (enlaza al espacio de trabajo del Contrato)
 - **Cuenta**: El número y nombre de cuenta contable
-- **Asignación**: La etiqueta del método de asignación del año actual (enlaza a la pestaña **Asignaciones**)
 - **Presupuesto A** y **Aterrizaje previsto A**: Los importes del año actual de la columna por defecto y de la última columna visible (enlazan a la pestaña **Presupuesto** de este año). Con la configuración estándar son Presupuesto y Aterrizaje previsto. Cuando la columna por defecto es también la última visible, aparece una sola columna de importe. Consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias)
 - **Dimensiones obligatorias**: Una columna por dimensión activada que es obligatoria para alguno de los dos tipos, con el nombre de la dimensión. Un espacio de trabajo nuevo no tiene ninguna
-- **Tarea**: El título de la última tarea (enlaza a la pestaña **Vista general**, donde está el panel de tareas)
 
 **Columnas adicionales** (ocultas por defecto, habilítelas mediante el selector de columnas):
 
+- **Contrato**: El nombre del último contrato vinculado (enlaza al espacio de trabajo del Contrato)
+- **Asignación**: La etiqueta del método de asignación del año actual (enlaza a la pestaña **Asignaciones**)
+- **Tarea**: El título de la última tarea (enlaza a la pestaña **Vista general**, donde está el panel de tareas)
 - **Columnas de importes**: Cada columna presupuestaria visible para A-1, A, A+1 y A+2, con los nombres que eligió su organización. El encabezado indica la columna, el año respecto a hoy y el año natural, por ejemplo **Revisión A+1 (2027)**. Las columnas ocultas no se ofrecen
 - **Columnas de ETC**: El ETC de cada columna presupuestaria visible para A-1, A, A+1 y A+2, con los nombres que eligió su organización, justo después de las columnas de importes en el selector de columnas. El encabezado indica la columna y el año natural, por ejemplo **ETC Presupuesto (2026)**. El ETC de una línea es la suma del ETC de sus líneas de cantidad y precio en esa columna. Consulte [ETC](#etc). La celda queda vacía cuando la columna no tiene líneas
 - **ETC declarados**: **Sí** cuando la línea declara ETC en al menos una columna presupuestaria de cualquier año; si no, vacía. Son las líneas que conserva el filtro **Líneas con ETC** de los informes
@@ -366,8 +366,9 @@ En una columna vacía, un clic en una pestaña cambia de inmediato. En una colum
 
 - Bajo el editor, **Resultado por mes** muestra el año mes a mes para cada columna visible, en la moneda de la línea, con un subtotal por trimestre (**T1** a **T4**) y una fila **Total**. La columna activa aparece resaltada
 - Con dos columnas o más, una última fila da la diferencia de cada columna con una de ellas, por ejemplo «+12.000 (+1,8 %)». Elija esa columna en **Diferencia con** encima de la tabla. Parte de la columna por defecto
-- Mientras cada columna esté vacía, o sea un importe repartido de forma uniforme en todo el año, una frase sustituye la tabla, por ejemplo «Todas las columnas se reparten de forma lineal en todo el año: el detalle mensual no aporta nada más.» **Mostrar el detalle** abre la tabla y **Ocultar el detalle** la vuelve a plegar. Su elección se mantiene mientras siga en la línea
-- La tabla sigue abierta mientras la columna activa se introduce por mes o una columna está pendiente de su elección
+- La tabla está plegada por defecto. **Mostrar el detalle** la abre y **Ocultar el detalle** la vuelve a plegar. Su elección se mantiene mientras siga en la línea
+- Plegada, la sección muestra su título y **Mostrar el detalle**. Mientras cada columna esté vacía, o sea un importe repartido de forma uniforme en todo el año, una frase indica el motivo, por ejemplo «Todas las columnas se reparten de forma lineal en todo el año: el detalle mensual no aporta nada más.»
+- La tabla se abre sola mientras la columna activa se introduce por mes o una columna está pendiente de su elección
 
 **Volver a los valores de apertura**:
 
