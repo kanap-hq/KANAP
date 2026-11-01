@@ -136,7 +136,7 @@ Les modèles de phases fournissent :
 
 Configurez les types, catégories et flux pour organiser les demandes et projets.
 
-Un nouvel espace de travail commence avec trois sources (Informatique, Métier, Conformité) et trois catégories (Applications, Cybersécurité, Infrastructure), sans filière. Leurs noms suivent la langue de l'espace de travail. Vous pouvez les renommer, les désactiver ou les supprimer comme toute autre valeur.
+Un nouvel espace de travail commence avec trois sources (Informatique, Métier, Conformité) et cinq catégories, chacune avec une courte description (Applications métier, Poste de travail et services aux utilisateurs, Infrastructure et exploitation, Innovation et transformation numérique, Cybersécurité), sans filière. Leurs noms suivent la langue de l'espace de travail. Vous pouvez les renommer, les désactiver ou les supprimer comme toute autre valeur.
 
 ### Types
 
