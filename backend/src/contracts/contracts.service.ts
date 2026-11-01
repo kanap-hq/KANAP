@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { BUDGET_LINE_TABLE, BUDGET_NATURES, linkedLineOf, naturesAnd } from '../spend/budget-nature';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, DeepPartial, EntityManager, In, Repository, Raw, SelectQueryBuilder } from 'typeorm';
@@ -1771,7 +1772,7 @@ export class ContractsService {
    */
   async budgetCoverage(contractId: string, query: any, opts?: ListReadOptions) {
     const mg = opts?.manager ?? this.repo.manager;
-    if (!opts?.budgetAccess) throw new ForbiddenException('Reading the budget figures of a contract needs access to the budget.');
+    if (!opts?.budgetAccess) throw moduleRightRequired('budget', 'reader', 'Reading the budget figures of a contract needs access to the budget.');
     const contract = await this.findContract(contractId, mg);
     const currentYear = contractBudgetCurrentYear();
     const selection = parseContractBudgetSelection(query, currentYear, { year: 'year', column: 'column' });

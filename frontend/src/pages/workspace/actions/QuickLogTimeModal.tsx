@@ -23,6 +23,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { localTodayYmd } from '../../../lib/datetime';
 import { ACTIVE_TASK_STATUSES } from '../../tasks/task.constants';
 import { useNotify } from '../../../components/notify/NotifyProvider';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
 interface QuickLogTimeModalProps {
   open: boolean;
@@ -156,7 +157,7 @@ export default function QuickLogTimeModal({
       notify({ message: t('messages.timeLogged') });
     },
     onError: (err: any) => {
-      setError(err?.response?.data?.message || err.message || t('messages.failedToLogTime'));
+      setError(getApiErrorMessage(err, t, t('messages.failedToLogTime')));
     },
   });
 

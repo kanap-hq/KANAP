@@ -2207,7 +2207,7 @@
         "assignmentAdded": "Affectation ajoutée",
         "removed": "{{name}} retiré.",
         "application": "Application",
-        "environment": "Environnement",
+        "environment": "Déploiement",
         "role": "Rôle",
         "since": "Depuis",
         "notes": "Notes",
@@ -2216,13 +2216,13 @@
         "removeAssignment": "Retirer l'affectation",
         "addAssignmentDialog": "Ajouter une affectation",
         "applicationRequired": "L'application est requise",
-        "environmentRequired": "L'environnement (instance) est requis",
+        "environmentRequired": "Choisissez un déploiement.",
         "roleRequired": "Le rôle est requis",
-        "selectAppForEnv": "Sélectionnez une application pour choisir un environnement.",
-        "chooseEnvironment": "Choisissez un environnement.",
-        "noInstances": "Aucune instance pour cette application",
+        "selectAppForEnv": "Sélectionnez une application pour choisir un déploiement.",
+        "chooseEnvironment": "Choisissez un déploiement.",
         "noServerRoles": "Aucun rôle serveur configuré ; mettez à jour les paramètres de la cartographie SI.",
-        "assign": "Affecter"
+        "assign": "Affecter",
+        "createDeployment": "+ Créer le déploiement {{environment}}"
       },
       "connections": {
         "loadingConnections": "Chargement des connexions…",
@@ -3182,7 +3182,9 @@
         "deleteUsage_other": "<strong>{{count}} actifs sont</strong> actuellement affectés à <strong>{{name}}</strong>. Supprimer ce sous-site les laissera sans sous-site.",
         "deleteKeepsAssets": "Les fiches des actifs sont conservées ; seul leur lien au sous-site est effacé.",
         "deleteAnyway": "Supprimer quand même"
-      }
+      },
+      "createOption": "+ Créer le site « {{name}} »",
+      "createNew": "+ Nouveau site"
     }
   },
   "components": {

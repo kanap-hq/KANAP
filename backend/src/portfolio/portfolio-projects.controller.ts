@@ -1,14 +1,14 @@
 import { languageOf } from '../common/csv-sheet';
 import {
-  Body, Controller, Delete, ForbiddenException, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
+  Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
+import { moduleRightRequired, requestContextMissing } from '../auth/module-right-required';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { DataSource, EntityManager } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { moduleRightRequired } from '../auth/module-right-required';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { Public } from '../auth/public.decorator';
@@ -60,7 +60,9 @@ function assertContributorProjectFields(ctx: TenantRequest, body: Record<string,
   if (hasLevel(ctx, 'portfolio_projects', 'member')) return;
   const refused = Object.keys(body ?? {}).filter((key) => !CONTRIBUTOR_PROJECT_FIELDS.has(key));
   if (refused.length > 0) {
-    throw new ForbiddenException(
+    throw moduleRightRequired(
+      'portfolio_projects',
+      'member',
       `Changing ${refused.join(', ')} needs the member level on projects. A contributor can change the purpose, the planned dates and the scheduling mode.`,
     );
   }
@@ -90,7 +92,7 @@ export class PortfolioProjectsController {
    */
   private requireManager(ctx: TenantRequest): EntityManager {
     if (!ctx.manager) {
-      throw new ForbiddenException('Tenant context is not available');
+      throw requestContextMissing('Tenant context is not available');
     }
     return ctx.manager;
   }

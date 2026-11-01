@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { codedForbidden } from '../../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { textSortKey, type TextSortKey } from '../../common/list-sort';
@@ -160,6 +161,7 @@ const USER_FIELDS = ['reporter_user_id', 'owner_user_id'] as const;
 const BOOLEAN_FIELDS = ['personal_data_affected', 'authority_notification_required'] as const;
 
 const CONFIDENTIAL_LIFT_MESSAGE = 'Only a register administrator can lift this restriction.';
+const confidentialLift = () => codedForbidden('INCIDENT_CONFIDENTIAL_LIFT', CONFIDENTIAL_LIFT_MESSAGE);
 
 /** Change note stored on the review version kept by a closure or a cancellation. */
 const CLOSURE_CHANGE_NOTES: Record<string, string> = {
@@ -1032,7 +1034,7 @@ export class IncidentsService extends IncidentsBaseService {
       return this.get(incident.id, this.viewed(opts, opts?.viewer ?? { userId, isAdmin: true }));
     }
     if (incident.confidential && !confidential && !opts?.viewer?.isAdmin) {
-      throw new ForbiddenException(CONFIDENTIAL_LIFT_MESSAGE);
+      throw confidentialLift();
     }
 
     const before = { ...incident };
@@ -1123,7 +1125,7 @@ export class IncidentsService extends IncidentsBaseService {
   ): void {
     if (next === undefined || next === incident.confidential) return;
     if (incident.confidential && !next && !viewer?.isAdmin) {
-      throw new ForbiddenException(CONFIDENTIAL_LIFT_MESSAGE);
+      throw confidentialLift();
     }
     incident.confidential = next;
   }

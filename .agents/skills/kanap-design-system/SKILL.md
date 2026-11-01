@@ -71,6 +71,15 @@ KANAP uses MUI, but only through constrained patterns:
 - Use shared `sx` constants for repeated drawer/select/date/menu styling; do not paste large repeated inline `sx` objects.
 - Required asterisks are orange, not red.
 
+## Help Text And Empty States
+
+Read [references/help-text.md](references/help-text.md) before adding or reviewing any interface text. In short:
+
+- The screen says what the person needs to act exactly once. Take the first option that works: nothing, a precise label or a data-shape placeholder, an `InfoHint` tooltip, collapsible help, and a visible sentence only when it must be read before acting (an irreversible consequence or a hidden blocking condition).
+- No help line under a field that repeats its label, no page subtitle, no dialog paragraph that explains the fields, no permanent tip alert.
+- An empty list, tab or section says in one line what goes there and offers the add action to people who may take it.
+- The record title is typed in the workspace header, in creation as in editing; no body "Name" field repeats it.
+
 ## List Pages
 
 - Plain list: `PageHeader` (title, action bar) → grid toolbar (quick filter, "Show" scope, filters) → column chooser → grid. Reference: `frontend/src/pages/CompaniesPage.tsx`.
@@ -185,3 +194,5 @@ Read [references/kanap-design-charter.md](references/kanap-design-charter.md) fo
 - Drawer tab and property group rules.
 - AG Grid CSS enforcement details.
 - Full implementation checklist.
+
+Read [references/help-text.md](references/help-text.md) for the help text rule, the three levers (collapsible help, the label carries the example, the empty state says the gesture) and the review checklist.

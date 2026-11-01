@@ -168,7 +168,7 @@ Die Leiste zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen 
 - **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört, zum Beispiel Tier 0 für einen Domänencontroller und den Hypervisor, auf dem er läuft. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Zonen oder **Keine Zone**. Das Asset erscheint dann in dieser Zone auf der Seite [Administrationszonen](administration-view.md)
 
 **Standort**:
-- **Standort** (erforderlich)
+- **Standort** (erforderlich): Jedes Asset hat einen, ob es über den Bildschirm, einen Import oder den Assistenten angelegt wird. Gibt es den Standort noch nicht, geben Sie seinen Namen ein und wählen Sie **+ Standort „…“ anlegen**: Geben Sie die Hosting-Art an, und der neue Standort wird ins Feld übernommen. Dafür ist `locations:member` nötig
 - **Unterstandort** (wenn der Standort definierte Unterstandorte hat)
 - **Hosting-Typ**, **Betreiberunternehmen** oder **Cloud-Anbieter**, **Land**, **Stadt**: schreibgeschützt, vom Standort abgeleitet. Sie folgen, wenn Sie den Standort ändern
 
@@ -217,12 +217,12 @@ Der Reiter Betrieb zeigt den Cluster des Assets und was darauf läuft: die Anwen
 | Spalte | Was sie zeigt |
 |--------|---------------|
 | **Anwendung** | Anwendungsname. Klicken Sie darauf, um die Anwendung auf ihrem Reiter **Bereitstellungen** zu öffnen |
-| **Umgebung** | Die Bereitstellungsumgebung, zu der die Zuordnung gehört |
+| **Bereitstellung** | Die Bereitstellung der Anwendung, der das Asset dient, benannt nach ihrer Umgebung |
 | **Rolle** | Server-Rolle (Web, Datenbank, Anwendung usw.) |
 | **Seit** | Datum, an dem der Server zugeordnet wurde |
 | **Notizen** | Freitext-Notizen |
 
-Klicken Sie auf **Zuordnung hinzufügen**, um dieses Asset einer Anwendungs-Bereitstellung zuzuordnen. Wählen Sie die Anwendung, dann die Umgebung (die Anwendung muss bereits eine Bereitstellung in dieser Umgebung haben), dann die Rolle und optional Datum und Notizen. Bei einem Mitglied eines Clusters fragt KANAP zuerst, ob dem Cluster oder nur diesem Server zugeordnet wird. Siehe [Anwendungen auf einem Cluster](#applications-on-a-cluster). Der Stift am Ende einer Zeile öffnet die Anwendung: Die Zuordnung wird in ihrem Reiter **Bereitstellungen** bearbeitet. Das Papierkorbsymbol entfernt die Zuordnung nach einer Bestätigung. **Zuordnung hinzufügen** ist nicht verfügbar, solange in **IT-Landschaft > Einstellungen** keine Serverrolle eingerichtet ist. Diese Befehle erfordern `infrastructure:member` und `applications:member`. Ohne beide ist die Tabelle schreibgeschützt.
+Klicken Sie auf **Zuordnung hinzufügen**, um dieses Asset einer Anwendungs-Bereitstellung zuzuordnen. Wählen Sie die Anwendung, dann ihre Bereitstellung. Hat die Anwendung in einer Umgebung noch keine Bereitstellung, legt **+ Bereitstellung … anlegen** sie zusammen mit der Zuordnung an. Wählen Sie dann die Rolle und optional Datum und Notizen. Bei einem Mitglied eines Clusters fragt KANAP zuerst, ob dem Cluster oder nur diesem Server zugeordnet wird. Siehe [Anwendungen auf einem Cluster](#applications-on-a-cluster). Der Stift am Ende einer Zeile öffnet die Anwendung: Die Zuordnung wird in ihrem Reiter **Bereitstellungen** bearbeitet. Das Papierkorbsymbol entfernt die Zuordnung nach einer Bestätigung. **Zuordnung hinzufügen** ist nicht verfügbar, solange in **IT-Landschaft > Einstellungen** keine Serverrolle eingerichtet ist. Diese Befehle erfordern `infrastructure:member` und `applications:member`. Ohne beide ist die Tabelle schreibgeschützt.
 
 Bei einem Mitglied zeigt eine dem Cluster zugeordnete Anwendung „über“ und den Namen des Clusters, ohne Stift und Papierkorb: Ändern Sie sie am Cluster.
 
@@ -512,7 +512,7 @@ Einige Felder werden berechnet und können nicht importiert werden:
 ### Einschränkungen
 
 - **Maximal 4 IP-Adressen**: Assets unterstützen bis zu 4 IP-Adresseinträge in einer Datei
-- **Standort erforderlich**: Jedes Asset muss den Code eines vorhandenen Standorts haben
+- **Standort erforderlich**: Jedes Asset muss den Code eines vorhandenen Standorts haben. **Preflight** meldet einen Fehler in einer Zeile mit leerer `location_reference`-Zelle und lehnt eine Datei ohne diese Spalte ab
 - **Verknüpfungen nicht enthalten**: Anwendungszuweisungen, Verbindungen, Finanzverknüpfungen, Projekte, Aufgaben und Anhänge müssen im Arbeitsbereich verwaltet werden
 
 ### Fehlerbehebung

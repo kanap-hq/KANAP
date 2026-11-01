@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { outsideParticipation, moduleRightRequired } from '../../auth/module-right-required';
 import type { EntityManager } from 'typeorm';
 import { applicationParticipantCondition, ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
@@ -6,7 +7,6 @@ import { assertLinesEditable, DATA_ACCESS_CONTRACT_NOT_FOUND_MESSAGE, isLimitedT
 import { auditedLinkSet, hiddenLineCount, type HiddenLineOwner } from '../../data-access/hidden-links';
 import { binder } from './related-objects';
 import { parseTargetId } from './relation-target';
-import { moduleRightRequired } from '../../auth/module-right-required';
 
 /**
  * The kinds `setOwnedLink` writes one row at a time. Incidents stay with their own service.
@@ -169,7 +169,7 @@ export async function setOwnedLink(args: {
         `SELECT 1 FROM applications a WHERE a.tenant_id = $1 AND a.id = $2 AND ${applicationParticipantCondition('a', '$3')}`,
         [tenantId, id, args.applicationScope.userId],
       );
-      if (inScope.length === 0) throw new ForbiddenException('You can only link applications you take part in.');
+      if (inScope.length === 0) throw outsideParticipation('applications', 'You can only link applications you take part in.');
     }
   }
 

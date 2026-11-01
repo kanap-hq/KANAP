@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { codedForbidden } from '../../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { PortfolioProject } from '../portfolio-project.entity';
@@ -160,7 +161,7 @@ export class PortfolioTimesheetService extends PortfolioProjectsBaseService {
       || entry.logged_by_id === userId
       || (entry.user_id != null && entry.user_id === userId);
     if (!canEdit) {
-      throw new ForbiddenException('You can only edit your own or assigned time entries');
+      throw codedForbidden('TIME_ENTRY_EDIT_OWN_OR_ASSIGNED', 'You can only edit your own or assigned time entries');
     }
 
     const before = { ...entry };
@@ -236,7 +237,7 @@ export class PortfolioTimesheetService extends PortfolioProjectsBaseService {
       || entry.logged_by_id === userId
       || (entry.user_id != null && entry.user_id === userId);
     if (!canDelete) {
-      throw new ForbiddenException('You can only delete your own or assigned time entries');
+      throw codedForbidden('TIME_ENTRY_DELETE_OWN_OR_ASSIGNED', 'You can only delete your own or assigned time entries');
     }
 
     const projectId = entry.project_id;

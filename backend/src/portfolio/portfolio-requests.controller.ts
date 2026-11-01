@@ -2,15 +2,15 @@ import { linkedReadsFromContext } from '../common/relations/linked-reads';
 import { assertApplicationsInScope, idsInScope } from './portfolio-linked-reads';
 import { languageOf } from '../common/csv-sheet';
 import {
-  Body, Controller, Delete, ForbiddenException, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
+  Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
+import { requestContextMissing, codedForbidden, moduleRightRequired } from '../auth/module-right-required';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { DataSource } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { moduleRightRequired } from '../auth/module-right-required';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { Public } from '../auth/public.decorator';
@@ -88,7 +88,7 @@ export class PortfolioRequestsController {
    */
   private async requestRelationsContext(req: any) {
     const manager = req?.queryRunner?.manager;
-    if (!manager) throw new ForbiddenException('Tenant context is not available');
+    if (!manager) throw requestContextMissing('Tenant context is not available');
     const accessCtx = { isAdmin: req?.isAdmin === true, permissions: req?.permissions };
     const rights = buildRelationsAccess(accessCtx, {
       read: REQUEST_RELATION_READS,
@@ -124,7 +124,7 @@ export class PortfolioRequestsController {
     const userId = req?.user?.sub;
     const manager = req?.queryRunner?.manager;
     if (!userId || !manager) {
-      throw new ForbiddenException('Task conversion permission check failed');
+      throw requestContextMissing('Task conversion permission check failed');
     }
 
     const userRows = await manager.query(
@@ -133,7 +133,7 @@ export class PortfolioRequestsController {
     ) as Array<{ role_id: string | null }>;
     const userRow = userRows[0];
     if (!userRow) {
-      throw new ForbiddenException('User not found');
+      throw requestContextMissing('User not found');
     }
 
     const extraRoleRows = await manager.query(
@@ -164,7 +164,7 @@ export class PortfolioRequestsController {
       [taskId, accessScope.userId],
     );
     if (!rows?.length) {
-      throw new ForbiddenException('Task is outside your access scope');
+      throw codedForbidden('TASK_OUTSIDE_SCOPE', 'Task is outside your access scope');
     }
   }
 

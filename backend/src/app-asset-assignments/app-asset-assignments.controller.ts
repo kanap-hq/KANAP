@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
@@ -27,7 +28,7 @@ export class AppAssetAssignmentsController {
    */
   private assertInfrastructureMember(req: any): void {
     if (!hasLevel(req ?? {}, 'infrastructure', 'member')) {
-      throw new ForbiddenException('Changing the servers of a deployment needs the member level on the infrastructure.');
+      throw moduleRightRequired('infrastructure', 'member', 'Changing the servers of a deployment needs the member level on the infrastructure.');
     }
   }
 
