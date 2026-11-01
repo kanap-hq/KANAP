@@ -27,6 +27,9 @@ import { Role } from '../../../roles/role.entity';
 import { RolesService } from '../../../roles/roles.service';
 import { buildStartingCompanyName, TenantBaselineService } from '../../../tenants/tenant-baseline.service';
 import { Tenant } from '../../../tenants/tenant.entity';
+import { ItOpsSettingsService } from '../../../it-ops-settings/it-ops-settings.service';
+import { Location } from '../../../locations/location.entity';
+import { TechnologyCatalogService } from '../../../technologies/catalog/technology-catalog.service';
 import { TenantsService } from '../../../tenants/tenants.service';
 import { User } from '../../../users/user.entity';
 import { UsersService } from '../../../users/users.service';
@@ -113,7 +116,8 @@ export function buildServices(opts: { storage?: RecordingStorage; resetAudit?: A
     repo(User), repo(Company), repo(Department), roles, {} as any, {} as any, audit, repo(PasswordResetToken),
   );
   const auth = new AuthService(users, repo(RefreshToken), repo(PasswordResetToken));
-  const baseline = new TenantBaselineService(tenants, coas, companies);
+  const itOps = new ItOpsSettingsService(repo(Tenant), repo(Location), audit);
+  const baseline = new TenantBaselineService(tenants, coas, companies, new TechnologyCatalogService(audit, itOps));
   const storage = opts.storage ?? new RecordingStorage();
   const reset = new TenantResetService(dataSource, baseline, opts.resetAudit ?? audit, storage as any);
   const admin = new AdminTenantsService(
@@ -472,6 +476,7 @@ export async function baselineSnapshot(tenantId: string): Promise<Record<string,
     companies: `SELECT co.*, c.code AS coa_code FROM companies co LEFT JOIN chart_of_accounts c ON c.id = co.coa_id WHERE co.tenant_id = $1`,
     working_day_profiles: `SELECT * FROM working_day_profiles WHERE tenant_id = $1`,
     item_sequences: `SELECT * FROM item_sequences WHERE tenant_id = $1`,
+    technologies: `SELECT * FROM technologies WHERE tenant_id = $1`,
   };
   return inTenant(tenantId, async (manager) => {
     const snapshot: Record<string, string[]> = {};

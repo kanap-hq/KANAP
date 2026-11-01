@@ -4,7 +4,8 @@ import { ChartOfAccountsService } from '../accounts/chart-of-accounts.service';
 import { CompaniesService } from '../companies/companies.service';
 import { StatusState } from '../common/status';
 import { withSavepoint } from '../common/savepoint.util';
-import { SeedLanguage } from '../analytics/recommended-dimensions.seed';
+import { SeedLanguage, tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
+import { TechnologyCatalogService } from '../technologies/catalog/technology-catalog.service';
 import { TenantsService } from './tenants.service';
 
 /** What happened to the default global chart of accounts: created, no template to create it from, or failed. */
@@ -52,9 +53,17 @@ export function baseCurrencyForCountry(countryIso: string | null | undefined): s
 export const STARTING_COMPANY_CITY = 'Unknown';
 
 /**
+ * Catalog keys of the technologies a workspace starts with: almost every IT estate runs them, and
+ * an empty technology list reads as a broken screen. The catalog gives them their CPE
+ * identifiers (end of support and vulnerability feeds) and leaves their vulnerability alerts off,
+ * as for any operating system.
+ */
+export const STARTING_TECHNOLOGY_KEYS = ['windows-server', 'ubuntu'] as const;
+
+/**
  * The state of a tenant right after a trial activation, apart from its users and subscription:
  * the tenant defaults (TenantsService.seedTenantDefaults), the default global chart of accounts,
- * and the starting company with its standard calendar. Trial activation, the reset to that state
+ * the starting company with its standard calendar, and the starting technologies. Trial activation, the reset to that state
  * and the first start of a single-tenant installation share these steps.
  *
  * Every step runs on the given manager, inside the caller's transaction, with
@@ -66,10 +75,12 @@ export class TenantBaselineService {
     private readonly tenants: TenantsService,
     private readonly coas: ChartOfAccountsService,
     private readonly companies: CompaniesService,
+    private readonly technologyCatalog: TechnologyCatalogService,
   ) {}
 
   /**
-   * The tenant defaults, then the default global chart of accounts, then the starting company.
+   * The tenant defaults, then the default global chart of accounts, then the starting company,
+   * then the starting technologies.
    * `language` names the seeded dimensions (English when absent). Returns what happened to the
    * chart of accounts.
    */
@@ -83,7 +94,28 @@ export class TenantBaselineService {
     await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
     const chartOfAccounts = await this.provisionDefaultGlobalCoa(manager);
     await this.createStartingCompany(manager, company);
+    await this.adoptStartingTechnologies(manager, tenantId, opts?.language);
     return { chartOfAccounts };
+  }
+
+  /**
+   * Adopts the `STARTING_TECHNOLOGY_KEYS` from the catalog (a technology already there is kept).
+   * Under its own savepoint, like the chart of accounts: a failure is logged and leaves the
+   * caller's transaction usable, so activation, reset and first start go on without them.
+   */
+  async adoptStartingTechnologies(manager: EntityManager, tenantId: string, language?: SeedLanguage): Promise<void> {
+    try {
+      await withSavepoint(manager, async () => {
+        // The descriptions are written in the seed language, the tenant's own when none is given.
+        const [tenant] = language ? [] : await manager.query(`SELECT metadata FROM tenants WHERE id = $1`, [tenantId]);
+        const descriptionLanguage = language ?? tenantSeedLanguage(tenant?.metadata);
+        for (const key of STARTING_TECHNOLOGY_KEYS) {
+          await this.technologyCatalog.adopt(key, { manager, tenantId, userId: null, language: descriptionLanguage, audit: { source: 'system' } });
+        }
+      });
+    } catch (e) {
+      console.warn('[provisioning] Starting technologies skipped:', (e as Error)?.message);
+    }
   }
 
   /**

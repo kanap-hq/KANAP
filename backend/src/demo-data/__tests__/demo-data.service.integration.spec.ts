@@ -923,8 +923,8 @@ async function testLoadResetsItemSequences() {
     ));
     assert.deepEqual(
       rows.map((row: { entity_type: string; next_val: number }) => [row.entity_type, Number(row.next_val)]),
-      [['document', 40]],
-      'the incident and task counters are gone; the document counter stays',
+      [['document', 40], ['technology', 3]],
+      'the incident and task counters are gone; the document and technology counters stay',
     );
     const first = await inTenant(t.tenantId, (m) => allocateItemNumbers('incident', t!.tenantId, 1, m));
     assert.equal(first, 1, 'the next incident is INC-1');

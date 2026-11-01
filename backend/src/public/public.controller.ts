@@ -593,6 +593,7 @@ export class PublicController {
         countryIso: signup.country_iso || 'FR',
         actorId: owner.id,
       });
+      await this.baseline.adoptStartingTechnologies(runner.manager, tenant.id, language);
 
       await runner.manager.getRepository(TrialSignup).update(signup.id, {
         activated_at: new Date(),

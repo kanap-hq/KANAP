@@ -889,10 +889,10 @@ export class DemoDataService implements OnApplicationShutdown {
       }
       // Objects created and then deleted leave their counters. The incident journal
       // addresses incidents by those numbers and checks the title, so a load into an
-      // empty workspace starts every counter again at 1. Template documents already
-      // use the document counter, which stays.
+      // empty workspace starts every counter again at 1. Template documents and the
+      // starting technologies (TenantBaselineService) already use theirs, which stay.
       await manager.query(
-        `DELETE FROM item_sequences WHERE tenant_id = $1 AND entity_type <> 'document'`,
+        `DELETE FROM item_sequences WHERE tenant_id = $1 AND entity_type NOT IN ('document', 'technology')`,
         [tenant.id],
       );
       return (await this.baseline.resolveStartingCompany(manager, tenant)).companyName;

@@ -88,6 +88,7 @@ function buildController() {
   const baseline = {
     provisionDefaultGlobalCoa: async () => { writes.push('chart of accounts'); },
     createStartingCompany: async () => { writes.push('company'); },
+    adoptStartingTechnologies: async () => { writes.push('technologies'); },
   };
   const runnerManager = {
     query: async () => [],
