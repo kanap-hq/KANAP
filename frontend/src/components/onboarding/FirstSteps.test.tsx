@@ -12,12 +12,13 @@ import FirstStepsTile from './FirstStepsTile';
 import StepHint from './StepHint';
 
 const env = vi.hoisted(() => ({
+  summary: (() => Promise.resolve({ data: { items: [] } })) as (config?: unknown) => Promise<unknown>,
   server: null as unknown as ReturnType<typeof import('../../test/fakeOnboardingServer').createFakeOnboardingServer>,
 }));
 
 vi.mock('../../api', () => ({
   default: {
-    get: (url: string) => env.server.api.get(url),
+    get: (url: string, config?: unknown) => (url === '/budget-lines/summary' ? env.summary(config) : env.server.api.get(url)),
     put: (url: string, body?: unknown) => env.server.api.put(url, body),
     post: (url: string, body?: unknown) => env.server.api.post(url, body),
     delete: (url: string) => env.server.api.delete(url),
@@ -41,7 +42,7 @@ function Where() {
   return <div data-testid="where">{`${location.pathname}${location.search}`}</div>;
 }
 
-function renderAt(path: string, node: React.ReactNode) {
+function renderAt(path: string | { pathname: string; search?: string; state?: unknown }, node: React.ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -72,11 +73,31 @@ describe('FirstStepsTile', () => {
     expect(await screen.findByText('Your first five steps')).toBeInTheDocument();
     expect(screen.getByText('1/5')).toBeInTheDocument();
     const links = screen.getAllByRole('link');
-    expect(links.map((link) => link.textContent)).toEqual([
-      'The overview', 'A budget line', 'A report', 'A question for Plaid', 'Your data',
-    ]);
-    expect(links[1]).toHaveAttribute('href', '/ops/budget?step=budget_line');
-    expect(links[3]).toHaveAttribute('href', '/ai?step=budget_plaid');
+    expect(links.map((link) => link.textContent)).toEqual(['The overview', 'A report', 'A question for Plaid', 'Your data']);
+    expect(links[0]).toHaveAttribute('href', '/ops/budget?step=budget_overview');
+    expect(links[2]).toHaveAttribute('href', '/ai?step=budget_plaid');
+    expect(screen.getByRole('button', { name: 'A budget line' })).toBeInTheDocument();
+  });
+
+  it('opens the largest line of the year for the budget line step, named in its hint', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    let asked: unknown = null;
+    env.summary = async (config) => {
+      asked = config;
+      return { data: { items: [{ id: 'l-7', item_number: 7, product_name: 'Microsoft Enterprise' }] } };
+    };
+    renderAt('/', <FirstStepsTile />);
+    fireEvent.click(await screen.findByRole('button', { name: 'A budget line' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/ops/budget/BL-7?step=budget_line'));
+    expect((asked as { params: { limit: number; sort: string } }).params).toMatchObject({ limit: 1, sort: expect.stringMatching(/:DESC$/) });
+  });
+
+  it('opens the list for the budget line step when there is no line', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    env.summary = async () => ({ data: { items: [] } });
+    renderAt('/', <FirstStepsTile />);
+    fireEvent.click(await screen.findByRole('button', { name: 'A budget line' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/ops/budget?step=budget_line'));
   });
 
   it('ends on inviting a colleague with your own data', async () => {
@@ -144,14 +165,39 @@ describe('StepHint', () => {
 
   it('points at the page title, says what to look at and marks the step done on the example', async () => {
     env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
-    renderAt('/ops/budget?step=budget_line', page);
-    const hint = await screen.findByRole('dialog', { name: 'A budget line' });
-    expect(hint).toHaveTextContent('Open a line: who pays, which account, which dimensions.');
-    expect(hint).toHaveTextContent('Under Relations, its contract and its applications.');
-    await waitFor(() => expect(done('budget_line')).toBeTruthy());
+    renderAt('/ops/budget?step=budget_overview', page);
+    const hint = await screen.findByRole('dialog', { name: 'The overview' });
+    expect(hint).toHaveTextContent('Here are the budget lines, sorted by budget for the current year.');
+    await waitFor(() => expect(done('budget_overview')).toBeTruthy());
     fireEvent.click(within(hint).getByRole('button', { name: 'Got it' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByTestId('where')).toHaveTextContent(/^\/ops\/budget$/);
+  });
+
+  it('names the line its step opened and points at its tabs', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    renderAt({ pathname: '/ops/budget/BL-7', search: '?step=budget_line', state: { onboardingRecord: 'BL-7 Microsoft Enterprise' } }, (
+      <main>
+        <h5 className="MuiTypography-h5">Microsoft Enterprise</h5>
+        <div role="tablist" aria-label="tabs" data-testid="tabs" />
+        <StepHint />
+      </main>
+    ));
+    const hint = await screen.findByRole('dialog', { name: 'A budget line' });
+    expect(hint).toHaveTextContent('You are in the record of BL-7 Microsoft Enterprise. Explore the tabs.');
+  });
+
+  it('points at the Export button of the list for the data step', async () => {
+    env.server = createFakeOnboardingServer({ angle: 'budget', mode: 'example' });
+    renderAt('/ops/budget?step=budget_import', (
+      <main>
+        <h5 className="MuiTypography-h5">Budget lines</h5>
+        <button type="button">Export</button>
+        <StepHint />
+      </main>
+    ));
+    const hint = await screen.findByRole('dialog', { name: 'Your data' });
+    expect(hint).toHaveTextContent('Try the export to get the data as csv or xlsx.');
   });
 
   it('waits for "Done" with your own data, and names the colleague of the angle', async () => {

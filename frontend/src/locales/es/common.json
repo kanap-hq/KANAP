@@ -1584,23 +1584,24 @@
       "steps": {
         "budget_overview": {
           "title": "La vista general",
-          "hint": "Las líneas presupuestarias del año con sus cinco columnas: presupuesto, revisión, realizado, aterrizaje previsto y previsión. Filtre por empresa o centro de coste para leer su total."
+          "hint": "Estas son las líneas presupuestarias, ordenadas por presupuesto del año en curso. Filtre por Tipo o Empresa pagadora, o busque directamente en Filtro rápido."
         },
         "budget_line": {
           "title": "Una línea presupuestaria",
-          "hint": "Abra una línea: quién paga, qué cuenta, qué dimensiones. Su pestaña Presupuesto contiene los meses, su pestaña Historial cada cambio. En Relaciones, su contrato y sus aplicaciones."
+          "hint": "Abra una línea y explore sus pestañas. Presupuesto, la pestaña principal, muestra 4 columnas de 5 posibles, todas configurables en «Administración». La pestaña Relaciones vincula el presupuesto con los elementos que soporta.",
+          "hintRecord": "Está en la ficha {{record}}. Explore las pestañas. Presupuesto, la pestaña principal, muestra 4 columnas de 5 posibles, todas configurables en «Administración». La pestaña Relaciones vincula el presupuesto con los elementos que soporta."
         },
         "budget_report": {
           "title": "Un informe",
-          "hint": "Líneas principales, luego Mayores subidas y bajadas: desde una subida, abra la línea que la explica."
+          "hint": "Todos los informes se configuran en detalle. Explore las opciones de filtrado. Desde los resultados, abra directamente las líneas presupuestarias correspondientes. Exporte el informe en .pdf, .png o .xlsx."
         },
         "budget_plaid": {
           "title": "Una pregunta a Plaid",
-          "hint": "Pregunte «¿Cuáles son mis cinco líneas presupuestarias más grandes este año?» y compruebe la cifra en el informe de líneas principales."
+          "hint": "Pregunte «¿Cuáles son las principales oportunidades de ahorro en el OPEX de TI?»"
         },
         "budget_import": {
           "title": "Sus datos",
-          "hint": "Exporte el archivo de presupuesto del ejemplo para ver su formato y luego importe el suyo: la validación previa a la carga indica qué bloquea."
+          "hint": "Pruebe la exportación para obtener los datos en csv o xlsx. Puede usar estos archivos como plantillas para actualizar en bloque o importar datos nuevos. Plaid también puede ayudarle a convertir un archivo existente."
         },
         "own_company": {
           "title": "Su empresa",

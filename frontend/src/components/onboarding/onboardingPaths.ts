@@ -2,21 +2,22 @@ import type { OnboardingAngle } from './onboardingApi';
 
 /**
  * Where each step opens, and what its hint points at on that screen: the page title by default,
- * or the composer of Plaid. The step keys and their order come from the API
+ * the composer of Plaid, the tab row of a record or the list's Export button. The step keys and their order come from the API
  * (`backend/src/onboarding/onboarding-paths.ts`); a key missing here is left out of the list.
  */
-export type StepTarget = 'title' | 'composer';
+export type StepTarget = 'title' | 'composer' | 'tabs' | 'export';
 
-export type StepScreen = { to: string; target: StepTarget };
+/** `opensTopLine`: the step opens the largest budget line of the year, its list when there is none. */
+export type StepScreen = { to: string; target: StepTarget; opensTopLine?: boolean };
 
 const title = (to: string): StepScreen => ({ to, target: 'title' });
 
 export const STEP_SCREENS: Record<string, StepScreen> = {
   budget_overview: title('/ops/budget'),
-  budget_line: title('/ops/budget'),
+  budget_line: { to: '/ops/budget', target: 'tabs', opensTopLine: true },
   budget_report: title('/ops/reports/top-opex'),
   budget_plaid: { to: '/ai', target: 'composer' },
-  budget_import: title('/ops/budget'),
+  budget_import: { to: '/ops/budget', target: 'export' },
   own_company: title('/master-data/companies'),
   own_budget_lines: title('/ops/budget'),
   own_contract: title('/ops/contracts'),
@@ -56,3 +57,6 @@ export function stepHintKey(key: string, angle: OnboardingAngle | null): string 
     ? `onboarding.firstSteps.steps.own_invite.hint.${angle}`
     : `onboarding.firstSteps.steps.${key}.hint`;
 }
+
+/** What the hint of a record opened by its step names: carried in the navigation state. */
+export type StepLocationState = { onboardingRecord?: string };

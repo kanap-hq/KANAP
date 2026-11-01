@@ -1584,23 +1584,24 @@
       "steps": {
         "budget_overview": {
           "title": "Die Übersicht",
-          "hint": "Die Budgetzeilen des Jahres mit ihren fünf Spalten: Budget, Revision, Ist-Werte, erwarteter Endwert und Prognose. Filtern Sie nach Unternehmen oder Kostenstelle, um deren Summe zu lesen."
+          "hint": "Hier sind die Budgetzeilen, nach Budget des laufenden Jahres sortiert. Filtern Sie nach Typ oder Zahlendes Unternehmen, oder suchen Sie direkt im Schnellfilter."
         },
         "budget_line": {
           "title": "Eine Budgetzeile",
-          "hint": "Öffnen Sie eine Zeile: wer zahlt, welches Konto, welche Dimensionen. Der Reiter Budget enthält die Monate, der Reiter Verlauf jede Änderung. Unter Beziehungen ihr Vertrag und ihre Anwendungen."
+          "hint": "Öffnen Sie eine Zeile und erkunden Sie ihre Reiter. Budget, der Hauptreiter, zeigt 4 von 5 möglichen Spalten, alle unter „Administration“ einstellbar. Der Reiter Beziehungen verknüpft das Budget mit den Elementen, die es trägt.",
+          "hintRecord": "Sie sind im Datensatz {{record}}. Erkunden Sie die Reiter. Budget, der Hauptreiter, zeigt 4 von 5 möglichen Spalten, alle unter „Administration“ einstellbar. Der Reiter Beziehungen verknüpft das Budget mit den Elementen, die es trägt."
         },
         "budget_report": {
           "title": "Ein Bericht",
-          "hint": "Top-Zeilen, dann die stärksten Anstiege und Rückgänge: Öffnen Sie von einem Anstieg aus die Zeile dahinter."
+          "hint": "Alle Berichte lassen sich im Detail einstellen. Erkunden Sie die Filteroptionen. Öffnen Sie aus den Ergebnissen direkt die betroffenen Budgetzeilen. Exportieren Sie den Bericht als .pdf, .png oder .xlsx."
         },
         "budget_plaid": {
           "title": "Eine Frage an Plaid",
-          "hint": "Fragen Sie „Was sind meine fünf größten Budgetzeilen in diesem Jahr?“ und prüfen Sie die Zahl im Bericht Top-Zeilen."
+          "hint": "Fragen Sie „Wo liegen die größten Einsparpotenziale bei den IT-OPEX?“"
         },
         "budget_import": {
           "title": "Ihre Daten",
-          "hint": "Exportieren Sie die Budgetdatei des Beispiels, um ihr Format zu sehen, und importieren Sie dann Ihre eigene: Die Prüfung vor dem Laden nennt, was blockiert."
+          "hint": "Probieren Sie den Export aus, um die Daten als csv oder xlsx zu erhalten. Diese Dateien dienen als Vorlagen, um Daten in großer Zahl zu aktualisieren oder neue zu importieren. Plaid hilft Ihnen auch, eine vorhandene Datei umzuwandeln."
         },
         "own_company": {
           "title": "Ihr Unternehmen",

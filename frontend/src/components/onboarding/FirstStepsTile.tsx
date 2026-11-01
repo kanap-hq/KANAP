@@ -4,11 +4,14 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import DashboardTile from '../../pages/workspace/tiles/DashboardTile';
 import { ONBOARDING_ANGLES, type OnboardingState } from './onboardingApi';
-import { stepHref } from './onboardingPaths';
+import api from '../../api';
+import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import { buildItemPath, formatItemRef } from '../../utils/item-ref';
+import { STEP_PARAM, STEP_SCREENS, stepHref, type StepLocationState } from './onboardingPaths';
 import { useOnboarding, useOnboardingActions } from './useOnboarding';
 
 const rowSx = {
@@ -17,6 +20,48 @@ const rowSx = {
   gap: 0.5,
   minHeight: 32,
 } as const;
+
+type TopLine = { id: string; item_number: number | null; product_name: string | null };
+
+/**
+ * Opens the largest budget line of the year (the first of the list), named in the hint. Without
+ * a line, or when the list cannot be read, the step opens the list.
+ */
+function useOpenTopLine(stepKey: string) {
+  const navigate = useNavigate();
+  const { defaultSort } = useBudgetColumns();
+  return React.useCallback(async () => {
+    const year = new Date().getFullYear();
+    const fallback = stepHref(stepKey) ?? '/ops/budget';
+    try {
+      const res = await api.get<{ items: TopLine[] }>('/budget-lines/summary', {
+        params: { limit: 1, sort: defaultSort, years: [year - 1, year].join(',') },
+      });
+      const line = res.data.items?.[0];
+      if (!line) { navigate(fallback); return; }
+      const ref = line.item_number != null ? formatItemRef('budget', line.item_number) : line.id;
+      const state: StepLocationState = { onboardingRecord: [line.item_number != null ? ref : null, line.product_name].filter(Boolean).join(' ') };
+      navigate(`${buildItemPath('budget', ref)}?${STEP_PARAM}=${encodeURIComponent(stepKey)}`, { state });
+    } catch {
+      navigate(fallback);
+    }
+  }, [defaultSort, navigate, stepKey]);
+}
+
+function TopLineStepLink({ stepKey, children, sx }: { stepKey: string; children: React.ReactNode; sx: object }) {
+  const openTopLine = useOpenTopLine(stepKey);
+  return (
+    <Link
+      component="button"
+      type="button"
+      underline="hover"
+      onClick={() => { void openTopLine(); }}
+      sx={{ ...sx, textAlign: 'left', font: 'inherit' }}
+    >
+      {children}
+    </Link>
+  );
+}
 
 function StepRow({ stepKey, done, next, busy, onToggle }: {
   stepKey: string;
@@ -29,6 +74,21 @@ function StepRow({ stepKey, done, next, busy, onToggle }: {
   const href = stepHref(stepKey);
   const label = t(`onboarding.firstSteps.steps.${stepKey}.title`);
   const toggleLabel = done ? t('onboarding.firstSteps.markUndone') : t('onboarding.firstSteps.markDone');
+  const linkSx = {
+    flex: 1,
+    minWidth: 0,
+    display: 'flex',
+    alignItems: 'center',
+    fontSize: 14,
+    fontWeight: next ? 500 : 400,
+    color: done ? 'text.secondary' : 'text.primary',
+  };
+  const content = (
+    <>
+      <Box component="span" sx={{ flex: 1, minWidth: 0 }}>{label}</Box>
+      {next ? <ChevronRightIcon aria-hidden sx={{ fontSize: 18, color: 'text.secondary' }} /> : null}
+    </>
+  );
   return (
     <Box component="li" sx={rowSx}>
       <Tooltip title={toggleLabel}>
@@ -38,23 +98,11 @@ function StepRow({ stepKey, done, next, busy, onToggle }: {
             : <RadioButtonUncheckedIcon sx={{ fontSize: 18, color: 'text.disabled' }} />}
         </IconButton>
       </Tooltip>
-      <Link
-        component={RouterLink}
-        to={href ?? '#'}
-        underline="hover"
-        sx={{
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          alignItems: 'center',
-          fontSize: 14,
-          fontWeight: next ? 500 : 400,
-          color: done ? 'text.secondary' : 'text.primary',
-        }}
-      >
-        <Box component="span" sx={{ flex: 1, minWidth: 0 }}>{label}</Box>
-        {next ? <ChevronRightIcon aria-hidden sx={{ fontSize: 18, color: 'text.secondary' }} /> : null}
-      </Link>
+      {STEP_SCREENS[stepKey]?.opensTopLine ? (
+        <TopLineStepLink stepKey={stepKey} sx={linkSx}>{content}</TopLineStepLink>
+      ) : (
+        <Link component={RouterLink} to={href ?? '#'} underline="hover" sx={linkSx}>{content}</Link>
+      )}
     </Box>
   );
 }

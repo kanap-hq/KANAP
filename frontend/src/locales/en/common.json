@@ -1584,23 +1584,24 @@
       "steps": {
         "budget_overview": {
           "title": "The overview",
-          "hint": "Your budget lines for the year with their five columns: budget, revision, actuals, expected landing and forecast. Filter by company or cost center to read its total."
+          "hint": "Here are the budget lines, sorted by budget for the current year. Filter by Type or Paying company, or search directly in Quick filter."
         },
         "budget_line": {
           "title": "A budget line",
-          "hint": "Open a line: who pays, which account, which dimensions. Its Budget tab holds the months, its History tab every change. Under Relations, its contract and its applications."
+          "hint": "Open a line and explore its tabs. Budget, the main tab, shows 4 columns out of 5 possible ones, all set in Administration. The Relations tab links the budget to the items it carries.",
+          "hintRecord": "You are in the record of {{record}}. Explore the tabs. Budget, the main tab, shows 4 columns out of 5 possible ones, all set in Administration. The Relations tab links the budget to the items it carries."
         },
         "budget_report": {
           "title": "A report",
-          "hint": "Top lines, then Top increase / decrease: from an increase, open the line behind it."
+          "hint": "Every report can be set in detail. Explore the filter options. From the results, open the budget lines concerned directly. Export the report as .pdf, .png or .xlsx."
         },
         "budget_plaid": {
           "title": "A question for Plaid",
-          "hint": "Ask “What are my five largest budget lines this year?”, then check the figure against the Top lines report."
+          "hint": "Ask “What are the main savings opportunities in IT OPEX?”"
         },
         "budget_import": {
           "title": "Your data",
-          "hint": "Export the budget file of the example to see its format, then import your own: the check before loading says what blocks."
+          "hint": "Try the export to get the data as csv or xlsx. You can use these files as templates to update in bulk or to import new data. Plaid can also help you convert an existing file."
         },
         "own_company": {
           "title": "Your company",

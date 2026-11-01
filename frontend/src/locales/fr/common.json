@@ -1584,23 +1584,24 @@
       "steps": {
         "budget_overview": {
           "title": "La vue d'ensemble",
-          "hint": "Les lignes budgétaires de l'année et leurs cinq colonnes : budget, révision, réalisé, atterrissage prévu et prévision. Filtrez par société ou par centre de coûts pour lire son total."
+          "hint": "Voici les lignes budgétaires, triées par budget pour l'année en cours. Filtrez par Type, Société payeuse ou recherchez directement dans Filtre rapide."
         },
         "budget_line": {
           "title": "Une ligne budgétaire",
-          "hint": "Ouvrez une ligne : qui paie, quel compte, quelles dimensions. Son onglet Budget porte les mois, son onglet Historique chaque modification. Dans Relations, son contrat et ses applications."
+          "hint": "Ouvrez une ligne et explorez ses onglets. Le budget, l'onglet principal, affiche 4 colonnes parmi 5 possibles, toutes paramétrables dans « Administration ». L'onglet Relations permet de relier le budget aux éléments qu'il porte.",
+          "hintRecord": "Vous êtes dans la fiche {{record}}. Explorez les onglets. Le budget, l'onglet principal, affiche 4 colonnes parmi 5 possibles, toutes paramétrables dans « Administration ». L'onglet Relations permet de relier le budget aux éléments qu'il porte."
         },
         "budget_report": {
           "title": "Un rapport",
-          "hint": "Top lignes, puis Plus fortes hausses et baisses : depuis une hausse, ouvrez la ligne qui l'explique."
+          "hint": "Tous les rapports sont paramétrables en détail. Explorez les options de filtrage. Depuis les résultats, ouvrez directement les lignes budgétaires concernées. Exportez le rapport en .pdf, .png ou en .xlsx."
         },
         "budget_plaid": {
           "title": "Une question à Plaid",
-          "hint": "Demandez « Quelles sont mes cinq plus grosses lignes cette année ? », puis vérifiez le chiffre dans le rapport Top lignes."
+          "hint": "Demandez « Quelles sont les principales opportunités d'économies dans les OPEX IT ? »"
         },
         "budget_import": {
           "title": "Vos données",
-          "hint": "Exportez le fichier budget de l'exemple pour voir son format, puis importez le vôtre : la validation avant chargement dit ce qui bloque."
+          "hint": "Testez la fonctionnalité d'export pour récupérer les données en csv ou xlsx. Vous pouvez utiliser ces fichiers comme modèles pour mettre à jour en masse ou importer de nouvelles données. Plaid peut aussi vous aider à convertir un fichier existant."
         },
         "own_company": {
           "title": "Votre société",

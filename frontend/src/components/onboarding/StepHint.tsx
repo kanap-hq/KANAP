@@ -2,21 +2,34 @@ import React from 'react';
 import { Box, Button, Paper, Popper, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { STEP_PARAM, STEP_SCREENS, stepHintKey, type StepTarget } from './onboardingPaths';
+import { STEP_PARAM, STEP_SCREENS, stepHintKey, type StepLocationState, type StepTarget } from './onboardingPaths';
 import { useOnboarding, useOnboardingActions } from './useOnboarding';
 
 /** `data-page-title`: the title of `PageHeader` and `ReportLayout`. */
 const TITLE = ['main [data-page-title]', 'main .MuiTypography-h5', 'main h1, main h2, main h3, main h4, main h5'];
 
-/** Candidates in order; while Plaid waits to be turned on, its acceptance box holds the composer's place. */
-const TARGETS: Record<StepTarget, string[]> = {
+type Candidate = string | ((exportLabel: string) => HTMLElement | null);
+
+/** The list's Export button, found by its label. */
+const exportButton = (label: string) => Array.from(document.querySelectorAll<HTMLElement>('main button'))
+  .find((button) => button.textContent?.trim() === label) ?? null;
+
+/**
+ * Candidates in order, the page title last. While Plaid waits to be turned on, its acceptance box
+ * holds the composer's place; Export is shown to the list's administrators only.
+ */
+const TARGETS: Record<StepTarget, Candidate[]> = {
   title: TITLE,
   composer: ['main textarea', 'main [data-plaid-composer]', ...TITLE],
+  tabs: ['main [role="tablist"]', ...TITLE],
+  export: [exportButton, ...TITLE],
 };
 
-function findTarget(target: StepTarget): HTMLElement | null {
-  for (const selector of TARGETS[target]) {
-    const found = document.querySelector<HTMLElement>(selector);
+function findTarget(target: StepTarget, exportLabel: string): HTMLElement | null {
+  for (const candidate of TARGETS[target]) {
+    const found = typeof candidate === 'string'
+      ? document.querySelector<HTMLElement>(candidate)
+      : candidate(exportLabel);
     if (found) return found;
   }
   return null;
@@ -24,13 +37,15 @@ function findTarget(target: StepTarget): HTMLElement | null {
 
 /** The element of the screen, once the page has drawn it (lazy route, data). */
 function useTargetElement(target: StepTarget | null): HTMLElement | null {
+  const { t } = useTranslation('common');
+  const exportLabel = t('export.button');
   const [element, setElement] = React.useState<HTMLElement | null>(null);
   React.useEffect(() => {
     setElement(null);
     if (!target) return undefined;
     let tries = 0;
     const timer = window.setInterval(() => {
-      const found = findTarget(target);
+      const found = findTarget(target, exportLabel);
       tries += 1;
       if (found || tries > 40) {
         window.clearInterval(timer);
@@ -38,7 +53,7 @@ function useTargetElement(target: StepTarget | null): HTMLElement | null {
       }
     }, 150);
     return () => window.clearInterval(timer);
-  }, [target]);
+  }, [exportLabel, target]);
   return element;
 }
 
@@ -65,7 +80,7 @@ function useRect(element: HTMLElement | null): DOMRect | null {
  * data, "Done" does. Closing it drops the step from the address.
  */
 export default function StepHint() {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const location = useLocation();
   const navigate = useNavigate();
   const { state } = useOnboarding();
@@ -93,6 +108,12 @@ export default function StepHint() {
   }, [location.pathname, location.search, navigate]);
 
   if (!step || !screen || !state) return null;
+  // A record opened by its step is named in the hint, when the step has a sentence for it.
+  const record = (location.state as StepLocationState | null)?.onboardingRecord;
+  const recordKey = `onboarding.firstSteps.steps.${step.key}.hintRecord`;
+  const hint = record && i18n.exists(`common:${recordKey}`)
+    ? t(recordKey, { record })
+    : t(stepHintKey(step.key, state.angle));
 
   return (
     <>
@@ -132,7 +153,7 @@ export default function StepHint() {
             boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 4px 16px rgba(15, 17, 23, 0.08)',
           })}
         >
-          <Typography variant="body2">{t(stepHintKey(step.key, state.angle))}</Typography>
+          <Typography variant="body2">{hint}</Typography>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1.25 }}>
             {discover || step.done_at ? (
               <Button variant="action" onClick={close}>{t('onboarding.firstSteps.gotIt')}</Button>
