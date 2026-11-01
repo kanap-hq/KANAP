@@ -227,7 +227,7 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header
 
 ### Available tools
 
-The MCP server is read only. A client can search and read your data but cannot change anything. A key or a connection gets the twelve tools below, and thirteen when web search is switched on for your organization. A person sees only the tools their role lets them read with.
+The MCP server is read only. A client can search and read your data but cannot change anything. A key or a connection gets the fourteen tools below, and fifteen when web search is switched on for your organization. A person sees only the tools their role lets them read with.
 
 | Tool | What it does |
 |---|---|
@@ -243,6 +243,8 @@ The MCP server is read only. A client can search and read your data but cannot c
 | `get_record_history` | Reads the history of one record, as its History tab shows it |
 | `search_knowledge` | Searches the knowledge base |
 | `get_document` | Reads one knowledge document |
+| `list_help_topics` | Lists the pages and sections of the user manual |
+| `read_help_section` | Reads one page or section of the user manual, with its link |
 | `web_search` | Searches the web, when web search is switched on for your organization |
 
 When a client connects, the server tells it which workspace it reads, that it only reads, that it reads with the rights of the person behind the key or the connection, how to search (cost centers, calendars and dimensions included), where to read the exchange rates, and which data it does not read (the audit log and AI agents). It reads roles and data access settings only for a person who administers users with access to all data.
