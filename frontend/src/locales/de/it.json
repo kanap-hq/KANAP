@@ -2206,7 +2206,7 @@
         "assignmentAdded": "Zuordnung hinzugefügt",
         "removed": "{{name}} entfernt.",
         "application": "Anwendung",
-        "environment": "Umgebung",
+        "environment": "Bereitstellung",
         "role": "Rolle",
         "since": "Seit",
         "notes": "Notizen",
@@ -2215,13 +2215,13 @@
         "removeAssignment": "Zuordnung entfernen",
         "addAssignmentDialog": "Zuordnung hinzufügen",
         "applicationRequired": "Anwendung ist erforderlich",
-        "environmentRequired": "Umgebung (Instanz) ist erforderlich",
+        "environmentRequired": "Wählen Sie eine Bereitstellung.",
         "roleRequired": "Rolle ist erforderlich",
-        "selectAppForEnv": "Wählen Sie eine Anwendung, um eine Umgebung auszuwählen.",
-        "chooseEnvironment": "Wählen Sie eine Umgebung.",
-        "noInstances": "Keine Instanzen für diese Anwendung",
+        "selectAppForEnv": "Wählen Sie eine Anwendung, um eine Bereitstellung auszuwählen.",
+        "chooseEnvironment": "Wählen Sie eine Bereitstellung.",
         "noServerRoles": "Keine Serverrollen konfiguriert; aktualisieren Sie die IT-Landschaft-Einstellungen.",
-        "assign": "Zuordnen"
+        "assign": "Zuordnen",
+        "createDeployment": "+ Bereitstellung {{environment}} anlegen"
       },
       "connections": {
         "loadingConnections": "Verbindungen werden geladen…",
@@ -3181,7 +3181,9 @@
         "deleteUsage_other": "<strong>{{count}} Assets sind</strong> derzeit <strong>{{name}}</strong> zugeordnet. Wenn Sie diesen Unterstandort löschen, haben sie keine Unterstandort-Zuordnung mehr.",
         "deleteKeepsAssets": "Die Asset-Datensätze selbst bleiben erhalten; nur ihre Unterstandort-Verknüpfung wird entfernt.",
         "deleteAnyway": "Trotzdem löschen"
-      }
+      },
+      "createOption": "+ Standort „{{name}}“ anlegen",
+      "createNew": "+ Neuer Standort"
     }
   },
   "components": {

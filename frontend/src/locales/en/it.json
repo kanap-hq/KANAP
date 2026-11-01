@@ -2206,7 +2206,7 @@
         "assignmentAdded": "Assignment added",
         "removed": "{{name}} removed.",
         "application": "Application",
-        "environment": "Environment",
+        "environment": "Deployment",
         "role": "Role",
         "since": "Since",
         "notes": "Notes",
@@ -2215,13 +2215,13 @@
         "removeAssignment": "Remove assignment",
         "addAssignmentDialog": "Add assignment",
         "applicationRequired": "Application is required",
-        "environmentRequired": "Environment (instance) is required",
+        "environmentRequired": "Choose a deployment.",
         "roleRequired": "Role is required",
-        "selectAppForEnv": "Select an application to choose an environment.",
-        "chooseEnvironment": "Choose an environment.",
-        "noInstances": "No instances for this application",
+        "selectAppForEnv": "Select an application to choose a deployment.",
+        "chooseEnvironment": "Choose a deployment.",
         "noServerRoles": "No server roles configured; update IT ops settings.",
-        "assign": "Assign"
+        "assign": "Assign",
+        "createDeployment": "+ Create the {{environment}} deployment"
       },
       "connections": {
         "loadingConnections": "Loading connections…",
@@ -3181,7 +3181,9 @@
         "deleteUsage_other": "<strong>{{count}} assets are</strong> currently assigned to <strong>{{name}}</strong>. Deleting this sub-location will leave them without a sub-location assignment.",
         "deleteKeepsAssets": "The asset records themselves are kept; only their sub-location link is cleared.",
         "deleteAnyway": "Delete anyway"
-      }
+      },
+      "createOption": "+ Create location \"{{name}}\"",
+      "createNew": "+ New location"
     }
   },
   "components": {
