@@ -81,37 +81,36 @@ export class KnowledgeWorkflowService {
       return;
     }
 
-    const [ownerRows, requesterRows, participantRows] = await Promise.all([
-      manager.query<Array<{ present: number }>>(
-        `SELECT 1 AS present
-         FROM document_contributors
-         WHERE document_id = $1
-           AND user_id = $2
-           AND role = 'owner'
-         LIMIT 1`,
-        [documentId, userId],
-      ),
-      manager.query<Array<{ present: number }>>(
-        `SELECT 1 AS present
-         FROM document_workflows
-         WHERE id = $1
-           AND requested_by = $2
-         LIMIT 1`,
-        [workflowId, userId],
-      ),
-      currentStage
-        ? manager.query<Array<{ present: number }>>(
-            `SELECT 1 AS present
-             FROM document_workflow_participants
-             WHERE workflow_id = $1
-               AND user_id = $2
-               AND stage = $3
-               AND decision = 'pending'
-             LIMIT 1`,
-            [workflowId, userId, currentStage],
-          )
-        : Promise.resolve([] as Array<{ present: number }>),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const ownerRows = await manager.query<Array<{ present: number }>>(
+      `SELECT 1 AS present
+       FROM document_contributors
+       WHERE document_id = $1
+         AND user_id = $2
+         AND role = 'owner'
+       LIMIT 1`,
+      [documentId, userId],
+    );
+    const requesterRows = await manager.query<Array<{ present: number }>>(
+      `SELECT 1 AS present
+       FROM document_workflows
+       WHERE id = $1
+         AND requested_by = $2
+       LIMIT 1`,
+      [workflowId, userId],
+    );
+    const participantRows = currentStage
+      ? await manager.query<Array<{ present: number }>>(
+          `SELECT 1 AS present
+           FROM document_workflow_participants
+           WHERE workflow_id = $1
+             AND user_id = $2
+             AND stage = $3
+             AND decision = 'pending'
+           LIMIT 1`,
+          [workflowId, userId, currentStage],
+        )
+      : [] as Array<{ present: number }>;
 
     if (ownerRows.length > 0 || requesterRows.length > 0 || participantRows.length > 0) {
       return;

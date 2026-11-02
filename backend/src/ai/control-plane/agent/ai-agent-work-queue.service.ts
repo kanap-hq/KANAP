@@ -3055,27 +3055,26 @@ export class AiAgentWorkQueueService {
     const inScope = (id: string | null): boolean => id != null && idSet.has(id);
     const windowEnd = now;
     const windowStart = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-    const [actions, runs, targetStates] = await Promise.all([
-      this.actionRepo(context).find({
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const actions = await this.actionRepo(context).find({
         where: {
           tenant_id: context.tenantId,
           provider_kind: 'ticketing',
         },
-      }),
-      this.runRepo(context).find({
+      });
+    const runs = await this.runRepo(context).find({
         where: {
           tenant_id: context.tenantId,
         },
-      }),
-      definitionIds.length > 0
-        ? this.targetStateRepo(context).find({
-          where: {
-            tenant_id: context.tenantId,
-            agent_definition_id: In(definitionIds),
-          },
-        })
-        : Promise.resolve([]),
-    ]);
+      });
+    const targetStates = definitionIds.length > 0
+      ? await this.targetStateRepo(context).find({
+        where: {
+          tenant_id: context.tenantId,
+          agent_definition_id: In(definitionIds),
+        },
+      })
+      : [];
     const relevantActions = actions.filter((action) =>
       HELPDESK_REVIEW_ACTION_CAPABILITIES.includes(action.capability_name)
       && inScope(definitionIdFromMetadata(action.metadata_json))
@@ -3245,7 +3244,11 @@ export class AiAgentWorkQueueService {
         order: { created_at: 'DESC' },
         take: 20,
       });
-    const helpdeskSummaries = await Promise.all(helpdeskDefinitions.map((definition) => this.helpdeskSummary(context, definition)));
+    // One after the other: each summary reads on the request's connection.
+    const helpdeskSummaries: HelpdeskTicketingAgentSummary[] = [];
+    for (const definition of helpdeskDefinitions) {
+      helpdeskSummaries.push(await this.helpdeskSummary(context, definition));
+    }
     // Fleet header aggregate: pooled across every helpdesk agent so it represents
     // the whole fleet, not the built-in agent's summary used as a proxy.
     const fleet = helpdeskDefinitionIds.length > 0

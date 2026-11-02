@@ -3319,48 +3319,43 @@ export class AiQueryExecutor {
     );
     const summary = withDetailAiKeys(row, registry);
 
-    const [
-      financialVersions,
-      contacts,
-      linkedApplications,
-      linkedProjects,
-      linkedContracts,
-      links,
-      attachments,
-    ] = await Promise.all([
-      this.loadFinancialVersions(context, {
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const financialVersions = await this.loadFinancialVersions(context, {
         versionTable: 'spend_versions',
         amountTable: 'spend_amounts',
         itemColumn: 'spend_item_id',
         itemId: lineId,
-      }),
-      this.loadLinkedContacts(context, {
+      });
+    const contacts = await this.loadLinkedContacts(context, {
         table: 'spend_item_contacts',
         foreignKey: 'spend_item_id',
         id: lineId,
-      }).catch(() => []),
-      reads.applications ? this.budgetLines.listApplications(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] })) : null,
-      reads.projects ? this.budgetLines.listProjects(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] })) : null,
-      reads.contracts
-        ? (nature === 'opex'
-          ? this.contracts.listContractsForSpendItem(lineId, { manager: context.manager })
-          : this.contracts.listContractsForCapexItem(lineId, { manager: context.manager })).catch(() => ({ items: [] }))
-          .then(async (linked) => {
-            if (!linked || linked.items.length === 0) return linked;
-            const mismatches = await contractMismatchesAgainstLine(
-              context.manager,
-              context.tenantId,
-              lineId,
-              linked.items.map((row) => row.id),
-            );
-            return {
-              items: linked.items.map((row) => ({ ...row, mismatches: mismatches?.get(row.id) ?? [] })),
-            };
-          })
-        : null,
-      this.budgetLines.listLinks(lineId, nature, { manager: context.manager }).catch(() => []),
-      this.budgetLines.listAttachments(lineId, nature, { manager: context.manager }).catch(() => []),
-    ]);
+      }).catch(() => []);
+    const linkedApplications = reads.applications
+      ? await this.budgetLines.listApplications(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] }))
+      : null;
+    const linkedProjects = reads.projects
+      ? await this.budgetLines.listProjects(lineId, nature, { manager: context.manager }).catch(() => ({ items: [] }))
+      : null;
+    const linkedContracts = reads.contracts
+      ? await (nature === 'opex'
+        ? this.contracts.listContractsForSpendItem(lineId, { manager: context.manager })
+        : this.contracts.listContractsForCapexItem(lineId, { manager: context.manager })).catch(() => ({ items: [] }))
+        .then(async (linked) => {
+          if (!linked || linked.items.length === 0) return linked;
+          const mismatches = await contractMismatchesAgainstLine(
+            context.manager,
+            context.tenantId,
+            lineId,
+            linked.items.map((row) => row.id),
+          );
+          return {
+            items: linked.items.map((row) => ({ ...row, mismatches: mismatches?.get(row.id) ?? [] })),
+          };
+        })
+      : null;
+    const links = await this.budgetLines.listLinks(lineId, nature, { manager: context.manager }).catch(() => []);
+    const attachments = await this.budgetLines.listAttachments(lineId, nature, { manager: context.manager }).catch(() => []);
 
     return {
       ...(summary ?? {}),
@@ -3410,15 +3405,16 @@ export class AiQueryExecutor {
     const probe = this.readProbe(context);
     const readsAssets = await probe('assets');
     const readsTechnologies = await probe('technologies');
-    const [contacts, linkedCapexItems, tasks] = await Promise.all([
-      this.loadLinkedContacts(context, {
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const contacts = await this.loadLinkedContacts(context, {
         table: 'contract_contacts',
         foreignKey: 'contract_id',
         id: contractId,
-      }).catch(() => []),
-      reads.budget ? this.contracts.listLinkedCapexItems(contractId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
-      this.contracts.listTasks(contractId, { manager: context.manager }).catch(() => []),
-    ]);
+      }).catch(() => []);
+    const linkedCapexItems = reads.budget
+      ? await this.contracts.listLinkedCapexItems(contractId, { manager: context.manager }).catch(() => ({ items: [] }))
+      : null;
+    const tasks = await this.contracts.listTasks(contractId, { manager: context.manager }).catch(() => []);
     // The contract's budget lines, both natures in one list: the OPEX lines come with the contract
     // (`contracts.get`), the CAPEX lines from their own link read. Null without the budget right,
     // which is not "none".
@@ -3904,11 +3900,10 @@ export class AiQueryExecutor {
       // routes: infrastructure for assets and technologies, applications (narrowed to a
       // Business Contributor's participation) for applications, tasks for tasks. A section
       // without its right stays absent from the detail instead of failing the call.
-      const [readsInfrastructure, readsApplications, readsTasks] = await Promise.all([
-        this.policy?.canReadEntityType(context, 'technologies', context.manager) ?? false,
-        this.policy?.canReadEntityType(context, 'applications', context.manager) ?? false,
-        this.policy?.canReadEntityType(context, 'tasks', context.manager) ?? false,
-      ]);
+      // One after the other: the request's single connection runs its queries in turn anyway.
+      const readsInfrastructure = await this.policy?.canReadEntityType(context, 'technologies', context.manager) ?? false;
+      const readsApplications = await this.policy?.canReadEntityType(context, 'applications', context.manager) ?? false;
+      const readsTasks = await this.policy?.canReadEntityType(context, 'tasks', context.manager) ?? false;
       const applicationScope = readsApplications
         ? await resolveAiParticipationAccessScope(context, 'applications')
         : undefined;

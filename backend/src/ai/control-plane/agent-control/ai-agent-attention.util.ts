@@ -79,10 +79,9 @@ async function attentionWorkItems(manager: Manager, tenantId: string, scope: Att
 }
 
 export async function countAttention(manager: Manager, tenantId: string, scope: AttentionScope = {}): Promise<AttentionSummary> {
-  const [actions, workItems] = await Promise.all([
-    attentionActions(manager, tenantId, scope),
-    attentionWorkItems(manager, tenantId, scope),
-  ]);
+  // One after the other: the request's single connection runs its queries in turn anyway.
+  const actions = await attentionActions(manager, tenantId, scope);
+  const workItems = await attentionWorkItems(manager, tenantId, scope);
   return { actions: actions.length, work_items: workItems.length, total: actions.length + workItems.length };
 }
 
