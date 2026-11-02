@@ -190,7 +190,7 @@ function nestedControllers(kind: Kind) {
   return kind === 'opex'
     ? {
       versions: new SpendVersionsController(new SpendVersionsService(none, none, none, none), none, none) as any,
-      tasks: new SpendTasksController(new SpendTasksService(unified, none)) as any,
+      tasks: new SpendTasksController(new SpendTasksService(unified)) as any,
       contracts: new SpendItemContractsController(contracts) as any,
     }
     : {

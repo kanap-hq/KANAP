@@ -82,7 +82,7 @@ function controllers(runner: QueryRunner) {
     none, audit as any, none, none, { getTaskRecipients: async () => [] } as any, new ItemNumberService(),
     { logChange: async () => undefined } as any, { cleanupOrphanedImages: async () => undefined } as any, none,
   );
-  const opexTasks = new SpendTasksController(new SpendTasksService(unified, audit as any)) as any;
+  const opexTasks = new SpendTasksController(new SpendTasksService(unified)) as any;
   const capexTasks = new CapexTasksController(unified) as any;
   return { opex, capex, opexSvc, capexSvc, opexTasks, capexTasks, typeChange };
 }
