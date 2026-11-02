@@ -61,6 +61,7 @@ const content: FeatureContent = {
       shotAlt: 'Die 10 größten OPEX-Zeilen des Budgets 2026 als Kreisdiagramm',
     },
   ],
+  series: 'opex-budget',
   more: {
     title: 'Außerdem',
     items: [

@@ -95,6 +95,11 @@ const crossItems = content.crossCutting.items.map((i) => ({
         columns={3}
       />
       <p class="mk-home__layers-outro">{content.layers.outro}</p>
+      {content.layers.guide && (
+        <p class="mk-home__layers-guide">
+          <a href={localePath(locale, content.layers.guide.href)}>{content.layers.guide.label} →</a>
+        </p>
+      )}
     </Section>
   )}
 
@@ -174,5 +179,11 @@ const crossItems = content.crossCutting.items.map((i) => ({
     line-height: 1.6;
     color: var(--kanap-text-primary);
     max-width: 640px;
+  }
+
+  .mk-home__layers-guide {
+    margin: 12px 0 0;
+    font-size: 15px;
+    font-weight: 500;
   }
 </style>

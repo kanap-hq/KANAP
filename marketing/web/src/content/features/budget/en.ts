@@ -61,6 +61,7 @@ const content: FeatureContent = {
       shotAlt: 'Top 10 OPEX lines of the 2026 budget, as a pie chart',
     },
   ],
+  series: 'opex-budget',
   more: {
     title: 'And also',
     items: [

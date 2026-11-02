@@ -36,6 +36,7 @@ const content: HomeContent = {
       },
     ],
     outro: 'Cada línea está vinculada a su aplicación, su contrato o su proyecto: desde el presupuesto se ve lo que TI hace funcionar y lo que cuesta cada cosa.',
+    guide: { label: 'Guía: OPEX y CAPEX en el presupuesto de TI', href: '/blog/opex-y-capex-en-el-presupuesto-de-ti' },
   },
 
   pillars: {

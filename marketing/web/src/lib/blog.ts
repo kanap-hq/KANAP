@@ -197,9 +197,13 @@ export async function getTranslations(item: BlogItem): Promise<Partial<Record<Lo
  */
 export async function getSeriesParts(item: BlogItem, locale: Locale): Promise<BlogItem[]> {
   const series = item.post.data.series;
-  if (!series) return [];
+  return series ? getSeriesByKey(series.key, locale) : [];
+}
+
+/** Published parts of the series `key` as listed from `locale`, ordered by part number. */
+export async function getSeriesByKey(key: string, locale: Locale): Promise<BlogItem[]> {
   return (await getPostsWithFallback(locale))
-    .filter((i) => i.post.data.series?.key === series.key)
+    .filter((i) => i.post.data.series?.key === key)
     .sort((a, b) => a.post.data.series!.part - b.post.data.series!.part);
 }
 

@@ -36,6 +36,7 @@ const content: HomeContent = {
       },
     ],
     outro: 'Jede Zeile hängt an ihrer Anwendung, ihrem Vertrag oder ihrem Projekt: Vom Budget aus sehen Sie, was die IT betreibt und was es kostet.',
+    guide: { label: 'Leitfaden: OPEX und CAPEX im IT-Budget', href: '/blog/opex-und-capex-im-it-budget' },
   },
 
   pillars: {
