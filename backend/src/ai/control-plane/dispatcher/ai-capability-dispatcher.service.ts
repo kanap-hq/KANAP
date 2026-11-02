@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import Ajv, { ErrorObject, ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
@@ -30,6 +30,7 @@ import { mcpArgumentPreview } from '../mcp/ai-mcp-audit.service';
 import { AdapterEvidenceSeed } from '../providers/provider.types';
 import { isRecord } from '../../../common/object-guards';
 import { withSavepoint } from '../../../common/savepoint.util';
+import { codedForbidden, requestContextMissing } from '../../../auth/module-right-required';
 
 type DispatchInput = {
   capabilityName: string;
@@ -247,22 +248,22 @@ export class AiCapabilityDispatcherService {
 
   private extractPreviewIds(input: unknown, field: string): string[] {
     if (!input || typeof input !== 'object' || Array.isArray(input)) {
-      throw new ForbiddenException('Capability approval strategy could not resolve action requests.');
+      throw codedForbidden('AGENT_ACTION_INCOMPLETE', 'Capability approval strategy could not resolve action requests.');
     }
     const value = (input as Record<string, unknown>)[field];
     if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string')) {
-      throw new ForbiddenException('Capability approval strategy could not resolve action requests.');
+      throw codedForbidden('AGENT_ACTION_INCOMPLETE', 'Capability approval strategy could not resolve action requests.');
     }
     return value;
   }
 
   private extractActionRequestId(input: unknown, field: string): string {
     if (!input || typeof input !== 'object' || Array.isArray(input)) {
-      throw new ForbiddenException('Capability approval strategy could not resolve action request.');
+      throw codedForbidden('AGENT_ACTION_INCOMPLETE', 'Capability approval strategy could not resolve action request.');
     }
     const value = (input as Record<string, unknown>)[field];
     if (typeof value !== 'string' || value.trim().length === 0) {
-      throw new ForbiddenException('Capability approval strategy could not resolve action request.');
+      throw codedForbidden('AGENT_ACTION_INCOMPLETE', 'Capability approval strategy could not resolve action request.');
     }
     return value.trim();
   }
@@ -287,7 +288,7 @@ export class AiCapabilityDispatcherService {
         || action.capability_version !== contract.version
         || action.effect !== contract.effect
       ) {
-        throw new ForbiddenException('Action request does not match the executing capability.');
+        throw codedForbidden('AGENT_ACTION_CHANGED', 'Action request does not match the executing capability.');
       }
       this.actions.verifyProviderActionIntegrity(action);
       const approval = await this.approvals.resolveApprovedActionForExecution(context, action, contract, execution);
@@ -295,7 +296,7 @@ export class AiCapabilityDispatcherService {
     }
 
     if (contract.approval_strategy.mode !== 'mutation_preview') {
-      throw new ForbiddenException('Capability requires an explicit approval strategy before execution.');
+      throw codedForbidden('AGENT_ACTION_APPROVAL_REQUIRED', 'Capability requires an explicit approval strategy before execution.');
     }
 
     const actionRequests: AiActionRequest[] = [];
@@ -382,7 +383,7 @@ export class AiCapabilityDispatcherService {
     input: DispatchInput,
   ): Promise<CapabilityExecutionResult<T>> {
     if (!context.tenantId) {
-      throw new ForbiddenException('Tenant context is required for capability execution.');
+      throw requestContextMissing('Tenant context is required for capability execution.');
     }
 
     const surface = this.resolveSurface(context, input.execution);

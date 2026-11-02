@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
-import { BadRequestException, ForbiddenException, Injectable, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { AiSecretCipherService } from '../../ai-secret-cipher.service';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { parseCredentialRef } from './adapter-config.service';
 import { ProviderCredentialRef } from './provider.types';
+import { codedForbidden, requestContextMissing } from '../../../auth/module-right-required';
 
 const ENV_REF_RE = /^[A-Z][A-Z0-9_]{1,127}$/;
 const SECRET_REF_RE = /^[A-Za-z0-9][A-Za-z0-9_./:@-]{0,255}$/;
@@ -35,7 +36,7 @@ export class AiResolvedTenantSecret {
 
   reveal(): string {
     if (this.#secretMaterial == null) {
-      throw new ForbiddenException('Credential reference did not resolve to secret material.');
+      throw codedForbidden('AGENT_CREDENTIAL_UNAVAILABLE', 'Credential reference did not resolve to secret material.');
     }
     return this.#secretMaterial;
   }
@@ -118,13 +119,13 @@ function containsPlaintextSecret(value: unknown): boolean {
 function assertTenantScopedRef(context: AiExecutionContextWithManager, rawRef: unknown, ref: ProviderCredentialRef): void {
   const rawTenantId = stringField(rawRef, 'tenant_id') ?? stringField(rawRef, 'tenantId') ?? ('tenant_id' in ref ? ref.tenant_id ?? null : null);
   if (ref.kind === 'environment' && !rawTenantId) {
-    throw new ForbiddenException('Environment credential references must include a tenant_id.');
+    throw codedForbidden('AGENT_CREDENTIAL_UNAVAILABLE', 'Environment credential references must include a tenant_id.');
   }
   if (rawTenantId && rawTenantId !== context.tenantId) {
-    throw new ForbiddenException('Credential reference belongs to a different tenant.');
+    throw codedForbidden('AGENT_CREDENTIAL_UNAVAILABLE', 'Credential reference belongs to a different tenant.');
   }
   if (ref.kind === 'environment' && !ref.ref.startsWith(tenantEnvironmentSecretEnvPrefix(context.tenantId))) {
-    throw new ForbiddenException('Environment credential reference is not tenant-owned.');
+    throw codedForbidden('AGENT_CREDENTIAL_UNAVAILABLE', 'Environment credential reference is not tenant-owned.');
   }
   if (ref.kind !== 'secret_ref') {
     return;
@@ -133,7 +134,7 @@ function assertTenantScopedRef(context: AiExecutionContextWithManager, rawRef: u
   const colonMatch = ref.ref.match(/^tenant:([^:]+):/);
   const embeddedTenant = slashMatch?.[1] ?? colonMatch?.[1] ?? null;
   if (embeddedTenant && embeddedTenant !== context.tenantId) {
-    throw new ForbiddenException('Credential reference belongs to a different tenant.');
+    throw codedForbidden('AGENT_CREDENTIAL_UNAVAILABLE', 'Credential reference belongs to a different tenant.');
   }
 }
 
@@ -166,7 +167,7 @@ export class AiTenantSecretResolverService {
     env: Record<string, string | undefined> = process.env,
   ): AiResolvedTenantSecret {
     if (!context?.tenantId) {
-      throw new ForbiddenException('Tenant context is required for credential resolution.');
+      throw requestContextMissing('Tenant context is required for credential resolution.');
     }
     if (rawRef == null) {
       throw new BadRequestException('Credential reference is missing.');
@@ -194,7 +195,7 @@ export class AiTenantSecretResolverService {
       // environment variable: a structured missing-credential Forbidden, and
       // never a throw that carries material or ciphertext.
       if (!this.cipher?.canEncrypt()) {
-        throw new ForbiddenException('Encrypted credential storage is not configured on this instance.');
+        throw codedForbidden('CREDENTIAL_STORAGE_NOT_CONFIGURED', 'Encrypted credential storage is not configured on this instance.');
       }
       let material: string | null = null;
       try {
@@ -203,7 +204,7 @@ export class AiTenantSecretResolverService {
         material = null;
       }
       if (typeof material !== 'string' || material.length === 0) {
-        throw new ForbiddenException('Stored encrypted credential could not be decrypted.');
+        throw codedForbidden('AGENT_CREDENTIAL_UNAVAILABLE', 'Stored encrypted credential could not be decrypted.');
       }
       return new AiResolvedTenantSecret({
         kind: 'encrypted',
@@ -215,7 +216,7 @@ export class AiTenantSecretResolverService {
     if (parsed.kind === 'environment') {
       const value = env[parsed.ref];
       if (typeof value !== 'string' || value.length === 0) {
-        throw new ForbiddenException('Environment credential reference is not configured.');
+        throw codedForbidden('AGENT_CREDENTIAL_UNAVAILABLE', 'Environment credential reference is not configured.');
       }
       return new AiResolvedTenantSecret({
         kind: 'environment',
@@ -232,7 +233,7 @@ export class AiTenantSecretResolverService {
     });
     const value = env[envName];
     if (typeof value !== 'string' || value.length === 0) {
-      throw new ForbiddenException(`Secret manager reference is not available through the local Phase 8 resolver (${envName}).`);
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', `Secret manager reference is not available through the local Phase 8 resolver (${envName}).`);
     }
     return new AiResolvedTenantSecret({
       kind: 'secret_ref',

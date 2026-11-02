@@ -527,6 +527,7 @@ import {
   clampText,
   stripHeadlineTags,
 } from './agent-control-util';
+import { codedForbidden } from '../../../auth/module-right-required';
 
 export type AgentControlAgentDefinitionInput = {
   agent_key?: string | null;
@@ -1080,7 +1081,7 @@ export class AiAgentControlService {
           cap: guardrails,
         },
       });
-      throw new ForbiddenException('Agent run exceeded the configured per-run economic cap.');
+      throw codedForbidden('AGENT_RUN_COST_CAP', 'Agent run exceeded the configured per-run economic cap.');
     }
     if (run) {
       await repo.save(run);
@@ -1424,21 +1425,21 @@ export class AiAgentControlService {
     action: AiActionRequest,
   ): Promise<void> {
     if (action.tenant_id !== context.tenantId) {
-      throw new ForbiddenException('Action request does not belong to this tenant.');
+      throw codedForbidden('AGENT_ACTION_NOT_FOUND', 'Action request does not belong to this tenant.');
     }
     if (!['pending', 'approved', APPROVED_ACTION_EXECUTING_STATUS, 'executed'].includes(action.status)) {
-      throw new ForbiddenException(`Action is ${action.status}.`);
+      throw codedForbidden('AGENT_ACTION_NOT_PENDING', `Action is ${action.status}.`);
     }
     if (action.expires_at && action.expires_at <= new Date()) {
-      throw new ForbiddenException('Action request is expired.');
+      throw codedForbidden('AGENT_ACTION_EXPIRED', 'Action request is expired.');
     }
     if ((action.provider_kind && !action.provider_key) || (!action.provider_kind && action.provider_key)) {
-      throw new ForbiddenException('Action request provider identity is incomplete.');
+      throw codedForbidden('AGENT_ACTION_INCOMPLETE', 'Action request provider identity is incomplete.');
     }
     const providerReadiness = await this.providerExecutionReadinessForActions(context, [action]);
     const blockedReason = providerReadiness.get(action.id)?.blocked_reason ?? null;
     if (blockedReason) {
-      throw new ForbiddenException(blockedReason);
+      throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', blockedReason, { detail: blockedReason });
     }
   }
 
@@ -1740,35 +1741,35 @@ export class AiAgentControlService {
 
   async listSharedContextProfiles(context: AiExecutionContextWithManager) {
     if (!this.sharedContextProfiles) {
-      throw new ForbiddenException('Shared context profiles are not available.');
+      throw codedForbidden('AGENT_SHARED_CONTEXT_UNAVAILABLE', 'Shared context profiles are not available.');
     }
     return this.sharedContextProfiles.list(context);
   }
 
   async createSharedContextProfile(context: AiExecutionContextWithManager, input: SharedContextProfileInput = {}) {
     if (!this.sharedContextProfiles) {
-      throw new ForbiddenException('Shared context profiles are not available.');
+      throw codedForbidden('AGENT_SHARED_CONTEXT_UNAVAILABLE', 'Shared context profiles are not available.');
     }
     return this.sharedContextProfiles.create(context, input);
   }
 
   async updateSharedContextProfile(context: AiExecutionContextWithManager, id: string, input: SharedContextProfileInput = {}) {
     if (!this.sharedContextProfiles) {
-      throw new ForbiddenException('Shared context profiles are not available.');
+      throw codedForbidden('AGENT_SHARED_CONTEXT_UNAVAILABLE', 'Shared context profiles are not available.');
     }
     return this.sharedContextProfiles.update(context, id, input);
   }
 
   async archiveSharedContextProfile(context: AiExecutionContextWithManager, id: string) {
     if (!this.sharedContextProfiles) {
-      throw new ForbiddenException('Shared context profiles are not available.');
+      throw codedForbidden('AGENT_SHARED_CONTEXT_UNAVAILABLE', 'Shared context profiles are not available.');
     }
     return this.sharedContextProfiles.archive(context, id);
   }
 
   async restoreSharedContextProfile(context: AiExecutionContextWithManager, id: string) {
     if (!this.sharedContextProfiles) {
-      throw new ForbiddenException('Shared context profiles are not available.');
+      throw codedForbidden('AGENT_SHARED_CONTEXT_UNAVAILABLE', 'Shared context profiles are not available.');
     }
     return this.sharedContextProfiles.restore(context, id);
   }
@@ -1833,7 +1834,7 @@ export class AiAgentControlService {
     input: AgentControlTargetingPreviewInput = {},
   ): Promise<{ preview: TargetingPreviewSummary }> {
     if (!this.agentQueue) {
-      throw new ForbiddenException('Agent work queue is not available.');
+      throw codedForbidden('AGENT_RUNS_UNAVAILABLE', 'Agent work queue is not available.');
     }
     const definition = await context.manager.getRepository(AiAgentDefinition).findOne({
       where: { id, tenant_id: context.tenantId },
@@ -2134,7 +2135,7 @@ export class AiAgentControlService {
       ? normalizeAllowedCapabilitiesForConfig(input.allowed_capabilities_json, agentType)
       : defaults.allowed_capabilities_json;
     const forbiddenCapabilities = input.forbidden_capabilities_json !== undefined
-      ? (() => { throw new ForbiddenException('Forbidden capabilities are immutable from this endpoint.'); })()
+      ? (() => { throw codedForbidden('AGENT_FORBIDDEN_CAPABILITIES_LOCKED', 'Forbidden capabilities are immutable from this endpoint.'); })()
       : [...defaults.forbidden_capabilities_json];
     const scopePolicy = normalizedPolicyObject(input.scope_policy_json, 'Scope policy') ?? defaults.scope_policy_json;
     const normalizedScopePolicy = normalizeScopePolicyForAgentType(agentType, scopePolicy);
@@ -2202,7 +2203,7 @@ export class AiAgentControlService {
       throw new NotFoundException('Agent definition not found.');
     }
     if (Object.prototype.hasOwnProperty.call(input, 'forbidden_capabilities_json')) {
-      throw new ForbiddenException('Forbidden capabilities are immutable from this endpoint.');
+      throw codedForbidden('AGENT_FORBIDDEN_CAPABILITIES_LOCKED', 'Forbidden capabilities are immutable from this endpoint.');
     }
     const before = configSnapshot(definition);
     if (Object.prototype.hasOwnProperty.call(input, 'name')) {
@@ -2629,7 +2630,7 @@ export class AiAgentControlService {
     }
 
     if (input.confirm !== true) {
-      throw new ForbiddenException('Automatic mode requires explicit confirmation.');
+      throw codedForbidden('AGENT_AUTOMATIC_CONFIRMATION_REQUIRED', 'Automatic mode requires explicit confirmation.');
     }
     const rows = await this.autonomyRowsForDefinition(context, definition);
     const row = rows.find((candidate) => candidate.actionClass === actionClassName);
@@ -2644,6 +2645,7 @@ export class AiAgentControlService {
       && acknowledged;
     if (!row || (!row.eligible && !overrideGranted)) {
       throw new ForbiddenException({
+        code: 'AGENT_AUTOMATIC_NOT_ELIGIBLE',
         message: 'Automatic mode is not eligible for this action class.',
         reasons: row?.reasons ?? ['ACTION_CLASS_NOT_FOUND'],
         hardReasons,
@@ -2657,6 +2659,7 @@ export class AiAgentControlService {
     // client, which only mirrors this rule in its dialog.
     if (acknowledgementRequired && !acknowledged) {
       throw new ForbiddenException({
+        code: 'AGENT_AUTOMATIC_CONFIRMATION_REQUIRED',
         message: 'This action class always requires an explicit acknowledgement and a reason before it can run automatically.',
         reasons: ['HIGH_RISK_ACKNOWLEDGEMENT_REQUIRED'],
         hardReasons: [],
@@ -2667,10 +2670,10 @@ export class AiAgentControlService {
     }
     const capabilityName = approvedCapabilityForAutonomyActionClass(actionClassName);
     if (!capabilityName || !isAutomatableAutonomyActionClass(actionClassName)) {
-      throw new ForbiddenException('This action class cannot run automatically.');
+      throw codedForbidden('AGENT_ACTION_NOT_AUTOMATABLE', 'This action class cannot run automatically.');
     }
     if (!definitionAllowsCapability(definition, capabilityName)) {
-      throw new ForbiddenException('The agent definition does not allow this capability.');
+      throw codedForbidden('AGENT_CAPABILITY_NOT_ALLOWED', 'The agent definition does not allow this capability.');
     }
     const ticketingBinding = requireTicketingBinding(definition);
     const providerKey = ticketingBinding.providerKey;
@@ -3861,7 +3864,7 @@ export class AiAgentControlService {
 
     const applicability = await this.providers.getApplicability(context, 'ticketing', providerKey);
     if (!applicability.available) {
-      throw new ForbiddenException(`${options.unavailableMessage ?? 'Ticketing provider is unavailable'}: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`);
+      throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `${options.unavailableMessage ?? 'Ticketing provider is unavailable'}: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`, { detail: applicability.message ?? applicability.reasonCode ?? 'not ready' });
     }
 
     const result = await this.dispatcher.execute(context, {
@@ -3947,7 +3950,7 @@ export class AiAgentControlService {
     input: AgentControlMonitoringDiagnosisInput = {},
   ) {
     if (!this.agentQueue) {
-      throw new ForbiddenException('Agent work queue is required to run monitoring diagnosis.');
+      throw codedForbidden('AGENT_RUNS_UNAVAILABLE', 'Agent work queue is required to run monitoring diagnosis.');
     }
     const workItemId = trimmedString(input.work_item_id);
     if (workItemId) {
@@ -3968,7 +3971,7 @@ export class AiAgentControlService {
     const binding = requireMonitoringBinding(definition, 'Monitoring diagnosis requires a monitoring provider binding.');
     const applicability = await this.providers.getApplicability(context, binding.providerKind, binding.providerKey);
     if (!applicability.available) {
-      throw new ForbiddenException(`Monitoring provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`);
+      throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `Monitoring provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`, { detail: applicability.message ?? applicability.reasonCode ?? 'not ready' });
     }
     // Direct provider read before enqueue: the occurrence-scoped dedup key
     // needs the live occurrence timestamp. The queued run re-reads the alert
@@ -4006,7 +4009,7 @@ export class AiAgentControlService {
     workItemId: string,
   ) {
     if (!this.agentQueue) {
-      throw new ForbiddenException('Agent work queue is required to run monitoring diagnosis.');
+      throw codedForbidden('AGENT_RUNS_UNAVAILABLE', 'Agent work queue is required to run monitoring diagnosis.');
     }
     const queuedWorkItem = await context.manager.getRepository(AiAgentWorkItem).findOne({
       where: { id: workItemId, tenant_id: context.tenantId },
@@ -4021,7 +4024,7 @@ export class AiAgentControlService {
       where: { id: queuedWorkItem.agent_definition_id, tenant_id: context.tenantId },
     });
     if (!definition) {
-      throw new ForbiddenException('Queued monitoring diagnosis work item has no tenant-scoped agent definition.');
+      throw codedForbidden('AGENT_WORK_ITEM_NOT_RUNNABLE', 'Queued monitoring diagnosis work item has no tenant-scoped agent definition.');
     }
     this.agentQueue.assertSreMonitoringDefinitionRunnable(definition);
     const binding = requireMonitoringBinding(definition, 'Queued monitoring diagnosis requires a monitoring provider binding.');
@@ -4049,7 +4052,7 @@ export class AiAgentControlService {
     try {
       const applicability = await this.providers.getApplicability(context, binding.providerKind, binding.providerKey);
       if (!applicability.available) {
-        throw new ForbiddenException(`Monitoring provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`);
+        throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `Monitoring provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`, { detail: applicability.message ?? applicability.reasonCode ?? 'not ready' });
       }
 
       let stepIndex = 1;
@@ -4881,7 +4884,7 @@ export class AiAgentControlService {
     let agentMetadata: Record<string, unknown> = {};
     if (workItemId) {
       if (!this.agentQueue) {
-        throw new ForbiddenException('Agent work queue is required to run queued ticketing triage.');
+        throw codedForbidden('AGENT_RUNS_UNAVAILABLE', 'Agent work queue is required to run queued ticketing triage.');
       }
       const queuedWorkItem = await context.manager.getRepository(AiAgentWorkItem).findOne({
         where: {
@@ -4905,7 +4908,7 @@ export class AiAgentControlService {
         },
       });
       if (!agentDefinition) {
-        throw new ForbiddenException('Queued ticketing triage work item has no tenant-scoped agent definition.');
+        throw codedForbidden('AGENT_WORK_ITEM_NOT_RUNNABLE', 'Queued ticketing triage work item has no tenant-scoped agent definition.');
       }
       this.agentQueue.assertHelpdeskTicketingDefinitionRunnable(agentDefinition, null);
       const binding = requireTicketingBinding(agentDefinition, 'Queued ticket triage requires a ticketing provider binding.');
@@ -5028,7 +5031,7 @@ export class AiAgentControlService {
     try {
       const applicability = await this.providers.getApplicability(context, 'ticketing', target.provider_key);
       if (!applicability.available) {
-        throw new ForbiddenException(`Ticketing provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`);
+        throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `Ticketing provider is unavailable: ${applicability.message ?? applicability.reasonCode ?? 'not ready'}.`, { detail: applicability.message ?? applicability.reasonCode ?? 'not ready' });
       }
       // On the built-in provider, one triage run consumes one included message (same
       // unit as a chat message), reserved before any provider or LLM work happens.

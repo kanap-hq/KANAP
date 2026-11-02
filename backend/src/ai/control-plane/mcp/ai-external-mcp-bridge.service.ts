@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -15,6 +14,7 @@ import { parseCredentialRef } from '../providers/adapter-config.service';
 import { AdapterErrorCode, AdapterEvidenceSeed, AdapterResult } from '../providers/provider.types';
 import { AiExternalMcpMockTransport, ExternalMcpMockToolDefinition } from './ai-external-mcp-mock-transport.service';
 import { EMAIL_ADDRESSES } from '../../../common/text-scan';
+import { codedForbidden, requestContextMissing } from '../../../auth/module-right-required';
 
 const SECRET_KEY_RE = /(api[-_]?key|token|secret|password|authorization|cookie|session|client_secret)/i;
 const EMAIL_RE = EMAIL_ADDRESSES;
@@ -236,7 +236,7 @@ export class AiExternalMcpBridgeService {
     const existing = await repo.findOne({ where: { tenant_id: context.tenantId, server_key: serverKey } });
     const enabled = input.enabled ?? existing?.enabled ?? false;
     if (enabled && transportKind !== 'mock') {
-      throw new ForbiddenException('Live external MCP transports are not enabled in Phase 7.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'Live external MCP transports are not enabled in Phase 7.');
     }
     const maxEffect = input.maxEffect ?? existing?.max_effect ?? 'read';
     if (maxEffect !== 'read') {
@@ -292,7 +292,7 @@ export class AiExternalMcpBridgeService {
     const capabilityVersion = input.capabilityVersion?.trim() || '1.0.0';
     const schemaVersion = input.schemaVersion?.trim() || capabilityVersion;
     if (input.mcpExposureEnabled) {
-      throw new ForbiddenException('External MCP tools are not re-exported through KANAP MCP in Phase 7.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'External MCP tools are not re-exported through KANAP MCP in Phase 7.');
     }
     this.assertNoPlaintextSecrets(input.metadata, 'metadata');
 
@@ -336,7 +336,7 @@ export class AiExternalMcpBridgeService {
       throw new NotFoundException('External MCP server registration was not found.');
     }
     if (server.transport_kind !== 'mock') {
-      throw new ForbiddenException('Only mock external MCP discovery is available in Phase 7.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'Only mock external MCP discovery is available in Phase 7.');
     }
     return this.mockTransport.listTools(serverKey);
   }
@@ -392,10 +392,10 @@ export class AiExternalMcpBridgeService {
   ): Promise<ExternalMcpBridgeResult> {
     this.assertTenantContext(context);
     if (!PHASE7_SUPPORTED_SURFACES.includes(execution.surface as any)) {
-      throw new ForbiddenException('External MCP bridge is not available on this execution surface.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'External MCP bridge is not available on this execution surface.');
     }
     if (contract.provider_kind !== 'external_mcp' || contract.effect !== 'read') {
-      throw new ForbiddenException('External MCP bridge only executes read-only external MCP capabilities.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'External MCP bridge only executes read-only external MCP capabilities.');
     }
     const snapshot = await this.toolRepository(context).findOne({
       where: {
@@ -406,15 +406,15 @@ export class AiExternalMcpBridgeService {
       },
     });
     if (!snapshot) {
-      throw new ForbiddenException('External MCP tool is not allowlisted for this tenant.');
+      throw codedForbidden('EXTERNAL_MCP_NOT_ALLOWED', 'External MCP tool is not allowlisted for this tenant.');
     }
     const server = await this.enabledServerForSnapshot(context, snapshot);
     if (!server) {
-      throw new ForbiddenException('External MCP server is not enabled for this tenant.');
+      throw codedForbidden('EXTERNAL_MCP_NOT_ALLOWED', 'External MCP server is not enabled for this tenant.');
     }
     this.assertSnapshotStillMatchesContract(server, snapshot, contract);
     if (server.transport_kind !== 'mock') {
-      throw new ForbiddenException('Live external MCP transports are not enabled in Phase 7.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'Live external MCP transports are not enabled in Phase 7.');
     }
     const callInput = asRecord(input);
     if (!callInput) {
@@ -429,7 +429,7 @@ export class AiExternalMcpBridgeService {
 
   private assertTenantContext(context: AiExecutionContextWithManager): void {
     if (!context.tenantId) {
-      throw new ForbiddenException('Tenant context is required for external MCP bridge execution.');
+      throw requestContextMissing('Tenant context is required for external MCP bridge execution.');
     }
   }
 
@@ -583,17 +583,17 @@ export class AiExternalMcpBridgeService {
       || snapshot.capability_name !== contract.name
       || snapshot.capability_version !== contract.version
     ) {
-      throw new ForbiddenException('External MCP allowlist snapshot no longer matches the capability contract.');
+      throw codedForbidden('AGENT_ACTION_CHANGED', 'External MCP allowlist snapshot no longer matches the capability contract.');
     }
     if (server.max_effect !== 'read' || snapshot.effect !== 'read') {
-      throw new ForbiddenException('External MCP bridge only supports read-only effect in Phase 7.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'External MCP bridge only supports read-only effect in Phase 7.');
     }
     if (snapshot.mcp_exposure_enabled) {
-      throw new ForbiddenException('External MCP bridge tools are not exposed through KANAP MCP in Phase 7.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'External MCP bridge tools are not exposed through KANAP MCP in Phase 7.');
     }
     const schemaHash = this.schemaHash(snapshot.input_schema_json);
     if (schemaHash !== snapshot.input_schema_hash || this.schemaHash(contract.input_schema) !== snapshot.input_schema_hash) {
-      throw new ForbiddenException('External MCP tool schema snapshot no longer matches its stored hash.');
+      throw codedForbidden('AGENT_ACTION_CHANGED', 'External MCP tool schema snapshot no longer matches its stored hash.');
     }
   }
 

@@ -1,4 +1,3 @@
-import { ForbiddenException } from '@nestjs/common';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import * as cors from 'cors';
 import {
@@ -10,6 +9,7 @@ import {
   parseCorsPatterns,
 } from './env';
 import { resolveConfiguredAppBaseUrl } from './url';
+import { codedForbidden } from '../auth/module-right-required';
 import { tenantSlugFromHost } from './tenancy/request-tenancy.middleware';
 import { Features } from '../config/features';
 
@@ -201,7 +201,7 @@ export function assertRequestOriginAllowed(req: any, policy: OriginPolicy = crea
     tenantSlug: tenantSlugForRequest(req),
   });
   if (!decision.allowed) {
-    throw new ForbiddenException({ statusCode: 403, error: 'Forbidden', message: 'Origin not allowed' });
+    throw codedForbidden('ORIGIN_NOT_ALLOWED', 'Origin not allowed');
   }
 }
 
@@ -254,7 +254,7 @@ export function createCorsMiddlewares(
       return;
     }
     logRefusal(origin);
-    res.status(403).json({ statusCode: 403, error: 'Forbidden', message: 'Origin not allowed' });
+    res.status(403).json({ statusCode: 403, error: 'Forbidden', code: 'ORIGIN_NOT_ALLOWED', message: 'Origin not allowed' });
   };
   return [guard, cors({ origin: true, credentials: true, exposedHeaders: ['Retry-After', 'X-Data-Access'] })];
 }

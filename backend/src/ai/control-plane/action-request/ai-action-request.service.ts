@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
@@ -9,6 +9,7 @@ import { AiEvaluation } from '../entities/ai-evaluation.entity';
 import { hashStableJson } from '../evidence/ai-evidence.service';
 import { PolicyDecisionRecord } from '../policy/policy-decision.types';
 import { isRecord } from '../../../common/object-guards';
+import { codedForbidden, requestContextMissing } from '../../../auth/module-right-required';
 
 const DEFAULT_PROVIDER_ACTION_TTL_MS = 30 * 60 * 1000;
 const PROVIDER_ACTION_RETRYABLE_TERMINAL_STATUSES = new Set(['expired', 'failed', 'rejected', 'dismissed']);
@@ -317,7 +318,7 @@ export class AiActionRequestService {
     seed: ProviderActionRequestSeed,
   ): Promise<AiActionRequest> {
     if (!context.tenantId) {
-      throw new ForbiddenException('Tenant context is required for provider action requests.');
+      throw requestContextMissing('Tenant context is required for provider action requests.');
     }
     const repo = this.actionRepository(context.manager);
     const findExisting = (candidate: ProviderActionRequestSeed) => repo.findOne({
@@ -462,7 +463,7 @@ export class AiActionRequestService {
 
   verifyProviderActionIntegrity(action: AiActionRequest): void {
     if (!action.idempotency_key || !action.provider_kind || !action.provider_key || !action.target_type || !action.target_ref || !action.action_payload_json) {
-      throw new ForbiddenException('Provider action request is incomplete.');
+      throw codedForbidden('AGENT_ACTION_INCOMPLETE', 'Provider action request is incomplete.');
     }
     const expectedHash = this.inputHashForProviderAction({
       capabilityName: action.capability_name,
@@ -477,7 +478,7 @@ export class AiActionRequestService {
       idempotencyKey: action.idempotency_key,
     });
     if (expectedHash !== action.input_hash) {
-      throw new ForbiddenException('Provider action request payload no longer matches its approval scope.');
+      throw codedForbidden('AGENT_ACTION_CHANGED', 'Provider action request payload no longer matches its approval scope.');
     }
   }
 

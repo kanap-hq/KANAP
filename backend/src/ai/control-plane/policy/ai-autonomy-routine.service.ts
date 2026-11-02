@@ -1,10 +1,11 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { AiReadonlyDiagnosticWorkflowService, DiagnosticWorkflowResult } from '../diagnostics/ai-readonly-diagnostic-workflow.service';
 import { AiAutonomyRoutine } from '../entities/ai-autonomy-routine.entity';
 import { isRecord } from '../../../common/object-guards';
+import { codedForbidden } from '../../../auth/module-right-required';
 
 type RoutineTriggerInput = {
   routineKey: string;
@@ -45,26 +46,26 @@ export class AiAutonomyRoutineService {
       throw new BadRequestException('Autonomy routine was not found for this tenant and trigger.');
     }
     if (!routine.enabled) {
-      throw new ForbiddenException('Autonomy routine is disabled.');
+      throw codedForbidden('AUTONOMY_ROUTINE_DISABLED', 'Autonomy routine is disabled.');
     }
     if (routine.workflow_type !== 'readonly_diagnostic') {
-      throw new ForbiddenException('Autonomy routine workflow is not enabled for Phase 6.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'Autonomy routine workflow is not enabled for Phase 6.');
     }
     if (routine.max_runs_per_window !== 1) {
-      throw new ForbiddenException('Phase 6 routines are bounded to one diagnostic run per trigger.');
+      throw codedForbidden('AGENT_NOT_AVAILABLE_YET', 'Phase 6 routines are bounded to one diagnostic run per trigger.');
     }
     return routine;
   }
 
   private assertProviderScope(routine: AiAutonomyRoutine, requestedProviderKey?: string | null) {
     if (requestedProviderKey && requestedProviderKey !== routine.provider_key) {
-      throw new ForbiddenException('Autonomy routine provider override does not match the routine provider.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'Autonomy routine provider override does not match the routine provider.');
     }
   }
 
   private assertCooldownAvailable(routine: AiAutonomyRoutine, now = new Date()) {
     if (!Number.isInteger(routine.cooldown_seconds) || routine.cooldown_seconds < 0) {
-      throw new ForbiddenException('Autonomy routine cooldown is malformed.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'Autonomy routine cooldown is malformed.');
     }
     if (routine.cooldown_seconds === 0 || !routine.last_triggered_at) {
       return;
@@ -73,11 +74,11 @@ export class AiAutonomyRoutineService {
       ? routine.last_triggered_at
       : new Date(routine.last_triggered_at);
     if (!Number.isFinite(lastTriggered.getTime())) {
-      throw new ForbiddenException('Autonomy routine last trigger timestamp is malformed.');
+      throw codedForbidden('AGENT_SETTINGS_INVALID', 'Autonomy routine last trigger timestamp is malformed.');
     }
     const cooldownMs = routine.cooldown_seconds * 1000;
     if (now.getTime() - lastTriggered.getTime() < cooldownMs) {
-      throw new ForbiddenException('Autonomy routine cooldown is active.');
+      throw codedForbidden('AGENT_COOLDOWN_ACTIVE', 'Autonomy routine cooldown is active.');
     }
   }
 
@@ -104,7 +105,7 @@ export class AiAutonomyRoutineService {
       `, [context.tenantId, routine.id]);
       const rows = Array.isArray(result) ? result : [];
       if (rows.length === 0) {
-        throw new ForbiddenException('Autonomy routine cooldown is active.');
+        throw codedForbidden('AGENT_COOLDOWN_ACTIVE', 'Autonomy routine cooldown is active.');
       }
       const [row] = rows as Array<{ last_triggered_at?: Date | string; updated_at?: Date | string }>;
       routine.last_triggered_at = row.last_triggered_at ? new Date(row.last_triggered_at) : new Date();

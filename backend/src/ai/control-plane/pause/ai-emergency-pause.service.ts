@@ -1,10 +1,11 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { CapabilityContract, CapabilityEffect } from '../capability/capability-contract';
 import { AiAgentDefinition } from '../entities/ai-agent-definition.entity';
 import { AiEmergencyPause } from '../entities/ai-emergency-pause.entity';
+import { codedForbidden } from '../../../auth/module-right-required';
 
 export type AiPauseCheckInput = {
   capabilityName: string;
@@ -38,21 +39,21 @@ export class AiEmergencyPauseService {
   ): Promise<AiEmergencyPause> {
     const scope = input.scope ?? 'tenant';
     if (scope === 'global') {
-      throw new ForbiddenException('Global emergency pause mutation requires a platform control path.');
+      throw codedForbidden('AGENT_PAUSE_NOT_ALLOWED', 'Global emergency pause mutation requires a platform control path.');
     }
     const agentDefinitionId = input.agentDefinitionId ?? null;
     if (scope === 'agent') {
       if (!agentDefinitionId) {
-        throw new ForbiddenException('Agent emergency pause requires an agent definition.');
+        throw codedForbidden('AGENT_PAUSE_NOT_ALLOWED', 'Agent emergency pause requires an agent definition.');
       }
       const definition = await context.manager.getRepository(AiAgentDefinition).findOne({
         where: { id: agentDefinitionId, tenant_id: context.tenantId },
       });
       if (!definition) {
-        throw new ForbiddenException('Agent definition not found.');
+        throw codedForbidden('AGENT_NOT_FOUND', 'Agent definition not found.');
       }
     } else if (agentDefinitionId) {
-      throw new ForbiddenException('Only agent-scoped pauses may reference an agent definition.');
+      throw codedForbidden('AGENT_PAUSE_NOT_ALLOWED', 'Only agent-scoped pauses may reference an agent definition.');
     }
     const repo = this.repo(context.manager);
     return repo.save(repo.create({
@@ -81,7 +82,7 @@ export class AiEmergencyPauseService {
       where: { id: pauseId, tenant_id: context.tenantId },
     });
     if (!pause) {
-      throw new ForbiddenException('Emergency pause not found.');
+      throw codedForbidden('AGENT_PAUSE_NOT_FOUND', 'Emergency pause not found.');
     }
     pause.active = false;
     pause.revoked_at = new Date();
@@ -151,7 +152,7 @@ export class AiEmergencyPauseService {
       agentDefinitionId: input.agentDefinitionId ?? null,
     });
     if (pause) {
-      throw new ForbiddenException(`AI emergency pause is active: ${pause.reason}`);
+      throw codedForbidden('AI_EMERGENCY_PAUSE_ACTIVE', `AI emergency pause is active: ${pause.reason}`, { reason: pause.reason });
     }
   }
 }
