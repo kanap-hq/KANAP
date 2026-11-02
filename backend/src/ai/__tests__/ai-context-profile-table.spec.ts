@@ -367,7 +367,7 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Remove the contact Jane Doe from Acme Corp', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
   { prompt: 'Add contact John Smith from Oracle', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
   { prompt: 'Change le contact principal de Fromagerie Durand', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
-  { prompt: 'Mets à jour le contact de Fournisseur Lactalis', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
+  { prompt: 'Mets à jour le contact de Fournisseur Fromagerie Dupont', profile: 'write_master_data', mode: 'write', tools: ['update_master_data_record'] },
 
   // Lot 7: the six phrases that came back to their pre-lot 5 profile. A state verb that clears a
   // task field is a task write, and a user account change is a generic write with no AI tool. A
