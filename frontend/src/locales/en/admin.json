@@ -2945,5 +2945,79 @@
       "loadFailed": "The access could not be loaded."
     },
     "importCsv": "Import CSV"
+  },
+  "trials": {
+    "title": "Trials",
+    "refresh": "Refresh",
+    "loadFailed": "The trials could not be loaded.",
+    "empty": "No trial sign-up.",
+    "filterState": "State",
+    "attention_one": "{{count}} workspace without a sign-in 24 hours after activation",
+    "attention_other": "{{count}} workspaces without a sign-in 24 hours after activation",
+    "noSignIn": "No sign-in after 24 h",
+    "states": {
+      "all": "All states",
+      "awaiting_activation": "Awaiting activation",
+      "trialing": "In trial",
+      "ended": "Trial ended",
+      "converted": "Converted",
+      "internal": "Internal"
+    },
+    "columns": {
+      "workspace": "Workspace",
+      "state": "State",
+      "signedUp": "Signed up",
+      "activated": "Activated",
+      "firstSignIn": "First sign-in",
+      "lastSignIn": "Last sign-in",
+      "path": "Path",
+      "steps": "Steps",
+      "sampleData": "Sample data",
+      "firstRecord": "First record",
+      "firstQuestion": "First question to Plaid",
+      "firstImport": "First import",
+      "firstInvitation": "First invitation",
+      "backDay1": "Back after 1 day",
+      "backDay7": "Back after 7 days",
+      "trialEnd": "Trial end",
+      "converted": "Converted",
+      "callClicked": "Call link clicked",
+      "call": "Discovery call"
+    },
+    "values": {
+      "no": "No",
+      "yes": "Yes"
+    },
+    "weeks": {
+      "title": "Sign-ups by week",
+      "weekOf": "Week of",
+      "created": "Sign-ups",
+      "activated": "Activated",
+      "signedIn": "Signed in",
+      "converted": "Converted"
+    },
+    "placements": {
+      "last_step": "End of the first steps",
+      "about": "About KANAP",
+      "mail_j0": "Welcome e-mail",
+      "mail_j5": "Day 5 e-mail",
+      "mail_j12": "Day 12 e-mail",
+      "trial_end": "End of trial notice"
+    },
+    "call": {
+      "title": "Discovery call: {{name}}",
+      "edit": "Discovery call of {{name}}",
+      "set": "Set",
+      "date": "Date and time",
+      "status": "Status",
+      "note": "Note",
+      "remove": "Remove",
+      "fromCalcom": "Booked on Cal.com.",
+      "saveFailed": "The discovery call could not be saved.",
+      "statuses": {
+        "booked": "Booked",
+        "cancelled": "Cancelled"
+      }
+    }
   }
 }

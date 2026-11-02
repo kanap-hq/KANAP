@@ -2945,5 +2945,79 @@
       "loadFailed": "No se pudo cargar el acceso."
     },
     "importCsv": "Importar CSV"
+  },
+  "trials": {
+    "title": "Pruebas",
+    "refresh": "Actualizar",
+    "loadFailed": "No se pudieron cargar las pruebas.",
+    "empty": "Ningún registro de prueba.",
+    "filterState": "Estado",
+    "attention_one": "{{count}} espacio sin inicio de sesión 24 h después de su activación",
+    "attention_other": "{{count}} espacios sin inicio de sesión 24 h después de su activación",
+    "noSignIn": "Sin inicio de sesión tras 24 h",
+    "states": {
+      "all": "Todos los estados",
+      "awaiting_activation": "Pendiente de activación",
+      "trialing": "En prueba",
+      "ended": "Prueba terminada",
+      "converted": "Convertido",
+      "internal": "Interno"
+    },
+    "columns": {
+      "workspace": "Espacio",
+      "state": "Estado",
+      "signedUp": "Registro",
+      "activated": "Activación",
+      "firstSignIn": "Primer inicio de sesión",
+      "lastSignIn": "Último inicio de sesión",
+      "path": "Recorrido",
+      "steps": "Pasos",
+      "sampleData": "Datos de ejemplo",
+      "firstRecord": "Primera ficha",
+      "firstQuestion": "Primera pregunta a Plaid",
+      "firstImport": "Primera importación",
+      "firstInvitation": "Primera invitación",
+      "backDay1": "Vuelta tras 1 día",
+      "backDay7": "Vuelta tras 7 días",
+      "trialEnd": "Fin de la prueba",
+      "converted": "Conversión",
+      "callClicked": "Clic en la llamada",
+      "call": "Llamada de descubrimiento"
+    },
+    "values": {
+      "no": "No",
+      "yes": "Sí"
+    },
+    "weeks": {
+      "title": "Registros por semana",
+      "weekOf": "Semana del",
+      "created": "Registros",
+      "activated": "Activados",
+      "signedIn": "Conectados",
+      "converted": "Convertidos"
+    },
+    "placements": {
+      "last_step": "Fin de los primeros pasos",
+      "about": "Acerca de KANAP",
+      "mail_j0": "Correo de bienvenida",
+      "mail_j5": "Correo del día 5",
+      "mail_j12": "Correo del día 12",
+      "trial_end": "Aviso de fin de la prueba"
+    },
+    "call": {
+      "title": "Llamada de descubrimiento: {{name}}",
+      "edit": "Llamada de descubrimiento de {{name}}",
+      "set": "Indicar",
+      "date": "Fecha y hora",
+      "status": "Estado",
+      "note": "Nota",
+      "remove": "Quitar",
+      "fromCalcom": "Reservada en Cal.com.",
+      "saveFailed": "No se pudo guardar la llamada de descubrimiento.",
+      "statuses": {
+        "booked": "Reservada",
+        "cancelled": "Cancelada"
+      }
+    }
   }
 }

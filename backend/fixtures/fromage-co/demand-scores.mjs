@@ -204,7 +204,8 @@ export function sameCriteriaValues(stored, next) {
  * Resolves DEMAND_SCORES against the tenant's criteria and demands.
  * `skipped` is set when the criteria are not the default English ones: the
  * caller then changes nothing. A demand the tenant does not hold is named in
- * `missing` and the others are still scored.
+ * `missing` and the others are still scored. `translate` gives a demand's
+ * name in the language of the data set (the names below are English).
  *
  * @returns {{
  *   skipped: boolean,
@@ -213,7 +214,7 @@ export function sameCriteriaValues(stored, next) {
  *   assignments: Array<{ requestId: string, name: string, criteria_values: Record<string, string>, current: Record<string, string> }>,
  * }}
  */
-export function planDemandScores(criteria, requests) {
+export function planDemandScores(criteria, requests, translate = (text) => text) {
   const reason = defaultCriteriaReason(criteria);
   if (reason) return { skipped: true, reason, missing: [], assignments: [] };
 
@@ -226,7 +227,7 @@ export function planDemandScores(criteria, requests) {
   const assignments = [];
   const missing = [];
   for (const demand of DEMAND_SCORES) {
-    const request = byRequest.get(demand.name);
+    const request = byRequest.get(translate(demand.name));
     if (!request?.id) {
       missing.push(demand.name);
       continue;

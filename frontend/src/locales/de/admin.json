@@ -2945,5 +2945,79 @@
       "loadFailed": "Der Zugriff konnte nicht geladen werden."
     },
     "importCsv": "CSV importieren"
+  },
+  "trials": {
+    "title": "Testphasen",
+    "refresh": "Aktualisieren",
+    "loadFailed": "Die Testphasen konnten nicht geladen werden.",
+    "empty": "Keine Testanmeldung.",
+    "filterState": "Status",
+    "attention_one": "{{count}} Arbeitsbereich ohne Anmeldung 24 Std. nach der Aktivierung",
+    "attention_other": "{{count}} Arbeitsbereiche ohne Anmeldung 24 Std. nach der Aktivierung",
+    "noSignIn": "Keine Anmeldung nach 24 Std.",
+    "states": {
+      "all": "Alle Status",
+      "awaiting_activation": "Aktivierung ausstehend",
+      "trialing": "In der Testphase",
+      "ended": "Testphase beendet",
+      "converted": "Umgewandelt",
+      "internal": "Intern"
+    },
+    "columns": {
+      "workspace": "Arbeitsbereich",
+      "state": "Status",
+      "signedUp": "Angemeldet",
+      "activated": "Aktiviert",
+      "firstSignIn": "Erste Anmeldung",
+      "lastSignIn": "Letzte Anmeldung",
+      "path": "Pfad",
+      "steps": "Schritte",
+      "sampleData": "Beispieldaten",
+      "firstRecord": "Erster Datensatz",
+      "firstQuestion": "Erste Frage an Plaid",
+      "firstImport": "Erster Import",
+      "firstInvitation": "Erste Einladung",
+      "backDay1": "Zurück nach 1 Tag",
+      "backDay7": "Zurück nach 7 Tagen",
+      "trialEnd": "Ende der Testphase",
+      "converted": "Umgewandelt",
+      "callClicked": "Gesprächslink geklickt",
+      "call": "Kennenlerngespräch"
+    },
+    "values": {
+      "no": "Nein",
+      "yes": "Ja"
+    },
+    "weeks": {
+      "title": "Anmeldungen pro Woche",
+      "weekOf": "Woche vom",
+      "created": "Anmeldungen",
+      "activated": "Aktiviert",
+      "signedIn": "Angemeldet",
+      "converted": "Umgewandelt"
+    },
+    "placements": {
+      "last_step": "Ende der ersten Schritte",
+      "about": "Über KANAP",
+      "mail_j0": "Willkommens-E-Mail",
+      "mail_j5": "E-Mail vom 5. Tag",
+      "mail_j12": "E-Mail vom 12. Tag",
+      "trial_end": "Hinweis zum Ende der Testphase"
+    },
+    "call": {
+      "title": "Kennenlerngespräch: {{name}}",
+      "edit": "Kennenlerngespräch von {{name}}",
+      "set": "Eintragen",
+      "date": "Datum und Uhrzeit",
+      "status": "Status",
+      "note": "Notiz",
+      "remove": "Entfernen",
+      "fromCalcom": "Auf Cal.com gebucht.",
+      "saveFailed": "Das Kennenlerngespräch konnte nicht gespeichert werden.",
+      "statuses": {
+        "booked": "Gebucht",
+        "cancelled": "Abgesagt"
+      }
+    }
   }
 }

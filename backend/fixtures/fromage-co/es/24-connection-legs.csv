@@ -1,0 +1,9 @@
+connection_ref;order_index;function_code;equipment_asset_name;protocol_codes;port_override;notes
+CONN-FROMAGE-001;1;firewall;PAR-FW-01;tcp;;Cortafuegos perimetral de París
+CONN-FROMAGE-001;2;firewall;GOU-FW-01;tcp;;Cortafuegos de la sede de Gouda
+CONN-FROMAGE-002;1;firewall;PAR-FW-01;tcp;;Cortafuegos perimetral de París
+CONN-FROMAGE-002;2;firewall;PRM-FW-01;tcp;;Cortafuegos de la sede de Parma
+CONN-FROMAGE-003;1;vpn_endpoint;PAR-FW-01;ipsec;;Concentrador VPN de París (FortiGate)
+CONN-FROMAGE-003;2;vpn_endpoint;NYC-FW-01;ipsec;;Punto de terminación VPN de la oficina de Nueva York
+CONN-FROMAGE-004;1;vpn_endpoint;PAR-FW-01;ipsec;;Concentrador VPN de París (FortiGate)
+CONN-FROMAGE-004;2;vpn_endpoint;;ipsec;;AWS Virtual Private Gateway (gestionado)

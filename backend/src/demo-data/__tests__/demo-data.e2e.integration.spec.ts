@@ -44,7 +44,7 @@ import { localTodayYmd } from '../../portfolio/services/portfolio-timesheet.serv
 // - USD has a rate for years N-1 through N+2 and no currency in use is missing one.
 //   The rate sources are pointed at a closed port, so that rate is the loader's
 //   documented manual fallback, not a fetch;
-// - the tenant is French (activated from a French browser): its budget lines carry the
+// - the tenant is French (activated from a French browser) and loads the English set: its budget lines carry the
 //   recommended dimensions in French ("Matériel" for the files' "Hardware"), no English value is
 //   added next to them, and every line has a cost pool, an IT tower and a business domain;
 //   business domain and budget reference are named in French too ("IT partagée" for "Shared IT");
@@ -955,7 +955,8 @@ async function testLoadResetAndFailure() {
     const neighbourCounts = await countTenantRows(b.tenantId);
 
     // ── Load ──
-    const claimed = await served.demo.load({ tenantId: a.tenantId, actorId: a.ownerId, host: hostA });
+    // The English set: the checks below name its records in English.
+    const claimed = await served.demo.loadDemoData(a.tenantId, { language: 'en', actorId: a.ownerId, host: hostA });
     assert.equal(claimed.status, 'loading');
     const loaded = await waitForEnd(served.demo, a.tenantId);
     lap('load ended');
@@ -1136,7 +1137,52 @@ async function testOlderWorkspace() {
   }
 }
 
-runSpecs('demo-data.e2e.integration.spec', [testLoadResetAndFailure, testOlderWorkspace]).catch((err) => {
+/** The runner's translation of an English text of the data set, in `language`. */
+async function datasetText(language: string, text: string): Promise<string> {
+  const importer = new Function('specifier', 'return import(specifier)') as (
+    specifier: string,
+  ) => Promise<{ datasetTranslator: (language: string) => (text: string) => string }>;
+  const { datasetTranslator } = await importer(pathToFileURL(path.join(FIXTURES, 'translations', 'translate.mjs')).href);
+  return datasetTranslator(language)(text);
+}
+
+// The sample data in each language: a tenant activated in that language loads its own set (the
+// administrator's load takes the tenant's seed language). The load ends `loaded`, which proves
+// every record the loader looks up by name was found (a name not found is a warning, and a
+// warning fails the load); every table holds as many rows as after the English load; the
+// project converted from the best-scored demand carries the translated name.
+async function testEachLanguage() {
+  const svc: Services = buildServices();
+  const served = await serve();
+  const tenants: ActivatedTenant[] = [];
+  try {
+    const counts = new Map<string, Record<string, number>>();
+    for (const language of ['en', 'fr', 'de', 'es'] as const) {
+      const t = await createActivatedTenant(svc, { tag: `e2e-${language}`, orgName: `Fromage E2E ${language}`, signup: true, language });
+      tenants.push(t);
+      await served.demo.load({ tenantId: t.tenantId, actorId: t.ownerId, host: `${t.slug}.lvh.me` });
+      const loaded = await waitForEnd(served.demo, t.tenantId);
+      assert.equal(loaded.status, 'loaded', `${language}: the load ended ${JSON.stringify(loaded)}`);
+      assert.equal(loaded.language, language);
+      assert.equal(served.loaderEnvs[served.loaderEnvs.length - 1].KANAP_DEMO_LANGUAGE, language);
+      counts.set(language, await countTenantRows(t.tenantId));
+      const cave = await datasetText(language, 'Cave Climate Digital Twin');
+      const [row] = await inTenant(t.tenantId, (m) => m.query(
+        `SELECT count(*)::int AS n FROM portfolio_projects WHERE tenant_id = $1 AND name = $2`, [t.tenantId, cave]));
+      assert.equal(row.n, 1, `${language}: the converted project is "${cave}"`);
+      if (language !== 'en') assert.notEqual(cave, 'Cave Climate Digital Twin', `${language}: the name is translated`);
+    }
+    for (const language of ['fr', 'de', 'es']) {
+      assert.deepEqual(countDifferences(counts.get('en')!, counts.get(language)!, ['audit_log']), [], `${language}: the rows of the English load`);
+    }
+  } finally {
+    served.demo.stop();
+    await served.app.close();
+    await cleanupTenants(tenants.map((t) => t.tenantId));
+  }
+}
+
+runSpecs('demo-data.e2e.integration.spec', [testLoadResetAndFailure, testOlderWorkspace, testEachLanguage]).catch((err) => {
   console.error(err);
   process.exit(1);
 });

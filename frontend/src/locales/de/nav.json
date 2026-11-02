@@ -117,6 +117,7 @@
     },
     "platform": {
       "tenants": "Mandanten",
+      "trials": "Testphasen",
       "coaTemplates": "CoA-Vorlagen",
       "standardAccounts": "Standardkonten",
       "platformAi": "Platform AI",

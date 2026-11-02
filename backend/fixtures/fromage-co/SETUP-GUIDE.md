@@ -36,10 +36,10 @@ users on the old `.com`, `.nl` and `.it` domains, and are left as they are.
 Re-running the runner on such a tenant would create every demo user a second
 time under its new address: load the current dataset on a new tenant instead.
 
-The master data and the budget are in English, as an international group
-would keep them; each company keeps a few local names (French, Dutch and
-Italian budget lines, the French projects and requests, the local charts of
-accounts). Tenants loaded before this
+The dataset is written in English and loads in French, German or Spanish too
+(see "Languages" below); each company keeps a few local names (French, Dutch
+and Italian budget lines, the French projects and requests, the local charts
+of accounts) in every language. Tenants loaded before this
 change hold French names for the cost centres, the dimensions and the budget
 lines. Re-running the runner on such a tenant would add the English
 departments, dimension values and budget lines next to the French ones: load
@@ -162,7 +162,7 @@ its own: load the current dataset on a new tenant instead.
    it is confirmed: see "AI prerequisites").
 
 Flags: `--skip-relations`, `--skip-agents`, `--org`, `--country`, `--year`,
-`--shift-years`, `--activation-token` (see below), `--netbox-test-cases`,
+`--shift-years`, `--language` (see "Languages"), `--activation-token` (see below), `--netbox-test-cases`,
 `--accept-included-model` (see "AI prerequisites"),
 `--contact-suppliers-only` (see "Linking the contacts to their suppliers").
 
@@ -260,6 +260,40 @@ the last one falls on the day before the load.
 Without `--shift-years`, the runner behaves as before: the dates as written,
 and the `y_*` budget columns read against the current year.
 
+## Languages
+
+`--language fr` (or `de`, `es`; default `en`, any other value gives `en`)
+loads the French, German or Spanish set. The API passes the tenant's seed
+language (`KANAP_DEMO_LANGUAGE`), so a trial loads in the language of the
+browser that activated it, and a load after a reset in the same language.
+
+The English files are the source. `translations/fields.mjs` lists the columns
+each file translates (titles, descriptions, notes, incidents, the names of
+budget lines, projects, departments and contracts) and the documents of
+`docs/`; everything else stays as written: codes, amounts, dates, e-mail
+addresses, the names of companies, people, suppliers, applications and assets.
+`translations/<language>.json` is the translation memory: each English text
+(a cell, a Markdown block, a text of the runner) and its translation.
+`tools/translate-dataset.mjs` builds `fr/`, `de/` and `es/` from both; the
+runner reads a file there when its language has one. The runner's own texts
+(classification, locations, phases, teams, the agent, the Service Desk Docs
+titles) and every English name it looks up go through `t('…')`, the same
+memory, so a name it looks up is the name the set holds.
+
+After a change to an English file (`tools/generate-budget.mjs` included), to
+a `t('…')` text or to `fields.mjs`:
+
+```bash
+node backend/fixtures/fromage-co/tools/translate-dataset.mjs --missing /tmp/fromage-missing
+```
+
+It writes each complete language and lists the texts a memory lacks, in
+`/tmp/fromage-missing/<language>.json` (English text, empty translation).
+Translate them with the glossary (`frontend/src/locales/glossary.json`), add
+them to the memory, and run the command again. Commit the memories and the
+sets. `fixture-translations.spec.ts` (backend suite) fails while a set is not
+what the command would write.
+
 ## Server mode
 
 The API runs the runner itself to load the demo data on a tenant that was just
@@ -273,6 +307,7 @@ with no other argument. Its inputs come from the environment only:
 | `KANAP_DEMO_TOKEN` | An access token of the tenant administrator |
 | `KANAP_DEMO_STARTING_COMPANY` | The company the activation created, removed once the dataset's companies exist |
 | `KANAP_DEMO_YEAR` | The year the dataset is moved to (the shift is this year minus 2026) |
+| `KANAP_DEMO_LANGUAGE` | The language of the dataset: `en`, `fr`, `de` or `es` (anything else loads `en`) |
 
 In this mode the runner does not create the tenant, log in, set passwords
 (the demo users have none and get no invitation), create the demo AI agent or
@@ -383,6 +418,10 @@ first run.
   centres over the four legal entities; about 40 % of the OPEX is external
   staffing priced per working day.
 - `docs/*.md` — the Service Desk Docs contents.
+- `translations/` — what each language translates (`fields.mjs`), the
+  translation memories (`fr.json`, `de.json`, `es.json`) and the translation
+  functions; `fr/`, `de/`, `es/` — the generated sets. Regenerate them with
+  `node backend/fixtures/fromage-co/tools/translate-dataset.mjs` (see "Languages").
 - The fromage mock helpdesk tickets live in the backend's mock ticketing
   provider (`backend/src/ai/control-plane/providers/mocks/mock-ticketing.provider.ts`,
   entity `fromage-helpdesk`) so they are available in every environment

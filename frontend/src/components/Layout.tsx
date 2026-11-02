@@ -22,6 +22,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import ApartmentIcon from '@mui/icons-material/Apartment';
+import HourglassBottomIcon from '@mui/icons-material/HourglassBottom';
 import SecurityIcon from '@mui/icons-material/Security';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import LanIcon from '@mui/icons-material/Lan';
@@ -290,6 +291,7 @@ export default function Layout() {
 
   const platformAdminNav: NavEntry[] = [
     { to: '/admin/tenants', label: t('nav:sidebar.platform.tenants'), icon: <ApartmentIcon /> },
+    { to: '/admin/trials', label: t('nav:sidebar.platform.trials'), icon: <HourglassBottomIcon /> },
     { to: '/admin/coa-templates', label: t('nav:sidebar.platform.coaTemplates'), icon: <StorageIcon /> },
     { to: '/admin/standard-accounts', label: t('nav:sidebar.platform.standardAccounts'), icon: <AccountBalanceIcon /> },
     { divider: '' },

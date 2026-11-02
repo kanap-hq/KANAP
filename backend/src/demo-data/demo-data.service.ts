@@ -19,7 +19,12 @@ import { DataSource, EntityManager } from 'typeorm';
 import { TENANT_RESET_RUNNING_CODE, TenantResetService } from '../admin/tenants/tenant-reset.service';
 import { capexDimensionTable } from '../analytics/capex-dimensions.seed';
 import { DEFAULT_ANALYTICS_AXIS_CODE } from '../analytics/analytics-axes.util';
-import { RECOMMENDED_DIMENSIONS, SEED_LANGUAGES, tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
+import {
+  RECOMMENDED_DIMENSIONS,
+  SEED_LANGUAGES,
+  TENANT_LANGUAGE_METADATA_KEY,
+  tenantSeedLanguage,
+} from '../analytics/recommended-dimensions.seed';
 import { AuthService } from '../auth/auth.service';
 import { DEFAULT_ACCESS_TOKEN_TTL, parseDurationMs } from '../auth/token-ttl.util';
 import { StripeConfigService } from '../billing/stripe/stripe.config';
@@ -74,17 +79,20 @@ export type DemoErrorCode =
   | 'load_interrupted' // the API process that ran the load stopped
   | 'reset_failed'; // the automatic reset after a failed load failed too
 
-/** The languages the sample data comes in. */
-export const DEMO_DATA_LANGUAGES = ['en'] as const;
+/**
+ * The languages the sample data comes in: the English set and the sets generated from it
+ * (fixtures/fromage-co/translations, DATASET_LANGUAGES there).
+ */
+export const DEMO_DATA_LANGUAGES = ['en', 'fr', 'de', 'es'] as const;
 export type DemoDataLanguage = (typeof DEMO_DATA_LANGUAGES)[number];
 
 function isDemoDataLanguage(value: unknown): value is DemoDataLanguage {
   return typeof value === 'string' && (DEMO_DATA_LANGUAGES as readonly string[]).includes(value);
 }
 
-/** The sample data language for a requested one (a tenant language): any other value gives `en`. */
+/** The sample data language for a requested one (a tenant language, `fr-FR` gives `fr`): any other value gives `en`. */
 export function resolveDemoDataLanguage(language: unknown): DemoDataLanguage {
-  const requested = String(language ?? '').trim().toLowerCase();
+  const requested = String(language ?? '').trim().toLowerCase().split(/[-_]/, 1)[0];
   return isDemoDataLanguage(requested) ? requested : 'en';
 }
 
@@ -106,7 +114,7 @@ export type DemoDataState = {
   ever_loaded_at: string | null;
   /** When the last reset an administrator asked for failed; cleared by the next load or reset. */
   reset_failed_at: string | null;
-  /** The sample data language of the last load that named one (the load at trial activation); absent otherwise. */
+  /** The sample data language of the last load; absent on a tenant loaded before the sample data had one. */
   language?: DemoDataLanguage;
 };
 
@@ -313,10 +321,11 @@ export type LoaderInputs = {
   token: string;
   startingCompany: string;
   year: number;
+  language: DemoDataLanguage;
 };
 
 /**
- * The loader's whole environment: PATH and NODE_ENV of the API, its five inputs, nothing else
+ * The loader's whole environment: PATH and NODE_ENV of the API, its six inputs, nothing else
  * (no database address, no secret of the API). The token travels only here.
  */
 export function buildLoaderEnv(inputs: LoaderInputs, parent: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
@@ -330,6 +339,7 @@ export function buildLoaderEnv(inputs: LoaderInputs, parent: NodeJS.ProcessEnv =
   env.KANAP_DEMO_TOKEN = inputs.token;
   env.KANAP_DEMO_STARTING_COMPANY = inputs.startingCompany;
   env.KANAP_DEMO_YEAR = String(inputs.year);
+  env.KANAP_DEMO_LANGUAGE = inputs.language;
   return env;
 }
 
@@ -575,7 +585,16 @@ const errorCode = (error: unknown): string => {
   return typeof code === 'string' ? code : errorMessage(error);
 };
 
-type TenantRow = { id: string; slug: string; name: string; status: string; is_system_tenant: boolean | null; demo: unknown };
+type TenantRow = {
+  id: string;
+  slug: string;
+  name: string;
+  status: string;
+  is_system_tenant: boolean | null;
+  demo: unknown;
+  /** The tenant's seed language (`metadata.language`, see TENANT_LANGUAGE_METADATA_KEY). */
+  language: string | null;
+};
 
 /** What the stored state must be for a conditional update to apply. */
 type StateCondition = {
@@ -796,7 +815,8 @@ export class DemoDataService implements OnApplicationShutdown {
    * Starts loading the sample data into the tenant and returns at once (status `loading`).
    * Only into a workspace still in its starting state, by one of its administrators, from a
    * host of the tenant, with a subscription in good standing, and while fewer than
-   * `DEMO_LOAD_MAX_CONCURRENT` loads run over every tenant.
+   * `DEMO_LOAD_MAX_CONCURRENT` loads run over every tenant. The data comes in the tenant's seed
+   * language, which a reset keeps: a load after a reset is in the same language.
    */
   async load(params: { tenantId: string; actorId: string; host: string }): Promise<DemoDataState> {
     return this.startLoad(params, { language: null });
@@ -805,7 +825,8 @@ export class DemoDataService implements OnApplicationShutdown {
   /**
    * The load at trial activation (`provisionTrialSampleData`): the checks and the run of `load`,
    * empty workspace check included, with the tenant's own host given by the caller (still checked
-   * against the tenant), and the sample data language recorded in the state. A tenant just
+   * against the tenant), in `language` (any language the sample data does not come in loads
+   * English). A tenant just
    * activated is in its starting state; one whose administrator has started creating records is
    * refused (`tenant_not_empty`), so nothing is loaded over them or reset. With
    * `unlessBannerHidden` (the load at activation), a workspace whose home banner was hidden
@@ -815,7 +836,6 @@ export class DemoDataService implements OnApplicationShutdown {
     tenantId: string,
     params: { language: unknown; actorId: string; host: string; unlessBannerHidden?: boolean },
   ): Promise<DemoDataState> {
-    // Recorded only: the loader is not told the language yet (one language, `en`, for now).
     const language = resolveDemoDataLanguage(params.language);
     return this.startLoad(
       { tenantId, actorId: params.actorId, host: params.host },
@@ -881,8 +901,9 @@ export class DemoDataService implements OnApplicationShutdown {
   }
 
   /**
-   * `load` and `loadDemoData`: a workspace that holds data is refused (`tenant_not_empty`);
-   * `language` is recorded in the state when given.
+   * `load` and `loadDemoData`: a workspace that holds data is refused (`tenant_not_empty`).
+   * The loader loads the set of `language`, or of the tenant's seed language when it is null,
+   * and the state records it.
    */
   private async startLoad(
     params: { tenantId: string; actorId: string; host: string },
@@ -936,7 +957,8 @@ export class DemoDataService implements OnApplicationShutdown {
     // argument, never logged). Signed before the claim: a claimed load always starts its run.
     const token = this.auth.signToken({ id: actor.id, email: actor.email, role: actor.role, tenant_id: tenant.id }).access_token;
     const runId = randomUUID();
-    const claimed = await this.claim(tenant.id, actor.id, runId, opts.language, opts.unlessBannerHidden === true);
+    const language = opts.language ?? resolveDemoDataLanguage(tenant.language);
+    const claimed = await this.claim(tenant.id, actor.id, runId, language, opts.unlessBannerHidden === true);
     this.runInBackground(`load of tenant ${tenant.id}`, () => this.runLoad({
       tenantId: tenant.id,
       actorId: actor.id,
@@ -948,6 +970,7 @@ export class DemoDataService implements OnApplicationShutdown {
         token,
         startingCompany,
         year: new Date().getFullYear(),
+        language,
       }),
       token,
     }));
@@ -1208,7 +1231,8 @@ export class DemoDataService implements OnApplicationShutdown {
     if (Features.SINGLE_TENANT) throwNotAvailableInMode();
     if (!UUID.test(String(tenantId ?? ''))) throw new NotFoundException('Tenant not found');
     const [tenant]: TenantRow[] = await this.dataSource.query(
-      `SELECT id, slug, name, status, is_system_tenant, metadata->'demo' AS demo FROM tenants WHERE id = $1`,
+      `SELECT id, slug, name, status, is_system_tenant, metadata->'demo' AS demo, metadata->>'${TENANT_LANGUAGE_METADATA_KEY}' AS language
+         FROM tenants WHERE id = $1`,
       [tenantId],
     );
     if (!tenant) throw new NotFoundException('Tenant not found');
