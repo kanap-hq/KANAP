@@ -39,7 +39,7 @@ La chaîne est simple : **Application > Environnement > Serveur**. À la fin de 
 
 ## Étape 1 : Créez votre application
 
-Allez dans **Cartographie SI > Applications** et cliquez sur **Nouvelle application / service**.
+Allez dans **Cartographie SI > Applications** et cliquez sur **Nouvelle application**.
 
 Saisissez le nom dans le titre, par exemple `Salesforce CRM`, et appuyez sur Entrée. Votre application est maintenant dans le registre, et ses six onglets s'ouvrent pour une documentation détaillée : **Vue d'ensemble**, **Déploiements**, **Interfaces**, **Exploitation**, **Conformité** et **Relations**.
 
@@ -291,7 +291,7 @@ Puis utilisez la [Carte des interfaces](../interface-map.md) pour visualiser le 
 
 | Je veux... | Aller à... |
 |------------|-----------|
-| Créer une application | Cartographie SI > Applications > Nouvelle application / service |
+| Créer une application | Cartographie SI > Applications > Nouvelle application |
 | Ajouter des environnements | Ouvrir l'app > onglet Déploiements > Ajouter un déploiement |
 | Assigner des responsables | Ouvrir l'app > panneau Propriétés |
 | Définir les méthodes d'accès | Ouvrir l'app > onglet Exploitation |

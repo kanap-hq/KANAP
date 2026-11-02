@@ -39,7 +39,7 @@ La cadena es simple: **Aplicación → Entorno → Servidor**. Al final de esta 
 
 ## Paso 1: Crear su aplicación
 
-Vaya a **Panorama IT > Aplicaciones** y haga clic en **Nueva aplicación / servicio**.
+Vaya a **Panorama IT > Aplicaciones** y haga clic en **Nueva aplicación**.
 
 Escriba el nombre en el título, por ejemplo `Salesforce CRM`, y pulse Intro. Su aplicación está ahora en el registro, y sus seis pestañas se abren para documentación detallada: **Vista general**, **Despliegues**, **Interfaces**, **Operaciones**, **Conformidad** y **Relaciones**.
 
@@ -291,7 +291,7 @@ Luego utilice el [Mapa de interfaces](../interface-map.md) para visualizar el fl
 
 | Quiero... | Ir a... |
 |-----------|---------|
-| Crear una aplicación | Panorama IT > Aplicaciones > Nueva aplicación / servicio |
+| Crear una aplicación | Panorama IT > Aplicaciones > Nueva aplicación |
 | Añadir entornos | Abrir app > pestaña Despliegues > Agregar despliegue |
 | Asignar responsables | Abrir app > panel Propiedades |
 | Configurar métodos de acceso | Abrir app > pestaña Operaciones |

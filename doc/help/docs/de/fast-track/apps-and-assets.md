@@ -39,7 +39,7 @@ Die Kette ist einfach: **Anwendung → Umgebung → Server**. Am Ende dieses Lei
 
 ## Schritt 1: Ihre Anwendung erstellen
 
-Gehen Sie zu **IT-Landschaft > Anwendungen** und klicken Sie auf **Neue Anwendung / Service**.
+Gehen Sie zu **IT-Landschaft > Anwendungen** und klicken Sie auf **Neue Anwendung**.
 
 Geben Sie den Namen in den Titel ein, zum Beispiel `Salesforce CRM`, und drücken Sie die Eingabetaste. Ihre Anwendung ist jetzt im Register, und ihre sechs Tabs öffnen sich für die detaillierte Dokumentation: **Übersicht**, **Bereitstellungen**, **Schnittstellen**, **Betrieb**, **Compliance** und **Beziehungen**.
 
@@ -291,7 +291,7 @@ Verwenden Sie dann die [Schnittstellenkarte](../interface-map.md), um den vollst
 
 | Ich möchte... | Gehe zu... |
 |---------------|------------|
-| Eine Anwendung erstellen | IT-Landschaft > Anwendungen > Neue Anwendung / Service |
+| Eine Anwendung erstellen | IT-Landschaft > Anwendungen > Neue Anwendung |
 | Umgebungen hinzufügen | App öffnen > Tab Bereitstellungen > Bereitstellung hinzufügen |
 | Verantwortliche zuweisen | App öffnen > Bereich Eigenschaften |
 | Zugriffsmethoden festlegen | App öffnen > Tab Betrieb |
