@@ -14,6 +14,7 @@ import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { AuditService } from '../audit/audit.service';
 import { GTC_URLS, GTC_VERSION, type TermsPaymentPath } from './terms';
+import { computeTrialDeletionAt } from './subscription-freeze.util';
 import {
   PLANS,
   HEALTHY_STATUSES,
@@ -213,6 +214,7 @@ export class BillingService {
       const freezeMs = new Date(paymentDueAt).getTime() + FREEZE_GRACE_DAYS * 86400000;
       freezeEffectiveAt = new Date(freezeMs).toISOString();
     }
+    const trialDeletionAt = computeTrialDeletionAt(sub, !Features.SINGLE_TENANT && this.stripeConfig.isConfigured());
     const renewalAt = sub.current_period_end
       ? sub.current_period_end.toISOString()
       : (sub.next_payment_at ? sub.next_payment_at.toISOString() : paymentDueAt);
@@ -262,6 +264,7 @@ export class BillingService {
       trial_days_remaining: trialDaysRemaining,
       payment_due_at: paymentDueAt,
       freeze_effective_at: freezeEffectiveAt,
+      trial_deletion_at: trialDeletionAt ? trialDeletionAt.toISOString() : null,
       scheduled_change: scheduledChange,
     };
   }

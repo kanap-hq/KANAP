@@ -464,6 +464,8 @@ Ohne laufendes Abonnement (eine Testphase, eine abgelaufene Testphase oder ein b
 
 Während einer Testphase zeigt zusätzlich ein Etikett in der oberen Leiste die verbleibenden Tage an, zum Beispiel „Test: 9 Tage“. Für Abrechnungsadministratoren öffnet es diese Seite. Fahren Sie mit der Maus darüber, um das Ende der Testphase zu sehen. Nach Ablauf der Testphase tritt ein Banner an seine Stelle.
 
+Endet eine Testphase ohne Abonnement, bleibt der Arbeitsbereich 30 Tage lang lesbar. Danach wird er mit allen Daten gelöscht. Schließen Sie vor diesem Datum ein Abonnement ab, bleibt der Arbeitsbereich unverändert erhalten.
+
 Ist ein Wechsel zur monatlichen Abrechnung geplant, zeigt ihn eine dritte Zeile an, zum Beispiel „Wechselt am 7. Okt. 2027 zu monatlich.“ Klicken Sie in dieser Zeile auf **Jährlich beibehalten**, um den Wechsel abzubrechen.
 
 ### Aktionen

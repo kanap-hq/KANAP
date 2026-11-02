@@ -6,6 +6,7 @@ import { AdminTenantsController } from './admin-tenants.controller';
 import { AdminTenantsService } from './admin-tenants.service';
 import { TenantStatsService } from './tenant-stats.service';
 import { TenantResetService } from './tenant-reset.service';
+import { TrialWorkspaceExpiryService } from './trial-workspace-expiry.service';
 import { BillingModule } from '../../billing/billing.module';
 import { AuditModule } from '../../audit/audit.module';
 import { PlatformAdminGuard } from '../../auth/platform-admin.guard';
@@ -15,7 +16,7 @@ import { TenantBaselineModule } from '../../tenants/tenant-baseline.module';
 @Module({
   imports: [TypeOrmModule.forFeature([Tenant, TrialSignup]), BillingModule, AuditModule, StorageModule, TenantBaselineModule],
   controllers: [AdminTenantsController],
-  providers: [AdminTenantsService, TenantStatsService, PlatformAdminGuard, TenantResetService],
+  providers: [AdminTenantsService, TenantStatsService, PlatformAdminGuard, TenantResetService, TrialWorkspaceExpiryService],
   exports: [TenantResetService],
 })
 export class AdminTenantsModule {}
