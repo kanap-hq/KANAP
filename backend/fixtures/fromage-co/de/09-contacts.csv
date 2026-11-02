@@ -1,0 +1,17 @@
+first_name;last_name;job_title;email;phone;mobile;country;notes;active
+Robert;Chen;Enterprise Account Manager;robert.chen@microsoft.example;+1 425 555 0101;;US;Hauptansprechpartner bei Microsoft für die EA-Verlängerung;true
+Sarah;Mitchell;Account Executive;sarah.mitchell@salesforce.example;+1 415 555 0202;;US;Salesforce Sales Cloud und Service Cloud;true
+Klaus;Weber;Senior Consultant;klaus.weber@sap.example;+49 6227 555 303;;DE;Leitender Berater für die SAP-S/4HANA-Migration;true
+Antoine;Moreau;Technical Account Manager;antoine.moreau@ovhcloud.example;+33 1 55 04 0404;;FR;Dedizierte OVHcloud-Infrastruktur;true
+Anita;Patel;Solutions Engineer;anita.patel@atlassian.example;+44 20 7555 0505;;GB;Unterstützung bei der Migration zu Atlassian Cloud;true
+Gianluca;Bianchi;IoT-Lösungsarchitekt;gianluca.bianchi@schneider-electric.example;+39 02 555 0606;;IT;Schneider Electric — Projektleitung CaveGuard IoT;true
+Lisa;Thompson;Customer Success Manager;lisa.thompson@datadog.example;+1 646 555 0707;;US;Datadog-Enterprise-Monitoring;true
+David;Kim;Solutions Architect;david.kim@okta.example;+1 888 555 0808;;US;Einführung von Okta SSO und Zero-Trust-Architektur;true
+Emma;Johansson;Channel Partner Manager;emma.johansson@sophos.example;+44 20 7555 0909;;GB;Endpoint- und Netzwerksicherheit von Sophos;true
+Yuki;Tanaka;Großkundenvertrieb;yuki.tanaka@docusign.example;+1 415 555 1010;;US;DocuSign für Verträge und Einkauf;true
+Hans;Gruber;Berater Käsetechnologie;hans.gruber@cavelogic-systems.example;+33 5 55 11 1111;;FR;Spezialist für das Reifungsmanagementsystem FroMag;true
+Valentina;Costa;Supply Chain Director;valentina.costa@coldchain-solutions.example;+31 20 555 1212;;NL;Einführung und Support CheeseTrack;true
+James;O'Brien;Enterprise Account Manager;james.obrien@servicenow.example;+44 20 7555 1313;;GB;ITSM-Plattform ServiceNow;true
+Priya;Sharma;Implementierungsleiter;priya.sharma@workday.example;+1 925 555 1414;;US;Weltweiter Rollout von Workday HCM;true
+Carlos;Mendez;Account Manager;carlos.mendez@broadcom.example;+1 408 555 1515;;US;VMware vSphere ELA und Verlängerungen;true
+Rachel;Lee;Channel Partner Manager;rachel.lee@fortinet.example;+1 408 555 1616;;US;Support für Fortinet-FortiGate-Firewalls;true

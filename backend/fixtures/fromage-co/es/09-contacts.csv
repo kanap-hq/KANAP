@@ -1,0 +1,17 @@
+first_name;last_name;job_title;email;phone;mobile;country;notes;active
+Robert;Chen;Gestor de grandes cuentas;robert.chen@microsoft.example;+1 425 555 0101;;US;Contacto principal de Microsoft para la renovación del EA;true
+Sarah;Mitchell;Ejecutivo de cuentas;sarah.mitchell@salesforce.example;+1 415 555 0202;;US;Salesforce Sales Cloud y Service Cloud;true
+Klaus;Weber;Consultor sénior;klaus.weber@sap.example;+49 6227 555 303;;DE;Consultor principal de la migración a SAP S/4HANA;true
+Antoine;Moreau;Technical Account Manager;antoine.moreau@ovhcloud.example;+33 1 55 04 0404;;FR;Infraestructura dedicada OVHcloud;true
+Anita;Patel;Ingeniero de soluciones;anita.patel@atlassian.example;+44 20 7555 0505;;GB;Soporte para la migración a Atlassian Cloud;true
+Gianluca;Bianchi;Arquitecto de soluciones IoT;gianluca.bianchi@schneider-electric.example;+39 02 555 0606;;IT;Schneider Electric — jefe del proyecto CaveGuard IoT;true
+Lisa;Thompson;Customer Success Manager;lisa.thompson@datadog.example;+1 646 555 0707;;US;Supervisión empresarial Datadog;true
+David;Kim;Arquitecto de soluciones;david.kim@okta.example;+1 888 555 0808;;US;Despliegue de Okta SSO y arquitectura Zero Trust;true
+Emma;Johansson;Gestor de socios de canal;emma.johansson@sophos.example;+44 20 7555 0909;;GB;Seguridad de puestos y de red Sophos;true
+Yuki;Tanaka;Ventas corporativas;yuki.tanaka@docusign.example;+1 415 555 1010;;US;DocuSign para contratos y compras;true
+Hans;Gruber;Consultor en tecnología quesera;hans.gruber@cavelogic-systems.example;+33 5 55 11 1111;;FR;Especialista en el sistema de gestión de la maduración FroMag;true
+Valentina;Costa;Director de cadena de suministro;valentina.costa@coldchain-solutions.example;+31 20 555 1212;;NL;Implantación y soporte de CheeseTrack;true
+James;O'Brien;Gestor de grandes cuentas;james.obrien@servicenow.example;+44 20 7555 1313;;GB;Plataforma ITSM de ServiceNow;true
+Priya;Sharma;Responsable de implantación;priya.sharma@workday.example;+1 925 555 1414;;US;Despliegue global de Workday HCM;true
+Carlos;Mendez;Gestor de cuentas;carlos.mendez@broadcom.example;+1 408 555 1515;;US;VMware vSphere ELA y renovaciones;true
+Rachel;Lee;Gestor de socios de canal;rachel.lee@fortinet.example;+1 408 555 1616;;US;Soporte de cortafuegos Fortinet FortiGate;true

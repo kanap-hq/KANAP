@@ -1,0 +1,17 @@
+code;kind;name;parent_code;company_name;owner_email;description;status
+DSI-GRP;group;Konzern-IT;;;;Die IT-Abteilung des Konzerns;enabled
+DIV-DIS;group;Sparte Distribution und Gastronomie;DSI-GRP;;;Systeme für den Verkauf an Händler und die Gastronomie;enabled
+DIV-BOU;group;Sparte Läden und E-Commerce;DSI-GRP;;;Laden- und Onlinevertriebssysteme;enabled
+DIV-TRV;group;Zentrale Funktionen;DSI-GRP;;;Infrastruktur, Arbeitsplatz, Sicherheit und IT-Leitung;enabled
+FR-DIS-100;cost_center;Projektmanagement Distribution;DIV-DIS;Fromage & Co SA;clara.dupont@fromage-co.example;Projekte für B2B-Vertriebssysteme, EDI und das Händlerportal;enabled
+FR-DIS-200;cost_center;Engineering und Bereitstellung Distribution;DIV-DIS;Fromage & Co SA;lucas.bernard@fromage-co.example;Entwicklung und Bereitstellung der Anwendungen der Sparte;enabled
+FR-DIS-300;cost_center;Backoffice-Abläufe der Distribution;DIV-DIS;Fromage & Co SA;pierre.martin@fromage-co.example;Betrieb der Vertriebssteuerungs- und Logistiksysteme;enabled
+NL-DIS-300;cost_center;Distributionsbetrieb Benelux;DIV-DIS;Kaasmeester BV;jan.bakker@kaasmeester.example;Betrieb der Systeme der niederländischen Tochtergesellschaft;enabled
+FR-BOU-100;cost_center;Projektmanagement Läden und E-Commerce;DIV-BOU;Fromage & Co SA;amelie.rousseau@fromage-co.example;Laden-, E-Commerce- und Abonnementprojekte;enabled
+FR-BOU-310;cost_center;Front-Office-Betrieb (Läden und E-Commerce);DIV-BOU;Fromage & Co SA;nadia.lemaire@fromage-co.example;Betrieb der Kassen, des Onlineshops und der Ladentools;enabled
+IT-BOU-310;cost_center;Front-Office-Betrieb Italien;DIV-BOU;Formaggio Supremo SRL;luca.ferrari@formaggio-supremo.example;Betrieb der Läden und Systeme der italienischen Tochtergesellschaft;enabled
+US-BOU-310;cost_center;E-Commerce Nordamerika;DIV-BOU;Fromage & Co Inc.;mike.johnson@fromage-co.example;Onlineshop und Systeme der US-Tochtergesellschaft;enabled
+FR-TRV-400;cost_center;Infrastruktur und Cloud;DIV-TRV;Fromage & Co SA;marc.petit@fromage-co.example;Rechenzentren, Cloud, Netzwerk und Telekommunikation des Konzerns;enabled
+FR-TRV-500;cost_center;Arbeitsplatz und Support;DIV-TRV;Fromage & Co SA;olivier.garnier@fromage-co.example;Arbeitsplatzrechner, Kollaborationstools und Service-Desk;enabled
+FR-TRV-600;cost_center;Sicherheit;DIV-TRV;Fromage & Co SA;ines.chevalier@fromage-co.example;Informationssicherheit und Compliance;enabled
+FR-TRV-700;cost_center;IT-Leitung und Controlling;DIV-TRV;Fromage & Co SA;maria.casanova@fromage-co.example;IT-Leitung, Controlling, IT-Einkauf, Schulung;enabled

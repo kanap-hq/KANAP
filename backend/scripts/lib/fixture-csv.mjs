@@ -45,7 +45,7 @@ function normalizeValue(value) {
 }
 
 /** The fields of a CSV text with their raw spans: `{ start, end, row, col }`. */
-function fieldSpans(content, delimiter) {
+export function fieldSpans(content, delimiter) {
   const fields = [];
   let row = 0;
   let col = 0;
@@ -78,7 +78,7 @@ function fieldSpans(content, delimiter) {
 }
 
 /** The raw text of a field without its quotes (`""` read as `"`). */
-function unquote(raw) {
+export function unquote(raw) {
   return raw.replace(/"("?)/g, '$1');
 }
 

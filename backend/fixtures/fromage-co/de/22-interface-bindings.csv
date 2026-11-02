@@ -1,0 +1,20 @@
+interface_id;environment;leg_order;source_application_name;target_application_name;status;source_endpoint;target_endpoint;trigger_details;env_job_name;authentication_mode;monitoring_url;env_notes;integration_tool_application_name
+IF-FROMAGE-001;prod;1;SAP S/4HANA;Talend Data Integration;active;/api/customers;/jobs/sap_extract;Kundenaktualisierungen in Echtzeit;sap_salesforce_extract_prod;;;Prod-Extraktionsstrecke;Talend Data Integration
+IF-FROMAGE-001;prod;2;Talend Data Integration;Talend Data Integration;active;/jobs/sap_extract;/jobs/sap_transform;Transformationspipeline;sap_salesforce_transform_prod;;;Prod-Transformationsstrecke;Talend Data Integration
+IF-FROMAGE-001;prod;3;Talend Data Integration;Salesforce Sales Cloud;active;/jobs/sap_load;/services/data/v60.0;Laden nahezu in Echtzeit;sap_salesforce_load_prod;;;Prod-Ladestrecke;Talend Data Integration
+IF-FROMAGE-001;qa;1;SAP S/4HANA;Talend Data Integration;active;/api/customers;/jobs/sap_extract_qa;QA-Kundensynchronisation;sap_salesforce_extract_qa;;;QA-Extraktionsstrecke (Multi-Umgebungs-Demo);Talend Data Integration
+IF-FROMAGE-001;qa;2;Talend Data Integration;Talend Data Integration;active;/jobs/sap_extract_qa;/jobs/sap_transform_qa;QA-Transformationspipeline;sap_salesforce_transform_qa;;;QA-Transformationsstrecke (Multi-Umgebungs-Demo);Talend Data Integration
+IF-FROMAGE-001;qa;3;Talend Data Integration;Salesforce Sales Cloud;active;/jobs/sap_load_qa;/services/data/v60.0;QA-Laden nach Salesforce;sap_salesforce_load_qa;;;QA-Ladestrecke (Multi-Umgebungs-Demo);Talend Data Integration
+IF-FROMAGE-002;prod;1;SAP BW/4HANA;Talend Data Integration;active;/bw/odata;/jobs/bw_extract;Täglicher BW-Extrakt;bw_powerbi_extract_prod;;;Prod-Extraktionsstrecke;Talend Data Integration
+IF-FROMAGE-002;prod;2;Talend Data Integration;Talend Data Integration;active;/jobs/bw_extract;/jobs/bw_transform;Tägliche KPI-Transformation;bw_powerbi_transform_prod;;;Prod-Transformationsstrecke;Talend Data Integration
+IF-FROMAGE-002;prod;3;Talend Data Integration;Power BI;active;/jobs/bw_load;/datasets/refreshes;Tägliches KPI-Laden;bw_powerbi_load_prod;;;Prod-Ladestrecke;Talend Data Integration
+IF-FROMAGE-003;prod;1;Salesforce Sales Cloud;HubSpot Marketing Hub;active;/api/leads;/crm/v3/objects/contacts;Lead-Synchronisation;salesforce_hubspot_prod;;;Prod-Direktstrecke;
+IF-FROMAGE-004;prod;1;CheeseTrack;SAP S/4HANA;active;/api/batches;/api/traceability;Stündlicher Batch-Export;cheesetrack_sap_prod;;;Prod-Direktstrecke;
+IF-FROMAGE-005;prod;1;CaveGuard IoT;Datadog;active;/api/metrics;/api/v1/series;Telemetrie in Echtzeit;caveguard_datadog_prod;;;Prod-Direktstrecke;
+IF-FROMAGE-006;prod;1;CaveGuard IoT;Cave Monitoring Dashboard;active;/api/metrics;/api/datasource;Dashboard-Feed in Echtzeit;caveguard_dashboard_prod;;;Prod-Direktstrecke;
+IF-FROMAGE-007;prod;1;Okta Workforce Identity;Microsoft 365;active;/scim/v2/Users;/scim/v2/Users;Provisioning-Synchronisation;okta_m365_prod;;;Prod-Direktstrecke;
+IF-FROMAGE-008;prod;1;Workday HCM;Okta Workforce Identity;active;/api/workers;/api/users;HR-gesteuerter Lebenszyklus;workday_okta_prod;;;Prod-Direktstrecke;
+IF-FROMAGE-009;prod;1;Datadog;PagerDuty;active;/api/v1/alerts;/v2/enqueue;Alarmeskalation;datadog_pagerduty_prod;;;Prod-Direktstrecke;
+IF-FROMAGE-010;prod;1;Talend Data Integration;Talend Data Integration;active;/jobs/fondue_extract;/jobs/fondue_transform;Datenextraktion;talend_snowflake_extract_prod;;;Prod-Extraktionsstrecke;Talend Data Integration
+IF-FROMAGE-010;prod;2;Talend Data Integration;Talend Data Integration;active;/jobs/fondue_transform;/jobs/fondue_load;Datentransformation;talend_snowflake_transform_prod;;;Prod-Transformationsstrecke;Talend Data Integration
+IF-FROMAGE-010;prod;3;Talend Data Integration;Snowflake;active;/jobs/fondue_load;/api/v2/statements;Datenladen;talend_snowflake_load_prod;;;Prod-Ladestrecke;Talend Data Integration
