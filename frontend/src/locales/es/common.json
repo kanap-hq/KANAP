@@ -1714,7 +1714,6 @@
     }
   },
   "creation": {
-    "cancel": "Cancelar la creación",
     "confirmTitle": "Cancelar la creación",
     "confirmMessage": "{{record}} y lo que ha añadido ({{changes}}) se eliminarán.",
     "keep": "Conservar",
@@ -1737,7 +1736,18 @@
       "timeEntries_one": "{{count}} registro de tiempo",
       "timeEntries_other": "{{count}} registros de tiempo",
       "journalEntries_one": "{{count}} entrada del diario",
-      "journalEntries_other": "{{count}} entradas del diario"
-    }
+      "journalEntries_other": "{{count}} entradas del diario",
+      "amounts_one": "los importes",
+      "amounts_other": "los importes",
+      "allocations_one": "las asignaciones",
+      "allocations_other": "las asignaciones",
+      "versions_one": "{{count}} versión presupuestaria",
+      "versions_other": "{{count}} versiones presupuestarias",
+      "contacts_one": "{{count}} contacto",
+      "contacts_other": "{{count}} contactos",
+      "tasks_one": "{{count}} tarea",
+      "tasks_other": "{{count}} tareas"
+    },
+    "titleRequired": "Escriba un título."
   }
 }

@@ -166,6 +166,8 @@ export type EditableTitleProps = {
   /** A refusal shown under the title. Hidden while a non-empty replacement is being typed. */
   error?: string | null;
   fallback: string;
+  /** Each new value moves the focus to the title (its field while typing): a page's Create on an empty title. */
+  focusRequest?: number;
   maxLength?: number;
   /** Fired on each keystroke, so the caller can drop a refusal that the draft has answered. */
   onDraftChange?: (draft: string) => void;
@@ -185,6 +187,7 @@ export default function EditableTitle({
   emphasizeEmpty = false,
   error,
   fallback,
+  focusRequest = 0,
   maxLength,
   onDraftChange,
   onCancel,
@@ -225,6 +228,11 @@ export default function EditableTitle({
     pendingFocus.current = false;
     buttonRef.current?.focus();
   }, [editing]);
+
+  React.useEffect(() => {
+    if (!focusRequest) return;
+    (inputRef.current ?? buttonRef.current)?.focus();
+  }, [focusRequest]);
 
   const open = () => {
     closing.current = false;

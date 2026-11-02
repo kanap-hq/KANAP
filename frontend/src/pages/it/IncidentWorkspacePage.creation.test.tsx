@@ -130,7 +130,10 @@ describe('Incident creation at the title', () => {
     const input = await screen.findByRole('textbox', { name: TITLE });
     expect(input).toHaveFocus();
     expect(input).toHaveAttribute('placeholder', 'workspace.incident.newTitle');
-    expect(screen.queryByRole('button', { name: 'common:buttons.create' })).toBeNull();
+    // Create and Cancel in place of the close button.
+    expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
     // Tabs other than the overview wait for the incident.
     expect(screen.getByRole('tab', { name: 'workspace.incident.tabs.journal' })).toBeDisabled();
 
@@ -172,7 +175,7 @@ describe('Incident creation at the title', () => {
     expect(await screen.findByTestId('review-editor')).toBeTruthy();
     expect(screen.queryByTestId('creation-preview')).toBeNull();
     for (const tab of screen.getAllByRole('tab')) expect(tab).not.toBeDisabled();
-    expect(screen.getByRole('button', { name: 'common:creation.cancel' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'workspace.incident.next' })).toBeNull();
   });
 
@@ -180,7 +183,7 @@ describe('Incident creation at the title', () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new incident' }));
     await createMailOutage();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:creation.cancel' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.cancel' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.get).toHaveBeenCalledWith('/incidents/inc-new/creation', { params: { token: 'token-1' } });
     expect(mocked.delete).toHaveBeenCalledWith('/incidents/inc-new/creation', { data: { token: 'token-1' } });
@@ -190,7 +193,7 @@ describe('Incident creation at the title', () => {
   it('asks before cancelling a creation that holds more than its title', async () => {
     renderPage(['/it/incidents/new/overview'], { fields: 1, children: { journal_entry: 2 } });
     await createMailOutage();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:creation.cancel' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.cancel' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/common:creation\.confirmMessage/).textContent).toContain(
       'changes=common:creation.changes.fields(count=1), common:creation.changes.journalEntries(count=2)',
@@ -205,7 +208,7 @@ describe('Incident creation at the title', () => {
     renderPage(['/it/incidents/new/overview']);
     mocked.delete.mockRejectedValueOnce({ response: { status: 409, data: { code: 'INCIDENT_HAS_REGULATORY_RECORDS', usages: [] } } });
     await createMailOutage();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:creation.cancel' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.cancel' }));
     expect(await screen.findByText(/INCIDENT_HAS_REGULATORY_RECORDS/)).toBeTruthy();
     expect(location()).toBe('/it/incidents/INC-4/overview');
   });
@@ -215,7 +218,7 @@ describe('Incident creation at the title', () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new incident' }));
     await createMailOutage();
-    expect(await screen.findByRole('button', { name: 'common:creation.cancel' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'workspace.incident.actions.cancel' })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'workspace.incident.backLabel' }));
@@ -223,7 +226,7 @@ describe('Incident creation at the title', () => {
     cleanup();
     renderPage(['/it/incidents/INC-4/overview']);
     expect(await screen.findByRole('button', { name: 'workspace.incident.actions.cancel' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'common:creation.cancel' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.cancel' })).toBeNull();
   });
 
   it('leaves an empty new incident on Escape, to the previous address', async () => {
@@ -233,5 +236,26 @@ describe('Incident creation at the title', () => {
     fireEvent.keyDown(input, { key: 'Escape' });
     await waitFor(() => expect(location()).toBe('/start'));
     expect(incidents.create).not.toHaveBeenCalled();
+  });
+  it('shows the error under the empty title on Create and gives it the focus, nothing created', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new incident' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE })).toHaveFocus());
+    expect(input).toBeTruthy();
+    expect(incidents.create).not.toHaveBeenCalled();
+    expect(location()).not.toBe('/start');
+  });
+
+  it('keeps the record being created and closes it on Create, back where the creation started', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new incident' }));
+    await createMailOutage();
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(mocked.delete).not.toHaveBeenCalled();
+    expect(incidents.create).toHaveBeenCalledTimes(1);
   });
 });

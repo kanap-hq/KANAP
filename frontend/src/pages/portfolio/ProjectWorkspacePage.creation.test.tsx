@@ -135,7 +135,10 @@ describe('Project creation at the title', () => {
     const input = await screen.findByRole('textbox', { name: TITLE });
     expect(input).toHaveFocus();
     expect(input).toHaveAttribute('placeholder', 'portfolio:workspace.project.title.new');
-    expect(screen.queryByRole('button', { name: 'common:buttons.create' })).toBeNull();
+    // Create and Cancel in place of the close button.
+    expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'portfolio:labels.timeline' })).toBeDisabled();
 
     // The metadata, the summary and the properties panel of an empty project.
@@ -179,7 +182,7 @@ describe('Project creation at the title', () => {
     for (const tab of screen.getAllByRole('tab')) expect(tab).not.toBeDisabled();
     expect(screen.queryByTestId('creation-preview')).toBeNull();
     expect(screen.queryByText('workspace.project.fields.projectName')).toBeNull();
-    expect(screen.getByRole('button', { name: 'common:creation.cancel' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
   });
 
   it('waits for the classification defaults before creating', async () => {
@@ -199,7 +202,7 @@ describe('Project creation at the title', () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new project' }));
     await createDataPlatform();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:creation.cancel' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.cancel' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.get).toHaveBeenCalledWith('/portfolio/projects/prj-new/creation', { params: { token: 'token-1' } });
     expect(mocked.delete).toHaveBeenCalledWith('/portfolio/projects/prj-new/creation', { data: { token: 'token-1' } });
@@ -209,7 +212,7 @@ describe('Project creation at the title', () => {
   it('asks before cancelling a creation that holds more than its title', async () => {
     renderPage(['/portfolio/projects/new/summary'], { changes: { fields: 0, children: { document: 1, time_entry: 2 } } });
     await createDataPlatform();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:creation.cancel' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.cancel' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/common:creation\.confirmMessage/).textContent).toContain(
       'changes=common:creation.changes.documents(count=1), common:creation.changes.timeEntries(count=2)',
@@ -227,5 +230,27 @@ describe('Project creation at the title', () => {
     fireEvent.keyDown(input, { key: 'Escape' });
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.post).not.toHaveBeenCalled();
+  });
+  it('shows the error under the empty title on Create and gives it the focus, nothing created', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new project' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE })).toHaveFocus());
+    expect(input).toBeTruthy();
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(location()).not.toBe('/start');
+  });
+
+  it('keeps the record being created and closes it on Create, back where the creation started', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new project' }));
+    await createDataPlatform();
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(mocked.delete).not.toHaveBeenCalled();
+    expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 });

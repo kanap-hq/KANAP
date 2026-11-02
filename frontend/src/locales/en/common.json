@@ -1714,7 +1714,6 @@
     }
   },
   "creation": {
-    "cancel": "Cancel creation",
     "confirmTitle": "Cancel creation",
     "confirmMessage": "{{record}} and what you added: {{changes}} will be deleted.",
     "keep": "Keep",
@@ -1737,7 +1736,18 @@
       "timeEntries_one": "{{count}} time entry",
       "timeEntries_other": "{{count}} time entries",
       "journalEntries_one": "{{count}} journal entry",
-      "journalEntries_other": "{{count}} journal entries"
-    }
+      "journalEntries_other": "{{count}} journal entries",
+      "amounts_one": "the amounts",
+      "amounts_other": "the amounts",
+      "allocations_one": "the allocations",
+      "allocations_other": "the allocations",
+      "versions_one": "{{count}} budget version",
+      "versions_other": "{{count}} budget versions",
+      "contacts_one": "{{count}} contact",
+      "contacts_other": "{{count}} contacts",
+      "tasks_one": "{{count}} task",
+      "tasks_other": "{{count}} tasks"
+    },
+    "titleRequired": "Enter a title."
   }
 }

@@ -1714,7 +1714,6 @@
     }
   },
   "creation": {
-    "cancel": "Annuler la création",
     "confirmTitle": "Annuler la création",
     "confirmMessage": "{{record}} et ce que vous avez ajouté ({{changes}}) seront supprimés.",
     "keep": "Conserver",
@@ -1737,7 +1736,18 @@
       "timeEntries_one": "{{count}} saisie de temps",
       "timeEntries_other": "{{count}} saisies de temps",
       "journalEntries_one": "{{count}} entrée du journal",
-      "journalEntries_other": "{{count}} entrées du journal"
-    }
+      "journalEntries_other": "{{count}} entrées du journal",
+      "amounts_one": "les montants",
+      "amounts_other": "les montants",
+      "allocations_one": "les ventilations",
+      "allocations_other": "les ventilations",
+      "versions_one": "{{count}} version budgétaire",
+      "versions_other": "{{count}} versions budgétaires",
+      "contacts_one": "{{count}} contact",
+      "contacts_other": "{{count}} contacts",
+      "tasks_one": "{{count}} tâche",
+      "tasks_other": "{{count}} tâches"
+    },
+    "titleRequired": "Saisissez un titre."
   }
 }

@@ -120,8 +120,10 @@ describe('Application creation at the title', () => {
     expect(input).toHaveFocus();
     expect(input).toHaveAttribute('placeholder', 'workspace.application.newTitle');
     expect(getComputedStyle(input).borderRadius).toBe('6px');
-    expect(screen.queryByRole('button', { name: 'common:buttons.create' })).toBeNull();
-    expect(screen.queryByText('common:creation.cancel')).toBeNull();
+    // Create and Cancel in place of the close button.
+    expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
   });
 
   it('shows the application to come under the title, dimmed and out of reach, until the title creates it', async () => {
@@ -166,7 +168,7 @@ describe('Application creation at the title', () => {
     expect(title).toHaveTextContent('Billing');
     await waitFor(() => expect(title).toHaveFocus());
     for (const tab of screen.getAllByRole('tab')) expect(tab).not.toBeDisabled();
-    expect(screen.getByRole('button', { name: 'common:creation.cancel' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
   });
 
   it('shows a refused name under the title and keeps the field open, nothing created', async () => {
@@ -187,7 +189,7 @@ describe('Application creation at the title', () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
     await createBilling();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:creation.cancel' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.cancel' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.get).toHaveBeenCalledWith('/applications/app-new/creation', { params: { token: 'token-1' } });
     expect(mocked.delete).toHaveBeenCalledWith('/applications/app-new/creation', { data: { token: 'token-1' } });
@@ -202,7 +204,7 @@ describe('Application creation at the title', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
     await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview?sort=name%3AASC'));
 
-    fireEvent.click(await screen.findByRole('button', { name: 'common:creation.cancel' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.cancel' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/common:creation\.confirmMessage/).textContent).toContain(
       'changes=common:creation.changes.fields(count=2), common:creation.changes.relations(count=1)',
@@ -212,7 +214,7 @@ describe('Application creation at the title', () => {
     expect(mocked.delete).not.toHaveBeenCalled();
     expect(location()).toBe('/it/applications/APP-7/overview?sort=name%3AASC');
 
-    fireEvent.click(screen.getByRole('button', { name: 'common:creation.cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
     fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'common:buttons.delete' }));
     // No previous address in this tab: the list, with its context.
     await waitFor(() => expect(location()).toBe('/it/applications?sort=name%3AASC'));
@@ -241,13 +243,35 @@ describe('Application creation at the title', () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
     await createBilling();
-    expect(screen.getByRole('button', { name: 'common:creation.cancel' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
     // To the list, then back to the record: the creation is over.
     fireEvent.click(screen.getByRole('button', { name: 'pages.applications.title' }));
     await screen.findByTestId('application-list');
     cleanup();
     renderPage(['/it/applications/APP-7/overview']);
     await screen.findByRole('button', { name: TITLE });
-    expect(screen.queryByRole('button', { name: 'common:creation.cancel' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.cancel' })).toBeNull();
+  });
+  it('shows the error under the empty title on Create and gives it the focus, nothing created', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('messages.nameRequired')).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE })).toHaveFocus());
+    expect(input).toBeTruthy();
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(location()).not.toBe('/start');
+  });
+
+  it('keeps the record being created and closes it on Create, back where the creation started', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
+    await createBilling();
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(mocked.delete).not.toHaveBeenCalled();
+    expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 });
