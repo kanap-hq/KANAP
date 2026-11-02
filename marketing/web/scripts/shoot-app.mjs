@@ -116,6 +116,14 @@ const pickSelect = async (page, label, option, nth = 1) => {
   if (shown !== option) console.warn(`select '${label}' shows '${shown}', not '${option}'`);
 };
 
+// The dev build shows a "dev · main of ..." chip in the top bar: leave it out of the shot.
+const hideDevBadge = (page) =>
+  page.evaluate(() => {
+    for (const el of document.querySelectorAll('header *, [class*="MuiChip"], [class*="MuiAppBar"] *')) {
+      if (!el.children.length && /^dev( ·| \+|$)/.test(el.textContent?.trim() || '')) (el.closest('[class*="MuiChip"]') || el.parentElement || el).style.display = 'none';
+    }
+  });
+
 // Hide the controls of the given analytics dimensions (label + field), in report
 // filters and in the Properties panel.
 const hideControls = (page, labels) =>
@@ -999,6 +1007,59 @@ const PAGES = {
     async prepare(page) {
       await page.waitForFunction(() => /Hosted applications/.test(document.querySelector('main')?.innerText || '') && /Sage X3/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
       await sleep(1000);
+    },
+  },
+  // Clusters article (2026-11-02): Operations tab of the SQL Server cluster, members then hosted applications. Read-only.
+  'clusters-operations-2026-11-02': {
+    frame: 1600,
+    path: '/it/assets/AST-52/operations', // PAR-SQL-CL01
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Hosted applications/.test(document.querySelector('main')?.innerText || '') && /Sage X3/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1000);
+      await hideDevBadge(page);
+    },
+  },
+  // Clusters article (2026-11-02): the "Assign to the cluster?" question, opened from the Add assignment form of a
+  // member (PAR-SQL-01). The dialogs are cancelled, nothing is created.
+  'clusters-assign-2026-11-02': {
+    frame: 1280,
+    path: '/it/assets/AST-50/operations', // PAR-SQL-01, member of PAR-SQL-CL01
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Hosted applications/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1000);
+      await hideDevBadge(page);
+      await clickText(page, 'button', 'Add assignment');
+      await page.waitForSelector('[role="dialog"] input', { timeout: 10000 });
+      await sleep(500);
+      await page.click('[role="dialog"] input');
+      await sleep(800);
+      await page.keyboard.type('QualityLab', { delay: 80 });
+      await sleep(2000);
+      for (const opt of await page.$$('li[role="option"]')) {
+        if ((await opt.evaluate((n) => n.textContent || '')).startsWith('QualityLab LIMS')) { await opt.click(); break; }
+      }
+      await sleep(1500);
+      const [dep] = await page.$$('xpath/.//*[@role="dialog"]//*[normalize-space(text())="Deployment"]/following::*[contains(@class,"MuiSelect-select") or @role="combobox"][1]');
+      if (dep) { await dep.click(); await page.waitForSelector('li[role="option"]', { timeout: 10000 }); await sleep(400); await page.click('li[role="option"]'); await sleep(800); } else console.warn('deployment select not found');
+      const [role] = await page.$$('xpath/.//*[@role="dialog"]//*[normalize-space(text())="Role"]/following::*[contains(@class,"MuiSelect-select")][1]');
+      if (role) { await role.click(); await page.waitForSelector('li[role="option"]', { timeout: 10000 }); await sleep(400); await clickText(page, 'li[role="option"]', 'Database server'); await sleep(800); } else console.warn('role select not found');
+      await sleep(500);
+      await clickText(page, 'button', 'Assign');
+      await page.waitForFunction(() => /Assign to the cluster\?/.test(document.body.innerText), { timeout: 15000 }).catch(() => console.warn('question not shown'));
+      await sleep(1000);
+    },
+  },
+  // Clusters article (2026-11-02): "If this asset goes down" of a cluster member: the cluster is Degraded. Read-only.
+  'clusters-impact-2026-11-02': {
+    frame: 1280,
+    path: '/it/assets/AST-50/dependencies', // PAR-SQL-01
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Degraded/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1000);
+      await hideDevBadge(page);
     },
   },
   // Vulnerabilities article (2026-10-24): "Why this row" in the side panel of a Tomcat CVE found by both sources. Read-only.
