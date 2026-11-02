@@ -13,7 +13,8 @@
 // is written, the same command with --commit commits "Release <version>", pushes the branch,
 // opens the pull request and puts it in the merge queue. A product in
 // backend/src/technologies/catalog/curated/ whose oldest checked_on is more than 120 days
-// old prints a warning. The warning never stops the command.
+// old prints a warning. A base image pin behind the digest its tag resolves to now prints one too;
+// nothing is printed when Docker or the network is unavailable. A warning never stops the command.
 //
 // publish: once the release pull request has merged, checks that the package.json files and the
 // compose files of its merge commit carry the version, tags that commit v<version>, waits
@@ -37,6 +38,7 @@
 // Exit status: 2 for a usage or input mistake, 1 for any other failure.
 
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -149,6 +151,116 @@ function curatedProducts(root) {
 
 function warnCuratedCatalog(root) {
   const line = curatedStaleWarning(curatedProducts(root), new Date().toISOString().slice(0, 10));
+  if (line) console.log(line);
+}
+
+const IMAGE_DIGEST = /^sha256:[0-9a-f]{64}$/;
+
+function asImageDigest(value) {
+  if (typeof value !== 'string') return null;
+  const digest = value.trim().toLowerCase();
+  return IMAGE_DIGEST.test(digest) ? digest : null;
+}
+
+/**
+ * Warnings when a pinned base image digest differs from the digest its tag resolves to now.
+ * `pins` is `{ file, image, digest }[]` (`image` is `name:tag`). `resolve(image)` returns the
+ * current digest of that tag, or throws or returns null when Docker or the network is unavailable.
+ * One line per pin that differs, naming the file, the image and both digests. Null when every pin
+ * matches or when resolution fails. Never throws.
+ */
+export function imagePinWarnings(pins, resolve) {
+  if (!Array.isArray(pins) || typeof resolve !== 'function') return null;
+  const resolved = new Map();
+  const lines = [];
+  for (const pin of pins) {
+    const digest = asImageDigest(pin?.digest);
+    const image = typeof pin?.image === 'string' ? pin.image : '';
+    const file = typeof pin?.file === 'string' ? pin.file : '';
+    if (!file || !image || !digest) continue;
+    if (!resolved.has(image)) {
+      let current = null;
+      try {
+        current = asImageDigest(resolve(image));
+      } catch {
+        current = null;
+      }
+      resolved.set(image, current);
+    }
+    const current = resolved.get(image);
+    if (!current || current === digest) continue;
+    lines.push(`Warning: ${file}: ${image} is pinned to ${digest}, the tag now resolves to ${current}`);
+  }
+  return lines.length === 0 ? null : lines.join('\n');
+}
+
+/** `{ file, image, digest }[]` from a Dockerfile. A stage name (`FROM base AS build`) is skipped. */
+export function baseImagePins(file, text) {
+  const pins = [];
+  for (const line of String(text ?? '').split('\n')) {
+    const from = /^[ \t]*FROM[ \t]+(.*)$/i.exec(line);
+    if (!from) continue;
+    let rest = from[1].trim();
+    while (rest.startsWith('--')) {
+      const space = rest.search(/\s/);
+      if (space === -1) {
+        rest = '';
+        break;
+      }
+      rest = rest.slice(space).trimStart();
+    }
+    const token = rest.split(/\s+/)[0];
+    const pin = token ? pinnedImage(token) : null;
+    if (pin) pins.push({ file, image: pin.image, digest: pin.digest });
+  }
+  return pins;
+}
+
+function pinnedImage(token) {
+  const at = token.lastIndexOf('@');
+  if (at < 0) return null;
+  const digest = asImageDigest(token.slice(at + 1));
+  if (!digest) return null;
+  const nameTag = token.slice(0, at);
+  const colon = nameTag.lastIndexOf(':');
+  if (colon <= 0) return null;
+  const name = nameTag.slice(0, colon);
+  const tag = nameTag.slice(colon + 1);
+  if (!name || !tag || /\s/.test(name) || /\s/.test(tag)) return null;
+  return { image: `${name}:${tag}`, digest };
+}
+
+// The digest of a tag is the sha256 of the manifest bytes. `imagetools inspect --raw` writes
+// those bytes with no trailing newline, so the hash is the digest the tag resolves to.
+function currentTagDigest(image) {
+  const result = spawnSync('docker', ['buildx', 'imagetools', 'inspect', '--raw', image], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  if (result.error || result.status !== 0 || !result.stdout?.length || result.stdout[0] !== 0x7b) return null;
+  return `sha256:${createHash('sha256').update(result.stdout).digest('hex')}`;
+}
+
+function collectBaseImagePins(root) {
+  const listed = spawnSync('git', ['ls-files', '-z', '--', '*Dockerfile*'], { cwd: root, encoding: 'utf8' });
+  if (listed.error || listed.status !== 0) return [];
+  const pins = [];
+  for (const file of listed.stdout.split('\0').filter(Boolean)) {
+    try {
+      pins.push(...baseImagePins(file, readFileSync(path.join(root, file), 'utf8')));
+    } catch {
+      // A Dockerfile that cannot be read is skipped. prepare still runs.
+    }
+  }
+  return pins;
+}
+
+function warnBaseImagePins(root) {
+  let line = null;
+  try {
+    line = imagePinWarnings(collectBaseImagePins(root), currentTagDigest);
+  } catch {
+    return;
+  }
   if (line) console.log(line);
 }
 
@@ -483,6 +595,7 @@ function prepare(root, options) {
   console.log(`Release notes draft: ${draftFile}`);
   console.log(`${prs.length} pull requests merged since ${base}: ${draft.withNotes} with a release notes section, ${draft.without} without.`);
   warnCuratedCatalog(root);
+  warnBaseImagePins(root);
 
   if (!options.commit) {
     console.log(`\nNext: write the ${version} entry in ${changelogFile} from the draft, then run:`);
