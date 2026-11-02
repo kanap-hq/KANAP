@@ -72,21 +72,28 @@ La búsqueda filtra la lista por título a medida que escribe. El cambio de nomb
 El cuadro de redacción es el principal punto de control del espacio de trabajo. Admite:
 
 - Texto de varias líneas, hasta 10 filas visibles antes de que se desplace
-- Adjuntos de imágenes en línea (PNG, JPG, GIF, WEBP)
+- Adjuntos: imágenes (PNG, JPG, GIF, WEBP) y hojas de cálculo (.xlsx, CSV)
 - Menciones con `@` de registros de KANAP
 - Un recordatorio de atajos de teclado ("Intro para enviar · Mayús+Intro para nueva línea")
 
-### Adjuntar imágenes
+### Adjuntar imágenes y hojas de cálculo
 
-Puede añadir imágenes de tres maneras:
+Puede adjuntar imágenes (PNG, JPG, GIF, WEBP) y hojas de cálculo: libros de Excel (.xlsx) y archivos CSV. Hay tres maneras de añadirlos:
 
-- Haga clic en el icono de clip y seleccione archivos de su ordenador
-- Arrastre y suelte archivos de imagen sobre el cuadro de redacción (una superposición de ayuda confirma la zona de destino)
-- Pegue una imagen directamente desde el portapapeles
+- Haga clic en el icono de clip (**Adjuntar un archivo**) y seleccione archivos de su ordenador
+- Arrastre y suelte archivos sobre el cuadro de redacción (una superposición de ayuda confirma la zona de destino)
+- Pegue un archivo directamente desde el portapapeles
 
-Cada imagen pendiente aparece como una miniatura encima del texto. Haga clic en la pequeña **X** de una miniatura para quitarla. Existe un límite de adjuntos por mensaje; una vez alcanzado, el clip se desactiva hasta que quite o envíe los adjuntos actuales.
+Cada imagen pendiente aparece como una miniatura encima del texto. Cada hoja de cálculo pendiente aparece como un pequeño mosaico con su nombre y su tamaño. Haga clic en la pequeña **X** para quitar uno. Un mensaje admite hasta 8 adjuntos, entre imágenes y hojas de cálculo. Una vez alcanzado el límite, el clip se desactiva hasta que quite o envíe los adjuntos actuales.
 
 Las imágenes se cargan junto con su mensaje para que Plaid pueda describirlas, compararlas o extraer detalles.
+
+KANAP lee una hoja de cálculo cuando usted envía el mensaje:
+
+- Un archivo puede tener hasta 5 MB y 20 000 filas. Solo se lee la primera hoja de un libro.
+- Un archivo que no se puede leer (dañado, vacío, formato .xls antiguo, demasiado grande) se rechaza de inmediato, con el motivo. El mensaje no se envía.
+- Plaid recibe un resumen del archivo: los encabezados de columna, el tipo de cada columna (texto, número o fecha), las diez primeras filas y el número de filas. Puede describir el archivo, decir qué contiene cada columna y detectar problemas en las primeras filas. No puede responder sobre las filas posteriores a las diez primeras.
+- El resumen queda adjunto al mensaje durante el resto de la conversación.
 
 ### Mencionar registros con `@`
 
