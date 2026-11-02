@@ -3113,6 +3113,7 @@
       "contactsAfterCreate": "Les contacts sont disponibles après la création du site.",
       "relationsAfterCreate": "Les relations sont disponibles après la création du site.",
       "untitled": "Site sans nom",
+      "notFound": "Site introuvable.",
       "previous": "Site précédent",
       "next": "Site suivant",
       "namePlaceholder": "ex. : Centre d'exploitation Paris",

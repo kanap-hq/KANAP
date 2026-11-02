@@ -46,7 +46,7 @@ La cuadrícula estándar resalta los campos que importan durante la recepción y
 | **Estado** | Estado actual de recepción |
 | **Origen** | Clasificación de origen del portafolio |
 | **Categoría** | Categoría del portafolio |
-| **Flujo** | Flujo del portafolio |
+| **Línea** | Línea del portafolio |
 | **Empresa** | Clasificación de empresa |
 | **Solicitante** | Persona que planteó la solicitud |
 | **Fecha objetivo** | Fecha de entrega objetivo solicitada |
@@ -111,7 +111,7 @@ Trate el panel como la columna vertebral estructural de la solicitud. Contiene t
 #### Propiedades principales
 
 - Estado
-- Origen, Categoría, Flujo
+- Origen, Categoría, Línea
 - Solicitante
 - Empresa, Departamento
 - Fecha de entrega objetivo
@@ -119,7 +119,7 @@ Trate el panel como la columna vertebral estructural de la solicitud. Contiene t
 Estos campos dan forma a cómo se enruta, filtra y revisa la solicitud en otras partes del espacio de trabajo. Por ejemplo:
 
 - cambiar **Estado** afecta a qué decisiones pueden seguir y si la conversión está disponible
-- cambiar **Categoría** o **Flujo** cambia el contexto analítico para la viabilidad y la evaluación
+- cambiar **Categoría** o **Línea** cambia el contexto analítico para la viabilidad y la evaluación
 - cambiar **Empresa** o **Solicitante** cambia los informes y la visibilidad de propiedad en todo el portafolio
 
 #### Equipo
