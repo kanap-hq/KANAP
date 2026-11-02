@@ -3044,8 +3044,8 @@ export class AiEntityService {
     const relatedApplicationParams: unknown[] = [applicationId, tenantId];
     const relatedApplicationScopeSql = appendParticipationScopeSql('applications', 'a', relatedApplicationParams, applicationAccessScope);
 
-    const [requestRows, projectRows, relatedApplicationRows, assetRows, ownerRows, instanceRows] = await Promise.all([
-      manager.query<SearchRow[]>(
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const requestRows = await manager.query<SearchRow[]>(
         `SELECT r.id, r.item_number, r.name AS label, ${requestSummarySql} AS summary, r.status, r.updated_at
          FROM portfolio_request_applications l
          JOIN portfolio_requests r ON r.id = l.request_id AND r.tenant_id = $2 AND r.tenant_id = l.tenant_id
@@ -3054,8 +3054,8 @@ export class AiEntityService {
            ${applicationRequestScopeSql}
          ORDER BY r.updated_at DESC`,
         applicationRequestParams,
-      ),
-      manager.query<SearchRow[]>(
+      );
+    const projectRows = await manager.query<SearchRow[]>(
         `SELECT p.id, p.item_number, p.name AS label, ${projectSummarySql} AS summary, p.status, p.updated_at
          FROM application_projects l
          JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = $2 AND p.tenant_id = l.tenant_id
@@ -3064,8 +3064,8 @@ export class AiEntityService {
            ${applicationProjectScopeSql}
          ORDER BY p.updated_at DESC`,
         applicationProjectParams,
-      ),
-      manager.query<SearchRow[]>(
+      );
+    const relatedApplicationRows = await manager.query<SearchRow[]>(
         `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
          FROM application_suites l
          JOIN applications a ON a.id = l.suite_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
@@ -3080,8 +3080,8 @@ export class AiEntityService {
            AND l.tenant_id = $2
            ${relatedApplicationScopeSql}`,
         relatedApplicationParams,
-      ),
-      manager.query<SearchRow[]>(
+      );
+    const assetRows = await manager.query<SearchRow[]>(
         `SELECT a.id, a.asset_reference AS item_ref, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
          FROM app_instances ai
          -- The servers the application runs on (effective: a cluster and its members in service).
@@ -3092,8 +3092,8 @@ export class AiEntityService {
            AND ai.tenant_id = $2
          ORDER BY a.updated_at DESC`,
         [applicationId, tenantId],
-      ),
-      manager.query<any[]>(
+      );
+    const ownerRows = await manager.query<any[]>(
         `SELECT ao.owner_type, ao.user_id, u.email, u.first_name, u.last_name
          FROM application_owners ao
          JOIN users u ON u.id = ao.user_id AND u.tenant_id = ao.tenant_id
@@ -3101,8 +3101,8 @@ export class AiEntityService {
            AND ao.tenant_id = $2
          ORDER BY ao.owner_type ASC, u.last_name ASC NULLS LAST, u.first_name ASC NULLS LAST, u.email ASC NULLS LAST`,
         [applicationId, tenantId],
-      ),
-      // The environments of the deployments. The legacy applications.environment column is not read.
+      );
+    const instanceRows = await // The environments of the deployments. The legacy applications.environment column is not read.
       manager.query<Array<{ environment: string | null }>>(
         `SELECT ai.environment
          FROM app_instances ai
@@ -3110,8 +3110,7 @@ export class AiEntityService {
            AND ai.tenant_id = $2
          ORDER BY ai.environment ASC`,
         [applicationId, tenantId],
-      ),
-    ]);
+      );
 
     const businessOwners = ownerRows.filter((row) => row.owner_type === 'business').map((row) => toPersonMetadata(row));
     const itOwners = ownerRows.filter((row) => row.owner_type === 'it').map((row) => toPersonMetadata(row));
@@ -3187,8 +3186,8 @@ export class AiEntityService {
     const assetApplicationParams: unknown[] = [assetId, tenantId];
     const assetApplicationScopeSql = appendParticipationScopeSql('applications', 'a', assetApplicationParams, applicationAccessScope);
 
-    const [requestRows, projectRows, relatedAssetRows, applicationRows] = await Promise.all([
-      manager.query<SearchRow[]>(
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const requestRows = await manager.query<SearchRow[]>(
         `SELECT r.id, r.item_number, r.name AS label, ${requestSummarySql} AS summary, r.status, r.updated_at
          FROM portfolio_request_assets l
          JOIN portfolio_requests r ON r.id = l.request_id AND r.tenant_id = $2 AND r.tenant_id = l.tenant_id
@@ -3197,8 +3196,8 @@ export class AiEntityService {
            ${assetRequestScopeSql}
          ORDER BY r.updated_at DESC`,
         assetRequestParams,
-      ),
-      manager.query<SearchRow[]>(
+      );
+    const projectRows = await manager.query<SearchRow[]>(
         `SELECT p.id, p.item_number, p.name AS label, ${projectSummarySql} AS summary, p.status, p.updated_at
          FROM asset_projects l
          JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = $2 AND p.tenant_id = l.tenant_id
@@ -3207,8 +3206,8 @@ export class AiEntityService {
            ${assetProjectScopeSql}
          ORDER BY p.updated_at DESC`,
         assetProjectParams,
-      ),
-      manager.query<SearchRow[]>(
+      );
+    const relatedAssetRows = await manager.query<SearchRow[]>(
         `SELECT a.id, a.asset_reference AS item_ref, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
          FROM asset_relations rel
          JOIN assets a ON a.id = rel.related_asset_id AND a.tenant_id = $2 AND a.tenant_id = rel.tenant_id
@@ -3221,8 +3220,8 @@ export class AiEntityService {
          WHERE rel.related_asset_id = $1
            AND rel.tenant_id = $2`,
         [assetId, tenantId],
-      ),
-      manager.query<SearchRow[]>(
+      );
+    const applicationRows = await manager.query<SearchRow[]>(
         `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
          -- The applications running on the asset (effective: a member runs what its clusters carry).
          FROM (${effectiveAssignmentsSql({ tenant: '$2', assets: 'ARRAY[$1::uuid]' })}) aaa
@@ -3233,8 +3232,7 @@ export class AiEntityService {
            ${assetApplicationScopeSql}
          ORDER BY a.updated_at DESC`,
         assetApplicationParams,
-      ),
-    ]);
+      );
 
     return {
       entity: {
@@ -3520,8 +3518,8 @@ export class AiEntityService {
     const requestApplicationParams: unknown[] = [requestId, tenantId];
     const requestApplicationScopeSql = appendParticipationScopeSql('applications', 'a', requestApplicationParams, applicationAccessScope);
 
-    const [projectRows, dependencyRows, applicationRows, assetRows, contributorRows] = await Promise.all([
-      manager.query<SearchRow[]>(
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const projectRows = await manager.query<SearchRow[]>(
         `SELECT p.id, p.item_number, p.name AS label, ${projectSummarySql} AS summary, p.status, p.updated_at
          FROM portfolio_request_projects rp
          JOIN portfolio_projects p ON p.id = rp.project_id AND p.tenant_id = $2 AND p.tenant_id = rp.tenant_id
@@ -3530,8 +3528,8 @@ export class AiEntityService {
            ${requestProjectScopeSql}
          ORDER BY p.updated_at DESC`,
         requestProjectParams,
-      ),
-      manager.query<any[]>(
+      );
+    const dependencyRows = await manager.query<any[]>(
         `SELECT r.id AS request_id,
                 r.item_number AS request_item_number,
                 r.name AS request_label,
@@ -3551,8 +3549,8 @@ export class AiEntityService {
            AND d.tenant_id = $2
            ${requestDependencyScopeSql}`,
         requestDependencyParams,
-      ),
-      manager.query<SearchRow[]>(
+      );
+    const applicationRows = await manager.query<SearchRow[]>(
         `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
          FROM portfolio_request_applications l
          JOIN applications a ON a.id = l.application_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
@@ -3561,8 +3559,8 @@ export class AiEntityService {
            ${requestApplicationScopeSql}
          ORDER BY a.updated_at DESC`,
         requestApplicationParams,
-      ),
-      manager.query<SearchRow[]>(
+      );
+    const assetRows = await manager.query<SearchRow[]>(
         `SELECT a.id, a.asset_reference AS item_ref, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
          FROM portfolio_request_assets l
          JOIN assets a ON a.id = l.asset_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
@@ -3570,8 +3568,8 @@ export class AiEntityService {
            AND l.tenant_id = $2
          ORDER BY a.updated_at DESC`,
         [requestId, tenantId],
-      ),
-      manager.query<any[]>(
+      );
+    const contributorRows = await manager.query<any[]>(
         `SELECT rt.user_id, u.email, u.first_name, u.last_name
          FROM portfolio_request_team rt
          JOIN users u ON u.id = rt.user_id AND u.tenant_id = rt.tenant_id
@@ -3579,8 +3577,7 @@ export class AiEntityService {
            AND rt.tenant_id = $2
          ORDER BY u.last_name ASC NULLS LAST, u.first_name ASC NULLS LAST, u.email ASC NULLS LAST`,
         [requestId, tenantId],
-      ),
-    ]);
+      );
 
     // A dependency on a project shows only to a reader of projects; the requests are the caller's own family.
     const readsProjects = await this.canReadType(context, 'projects');
@@ -3691,18 +3688,8 @@ export class AiEntityService {
     const projectApplicationParams: unknown[] = [projectId, tenantId];
     const projectApplicationScopeSql = appendParticipationScopeSql('applications', 'a', projectApplicationParams, applicationAccessScope);
 
-    const [
-      requestRows,
-      dependencyRows,
-      applicationRows,
-      assetRows,
-      contributorRows,
-      phaseRows,
-      projectTaskRows,
-      integratedDocumentRows,
-      recentActivity,
-    ] = await Promise.all([
-      manager.query<SearchRow[]>(
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const requestRows = await manager.query<SearchRow[]>(
         `SELECT r.id, r.item_number, r.name AS label, ${requestSummarySql} AS summary, r.status, r.updated_at
          FROM portfolio_request_projects rp
          JOIN portfolio_requests r ON r.id = rp.request_id AND r.tenant_id = $2 AND r.tenant_id = rp.tenant_id
@@ -3711,8 +3698,8 @@ export class AiEntityService {
            ${projectRequestScopeSql}
          ORDER BY r.updated_at DESC`,
         projectRequestParams,
-      ),
-      manager.query<SearchRow[]>(
+      );
+    const dependencyRows = await manager.query<SearchRow[]>(
         `SELECT p.id, p.item_number, p.name AS label, ${projectSummarySql} AS summary, p.status, p.updated_at
          FROM portfolio_project_dependencies d
          JOIN portfolio_projects p ON p.id = d.depends_on_project_id AND p.tenant_id = $2 AND p.tenant_id = d.tenant_id
@@ -3721,8 +3708,8 @@ export class AiEntityService {
            ${projectDependencyScopeSql}
          ORDER BY p.updated_at DESC`,
         projectDependencyParams,
-      ),
-      manager.query<SearchRow[]>(
+      );
+    const applicationRows = await manager.query<SearchRow[]>(
         `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
          FROM application_projects l
          JOIN applications a ON a.id = l.application_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
@@ -3731,8 +3718,8 @@ export class AiEntityService {
            ${projectApplicationScopeSql}
          ORDER BY a.updated_at DESC`,
         projectApplicationParams,
-      ),
-      manager.query<SearchRow[]>(
+      );
+    const assetRows = await manager.query<SearchRow[]>(
         `SELECT a.id, a.asset_reference AS item_ref, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
          FROM asset_projects l
          JOIN assets a ON a.id = l.asset_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
@@ -3740,8 +3727,8 @@ export class AiEntityService {
            AND l.tenant_id = $2
          ORDER BY a.updated_at DESC`,
         [projectId, tenantId],
-      ),
-      manager.query<any[]>(
+      );
+    const contributorRows = await manager.query<any[]>(
         `SELECT pt.user_id, u.email, u.first_name, u.last_name
          FROM portfolio_project_team pt
          JOIN users u ON u.id = pt.user_id AND u.tenant_id = pt.tenant_id
@@ -3749,8 +3736,8 @@ export class AiEntityService {
            AND pt.tenant_id = $2
          ORDER BY u.last_name ASC NULLS LAST, u.first_name ASC NULLS LAST, u.email ASC NULLS LAST`,
         [projectId, tenantId],
-      ),
-      manager.query<any[]>(
+      );
+    const phaseRows = await manager.query<any[]>(
         `SELECT phase.name,
                 phase.status,
                 phase.sequence,
@@ -3764,8 +3751,8 @@ export class AiEntityService {
          GROUP BY phase.id, phase.name, phase.status, phase.sequence, phase.planned_start, phase.planned_end
          ORDER BY phase.sequence ASC, phase.name ASC`,
         [projectId, tenantId],
-      ),
-      manager.query<any[]>(
+      );
+    const projectTaskRows = await manager.query<any[]>(
         `SELECT t.id,
                 t.item_number,
                 COALESCE(t.title, 'Untitled task') AS label,
@@ -3785,17 +3772,16 @@ export class AiEntityService {
            ${projectTaskScopeSql}
          ORDER BY COALESCE(phase.sequence, 2147483647) ASC, t.updated_at DESC, t.item_number DESC`,
         projectTaskParams,
-      ),
-      canReadKnowledge
-        ? this.listIntegratedDocuments(manager, {
-          tenantId,
-          sourceEntityType: 'projects',
-          sourceEntityId: projectId,
-          userId: context.userId ?? null,
-        })
-        : Promise.resolve([]),
-      this.listRecentActivity(manager, { tenantId, projectId }),
-    ]);
+      );
+    const integratedDocumentRows = canReadKnowledge
+      ? await this.listIntegratedDocuments(manager, {
+        tenantId,
+        sourceEntityType: 'projects',
+        sourceEntityId: projectId,
+        userId: context.userId ?? null,
+      })
+      : [];
+    const recentActivity = await this.listRecentActivity(manager, { tenantId, projectId });
 
     return {
       entity: {
@@ -3899,8 +3885,8 @@ export class AiEntityService {
     const relatedGroups: AiEntityRelationshipGroupDto[] = [];
     const applicationAccessScope = await resolveAiParticipationAccessScope(context, 'applications');
     const taskApplicationParams: unknown[] = [taskId, tenantId];
-    const [linkedApplicationRows, assetRows] = await Promise.all([
-      manager.query<SearchRow[]>(
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const linkedApplicationRows = await manager.query<SearchRow[]>(
         `SELECT a.id,
                 a.sequential_id AS item_ref,
                 a.name AS label,
@@ -3913,8 +3899,8 @@ export class AiEntityService {
            AND ta.tenant_id = $2
          ORDER BY a.name ASC`,
         taskApplicationParams,
-      ),
-      manager.query<SearchRow[]>(
+      );
+    const assetRows = await manager.query<SearchRow[]>(
         `SELECT a.id,
                 a.asset_reference AS item_ref,
                 a.name AS label,
@@ -3927,8 +3913,7 @@ export class AiEntityService {
            AND ta.tenant_id = $2
          ORDER BY a.name ASC`,
         [taskId, tenantId],
-      ),
-    ]);
+      );
 
     // One application outside a Business Contributor's participation hides them all, as on the task
     // page, where a save would replace the whole list.

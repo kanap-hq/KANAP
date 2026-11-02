@@ -383,6 +383,46 @@ async function testIndexedBudgetLineReferences() {
   ]);
 }
 
+/** Application, asset, request, project and task context each read several rows on one connection. */
+async function testEntityContextsDoNotOverlapQueries() {
+  const service = createService();
+  let busy = 0;
+  let maxBusy = 0;
+  const context = createContext(async (sql: string) => {
+    if (busy > 0) throw new Error('client.query() when the client is already executing a query');
+    busy += 1;
+    maxBusy = Math.max(maxBusy, busy);
+    try {
+      await new Promise((resolve) => setImmediate(resolve));
+      const row = { id: randomUUID(), status: 'active', updated_at: null, item_number: 4 };
+      if (sql.includes('cyber_criticality') && sql.includes('LIMIT 1')) return [{ ...row, name: 'Billing', sequential_id: 1 }];
+      if (sql.includes('a.region') && sql.includes('LIMIT 1')) return [{ ...row, name: 'Host', asset_reference: 'AST-1' }];
+      if (sql.includes('origin_task_ref')) return [{ ...row, name: 'Need' }];
+      if (sql.includes('execution_progress')) return [{ ...row, name: 'Rollout' }];
+      if (sql.includes('converted_request_id')) return [{ ...row, title: 'Do it', item_number: 8 }];
+      return [];
+    } finally {
+      busy -= 1;
+    }
+  });
+
+  const labels: Record<string, string> = {
+    applications: 'Billing',
+    assets: 'Host',
+    requests: 'Need',
+    projects: 'Rollout',
+    tasks: 'Do it',
+  };
+  for (const entityType of Object.keys(labels)) {
+    const result = await service.getEntityContext(context as any, {
+      entity_type: entityType as any,
+      entity_id: randomUUID(),
+    });
+    assert.equal(result.entity.label, labels[entityType], entityType);
+  }
+  assert.equal(maxBusy, 1);
+}
+
 async function run() {
   await testIndexedSearchAllReadsBothBudgetNatureTypes();
   await testNoLegacyBudgetSearch();
@@ -401,6 +441,7 @@ async function run() {
   await testIndexedBudgetLineReferences();
   await testOverflowNumberBindsNullInt();
   await testLegacyOverflowNumberBindsNullInt();
+  await testEntityContextsDoNotOverlapQueries();
 }
 
 void run();

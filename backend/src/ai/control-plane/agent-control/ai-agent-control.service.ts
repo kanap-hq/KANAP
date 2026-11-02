@@ -1499,16 +1499,14 @@ export class AiAgentControlService {
       take: limit,
     });
 
-    const items = await Promise.all(runs.map(async (run) => {
-      const [
-        runToolExecutions,
-        runEvidence,
-        directActionRequests,
-      ] = await Promise.all([
-        toolRepo.find({ where: { tenant_id: context.tenantId, run_id: run.id } }),
-        evidenceRepo.find({ where: { tenant_id: context.tenantId, run_id: run.id } }),
-        actionRepo.find({ where: { tenant_id: context.tenantId, run_id: run.id } }),
-      ]);
+    // One after the other, including across runs: the request's single connection runs its queries in turn anyway.
+    const items: Array<ReturnType<typeof serializeRun> & {
+      counts: { tool_executions: number; evidence: number; action_requests: number; pending_actions: number };
+    }> = [];
+    for (const run of runs) {
+      const runToolExecutions = await toolRepo.find({ where: { tenant_id: context.tenantId, run_id: run.id } });
+      const runEvidence = await evidenceRepo.find({ where: { tenant_id: context.tenantId, run_id: run.id } });
+      const directActionRequests = await actionRepo.find({ where: { tenant_id: context.tenantId, run_id: run.id } });
       const linkedActionIds = Array.from(new Set([
         ...directActionRequests.map((action) => action.id),
         ...runToolExecutions
@@ -1527,7 +1525,7 @@ export class AiAgentControlService {
         })
         : directActionRequests;
       const pendingActionCount = linkedActions.filter((action) => actionIsActivePending(action)).length;
-      return {
+      items.push({
         ...serializeRun(run),
         counts: {
           tool_executions: runToolExecutions.length,
@@ -1535,8 +1533,8 @@ export class AiAgentControlService {
           action_requests: linkedActionIds.length,
           pending_actions: pendingActionCount,
         },
-      };
-    }));
+      });
+    }
 
     return { items };
   }
@@ -1550,49 +1548,39 @@ export class AiAgentControlService {
       throw new NotFoundException('AI run not found.');
     }
 
-    const [
-      runSteps,
-      toolExecutions,
-      evidence,
-      observations,
-      recommendations,
-      decisions,
-      evaluations,
-      actionRequests,
-    ] = await Promise.all([
-      context.manager.getRepository(AiRunStep).find({
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const runSteps = await context.manager.getRepository(AiRunStep).find({
         where: { tenant_id: context.tenantId, run_id: run.id },
         order: { step_index: 'ASC', created_at: 'ASC' },
-      }),
-      context.manager.getRepository(AiToolExecution).find({
+      });
+    const toolExecutions = await context.manager.getRepository(AiToolExecution).find({
         where: { tenant_id: context.tenantId, run_id: run.id },
         order: { created_at: 'ASC' },
-      }),
-      context.manager.getRepository(AiEvidence).find({
+      });
+    const evidence = await context.manager.getRepository(AiEvidence).find({
         where: { tenant_id: context.tenantId, run_id: run.id },
         order: { created_at: 'ASC' },
-      }),
-      context.manager.getRepository(AiObservation).find({
+      });
+    const observations = await context.manager.getRepository(AiObservation).find({
         where: { tenant_id: context.tenantId, run_id: run.id },
         order: { created_at: 'ASC' },
-      }),
-      context.manager.getRepository(AiRecommendation).find({
+      });
+    const recommendations = await context.manager.getRepository(AiRecommendation).find({
         where: { tenant_id: context.tenantId, run_id: run.id },
         order: { created_at: 'ASC' },
-      }),
-      context.manager.getRepository(AiDecision).find({
+      });
+    const decisions = await context.manager.getRepository(AiDecision).find({
         where: { tenant_id: context.tenantId, run_id: run.id },
         order: { created_at: 'ASC' },
-      }),
-      context.manager.getRepository(AiEvaluation).find({
+      });
+    const evaluations = await context.manager.getRepository(AiEvaluation).find({
         where: { tenant_id: context.tenantId, run_id: run.id },
         order: { created_at: 'ASC' },
-      }),
-      context.manager.getRepository(AiActionRequest).find({
+      });
+    const actionRequests = await context.manager.getRepository(AiActionRequest).find({
         where: { tenant_id: context.tenantId, run_id: run.id },
         order: { updated_at: 'ASC', created_at: 'ASC' },
-      }),
-    ]);
+      });
 
     const linkedActionIds = Array.from(new Set([
       ...actionRequests.map((action) => action.id),
@@ -3212,8 +3200,8 @@ export class AiAgentControlService {
     }
 
     if (typeof (context.manager as unknown as { query?: unknown }).query === 'function') {
-      const [actionRows, runRows] = await Promise.all([
-        context.manager.query(
+      // One after the other: the request's single connection runs its queries in turn anyway.
+      const actionRows = await context.manager.query(
           `
             SELECT
               date_trunc('day', created_at AT TIME ZONE 'UTC')::date AS day,
@@ -3234,8 +3222,8 @@ export class AiAgentControlService {
             GROUP BY 1
           `,
           [context.tenantId, HELPDESK_REVIEW_ACTION_CAPABILITIES, start, end, agentDefinitionId],
-        ),
-        context.manager.query(
+        );
+      const runRows = await context.manager.query(
           `
             SELECT
               date_trunc('day', created_at AT TIME ZONE 'UTC')::date AS day,
@@ -3249,8 +3237,7 @@ export class AiAgentControlService {
             GROUP BY 1
           `,
           [context.tenantId, start, end, agentDefinitionId],
-        ),
-      ]);
+        );
       for (const row of actionRows as Array<Record<string, unknown>>) {
         const key = row.day instanceof Date ? dateKey(row.day) : String(row.day ?? '').slice(0, 10);
         const target = byDay.get(key);
@@ -3275,18 +3262,17 @@ export class AiAgentControlService {
       return { days: Array.from(byDay.values()) };
     }
 
-    const [actions, runs] = await Promise.all([
-      context.manager.getRepository(AiActionRequest).find({
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const actions = await context.manager.getRepository(AiActionRequest).find({
         where: {
           tenant_id: context.tenantId,
           provider_kind: 'ticketing',
         },
-      }),
-      context.manager.getRepository(AiRun).createQueryBuilder('run')
+      });
+    const runs = await context.manager.getRepository(AiRun).createQueryBuilder('run')
         .where('run.tenant_id = :tenantId', { tenantId: context.tenantId })
         .andWhere('run.created_at >= :start', { start })
-        .getMany(),
-    ]);
+        .getMany();
 
     const acceptedByDay = new Map<string, number>();
     for (const action of actions) {
@@ -3427,24 +3413,23 @@ export class AiAgentControlService {
         runIds.add(state.last_run_id);
       }
     }
-    const [linkedActionRequests, runActionRequests] = await Promise.all([
-      actionIds.size > 0
-        ? context.manager.getRepository(AiActionRequest).find({
-          where: {
-            tenant_id: context.tenantId,
-            id: In(Array.from(actionIds)),
-          },
-        })
-        : Promise.resolve([]),
-      runIds.size > 0
-        ? context.manager.getRepository(AiActionRequest).find({
-          where: {
-            tenant_id: context.tenantId,
-            run_id: In(Array.from(runIds)),
-          },
-        })
-        : Promise.resolve([]),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const linkedActionRequests = actionIds.size > 0
+      ? await context.manager.getRepository(AiActionRequest).find({
+        where: {
+          tenant_id: context.tenantId,
+          id: In(Array.from(actionIds)),
+        },
+      })
+      : [];
+    const runActionRequests = runIds.size > 0
+      ? await context.manager.getRepository(AiActionRequest).find({
+        where: {
+          tenant_id: context.tenantId,
+          run_id: In(Array.from(runIds)),
+        },
+      })
+      : [];
     const actionRequests = Array.from(new Map([
       ...linkedActionRequests,
       ...runActionRequests,
@@ -3474,10 +3459,9 @@ export class AiAgentControlService {
     for (const action of actionRequests) {
       collectTicketRef(action.provider_kind, action.provider_key, action.target_type, action.target_ref);
     }
-    const [targetLinks, cost] = await Promise.all([
-      this.resolveTicketTargetLinks(context, ticketRefsByProvider),
-      this.agentCostTotals(context),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const targetLinks = await this.resolveTicketTargetLinks(context, ticketRefsByProvider);
+    const cost = await this.agentCostTotals(context);
     // Per-agent earned-autonomy summary for the fleet view: which action classes run
     // automatically (an enabled agent-autonomy policy). One query, grouped by agent.
     const automaticByDefinition = new Map<string, string[]>();
@@ -3704,15 +3688,14 @@ export class AiAgentControlService {
     if (!providerKey) {
       throw new BadRequestException('provider_key is required for ticketing read targets.');
     }
-    const [targets, applicability] = await Promise.all([
-      this.liveTargets.findEnabledTargets(context, {
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const targets = await this.liveTargets.findEnabledTargets(context, {
         providerKind: 'ticketing',
         providerKey,
         allowedEffect: 'read',
         targetKind: 'ticket',
-      }),
-      this.providers.getApplicability(context, 'ticketing', providerKey),
-    ]);
+      });
+    const applicability = await this.providers.getApplicability(context, 'ticketing', providerKey);
 
     return {
       provider: {
