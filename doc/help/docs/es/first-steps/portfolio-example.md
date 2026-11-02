@@ -15,6 +15,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **La solicitud mejor puntuada**, abierta por el paso en su pestaña **Evaluación**
 
+![Una solicitud y su puntuación](images/portfolio-example-1.webp)
+
 **Qué hacer.** Lea la respuesta a cada criterio y la puntuación que resulta.
 
 **Qué ve.** Una solicitud es un proyecto aún no decidido. KANAP puntúa todas las solicitudes con los mismos criterios, para que la decisión compare cosas comparables. Los criterios y sus pesos se configuran una sola vez en **Portafolio > Configuración**, pestaña **Criterios de evaluación**. Con el estado **Aprobada**, una solicitud se convierte en proyecto con **Convertir en proyecto**.
@@ -22,6 +24,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 ## 2. El proyecto nacido de la solicitud
 
 **El proyecto de una solicitud convertida**, abierto por el paso
+
+![El proyecto nacido de la solicitud](images/portfolio-example-2.webp)
 
 **Qué hacer.** Lea el panel de propiedades y abra luego las pestañas **Cronograma**, **Esfuerzo** y **Relaciones**.
 
@@ -31,6 +35,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Portafolio > Tareas**
 
+![Las tareas](images/portfolio-example-3.webp)
+
 **Qué hacer.** Pruebe los filtros y la búsqueda para encontrar las tareas que le interesan.
 
 **Qué ve.** Todas las tareas, ligadas a un proyecto, al presupuesto o independientes, con su estado.
@@ -39,6 +45,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Portafolio > Informes**
 
+![Los informes](images/portfolio-example-4.webp)
+
 **Qué hacer.** Abra **Mapa de calor de capacidad** y luego los demás informes.
 
 **Qué ve.** Siete informes para dirigir el portafolio: lo que ha pasado, lo que está en curso, lo que viene. **Mapa de calor de capacidad** compara la carga de cada colaborador con su capacidad.
@@ -46,6 +54,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 ## 5. Sus datos
 
 **Portafolio > Proyectos**, **Exportar**
+
+![Sus datos](images/portfolio-example-5.webp)
 
 **Qué hacer.** Haga clic en **Exportar**, elija **CSV** o **Excel (.xlsx)** y abra el archivo. Después haga clic en **Importar** y en **Descargar un ejemplo**.
 

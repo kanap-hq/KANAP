@@ -15,6 +15,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Die am besten bewertete Anfrage**, vom Schritt auf ihrem Reiter **Bewertung** geöffnet
 
+![Eine Anfrage und ihre Bewertung](images/portfolio-example-1.webp)
+
 **Was Sie tun.** Lesen Sie die Antwort zu jedem Kriterium und die Punktzahl, die sich daraus ergibt.
 
 **Was Sie sehen.** Eine Anfrage ist ein noch nicht entschiedenes Projekt. KANAP bewertet alle Anfragen nach denselben Kriterien, damit die Entscheidung Vergleichbares vergleicht. Die Kriterien und ihre Gewichte legen Sie einmal unter **Portfolio > Einstellungen**, Reiter **Bewertungskriterien**, fest. Im Status **Genehmigt** wird eine Anfrage mit **In Projekt konvertieren** zum Projekt.
@@ -22,6 +24,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 ## 2. Das aus der Anfrage entstandene Projekt
 
 **Das Projekt einer konvertierten Anfrage**, vom Schritt geöffnet
+
+![Das aus der Anfrage entstandene Projekt](images/portfolio-example-2.webp)
 
 **Was Sie tun.** Lesen Sie das Eigenschaften-Panel und öffnen Sie dann die Reiter **Zeitstrahl**, **Aufwand** und **Beziehungen**.
 
@@ -31,6 +35,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Portfolio > Aufgaben**
 
+![Die Aufgaben](images/portfolio-example-3.webp)
+
 **Was Sie tun.** Probieren Sie die Filter und die Suche aus, um die Aufgaben zu finden, die Sie interessieren.
 
 **Was Sie sehen.** Alle Aufgaben, ob zu einem Projekt, zum Budget gehörig oder eigenständig, mit ihrem Status.
@@ -39,6 +45,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Portfolio > Berichte**
 
+![Die Berichte](images/portfolio-example-4.webp)
+
 **Was Sie tun.** Öffnen Sie **Kapazitäts-Heatmap**, dann die anderen Berichte.
 
 **Was Sie sehen.** Sieben Berichte, um das Portfolio zu steuern: was geschehen ist, was läuft, was kommt. **Kapazitäts-Heatmap** stellt die Auslastung jeder mitwirkenden Person ihrer Kapazität gegenüber.
@@ -46,6 +54,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 ## 5. Ihre Daten
 
 **Portfolio > Projekte**, **Exportieren**
+
+![Ihre Daten](images/portfolio-example-5.webp)
 
 **Was Sie tun.** Klicken Sie auf **Exportieren**, wählen Sie **CSV** oder **Excel (.xlsx)** und öffnen Sie die Datei. Klicken Sie dann auf **Importieren** und **Beispiel herunterladen**.
 

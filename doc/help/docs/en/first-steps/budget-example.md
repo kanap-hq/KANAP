@@ -15,6 +15,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **Budget management > Budget lines**
 
+![The overview](images/budget-example-1.webp)
+
 **What to do.** Filter the list by **Type** (OPEX or CAPEX) or by **Paying company**, or type a name in **Quick filter**.
 
 **What you see.** Every budget line of the example, sorted by its budget for the current year. Each line has a paying company, an account, a supplier and amounts for each year.
@@ -22,6 +24,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 ## 2. A budget line
 
 **The largest line of the year**, opened by the step
+
+![A budget line](images/budget-example-2.webp)
 
 **What to do.** Open the **Budget** tab, then **Relations** and **History**.
 
@@ -31,6 +35,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **Budget management > Reporting > Top lines**
 
+![A report](images/budget-example-3.webp)
+
 **What to do.** Switch between OPEX and CAPEX, change the **Year**, the **Metric** or the **Top count**. Click a line in the results to open it.
 
 **What you see.** The largest lines of the year with their share of the total, as a chart and a table. Every report can be exported as .pdf, .png or .xlsx.
@@ -38,6 +44,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 ## 4. A question for Plaid
 
 **Plaid**, in the top bar
+
+![A question for Plaid](images/budget-example-4.webp)
 
 **What to do.** Under **Try asking**, click **What are the main savings opportunities in IT OPEX?** The path's second question, **Which budget lines have no owner?**, comes next.
 
@@ -48,6 +56,8 @@ During the trial, Plaid starts turned off. An administrator turns it on by ticki
 ## 5. Your data
 
 **Budget management > Budget lines**, **Export**
+
+![Your data](images/budget-example-5.webp)
 
 **What to do.** Click **Export**, choose **CSV** or **Excel (.xlsx)** and open the file. Then click **Import** and **Download an example**.
 

@@ -15,6 +15,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **IT landscape > Applications**
 
+![The application list](images/landscape-example-1.webp)
+
 **What to do.** Filter, sort and search the list, for example on criticality.
 
 **What you see.** Every application of the example with its criticality, its owner and its company. It is the inventory the rest of the map hangs on.
@@ -22,6 +24,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 ## 2. An application record
 
 **The most critical application**, opened by the step
+
+![An application record](images/landscape-example-2.webp)
 
 **What to do.** Read the properties panel, then open the tabs: **Deployments**, **Interfaces**, **Operations**, **Relations**.
 
@@ -31,6 +35,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **IT landscape > Assets**
 
+![The servers](images/landscape-example-3.webp)
+
 **What to do.** Open a server.
 
 **What you see.** Each server says where the applications run: its environment, its location and the technologies installed on it. Its **Operations** tab lists the applications it hosts.
@@ -39,6 +45,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **IT landscape > End of support**
 
+![Technologies, end of support and vulnerabilities](images/landscape-example-4.webp)
+
 **What to do.** Choose a **Horizon**, then click a row to unfold the servers and the applications it touches. Open a technology from its row.
 
 **What you see.** What has reached or reaches its end of support within the horizon, with its **State**: **Out of support**, **Extended support** or **Ends soon**. On a technology, a version marked **Catalog** takes its dates from the KANAP catalog, kept up to date from the publishers' calendars. **IT landscape > Vulnerabilities** lists the published vulnerabilities (CVE) that affect the versions you declare, with the servers and applications concerned.
@@ -46,6 +54,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 ## 5. Your data
 
 **IT landscape > Applications**, **Export**
+
+![Your data](images/landscape-example-5.webp)
 
 **What to do.** Click **Export**, choose **CSV** or **Excel (.xlsx)** and open the file. Then click **Import** and **Download an example**.
 

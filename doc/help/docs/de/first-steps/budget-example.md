@@ -15,6 +15,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Budgetverwaltung > Budgetzeilen**
 
+![Die Übersicht](images/budget-example-1.webp)
+
 **Was Sie tun.** Filtern Sie die Liste nach **Typ** (OPEX oder CAPEX) oder nach **Zahlendes Unternehmen**, oder geben Sie einen Namen in **Schnellfilter** ein.
 
 **Was Sie sehen.** Alle Budgetzeilen des Beispiels, sortiert nach ihrem Budget für das laufende Jahr. Jede Zeile hat ein zahlendes Unternehmen, ein Konto, einen Lieferanten und Beträge für jedes Jahr.
@@ -22,6 +24,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 ## 2. Eine Budgetzeile
 
 **Die größte Zeile des Jahres**, vom Schritt geöffnet
+
+![Eine Budgetzeile](images/budget-example-2.webp)
 
 **Was Sie tun.** Öffnen Sie den Reiter **Budget**, dann **Verknüpfungen** und **Verlauf**.
 
@@ -31,6 +35,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Budgetverwaltung > Berichte > Top-Zeilen**
 
+![Ein Bericht](images/budget-example-3.webp)
+
 **Was Sie tun.** Wechseln Sie zwischen OPEX und CAPEX, ändern Sie **Jahr**, **Metrik** oder **Anzahl Top**. Klicken Sie auf eine Zeile der Ergebnisse, um sie zu öffnen.
 
 **Was Sie sehen.** Die größten Zeilen des Jahres mit ihrem Anteil am Gesamtbetrag, als Diagramm und als Tabelle. Jeder Bericht lässt sich als .pdf, .png oder .xlsx exportieren.
@@ -38,6 +44,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 ## 4. Eine Frage an Plaid
 
 **Plaid**, in der oberen Leiste
+
+![Eine Frage an Plaid](images/budget-example-4.webp)
 
 **Was Sie tun.** Klicken Sie unter **Versuchen Sie** auf **Wo liegen die größten Einsparpotenziale bei den IT-OPEX?** Die zweite Frage des Pfads, **Welche Budgetzeilen haben keine verantwortliche Person?**, folgt darunter.
 
@@ -48,6 +56,8 @@ Während der Testphase ist Plaid zunächst ausgeschaltet. Eine Administratorin o
 ## 5. Ihre Daten
 
 **Budgetverwaltung > Budgetzeilen**, **Exportieren**
+
+![Ihre Daten](images/budget-example-5.webp)
 
 **Was Sie tun.** Klicken Sie auf **Exportieren**, wählen Sie **CSV** oder **Excel (.xlsx)** und öffnen Sie die Datei. Klicken Sie dann auf **Importieren** und **Beispiel herunterladen**.
 

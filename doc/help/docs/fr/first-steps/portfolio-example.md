@@ -15,6 +15,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **La demande la mieux notée**, ouverte par le pas sur son onglet **Évaluation**
 
+![Une demande et son score](images/portfolio-example-1.webp)
+
 **Le geste.** Lisez la réponse à chaque critère et le score qui en découle.
 
 **Ce que vous lisez.** Une demande est un projet pas encore décidé. KANAP note toutes les demandes sur les mêmes critères, pour que l'arbitrage compare des choses comparables. Les critères et leurs poids se règlent une fois pour toutes dans **Portefeuille > Paramètres**, onglet **Critères d'évaluation**. Une fois au statut **Approuvé**, une demande devient un projet avec **Convertir en projet**.
@@ -22,6 +24,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 ## 2. Le projet issu de la demande
 
 **Le projet d'une demande convertie**, ouvert par le pas
+
+![Le projet issu de la demande](images/portfolio-example-2.webp)
 
 **Le geste.** Lisez le panneau des propriétés, puis ouvrez les onglets **Chronologie**, **Charge** et **Relations**.
 
@@ -31,6 +35,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Portefeuille > Tâches**
 
+![Les tâches](images/portfolio-example-3.webp)
+
 **Le geste.** Essayez les filtres et la recherche pour trouver les tâches qui vous intéressent.
 
 **Ce que vous lisez.** Toutes les tâches, qu'elles soient liées à un projet, au budget ou indépendantes, avec leur statut.
@@ -39,6 +45,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Portefeuille > Rapports**
 
+![Les rapports](images/portfolio-example-4.webp)
+
 **Le geste.** Ouvrez **Planning de capacité**, puis les autres rapports.
 
 **Ce que vous lisez.** Sept rapports pour piloter le portefeuille : ce qui s'est passé, ce qui est en cours, ce qui vient. **Planning de capacité** met la charge de chaque contributeur face à sa capacité.
@@ -46,6 +54,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 ## 5. Vos données
 
 **Portefeuille > Projets**, **Exporter**
+
+![Vos données](images/portfolio-example-5.webp)
 
 **Le geste.** Cliquez sur **Exporter**, choisissez **CSV** ou **Excel (.xlsx)** et ouvrez le fichier. Cliquez ensuite sur **Importer**, puis **Télécharger un exemple**.
 

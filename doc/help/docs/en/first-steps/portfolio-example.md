@@ -15,6 +15,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **The best-scored request**, opened by the step on its **Scoring** tab
 
+![A request and its score](images/portfolio-example-1.webp)
+
 **What to do.** Read the answer to each criterion and the score they give.
 
 **What you see.** A request is a project not yet decided. KANAP scores every request on the same criteria, so the decision compares like with like. The criteria and their weights are set once in **Portfolio > Settings**, **Scoring criteria** tab. Once **Approved**, a request becomes a project with **Convert to project**.
@@ -22,6 +24,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 ## 2. The project born from the request
 
 **The project of a converted request**, opened by the step
+
+![The project born from the request](images/portfolio-example-2.webp)
 
 **What to do.** Read the properties panel, then open the **Timeline**, **Effort** and **Relations** tabs.
 
@@ -31,6 +35,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **Portfolio > Tasks**
 
+![Tasks](images/portfolio-example-3.webp)
+
 **What to do.** Try the filters and the search to find the tasks you care about.
 
 **What you see.** Every task, whether it belongs to a project, to the budget or stands alone, with its status.
@@ -39,6 +45,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **Portfolio > Reporting**
 
+![The reports](images/portfolio-example-4.webp)
+
 **What to do.** Open **Capacity heatmap**, then the other reports.
 
 **What you see.** Seven reports to steer the portfolio: what happened, what is under way, what comes next. **Capacity heatmap** sets each contributor's workload against their capacity.
@@ -46,6 +54,8 @@ These are the five steps of the **Your first five steps** tile on the home page,
 ## 5. Your data
 
 **Portfolio > Projects**, **Export**
+
+![Your data](images/portfolio-example-5.webp)
 
 **What to do.** Click **Export**, choose **CSV** or **Excel (.xlsx)** and open the file. Then click **Import** and **Download an example**.
 

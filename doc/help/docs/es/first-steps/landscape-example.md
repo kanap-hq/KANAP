@@ -15,6 +15,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Panorama IT > Aplicaciones**
 
+![La lista de aplicaciones](images/landscape-example-1.webp)
+
 **Qué hacer.** Filtre, ordene y busque en la lista, por ejemplo por criticidad.
 
 **Qué ve.** Todas las aplicaciones del ejemplo con su criticidad, su responsable y su empresa. Es el inventario del que cuelga el resto del mapa.
@@ -22,6 +24,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 ## 2. Una ficha de aplicación
 
 **La aplicación más crítica**, abierta por el paso
+
+![Una ficha de aplicación](images/landscape-example-2.webp)
 
 **Qué hacer.** Lea el panel de propiedades y abra luego las pestañas **Despliegues**, **Interfaces**, **Operaciones** y **Relaciones**.
 
@@ -31,6 +35,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Panorama IT > Activos**
 
+![Los servidores](images/landscape-example-3.webp)
+
 **Qué hacer.** Abra un servidor.
 
 **Qué ve.** Cada servidor indica dónde se ejecutan las aplicaciones: su entorno, su ubicación y las tecnologías instaladas. Su pestaña **Operaciones** lista las aplicaciones que aloja.
@@ -39,6 +45,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Panorama IT > Fin de soporte**
 
+![Tecnologías, fin de soporte y vulnerabilidades](images/landscape-example-4.webp)
+
 **Qué hacer.** Elija un **Horizonte** y haga clic en una fila para desplegar los servidores y las aplicaciones que afecta. Abra una tecnología desde su fila.
 
 **Qué ve.** Lo que ha llegado o llega al fin de soporte dentro del horizonte, con su **Estado**: **Sin soporte**, **Soporte extendido** o **Termina pronto**. En una tecnología, una versión marcada **Catálogo** toma sus fechas del catálogo de KANAP, mantenido al día a partir de los calendarios de los editores. **Panorama IT > Vulnerabilidades** lista las vulnerabilidades publicadas (CVE) que afectan a las versiones que usted declara, con los servidores y las aplicaciones afectados.
@@ -46,6 +54,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 ## 5. Sus datos
 
 **Panorama IT > Aplicaciones**, **Exportar**
+
+![Sus datos](images/landscape-example-5.webp)
 
 **Qué hacer.** Haga clic en **Exportar**, elija **CSV** o **Excel (.xlsx)** y abra el archivo. Después haga clic en **Importar** y en **Descargar un ejemplo**.
 

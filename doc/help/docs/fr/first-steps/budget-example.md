@@ -15,6 +15,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Gestion budgétaire > Lignes budgétaires**
 
+![La vue d'ensemble](images/budget-example-1.webp)
+
 **Le geste.** Filtrez la liste par **Type** (OPEX ou CAPEX) ou par **Société payeuse**, ou tapez un nom dans **Filtre rapide**.
 
 **Ce que vous lisez.** Toutes les lignes budgétaires de l'exemple, triées par leur budget de l'année en cours. Chaque ligne a une société payeuse, un compte, un fournisseur et des montants pour chaque année.
@@ -22,6 +24,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 ## 2. Une ligne budgétaire
 
 **La plus grosse ligne de l'année**, ouverte par le pas
+
+![Une ligne budgétaire](images/budget-example-2.webp)
 
 **Le geste.** Ouvrez l'onglet **Budget**, puis **Relations** et **Historique**.
 
@@ -31,6 +35,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Gestion budgétaire > Rapports > Top lignes**
 
+![Un rapport](images/budget-example-3.webp)
+
 **Le geste.** Passez de l'OPEX au CAPEX, changez l'**Année**, la **Métrique** ou le **Nombre de premiers**. Cliquez sur une ligne des résultats pour l'ouvrir.
 
 **Ce que vous lisez.** Les plus grosses lignes de l'année avec leur part du total, en graphique et en tableau. Chaque rapport s'exporte en .pdf, .png ou .xlsx.
@@ -38,6 +44,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 ## 4. Une question à Plaid
 
 **Plaid**, dans la barre du haut
+
+![Une question à Plaid](images/budget-example-4.webp)
 
 **Le geste.** Sous **Pour démarrer**, cliquez sur **Quelles sont les principales opportunités d'économies dans les OPEX IT ?** La deuxième question du parcours, **Quelles lignes n'ont pas de responsable ?**, vient ensuite.
 
@@ -48,6 +56,8 @@ Pendant l'essai, Plaid démarre désactivé. Un administrateur l'active en cocha
 ## 5. Vos données
 
 **Gestion budgétaire > Lignes budgétaires**, **Exporter**
+
+![Vos données](images/budget-example-5.webp)
 
 **Le geste.** Cliquez sur **Exporter**, choisissez **CSV** ou **Excel (.xlsx)** et ouvrez le fichier. Cliquez ensuite sur **Importer**, puis **Télécharger un exemple**.
 

@@ -15,6 +15,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Cartographie SI > Applications**
 
+![La liste des applications](images/landscape-example-1.webp)
+
 **Le geste.** Filtrez, triez et cherchez dans la liste, par exemple sur la criticité.
 
 **Ce que vous lisez.** Toutes les applications de l'exemple avec leur criticité, leur responsable et leur société. C'est l'inventaire auquel se rattache le reste de la cartographie.
@@ -22,6 +24,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 ## 2. Une fiche d'application
 
 **L'application la plus critique**, ouverte par le pas
+
+![Une fiche d'application](images/landscape-example-2.webp)
 
 **Le geste.** Lisez le panneau des propriétés, puis ouvrez les onglets **Déploiements**, **Interfaces**, **Exploitation** et **Relations**.
 
@@ -31,6 +35,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Cartographie SI > Actifs**
 
+![Les serveurs](images/landscape-example-3.webp)
+
 **Le geste.** Ouvrez un serveur.
 
 **Ce que vous lisez.** Chaque serveur dit où tournent les applications : son environnement, son site et les technologies qui y sont installées. Son onglet **Exploitation** liste les applications qu'il héberge.
@@ -39,6 +45,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 
 **Cartographie SI > Fins de support**
 
+![Les technologies, fins de support et failles](images/landscape-example-4.webp)
+
 **Le geste.** Choisissez un **Horizon**, puis cliquez sur une ligne pour déplier les serveurs et les applications qu'elle touche. Ouvrez une technologie depuis sa ligne.
 
 **Ce que vous lisez.** Ce qui est arrivé ou arrive en fin de support dans l'horizon, avec son **État** : **Hors support**, **Support étendu** ou **Fin proche**. Sur une technologie, une version marquée **Catalogue** tient ses dates du catalogue KANAP, tenu à jour à partir des calendriers des éditeurs. **Cartographie SI > Vulnérabilités** liste les vulnérabilités publiées (CVE) qui touchent les versions que vous déclarez, avec les serveurs et les applications concernés.
@@ -46,6 +54,8 @@ Ce sont les cinq pas de la tuile **Vos cinq premiers pas** de l'accueil, pour le
 ## 5. Vos données
 
 **Cartographie SI > Applications**, **Exporter**
+
+![Vos données](images/landscape-example-5.webp)
 
 **Le geste.** Cliquez sur **Exporter**, choisissez **CSV** ou **Excel (.xlsx)** et ouvrez le fichier. Cliquez ensuite sur **Importer**, puis **Télécharger un exemple**.
 

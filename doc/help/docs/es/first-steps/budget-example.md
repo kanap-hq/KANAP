@@ -15,6 +15,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Gestión presupuestaria > Líneas presupuestarias**
 
+![La vista general](images/budget-example-1.webp)
+
 **Qué hacer.** Filtre la lista por **Tipo** (OPEX o CAPEX) o por **Empresa pagadora**, o escriba un nombre en **Filtro rápido**.
 
 **Qué ve.** Todas las líneas presupuestarias del ejemplo, ordenadas por su presupuesto del año en curso. Cada línea tiene una empresa pagadora, una cuenta, un proveedor e importes para cada año.
@@ -22,6 +24,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 ## 2. Una línea presupuestaria
 
 **La mayor línea del año**, abierta por el paso
+
+![Una línea presupuestaria](images/budget-example-2.webp)
 
 **Qué hacer.** Abra la pestaña **Presupuesto**, luego **Relaciones** e **Historial**.
 
@@ -31,6 +35,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Gestión presupuestaria > Informes > Top líneas**
 
+![Un informe](images/budget-example-3.webp)
+
 **Qué hacer.** Cambie entre OPEX y CAPEX, modifique el **Año**, la **Métrica** o la **Cantidad top**. Haga clic en una línea de los resultados para abrirla.
 
 **Qué ve.** Las mayores líneas del año con su parte del total, en gráfico y en tabla. Cada informe se exporta en .pdf, .png o .xlsx.
@@ -38,6 +44,8 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 ## 4. Una pregunta a Plaid
 
 **Plaid**, en la barra superior
+
+![Una pregunta a Plaid](images/budget-example-4.webp)
 
 **Qué hacer.** En **Para comenzar**, haga clic en **¿Cuáles son las principales oportunidades de ahorro en el OPEX de TI?** La segunda pregunta del recorrido, **¿Qué líneas presupuestarias no tienen responsable?**, viene a continuación.
 
@@ -48,6 +56,8 @@ Durante la prueba, Plaid empieza desactivado. Un administrador lo activa marcand
 ## 5. Sus datos
 
 **Gestión presupuestaria > Líneas presupuestarias**, **Exportar**
+
+![Sus datos](images/budget-example-5.webp)
 
 **Qué hacer.** Haga clic en **Exportar**, elija **CSV** o **Excel (.xlsx)** y abra el archivo. Después haga clic en **Importar** y en **Descargar un ejemplo**.
 

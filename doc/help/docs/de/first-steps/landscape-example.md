@@ -15,6 +15,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **IT-Landschaft > Anwendungen**
 
+![Die Anwendungsliste](images/landscape-example-1.webp)
+
 **Was Sie tun.** Filtern, sortieren und durchsuchen Sie die Liste, zum Beispiel nach Kritikalität.
 
 **Was Sie sehen.** Alle Anwendungen des Beispiels mit ihrer Kritikalität, ihrer verantwortlichen Person und ihrem Unternehmen. Das ist das Inventar, an dem der Rest der Landkarte hängt.
@@ -22,6 +24,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 ## 2. Ein Anwendungsdatensatz
 
 **Die kritischste Anwendung**, vom Schritt geöffnet
+
+![Ein Anwendungsdatensatz](images/landscape-example-2.webp)
 
 **Was Sie tun.** Lesen Sie das Eigenschaften-Panel und öffnen Sie dann die Reiter **Bereitstellungen**, **Schnittstellen**, **Betrieb** und **Beziehungen**.
 
@@ -31,6 +35,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **IT-Landschaft > Assets**
 
+![Die Server](images/landscape-example-3.webp)
+
 **Was Sie tun.** Öffnen Sie einen Server.
 
 **Was Sie sehen.** Jeder Server sagt, wo die Anwendungen laufen: seine Umgebung, sein Standort und die darauf installierten Technologien. Sein Reiter **Betrieb** listet die Anwendungen, die er hostet.
@@ -39,6 +45,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **IT-Landschaft > Supportende**
 
+![Technologien, Supportende und Schwachstellen](images/landscape-example-4.webp)
+
 **Was Sie tun.** Wählen Sie einen **Zeitraum** und klicken Sie auf eine Zeile, um die betroffenen Server und Anwendungen aufzuklappen. Öffnen Sie eine Technologie aus ihrer Zeile.
 
 **Was Sie sehen.** Was sein Supportende erreicht hat oder innerhalb des Zeitraums erreicht, mit seinem **Status**: **Ohne Support**, **Erweiterter Support** oder **Endet bald**. Bei einer Technologie übernimmt eine mit **Katalog** markierte Version ihre Daten aus dem KANAP-Katalog, der nach den Kalendern der Hersteller aktuell gehalten wird. **IT-Landschaft > Schwachstellen** listet die veröffentlichten Schwachstellen (CVE), die die von Ihnen erfassten Versionen betreffen, mit den betroffenen Servern und Anwendungen.
@@ -46,6 +54,8 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 ## 5. Ihre Daten
 
 **IT-Landschaft > Anwendungen**, **Exportieren**
+
+![Ihre Daten](images/landscape-example-5.webp)
 
 **Was Sie tun.** Klicken Sie auf **Exportieren**, wählen Sie **CSV** oder **Excel (.xlsx)** und öffnen Sie die Datei. Klicken Sie dann auf **Importieren** und **Beispiel herunterladen**.
 
