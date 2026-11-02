@@ -2132,6 +2132,18 @@ One file for both natures since lot C1b: a `nature` column (`opex`, `capex`) say
   - Requires `budget_ops:admin`
 - All three endpoints return the same shape so the UI can refresh local state after each call.
 
+## Trials (Platform Admin)
+Cloud only (404 on-premise). Columns, sources and the 24-hour alert: [trial-funnel.md](trial-funnel.md).
+
+- GET `/admin/trials?state=trialing`
+  - Requires platform admin claim (`isPlatformAdmin` true) on the platform host
+  - Returns `{ items, weeks, attention }`: one item per trial sign-up with its milestones, the sign-ups of the last eight weeks with how many were activated, signed in and converted, and the number of running trials without a sign-in 24 hours after activation
+  - `state`: `awaiting_activation`, `trialing`, `ended`, `converted`, `internal`
+- PUT `/admin/trials/:tenantId/discovery-call`
+  - Body: `{ scheduled_at, status?, note? }` (`status` `booked` by default, or `cancelled`); 400 `discovery_call_invalid`, 404 when the workspace has no trial sign-up
+- DELETE `/admin/trials/:tenantId/discovery-call`
+  - Removes the call (204)
+
 ## Tenants (Platform Admin)
 - GET `/admin/tenants?page=1&limit=20&q=slug&status=active`
   - Requires platform admin claim (`isPlatformAdmin` true)
