@@ -16,7 +16,7 @@ import { TechnologyCatalogSyncService } from './catalog/technology-catalog-sync.
 import { TechnologiesController } from './technologies.controller';
 import { TechnologiesDeleteService } from './technologies-delete.service';
 import { TechnologiesRelationsService } from './technologies-relations.service';
-import { TechnologyCpeEvents } from './technology-cpe-events';
+import { TechnologyCpeEventsModule } from './technology-cpe-events.module';
 import { TechnologiesService } from './technologies.service';
 import { OperatingSystemService } from './operating-system.service';
 import { TechnologyLinksCsvService } from './technology-links-csv.service';
@@ -33,9 +33,11 @@ import { EndOfSupportService } from './reports/end-of-support.service';
  * `ApplicationConversionController` turns an application into a technology (lot C1).
  * `TechnologyCatalogSyncService` keeps the adopted technologies up to date with the living catalog (lot C4).
  * `EndOfSupportService` is exported for the assistant's two report families, which read its rows.
+ * `TechnologyCpeEvents` lives in `TechnologyCpeEventsModule`, re-exported here: the tenant baseline
+ * imports that module too, so both catalog instances emit on the bus the vulnerability feed subscribes to.
  */
 @Module({
-  imports: [AuditModule, PermissionsModule, forwardRef(() => UsersModule), StorageModule, ItOpsSettingsModule, CurrencyModule, IncidentsModule, forwardRef(() => ApplicationsModule), ScheduledTasksModule],
+  imports: [TechnologyCpeEventsModule, AuditModule, PermissionsModule, forwardRef(() => UsersModule), StorageModule, ItOpsSettingsModule, CurrencyModule, IncidentsModule, forwardRef(() => ApplicationsModule), ScheduledTasksModule],
   // The report's controller first: its static paths are registered before `technologies/:id`.
   controllers: [EndOfSupportController, TechnologiesController, ApplicationConversionController],
   providers: [
@@ -47,12 +49,11 @@ import { EndOfSupportService } from './reports/end-of-support.service';
     TechnologiesRelationsService,
     TechnologiesDeleteService,
     TechnologyCatalogService,
-    TechnologyCpeEvents,
     CveNamesService,
     TechnologyCatalogSyncService,
     EndOfSupportService,
     ApplicationConversionService,
   ],
-  exports: [TechnologiesService, TechnologyLinksService, OperatingSystemService, TechnologyReachService, TechnologyCatalogService, TechnologyCpeEvents, CveNamesService, EndOfSupportService],
+  exports: [TechnologiesService, TechnologyLinksService, OperatingSystemService, TechnologyReachService, TechnologyCatalogService, TechnologyCpeEventsModule, CveNamesService, EndOfSupportService],
 })
 export class TechnologiesModule {}
