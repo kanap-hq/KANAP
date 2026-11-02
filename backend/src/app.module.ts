@@ -72,7 +72,7 @@ import { ListContextsModule } from './common/list-context/list-contexts.module';
 import { apiProcessCount, clusterWorkerId } from './common/cluster/process-role';
 import { DatabaseThrottlerStorage } from './common/rate-limit-store';
 import { DataSource, DataSourceOptions } from 'typeorm';
-import { runDataAccessBeforeMigrations } from './data-access/data-access-availability';
+import { runStartupMigrations } from './common/startup-migrations';
 import { readPoolMax } from './common/db-pool-budget';
 
 @Module({
@@ -114,17 +114,15 @@ import { readPoolMax } from './common/db-pool-budget';
           },
         } as any;
       },
-      // The migrations run here rather than inside DataSource.initialize(): the data-access guard
-      // first removes the policies of a limited role the application role inherits, so no
-      // migration runs under them (data-access/data-access-availability.ts). Same run otherwise.
+      // The migrations run here rather than inside DataSource.initialize(): the role is checked
+      // and the data-access guard runs first (common/startup-migrations.ts).
       dataSourceFactory: async (options) => {
         const runMigrations = Boolean(options?.migrationsRun);
         const dataSource = new DataSource({ ...options, migrationsRun: false } as DataSourceOptions);
         await dataSource.initialize();
         if (!runMigrations) return dataSource;
         try {
-          await runDataAccessBeforeMigrations(dataSource);
-          await dataSource.runMigrations({ transaction: dataSource.options.migrationsTransactionMode });
+          await runStartupMigrations(dataSource);
         } catch (error) {
           await dataSource.destroy().catch(() => undefined);
           throw error;

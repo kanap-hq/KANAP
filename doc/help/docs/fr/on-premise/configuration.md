@@ -95,7 +95,7 @@ Si `CORS_ORIGINS` et l'adresse de l'application (`APP_BASE_URL`) manquent tous l
 
 Renseignez `APP_ENV=production` lorsque les utilisateurs accèdent à KANAP en HTTPS, ce qui est la configuration documentée. Si `NODE_ENV` est défini et `APP_ENV` ne l'est pas, KANAP lit `NODE_ENV` à la place.
 
-**Contrôles au démarrage.** L'API refuse de démarrer si `DEPLOYMENT_MODE` vaut autre chose que `single-tenant`, `multi-tenant` ou non défini, si `JWT_SECRET` ou `DATABASE_URL` manque ou est vide, et, avec `APP_ENV=production`, si `APP_BASE_URL` ou `CORS_ORIGINS` manque. Elle refuse aussi de fonctionner si le rôle PostgreSQL de `DATABASE_URL` est `SUPERUSER` ou `BYPASSRLS`. Ce dernier contrôle s'exécute après les migrations : quand le message apparaît, les migrations ont donc déjà été exécutées avec ce rôle.
+**Contrôles au démarrage.** L'API refuse de démarrer si `DEPLOYMENT_MODE` vaut autre chose que `single-tenant`, `multi-tenant` ou non défini, si `JWT_SECRET` ou `DATABASE_URL` manque ou est vide, et, avec `APP_ENV=production`, si `APP_BASE_URL` ou `CORS_ORIGINS` manque. Avant toute migration, elle contrôle aussi le rôle PostgreSQL de `DATABASE_URL`. Un rôle dédié en `SUPERUSER` ou `BYPASSRLS` est d'abord passé en `NOSUPERUSER NOBYPASSRLS`. Un rôle protégé comme `postgres` doté de l'un de ces attributs arrête le démarrage, et aucune migration ne s'exécute (voir « Requis : base de données » plus bas).
 
 ## Ce que le journal de l'API affiche au démarrage
 
@@ -219,7 +219,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 GRANT ALL ON SCHEMA public TO kanap;
 ```
 
-Si un rôle applicatif dédié a été créé au départ avec trop de privilèges, la première migration de KANAP le restreint en `NOSUPERUSER NOBYPASSRLS`. Si `DATABASE_URL` pointe vers un rôle d'administration du cluster protégé comme `postgres`, le démarrage échoue et vous devez passer à un rôle applicatif dédié.
+À chaque démarrage, avant les migrations, KANAP passe le rôle applicatif en `NOSUPERUSER NOBYPASSRLS` s'il a, ou retrouve, l'un de ces attributs. Si `DATABASE_URL` pointe vers un rôle d'administration du cluster protégé (`postgres` ou un nom qui commence par `pg_`) doté de l'un de ces attributs, le démarrage s'arrête avant les migrations et vous devez passer à un rôle applicatif dédié. Si PostgreSQL refuse le changement, par exemple pour un rôle `BYPASSRLS` qui n'est pas superutilisateur ou pour le rôle qui a créé le cluster, le démarrage s'arrête aussi avant les migrations. Le journal donne alors la commande `ALTER ROLE "<role>" NOSUPERUSER NOBYPASSRLS` à exécuter en tant que superutilisateur PostgreSQL.
 
 **Le mot de passe dans l'URL.** Le mot de passe fait partie de l'URL. Un mot de passe qui contient `@ : / # ?` ou `%` casse l'URL, sauf si vous encodez ces caractères en pourcentage. Générez plutôt le mot de passe avec `openssl rand -hex 24` : les lettres et les chiffres n'ont besoin d'aucun encodage. Il en va de même pour tout secret que vous placez dans une URL.
 

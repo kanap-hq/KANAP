@@ -2,13 +2,19 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import type { DataSource } from 'typeorm';
 import { backendPath } from './backend-root';
+import { runStartupMigrations } from '../startup-migrations';
 
 /**
  * The image entrypoint (`scripts/migrate-and-start.js`) runs the integrated-doc repair and its
  * verification as compiled scripts, with the node binary of the entrypoint: the runtime image
  * holds no TypeScript tooling and no sources. A failed step never stops the start-up (unless
  * strict) and prints one error line that names the step.
+ *
+ * Both places that run migrations check the database role first: the entrypoint (its tests are in
+ * startup-migrations.spec.ts, with a compiled copy of the check it loads from dist/) and the API's
+ * own start (`runStartupMigrations`, app.module.ts), tested here.
  */
 
 type Step = { label: string; script: string };
@@ -108,6 +114,76 @@ async function main(): Promise<void> {
     entrypoint.integratedDocsFailureLine('rollout check', new Error('connection refused')),
     /^\[entrypoint\] Integrated-doc rollout: the rollout check step failed \(connection refused\)\. The API starts anyway/,
   );
+
+  // 4. The entrypoint loads the role check from dist/, compiled from src/common/.
+  {
+    const script = fs.readFileSync(backendPath('scripts', 'migrate-and-start.js'), 'utf8');
+    assert.ok(
+      /'\.\.\/dist\/common\/database-role-safety\.js'\)\)\s*\.hardenDatabaseRoleBeforeMigrations\(/.test(script),
+      'the entrypoint requires dist/common/database-role-safety.js for hardenDatabaseRoleBeforeMigrations',
+    );
+    const source = fs.readFileSync(backendPath('src', 'common', 'database-role-safety.ts'), 'utf8');
+    assert.match(source, /export async function hardenDatabaseRoleBeforeMigrations\(/);
+  }
+
+  // 5. The API's own migration run (app.module.ts): role check, data-access guard, migrations.
+  {
+    type Role = { name: string; superuser: boolean; bypassRls: boolean };
+    const fake = (role: Role) => {
+      const statements: string[] = [];
+      const ds = {
+        options: { migrationsTransactionMode: 'all' },
+        async query(sql: string): Promise<any> {
+          if (/ALTER ROLE %I NO(SUPERUSER|BYPASSRLS)/.test(sql)) {
+            statements.push('alter role');
+            role.superuser = false;
+            role.bypassRls = false;
+            return [];
+          }
+          if (/FROM pg_roles r\s+WHERE r\.rolname = current_user/.test(sql)) {
+            statements.push('read role');
+            return [{ current_user: role.name, is_superuser: role.superuser, can_bypass_rls: role.bypassRls ? 't' : 'f' }];
+          }
+          throw new Error(`unexpected statement: ${sql}`);
+        },
+        async runMigrations(options: { transaction?: string }) {
+          statements.push(`migrate (${options.transaction})`);
+          return [];
+        },
+      };
+      const guard = async () => { statements.push('guard'); };
+      return { ds: ds as unknown as DataSource, statements, guard };
+    };
+    const quiet = console.log;
+    const logged: string[] = [];
+    console.log = (...args: unknown[]) => { logged.push(args.map(String).join(' ')); };
+    try {
+      // A safe role: one read, no ALTER ROLE.
+      const safe = fake({ name: 'kanap', superuser: false, bypassRls: false });
+      await runStartupMigrations(safe.ds, safe.guard);
+      assert.deepEqual(safe.statements, ['read role', 'guard', 'migrate (all)']);
+      assert.deepEqual(logged, []);
+
+      // A protected role: stopped before the guard and the migrations.
+      const protectedRole = fake({ name: 'postgres', superuser: true, bypassRls: true });
+      await assert.rejects(
+        runStartupMigrations(protectedRole.ds, protectedRole.guard),
+        /^Error: \[migrations\] DATABASE_URL resolves to protected PostgreSQL role "postgres" with SUPERUSER, BYPASSRLS\. .*point DATABASE_URL to it and restart\.$/,
+      );
+      assert.deepEqual(protectedRole.statements, ['read role']);
+
+      // A superuser application role: hardened before the guard and the migrations.
+      const superuser = fake({ name: 'kanap', superuser: true, bypassRls: false });
+      await runStartupMigrations(superuser.ds, superuser.guard);
+      assert.deepEqual(superuser.statements, ['read role', 'alter role', 'read role', 'guard', 'migrate (all)']);
+      assert.deepEqual(logged, [
+        '[migrations] Hardening PostgreSQL role "kanap" from SUPERUSER to NOSUPERUSER NOBYPASSRLS before the migrations',
+        '[migrations] PostgreSQL role "kanap" is ready for native RLS enforcement',
+      ]);
+    } finally {
+      console.log = quiet;
+    }
+  }
 
   console.log('startup-entrypoint.spec: ok');
 }
