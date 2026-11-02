@@ -46,7 +46,7 @@ La lista de proyectos está diseñada para responder rápidamente a dos pregunta
 | **Progreso** | Progreso de ejecución como barra |
 | **Origen** | Clasificación de origen del portafolio |
 | **Categoría** | Categoría del portafolio |
-| **Flujo** | Flujo del portafolio |
+| **Línea** | Línea del portafolio |
 | **Empresa** | Clasificación de empresa |
 | **Inicio** | Fecha de inicio planificada |
 | **Fin** | Fecha de fin planificada |
@@ -61,7 +61,7 @@ La lista de proyectos está diseñada para responder rápidamente a dos pregunta
 - Los proyectos se ordenan por puntuación de prioridad a menos que cambie la ordenación
 - Los proyectos en estado **Hecho** están ocultos por defecto
 - La búsqueda funciona en el contenido de texto
-- Los filtros de estado, origen, fuente, categoría, flujo y empresa están disponibles directamente en la cuadrícula
+- Los filtros de estado, origen, fuente, categoría, línea y empresa están disponibles directamente en la cuadrícula
 
 **Administración masiva**
 
@@ -133,7 +133,7 @@ Trate el panel de Propiedades como la tarjeta de identidad persistente del proye
 
 - Estado
 - Origen: **Fast-track** o **Histórico** para un proyecto creado directamente. Un proyecto convertido desde una solicitud conserva el origen **Solicitud**
-- Origen, Categoría, Flujo
+- Origen, Categoría, Línea
 - Empresa, Departamento
 - Inicio planificado, Fin planificado
 
