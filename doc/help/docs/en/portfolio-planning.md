@@ -60,7 +60,7 @@ Roadmap Generator computes proposed project dates from the selected scope and pl
 
 After generation, the Schedule tab shows proposed project dates.
 
-- Project titles are clickable and open the project **Progress** tab.
+- Project titles are clickable and open the project **Effort** tab.
 - Checkboxes define the scenario scope.
 - A **Category (Preview)** filter lets you filter the roadmap Gantt display without changing the generated schedule itself.
 - Unselecting a project immediately regenerates the scenario:

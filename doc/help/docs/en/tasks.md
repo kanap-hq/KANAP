@@ -454,7 +454,7 @@ The score appears in the metadata bar at the top of the workspace and as the **S
 **Time contribution**: Time logged to project tasks contributes to the project's actual effort calculations:
 - IT-category time adds to **Actual Effort (IT)**
 - Business-category time adds to **Actual Effort (Business)**
-- The project Progress tab shows a breakdown of Project Overhead vs Task Time
+- The project Effort tab shows a breakdown of Project Overhead vs Task Time
 - The unified Time Log displays all time entries from both project overhead and task work
 
 **Status validation**: Project tasks cannot be marked as **Done** without logging time first. This ensures accurate project effort tracking.
