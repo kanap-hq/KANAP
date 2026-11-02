@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getDocUrl } from './docUrls';
+import { STEP_SCREENS, stepHref } from '../components/onboarding/onboardingPaths';
 
 describe('getDocUrl', () => {
   it('opens the budget lines manual from the list and a line', () => {
@@ -40,6 +41,23 @@ describe('getDocUrl', () => {
   it('opens the data access manual from the administration page', () => {
     expect(getDocUrl('/admin/data-access')).toBe('https://doc.kanap.net/data-access/');
     expect(getDocUrl('/admin/data-access', 'fr')).toBe('https://doc.kanap.net/fr/data-access/');
+  });
+
+  it('opens the guide of the trial step a screen was opened from', () => {
+    expect(getDocUrl('/ops/budget', undefined, '?step=budget_overview')).toBe('https://doc.kanap.net/first-steps/budget-example/');
+    expect(getDocUrl('/it/locations', 'fr', '?step=own_sites')).toBe('https://doc.kanap.net/fr/first-steps/landscape-own-data/');
+    expect(getDocUrl('/portfolio/projects/PRJ-3/relations', 'de', '?step=own_project_budget')).toBe('https://doc.kanap.net/de/first-steps/portfolio-own-data/');
+    expect(getDocUrl('/portfolio/contributors/me', 'es', '?step=own_invite')).toBe('https://doc.kanap.net/es/first-steps/portfolio-own-data/');
+    // On the users list, the colleague step ends two paths: the route's manual stays.
+    expect(getDocUrl('/admin/users', undefined, '?step=own_invite')).toBe('https://doc.kanap.net/admin/');
+    expect(getDocUrl('/ops/budget', undefined, '?step=unknown')).toBe('https://doc.kanap.net/budget-lines/');
+  });
+
+  it('gives every trial step a guide', () => {
+    for (const key of Object.keys(STEP_SCREENS)) {
+      const [path, search] = (stepHref(key, key === 'own_invite' ? 'portfolio' : null) ?? '').split('?');
+      expect(getDocUrl(path, undefined, `?${search}`), key).toMatch(/^https:\/\/doc\.kanap\.net\/first-steps\//);
+    }
   });
 
   it('keeps the overview and falls back to the docs home', () => {

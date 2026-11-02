@@ -8,6 +8,14 @@ KANAP ayuda a los equipos de IT y finanzas a gestionar su panorama tecnológico,
 
 Si desea el camino más corto hacia la productividad, comience con las guías de Inicio Rápido antes de consultar las páginas de referencia completas.
 
+## Sus primeros pasos
+
+Diez minutos por recorrido, con el ejemplo Fromage & Co o con sus propios datos:
+
+- Presupuesto de TI: [descubrir con el ejemplo](first-steps/budget-example.md), [empezar con mis datos](first-steps/budget-own-data.md)
+- Mapa del SI: [descubrir con el ejemplo](first-steps/landscape-example.md), [empezar con mis datos](first-steps/landscape-own-data.md)
+- Proyectos y solicitudes: [descubrir con el ejemplo](first-steps/portfolio-example.md), [empezar con mis datos](first-steps/portfolio-own-data.md)
+
 ## Guías de Inicio Rápido
 
 - [Primeros pasos: Sus primeros 10 minutos en KANAP](fast-track/getting-started.md): Incorporación del primer día, configuración del perfil, panel de control y conceptos clave

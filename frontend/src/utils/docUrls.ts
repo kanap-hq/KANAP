@@ -123,6 +123,28 @@ const routeToDocSlug: [RegExp, string][] = [
   [/^\/settings/, 'fast-track/getting-started'],
 ];
 
+/** The first steps guide of each trial step (`onboarding-paths.ts`), by its key. */
+const STEP_GUIDES: Record<string, string> = Object.fromEntries(Object.entries({
+  'first-steps/budget-example': ['budget_overview', 'budget_line', 'budget_report', 'budget_plaid', 'budget_import'],
+  'first-steps/budget-own-data': ['own_company', 'own_budget_lines', 'own_contract', 'own_report'],
+  'first-steps/landscape-example': ['map_applications', 'map_application', 'map_assets', 'map_technologies', 'map_import'],
+  'first-steps/landscape-own-data': ['own_sites', 'own_applications', 'own_technologies', 'own_assets'],
+  'first-steps/portfolio-example': ['portfolio_request', 'portfolio_project', 'portfolio_tasks', 'portfolio_time', 'portfolio_import'],
+  'first-steps/portfolio-own-data': ['own_request', 'own_projects', 'own_tasks', 'own_project_budget'],
+}).flatMap(([slug, keys]) => keys.map((key) => [key, slug])));
+
+/**
+ * The guide of the trial step a screen was opened from (`?step=<key>`, while its hint shows).
+ * `own_invite` ends the three own-data paths: on the contributor profile it is the portfolio one;
+ * on the users list the path is unknown and the route's manual applies.
+ */
+function stepGuideSlug(pathname: string, search?: string): string | null {
+  const step = new URLSearchParams(search ?? '').get('step');
+  if (!step) return null;
+  if (step === 'own_invite') return /^\/portfolio\/contributors/.test(pathname) ? 'first-steps/portfolio-own-data' : null;
+  return STEP_GUIDES[step] ?? null;
+}
+
 /**
  * Get the locale prefix for documentation URLs.
  * English uses root (no prefix), other supported languages get /fr/, /de/, /es/.
@@ -135,10 +157,13 @@ function getLocalePrefix(locale?: string): string {
 }
 
 /**
- * Slug for a route. IT settings uses the query: `tab=netbox` opens the Netbox manual,
- * any other tab (including the lists) opens the IT settings manual.
+ * Slug for a route. A screen opened by a trial step opens that step's guide. IT settings uses the
+ * query: `tab=netbox` opens the Netbox manual, any other tab (including the lists) opens the IT
+ * settings manual.
  */
 export function getDocSlug(pathname: string, search?: string): string | null {
+  const guide = stepGuideSlug(pathname, search);
+  if (guide) return guide;
   if (/^\/it\/settings(?:\/|$)/.test(pathname) && new URLSearchParams(search ?? '').get('tab') === 'netbox') {
     return 'netbox';
   }
