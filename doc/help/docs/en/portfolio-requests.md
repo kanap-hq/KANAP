@@ -86,7 +86,7 @@ The workspace header gives you operational context without leaving the page:
 - a metadata strip with **Status**, **Score**, **Requestor**, **IT owner**, **Target Delivery Date**, and (when applicable) the **Source Task** the request was created from
 - **Share** to send a link to the request
 - **Convert to Project** when the request is **Approved** or **Converted**
-- **Cancel creation**, while you stay on a request you just created. See [Cancelling a creation](#cancelling-a-creation)
+- **Create** and **Cancel**, while the request is being created. See [Creating or cancelling](#cancelling-a-creation)
 - **Delete**, a trash icon, for administrators (when the request is not yet converted). A converted request stays as the origin of its project and cannot be deleted
 - previous/next navigation based on the exact list context you came from
 
@@ -98,11 +98,14 @@ The workspace header gives you operational context without leaving the page:
 
 Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Press Escape on the empty title to leave without creating anything.
 
-### Cancelling a creation { #cancelling-a-creation }
+### Creating or cancelling { #cancelling-a-creation }
 
-While you stay on the request you just created, **Cancel creation** in the header deletes it and takes you back to where you started: the list or the previous screen. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete requests.
+While the request is being created, its header shows **Create** and **Cancel**. They stay until you leave the request.
 
-Once you leave the request, it stays. An administrator can then delete it with **Delete**. The reference of a cancelled request is not used again.
+- **Create** keeps the request and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one
+- **Cancel** closes without keeping anything. On a request already created, it deletes it. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete requests
+
+Leaving the request any other way keeps it. An administrator can then delete it with **Delete**. The reference of a cancelled request is not used again.
 
 ### Properties drawer
 

@@ -39,11 +39,14 @@ Le nouvel incident est **Ouvert**, de gravité **Mineure**, détecté maintenant
 
 Les deux dates acceptent des valeurs passées : un incident découvert le lundi matin peut être enregistré comme ayant commencé le samedi soir. Appuyez sur Échap dans le titre vide pour partir sans rien enregistrer.
 
-### Annuler la création { #cancelling-a-creation }
+### Créer ou annuler { #cancelling-a-creation }
 
-Tant que vous restez sur l'incident que vous venez d'enregistrer, **Annuler la création** dans l'en-tête le supprime et vous ramène là où vous avez commencé : la liste ou l'écran précédent. Si vous avez saisi plus que le titre, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des incidents. **Annuler l'incident** est masqué pendant ce temps.
+Tant que l'incident est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez l'incident.
 
-L'annulation de la création est refusée dès que l'incident est clôturé ou annulé, ou contient des données de déclaration réglementaire (voir [Supprimer un incident](#supprimer-un-incident)). Une fois que vous quittez l'incident, il reste dans le registre. La référence d'une création annulée n'est pas réutilisée.
+- **Créer** conserve l'incident et le ferme. Vous revenez à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, rien ne se ferme et le titre en demande un
+- **Annuler** ferme sans rien conserver. Sur un incident déjà créé, il le supprime. Si vous avez saisi plus que le titre, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des incidents
+
+**Annuler l'incident** est masqué tant que l'incident est en cours de création. L'annulation de la création est refusée dès que l'incident est clôturé ou annulé, ou contient des données de déclaration réglementaire (voir [Supprimer un incident](#supprimer-un-incident)). Si vous quittez l'incident autrement, il reste dans le registre. La référence d'une création annulée n'est pas réutilisée.
 
 **Autorisations** :
 

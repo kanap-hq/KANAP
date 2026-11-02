@@ -84,11 +84,14 @@ Ein so erstelltes Projekt kann in der Eigenschaftsleiste zwischen **Fast-track**
 
 Verwenden Sie **Fast-track** für Arbeit, die wirklich direkt in die Lieferung eingeführt wird. Verwenden Sie **Altbestand** für Arbeit, die bereits außerhalb der normalen Erfassungshistorie existiert. Diese Unterscheidung wirkt sich auf die Berichterstattung aus und macht spätere Portfolio-Analysen weitaus weniger verwirrend.
 
-### Erstellung abbrechen { #cancelling-a-creation }
+### Erstellen oder abbrechen { #cancelling-a-creation }
 
-Solange Sie auf dem gerade erstellten Projekt bleiben, löscht **Erstellung abbrechen** in der Kopfzeile es und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne jedes Löschrecht abbrechen.
+Solange das Projekt erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie das Projekt verlassen.
 
-Nur so lässt sich ein Projekt löschen. Sobald Sie das Projekt verlassen, bleibt es bestehen: Setzen Sie seinen Status auf **Abgebrochen**, wenn es nicht zustande kommt. Ein mit einer Anfrage verknüpftes Projekt kann nicht gelöscht werden. Die Referenz eines abgebrochenen Projekts wird nicht wiederverwendet.
+- **Erstellen** behält das Projekt und schließt es. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen
+- **Abbrechen** schließt, ohne etwas zu behalten. Ein bereits erstelltes Projekt wird gelöscht. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne jedes Löschrecht abbrechen
+
+Nur mit **Abbrechen** lässt sich ein Projekt löschen. Sobald Sie das Projekt verlassen, bleibt es bestehen: Setzen Sie seinen Status auf **Abgebrochen**, wenn es nicht zustande kommt. Ein mit einer Anfrage verknüpftes Projekt kann nicht gelöscht werden. Die Referenz eines abgebrochenen Projekts wird nicht wiederverwendet.
 
 ## Mentales Modell des Arbeitsbereichs
 
@@ -110,7 +113,7 @@ Die Arbeitsbereichs-Kopfzeile ist eine Steuerungsleiste, keine Dekoration.
 - Eine kompakte Metadatenzeile: **Status**, **Bewertung**, **Fortschritt**, **IT-Leiter**, **Geplantes Ende** und **Herkunft** (oder die Quell-Anfragen-Referenz für Projekte mit Anfragenherkunft)
 - **Vorherige** und **Nächste** bewegen sich durch das aktuelle Listenergebnis, nicht durch jedes Projekt im System
 - **Teilen** sendet die aktuelle Projekt-URL per E-Mail mit einer optionalen Nachricht
-- **Erstellung abbrechen**, solange Sie auf einem gerade erstellten Projekt bleiben. Siehe [Erstellung abbrechen](#cancelling-a-creation)
+- **Erstellen** und **Abbrechen**, solange das Projekt erstellt wird. Siehe [Erstellen oder abbrechen](#cancelling-a-creation)
 
 Das Senden eines Links gewährt keinen Zugriff. Es teilt nur den Standort. Berechtigungen bleiben genau so, wie sie vor dem Versenden der E-Mail waren.
 

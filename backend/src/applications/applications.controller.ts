@@ -54,7 +54,7 @@ import { ApplicationDataResidency } from './application-data-residency.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { NotFoundException } from '@nestjs/common';
 import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
-import { countChangesSinceCreation, type CreationChanges } from '../common/creation/creation-changes';
+import { assertCreatorAloneSinceCreation, countChangesSinceCreation, type CreationChanges } from '../common/creation/creation-changes';
 
 @UseGuards(JwtAuthGuard)
 @Controller('applications')
@@ -646,6 +646,7 @@ export class ApplicationsController {
     const manager = this.requireManager(ctx);
     const found = await manager.query('SELECT 1 FROM applications WHERE id = $1 AND tenant_id = $2', [id, ctx.tenantId]);
     if (!found.length) throw new NotFoundException('Application not found');
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'applications', id, ctx.userId);
     const changes = await countChangesSinceCreation(manager, ctx.tenantId, 'applications', id);
     const { removes } = await this.deleteSvc.deleteCheck([id], { manager });
     for (const removed of removes) {
@@ -657,7 +658,9 @@ export class ApplicationsController {
 
   /**
    * "Cancel creation": the creator deletes the application they just created, with its token,
-   * even without the delete right. Same delete as `DELETE :id` (cascades, refusals, audit entry).
+   * even without the delete right, while nobody else has written on it (403
+   * `CREATION_CANCEL_EXPIRED` otherwise, checked under its lock). Same delete as `DELETE :id`
+   * (cascades, refusals, audit entry).
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
@@ -668,7 +671,9 @@ export class ApplicationsController {
     @Tenant() ctx: TenantRequest,
   ): Promise<void> {
     this.assertCreationToken(id, body?.token, ctx);
-    await this.deleteSvc.delete(id, { manager: ctx.manager, userId: ctx.userId || null });
+    const manager = this.requireManager(ctx);
+    await assertCreatorAloneSinceCreation(manager, ctx.tenantId, 'applications', id, ctx.userId, { lock: true });
+    await this.deleteSvc.delete(id, { manager, userId: ctx.userId || null });
   }
 
   @UseGuards(PermissionGuard)

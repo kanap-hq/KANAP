@@ -47,22 +47,15 @@
       "history": "Verlauf"
     },
     "editor": {
-      "productNameRequired": "Produktname ist erforderlich",
-      "currencyMust3": "Die Währung muss aus 3 Buchstaben bestehen",
-      "payingCompanyRequired": "Zahlendes Unternehmen ist erforderlich",
-      "accountRequired": "Konto ist erforderlich",
-      "dimensionRequired": "{{name}} ist erforderlich",
       "requiredLeaveTitle_one": "Pflichtwert fehlt",
       "requiredLeaveTitle_other": "Pflichtwerte fehlen",
       "requiredLeaveMessage_one": "{{names}} ist erforderlich. Wählen Sie einen Wert, bevor Sie die Seite verlassen.",
       "requiredLeaveMessage_other": "{{names}} sind erforderlich. Wählen Sie Werte, bevor Sie die Seite verlassen.",
       "requiredLeaveStay": "Bleiben",
       "requiredLeaveConfirm": "Trotzdem verlassen",
-      "effectiveStartRequired": "Gültigkeitsbeginn ist erforderlich",
       "failedToCreate": "Zeile konnte nicht erstellt werden",
       "failedToSave": "Speichern fehlgeschlagen",
-      "failedToLoad": "Zeile konnte nicht geladen werden",
-      "obsoleteAccount": "Veraltetes Konto erkannt. Das ausgewählte Konto gehört nicht zum Kontenplan des Unternehmens. Bitte aktualisieren Sie das Konto."
+      "failedToLoad": "Zeile konnte nicht geladen werden"
     },
     "budget": {
       "title": "Budget",
@@ -1925,6 +1918,16 @@
       "deleted_other": "{{count}} Budgetzeilen gelöscht",
       "failed": "Die Budgetzeile konnte nicht gelöscht werden."
     },
-    "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff"
+    "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff",
+    "creation": {
+      "record": "Die Budgetzeile",
+      "missing": "Fehlt: {{fields}}",
+      "placeFirst": "Wählen Sie zuerst das zahlende Unternehmen oder die Kostenstelle.",
+      "leaveTitle": "Diese Zeile ist unvollständig",
+      "leaveComplete": "Vervollständigen",
+      "leaveDelete": "Löschen",
+      "leaveAnyway": "Trotzdem verlassen",
+      "completeFailed": "Die Zeile konnte nicht geprüft werden."
+    }
   }
 }

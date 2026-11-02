@@ -14,7 +14,7 @@ The header strip at the top of the dashboard provides shortcut buttons for commo
 
 - **Create Task**: opens the standalone task creation flow. Requires `tasks:member` or higher.
 - **Log Time**: opens the **Quick Log Time** dialog (see below). Requires `portfolio_projects:contributor` or `tasks:member`.
-- **New budget line**: opens a new budget line. It starts as OPEX, and the **Type** row of its Properties panel switches it to CAPEX (see [Budget lines](budget-lines.md#the-workspace)). Requires `budget:member` or higher.
+- **New budget line**: opens a new OPEX line (see [Budget lines](budget-lines.md#the-workspace)). Requires `budget:member` or higher.
 - **New Application**: opens the application creation flow. Requires `applications:member` or higher.
 - **New Asset**: opens the asset creation flow. Requires `infrastructure:member` or higher.
 - **New Document** (split button): creates a blank Knowledge document, or opens the template picker to start from a published template. Requires `knowledge:member` or higher.

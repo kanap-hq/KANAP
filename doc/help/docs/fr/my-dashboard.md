@@ -14,7 +14,7 @@ La bande d'en-tête en haut du tableau de bord fournit des boutons de raccourci 
 
 - **Créer une tâche** : ouvre le flux de création de tâche autonome. Nécessite `tasks:member` ou supérieur.
 - **Enregistrer du temps** : ouvre la boîte de dialogue **Enregistrement rapide du temps** (voir ci-dessous). Nécessite `portfolio_projects:contributor` ou `tasks:member`.
-- **Nouvelle ligne budgétaire** : ouvre une nouvelle ligne budgétaire. Elle démarre en OPEX, et la ligne **Type** de son panneau Propriétés la passe en CAPEX (voir [Lignes budgétaires](budget-lines.md#lespace-de-travail)). Nécessite `budget:member` ou supérieur.
+- **Nouvelle ligne budgétaire** : ouvre une nouvelle ligne OPEX (voir [Lignes budgétaires](budget-lines.md#lespace-de-travail)). Nécessite `budget:member` ou supérieur.
 - **Nouvelle application** : ouvre le flux de création d'application. Nécessite `applications:member` ou supérieur.
 - **Nouvel actif** : ouvre le flux de création d'actif. Nécessite `infrastructure:member` ou supérieur.
 - **Nouveau document** (bouton à options) : crée un document de connaissances vierge, ou ouvre le sélecteur de modèles pour démarrer à partir d'un modèle publié. Nécessite `knowledge:member` ou supérieur.

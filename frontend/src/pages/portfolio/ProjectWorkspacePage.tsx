@@ -47,7 +47,7 @@ import { portfolioLinksKey, usePortfolioRelationsBadge } from './workspace/portf
 import { unsavedConfirm, useKanapDialogs } from '../../components/design';
 import { carryListFilters } from '../../lib/listContext';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CancelCreationButton, CreationPreview, useCreationReturn, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
 type TabKey = 'summary' | 'tasks' | 'timeline' | 'effort' | 'scoring' | 'relations' | 'knowledge' | typeof RECORD_HISTORY_TAB_KEY;
@@ -814,20 +814,21 @@ export default function ProjectWorkspacePage() {
     queryKeyPrefixes: ['portfolio-projects'],
     onError: setSaveError,
   });
-  // "Cancel creation" counts what was written: a purpose still typed is saved first.
+  // "Cancel" counts what was written: a purpose still typed is saved first.
   const cancelCreation = React.useCallback(async () => {
     if (purposeEditorRef.current?.isDirty() && !(await purposeEditorRef.current.save())) return;
     await creation.cancelCreation();
   }, [creation]);
   // A refusal of the name typed on a new project.
   const [titleError, setTitleError] = React.useState<string | null>(null);
+  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('common:creation.titleRequired') });
   // The name committed before the classification defaults were read: created once they are.
   const [pendingName, setPendingName] = React.useState<string | null>(null);
   const creatingRef = React.useRef(false);
 
   // The name committed in the header creates the project at once (fast track), with the
   // classification defaults the form would have sent; the page moves to it, every tab open,
-  // with "Cancel creation".
+  // with Create and Cancel (or closes it, kept, when Create was clicked meanwhile).
   const createProject = React.useCallback(async (name: string) => {
     if (creatingRef.current) return;
     creatingRef.current = true;
@@ -836,6 +837,11 @@ export default function ProjectWorkspacePage() {
     try {
       const res = await api.post('/portfolio/projects', { ...withClassificationDefaults(form), origin: 'fast_track', name });
       const { creation_token: token, ...created } = res.data;
+      if (newCreate.titleSettled()) {
+        void queryClient.invalidateQueries({ queryKey: ['portfolio-projects'], refetchType: 'none' });
+        navigate(creationReturn, { replace: true });
+        return;
+      }
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       const reference = formatItemRef('project', created.item_number);
       // The page keeps its header while the full project loads.
@@ -844,11 +850,12 @@ export default function ProjectWorkspacePage() {
       const qs = searchParams.toString();
       navigate(`/portfolio/projects/${reference}/summary${qs ? `?${qs}` : ''}`, { replace: true });
     } catch (err) {
+      newCreate.titleSettled();
       setTitleError(getApiErrorMessage(err, t, t('portfolio:workspace.project.messages.saveFailed')));
     } finally {
       creatingRef.current = false;
     }
-  }, [creation, creationReturn, form, navigate, queryClient, searchParams, t, withClassificationDefaults]);
+  }, [creation, creationReturn, form, navigate, newCreate, queryClient, searchParams, t, withClassificationDefaults]);
 
   React.useEffect(() => {
     if (!isCreate || pendingName === null || !classificationReady) return;
@@ -873,6 +880,18 @@ export default function ProjectWorkspacePage() {
     }
     navigate(listPath);
   }, [creationReturn, dialogs, handleSave, handleReset, hasUnsavedChanges, isCreate, listPath, navigate, t]);
+
+  // Create: on the new page, the title is the only field; on a project being created, what is still
+  // being typed is saved, then the project is kept and closed.
+  const createAction = React.useCallback(async () => {
+    if (isCreate) {
+      newCreate.create(titleError);
+      return;
+    }
+    if (purposeEditorRef.current?.isDirty() && !(await purposeEditorRef.current.save())) return;
+    if (hasUnsavedChanges && !(await handleSave())) return;
+    creation.finishCreation();
+  }, [creation, handleSave, hasUnsavedChanges, isCreate, newCreate, titleError]);
 
   const statusLabel = form?.status ? getProjectStatusLabel(t, form.status) : '';
   const statusColor = (PROJECT_STATUS_COLORS[form?.status] || 'default') as 'default' | 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info';
@@ -936,6 +955,7 @@ export default function ProjectWorkspacePage() {
         onTitleSave={(value) => {
           if (isCreate) {
             setTitleError(null);
+            newCreate.titleSent();
             setPendingName(value);
             return;
           }
@@ -945,6 +965,7 @@ export default function ProjectWorkspacePage() {
         titleError={isCreate ? titleError : undefined}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? () => { void closeWorkspace(); } : undefined}
+        titleFocusRequest={newCreate.focusRequest}
         isCreate={isCreate}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,
@@ -1044,13 +1065,6 @@ export default function ProjectWorkspacePage() {
         actions={(
           <>
             {!isCreate && (
-              <CancelCreationButton
-                beingCreated={creation.beingCreated}
-                cancelling={creation.cancelling}
-                onCancel={() => { void cancelCreation(); }}
-              />
-            )}
-            {!isCreate && (
               <SendLinkButton
                 itemType="project"
                 itemId={form?.id || id}
@@ -1058,14 +1072,22 @@ export default function ProjectWorkspacePage() {
                 itemNumber={form?.item_number}
               />
             )}
-            <IconButton
-              aria-label={t('common:buttons.close')}
-              title={t('common:buttons.close')}
-              onClick={() => { void closeWorkspace(); }}
-              size="small"
-            >
-              <CloseIcon />
-            </IconButton>
+            {isCreate || creation.beingCreated ? (
+              <CreationActions
+                busy={creation.cancelling}
+                onCreate={() => { void createAction(); }}
+                onCancel={() => { if (isCreate) void closeWorkspace(); else void cancelCreation(); }}
+              />
+            ) : (
+              <IconButton
+                aria-label={t('common:buttons.close')}
+                title={t('common:buttons.close')}
+                onClick={() => { void closeWorkspace(); }}
+                size="small"
+              >
+                <CloseIcon />
+              </IconButton>
+            )}
           </>
         )}
         properties={isCreate ? (

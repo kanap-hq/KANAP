@@ -160,6 +160,8 @@ export async function resolveItemAnalyticsChanges(
   tenantId: string,
   input: Record<string, unknown>,
   existingItemId: string | null,
+  /** A line created at its title (`ItemWriteOptions.creation`): its required dimensions come later. */
+  options: { skipRequiredOnCreate?: boolean } = {},
 ): Promise<ItemAnalyticsChange[]> {
   const supplied = (key: string) => Object.prototype.hasOwnProperty.call(input, key) && input[key] !== undefined;
   const valuesSupplied = supplied(ANALYTICS_VALUES_FIELD);
@@ -186,7 +188,7 @@ export async function resolveItemAnalyticsChanges(
   let axes: AnalyticsAxisInfo[] = await loadAnalyticsAxes(manager, tenantId);
   // A new line must end with a value on every required dimension (the resolved changes are its values).
   const checked = (changes: ItemAnalyticsChange[]): ItemAnalyticsChange[] => {
-    if (creating) {
+    if (creating && !options.skipRequiredOnCreate) {
       const values = new Map(changes.map((change) => [change.axis_id, change.category_id]));
       const [missing] = missingRequiredDimensions(axes, values, scope);
       if (missing) throw new BadRequestException(requiredDimensionMessage(missing));

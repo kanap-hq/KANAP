@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { ForbiddenException } from '@nestjs/common';
 import type { EntityManager, QueryRunner } from 'typeorm';
 import dataSource from '../../../data-source';
+import { writeAuditLog } from '../../../audit/audit.service';
 import { ItemNumberService } from '../../item-number.service';
 import { KnowledgeService } from '../../../knowledge/knowledge.service';
 import { IntegratedDocumentsService } from '../../../knowledge/integrated-documents.service';
@@ -187,4 +188,9 @@ export async function deletionAuthors(runner: QueryRunner, tenantId: string, tab
     [tenantId, table, recordId],
   );
   return rows.map((row: any) => row.user_id);
+}
+
+/** An update of the record's `field` in its history, written by `userId`, as an edit of it leaves. */
+export async function auditedEdit(runner: QueryRunner, table: string, recordId: string, userId: string, field = 'name') {
+  await writeAuditLog(runner.manager, { table, recordId, action: 'update', before: { [field]: 'Before' }, after: { [field]: 'After' }, userId });
 }

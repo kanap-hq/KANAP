@@ -52,7 +52,7 @@ import {
 } from './workspace/incidentWorkspace';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CancelCreationButton, CreationPreview, useCreationReturn, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
 const TAB_KEYS = ['overview', 'journal', 'relations', 'documents', RECORD_HISTORY_TAB_KEY] as const;
@@ -139,6 +139,7 @@ export function IncidentWorkspacePage() {
   // A refusal of the title typed on a new incident.
   const [titleError, setTitleError] = React.useState<string | null>(null);
   const creatingRef = React.useRef(false);
+  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('common:creation.titleRequired') });
   const [exportingPdf, setExportingPdf] = React.useState(false);
   // The incident review is an integrated document: its draft lives in the
   // editor, so every controlled transition has to drain it through this handle.
@@ -370,11 +371,22 @@ export function IncidentWorkspacePage() {
     navigate(listPath);
   }, [creationReturn, flushAll, isCreate, listPath, navigate]);
 
-  // "Cancel creation" counts what was written: the description and the review still typed go first.
+  // "Cancel" counts what was written: the description and the review still typed go first.
   const cancelCreation = React.useCallback(async () => {
     if (!(await flushAll())) return;
     await creation.cancelCreation();
   }, [creation, flushAll]);
+
+  // Create: on the new page, the title is the only field; on an incident being created, what is
+  // still being typed is saved, then the incident is kept and closed.
+  const createAction = React.useCallback(async () => {
+    if (isCreate) {
+      newCreate.create(titleError);
+      return;
+    }
+    if (!(await flushAll())) return;
+    creation.finishCreation();
+  }, [creation, flushAll, isCreate, newCreate, titleError]);
 
   const handleTabChange = React.useCallback(async (nextTab: string) => {
     if (nextTab === validTab) return;
@@ -399,8 +411,9 @@ export function IncidentWorkspacePage() {
   }, [flushAll, navigate, searchParams, validTab]);
 
   // The title committed in the header creates the incident at once, with the defaults of
-  // `draftValues`; the page moves to it, every tab open, with "Cancel creation". It is not
-  // confidential, so its creator always keeps access to it.
+  // `draftValues`; the page moves to it, every tab open, with Create and Cancel (or closes it,
+  // kept, when Create was clicked meanwhile). It is not confidential, so its creator always keeps
+  // access to it.
   const createIncident = React.useCallback(async (title: string) => {
     if (!canEdit || creatingRef.current) return;
     creatingRef.current = true;
@@ -414,6 +427,11 @@ export function IncidentWorkspacePage() {
         detected_at: new Date().toISOString(),
         reporter_user_id: draftValues.reporter_user_id,
       });
+      if (newCreate.titleSettled()) {
+        void queryClient.invalidateQueries({ queryKey: ['incidents-ids'] });
+        navigate(creationReturn, { replace: true });
+        return;
+      }
       creation.startCreation({ recordId: saved.id, token, returnTo: creationReturn });
       void queryClient.invalidateQueries({ queryKey: ['incidents-ids'] });
       const savedRef = formatItemRef('incident', saved.item_number);
@@ -421,22 +439,24 @@ export function IncidentWorkspacePage() {
       const qs = listContextParams.toString();
       navigate(`/it/incidents/${savedRef}/overview${qs ? `?${qs}` : ''}`, { replace: true });
     } catch (e) {
+      newCreate.titleSettled();
       setTitleError(getApiErrorMessage(e, t, t('workspace.incident.messages.createFailed')));
     } finally {
       creatingRef.current = false;
     }
-  }, [canEdit, creation, creationReturn, draftValues, listContextParams, navigate, queryClient, t]);
+  }, [canEdit, creation, creationReturn, draftValues, listContextParams, navigate, newCreate, queryClient, t]);
 
   const handleTitleSave = React.useCallback((next: string) => {
     const trimmed = next.trim();
     if (!trimmed) return;
     if (isCreate) {
+      newCreate.titleSent();
       void createIncident(trimmed);
       return;
     }
     if (!data || trimmed === data.title) return;
     void patchNow({ title: trimmed });
-  }, [createIncident, data, isCreate, patchNow]);
+  }, [createIncident, data, isCreate, newCreate, patchNow]);
 
   const handleConfidentiality = React.useCallback(async (confidential: boolean) => {
     if (!data || stale) return;
@@ -586,13 +606,6 @@ export function IncidentWorkspacePage() {
 
   const actions = (
     <>
-      {!isCreate && (
-        <CancelCreationButton
-          beingCreated={creation.beingCreated}
-          cancelling={creation.cancelling}
-          onCancel={() => { void cancelCreation(); }}
-        />
-      )}
       {!isCreate && data && canView && (
         <Button
           variant="action"
@@ -646,7 +659,7 @@ export function IncidentWorkspacePage() {
           {t('workspace.incident.actions.reopen')}
         </Button>
       )}
-      {/* Hidden beside "Cancel creation": two cancels of the same incident would sit side by side. */}
+      {/* Hidden while the incident is being created: two cancels of the same incident would sit side by side. */}
       {!isCreate && data && isAdmin && !locked && !creation.beingCreated && (
         <Button variant="action-danger" size="small" onClick={() => void handleCancel()} disabled={stale}>
           {t('workspace.incident.actions.cancel')}
@@ -660,6 +673,13 @@ export function IncidentWorkspacePage() {
           beforeDelete={() => flushAll()}
           onDeleted={leaveRegister}
           onError={setError}
+        />
+      )}
+      {((isCreate && canEdit) || creation.beingCreated) && (
+        <CreationActions
+          busy={creation.cancelling}
+          onCreate={() => { void createAction(); }}
+          onCancel={() => { if (isCreate) void handleClose(); else void cancelCreation(); }}
         />
       )}
     </>
@@ -731,6 +751,7 @@ export function IncidentWorkspacePage() {
         titleError={isCreate ? titleError : null}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? () => { void handleClose(); } : undefined}
+        titleFocusRequest={newCreate.focusRequest}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
         onSaveShortcut={() => { if (!isCreate) void flushAll(); }}

@@ -56,6 +56,21 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
     await deleteBlobs(this.storage, paths, this.logger);
   }
 
+  /**
+   * The rows step of `delete` alone, for "Cancel" of a line being created
+   * (`BudgetLinesService.cancelCreation`): the rows go inside its delete window; the attachment
+   * paths it returns go through `deleteFiles` once the window is closed.
+   */
+  async deleteRowsOf(itemId: string, opts: { manager: EntityManager; userId: string | null }): Promise<string[]> {
+    const tenantId = await currentTenantId(opts.manager);
+    return this.deleteRows(itemId, tenantId, opts.manager, opts.userId, false);
+  }
+
+  /** The attachment files `deleteRowsOf` returned, best effort. */
+  async deleteFiles(paths: string[]): Promise<void> {
+    await deleteBlobs(this.storage, paths, this.logger);
+  }
+
   /** Deletes the item's rows; returns the attachment paths nothing references any more. */
   private async deleteRows(
     itemId: string,

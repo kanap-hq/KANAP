@@ -70,6 +70,8 @@ type PortfolioDetailWorkspaceShellProps = {
   titleAutoEdit?: boolean;
   /** Escape in the empty title of `titleAutoEdit`: leave without creating anything. */
   titleOnCancel?: () => void;
+  /** Each new value moves the focus to the title (Create on an empty title). */
+  titleFocusRequest?: number;
   /** Omitted (e.g. on a create page), the shell draws no Properties tab and no drawer. */
   properties?: React.ReactNode;
   tabs: PortfolioDetailWorkspaceTab[];
@@ -212,6 +214,7 @@ export default function PortfolioDetailWorkspaceShell({
   titleAutoEdit = false,
   titleMaxLength,
   titleOnCancel,
+  titleFocusRequest,
   titleRequiredMessage,
   properties,
   tabs,
@@ -440,6 +443,7 @@ export default function PortfolioDetailWorkspaceShell({
                         autoEdit={titleAutoEdit}
                         emphasizeEmpty={titleAutoEdit}
                         onCancel={titleOnCancel}
+                        focusRequest={titleFocusRequest}
                       />
                     </>
                   )}

@@ -39,11 +39,14 @@ Der neue Vorfall ist **Offen**, mit dem Schweregrad **Mittel**, jetzt erkannt, u
 
 Beide Daten akzeptieren Werte in der Vergangenheit: Ein am Montagmorgen entdeckter Vorfall kann als am Samstagabend begonnen erfasst werden. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erfassen.
 
-### Erstellung abbrechen { #cancelling-a-creation }
+### Erstellen oder abbrechen { #cancelling-a-creation }
 
-Solange Sie auf dem gerade erfassten Vorfall bleiben, löscht **Erstellung abbrechen** in der Kopfzeile ihn und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Wenn Sie mehr als den Titel eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Vorfällen abbrechen. **Vorfall abbrechen** ist währenddessen ausgeblendet.
+Solange der Vorfall erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie den Vorfall verlassen.
 
-Das Abbrechen der Erstellung wird abgelehnt, sobald der Vorfall geschlossen oder abgebrochen ist oder Daten zur behördlichen Meldung enthält (siehe [Einen Vorfall löschen](#einen-vorfall-loschen)). Sobald Sie den Vorfall verlassen, bleibt er im Register. Die Referenz einer abgebrochenen Erstellung wird nicht wiederverwendet.
+- **Erstellen** behält den Vorfall und schließt ihn. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen
+- **Abbrechen** schließt, ohne etwas zu behalten. Ein bereits erstellter Vorfall wird gelöscht. Wenn Sie mehr als den Titel eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Vorfällen abbrechen
+
+**Vorfall abbrechen** ist ausgeblendet, solange der Vorfall erstellt wird. Das Abbrechen der Erstellung wird abgelehnt, sobald der Vorfall geschlossen oder abgebrochen ist oder Daten zur behördlichen Meldung enthält (siehe [Einen Vorfall löschen](#einen-vorfall-loschen)). Verlassen Sie den Vorfall auf andere Weise, bleibt er im Register. Die Referenz einer abgebrochenen Erstellung wird nicht wiederverwendet.
 
 **Berechtigungen**:
 

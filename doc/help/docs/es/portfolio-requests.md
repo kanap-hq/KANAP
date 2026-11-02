@@ -86,7 +86,7 @@ El encabezado del espacio de trabajo le da contexto operativo sin salir de la p�
 - una franja de metadatos con **Estado**, **Puntuación**, **Solicitante**, **Responsable IT**, **Fecha de entrega objetivo** y (cuando aplica) la **Tarea de origen** desde la que se creó la solicitud
 - **Compartir** para enviar un enlace a la solicitud
 - **Convertir en proyecto** cuando la solicitud está **Aprobada** o **Convertida**
-- **Cancelar la creación**, mientras permanezca en una solicitud que acaba de crear. Consulte [Cancelar la creación](#cancelling-a-creation)
+- **Crear** y **Cancelar**, mientras la solicitud se está creando. Consulte [Crear o cancelar](#cancelling-a-creation)
 - **Eliminar**, un icono de papelera, para administradores (cuando la solicitud aún no se ha convertido). Una solicitud convertida sigue siendo el origen de su proyecto y no se puede eliminar
 - navegación anterior/siguiente basada en el contexto exacto de la lista del que vino
 
@@ -98,11 +98,14 @@ El encabezado del espacio de trabajo le da contexto operativo sin salir de la p�
 
 Complete después el panel de Propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulse Escape en el título vacío para salir sin crear nada.
 
-### Cancelar la creación { #cancelling-a-creation }
+### Crear o cancelar { #cancelling-a-creation }
 
-Mientras permanezca en la solicitud que acaba de crear, **Cancelar la creación** en el encabezado la elimina y le devuelve al punto de partida: la lista o la pantalla anterior. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar solicitudes.
+Mientras la solicitud se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la solicitud.
 
-Una vez que sale de la solicitud, esta permanece. Un administrador puede entonces eliminarla con **Eliminar**. La referencia de una solicitud cancelada no se reutiliza.
+- **Crear** conserva la solicitud y la cierra. Vuelve al punto de partida: la lista o la pantalla anterior. Con el título vacío, no se cierra nada y el título pide uno
+- **Cancelar** cierra sin conservar nada. En una solicitud ya creada, la elimina. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar solicitudes
+
+Si sale de la solicitud de otra forma, esta permanece. Un administrador puede entonces eliminarla con **Eliminar**. La referencia de una solicitud cancelada no se reutiliza.
 
 ### Panel de Propiedades
 

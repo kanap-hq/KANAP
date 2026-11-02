@@ -12,6 +12,7 @@ import { ItemNumberService } from '../../common/item-number.service';
 import { closeMarkdownWorkers } from '../../common/markdown-worker';
 import { issueCreationToken } from '../../common/creation/creation-token';
 import {
+  auditedEdit,
   boundDocuments,
   deletionAuthors,
   inRolledBackTransaction,
@@ -102,6 +103,13 @@ async function testCreatorCancelsTheCreation() {
       { now: Date.now() - 25 * 60 * 60 * 1000 },
     );
     await refusedAsExpired(controller.cancelCreation(created.id, { token: expired }, asCreator), 'expired token');
+
+    // Another person wrote on the other incident: its creator's cancel is over (preflight and cancel).
+    await auditedEdit(runner, 'incidents', other.id, otherId, 'title');
+    await refusedAsExpired(controller.creationChanges(other.id, other.creation_token, asCreator), 'another author, preflight');
+    await refusedAsExpired(controller.cancelCreation(other.id, { token: other.creation_token }, asCreator), 'another author');
+    // The creator's own edit keeps it open.
+    await auditedEdit(runner, 'incidents', created.id, creatorId, 'title');
 
     // Regulatory reporting data keeps the incident in the register, cancel or not.
     await runner.query(`UPDATE incidents SET personal_data_affected = true WHERE tenant_id = $1 AND id = $2`, [tenantId, created.id]);

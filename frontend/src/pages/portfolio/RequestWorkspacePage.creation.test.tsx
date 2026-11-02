@@ -25,8 +25,9 @@ const translation = {
 };
 vi.mock('react-i18next', () => ({ useTranslation: () => translation, initReactI18next: { type: '3rdParty', init: () => undefined } }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+const auth = vi.hoisted(() => ({ admin: false }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: (_resource: string, level: string) => level !== 'admin', profile: { id: 'user-1', first_name: 'Ada', last_name: 'Lovelace' } }),
+  useAuth: () => ({ hasLevel: (_resource: string, level: string) => auth.admin || level !== 'admin', profile: { id: 'user-1', first_name: 'Ada', last_name: 'Lovelace' } }),
 }));
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'acme' }) }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
@@ -127,6 +128,7 @@ describe('Request creation at the title', () => {
     vi.clearAllMocks();
     resetCreationStore();
     resetNavigationTracker();
+    auth.admin = false;
   });
 
   it('opens with the title to type and the request to come dimmed, without its name field', async () => {
@@ -134,7 +136,10 @@ describe('Request creation at the title', () => {
     const input = await screen.findByRole('textbox', { name: TITLE });
     expect(input).toHaveFocus();
     expect(input).toHaveAttribute('placeholder', 'portfolio:workspace.request.title.new');
-    expect(screen.queryByRole('button', { name: 'common:buttons.create' })).toBeNull();
+    // Create and Cancel in place of the close button.
+    expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'portfolio:labels.analysis' })).toBeDisabled();
 
     // The metadata, the summary and the properties panel of an empty request.
@@ -178,7 +183,7 @@ describe('Request creation at the title', () => {
     for (const tab of screen.getAllByRole('tab')) expect(tab).not.toBeDisabled();
     expect(screen.queryByTestId('creation-preview')).toBeNull();
     expect(screen.queryByText('workspace.request.fields.requestName')).toBeNull();
-    expect(screen.getByRole('button', { name: 'common:creation.cancel' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
   });
 
   it('waits for the classification defaults before creating', async () => {
@@ -198,7 +203,7 @@ describe('Request creation at the title', () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new request' }));
     await createDataPlatform();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:creation.cancel' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.cancel' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.get).toHaveBeenCalledWith('/portfolio/requests/req-new/creation', { params: { token: 'token-1' } });
     expect(mocked.delete).toHaveBeenCalledWith('/portfolio/requests/req-new/creation', { data: { token: 'token-1' } });
@@ -208,7 +213,7 @@ describe('Request creation at the title', () => {
   it('asks before cancelling a creation that holds more than its title', async () => {
     renderPage(['/portfolio/requests/new/summary'], { changes: { fields: 0, children: { document: 1, attachment: 2 } } });
     await createDataPlatform();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:creation.cancel' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.cancel' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/common:creation\.confirmMessage/).textContent).toContain(
       'changes=common:creation.changes.documents(count=1), common:creation.changes.attachments(count=2)',
@@ -226,5 +231,39 @@ describe('Request creation at the title', () => {
     fireEvent.keyDown(input, { key: 'Escape' });
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.post).not.toHaveBeenCalled();
+  });
+  it('shows no Delete beside Cancel while the request is being created, and Delete once it is left', async () => {
+    auth.admin = true;
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new request' }));
+    await createDataPlatform();
+    expect(await screen.findByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+    cleanup();
+    renderPage(['/portfolio/requests/REQ-9/summary']);
+    expect(await screen.findByRole('button', { name: 'common:buttons.delete' })).toBeTruthy();
+  });
+
+  it('shows the error under the empty title on Create and gives it the focus, nothing created', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new request' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE })).toHaveFocus());
+    expect(input).toBeTruthy();
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(location()).not.toBe('/start');
+  });
+
+  it('keeps the record being created and closes it on Create, back where the creation started', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new request' }));
+    await createDataPlatform();
+    expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(mocked.delete).not.toHaveBeenCalled();
+    expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 });

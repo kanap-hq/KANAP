@@ -81,22 +81,15 @@
       "history": "History"
     },
     "editor": {
-      "productNameRequired": "Product name is required",
-      "currencyMust3": "Currency must be 3 letters",
-      "payingCompanyRequired": "Paying company is required",
-      "accountRequired": "Account is required",
-      "dimensionRequired": "{{name}} is required",
       "requiredLeaveTitle_one": "Required value missing",
       "requiredLeaveTitle_other": "Required values missing",
       "requiredLeaveMessage_one": "{{names}} is required. Choose a value before leaving.",
       "requiredLeaveMessage_other": "{{names}} are required. Choose values before leaving.",
       "requiredLeaveStay": "Stay",
       "requiredLeaveConfirm": "Leave anyway",
-      "effectiveStartRequired": "Effective start is required",
       "failedToCreate": "Failed to create line",
       "failedToSave": "Failed to save",
-      "failedToLoad": "Failed to load line",
-      "obsoleteAccount": "Obsolete account detected. The selected account does not belong to the company's Chart of Accounts. Please update the account."
+      "failedToLoad": "Failed to load line"
     },
     "budget": {
       "title": "Budget",
@@ -1925,6 +1918,16 @@
       "deleted_other": "{{count}} budget lines deleted",
       "failed": "The budget line could not be deleted."
     },
-    "readOnlyInYourAccess": "Read only in your access"
+    "readOnlyInYourAccess": "Read only in your access",
+    "creation": {
+      "record": "The budget line",
+      "missing": "Missing: {{fields}}",
+      "placeFirst": "Choose the paying company or the cost center first.",
+      "leaveTitle": "This line is incomplete",
+      "leaveComplete": "Complete it",
+      "leaveDelete": "Delete it",
+      "leaveAnyway": "Leave anyway",
+      "completeFailed": "The line could not be checked."
+    }
   }
 }

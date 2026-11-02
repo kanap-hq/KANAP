@@ -1715,7 +1715,6 @@
     }
   },
   "creation": {
-    "cancel": "Erstellung abbrechen",
     "confirmTitle": "Erstellung abbrechen",
     "confirmMessage": "{{record}} und was Sie hinzugefügt haben ({{changes}}) werden gelöscht.",
     "keep": "Behalten",
@@ -1738,7 +1737,18 @@
       "timeEntries_one": "{{count}} Zeiteintrag",
       "timeEntries_other": "{{count}} Zeiteinträge",
       "journalEntries_one": "{{count}} Journaleintrag",
-      "journalEntries_other": "{{count}} Journaleinträge"
-    }
+      "journalEntries_other": "{{count}} Journaleinträge",
+      "amounts_one": "die Beträge",
+      "amounts_other": "die Beträge",
+      "allocations_one": "die Zuordnungen",
+      "allocations_other": "die Zuordnungen",
+      "versions_one": "{{count}} Budgetversion",
+      "versions_other": "{{count}} Budgetversionen",
+      "contacts_one": "{{count}} Kontakt",
+      "contacts_other": "{{count}} Kontakte",
+      "tasks_one": "{{count}} Aufgabe",
+      "tasks_other": "{{count}} Aufgaben"
+    },
+    "titleRequired": "Geben Sie einen Titel ein."
   }
 }

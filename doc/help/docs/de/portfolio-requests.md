@@ -86,7 +86,7 @@ Die Arbeitsbereichs-Kopfzeile gibt Ihnen operativen Kontext, ohne die Seite zu v
 - eine Metadatenleiste mit **Status**, **Bewertung**, **Anforderer**, **IT-Verantwortlicher**, **Ziel-Lieferdatum** und (falls zutreffend) der **Quell-Aufgabe**, aus der die Anfrage erstellt wurde
 - **Teilen**, um einen Link zur Anfrage zu senden
 - **In Projekt umwandeln**, wenn die Anfrage **Genehmigt** oder **Konvertiert** ist
-- **Erstellung abbrechen**, solange Sie auf einer gerade erstellten Anfrage bleiben. Siehe [Erstellung abbrechen](#cancelling-a-creation)
+- **Erstellen** und **Abbrechen**, solange die Anfrage erstellt wird. Siehe [Erstellen oder abbrechen](#cancelling-a-creation)
 - **Löschen**, ein Papierkorbsymbol, für Administratoren (wenn die Anfrage noch nicht konvertiert ist). Eine konvertierte Anfrage bleibt der Ursprung ihres Projekts und kann nicht gelöscht werden
 - Vorherige/Nächste-Navigation basierend auf dem genauen Listenkontext, aus dem Sie kamen
 
@@ -98,11 +98,14 @@ Die Arbeitsbereichs-Kopfzeile gibt Ihnen operativen Kontext, ohne die Seite zu v
 
 Füllen Sie dann die Eigenschaftsleiste und den **Zweck** aus. Der Name wird nur in der Kopfzeile bearbeitet. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erstellen.
 
-### Erstellung abbrechen { #cancelling-a-creation }
+### Erstellen oder abbrechen { #cancelling-a-creation }
 
-Solange Sie auf der gerade erstellten Anfrage bleiben, löscht **Erstellung abbrechen** in der Kopfzeile sie und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Anfragen abbrechen.
+Solange die Anfrage erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie die Anfrage verlassen.
 
-Sobald Sie die Anfrage verlassen, bleibt sie bestehen. Ein Administrator kann sie dann mit **Löschen** löschen. Die Referenz einer abgebrochenen Anfrage wird nicht wiederverwendet.
+- **Erstellen** behält die Anfrage und schließt sie. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen
+- **Abbrechen** schließt, ohne etwas zu behalten. Eine bereits erstellte Anfrage wird gelöscht. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Anfragen abbrechen
+
+Verlassen Sie die Anfrage auf andere Weise, bleibt sie bestehen. Ein Administrator kann sie dann mit **Löschen** löschen. Die Referenz einer abgebrochenen Anfrage wird nicht wiederverwendet.
 
 ### Eigenschaftsleiste
 

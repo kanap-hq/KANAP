@@ -52,7 +52,7 @@ Füllen Sie dann das Wesentliche in der Kopfzeile und der Eigenschaftsleiste aus
 | **Geschäftskritikalität** | Geschäftliche Bedeutung | `Geschäftskritisch` |
 | **Lebenszyklus** | Aktueller Status (bei der Erstellung Aktiv) | `Aktiv` |
 
-Solange Sie auf ihrer Seite sind, löscht **Erstellung abbrechen** in der Kopfzeile die neue Anwendung.
+Solange Sie auf ihrer Seite sind, behält **Erstellen** in der Kopfzeile die neue Anwendung und schließt sie, und **Abbrechen** löscht sie.
 
 !!! tip "Beginnen Sie mit dem, was Sie wissen"
     Beschreibung, Herausgeber, Version, Lizenzierung: alles nützlich, aber in diesem Stadium optional. Sie können später anreichern. Das Ziel ist, die App ins System zu bekommen.

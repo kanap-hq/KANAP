@@ -207,7 +207,7 @@ The two settings must agree. A dimension cannot be set to one kind of line while
 
 Turn on **Required** when every budget line must be classified on a dimension. KANAP then checks the lines of the kinds the dimension is used for:
 
-- **A new line needs a value on the dimension.** This applies to every way of creating a line: the OPEX and CAPEX screens, a budget file, Plaid and the API. Without a value, the line is not created, with the message "The Cost pool dimension is required. Choose a value."
+- **A new line needs a value on the dimension.** A budget file, Plaid and the API do not create a line without one, with the message "The Cost pool dimension is required. Choose a value." On the budget line screen, a line exists from its title, and **Create** lists the dimension as missing until it has a value.
 - **A line that holds a value cannot lose it.** You can pick another value. The field cannot be cleared.
 - **A line created before you turned the setting on keeps working.** If it has no value on the dimension, it stays editable and you can save other changes on it. Its field is marked as required. On the OPEX and CAPEX screens, leaving such a line after changing it asks you to choose a value first, with **Stay** and **Leave anyway**. Opening it without changing anything never asks.
 
@@ -332,7 +332,7 @@ The default dimension cannot be disabled.
 In the **Properties** panel of an OPEX or CAPEX line, and when you create one, each enabled dimension used for that kind of line has its own field, named after the dimension, in dimension order. The default dimension shows as **Analytics dimension** until you rename it.
 
 - Pick a value, or clear the field to leave the line without a value on that dimension. The change saves at once.
-- A required dimension's field is marked with an asterisk. A new line cannot be created without a value on it, with the message "Cost pool is required". On a line that holds a value, the field offers no clear button: you can only pick another value. See [Required dimensions](#required-dimensions).
+- A required dimension's field is marked with an asterisk. On a line being created, **Create** lists it as missing until it has a value. On a line that holds a value, the field offers no clear button: you can only pick another value. See [Required dimensions](#required-dimensions).
 - The field lists the enabled values of its dimension that are used for this kind of line. A disabled value, or a value used for the other kind of line only, stays shown on the lines that have it. See [OPEX or CAPEX values](#opex-or-capex-values).
 - On a dimension with [open values](#open-values), the field offers **Add “…”** for a name that does not exist. On the other dimensions, the field cannot create a value: create values on the Analytics dimensions page, or let the budget file create them.
 - A value applies to the whole line, across all years.

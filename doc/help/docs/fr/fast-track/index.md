@@ -56,7 +56,7 @@ Remplissez ensuite les détails minimaux dans la barre latérale de propriétés
 
 Puis utilisez le document **Objet** dans le **Résumé** pour expliquer le besoin métier et le résultat attendu en langage courant. Si vous avez déjà un brief dans Word, utilisez le bouton **Import** sur l'éditeur d'Objet pour importer le fichier `.docx` directement, sans copier-coller.
 
-Tant que vous êtes sur sa page, **Annuler la création** dans l'en-tête supprime la nouvelle demande.
+Tant que vous êtes sur sa page, **Créer** dans l'en-tête conserve la nouvelle demande et la ferme, et **Annuler** la supprime.
 
 !!! tip "Conseil : Restez léger"
     Vous pourrez ajouter une analyse plus approfondie, des documents de base de connaissances liés et des preuves de support plus tard. L'objectif maintenant est d'introduire la demande dans le flux d'intake gouverné.

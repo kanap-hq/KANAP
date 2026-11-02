@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { BulkDeleteResult } from '../common/delete.types';
@@ -19,6 +19,18 @@ import {
 import { budgetLineContractConsistency } from '../contracts/contract-line-match';
 import { CapexItemsService, SpendItemsService } from './spend-items.service';
 import { hiddenCategoryLineCounts } from '../data-access/hidden-links';
+import { withCreatorCancelAccess } from '../data-access/creator-cancel-access';
+import { countChangesSinceCreation, withChildCount, type CreationChanges } from '../common/creation/creation-changes';
+import { assertCreatorAloneSinceCreation } from '../common/creation/creation-changes';
+import { creationCancelExpired } from '../common/creation/creation-token';
+import {
+  assertBudgetLineCreationToken,
+  budgetLineIncomplete,
+  creationBody,
+  hasSuccessorLine,
+  missingCreationFields,
+} from './budget-line-creation';
+import { lockBudgetLine } from './budget-locks';
 
 type ReadOptions = { manager: EntityManager; access?: BudgetListAccess };
 
@@ -68,6 +80,76 @@ export class BudgetLinesService {
     const input = this.nativeBody(body, nature, false);
     const created = await this.items(nature).create(input, userId, { ...opts, fields: 'columns', native: true });
     return this.get(created.id, opts);
+  }
+
+  /**
+   * A line created at its title on the screen (`budget-line-creation.ts`): the title, the type, the
+   * currency, the start date and, when given, its place; no paying company or required dimension
+   * yet. The data-access placement rule still applies (a limited person gives a place).
+   */
+  async createAtTitle(body: unknown, userId: string | undefined, opts: { manager: EntityManager }) {
+    const nature = (body as any)?.nature;
+    if (nature !== 'opex' && nature !== 'capex') throw new BadRequestException('nature must be opex or capex.');
+    const input = creationBody(body);
+    const created = await this.items(nature).create(input, userId, { ...opts, fields: 'columns', native: true, creation: true });
+    return this.get(created.id, opts);
+  }
+
+  /**
+   * What was written on the line and its children since its creation, before "Cancel" (nothing is
+   * written); 403 `CREATION_CANCEL_EXPIRED` when "Cancel" would be refused: another person wrote on
+   * it, or a line continues it.
+   */
+  async creationChanges(id: string, userId: string, opts: { manager: EntityManager }): Promise<{ changes: CreationChanges }> {
+    const tenantId = await summaryTenantId(opts.manager);
+    const found = await opts.manager.query(
+      `SELECT 1 FROM spend_items WHERE tenant_id = $1 AND id = $2 AND nature IN ('opex', 'capex')`,
+      [tenantId, id],
+    );
+    if (!found.length) throw new NotFoundException('Budget line not found');
+    await assertCreatorAloneSinceCreation(opts.manager, tenantId, 'spend_items', id, userId);
+    if (await hasSuccessorLine(opts.manager, tenantId, id)) throw creationCancelExpired();
+    const changes = await countChangesSinceCreation(opts.manager, tenantId, 'spend_items', id);
+    const [{ total }] = await opts.manager.query(
+      'SELECT count(*)::int AS total FROM spend_attachments WHERE tenant_id = $1 AND spend_item_id = $2',
+      [tenantId, id],
+    );
+    return { changes: withChildCount(changes, 'attachment', total) };
+  }
+
+  /** The screen's "Create": 400 `BUDGET_LINE_INCOMPLETE` while the line lacks a field it needs. */
+  async completeCreation(id: string, opts: { manager: EntityManager }): Promise<{ complete: true }> {
+    const tenantId = await summaryTenantId(opts.manager);
+    const missing = await missingCreationFields(opts.manager, tenantId, id);
+    if (!missing) throw new NotFoundException('Budget line not found');
+    if (missing.fields.length > 0) throw budgetLineIncomplete(missing.fields, missing.names);
+    return { complete: true };
+  }
+
+  /**
+   * The screen's "Cancel" of a line being created: its creator deletes it, through the delete of its
+   * nature (refusals such as `BUDGET_LINE_FROZEN`, children, audit entry). Called by its route only
+   * (`data-access-inventory.spec.ts`).
+   * - The creation token is checked here, against the transaction's tenant and `userId`: no caller
+   *   reaches the delete window without it (403 `CREATION_CANCEL_EXPIRED`).
+   * - The line is locked FOR UPDATE under the person's access: a line hidden from them is 404, one
+   *   they may no longer modify 403. Under that lock, a line another person wrote on, or that a line
+   *   continues, is refused with `CREATION_CANCEL_EXPIRED`.
+   * - A limited person's delete then runs in `withCreatorCancelAccess`, for this line only; its
+   *   attachment files go once the window is closed and the person's access is back.
+   */
+  async cancelCreation(id: string, token: unknown, userId: string, opts: { manager: EntityManager }): Promise<void> {
+    const tenantId = await summaryTenantId(opts.manager);
+    assertBudgetLineCreationToken(id, token, { tenantId, userId });
+    const line = await resolveBudgetLine(id, opts.manager);
+    if (!(await lockBudgetLine(opts.manager, line.nature, tenantId, line.id, 'update'))) {
+      throw new NotFoundException('Budget line not found');
+    }
+    await assertCreatorAloneSinceCreation(opts.manager, tenantId, 'spend_items', line.id, userId);
+    if (await hasSuccessorLine(opts.manager, tenantId, line.id)) throw creationCancelExpired();
+    const deleter = line.nature === 'capex' ? this.capexDelete : this.opexDelete;
+    const paths = await withCreatorCancelAccess(opts.manager, userId, (manager) => deleter.deleteRowsOf(line.id, { manager, userId }));
+    await deleter.deleteFiles(paths);
   }
 
   async update(ref: string, body: unknown, userId: string | undefined, opts: { manager: EntityManager }) {

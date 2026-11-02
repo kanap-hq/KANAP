@@ -39,11 +39,14 @@ The new incident is **Open**, with severity **Minor**, detected now, and you as 
 
 Both dates accept past values, so an incident discovered on Monday morning can be recorded as having started on Saturday night. Press Escape on the empty title to leave without logging anything.
 
-### Cancelling a creation { #cancelling-a-creation }
+### Creating or cancelling { #cancelling-a-creation }
 
-While you stay on the incident you just logged, **Cancel creation** in the header deletes it and takes you back to where you started: the list or the previous screen. If you entered more than the title, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete incidents. **Cancel incident** is hidden meanwhile.
+While the incident is being created, its header shows **Create** and **Cancel**. They stay until you leave the incident.
 
-Cancelling a creation is refused once the incident is closed or cancelled, or holds regulatory reporting data (see [Deleting an incident](#deleting-an-incident)). Once you leave the incident, it stays in the register. The reference of a cancelled creation is not used again.
+- **Create** keeps the incident and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one
+- **Cancel** closes without keeping anything. On an incident already created, it deletes it. If you entered more than the title, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete incidents
+
+**Cancel incident** is hidden while the incident is being created. Cancelling a creation is refused once the incident is closed or cancelled, or holds regulatory reporting data (see [Deleting an incident](#deleting-an-incident)). Leaving the incident any other way keeps it in the register. The reference of a cancelled creation is not used again.
 
 **Permissions**:
 

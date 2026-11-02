@@ -71,7 +71,7 @@ import { useLocale } from '../../i18n/useLocale';
 import ApplicationClassificationPanel, { HelpLabel, HelpTip, type RecoveryDependency } from './components/ApplicationClassificationPanel';
 import ApplicationCriticalityMetadata from './components/ApplicationCriticalityMetadata';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
-import { CancelCreationButton, CreationPreview, useCreationReturn, useRecordCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
@@ -1469,6 +1469,7 @@ export default function ApplicationWorkspacePage() {
   // A refusal of the name typed on a new application (a name another application has).
   const [titleError, setTitleError] = React.useState<string | null>(null);
   const creatingRef = React.useRef(false);
+  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('messages.nameRequired') });
   const [error, setError] = React.useState<string | null>(null);
   const feedbackRef = React.useRef<ReturnType<typeof useApplicationFeedback>>({ error: () => undefined, undo: () => undefined, info: () => undefined });
 
@@ -1614,7 +1615,8 @@ export default function ApplicationWorkspacePage() {
   }, [queryClient, updateApplicationCache, t]);
 
   // The name committed in the header creates the application at once (category and lifecycle
-  // take the server defaults); the page moves to it, every tab open, with "Cancel creation".
+  // take the server defaults); the page moves to it, every tab open, with Create and Cancel (or
+  // closes it, kept, when Create was clicked meanwhile).
   const createApplication = React.useCallback(async (name: string) => {
     if (creatingRef.current) return;
     creatingRef.current = true;
@@ -1624,6 +1626,14 @@ export default function ApplicationWorkspacePage() {
       // The created row: no child list yet (owners, audience, deployments).
       const res = await api.post<Partial<ApplicationDetail> & { id: string; name: string; creation_token: string }>('/applications', { name });
       const { creation_token: token, ...created } = res.data;
+      if (newCreate.titleSettled()) {
+        void queryClient.invalidateQueries({
+          predicate: (query) => ['applications', 'app-filter-values'].some((key) => String(query.queryKey[0]).startsWith(key)),
+          refetchType: 'none',
+        });
+        navigate(creationReturn, { replace: true });
+        return;
+      }
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       const target = created.sequential_id || created.id;
       // The page keeps its header while the full record loads: the title button takes the focus.
@@ -1637,11 +1647,29 @@ export default function ApplicationWorkspacePage() {
       });
       navigate(canonicalPathFor(target, 'overview'), { replace: true });
     } catch (err) {
+      newCreate.titleSettled();
       setTitleError(getApiErrorMessage(err, t, t('messages.createApplicationFailed')));
     } finally {
       creatingRef.current = false;
     }
-  }, [canonicalPathFor, creation, creationReturn, navigate, queryClient, t]);
+  }, [canonicalPathFor, creation, creationReturn, navigate, newCreate, queryClient, t]);
+
+  // Create: on the new page, the title is the only field; on an application being created, what is
+  // still being typed is saved, then the application is kept and closed.
+  const createAction = React.useCallback(async () => {
+    if (isCreate) {
+      newCreate.create(titleError);
+      return;
+    }
+    if (overviewEditorRef.current && !(await overviewEditorRef.current.save())) return;
+    try {
+      await saveQueue.current;
+    } catch {
+      return;
+    }
+    if (classificationSaveFailed.current) return;
+    creation.finishCreation();
+  }, [creation, isCreate, newCreate, titleError]);
 
   const copyReference = React.useCallback(async (reference: string) => {
     try {
@@ -1731,6 +1759,7 @@ export default function ApplicationWorkspacePage() {
         readOnly={!isCreate && !canManage}
         onTitleSave={(value) => {
           if (isCreate) {
+            newCreate.titleSent();
             void createApplication(value);
             return;
           }
@@ -1740,6 +1769,7 @@ export default function ApplicationWorkspacePage() {
         titleError={isCreate ? titleError : undefined}
         titleAutoEdit={isCreate}
         titleOnCancel={isCreate ? closeWorkspace : undefined}
+        titleFocusRequest={newCreate.focusRequest}
         titleRequiredMessage={t('messages.nameRequired')}
         titleMaxLength={APPLICATION_NAME_MAX}
         isCreate={isCreate}
@@ -1805,13 +1835,6 @@ export default function ApplicationWorkspacePage() {
         ) : undefined}
         actions={(
           <>
-            {!isCreate && (
-              <CancelCreationButton
-                beingCreated={creation.beingCreated}
-                cancelling={creation.cancelling}
-                onCancel={() => { void creation.cancelCreation(); }}
-              />
-            )}
             {!isCreate && app && (
               <SendLinkButton
                 itemType="application"
@@ -1832,7 +1855,7 @@ export default function ApplicationWorkspacePage() {
                 onConverted={(technologyId) => navigate(`/it/technologies/${technologyId}`)}
               />
             )}
-            {!isCreate && canDelete && app && (
+            {!isCreate && !creation.beingCreated && canDelete && app && (
               <ApplicationDeleteButton
                 applicationId={app.id}
                 applicationName={app.name || t('workspace.application.untitled')}
@@ -1840,9 +1863,17 @@ export default function ApplicationWorkspacePage() {
                 onError={setError}
               />
             )}
-            <IconButton aria-label={t('common:buttons.close')} title={t('common:buttons.close')} onClick={closeWorkspace} size="small">
-              <CloseIcon />
-            </IconButton>
+            {isCreate || creation.beingCreated ? (
+              <CreationActions
+                busy={creation.cancelling}
+                onCreate={() => { void createAction(); }}
+                onCancel={() => { if (isCreate) closeWorkspace(); else void creation.cancelCreation(); }}
+              />
+            ) : (
+              <IconButton aria-label={t('common:buttons.close')} title={t('common:buttons.close')} onClick={closeWorkspace} size="small">
+                <CloseIcon />
+              </IconButton>
+            )}
           </>
         )}
         properties={isCreate ? (
