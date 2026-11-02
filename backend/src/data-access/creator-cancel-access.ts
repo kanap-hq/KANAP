@@ -13,6 +13,8 @@ import { applyDataAccess } from './data-access';
  * `data-access-inventory.spec.ts`, which checks its single caller):
  * - the caller has checked the token and locked the line FOR UPDATE under the limited role (the
  *   UPDATE policy: a line the person may no longer modify is refused before the window);
+ * - the access applied to the transaction is the person's (`app.da_user`, set by
+ *   `data_access_apply`, equals `userId`): a window for anyone else throws before leaving the role;
  * - the window opens a savepoint and leaves the limited role (`RESET ROLE`), runs `run` (the delete
  *   of that line, its children and its audit entry), releases the savepoint, then applies the
  *   person's access again (`applyDataAccess`, which takes the limited role back) and checks that the
@@ -51,6 +53,12 @@ export async function withCreatorCancelAccess<T>(
     throw new Error('withCreatorCancelAccess runs inside a transaction.');
   }
   if ((await currentRole(manager)) !== LIMITED_ROLE) return run(manager);
+  // The window is the person's own: the access the transaction runs under was applied for them.
+  const [applied] = await manager.query(`SELECT current_setting('app.da_user', true) AS user_id`);
+  const appliedUser = String(applied?.user_id ?? '').toLowerCase();
+  if (!appliedUser || appliedUser !== String(userId ?? '').toLowerCase()) {
+    throw new Error('withCreatorCancelAccess: the transaction\'s data access is not the person\'s.');
+  }
 
   await manager.query(`SAVEPOINT ${SAVEPOINT}; RESET ROLE`);
   let result: T;

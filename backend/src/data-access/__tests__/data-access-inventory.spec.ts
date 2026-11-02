@@ -142,6 +142,15 @@ const CREATOR_CANCEL_CALLS: Record<string, number> = {
 const CREATOR_CANCEL_IMPORT = /(?:\bfrom|\brequire\s*\(|\bimport\s*\()\s*['"`][^'"`]*\/creator-cancel-access(?:\.[jt]s)?['"`]/;
 
 /**
+ * Calls of `BudgetLinesService.cancelCreation` (the member that opens the window), by property
+ * access or by name: its route only, `DELETE /budget-lines/:id/creation`.
+ */
+const CANCEL_CREATION_CALLS: Record<string, number> = {
+  'spend/budget-lines.controller.ts': 1,
+};
+const CANCEL_CREATION_CALL = /\.\s*cancelCreation\b|\[\s*['"`]cancelCreation['"`]\s*\]/;
+
+/**
  * `withFullDataAccess(` calls per file, outside its definition (spec §6.6, §10.3 "Divulgations"):
  * the chargeback report, the contract coverage (page and list, through
  * `readContractBudgetCoverage`), and the record history's existence read, which returns ids only
@@ -197,7 +206,14 @@ function testRoleChanges(): void {
     return CREATOR_CANCEL_IMPORT.test(codeOf(fs.readFileSync(path.join(SRC, rel), 'utf8')));
   });
   assert.deepEqual(cancelImporters, Object.keys(CREATOR_CANCEL_CALLS).sort(), 'creator-cancel-access is imported by the budget lines service only');
-  console.log('  role changes, withFullDataAccess called and imported from the chargeback report and the contract coverage only, withCreatorCancelAccess from the cancel of a line being created only: OK');
+  const cancelCreationCalls: Record<string, number> = {};
+  for (const rel of sourceFiles()) {
+    if (rel.startsWith('migrations/')) continue;
+    const n = count(codeOf(fs.readFileSync(path.join(SRC, rel), 'utf8')), CANCEL_CREATION_CALL);
+    if (n) cancelCreationCalls[rel] = n;
+  }
+  assert.deepEqual(cancelCreationCalls, CANCEL_CREATION_CALLS, 'BudgetLinesService.cancelCreation is called from its route only');
+  console.log('  role changes, withFullDataAccess called and imported from the chargeback report and the contract coverage only, withCreatorCancelAccess from the cancel of a line being created only, cancelCreation from its route only: OK');
 }
 
 // ---------------------------------------------------------------------------------------------

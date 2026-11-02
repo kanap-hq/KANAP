@@ -9,6 +9,7 @@ import { AuditService } from '../../audit/audit.service';
 import { issueCreationToken } from '../../common/creation/creation-token';
 import { deletionAuthors, refusedAsExpired } from '../../common/creation/__tests__/creation-cancel.fixtures';
 import { applyDataAccess } from '../../data-access/data-access';
+import { withCreatorCancelAccess } from '../../data-access/creator-cancel-access';
 import { UserTimeAggregateService } from '../../portfolio/services/user-time-aggregate.service';
 import { BudgetLinesController } from '../budget-lines.controller';
 import { BudgetLinesService } from '../budget-lines.service';
@@ -27,10 +28,11 @@ import { inRolledBackTransaction, runSpecs, seedTenant, setTenant } from './roun
 // - `GET :id/creation` counts what was written since; `DELETE :id/creation` deletes the line for its
 //   creator at the member level; another person, another line's token, none or an expired one is
 //   refused (`CREATION_CANCEL_EXPIRED`), and so is a line another person wrote on or that a line
-//   continues; the creator's own edits keep the cancel open;
+//   continues; the creator's own edits keep the cancel open; the service checks the token itself;
 // - a person whose data access is limited: a creation without a place is refused, with one it is
 //   allowed, and the cancel deletes the line (outside the limited role for that delete only), the
-//   limited role and mode back afterwards.
+//   limited role and mode back afterwards; the window refuses a person other than the one whose
+//   access the transaction runs under.
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'budget-line-creation-spec-secret';
 
@@ -185,6 +187,10 @@ async function testTitleCreationCompleteAndCancel() {
     );
     await refusedAsExpired(controller.cancelCreation(created.id, { token: expired }, asCreator), 'expired token');
 
+    // The service checks the token itself: a direct call without the creator's token opens nothing.
+    await refusedAsExpired(svc.cancelCreation(created.id, 'not-a-token', s.creatorId, { manager: runner.manager }), 'service, bad token');
+    await refusedAsExpired(svc.cancelCreation(created.id, created.creation_token, s.otherId, { manager: runner.manager }), 'service, other person');
+
     // Another person wrote on the other line: its creator's cancel is over (preflight and cancel).
     await svc.update(other.id, { notes: 'Seen by a colleague' }, s.otherId, { manager: runner.manager });
     await refusedAsExpired(controller.creationChanges(other.id, other.creation_token, asCreator), 'another author, preflight');
@@ -245,6 +251,18 @@ async function testLimitedPerson() {
     const foreign = issueCreationToken({ tenantId: s.tenantId, family: 'budget-lines', recordId: kept.id, userId: s.creatorId });
     await refusedAsExpired(controller.cancelCreation(kept.id, { token: foreign }, asLimited), 'another person\'s token');
 
+    // The window is the person's own: for anyone else than the one whose access applies, it throws
+    // before leaving the limited role.
+    let ran = false;
+    await assert.rejects(
+      withCreatorCancelAccess(runner.manager, s.creatorId, async () => {
+        ran = true;
+      }),
+      /not the person's/,
+    );
+    assert.equal(ran, false, 'nothing ran in the window');
+    const [after] = await runner.query(`SELECT current_setting('role', true) AS role`);
+    assert.equal(after.role, 'kanap_data_limited', 'the limited role stays');
   });
 }
 

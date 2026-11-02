@@ -28,10 +28,8 @@ import { SpendBudgetOperationsService } from './spend-budget-operations.service'
 import type { BudgetOperationScope, CopyBudgetOperation } from './budget-copy';
 import type { BudgetColumn } from './amounts-write.util';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
-import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
-import { BUDGET_LINE_CREATION_FAMILY } from './budget-line-creation';
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { issueCreationToken } from '../common/creation/creation-token';
+import { assertBudgetLineCreationToken, BUDGET_LINE_CREATION_FAMILY } from './budget-line-creation';
 
 @UseGuards(JwtAuthGuard)
 @Controller('budget-lines')
@@ -276,9 +274,7 @@ export class BudgetLinesController {
 
   /** The token of `POST creation` for this line (its uuid), tenant and person, still valid; a 403 otherwise. */
   private assertCreationToken(id: string, token: unknown, ctx: TenantRequest): void {
-    const recordId = String(id ?? '');
-    const subject = { tenantId: ctx.tenantId, family: BUDGET_LINE_CREATION_FAMILY, recordId, userId: ctx.userId || '' };
-    if (!UUID.test(recordId) || !verifyCreationToken(token, subject)) throw creationCancelExpired();
+    assertBudgetLineCreationToken(id, token, { tenantId: ctx.tenantId, userId: ctx.userId || '' });
   }
 
   /** Before "Cancel": what was written on the line and its children since its creation. Nothing is written. */
@@ -309,8 +305,8 @@ export class BudgetLinesController {
   @RequireLevel('budget', 'member')
   @Delete(':id/creation')
   async cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest): Promise<void> {
-    this.assertCreationToken(id, body?.token, ctx);
-    await this.svc.cancelCreation(id, ctx.userId || '', { manager: ctx.manager as EntityManager });
+    // The service checks the token itself, before its delete window.
+    await this.svc.cancelCreation(id, body?.token, ctx.userId || '', { manager: ctx.manager as EntityManager });
   }
 
   @UseGuards(PermissionGuard)

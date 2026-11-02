@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { ANALYTICS_LINK_TABLES, loadAnalyticsAxes } from '../analytics/analytics-axes.util';
 import { dimensionPhrase, missingRequiredDimensions } from './item-analytics.util';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
+import { creationCancelExpired, verifyCreationToken } from '../common/creation/creation-token';
 import type { BudgetNature } from './budget-nature';
 import { readSuccessor } from './budget-line-lineage';
 
@@ -23,6 +24,21 @@ import { readSuccessor } from './budget-line-lineage';
 
 /** The family of the creation token of a budget line. */
 export const BUDGET_LINE_CREATION_FAMILY = 'budget-lines';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The creation token of `POST /budget-lines/creation` for this line (its uuid), tenant and person,
+ * still valid; 403 `CREATION_CANCEL_EXPIRED` otherwise. The routes check it, and "Cancel"
+ * (`BudgetLinesService.cancelCreation`) checks it again itself before its delete window.
+ */
+export function assertBudgetLineCreationToken(id: unknown, token: unknown, subject: { tenantId: string; userId: string }): void {
+  const recordId = String(id ?? '');
+  const valid = UUID.test(recordId) && verifyCreationToken(token, {
+    tenantId: subject.tenantId, family: BUDGET_LINE_CREATION_FAMILY, recordId, userId: subject.userId,
+  });
+  if (!valid) throw creationCancelExpired();
+}
 
 /**
  * Whether another line continues this one (`spend_items.predecessor_id`, a type change): "Cancel"

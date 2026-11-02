@@ -24,6 +24,7 @@ import { countChangesSinceCreation, withChildCount, type CreationChanges } from 
 import { assertCreatorAloneSinceCreation } from '../common/creation/creation-changes';
 import { creationCancelExpired } from '../common/creation/creation-token';
 import {
+  assertBudgetLineCreationToken,
   budgetLineIncomplete,
   creationBody,
   hasSuccessorLine,
@@ -126,15 +127,19 @@ export class BudgetLinesService {
   }
 
   /**
-   * The screen's "Cancel" of a line being created: its creator deletes it (the caller checked the
-   * token), through the delete of its nature (refusals such as `BUDGET_LINE_FROZEN`, children,
-   * audit entry). The line is locked FOR UPDATE under the person's access first: a line hidden from
-   * them is 404, one they may no longer modify 403. Under that lock, a line another person wrote on,
-   * or that a line continues, is refused with `CREATION_CANCEL_EXPIRED`. A limited person's delete
-   * then runs in `withCreatorCancelAccess`, for this line only.
+   * The screen's "Cancel" of a line being created: its creator deletes it, through the delete of its
+   * nature (refusals such as `BUDGET_LINE_FROZEN`, children, audit entry). Called by its route only
+   * (`data-access-inventory.spec.ts`).
+   * - The creation token is checked here, against the transaction's tenant and `userId`: no caller
+   *   reaches the delete window without it (403 `CREATION_CANCEL_EXPIRED`).
+   * - The line is locked FOR UPDATE under the person's access: a line hidden from them is 404, one
+   *   they may no longer modify 403. Under that lock, a line another person wrote on, or that a line
+   *   continues, is refused with `CREATION_CANCEL_EXPIRED`.
+   * - A limited person's delete then runs in `withCreatorCancelAccess`, for this line only.
    */
-  async cancelCreation(id: string, userId: string, opts: { manager: EntityManager }): Promise<void> {
+  async cancelCreation(id: string, token: unknown, userId: string, opts: { manager: EntityManager }): Promise<void> {
     const tenantId = await summaryTenantId(opts.manager);
+    assertBudgetLineCreationToken(id, token, { tenantId, userId });
     const line = await resolveBudgetLine(id, opts.manager);
     if (!(await lockBudgetLine(opts.manager, line.nature, tenantId, line.id, 'update'))) {
       throw new NotFoundException('Budget line not found');
