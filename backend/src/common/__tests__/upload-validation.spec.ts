@@ -45,7 +45,8 @@ function run() {
   // A workbook renamed .csv is refused: its content does not match its name.
   assert.throws(
     () => validateUploadedFile({ originalName: 'apps.csv', mimeType: 'text/csv', buffer: workbook }, { scope: 'ai-attachment' }),
-    (error: unknown) => error instanceof BadRequestException,
+    (error: unknown) => error instanceof BadRequestException
+      && (error.getResponse() as { code?: string }).code === 'UPLOAD_CONTENT_MISMATCH',
   );
 }
 

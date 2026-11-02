@@ -284,6 +284,7 @@
   "AI_TABLE_TOO_LARGE": "This file is larger than {{max}} MB.",
   "AI_TABLE_TOO_MANY_ROWS": "This file has more than {{max}} rows.",
   "AI_TABLE_UNREADABLE": "This file could not be read as CSV.",
+  "UPLOAD_CONTENT_MISMATCH": "The content of this file does not match its extension. Save it again in its real format.",
   "AI_API_KEY_NOT_FOUND": "This key does not exist, or you cannot manage it.",
   "AI_CONVERSATION_NOT_YOURS": "This conversation belongs to someone else.",
   "AI_ATTACHMENT_NOT_YOURS": "This attachment belongs to someone else.",

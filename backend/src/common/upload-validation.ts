@@ -360,7 +360,7 @@ export function validateUploadedFile(
   const extensionMime = extension ? EXTENSION_TO_MIME[extension] : '';
 
   if (detectedMime && extensionMime && !areMimeTypesEquivalent(detectedMime, extensionMime)) {
-    throw new BadRequestException('File content does not match file extension');
+    throw new BadRequestException({ message: 'File content does not match file extension', code: 'UPLOAD_CONTENT_MISMATCH' });
   }
 
   let canonicalMime = detectedMime || extensionMime || '';

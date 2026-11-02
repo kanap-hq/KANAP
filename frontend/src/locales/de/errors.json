@@ -284,6 +284,7 @@
   "AI_TABLE_TOO_LARGE": "Diese Datei ist größer als {{max}} MB.",
   "AI_TABLE_TOO_MANY_ROWS": "Diese Datei hat mehr als {{max}} Zeilen.",
   "AI_TABLE_UNREADABLE": "Diese Datei konnte nicht als CSV gelesen werden.",
+  "UPLOAD_CONTENT_MISMATCH": "Der Inhalt dieser Datei passt nicht zu ihrer Endung. Speichern Sie sie erneut in ihrem tatsächlichen Format.",
   "AI_API_KEY_NOT_FOUND": "Dieser Schlüssel existiert nicht, oder Sie können ihn nicht verwalten.",
   "AI_CONVERSATION_NOT_YOURS": "Diese Unterhaltung gehört jemand anderem.",
   "AI_ATTACHMENT_NOT_YOURS": "Dieser Anhang gehört jemand anderem.",
