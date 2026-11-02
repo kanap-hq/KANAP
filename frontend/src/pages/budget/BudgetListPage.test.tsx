@@ -767,6 +767,23 @@ describe('BudgetListPage', () => {
     expect(hrefOf('contract_name', row)).toBe('/ops/contracts/k-1/overview');
     const Y = new Date().getFullYear();
     expect(hrefOf('yPlus1Revision', row)).toMatch(new RegExp(`^/ops/budget/BL-7/budget\\?.*year=${Y + 1}`));
+    expect(new URLSearchParams(hrefOf('product_name', row)!.split('?')[1]).has('year')).toBe(false);
+  });
+
+  it('opens a line on the year of the list address from a cell with no year of its own', async () => {
+    await renderPage('/ops/budget?year=2025');
+    const yearOf = (id: string) => {
+      const row = { id: 'o-1', nature: 'opex', item_number: 3 };
+      const col = column(id)!;
+      const renderer = col.cellRenderer ?? col.cellRendererSelector!({ node: {} }).component as (p: any) => React.ReactElement;
+      const href = (renderer({ data: row, value: '', colDef: {} }).props as { getHref: (row: unknown) => string | null }).getHref(row);
+      expect(href).toMatch(/^\/ops\/budget\/BL-3\//);
+      return new URLSearchParams(href!.split('?')[1]).get('year');
+    };
+    expect(yearOf('product_name')).toBe('2025');
+    expect(yearOf('latest_task_text')).toBe('2025');
+    // An amount cell keeps its own column's year.
+    expect(yearOf('yPlus1Revision')).toBe(String(new Date().getFullYear() + 1));
   });
 
   it('keeps the last known currency in the title while the totals reload or when they fail', async () => {
