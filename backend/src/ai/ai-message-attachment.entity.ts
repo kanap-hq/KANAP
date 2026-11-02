@@ -1,14 +1,15 @@
 import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 /**
- * Attachments uploaded by users alongside Plaid chat messages (currently images only).
+ * Attachments uploaded by users alongside Plaid chat messages: images, and spreadsheets (`kind = 'table'`)
+ * of which the model only receives a summary.
  *
  * Lifecycle:
  *   1. Frontend uploads via POST /ai/conversations/:id/attachments → row created with
  *      message_id = NULL (the message hasn't been sent yet).
  *   2. When the user sends the chat message, the orchestrator links the attachment(s)
- *      to the persisted ai_message via message_id, then includes them as multimodal
- *      content blocks in the LLM call.
+ *      to the persisted ai_message via message_id, then includes images as multimodal
+ *      content blocks and spreadsheets as their summary in the LLM call.
  *
  * Tenant isolation is enforced at three layers: tenant_id default, FK on tenant-scoped
  * conversation_id, and an RLS policy mirroring app_current_tenant().
@@ -47,7 +48,7 @@ export class AiMessageAttachment {
   @Column('text')
   storage_path!: string;
 
-  /** Reserved for future kinds (pdf, doc) — currently always 'image'. */
+  /** `image` or `table` (an .xlsx or .csv file). */
   @Column('varchar', { length: 32, default: 'image' })
   kind!: string;
 

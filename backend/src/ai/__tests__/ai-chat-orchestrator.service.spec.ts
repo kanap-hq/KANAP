@@ -42,6 +42,8 @@ function createOrchestrator(options?: {
   reasoningEffort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | null;
   /** The provider adapter's cache cost factors; absent when omitted. */
   cacheCostFactors?: { read: number; write: number };
+  /** Attachments of the history's user messages (`listAttachmentsForMessages`). */
+  attachmentRows?: any[];
 }) {
   const persistedMessages: any[] = [];
   let conversationCreated = false;
@@ -371,8 +373,12 @@ function createOrchestrator(options?: {
     {
       assertAndLoadAttachments: async () => [],
       linkAttachmentsToMessage: async () => undefined,
-      listAttachmentsForMessages: async () => [],
-      loadAttachmentBuffer: async () => ({ attachment: {} as any, buffer: Buffer.alloc(0) }),
+      listAttachmentsForMessages: async () => options?.attachmentRows ?? [],
+      loadAttachmentBuffer: async () => ({ attachment: {} as any, buffer: Buffer.from('png-bytes') }),
+      loadTableSummaryText: async (row: any) => {
+        if (row.original_filename === 'gone.xlsx') throw new Error('object missing');
+        return `<attached_table id="${row.id}">summary of ${row.original_filename}</attached_table>`;
+      },
     } as any,
   );
 
@@ -918,6 +924,39 @@ async function testReasoningContentIsNotReplayedForNonDeepSeekEndpoint() {
   const persistedAssistant = persistedMessages
     .find((message) => message.role === 'assistant' && message.toolCalls?.[0]?.id === 'tc-1');
   assert.equal(persistedAssistant.providerMetadata, null);
+}
+
+async function testTableAttachmentsReachTheModelAsTheirSummary() {
+  const { orchestrator, recordedRequests } = createOrchestrator({
+    historyMessages: [
+      { id: 'msg-1', role: 'user', content: 'Here are my applications.' },
+      { id: 'msg-2', role: 'assistant', content: 'Thanks.' },
+      { id: 'msg-3', role: 'user', content: 'Map them.' },
+    ],
+    attachmentRows: [
+      { id: 'att-img', message_id: 'msg-1', kind: 'image', mime_type: 'image/png', original_filename: 'shot.png', size: 9 },
+      { id: 'att-tab', message_id: 'msg-1', kind: 'table', mime_type: 'text/csv', original_filename: 'apps.csv', size: 120 },
+      { id: 'att-gone', message_id: 'msg-3', kind: 'table', mime_type: 'text/csv', original_filename: 'gone.xlsx', size: 80 },
+    ],
+  });
+  const events = await collectEvents(
+    orchestrator.stream({
+      context: { tenantId: 'tenant-1', userId: 'user-1', isPlatformHost: false, surface: 'chat', authMethod: 'jwt' },
+      conversationId: 'conv-1',
+      userMessage: 'Map them.',
+    }),
+  );
+
+  const users = (recordedRequests[0].messages as any[]).filter((message) => message.role === 'user');
+  assert.equal(users[0].content, 'Here are my applications.\n\n<attached_table id="att-tab">summary of apps.csv</attached_table>');
+  // Only the image goes in as an image: the spreadsheet's bytes never reach the provider.
+  assert.deepEqual(users[0].images, [{ mime_type: 'image/png', base64_data: Buffer.from('png-bytes').toString('base64') }]);
+  // A file that can no longer be read leaves the message as typed.
+  assert.equal(users[1].content, 'Map them.');
+  assert.equal(users[1].images, undefined);
+  const context = (events.find((event: any) => event.type === 'context' && event.context.attachments) as any).context;
+  assert.deepEqual(context.attachments.map((item: any) => item.label), ['shot.png', 'apps.csv', 'gone.xlsx']);
+  assert.equal(context.history.attachment_count, 3);
 }
 
 async function testPersistedDeepSeekReasoningContentIsReplayedOnSecondTurn() {
@@ -4889,6 +4928,7 @@ async function run() {
   await testDeepSeekReasoningContentIsReplayedForEverySplitToolCall();
   await testReasoningContentIsNotReplayedForNonDeepSeekEndpoint();
   await testPersistedDeepSeekReasoningContentIsReplayedOnSecondTurn();
+  await testTableAttachmentsReachTheModelAsTheirSummary();
   await testPersistedDeepSeekToolCallWithoutReasoningIsSkippedOnReplay();
   await testBatchPreviewToolResultEmitsEveryPreview();
   await testPreviewStreamKeepsTheRequestorEmailWhileTheModelSeesItRedacted();
