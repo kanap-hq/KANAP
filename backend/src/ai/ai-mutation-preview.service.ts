@@ -1,11 +1,11 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { codedForbidden } from '../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
 import {
@@ -195,7 +195,7 @@ export class AiMutationPreviewService {
       return;
     }
     if (preview.conversation_id !== conversationId) {
-      throw new ForbiddenException('AI preview does not belong to this conversation.');
+      throw codedForbidden('AI_PREVIEW_NOT_IN_CONVERSATION', 'AI preview does not belong to this conversation.');
     }
   }
 

@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   Param,
   Post,
@@ -10,6 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { codedForbidden } from '../auth/module-right-required';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorator';
 import { AiApiKeysService } from './ai-api-keys.service';
@@ -91,7 +91,7 @@ export class AiApiKeysController {
       await this.policy.assertKeyManagementAccess(context, manager);
       const key = await this.apiKeys.findById(id, { manager });
       if (!key || key.tenant_id !== context.tenantId || key.user_id !== context.userId) {
-        throw new ForbiddenException('Key not found or access denied.');
+        throw codedForbidden('AI_API_KEY_NOT_FOUND', 'Key not found or access denied.');
       }
       return this.apiKeys.revokeKey(id, {
         manager,
@@ -121,7 +121,7 @@ export class AiApiKeysController {
       await this.policy.assertSettingsAccess(context, manager);
       const key = await this.apiKeys.findById(id, { manager });
       if (!key || key.tenant_id !== context.tenantId) {
-        throw new ForbiddenException('Key not found.');
+        throw codedForbidden('AI_API_KEY_NOT_FOUND', 'Key not found.');
       }
       return this.apiKeys.revokeKey(id, {
         manager,

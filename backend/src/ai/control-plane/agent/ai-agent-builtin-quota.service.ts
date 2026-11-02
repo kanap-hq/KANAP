@@ -1,4 +1,5 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { codedForbidden } from '../../../auth/module-right-required';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { AiModelResolutionError, AiModelResolverService } from '../../ai-model-resolver.service';
 import { AiBuiltinUsageService } from '../../platform/ai-builtin-usage.service';
@@ -45,19 +46,19 @@ export class AiAgentBuiltinQuotaService {
   async assertQuotaAvailable(context: AiExecutionContextWithManager): Promise<void> {
     const use = await this.builtinUse(context);
     if (use === 'awaiting_confirmation') {
-      throw new ForbiddenException(AGENT_RUNS_AWAIT_BUILTIN_CONFIRMATION);
+      throw codedForbidden('AI_INCLUDED_MODEL_NOT_ACCEPTED', AGENT_RUNS_AWAIT_BUILTIN_CONFIRMATION);
     }
     if (use !== 'builtin') return;
     const usage = await this.builtinUsage.getCurrentUsage(context.tenantId, context.manager);
     if (usage.count >= usage.limit) {
-      throw new ForbiddenException('The monthly volume of included AI messages is used up; agent runs resume when it resets.');
+      throw codedForbidden('AI_INCLUDED_QUOTA_USED', 'The monthly volume of included AI messages is used up; agent runs resume when it resets.');
     }
   }
 
   async reserveRun(context: AiExecutionContextWithManager): Promise<void> {
     const use = await this.builtinUse(context);
     if (use === 'awaiting_confirmation') {
-      throw new ForbiddenException(AGENT_RUNS_AWAIT_BUILTIN_CONFIRMATION);
+      throw codedForbidden('AI_INCLUDED_MODEL_NOT_ACCEPTED', AGENT_RUNS_AWAIT_BUILTIN_CONFIRMATION);
     }
     if (use !== 'builtin') return;
     const limit = await this.builtinUsage.getMonthlyLimit(context.manager);

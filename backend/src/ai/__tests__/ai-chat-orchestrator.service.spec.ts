@@ -4164,7 +4164,9 @@ async function testModelUnavailableAfterTheAccessCheckIsRefused() {
       },
       userMessage: 'Hello',
     }),
-    (error: unknown) => error instanceof ForbiddenException && error.message === BUILTIN_NOT_ACCEPTED_MESSAGE,
+    (error: unknown) => error instanceof ForbiddenException
+      && error.message === BUILTIN_NOT_ACCEPTED_MESSAGE
+      && (error.getResponse() as { code?: string }).code === 'AI_INCLUDED_MODEL_NOT_ACCEPTED',
   );
   assert.equal(recordedRequests.length, 0, 'no provider call');
 }

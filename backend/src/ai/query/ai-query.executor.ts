@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { codedForbidden } from '../../auth/module-right-required';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
 import { AnalyticsCategoriesService } from '../../analytics/analytics-categories.service';
@@ -1807,7 +1808,7 @@ export class AiQueryExecutor {
    * and the screen, or the reserved message). Closed without the policy.
    */
   private async assertRolesRead(context: AiExecutionContextWithManager, entityType: 'roles' | 'role_permissions'): Promise<void> {
-    if (!this.policy) throw new ForbiddenException('The roles are not available.');
+    if (!this.policy) throw codedForbidden('AI_ROLES_UNAVAILABLE', 'The roles are not available.');
     await this.policy.assertEntityTypeReadRight(context, entityType, context.manager);
   }
 

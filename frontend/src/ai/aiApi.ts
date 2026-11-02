@@ -9,6 +9,7 @@ import {
   ConversationMessagesResponse,
 } from './aiTypes';
 import i18n from '../i18n';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import type { AiBuiltinProvider } from './includedModel';
 
 const MAX_STREAM_BUFFER_CHARS = 1_048_576;
@@ -1292,8 +1293,12 @@ export async function* streamChat(params: {
     } catch {
       payload = null;
     }
+    const fallback = raw || i18n.t('ai:errors.streamRequestFailed');
     throw new ChatStreamRequestError(
-      payload?.message || raw || i18n.t('ai:errors.streamRequestFailed'),
+      // A coded refusal (`AI_CHAT_DISABLED`, `MODULE_RIGHT_REQUIRED`) is shown in the language of the screen.
+      payload && typeof payload === 'object'
+        ? getApiErrorMessage({ response: { status: response.status, data: payload } }, i18n.t.bind(i18n), fallback)
+        : fallback,
       {
         status: response.status,
         code: payload?.code ?? null,

@@ -242,7 +242,8 @@ async function testControllersRejectInvalidTenantContext() {
   );
   assert.throws(
     () => (overview as any).buildContext(req),
-    (error: unknown) => error instanceof ForbiddenException,
+    (error: unknown) => error instanceof ForbiddenException
+      && (error.getResponse() as { code?: string }).code === 'REQUEST_CONTEXT_MISSING',
   );
   assert.throws(
     () => (mcp as any).buildContext(req),
@@ -632,7 +633,22 @@ async function testAdminOverviewControllerRejectsMissingTenantContext() {
 
   await assert.rejects(
     () => controller.getOverview(createRequest({ tenant: null }) as any),
-    (error: unknown) => error instanceof ForbiddenException,
+    (error: unknown) => error instanceof ForbiddenException
+      && (error.getResponse() as { code?: string }).code === 'REQUEST_CONTEXT_MISSING',
+  );
+}
+
+async function testMcpPostRefusesAnInvalidKeyPolicyWithItsCode() {
+  const { controller } = createMcpControllerHarness();
+  const req = createMcpPostRequest(
+    { jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} },
+    createMcpApiKey({ mcp_max_effect: 'not-an-effect' }),
+  );
+  assert.throws(
+    () => runMcpPostPreflight(controller, req),
+    (error: unknown) => error instanceof ForbiddenException
+      && error.message === 'MCP API key policy is invalid.'
+      && (error.getResponse() as { code?: string }).code === 'AI_MCP_KEY_POLICY_INVALID',
   );
 }
 
@@ -725,6 +741,7 @@ async function run() {
   await testChatControllerAbortsOnDisconnect();
   await testAdminOverviewControllerBuildsContextAndCallsService();
   await testAdminOverviewControllerRejectsMissingTenantContext();
+  await testMcpPostRefusesAnInvalidKeyPolicyWithItsCode();
   await testConversationsControllerReturnsMessagesWithConversationUsage();
 }
 

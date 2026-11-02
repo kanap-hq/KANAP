@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { ApplicationsService } from '../../applications/services/applications.service';
@@ -62,7 +62,7 @@ import { nameWithoutLeadingReference } from './name-without-leading-reference';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, INCIDENT_STATUS_RANK } from '../../incidents/incident.entity';
 import {
-  INCIDENT_LOCKED_MESSAGE,
+  incidentLocked,
   incidentVisibilitySql,
   isFrozenIncidentStatus,
   resolveIncidentViewer,
@@ -1892,7 +1892,7 @@ export class AiBusinessRecordMutationSupportService {
     opts: { sourcePreviewId: string | null },
   ): Promise<AiPreparedMutationPreview> {
     if (entityType === 'incidents' && isFrozenIncidentStatus(String(target.row.status ?? ''))) {
-      throw new ForbiddenException(INCIDENT_LOCKED_MESSAGE);
+      throw incidentLocked();
     }
     const normalized = await this.normalizeFields(context, entityType, rawFields, 'update', target.row);
     if (entityType === 'technologies') {

@@ -2,10 +2,10 @@ import * as path from 'path';
 import { randomUUID } from 'crypto';
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { codedForbidden } from '../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
 import { StorageService } from '../common/storage/storage.service';
@@ -58,7 +58,7 @@ export class AiAttachmentService {
     if (!conversation) throw new NotFoundException('Conversation not found');
     if (conversation.archived_at) throw new BadRequestException('Conversation is archived');
     if (input.userId && conversation.user_id !== input.userId) {
-      throw new ForbiddenException('Cannot attach to another user\'s conversation');
+      throw codedForbidden('AI_CONVERSATION_NOT_YOURS', 'Cannot attach to another user\'s conversation');
     }
 
     const decodedName = fixMulterFilename(input.file.originalname);
@@ -138,7 +138,7 @@ export class AiAttachmentService {
     if (ctx.userId) {
       for (const row of rows) {
         if (row.uploaded_by_id && row.uploaded_by_id !== ctx.userId) {
-          throw new ForbiddenException('Attachment does not belong to current user');
+          throw codedForbidden('AI_ATTACHMENT_NOT_YOURS', 'Attachment does not belong to current user');
         }
       }
     }

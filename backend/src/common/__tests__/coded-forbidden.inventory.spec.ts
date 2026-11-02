@@ -18,21 +18,14 @@ const BARE_FORBIDDEN = /new\s+ForbiddenException\(\s*(?:['"`]|[A-Za-z_$][\w$]*\s
 const BARE_HTTP_EXCEPTION = /new\s+HttpException\(\s*(?:['"`]|[A-Za-z_$][\w$]*\s*,)[^;]*?,\s*(?:403|HttpStatus\.FORBIDDEN)\s*\)/g;
 
 /**
- * Files that still hold a bare refusal: the AI module, until its own lot codes them. The list
+ * Files that still hold a bare refusal: the control plane of the AI module (`src/ai/control-plane/`), until its own lot codes them. The list
  * only shrinks: remove a file once its refusals are coded.
  */
 const ALLOWED_FILES = new Set<string>([
-  'src/ai/ai-admin-overview.controller.ts',
-  'src/ai/ai-api-keys.controller.ts',
-  'src/ai/ai-attachment.service.ts',
-  'src/ai/ai-mcp.controller.ts',
-  'src/ai/ai-mutation-preview.service.ts',
-  'src/ai/ai-policy.service.ts',
   'src/ai/control-plane/action-request/ai-action-request.service.ts',
   'src/ai/control-plane/agent-control/agent-control-definition.util.ts',
   'src/ai/control-plane/agent-control/ai-agent-control.controller.ts',
   'src/ai/control-plane/agent-control/ai-agent-control.service.ts',
-  'src/ai/control-plane/agent/ai-agent-builtin-quota.service.ts',
   'src/ai/control-plane/agent/ai-agent-helpdesk-ticketing-ingestion.service.ts',
   'src/ai/control-plane/agent/ai-agent-monitoring-alert-ingestion.service.ts',
   'src/ai/control-plane/agent/ai-agent-work-queue.service.ts',
@@ -49,13 +42,6 @@ const ALLOWED_FILES = new Set<string>([
   'src/ai/control-plane/pause/ai-emergency-pause.service.ts',
   'src/ai/control-plane/policy/ai-autonomy-routine.service.ts',
   'src/ai/control-plane/providers/tenant-secret-resolver.service.ts',
-  'src/ai/mutation/ai-business-record-mutation-support.service.ts',
-  'src/ai/mutation/ai-document-mutation-support.service.ts',
-  'src/ai/mutation/ai-incident-mutation-support.service.ts',
-  'src/ai/mutation/ai-task-mutation-support.service.ts',
-  'src/ai/query/ai-aggregate.executor.ts',
-  'src/ai/query/ai-query.executor.ts',
-  'src/ai/search-index/ai-admin-search-index.controller.ts',
 ]);
 
 function sourceFiles(dir: string): string[] {

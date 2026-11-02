@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, Optional } from '@nestjs/common';
+import { codedForbidden } from '../../auth/module-right-required';
 import { AiPolicyService } from '../ai-policy.service';
 import { FxRateService } from '../../currency/fx-rate.service';
 import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem, yearRateSetId } from '../../spend/allocation-distribution';
@@ -1251,7 +1252,7 @@ export class AiAggregateExecutor {
     }
     if (thenBy) {
       const withheld = registry.withheldFields?.find((entry) => entry.field === thenBy);
-      if (withheld) throw new ForbiddenException(`then_by ${withheld.field} is not available: ${withheld.reason}`);
+      if (withheld) throw codedForbidden('AI_FIELD_WITHHELD', `then_by ${withheld.field} is not available: ${withheld.reason}`);
       const field = registry.fields[thenBy];
       if (!field || field.groupable !== true) throw new BadRequestException('Unsupported then_by field: a group-by field describe_entity_filters lists.');
       if (thenBy === input.group_by) throw new BadRequestException('then_by names the group_by field again: give a second field, or leave then_by out.');
@@ -1999,7 +2000,7 @@ export class AiAggregateExecutor {
     const field = registry.fields[input.group_by];
     // A field the person may not read is refused with the reason (the right), never grouped as one blank group.
     const withheld = registry.withheldFields?.find((entry) => entry.field === input.group_by);
-    if (withheld) throw new ForbiddenException(`group_by ${withheld.field} is not available: ${withheld.reason}`);
+    if (withheld) throw codedForbidden('AI_FIELD_WITHHELD', `group_by ${withheld.field} is not available: ${withheld.reason}`);
     if (!field || field.groupable !== true) {
       throw new BadRequestException('Unsupported group_by field.');
     }
@@ -2098,7 +2099,7 @@ export class AiAggregateExecutor {
     if (input.entity_type === 'roles' || input.entity_type === 'role_permissions') {
       // The tool already checked the family; checked again here, as the data access branch, in the
       // policy's words (the right and the screen, or the reserved message).
-      if (!this.policy) throw new ForbiddenException('The roles are not available.');
+      if (!this.policy) throw codedForbidden('AI_ROLES_UNAVAILABLE', 'The roles are not available.');
       await this.policy.assertEntityTypeReadRight(context, input.entity_type, context.manager);
       if (!this.roles || !this.permissions) throw new BadRequestException('The roles are not available.');
       const services = { roles: this.roles, permissions: this.permissions };

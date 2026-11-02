@@ -126,6 +126,14 @@ function createPolicy(options?: {
   );
 }
 
+/** The translatable code and params of a coded 403. */
+function refusal(error: any, code: string, params?: Record<string, unknown>): boolean {
+  const body = error?.getResponse?.();
+  assert.equal(body?.code, code);
+  if (params) assert.deepEqual(body?.params, params);
+  return true;
+}
+
 async function testListReadableEntityTypesFiltersUnreadableFamilies() {
   const originalFeature = Features.AI_CHAT_ENABLED;
   Features.AI_CHAT_ENABLED = true;
@@ -226,7 +234,7 @@ async function testModelConfigReadTierMatrix() {
       { ...context, isPlatformHost: true },
       createManager(),
     ),
-    /platform host/,
+    (error: any) => /platform host/.test(error.message) && refusal(error, 'AI_PLATFORM_HOST'),
   );
 
   Features.AI_SETTINGS_ENABLED = originalFeature;
@@ -329,7 +337,7 @@ async function testChatSurfaceRequiresTenantEnablement() {
       },
       createManager(),
     ),
-    /AI chat is disabled for this tenant/,
+    (error: any) => /AI chat is disabled for this tenant/.test(error.message) && refusal(error, 'AI_CHAT_DISABLED'),
   );
 
   Features.AI_CHAT_ENABLED = originalFeature;
@@ -353,7 +361,7 @@ async function testMcpSurfaceRequiresTenantEnablement() {
       },
       createManager(),
     ),
-    /AI MCP access is disabled for this tenant/,
+    (error: any) => /AI MCP access is disabled for this tenant/.test(error.message) && refusal(error, 'AI_MCP_DISABLED'),
   );
 
   Features.AI_MCP_ENABLED = originalFeature;
@@ -377,7 +385,7 @@ async function testChatSurfaceRequiresProviderReadiness() {
       },
       createManager(),
     ),
-    /AI chat is not fully configured for this tenant/,
+    (error: any) => /AI chat is not fully configured for this tenant/.test(error.message) && refusal(error, 'AI_NOT_CONFIGURED'),
   );
 
   Features.AI_CHAT_ENABLED = originalFeature;
@@ -399,7 +407,7 @@ async function testSurfaceRequiresActiveTenant() {
       },
       createManager({ tenantStatus: TenantStatus.FROZEN }),
     ),
-    /inactive/,
+    (error: any) => /inactive/.test(error.message) && refusal(error, 'AI_TENANT_INACTIVE'),
   );
 
   Features.AI_CHAT_ENABLED = originalFeature;
@@ -428,7 +436,7 @@ async function testSurfaceRejectsDisabledUsers() {
       },
       createManager(),
     ),
-    /User is not allowed to use AI/,
+    (error: any) => /User is not allowed to use AI/.test(error.message) && refusal(error, 'AI_USER_NOT_ALLOWED'),
   );
 
   Features.AI_CHAT_ENABLED = originalFeature;
@@ -614,7 +622,7 @@ async function testSurfaceRejectsPlatformHost() {
       },
       createManager(),
     ),
-    /platform host/,
+    (error: any) => /platform host/.test(error.message) && refusal(error, 'AI_PLATFORM_HOST'),
   );
 
   Features.AI_CHAT_ENABLED = originalFeature;
@@ -634,7 +642,7 @@ async function testKeyManagementRejectsPlatformHost() {
       },
       createManager(),
     ),
-    /platform host/,
+    (error: any) => /platform host/.test(error.message) && refusal(error, 'AI_PLATFORM_HOST'),
   );
 
   Features.AI_MCP_ENABLED = originalFeature;
@@ -654,7 +662,7 @@ async function testSettingsAccessRejectsPlatformHost() {
       },
       createManager(),
     ),
-    /platform host/,
+    (error: any) => /platform host/.test(error.message) && refusal(error, 'AI_PLATFORM_HOST'),
   );
 
   Features.AI_SETTINGS_ENABLED = originalFeature;
@@ -672,7 +680,7 @@ async function testCapabilitiesRejectPlatformHost() {
       },
       createManager(),
     ),
-    /platform host/,
+    (error: any) => /platform host/.test(error.message) && refusal(error, 'AI_PLATFORM_HOST'),
   );
 }
 
@@ -745,7 +753,8 @@ async function testContributorWritesAtTheScreenLevel() {
   // Counter-checks: the name is not opened to a contributor; a member write stays at member.
   await assert.rejects(
     () => contributor.assertWriteAccess(chat, 'portfolio_projects', createManager(), { ...projectFields, fields: { name: 'Name', purpose: 'Purpose' } }),
-    (error: any) => error.message === contributorFieldsMessage('portfolio_projects', ['Name']),
+    (error: any) => error.message === contributorFieldsMessage('portfolio_projects', ['Name'])
+      && refusal(error, 'MODULE_RIGHT_REQUIRED', { resource: 'portfolio_projects', level: 'member' }),
   );
   await assert.rejects(
     () => contributor.assertWriteAccess(chat, 'portfolio_projects', createManager()),
@@ -767,7 +776,7 @@ async function testContributorWritesAtTheScreenLevel() {
   // MCP stays read only.
   await assert.rejects(
     () => member.assertWriteAccess({ ...chat, surface: 'mcp' }, 'portfolio_projects', createManager(), { level: 'contributor' }),
-    /MCP write access is not available/,
+    (error: any) => /MCP write access is not available/.test(error.message) && refusal(error, 'AI_MCP_WRITE_UNAVAILABLE'),
   );
 
   // The rights the refusals name: a contributor contributes to projects, modifies no module.
