@@ -221,6 +221,7 @@
   "MAPPING_SET_DEFAULT": "El conjunto de correspondencias predeterminado no se puede eliminar. Defina primero otro conjunto como predeterminado.",
   "MAPPING_GROUP_DEFAULT": "Los grupos de correspondencias predeterminados no se pueden eliminar. Deje el grupo vacío si no lo necesita.",
   "REQUEST_CONVERTED": "Esta solicitud se convirtió en un proyecto y sigue siendo su origen. No se puede eliminar.",
+  "PROJECT_FROM_REQUEST": "Este proyecto proviene de una solicitud, que lo conserva como resultado. No se puede eliminar.",
   "TASK_REQUEST_ORIGIN": "La solicitud {{reference}} se creó a partir de esta tarea. Cierre la tarea en lugar de eliminarla.",
   "KNOWLEDGE_DOCUMENT_MANAGED": "Este documento forma parte de la página de un registro y se elimina con él. No se puede eliminar desde Conocimiento.",
   "KNOWLEDGE_DOCUMENT_MANAGED_RELATIONS": "Este documento forma parte de la página de un registro. No se puede vincular a otro registro ni desvincular del suyo.",

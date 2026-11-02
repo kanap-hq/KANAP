@@ -1572,6 +1572,9 @@
     "incident": {
       "title": "Vorfall",
       "newTitle": "Neuer Vorfall",
+      "creation": {
+        "record": "Der Vorfall"
+      },
       "fields": {
         "title": "Titel"
       },
@@ -1624,10 +1627,7 @@
         "minutes": "{{count}} Min."
       },
       "create": {
-        "description": "Beschreibung",
-        "titleRequired": "Titel ist erforderlich.",
-        "severityRequired": "Schweregrad ist erforderlich.",
-        "detectedRequired": "Erkennungsdatum ist erforderlich."
+        "description": "Beschreibung"
       },
       "overview": {
         "description": "Beschreibung",

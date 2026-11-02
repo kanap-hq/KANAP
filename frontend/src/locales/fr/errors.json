@@ -221,6 +221,7 @@
   "MAPPING_SET_DEFAULT": "Le jeu de correspondances par défaut ne peut pas être supprimé. Définissez d’abord un autre jeu par défaut.",
   "MAPPING_GROUP_DEFAULT": "Les groupes de correspondances par défaut ne peuvent pas être supprimés. Laissez le groupe vide si vous n’en avez pas besoin.",
   "REQUEST_CONVERTED": "Cette demande est devenue un projet et reste son origine. Elle ne peut pas être supprimée.",
+  "PROJECT_FROM_REQUEST": "Ce projet vient d’une demande, qui le garde comme résultat. Il ne peut pas être supprimé.",
   "TASK_REQUEST_ORIGIN": "La demande {{reference}} a été créée à partir de cette tâche. Clôturez la tâche plutôt que de la supprimer.",
   "KNOWLEDGE_DOCUMENT_MANAGED": "Ce document fait partie de la page d’un objet et est supprimé avec lui. Il ne peut pas être supprimé depuis Connaissances.",
   "KNOWLEDGE_DOCUMENT_MANAGED_RELATIONS": "Ce document fait partie de la page d’un objet. Il ne peut pas être lié à un autre objet ni retiré du sien.",

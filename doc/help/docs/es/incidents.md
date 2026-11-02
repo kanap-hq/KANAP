@@ -20,24 +20,30 @@ No registre el trabajo rutinario: restablecimientos de contraseña, problemas de
 
 ---
 
-## Primeros pasos
+## Primeros pasos { #getting-started }
 
-Vaya a **Panorama IT > Incidentes** para ver el registro. Haga clic en **Nuevo incidente** para registrar uno.
+Vaya a **Panorama IT > Incidentes** para ver el registro. Para registrar un incidente:
 
-**Campos obligatorios**:
+1. Haga clic en **Nuevo incidente**. La página del incidente se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
+2. Escriba un resumen breve y objetivo, p. ej.: «Servicio de correo no disponible en la oficina de Lyon».
+3. Pulse Intro o haga clic fuera del título. KANAP registra el incidente de inmediato. Su referencia (`INC-14`) aparece y se abren todas las pestañas.
 
-- **Título**: un resumen breve y objetivo, p. ej.: «Servicio de correo no disponible en la oficina de Lyon»
+El nuevo incidente queda **Abierto**, con gravedad **Media**, detectado ahora y con usted como notificante. Complete después el resto como en cualquier incidente:
+
 - **Gravedad**: Crítica, Alta, Media o Baja
-- **Detectado**: cuándo se advirtió el incidente (por defecto, ahora)
-
-**Recomendados en la misma pantalla**:
-
+- **Detectado**: cuándo se advirtió el incidente
+- **Inicio**: cuándo empezó realmente el incidente, si difiere del momento en que lo advirtió
 - **Descripción**: qué ocurrió, tal como se observó
 - **Categoría**: infraestructura, seguridad, aplicación, datos, proveedor, otros (configurable, véase [Categorías](#categorias))
-- **Inicio**: cuándo empezó realmente el incidente, si difiere del momento en que lo advirtió
 - **Responsable**: quién se encarga de gestionarlo
 
-El **Notificante** es usted por defecto. Ambas fechas admiten valores pasados: un incidente descubierto el lunes por la mañana puede registrarse como iniciado el sábado por la noche.
+Ambas fechas admiten valores pasados: un incidente descubierto el lunes por la mañana puede registrarse como iniciado el sábado por la noche. Pulse Escape en el título vacío para salir sin registrar nada.
+
+### Cancelar la creación { #cancelling-a-creation }
+
+Mientras permanezca en el incidente que acaba de registrar, **Cancelar la creación** en el encabezado lo elimina y le devuelve al punto de partida: la lista o la pantalla anterior. Si introdujo algo más que el título, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar incidentes. **Cancelar incidente** permanece oculto mientras tanto.
+
+La cancelación de la creación se rechaza en cuanto el incidente está cerrado o cancelado, o contiene datos de notificación reglamentaria (consulte [Eliminar un incidente](#eliminar-un-incidente)). Una vez que sale del incidente, este permanece en el registro. La referencia de una creación cancelada no se reutiliza.
 
 **Permisos**:
 

@@ -20,24 +20,30 @@ Do not log routine work: password resets, single-user problems, standard change 
 
 ---
 
-## Getting started
+## Getting started { #getting-started }
 
-Navigate to **IT Landscape > Incidents** to see the register. Click **New incident** to log one.
+Navigate to **IT Landscape > Incidents** to see the register. To log an incident:
 
-**Required fields**:
+1. Click **New incident**. The incident page opens with an empty title in the header. The rest of the page is dimmed.
+2. Type a short factual summary, e.g. "Mail service unavailable at the Lyon office".
+3. Press Enter, or click outside the title. KANAP logs the incident at once. Its reference (`INC-14`) shows and all tabs open.
 
-- **Title**: a short factual summary, e.g. "Mail service unavailable at the Lyon office"
+The new incident is **Open**, with severity **Minor**, detected now, and you as the reporter. Then fill in the rest like on any incident:
+
 - **Severity**: Critical, Major, Minor or Low
-- **Detected**: when the incident was noticed (defaults to now)
-
-**Recommended on the same screen**:
-
+- **Detected**: when the incident was noticed
+- **Started**: when the incident actually began, if it differs from when you noticed it
 - **Description**: what happened, as observed
 - **Category**: infrastructure, security, application, data, supplier, other (configurable, see [Categories](#categories))
-- **Started**: when the incident actually began, if it differs from when you noticed it
 - **Owner**: who is responsible for handling it
 
-**Reporter** defaults to you. Both dates accept past values, so an incident discovered on Monday morning can be recorded as having started on Saturday night.
+Both dates accept past values, so an incident discovered on Monday morning can be recorded as having started on Saturday night. Press Escape on the empty title to leave without logging anything.
+
+### Cancelling a creation { #cancelling-a-creation }
+
+While you stay on the incident you just logged, **Cancel creation** in the header deletes it and takes you back to where you started: the list or the previous screen. If you entered more than the title, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete incidents. **Cancel incident** is hidden meanwhile.
+
+Cancelling a creation is refused once the incident is closed or cancelled, or holds regulatory reporting data (see [Deleting an incident](#deleting-an-incident)). Once you leave the incident, it stays in the register. The reference of a cancelled creation is not used again.
 
 **Permissions**:
 

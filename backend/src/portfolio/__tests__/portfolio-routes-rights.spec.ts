@@ -76,7 +76,7 @@ function projectController(scopeVisible: string[] = []) {
       return { ok: true };
     },
   });
-  const controller = new PortfolioProjectsController(svc as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any) as any;
+  const controller = new PortfolioProjectsController(svc as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any) as any;
   const levels: string[] = [];
   controller.resolveForAccess = async (_id: string, _ctx: unknown, level: string) => {
     levels.push(level);

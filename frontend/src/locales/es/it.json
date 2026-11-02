@@ -1572,6 +1572,9 @@
     "incident": {
       "title": "Incidente",
       "newTitle": "Nuevo incidente",
+      "creation": {
+        "record": "El incidente"
+      },
       "fields": {
         "title": "Título"
       },
@@ -1624,10 +1627,7 @@
         "minutes": "{{count}} min"
       },
       "create": {
-        "description": "Descripción",
-        "titleRequired": "El título es obligatorio.",
-        "severityRequired": "La gravedad es obligatoria.",
-        "detectedRequired": "La fecha de detección es obligatoria."
+        "description": "Descripción"
       },
       "overview": {
         "description": "Descripción",

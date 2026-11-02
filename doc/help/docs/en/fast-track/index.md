@@ -39,25 +39,24 @@ This pipeline ensures every initiative is evaluated fairly, prioritized transpar
 
 ## Step 1: Submit a Request
 
-Go to **Portfolio > Requests** and click **+ New Request**.
+Go to **Portfolio > Requests** and click **New request**.
 
-New requests open on **Summary** with the request property sidebar already visible. Start with the structural fields in the sidebar, then capture the narrative in **Purpose**.
+Type a clear, concise title for the initiative in the header, and press Enter. Your request enters the pipeline with status **Pending Review**, and all its tabs open.
 
 <!-- screenshot: New Request workspace with Summary and property sidebar -->
 
-Fill in the minimum details to get started:
+Then fill in the minimum details in the property sidebar:
 
 | Field | What to enter |
 |-------|--------------|
-| **Name** | A clear, concise title for the initiative |
 | **Source** | Where did this come from? (Business unit, regulation, IT strategy...) |
 | **Category** | The type of initiative (e.g., New Application, Infrastructure, Process Improvement) |
-| **Requestor** | Who is asking for this? |
+| **Requestor** | Who is asking for this? You, by default |
 | **Target Delivery Date** | When is this ideally needed by? |
 
 Then use the **Purpose** document on **Summary** to explain the business need and expected outcome in plain language. If you already have a brief in Word, use the **Import** button on the Purpose editor to pull the `.docx` file in directly, with no copy-paste needed.
 
-Click **Create**. Your request enters the pipeline with status **Pending Review**.
+While you are on its page, **Cancel creation** in the header deletes the new request.
 
 !!! tip "Keep it lean"
     You can add deeper analysis, linked knowledge, and supporting evidence later. The goal right now is to get the request into the governed intake flow.
@@ -357,7 +356,7 @@ See [Reporting reference](../portfolio-reporting.md).
 
 | I want to... | Go to... |
 |------------|--------|
-| Submit a new idea | Portfolio > Requests > + New |
+| Submit a new idea | Portfolio > Requests > New request |
 | Score a request | Open request > Scoring tab |
 | Assess feasibility | Open request > Analysis tab |
 | Set the project team | Open project > Project Properties sidebar > Team |

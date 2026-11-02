@@ -43,6 +43,8 @@ const KIND_WORDS: Record<string, string> = {
   attachment: 'attachments',
   document: 'documents',
   description: 'description',
+  time_entry: 'timeEntries',
+  journal_entry: 'journalEntries',
 };
 
 /** "2 fields, 1 relation": what the person added since the creation, in a few words. */

@@ -20,24 +20,30 @@ Erfassen Sie keine Routinearbeit: Passwortzurücksetzungen, Probleme einzelner B
 
 ---
 
-## Erste Schritte
+## Erste Schritte { #getting-started }
 
-Gehen Sie zu **IT-Landschaft > Vorfälle**, um das Register zu sehen. Klicken Sie auf **Neuer Vorfall**, um einen zu erfassen.
+Gehen Sie zu **IT-Landschaft > Vorfälle**, um das Register zu sehen. So erfassen Sie einen Vorfall:
 
-**Pflichtfelder**:
+1. Klicken Sie auf **Neuer Vorfall**. Die Seite des Vorfalls öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
+2. Geben Sie eine kurze, sachliche Zusammenfassung ein, z. B. „Mail-Dienst am Standort Lyon nicht verfügbar".
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erfasst den Vorfall sofort. Seine Referenz (`INC-14`) erscheint und alle Reiter öffnen sich.
 
-- **Titel**: eine kurze, sachliche Zusammenfassung, z. B. „Mail-Dienst am Standort Lyon nicht verfügbar"
+Der neue Vorfall ist **Offen**, mit dem Schweregrad **Mittel**, jetzt erkannt, und Sie sind der Melder. Füllen Sie dann den Rest aus wie bei jedem Vorfall:
+
 - **Schweregrad**: Kritisch, Hoch, Mittel oder Niedrig
-- **Erkannt**: wann der Vorfall bemerkt wurde (standardmäßig jetzt)
-
-**Auf demselben Bildschirm empfohlen**:
-
+- **Erkannt**: wann der Vorfall bemerkt wurde
+- **Begonnen**: wann der Vorfall tatsächlich begann, falls das vom Zeitpunkt der Entdeckung abweicht
 - **Beschreibung**: was passiert ist, wie beobachtet
 - **Kategorie**: Infrastruktur, Sicherheit, Anwendung, Daten, Lieferant, Sonstiges (konfigurierbar, siehe [Kategorien](#kategorien))
-- **Begonnen**: wann der Vorfall tatsächlich begann, falls das vom Zeitpunkt der Entdeckung abweicht
 - **Verantwortlicher**: wer die Bearbeitung übernimmt
 
-Der **Melder** sind standardmäßig Sie. Beide Daten akzeptieren Werte in der Vergangenheit: Ein am Montagmorgen entdeckter Vorfall kann als am Samstagabend begonnen erfasst werden.
+Beide Daten akzeptieren Werte in der Vergangenheit: Ein am Montagmorgen entdeckter Vorfall kann als am Samstagabend begonnen erfasst werden. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erfassen.
+
+### Erstellung abbrechen { #cancelling-a-creation }
+
+Solange Sie auf dem gerade erfassten Vorfall bleiben, löscht **Erstellung abbrechen** in der Kopfzeile ihn und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Wenn Sie mehr als den Titel eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Vorfällen abbrechen. **Vorfall abbrechen** ist währenddessen ausgeblendet.
+
+Das Abbrechen der Erstellung wird abgelehnt, sobald der Vorfall geschlossen oder abgebrochen ist oder Daten zur behördlichen Meldung enthält (siehe [Einen Vorfall löschen](#einen-vorfall-loschen)). Sobald Sie den Vorfall verlassen, bleibt er im Register. Die Referenz einer abgebrochenen Erstellung wird nicht wiederverwendet.
 
 **Berechtigungen**:
 

@@ -2,7 +2,7 @@ import { linkedReadsFromContext } from '../common/relations/linked-reads';
 import { assertApplicationsInScope, idsInScope } from './portfolio-linked-reads';
 import { languageOf } from '../common/csv-sheet';
 import {
-  Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
+  Body, Controller, Delete, Get, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
   UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { requestContextMissing, codedForbidden, moduleRightRequired } from '../auth/module-right-required';
@@ -38,6 +38,13 @@ import { REFRESH_TOKEN_COOKIE_NAME, parseCookieValue } from '../auth/auth-cookie
 import { resolveBusinessContributorScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
+import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '../common/creation/creation-token';
+import {
+  countChangesSinceCreation,
+  countEditedManagedDocuments,
+  withChildCount,
+  type CreationChanges,
+} from '../common/creation/creation-changes';
 import {
   PortfolioRelationsService,
   REQUEST_RELATION_READS,
@@ -591,14 +598,65 @@ export class PortfolioRequestsController {
     );
   }
 
+  /**
+   * Creates the request and hands its creator a creation token (`common/creation`), which opens
+   * "Cancel creation" (`DELETE :id/creation`) for this record and this person only.
+   */
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_requests', 'member')
   @Post()
-  create(@Body() body: any, @Req() req: any) {
+  async create(@Body() body: any, @Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.create(body, tenantId, req.user?.sub ?? null, {
+    const created = await this.svc.create(body, tenantId, req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,
     });
+    const creation_token = issueCreationToken({ tenantId, family: 'requests', recordId: created.id, userId: req.user?.sub ?? '' });
+    return Object.assign(created, { creation_token });
+  }
+
+  /** The token of `POST /portfolio/requests` for this record, tenant and person, still valid; a 403 otherwise. */
+  private assertCreationToken(id: string, token: unknown, req: any): void {
+    const subject = { tenantId: req?.tenant?.id ?? '', family: 'requests', recordId: String(id ?? ''), userId: req?.user?.sub ?? '' };
+    if (!verifyCreationToken(token, subject)) throw creationCancelExpired();
+  }
+
+  /**
+   * Before "Cancel creation": what was written on the request and its children since its creation
+   * (its history's audit rows), with its purpose and risks documents counted when their content
+   * changed, and its attachments as they stand. Nothing is written.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_requests', 'member')
+  @Get(':id/creation')
+  async creationChanges(
+    @Param('id') id: string,
+    @Query('token') token: string,
+    @Req() req: any,
+  ): Promise<{ changes: CreationChanges }> {
+    this.assertCreationToken(id, token, req);
+    const manager = req?.queryRunner?.manager;
+    const tenantId = req?.tenant?.id ?? '';
+    const found = await manager.query('SELECT 1 FROM portfolio_requests WHERE id = $1 AND tenant_id = $2', [id, tenantId]);
+    if (!found.length) throw new NotFoundException('Request not found');
+    let changes = await countChangesSinceCreation(manager, tenantId, 'portfolio_requests', id);
+    changes = withChildCount(changes, 'document', await countEditedManagedDocuments(manager, tenantId, 'requests', id));
+    const [{ total }] = await manager.query(
+      'SELECT count(*)::int AS total FROM portfolio_request_attachments WHERE tenant_id = $1 AND request_id = $2',
+      [tenantId, id],
+    );
+    return { changes: withChildCount(changes, 'attachment', total) };
+  }
+
+  /**
+   * "Cancel creation": the creator deletes the request they just created, with its token, even
+   * without the delete right (admin). Same delete as `DELETE :id` (refusals, cascades, audit entry).
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_requests', 'member')
+  @Delete(':id/creation')
+  async cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
+    this.assertCreationToken(id, body?.token, req);
+    await this.svc.delete(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
   @UseGuards(PermissionGuard)

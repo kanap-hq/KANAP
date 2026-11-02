@@ -39,25 +39,24 @@ Ce pipeline garantit que chaque initiative est évaluée équitablement, prioris
 
 ## Étape 1 : Soumettez une demande
 
-Allez dans **Portefeuille > Demandes** et cliquez sur **+ Nouvelle demande**.
+Allez dans **Portefeuille > Demandes** et cliquez sur **Nouvelle demande**.
 
-Les nouvelles demandes s'ouvrent sur le **Résumé** avec la barre latérale de propriétés déjà visible. Commencez par les champs structurels dans la barre latérale, puis capturez le récit dans l'**Objet**.
+Saisissez dans l'en-tête un titre clair et concis pour l'initiative, puis appuyez sur Entrée. Votre demande entre dans le pipeline avec le statut **En attente de revue**, et tous ses onglets s'ouvrent.
 
 <!-- screenshot: Espace de travail Nouvelle demande avec Résumé et barre latérale de propriétés -->
 
-Remplissez les détails minimaux pour commencer :
+Remplissez ensuite les détails minimaux dans la barre latérale de propriétés :
 
 | Champ | Quoi saisir |
 |-------|------------|
-| **Nom** | Un titre clair et concis pour l'initiative |
 | **Source** | D'où vient-elle ? (Direction métier, réglementation, stratégie IT...) |
 | **Catégorie** | Le type d'initiative (ex. : Nouvelle application, Infrastructure, Amélioration de processus) |
-| **Demandeur** | Qui fait la demande ? |
+| **Demandeur** | Qui fait la demande ? Vous, par défaut |
 | **Date de livraison cible** | Quand est-ce idéalement nécessaire ? |
 
 Puis utilisez le document **Objet** dans le **Résumé** pour expliquer le besoin métier et le résultat attendu en langage courant. Si vous avez déjà un brief dans Word, utilisez le bouton **Import** sur l'éditeur d'Objet pour importer le fichier `.docx` directement, sans copier-coller.
 
-Cliquez sur **Créer**. Votre demande entre dans le pipeline avec le statut **En attente de revue**.
+Tant que vous êtes sur sa page, **Annuler la création** dans l'en-tête supprime la nouvelle demande.
 
 !!! tip "Conseil : Restez léger"
     Vous pourrez ajouter une analyse plus approfondie, des documents de base de connaissances liés et des preuves de support plus tard. L'objectif maintenant est d'introduire la demande dans le flux d'intake gouverné.
@@ -357,7 +356,7 @@ Voir la [référence Rapports](../portfolio-reporting.md).
 
 | Je veux... | Aller à... |
 |------------|-----------|
-| Soumettre une nouvelle idée | Portefeuille > Demandes > + Nouveau |
+| Soumettre une nouvelle idée | Portefeuille > Demandes > Nouvelle demande |
 | Évaluer une demande | Ouvrir la demande > onglet Évaluation |
 | Évaluer la faisabilité | Ouvrir la demande > onglet Analyse |
 | Définir l'équipe projet | Ouvrir le projet > Barre latérale Propriétés du projet > Équipe |

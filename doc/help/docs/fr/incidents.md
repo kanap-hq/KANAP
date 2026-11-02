@@ -20,24 +20,30 @@ N'enregistrez pas le travail courant : réinitialisations de mot de passe, probl
 
 ---
 
-## Premiers pas
+## Premiers pas { #getting-started }
 
-Rendez-vous dans **Cartographie SI > Incidents** pour voir le registre. Cliquez sur **Nouvel incident** pour en enregistrer un.
+Rendez-vous dans **Cartographie SI > Incidents** pour voir le registre. Pour enregistrer un incident :
 
-**Champs obligatoires** :
+1. Cliquez sur **Nouvel incident**. La page de l'incident s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+2. Saisissez un résumé court et factuel, ex. : « Messagerie indisponible sur le site de Lyon ».
+3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP enregistre l'incident aussitôt. Sa référence (`INC-14`) apparaît et tous les onglets s'ouvrent.
 
-- **Titre** : un résumé court et factuel, ex. : « Messagerie indisponible sur le site de Lyon »
+Le nouvel incident est **Ouvert**, de gravité **Mineure**, détecté maintenant, avec vous comme déclarant. Complétez ensuite le reste comme sur tout incident :
+
 - **Gravité** : Critique, Majeur, Mineur ou Faible
-- **Détecté** : quand l'incident a été remarqué (par défaut maintenant)
-
-**Recommandés sur le même écran** :
-
+- **Détecté** : quand l'incident a été remarqué
+- **Début** : quand l'incident a réellement commencé, si c'est différent du moment où vous l'avez remarqué
 - **Description** : ce qui s'est passé, tel qu'observé
 - **Catégorie** : infrastructure, sécurité, application, données, fournisseur, autre (configurable, voir [Catégories](#categories))
-- **Début** : quand l'incident a réellement commencé, si c'est différent du moment où vous l'avez remarqué
 - **Responsable** : qui prend l'incident en charge
 
-Le **Déclarant** est vous par défaut. Les deux dates acceptent des valeurs passées : un incident découvert le lundi matin peut être enregistré comme ayant commencé le samedi soir.
+Les deux dates acceptent des valeurs passées : un incident découvert le lundi matin peut être enregistré comme ayant commencé le samedi soir. Appuyez sur Échap dans le titre vide pour partir sans rien enregistrer.
+
+### Annuler la création { #cancelling-a-creation }
+
+Tant que vous restez sur l'incident que vous venez d'enregistrer, **Annuler la création** dans l'en-tête le supprime et vous ramène là où vous avez commencé : la liste ou l'écran précédent. Si vous avez saisi plus que le titre, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des incidents. **Annuler l'incident** est masqué pendant ce temps.
+
+L'annulation de la création est refusée dès que l'incident est clôturé ou annulé, ou contient des données de déclaration réglementaire (voir [Supprimer un incident](#supprimer-un-incident)). Une fois que vous quittez l'incident, il reste dans le registre. La référence d'une création annulée n'est pas réutilisée.
 
 **Autorisations** :
 
