@@ -6,43 +6,42 @@ import { backendPath } from './backend-root';
 
 // A 403 carries a translatable `code` (and `params` when it names a right, a family or a module),
 // so the screen shows it in the language of the person (`errors:<code>`). This inventory fails
-// when a refusal is written with a bare sentence outside the allowlist below:
+// when a refusal leaves without a code:
 //   - `new ForbiddenException('...')`, a template or a constant (`new ForbiddenException(MESSAGE)`);
+//   - `new ForbiddenException()` with no body;
+//   - `new ForbiddenException({ ... })` whose object names no `code` (an `error` other than
+//     'Forbidden' counts: the screen reads it as the code);
 //   - `new HttpException('...', 403)` or `HttpStatus.FORBIDDEN` with a bare sentence.
 // Write it through `codedForbidden(code, message, params?)`, `moduleRightRequired(...)` or one of
 // the helpers of `src/auth/module-right-required.ts`, or with an object holding a `code`.
 // It reads files outside its own folder: `backendPath()`, never `__dirname` (the compiled tree
 // has no `.ts` file).
 
-const BARE_FORBIDDEN = /new\s+ForbiddenException\(\s*(?:['"`]|[A-Za-z_$][\w$]*\s*[,)])/g;
+const BARE_FORBIDDEN = /new\s+ForbiddenException\(\s*(?:['"`]|\)|[A-Za-z_$][\w$]*\s*[,)])/g;
 const BARE_HTTP_EXCEPTION = /new\s+HttpException\(\s*(?:['"`]|[A-Za-z_$][\w$]*\s*,)[^;]*?,\s*(?:403|HttpStatus\.FORBIDDEN)\s*\)/g;
+const OBJECT_FORBIDDEN = /new\s+ForbiddenException\(\s*\{/g;
+const CODE_KEY = /(?:^|[{,\s])code\s*[:,}]|(?:^|[{,\s])error\s*:(?!\s*['"`]Forbidden['"`])/;
 
-/**
- * Files that still hold a bare refusal: the control plane of the AI module (`src/ai/control-plane/`), until its own lot codes them. The list
- * only shrinks: remove a file once its refusals are coded.
- */
-const ALLOWED_FILES = new Set<string>([
-  'src/ai/control-plane/action-request/ai-action-request.service.ts',
-  'src/ai/control-plane/agent-control/agent-control-definition.util.ts',
-  'src/ai/control-plane/agent-control/ai-agent-control.controller.ts',
-  'src/ai/control-plane/agent-control/ai-agent-control.service.ts',
-  'src/ai/control-plane/agent/ai-agent-helpdesk-ticketing-ingestion.service.ts',
-  'src/ai/control-plane/agent/ai-agent-monitoring-alert-ingestion.service.ts',
-  'src/ai/control-plane/agent/ai-agent-work-queue.service.ts',
-  'src/ai/control-plane/approval/ai-approval.service.ts',
-  'src/ai/control-plane/automation/ai-automation-job-catalog.service.ts',
-  'src/ai/control-plane/capability/ai-capability.registry.ts',
-  'src/ai/control-plane/diagnostics/ai-readonly-diagnostic-workflow.service.ts',
-  'src/ai/control-plane/dispatcher/ai-capability-dispatcher.service.ts',
-  'src/ai/control-plane/live-readiness/ai-live-contract-harness.service.ts',
-  'src/ai/control-plane/live-readiness/ai-live-test-target.service.ts',
-  'src/ai/control-plane/mcp/ai-external-mcp-bridge.service.ts',
-  'src/ai/control-plane/mcp/ai-mcp-access-policy.ts',
-  'src/ai/control-plane/mcp/ai-mcp-exposure.service.ts',
-  'src/ai/control-plane/pause/ai-emergency-pause.service.ts',
-  'src/ai/control-plane/policy/ai-autonomy-routine.service.ts',
-  'src/ai/control-plane/providers/tenant-secret-resolver.service.ts',
-]);
+/** The object literal that opens at `open` (a `{`), braces balanced, strings skipped. */
+function objectAt(source: string, open: number): string {
+  let depth = 0;
+  let quote: string | null = null;
+  for (let i = open; i < source.length; i += 1) {
+    const char = source[i];
+    if (quote) {
+      if (char === '\\') i += 1;
+      else if (char === quote) quote = null;
+    } else if (char === "'" || char === '"' || char === '`') {
+      quote = char;
+    } else if (char === '{') {
+      depth += 1;
+    } else if (char === '}') {
+      depth -= 1;
+      if (depth === 0) return source.slice(open, i + 1);
+    }
+  }
+  return source.slice(open);
+}
 
 function sourceFiles(dir: string): string[] {
   const files: string[] = [];
@@ -61,28 +60,22 @@ function lineOf(source: string, index: number): number {
 
 function run(): void {
   const failures: string[] = [];
-  const stale: string[] = [];
-  const seenAllowed = new Set<string>();
   for (const file of sourceFiles(backendPath('src'))) {
     const relative = path.relative(backendPath(), file).split(path.sep).join('/');
     const source = fs.readFileSync(file, 'utf8');
-    const hits = [...source.matchAll(BARE_FORBIDDEN), ...source.matchAll(BARE_HTTP_EXCEPTION)];
-    if (ALLOWED_FILES.has(relative)) {
-      if (hits.length > 0) seenAllowed.add(relative);
-      continue;
+    const hits = [...source.matchAll(BARE_FORBIDDEN), ...source.matchAll(BARE_HTTP_EXCEPTION)].map((match) => match.index ?? 0);
+    for (const match of source.matchAll(OBJECT_FORBIDDEN)) {
+      const index = match.index ?? 0;
+      if (!CODE_KEY.test(objectAt(source, index + match[0].length - 1))) hits.push(index);
     }
-    for (const match of hits) {
+    for (const index of hits) {
       failures.push(
-        `${relative}:${lineOf(source, match.index ?? 0)}: a 403 with a bare sentence. Use codedForbidden(code, message, params?) ` +
+        `${relative}:${lineOf(source, index)}: a 403 with no code. Use codedForbidden(code, message, params?) ` +
         'or moduleRightRequired(...) from src/auth/module-right-required.ts, and add errors:<code> to the four locales.',
       );
     }
   }
-  for (const allowed of ALLOWED_FILES) {
-    if (!seenAllowed.has(allowed)) stale.push(allowed);
-  }
-  assert.deepEqual(failures, [], `Bare 403 refusals found:\n${failures.join('\n')}`);
-  assert.deepEqual(stale, [], `Remove from ALLOWED_FILES (no bare 403 left there):\n${stale.join('\n')}`);
+  assert.deepEqual(failures, [], `403 refusals with no code found:\n${failures.join('\n')}`);
   console.log('coded-forbidden.inventory.spec: ok');
 }
 
