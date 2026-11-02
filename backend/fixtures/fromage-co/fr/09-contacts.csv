@@ -1,0 +1,17 @@
+first_name;last_name;job_title;email;phone;mobile;country;notes;active
+Robert;Chen;Responsable grands comptes;robert.chen@microsoft.example;+1 425 555 0101;;US;Contact Microsoft principal pour le renouvellement de l'EA;true
+Sarah;Mitchell;Ingénieur commercial;sarah.mitchell@salesforce.example;+1 415 555 0202;;US;Salesforce Sales Cloud et Service Cloud;true
+Klaus;Weber;Consultant senior;klaus.weber@sap.example;+49 6227 555 303;;DE;Consultant principal de la migration SAP S/4HANA;true
+Antoine;Moreau;Responsable technique de compte;antoine.moreau@ovhcloud.example;+33 1 55 04 0404;;FR;Infrastructure dédiée OVHcloud;true
+Anita;Patel;Ingénieur solutions;anita.patel@atlassian.example;+44 20 7555 0505;;GB;Accompagnement de la migration vers Atlassian Cloud;true
+Gianluca;Bianchi;Architecte de solutions IoT;gianluca.bianchi@schneider-electric.example;+39 02 555 0606;;IT;Schneider Electric — chef de projet CaveGuard IoT;true
+Lisa;Thompson;Customer Success Manager;lisa.thompson@datadog.example;+1 646 555 0707;;US;Supervision Datadog pour l'entreprise;true
+David;Kim;Architecte solutions;david.kim@okta.example;+1 888 555 0808;;US;Déploiement du SSO Okta et architecture zero trust;true
+Emma;Johansson;Responsable partenaires de distribution;emma.johansson@sophos.example;+44 20 7555 0909;;GB;Sécurité des postes et du réseau Sophos;true
+Yuki;Tanaka;Ventes grands comptes;yuki.tanaka@docusign.example;+1 415 555 1010;;US;DocuSign pour les contrats et les achats;true
+Hans;Gruber;Consultant en technologie fromagère;hans.gruber@cavelogic-systems.example;+33 5 55 11 1111;;FR;Spécialiste du système de gestion de l'affinage FroMag;true
+Valentina;Costa;Directeur supply chain;valentina.costa@coldchain-solutions.example;+31 20 555 1212;;NL;Mise en œuvre et support CheeseTrack;true
+James;O'Brien;Responsable grands comptes;james.obrien@servicenow.example;+44 20 7555 1313;;GB;Plateforme ITSM ServiceNow;true
+Priya;Sharma;Responsable de la mise en œuvre;priya.sharma@workday.example;+1 925 555 1414;;US;Déploiement mondial de Workday HCM;true
+Carlos;Mendez;Responsable de compte;carlos.mendez@broadcom.example;+1 408 555 1515;;US;ELA VMware vSphere et renouvellements;true
+Rachel;Lee;Responsable partenaires de distribution;rachel.lee@fortinet.example;+1 408 555 1616;;US;Support des pare-feu Fortinet FortiGate;true

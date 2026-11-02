@@ -1,0 +1,19 @@
+email;first_name;last_name;role;company_name;department_name;status
+thomas.berger@fromage-co.example;Thomas;Berger;Administrator;Fromage & Co SA;Informatique et digital;enabled
+sophie.laurent@fromage-co.example;Sophie;Laurent;IT Landscape Administrator;Fromage & Co SA;Informatique et digital;enabled
+marc.petit@fromage-co.example;Marc;Petit;IT Landscape Member;Fromage & Co SA;Informatique et digital;enabled
+amelie.rousseau@fromage-co.example;Amélie;Rousseau;IT Landscape Member;Fromage & Co SA;Informatique et digital;enabled
+pierre.martin@fromage-co.example;Pierre;Martin;IT Landscape Member;Fromage & Co SA;Informatique et digital;enabled
+lucas.bernard@fromage-co.example;Lucas;Bernard;IT Landscape Member;Fromage & Co SA;Informatique et digital;enabled
+clara.dupont@fromage-co.example;Clara;Dupont;Portfolio Member;Fromage & Co SA;Informatique et digital;enabled
+hugo.mercier@fromage-co.example;Hugo;Mercier;IT Landscape Reader;Fromage & Co SA;Informatique et digital;enabled
+maria.casanova@fromage-co.example;Maria;Casanova;Budget Administrator;Fromage & Co SA;Finance et contrôle de gestion;enabled
+jacques.dubois@fromage-co.example;Jacques;Dubois;Business Contributor;Fromage & Co SA;Production;enabled
+isabelle.moreau@fromage-co.example;Isabelle;Moreau;Portfolio Reader;Fromage & Co SA;Ventes et marketing;enabled
+catherine.blanc@fromage-co.example;Catherine;Blanc;Portfolio Reader;Fromage & Co SA;Qualité et R&D;enabled
+jan.bakker@kaasmeester.example;Jan;Bakker;IT Landscape Member;Kaasmeester BV;Informatique;enabled
+luca.ferrari@formaggio-supremo.example;Luca;Ferrari;IT Landscape Member;Formaggio Supremo SRL;Informatique;enabled
+mike.johnson@fromage-co.example;Mike;Johnson;IT Landscape Member;Fromage & Co Inc.;Informatique;enabled
+nadia.lemaire@fromage-co.example;Nadia;Lemaire;Budget Member;Fromage & Co SA;Informatique et digital;enabled
+olivier.garnier@fromage-co.example;Olivier;Garnier;Budget Member;Fromage & Co SA;Informatique et digital;enabled
+ines.chevalier@fromage-co.example;Inès;Chevalier;Budget Member;Fromage & Co SA;Informatique et digital;enabled

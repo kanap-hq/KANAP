@@ -1,0 +1,43 @@
+name;erp_supplier_id;commercial_contact;technical_contact;support_contact;notes;status
+Microsoft;SUP-001;;;;Enterprise Agreement — Microsoft 365, Azure, GitHub, Power BI;enabled
+SAP;SUP-002;;;;ERP et analytique — S/4HANA, BW/4HANA, Concur;enabled
+Salesforce;SUP-003;;;;CRM et service client — Sales Cloud, Service Cloud, Slack;enabled
+OVHcloud;SUP-004;;;;Cloud européen — serveurs dédiés et stockage objet;enabled
+Atlassian;SUP-005;;;;Collaboration — Jira Software et Confluence Cloud;enabled
+Sage;SUP-006;;;;Comptabilité — X3 pour les entités néerlandaise et italienne;enabled
+Schneider Electric;SUP-007;;;;IoT et automatisation industrielle — plateforme CaveGuard;enabled
+Datadog;SUP-008;;;;Supervision de l'infrastructure et des applications;enabled
+Okta;SUP-009;;;;Gestion des identités, SSO et MFA;enabled
+DocuSign;SUP-010;;;;Signature électronique et CLM;enabled
+Sophos;SUP-011;;;;Protection des postes et EDR;enabled
+Zoom Video Communications;SUP-012;;;;Visioconférence et communications unifiées;enabled
+Cavelogic Systems;SUP-013;;;;Logiciel pour l'industrie fromagère — gestion de l'affinage FroMag;enabled
+ColdChain Solutions;SUP-014;;;;Traçabilité de la chaîne du froid — plateforme CheeseTrack;enabled
+ServiceNow;SUP-015;;;;Plateforme de gestion des services informatiques;enabled
+Workday;SUP-016;;;;Gestion des ressources humaines et paie;enabled
+HubSpot;SUP-017;;;;Inbound marketing et automatisation du marketing;enabled
+Broadcom;SUP-018;;;;Virtualisation — VMware vSphere;enabled
+Veeam;SUP-019;;;;Sauvegarde et reprise après sinistre;enabled
+Fortinet;SUP-020;;;;Sécurité réseau — pare-feu FortiGate;enabled
+Cisco;SUP-021;;;;Infrastructure réseau — commutateurs et Meraki;enabled
+Snowflake;SUP-022;;;;Plateforme de données cloud et analytique;enabled
+Coupa;SUP-023;;;;Achats et gestion des dépenses;enabled
+Intuit;SUP-024;;;;Comptabilité — QuickBooks Online pour l'entité américaine;enabled
+Adobe;SUP-025;;;;Gestion documentaire — Acrobat Pro;enabled
+Axians;SUP-026;;;;Services informatiques managés pour les activités françaises;enabled
+Atlantic IT Solutions;SUP-027;;;;Services informatiques managés — support des activités américaines;enabled
+Fromatech Consulting;SUP-028;;;;Prestataires et centres de compétences, France;enabled
+Nearshore Digital Lisboa;SUP-029;;;;Développement et support nearshore, Portugal;enabled
+DevHouse Milano;SUP-030;;;;Développement et services managés, Italie;enabled
+Benelux IT Partners;SUP-031;;;;Services managés et prestataires, Benelux;enabled
+Alpine Data Experts;SUP-032;;;;Conseil, données et gestion de projet;enabled
+Generix Group;SUP-033;;;;Plateforme EDI et supply chain;enabled
+Akeneo;SUP-034;;;;Gestion des informations produits (PIM);enabled
+Cegid;SUP-035;;;;Logiciels de caisse et de commerce de détail;enabled
+Orange Business;SUP-036;;;;Télécoms et réseau, France;enabled
+KPN;SUP-037;;;;Télécoms, Pays-Bas;enabled
+TIM Business;SUP-038;;;;Télécoms, Italie;enabled
+Verizon Business;SUP-039;;;;Télécoms, États-Unis;enabled
+Dell Technologies;SUP-040;;;;Serveurs et stockage;enabled
+Lenovo;SUP-041;;;;Postes de travail;enabled
+Shopify;SUP-042;;;;Plateforme e-commerce;enabled

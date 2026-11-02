@@ -27,7 +27,8 @@ import { TrialSignup } from '../trial-signup.entity';
 // load (empty workspace included). Real activation, real DemoDataService and tenant reset on the
 // spec database; the loader process and the e-mails are doubles.
 // - the loader gets the tenant's host, its starting company and a token of the new administrator;
-// - the sample data language is recorded (`en` whatever the browser, for now);
+// - the sample data comes in the browser's language (`fr` for a French browser), recorded in the
+//   state and given to the loader; any other language gives `en`;
 // - with every load slot taken, the load is tried again until a slot frees, or gives up `idle`;
 // - a missing loader leaves `idle` (as a manual load), a loader that fails leaves `failed`;
 // - a workspace holding a numbered record, before or during the wait, is refused with its counters intact;
@@ -225,12 +226,16 @@ async function testActivationLoadsSampleData() {
   }
 }
 
-// The sample data language: recorded in the state, `en` for any browser language for now.
+// The sample data language: the browser's when the sample data comes in it, else `en`; recorded
+// in the state and given to the loader.
 async function testLanguageIsRecorded() {
-  assert.deepEqual([...DEMO_DATA_LANGUAGES], ['en']);
+  assert.deepEqual([...DEMO_DATA_LANGUAGES], ['en', 'fr', 'de', 'es']);
   assert.equal(resolveDemoDataLanguage('en'), 'en');
   assert.equal(resolveDemoDataLanguage(' EN '), 'en');
-  assert.equal(resolveDemoDataLanguage('fr'), 'en');
+  assert.equal(resolveDemoDataLanguage('fr'), 'fr');
+  assert.equal(resolveDemoDataLanguage('de-CH'), 'de');
+  assert.equal(resolveDemoDataLanguage('es_ES'), 'es');
+  assert.equal(resolveDemoDataLanguage('it'), 'en');
   assert.equal(resolveDemoDataLanguage(undefined), 'en');
   assert.equal(resolveDemoDataLanguage(42), 'en');
 
@@ -243,8 +248,9 @@ async function testLanguageIsRecorded() {
     assert.equal(tenant.language, 'fr', 'the tenant keeps the browser language');
     await waitFor('loader started', () => h.children.length, (n) => n === 1);
     const demo = await demoOf(a.tenantId);
-    assert.equal(demo.language, 'en');
-    assert.equal((await h.service.getStatus(a.tenantId)).language, 'en', 'the state shows the language');
+    assert.equal(demo.language, 'fr');
+    assert.equal((await h.service.getStatus(a.tenantId)).language, 'fr', 'the state shows the language');
+    assert.equal(h.children[0].env.KANAP_DEMO_LANGUAGE, 'fr', 'the loader loads the French set');
   } finally {
     await h.finishAll();
     await cleanupActivated([a]);

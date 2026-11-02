@@ -1,0 +1,156 @@
+ref;title;category;severity;status;confidential;started_at (Europe/Paris);detected_at (Europe/Paris);resolved_at (Europe/Paris);closed_at (Europe/Paris);reporter;owner;description;review;source_ref;personal_data_affected;authority_notification_required;authority_notified_at (Europe/Paris);notified_parties
+;Lecturas de humedad de la Cava B perdidas durante la noche;infrastructure;major;closed;false;2026-03-14 01:20;2026-03-14 06:45;2026-03-14 09:30;2026-03-20 17:00;jacques.dubois@fromage-co.example;lucas.bernard@fromage-co.example;La pasarela IoT de la Cava B dejó de reenviar los datos de los sensores. CaveGuard mostró valores obsoletos durante cinco horas sin generar ninguna alerta, por lo que el turno de noche no revisó la cava de Brie.;"## Descripción detallada
+
+El 14 de marzo de 2026 a las 01:20, la pasarela IoT de la Cava B, CAVE-GW-02, dejó de reenviar los datos de los sensores tras un fallo del watchdog del firmware. CaveGuard mantuvo los últimos valores en pantalla y no generó ninguna alerta, por lo que la falta de datos pasó desapercibida hasta que el turno de noche revisó la cava a las 06:45. La pasarela se reinició y las lecturas se reanudaron a las 07:25. El incidente se cerró el 20 de marzo tras revisar las acciones correctivas.
+
+## Impacto
+
+- 18 sensores de la Cava B no enviaron datos de 01:20 a 06:45, una interrupción de cinco horas y veinticinco minutos.
+- El turno de noche no tuvo la tendencia de humedad de la cava de Brie. Dos lotes de Brie se comprobaron a mano a las 07:00: la humedad había bajado al 82%, todavía dentro de la tolerancia aplicada por Calidad.
+- No se perdió ningún lote y ninguna entrega a clientes se vio afectada.
+
+## Causa raíz
+
+El firmware de CAVE-GW-02 no tenía reinicio automático tras un fallo del watchdog. CaveGuard solo alertaba de los rebasamientos de umbral, no de la falta de datos, y la pasarela no estaba en PRTG, así que nada señaló el silencio.
+
+## Acciones correctivas
+
+- Firmware actualizado en las dos pasarelas de las cavas a una versión con reinicio automático tras un fallo del watchdog (hecho, 16 de marzo de 2026).
+- CaveGuard genera ahora una alerta cuando un sensor no envía nada durante 15 minutos (hecho, 18 de marzo de 2026).
+- CAVE-GW-02 añadida a PRTG con un ping y una comprobación de actualidad de los datos (abierto al cierre, responsable Lucas Bernard).
+- Lista de comprobación del turno de noche actualizada para revisar el indicador de actualidad de datos de CaveGuard al inicio de cada turno (hecho, 19 de marzo de 2026).
+
+## Lecciones aprendidas
+
+Vigilar la ausencia de datos importa tanto como vigilar los valores. Un sensor que deja de enviar datos es invisible para una alerta por umbral. La pasarela también debía estar en la herramienta de supervisión estándar, no solo en CaveGuard. El próximo despliegue IoT incluirá ambas comprobaciones desde el principio.";;false;false;;
+;Campaña de phishing contra cuentas a pagar;security;major;closed;true;2026-04-07 08:10;2026-04-07 09:05;2026-04-07 12:30;2026-04-15 10:00;maria.casanova@fromage-co.example;lucas.bernard@fromage-co.example;"Facturas falsas de proveedores con un enlace a una página clonada de inicio de sesión de Microsoft llegaron a 23 personas de Finanzas. Un usuario introdujo su contraseña; Okta bloqueó el inicio de sesión en el paso de MFA.";"## Descripción detallada
+
+El 7 de abril de 2026 a las 08:10, 23 usuarios de Finanzas recibieron un correo que parecía proceder de un proveedor conocido, con un enlace a una factura que llevaba a una página clonada de inicio de sesión de Microsoft. Un usuario introdujo su contraseña a las 08:42. Okta exigió la MFA y bloqueó el inicio de sesión. El usuario informó del correo a las 09:05. Seguridad bloqueó el remitente y el dominio similar, eliminó los mensajes de todos los buzones, restableció la contraseña del usuario y revocó sus sesiones antes de las 12:30. El incidente se cerró el 15 de abril tras revisar los registros del buzón y de inicio de sesión.
+
+## Impacto
+
+- 23 usuarios de Finanzas recibieron el correo de phishing.
+- Se introdujo una credencial en la página clonada. La MFA bloqueó el inicio de sesión y no se detectó ningún acceso al buzón, cambio de pago ni exfiltración de datos.
+- El incidente está restringido a los administradores del registro. El usuario afectado no se nombra en esta revisión.
+
+## Causa raíz
+
+El dominio similar no figuraba en la lista de bloqueo del filtro de correo y su reputación seguía limpia. La temática de la factura coincidía con un proceso real de un proveedor, por lo que el mensaje parecía normal. La MFA impidió la toma de control de la cuenta. El filtro se basaba en la reputación del dominio y no detectó el dominio similar recién registrado.
+
+## Acciones correctivas
+
+- Remitente y dominio similar bloqueados (hecho, 7 de abril de 2026).
+- Mensajes de phishing eliminados de todos los buzones (hecho, 7 de abril de 2026).
+- Contraseña del usuario restablecida y sesiones revocadas (hecho, 7 de abril de 2026).
+- Regla de detección para dominios similares a los de proveedores añadida (hecho, 9 de abril de 2026).
+- Nota de concienciación para Finanzas sobre la verificación telefónica de facturas (hecho, 10 de abril de 2026).
+- Simulación de phishing con temática de facturas añadida a la campaña trimestral (abierto, responsable Lucas Bernard).
+
+## Lecciones aprendidas
+
+La MFA convirtió una contraseña robada en un inicio de sesión bloqueado. El aviso rápido del usuario acortó la respuesta. Los dominios similares recién registrados necesitan una regla de detección, no solo una lista de bloqueo. Cualquier cambio de datos bancarios de un proveedor debe verificarse llamando a un número conocido, no al que figura en el correo.";SOC-2026-0412;false;false;;
+;Cierre mensual de SAP ralentizado por contención de memoria del host;infrastructure;major;closed;false;2026-04-30 16:00;2026-04-30 17:20;2026-05-01 09:00;2026-05-06 11:00;maria.casanova@fromage-co.example;pierre.martin@fromage-co.example;Las tareas del cierre financiero fueron cuatro veces más lentas de lo habitual. PAR-ESX-01 quedó sobrecargado tras un mantenimiento de host, con los servidores S/4HANA y BW en el mismo host.;"## Descripción detallada
+
+El 30 de abril de 2026 a las 16:00, las tareas del cierre mensual fueron unas cuatro veces más lentas de lo habitual. Las primeras comprobaciones, a las 17:20, mostraron contención de memoria en PAR-ESX-01: un mantenimiento de host el 29 de abril había dejado las VM de producción de S/4HANA y BW en el mismo host, sin regla de reserva de memoria. La VM de BW se trasladó a PAR-ESX-02 y las tareas de cierre recuperaron su velocidad normal a las 19:10. El cierre terminó el 1 de mayo a las 09:00. El incidente se cerró el 6 de mayo tras la confirmación de las cifras por Finanzas.
+
+## Impacto
+
+- Las tareas del cierre mensual fueron cuatro veces más lentas durante unas tres horas, de 16:00 a 19:10.
+- El equipo de Finanzas no pudo lanzar la primera consolidación el 30 de abril y tuvo que esperar a la mañana del 1 de mayo.
+- El cierre terminó el 1 de mayo sin pérdida de datos ni contabilizaciones duplicadas.
+
+## Causa raíz
+
+El mantenimiento del 29 de abril dejó las dos VM de producción de SAP en PAR-ESX-01 y redujo la memoria disponible para ellas. VMware DRS no tenía ninguna regla para mantener separadas las dos VM y ninguna alerta vigilaba la contención de memoria del host, de modo que las tareas de cierre compitieron por la memoria.
+
+## Acciones correctivas
+
+- VM de BW trasladada a PAR-ESX-02 y reservas de memoria comprobadas en las dos VM de SAP (hecho, 30 de abril de 2026).
+- Regla de antiafinidad DRS añadida para las VM de producción de S/4HANA y BW (hecho, 4 de mayo de 2026).
+- Alerta de memoria del host al 90% añadida para los hosts ESXi que alojan la producción de SAP (hecho, 5 de mayo de 2026).
+- Lista de comprobación de mantenimiento actualizada con una verificación de reservas de memoria y de ubicación para los hosts SAP (hecho, 5 de mayo de 2026).
+- Revisión de capacidad antes de cada cierre mensual durante la migración SAP Cheddar (abierto, responsable Pierre Martin).
+
+## Lecciones aprendidas
+
+Un mantenimiento de host es un cambio en la plataforma de producción de SAP, aunque no se reinicie ninguna VM. La ubicación y las reservas de memoria deben comprobarse antes del periodo de cierre. Una regla de antiafinidad es un control sencillo que impide que un mantenimiento coloque las dos VM de producción en un mismo host. El próximo cierre incluirá una comprobación de capacidad en el procedimiento.";;false;false;;
+;Portal B2B caído: disco de la base de datos lleno;application;critical;closed;false;2026-06-02 07:50;2026-06-02 08:05;2026-06-02 11:10;2026-06-12 15:00;isabelle.moreau@fromage-co.example;marc.petit@fromage-co.example;Los distribuidores no pudieron hacer pedidos durante tres horas. El servidor PostgreSQL 13 del portal B2B llenó su disco con registros WAL tras el fallo de la tarea de archivado.;"## Descripción detallada
+
+La tarea de archivado WAL de PAR-DB-01 llevaba seis días fallando. El disco se llenó a las 07:50 del 2 de junio de 2026 y PostgreSQL dejó de aceptar escrituras, por lo que Fromage B2B Portal no estuvo disponible para los distribuidores. Las primeras llamadas llegaron al equipo de Ventas a las 07:50 y el incidente se detectó a las 08:05. El destino de archivado se corrigió a las 09:20, se archivó el WAL pendiente y el uso de disco bajó. La base de datos volvió a aceptar escrituras a las 10:50 y el portal se abrió a las 11:10. El incidente se cerró el 12 de junio tras la revisión con Ventas e Infraestructura.
+
+## Impacto
+
+- Fromage B2B Portal no disponible de 07:50 a 11:10, tres horas y veinte minutos.
+- Unos 140 pedidos se tomaron por teléfono y se registraron después.
+- No se perdió ningún pedido y no se expusieron datos de clientes.
+
+## Causa raíz
+
+El destino de archivado cambió durante la migración SAN y nadie vigilaba la tarea. Ninguna alerta vigilaba el uso de disco del servidor de bases de datos, así que una tarea de archivado fallida tuvo seis días para llenar el disco.
+
+## Acciones correctivas
+
+- Tarea de archivado corregida y supervisada (hecho, 2 de junio de 2026).
+- Alerta de uso de disco al 80% en los servidores de bases de datos (hecho, 4 de junio de 2026).
+- Destino de archivado WAL añadido a la lista de comprobación de la migración SAN (hecho, 5 de junio de 2026).
+- Actualizar PostgreSQL 13, sin soporte, dentro de la hoja de ruta del portal (abierto, seguido como tarea correctiva, objetivo diciembre de 2026).
+
+## Lecciones aprendidas
+
+Las tareas de copia de seguridad y archivado son servicios de producción: su resultado y el espacio en disco que consumen requieren supervisión. Un cambio de infraestructura que traslada un destino debe incluir las tareas que escriben en él. El procedimiento telefónico funcionó, pero tres horas de pedidos manuales son un coste que la hoja de ruta del portal debe eliminar.";;false;false;;
+;Confirmaciones de pedido enviadas a clientes equivocados;data;major;closed;false;2026-07-09 14:00;2026-07-09 15:30;2026-07-09 16:10;2026-07-24 12:00;isabelle.moreau@fromage-co.example;marc.petit@fromage-co.example;Un error de caché en la versión de la tienda online envió 214 correos de confirmación de pedido con el nombre, la dirección y el contenido del pedido de otro cliente.;"## Descripción detallada
+
+Un error de caché en la versión de la tienda online desplegada el 9 de julio de 2026 a las 13:40 provocó el envío de 214 correos de confirmación de pedido con el nombre, la dirección y el contenido del pedido de otro cliente. Los primeros avisos llegaron a Atención al cliente a las 15:30. La versión se revirtió a las 15:45 y la cola de correos se detuvo a las 16:10. Los clientes afectados fueron informados por correo el 10 de julio y la CNIL fue notificada el 11 de julio a las 10:00. El incidente se cerró el 24 de julio tras revisar la corrección y la notificación.
+
+## Impacto
+
+- 214 clientes recibieron un correo de confirmación con datos personales de otro cliente: nombre, dirección y contenido del pedido.
+- No se expusieron datos de pago, contraseñas ni datos bancarios.
+- Atención al cliente gestionó las llamadas y los correos de los clientes afectados. No se ha detectado ningún uso indebido de los datos.
+
+## Causa raíz
+
+En la nueva versión, la clave de caché de la plantilla de confirmación de pedido no incluía el id del cliente, por lo que un mensaje en caché podía reutilizarse para el siguiente pedido. La versión no tenía ninguna prueba con dos clientes simultáneos ni ninguna comprobación del correo generado antes de su envío.
+
+## Acciones correctivas
+
+- Versión revertida y cola de correos detenida (hecho, 9 de julio de 2026).
+- Clave de caché corregida para incluir el cliente y el id del pedido (hecho, 10 de julio de 2026).
+- Prueba de regresión con dos clientes y una caché compartida añadida (hecho, 11 de julio de 2026).
+- Comprobación del formato de los correos añadida a la lista de comprobación de versiones (hecho, 14 de julio de 2026).
+- Clientes afectados informados y CNIL notificada (hecho, 10 y 11 de julio de 2026).
+- Revisión del proceso de publicación para contenido personalizado (abierto, responsable Marc Petit).
+
+## Lecciones aprendidas
+
+El contenido personalizado debe probarse con al menos dos identidades, también cuando interviene una caché. La clave de caché forma parte del diseño de protección de datos. La detección tardó 90 minutos porque los primeros avisos llegaron de los clientes; una alerta sobre nombres de cliente repetidos en la cola de correos la acortaría.";;true;true;2026-07-11 10:00;"CNIL; 214 clientes afectados informados por correo el 10 de julio"
+;Tareas de copia de seguridad Veeam fallidas en la SAN de copias;infrastructure;minor;resolved;false;2026-08-18 22:00;2026-08-19 07:30;2026-08-21 18:00;;pierre.martin@fromage-co.example;pierre.martin@fromage-co.example;Tres noches de copias de seguridad fallidas tras dos averías de disco en PAR-SAN-02. La cabina llega al fin de vida en diciembre de 2026 y no quedan discos de repuesto en soporte.;;;false;false;;
+;CheeseTrack fuera de línea durante la conmutación del clúster SQL Server;infrastructure;minor;resolved;false;2026-09-12 21:05;2026-09-12 21:10;2026-09-12 21:45;;jacques.dubois@fromage-co.example;pierre.martin@fromage-co.example;La aplicación de parches en PAR-SQL-02 provocó una conmutación que CheeseTrack no siguió: su cadena de conexión apuntaba al nodo y no al listener. Los escaneos de la cadena de frío quedaron en cola en los terminales portátiles y se sincronizaron después.;;;false;false;;
+;Caída de Microsoft Teams en Europa occidental;supplier;low;closed;false;2026-09-24 09:30;2026-09-24 09:40;2026-09-24 12:15;2026-09-25 09:00;amelie.rousseau@fromage-co.example;sophie.laurent@fromage-co.example;Incidente de servicio de Microsoft: reuniones y chat no disponibles para la mayoría de los usuarios durante casi tres horas. Ninguna acción por nuestra parte, salvo informar a los usuarios.;;Microsoft 365 TM891245;false;false;;
+;No se pueden guardar resultados de laboratorio en QualityLab LIMS;application;major;in_progress;false;2026-10-14 10:00;2026-10-14 10:20;;;catherine.blanc@fromage-co.example;sophie.laurent@fromage-co.example;La base de datos integrada SQL Server 2017 Express ha alcanzado su límite de 10 GB. Los resultados se anotan en papel hasta que la base de datos se traslade al clúster SQL Server.;"## Descripción detallada
+
+Desde el 14 de octubre de 2026 a las 10:00, QualityLab LIMS no guarda los nuevos resultados de laboratorio. Los primeros fallos se notificaron a las 10:20. La aplicación sigue abriéndose y muestra los resultados existentes, pero cualquier escritura falla. La base de datos integrada SQL Server 2017 Express ha alcanzado su límite de 10 GB. El equipo de Calidad anota los resultados en papel hasta que la base de datos se traslade al clúster SQL Server. El incidente sigue en curso; esta revisión es parcial.
+
+## Impacto
+
+- No se pueden guardar resultados de laboratorio en QualityLab desde las 10:00 del 14 de octubre.
+- Los resultados se anotan en papel y se registran más tarde. Hasta ahora no se ha perdido ningún resultado.
+- La liberación de lotes y la preparación de certificados llevan un retraso de medio día aproximadamente.
+- El LIMS sigue disponible para consultar los resultados existentes.
+
+## Causa raíz
+
+En investigación. La base de datos integrada SQL Server 2017 Express ha alcanzado su límite de 10 GB. El crecimiento exacto sigue en análisis: el histórico de resultados, las tablas de auditoría y los adjuntos son los principales candidatos. El traslado al clúster SQL Server es la solución duradera.
+
+## Acciones correctivas
+
+- Procedimiento en papel acordado con Calidad; una conciliación diaria comprueba que todos los resultados se registran (hecho).
+- Tamaño de la base de datos y espacio libre supervisados a diario (hecho).
+- Trasladar la base de datos de QualityLab al clúster SQL Server (en curso, responsable Sophie Laurent, objetivo diciembre de 2026).
+- Archivar o purgar los resultados antiguos según la política de conservación (previsto).
+- Caso de soporte abierto con el proveedor sobre el límite de Express y la migración (en curso).
+
+## Lecciones aprendidas
+
+Una base de datos en edición Express no sirve para un LIMS con años de resultados. La capacidad y los límites de la edición requieren una comprobación mensual, no una reacción cuando la base de datos ya está llena. El procedimiento en papel funciona, pero añade un paso de conciliación; la migración debe planificarse fuera de una campaña de producción.";;false;false;;
+;La VPN con la sede de Gouda se corta continuamente;infrastructure;minor;open;false;2026-10-19 08:00;2026-10-19 09:15;;;jan.bakker@kaasmeester.example;lucas.bernard@fromage-co.example;La VPN site-to-site entre GOU-FW-01 y París se renegocia cada pocos minutos desde el domingo. Los usuarios neerlandeses notan Sage X3 lento y pierden sus sesiones.;;;false;false;;

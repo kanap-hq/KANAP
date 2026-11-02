@@ -1,0 +1,26 @@
+application_name;environment;lifecycle;status;base_url;region;zone;notes
+SAP S/4HANA;prod;active;enabled;;;EU-Paris;Instance de production SAP
+SAP S/4HANA;qa;active;enabled;;;EU-Paris;Instance SAP QA pour la démonstration multi-environnement
+Salesforce Sales Cloud;prod;active;enabled;;;EU-West;Org Salesforce de production
+Salesforce Sales Cloud;qa;active;enabled;;;EU-West;Org Salesforce QA pour la démonstration multi-environnement
+SAP BW/4HANA;prod;active;enabled;;;EU-Paris;Production SAP BW
+Power BI;prod;active;enabled;;;EU-West;Production Power BI
+HubSpot Marketing Hub;prod;active;enabled;;;EU-West;Production HubSpot
+CheeseTrack;prod;active;enabled;;;EU-Paris;Production CheeseTrack
+CaveGuard IoT;prod;active;enabled;;;EU-Paris;Production CaveGuard
+Cave Monitoring Dashboard;prod;active;enabled;;;EU-Paris;Production du tableau de bord Grafana
+Datadog;prod;active;enabled;;;EU-West;Production Datadog
+Okta Workforce Identity;prod;active;enabled;;;EU-West;Production Okta
+Microsoft 365;prod;active;enabled;;;EU-Global;Tenant M365 de production
+Workday HCM;prod;active;enabled;;;EU-West;Production Workday
+PagerDuty;prod;active;enabled;;;US-East;Production PagerDuty
+Talend Data Integration;prod;active;enabled;;;EU-Paris;Runtime Talend de production
+Talend Data Integration;qa;active;enabled;;;EU-Paris;Runtime Talend QA pour la démonstration multi-environnement
+Snowflake;prod;active;enabled;;;EU-Central;Entrepôt Snowflake de production
+Fromage B2B Portal;prod;active;enabled;https://b2b.fromage-co.example;;EU-Paris;Instance de production du portail B2B
+QualityLab LIMS;prod;active;enabled;;;EU-Paris;Instance de production du LIMS
+La Boutique du Fromage;prod;active;enabled;https://boutique.fromage-co.example;eu-west-1;;Instance de production de la boutique en ligne
+Sage X3;prod;active;enabled;;;EU-Gouda;Instance de production Sage X3 des sites néerlandais et italiens
+PRTG Network Monitor;prod;active;enabled;;;EU-Paris;Serveur PRTG de production
+Veeam Backup & Replication;prod;active;enabled;;;EU-Paris;Sauvegarde Veeam de production
+VMware vSphere;prod;active;enabled;;;EU-Paris;Plateforme de production vSphere de Paris

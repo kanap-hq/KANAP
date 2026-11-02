@@ -1,0 +1,15 @@
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
+45100;Suscripciones SaaS;SaaS-abonnementen;Cloud-softwareabonnementen;2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled;opex
+45200;Licencias de software;Softwarelicenties;Perpetuele en termijnlicenties;2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled;opex
+45300;Alojamiento en la nube;Cloudhosting en IaaS;Dedicated servers en objectopslag;2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+45400;Herramientas de ciberseguridad;Cyberbeveiligingstools;Endpointbeveiliging en IAM;2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+45500;Plataformas de datos y analítica;Data- en analyticsplatformen;Monitoring, BI en datatools;2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+46100;Mantenimiento y soporte de TI;IT-onderhoud en support;Onderhoud van hardware en beheerde diensten;2300;Maintenance & Support;Software/hardware maintenance contracts;enabled;opex
+46200;Telecomunicaciones y red;Telecommunicatie en netwerken;WAN, LAN, internet en telefonie;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled;opex
+46300;Costes del centro de datos;Datacenterkosten;Colocatie, energie en koeling;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled;opex
+47100;Refuerzo de personal de TI;IT-detachering;Externe ontwikkelaars en ingenieurs;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled;opex
+47200;Consultoría de TI;IT-advies;Strategie- en architectuuradvies;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled;opex
+48100;Formación de TI;IT-opleiding en certificering;Opleidingen en professionele certificeringen;2600;Training & Certification;Staff training and certifications;enabled;opex
+48200;Viajes y eventos de TI;IT-reizen en evenementen;Reizen, conferenties en beurzen;2800;Travel & Mobility (IT Projects);Project-related travel costs;enabled;opex
+01100;Activos de software;Immateriële vaste activa — software;Inmovilizado intangible — software y licencias adquiridos;1100;Intangible Assets (CAPEX);Capitalized software and rights — IAS 38;enabled;capex
+02100;Equipos de TI;Materiële vaste activa — IT-apparatuur;Inmovilizado material — servidores, puestos de trabajo y red;1000;Tangible Assets (CAPEX);Purchase of physical IT equipment — IAS 16;enabled;capex
