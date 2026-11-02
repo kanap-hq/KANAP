@@ -368,6 +368,34 @@ function hasEntityReference(text: string): boolean {
   return /\b[A-Z]{1,6}-\d+\b/.test(text) || /\/(?:portfolio|it|ops|knowledge|master-data)\//i.test(text);
 }
 
+/**
+ * Business references the inspection branch keeps. A cost center code is not one of these:
+ * the segment TRV-600 inside FR-TRV-600 is not a record.
+ */
+const RECORD_REFERENCE_RE = /\b(?:APP|AST|BL|BP|COMP|CONN|CON|CONT|CPX|CTR|CVE|DEPT|DOC|INC|INT|LOC|OPEX|OPX|PRJ|REQ|SI|SUP|TEC|T)-\d+\b/i;
+
+/**
+ * Count words, accents already removed: French and English as the list branch below,
+ * plus German (wie viele, Anzahl) and Spanish (cuántas, cantidad).
+ */
+const COST_CENTER_COUNT_WORD_RE = /\b(?:how many|combien|count|nombre|wie viele|wieviel(?:e)?|anzahl|cuant[oa]s?|cantidad)\b/;
+
+/**
+ * A count that names a cost center by its code: "Combien de lignes sur FR-TRV-600 ?",
+ * "How many lines on FR-TRV-600?", "Wie viele Zeilen auf FR-TRV-600?",
+ * "¿Cuántas líneas en FR-TRV-600?". The code carries a segment such as TRV-600, which
+ * hasEntityReference reads as a record, so the inspection branch would take the phrase
+ * before the count words, and that profile has no aggregate_entities. A bare code has
+ * no count word and stays an inspection. A business reference (APP-3, T-4) stays on
+ * its own branch ("Combien de tâches sur APP-3 ?").
+ */
+function isCostCenterCodeCount(rawText: string, text: string): boolean {
+  if (!COST_CENTER_COUNT_WORD_RE.test(text)) return false;
+  const tokens = rawText.match(/\b[A-Z]{1,6}-\d+\b/g);
+  if (tokens == null) return false;
+  return tokens.every((token) => !RECORD_REFERENCE_RE.test(token));
+}
+
 function withWebCapability(profile: AiContextProfile, needsWeb: boolean): AiContextProfile {
   if (!needsWeb || profile.toolNames.includes('web_search')) {
     return profile;
@@ -1208,6 +1236,12 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
     wordsInOrder(/\b(?:find|search|cherche|chercher|trouve|trouver)\b/, /\b(?:doc|document|knowledge|backup)\b/),
   ])) {
     return { profile: PROFILES.knowledge, explicitIntent: true };
+  }
+
+  // A count on a cost center code is a read query: the inspection profile below has no
+  // aggregate_entities. A bare code and a business reference stay on the inspection branch.
+  if (isCostCenterCodeCount(raw, text)) {
+    return { profile: PROFILES.read_query, explicitIntent: true };
   }
 
   if (hasEntityReference(raw) || containsAny(text, [
