@@ -30,12 +30,12 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
-const access = vi.hoisted(() => ({ limited: false, start: { ready: true, companyId: null as string | null, needsChoice: false } }));
+const access = vi.hoisted(() => ({ limited: false, admin: false, start: { ready: true, companyId: null as string | null, needsChoice: false } }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
     profile: { id: 'me' },
     dataAccess: access.limited ? { available: true, mode: 'limited' as const, nodes: [], modules: ['budget'] } : null,
-    hasLevel: (_resource: string, level: string) => level !== 'admin',
+    hasLevel: (_resource: string, level: string) => access.admin || level !== 'admin',
   }),
 }));
 vi.mock('../../hooks/usePlacementOptions', () => ({
@@ -167,6 +167,7 @@ describe('Budget line creation at the title', () => {
     resetNavigationTracker();
     resetSharedPatchBuffers();
     access.limited = false;
+    access.admin = false;
     access.start = { ready: true, companyId: null, needsChoice: false };
   });
 
@@ -286,6 +287,19 @@ describe('Budget line creation at the title', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'budget.creation.leaveAnyway' }));
     await waitFor(() => expect(location()).toBe('/ops/budget'));
     expect(mocked.delete).not.toHaveBeenCalled();
+  });
+
+  it('shows no Delete beside Cancel while the line is being created, and Delete once it is left', async () => {
+    access.admin = true;
+    await startNewLine();
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+    await createMonitoring();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+    cleanup();
+    renderPage(['/ops/budget/BL-12/overview'], { line: { paying_company_id: 'company-1', account_id: 'account-1' } });
+    await screen.findByRole('button', { name: TITLE });
+    expect(screen.getByRole('button', { name: 'common:buttons.delete' })).toBeTruthy();
   });
 
   it('says nothing on a line that has its company', async () => {

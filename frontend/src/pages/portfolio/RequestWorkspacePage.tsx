@@ -1164,7 +1164,7 @@ export default function RequestWorkspacePage() {
                 {t('portfolio:actions.convertToProject')}
               </Button>
             )}
-            {!isCreate && canAdmin && form?.status !== 'converted' && (
+            {!isCreate && !creation.beingCreated && canAdmin && form?.status !== 'converted' && (
               <DeleteIconButton onClick={() => setDeleteConfirmOpen(true)} />
             )}
             {isCreate || creation.beingCreated ? (

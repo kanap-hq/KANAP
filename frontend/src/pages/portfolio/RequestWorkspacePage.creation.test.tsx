@@ -25,8 +25,9 @@ const translation = {
 };
 vi.mock('react-i18next', () => ({ useTranslation: () => translation, initReactI18next: { type: '3rdParty', init: () => undefined } }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+const auth = vi.hoisted(() => ({ admin: false }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: (_resource: string, level: string) => level !== 'admin', profile: { id: 'user-1', first_name: 'Ada', last_name: 'Lovelace' } }),
+  useAuth: () => ({ hasLevel: (_resource: string, level: string) => auth.admin || level !== 'admin', profile: { id: 'user-1', first_name: 'Ada', last_name: 'Lovelace' } }),
 }));
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'acme' }) }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
@@ -127,6 +128,7 @@ describe('Request creation at the title', () => {
     vi.clearAllMocks();
     resetCreationStore();
     resetNavigationTracker();
+    auth.admin = false;
   });
 
   it('opens with the title to type and the request to come dimmed, without its name field', async () => {
@@ -230,6 +232,18 @@ describe('Request creation at the title', () => {
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.post).not.toHaveBeenCalled();
   });
+  it('shows no Delete beside Cancel while the request is being created, and Delete once it is left', async () => {
+    auth.admin = true;
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new request' }));
+    await createDataPlatform();
+    expect(await screen.findByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+    cleanup();
+    renderPage(['/portfolio/requests/REQ-9/summary']);
+    expect(await screen.findByRole('button', { name: 'common:buttons.delete' })).toBeTruthy();
+  });
+
   it('shows the error under the empty title on Create and gives it the focus, nothing created', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new request' }));

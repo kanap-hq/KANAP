@@ -41,6 +41,7 @@ import {
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
+import { missingFieldsList } from './missingFieldsList';
 import ChangeTypeDialog, { type ChangeTypeResult } from '../../components/finance/ChangeTypeDialog';
 import LineLineage, { type LineageLine } from '../../components/finance/LineLineage';
 import { budgetLinePath, openLineAfterTypeChange } from '../../components/finance/changeTypeNavigation';
@@ -1068,7 +1069,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
       const fields = answer?.code === 'BUDGET_LINE_INCOMPLETE' && Array.isArray(answer.params?.fields) ? answer.params.fields.map(String) : null;
       if (fields && fields.length > 0) {
         setMissingFields(new Set(fields));
-        setSaveError(t('budget.creation.missing', { fields: fields.map(fieldLabel).join(', ') }));
+        setSaveError(t('budget.creation.missing', { fields: missingFieldsList(fields.map(fieldLabel), locale) }));
         focusLineField(fields[0]);
       } else {
         setSaveError(getApiErrorMessage(e, t, t('budget.creation.completeFailed')));
@@ -1135,7 +1136,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             {!!saveError && <Alert severity="error" onClose={() => setSaveError(null)}>{saveError}</Alert>}
             {incompleteNotice.length > 0 && (
               <Alert severity="warning" data-testid="line-incomplete">
-                {t('budget.creation.missing', { fields: incompleteNotice.map(fieldLabel).join(', ') })}
+                {t('budget.creation.missing', { fields: missingFieldsList(incompleteNotice.map(fieldLabel), locale) })}
               </Alert>
             )}
             {!isCreate && (
@@ -1267,7 +1268,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
                 itemRef={reference}
               />
             )}
-            {!isCreate && uuid && canDelete && (
+            {!isCreate && !creation.beingCreated && uuid && canDelete && (
               <RecordDeleteButton
                 base="/budget-lines"
                 id={uuid}

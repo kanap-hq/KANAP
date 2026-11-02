@@ -33,7 +33,8 @@ vi.mock('../../components/fields/CompanySelect', () => ({ default: () => null })
 vi.mock('../../components/fields/DepartmentMultiSelect', () => ({ default: () => null }));
 vi.mock('../../components/fields/TeamMemberMultiSelect', () => ({ default: () => null }));
 vi.mock('../ForbiddenPage', () => ({ default: () => <div data-testid="forbidden" /> }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: (_resource: string, level: string) => level !== 'admin' }) }));
+const auth = vi.hoisted(() => ({ admin: false }));
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: (_resource: string, level: string) => auth.admin || level !== 'admin' }) }));
 vi.mock('../../components/IntegratedDocumentEditor', () => ({ default: () => <div data-testid="description-editor" /> }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => <div data-testid="knowledge-panel" /> }));
 vi.mock('../../components/history/RecordHistoryTab', () => ({ default: () => <div data-testid="record-history" /> }));
@@ -112,6 +113,7 @@ describe('Application creation at the title', () => {
     vi.clearAllMocks();
     resetCreationStore();
     resetNavigationTracker();
+    auth.admin = false;
   });
 
   it('opens with the title to type, light blue while empty, and nothing else to fill', async () => {
@@ -252,6 +254,19 @@ describe('Application creation at the title', () => {
     await screen.findByRole('button', { name: TITLE });
     expect(screen.queryByRole('button', { name: 'common:buttons.cancel' })).toBeNull();
   });
+  it('shows no Delete beside Cancel while the application is being created, and Delete once it is left', async () => {
+    auth.admin = true;
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
+    await createBilling();
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+    cleanup();
+    renderPage(['/it/applications/APP-7/overview']);
+    await screen.findByRole('button', { name: TITLE });
+    expect(screen.getByRole('button', { name: 'common:buttons.delete' })).toBeTruthy();
+  });
+
   it('shows the error under the empty title on Create and gives it the focus, nothing created', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new application' }));

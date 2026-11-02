@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { KanapDialog } from '../../components/design';
+import { missingFieldsList } from './missingFieldsList';
 
 type Options = {
   /** The line is being created: the other answer deletes it (Cancel), instead of leaving it as it is. */
@@ -23,7 +24,7 @@ type Asking = { labels: string[]; firstKey: string };
  * resolves true when the move may go on. A question left unanswered (the page goes) stays.
  */
 export default function useIncompleteLineLeave({ beingCreated, missing, focus, onDelete }: Options) {
-  const { t } = useTranslation(['ops']);
+  const { t, i18n } = useTranslation(['ops']);
   const latest = React.useRef({ beingCreated, missing, focus, onDelete });
   latest.current = { beingCreated, missing, focus, onDelete };
   const [asking, setAsking] = React.useState<Asking | null>(null);
@@ -84,7 +85,7 @@ export default function useIncompleteLineLeave({ beingCreated, missing, focus, o
       )}
     >
       <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-        {t('budget.creation.missing', { fields: asking.labels.join(', ') })}
+        {t('budget.creation.missing', { fields: missingFieldsList(asking.labels, i18n.resolvedLanguage || i18n.language) })}
       </Typography>
     </KanapDialog>
   ) : null;

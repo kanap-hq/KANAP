@@ -1855,7 +1855,7 @@ export default function ApplicationWorkspacePage() {
                 onConverted={(technologyId) => navigate(`/it/technologies/${technologyId}`)}
               />
             )}
-            {!isCreate && canDelete && app && (
+            {!isCreate && !creation.beingCreated && canDelete && app && (
               <ApplicationDeleteButton
                 applicationId={app.id}
                 applicationName={app.name || t('workspace.application.untitled')}

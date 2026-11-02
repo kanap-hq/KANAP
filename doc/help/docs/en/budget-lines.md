@@ -202,7 +202,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 
 Click any row in the list to open the workspace. Its address names the line by its reference, for example `/ops/budget/BL-12/overview`. It has four parts:
 
-- **Header**: the line reference (e.g., `BL-12`) with a copy button, the line's title (click it to rename the line), **Prev** / **Next**, **Share**, **Delete** (trash icon, `budget:admin`, access to all data), and the close button. While the line is being created, **Create** and **Cancel** replace the close button
+- **Header**: the line reference (e.g., `BL-12`) with a copy button, the line's title (click it to rename the line), **Prev** / **Next**, **Share**, **Delete** (trash icon, `budget:admin`, access to all data), and the close button. While the line is being created, **Create** and **Cancel** replace **Delete** and the close button
 - **Metadata bar** under the title: **Status**, **IT owner**, and **Business owner**, each editable in place. When the line's cost center has a budget holder, **Budget holder** follows them. It is read only and derived from the cost center, not stored on the line: hover it to see which cost center it comes from, and change it on the cost center (see [Cost centers](cost-centers.md#budget-holder-on-budget-lines))
 - **Five tabs**: **Overview**, **Budget**, **Allocations**, **Relations** (the Relations tab shows how many links the line has), and **History**
 - **Properties panel** on the right: the line's main fields, starting with **Type** (with **Change type...** next to it once the line is no longer being created, see [Changing the type](#changing-the-type)). Open or close it with the properties button; the workspace remembers your choice
