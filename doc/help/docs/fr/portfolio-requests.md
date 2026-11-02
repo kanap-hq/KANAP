@@ -46,7 +46,7 @@ La grille standard met en évidence les champs qui comptent pendant l'intake et 
 | **Statut** | État d'intake actuel |
 | **Source** | Classification source du portefeuille |
 | **Catégorie** | Catégorie du portefeuille |
-| **Stream** | Stream du portefeuille |
+| **Filière** | Filière du portefeuille |
 | **Société** | Classification société |
 | **Demandeur** | Personne ayant soulevé la demande |
 | **Date cible** | Date de livraison cible demandée |
@@ -111,7 +111,7 @@ Traitez le tiroir comme la colonne vertébrale structurelle de la demande. Il co
 #### Propriétés principales
 
 - Statut
-- Source, Catégorie, Stream
+- Source, Catégorie, Filière
 - Demandeur
 - Société, Département
 - Date de livraison cible
@@ -119,7 +119,7 @@ Traitez le tiroir comme la colonne vertébrale structurelle de la demande. Il co
 Ces champs façonnent la manière dont la demande est routée, filtrée et revue ailleurs dans l'espace de travail. Par exemple :
 
 - changer le **Statut** affecte les décisions qui peuvent suivre et si la conversion est disponible
-- changer la **Catégorie** ou le **Stream** change le contexte analytique pour la faisabilité et l'évaluation
+- changer la **Catégorie** ou la **Filière** change le contexte analytique pour la faisabilité et l'évaluation
 - changer la **Société** ou le **Demandeur** change le reporting et la visibilité de la responsabilité dans tout le portefeuille
 
 #### Équipe
