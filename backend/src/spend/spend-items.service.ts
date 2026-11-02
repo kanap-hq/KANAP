@@ -455,17 +455,18 @@ export class SpendItemsService {
    * file, a block); a CAPEX line also gets a CPX number from the `capex` sequence (`legacyNumber`
    * when allocated by the caller): what the CAPEX API and screens show as its number. `fields`:
    * `columns` when the body names the columns of `spend_items` (the budget file), not the API's names.
+   * `creation`: a line created at its title on the screen (`ItemWriteOptions`), set by that route only.
    */
   async create(
     body: SpendItemUpsertDto | Record<string, unknown>,
     userId?: string,
-    opts?: { manager?: EntityManager; itemNumber?: number; legacyNumber?: number; source?: string; fields?: ItemWriteFields; native?: boolean },
+    opts?: { manager?: EntityManager; itemNumber?: number; legacyNumber?: number; source?: string; fields?: ItemWriteFields; native?: boolean; creation?: boolean },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendItem);
     // Writable fields only (a CAPEX title in `product_name`, `company_id` the CAPEX alias of the paying
     // company), every id resolved in this tenant; see `item-write.util.ts`.
-    const { values, lifecycle: input, analytics } = await resolveItemWrite(mg, this.nature, body, null, opts?.fields);
+    const { values, lifecycle: input, analytics } = await resolveItemWrite(mg, this.nature, body, null, opts?.fields, { creation: opts?.creation === true });
     const disabled_at = this.endOfValidityInput(input.disabled_at, input.effective_end);
     const lifecycle = resolveLifecycleState({ nextStatus: input.status, nextDisabledAt: disabled_at });
     const tenantId = await this.resolveTenantId(mg);
