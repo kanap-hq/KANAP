@@ -30,6 +30,7 @@ const EXPECTED_KEEP = [
   'tenant_onboarding',
   'onboarding_steps',
   'onboarding_dismissals',
+  'trial_discovery_calls',
 ];
 
 function testConfigurationCoversEveryTenantTable() {

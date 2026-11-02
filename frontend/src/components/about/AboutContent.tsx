@@ -9,6 +9,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { useTenant } from '../../tenant/TenantContext';
 import { getDocHomeUrl, getDocPageUrl } from '../../utils/docUrls';
 import AboutOnboardingLine from '../onboarding/AboutOnboardingLine';
+import BookDiscoveryCallButton, { useDiscoveryCall } from '../BookDiscoveryCallButton';
 import {
   buildSupportInfo,
   buildSupportMailto,
@@ -52,6 +53,7 @@ export default function AboutContent({ onNavigate }: { onNavigate?: () => void }
   const { subscription, claims } = useAuth();
   const { tenantName, tenantSlug } = useTenant();
   const locale = useLocale();
+  const discoveryCall = useDiscoveryCall();
   const [copied, setCopied] = React.useState(false);
   const copiedTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(() => () => {
@@ -116,6 +118,12 @@ export default function AboutContent({ onNavigate }: { onNavigate?: () => void }
                 <Link variant="body2" component={RouterLink} to="/admin/billing" onClick={onNavigate}>
                   {t('about.choosePlan')}
                 </Link>
+              </>
+            )}
+            {discoveryCall && (
+              <>
+                {' · '}
+                <BookDiscoveryCallButton placement="about" asLink />
               </>
             )}
           </Typography>

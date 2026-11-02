@@ -1750,5 +1750,8 @@
       "tasks_other": "{{count}} tasks"
     },
     "titleRequired": "Enter a title."
+  },
+  "discoveryCall": {
+    "book": "Book a discovery call"
   }
 }

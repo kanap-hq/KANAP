@@ -242,6 +242,12 @@ The workspace's angle and mode, and each user's first five steps. Every signed-i
 - POST, DELETE `/onboarding/steps/:key/done`
 - POST, DELETE `/onboarding/dismiss`
 
+## Discovery call
+Cloud only (404 on-premise). Details, storage and audit events: [discovery-call.md](discovery-call.md).
+
+- POST `/discovery-call/clicks` with `{ placement }` (signed-in user, `204`): records a click on **Book a discovery call**
+- POST `/discovery-call/calcom`: the Cal.com booking webhook, public, signed with `DISCOVERY_CALL_WEBHOOK_SECRET` (`x-cal-signature-256`)
+
 ## Billing
 - GET `/billing/subscription` → `{ plan_name, seat_limit, seats_used }`
 - POST `/billing/portal` → `{ url }`

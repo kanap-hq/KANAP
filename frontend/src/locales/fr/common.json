@@ -1750,5 +1750,8 @@
       "tasks_other": "{{count}} tâches"
     },
     "titleRequired": "Saisissez un titre."
+  },
+  "discoveryCall": {
+    "book": "Planifier un appel découverte"
   }
 }

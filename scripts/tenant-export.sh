@@ -320,6 +320,7 @@ TENANT_TABLES=(
   technology_versions
   technology_vulnerabilities
   tenant_onboarding
+  trial_discovery_calls
   user_dashboard_config
   user_data_access_nodes
   user_notification_preferences

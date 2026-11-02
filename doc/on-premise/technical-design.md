@@ -333,6 +333,17 @@ Administration > Sample data loads the Fromage & Co set into an empty workspace 
 | `config/config.controller.ts` | `sampleData` | `!Features.SINGLE_TENANT` in `@Get('public')` |
 | `frontend/src/config/FeaturesContext.tsx` | `sampleData` | Type key; default `false`, so the feature stays hidden if `/config/public` cannot be read |
 
+#### Discovery call (cloud only, `!Features.SINGLE_TENANT`)
+
+The "Book a discovery call" button of trial workspaces, its click events and the Cal.com webhook that stores the call's date (`doc/discovery-call.md`). On-premise the variables are ignored, the button never shows and both routes answer 404.
+
+| File | What | Behavior |
+|------|------|----------|
+| `discovery-call/discovery-call.config.ts` | `discoveryCallConfig()` | Every value empty when `SINGLE_TENANT`, whatever `DISCOVERY_CALL_URL`, `DISCOVERY_CALL_FALLBACK_EMAIL` and `DISCOVERY_CALL_WEBHOOK_SECRET` say |
+| `discovery-call/discovery-call.controller.ts` | `MultiTenantOnlyGuard` on `discovery-call` | 404; the webhook also answers 404 while no secret is set |
+| `config/config.controller.ts` | `discoveryCall` | `{ url, fallbackEmail }` from `discoveryCallConfig()` in `@Get('public')` |
+| `frontend/src/components/BookDiscoveryCallButton.tsx` | `useDiscoveryCall()` | Hidden on-premise, without a running trial, for a platform administrator, and when both values are empty |
+
 #### Microsoft Entra (`Features.ENTRA_SSO`)
 
 Optional in both modes: true when `ENTRA_CLIENT_ID` is configured. Per-tenant activation lives on `tenants.sso_provider` / `sso_enabled`; everything below is inert for tenants without Entra.

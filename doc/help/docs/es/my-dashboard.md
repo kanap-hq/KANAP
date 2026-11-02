@@ -62,6 +62,8 @@ Una vez elegido el recorrido, el mosaico **Sus cinco primeros pasos** aparece pr
 
 Cuando los cinco pasos están hechos, el mosaico ofrece los otros dos recorridos. También ofrece **Reiniciar este recorrido**, que deshace los cinco pasos de este recorrido. El botón de cierre (**×**) oculta el mosaico. Para mostrarlo de nuevo, use **Mostrar los primeros pasos** en **Acerca de KANAP**.
 
+Durante la prueba, el mosaico también ofrece **Programar una llamada de descubrimiento**: una videollamada de 30 minutos sobre su situación y sus preguntas, reservada en la página que se abre en el momento que le convenga. El mismo enlace sigue a los días de prueba restantes en **Acerca de KANAP**.
+
 | Recorrido | Con el ejemplo | Con sus datos |
 |---|---|---|
 | Presupuesto de TI | La vista general, Una línea presupuestaria, Un informe, Una pregunta a Plaid, Sus datos | Su empresa, Sus líneas, Un contrato vinculado, Su primer informe, Un colega |

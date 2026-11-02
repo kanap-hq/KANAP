@@ -1750,5 +1750,8 @@
       "tasks_other": "{{count}} Aufgaben"
     },
     "titleRequired": "Geben Sie einen Titel ein."
+  },
+  "discoveryCall": {
+    "book": "Kennenlerngespräch vereinbaren"
   }
 }

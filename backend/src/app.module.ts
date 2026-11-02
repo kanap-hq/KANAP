@@ -54,6 +54,7 @@ import { PortfolioModule } from './portfolio/portfolio.module';
 import { TasksModule } from './tasks/tasks.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
+import { DiscoveryCallModule } from './discovery-call/discovery-call.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { RateLimitGuard } from './common/rate-limit.guard';
@@ -179,6 +180,7 @@ import { readPoolMax } from './common/db-pool-budget';
     TasksModule,
     DashboardModule,
     OnboardingModule,
+    DiscoveryCallModule,
     NotificationsModule,
     KnowledgeModule,
     DocumentExportModule,
