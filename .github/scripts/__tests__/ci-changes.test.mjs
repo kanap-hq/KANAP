@@ -35,7 +35,7 @@ const all = { backend: 'full', frontend: 'true', builds: 'true', images: 'true' 
 
 test('docs, marketing, release scripts and root files need no suite', (t) => {
   assert.deepEqual(needs(t, ['doc/architecture.md', 'marketing/web/src/content/blog/en/a.md',
-    'scripts/release/release.mjs', 'translation-state/docs-source-hashes.json', 'AGENTS.md', 'CHANGELOG.md']),
+    'scripts/release/release.mjs', 'scripts/docs/translation-status.mjs', 'AGENTS.md', 'CHANGELOG.md']),
   { backend: 'none', frontend: 'false', builds: 'false', images: 'false' });
 });
 

@@ -46,7 +46,7 @@ La liste des projets est conçue pour répondre rapidement à deux questions : �
 | **Avancement** | Avancement d'exécution sous forme de barre |
 | **Source** | Classification source du portefeuille |
 | **Catégorie** | Catégorie du portefeuille |
-| **Stream** | Stream du portefeuille |
+| **Filière** | Filière du portefeuille |
 | **Société** | Classification société |
 | **Début** | Date de début planifiée |
 | **Fin** | Date de fin planifiée |
@@ -61,7 +61,7 @@ La liste des projets est conçue pour répondre rapidement à deux questions : �
 - Les projets sont triés par score de priorité sauf si vous changez le tri
 - Les projets au statut **Terminé** sont masqués par défaut
 - La recherche fonctionne sur le contenu textuel
-- Les filtres sur statut, origine, source, catégorie, stream et société sont disponibles directement dans la grille
+- Les filtres sur statut, origine, source, catégorie, filière et société sont disponibles directement dans la grille
 
 **Administration en masse**
 
@@ -136,7 +136,7 @@ Traitez le tiroir Propriétés comme la carte d'identité persistante du projet.
 
 - Statut
 - Origine : **Fast-track** ou **Historique** pour un projet créé directement. Un projet converti depuis une demande garde l'origine **Demande**
-- Source, Catégorie, Stream
+- Source, Catégorie, Filière
 - Société, Département
 - Début planifié, Fin planifiée
 

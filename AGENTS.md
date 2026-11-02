@@ -108,10 +108,9 @@ Tool-specific or private notes live in each tool's local files, never here.
   own commits). When a stack is opened anyway, `auto-queue` queues a PR only after the PR below
   it, and the `stack order` job refuses a queued PR that contains a PR still open and not ahead
   of it in the queue. CI only runs for PRs targeting `main`.
-- The docs translation manifest (`translation-state/docs-source-hashes.json`) keeps an empty
-  line between two keys, so that two PRs updating neighbouring pages merge without a conflict.
-  After the `translate-docs` skill writes it, run `node scripts/docs/format-translation-manifest.mjs`;
-  `build (onprem)` fails on a manifest that is not in that form.
+- The repository keeps no translation manifest: `node scripts/docs/translation-status.mjs` reads
+  from git history which manual translations are missing or stale (the English page changed in a
+  later commit than the translation). Commit a translation with its English change, or after it.
 - Commits: imperative mood, short scope prefix when useful (`backend: ...`, `frontend: ...`,
   `master data: ...`). Attribution footers only when the agent actually wrote the code.
 - Guard every `cd` before git commands (`set -e` or `git -C <dir>`): a failed `cd` once ran a
@@ -198,7 +197,7 @@ Tool-specific or private notes live in each tool's local files, never here.
   frontend build and tests for `frontend/` and `backend/fixtures/`; the on-premise builds when
   either suite runs, except for the manual alone. A change under `.github/` runs everything. A required
   job that is not needed is skipped, which counts as passed. The script checks of
-  `build (onprem)` (licenses, lockfiles, release, queue scripts, docs manifest) always run. A new
+  `build (onprem)` (licenses, lockfiles, release, queue scripts, docs translation status) always run. A new
   spec that reads files outside its own tree must be added to the rules of `ci-changes.sh`.
 - The frontend check runs as a `frontend build` job and three `frontend tests (i/3)` shards in
   parallel (`vitest run --shard`, split by file); the `frontend (cloud)` job only gathers their

@@ -77,14 +77,7 @@ doc/help/site/
 .codex/
 .grok/
 .playwright-mcp/
-# Translation state. The docs manifest is what detects "English changed, so
-# fr/de/es are now stale", so it has to be shared — the translate-docs skill
-# already documents it as committed. The app-locale manifest stays local.
-# Note: the glob must be /translation-state/* rather than translation-state/,
-# because git cannot re-include a file whose parent directory is excluded. That
-# anchors it to the repo root, so nested copies need their own rule.
+# Local translation state (the app-locale manifest of the translate skill). The user manual's
+# translation status comes from git history: scripts/docs/translation-status.mjs.
 **/translation-state/
-!/translation-state/
-/translation-state/*
-!/translation-state/docs-source-hashes.json
 /tasks/

@@ -186,3 +186,40 @@ describe('LocationWorkspacePage delete', () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 });
+
+function rejectRead(status: number, message?: string) {
+  const error = new Error(`status ${status}`) as Error & { response?: { status: number; data?: { message: string } } };
+  error.response = message ? { status, data: { message } } : { status };
+  return error;
+}
+
+describe('LocationWorkspacePage missing location', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows a not-found screen and the link back to the list, without the form, when the read is a 404', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/locations/LOC-9999') throw rejectRead(404, 'Location not found');
+      return { data: [] };
+    });
+    renderAt('/it/locations/LOC-9999/overview?sort=name&q=paris');
+    expect(await screen.findByText('workspace.location.notFound')).toBeInTheDocument();
+    expect(screen.queryByText('Location not found')).toBeNull();
+    expect(screen.queryByRole('tab')).toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.queryByText('workspace.location.untitled')).toBeNull();
+    expect(screen.getByRole('link', { name: 'pages.locations.title' })).toHaveAttribute('href', '/it/locations?sort=name&q=paris');
+  });
+
+  it('keeps the load failure banner, and not the not-found screen, when the read fails with a 500', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/locations/LOC-500') throw rejectRead(500);
+      return { data: [] };
+    });
+    renderAt('/it/locations/LOC-500/overview');
+    expect(await screen.findByText('messages.loadLocationFailed')).toBeInTheDocument();
+    expect(screen.queryByText('workspace.location.notFound')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'workspace.location.tabs.overview' })).toBeInTheDocument();
+  });
+});

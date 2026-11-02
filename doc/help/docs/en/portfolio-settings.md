@@ -134,66 +134,77 @@ Phase templates provide:
 
 ## Classification
 
-Configure types, categories, and streams for organizing requests and projects.
+Configure sources, categories, and streams for classifying requests and projects.
 
 A new workspace starts with three sources (IT, Business, Compliance) and five categories, each with a short description (Business Applications, End-user Computing & Services, Infrastructure & Operations, Innovation & Digital Transformation, Cybersecurity), with no stream. Their names follow the workspace language. You can rename, disable or delete them like any other value.
 
-### Types
+### Sources
 
-Types describe the nature of the work:
-- **Enhancement**: Improvements to existing capabilities
-- **New Development**: Building new capabilities
-- **Maintenance**: Keeping systems operational
-- **Infrastructure**: Platform and technical foundation
+A source records where a request comes from. The workspace starts with IT, Business and Compliance.
 
-**To add a type**:
-1. Click **Add Type**
-2. Enter name and optional description
+**To add a source**:
+1. Click **Add source**
+2. Enter a name and an optional description
 3. Click **Save**
 
-**To toggle a type**:
-- Use the switch to enable/disable
-- Disabled types won't appear in selection dropdowns
+**To switch a source on or off**:
+- Use the switch
+- A source that is switched off does not appear in selection dropdowns
 
-### Categories & Streams
+### Categories & streams
 
-Categories provide high-level grouping, and streams offer sub-categorization within each category.
+A category groups work at a high level. A stream is a finer grouping inside one category.
 
 **Structure**:
 ```
-Category (e.g., "Digital Transformation")
-  ├── Stream (e.g., "Customer Experience")
-  ├── Stream (e.g., "Operations Efficiency")
-  └── Stream (e.g., "Data Analytics")
+Category (for example, "Digital Transformation")
+  ├── Stream (for example, "Customer Experience")
+  ├── Stream (for example, "Operations Efficiency")
+  └── Stream (for example, "Data Analytics")
 ```
 
 **To add a category**:
-1. Click **Add Category**
-2. Enter name and optional description
+1. Click **Add category**
+2. Enter a name and an optional description
 3. Click **Save**
 
 **To add a stream**:
 1. Expand the category
-2. Click **Add Stream**
-3. Enter name and optional description
+2. Click **Add stream**
+3. Enter a name and an optional description
 4. Click **Save**
 
-**To toggle items**:
-- Use switches to enable/disable categories or streams
-- Disabled items won't appear in selection dropdowns
-- Disabling a category hides all its streams
+**To switch items on or off**:
+- Use the switch on a category or a stream
+- An item that is switched off does not appear in selection dropdowns
+
+Deleting a category deletes its streams. KANAP says so before you confirm.
+
+### Task types
+
+Task types are the list used on portfolio tasks. See [Tasks](tasks.md). A new workspace starts with Task, Bug, Problem and Incident. Each person sees those names in their own language while the name stays unchanged.
+
+**To add a task type**:
+1. Click **Add task type**
+2. Enter a name and an optional description
+3. Click **Save**
+
+**To switch a task type on or off**:
+- Use the switch
+- A task type that is switched off does not appear in selection dropdowns
+
+A task type that tasks still use cannot be deleted. KANAP says so before you confirm, and counts the tasks that use it. Switch it off.
 
 **System items**:
-- Pre-defined categories and types marked with "System" chip
-- Can be edited or disabled but not deleted
-- An item that requests or projects still use, or a task type that tasks use, cannot be deleted. KANAP says so before asking you to confirm, and counts what uses it. Disable it instead
+- A source, a category or a task type marked **System** can be edited or switched off. It cannot be deleted.
+- A source, a category or a stream that requests or projects still use cannot be deleted. A task type that tasks still use cannot be deleted. KANAP says so before you confirm, and counts what uses it. Switch it off.
 
-### Best Practices
+### Best practices
 
-- Keep type list short (3-6 items)
+- Keep the lists of sources, categories, streams and task types short
 - Use categories for major business areas or strategic themes
-- Use streams for more specific groupings within categories
-- Review and clean up unused classification items periodically
+- Use streams for more specific groupings within a category
+- Review unused sources, categories, streams and task types from time to time, and switch off the ones you no longer offer
 
 ---
 

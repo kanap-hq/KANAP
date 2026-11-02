@@ -2,7 +2,7 @@
 name: translate-docs
 description: Generate and maintain fr/de/es translations for KANAP user documentation (Markdown). Translates pages, detects stale translations from changed English source text, and enforces glossary and nav-label consistency.
 argument-hint: [--all | --check]
-allowed-tools: Read, Write, Glob, Grep, Bash(node *), Bash(git show *), Bash(md5sum *)
+allowed-tools: Read, Write, Glob, Grep, Bash(node *), Bash(git show *), Bash(git log *), Bash(git diff *)
 ---
 
 # /translate-docs — KANAP Documentation Translation Skill
@@ -25,8 +25,9 @@ Generate and maintain French, German, and Spanish translations of the KANAP user
 - Glossary: `frontend/src/locales/glossary.json`
 - App nav labels: `frontend/src/locales/{fr,de,es}/nav.json`
 
-### Translation state
-- Manifest: `translation-state/docs-source-hashes.json`
+### Translation status
+- `node scripts/docs/translation-status.mjs` (`--json` for the details). It reads git history; the
+  repository stores no manifest.
 
 ## Workflow
 
@@ -36,20 +37,20 @@ Execute these steps in order:
 
 1. Read the glossary: `frontend/src/locales/glossary.json`
 2. Read the app nav labels: `frontend/src/locales/{fr,de,es}/nav.json`
-3. Read the source-hash manifest: `translation-state/docs-source-hashes.json` (create empty `{"files":{},"glossary_hash":"","nav_hashes":{}}` if missing)
-4. List all English source files: `doc/help/docs/en/**/*.md`
-5. Compute MD5 hash of each English source file, the glossary file, and each nav.json file (use `node -e` with crypto module)
+3. Run `node scripts/docs/translation-status.mjs --json`
 
 ### Step 2: Build work list
 
 **If `--all` flag:** Add every English source file to the work list for all three languages.
 
-**If `--check` flag or default mode:**
-- **Missing target**: English file exists but `doc/help/docs/{locale}/same-path.md` is missing → add
-- **Stale source**: MD5 hash of English file differs from stored hash in manifest → add (all three languages)
-- **Glossary changed**: current glossary hash differs from stored `glossary_hash` → requeue ALL files for ALL languages
-- **Nav labels changed**: current nav.json hash for a locale differs from stored `nav_hashes.{locale}` → requeue ALL files for THAT locale
-- **Orphan cleanup**: translated file exists but no corresponding English source → delete orphan
+**If `--check` flag or default mode**, from the status:
+- **`missing`**: English page with no translation in that locale → add
+- **`stale`**: the English page changed in a commit after the last commit of the translation (or
+  has uncommitted changes) → add for that locale. `git diff <oldest listed commit>~1 -- doc/help/docs/en/<page>`
+  shows what changed: update the translation for those changes, or retranslate the page.
+- **`terms`**: a glossary term or nav label of that locale was renamed since the translation's last
+  commit and the page still uses the former wording → replace it with the new one
+- **`orphans`**: translated file with no English source → delete it
 
 **If `--check` flag:** Report the work list and stop. Do not write any files.
 
@@ -65,33 +66,14 @@ For each file in the work list, for each target language:
 - Read all English source files in the batch
 - Translate and write each target file
 
-### Step 4: Update manifest
+### Step 4: Commit
 
-Write `translation-state/docs-source-hashes.json`, then put it in its canonical form (keys sorted,
-an empty line between two keys, so that two pull requests updating neighbouring pages merge
-without a conflict; the `build (onprem)` check refuses any other form):
+There is no manifest to update: a translation is up to date once it is committed in the same
+commit as its English change, or in a later one. Commit the translations on the branch that
+changed the English pages (the repository squashes a pull request into one commit).
 
-```bash
-node scripts/docs/format-translation-manifest.mjs
-```
-
-The content:
-```json
-{
-  "files": {
-    "index.md": "<md5 of English source>",
-    "applications.md": "<md5>",
-    "fast-track/getting-started.md": "<md5>",
-    ...
-  },
-  "glossary_hash": "<md5 of glossary.json>",
-  "nav_hashes": {
-    "fr": "<md5 of fr/nav.json>",
-    "de": "<md5 of de/nav.json>",
-    "es": "<md5 of es/nav.json>"
-  }
-}
-```
+A page whose English change needs no translation (a fix inside a code block, for instance) stays
+stale until its translation is touched: make the matching edit in each locale.
 
 ### Step 5: Validate
 
@@ -186,25 +168,3 @@ Cross-reference the `workspaces`, `sidebar`, and `breadcrumbs` sections of each 
 - Markdown syntax markers
 - HTML tags and attributes
 - Anchor IDs in links
-
-## Manifest Format
-
-`translation-state/docs-source-hashes.json`:
-```json
-{
-  "files": {
-    "index.md": "a1b2c3d4e5f6...",
-    "applications.md": "f6e5d4c3b2a1...",
-    "fast-track/getting-started.md": "1234abcd5678...",
-    "on-premise/index.md": "abcd1234efgh..."
-  },
-  "glossary_hash": "9876fedc5432...",
-  "nav_hashes": {
-    "fr": "aaaa1111bbbb...",
-    "de": "cccc2222dddd...",
-    "es": "eeee3333ffff..."
-  }
-}
-```
-
-File keys are relative to `doc/help/docs/en/`. Values are MD5 hex hashes. This file should be committed to git.
