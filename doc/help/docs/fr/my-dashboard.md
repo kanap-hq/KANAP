@@ -278,9 +278,9 @@ Les tuiles ci-dessous sont présentées dans leur ordre par défaut.
 
 ### Budget
 
-Un tableau couvrant trois exercices : l'année dernière (A-1), l'année en cours (A) et l'année prochaine (A+1). Chaque année a trois lignes : **OPEX**, **CAPEX** et **Total**. Les colonnes de valeurs sont les colonnes budgétaires affichées par votre organisation, sous leurs noms (**Budget**, **Révision**, **Réalisé** et **Atterrissage prévu** avec les réglages standard, plus **Prévision** quand elle est affichée). Vous pouvez en garder moins dans les options de la tuile (voir [Personnaliser votre tableau de bord](#customizing-the-budget-section)). Une colonne s'affiche dès qu'elle contient un montant pour au moins une ligne. Les colonnes masquées n'apparaissent jamais. Tous les montants sont arrondis au millier le plus proche et affichés avec un suffixe « k » (par exemple, `7 846 k`). Les séparateurs suivent la langue de l'interface.
+Un tableau couvrant trois exercices : l'année dernière (A-1), l'année en cours (A) et l'année prochaine (A+1). Chaque année tient sur une ligne, et chaque montant est le total de l'OPEX et du CAPEX. Laissez le pointeur sur un montant, ou atteignez-le au clavier, pour lire l'OPEX et le CAPEX de cette année et de cette colonne. Les colonnes de valeurs sont les colonnes budgétaires affichées par votre organisation, sous leurs noms (**Budget**, **Révision**, **Réalisé** et **Atterrissage prévu** avec les réglages standard, plus **Prévision** quand elle est affichée). Vous pouvez en garder moins dans les options de la tuile (voir [Personnaliser votre tableau de bord](#customizing-the-budget-section)). Une colonne s'affiche dès que l'OPEX, le CAPEX ou le total contient un montant. Les colonnes masquées n'apparaissent jamais. Tous les montants sont arrondis au millier le plus proche et affichés avec un suffixe « k » (par exemple, `7 846 k`). Les séparateurs suivent la langue de l'interface.
 
-Cliquez sur un montant pour ouvrir la [liste des lignes budgétaires](budget-lines.md) sur ce type. Un montant **Total** ouvre la liste sur les deux types. Cliquez sur **Voir** pour ouvrir la liste.
+Cliquez sur un montant pour ouvrir la [liste des lignes budgétaires](budget-lines.md) sur les deux types. Cliquez sur **Voir** pour ouvrir la même liste.
 
 ### Top lignes
 

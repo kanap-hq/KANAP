@@ -278,9 +278,9 @@ Los mosaicos siguientes aparecen en su orden por defecto.
 
 ### Presupuesto
 
-Una tabla que cubre tres ejercicios fiscales: el año anterior (A-1), el año actual (A) y el año siguiente (A+1). Cada año tiene tres filas: **OPEX**, **CAPEX** y **Total**. Las columnas de valores son las columnas presupuestarias que muestra su organización, con sus nombres (**Presupuesto**, **Revisión**, **Realizado** y **Aterrizaje previsto** con la configuración estándar, más **Previsión** cuando se muestra). Puede conservar menos en las opciones del mosaico (consulte [Personalizar su panel](#customizing-the-budget-section)). Una columna se muestra cuando contiene un importe para al menos una fila. Las columnas ocultas nunca aparecen. Todos los importes se redondean al millar más cercano y se muestran con el sufijo "k" (por ejemplo, `7.846 k`). Los separadores siguen el idioma de la interfaz.
+Una tabla que cubre tres ejercicios fiscales: el año anterior (A-1), el año actual (A) y el año siguiente (A+1). Cada año ocupa una fila, y cada importe es el total de OPEX y CAPEX. Deje el puntero sobre un importe, o acceda a él con el teclado, para leer el OPEX y el CAPEX de ese año y de esa columna. Las columnas de valores son las columnas presupuestarias que muestra su organización, con sus nombres (**Presupuesto**, **Revisión**, **Realizado** y **Aterrizaje previsto** con la configuración estándar, más **Previsión** cuando se muestra). Puede conservar menos en las opciones del mosaico (consulte [Personalizar su panel](#customizing-the-budget-section)). Una columna se muestra cuando OPEX, CAPEX o el total contiene un importe. Las columnas ocultas nunca aparecen. Todos los importes se redondean al millar más cercano y se muestran con el sufijo "k" (por ejemplo, `7.846 k`). Los separadores siguen el idioma de la interfaz.
 
-Haga clic en un importe para abrir la [lista de líneas presupuestarias](budget-lines.md) en ese tipo. Un importe **Total** abre la lista con ambos tipos. Haga clic en **Ver** para abrir la lista.
+Haga clic en un importe para abrir la [lista de líneas presupuestarias](budget-lines.md) con ambos tipos. Haga clic en **Ver** para abrir la misma lista.
 
 ### Top líneas
 
