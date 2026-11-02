@@ -3948,8 +3948,9 @@ export class AiQueryExecutor {
 
   /**
    * A technology with its figures (`listAiTechnologies`), versions (support state and date, use,
-   * servers in service per version), owners (names only) and number of contracts (null without the contracts read right).
-   * References and names only: no id of another record.
+   * servers in service per version), owners (names only), attachments (name, type, size, upload
+   * date; never a storage path) and number of contracts (null without the contracts read right).
+   * References and names only: no id of another record. Attachments are read with the technology.
    */
   private async technologyDetail(context: AiExecutionContextWithManager, entityId: string): Promise<AiEntityDetailDto> {
     if (!this.technologies) throw new BadRequestException('Unsupported entity type.');
@@ -3963,10 +3964,11 @@ export class AiQueryExecutor {
       .filter((owner) => owner.owner_type === type)
       .map((owner) => owner.full_name)
       .filter((name): name is string => !!name);
-    // What Plaid writes beside the record: support contacts and web links, as the Operations and
-    // Relations tabs read them. Names only for a contact, never its email.
+    // What the Operations and Relations tabs read: support contacts and web links, and the files.
+    // Names only for a contact, never its email. A file is its name, type, size and upload date.
     const supportContacts: any[] = await this.technologies.listSupportContacts(record.id, opts);
     const webLinks: any[] = await this.technologies.listLinks(record.id, opts);
+    const attachments: any[] = await this.technologies.listAttachments(record.id, opts).catch(() => []);
     return this.toDetailResult(this.mapTechnology(row), {
       reference: row.reference,
       name: record.name,
@@ -4017,6 +4019,14 @@ export class AiQueryExecutor {
         role: contact.role ?? null,
       })),
       web_links: webLinks.map((link: any) => ({ url: String(link.url ?? ''), description: link.description ?? null })),
+      // The asset detail's attachment metadata, without a storage path or a stored name.
+      // `listAttachments` already omits both; the map keeps only the fields the answer uses.
+      attachments: attachments.map((file: any) => ({
+        original_filename: file.original_filename ?? null,
+        mime_type: file.mime_type ?? null,
+        size: file.size == null || file.size === '' ? null : Number(file.size),
+        uploaded_at: file.uploaded_at ?? null,
+      })),
       // As the technology page: no number of contracts without the contracts read right.
       contract_count: (await this.policy?.canReadEntityType(context, 'contracts', context.manager))
         ? await technologyContractCount(context.manager, context.tenantId, record.id)
