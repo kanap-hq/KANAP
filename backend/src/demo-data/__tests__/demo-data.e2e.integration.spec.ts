@@ -586,12 +586,28 @@ async function vmwareSnapshot(tenantId: string) {
  * headings of the model, the journal of the B2B portal, the SAP close and the LIMS signed by
  * their people and backdated, the three corrective tasks, and no incident on a cluster.
  */
+/**
+ * The year the loader gives the incidents: the current one once their last day (19 October) is
+ * past, the previous one before, so that they never lie in the future.
+ */
+function incidentYear(): number {
+  const year = new Date().getFullYear();
+  return localTodayYmd() > `${year}-10-19` ? year : year - 1;
+}
+
 async function checkIncidents(tenantId: string) {
   const incidents: Array<{ item_number: number; title: string; status: string }> = await inTenant(tenantId, (m) => m.query(
     `SELECT item_number, title, status FROM incidents WHERE tenant_id = $1 ORDER BY item_number`,
     [tenantId],
   ));
   assert.equal(incidents.length, 10, 'ten incidents, no row added or removed');
+  const [last] = await inTenant(tenantId, (m) => m.query(
+    `SELECT GREATEST(
+              (SELECT max(GREATEST(started_at, detected_at, resolved_at, closed_at, authority_notified_at)) FROM incidents WHERE tenant_id = $1),
+              (SELECT max(occurred_at) FROM incident_entries WHERE tenant_id = $1)) AS at`,
+    [tenantId],
+  ));
+  assert.ok(new Date(last.at).getTime() < Date.now(), `the incidents lie in the past (last event ${new Date(last.at).toISOString()})`);
   assert.equal(incidents[3]?.title, B2B_INCIDENT, 'INC-4 is the B2B portal');
   assert.equal(incidents[3]?.status, 'closed');
   assert.equal(incidents[8]?.title, 'Lab results cannot be saved in QualityLab LIMS', 'INC-9 is the LIMS');
@@ -640,8 +656,8 @@ async function checkIncidents(tenantId: string) {
   ));
   const journal = fixtureRows('32-incident-journal.csv');
   assert.equal(entries.length, journal.length, 'every journal row imported');
-  // The entries are backdated: each keeps its journal time, moved with the year, not the load time.
-  const yearShift = new Date().getFullYear() - 2026;
+  // The entries are backdated: each keeps its journal time, moved with the incidents, not the load time.
+  const yearShift = incidentYear() - 2026;
   const journalTimes = journal.map((line) => {
     const at = line.split(';')[2].trim();
     return `${Number(at.slice(0, 4)) + yearShift}${at.slice(4)}`;
@@ -686,7 +702,7 @@ async function checkIncidents(tenantId: string) {
     'pierre.martin@fromage-co.example',
     'marc.petit@fromage-co.example',
   ]);
-  const year = new Date().getFullYear();
+  const year = incidentYear();
   assert.deepEqual(tasks.map((task) => task.due_date), [`${year}-04-30`, `${year}-11-30`, `${year}-12-31`]);
   assert.deepEqual(tasks.map((task) => task.status), ['done', 'in_progress', 'open']);
 

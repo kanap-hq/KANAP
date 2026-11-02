@@ -250,6 +250,13 @@ the year the relative `y_*` budget columns are read against. A 29 February
 moved to a common year becomes the 28th. Years written inside a text (a note
 saying "2026 actuals") do not move. The files on disk never change.
 
+Past events stay in the past whatever the day of the load. The incidents
+(`31-incidents.csv`, `32-incident-journal.csv`, `19b-incident-tasks.csv`) move
+one year less while their last day, 19 October, moved, is not yet past. The
+time booked on the Cave Climate Digital Twin project keeps its days once
+22 October, moved, is past; before, its five entries move back together so
+the last one falls on the day before the load.
+
 Without `--shift-years`, the runner behaves as before: the dates as written,
 and the `y_*` budget columns read against the current year.
 

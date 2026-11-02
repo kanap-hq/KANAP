@@ -201,9 +201,22 @@ function normalizeValue(value) {
   return String(value).trim();
 }
 
-/** A dataset file as loaded: its dates moved by YEAR_SHIFT. */
+/** Today minus `days`, in local time, as YYYY-MM-DD. */
+function localDay(days = 0) {
+  const now = new Date();
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() - days)).toISOString().slice(0, 10);
+}
+
+// The incidents are past events: their register, journal and corrective tasks move together, one
+// year less than the rest of the dataset while their last day (INCIDENTS_LAST_DAY, moved) is not
+// yet past, so a load made before it does not date them in the future.
+const INCIDENT_FILES = new Set(['19b-incident-tasks.csv', '31-incidents.csv', '32-incident-journal.csv']);
+const INCIDENTS_LAST_DAY = '2026-10-19';
+const INCIDENT_YEAR_SHIFT = shiftIsoDate(INCIDENTS_LAST_DAY, YEAR_SHIFT) < localDay() ? YEAR_SHIFT : YEAR_SHIFT - 1;
+
+/** A dataset file as loaded: its dates moved by YEAR_SHIFT (INCIDENT_YEAR_SHIFT for the incidents). */
 function fixtureText(name) {
-  return shiftCsvText(readFileSync(file(name), 'utf8'), YEAR_SHIFT);
+  return shiftCsvText(readFileSync(file(name), 'utf8'), INCIDENT_FILES.has(name) ? INCIDENT_YEAR_SHIFT : YEAR_SHIFT);
 }
 
 function readCsv(name) {
@@ -1935,8 +1948,7 @@ function utcDay(ymd) {
  * so the last one lands on yesterday (local) and the gaps between entries stay as written.
  */
 function bookedDay(day) {
-  const now = new Date();
-  const yesterday = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const yesterday = utcDay(localDay(1));
   const last = utcDay(shiftedDate(LAST_BOOKED_DAY));
   const back = Math.max(0, last - yesterday);
   return new Date(utcDay(shiftedDate(day)) - back).toISOString().slice(0, 10);
