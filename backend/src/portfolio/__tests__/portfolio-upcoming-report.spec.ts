@@ -22,12 +22,22 @@ const blockOf = (sql: string): Block => {
 /** A stand-in for the tenant-bound manager: each block gets its canned rows. */
 function stubManager(results: Partial<Record<Block, Array<Record<string, unknown>>>> = {}) {
   const calls = new Map<Block, Call>();
+  // Two queries in flight at once are the node-postgres warning
+  // (`client.query() when the client is already executing a query`).
+  let busy = 0;
   const manager = {
     query: async (sql: string, params: any[]) => {
-      const block = blockOf(sql);
-      assert.ok(!calls.has(block), `one statement per block (${block})`);
-      calls.set(block, { sql, params });
-      return results[block] ?? [];
+      if (busy > 0) throw new Error('client.query() when the client is already executing a query');
+      busy += 1;
+      try {
+        await new Promise((resolve) => setImmediate(resolve));
+        const block = blockOf(sql);
+        assert.ok(!calls.has(block), `one statement per block (${block})`);
+        calls.set(block, { sql, params });
+        return results[block] ?? [];
+      } finally {
+        busy -= 1;
+      }
     },
   } as any;
   return { manager, calls };

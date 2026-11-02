@@ -884,17 +884,16 @@ export const applicationCsvConfig: CsvEntityConfig = {
   sameAsStored: async (rows, context) => {
     const settings = await requireImportCatalogs(context);
     const ids = rows.map((row) => row.existingEntity.id);
-    const [owners, residency, users] = ids.length === 0 ? [[], [], []] : await Promise.all([
-      context.manager.query(
-        `SELECT application_id, user_id, owner_type FROM application_owners WHERE tenant_id = $1 AND application_id = ANY($2)`,
-        [context.tenantId, ids],
-      ),
-      context.manager.query(
-        `SELECT application_id, country_iso FROM application_data_residency WHERE tenant_id = $1 AND application_id = ANY($2)`,
-        [context.tenantId, ids],
-      ),
-      usersByEmail(context.manager, context.tenantId),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const owners = ids.length === 0 ? [] : await context.manager.query(
+      `SELECT application_id, user_id, owner_type FROM application_owners WHERE tenant_id = $1 AND application_id = ANY($2)`,
+      [context.tenantId, ids],
+    );
+    const residency = ids.length === 0 ? [] : await context.manager.query(
+      `SELECT application_id, country_iso FROM application_data_residency WHERE tenant_id = $1 AND application_id = ANY($2)`,
+      [context.tenantId, ids],
+    );
+    const users = ids.length === 0 ? [] : await usersByEmail(context.manager, context.tenantId);
     const userByEmail = users as unknown as Map<string, string>;
     const ownersById = groupKeys(owners, (o: any) => o.application_id, (o: any) => `${o.owner_type}:${o.user_id}`);
     const residencyById = groupKeys(residency, (r: any) => r.application_id, (r: any) => String(r.country_iso).trim().toUpperCase());

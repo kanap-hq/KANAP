@@ -126,12 +126,12 @@ export class ApplicationsController {
       write: { technologies: 'infrastructure', processes: 'business_processes' },
       contribute: { incidents: 'incidents' },
     });
-    const [application, project, request, task] = await Promise.all([
-      this.participationScope(ctx, 'applications'),
-      this.readProjectScope(ctx),
-      this.participationScope(ctx, 'portfolio_requests'),
-      this.readTaskScope(ctx),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    // Each participation scope reads the caller's roles on this manager.
+    const application = await this.participationScope(ctx, 'applications');
+    const project = await this.readProjectScope(ctx);
+    const request = await this.participationScope(ctx, 'portfolio_requests');
+    const task = await this.readTaskScope(ctx);
     return {
       manager: this.requireManager(ctx),
       tenantId: ctx.tenantId,

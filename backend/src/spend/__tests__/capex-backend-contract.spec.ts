@@ -237,11 +237,67 @@ async function testYearlyTotalsFillsMissingYears() {
   ]);
 }
 
+/**
+ * The plain CAPEX list names companies, suppliers, accounts, owners and analytics on the request's
+ * connection. Two finds in flight at once are the node-postgres warning
+ * (`client.query() when the client is already executing a query`).
+ */
+async function testCapexListNamesRunOneAfterTheOther() {
+  let busy = 0;
+  const reads: string[] = [];
+  async function occupy<T>(label: string, work: () => T): Promise<T> {
+    if (busy > 0) throw new Error('client.query() when the client is already executing a query');
+    busy += 1;
+    try {
+      await new Promise((resolve) => setImmediate(resolve));
+      reads.push(label);
+      return work();
+    } finally {
+      busy -= 1;
+    }
+  }
+  const manager = {
+    query: (sql: string) => occupy('analytics', () => {
+      assert.match(sql, /item_analytics|analytics/i);
+      return [];
+    }),
+    getRepository(entity: { name?: string }) {
+      const name = entity?.name ?? 'unknown';
+      return {
+        find: () => occupy(name, () => {
+          if (name === 'Company') return [{ id: 'co', name: 'Acme' }];
+          if (name === 'Supplier') return [{ id: 'su', name: 'Supply' }];
+          if (name === 'Account') return [{ id: 'ac', account_number: '100', account_name: 'Cash' }];
+          if (name === 'User') return [{ id: 'ow', first_name: 'Ann', last_name: 'One', email: 'ann@example.com' }];
+          return [];
+        }),
+      };
+    },
+  };
+  const service = createCapexItemsService(manager);
+  const [row] = await (service as any).enrichCapexListItems([{
+    id: 'line-1',
+    item_number: 4,
+    paying_company_id: 'co',
+    supplier_id: 'su',
+    account_id: 'ac',
+    owner_it_id: 'ow',
+    owner_business_id: null,
+    product_name: 'Server',
+  }], manager, 'tenant-1');
+  assert.equal(row.company_name, 'Acme');
+  assert.equal(row.supplier_name, 'Supply');
+  assert.equal(row.account_number, '100');
+  assert.equal(row.owner_it_name, 'Ann One');
+  assert.deepEqual(reads, ['Company', 'Supplier', 'Account', 'User', 'analytics']);
+}
+
 async function run() {
   await testCapexReferenceResolution();
   await testSummaryIdsReturnsAlignedItemNumbers();
   await testManualPctBulkUpsert();
   await testYearlyTotalsFillsMissingYears();
+  await testCapexListNamesRunOneAfterTheOther();
 }
 
 void run();

@@ -142,11 +142,10 @@ export class TeamMemberConfigController {
     const request = await reportExportRequest(query, ctx, SKILLS_MATRIX_EXPORT_QUERY_KEYS);
     const parsed = skillsMatrixExportQuery(query);
     const opts = { manager: ctx.manager };
-    const [{ items: contributors }, teams, { items: skills }] = await Promise.all([
-      this.svc.list(ctx.tenantId, opts),
-      this.teamsSvc.list(ctx.tenantId, opts),
-      this.skillsSvc.list(ctx.tenantId, opts),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const { items: contributors } = await this.svc.list(ctx.tenantId, opts);
+    const teams = await this.teamsSvc.list(ctx.tenantId, opts);
+    const { items: skills } = await this.skillsSvc.list(ctx.tenantId, opts);
     if (parsed.teamId !== 'all' && parsed.teamId !== UNASSIGNED_GROUP && !teams.some((team) => team.id === parsed.teamId)) {
       throw new BadRequestException('teamId is not a team of this workspace.');
     }

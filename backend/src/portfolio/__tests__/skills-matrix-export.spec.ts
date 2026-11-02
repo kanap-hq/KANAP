@@ -2,6 +2,9 @@ import * as assert from 'node:assert/strict';
 import AdmZip = require('adm-zip');
 import { assertLocaleLabels } from '../../common/report-export/__tests__/locale-labels';
 import { TeamMemberConfigController } from '../team-member-config.controller';
+import { TeamMemberConfigService } from '../team-member-config.service';
+import { PortfolioSkillsService } from '../portfolio-skills.service';
+import { PortfolioTeamsService } from '../portfolio-teams.service';
 import { SKILLS_MATRIX_EXPORT_KEYS, SKILLS_MATRIX_EXPORT_LABELS } from '../services/skills-matrix-export';
 // The screen's own code, from the frontend tree: the export must give the grid it computes.
 import { filterContributorsByEmploymentType } from '../../../../frontend/src/pages/portfolio/contributorsOrdering';
@@ -197,10 +200,51 @@ async function testRefused() {
   }
 }
 
+/**
+ * The matrix export reads contributors, teams and skills on the request's connection. Two queries
+ * in flight at once are the node-postgres warning (`client.query() when the client is already
+ * executing a query`).
+ */
+async function testMatrixReadsRunOneAfterTheOther() {
+  let busy = 0;
+  const reads: string[] = [];
+  async function occupy<T>(label: string, work: () => T): Promise<T> {
+    if (busy > 0) throw new Error('client.query() when the client is already executing a query');
+    busy += 1;
+    try {
+      await new Promise((resolve) => setImmediate(resolve));
+      reads.push(label);
+      return work();
+    } finally {
+      busy -= 1;
+    }
+  }
+  const manager = {
+    query: (sql: string) => occupy(sql, () => (sql.includes('split_part(email') ? [{ name: 'Ann' }] : [])),
+    getRepository: () => ({ find: () => occupy('skills', () => []) }),
+  };
+  const ctrl = new TeamMemberConfigController(
+    new TeamMemberConfigService({ manager } as any, {} as any, {} as any, {} as any),
+    {} as any,
+    new PortfolioTeamsService({ manager } as any),
+    new PortfolioSkillsService({ manager } as any, {} as any),
+  );
+  const out = fakeResponse();
+  await ctrl.exportSkillsMatrix(
+    { language: 'en', tz: 'UTC' },
+    { tenantId: TENANT, userId: 'user-1', userRoles: [], manager } as any,
+    out.res,
+  );
+  assert.ok(out.body().length > 0);
+  const lists = reads.filter((sql) => sql === 'skills' || sql.includes('portfolio_team_member_configs') || sql.includes('FROM portfolio_teams'));
+  assert.equal(lists.length, 3, reads.join('\n'));
+}
+
 async function run() {
   await testRowsFollowTheScreen();
   await testWorkbook();
   await testRefused();
+  await testMatrixReadsRunOneAfterTheOther();
   assertLocaleLabels('portfolio', SKILLS_MATRIX_EXPORT_KEYS, SKILLS_MATRIX_EXPORT_LABELS);
   console.log('skills-matrix-export.spec: OK');
 }

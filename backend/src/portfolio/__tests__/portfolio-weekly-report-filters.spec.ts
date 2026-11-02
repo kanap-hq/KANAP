@@ -221,6 +221,26 @@ async function run() {
   assert.deepEqual(parse('bogus'), []);
   assert.deepEqual(parse(''), []);
 
+  // The filter lists (sources, categories, streams, task types) share the request's connection.
+  let busy = 0;
+  const filterCalls: string[] = [];
+  const filterManager = {
+    query: async (sql: string) => {
+      if (busy > 0) throw new Error('client.query() when the client is already executing a query');
+      busy += 1;
+      try {
+        await new Promise((resolve) => setImmediate(resolve));
+        filterCalls.push(sql);
+        return [];
+      } finally {
+        busy -= 1;
+      }
+    },
+  };
+  const values = await svc.listFilterValues(tenantId, { manager: filterManager as any });
+  assert.deepEqual(values, { sources: [], categories: [], streams: [], taskTypes: [] });
+  assert.equal(filterCalls.length, 4, 'one statement per list, one after the other');
+
   console.log('portfolio-weekly-report-filters.spec.ts: ok');
 }
 

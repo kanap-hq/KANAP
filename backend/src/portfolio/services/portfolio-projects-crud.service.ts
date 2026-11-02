@@ -842,10 +842,9 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const beforeSorted = [...beforeIds].sort();
     const afterSorted = [...afterIds].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
-      const [beforeNames, afterNames] = await Promise.all([
-        this.resolveUserNamesByIds(mg, beforeSorted),
-        this.resolveUserNamesByIds(mg, afterSorted),
-      ]);
+      // One after the other: the request's single connection runs its queries in turn anyway.
+      const beforeNames = await this.resolveUserNamesByIds(mg, beforeSorted);
+      const afterNames = await this.resolveUserNamesByIds(mg, afterSorted);
       await this.logActivity(mg, {
         project_id: projectId,
         tenant_id: project.tenant_id,
@@ -952,10 +951,9 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const beforeSorted = [...beforeIds].sort();
     const afterSorted = [...afterIds].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
-      const [beforeLabels, afterLabels] = await Promise.all([
-        activityBudgetLines(mg, 'capex', beforeSorted),
-        activityBudgetLines(mg, 'capex', afterSorted),
-      ]);
+      // One after the other: the request's single connection runs its queries in turn anyway.
+      const beforeLabels = await activityBudgetLines(mg, 'capex', beforeSorted);
+      const afterLabels = await activityBudgetLines(mg, 'capex', afterSorted);
       await this.logActivity(mg, {
         project_id: projectId,
         tenant_id: project.tenant_id,
@@ -1008,10 +1006,9 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const beforeSorted = [...beforeIds].sort();
     const afterSorted = [...afterIds].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
-      const [beforeLabels, afterLabels] = await Promise.all([
-        activityBudgetLines(mg, 'opex', beforeSorted),
-        activityBudgetLines(mg, 'opex', afterSorted),
-      ]);
+      // One after the other: the request's single connection runs its queries in turn anyway.
+      const beforeLabels = await activityBudgetLines(mg, 'opex', beforeSorted);
+      const afterLabels = await activityBudgetLines(mg, 'opex', afterSorted);
       await this.logActivity(mg, {
         project_id: projectId,
         tenant_id: project.tenant_id,

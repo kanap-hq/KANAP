@@ -328,51 +328,40 @@ export class PortfolioFlowReportService {
     const startDate = weekBounds[0].periodStart;
     const monthsStartDate = monthBounds[0].periodStart;
 
-    const [
-      tasks,
-      requests,
-      projects,
-      taskAge,
-      requestAge,
-      projectAge,
-      taskStatuses,
-      requestStatuses,
-      projectStatuses,
-    ] = await Promise.all([
-      this.entity(manager, 'tasks', {
-        tenantId,
-        timeZone,
-        granularity: 'week',
-        bounds: weekBounds,
-        windowStart: startDate,
-        endDate,
-        filters,
-      }),
-      this.entity(manager, 'requests', {
-        tenantId,
-        timeZone,
-        granularity: 'month',
-        bounds: monthBounds,
-        windowStart: monthsStartDate,
-        endDate,
-        filters,
-      }),
-      this.entity(manager, 'projects', {
-        tenantId,
-        timeZone,
-        granularity: 'month',
-        bounds: monthBounds,
-        windowStart: monthsStartDate,
-        endDate,
-        filters,
-      }),
-      this.taskAge(manager, tenantId, timeZone, endDate, filters),
-      this.createdAge(manager, 'requests', tenantId, timeZone, endDate, filters),
-      this.createdAge(manager, 'projects', tenantId, timeZone, endDate, filters),
-      this.byStatus(manager, 'tasks', tenantId, timeZone, endDate, filters),
-      this.byStatus(manager, 'requests', tenantId, timeZone, endDate, filters),
-      this.byStatus(manager, 'projects', tenantId, timeZone, endDate, filters),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const tasks = await this.entity(manager, 'tasks', {
+      tenantId,
+      timeZone,
+      granularity: 'week',
+      bounds: weekBounds,
+      windowStart: startDate,
+      endDate,
+      filters,
+    });
+    const requests = await this.entity(manager, 'requests', {
+      tenantId,
+      timeZone,
+      granularity: 'month',
+      bounds: monthBounds,
+      windowStart: monthsStartDate,
+      endDate,
+      filters,
+    });
+    const projects = await this.entity(manager, 'projects', {
+      tenantId,
+      timeZone,
+      granularity: 'month',
+      bounds: monthBounds,
+      windowStart: monthsStartDate,
+      endDate,
+      filters,
+    });
+    const taskAge = await this.taskAge(manager, tenantId, timeZone, endDate, filters);
+    const requestAge = await this.createdAge(manager, 'requests', tenantId, timeZone, endDate, filters);
+    const projectAge = await this.createdAge(manager, 'projects', tenantId, timeZone, endDate, filters);
+    const taskStatuses = await this.byStatus(manager, 'tasks', tenantId, timeZone, endDate, filters);
+    const requestStatuses = await this.byStatus(manager, 'requests', tenantId, timeZone, endDate, filters);
+    const projectStatuses = await this.byStatus(manager, 'projects', tenantId, timeZone, endDate, filters);
 
     return {
       weeks,
@@ -691,10 +680,9 @@ export class PortfolioFlowReportService {
     const totalsParams = [...windowParams, [...spec.openStatuses], ctx.windowStart, ctx.endDate];
     const totalsFilter = this.liveFilter(totalsParams, spec, ctx.filters);
 
-    const [rows, totals] = await Promise.all([
-      this.periodRows(manager, spec, periodFilter, periodParams),
-      this.totalsRow(manager, key, spec, totalsFilter, totalsParams),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const rows = await this.periodRows(manager, spec, periodFilter, periodParams);
+    const totals = await this.totalsRow(manager, key, spec, totalsFilter, totalsParams);
 
     const byIndex = new Map(rows.map((row) => [num(row.idx), row]));
     const periods: FlowPeriod[] = ctx.bounds.map((bound, index) => {
