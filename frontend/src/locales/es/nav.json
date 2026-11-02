@@ -117,6 +117,7 @@
     },
     "platform": {
       "tenants": "Espacios de trabajo",
+      "trials": "Pruebas",
       "coaTemplates": "Plantillas CoA",
       "standardAccounts": "Cuentas estándar",
       "platformAi": "Platform AI",

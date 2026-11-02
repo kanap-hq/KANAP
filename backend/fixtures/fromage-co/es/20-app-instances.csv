@@ -1,0 +1,26 @@
+application_name;environment;lifecycle;status;base_url;region;zone;notes
+SAP S/4HANA;prod;active;enabled;;;EU-Paris;Instancia de producción de SAP
+SAP S/4HANA;qa;active;enabled;;;EU-Paris;Instancia SAP QA para la demostración multientorno
+Salesforce Sales Cloud;prod;active;enabled;;;EU-West;Org de producción de Salesforce
+Salesforce Sales Cloud;qa;active;enabled;;;EU-West;Org QA de Salesforce para la demostración multientorno
+SAP BW/4HANA;prod;active;enabled;;;EU-Paris;SAP BW producción
+Power BI;prod;active;enabled;;;EU-West;Power BI producción
+HubSpot Marketing Hub;prod;active;enabled;;;EU-West;HubSpot producción
+CheeseTrack;prod;active;enabled;;;EU-Paris;CheeseTrack producción
+CaveGuard IoT;prod;active;enabled;;;EU-Paris;CaveGuard producción
+Cave Monitoring Dashboard;prod;active;enabled;;;EU-Paris;Panel Grafana producción
+Datadog;prod;active;enabled;;;EU-West;Datadog producción
+Okta Workforce Identity;prod;active;enabled;;;EU-West;Okta producción
+Microsoft 365;prod;active;enabled;;;EU-Global;Tenant M365 producción
+Workday HCM;prod;active;enabled;;;EU-West;Workday producción
+PagerDuty;prod;active;enabled;;;US-East;PagerDuty producción
+Talend Data Integration;prod;active;enabled;;;EU-Paris;Runtime Talend de producción
+Talend Data Integration;qa;active;enabled;;;EU-Paris;Runtime Talend QA para la demostración multientorno
+Snowflake;prod;active;enabled;;;EU-Central;Almacén de producción Snowflake
+Fromage B2B Portal;prod;active;enabled;https://b2b.fromage-co.example;;EU-Paris;Instancia de producción del portal B2B
+QualityLab LIMS;prod;active;enabled;;;EU-Paris;Instancia de producción del LIMS
+La Boutique du Fromage;prod;active;enabled;https://boutique.fromage-co.example;eu-west-1;;Instancia de producción de la tienda online
+Sage X3;prod;active;enabled;;;EU-Gouda;Instancia de producción de Sage X3 para las sedes neerlandesa e italiana
+PRTG Network Monitor;prod;active;enabled;;;EU-Paris;Servidor de producción PRTG
+Veeam Backup & Replication;prod;active;enabled;;;EU-Paris;Copia de seguridad Veeam de producción
+VMware vSphere;prod;active;enabled;;;EU-Paris;Plataforma de producción vSphere de París

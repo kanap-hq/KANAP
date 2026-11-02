@@ -1,0 +1,12 @@
+interface_id;environment;leg_order;connection_ref;notes
+IF-FROMAGE-001;prod;3;CONN-FROMAGE-001;SAP a Salesforce producción por la WAN París-Gouda
+IF-FROMAGE-001;qa;3;CONN-FROMAGE-001;SAP a Salesforce QA por la WAN París-Gouda
+IF-FROMAGE-002;prod;3;CONN-FROMAGE-001;Flujo de BW a Power BI por la WAN París-Gouda
+IF-FROMAGE-003;prod;1;CONN-FROMAGE-002;Enlace de negocio de Salesforce a HubSpot
+IF-FROMAGE-004;prod;1;CONN-FROMAGE-002;Enlace de producción CheeseTrack a SAP
+IF-FROMAGE-005;prod;1;CONN-FROMAGE-004;Telemetría de las cavas a Datadog por VPN AWS
+IF-FROMAGE-006;prod;1;CONN-FROMAGE-004;Telemetría de las cavas al panel por VPN AWS
+IF-FROMAGE-007;prod;1;CONN-FROMAGE-003;Ruta de aprovisionamiento de Okta hacia la plataforma de EE. UU.
+IF-FROMAGE-008;prod;1;CONN-FROMAGE-003;Ruta de Workday a Okta
+IF-FROMAGE-009;prod;1;CONN-FROMAGE-003;Ruta de alertas de Datadog a PagerDuty
+IF-FROMAGE-010;prod;3;CONN-FROMAGE-004;Carga de Talend a Snowflake por VPN AWS

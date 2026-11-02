@@ -117,6 +117,7 @@
     },
     "platform": {
       "tenants": "Tenants",
+      "trials": "Trials",
       "coaTemplates": "CoA templates",
       "standardAccounts": "Standard accounts",
       "platformAi": "Platform AI",

@@ -1,0 +1,15 @@
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
+7110;Suscripciones SaaS;;Suscripciones de software cloud;2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled;opex
+7120;Licencias de software;;Licencias perpetuas y temporales;2000;Software Licenses (OPEX);Recurring licenses and subscriptions;enabled;opex
+7130;Alojamiento en la nube;;Infraestructura cloud y PaaS;2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+7140;Herramientas de ciberseguridad;;Protección de puestos e IAM;2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+7150;Plataformas de datos y analítica;;Supervisión, BI y herramientas de datos;2100;Cloud & Hosting Services;IaaS/PaaS/SaaS usage and hosting;enabled;opex
+7210;Mantenimiento y soporte de TI;;Mantenimiento de hardware y servicios gestionados;2300;Maintenance & Support;Software/hardware maintenance contracts;enabled;opex
+7220;Telecomunicaciones y red;;WAN, LAN, internet y telefonía;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled;opex
+7230;Costes del centro de datos;;Coubicación, energía y refrigeración;2200;Telecommunications & Network;Internet, mobile, lines, VPN;enabled;opex
+7310;Refuerzo de personal de TI;;Desarrolladores e ingenieros externos;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled;opex
+7320;Consultoría de TI;;Asesoría en estrategia y arquitectura;2400;IT Consulting & External Services;Professional services, integration, contractors;enabled;opex
+7410;Formación de TI;;Programas de formación y certificaciones;2600;Training & Certification;Staff training and certifications;enabled;opex
+7420;Viajes y eventos de TI;;Viajes, congresos y eventos del sector;2800;Travel & Mobility (IT Projects);Project-related travel costs;enabled;opex
+151000;Activos de software;;Activos intangibles — software y licencias adquiridos;1100;Intangible Assets (CAPEX);Capitalized software and rights — IAS 38;enabled;capex
+161000;Equipos de TI;;Inmovilizado material — equipos informáticos;1000;Tangible Assets (CAPEX);Purchase of physical IT equipment — IAS 16;enabled;capex

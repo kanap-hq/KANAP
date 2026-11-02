@@ -117,6 +117,7 @@
     },
     "platform": {
       "tenants": "Tenants",
+      "trials": "Essais",
       "coaTemplates": "Modèles CoA",
       "standardAccounts": "Comptes standards",
       "platformAi": "Platform AI",

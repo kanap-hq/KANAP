@@ -1,0 +1,20 @@
+interface_id;environment;leg_order;source_application_name;target_application_name;status;source_endpoint;target_endpoint;trigger_details;env_job_name;authentication_mode;monitoring_url;env_notes;integration_tool_application_name
+IF-FROMAGE-001;prod;1;SAP S/4HANA;Talend Data Integration;active;/api/customers;/jobs/sap_extract;Actualizaciones de clientes en tiempo real;sap_salesforce_extract_prod;;;Tramo de extracción de producción;Talend Data Integration
+IF-FROMAGE-001;prod;2;Talend Data Integration;Talend Data Integration;active;/jobs/sap_extract;/jobs/sap_transform;Cadena de transformación;sap_salesforce_transform_prod;;;Tramo de transformación de producción;Talend Data Integration
+IF-FROMAGE-001;prod;3;Talend Data Integration;Salesforce Sales Cloud;active;/jobs/sap_load;/services/data/v60.0;Carga casi en tiempo real;sap_salesforce_load_prod;;;Tramo de carga de producción;Talend Data Integration
+IF-FROMAGE-001;qa;1;SAP S/4HANA;Talend Data Integration;active;/api/customers;/jobs/sap_extract_qa;Sincronización de clientes QA;sap_salesforce_extract_qa;;;Tramo de extracción QA (demostración multientorno);Talend Data Integration
+IF-FROMAGE-001;qa;2;Talend Data Integration;Talend Data Integration;active;/jobs/sap_extract_qa;/jobs/sap_transform_qa;Cadena de transformación QA;sap_salesforce_transform_qa;;;Tramo de transformación QA (demostración multientorno);Talend Data Integration
+IF-FROMAGE-001;qa;3;Talend Data Integration;Salesforce Sales Cloud;active;/jobs/sap_load_qa;/services/data/v60.0;Carga QA hacia Salesforce;sap_salesforce_load_qa;;;Tramo de carga QA (demostración multientorno);Talend Data Integration
+IF-FROMAGE-002;prod;1;SAP BW/4HANA;Talend Data Integration;active;/bw/odata;/jobs/bw_extract;Extracción diaria de BW;bw_powerbi_extract_prod;;;Tramo de extracción de producción;Talend Data Integration
+IF-FROMAGE-002;prod;2;Talend Data Integration;Talend Data Integration;active;/jobs/bw_extract;/jobs/bw_transform;Transformación diaria de KPI;bw_powerbi_transform_prod;;;Tramo de transformación de producción;Talend Data Integration
+IF-FROMAGE-002;prod;3;Talend Data Integration;Power BI;active;/jobs/bw_load;/datasets/refreshes;Carga diaria de KPI;bw_powerbi_load_prod;;;Tramo de carga de producción;Talend Data Integration
+IF-FROMAGE-003;prod;1;Salesforce Sales Cloud;HubSpot Marketing Hub;active;/api/leads;/crm/v3/objects/contacts;Sincronización de leads;salesforce_hubspot_prod;;;Tramo directo de producción;
+IF-FROMAGE-004;prod;1;CheeseTrack;SAP S/4HANA;active;/api/batches;/api/traceability;Exportación por lotes cada hora;cheesetrack_sap_prod;;;Tramo directo de producción;
+IF-FROMAGE-005;prod;1;CaveGuard IoT;Datadog;active;/api/metrics;/api/v1/series;Telemetría en tiempo real;caveguard_datadog_prod;;;Tramo directo de producción;
+IF-FROMAGE-006;prod;1;CaveGuard IoT;Cave Monitoring Dashboard;active;/api/metrics;/api/datasource;Alimentación del panel en tiempo real;caveguard_dashboard_prod;;;Tramo directo de producción;
+IF-FROMAGE-007;prod;1;Okta Workforce Identity;Microsoft 365;active;/scim/v2/Users;/scim/v2/Users;Sincronización del aprovisionamiento;okta_m365_prod;;;Tramo directo de producción;
+IF-FROMAGE-008;prod;1;Workday HCM;Okta Workforce Identity;active;/api/workers;/api/users;Ciclo de vida gestionado por RR. HH.;workday_okta_prod;;;Tramo directo de producción;
+IF-FROMAGE-009;prod;1;Datadog;PagerDuty;active;/api/v1/alerts;/v2/enqueue;Escalado de alertas;datadog_pagerduty_prod;;;Tramo directo de producción;
+IF-FROMAGE-010;prod;1;Talend Data Integration;Talend Data Integration;active;/jobs/fondue_extract;/jobs/fondue_transform;Extracción de datos;talend_snowflake_extract_prod;;;Tramo de extracción de producción;Talend Data Integration
+IF-FROMAGE-010;prod;2;Talend Data Integration;Talend Data Integration;active;/jobs/fondue_transform;/jobs/fondue_load;Transformación de datos;talend_snowflake_transform_prod;;;Tramo de transformación de producción;Talend Data Integration
+IF-FROMAGE-010;prod;3;Talend Data Integration;Snowflake;active;/jobs/fondue_load;/api/v2/statements;Carga de datos;talend_snowflake_load_prod;;;Tramo de carga de producción;Talend Data Integration

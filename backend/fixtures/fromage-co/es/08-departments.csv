@@ -1,0 +1,25 @@
+company_name;name;description;status;disabled_at
+Fromage & Co SA;Dirección general;Dirección ejecutiva y estrategia corporativa;enabled;
+Fromage & Co SA;Finanzas y control de gestión;Finanzas, contabilidad, control de gestión y tesorería del grupo;enabled;
+Fromage & Co SA;Recursos humanos;Gestión de RR. HH., contratación y desarrollo del talento;enabled;
+Fromage & Co SA;TI y Digital;Tecnologías de la información, transformación digital y ciberseguridad;enabled;
+Fromage & Co SA;Ventas y marketing;Operaciones comerciales, gestión de marca y e-commerce;enabled;
+Fromage & Co SA;Producción;Fabricación, maduración y envasado del queso;enabled;
+Fromage & Co SA;Calidad e I+D;Aseguramiento de la calidad, certificaciones AOP y desarrollo de nuevos quesos;enabled;
+Fromage & Co SA;Logística;Almacenamiento, cadena de frío y distribución del grupo;enabled;
+Fromage & Co SA;Compras;Compras, gestión de proveedores y negociación de contratos;enabled;
+Kaasmeester BV;Dirección;Dirección y administración locales;enabled;
+Kaasmeester BV;Finanzas;Contabilidad local e informes financieros;enabled;
+Kaasmeester BV;Operaciones;Producción, calidad y logística;enabled;
+Kaasmeester BV;Ventas;Comercial y atención al cliente;enabled;
+Kaasmeester BV;TI;Coordinación y soporte de TI local;enabled;
+Formaggio Supremo SRL;Direzione;Dirección local;enabled;
+Formaggio Supremo SRL;Amministrazione;Finanzas y administración;enabled;
+Formaggio Supremo SRL;Produzione;Producción y calidad del queso;enabled;
+Formaggio Supremo SRL;Commerciale;Ventas y distribución;enabled;
+Formaggio Supremo SRL;TI;Coordinación y soporte de TI local;enabled;
+Fromage & Co Inc.;Dirección;Dirección de la filial estadounidense;enabled;
+Fromage & Co Inc.;Finanzas;Contabilidad y conformidad en EE. UU.;enabled;
+Fromage & Co Inc.;Operaciones;Almacenamiento, logística de importación y distribución;enabled;
+Fromage & Co Inc.;Ventas;Ventas y cuentas clave del mercado estadounidense;enabled;
+Fromage & Co Inc.;TI;Operaciones de TI local y centro de soporte;enabled;

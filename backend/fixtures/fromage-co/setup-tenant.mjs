@@ -17,6 +17,9 @@
 // gets. Use a private value on any tenant reachable from outside the machine,
 // or pass --demo-password '' to create the users without a password.
 //
+// --language <en|fr|de|es>: the language of the dataset (default en). The French,
+// German and Spanish sets are generated from the English files (tools/translate-dataset.mjs).
+//
 // --contact-suppliers-only: on a tenant already loaded, only links the demo contacts
 // to their suppliers (09b-contact-suppliers.csv), then stops. --demo-password is not needed.
 //
@@ -34,6 +37,7 @@
 //   KANAP_DEMO_TOKEN             an access token of the tenant administrator
 //   KANAP_DEMO_STARTING_COMPANY  the company the activation created, replaced by the dataset
 //   KANAP_DEMO_YEAR              the year the dataset is moved to
+//   KANAP_DEMO_LANGUAGE          the language of the dataset (en, fr, de, es; anything else: en)
 // It skips the tenant bootstrap, the login, the demo passwords, the AI agent
 // and the Netbox test cases. Each step starts with a `KANAP_DEMO_STEP <name>`
 // line on stdout; the rest of the output goes to stderr. The exit code is not
@@ -49,6 +53,7 @@ import { createHttpClient } from '../../scripts/lib/http-client.mjs';
 import { analyticsValuesText, fixtureDimensions, resolveFixtureLanguage, withFixtureDimensionValues } from './fixture-dimensions.mjs';
 import { planDemandScores, sameCriteriaValues } from './demand-scores.mjs';
 import { rewriteIncidentTaskLinks } from './incident-task-links.mjs';
+import { datasetTranslator, isTranslatedFile, resolveDatasetLanguage } from './translations/translate.mjs';
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -76,6 +81,7 @@ const options = {
   netboxTestCases: false,
   acceptIncludedModel: false,
   contactSuppliersOnly: false,
+  language: 'en',
 };
 
 /** Stops before any request, with one line per problem. */
@@ -116,6 +122,7 @@ if (serverMode) {
   options.demoPassword = '';
   options.yearShift = year - DATASET_YEAR;
   options.skipAgents = true;
+  options.language = resolveDatasetLanguage(env.KANAP_DEMO_LANGUAGE);
   tenantHost = host;
   token = accessToken;
 } else {
@@ -143,6 +150,7 @@ if (serverMode) {
     else if (arg === '--netbox-test-cases') options.netboxTestCases = true;
     // Repair of a tenant already loaded: only links the demo contacts to their suppliers.
     else if (arg === '--contact-suppliers-only') options.contactSuppliersOnly = true;
+    else if (arg === '--language') options.language = resolveDatasetLanguage(argv[++i]);
     else throw new Error(`Unknown argument: ${arg}`);
   }
 
@@ -192,8 +200,15 @@ function step(name) {
   if (serverMode) process.stdout.write(`KANAP_DEMO_STEP ${name}\n`);
 }
 
+/**
+ * The dataset's texts in its language: the translation of an English text of this script, or
+ * the text itself in English (translations/translate.mjs). Applied once, to English texts only.
+ */
+const t = datasetTranslator(options.language);
+
+/** A file of the dataset, in its language when it has a translated version. */
 function file(name) {
-  return path.join(ROOT_DIR, name);
+  return options.language !== 'en' && isTranslatedFile(name) ? path.join(ROOT_DIR, options.language, name) : path.join(ROOT_DIR, name);
 }
 
 function normalizeValue(value) {
@@ -622,27 +637,27 @@ async function ensurePortfolioClassification() {
   };
 
   await ensure('/portfolio/classification/sources', [
-    { name: 'Strategic Plan', description: 'Multi-year strategic roadmap initiatives' },
-    { name: 'IT Modernization', description: 'Technical debt reduction and platform upgrades' },
-    { name: 'Business Request', description: 'Ad-hoc requests from business stakeholders' },
-    { name: 'Regulatory Compliance', description: 'Regulatory and legal requirements' },
+    { name: t('Strategic Plan'), description: t('Multi-year strategic roadmap initiatives') },
+    { name: t('IT Modernization'), description: t('Technical debt reduction and platform upgrades') },
+    { name: t('Business Request'), description: t('Ad-hoc requests from business stakeholders') },
+    { name: t('Regulatory Compliance'), description: t('Regulatory and legal requirements') },
   ]);
 
   await ensure('/portfolio/classification/categories', [
-    { name: 'Digital Transformation', description: 'Innovation and digital business capabilities' },
-    { name: 'Business Applications', description: 'ERP, CRM, HR and core business systems' },
-    { name: 'Infrastructure', description: 'Servers, networks, cloud and datacenter' },
-    { name: 'Security & Compliance', description: 'Cybersecurity, identity and compliance' },
-    { name: 'Data & Analytics', description: 'BI, data platforms and advanced analytics' },
+    { name: t('Digital Transformation'), description: t('Innovation and digital business capabilities') },
+    { name: t('Business Applications'), description: t('ERP, CRM, HR and core business systems') },
+    { name: t('Infrastructure'), description: t('Servers, networks, cloud and datacenter') },
+    { name: t('Security & Compliance'), description: t('Cybersecurity, identity and compliance') },
+    { name: t('Data & Analytics'), description: t('BI, data platforms and advanced analytics') },
   ]);
 
   const categories = await getAll('/portfolio/classification/categories');
   const categoryId = (name) => firstBy(categories, (item) => lower(item.name) === lower(name));
   const streams = await getAll('/portfolio/classification/streams');
   for (const [name, description, category] of [
-    ['Cheese Production Excellence', 'Optimize production, aging and quality', 'Digital Transformation'],
-    ['Customer Experience', 'Improve B2B and B2C customer interactions', 'Business Applications'],
-    ['IT Foundation', 'Core IT infrastructure and shared services', 'Infrastructure'],
+    [t('Cheese Production Excellence'), t('Optimize production, aging and quality'), t('Digital Transformation')],
+    [t('Customer Experience'), t('Improve B2B and B2C customer interactions'), t('Business Applications')],
+    [t('IT Foundation'), t('Core IT infrastructure and shared services'), t('Infrastructure')],
   ]) {
     if (streams.some((item) => lower(item.name) === lower(name))) continue;
     const category_id = categoryId(category);
@@ -966,7 +981,7 @@ async function scoreRequests() {
   const payload = await apiGet('/portfolio/criteria');
   const criteria = Array.isArray(payload) ? payload : items(payload);
   const requests = await getAll('/portfolio/requests?limit=1000&status=all');
-  const plan = planDemandScores(criteria, requests);
+  const plan = planDemandScores(criteria, requests, t);
   if (plan.skipped) {
     info(`Demand scores left as they are: ${plan.reason}.`);
     return;
@@ -1002,7 +1017,7 @@ async function scoreRequests() {
  * a later import puts the status back: the link is kept and the status is set to converted
  * again, without a second project.
  */
-const CAVE_REQUEST_NAME = 'Cave Climate Digital Twin';
+const CAVE_REQUEST_NAME = t('Cave Climate Digital Twin');
 
 async function caveProjectId() {
   const requests = await getAll('/portfolio/requests?limit=1000&status=all');
@@ -1184,12 +1199,12 @@ async function cleanupBootstrapCompany() {
 // to real locations. Location references are server-generated, so lookups are
 // by name.
 const LOCATIONS = {
-  'PAR-DC1': { name: 'Paris Data Center', hosting_type: 'on_prem', company: 'Fromage & Co SA', country_iso: 'FR', city: 'Paris' },
-  'GOU-DC1': { name: 'Gouda Server Room', hosting_type: 'on_prem', company: 'Kaasmeester BV', country_iso: 'NL', city: 'Gouda' },
-  'PRM-SITE': { name: 'Parma Server Room', hosting_type: 'on_prem', company: 'Formaggio Supremo SRL', country_iso: 'IT', city: 'Parma' },
-  'PAR-CAVE': { name: 'Paris Cheese Caves', hosting_type: 'on_prem', company: 'Fromage & Co SA', country_iso: 'FR', city: 'Paris' },
-  'NYC-OFF': { name: 'New York Office', hosting_type: 'on_prem', company: 'Fromage & Co Inc.', country_iso: 'US', city: 'New York' },
-  'AWS-EU': { name: 'AWS eu-west-1', hosting_type: 'public_cloud', provider: 'aws', country_iso: 'IE', city: 'Dublin', region: 'eu-west-1', additional_info: 'AWS Ireland region' },
+  'PAR-DC1': { name: t('Paris Data Center'), hosting_type: 'on_prem', company: 'Fromage & Co SA', country_iso: 'FR', city: 'Paris' },
+  'GOU-DC1': { name: t('Gouda Server Room'), hosting_type: 'on_prem', company: 'Kaasmeester BV', country_iso: 'NL', city: 'Gouda' },
+  'PRM-SITE': { name: t('Parma Server Room'), hosting_type: 'on_prem', company: 'Formaggio Supremo SRL', country_iso: 'IT', city: 'Parma' },
+  'PAR-CAVE': { name: t('Paris Cheese Caves'), hosting_type: 'on_prem', company: 'Fromage & Co SA', country_iso: 'FR', city: 'Paris' },
+  'NYC-OFF': { name: t('New York Office'), hosting_type: 'on_prem', company: 'Fromage & Co Inc.', country_iso: 'US', city: 'New York' },
+  'AWS-EU': { name: 'AWS eu-west-1', hosting_type: 'public_cloud', provider: 'aws', country_iso: 'IE', city: 'Dublin', region: 'eu-west-1', additional_info: t('AWS Ireland region') },
 };
 
 async function ensureLocations() {
@@ -1701,7 +1716,8 @@ async function linkApplicationDepartments() {
     }
     const ids = [];
     for (const pair of pairs) {
-      const [companyName, departmentName] = pair.split('::');
+      const [companyName, englishDepartment] = pair.split('::');
+      const departmentName = t(englishDepartment);
       const cid = companyId(companyName);
       const id = firstBy(departments, (item) => item.name === departmentName && item.company_id === cid);
       if (id) ids.push(id);
@@ -1734,14 +1750,14 @@ const CONTRACT_SPEND_ITEMS = {
 async function linkContractsToSpend() {
   info('Linking contracts to spend items');
   for (const [contractName, spendNames] of Object.entries(CONTRACT_SPEND_ITEMS)) {
-    const contractId = await contractIdByName(contractName);
+    const contractId = await contractIdByName(t(contractName));
     if (!contractId) {
       warn(`Contract '${contractName}' not found`);
       continue;
     }
     const ids = [];
     for (const name of spendNames) {
-      const id = await spendIdByName(name);
+      const id = await spendIdByName(t(name));
       if (id) ids.push(id);
       else warn(`Spend item '${name}' not found for contract '${contractName}'`);
     }
@@ -1772,7 +1788,7 @@ const SPEND_APPLICATIONS = {
 async function linkSpendToApps() {
   info('Linking spend items to applications');
   for (const [spendName, appNames] of Object.entries(SPEND_APPLICATIONS)) {
-    const spendId = await spendIdByName(spendName);
+    const spendId = await spendIdByName(t(spendName));
     if (!spendId) {
       warn(`Spend item '${spendName}' not found`);
       continue;
@@ -1785,11 +1801,17 @@ async function linkSpendToApps() {
 
 // ── Portfolio teams, timeline, allocations ───────────────────────────────────
 
+const TEAMS = [
+  [t('Business Applications'), t('Business Applications delivery team')],
+  [t('Development'), t('Development delivery team')],
+  [t('Infrastructure'), t('Infrastructure delivery team')],
+];
+
 async function ensurePortfolioTeamsAndCapacity() {
   info('Ensuring portfolio teams and capacity');
-  for (const name of ['Business Applications', 'Development', 'Infrastructure']) {
+  for (const [name, description] of TEAMS) {
     const existingId = await portfolioTeamIdByName(name);
-    const body = { name, description: `${name} delivery team`, is_active: true };
+    const body = { name, description, is_active: true };
     if (existingId) await apiPatch(`/portfolio/teams/${existingId}`, body);
     else await apiPost('/portfolio/teams', body);
   }
@@ -1814,7 +1836,7 @@ async function ensurePortfolioTeamsAndCapacity() {
   ];
   for (const [email, team] of teamByEmail) {
     const userId = await userIdByEmail(email);
-    const teamId = await portfolioTeamIdByName(team);
+    const teamId = await portfolioTeamIdByName(t(team));
     if (userId && teamId) {
       await apiPost(`/portfolio/team-members/by-user/${userId}`, {
         team_id: teamId,
@@ -1828,35 +1850,35 @@ async function ensurePortfolioTeamsAndCapacity() {
 // Dates of the dataset year (2026), moved by YEAR_SHIFT when they are sent.
 const PROJECT_PHASES = {
   'Fromage-as-a-Service': [
-    ['Discovery & UX Design', '2025-06-01', '2025-09-30', 'completed'],
-    ['MVP Development', '2025-09-01', '2026-03-31', 'in_progress'],
-    ['Beta Testing', '2026-03-01', '2026-06-30', 'pending'],
-    ['Launch & Scale', '2026-06-01', '2026-09-30', 'pending'],
+    [t('Discovery & UX Design'), '2025-06-01', '2025-09-30', 'completed'],
+    [t('MVP Development'), '2025-09-01', '2026-03-31', 'in_progress'],
+    [t('Beta Testing'), '2026-03-01', '2026-06-30', 'pending'],
+    [t('Launch & Scale'), '2026-06-01', '2026-09-30', 'pending'],
   ],
   'Zero Trust Fromage': [
-    ['Assessment & Architecture', '2025-04-01', '2025-08-31', 'completed'],
-    ['Network Segmentation', '2025-09-01', '2026-02-28', 'in_progress'],
-    ['Identity Hardening', '2026-02-01', '2026-05-31', 'pending'],
-    ['Validation & Audit', '2026-05-01', '2026-06-30', 'pending'],
+    [t('Assessment & Architecture'), '2025-04-01', '2025-08-31', 'completed'],
+    [t('Network Segmentation'), '2025-09-01', '2026-02-28', 'in_progress'],
+    [t('Identity Hardening'), '2026-02-01', '2026-05-31', 'pending'],
+    [t('Validation & Audit'), '2026-05-01', '2026-06-30', 'pending'],
   ],
   'Workday Global Rollout': [
-    ['France Go-Live', '2025-04-01', '2025-07-31', 'completed'],
-    ['Netherlands Rollout', '2025-09-01', '2026-03-31', 'in_progress'],
-    ['Italy Rollout', '2026-03-01', '2026-08-31', 'pending'],
-    ['US Rollout', '2026-08-01', '2026-12-31', 'pending'],
+    [t('France Go-Live'), '2025-04-01', '2025-07-31', 'completed'],
+    [t('Netherlands Rollout'), '2025-09-01', '2026-03-31', 'in_progress'],
+    [t('Italy Rollout'), '2026-03-01', '2026-08-31', 'pending'],
+    [t('US Rollout'), '2026-08-01', '2026-12-31', 'pending'],
   ],
   'Cave Climate Digital Twin': [
-    ['Sensor history baseline', '2026-02-01', '2026-06-30', 'completed'],
-    ['Airflow and temperature model', '2026-05-01', '2026-12-31', 'in_progress'],
-    ['Cave master review', '2026-10-01', '2027-03-31', 'pending'],
-    ['Remote cave management', '2027-01-15', '2027-09-30', 'pending'],
+    [t('Sensor history baseline'), '2026-02-01', '2026-06-30', 'completed'],
+    [t('Airflow and temperature model'), '2026-05-01', '2026-12-31', 'in_progress'],
+    [t('Cave master review'), '2026-10-01', '2027-03-31', 'pending'],
+    [t('Remote cave management'), '2027-01-15', '2027-09-30', 'pending'],
   ],
 };
 
 async function ensureProjectPhases() {
   info('Ensuring project phases');
   for (const [projectName, phases] of Object.entries(PROJECT_PHASES)) {
-    const projectId = await projectIdByName(projectName);
+    const projectId = await projectIdByName(t(projectName));
     if (!projectId) {
       warn(`Project '${projectName}' not found; skipping phases`);
       continue;
@@ -1901,7 +1923,7 @@ const PROJECT_TEAMS = {
 async function ensureProjectTeams() {
   info('Ensuring project team members');
   for (const [projectName, emails] of Object.entries(PROJECT_TEAMS)) {
-    const projectId = await projectIdByName(projectName);
+    const projectId = await projectIdByName(t(projectName));
     if (!projectId) {
       warn(`Project '${projectName}' not found; skipping teams`);
       continue;
@@ -1926,14 +1948,14 @@ async function ensureProjectTeams() {
 // identity of a row: a re-run that finds it adds nothing. The project route
 // refuses a future day: see bookedDay.
 const CAVE_TASK_TIME = [
-  { title: 'Collect CaveGuard sensor history', email: 'marc.petit@fromage-co.example', category: 'it', hours: 16, day: '2026-06-12', notes: 'Sample data: CaveGuard history review' },
-  { title: 'Model cave airflow and temperature', email: 'marc.petit@fromage-co.example', category: 'it', hours: 24, day: '2026-09-18', notes: 'Sample data: airflow model' },
-  { title: 'Calibrate microbial activity with the cave masters', email: 'jacques.dubois@fromage-co.example', category: 'business', hours: 8, day: '2026-10-08', notes: 'Sample data: cave master calibration' },
+  { title: 'Collect CaveGuard sensor history', email: 'marc.petit@fromage-co.example', category: 'it', hours: 16, day: '2026-06-12', notes: t('Sample data: CaveGuard history review') },
+  { title: 'Model cave airflow and temperature', email: 'marc.petit@fromage-co.example', category: 'it', hours: 24, day: '2026-09-18', notes: t('Sample data: airflow model') },
+  { title: 'Calibrate microbial activity with the cave masters', email: 'jacques.dubois@fromage-co.example', category: 'business', hours: 8, day: '2026-10-08', notes: t('Sample data: cave master calibration') },
 ];
 
 const CAVE_PROJECT_TIME = [
-  { email: 'marc.petit@fromage-co.example', category: 'it', hours: 8, day: '2026-10-16', notes: 'Sample data: twin steering' },
-  { email: 'jacques.dubois@fromage-co.example', category: 'business', hours: 8, day: '2026-10-22', notes: 'Sample data: production workshop' },
+  { email: 'marc.petit@fromage-co.example', category: 'it', hours: 8, day: '2026-10-16', notes: t('Sample data: twin steering') },
+  { email: 'jacques.dubois@fromage-co.example', category: 'business', hours: 8, day: '2026-10-22', notes: t('Sample data: production workshop') },
 ];
 
 const LAST_BOOKED_DAY = '2026-10-22';
@@ -1973,7 +1995,7 @@ async function ensureCaveProjectStory() {
   if (appId) await apiPost(`/portfolio/projects/${projectId}/applications/bulk-replace`, { application_ids: [appId] });
   else warn(`Application 'CaveGuard IoT' not found for '${CAVE_REQUEST_NAME}'`);
 
-  const spendId = await spendIdByName('CaveGuard IoT Platform');
+  const spendId = await spendIdByName(t('CaveGuard IoT Platform'));
   if (spendId) await apiPost(`/portfolio/projects/${projectId}/opex/bulk-replace`, { opex_ids: [spendId] });
   else warn(`Spend item 'CaveGuard IoT Platform' not found for '${CAVE_REQUEST_NAME}'`);
 
@@ -1987,7 +2009,7 @@ async function ensureCaveProjectStory() {
 
   let booked = 0;
   for (const entry of CAVE_TASK_TIME) {
-    const taskId = taskIdByTitle.get(entry.title);
+    const taskId = taskIdByTitle.get(t(entry.title));
     const userId = await userOf(entry.email);
     if (!taskId || !userId) {
       warn(`Time entry '${entry.notes}' was not booked`);
@@ -2036,7 +2058,7 @@ const COMPANY_ALLOCATIONS = [
 async function ensureCompanyAllocations() {
   info('Applying company allocations to spend/CAPEX versions');
   for (const [kind, name, companyNames] of COMPANY_ALLOCATIONS) {
-    const itemId = kind === 'spend' ? await spendIdByName(name) : await capexIdByDescription(name);
+    const itemId = kind === 'spend' ? await spendIdByName(t(name)) : await capexIdByDescription(t(name));
     if (!itemId) {
       warn(`Allocation target not found: [${kind}] ${name}`);
       continue;
@@ -2076,13 +2098,13 @@ async function ensureCompanyAllocations() {
 
 // ── Service Desk Docs knowledge library ──────────────────────────────────────
 
-const SERVICE_DESK_LIBRARY = 'Service Desk Docs';
+const SERVICE_DESK_LIBRARY = t('Service Desk Docs');
 const SERVICE_DESK_DOCS = [
-  { title: 'VPN & Remote Access Guide', file: 'docs/vpn-remote-access.md', summary: 'FortiClient VPN setup, Okta MFA, and the classic "credentials rejected" fix.' },
-  { title: 'SAP Access Request Process', file: 'docs/sap-access-request.md', summary: 'SAP role matrix, approvers, SLAs and the expedited month-end close path.' },
-  { title: 'CaveGuard Alert Runbook — Cheese Cave Sensors', file: 'docs/caveguard-alert-runbook.md', summary: 'Alert severities, humidity profiles per cheese family, and when to call the on-call affineur.' },
-  { title: 'Guest Wi-Fi & Visitor Access', file: 'docs/guest-wifi-visitors.md', summary: 'FromageGuest Wi-Fi codes, visitor badges, and how to book a cave visit.' },
-  { title: 'Label Printer Troubleshooting (Zebra)', file: 'docs/label-printer-troubleshooting.md', summary: 'Curled labels, humidity, calibration, and when to call Axians.' },
+  { title: t('VPN & Remote Access Guide'), file: 'docs/vpn-remote-access.md', summary: t('FortiClient VPN setup, Okta MFA, and the classic "credentials rejected" fix.') },
+  { title: t('SAP Access Request Process'), file: 'docs/sap-access-request.md', summary: t('SAP role matrix, approvers, SLAs and the expedited month-end close path.') },
+  { title: t('CaveGuard Alert Runbook — Cheese Cave Sensors'), file: 'docs/caveguard-alert-runbook.md', summary: t('Alert severities, humidity profiles per cheese family, and when to call the on-call affineur.') },
+  { title: t('Guest Wi-Fi & Visitor Access'), file: 'docs/guest-wifi-visitors.md', summary: t('FromageGuest Wi-Fi codes, visitor badges, and how to book a cave visit.') },
+  { title: t('Label Printer Troubleshooting (Zebra)'), file: 'docs/label-printer-troubleshooting.md', summary: t('Curled labels, humidity, calibration, and when to call Axians.') },
 ];
 
 async function ensureServiceDeskDocs() {
@@ -2110,8 +2132,8 @@ async function ensureServiceDeskDocs() {
 
 // ── Demo AI agent (mock ticketing provider) ──────────────────────────────────
 
-const AGENT_NAME = 'Fromage Service Desk Agent';
-const SHARED_CONTEXT_NAME = 'Fromage & Co Company Context';
+const AGENT_NAME = t('Fromage Service Desk Agent');
+const SHARED_CONTEXT_NAME = t('Fromage & Co Company Context');
 
 async function ensureDemoAgent() {
   info('Ensuring demo AI agent');
@@ -2129,13 +2151,13 @@ async function ensureDemoAgent() {
   if (!profile) {
     const created = await apiPost(`${cp}/shared-context-profiles`, {
       name: SHARED_CONTEXT_NAME,
-      description: 'Shared facts about Fromage & Co for all agents',
+      description: t('Shared facts about Fromage & Co for all agents'),
       lines: [
-        'Fromage & Co is a European cheese group: Fromage & Co SA (France, HQ), Kaasmeester BV (Netherlands), Formaggio Supremo SRL (Italy), Fromage & Co Inc. (US).',
-        'Core systems: SAP S/4HANA (ERP, production), Salesforce (CRM), Microsoft 365 (collaboration), Workday HCM (HR), ServiceNow (ITSM).',
-        'The Paris Data Center (PAR-DC1) hosts SAP production; site firewalls are FortiGate appliances.',
-        'Business hours are 08:00-18:00 CET; the production sites in Paris and Parma run until 22:00.',
-        'IT service desk language is English; requesters may write in French, Dutch or Italian.',
+        t('Fromage & Co is a European cheese group: Fromage & Co SA (France, HQ), Kaasmeester BV (Netherlands), Formaggio Supremo SRL (Italy), Fromage & Co Inc. (US).'),
+        t('Core systems: SAP S/4HANA (ERP, production), Salesforce (CRM), Microsoft 365 (collaboration), Workday HCM (HR), ServiceNow (ITSM).'),
+        t('The Paris Data Center (PAR-DC1) hosts SAP production; site firewalls are FortiGate appliances.'),
+        t('Business hours are 08:00-18:00 CET; the production sites in Paris and Parma run until 22:00.'),
+        t('IT service desk language is English; requesters may write in French, Dutch or Italian.'),
       ],
     });
     profile = created?.profile ?? created;
@@ -2145,7 +2167,7 @@ async function ensureDemoAgent() {
   const agentBody = {
     name: AGENT_NAME,
     agent_type: 'helpdesk',
-    description: 'Demo helpdesk triage agent bound to the built-in mock ticketing provider.',
+    description: t('Demo helpdesk triage agent bound to the built-in mock ticketing provider.'),
     provider_bindings_json: { ticketing: { provider_kind: 'ticketing', provider_key: 'mock' } },
     // Scope follows the template shape: manual safe targets stay allowed (a
     // hard requirement of the triage runtime) and the bounded new-tickets
@@ -2177,14 +2199,14 @@ async function ensureDemoAgent() {
       automatic_writes_enabled: false,
     },
     persona_json: {
-      mission: 'Support the Fromage & Co IT service desk: triage incoming tickets, investigate using the IT landscape, and prepare source-cited replies for technician approval.',
+      mission: t('Support the Fromage & Co IT service desk: triage incoming tickets, investigate using the IT landscape, and prepare source-cited replies for technician approval.'),
       instructions: [
-        'Always cite the evidence used for a conclusion.',
-        'Prefer an internal note when evidence is incomplete or confidence is low.',
-        'Never promise delivery dates; route scheduling questions to the service desk lead.',
+        t('Always cite the evidence used for a conclusion.'),
+        t('Prefer an internal note when evidence is incomplete or confidence is low.'),
+        t('Never promise delivery dates; route scheduling questions to the service desk lead.'),
       ],
-      output_style: { tone: 'Professional, concise and friendly; address requesters by first name.', language: 'en' },
-      escalation_guidance: 'Escalate security incidents and anything touching SAP production to Pierre Martin.',
+      output_style: { tone: t('Professional, concise and friendly; address requesters by first name.'), language: options.language },
+      escalation_guidance: t('Escalate security incidents and anything touching SAP production to Pierre Martin.'),
       shared_context: { enabled: true, profile_id: profile.id },
     },
   };
@@ -2451,7 +2473,7 @@ const TECHNOLOGIES = [
   },
   {
     catalog: 'vsphere',
-    installed: [['PAR-VCENTER-01', '8.0', 'vCenter Server']],
+    installed: [['PAR-VCENTER-01', '8.0', t('vCenter Server')]],
     contracts: ['Broadcom VMware ELA'],
     owners: [['marc.petit@fromage-co.example', 'it']],
   },
@@ -2459,12 +2481,12 @@ const TECHNOLOGIES = [
     catalog: 'mssqlserver',
     installed: [
       ['PAR-SQL-01', '2019', null],
-      ['PAR-SQL-02', '2022', 'Upgraded first; PAR-SQL-01 follows in the next window'],
-      ['PAR-APP-01', '2017', 'Express edition, embedded in QualityLab LIMS'],
+      ['PAR-SQL-02', '2022', t('Upgraded first; PAR-SQL-01 follows in the next window')],
+      ['PAR-APP-01', '2017', t('Express edition, embedded in QualityLab LIMS')],
     ],
   },
   { catalog: 'tomcat', installed: [['PAR-APP-01', '9.0', null]] },
-  { catalog: 'postgresql', installed: [['AWS-RDS-BOUTIQUE', '16', 'Amazon RDS, Multi-AZ'], ['PAR-DB-01', '13', null]] },
+  { catalog: 'postgresql', installed: [['AWS-RDS-BOUTIQUE', '16', t('Amazon RDS, Multi-AZ')], ['PAR-DB-01', '13', null]] },
   { catalog: 'veeam-backup-and-replication', installed: [['PAR-BKP-01', '12', null]] },
 ];
 
@@ -2600,7 +2622,7 @@ async function ensureTechnologies() {
       if (ids.length) await apiPost(`/technologies/${technologyId}/applications`, { application_ids: ids });
     }
     for (const contract of spec.contracts ?? []) {
-      const contractId = await contractIdByName(contract);
+      const contractId = await contractIdByName(t(contract));
       if (!contractId) {
         warn(`Contract '${contract}' not found`);
         continue;
@@ -2726,13 +2748,14 @@ async function ensureIncidents() {
     return id;
   }).filter(Boolean);
   const incidentOf = (title) => incidents.find((item) => item.title === title);
+  const linksByTitle = new Map(Object.entries(INCIDENT_LINKS).map(([title, links]) => [t(title), links]));
   for (const row of rows) {
     const incident = incidentOf(row.title);
     if (!incident) {
       warn(`Incident '${row.title}' not found after the import`);
       continue;
     }
-    const links = INCIDENT_LINKS[row.title] ?? {};
+    const links = linksByTitle.get(row.title) ?? {};
     if (links.applications?.length) {
       await apiPost(`/incidents/${incident.id}/applications/bulk-replace`, { application_ids: await appIdsFromNames(links.applications) });
     }
@@ -2815,7 +2838,7 @@ async function linkProcessesToApplications() {
   info('Linking business processes to applications');
   const processes = await getAll('/business-processes?limit=500');
   for (const [processName, appNames] of Object.entries(PROCESS_APPLICATIONS)) {
-    const processId = processes.find((item) => item.name === processName)?.id;
+    const processId = processes.find((item) => item.name === t(processName))?.id;
     if (!processId) {
       warn(`Business process '${processName}' not found`);
       continue;

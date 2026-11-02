@@ -177,7 +177,7 @@ function codeOf(error: any): string | undefined {
 }
 
 // The loader runs as `node <script> --server-mode` without a shell, with PATH, NODE_ENV and its
-// five inputs only; the token is a valid access token of the administrator, never in the
+// six inputs only; the token is a valid access token of the administrator, never in the
 // arguments, never in the log (not even when the loader prints it). Steps reach the state; exit
 // 0 makes the status `loaded`.
 async function testLoadRunsTheLoader() {
@@ -203,7 +203,8 @@ async function testLoadRunsTheLoader() {
     assert.deepEqual(call.options.stdio, ['ignore', 'pipe', 'pipe']);
     const env = call.options.env as Record<string, string>;
     assert.deepEqual(Object.keys(env).sort(), [
-      'KANAP_DEMO_API_URL', 'KANAP_DEMO_HOST', 'KANAP_DEMO_STARTING_COMPANY', 'KANAP_DEMO_TOKEN', 'KANAP_DEMO_YEAR', 'NODE_ENV', 'PATH',
+      'KANAP_DEMO_API_URL', 'KANAP_DEMO_HOST', 'KANAP_DEMO_LANGUAGE', 'KANAP_DEMO_STARTING_COMPANY', 'KANAP_DEMO_TOKEN', 'KANAP_DEMO_YEAR',
+      'NODE_ENV', 'PATH',
     ]);
     assert.equal(env.PATH, process.env.PATH);
     assert.equal(env.NODE_ENV, 'production');
@@ -211,6 +212,7 @@ async function testLoadRunsTheLoader() {
     assert.equal(env.KANAP_DEMO_HOST, hostOf(t), 'the host without port, lower case');
     assert.equal(env.KANAP_DEMO_STARTING_COMPANY, 'Loader Org');
     assert.equal(env.KANAP_DEMO_YEAR, String(new Date().getFullYear()));
+    assert.equal(env.KANAP_DEMO_LANGUAGE, 'en', "the tenant's seed language");
     const token = env.KANAP_DEMO_TOKEN;
     const payload = jwt.verify(token, accessTokenVerifyKey()) as Record<string, any>;
     assert.equal(payload.sub, t.ownerId);
@@ -681,14 +683,15 @@ async function testRefusals() {
 // The reset an administrator asks for: `resetting` while the reset runs, then `idle` with the
 // tenant back to its starting state, the banner choice and the past load kept, and an e-mail to
 // the administrators. A failed reset changes nothing, puts the status back with the failure
-// noted, and e-mails nobody; the next successful reset clears the note.
+// noted, and e-mails nobody; the next successful reset clears the note. The next load comes in
+// the tenant's seed language, as the first one did.
 async function testManualReset() {
   const svc = buildServices();
   const h = harness(svc);
   const failing = harness(svc, { failReset: true });
   let t: ActivatedTenant | undefined;
   try {
-    t = await createActivatedTenant(svc, { tag: 'dd-reset', orgName: 'Reset Org' });
+    t = await createActivatedTenant(svc, { tag: 'dd-reset', orgName: 'Reset Org', language: 'de' });
     const initial = await countTenantRows(t.tenantId);
     await loadDemoSet(t.tenantId);
     const loadedState = {
@@ -721,12 +724,14 @@ async function testManualReset() {
     await settle();
     assert.deepEqual(h.emails, [{ tenantId: t.tenantId, actorId: t.ownerId }], 'the administrators are e-mailed');
     assert.deepEqual(countDifferences(initial, await countTenantRows(t.tenantId), ['audit_log']), []);
-    // Ready for a new load.
+    // Ready for a new load, in the tenant's language again.
     await h.service.load({ tenantId: t.tenantId, actorId: t.ownerId, host: hostOf(t) });
+    assert.equal((h.spawns[0].options.env as Record<string, string>).KANAP_DEMO_LANGUAGE, 'de', 'the German set again');
     h.spawns[0].child.finish(0);
     await settle();
     const reloaded = await demoOf(t.tenantId);
     assert.equal(reloaded.status, 'loaded');
+    assert.equal(reloaded.language, 'de', 'the state records the language');
     assert.ok(reloaded.ever_loaded_at && reloaded.ever_loaded_at > loadedState.ever_loaded_at, 'a full load is recorded');
   } finally {
     await h.finishAll();

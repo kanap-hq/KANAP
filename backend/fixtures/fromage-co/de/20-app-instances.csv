@@ -1,0 +1,26 @@
+application_name;environment;lifecycle;status;base_url;region;zone;notes
+SAP S/4HANA;prod;active;enabled;;;EU-Paris;SAP-Produktionsinstanz
+SAP S/4HANA;qa;active;enabled;;;EU-Paris;SAP-QA-Instanz für die Multi-Umgebungs-Demo
+Salesforce Sales Cloud;prod;active;enabled;;;EU-West;Salesforce-Produktions-Org
+Salesforce Sales Cloud;qa;active;enabled;;;EU-West;Salesforce-QA-Org für die Multi-Umgebungs-Demo
+SAP BW/4HANA;prod;active;enabled;;;EU-Paris;SAP BW Produktion
+Power BI;prod;active;enabled;;;EU-West;Power BI Produktion
+HubSpot Marketing Hub;prod;active;enabled;;;EU-West;HubSpot Produktion
+CheeseTrack;prod;active;enabled;;;EU-Paris;CheeseTrack Produktion
+CaveGuard IoT;prod;active;enabled;;;EU-Paris;CaveGuard Produktion
+Cave Monitoring Dashboard;prod;active;enabled;;;EU-Paris;Grafana-Dashboard Produktion
+Datadog;prod;active;enabled;;;EU-West;Datadog Produktion
+Okta Workforce Identity;prod;active;enabled;;;EU-West;Okta Produktion
+Microsoft 365;prod;active;enabled;;;EU-Global;M365-Tenant Produktion
+Workday HCM;prod;active;enabled;;;EU-West;Workday Produktion
+PagerDuty;prod;active;enabled;;;US-East;PagerDuty Produktion
+Talend Data Integration;prod;active;enabled;;;EU-Paris;Talend-Produktionslaufzeit
+Talend Data Integration;qa;active;enabled;;;EU-Paris;Talend-QA-Laufzeit für die Multi-Umgebungs-Demo
+Snowflake;prod;active;enabled;;;EU-Central;Snowflake-Produktions-Warehouse
+Fromage B2B Portal;prod;active;enabled;https://b2b.fromage-co.example;;EU-Paris;Produktionsinstanz des B2B-Portals
+QualityLab LIMS;prod;active;enabled;;;EU-Paris;LIMS-Produktionsinstanz
+La Boutique du Fromage;prod;active;enabled;https://boutique.fromage-co.example;eu-west-1;;Produktionsinstanz des Onlineshops
+Sage X3;prod;active;enabled;;;EU-Gouda;Sage-X3-Produktionsinstanz für die Standorte in den Niederlanden und Italien
+PRTG Network Monitor;prod;active;enabled;;;EU-Paris;PRTG-Produktionsserver
+Veeam Backup & Replication;prod;active;enabled;;;EU-Paris;Veeam-Produktionsbackup
+VMware vSphere;prod;active;enabled;;;EU-Paris;vSphere-Produktionsplattform Paris

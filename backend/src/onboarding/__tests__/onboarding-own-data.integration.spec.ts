@@ -455,7 +455,7 @@ async function testExample() {
     const loading = await demoOf(t.tenantId);
     assert.equal(loading.status, 'loading');
     assert.equal(loading.loaded_by, t.ownerId);
-    assert.equal(loading.language, 'en', 'the tenant language, resolved to a sample data language');
+    assert.equal(loading.language, 'fr', 'the tenant language, as a sample data language');
 
     const m = await createActivatedTenant(svc, { tag: 'onb-ex2', orgName: 'Example Member Org', signup: true });
     ids.push(m.tenantId);
