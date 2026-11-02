@@ -146,13 +146,12 @@ export class PortfolioUpcomingReportService {
     const createdBefore = shiftDay(asOf, 1 - requestDays);
     const filters: ProjectTeamFilters = { projectIds: query.projectIds, teamIds: query.teamIds };
 
-    const [tasks, projectEnds, projectStarts, pendingRequests, requestDeliveries] = await Promise.all([
-      this.tasks(manager, tenantId, asOf, taskUntil, filters),
-      this.projects(manager, tenantId, 'planned_end', UPCOMING_OPEN_PROJECT_STATUSES, asOf, projectUntil, filters, true),
-      this.projects(manager, tenantId, 'planned_start', UPCOMING_NOT_STARTED_PROJECT_STATUSES, asOf, projectUntil, filters, false),
-      this.pendingRequests(manager, tenantId, createdBefore, filters),
-      this.requestDeliveries(manager, tenantId, asOf, projectUntil, filters),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const tasks = await this.tasks(manager, tenantId, asOf, taskUntil, filters);
+    const projectEnds = await this.projects(manager, tenantId, 'planned_end', UPCOMING_OPEN_PROJECT_STATUSES, asOf, projectUntil, filters, true);
+    const projectStarts = await this.projects(manager, tenantId, 'planned_start', UPCOMING_NOT_STARTED_PROJECT_STATUSES, asOf, projectUntil, filters, false);
+    const pendingRequests = await this.pendingRequests(manager, tenantId, createdBefore, filters);
+    const requestDeliveries = await this.requestDeliveries(manager, tenantId, asOf, projectUntil, filters);
 
     return {
       asOf,

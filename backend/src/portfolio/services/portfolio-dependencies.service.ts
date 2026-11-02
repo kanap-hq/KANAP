@@ -371,10 +371,9 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
     const beforeSorted = [...beforeIds].sort();
     const afterSorted = [...unique].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
-      const [beforeLabels, afterLabels] = await Promise.all([
-        this.resolveApplicationLabelsByIds(mg, beforeSorted),
-        this.resolveApplicationLabelsByIds(mg, afterSorted),
-      ]);
+      // One after the other: the request's single connection runs its queries in turn anyway.
+      const beforeLabels = await this.resolveApplicationLabelsByIds(mg, beforeSorted);
+      const afterLabels = await this.resolveApplicationLabelsByIds(mg, afterSorted);
       await this.logActivity(mg, {
         project_id: projectId,
         tenant_id: project.tenant_id,
@@ -472,10 +471,9 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
     const beforeSorted = [...beforeIds].sort();
     const afterSorted = [...unique].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
-      const [beforeLabels, afterLabels] = await Promise.all([
-        this.resolveAssetLabelsByIds(mg, beforeSorted),
-        this.resolveAssetLabelsByIds(mg, afterSorted),
-      ]);
+      // One after the other: the request's single connection runs its queries in turn anyway.
+      const beforeLabels = await this.resolveAssetLabelsByIds(mg, beforeSorted);
+      const afterLabels = await this.resolveAssetLabelsByIds(mg, afterSorted);
       await this.logActivity(mg, {
         project_id: projectId,
         tenant_id: project.tenant_id,

@@ -29,10 +29,20 @@ const T1 = '33333333-3333-3333-3333-333333333333';
 
 const recorder = (answer: (sql: string) => any[] = () => []) => {
   const calls: Call[] = [];
+  // Two queries in flight at once are the node-postgres warning
+  // (`client.query() when the client is already executing a query`).
+  let busy = 0;
   const manager: any = {
     query: async (sql: string, params: any[]) => {
-      calls.push({ sql, params });
-      return answer(sql);
+      if (busy > 0) throw new Error('client.query() when the client is already executing a query');
+      busy += 1;
+      try {
+        await new Promise((resolve) => setImmediate(resolve));
+        calls.push({ sql, params });
+        return answer(sql);
+      } finally {
+        busy -= 1;
+      }
     },
   };
   return { manager, calls };

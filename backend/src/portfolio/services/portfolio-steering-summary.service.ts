@@ -87,37 +87,36 @@ export class PortfolioSteeringSummaryService {
     const startDate = shiftDay(endDate, -(days - 1));
     const period = { tenantId, startDate, endDate, timeZone };
 
-    const [tasks, requests, projects, attention, staleProjects] = await Promise.all([
-      this.flow(manager, period, {
-        table: 'tasks',
-        closedStatuses: CLOSED_TASK_STATUSES,
-        scopeSql: `
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const tasks = await this.flow(manager, period, {
+      table: 'tasks',
+      closedStatuses: CLOSED_TASK_STATUSES,
+      scopeSql: `
           SELECT t.id, (t.status <> ALL($6::text[])) AS is_open
           FROM tasks t
           WHERE t.tenant_id = $1 AND ${TASK_SCOPE_SQL}
         `,
-      }),
-      this.flow(manager, period, {
-        table: 'portfolio_requests',
-        closedStatuses: CLOSED_REQUEST_STATUSES,
-        scopeSql: `
+    });
+    const requests = await this.flow(manager, period, {
+      table: 'portfolio_requests',
+      closedStatuses: CLOSED_REQUEST_STATUSES,
+      scopeSql: `
           SELECT r.id, (r.status <> ALL($6::text[])) AS is_open
           FROM portfolio_requests r
           WHERE r.tenant_id = $1
         `,
-      }),
-      this.flow(manager, period, {
-        table: 'portfolio_projects',
-        closedStatuses: CLOSED_PROJECT_STATUSES,
-        scopeSql: `
+    });
+    const projects = await this.flow(manager, period, {
+      table: 'portfolio_projects',
+      closedStatuses: CLOSED_PROJECT_STATUSES,
+      scopeSql: `
           SELECT p.id, (p.status <> ALL($6::text[])) AS is_open
           FROM portfolio_projects p
           WHERE p.tenant_id = $1
         `,
-      }),
-      this.taskAttention(manager, tenantId, timeZone),
-      this.staleProjects(manager, tenantId, timeZone),
-    ]);
+    });
+    const attention = await this.taskAttention(manager, tenantId, timeZone);
+    const staleProjects = await this.staleProjects(manager, tenantId, timeZone);
 
     return {
       days,

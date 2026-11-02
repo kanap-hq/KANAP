@@ -604,8 +604,8 @@ export class PortfolioWeeklyReportService {
       };
     }
 
-    const [sourcesRaw, categoriesRaw, streamsRaw, taskTypesRaw] = await Promise.all([
-      mg.query(
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const sourcesRaw = await mg.query(
         `
         SELECT id, name
         FROM portfolio_sources
@@ -614,8 +614,8 @@ export class PortfolioWeeklyReportService {
         ORDER BY display_order ASC, name ASC
         `,
         [tenantId],
-      ),
-      mg.query(
+      );
+    const categoriesRaw = await mg.query(
         `
         SELECT id, name
         FROM portfolio_categories
@@ -624,8 +624,8 @@ export class PortfolioWeeklyReportService {
         ORDER BY display_order ASC, name ASC
         `,
         [tenantId],
-      ),
-      mg.query(
+      );
+    const streamsRaw = await mg.query(
         `
         SELECT id, name, category_id
         FROM portfolio_streams
@@ -634,8 +634,8 @@ export class PortfolioWeeklyReportService {
         ORDER BY display_order ASC, name ASC
         `,
         [tenantId],
-      ),
-      mg.query(
+      );
+    const taskTypesRaw = await mg.query(
         `
         SELECT id, name, code
         FROM portfolio_task_types
@@ -644,8 +644,7 @@ export class PortfolioWeeklyReportService {
         ORDER BY display_order ASC, name ASC
         `,
         [tenantId],
-      ),
-    ]);
+      );
 
     return {
       sources: (sourcesRaw as Array<{ id: string; name: string }>).map((row) => ({

@@ -449,10 +449,9 @@ async function assertAssetIdentityRows(rows: CsvImportRow[], context: CsvImportC
   const fqdns = new Map<CsvImportRow, string | null | undefined>();
   for (const row of rows) fqdns.set(row, rowFqdn(row, settings));
   const fqdnKeys = [...new Set([...fqdns.values()].filter((fqdn): fqdn is string => !!fqdn).map((fqdn) => assetNameKey(fqdn)))];
-  const [nameHolders, fqdnHolders] = await Promise.all([
-    assetIdentityHolders(context.manager, context.tenantId, 'name', nameKeys),
-    assetIdentityHolders(context.manager, context.tenantId, 'fqdn', fqdnKeys),
-  ]);
+  // One after the other: the request's single connection runs its queries in turn anyway.
+  const nameHolders = await assetIdentityHolders(context.manager, context.tenantId, 'name', nameKeys);
+  const fqdnHolders = await assetIdentityHolders(context.manager, context.tenantId, 'fqdn', fqdnKeys);
   const namesByKey = new Map<string, typeof nameHolders>();
   for (const holder of nameHolders) namesByKey.set(holder.key, [...(namesByKey.get(holder.key) ?? []), holder]);
   const fqdnsByKey = new Map<string, typeof fqdnHolders>();

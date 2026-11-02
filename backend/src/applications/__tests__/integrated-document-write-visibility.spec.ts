@@ -69,9 +69,53 @@ async function testInterfaceWritesNeedAnUnrestrictedReader() {
   assert.equal(calls.length, 8);
 }
 
+/**
+ * The Relations tab resolves four participation scopes on the request's connection. Two queries in
+ * flight at once are the node-postgres warning (`client.query() when the client is already executing
+ * a query`).
+ */
+async function testRelationsScopesRunOneAfterTheOther() {
+  let busy = 0;
+  let queries = 0;
+  const manager = {
+    query: async () => {
+      if (busy > 0) throw new Error('client.query() when the client is already executing a query');
+      busy += 1;
+      try {
+        await new Promise((resolve) => setImmediate(resolve));
+        queries += 1;
+        return [{ role_id: '11111111-1111-4111-8111-111111111111', role_name: 'administrator', level: 'admin' }];
+      } finally {
+        busy -= 1;
+      }
+    },
+  };
+  let received: { scopes?: unknown } | undefined;
+  const relations = {
+    getRelations: async (_id: string, context: { scopes?: unknown }) => {
+      received = context;
+      return { ok: true };
+    },
+  };
+  const controller = new ApplicationsController(
+    null as any, null as any, null as any, null as any, null as any, null as any, null as any, null as any, relations as any,
+  );
+  const result = await controller.getRelations('app-1', {
+    manager,
+    tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    userId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    isAdmin: false,
+    permissions: { applications: 'reader' },
+  } as any);
+  assert.deepEqual(result, { ok: true });
+  assert.equal(queries, 4, 'one role read per scope');
+  assert.ok(received?.scopes);
+}
+
 (async () => {
   await testApplicationWritesNeedAVisibleApplication();
   await testInterfaceWritesNeedAnUnrestrictedReader();
+  await testRelationsScopesRunOneAfterTheOther();
   console.log('integrated-document-write-visibility.spec: ok');
 })().catch((error) => {
   console.error(error);

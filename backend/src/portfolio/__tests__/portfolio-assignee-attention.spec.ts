@@ -13,10 +13,20 @@ type Call = { sql: string; params: any[] };
  */
 function stubManager(people: Array<Record<string, unknown>>, unassigned: Record<string, unknown>) {
   const calls: Call[] = [];
+  // Two queries in flight at once are the node-postgres warning
+  // (`client.query() when the client is already executing a query`).
+  let busy = 0;
   const manager = {
     query: async (sql: string, params: any[]) => {
-      calls.push({ sql, params });
-      return sql.includes('assignee_user_id IS NULL') ? [unassigned] : people;
+      if (busy > 0) throw new Error('client.query() when the client is already executing a query');
+      busy += 1;
+      try {
+        await new Promise((resolve) => setImmediate(resolve));
+        calls.push({ sql, params });
+        return sql.includes('assignee_user_id IS NULL') ? [unassigned] : people;
+      } finally {
+        busy -= 1;
+      }
     },
   } as any;
   return { manager, calls };

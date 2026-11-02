@@ -647,13 +647,15 @@ export const taskCsvConfig: CsvEntityConfig = {
   sameAsStored: async (rows, context) => {
     const ids = rows.map((row) => row.existingEntity.id);
     const phaseIds = [...new Set(rows.flatMap((row) => [row.parsed.phase_id, row.existingEntity.phase_id]).filter(Boolean))];
-    const [users, phases] = ids.length === 0 ? [[], []] : await Promise.all([
-      context.manager.query(`SELECT id, email FROM users WHERE tenant_id = $1`, [context.tenantId]),
-      phaseIds.length === 0 ? [] : context.manager.query(
-        `SELECT id, name, project_id FROM portfolio_project_phases WHERE tenant_id = $1 AND id = ANY($2)`,
-        [context.tenantId, phaseIds],
-      ),
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const users = ids.length === 0 ? [] : await context.manager.query(
+      `SELECT id, email FROM users WHERE tenant_id = $1`,
+      [context.tenantId],
+    );
+    const phases = ids.length === 0 || phaseIds.length === 0 ? [] : await context.manager.query(
+      `SELECT id, name, project_id FROM portfolio_project_phases WHERE tenant_id = $1 AND id = ANY($2)`,
+      [context.tenantId, phaseIds],
+    );
     const userByEmail = new Map<string, string>(users.map((u: any) => [String(u.email).toLowerCase(), u.id]));
     const phaseById = new Map<string, any>(phases.map((p: any) => [p.id, p]));
 
