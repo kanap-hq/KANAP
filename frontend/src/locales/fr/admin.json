@@ -2945,5 +2945,79 @@
       "loadFailed": "L'accès n'a pas pu être chargé."
     },
     "importCsv": "Importer CSV"
+  },
+  "trials": {
+    "title": "Essais",
+    "refresh": "Actualiser",
+    "loadFailed": "Impossible de charger les essais.",
+    "empty": "Aucune inscription à l'essai.",
+    "filterState": "État",
+    "attention_one": "{{count}} espace sans connexion 24 h après son activation",
+    "attention_other": "{{count}} espaces sans connexion 24 h après leur activation",
+    "noSignIn": "Aucune connexion après 24 h",
+    "states": {
+      "all": "Tous les états",
+      "awaiting_activation": "En attente d'activation",
+      "trialing": "En essai",
+      "ended": "Essai terminé",
+      "converted": "Converti",
+      "internal": "Interne"
+    },
+    "columns": {
+      "workspace": "Espace",
+      "state": "État",
+      "signedUp": "Inscription",
+      "activated": "Activation",
+      "firstSignIn": "Première connexion",
+      "lastSignIn": "Dernière connexion",
+      "path": "Parcours",
+      "steps": "Pas",
+      "sampleData": "Données d'exemple",
+      "firstRecord": "Première fiche",
+      "firstQuestion": "Première question à Plaid",
+      "firstImport": "Premier import",
+      "firstInvitation": "Première invitation",
+      "backDay1": "Retour après 1 jour",
+      "backDay7": "Retour après 7 jours",
+      "trialEnd": "Fin d'essai",
+      "converted": "Conversion",
+      "callClicked": "Clic sur l'appel",
+      "call": "Appel découverte"
+    },
+    "values": {
+      "no": "Non",
+      "yes": "Oui"
+    },
+    "weeks": {
+      "title": "Inscriptions par semaine",
+      "weekOf": "Semaine du",
+      "created": "Inscriptions",
+      "activated": "Activés",
+      "signedIn": "Connectés",
+      "converted": "Convertis"
+    },
+    "placements": {
+      "last_step": "Fin des premiers pas",
+      "about": "À propos de KANAP",
+      "mail_j0": "Mail de bienvenue",
+      "mail_j5": "Mail du 5e jour",
+      "mail_j12": "Mail du 12e jour",
+      "trial_end": "Avis de fin d'essai"
+    },
+    "call": {
+      "title": "Appel découverte : {{name}}",
+      "edit": "Appel découverte de {{name}}",
+      "set": "Saisir",
+      "date": "Date et heure",
+      "status": "État",
+      "note": "Note",
+      "remove": "Retirer",
+      "fromCalcom": "Réservé sur Cal.com.",
+      "saveFailed": "Impossible d'enregistrer l'appel découverte.",
+      "statuses": {
+        "booked": "Réservé",
+        "cancelled": "Annulé"
+      }
+    }
   }
 }

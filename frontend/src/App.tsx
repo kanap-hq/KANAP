@@ -61,6 +61,7 @@ const BillingCenter = React.lazy(() => import('./pages/admin/BillingCenter'));
 const RolesPage = React.lazy(() => import('./pages/admin/RolesPage'));
 const AuditLogsPage = React.lazy(() => import('./pages/admin/AuditLogsPage'));
 const AdminTenantsPage = React.lazy(() => import('./pages/admin/AdminTenantsPage'));
+const AdminTrialsPage = React.lazy(() => import('./pages/admin/AdminTrialsPage'));
 const AdminCoaTemplatesPage = React.lazy(() => import('./pages/admin/AdminCoaTemplatesPage'));
 const AdminStandardAccountsPage = React.lazy(() => import('./pages/admin/AdminStandardAccountsPage'));
 const AdminStandardAccountWorkspacePage = React.lazy(() => import('./pages/admin/AdminStandardAccountWorkspacePage'));
@@ -345,6 +346,7 @@ function AppRoutes() {
           <Route path="/admin/scheduled-tasks" element={<ScheduledTasksPage />} />
           {!isSingleTenant && <Route path="/admin/ops-dashboard" element={<OpsDashboardPage />} />}
           {!isSingleTenant && <Route path="/admin/tenants" element={<AdminTenantsPage />} />}
+          {!isSingleTenant && <Route path="/admin/trials" element={<AdminTrialsPage />} />}
           {!isSingleTenant && <Route path="/admin/coa-templates" element={<AdminCoaTemplatesPage />} />}
           {!isSingleTenant && <Route path="/admin/standard-accounts" element={<AdminStandardAccountsPage />} />}
           {!isSingleTenant && <Route path="/admin/standard-accounts/:templateId/:id" element={<AdminStandardAccountWorkspacePage />} />}

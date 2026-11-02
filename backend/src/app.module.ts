@@ -26,6 +26,7 @@ import { PublicController } from './public/public.controller';
 import { EmailModule } from './email/email.module';
 import { TrialSignup } from './public/trial-signup.entity';
 import { AdminTenantsModule } from './admin/tenants/admin-tenants.module';
+import { AdminTrialsModule } from './admin/trials/admin-trials.module';
 import { DemoDataModule } from './demo-data/demo-data.module';
 import { FreezeModule } from './freeze/freeze.module';
 import { BudgetColumnsModule } from './budget-columns/budget-columns.module';
@@ -153,6 +154,7 @@ import { readPoolMax } from './common/db-pool-budget';
     TenantsModule,
     TenantBaselineModule,
     AdminTenantsModule,
+    AdminTrialsModule,
     DemoDataModule,
     AdminCoaTemplatesModule,
     AdminOpsModule,

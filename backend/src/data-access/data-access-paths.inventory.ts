@@ -257,6 +257,9 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'admin/tenants/admin-tenants.service.ts', member: 'logTenantAction', site: 'with_tenant', class: 'system', reason: 'platform administration: audit_log entry on the tenant' },
   { file: 'admin/tenants/admin-tenants.service.ts', member: 'purgeTenantData', site: 'with_tenant', class: 'system', reason: 'platform administration: tenant deletion purges every table, budget block included' },
   { file: 'admin/tenants/tenant-stats.service.ts', member: 'compute', site: 'with_tenant', class: 'system', reason: 'platform administration: row counts of a tenant, budget lines included' },
+  { file: 'admin/trials/admin-trials.service.ts', member: 'buildRow', site: 'with_tenant', class: 'system', reason: 'platform administration: the trial funnel reads the milestones of a trial workspace' },
+  { file: 'admin/trials/admin-trials.service.ts', member: 'saveDiscoveryCall', site: 'with_tenant', class: 'system', reason: 'platform administration: the discovery call of a trial workspace, set by hand' },
+  { file: 'admin/trials/admin-trials.service.ts', member: 'removeDiscoveryCall', site: 'with_tenant', class: 'system', reason: 'platform administration: removes the discovery call of a trial workspace' },
 
   // Scheduled and detached jobs, command-line scripts: no person.
   { file: 'cleanup/auth-event-retention.service.ts', member: 'run', site: 'with_tenant', class: 'system', reason: 'scheduled purge of old sign-in events, per tenant' },
