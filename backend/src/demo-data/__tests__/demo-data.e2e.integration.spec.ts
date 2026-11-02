@@ -33,6 +33,7 @@ import { EmailService } from '../../email/email.service';
 import { Features } from '../../config/features';
 import { applyHttpMiddleware, applyTenancyAndPipeline } from '../../http-app';
 import { DemoDataService, DemoDataState } from '../demo-data.service';
+import { localTodayYmd } from '../../portfolio/services/portfolio-timesheet.service';
 
 // The sample data load end to end: the whole application (AppModule with the HTTP wiring of
 // main.ts, http-app.ts) listening on a local port, a trial tenant as activation leaves it, and
@@ -621,12 +622,12 @@ async function checkIncidents(tenantId: string) {
     title: string;
     kind: string;
     content: string | null;
-    occurred_at: Date;
-    created_at: Date;
+    occurred_paris: string;
     author_email: string | null;
     changed_fields: any;
   }> = await inTenant(tenantId, (m) => m.query(
-    `SELECT i.item_number, i.title, e.kind, e.content, e.occurred_at, e.created_at,
+    `SELECT i.item_number, i.title, e.kind, e.content,
+            to_char(e.occurred_at AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD HH24:MI') AS occurred_paris,
             lower(u.email) AS author_email, e.changed_fields
        FROM incident_entries e
        JOIN incidents i ON i.id = e.incident_id AND i.tenant_id = e.tenant_id
@@ -637,11 +638,18 @@ async function checkIncidents(tenantId: string) {
       ORDER BY i.item_number, e.occurred_at, e.created_at`,
     [tenantId, ['B2B portal down: database disk full', 'SAP month-end close slowed down by host memory contention', 'Lab results cannot be saved in QualityLab LIMS']],
   ));
-  assert.equal(entries.length, fixtureRows('32-incident-journal.csv').length, 'every journal row imported');
+  const journal = fixtureRows('32-incident-journal.csv');
+  assert.equal(entries.length, journal.length, 'every journal row imported');
+  // The entries are backdated: each keeps its journal time, moved with the year, not the load time.
+  const yearShift = new Date().getFullYear() - 2026;
+  const journalTimes = journal.map((line) => {
+    const at = line.split(';')[2].trim();
+    return `${Number(at.slice(0, 4)) + yearShift}${at.slice(4)}`;
+  });
+  assert.deepEqual(entries.map((entry) => entry.occurred_paris).sort(), journalTimes.sort(), 'the entries keep the journal times');
   const knownAuthors = new Set(fixtureRows('10-users.csv').map((line) => line.split(';')[0].trim().toLowerCase()));
   for (const entry of entries) {
     assert.ok(knownAuthors.has(String(entry.author_email)), `${entry.title}: ${entry.author_email} is one of the incident people`);
-    assert.ok(new Date(entry.created_at).getTime() > new Date(entry.occurred_at).getTime(), `${entry.title}: the entry is backdated, its creation time is the load`);
   }
   const b2b = entries.filter((entry) => entry.item_number === 4);
   assert.ok(b2b.some((entry) => entry.kind === 'note' && entry.author_email === 'isabelle.moreau@fromage-co.example'), 'the reporter wrote a note');
@@ -678,7 +686,8 @@ async function checkIncidents(tenantId: string) {
     'pierre.martin@fromage-co.example',
     'marc.petit@fromage-co.example',
   ]);
-  assert.deepEqual(tasks.map((task) => task.due_date), ['2026-04-30', '2026-11-30', '2026-12-31']);
+  const year = new Date().getFullYear();
+  assert.deepEqual(tasks.map((task) => task.due_date), [`${year}-04-30`, `${year}-11-30`, `${year}-12-31`]);
   assert.deepEqual(tasks.map((task) => task.status), ['done', 'in_progress', 'open']);
 
   const clusters = await tenantCount(
@@ -744,6 +753,8 @@ async function checkPortfolioStory(port: number, host: string, token: string, te
   assert.equal(cave.status, 'converted');
   assert.ok(scores.every((score) => Number(cave.priority_score) >= score), 'the converted request is the best scored');
 
+  // The day the project route checks time entries against, not the database clock.
+  const today = localTodayYmd();
   const [project] = await inTenant(tenantId, (m) => m.query(
     `SELECT p.id, p.status,
             p.estimated_effort_it::float AS estimated_it,
@@ -753,7 +764,7 @@ async function checkPortfolioStory(port: number, host: string, token: string, te
             (SELECT count(*)::int FROM portfolio_request_projects rp WHERE rp.project_id = p.id AND rp.tenant_id = p.tenant_id) AS links,
             (SELECT count(*)::int FROM tasks t WHERE t.tenant_id = p.tenant_id AND t.related_object_type = 'project' AND t.related_object_id = p.id) AS tasks,
             (SELECT count(*)::int FROM tasks t WHERE t.tenant_id = p.tenant_id AND t.related_object_type = 'project' AND t.related_object_id = p.id
-               AND t.status NOT IN ('done', 'cancelled') AND t.due_date < CURRENT_DATE) AS overdue,
+               AND t.status NOT IN ('done', 'cancelled') AND t.due_date < $2::date) AS overdue,
             (SELECT count(*)::int FROM portfolio_project_phases ph WHERE ph.project_id = p.id AND ph.tenant_id = p.tenant_id) AS phases,
             (SELECT count(*)::int FROM portfolio_project_team tm WHERE tm.project_id = p.id AND tm.tenant_id = p.tenant_id AND tm.role = 'it_team') AS it_team,
             (SELECT count(*)::int FROM portfolio_project_team tm WHERE tm.project_id = p.id AND tm.tenant_id = p.tenant_id AND tm.role = 'business_team') AS business_team,
@@ -765,7 +776,7 @@ async function checkPortfolioStory(port: number, host: string, token: string, te
               WHERE t.related_object_id = p.id AND t.related_object_type = 'project' AND t.tenant_id = p.tenant_id) AS task_time
        FROM portfolio_projects p
       WHERE p.tenant_id = $1 AND p.name = 'Cave Climate Digital Twin'`,
-    [tenantId],
+    [tenantId, today],
   ));
   assert.ok(project, 'the converted request has its project');
   assert.equal(project.links, 1);
@@ -773,7 +784,9 @@ async function checkPortfolioStory(port: number, host: string, token: string, te
   assert.ok(project.estimated_it > 0 && project.estimated_business > 0, 'planned effort');
   assert.ok(project.actual_it > 0 && project.actual_business > 0, 'consumed effort');
   assert.ok(project.tasks >= 6, `${project.tasks} tasks`);
-  assert.ok(project.overdue >= 1, 'one task is overdue');
+  // The earliest open task, 'Collect CaveGuard sensor history', is due on 31 March of the load's year.
+  if (today > `${new Date().getFullYear()}-03-31`) assert.ok(project.overdue >= 1, 'one task is overdue');
+  else assert.equal(project.overdue, 0, 'no task is due yet');
   assert.ok(project.phases >= 4, `${project.phases} phases`);
   assert.ok(project.it_team >= 1 && project.business_team >= 1, 'both teams');
   assert.ok(project.applications >= 1, 'an application');
