@@ -160,7 +160,7 @@ Die Schaltfläche **Löschen** (Papierkorbsymbol) in der Kopfzeile löscht das E
 
 ## Kostenstellen auf Budgetzeilen
 
-- **OPEX und CAPEX**: Das Feld **Kostenstelle** im Bereich **Eigenschaften** zeigt den Baum. Gruppen werden zur Orientierung angezeigt und können nicht gewählt werden. Wenn Sie eine Zeile erstellen und das zahlende Unternehmen leer ist, füllt die Wahl einer Kostenstelle es mit dem Unternehmen der Kostenstelle, und das Unternehmen folgt der Kostenstelle, bis Sie selbst ein Unternehmen oder ein Konto wählen. Wenn sich die beiden Unternehmen unterscheiden, bleiben beide erhalten und ein Hinweis weist darauf hin. Siehe [Budgetzeilen](budget-lines.md).
+- **OPEX und CAPEX**: Das Feld **Kostenstelle** im Bereich **Eigenschaften** zeigt den Baum. Gruppen werden zur Orientierung angezeigt und können nicht gewählt werden. Wenn das zahlende Unternehmen leer ist, füllt die Wahl einer Kostenstelle es mit dem Unternehmen der Kostenstelle. Wenn sich die beiden Unternehmen unterscheiden, bleiben beide erhalten und ein Hinweis weist darauf hin. Siehe [Budgetzeilen](budget-lines.md).
 - **Liste**: die Spalten und Filter **Kostenstelle** und **Run oder Build** der Liste der Budgetzeilen.
 - **Berichte**: Die Budgetberichte können auf eine Kostenstelle oder eine Gruppe gefiltert werden. Siehe [Filter nach Kostenstelle, Run oder Build und Analysedimensionen](reports.md#filter-nach-kostenstelle-run-oder-build-und-analysedimensionen).
 

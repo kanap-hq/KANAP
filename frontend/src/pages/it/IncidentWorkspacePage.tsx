@@ -1,13 +1,12 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Alert, Box, Button, CircularProgress, Menu, MenuItem, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Menu, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   incidentsApi,
-  type CreateIncidentInput,
   type Incident,
   type IncidentStatus,
   type UpdateIncidentInput,
@@ -53,6 +52,7 @@ import {
 } from './workspace/incidentWorkspace';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
+import { CreationActions, CreationPreview, useCreationReturn, useNewRecordCreate, useRecordCreation } from '../../components/workspace/creation';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
 const TAB_KEYS = ['overview', 'journal', 'relations', 'documents', RECORD_HISTORY_TAB_KEY] as const;
@@ -60,7 +60,8 @@ type TabKey = (typeof TAB_KEYS)[number];
 const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
 const HistoryTab = historyTab.Component;
 
-type CreateForm = IncidentDrawerValues & { title: string; description: string };
+/** The preview of a new incident (`CreationPreview`) is out of reach: its handlers never run. */
+const ignoreDraftChange = () => undefined;
 
 const UUID_ROUTE_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
 
@@ -115,11 +116,12 @@ export function IncidentWorkspacePage() {
 
   const [error, setError] = React.useState<string | null>(null);
   const [statusAnchor, setStatusAnchor] = React.useState<HTMLElement | null>(null);
-  const [createForm, setCreateForm] = React.useState<CreateForm>(() => ({
-    title: '',
-    description: '',
+  // What a new incident is created with besides its title, and what its dimmed drawer shows
+  // before: severity "minor" (the person changes it once created), open, detected now, reported
+  // by the current user.
+  const draftValues = React.useMemo<IncidentDrawerValues>(() => ({
     category: null,
-    severity: '',
+    severity: 'minor',
     status: 'open',
     started_at: null,
     detected_at: new Date().toISOString(),
@@ -133,10 +135,11 @@ export function IncidentWorkspacePage() {
     authority_notified_at: null,
     notified_parties: null,
     confidential: false,
-  }));
-  const [createSubmitting, setCreateSubmitting] = React.useState(false);
-  const [createError, setCreateError] = React.useState<string | null>(null);
-  const [createTitleError, setCreateTitleError] = React.useState<string | null>(null);
+  }), [profile?.id, routeId]);
+  // A refusal of the title typed on a new incident.
+  const [titleError, setTitleError] = React.useState<string | null>(null);
+  const creatingRef = React.useRef(false);
+  const newCreate = useNewRecordCreate({ setTitleError, requiredMessage: t('common:creation.titleRequired') });
   const [exportingPdf, setExportingPdf] = React.useState(false);
   // The incident review is an integrated document: its draft lives in the
   // editor, so every controlled transition has to drain it through this handle.
@@ -187,16 +190,12 @@ export function IncidentWorkspacePage() {
     owner_user_id?: string | null;
   }) => {
     if (isAdmin || !profile?.id) return false;
-    const confidential = next.confidential ?? (isCreate ? createForm.confidential : data?.confidential) ?? false;
+    const confidential = next.confidential ?? data?.confidential ?? false;
     if (!confidential) return false;
-    const reporter = next.reporter_user_id !== undefined
-      ? next.reporter_user_id
-      : (isCreate ? createForm.reporter_user_id : data?.reporter_user_id);
-    const owner = next.owner_user_id !== undefined
-      ? next.owner_user_id
-      : (isCreate ? createForm.owner_user_id : data?.owner_user_id);
+    const reporter = next.reporter_user_id !== undefined ? next.reporter_user_id : data?.reporter_user_id;
+    const owner = next.owner_user_id !== undefined ? next.owner_user_id : data?.owner_user_id;
     return reporter !== profile.id && owner !== profile.id;
-  }, [createForm.confidential, createForm.owner_user_id, createForm.reporter_user_id, data, isAdmin, isCreate, profile?.id]);
+  }, [data, isAdmin, profile?.id]);
 
   const confirmLoseAccess = React.useCallback(async () => {
     return dialogs.confirm({
@@ -346,11 +345,48 @@ export function IncidentWorkspacePage() {
     }
   }, [confirmLoseAccess, data, flushAll, invalidateEntries, leaveRegister, rollbackSnapshot, setIncidentCache, stale, t, viewerLosesAccess]);
 
-  const handleClose = React.useCallback(async () => {
-    if (!(await flushAll())) return;
+  const listPath = React.useMemo(() => {
     const qs = listContextParams.toString();
-    navigate(`/it/incidents${qs ? `?${qs}` : ''}`);
-  }, [flushAll, listContextParams, navigate]);
+    return `/it/incidents${qs ? `?${qs}` : ''}`;
+  }, [listContextParams]);
+  // Where the creation started: a new incident left empty, or cancelled, goes back there.
+  const creationReturn = useCreationReturn(listPath);
+  const creation = useRecordCreation({
+    family: 'incidents',
+    apiBase: '/incidents',
+    recordId: !isCreate && data && !stale ? data.id : null,
+    listPath,
+    recordLabel: t('workspace.incident.creation.record'),
+    queryKeyPrefixes: ['incidents'],
+    onError: setError,
+  });
+
+  const handleClose = React.useCallback(async () => {
+    // A new incident left before it has a title goes back where the creation started.
+    if (isCreate) {
+      navigate(creationReturn);
+      return;
+    }
+    if (!(await flushAll())) return;
+    navigate(listPath);
+  }, [creationReturn, flushAll, isCreate, listPath, navigate]);
+
+  // "Cancel" counts what was written: the description and the review still typed go first.
+  const cancelCreation = React.useCallback(async () => {
+    if (!(await flushAll())) return;
+    await creation.cancelCreation();
+  }, [creation, flushAll]);
+
+  // Create: on the new page, the title is the only field; on an incident being created, what is
+  // still being typed is saved, then the incident is kept and closed.
+  const createAction = React.useCallback(async () => {
+    if (isCreate) {
+      newCreate.create(titleError);
+      return;
+    }
+    if (!(await flushAll())) return;
+    creation.finishCreation();
+  }, [creation, flushAll, isCreate, newCreate, titleError]);
 
   const handleTabChange = React.useCallback(async (nextTab: string) => {
     if (nextTab === validTab) return;
@@ -374,17 +410,53 @@ export function IncidentWorkspacePage() {
     navigate(`/it/incidents/${target}/${validTab}${qs ? `?${qs}` : ''}`);
   }, [flushAll, navigate, searchParams, validTab]);
 
+  // The title committed in the header creates the incident at once, with the defaults of
+  // `draftValues`; the page moves to it, every tab open, with Create and Cancel (or closes it,
+  // kept, when Create was clicked meanwhile). It is not confidential, so its creator always keeps
+  // access to it.
+  const createIncident = React.useCallback(async (title: string) => {
+    if (!canEdit || creatingRef.current) return;
+    creatingRef.current = true;
+    setTitleError(null);
+    setError(null);
+    try {
+      const { creation_token: token, ...saved } = await incidentsApi.create({
+        title,
+        severity: 'minor',
+        status: draftValues.status,
+        detected_at: new Date().toISOString(),
+        reporter_user_id: draftValues.reporter_user_id,
+      });
+      if (newCreate.titleSettled()) {
+        void queryClient.invalidateQueries({ queryKey: ['incidents-ids'] });
+        navigate(creationReturn, { replace: true });
+        return;
+      }
+      creation.startCreation({ recordId: saved.id, token, returnTo: creationReturn });
+      void queryClient.invalidateQueries({ queryKey: ['incidents-ids'] });
+      const savedRef = formatItemRef('incident', saved.item_number);
+      queryClient.setQueryData<Incident>(['incident', savedRef], saved);
+      const qs = listContextParams.toString();
+      navigate(`/it/incidents/${savedRef}/overview${qs ? `?${qs}` : ''}`, { replace: true });
+    } catch (e) {
+      newCreate.titleSettled();
+      setTitleError(getApiErrorMessage(e, t, t('workspace.incident.messages.createFailed')));
+    } finally {
+      creatingRef.current = false;
+    }
+  }, [canEdit, creation, creationReturn, draftValues, listContextParams, navigate, newCreate, queryClient, t]);
+
   const handleTitleSave = React.useCallback((next: string) => {
     const trimmed = next.trim();
     if (!trimmed) return;
     if (isCreate) {
-      setCreateForm((previous) => ({ ...previous, title: trimmed }));
-      setCreateTitleError(null);
+      newCreate.titleSent();
+      void createIncident(trimmed);
       return;
     }
     if (!data || trimmed === data.title) return;
     void patchNow({ title: trimmed });
-  }, [data, isCreate, patchNow]);
+  }, [createIncident, data, isCreate, newCreate, patchNow]);
 
   const handleConfidentiality = React.useCallback(async (confidential: boolean) => {
     if (!data || stale) return;
@@ -468,68 +540,6 @@ export function IncidentWorkspacePage() {
     }
   }, [data, dialogs, flushAll, invalidateEntries, setIncidentCache, t]);
 
-  const handleCreate = React.useCallback(async () => {
-    if (!canEdit || createSubmitting) return;
-    const title = createForm.title.trim();
-    const severity = createForm.severity;
-    const detectedAt = createForm.detected_at;
-    if (!title) {
-      setCreateTitleError(t('workspace.incident.create.titleRequired'));
-      setCreateError(null);
-      return;
-    }
-    setCreateTitleError(null);
-    if (!severity) {
-      setCreateError(t('workspace.incident.create.severityRequired'));
-      return;
-    }
-    if (!detectedAt) {
-      setCreateError(t('workspace.incident.create.detectedRequired'));
-      return;
-    }
-    if (viewerLosesAccess({
-      confidential: createForm.confidential,
-      reporter_user_id: createForm.reporter_user_id,
-      owner_user_id: createForm.owner_user_id,
-    }) && !(await confirmLoseAccess())) {
-      return;
-    }
-    setCreateSubmitting(true);
-    setCreateError(null);
-    try {
-      const payload: CreateIncidentInput = {
-        title,
-        severity,
-        detected_at: detectedAt,
-        category: createForm.category,
-        started_at: createForm.started_at,
-        reporter_user_id: createForm.reporter_user_id,
-        owner_user_id: createForm.owner_user_id,
-        source_ref: createForm.source_ref,
-        personal_data_affected: createForm.personal_data_affected,
-        authority_notification_required: createForm.authority_notification_required,
-        authority_notified_at: createForm.authority_notified_at,
-        notified_parties: createForm.notified_parties,
-        confidential: createForm.confidential,
-        description: createForm.description.trim() || null,
-      };
-      const saved = await incidentsApi.create(payload);
-      void queryClient.invalidateQueries({ queryKey: ['incidents-ids'] });
-      if (viewerLosesAccess(saved)) {
-        leaveRegister();
-        return;
-      }
-      const savedRef = formatItemRef('incident', saved.item_number);
-      queryClient.setQueryData<Incident>(['incident', savedRef], saved);
-      const qs = listContextParams.toString();
-      navigate(`/it/incidents/${savedRef}/overview${qs ? `?${qs}` : ''}`, { replace: true });
-    } catch (e) {
-      setCreateError(getApiErrorMessage(e, t, t('workspace.incident.messages.createFailed')));
-    } finally {
-      setCreateSubmitting(false);
-    }
-  }, [canEdit, confirmLoseAccess, createForm, createSubmitting, leaveRegister, listContextParams, navigate, queryClient, t, viewerLosesAccess]);
-
   const handleExportPdf = React.useCallback(async () => {
     if (!data || isCreate || exportingPdf) return;
     // The report renders the review document: export what the user just typed.
@@ -596,16 +606,6 @@ export function IncidentWorkspacePage() {
 
   const actions = (
     <>
-      {isCreate && (
-        <Button
-          variant="contained"
-          size="small"
-          onClick={() => void handleCreate()}
-          disabled={createSubmitting || !canEdit}
-        >
-          {t('common:buttons.create')}
-        </Button>
-      )}
       {!isCreate && data && canView && (
         <Button
           variant="action"
@@ -659,7 +659,8 @@ export function IncidentWorkspacePage() {
           {t('workspace.incident.actions.reopen')}
         </Button>
       )}
-      {!isCreate && data && isAdmin && !locked && (
+      {/* Hidden while the incident is being created: two cancels of the same incident would sit side by side. */}
+      {!isCreate && data && isAdmin && !locked && !creation.beingCreated && (
         <Button variant="action-danger" size="small" onClick={() => void handleCancel()} disabled={stale}>
           {t('workspace.incident.actions.cancel')}
         </Button>
@@ -674,22 +675,24 @@ export function IncidentWorkspacePage() {
           onError={setError}
         />
       )}
+      {((isCreate && canEdit) || creation.beingCreated) && (
+        <CreationActions
+          busy={creation.cancelling}
+          onCreate={() => { void createAction(); }}
+          onCancel={() => { if (isCreate) void handleClose(); else void cancelCreation(); }}
+        />
+      )}
     </>
   );
 
   const properties = isCreate ? (
-    <IncidentPropertiesDrawer
-      values={createForm}
-      isCreate
-      disabled={createSubmitting || !canEdit}
-      restrictDisabled={createSubmitting || !canEdit}
-      onChange={(patch) => setCreateForm((previous) => ({ ...previous, ...patch }))}
-    />
+    <CreationPreview>
+      <IncidentPropertiesDrawer values={draftValues} disabled={!canEdit} restrictDisabled={!canEdit} onChange={ignoreDraftChange} />
+    </CreationPreview>
   ) : data ? (
     <IncidentPropertiesDrawer
       key={data.id}
       values={data}
-      isCreate={false}
       disabled={!editable}
       restrictDisabled={isAdmin ? false : (!editable || !!data.confidential)}
       onChange={handleDrawerChange}
@@ -698,7 +701,18 @@ export function IncidentWorkspacePage() {
     <Box />
   );
 
-  const metadata = !isCreate && data ? (
+  const metadata = isCreate ? (
+    // The metadata of the incident to be, dimmed like the rest, so the page does not move when it is created.
+    <CreationPreview sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' }}>
+      <IncidentMetadataBar
+        incident={{ ...draftValues, confidential: false, owner_name: null } as unknown as Incident}
+        disabled
+        onSeverityChange={ignoreDraftChange}
+        onOwnerChange={ignoreDraftChange}
+        onDetectedAtChange={ignoreDraftChange}
+      />
+    </CreationPreview>
+  ) : data ? (
     <IncidentMetadataBar
       incident={data}
       disabled={!editable}
@@ -729,17 +743,20 @@ export function IncidentWorkspacePage() {
         onBack={() => { void handleClose(); }}
         itemReference={!isCreate ? reference : null}
         onCopyReference={!isCreate && reference ? () => { void navigator.clipboard?.writeText(reference); } : undefined}
-        title={isCreate ? createForm.title : data?.title || ''}
+        title={isCreate ? '' : data?.title || ''}
         titleFallback={isCreate ? t('workspace.incident.newTitle') : t('workspace.incident.untitled')}
         canEditTitle={isCreate ? canEdit : editable}
         onTitleSave={handleTitleSave}
-        onTitleDraftChange={isCreate ? (draft) => { if (draft.trim()) setCreateTitleError(null); } : undefined}
-        titleRequiredMessage={isCreate && canEdit ? t('workspace.incident.create.titleRequired') : undefined}
-        titleError={isCreate ? createTitleError : null}
+        onTitleDraftChange={isCreate ? () => setTitleError(null) : undefined}
+        titleError={isCreate ? titleError : null}
+        titleAutoEdit={isCreate}
+        titleOnCancel={isCreate ? () => { void handleClose(); } : undefined}
+        titleFocusRequest={newCreate.focusRequest}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
-        onSaveShortcut={() => { void flushAll(); }}
-        nav={!isCreate && total > 0 ? {
+        onSaveShortcut={() => { if (!isCreate) void flushAll(); }}
+        // Hidden while the record is being created, so its page does not move once the title is typed.
+        nav={!isCreate && !creation.beingCreated && total > 0 ? {
           currentIndex: index + 1,
           totalCount: total,
           hasPrev,
@@ -754,25 +771,27 @@ export function IncidentWorkspacePage() {
         properties={properties}
       >
         {isCreate ? (
-          <Box sx={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
-            <Box>
-              <Typography component="label" sx={incidentSectionLabelSx}>
-                {t('workspace.incident.create.description')}
-              </Typography>
-              <TextField
-                value={createForm.description}
-                onChange={(event) => setCreateForm((previous) => ({ ...previous, description: event.target.value }))}
-                multiline
-                minRows={4}
-                fullWidth
-                variant="standard"
-                placeholder={t('workspace.incident.overview.descriptionPlaceholder')}
-                sx={incidentComposerSx}
-                disabled={createSubmitting || !canEdit}
-              />
-            </Box>
-            {createError && <Alert severity="error">{createError}</Alert>}
-          </Box>
+          // The description of the incident to be, as its Overview tab will show it.
+          <CreationPreview>
+            <Stack spacing={3} sx={{ pt: 1, maxWidth: 900 }}>
+              <Box>
+                <Typography component="label" sx={incidentSectionLabelSx}>
+                  {t('workspace.incident.overview.description')}
+                </Typography>
+                <TextField
+                  value=""
+                  multiline
+                  minRows={2}
+                  maxRows={4}
+                  fullWidth
+                  variant="standard"
+                  placeholder={t('workspace.incident.overview.descriptionPlaceholder')}
+                  InputProps={{ readOnly: true }}
+                  sx={incidentComposerSx}
+                />
+              </Box>
+            </Stack>
+          </CreationPreview>
         ) : !data ? null : (
           <>
             {validTab === 'overview' && (

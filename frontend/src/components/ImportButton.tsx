@@ -1,15 +1,14 @@
 import React from 'react';
 import {
-  Alert,
   Button,
   CircularProgress,
-  Snackbar,
   Typography,
 } from '@mui/material';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import { useTranslation } from 'react-i18next';
 import type { ImportDocumentResult } from '../api/endpoints/import';
 import { KanapDialog, useKanapDialogs } from './design';
+import { useNotify } from './notify/NotifyProvider';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 
 interface ImportButtonProps {
@@ -53,14 +52,13 @@ export default function ImportButton({
   buttonVariant = 'outlined',
 }: ImportButtonProps) {
   const { t } = useTranslation('common');
+  const notify = useNotify();
   const dialogs = useKanapDialogs();
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const focusCleanupRef = React.useRef<(() => void) | null>(null);
   const selectionHandledRef = React.useRef(false);
   const [importing, setImporting] = React.useState(false);
   const [pendingFile, setPendingFile] = React.useState<File | null>(null);
-  const [warningText, setWarningText] = React.useState('');
-  const [warningOpen, setWarningOpen] = React.useState(false);
 
   const clearDialogState = React.useCallback(() => {
     if (focusCleanupRef.current) {
@@ -81,9 +79,9 @@ export default function ImportButton({
     try {
       const result = await onImportFile(file);
       onImported(result);
+      // The document itself changes on screen. A warning is the part that does not.
       if (result.warnings.length > 0) {
-        setWarningText(result.warnings.join(' '));
-        setWarningOpen(true);
+        notify({ message: result.warnings.join(' '), tone: 'info' });
       }
     } catch (error) {
       if (onError) {
@@ -97,7 +95,7 @@ export default function ImportButton({
       setImporting(false);
       clearDialogState();
     }
-  }, [clearDialogState, dialogs, onError, onImportFile, onImported]);
+  }, [clearDialogState, dialogs, notify, onError, onImportFile, onImported]);
 
   const openPicker = React.useCallback(() => {
     if (disabled || importing) return;
@@ -181,16 +179,6 @@ export default function ImportButton({
           {t('import.replaceDescription')}
         </Typography>
       </KanapDialog>
-      <Snackbar
-        open={warningOpen}
-        autoHideDuration={8000}
-        onClose={() => setWarningOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity="warning" onClose={() => setWarningOpen(false)} sx={{ width: '100%' }}>
-          {warningText}
-        </Alert>
-      </Snackbar>
     </>
   );
 }

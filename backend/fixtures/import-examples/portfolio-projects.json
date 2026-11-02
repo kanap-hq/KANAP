@@ -1,0 +1,106 @@
+{
+  "essential": ["name", "purpose", "status", "origin", "planned_start", "planned_end", "estimated_effort_it", "estimated_effort_business"],
+  "advanced": [
+    "source_name", "category_name", "stream_name", "company_name", "department_name",
+    "business_sponsor_email", "business_lead_email", "it_sponsor_email", "it_lead_email",
+    "actual_start", "actual_end", "execution_progress"
+  ],
+  "rows": [
+    {
+      "name": {
+        "en": "Batch traceability from milk to shop",
+        "fr": "Traçabilité des lots du lait à la boutique",
+        "de": "Chargenrückverfolgung von der Milch bis zum Laden",
+        "es": "Trazabilidad de los lotes de la leche a la tienda"
+      },
+      "purpose": {
+        "en": "Follow each cheese batch from milk collection to sale, to answer a recall in hours instead of days.",
+        "fr": "Suivre chaque lot de fromage de la collecte du lait à la vente, pour répondre à un rappel en quelques heures plutôt qu'en plusieurs jours.",
+        "de": "Jede Käsecharge von der Milchsammlung bis zum Verkauf verfolgen, um einen Rückruf in Stunden statt Tagen zu bearbeiten.",
+        "es": "Seguir cada lote de queso desde la recogida de la leche hasta la venta, para responder a una retirada en horas en lugar de días."
+      },
+      "status": "planned",
+      "origin": "standard",
+      "planned_start": "{Y}-09-01",
+      "planned_end": "{Y+1}-06-30",
+      "estimated_effort_it": 60,
+      "estimated_effort_business": 35,
+      "source_name": "Regulatory Compliance",
+      "category_name": "Digital Transformation",
+      "stream_name": "Cheese Production Excellence",
+      "company_name": "Fromage & Co SA",
+      "department_name": "Quality & R&D",
+      "business_sponsor_email": "jacques.dubois@fromage-co.example",
+      "business_lead_email": "jacques.dubois@fromage-co.example",
+      "it_sponsor_email": "thomas.berger@fromage-co.example",
+      "it_lead_email": "sophie.laurent@fromage-co.example",
+      "actual_start": "",
+      "actual_end": "",
+      "execution_progress": ""
+    },
+    {
+      "name": {
+        "en": "New tills for the Italian shops",
+        "fr": "Nouvelles caisses des boutiques italiennes",
+        "de": "Neue Kassen für die italienischen Läden",
+        "es": "Nuevas cajas para las tiendas italianas"
+      },
+      "purpose": {
+        "en": "Replace the tills of the twelve shops in Italy before their support ends.",
+        "fr": "Remplacer les caisses des douze boutiques d'Italie avant la fin de leur support.",
+        "de": "Die Kassen der zwölf Läden in Italien vor dem Supportende ersetzen.",
+        "es": "Sustituir las cajas de las doce tiendas de Italia antes de que termine su soporte."
+      },
+      "status": "in_progress",
+      "origin": "standard",
+      "planned_start": "{Y-1}-10-01",
+      "planned_end": "{Y}-12-15",
+      "estimated_effort_it": 45,
+      "estimated_effort_business": 20,
+      "source_name": "IT Modernization",
+      "category_name": "Business Applications",
+      "stream_name": "Customer Experience",
+      "company_name": "Formaggio Supremo SRL",
+      "department_name": "",
+      "business_sponsor_email": "",
+      "business_lead_email": "",
+      "it_sponsor_email": "thomas.berger@fromage-co.example",
+      "it_lead_email": "marc.petit@fromage-co.example",
+      "actual_start": "{Y-1}-10-15",
+      "actual_end": "",
+      "execution_progress": 40
+    },
+    {
+      "name": {
+        "en": "Supplier self-service portal",
+        "fr": "Portail fournisseurs en libre-service",
+        "de": "Self-Service-Portal für Lieferanten",
+        "es": "Portal de autoservicio para proveedores"
+      },
+      "purpose": {
+        "en": "Let milk producers see their deliveries and payments without calling the purchasing team.",
+        "fr": "Permettre aux producteurs de lait de consulter leurs livraisons et leurs paiements sans appeler les achats.",
+        "de": "Milcherzeugern ihre Lieferungen und Zahlungen zeigen, ohne dass sie den Einkauf anrufen müssen.",
+        "es": "Permitir a los productores de leche consultar sus entregas y pagos sin llamar a compras."
+      },
+      "status": "waiting_list",
+      "origin": "fast_track",
+      "planned_start": "{Y+1}-01-15",
+      "planned_end": "{Y+1}-05-31",
+      "estimated_effort_it": 25,
+      "estimated_effort_business": 10,
+      "source_name": "Business Request",
+      "category_name": "Business Applications",
+      "stream_name": "",
+      "company_name": "Fromage & Co SA",
+      "department_name": "Procurement",
+      "business_sponsor_email": "",
+      "business_lead_email": "",
+      "it_sponsor_email": "",
+      "it_lead_email": "",
+      "actual_start": "",
+      "actual_end": "",
+      "execution_progress": ""
+    }
+  ]
+}

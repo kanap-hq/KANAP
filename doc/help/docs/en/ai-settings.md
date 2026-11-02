@@ -37,7 +37,7 @@ A confirmation covers what these features send to the provider: the questions pe
 
 - **Confirm** records your confirmation. It does not switch Plaid on.
 - **Enable chat** asks for the confirmation when it is still missing. Switch it on and save: a window shows the provider and the processing location. **Confirm and turn on** saves your changes and the confirmation together. If you close the window, nothing is saved. The window also links to the [AI models](ai-models.md) page, in case you prefer to use your own model.
-- During a cloud trial, the home page also offers to turn Plaid on, with the same confirmation window. See [My Dashboard](my-dashboard.md).
+- While the confirmation is missing, Plaid's page shows a box in place of the message field. Ticking it, as an administrator of the Plaid settings, records the confirmation and turns Plaid on. See [Plaid](ai-assistant.md#included-model-acceptance).
 - **Withdraw** removes the confirmation, after a second confirmation. AI features that use the included model stop until an administrator confirms again. Plaid stays switched on and shows a notice to its users.
 - You are asked again when the provider, its connection address, the name shown or the processing location changes. A new model from the same provider does not ask again. If the provider changes while your window is open, the window shows the new one and asks you to review it.
 - Plaid and agents that run on a model you added need no confirmation. External assistants connected over MCP do not depend on it either, because MCP sends nothing to the included model.
@@ -227,7 +227,7 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header
 
 ### Available tools
 
-The MCP server is read only. A client can search and read your data but cannot change anything. A key or a connection gets the twelve tools below, and thirteen when web search is switched on for your organization. A person sees only the tools their role lets them read with.
+The MCP server is read only. A client can search and read your data but cannot change anything. A key or a connection gets the fourteen tools below, and fifteen when web search is switched on for your organization. A person sees only the tools their role lets them read with.
 
 | Tool | What it does |
 |---|---|
@@ -243,9 +243,11 @@ The MCP server is read only. A client can search and read your data but cannot c
 | `get_record_history` | Reads the history of one record, as its History tab shows it |
 | `search_knowledge` | Searches the knowledge base |
 | `get_document` | Reads one knowledge document |
+| `list_help_topics` | Lists the pages and sections of the user manual |
+| `read_help_section` | Reads one page or section of the user manual, with its link |
 | `web_search` | Searches the web, when web search is switched on for your organization |
 
-When a client connects, the server tells it which workspace it reads, that it only reads, that it reads with the rights of the person behind the key or the connection, how to search (cost centers, calendars and dimensions included), where to read the exchange rates, and which data it does not read (the audit log and AI agents). It reads roles and data access settings only for a person who administers users with access to all data.
+When a client connects, the server tells it which workspace it reads, that it only reads, that it reads with the rights of the person behind the key or the connection, how to search (cost centers, calendars and dimensions included), where to read the exchange rates, and which data it does not read (the audit log and AI agents). It reads roles and data access settings only for a person who administers users with access to all data. It also tells the client to answer questions on how to use KANAP from the user manual.
 
 A call the server refuses comes back with its cause, so that the assistant can explain it: an unknown tool, a tool that would change data, a tool the key does not allow, or data the person cannot read.
 
@@ -271,7 +273,7 @@ The journal also records calls made with a key that was revoked or has expired. 
 ## Tips
 
 - **Leave Plaid on the default model unless you have a reason not to.** Pinning chat to a specific model means it stops following the organization default. That is useful when chat and agents genuinely need different models, a nuisance otherwise.
-- **Chat volume is cheap to underestimate.** The [Usage & costs](ai-usage.md) page prices chat at the assigned model's rates; a busy assistant on an expensive model shows up there long before it shows up on an invoice.
+- **Chat volume is cheap to underestimate.** The [Usage & costs](ai-usage.md) page prices each chat message at the rates recorded with it; a busy assistant on an expensive model shows up there long before it shows up on an invoice.
 - **A vision model is an agent requirement, not a chat one.** If your triage agents need to read ticket screenshots, that belongs on *their* model: see **Understands images** on the [AI models](ai-models.md) page.
 - **Prefer connections for Claude.** Each person signs in with their own account and reads with their own access, so nobody shares a key. Keep keys for clients that need one, rotate them, and use **Key max lifetime (days)** to set a ceiling no request can exceed.
 - **Set a retention window.** Keeping conversations forever is convenient until the database grows large or a compliance review asks how long chat content is kept. A value of 90 or 180 days is a common starting point.

@@ -6,7 +6,7 @@ import * as path from 'path';
 import { Features } from '../config/features';
 import { CSV_DECODE_MESSAGES, CsvDecodeErrorCode } from './csv-sheet/decode';
 import { XLSX_CONTENT_TYPE } from './xlsx/write';
-import { isUploadTypeAllowedForScope, UploadValidationScope } from './upload-validation';
+import { AI_ATTACHMENT_TYPE_MESSAGE, isUploadTypeAllowedForScope, UploadValidationScope } from './upload-validation';
 
 export const ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024; // 20 MB
 export const CSV_IMPORT_MAX_BYTES = 1 * 1024 * 1024; // 1 MB
@@ -73,6 +73,10 @@ const buildFileFilter = (scope: UploadValidationScope): NonNullable<MulterOption
       cb(new BadRequestException('Unsupported image type. Allowed: PNG, JPG, JPEG, GIF, WEBP'), false);
       return;
     }
+    if (scope === 'ai-attachment') {
+      cb(new BadRequestException({ message: AI_ATTACHMENT_TYPE_MESSAGE, code: 'AI_ATTACHMENT_TYPE' }), false);
+      return;
+    }
     if (scope === 'document-import') {
       cb(new BadRequestException('Unsupported file type. Allowed: DOCX'), false);
       return;
@@ -95,6 +99,12 @@ export const attachmentMulterOptions: MulterOptions = {
 export const inlineImageMulterOptions: MulterOptions = {
   limits: multipartLimits(ATTACHMENT_MAX_BYTES),
   fileFilter: buildFileFilter('inline-image'),
+};
+
+/** A Plaid chat attachment: an image, or a spreadsheet (its own cap is checked when it is read). */
+export const aiAttachmentMulterOptions: MulterOptions = {
+  limits: multipartLimits(ATTACHMENT_MAX_BYTES),
+  fileFilter: buildFileFilter('ai-attachment'),
 };
 
 export const documentImportMulterOptions: MulterOptions = {

@@ -1,5 +1,6 @@
 import { PortfolioLinkedReads, idsInScope } from './portfolio-linked-reads';
-import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
+import { codedForbidden } from '../auth/module-right-required';
 import { webLinkUrlsOf } from '../common/web-link-url';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, ILike, In, IsNull, Repository, SelectQueryBuilder } from 'typeorm';
@@ -2509,7 +2510,7 @@ export class PortfolioRequestsService {
 
     // Only allow the author to edit
     if (activity.author_id !== userId) {
-      throw new ForbiddenException('You can only edit your own comments');
+      throw codedForbidden('OWN_COMMENTS_ONLY', 'You can only edit your own comments');
     }
 
     const oldContent = activity.content;

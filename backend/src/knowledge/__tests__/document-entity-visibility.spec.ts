@@ -305,7 +305,11 @@ async function testAsyncAsserts() {
     assertDocumentIncidentWritable(DOCUMENT, manager, OWNER, TENANT, {
       binding: binding({ status: 'cancelled' }), viewer: CONTRIBUTOR_OWNER,
     }),
-    new RegExp(INCIDENT_REVIEW_LOCKED_MESSAGE.split('.')[0]),
+    (error: any) => {
+      assert.match(error.message, new RegExp(INCIDENT_REVIEW_LOCKED_MESSAGE.split('.')[0]));
+      assert.equal(error.getResponse().code, 'INCIDENT_REVIEW_LOCKED', 'the screen translates the lock');
+      return true;
+    },
   );
   assert.ok(
     await assertDocumentIncidentWritable(DOCUMENT, manager, OWNER, TENANT, {

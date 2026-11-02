@@ -34,7 +34,8 @@
     "browse": "Parcourir",
     "loadMore": "Charger plus",
     "done": "Terminé",
-    "moreActions": "Plus d'actions"
+    "moreActions": "Plus d'actions",
+    "undo": "Annuler"
   },
   "status": {
     "loading": "Chargement…",
@@ -294,25 +295,21 @@
     "failedToLogTime": "Échec de l'enregistrement du temps"
   },
   "dashboard": {
-    "overview": "Vue d'ensemble",
     "welcomeBack": "Bienvenue, {{name}}",
     "workOverview": "Voici un aperçu de votre travail",
     "createTask": "Créer une tâche",
     "logTime": "Saisir du temps",
-    "newRequest": "Nouvelle demande",
+    "newBudgetLine": "Nouvelle ligne budgétaire",
     "newApplication": "Nouvelle application",
     "newAsset": "Nouvel actif",
     "newDocument": "Nouveau document",
-    "dashboardSettings": "Paramètres du tableau de bord",
-    "noTilesEnabled": "Aucune tuile activée. Cliquez sur l'icône de paramètres pour configurer votre tableau de bord.",
+    "noTilesEnabled": "Aucune tuile activée. Choisissez vos tuiles avec « Personnaliser l'accueil ».",
+    "allTilesEmpty": "Vos tuiles n'ont encore rien à afficher.",
     "blankDocument": "Document vierge",
     "fromTemplate": "À partir d'un modèle…",
     "selectTemplate": "Sélectionner un modèle",
     "useTemplate": "Utiliser le modèle",
     "noTemplatesAvailable": "Aucun modèle publié n'est disponible.",
-    "newOpexLine": "Nouvelle ligne OPEX",
-    "newCapexLine": "Nouvelle ligne CAPEX",
-    "newContract": "Nouveau contrat",
     "newOpex": "Nouvel OPEX",
     "newCapex": "Nouveau CAPEX",
     "recentUpdates": "Mises à jour récentes",
@@ -335,7 +332,6 @@
     },
     "topItems": "Top lignes",
     "columnY": "{{column}}, A",
-    "topIncreases": "Plus fortes hausses",
     "columnYvsYminus1": "{{column}}, A vs A-1",
     "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "Aucune hausse",
@@ -354,8 +350,6 @@
     "byCostCenter": "Par centre de coûts",
     "noCostCenter": "Sans centre de coûts",
     "settings": {
-      "title": "Paramètres du tableau de bord",
-      "description": "Activez ou désactivez les tuiles, ajustez leurs options et glissez-les pour les réorganiser.",
       "resetToDefaults": "Rétablir les valeurs par défaut",
       "dragToReorder": "Glisser pour réorganiser",
       "options": {
@@ -364,7 +358,8 @@
         "days": "Jours affichés",
         "scope": "Périmètre",
         "thresholdDays": "Seuil (jours)"
-      }
+      },
+      "hideEmptyTiles": "Masquer les tuiles sans contenu"
     },
     "quickCreate": {
       "createTask": "Créer une tâche",
@@ -525,12 +520,27 @@
     },
     "welcome": "Bienvenue",
     "budgetSettings": {
-      "customize": "Personnaliser",
-      "title": "Réglages du tableau de bord du budget",
       "columns": "Colonnes de montant",
       "tenantColumns": "Colonnes de l'espace de travail",
-      "atLeastOne": "Choisissez au moins une colonne de montant.",
       "saveFailed": "Impossible d’enregistrer les réglages du tableau de bord."
+    },
+    "sections": {
+      "work": "Mon travail"
+    },
+    "customize": {
+      "start": "Personnaliser l'accueil",
+      "done": "Terminer",
+      "addTile": "Ajouter une tuile",
+      "hideTile": "Masquer la tuile",
+      "tileOptions": "Options de la tuile",
+      "moveSection": "Glisser pour déplacer la section",
+      "hideSection": "Masquer la section",
+      "showSection": "Afficher la section"
+    },
+    "topLinesMode": {
+      "label": "Classement",
+      "amount": "Montant",
+      "increase": "Hausse"
     }
   },
   "csv": {
@@ -544,6 +554,7 @@
     "customSelection": "Sélection personnalisée",
     "fieldsSelected": "{{selected}} sur {{total}} champs sélectionnés",
     "downloadTemplate": "Télécharger le modèle",
+    "downloadExample": "Télécharger un exemple",
     "uploadDescription": "Téléversez un CSV avec des séparateurs point-virgule et les titres de colonnes exactement identiques au modèle.",
     "uploadDescriptionFlexible": "Téléversez un fichier CSV avec les titres de colonnes du modèle. Les virgules et les points-virgules conviennent, et un fichier enregistré par Excel aussi.",
     "uploadDescriptionWorkbook": "Téléversez un CSV avec des séparateurs point-virgule, ou un classeur Excel (.xlsx), avec les titres de colonnes exactement identiques au modèle.",
@@ -1532,5 +1543,216 @@
     "linksEmpty": "Aucun lien web.",
     "removeFileNamed": "Supprimer le fichier {{name}}",
     "removed": "Lien « {{name}} » retiré."
+  },
+  "onboarding": {
+    "choice": {
+      "angleTitle": "Qu'est-ce qui vous amène ?",
+      "modeTitle": "Comment voulez-vous commencer ?",
+      "justLooking": "Je regarde",
+      "erasesExample": "L'exemple est effacé.",
+      "confirmTitle": "Effacer l'exemple ?",
+      "failed": "Votre réponse n'a pas pu être enregistrée."
+    },
+    "angles": {
+      "budget": "Le budget IT",
+      "cartography": "La cartographie du SI",
+      "portfolio": "Les projets et les demandes"
+    },
+    "modes": {
+      "example": "Découvrir avec l'exemple complet",
+      "own_data": "Commencer avec mes données"
+    },
+    "about": {
+      "path": "Parcours : {{path}}",
+      "angles": {
+        "budget": "Budget IT",
+        "cartography": "Cartographie du SI",
+        "portfolio": "Portefeuille de projets",
+        "none": "Je regarde"
+      },
+      "modes": {
+        "example": "exemple",
+        "own_data": "mes données"
+      },
+      "notChosen": "non choisi",
+      "change": "Changer",
+      "choose": "Choisir"
+    },
+    "firstSteps": {
+      "title": "Vos cinq premiers pas",
+      "progress": "{{done}}/{{total}}",
+      "hide": "Masquer les premiers pas",
+      "markDone": "Marquer comme fait",
+      "markUndone": "Marquer comme non fait",
+      "gotIt": "Compris",
+      "done": "Fait",
+      "later": "Plus tard",
+      "end": {
+        "title": "Parcours {{path}} terminé !",
+        "others": "Les deux autres parcours :",
+        "restart": "Recommencer ce parcours"
+      },
+      "showAgain": "Afficher les premiers pas",
+      "steps": {
+        "budget_overview": {
+          "title": "La vue d'ensemble",
+          "hint": "Voici les lignes budgétaires, triées par budget pour l'année en cours. Filtrez par Type, Société payeuse ou recherchez directement dans Filtre rapide."
+        },
+        "budget_line": {
+          "title": "Une ligne budgétaire",
+          "hint": "Ouvrez une ligne et explorez ses onglets. Le budget, l'onglet principal, affiche 4 colonnes parmi 5 possibles, toutes paramétrables dans « Administration ». L'onglet Relations permet de relier le budget aux éléments qu'il porte.",
+          "hintRecord": "Vous êtes dans la fiche {{record}}. Explorez les onglets. Le budget, l'onglet principal, affiche 4 colonnes parmi 5 possibles, toutes paramétrables dans « Administration ». L'onglet Relations permet de relier le budget aux éléments qu'il porte."
+        },
+        "budget_report": {
+          "title": "Un rapport",
+          "hint": "Tous les rapports sont paramétrables en détail. Explorez les options de filtrage. Depuis les résultats, ouvrez directement les lignes budgétaires concernées. Exportez le rapport en .pdf, .png ou en .xlsx."
+        },
+        "budget_plaid": {
+          "title": "Une question à Plaid",
+          "hint": "Demandez « Quelles sont les principales opportunités d'économies dans les OPEX IT ? »"
+        },
+        "budget_import": {
+          "title": "Vos données",
+          "hint": "Testez la fonctionnalité d'export pour récupérer les données en csv ou xlsx. Vous pouvez utiliser ces fichiers comme modèles pour mettre à jour en masse ou importer de nouvelles données. Plaid peut aussi vous aider à convertir un fichier existant."
+        },
+        "own_company": {
+          "title": "Votre société",
+          "hint": "Une première société a été créée avec l'environnement. Vérifiez les données et complétez les informations, en particulier la devise et le plan comptable. Si nécessaire, passez par la vue « Plans comptables » pour ajouter le vôtre. Créez d'autres sociétés au besoin."
+        },
+        "own_budget_lines": {
+          "title": "Vos lignes",
+          "hint": "Importez votre fichier budget (exportez d'abord pour récupérer le modèle) ou créez votre première ligne budgétaire directement."
+        },
+        "own_contract": {
+          "title": "Un contrat lié",
+          "hint": "Créez votre premier contrat et, le cas échéant, liez-le à la ligne de budget que vous venez de créer."
+        },
+        "own_report": {
+          "title": "Votre premier rapport",
+          "hint": "Vérifiez que les filtres suivent bien vos entrées. Créez plus de lignes pour enrichir les rapports !"
+        },
+        "own_invite": {
+          "title": "Un collègue",
+          "portfolioTitle": "Votre fiche contributeur",
+          "hint": {
+            "budget": "Invitez vos collègues en créant leur compte utilisateur. Passez par le menu Authentification pour configurer le SSO avec Entra ID.",
+            "cartography": "Invitez un responsable d'application ou d'actif.",
+            "portfolio": "Ajoutez-vous comme contributeur : équipe, disponibilité projet. Pas encore d'équipe ? Créez-la dans Paramètres › Équipes."
+          }
+        },
+        "map_application": {
+          "title": "Une fiche d'application",
+          "hint": "Voici la fiche d'une application. Explorez le panneau des propriétés et les différents onglets pour découvrir toutes les facettes de cet objet clé de KANAP."
+        },
+        "map_technologies": {
+          "title": "Les technologies, fins de support et failles",
+          "hint": "Ce qui arrive en fin de support dans les prochains mois, la source de chaque date, et les CVE qui touchent ces technologies."
+        },
+        "map_import": {
+          "title": "Vos données",
+          "hint": "Exportez les applications en csv ou en Excel, puis utilisez le modèle pour importer les vôtres. Poursuivez avec les technologies pour y associer les fins de support et les vulnérabilités."
+        },
+        "own_sites": {
+          "title": "Vos sites",
+          "hint": "Créez vos sites : salles serveurs, datacenters ou clouds. Chaque serveur est rattaché à l'un d'eux."
+        },
+        "own_applications": {
+          "title": "Vos applications",
+          "hint": "Importez la liste de vos applications puis enrichissez-les, ou créez-les directement dans KANAP."
+        },
+        "own_technologies": {
+          "title": "Vos technologies",
+          "hint": "Activez des technologies et liez-les à vos applications. KANAP s'occupe du reste."
+        },
+        "own_assets": {
+          "title": "Vos serveurs",
+          "hint": "Importez ou créez vos serveurs, puis liez-les aux applications."
+        },
+        "portfolio_request": {
+          "title": "Une demande et son score",
+          "hint": "Voici une demande, sur son onglet Évaluation : les critères et le score calculé. Approuvée, elle se convertit en projet d'un clic."
+        },
+        "portfolio_import": {
+          "title": "Vos données",
+          "hint": "Exportez la liste des projets de l'exemple pour voir le format, puis importez la vôtre. Faites de même avec les demandes et les tâches."
+        },
+        "own_projects": {
+          "title": "Votre projet",
+          "hint": "Le projet issu de la demande est créé. Découvrez ses détails : responsables, équipe projet, phases, charge…"
+        },
+        "own_request": {
+          "title": "Votre première demande",
+          "hint": "Créez une demande, scorez-la, approuvez-la, puis convertissez-la en projet."
+        },
+        "own_project_budget": {
+          "title": "Le budget du projet",
+          "hint": "Dans l'onglet Relations, liez une ou plusieurs lignes budgétaires à votre projet pour en voir les coûts."
+        },
+        "map_applications": {
+          "title": "La liste des applications",
+          "hint": "Toutes les applications de l'exemple, avec leur criticité, leur responsable et leur société. C'est l'inventaire : filtrez, triez, recherchez."
+        },
+        "map_assets": {
+          "title": "Les serveurs",
+          "hint": "Chaque serveur dit où tournent les applications : environnement, site, technologies installées. Ouvrez une fiche pour en savoir plus."
+        },
+        "portfolio_project": {
+          "title": "Le projet issu de la demande",
+          "hint": "Voici un projet issu d'une demande : objectif, équipe, phases, et dans Relations la demande d'origine, ses applications et ses lignes budgétaires."
+        },
+        "portfolio_tasks": {
+          "title": "Les tâches",
+          "hint": "La liste de toutes les tâches, qu'elles soient liées à un projet, au budget ou indépendantes. Testez les filtres et la recherche pour rapidement trouver les tâches qui vous intéressent."
+        },
+        "portfolio_time": {
+          "title": "Les rapports",
+          "hint": "Sept rapports pour piloter le portefeuille : ce qui s'est passé, ce qui est en cours, ce qui vient. Le Planning de capacité met la charge de chaque contributeur face à sa capacité."
+        },
+        "own_tasks": {
+          "title": "Les premières tâches",
+          "hint": "Créez une tâche et liez-la au projet. Affectez-vous la tâche et ajoutez un commentaire ; vous pouvez aussi modifier son statut et enregistrer du temps."
+        }
+      }
+    }
+  },
+  "creation": {
+    "confirmTitle": "Annuler la création",
+    "confirmMessage": "{{record}} et ce que vous avez ajouté ({{changes}}) seront supprimés.",
+    "keep": "Conserver",
+    "cancelFailed": "La création n’a pas pu être annulée.",
+    "changes": {
+      "fields_one": "{{count}} champ",
+      "fields_other": "{{count}} champs",
+      "relations_one": "{{count}} relation",
+      "relations_other": "{{count}} relations",
+      "deployments_one": "{{count}} déploiement",
+      "deployments_other": "{{count}} déploiements",
+      "links_one": "{{count}} lien",
+      "links_other": "{{count}} liens",
+      "attachments_one": "{{count}} pièce jointe",
+      "attachments_other": "{{count}} pièces jointes",
+      "documents_one": "{{count}} document",
+      "documents_other": "{{count}} documents",
+      "description_one": "la description",
+      "description_other": "la description",
+      "timeEntries_one": "{{count}} saisie de temps",
+      "timeEntries_other": "{{count}} saisies de temps",
+      "journalEntries_one": "{{count}} entrée du journal",
+      "journalEntries_other": "{{count}} entrées du journal",
+      "amounts_one": "les montants",
+      "amounts_other": "les montants",
+      "allocations_one": "les ventilations",
+      "allocations_other": "les ventilations",
+      "versions_one": "{{count}} version budgétaire",
+      "versions_other": "{{count}} versions budgétaires",
+      "contacts_one": "{{count}} contact",
+      "contacts_other": "{{count}} contacts",
+      "tasks_one": "{{count}} tâche",
+      "tasks_other": "{{count}} tâches"
+    },
+    "titleRequired": "Saisissez un titre."
+  },
+  "discoveryCall": {
+    "book": "Planifier un appel découverte"
   }
 }

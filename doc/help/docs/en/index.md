@@ -19,7 +19,7 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 
 ### Dashboard
 
-- [Dashboard](my-dashboard.md): Personal overview with configurable tiles (click the KANAP logo)
+- [Dashboard](my-dashboard.md): Personal overview with configurable tiles and the budget management section (click the KANAP logo)
 
 ### Portfolio Management
 
@@ -124,7 +124,6 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 - [Usage & costs](ai-usage.md): AI usage and real costs across chat and agents, by agent and by model
 - [Integrations](integrations.md): Connect GLPI for ticket import and for agents
 - [Scheduled Tasks](scheduled-tasks.md): Review and manage recurring background jobs
-- [Budget management overview](operations-dashboard.md): OPEX and CAPEX snapshots, deadlines and quick actions
 
 ### Deployment & Operations
 

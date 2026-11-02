@@ -107,6 +107,7 @@ export default function VulnerabilitiesTile() {
       title={t('dashboard.tiles.vulnerabilities')}
       subtitle={t('dashboard.tiles.vulnerabilitiesSubtitle')}
       icon="GppMaybe"
+      isEmpty={lines.length === 0 && warnings.length === 0}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => { void refetch(); }}

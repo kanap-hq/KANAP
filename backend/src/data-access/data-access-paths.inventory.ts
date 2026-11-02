@@ -94,7 +94,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'ai/oauth/mcp-oauth.service.ts', member: 'revoke', site: 'tenant_executor_run', class: 'no_scoped_table', reason: 'MCP OAuth revocation: grants' },
 
   // Model configurations: the list serves every chat user, the rest is AI settings.
-  { file: 'ai/ai-model-configs.controller.ts', member: 'AiModelConfigsController', site: 'skip_tenant_transaction', class: 'no_scoped_table', reason: 'model configurations only (ai_model_configs); the settings routes are listed as reserved' , routes: ['archive', 'clearDefault', 'create', 'list', 'restore', 'setDefault', 'test', 'update'] },
+  { file: 'ai/ai-model-configs.controller.ts', member: 'AiModelConfigsController', site: 'skip_tenant_transaction', class: 'no_scoped_table', reason: 'model configurations only (ai_model_configs); the settings routes are listed as reserved' , routes: ['archive', 'clearDefault', 'create', 'list', 'reasoningEfforts', 'restore', 'setDefault', 'test', 'update'] },
   { file: 'ai/ai-model-configs.controller.ts', member: 'list', site: 'tenant_executor_run', class: 'no_scoped_table', reason: 'lists the model configurations a person may pick' },
   { file: 'ai/ai-model-configs.controller.ts', member: 'create', site: 'tenant_executor_run', class: 'reserved', reason: AI_SETTINGS },
   { file: 'ai/ai-model-configs.controller.ts', member: 'update', site: 'tenant_executor_run', class: 'reserved', reason: AI_SETTINGS },
@@ -168,6 +168,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
       'pollSreMonitoringIngestion',
       'previewAgentTargeting',
       'rejectAction',
+      'restoreSharedContextProfile',
       'revokeEmergencyPause',
       'revokeHelpdeskEmergencyPause',
       'runGlpiRead',
@@ -225,6 +226,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'billing/billing.service.ts', member: 'updateSubscriptionCustomer', site: 'with_tenant', class: 'no_scoped_table', reason: 'invoicing details of the subscription (subscriptions)' },
   { file: 'billing/stripe-webhook.service.ts', member: 'lookupTenant', site: 'with_tenant', class: 'system', reason: 'Stripe webhook: finds the tenant of a subscription (subscriptions)' },
   { file: 'billing/stripe-webhook.service.ts', member: 'applyEventToTenant', site: 'with_tenant', class: 'system', reason: 'Stripe webhook: updates the subscription (subscriptions)' },
+  { file: 'discovery-call/discovery-call.service.ts', member: 'applyCalcomEvent', site: 'with_tenant', class: 'system', reason: 'Cal.com webhook: records the discovery call of a trial workspace (trial_discovery_calls, audit_log)' },
   { file: 'ai/platform/ai-builtin-usage.service.ts', member: 'reserveMessageDetached', site: 'with_tenant', class: 'no_scoped_table', reason: 'Plaid built-in model message counter (AI usage tables)' },
   { file: 'ai/platform/ai-builtin-usage.service.ts', member: 'getUsageForAllTenants', site: 'with_tenant', class: 'system', reason: 'platform administration: built-in model usage per tenant (AI usage tables)' },
 
@@ -241,8 +243,11 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   // Sample data and workspace reset: Administrator only (always unscoped).
   { file: 'demo-data/demo-data.service.ts', member: 'getOverview', site: 'with_tenant', class: 'reserved', reason: 'sample data overview (Administrator only): checks whether the workspace holds data, budget block included', count: 2 },
   { file: 'demo-data/demo-data.service.ts', member: 'dismissBanner', site: 'with_tenant', class: 'reserved', reason: 'sample data banner (Administrator only)' },
-  { file: 'demo-data/demo-data.service.ts', member: 'load', site: 'with_tenant', class: 'reserved', reason: 'sample data load (Administrator only): checks the workspace is empty, budget block included', count: 2 },
+  { file: 'demo-data/demo-data.service.ts', member: 'startLoad', site: 'with_tenant', class: 'reserved', reason: 'sample data load (Administrator from the screen, the trial owner at activation): checks the workspace is empty, budget block included', count: 2 },
   { file: 'demo-data/demo-data.service.ts', member: 'startReset', site: 'with_tenant', class: 'reserved', reason: 'workspace reset (Administrator only)' },
+  { file: 'demo-data/demo-data.service.ts', member: 'cancelLoad', site: 'with_tenant', class: 'reserved', reason: 'stop of a sample data load (Administrator only, onboarding choice)' },
+  { file: 'demo-data/demo-data.service.ts', member: 'clearFailedLoad', site: 'with_tenant', class: 'reserved', reason: 'clearing a failed sample data load (Administrator only, onboarding choice)' },
+  { file: 'demo-data/demo-data.service.ts', member: 'trialActivationActor', site: 'with_tenant', class: 'system', reason: 'resume of a trial\'s sample data load at startup, no person: finds the trial owner (subscriptions, trial sign-up, users, roles)' },
   { file: 'admin/tenants/tenant-reset.service.ts', member: 'reset', site: 'with_tenant', class: 'reserved', reason: 'workspace reset started by an Administrator (sample data): erases the whole tenant, budget block included' },
 
   // Platform administration (PlatformAdminGuard): no person of the tenant.

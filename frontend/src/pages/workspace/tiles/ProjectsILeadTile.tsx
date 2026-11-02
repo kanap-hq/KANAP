@@ -62,6 +62,7 @@ export default function ProjectsILeadTile({ config }: ProjectsILeadTileProps) {
     <DashboardTile
       title={t('dashboard.tiles.projectsILead')}
       icon="Leaderboard"
+      isEmpty={projects.length === 0}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => { void refetch(); }}

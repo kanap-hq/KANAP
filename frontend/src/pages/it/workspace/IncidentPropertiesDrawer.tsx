@@ -47,7 +47,6 @@ export type IncidentDrawerPatch = Partial<Omit<IncidentDrawerValues, 'created_at
 
 type Props = {
   values: IncidentDrawerValues;
-  isCreate: boolean;
   disabled?: boolean;
   /** When true, the access switch stays off-limits (contributor cannot lift it). */
   restrictDisabled?: boolean;
@@ -90,7 +89,6 @@ function DrawerTextField({
 
 export default function IncidentPropertiesDrawer({
   values,
-  isCreate,
   disabled = false,
   restrictDisabled = false,
   onChange,
@@ -154,41 +152,39 @@ export default function IncidentPropertiesDrawer({
             ))}
           </TextField>
         </PropertyRow>
-        {!isCreate && (
-          <PropertyRow label={t('workspace.incident.drawer.status')}>
-            <TextField
-              select
-              value={values.status}
-              onChange={(event) => onChange({ status: event.target.value as IncidentStatus })}
-              variant="standard"
-              SelectProps={{
-                renderValue: (selected) => (
-                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                    <StatusDot color={getDotColor(INCIDENT_STATUS_COLORS[String(selected)], theme.palette.mode)} />
-                    {incidentStatusLabel(t, String(selected))}
-                  </Box>
-                ),
-              }}
-              sx={drawerSelectSx}
-              disabled={disabled}
-            >
-              {statusOptions.map((status) => {
-                const forward = isForwardStatusMove(values.status, status);
-                return (
-                  <MenuItem key={status} value={status} disabled={!forward} sx={{ ...drawerMenuItemSx, gap: '8px' }}>
-                    <StatusDot color={getDotColor(INCIDENT_STATUS_COLORS[status], theme.palette.mode)} />
-                    {incidentStatusLabel(t, status)}
-                    {!forward && (
-                      <Box component="span" sx={{ ml: 'auto', pl: 1.5, fontSize: 11, color: 'kanap.text.tertiary' }}>
-                        {t('workspace.incident.actions.useReopen')}
-                      </Box>
-                    )}
-                  </MenuItem>
-                );
-              })}
-            </TextField>
-          </PropertyRow>
-        )}
+        <PropertyRow label={t('workspace.incident.drawer.status')}>
+          <TextField
+            select
+            value={values.status}
+            onChange={(event) => onChange({ status: event.target.value as IncidentStatus })}
+            variant="standard"
+            SelectProps={{
+              renderValue: (selected) => (
+                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <StatusDot color={getDotColor(INCIDENT_STATUS_COLORS[String(selected)], theme.palette.mode)} />
+                  {incidentStatusLabel(t, String(selected))}
+                </Box>
+              ),
+            }}
+            sx={drawerSelectSx}
+            disabled={disabled}
+          >
+            {statusOptions.map((status) => {
+              const forward = isForwardStatusMove(values.status, status);
+              return (
+                <MenuItem key={status} value={status} disabled={!forward} sx={{ ...drawerMenuItemSx, gap: '8px' }}>
+                  <StatusDot color={getDotColor(INCIDENT_STATUS_COLORS[status], theme.palette.mode)} />
+                  {incidentStatusLabel(t, status)}
+                  {!forward && (
+                    <Box component="span" sx={{ ml: 'auto', pl: 1.5, fontSize: 11, color: 'kanap.text.tertiary' }}>
+                      {t('workspace.incident.actions.useReopen')}
+                    </Box>
+                  )}
+                </MenuItem>
+              );
+            })}
+          </TextField>
+        </PropertyRow>
         <PropertyRow
           label={t('workspace.incident.drawer.restrictAccess')}
           helperText={t('workspace.incident.drawer.restrictAccessHint')}
@@ -214,27 +210,23 @@ export default function IncidentPropertiesDrawer({
           <IncidentDateTimeField
             value={values.detected_at}
             onChange={(next) => {
-              if (next || isCreate) onChange({ detected_at: next });
+              if (next) onChange({ detected_at: next });
             }}
             disabled={disabled}
           />
         </PropertyRow>
-        {!isCreate && (
-          <>
-            <PropertyRow label={t('workspace.incident.drawer.resolved')}>
-              <IncidentDateTimeField
-                value={values.resolved_at}
-                onChange={(next) => onChange({ resolved_at: next })}
-                disabled={disabled}
-              />
-            </PropertyRow>
-            <PropertyRow label={t('workspace.incident.drawer.closed')}>
-              <Typography sx={readOnlyValueSx}>
-                {formatShortDateTime(values.closed_at, locale, { empty: t('workspace.incident.drawer.notSet') })}
-              </Typography>
-            </PropertyRow>
-          </>
-        )}
+        <PropertyRow label={t('workspace.incident.drawer.resolved')}>
+          <IncidentDateTimeField
+            value={values.resolved_at}
+            onChange={(next) => onChange({ resolved_at: next })}
+            disabled={disabled}
+          />
+        </PropertyRow>
+        <PropertyRow label={t('workspace.incident.drawer.closed')}>
+          <Typography sx={readOnlyValueSx}>
+            {formatShortDateTime(values.closed_at, locale, { empty: t('workspace.incident.drawer.notSet') })}
+          </Typography>
+        </PropertyRow>
       </PropertyGroup>
 
       <PropertyGroup>
@@ -310,16 +302,14 @@ export default function IncidentPropertiesDrawer({
         </PropertyRow>
       </PropertyGroup>
 
-      {!isCreate && (
-        <PropertyGroup>
-          <PropertyRow label={t('workspace.incident.drawer.created')}>
-            <Typography sx={readOnlyValueSx}>{formatShortDateTime(values.created_at, locale)}</Typography>
-          </PropertyRow>
-          <PropertyRow label={t('workspace.incident.drawer.updated')}>
-            <Typography sx={readOnlyValueSx}>{formatShortDateTime(values.updated_at, locale)}</Typography>
-          </PropertyRow>
-        </PropertyGroup>
-      )}
+      <PropertyGroup>
+        <PropertyRow label={t('workspace.incident.drawer.created')}>
+          <Typography sx={readOnlyValueSx}>{formatShortDateTime(values.created_at, locale)}</Typography>
+        </PropertyRow>
+        <PropertyRow label={t('workspace.incident.drawer.updated')}>
+          <Typography sx={readOnlyValueSx}>{formatShortDateTime(values.updated_at, locale)}</Typography>
+        </PropertyRow>
+      </PropertyGroup>
     </>
   );
 }

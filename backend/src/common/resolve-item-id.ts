@@ -177,9 +177,10 @@ export type BudgetLineReferenceNumbers = {
 };
 
 /**
- * The numbers a budget line reference names, the one rule the read resolver (`resolveBudgetLine`)
- * and the write resolvers share: `BL-n` and a bare number read `item_number`; `OPX-n` and `CPX-n`
- * read only `legacy_number` of their nature. A name, or a malformed reference, names neither.
+ * The numbers a budget line reference names for a write: `BL-n` and a bare number are
+ * `item_number`; `OPX-n` and `CPX-n` are only `legacy_number`. A name, or a malformed reference,
+ * names neither. A read (`resolveBudgetLine`) takes the line number of an `OPX-n` or a `CPX-n`
+ * first, and this legacy number when no line carries that number.
  */
 export function budgetLineReferenceNumbers(raw: string): BudgetLineReferenceNumbers {
   const match = String(raw ?? '').match(/^(?:(BL|OPX|CPX)-)?(\d+)$/i);
@@ -192,22 +193,43 @@ export function budgetLineReferenceNumbers(raw: string): BudgetLineReferenceNumb
     : { itemNumber: number, legacyNumber: null };
 }
 
-/** Resolve a native budget reference across explicitly named natures in the request's tenant. */
+/** The line number written in an `OPX-n` or a `CPX-n`, the digits of the legacy form. */
+function lineNumberOfLegacy(legacyNumber: string): number | null {
+  return parseItemNumber(legacyNumber.slice(legacyNumber.indexOf('-') + 1));
+}
+
+/**
+ * The line a budget reference names, of either nature, in the request's tenant. `BL-n` and a bare
+ * number are the line's own number. `OPX-n` and `CPX-n` are that number among the lines of its nature
+ * first, then the legacy number (`spend_items.legacy_number`), so the detail and the history name the same line.
+ */
 export async function resolveBudgetLine(raw: string, manager: EntityManager): Promise<{ id: string; nature: 'opex' | 'capex'; reference: string }> {
   let predicate: string;
-  let value: string | number;
+  let params: unknown[];
+  let order = '';
   if (UUID_RE.test(raw)) {
     predicate = 'id = $1';
-    value = raw;
+    params = [raw];
   } else {
     const numbers = budgetLineReferenceNumbers(raw);
     if (numbers.itemNumber == null && numbers.legacyNumber == null) throw new BadRequestException('Malformed budget line reference');
-    predicate = numbers.legacyNumber ? 'legacy_number = $1' : 'item_number = $1';
-    value = numbers.legacyNumber ?? numbers.itemNumber!;
+    if (numbers.legacyNumber) {
+      const itemNumber = lineNumberOfLegacy(numbers.legacyNumber);
+      if (itemNumber == null) throw new BadRequestException('Malformed budget line reference');
+      predicate = '((item_number = $1 AND nature = $3) OR legacy_number = $2)';
+      params = [itemNumber, numbers.legacyNumber, numbers.legacyNumber.startsWith('CPX-') ? 'capex' : 'opex'];
+      order = 'ORDER BY (item_number = $1) DESC';
+    } else {
+      predicate = 'item_number = $1';
+      params = [numbers.itemNumber];
+    }
   }
   const [line] = await manager.query(
     `SELECT id, nature, item_number FROM spend_items
-     WHERE tenant_id = app_current_tenant() AND nature IN ('opex', 'capex') AND ${predicate} LIMIT 1`, [value],
+     WHERE tenant_id = app_current_tenant() AND nature IN ('opex', 'capex') AND ${predicate}
+     ${order}
+     LIMIT 1`,
+    params,
   );
   if (!line) throw new NotFoundException('Budget line not found');
   return { id: line.id, nature: line.nature, reference: `BL-${line.item_number}` };

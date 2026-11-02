@@ -33,6 +33,8 @@ export default function ApplicationSuitesField({ applicationId, canManage, textF
   const { data: current = [] } = useQuery({
     queryKey: key,
     queryFn: async () => (await api.get<{ items: SuiteOption[] }>(`/applications/${applicationId}/suites`)).data.items || [],
+    // No id yet: the empty draft of a new application (its creation preview) has no suite to read.
+    enabled: !!applicationId,
   });
   const { data: suites = [] } = useQuery({
     queryKey: ['application-suite-candidates'],

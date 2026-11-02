@@ -48,6 +48,12 @@ export interface CsvReadSchema {
   /** Detail columns, in any order. Matching ignores case, spaces, underscores and hyphens. */
   fields: readonly string[];
   /**
+   * Other headers a detail column is read by, by field: its titles in the four languages
+   * (`{ name: ['Name', 'Nom', 'Nombre'] }`), as the file's export writes them. Matched like the
+   * field itself, which stays accepted.
+   */
+  fieldLabels?: Readonly<Record<string, readonly string[]>>;
+  /**
    * When set, headers of the shape `<name>_<year>` and `<name>_<year>_<mm>` are amount
    * columns. A header that looks like one of these and does not parse is a header error.
    * Leave this unset on a master-data file.

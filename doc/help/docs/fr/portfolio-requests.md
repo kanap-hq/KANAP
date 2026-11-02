@@ -46,7 +46,7 @@ La grille standard met en évidence les champs qui comptent pendant l'intake et 
 | **Statut** | État d'intake actuel |
 | **Source** | Classification source du portefeuille |
 | **Catégorie** | Catégorie du portefeuille |
-| **Stream** | Stream du portefeuille |
+| **Filière** | Filière du portefeuille |
 | **Société** | Classification société |
 | **Demandeur** | Personne ayant soulevé la demande |
 | **Date cible** | Date de livraison cible demandée |
@@ -80,16 +80,32 @@ Cela compte parce que tout n'est pas enregistré de la même manière :
 - Les modifications dans **Synthèse**, **Analyse** et **Évaluation** sont des modifications d'espace de travail et utilisent **Enregistrer** / **Réinitialiser**.
 - Les documents managés **Objectif** et **Risques et atténuations** utilisent également le flux d'enregistrement de l'espace de travail.
 
-Si vous créez une nouvelle demande, KANAP démarre sur **Synthèse**. Les autres onglets deviennent utiles après que la demande existe comme un véritable enregistrement plutôt que comme une idée très sincère.
-
 L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quitter la page :
 
 - une référence de demande copiable telle que `REQ-42`
 - une bande de métadonnées avec **Statut**, **Score**, **Demandeur**, **Responsable IT**, **Date de livraison cible** et (lorsque applicable) la **Tâche source** depuis laquelle la demande a été créée
 - **Partager** pour envoyer un lien vers la demande
 - **Convertir en projet** lorsque la demande est **Approuvée** ou **Convertie**
+- **Créer** et **Annuler**, tant que la demande est en cours de création. Voir [Créer ou annuler](#cancelling-a-creation)
 - **Supprimer**, une icône corbeille, pour les administrateurs (lorsque la demande n'est pas encore convertie). Une demande convertie reste l'origine de son projet et ne peut pas être supprimée
 - navigation précédent/suivant basée sur le contexte exact de la liste d'où vous venez
+
+### Créer une demande { #creating-a-request }
+
+1. Cliquez sur **Nouvelle demande**. La page de la demande s'ouvre sur **Synthèse** avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+2. Saisissez le nom de la demande.
+3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée la demande aussitôt, au statut **En attente de revue** et avec vous comme demandeur. Sa référence (`REQ-42`) apparaît et tous les onglets s'ouvrent.
+
+Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+
+### Créer ou annuler { #cancelling-a-creation }
+
+Tant que la demande est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez la demande.
+
+- **Créer** conserve la demande et la ferme. Vous revenez à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, rien ne se ferme et le titre en demande un
+- **Annuler** ferme sans rien conserver. Sur une demande déjà créée, il la supprime. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des demandes
+
+Si vous quittez la demande autrement, elle reste. Un administrateur peut alors la supprimer avec **Supprimer**. La référence d'une demande annulée n'est pas réutilisée.
 
 ### Tiroir des propriétés
 
@@ -97,9 +113,8 @@ Traitez le tiroir comme la colonne vertébrale structurelle de la demande. Il co
 
 #### Propriétés principales
 
-- Nom de la demande
 - Statut
-- Source, Catégorie, Stream
+- Source, Catégorie, Filière
 - Demandeur
 - Société, Département
 - Date de livraison cible
@@ -107,7 +122,7 @@ Traitez le tiroir comme la colonne vertébrale structurelle de la demande. Il co
 Ces champs façonnent la manière dont la demande est routée, filtrée et revue ailleurs dans l'espace de travail. Par exemple :
 
 - changer le **Statut** affecte les décisions qui peuvent suivre et si la conversion est disponible
-- changer la **Catégorie** ou le **Stream** change le contexte analytique pour la faisabilité et l'évaluation
+- changer la **Catégorie** ou la **Filière** change le contexte analytique pour la faisabilité et l'évaluation
 - changer la **Société** ou le **Demandeur** change le reporting et la visibilité de la responsabilité dans tout le portefeuille
 
 #### Équipe

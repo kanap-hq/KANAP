@@ -126,7 +126,7 @@ The Relations tab shows the assets at this location and the applications that ru
 From the workspace header, click **Delete** (trash icon) to remove a location.
 
 - Requires `locations:member` permission.
-- Linked assets are not deleted. They are automatically unassigned (their location reference is cleared).
+- A location that still holds assets cannot be deleted: the message gives their number. Move the assets to another location first.
 - If you have unsaved changes in the workspace, those changes are lost on deletion.
 
 ---

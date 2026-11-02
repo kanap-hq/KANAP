@@ -80,6 +80,11 @@
       "title": "Select template"
     }
   },
+  "empty": {
+    "all": "No documents in these libraries yet.",
+    "folder": "No documents in this folder yet.",
+    "library": "No documents in this library yet."
+  },
   "folderMoveDialog": {
     "actions": {
       "move": "Move"

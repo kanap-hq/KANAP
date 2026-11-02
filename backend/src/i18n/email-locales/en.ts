@@ -190,10 +190,10 @@ export const en = {
     },
     activation: {
       subject: 'Confirm your KANAP workspace',
-      intro: 'Thanks for your interest in KANAP. Please confirm your email to provision your tenant.',
+      intro: "Thanks for your interest in KANAP. Confirm your email address to create your workspace: the link below is valid for 48 hours. While your workspace is being created, we prepare a complete sample company; when you first open it, you will choose to explore it or start with your own data.",
       copyPaste: 'If the button above does not work, copy and paste this link into your browser:',
-      expires: 'The link expires in 48 hours. If you did not request this trial you can ignore this message.',
-      textIntro: 'Thanks for your interest in KANAP. Confirm your email to provision your tenant.',
+      expires: "If you did not request this trial, you can ignore this message.",
+      textIntro: "Thanks for your interest in KANAP. Confirm your email address to create your workspace: the link below is valid for 48 hours. While your workspace is being created, we prepare a complete sample company; when you first open it, you will choose to explore it or start with your own data.",
       textAction: 'Activate your workspace: {{url}}',
     },
     passwordReset: {

@@ -95,7 +95,7 @@ export default function RecentlyViewedTile({ config }: RecentlyViewedTileProps) 
   };
 
   return (
-    <DashboardTile title={t('dashboard.tiles.recentlyViewed')} icon="History">
+    <DashboardTile title={t('dashboard.tiles.recentlyViewed')} icon="History" isEmpty={visibleItems.length === 0}>
       {visibleItems.length === 0 ? (
         <TileEmptyState message={t('dashboard.tiles.noRecentlyViewed')} />
       ) : (

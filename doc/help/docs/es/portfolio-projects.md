@@ -15,7 +15,7 @@ Para la secuenciación a nivel de portafolio y el trabajo de hoja de ruta, use [
 
 - `portfolio_projects:reader`: abrir la lista y ver los espacios de trabajo de proyecto
 - `portfolio_projects:contributor`: actualizar el documento gestionado **Propósito**, registrar tiempo en el proyecto (entradas de gastos generales del proyecto y entradas en tareas del proyecto) y mantener los registros vinculados, los enlaces y los archivos de la pestaña **Relaciones** (las dependencias requieren `portfolio_projects:member`)
-- `portfolio_projects:member`: crear proyectos y gestionar datos del proyecto, estado, equipo, relaciones, cronograma, progreso, tareas, evaluación, comentarios y decisiones
+- `portfolio_projects:member`: crear proyectos y gestionar datos del proyecto, estado, equipo, relaciones, cronograma, esfuerzo, tareas, evaluación, comentarios y decisiones
 - `portfolio_projects:admin`: incluye las capacidades del nivel miembro y también puede importar y exportar, guardar sobrescrituras de prioridad y mantener entradas de tiempo de gastos generales de otros usuarios
 - La visualización del conocimiento también requiere acceso a Base de conocimiento
 - Crear o vincular conocimiento independiente también requiere un rol de creación en Base de conocimiento
@@ -43,10 +43,10 @@ La lista de proyectos está diseñada para responder rápidamente a dos pregunta
 | **Prioridad** | Puntuación de prioridad calculada |
 | **Estado** | Estado de ejecución actual con un punto de color |
 | **Origen** | Solicitud, Fast-track o Legacy |
-| **Progreso** | Progreso de ejecución como barra |
+| **Esfuerzo** | Progreso de ejecución como barra |
 | **Origen** | Clasificación de origen del portafolio |
 | **Categoría** | Categoría del portafolio |
-| **Flujo** | Flujo del portafolio |
+| **Línea** | Línea del portafolio |
 | **Empresa** | Clasificación de empresa |
 | **Inicio** | Fecha de inicio planificada |
 | **Fin** | Fecha de fin planificada |
@@ -61,7 +61,7 @@ La lista de proyectos está diseñada para responder rápidamente a dos pregunta
 - Los proyectos se ordenan por puntuación de prioridad a menos que cambie la ordenación
 - Los proyectos en estado **Hecho** están ocultos por defecto
 - La búsqueda funciona en el contenido de texto
-- Los filtros de estado, origen, fuente, categoría, flujo y empresa están disponibles directamente en la cuadrícula
+- Los filtros de estado, origen, fuente, categoría, línea y empresa están disponibles directamente en la cuadrícula
 
 **Administración masiva**
 
@@ -70,22 +70,34 @@ La lista de proyectos está diseñada para responder rápidamente a dos pregunta
 
 Abrir un proyecto desde la lista preserva el contexto actual de la lista. El espacio de trabajo del proyecto utiliza el mismo contexto para la navegación **Anterior** y **Siguiente**, de modo que pueda revisar un conjunto filtrado sin perder su lugar.
 
-## Crear un proyecto
+## Crear un proyecto { #creating-a-project }
 
 La creación directa de proyectos es para trabajo que debe entrar en ejecución sin un registro de solicitud separado.
 
-- Los nuevos proyectos se abren solo en **Resumen**
-- Hasta que el proyecto se guarde por primera vez, las otras pestañas no están disponibles
-- Los proyectos creados directamente usan un origen de **Fast-track** o **Legacy**
-- Los proyectos de origen-solicitud conservan su origen de solicitud y vinculación de fuente
+1. Haga clic en **Nuevo proyecto**. La página del proyecto se abre en **Resumen** con un título vacío en el encabezado. El resto de la página aparece atenuado.
+2. Escriba el nombre del proyecto.
+3. Pulse Intro o haga clic fuera del título. KANAP crea el proyecto de inmediato, con el origen **Fast-track**. Su referencia (`PRJ-12`) aparece y se abren todas las pestañas.
 
-Use **Fast-track** para trabajo que se introduce genuinamente directo en la entrega. Use **Legacy** para trabajo que ya existe fuera del historial normal de captación. Esa distinción afecta a los informes y hace que el análisis posterior del portafolio sea mucho menos confuso.
+Complete después el panel de Propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulse Escape en el título vacío para salir sin crear nada.
+
+Un proyecto creado así puede pasar de **Fast-track** a **Histórico** y viceversa en el panel de Propiedades. Un proyecto convertido desde una solicitud conserva el origen **Solicitud** y su vinculación de fuente.
+
+Use **Fast-track** para trabajo que se introduce genuinamente directo en la entrega. Use **Histórico** para trabajo que ya existe fuera del historial normal de captación. Esa distinción afecta a los informes y hace que el análisis posterior del portafolio sea mucho menos confuso.
+
+### Crear o cancelar { #cancelling-a-creation }
+
+Mientras el proyecto se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga del proyecto.
+
+- **Crear** conserva el proyecto y lo cierra. Vuelve al punto de partida: la lista o la pantalla anterior. Con el título vacío, no se cierra nada y el título pide uno
+- **Cancelar** cierra sin conservar nada. En un proyecto ya creado, lo elimina. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin ningún derecho de eliminación
+
+**Cancelar** es la única forma de eliminar un proyecto. Una vez que sale del proyecto, este permanece: cambie su estado a **Cancelado** si no sigue adelante. Un proyecto vinculado a una solicitud no se puede eliminar. La referencia de un proyecto cancelado no se reutiliza.
 
 ## Modelo mental del espacio de trabajo
 
 El espacio de trabajo del proyecto tiene dos capas:
 
-- El **área de contenido principal** para las pestañas operativas: **Resumen**, **Tareas**, **Cronograma**, **Progreso**, **Evaluación**, **Relaciones**, **Conocimiento** e **Historial** (los cambios del proyecto, vea [Historial de los registros](record-history.md))
+- El **área de contenido principal** para las pestañas operativas: **Resumen**, **Tareas**, **Cronograma**, **Esfuerzo**, **Evaluación**, **Relaciones**, **Conocimiento** e **Historial** (los cambios del proyecto, vea [Historial de los registros](record-history.md))
 - Un panel persistente de **Propiedades** en el borde derecho para las propiedades principales, la asignación de equipo y las solicitudes de origen
 
 Abra o cierre el panel de Propiedades usando la pestaña vertical en el borde derecho.
@@ -101,6 +113,7 @@ El encabezado del espacio de trabajo es una franja de control, no decoración.
 - Una fila de metadatos compacta: **Estado**, **Puntuación**, **Progreso**, **Responsable IT**, **Fin planificado** y **Origen** (o la referencia de la solicitud de origen para proyectos de origen-solicitud)
 - **Anterior** y **Siguiente** se mueven por el conjunto de resultados de la lista actual, no por todos los proyectos del sistema
 - **Compartir** envía por correo la URL actual del proyecto con un mensaje opcional
+- **Crear** y **Cancelar**, mientras el proyecto se está creando. Consulte [Crear o cancelar](#cancelling-a-creation)
 
 Enviar un enlace no concede acceso. Solo comparte la ubicación. Los permisos permanecen exactamente como estaban antes de enviar el correo.
 
@@ -121,10 +134,9 @@ Trate el panel de Propiedades como la tarjeta de identidad persistente del proye
 
 ### Propiedades principales
 
-- Nombre del proyecto
 - Estado
-- Origen (solo durante la creación inicial; bloqueado después)
-- Origen, Categoría, Flujo
+- Origen: **Fast-track** o **Histórico** para un proyecto creado directamente. Un proyecto convertido desde una solicitud conserva el origen **Solicitud**
+- Origen, Categoría, Línea
 - Empresa, Departamento
 - Inicio planificado, Fin planificado
 
@@ -142,7 +154,7 @@ Estas asignaciones hacen más que rellenar casillas:
 
 - determinan qué aparece en **Mis proyectos** y **Proyectos de mi equipo**
 - alimentan el contexto del proyecto en resumen e informes
-- definen quién está disponible para la asignación de esfuerzo en la pestaña **Progreso**
+- definen quién está disponible para la asignación de esfuerzo en la pestaña **Esfuerzo**
 
 Si los responsables y colaboradores son incorrectos, su planificación de esfuerzo también será incorrecta.
 
@@ -201,7 +213,7 @@ La pestaña **Tareas** es la cola de ejecución del proyecto. La insignia de la 
 
 Esta pestaña es para gestionar tareas vinculadas al proyecto en contexto, no para reemplazar el espacio de trabajo completo de tareas. Abrir una tarea le lleva a su propio espacio de trabajo, donde continúa el detalle específico de la tarea y el registro de tiempo.
 
-Desde una perspectiva de proyecto, la consecuencia importante es esta: el estado de la tarea y el tiempo de la tarea no están aislados. Retroalimentan a Resumen y Progreso, así que las tareas descuidadas hacen que toda la imagen del proyecto sea menos fiable.
+Desde una perspectiva de proyecto, la consecuencia importante es esta: el estado de la tarea y el tiempo de la tarea no están aislados. Retroalimentan a Resumen y Esfuerzo, así que las tareas descuidadas hacen que toda la imagen del proyecto sea menos fiable.
 
 ## Cronograma
 
@@ -247,20 +259,20 @@ Encima de la lista de fases, alterne entre las vistas **Tabla** y **Gantt**:
 
 Solo las fases con fechas de inicio y fin utilizables aparecen significativamente en el Gantt. Si las fechas son vagas, el gráfico será igualmente vago. En la vista Gantt, puede arrastrar las barras de fase para ajustar las fechas de inicio/fin (con permiso de gestión).
 
-## Progreso
+## Esfuerzo
 
-La pestaña **Progreso** combina el progreso de ejecución, la planificación de carga de trabajo y el consumo de tiempo real. Esa combinación importa porque un proyecto que reporta 80% de progreso con 20% del esfuerzo consumido no es necesariamente eficiente; puede simplemente estar mal estimado.
+La pestaña **Esfuerzo** combina el progreso de ejecución, la planificación de carga de trabajo y el consumo de tiempo real. Esa combinación importa porque un proyecto que reporta 80% de progreso con 20% del esfuerzo consumido no es necesariamente eficiente; puede simplemente estar mal estimado.
 
 ### Progreso y carga de trabajo
 
-- **Progreso de ejecución** es la señal global de finalización del proyecto
+- **Progreso** es la señal global de finalización del proyecto
 - **Consumo de carga de trabajo** compara el esfuerzo real con el esfuerzo planificado
 
 Mantenga estos dos números alineados con la realidad. Si el progreso avanza sin esfuerzo correspondiente, o el esfuerzo se acumula sin movimiento de entrega, la discrepancia generalmente le está diciendo algo importante sobre el alcance, la estimación o la disciplina de informes.
 
 ### Esfuerzo estimado y asignaciones
 
-El progreso separa el esfuerzo estimado en:
+La pestaña **Esfuerzo** separa el esfuerzo estimado en:
 
 - **Esfuerzo IT**
 - **Esfuerzo de negocio**
@@ -280,7 +292,7 @@ Consecuencias importantes:
 
 - el tiempo de tareas contribuye al esfuerzo real del proyecto automáticamente
 - el tiempo de tareas es visible aquí pero debe corregirse en el espacio de trabajo de la tarea
-- las entradas de gastos generales del proyecto se mantienen desde la pestaña Progreso
+- las entradas de gastos generales del proyecto se mantienen desde la pestaña Esfuerzo
 - los colaboradores pueden mantener sus propias entradas de gastos generales del proyecto
 - los administradores pueden mantener entradas de gastos generales del proyecto entre usuarios
 
@@ -386,7 +398,7 @@ Use **Enriquecimiento de datos** cuando desee exportar, ajustar campos seleccion
 
 Las importaciones están diseñadas para cambios masivos controlados:
 
-- descargue primero una plantilla cuando necesite la estructura correcta
+- descargue primero una plantilla cuando necesite la estructura correcta, o un ejemplo para ver proyectos de ejemplo y los valores que admite cada columna ([Archivos de ejemplo](csv-files.md#example-files))
 - valide antes de importar
 - use opciones avanzadas para elegir el comportamiento de enriquecimiento vs reemplazo y las reglas de inserción/actualización
 
@@ -407,6 +419,6 @@ De nuevo, enviar un enlace no concede acceso. Solo evita que la gente tenga que 
 - Use el panel de Propiedades para datos estructurales que deben permanecer visibles mientras trabaja.
 - Use **Resumen** para la narrativa del proyecto, la actividad más reciente y la imagen operativa de alto nivel.
 - Use **Cronograma** para definir la estructura de entrega antes de que crezca el volumen de tareas.
-- Use **Progreso** regularmente, de lo contrario la variación de esfuerzo llega como una sorpresa aunque los datos ya le estuvieran avisando.
+- Use **Esfuerzo** regularmente, de lo contrario la variación de esfuerzo llega como una sorpresa aunque los datos ya le estuvieran avisando.
 - Use **Conocimiento** para documentación reutilizable o gobernada, no como una segunda copia del resumen del Propósito.
 - Use **Importar** en el editor de Propósito cuando un resumen de proyecto ya existe como documento Word, en lugar de reformatearlo a mano.

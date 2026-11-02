@@ -244,7 +244,7 @@ Eine Anwendung erscheint auf zwei Wegen:
 - **Gehostet**: Eine ihrer Bereitstellungen läuft auf einem Server, der die Technologie trägt. KANAP leitet die Zeile aus den Servern ab; ändern Sie den Server oder die Bereitstellung, um sie zu ändern.
 - **Deklariert**: Die Anwendung hängt von der Technologie ab, ohne neben ihr zu laufen, zum Beispiel eine Anwendung, deren Benutzer sich über Entra ID anmelden. Ändern Sie die Version direkt oder entfernen Sie die Deklaration. Das Entfernen zieht alle deklarierten Versionen dieser Anwendung zurück.
 
-**Hinzufügen** (`infrastructure:member`) öffnet eine Suche, in der Sie mehrere Anwendungen ankreuzen und in einem Schritt hinzufügen können. Sie werden mit unbekannter Version deklariert: Tragen Sie sie danach in jeder Zeile ein. Deaktivierte Anwendungen und Bereitstellungen zählen nicht.
+**Hinzufügen** (`infrastructure:member`) öffnet eine Suche, in der Sie mehrere Anwendungen ankreuzen können, und fragt dann nach ihrer Version: Wählen Sie eine aus, geben Sie eine neue ein oder wählen Sie **Version unbekannt**. Alle werden mit dieser Version deklariert. Klicken Sie auf die Version einer deklarierten Zeile, um sie zu ändern. Deaktivierte Anwendungen und Bereitstellungen zählen nicht.
 
 **Exportieren** lädt die Zeilen als CSV- oder Excel-Datei herunter, in der Sprache Ihres Bildschirms.
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -469,6 +469,162 @@ describe('AuditLogsPage', () => {
     });
     // Accents and case aside, as the server folds a search.
     expect(auditTablesMatchingSearch('societes', i18n.getFixedT('fr', 'admin') as any)).toContain('companies');
+  });
+
+  const ctxId = '33333333-3333-4333-8333-333333333333';
+  const costCenterId = '44444444-4444-4444-8444-444444444444';
+
+  function exportEntry(resource: string, path: string, query: Record<string, unknown>, format: string) {
+    return auditRow({
+      id: `export-${resource}`,
+      table_name: 'export',
+      action: 'export',
+      after_json: { resource, path, query, format, rows: 4 },
+    });
+  }
+
+  async function openExport(entry: Record<string, any>) {
+    getMock.mockResolvedValue({ data: entry } as any);
+    renderPage();
+    act(() => {
+      grid.props?.onCellClicked({ data: entry });
+    });
+    const dialog = await screen.findByRole('dialog');
+    await within(dialog).findByText(/^(Exported|Exporté) ?:/);
+    return dialog;
+  }
+
+  it('names a budget file export and folds the route under the raw data', async () => {
+    const entry = exportEntry(
+      'budget-lines/budget-file',
+      '/budget-lines/budget-file/export',
+      {
+        amountYears: '2025,2026',
+        columns: 'budget,forecast,actual',
+        ctx: ctxId,
+        detail: 'yearly',
+        filters: JSON.stringify({
+          status: { filterType: 'set', values: ['enabled'] },
+          name: { filterType: 'text', type: 'contains', filter: 'Acme' },
+        }),
+        format: 'xlsx',
+        language: 'en',
+        q: 'hosting',
+      },
+      'xlsx',
+    );
+    const parameters = [
+      'Years: 2025, 2026',
+      'Columns: Budget, Forecast, Actuals',
+      'Detail: Yearly totals',
+      'Status: Enabled',
+      'Name: Acme',
+      'Format: Excel (.xlsx)',
+      'Language: English',
+      'Search: hosting',
+    ].join(' ');
+
+    const dialog = await openExport(entry);
+    expect(within(dialog).getByText('Exported: Budget file')).toBeTruthy();
+    expect(within(dialog).getByText('Budget file')).toBeTruthy();
+    expect(within(dialog).getByText(parameters)).toBeTruthy();
+    expect(within(dialog).getByText('Excel (.xlsx)')).toBeTruthy();
+    expect(within(dialog).queryByText('Route')).toBeNull();
+    expect(dialog.textContent).not.toContain('/budget-lines/budget-file/export');
+    expect(dialog.textContent).not.toContain(ctxId);
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'View raw data' }));
+    const raw = Array.from(dialog.querySelectorAll('pre'), (node) => node.textContent).join('\n');
+    expect(raw).toContain('/budget-lines/budget-file/export');
+    expect(raw).toContain(ctxId);
+
+    cleanup();
+    await i18n.changeLanguage('fr');
+    const french = await openExport(entry);
+    expect(within(french).getByText('Exporté : Fichier budgétaire')).toBeTruthy();
+    expect(within(french).getByText('Fichier budgétaire')).toBeTruthy();
+    expect(within(french).getByText([
+      'Années : 2025, 2026',
+      'Colonnes : Budget, Prévision, Réalisé',
+      'Détail : Totaux annuels',
+      'Statut : Activé',
+      'Nom : Acme',
+      'Format : Excel (.xlsx)',
+      'Langue : English',
+      'Recherche : hosting',
+    ].join(' '))).toBeTruthy();
+    expect(within(french).queryByText('Route')).toBeNull();
+    expect(french.textContent).not.toContain('/budget-lines/budget-file/export');
+    fireEvent.click(within(french).getByRole('button', { name: 'Voir les données brutes' }));
+    expect(Array.from(french.querySelectorAll('pre'), (node) => node.textContent).join('\n')).toContain('/budget-lines/budget-file/export');
+  });
+
+  it('names a report export and keeps an identifier out of the parameter text', async () => {
+    const entry = exportEntry(
+      'reports/budget/top-lines',
+      '/reports/budget/top-lines/export',
+      {
+        costCenter: costCenterId,
+        ctx: ctxId,
+        format: 'csv',
+        language: 'fr',
+        measure: 'amount',
+        metric: 'budget',
+        runBuild: 'run',
+        scope: 'opex',
+        top: '10',
+        tz: 'Europe/Paris',
+        year: '2026',
+      },
+      'csv',
+    );
+    const parameters = [
+      'Cost center: Identifier',
+      'Format: CSV',
+      'Language: Français',
+      'Measure: Amount',
+      'Metric: Budget',
+      'Run or build: Run',
+      'Scope: OPEX',
+      'Top count: 10',
+      'Time zone: Europe/Paris',
+      'Year: 2026',
+    ].join(' ');
+
+    const dialog = await openExport(entry);
+    expect(within(dialog).getByText('Exported: Top lines report')).toBeTruthy();
+    expect(within(dialog).getByText('Top lines report')).toBeTruthy();
+    expect(within(dialog).getByText(parameters)).toBeTruthy();
+    expect(within(dialog).getByTitle(costCenterId)).toBeTruthy();
+    expect(within(dialog).queryByTitle(ctxId)).toBeNull();
+    expect(dialog.textContent).not.toContain(costCenterId);
+    expect(dialog.textContent).not.toContain(ctxId);
+    expect(within(dialog).queryByText('Route')).toBeNull();
+    expect(dialog.textContent).not.toContain('/reports/budget/top-lines/export');
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'View raw data' }));
+    expect(Array.from(dialog.querySelectorAll('pre'), (node) => node.textContent).join('\n')).toContain('/reports/budget/top-lines/export');
+
+    cleanup();
+    await i18n.changeLanguage('fr');
+    const french = await openExport(entry);
+    expect(within(french).getByText('Exporté : Rapport du top lignes')).toBeTruthy();
+    expect(within(french).getByText('Rapport du top lignes')).toBeTruthy();
+    expect(within(french).getByText([
+      'Centre de coûts : Identifiant',
+      'Format : CSV',
+      'Langue : Français',
+      'Mesure : Montant',
+      'Métrique : Budget',
+      'Run ou build : Run',
+      'Périmètre : OPEX',
+      'Nombre de premiers : 10',
+      'Fuseau horaire : Europe/Paris',
+      'Année : 2026',
+    ].join(' '))).toBeTruthy();
+    expect(within(french).getByTitle(costCenterId)).toBeTruthy();
+    expect(french.textContent).not.toContain(costCenterId);
+    expect(french.textContent).not.toContain(ctxId);
   });
 
   it('has every audit log text in the four languages', () => {

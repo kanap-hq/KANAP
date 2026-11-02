@@ -1,4 +1,6 @@
+import { ForbiddenException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { codedForbidden } from '../auth/module-right-required';
 
 /**
  * Who is looking at the incident register. `isAdmin` means incidents:admin
@@ -29,6 +31,11 @@ export const INCIDENT_FROZEN_STATUSES: ReadonlySet<string> = new Set(['closed', 
 
 /** The single refusal message for every write blocked by the closure freeze. */
 export const INCIDENT_LOCKED_MESSAGE = 'This incident is closed. Reopen it to make changes.';
+
+/** 403 `INCIDENT_LOCKED`: a closed or cancelled incident refuses every write until reopened. */
+export function incidentLocked(): ForbiddenException {
+  return codedForbidden('INCIDENT_LOCKED', INCIDENT_LOCKED_MESSAGE);
+}
 
 export function isFrozenIncidentStatus(status: string | null | undefined): boolean {
   return INCIDENT_FROZEN_STATUSES.has(String(status ?? ''));

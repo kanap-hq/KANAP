@@ -1,5 +1,6 @@
 // @database-spec
 import 'dotenv/config';
+import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { AssetClusterMember } from '../asset-cluster-member.entity';
@@ -32,15 +33,23 @@ function services(runner: QueryRunner) {
   return { settings, validation, crud, list };
 }
 
+/** A site for the tenant: every asset has one. */
+async function site(runner: QueryRunner, tenantId: string): Promise<string> {
+  const id = randomUUID();
+  await runner.query(`INSERT INTO locations (id, tenant_id, location_reference, name, hosting_type) VALUES ($1, $2, 'LOC-0', 'Site', 'on_prem')`, [id, tenantId]);
+  return id;
+}
+
 async function testWriteAndList() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'asset-adz');
+    const location_id = await site(runner, tenantId);
     const { settings, crud, list } = services(runner);
     const opts = { manager: runner.manager, tenantId };
     const saved = await settings.updateSettings(tenantId, { adminZones: [{ label: 'Tier 0' }, { label: 'Tier 1' }] as any }, { manager: runner.manager });
 
     const created = await crud.create(
-      { name: 'dc1', kind: 'physical_server', provider: 'other', environment: 'prod', admin_zone: 'Tier 0' },
+      { name: 'dc1', kind: 'physical_server', provider: 'other', environment: 'prod', admin_zone: 'Tier 0', location_id },
       tenantId,
       null,
       opts,
@@ -53,13 +62,13 @@ async function testWriteAndList() {
     assert.equal((await crud.get(created.id, opts)).admin_zone, 'tier_1');
 
     const other = await crud.create(
-      { name: 'app1', kind: 'physical_server', provider: 'other', environment: 'prod', admin_zone: 'tier_0' },
+      { name: 'app1', kind: 'physical_server', provider: 'other', environment: 'prod', admin_zone: 'tier_0', location_id },
       tenantId,
       null,
       opts,
     );
     await crud.create(
-      { name: 'bare', kind: 'physical_server', provider: 'other', environment: 'prod' },
+      { name: 'bare', kind: 'physical_server', provider: 'other', environment: 'prod', location_id },
       tenantId,
       null,
       opts,
@@ -90,10 +99,10 @@ async function testTenantIsolation() {
     const a = await seedTenant(runner, 'asset-adz-a');
     const { crud, list } = services(runner);
     await services(runner).settings.updateSettings(a, { adminZones: [{ label: 'Tier 0' }] as any }, { manager: runner.manager });
-    await crud.create({ name: 'ours', kind: 'physical_server', provider: 'other', environment: 'prod', admin_zone: 'tier_0' }, a, null, { manager: runner.manager, tenantId: a });
+    await crud.create({ name: 'ours', kind: 'physical_server', provider: 'other', environment: 'prod', admin_zone: 'tier_0', location_id: await site(runner, a) }, a, null, { manager: runner.manager, tenantId: a });
     const b = await seedTenant(runner, 'asset-adz-b');
     await services(runner).settings.updateSettings(b, { adminZones: [{ label: 'Tier 0' }] as any }, { manager: runner.manager });
-    await crud.create({ name: 'theirs', kind: 'physical_server', provider: 'other', environment: 'prod', admin_zone: 'tier_0' }, b, null, { manager: runner.manager, tenantId: b });
+    await crud.create({ name: 'theirs', kind: 'physical_server', provider: 'other', environment: 'prod', admin_zone: 'tier_0', location_id: await site(runner, b) }, b, null, { manager: runner.manager, tenantId: b });
     await setTenant(runner, a);
     const result = await list.list({ filters: JSON.stringify({ admin_zone: { filterType: 'set', values: ['tier_0'] } }), limit: 50 }, { manager: runner.manager, tenantId: a });
     assert.deepEqual(result.items.map((row: any) => row.name), ['ours']);

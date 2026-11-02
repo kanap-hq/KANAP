@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { randomUUID } from 'node:crypto';
 import * as assert from 'node:assert/strict';
 import { NotFoundException } from '@nestjs/common';
 import dataSource from '../../data-source';
@@ -54,8 +55,10 @@ async function run() {
       const remove = new AssetsDeleteService(repo, audit as any);
       const opts = { manager: runner.manager, tenantId };
 
+      const siteId = randomUUID();
+      await runner.query(`INSERT INTO locations (id, tenant_id, location_reference, name, hosting_type) VALUES ($1, $2, 'LOC-0', 'Site', 'on_prem')`, [siteId, tenantId]);
       const created = await crud.create(
-        { name: 'Edge', kind: 'vm', provider: 'other', environment: 'prod' } as any,
+        { name: 'Edge', kind: 'vm', provider: 'other', environment: 'prod', location_id: siteId } as any,
         tenantId,
         null,
         opts,

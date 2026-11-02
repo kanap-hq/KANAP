@@ -81,6 +81,8 @@ const wire = {
   clusters: [] as unknown[],
   members: [] as unknown[],
   deploymentServers: [] as unknown[],
+  /** The deployments of CheeseTrack (`GET /applications/app-1?include=instances`). */
+  instances: [{ id: 'dep-1', environment: 'prod' }] as Array<{ id: string; environment: string }>,
 };
 
 const direct = {
@@ -98,7 +100,7 @@ function renderOperations(tab = 'operations') {
     if (url === '/assets/asset-1/assignments') return { data: wire.assignments.items };
     if (url === '/assets/asset-1/assignments/groupable') return { data: { items: wire.assignments.groupable } };
     if (url === '/assets/sql-2/assignments') return { data: wire.memberRows };
-    if (url === '/applications/app-1') return { data: { id: 'app-1', name: 'CheeseTrack', instances: [{ id: 'dep-1', environment: 'prod' }] } };
+    if (url === '/applications/app-1') return { data: { id: 'app-1', name: 'CheeseTrack', instances: wire.instances } };
     if (url === '/applications/app-1/deployment-servers') return { data: { items: wire.deploymentServers, groupable: [] } };
     if (url === '/assets/asset-1/clusters') return { data: { items: wire.clusters } };
     if (url === '/assets/asset-1/members') return { data: { items: wire.members } };
@@ -149,6 +151,7 @@ describe('Asset workspace: assignments and clusters', () => {
     wire.clusters = [];
     wire.members = [];
     wire.deploymentServers = [];
+    wire.instances = [{ id: 'dep-1', environment: 'prod' }];
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: false, media: query, addListener: () => undefined, removeListener: () => undefined,
       addEventListener: () => undefined, removeEventListener: () => undefined, dispatchEvent: () => false,
@@ -205,6 +208,37 @@ describe('Asset workspace: assignments and clusters', () => {
     expect(within(dialog).getByText('The direct assignment of PAR-SQL-02 will be replaced.')).toBeTruthy();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Assign to the cluster' }));
     await waitFor(() => expect(post).toHaveBeenCalledWith('/app-instances/dep-1/assets', expect.objectContaining({ server_id: 'cl-1', role: 'db' })));
+  });
+
+  it('creates the deployment an application lacks, then assigns the server to it', async () => {
+    wire.instances = [];
+    post.mockImplementation(async (url: string) => (
+      url === '/applications/app-1/deployments' ? { data: { id: 'dep-new', environment: 'dev' } } : { data: { absorbed: [] } }
+    ));
+    renderOperations();
+    fireEvent.click(await screen.findByRole('button', { name: 'Add assignment' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Deployment')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'pick-application' }));
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/applications/app-1', expect.anything()));
+    fireEvent.mouseDown(within(dialog).getAllByRole('combobox')[0]);
+    fireEvent.click(await screen.findByRole('option', { name: '+ Create the Dev deployment' }));
+    expect(post).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Assign' }));
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/app-instances/dep-new/assets', expect.objectContaining({ server_id: 'asset-1' })));
+    expect(post.mock.calls[0]).toEqual(['/applications/app-1/deployments', { environment: 'dev' }]);
+  });
+
+  it('offers to create only the deployments the application does not have', async () => {
+    renderOperations();
+    fireEvent.click(await screen.findByRole('button', { name: 'Add assignment' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'pick-application' }));
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/applications/app-1', expect.anything()));
+    fireEvent.mouseDown(within(dialog).getAllByRole('combobox')[0]);
+    expect(await screen.findByRole('option', { name: 'Prod' })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: '+ Create the Prod deployment' })).toBeNull();
+    expect(screen.getByRole('option', { name: '+ Create the Sandbox deployment' })).toBeTruthy();
   });
 
   it('assigns this server alone on "This server only"', async () => {

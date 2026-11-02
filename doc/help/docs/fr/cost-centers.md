@@ -160,7 +160,7 @@ Le bouton **Supprimer** (icône corbeille) de l'en-tête supprime l'élément ap
 
 ## Les centres de coûts sur les lignes budgétaires
 
-- **OPEX et CAPEX** : le champ **Centre de coûts** du panneau **Propriétés** présente l'arbre. Les groupes s'affichent pour vous aider à vous repérer et ne peuvent pas être choisis. Lorsque vous créez une ligne et que la société payeuse est vide, choisir un centre de coûts la remplit avec la société du centre de coûts, et la société suit le centre de coûts jusqu'à ce que vous choisissiez vous-même une société ou un compte. Lorsque les deux sociétés diffèrent, les deux sont conservées et une indication le signale. Voir [Lignes budgétaires](budget-lines.md).
+- **OPEX et CAPEX** : le champ **Centre de coûts** du panneau **Propriétés** présente l'arbre. Les groupes s'affichent pour vous aider à vous repérer et ne peuvent pas être choisis. Lorsque la société payeuse est vide, choisir un centre de coûts la remplit avec la société du centre de coûts. Lorsque les deux sociétés diffèrent, les deux sont conservées et une indication le signale. Voir [Lignes budgétaires](budget-lines.md).
 - **Liste** : les colonnes et filtres **Centre de coûts** et **Run ou build** de la liste des lignes budgétaires.
 - **Rapports** : les rapports budgétaires peuvent être filtrés sur un centre de coûts ou un groupe. Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](reports.md#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques).
 

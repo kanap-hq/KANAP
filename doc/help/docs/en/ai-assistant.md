@@ -16,8 +16,19 @@ Plaid does not replace the rest of the application. It is a faster way to summar
 
 The workspace is also available to administrators with `ai_chat:admin`, who can see and moderate everything regular users do.
 
-!!! note "Waiting for an administrator"
-    On the hosted service, Plaid can run on the KANAP included model. Before it does, an administrator confirms the provider and where it processes data. Until then the workspace shows *An administrator must confirm the AI provider in Admin > Plaid.* instead of the chat. An administrator does this on the [Plaid Settings](ai-settings.md#confirming-the-kanap-included-model) page. Organizations that use a model of their own never see this notice.
+### Before the included model is accepted { #included-model-acceptance }
+
+On the hosted service, Plaid can run on the KANAP included model. Before it does, an administrator accepts the provider and where it processes data. New trial workspaces start in this state, with Plaid turned off.
+
+Until then, Plaid's page opens normally with its suggestions. A box takes the place of the message field: *I agree that {provider} ({location}) processes my questions and the data they concern for Plaid's answers. They are not used to train its models.*, followed by *Another model, or turn it off: Admin › Plaid*.
+
+- An administrator of the Plaid settings ticks the box. This turns Plaid on and records the acceptance, with who accepted and when. The message field then appears.
+- Anyone else reads *Plaid is waiting for an administrator to turn it on.*
+
+Administrators can also accept on the [Plaid Settings](ai-settings.md#confirming-the-kanap-included-model) page. Organizations that use a model of their own never see this box.
+
+!!! note "Chat turned off"
+    When an administrator turns chat off under **Administration › Plaid**, a person who may use the chat still opens this page, and the Plaid entry stays in the top navigation. The page says *Plaid is turned off for this workspace.* An administrator of the assistant also sees *Turn it on in Administration › Plaid*, which opens the Plaid settings. Anyone else sees *Ask an administrator to turn it on.* A person without the chat right sees the access denied page. While the included model waits for its acceptance, the page shows the acceptance box instead, even with chat turned off: see [Before the included model is accepted](#included-model-acceptance).
 
 ## Starting a conversation
 
@@ -28,6 +39,14 @@ When you open Plaid for the first time, you land on a welcome screen with:
 - The composer at the bottom, ready to accept your first message
 
 Click any suggestion to either send it directly, or (for prompts that contain an `@` placeholder) drop the suggestion into the composer so you can finish it.
+
+When a path was chosen for the workspace at its first opening, during the trial, the suggestions start with its two questions, among those you may read, then the usual ones, five at most:
+
+| Path | Questions |
+|---|---|
+| IT budget | *What are the main savings opportunities in IT OPEX?*, *Which budget lines have no owner?* |
+| IT landscape map | *Which technologies reach their end of support within six months?*, *Which critical applications have no recovery plan?* |
+| Projects and requests | *Which projects are over budget?*, *Which requests are waiting for a decision?* |
 
 Type a message and press **Enter** to send. **Shift+Enter** inserts a new line. The send button is disabled while there is nothing to send and morphs into a red **Stop** button while Plaid is responding.
 
@@ -53,21 +72,28 @@ Search filters the list by title as you type. Renaming and archiving are saved i
 The composer is the main control point of the workspace. It supports:
 
 - Multi-line text up to 10 visible rows before it scrolls
-- Inline image attachments (PNG, JPG, GIF, WEBP)
+- Attachments: images (PNG, JPG, GIF, WEBP) and spreadsheets (.xlsx, CSV)
 - `@`-mentions of KANAP records
 - A keyboard hint reminder ("Enter to send · Shift+Enter for new line")
 
-### Attaching images
+### Attaching images and spreadsheets
 
-You can add images in three ways:
+You can attach images (PNG, JPG, GIF, WEBP) and spreadsheets: Excel workbooks (.xlsx) and CSV files. There are three ways to add them:
 
-- Click the paperclip icon and pick files from your computer
-- Drag and drop image files onto the composer (a hint overlay confirms the drop target)
-- Paste an image directly from the clipboard
+- Click the paperclip icon (**Attach a file**) and pick files from your computer
+- Drag and drop files onto the composer (a hint overlay confirms the drop target)
+- Paste a file directly from the clipboard
 
-Each pending image appears as a thumbnail above the text. Click the small **X** on a thumbnail to remove it. There is a per-message attachment limit; once it is reached, the paperclip is disabled until you remove or send the current attachments.
+Each pending image appears as a thumbnail above the text. Each pending spreadsheet appears as a small tile with its name and size. Click the small **X** to remove one. A message holds up to 8 attachments, images and spreadsheets together. Once the limit is reached, the paperclip is disabled until you remove or send the current attachments.
 
-Images are uploaded together with your message so Plaid can describe them, compare them, or extract details.
+Images are uploaded with your message so Plaid can describe them, compare them, or extract details.
+
+KANAP reads a spreadsheet when you send the message:
+
+- A file can hold up to 5 MB and 20,000 rows. Only the first sheet of a workbook is read.
+- A file that cannot be read (damaged, empty, old .xls format, too large) is refused at once with the reason. The message is not sent.
+- Plaid receives a summary of the file: the column headers, the type of each column (text, number or date), the first ten rows and the number of rows. It can describe the file, say what each column holds and spot problems in the first rows. It cannot answer about the rows after the first ten.
+- The summary stays attached to the message for the rest of the conversation.
 
 ### Mentioning records with `@`
 
@@ -112,6 +138,8 @@ Images stored in KANAP, such as attachments, display as usual. An image hosted o
 
 Plaid uses a small set of internal tools to answer questions: `Search all`, `Search knowledge`, `Get document`, `Get entity context`, and a handful of others. Each tool call shows up as a compact line under the message ("used Search all · 8 results"). You usually do not need to read the tool details, but they are there if you want to see exactly which records the answer was based on.
 
+When you ask how to do something in KANAP, such as where a setting is or the steps of a task, Plaid reads the user manual of your KANAP version, in your language (`Browse the user manual`, `Read the user manual`). It describes the screens as the manual does and links the section it read on doc.kanap.net.
+
 `Search all` finds budget lines by the names of their analytics values, and tells Plaid which values each line holds. Plaid names a budget line by its `BL-12` reference, and its links open the line. A number alone, such as 21, means `BL-21`. The former numbers still work: `OPX-12` or `CPX-3` finds its line.
 
 Plaid reads OPEX and CAPEX lines together. A question that names neither type covers both, and Plaid can filter or group the lines by type.
@@ -130,7 +158,7 @@ Plaid names a record linked to the one you ask about only when you can read its 
 
 An administrator of users with access to all data reads with Plaid what **Admin › Roles** and **Admin › Data access** show. Plaid lists the roles, the number of people in each and the rights each role gives, with the words of the Roles screen. It says who is limited to which companies, cost centers or groups, in Read or Edit, who is limited with no node, and who sees a company. The users list also carries every role of a person and their access. Ask, for example: "Who is limited to Alpha Spain, and in which access?" or "Which roles give the Admin level on budget?" A person whose own access is limited does not read these, even as an administrator of users, and Plaid says so. Plaid changes none of them: a person's data access, their roles, the rights of a role, and creating or deactivating a person stay on the **Admin** screens. Assistants connected over MCP get the same answers.
 
-Plaid reads the [history](record-history.md) of a record, as its **History** tab shows it, for anyone who can open the record. Ask, for example: "Who changed the amounts of BL-12?" A record without a History tab, such as an application, a contract, a project, a task or an incident, has no history in KANAP: Plaid says so and does not rebuild one from other data. Assistants connected over MCP get the same answers.
+Plaid reads the [history](record-history.md) of a record, as its **History** tab shows it, for anyone who can open the record. Ask, for example: "Who changed the amounts of BL-12?" A record without a History tab, such as a user or a role, has no history in KANAP: Plaid says so and does not rebuild one from other data. Assistants connected over MCP get the same answers.
 
 When Plaid adds up budget amounts, a line whose currency has no exchange rate for the year is left out of the sum. Plaid then says which currencies and years it left out. Assistants connected over MCP get the same answer.
 
@@ -241,12 +269,11 @@ Nothing that mutates KANAP data is applied silently. The preview is the gate.
 
 ## Usage indicators
 
-Above the composer, two small indicators help you stay aware of cost and limits:
+Above the composer, a small indicator shows how much of the included monthly volume remains:
 
 - **Built-in usage**: when Plaid is running on the KANAP included model rather than one of your organization's own models, this shows how many messages remain in the current month and the date the quota resets. An administrator has confirmed that model beforehand (see [Plaid Settings](ai-settings.md#confirming-the-kanap-included-model)). When the limit is reached, the composer is disabled and a helper text invites administrators to switch to a model of their own; see [AI models](ai-models.md).
-- **Token usage**: a thin bar with input/output token counters for the current conversation, plus the size of the last request. Long conversations get more expensive over time; the bar makes that cost visible so you can decide when to start a fresh thread.
 
-The token usage bar only appears once the conversation has at least one exchange.
+People who can open **Admin > Plaid** also see a thin bar under the composer, once the conversation has at least one exchange. **Volume processed** adds the input and output tokens of every message in this conversation. Each question resends the earlier messages, so the volume grows faster than the number of turns. **Context of the last request** is the input of the latest question. The bar also shows the input tokens and the output tokens of the conversation.
 
 ## Tips
 

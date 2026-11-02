@@ -2,6 +2,7 @@ import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AiWorkspacePage from './AiWorkspacePage';
 import { aiConversationsApi } from '../../ai/aiApi';
@@ -47,20 +48,25 @@ vi.mock('../../ai/useAiCapabilities', () => ({
   useAiCapabilities: () => capabilitiesState,
 }));
 
-function chatCapabilities(reasons: string[]) {
+function chatCapabilities(reasons: string[], settingsAvailable = false) {
   return {
-    instance_features: { ai_chat: true, ai_mcp: false, ai_settings: false, ai_web_search: false },
+    instance_features: { ai_chat: true, ai_mcp: false, ai_settings: settingsAvailable, ai_web_search: false },
     surfaces: {
       chat: {
         feature_enabled: true,
-        tenant_enabled: true,
+        tenant_enabled: !reasons.includes('tenant_disabled'),
         permission_granted: true,
         provider_ready: !reasons.includes('builtin_not_accepted'),
         available: reasons.length === 0,
         reasons,
       },
       mcp: { feature_enabled: false, tenant_enabled: false, permission_granted: false, provider_ready: false, available: false, reasons: [] },
-      settings: { feature_enabled: false, permission_granted: false, available: false, reasons: [] },
+      settings: {
+        feature_enabled: settingsAvailable,
+        permission_granted: settingsAvailable,
+        available: settingsAvailable,
+        reasons: [],
+      },
     },
     builtin_confirmation_needed: reasons.includes('builtin_not_accepted'),
   };
@@ -69,6 +75,14 @@ function chatCapabilities(reasons: string[]) {
 vi.mock('../../ai/useChat', () => ({
   MAX_PENDING_ATTACHMENTS: 5,
   useChat: () => chatState,
+}));
+
+vi.mock('../../components/onboarding/PlaidConsent', () => ({
+  default: () => <div>consent box</div>,
+}));
+
+vi.mock('../../components/onboarding/useOnboarding', () => ({
+  useOnboarding: () => ({ state: undefined }),
 }));
 
 vi.mock('../../components/PageHeader', () => ({
@@ -123,6 +137,10 @@ vi.mock('../../ai/aiApi', () => ({
   },
 }));
 
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({ hasLevel: () => true }),
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -134,17 +152,22 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-function renderPage(client: QueryClient) {
-  const theme = createAppTheme('light');
-  return render(
-    <ThemeProvider theme={theme}>
-      <QueryClientProvider client={client}>
-        <KanapDialogProvider>
-          <AiWorkspacePage />
-        </KanapDialogProvider>
-      </QueryClientProvider>
-    </ThemeProvider>,
+function pageTree(client: QueryClient) {
+  return (
+    <MemoryRouter>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <QueryClientProvider client={client}>
+          <KanapDialogProvider>
+            <AiWorkspacePage />
+          </KanapDialogProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </MemoryRouter>
   );
+}
+
+function renderPage(client: QueryClient) {
+  return render(pageTree(client));
 }
 
 function createLocalStorageMock(): Storage {
@@ -260,8 +283,8 @@ describe('AiWorkspacePage', () => {
     expect(screen.getByText('workspace.messages.disabled')).toBeInTheDocument();
   });
 
-  it('says an administrator must confirm the AI provider when only that holds the assistant back', () => {
-    capabilitiesState = { data: chatCapabilities(['builtin_not_accepted']) };
+  it('says Plaid is turned off and links an administrator of the assistant to Administration › Plaid', () => {
+    capabilitiesState = { data: chatCapabilities(['tenant_disabled'], true) };
     const client = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -271,7 +294,46 @@ describe('AiWorkspacePage', () => {
 
     renderPage(client);
 
-    expect(screen.getByText('workspace.messages.builtinNotAccepted')).toBeInTheDocument();
+    expect(screen.getByText('workspace.messages.disabled')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'workspace.messages.tenantDisabledAdminLink' })).toHaveAttribute('href', '/admin/ai');
+    expect(screen.queryByText('workspace.messages.tenantDisabledAskAdmin')).not.toBeInTheDocument();
+    expect(screen.queryByText('Send message')).not.toBeInTheDocument();
+  });
+
+  it('says Plaid is turned off without a settings link when the person cannot administer the assistant', () => {
+    capabilitiesState = { data: chatCapabilities(['tenant_disabled']) };
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    renderPage(client);
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('workspace.messages.disabled');
+    expect(alert).toHaveTextContent('workspace.messages.tenantDisabledAskAdmin');
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.queryByText('Send message')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [['builtin_not_accepted']],
+    [['tenant_disabled', 'builtin_not_accepted']],
+  ])('opens the chat with the acceptance box in place of the composer while the included model waits (%j)', (reasons) => {
+    capabilitiesState = { data: chatCapabilities(reasons) };
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    renderPage(client);
+
+    expect(screen.getByText('consent box')).toBeInTheDocument();
+    expect(screen.getByText('workspace.empty.title')).toBeInTheDocument();
     expect(screen.queryByText('Send message')).not.toBeInTheDocument();
   });
 
@@ -285,7 +347,7 @@ describe('AiWorkspacePage', () => {
 
     renderPage(client);
 
-    expect(screen.queryByText('workspace.messages.builtinNotAccepted')).not.toBeInTheDocument();
+    expect(screen.queryByText('consent box')).not.toBeInTheDocument();
     expect(screen.getByText('Send message')).toBeInTheDocument();
   });
 
@@ -306,7 +368,7 @@ describe('AiWorkspacePage', () => {
     expect(chatState.sendMessage).toHaveBeenCalledWith('hello from mock');
   });
 
-  it('renders the token usage bar only when conversation usage exists', () => {
+  it('shows the token usage bar to an assistant administrator when conversation usage exists', () => {
     const client = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -314,6 +376,7 @@ describe('AiWorkspacePage', () => {
       },
     });
 
+    capabilitiesState = { data: chatCapabilities([], true) };
     chatState.messages = [{ id: 'msg-1', role: 'assistant', content: 'Hello' }];
     chatState.conversationUsage = { input_tokens: 12, output_tokens: 4 };
     chatState.lastRequestUsage = { input_tokens: 7, output_tokens: 2 };
@@ -321,6 +384,24 @@ describe('AiWorkspacePage', () => {
     renderPage(client);
 
     expect(screen.getByTestId('token-usage-bar')).toHaveTextContent('12/4/7');
+  });
+
+  it('hides the token usage bar from a user without the AI administration right', () => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    capabilitiesState = { data: chatCapabilities([]) };
+    chatState.messages = [{ id: 'msg-1', role: 'assistant', content: 'Hello' }];
+    chatState.conversationUsage = { input_tokens: 12, output_tokens: 4 };
+    chatState.lastRequestUsage = { input_tokens: 7, output_tokens: 2 };
+
+    renderPage(client);
+
+    expect(screen.queryByTestId('token-usage-bar')).not.toBeInTheDocument();
   });
 
   it('hides the token usage bar when no conversation usage is available', () => {
@@ -331,6 +412,7 @@ describe('AiWorkspacePage', () => {
       },
     });
 
+    capabilitiesState = { data: chatCapabilities([], true) };
     chatState.messages = [{ id: 'msg-1', role: 'assistant', content: 'Hello' }];
     chatState.conversationUsage = null;
     chatState.lastRequestUsage = null;
@@ -429,15 +511,7 @@ describe('AiWorkspacePage', () => {
       },
     ];
 
-    view.rerender(
-      <ThemeProvider theme={createAppTheme('light')}>
-        <QueryClientProvider client={client}>
-          <KanapDialogProvider>
-            <AiWorkspacePage />
-          </KanapDialogProvider>
-        </QueryClientProvider>
-      </ThemeProvider>,
-    );
+    view.rerender(pageTree(client));
 
     await waitFor(() => {
       expect(screen.getByTestId('artifact-panel')).toHaveTextContent('preview-1');

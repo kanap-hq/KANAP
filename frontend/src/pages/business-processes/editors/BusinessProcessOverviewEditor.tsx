@@ -14,6 +14,7 @@ import {
 import BusinessProcessCategoryMultiSelect from '../../../components/fields/BusinessProcessCategoryMultiSelect';
 import UserSelect from '../../../components/fields/UserSelect';
 import StatusSwitch from '../../../components/fields/StatusSwitch';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
 export type BusinessProcessOverviewEditorHandle = {
   isDirty: () => boolean;
@@ -92,7 +93,7 @@ export default forwardRef<BusinessProcessOverviewEditorHandle, Props>(function B
         onDirtyChange?.(false);
       } catch (e: any) {
         if (!active) return;
-        const msg = e?.response?.data?.message || e?.message || t('shared.messages.failedToLoad', { entity: t('businessProcesses.entity') });
+        const msg = getApiErrorMessage(e, t, t('shared.messages.failedToLoad', { entity: t('businessProcesses.entity') }));
         setServerError(msg);
       } finally {
         if (active) setLoading(false);
@@ -133,7 +134,7 @@ export default forwardRef<BusinessProcessOverviewEditorHandle, Props>(function B
         // A name another business process has: the reason shows under the name.
         form.setError('name', { type: 'server', message: t('businessProcesses.fields.nameTaken') });
       } else {
-        const msg = e?.response?.data?.message || e?.message || t('shared.messages.failedToSave', { entity: t('businessProcesses.entity') });
+        const msg = getApiErrorMessage(e, t, t('shared.messages.failedToSave', { entity: t('businessProcesses.entity') }));
         setServerError(msg);
       }
       throw e;

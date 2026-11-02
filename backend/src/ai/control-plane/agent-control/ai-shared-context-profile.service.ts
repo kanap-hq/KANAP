@@ -198,6 +198,26 @@ export class AiSharedContextProfileService {
     return { profile: serializeProfile(saved) };
   }
 
+  async restore(context: AiExecutionContextWithManager, id: string): Promise<{ profile: Record<string, unknown> }> {
+    const repo = context.manager.getRepository(AiSharedContextProfile);
+    const profile = await repo.findOne({ where: { id, tenant_id: context.tenantId } });
+    if (!profile) {
+      throw new NotFoundException('Shared context profile not found.');
+    }
+    // An active profile is already in the state restore would reach. A second
+    // call leaves the version and the audit trail unchanged.
+    if (profile.status === 'active') {
+      return { profile: serializeProfile(profile) };
+    }
+    profile.status = 'active';
+    profile.config_version = Math.max(1, Number(profile.config_version) || 1) + 1;
+    profile.updated_by_user_id = context.userId || null;
+    profile.updated_at = new Date();
+    const saved = await repo.save(profile);
+    await this.recordAuditEvent(context, 'shared_context_profile_restored', `Shared context profile ${saved.name} was restored.`, saved);
+    return { profile: serializeProfile(saved) };
+  }
+
   async resolveForAgent(
     context: AiExecutionContextWithManager,
     definition: AiAgentDefinition | null,

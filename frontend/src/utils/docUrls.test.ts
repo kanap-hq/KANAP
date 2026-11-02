@@ -43,7 +43,7 @@ describe('getDocUrl', () => {
   });
 
   it('keeps the overview and falls back to the docs home', () => {
-    expect(getDocUrl('/ops')).toBe('https://doc.kanap.net/operations-dashboard/');
+    expect(getDocUrl('/ops')).toBe('https://doc.kanap.net/my-dashboard/');
     expect(getDocUrl('/ops/budgets')).toBe('https://doc.kanap.net/');
   });
 });

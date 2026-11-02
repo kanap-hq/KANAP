@@ -11,7 +11,8 @@ import { stripKnowledgeAccents } from './agent-control-knowledge.util';
 import { cleanAgentPriority, metadataObject, trimmedString } from './agent-control-util';
 import { PlannerAction } from './ai-agent-action-planner.service';
 import { VerbatimCandidate } from './ai-agent-prompt-compiler.service';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
+import { codedForbidden } from '../../../auth/module-right-required';
 
 /**
  * Agent definition normalisation: persona, response policy, scope policy, allowed
@@ -339,7 +340,7 @@ export function normalizeAllowedCapabilitiesForConfig(value: unknown, agentType:
     }
     const maxCap = possibleCaps.get(name);
     if (!maxCap) {
-      throw new ForbiddenException(`Capability ${name} is not available for this agent type.`);
+      throw codedForbidden('AGENT_CAPABILITY_NOT_ALLOWED', `Capability ${name} is not available for this agent type.`);
     }
     const requestedLevel = isRecord(entry) && typeof entry.max_autonomy_level === 'string'
       ? entry.max_autonomy_level
@@ -347,7 +348,7 @@ export function normalizeAllowedCapabilitiesForConfig(value: unknown, agentType:
     const requestedRank = autonomyLevelRank(requestedLevel);
     const maxRank = autonomyLevelRank(maxCap);
     if (requestedRank === null || maxRank === null || requestedRank > maxRank) {
-      throw new ForbiddenException(`Capability ${name} cannot exceed ${maxCap}.`);
+      throw codedForbidden('AGENT_CAPABILITY_LIMIT', `Capability ${name} cannot exceed ${maxCap}.`, { max: maxCap });
     }
     if (!seen.has(name)) {
       seen.add(name);

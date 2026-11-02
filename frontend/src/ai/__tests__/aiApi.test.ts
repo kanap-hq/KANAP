@@ -47,6 +47,31 @@ describe('streamChat', () => {
     expect(reader.releaseLock).toHaveBeenCalledTimes(1);
   });
 
+  it('shows a coded refusal of the chat endpoint in the language of the screen', async () => {
+    const body = { statusCode: 403, error: 'Forbidden', code: 'AI_CHAT_DISABLED', message: 'AI chat is disabled for this tenant.' };
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false,
+      status: 403,
+      text: async () => JSON.stringify(body),
+    })));
+
+    const iterator = streamChat({ message: 'hello' });
+    const refusal = await iterator.next().then(() => null, (error: Error & { code?: string | null }) => error);
+    expect(refusal?.code).toBe('AI_CHAT_DISABLED');
+    expect(refusal?.message).toBe('Plaid is turned off for this workspace. An administrator can turn it on in Admin > Plaid.');
+  });
+
+  it('keeps the message of an answer with no code of its own', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false,
+      status: 400,
+      text: async () => JSON.stringify({ statusCode: 400, message: 'The message is empty.' }),
+    })));
+
+    const refusal = await streamChat({ message: '' }).next().then(() => null, (error: Error) => error);
+    expect(refusal?.message).toBe('The message is empty.');
+  });
+
   it('sends the time zone the chat provides', async () => {
     const reader = createReader(['{"type":"done"}\n']);
     let sentBody: any = null;

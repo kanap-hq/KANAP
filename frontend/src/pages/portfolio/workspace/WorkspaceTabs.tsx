@@ -29,7 +29,10 @@ export default function WorkspaceTabs({ tabs, activeTab, onTabChange, ariaLabel 
         minHeight: 'auto',
         overflow: 'visible',
         '& .MuiTabs-indicator': { display: 'none' },
-        '& .MuiTabs-scroller': { overflow: 'visible !important' },
+        // A row too wide for its room scrolls; the arrow toward its start stays out until there
+        // is something to scroll back to, so the first tab keeps its place under the title.
+        '& .MuiTabs-scrollButtons': { width: 24, flexShrink: 0, pt: '10px', pb: '9px' },
+        '& .MuiTabs-scrollButtons.Mui-disabled': { display: 'none' },
         '& .MuiTabs-flexContainer': { overflow: 'visible', pt: '10px' },
       }}
     >

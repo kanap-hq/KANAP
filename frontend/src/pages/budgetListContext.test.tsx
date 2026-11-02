@@ -258,7 +258,7 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     renderAt('/ops/budget');
     await waitFor(() => expect(calls(TOTALS)).toHaveLength(1), { timeout: 10_000 });
     const footer = (colId: string) => document.querySelector(`.ag-floating-bottom [col-id="${colId}"]`)?.textContent ?? null;
-    await waitFor(() => expect(footer('yBudget')).toBe('1 234'), { timeout: 10_000 });
+    await waitFor(() => expect(footer('yBudget')).toBe('1,234'), { timeout: 10_000 });
     // A column shown whose total was never asked: the previous totals stay on screen meanwhile,
     // without it.
     slow = true;
@@ -266,9 +266,9 @@ describe('OPEX list: list contexts, lean rows, footer amounts', () => {
     await waitFor(() => expect(calls(TOTALS)).toHaveLength(2), { timeout: 10_000 });
     expect(paramsOf(calls(TOTALS)[1]).amounts.split(',')).toContain('yRevision');
     await waitFor(() => expect(footer('yRevision')).toBe('…'), { timeout: 10_000 });
-    expect(footer('yBudget')).toBe('1 234');
+    expect(footer('yBudget')).toBe('1,234');
     await act(async () => { releases.forEach((release) => release()); });
-    await waitFor(() => expect(footer('yRevision')).toBe('1 234'), { timeout: 10_000 });
+    await waitFor(() => expect(footer('yRevision')).toBe('1,234'), { timeout: 10_000 });
   }, 30_000);
   it('the real grid opens on an address nature as its Type column filter', async () => {
     const model = { nature: { filterType: 'set', values: ['capex'] } };

@@ -402,6 +402,15 @@
       "skillsMatrix": "Matrice de compétences",
       "workingDayCalendars": "Calendriers de jours ouvrés"
     },
+    "exportParams": {
+      "filters": "Filtres",
+      "includeDisabled": "Inclure les lignes terminées",
+      "q": "Recherche",
+      "scope": "Périmètre",
+      "sort": "Tri",
+      "table": "Table",
+      "tz": "Fuseau horaire"
+    },
     "fields": {
       "access_methods": "Modes d’accès",
       "account_id": "Compte",
@@ -706,6 +715,11 @@
       "authentication_mode": "Authentification",
       "monitoring_url": "URL de supervision",
       "env_notes": "Notes d'environnement",
+      "rule_key": "Clé de règle",
+      "operation_kind": "Opération",
+      "environment_scope": "Environnements",
+      "implementation_status": "Statut d'implémentation",
+      "test_status": "Statut de test",
       "integration_tool_application_id": "Outil d'intégration",
       "duration_months": "Durée (mois)",
       "auto_renewal": "Reconduction tacite",
@@ -805,6 +819,17 @@
         "contentChanged": "Contenu modifié",
         "workingDaysChanged": "Jours ouvrés modifiés",
         "notesChanged": "Notes modifiées",
+        "emailChanged": "E-mail modifié",
+        "phoneChanged": "Téléphone modifié",
+        "mobileChanged": "Mobile modifié",
+        "conditionChanged": "Condition modifiée",
+        "businessRuleChanged": "Règle métier modifiée",
+        "middlewareRuleChanged": "Règle de middleware modifiée",
+        "remarksChanged": "Remarques modifiées",
+        "exampleInputChanged": "Exemple d'entrée modifié",
+        "exampleOutputChanged": "Exemple de sortie modifié",
+        "sourceBindingsChanged": "Champs source modifiés",
+        "targetBindingsChanged": "Champs cible modifiés",
         "renewalStopped": "Renouvellement arrêté",
         "renewalResumed": "Renouvellement repris",
         "descriptionChanged": "Description modifiée",
@@ -939,6 +964,14 @@
         "mapping_set": {
           "added": "Jeu de mappage ajouté : {{label}}",
           "removed": "Jeu de mappage retiré : {{label}}"
+        },
+        "mapping_group": {
+          "added": "Groupe de mappage ajouté : {{label}}",
+          "removed": "Groupe de mappage retiré : {{label}}"
+        },
+        "mapping_rule": {
+          "added": "Règle de mappage ajoutée : {{label}}",
+          "removed": "Règle de mappage retirée : {{label}}"
         },
         "middleware": {
           "added": "Middleware ajouté : {{label}}",
@@ -1240,7 +1273,7 @@
       "asset_spend_items": "Lignes OPEX d'actif",
       "asset_support_contacts": "Contacts de support d'actif",
       "asset_support_info": "Informations de support d'actif",
-      "asset_technologies": "Technologies des assets",
+      "asset_technologies": "Technologies des actifs",
       "assets": "Actifs",
       "auth": "Connexion et session",
       "business_process_categories": "Catégories de processus métier",
@@ -1316,6 +1349,7 @@
       "location_user_contacts": "Contacts internes de site",
       "locations": "Sites",
       "notification_preferences": "Préférences de notification",
+      "onboarding": "Premiers pas",
       "platform_ai_config": "Paramètres IA de la plateforme",
       "platform_ai_plan_limits": "Messages IA inclus",
       "portfolio_activities": "Activité du portefeuille",
@@ -2612,14 +2646,33 @@
       "priceOutput": "Coût de sortie",
       "priceInputPlaceholder": "ex. 3,00",
       "priceOutputPlaceholder": "ex. 15,00",
+      "priceCacheRead": "Coût de lecture en cache",
+      "priceCacheReadPlaceholder": "ex. 0,30",
+      "cacheReadHint": "Prix par million de tokens relus depuis le cache du fournisseur (souvent « cached input » sur sa page tarifs). Vide : le coût d’entrée s’applique, ou un dixième de celui-ci pour Anthropic.",
       "advanced": "Paramètres avancés",
       "timeout": "Délai d'attente",
       "timeoutPlaceholder": "ex. 120",
       "timeoutHint": "Durée d'attente, en secondes, avant d'abandonner l'appel. Laissez vide pour la limite standard. Les modèles locaux ont souvent besoin de plus de temps.",
+      "reasoningEffort": "Effort de raisonnement",
+      "reasoningEffortDefault": "Par défaut du fournisseur",
+      "reasoningEffortHint": "Combien le modèle réfléchit avant de répondre. Plus d’effort : réponses plus soignées, plus lentes et plus chères. Les niveaux proposés dépendent du fournisseur et du modèle. « Tester la connexion » indique l’effort envoyé.",
+      "reasoningEffortValues": {
+        "low": "Faible",
+        "medium": "Moyen",
+        "high": "Élevé",
+        "xhigh": "Très élevé",
+        "max": "Maximal"
+      },
+      "reasoningEffortUnavailable": "Ce modèle ne prend pas d’effort de raisonnement.",
+      "reasoningEffortMayBeIgnored": "Ce serveur peut ignorer l’effort de raisonnement. « Tester la connexion » indique si le modèle a raisonné.",
       "defaultLabel": "Utiliser comme modèle par défaut",
       "test": "Tester la connexion",
       "testing": "Test en cours…",
-      "testOk": "Connexion réussie ({{latency}} ms)."
+      "testOk": "Connexion réussie ({{latency}} ms).",
+      "testEffortSent": "Effort envoyé : {{effort}}.",
+      "testEffortNotSent": "Aucun effort envoyé.",
+      "testReasoningTokens_one": "{{count}} token de raisonnement.",
+      "testReasoningTokens_other": "{{count}} tokens de raisonnement."
     }
   },
   "aiUsage": {
@@ -2630,7 +2683,7 @@
       "totalMonth": "Total ce mois-ci",
       "agentsMonth": "Agents ce mois-ci",
       "chatMonth": "Plaid ce mois-ci",
-      "chatEstimatedNote": "Estimé aux tarifs du modèle actuellement assigné",
+      "chatEstimatedNote": "En partie estimé aux tarifs du modèle actuellement assigné",
       "chatFreeNote": "Le modèle assigné est sans coût",
       "byAgent": "Coût par agent",
       "byModel": "Coût par modèle",

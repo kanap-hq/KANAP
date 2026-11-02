@@ -1,8 +1,9 @@
 import { DASH } from '../../components/workspace/relations/helpers';
 import { countryNameFor } from '../../i18n/countries';
+import { frenchSpacing } from '../../i18n/formatters';
 import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import { formatItemRef } from '../../utils/item-ref';
-import type { Translate } from './auditLogLabels';
+import { EXPORT_EVENT_TABLE, exportResourceKey, type Translate } from './auditLogLabels';
 
 /**
  * The readable face of an audit entry: the field rows the detail dialog shows, the reference of
@@ -219,9 +220,11 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function omitted(key: string, action: string): boolean {
+function omitted(key: string, action: string, table: string): boolean {
   if (OMITTED_FIELDS.has(key) || NOISE_FIELDS.has(key) || key.startsWith('__')) return true;
-  return key === 'created_at' && action !== 'create';
+  if (key === 'created_at' && action !== 'create') return true;
+  // The route of an export stays in the raw JSON, under "View raw data".
+  return table === EXPORT_EVENT_TABLE && key === 'path';
 }
 
 function isEmptyValue(value: unknown): boolean {
@@ -250,6 +253,7 @@ export function auditHasNonObjectPayload(row: AuditPayloadRow | null | undefined
 export function auditFields(row: AuditPayloadRow | null | undefined): AuditFields {
   if (!row) return { mode: 'single', rows: [] };
   const action = String(row.action || '').toLowerCase();
+  const table = String(row.table_name || '');
   const before = isPlainObject(row.before_json) ? row.before_json : {};
   const after = isPlainObject(row.after_json) ? row.after_json : {};
 
@@ -257,7 +261,7 @@ export function auditFields(row: AuditPayloadRow | null | undefined): AuditField
     return {
       mode: 'change',
       rows: changedKeys(before, after)
-        .filter((key) => !omitted(key, action))
+        .filter((key) => !omitted(key, action, table))
         .filter((key) => !isEmptyValue(before[key]) || !isEmptyValue(after[key]))
         .map((key) => ({ key, before: before[key], after: after[key] })),
     };
@@ -269,7 +273,7 @@ export function auditFields(row: AuditPayloadRow | null | undefined): AuditField
   return {
     mode: 'single',
     rows: Object.keys(source)
-      .filter((key) => !omitted(key, action))
+      .filter((key) => !omitted(key, action, table))
       .map((key) => ({ key, value: source[key] })),
   };
 }
@@ -536,12 +540,323 @@ function dataAccessNodesText(value: unknown[], context: AuditValueContext): Audi
 }
 
 /**
+ * Query keys an export records for itself, not parameters the person chose: `ctx` is the id of a
+ * saved list context, `truncated` says the recorded query was cut to fit.
+ */
+const EXPORT_CONTEXT_KEYS = new Set(['ctx', 'truncated']);
+
+/** Parameter names that already have a screen label outside `auditLogs.fields`. */
+const EXPORT_PARAM_LABEL_KEYS: Record<string, string> = {
+  all: 'ops:operations.budgetFile.allLines',
+  amountYears: 'ops:operations.budgetFile.years',
+  analytics: 'ops:reports.filters.dimension',
+  columns: 'ops:operations.budgetFile.columns',
+  costCenter: 'ops:reports.filters.costCenter',
+  detail: 'ops:operations.budgetFile.detail',
+  excludeAccounts: 'ops:reports.filters.excludeAccounts',
+  excludeIds: 'ops:reports.filters.excludeItems',
+  filters: 'auditLogs.exportParams.filters',
+  fte: 'ops:reports.filters.fteItems',
+  includeDisabled: 'auditLogs.exportParams.includeDisabled',
+  language: 'settings:profile.fields.language',
+  measure: 'ops:reports.measure.label',
+  metric: 'ops:reports.filters.metric',
+  q: 'auditLogs.exportParams.q',
+  runBuild: 'ops:reports.filters.runBuild',
+  scope: 'auditLogs.exportParams.scope',
+  sort: 'auditLogs.exportParams.sort',
+  table: 'auditLogs.exportParams.table',
+  top: 'ops:reports.filters.topCount',
+  tz: 'auditLogs.exportParams.tz',
+};
+
+/** Budget-file and report column codes, to the label the budget screens use. */
+const EXPORT_COLUMN_LABEL_KEYS: Record<string, string> = {
+  budget: 'ops:operations.budgetColumns.budget',
+  planned: 'ops:operations.budgetColumns.budget',
+  revision: 'ops:operations.budgetColumns.revision',
+  committed: 'ops:operations.budgetColumns.revision',
+  forecast: 'ops:operations.budgetColumns.forecast',
+  actual: 'ops:operations.budgetColumns.followUp',
+  follow_up: 'ops:operations.budgetColumns.followUp',
+  landing: 'ops:operations.budgetColumns.landing',
+  expected_landing: 'ops:operations.budgetColumns.landing',
+};
+
+/** Parameter values whose screen label is not the field's own enumeration. */
+const EXPORT_VALUE_LABEL_KEYS: Record<string, Record<string, string>> = {
+  detail: {
+    yearly: 'ops:operations.budgetFile.yearly',
+    months: 'ops:operations.budgetFile.months',
+  },
+  format: {
+    csv: 'ops:reports.shared.exportCsv',
+    xlsx: 'ops:reports.shared.exportXlsx',
+  },
+  measure: {
+    amount: 'ops:reports.measure.amount',
+    amounts: 'ops:reports.measure.amount',
+    fte: 'ops:reports.measure.fte',
+  },
+  scope: {
+    all: 'ops:operations.scope.all',
+    opex: 'ops:operations.scope.opex',
+    capex: 'ops:operations.scope.capex',
+  },
+  runBuild: {
+    run: 'ops:reports.filters.runBuildRun',
+    build: 'ops:reports.filters.runBuildBuild',
+  },
+  fte: {
+    with: 'ops:reports.filters.fteItemsWith',
+  },
+};
+
+/** A file language, in its own name: the code is what the export stored. */
+const EXPORT_LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English',
+  fr: 'Français',
+  de: 'Deutsch',
+  es: 'Español',
+};
+
+type ExportPiece = { text: string; title?: string };
+
+function isFrenchLocale(locale: string): boolean {
+  return locale.toLowerCase().split('-')[0] === 'fr';
+}
+
+function exportPair(name: string, value: string, locale: string): string {
+  return isFrenchLocale(locale) ? `${name} : ${value}` : `${name}: ${value}`;
+}
+
+function splitComma(text: string): string[] {
+  return text.split(',').map((part) => part.trim()).filter((part) => part.length > 0);
+}
+
+function enumFieldName(key: string): string {
+  return key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+}
+
+function parseObject(value: unknown): Record<string, unknown> | null {
+  if (isPlainObject(value)) return value;
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  if (!text.startsWith('{')) return null;
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    return isPlainObject(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A JSON list, or a list the export stored as an array. A plain string stays one value. */
+function asItemList(value: unknown): string[] | null {
+  if (Array.isArray(value)) return value.map((item) => (item == null ? '' : String(item)));
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  if (!text.startsWith('[')) return null;
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    return parsed.map((item) => (item == null ? '' : String(item)));
+  } catch {
+    return null;
+  }
+}
+
+function maskUuids(text: string, context: AuditValueContext): ExportPiece {
+  const titles: string[] = [];
+  const replaced = text.replace(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+    (id) => {
+      titles.push(id);
+      return context.t('auditLogs.values.identifier');
+    },
+  );
+  return { text: replaced, title: titles.length > 0 ? titles.join('\n') : undefined };
+}
+
+function joinPieces(pieces: ExportPiece[]): ExportPiece | null {
+  const kept = pieces.filter((piece) => piece.text.trim() !== '');
+  if (kept.length === 0) return null;
+  const titles = kept.flatMap((piece) => (piece.title ? piece.title.split('\n') : []));
+  return {
+    text: kept.map((piece) => piece.text).join(', '),
+    title: titles.length > 0 ? titles.join('\n') : undefined,
+  };
+}
+
+function storedFieldLabel(field: string, context: AuditValueContext): string | null {
+  return screenLabel(context, `auditLogs.fields.${field}`);
+}
+
+/** A budget column code, else the audit field label of the same name, when one exists. */
+function columnLabel(code: string, context: AuditValueContext): string | null {
+  const folded = code.trim().toLowerCase();
+  const mapped = EXPORT_COLUMN_LABEL_KEYS[folded];
+  if (mapped) {
+    const label = screenLabel(context, mapped);
+    if (label) return label;
+  }
+  return storedFieldLabel(folded, context) ?? storedFieldLabel(code.trim(), context);
+}
+
+function paramLabel(key: string, context: AuditValueContext): string {
+  const mapped = EXPORT_PARAM_LABEL_KEYS[key];
+  if (mapped) {
+    const label = screenLabel(context, mapped);
+    if (label) return label;
+  }
+  return storedFieldLabel(key, context) ?? storedFieldLabel(enumFieldName(key), context) ?? key;
+}
+
+function filterName(field: string, context: AuditValueContext): string {
+  return storedFieldLabel(field, context) ?? columnLabel(field, context) ?? field;
+}
+
+function flagText(code: string, context: AuditValueContext): string | null {
+  if (code === 'true' || code === '1') return context.t('auditLogs.values.yes');
+  if (code === 'false' || code === '0') return context.t('auditLogs.values.no');
+  return null;
+}
+
+/** One parameter token: its screen label when one exists, else the stored text with ids masked. */
+function oneParamToken(key: string, part: string, context: AuditValueContext): ExportPiece {
+  const code = part.trim();
+  if (!code) return { text: '' };
+  if (key === 'all' || key === 'includeDisabled') {
+    const flag = flagText(code, context);
+    if (flag) return { text: flag };
+  }
+  if (key === 'language') {
+    const name = EXPORT_LANGUAGE_NAMES[code.toLowerCase()];
+    if (name) return { text: name };
+  }
+  if (key === 'columns' || key === 'metric') {
+    const label = columnLabel(code, context);
+    if (label) return { text: label };
+  }
+  const mapped = EXPORT_VALUE_LABEL_KEYS[key]?.[code] ?? EXPORT_VALUE_LABEL_KEYS[key]?.[code.toLowerCase()];
+  if (mapped) {
+    const label = screenLabel(context, mapped);
+    if (label) return { text: label };
+  }
+  // A search, a sort and a time zone are the person's text, not a code.
+  if (key !== 'q' && key !== 'sort' && key !== 'tz' && key !== 'amountYears') {
+    const enumerated = enumerationLabel(enumFieldName(key), code, context);
+    if (enumerated) return { text: enumerated };
+  }
+  return maskUuids(code, context);
+}
+
+function paramTokens(key: string, value: unknown, context: AuditValueContext): ExportPiece | null {
+  if (typeof value === 'boolean') {
+    return { text: context.t(value ? 'auditLogs.values.yes' : 'auditLogs.values.no') };
+  }
+  if (value === null || value === undefined) return null;
+  const items = asItemList(value);
+  if (items) return joinPieces(items.map((item) => oneParamToken(key, item, context)));
+  if (typeof value === 'string' || typeof value === 'number') {
+    return joinPieces(splitComma(String(value)).map((part) => oneParamToken(key, part, context)));
+  }
+  return maskUuids(compactJson(value), context);
+}
+
+function filterToken(field: string, value: unknown, context: AuditValueContext): ExportPiece {
+  if (value === null || value === undefined || String(value).trim() === '') {
+    return { text: screenLabel(context, 'common:filters.blank') ?? DASH };
+  }
+  const raw = String(value).trim();
+  return maskUuids(enumerationLabel(field, raw, context) ?? raw, context);
+}
+
+/** One column filter: its values, or the text it matches. Null when it carries nothing readable. */
+function filterPiece(field: string, filter: unknown, context: AuditValueContext): ExportPiece | null {
+  if (isPlainObject(filter)) {
+    if (Array.isArray(filter.values)) {
+      return joinPieces(filter.values.map((item) => filterToken(field, item, context)));
+    }
+    if (filter.filter !== undefined && filter.filter !== null && String(filter.filter).trim() !== '') {
+      return filterToken(field, filter.filter, context);
+    }
+    if (filter.type === 'blank' || filter.type === 'notBlank') {
+      const key = filter.type === 'blank' ? 'common:filters.blank' : 'common:filters.date.notBlank';
+      return { text: screenLabel(context, key) ?? String(filter.type) };
+    }
+    return null;
+  }
+  if (filter === null || filter === undefined || filter === '') return null;
+  return filterToken(field, filter, context);
+}
+
+/**
+ * An export's parameters as "name: value" lines. Column and filter names use their screen label
+ * when one exists. `ctx` and `truncated` stay in the raw JSON.
+ */
+function formatExportQuery(query: Record<string, unknown>, context: AuditValueContext): AuditValue {
+  const lines: string[] = [];
+  const titles: string[] = [];
+  for (const [key, value] of Object.entries(query)) {
+    if (EXPORT_CONTEXT_KEYS.has(key)) continue;
+    if (key === 'filters') {
+      const model = parseObject(value);
+      if (model) {
+        for (const [field, filter] of Object.entries(model)) {
+          const piece = filterPiece(field, filter, context);
+          if (!piece) continue;
+          lines.push(exportPair(filterName(field, context), piece.text, context.locale));
+          if (piece.title) titles.push(piece.title);
+        }
+        continue;
+      }
+    }
+    const piece = paramTokens(key, value, context);
+    if (!piece) continue;
+    lines.push(exportPair(paramLabel(key, context), piece.text, context.locale));
+    if (piece.title) titles.push(piece.title);
+  }
+  if (lines.length === 0) return { text: DASH };
+  const text = lines.join('\n');
+  return {
+    text: isFrenchLocale(context.locale) ? frenchSpacing(text) : text,
+    title: titles.length > 0 ? titles.join('\n') : undefined,
+  };
+}
+
+/** The resource, the file format and the parameters of an export. Null for any other field. */
+function formatExportValue(value: unknown, field: string, context: AuditValueContext): AuditValue | null {
+  if (context.table !== EXPORT_EVENT_TABLE) return null;
+  if (field === 'resource' && typeof value === 'string') {
+    const key = exportResourceKey(value);
+    const label = key ? screenLabel(context, `auditLogs.exportResources.${key}`) : null;
+    const text = value.trim();
+    return { text: label ?? (text || DASH) };
+  }
+  if (field === 'format' && (typeof value === 'string' || typeof value === 'number')) {
+    const label = oneParamToken('format', String(value), context).text;
+    const stored = String(value).trim();
+    if (label && label !== stored) return { text: label };
+    return null;
+  }
+  if (field === 'query') {
+    const query = parseObject(value);
+    if (query) return formatExportQuery(query, context);
+  }
+  return null;
+}
+
+/**
  * The text of a value cell: empty marker, yes/no, short dates, locale numbers, scalar lists,
  * one-line JSON for objects, the name of a person or a readable neighbour instead of an id,
- * and the screen label of a known enumeration. A code with no label stays as stored.
+ * and the screen label of a known enumeration. An export names its resource, its file format
+ * and its parameters. A code with no label stays as stored.
  */
 export function formatAuditValue(value: unknown, field: string, context: AuditValueContext): AuditValue {
   if (value === null || value === undefined) return { text: DASH };
+  const exported = formatExportValue(value, field, context);
+  if (exported) return exported;
   if (field === 'mode' && isDataAccessSnapshot(context.snapshot)) {
     const mode = dataAccessModeText(value, context);
     if (mode) return mode;

@@ -15,7 +15,7 @@ Pour le séquencement à l'échelle du portefeuille et le travail de roadmap, ut
 
 - `portfolio_projects:reader` : ouvrir la liste et consulter les espaces de travail des projets
 - `portfolio_projects:contributor` : mettre à jour le document **Objectif** managé, saisir du temps sur le projet (saisies de gestion de projet et saisies sur les tâches du projet), et maintenir les enregistrements liés, les liens et les fichiers de l'onglet **Relations** (les dépendances demandent `portfolio_projects:member`)
-- `portfolio_projects:member` : créer des projets et gérer les données du projet, statut, équipe, relations, planning, avancement, tâches, évaluation, commentaires et décisions
+- `portfolio_projects:member` : créer des projets et gérer les données du projet, statut, équipe, relations, planning, charge, tâches, évaluation, commentaires et décisions
 - `portfolio_projects:admin` : inclut les capacités du niveau membre et peut également importer et exporter, enregistrer les remplacements de priorité et maintenir les saisies de temps de gestion de projet d'autres utilisateurs
 - La consultation des connaissances nécessite également un accès Connaissances
 - Créer ou lier des connaissances autonomes nécessite également un rôle de création de connaissances
@@ -43,10 +43,10 @@ La liste des projets est conçue pour répondre rapidement à deux questions : �
 | **Priorité** | Score de priorité calculé |
 | **Statut** | État d'exécution actuel avec un point coloré |
 | **Origine** | Demande, Fast-track ou Legacy |
-| **Avancement** | Avancement d'exécution sous forme de barre |
+| **Charge** | Progression d'exécution sous forme de barre |
 | **Source** | Classification source du portefeuille |
 | **Catégorie** | Catégorie du portefeuille |
-| **Stream** | Stream du portefeuille |
+| **Filière** | Filière du portefeuille |
 | **Société** | Classification société |
 | **Début** | Date de début planifiée |
 | **Fin** | Date de fin planifiée |
@@ -61,7 +61,7 @@ La liste des projets est conçue pour répondre rapidement à deux questions : �
 - Les projets sont triés par score de priorité sauf si vous changez le tri
 - Les projets au statut **Terminé** sont masqués par défaut
 - La recherche fonctionne sur le contenu textuel
-- Les filtres sur statut, origine, source, catégorie, stream et société sont disponibles directement dans la grille
+- Les filtres sur statut, origine, source, catégorie, filière et société sont disponibles directement dans la grille
 
 **Administration en masse**
 
@@ -70,22 +70,34 @@ La liste des projets est conçue pour répondre rapidement à deux questions : �
 
 Ouvrir un projet depuis la liste préserve le contexte de liste actuel. L'espace de travail du projet utilise le même contexte pour la navigation **Précédent** et **Suivant**, vous pouvez donc parcourir un ensemble filtré sans perdre votre place.
 
-## Créer un projet
+## Créer un projet { #creating-a-project }
 
 La création directe de projet est destinée au travail qui doit entrer en exécution sans enregistrement de demande séparé.
 
-- Les nouveaux projets s'ouvrent uniquement sur **Synthèse**
-- Tant que le projet n'est pas enregistré pour la première fois, les autres onglets sont indisponibles
-- Les projets créés directement utilisent une origine de **Fast-track** ou **Legacy**
-- Les projets d'origine demande conservent leur origine demande et le lien source
+1. Cliquez sur **Nouveau projet**. La page du projet s'ouvre sur **Synthèse** avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+2. Saisissez le nom du projet.
+3. Appuyez sur Entrée, ou cliquez hors du titre. KANAP crée le projet aussitôt, avec l'origine **Fast-track**. Sa référence (`PRJ-12`) apparaît et tous les onglets s'ouvrent.
 
-Utilisez **Fast-track** pour le travail qui est réellement introduit directement en livraison. Utilisez **Legacy** pour le travail qui existe déjà en dehors de l'historique d'intake normal. Cette distinction affecte le reporting et rend l'analyse de portefeuille ultérieure beaucoup moins déroutante.
+Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+
+Un projet créé ainsi peut passer de **Fast-track** à **Historique** et inversement dans le tiroir Propriétés. Un projet converti depuis une demande garde l'origine **Demande** et son lien source.
+
+Utilisez **Fast-track** pour le travail qui est réellement introduit directement en livraison. Utilisez **Historique** pour le travail qui existe déjà en dehors de l'historique d'intake normal. Cette distinction affecte le reporting et rend l'analyse de portefeuille ultérieure beaucoup moins déroutante.
+
+### Créer ou annuler { #cancelling-a-creation }
+
+Tant que le projet est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez le projet.
+
+- **Créer** conserve le projet et le ferme. Vous revenez à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, rien ne se ferme et le titre en demande un
+- **Annuler** ferme sans rien conserver. Sur un projet déjà créé, il le supprime. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans aucun droit de suppression
+
+**Annuler** est le seul moyen de supprimer un projet. Une fois que vous quittez le projet, il reste : passez son statut à **Annulé** s'il ne se fait pas. Un projet lié à une demande ne peut pas être supprimé. La référence d'un projet annulé n'est pas réutilisée.
 
 ## Modèle mental de l'espace de travail
 
 L'espace de travail du projet a deux couches :
 
-- La **zone de contenu principale** pour les onglets opérationnels : **Synthèse**, **Tâches**, **Planning**, **Avancement**, **Évaluation**, **Relations**, **Connaissances** et **Historique** (les modifications du projet, voir [Historique des fiches](record-history.md))
+- La **zone de contenu principale** pour les onglets opérationnels : **Synthèse**, **Tâches**, **Planning**, **Charge**, **Évaluation**, **Relations**, **Connaissances** et **Historique** (les modifications du projet, voir [Historique des fiches](record-history.md))
 - Un tiroir **Propriétés** persistant sur le bord droit pour les propriétés principales, l'assignation d'équipe et les demandes sources
 
 Ouvrez ou fermez le tiroir Propriétés à l'aide de l'onglet vertical sur le bord droit.
@@ -98,9 +110,10 @@ L'en-tête de l'espace de travail est une bande de contrôle, pas de la décorat
 
 - Une pastille de référence **PRJ-...** copiable
 - Le titre du projet (cliquez pour modifier lorsque vous avez les droits manage)
-- Une rangée de métadonnées compacte : **Statut**, **Score**, **Avancement**, **Responsable IT**, **Fin planifiée** et **Origine** (ou la référence de la demande source pour les projets d'origine demande)
+- Une rangée de métadonnées compacte : **Statut**, **Score**, **Progression**, **Responsable IT**, **Fin planifiée** et **Origine** (ou la référence de la demande source pour les projets d'origine demande)
 - **Précédent** et **Suivant** parcourent l'ensemble de résultats de la liste actuelle, pas tous les projets du système
 - **Partager** envoie l'URL du projet courant par e-mail avec un message optionnel
+- **Créer** et **Annuler**, tant que le projet est en cours de création. Voir [Créer ou annuler](#cancelling-a-creation)
 
 Envoyer un lien n'accorde pas l'accès. Cela ne fait que partager l'emplacement. Les autorisations restent exactement comme elles étaient avant l'envoi de l'e-mail.
 
@@ -121,10 +134,9 @@ Traitez le tiroir Propriétés comme la carte d'identité persistante du projet.
 
 ### Propriétés principales
 
-- Nom du projet
 - Statut
-- Origine (uniquement pendant la création initiale ; verrouillée ensuite)
-- Source, Catégorie, Stream
+- Origine : **Fast-track** ou **Historique** pour un projet créé directement. Un projet converti depuis une demande garde l'origine **Demande**
+- Source, Catégorie, Filière
 - Société, Département
 - Début planifié, Fin planifiée
 
@@ -142,7 +154,7 @@ Ces assignations font plus que remplir des cases :
 
 - elles déterminent ce qui apparaît dans **Mes projets** et **Projets de mon équipe**
 - elles alimentent le contexte du projet dans la synthèse et le reporting
-- elles définissent qui est disponible pour la ventilation des charges dans l'onglet **Avancement**
+- elles définissent qui est disponible pour la ventilation des charges dans l'onglet **Charge**
 
 Si les responsables et contributeurs sont incorrects, votre planification de charge le sera aussi.
 
@@ -201,7 +213,7 @@ L'onglet **Tâches** est la file d'exécution du projet. Le badge de l'onglet af
 
 Cet onglet sert à gérer les tâches liées au projet en contexte, pas à remplacer l'espace de travail complet des tâches. Ouvrir une tâche vous emmène vers son propre espace de travail, où le détail spécifique à la tâche et l'enregistrement du temps continuent.
 
-D'un point de vue projet, la conséquence importante est celle-ci : le statut des tâches et le temps des tâches ne sont pas isolés. Ils alimentent en retour Synthèse et Avancement, donc des tâches négligées rendent l'image globale du projet moins fiable.
+D'un point de vue projet, la conséquence importante est celle-ci : le statut des tâches et le temps des tâches ne sont pas isolés. Ils alimentent en retour Synthèse et Charge, donc des tâches négligées rendent l'image globale du projet moins fiable.
 
 ## Planning
 
@@ -247,20 +259,20 @@ Au-dessus de la liste des phases, basculez entre les vues **Tableau** et **Gantt
 
 Seules les phases avec des dates de début et fin utilisables apparaissent de manière significative sur le Gantt. Si les dates sont vagues, le diagramme sera tout aussi vague. En vue Gantt, vous pouvez faire glisser les barres de phase pour ajuster les dates de début/fin (avec l'autorisation manage).
 
-## Avancement
+## Charge
 
-L'onglet **Avancement** combine l'avancement d'exécution, la planification de la charge et la consommation réelle de temps. Cette combinaison est importante car un projet qui rapporte 80 % d'avancement avec 20 % de la charge consommée n'est pas nécessairement efficace ; il peut simplement être mal estimé.
+L'onglet **Charge** combine la progression, la planification de la charge et la consommation réelle de temps. Cette combinaison est importante car un projet qui rapporte 80 % d'avancement avec 20 % de la charge consommée n'est pas nécessairement efficace ; il peut simplement être mal estimé.
 
-### Avancement et charge
+### Progression et charge
 
-- **Avancement d'exécution** est le signal global de complétion du projet
+- **Progression** est le signal global de complétion du projet
 - **Consommation de charge** compare la charge réelle avec la charge planifiée
 
 Gardez ces deux nombres alignés avec la réalité. Si l'avancement progresse sans charge correspondante, ou si la charge s'accumule sans mouvement de livraison, le décalage vous dit généralement quelque chose d'important sur le périmètre, l'estimation ou la discipline de reporting.
 
 ### Charge estimée et ventilations
 
-L'avancement sépare la charge estimée en :
+L'onglet **Charge** sépare la charge estimée en :
 
 - **Charge IT**
 - **Charge métier**
@@ -280,7 +292,7 @@ Conséquences importantes :
 
 - le temps des tâches contribue automatiquement à la charge réelle du projet
 - le temps des tâches est visible ici mais doit être corrigé dans l'espace de travail des tâches
-- les entrées de gestion de projet sont maintenues depuis l'onglet Avancement
+- les entrées de gestion de projet sont maintenues depuis l'onglet Charge
 - les contributeurs peuvent maintenir leurs propres entrées de gestion de projet
 - les administrateurs peuvent maintenir les entrées de gestion de projet pour tous les utilisateurs
 
@@ -386,7 +398,7 @@ Utilisez **Enrichissement de données** lorsque vous voulez exporter, ajuster de
 
 Les imports sont conçus pour des changements en masse contrôlés :
 
-- téléchargez d'abord un modèle quand vous avez besoin de la structure correcte
+- téléchargez d'abord un modèle quand vous avez besoin de la structure correcte, ou un exemple pour voir des projets d'exemple et les valeurs que chaque colonne accepte ([Fichiers d'exemple](csv-files.md#example-files))
 - validez avant d'importer
 - utilisez les options avancées pour choisir le comportement enrichissement vs remplacement et les règles d'insertion/mise à jour
 
@@ -407,6 +419,6 @@ Encore une fois, envoyer un lien n'accorde pas l'accès. Cela évite simplement 
 - Utilisez le tiroir Propriétés pour les données structurelles qui doivent rester visibles pendant que vous travaillez.
 - Utilisez **Synthèse** pour le récit du projet, l'activité récente et l'image opérationnelle de haut niveau.
 - Utilisez **Planning** pour définir la structure de livraison avant que le volume de tâches ne grandisse.
-- Utilisez **Avancement** régulièrement, sinon la variance de charge arrive comme une surprise même si les données vous avertissaient déjà.
+- Utilisez **Charge** régulièrement, sinon la variance de charge arrive comme une surprise même si les données vous avertissaient déjà.
 - Utilisez **Connaissances** pour la documentation réutilisable ou gouvernée, pas comme une seconde copie du brief Objectif.
 - Utilisez **Importer** sur l'éditeur d'Objectif lorsqu'un brief de projet existe déjà sous forme de document Word, plutôt que de le reformater à la main.

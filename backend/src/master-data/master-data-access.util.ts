@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { moduleRightRequired } from '../auth/module-right-required';
 
 export type MasterDataScope = 'companies' | 'departments';
 
@@ -18,6 +18,6 @@ export function canManageMasterDataScope(access: MasterDataAccess, scope: Master
 export function assertCanManageMasterDataScope(access: MasterDataAccess, scope: MasterDataScope, action: string) {
   if (!canManageMasterDataScope(access, scope)) {
     const label = scope === 'companies' ? 'Companies' : 'Departments';
-    throw new ForbiddenException(`You need ${label} admin permissions to ${action}`);
+    throw moduleRightRequired(scope, 'admin', `You need ${label} admin permissions to ${action}`);
   }
 }

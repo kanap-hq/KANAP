@@ -11,6 +11,7 @@ import { assetCsvConfig } from '../asset-csv.config';
 // The asset CSV dry run refuses a bad host name, a malformed IP, an unknown catalog value and an
 // impossible date, each as a coded row error. Loading that date returns the same error and leaves
 // the transaction usable: PostgreSQL used to abort it and the API answered 500.
+// A row without a site is a row error (CSV_VALUE_REQUIRED) and a file without the site column is refused.
 // An ip_2 address with an empty ip_1 cell is a row error (asset_ip_gap). A file that simply has no
 // ip_1 column is left alone.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file on a database lane.
@@ -67,6 +68,7 @@ async function run() {
         csvRow('Bad iso', { go_live_date: '2025-02-31' }),
         csvRow('Bad gap', { ip_2_type: 'host', ip_2_address: '10.2.2.2' }),
         csvRow('Bad type', { ip_1_type: 'Foo', ip_1_address: '10.3.3.3' }),
+        csvRow('No site', { location_reference: '' }),
       ].join('\n');
 
       const dryRun = await importer.import(assetCsvConfig, file(csv), params, context);
@@ -93,6 +95,7 @@ async function run() {
           { row: 10, column: 'go_live_date', code: 'CSV_DATE_INVALID', value: '2025-02-31', slot: undefined, earlier: undefined },
           { row: 11, column: 'ip_2_address', code: 'asset_ip_gap', value: undefined, slot: 2, earlier: 1 },
           { row: 12, column: 'ip_1_type', code: 'asset_ip_type_invalid', value: 'Foo', slot: undefined, earlier: undefined },
+          { row: 13, column: 'location_reference', code: 'CSV_VALUE_REQUIRED', value: undefined, slot: undefined, earlier: undefined },
         ],
       );
 
@@ -109,6 +112,13 @@ async function run() {
       ]);
       const [none] = await runner.query(`SELECT count(*)::int AS n FROM assets WHERE tenant_id = $1`, [tenantId]);
       assert.equal(none.n, 0);
+
+      // Every asset has a site: a file without the column is refused as a whole.
+      const noColumn = await importer.import(assetCsvConfig, file('name;kind;environment\nNo column;vm;prod'), params, context);
+      assert.equal(noColumn.ok, false);
+      assert.deepEqual(noColumn.errors.map((error) => [error.row, error.code, error.params?.missing]), [
+        [0, 'CSV_HEADER_MISSING_COLUMNS', 'location_reference'],
+      ]);
 
       const secondOnly = await importer.import(
         assetCsvConfig,

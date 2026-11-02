@@ -9,6 +9,7 @@ import {
   Box,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { useReportEmpty } from './emptyTiles';
 import TaskIcon from '@mui/icons-material/Task';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import GroupsIcon from '@mui/icons-material/Groups';
@@ -67,6 +68,8 @@ interface DashboardTileProps {
   /** Query failed: the tile shows a retry prompt instead of an empty state that would read as "nothing to do". */
   isError?: boolean;
   onRetry?: () => void;
+  /** Nothing to show (empty list, zero counts): the home page can leave the tile out. */
+  isEmpty?: boolean;
   children: ReactNode;
   action?: ReactNode;
   minHeight?: number;
@@ -80,11 +83,13 @@ export default function DashboardTile({
   isLoading = false,
   isError = false,
   onRetry,
+  isEmpty = false,
   children,
   action,
   minHeight = 120,
 }: DashboardTileProps) {
   const { t } = useTranslation('common');
+  useReportEmpty(isEmpty && !isLoading && !isError);
   const IconComponent = TILE_ICONS[icon] || TaskIcon;
   const hasSub = Boolean(subtitle || currency);
   // The full second line, for the tooltip when the column name is cut. The currency itself does not shrink.

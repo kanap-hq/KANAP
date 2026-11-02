@@ -35,6 +35,9 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+      # The user manual's pages, for the assistant (backend/Dockerfile, stage help-docs).
+      additional_contexts:
+        help-docs: ../doc/help/docs
       # The development stage (sources and tools for `npm run start:dev`). Servers build the
       # runtime stage, the default.
       target: dev

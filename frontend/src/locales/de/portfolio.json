@@ -302,6 +302,9 @@
         "fallback": "Unbenanntes Projekt",
         "new": "Neues Projekt"
       },
+      "creation": {
+        "record": "Das Projekt"
+      },
       "summary": {
         "cards": {
           "deliverySnapshot": "Lieferübersicht",
@@ -372,7 +375,6 @@
         "phase": "Phase",
         "plannedEnd": "Geplantes Ende",
         "plannedStart": "Geplanter Start",
-        "projectName": "Projektname",
         "source": "Quelle",
         "status": "Status",
         "stream": "Stream"
@@ -632,6 +634,9 @@
         "fallback": "Unbenannte Anfrage",
         "new": "Neue Anfrage"
       },
+      "creation": {
+        "record": "Die Anfrage"
+      },
       "summary": {
         "cards": {
           "analysisSnapshot": "Analyseübersicht",
@@ -677,7 +682,6 @@
         "itContributors": "IT-Mitwirkende",
         "itLead": "IT-Leiter",
         "itSponsor": "IT-Sponsor",
-        "requestName": "Anfragenname",
         "requestor": "Antragsteller",
         "source": "Quelle",
         "status": "Status",

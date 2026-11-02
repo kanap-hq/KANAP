@@ -179,6 +179,8 @@ The core read tools are:
   the other families are refused in words)
 - `search_knowledge`
 - `get_document`
+- `list_help_topics` and `read_help_section` (the user manual, for every person who
+  may use the assistant)
 - `web_search`, when the feature and tenant setting are enabled
 
 Structured query and aggregate tools are authoritative for counts, filters, and
@@ -672,6 +674,24 @@ tab is refused in words with the list of the families that have one; the prompt
 says a history is never rebuilt from other data, the audit log included. The
 tool is in the MCP core read group. The chat shows its entries as the tab's
 first lines (`ToolResultRenderer`, phase `reading_context`).
+
+`list_help_topics` and `read_help_section` read the user manual of the running
+version through `AiHelpManualService` (`ai-help-manual.service.ts`). The API image
+carries the Markdown pages of `doc/help/docs` in `/app/help-docs` (the named build
+context `help-docs` of `backend/Dockerfile`, passed by every Compose file that builds
+the API and by the CI workflows); a checkout reads the repository's `doc/help/docs`.
+The service reads every page of the four languages once, at start: title, H2 to H6
+headings with the anchors MkDocs gives them, and each section's extent. The table of
+contents lists every page with its H2 headings, or, with words, the pages and H2/H3
+sections that hold them; a read returns the section's text without images, HTML
+wrappers or attribute lists, admonitions unindented, links rewritten to doc.kanap.net,
+capped at 12,000 characters (`truncated`, `subsections`), with the section's
+doc.kanap.net address. The language is the one asked for, else the person's interface
+language, else English. In multi-tenant mode the on-premise installation pages are
+left out. The manual is public: the tools need no right and are offered whenever the
+pages were found. The fixed part of the chat prompt (tool usage guidelines) says to
+read the manual before describing a screen, and the MCP `initialize` instructions
+say it to MCP clients (they stay under 1,200 characters, `ai-mcp-transport.spec.ts`).
 
 ### Budget reports and chargeback
 

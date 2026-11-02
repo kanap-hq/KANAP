@@ -8,7 +8,7 @@ import {
   CompiledGuidance,
   RUNTIME_SAFETY_FLOOR_MONITORING_DIAGNOSIS,
 } from './ai-agent-prompt-compiler.service';
-import { AiAgentLlmClient } from './ai-agent-llm-client';
+import { AiAgentLlmClient, agentCallCostEur } from './ai-agent-llm-client';
 import {
   ReplySynthesisEntitySource,
   ReplySynthesisKnowledgeDoc,
@@ -603,7 +603,7 @@ export class AiDiagnosticBriefSynthesisService {
       model: `${response.runtime.providerId}:${response.runtime.model}`,
       usage: response.usage,
       estimated_tokens: actualTokens,
-      estimated_cost_eur: llmCostEur(actualInputTokens, actualOutputTokens, response.runtime),
+      estimated_cost_eur: agentCallCostEur(actualInputTokens, actualOutputTokens, response.runtime, response.usage),
       latency_ms: response.latencyMs,
     };
   }

@@ -6,13 +6,24 @@ import StopIcon from '@mui/icons-material/StopRounded';
 import AttachFileIcon from '@mui/icons-material/AttachFileOutlined';
 import CloseIcon from '@mui/icons-material/CloseRounded';
 import { useTranslation } from 'react-i18next';
-import type { PendingAttachment } from '../useChat';
+import { isTableFile, type PendingAttachment } from '../useChat';
 import type { EntitySearchResult } from '../aiApi';
 import { buildEntityUrl } from '../utils/entityUrls';
 import MentionPopover, { MentionPopoverHandle } from './MentionPopover';
+import AttachmentFileChip from './AttachmentFileChip';
 
 const ACCEPTED_IMAGE_MIME_PREFIX = 'image/';
 const ACCEPTED_IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp)$/i;
+const ACCEPTED_FILE_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  '.xlsx',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.csv',
+  'text/csv',
+].join(',');
 
 type ChatInputProps = {
   onSend: (text: string) => void;
@@ -37,9 +48,36 @@ export type ChatInputHandle = {
   setText: (value: string) => void;
 };
 
-function isAcceptableImage(file: File): boolean {
+function isAcceptableFile(file: File): boolean {
+  if (isTableFile(file)) return true;
   if (file.type && file.type.toLowerCase().startsWith(ACCEPTED_IMAGE_MIME_PREFIX)) return true;
   return ACCEPTED_IMAGE_EXT_RE.test(file.name || '');
+}
+
+function RemoveAttachmentButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <Tooltip title={label} placement="top">
+      <IconButton
+        size="small"
+        aria-label={label}
+        onClick={onClick}
+        sx={(theme) => ({
+          position: 'absolute',
+          top: 2,
+          right: 2,
+          width: 18,
+          height: 18,
+          bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.55)',
+          color: '#fff',
+          '&:hover': {
+            bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.7)',
+          },
+        })}
+      >
+        <CloseIcon sx={{ fontSize: 12 }} />
+      </IconButton>
+    </Tooltip>
+  );
 }
 
 function PendingThumbnail({
@@ -51,6 +89,14 @@ function PendingThumbnail({
   onRemove: (localId: string) => void;
   removeLabel: string;
 }) {
+  const remove = <RemoveAttachmentButton onClick={() => onRemove(attachment.localId)} label={removeLabel} />;
+  if (attachment.kind === 'table') {
+    return (
+      <AttachmentFileChip name={attachment.file.name} size={attachment.file.size}>
+        {remove}
+      </AttachmentFileChip>
+    );
+  }
   return (
     <Box
       sx={(theme) => ({
@@ -75,27 +121,7 @@ function PendingThumbnail({
           display: 'block',
         }}
       />
-      <Tooltip title={removeLabel} placement="top">
-        <IconButton
-          size="small"
-          aria-label={removeLabel}
-          onClick={() => onRemove(attachment.localId)}
-          sx={(theme) => ({
-            position: 'absolute',
-            top: 2,
-            right: 2,
-            width: 18,
-            height: 18,
-            bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.55)',
-            color: '#fff',
-            '&:hover': {
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.7)',
-            },
-          })}
-        >
-          <CloseIcon sx={{ fontSize: 12 }} />
-        </IconButton>
-      </Tooltip>
+      {remove}
     </Box>
   );
 }
@@ -269,9 +295,9 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const acceptFiles = useCallback(
       (files: File[]): boolean => {
         if (!onAddFiles || disabled) return false;
-        const images = files.filter(isAcceptableImage);
-        if (!images.length) return false;
-        onAddFiles(images);
+        const accepted = files.filter(isAcceptableFile);
+        if (!accepted.length) return false;
+        onAddFiles(accepted);
         return true;
       },
       [onAddFiles, disabled],
@@ -442,7 +468,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                   type="file"
                   hidden
                   multiple
-                  accept="image/png,image/jpeg,image/gif,image/webp"
+                  accept={ACCEPTED_FILE_TYPES}
                   onChange={handleFilePick}
                 />
                 <Tooltip title={t('input.attach')} placement="top">

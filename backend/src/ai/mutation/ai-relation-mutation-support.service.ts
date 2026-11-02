@@ -41,6 +41,7 @@ import {
   type ReplacedHostLink,
 } from '../../assets/placement-rules';
 import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
+import { nameWithoutLeadingReference } from './name-without-leading-reference';
 
 export const AI_RELATION_ENTITY_TYPES = [
   'applications',
@@ -1784,16 +1785,34 @@ export class AiRelationMutationSupportService {
 
   private recordTitle(entityType: RelationTarget | 'locations', row: Record<string, unknown>): string {
     switch (entityType) {
-      case 'applications': return [row.sequential_id, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled application';
-      case 'assets': return [row.asset_reference, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled asset';
+      case 'applications': {
+        const reference = textOrNull(row.sequential_id);
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled application';
+      }
+      case 'assets': {
+        const reference = textOrNull(row.asset_reference);
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled asset';
+      }
       case 'contacts': {
         const name = [row.first_name, row.last_name].map(textOrNull).filter(Boolean).join(' ');
         return name || textOrNull(row.email) || 'Untitled contact';
       }
-      case 'projects': return [row.item_number == null ? null : `PRJ-${row.item_number}`, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled project';
-      case 'requests': return [row.item_number == null ? null : `REQ-${row.item_number}`, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled request';
-      case 'budget_lines': return [row.item_number == null ? null : `${BUDGET_LINE_PREFIX}-${row.item_number}`, row.product_name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled budget line';
-      case 'locations': return [row.location_reference, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled location';
+      case 'projects': {
+        const reference = row.item_number == null ? null : `PRJ-${row.item_number}`;
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled project';
+      }
+      case 'requests': {
+        const reference = row.item_number == null ? null : `REQ-${row.item_number}`;
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled request';
+      }
+      case 'budget_lines': {
+        const reference = row.item_number == null ? null : `${BUDGET_LINE_PREFIX}-${row.item_number}`;
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.product_name))].filter(Boolean).join(' - ') || 'Untitled budget line';
+      }
+      case 'locations': {
+        const reference = textOrNull(row.location_reference);
+        return [reference, nameWithoutLeadingReference(reference, textOrNull(row.name))].filter(Boolean).join(' - ') || 'Untitled location';
+      }
       case 'users': {
         const name = [row.first_name, row.last_name].map(textOrNull).filter(Boolean).join(' ');
         return name || textOrNull(row.email) || 'Unknown user';

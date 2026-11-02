@@ -67,6 +67,7 @@ export default function NewRequestsTile({ config }: NewRequestsTileProps) {
     <DashboardTile
       title={t('dashboard.tiles.newRequests', { days })}
       icon="Inbox"
+      isEmpty={requests.length === 0}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => { void refetch(); }}

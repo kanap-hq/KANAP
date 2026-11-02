@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 // The stream checks a tenant endpoint before the call (multi-tenant mode). The
 // endpoints below are stand-ins for the fake SDK: allowlisted, so none of them
 // is resolved.
-process.env.SSRF_ALLOWED_HOSTS = 'api.deepseek.com,openrouter.ai,local-llm.test,openrouter.example';
+process.env.SSRF_ALLOWED_HOSTS = 'api.deepseek.com,api.mistral.ai,openrouter.ai,local-llm.test,openrouter.example';
 
 const Module = require('node:module');
 const originalLoad = Module._load;
@@ -206,6 +206,41 @@ async function testReasoningContentDeltasAreEmittedButNotText() {
   assert.deepEqual(events, [
     { type: 'reasoning_delta', text: 'private reasoning' },
     { type: 'text_delta', text: 'public answer' },
+    { type: 'done', usage: undefined, finish_reason: 'stop' },
+  ]);
+}
+
+async function testMistralContentBlocksAreSplitIntoReasoningAndText() {
+  resetState([
+    {
+      choices: [{
+        delta: { content: [{ type: 'thinking', thinking: [{ type: 'text', text: 'checking tasks' }] }] },
+        finish_reason: null,
+      }],
+    },
+    {
+      choices: [{ delta: { content: [{ type: 'text', text: 'One task ' }] }, finish_reason: null }],
+    },
+    {
+      choices: [{ delta: { content: 'is late.' }, finish_reason: 'stop' }],
+    },
+  ]);
+
+  const events = await collectEvents(openaiCompatibleStream({
+    providerId: 'custom',
+    model: 'mistral-large-latest',
+    apiKey: 'test-key',
+    endpointUrl: 'https://api.mistral.ai/v1',
+    systemPrompt: 'Use tools.',
+    messages: [{ role: 'user', content: 'Hello' }],
+    tools: [],
+    maxTokens: 128,
+  }));
+
+  assert.deepEqual(events, [
+    { type: 'reasoning_delta', text: 'checking tasks' },
+    { type: 'text_delta', text: 'One task ' },
+    { type: 'text_delta', text: 'is late.' },
     { type: 'done', usage: undefined, finish_reason: 'stop' },
   ]);
 }
@@ -429,7 +464,14 @@ async function testReasoningEffortIsSentOnlyWhenRequested() {
   await collectEvents(openaiCompatibleStream({ ...baseParams, reasoningEffort: 'low' }));
   assert.equal(state.requests[0].reasoning_effort, 'low');
 
-  // Tenant-provided configurations never set the field — the request must not carry it.
+  // A registry model's effort goes out as set, the values above high included.
+  for (const effort of ['xhigh', 'max'] as const) {
+    resetState([{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }]);
+    await collectEvents(openaiCompatibleStream({ ...baseParams, model: 'deepseek-v4', reasoningEffort: effort }));
+    assert.equal(state.requests[0].reasoning_effort, effort);
+  }
+
+  // No effort set (the provider's default): the request does not carry the field.
   resetState([{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }]);
   await collectEvents(openaiCompatibleStream({ ...baseParams }));
   assert.equal('reasoning_effort' in state.requests[0], false);
@@ -439,11 +481,132 @@ async function testReasoningEffortIsSentOnlyWhenRequested() {
   assert.equal('reasoning_effort' in state.requests[0], false);
 }
 
+// A compatible server that does not take the value refuses the call: the stream fails with the
+// server's own message (the connection test shows it), without a retry that drops the field.
+async function testRefusedReasoningEffortFailsWithTheProviderMessage() {
+  resetState([]);
+  const refused = Object.assign(new Error('400 Bad Request'), {
+    status: 400,
+    error: { message: 'unknown variant `max`, expected one of `low`, `medium`, `high` for reasoning_effort' },
+  });
+  state.createErrors = [refused];
+
+  await assert.rejects(
+    collectEvents(openaiCompatibleStream({
+      providerId: 'custom',
+      model: 'some-model',
+      apiKey: 'test-key',
+      endpointUrl: null,
+      systemPrompt: 'Be precise.',
+      messages: [{ role: 'user', content: 'Hello' }],
+      tools: [],
+      maxTokens: 128,
+      reasoningEffort: 'max',
+    })),
+    (error: Error) => {
+      assert.equal(
+        error.message,
+        'AI provider request failed (HTTP 400): unknown variant `max`, expected one of `low`, `medium`, `high` for reasoning_effort',
+      );
+      return true;
+    },
+  );
+  assert.equal(state.requests.length, 1);
+  assert.equal(state.requests[0].reasoning_effort, 'max');
+}
+
+async function testOpenAiAsksForTheStreamUsageAndReadsItFromTheLastChunk() {
+  const baseParams = {
+    model: 'gpt-5-mini',
+    apiKey: 'test-key',
+    systemPrompt: 'Be precise.',
+    messages: [{ role: 'user', content: 'Hello' }],
+    tools: [],
+    maxTokens: 128,
+  };
+  const chunks = [
+    { choices: [{ delta: { content: 'ok' }, finish_reason: null }] },
+    { choices: [{ delta: {}, finish_reason: 'stop' }], usage: null },
+    // OpenAI's usage chunk: no choices.
+    {
+      choices: [],
+      usage: { prompt_tokens: 1000, completion_tokens: 50, prompt_tokens_details: { cached_tokens: 800 } },
+    },
+  ];
+
+  resetState(chunks);
+  const events = await collectEvents(openaiCompatibleStream({ ...baseParams, providerId: 'openai', endpointUrl: null }));
+  assert.deepEqual(state.requests[0].stream_options, { include_usage: true });
+  assert.deepEqual(events, [
+    { type: 'text_delta', text: 'ok' },
+    {
+      type: 'done',
+      usage: { input_tokens: 1000, output_tokens: 50, cache_read_input_tokens: 800 },
+      finish_reason: 'stop',
+    },
+  ]);
+
+  // A custom endpoint may refuse the field: it is never sent there.
+  resetState(chunks);
+  await collectEvents(openaiCompatibleStream({
+    ...baseParams,
+    providerId: 'custom',
+    endpointUrl: 'https://openrouter.example/api/v1',
+  }));
+  assert.equal('stream_options' in state.requests[0], false);
+
+  // Mistral and DeepSeek send the usage on the finishing chunk: still one done, with it.
+  resetState([
+    { choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }], usage: { prompt_tokens: 10, completion_tokens: 2 } },
+  ]);
+  const customEvents = await collectEvents(openaiCompatibleStream({
+    ...baseParams,
+    providerId: 'custom',
+    endpointUrl: 'https://openrouter.example/api/v1',
+  }));
+  assert.deepEqual(customEvents.filter((event) => event.type === 'done'), [
+    { type: 'done', usage: { input_tokens: 10, output_tokens: 2 }, finish_reason: 'stop' },
+  ]);
+}
+
+// The reasoning tokens a response reports (completion_tokens_details) reach the usage, so the
+// connection test can say whether the model reasoned; absent, the usage has no such field.
+async function testReasoningTokensAreReadFromTheUsage() {
+  const baseParams = {
+    model: 'gpt-5-mini',
+    apiKey: 'test-key',
+    systemPrompt: 'Be precise.',
+    messages: [{ role: 'user', content: 'Hello' }],
+    tools: [],
+    maxTokens: 16,
+  };
+  resetState([
+    { choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] },
+    {
+      choices: [],
+      usage: { prompt_tokens: 20, completion_tokens: 14, completion_tokens_details: { reasoning_tokens: 12 } },
+    },
+  ]);
+  const events = await collectEvents(openaiCompatibleStream({ ...baseParams, providerId: 'openai', endpointUrl: null }));
+  assert.deepEqual(events.find((event) => event.type === 'done')?.usage, {
+    input_tokens: 20,
+    output_tokens: 14,
+    reasoning_tokens: 12,
+  });
+
+  resetState([
+    { choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }], usage: { prompt_tokens: 20, completion_tokens: 2, completion_tokens_details: null } },
+  ]);
+  const plain = await collectEvents(openaiCompatibleStream({ ...baseParams, providerId: 'custom', endpointUrl: 'https://openrouter.example/api/v1' }));
+  assert.deepEqual(plain.find((event) => event.type === 'done')?.usage, { input_tokens: 20, output_tokens: 2 });
+}
+
 async function run() {
   await testReasoningModelsPreferDeveloperRole();
   await testLengthFinishReasonWithPendingToolCallEmitsError();
   await testCompletedNativeToolCallIsEmitted();
   await testReasoningContentDeltasAreEmittedButNotText();
+  await testMistralContentBlocksAreSplitIntoReasoningAndText();
   await testAssistantReasoningContentIsPassedThroughWhenPresent();
   await testAssistantReasoningContentIsNotSentToOtherEndpoints();
   await testUnsupportedParallelToolCallsFallback();
@@ -452,6 +615,9 @@ async function run() {
   await testXmlStyleToolCallStreamErrorDiscardsPartialNativeToolCall();
   await testReasoningModelHelpers();
   await testReasoningEffortIsSentOnlyWhenRequested();
+  await testRefusedReasoningEffortFailsWithTheProviderMessage();
+  await testOpenAiAsksForTheStreamUsageAndReadsItFromTheLastChunk();
+  await testReasoningTokensAreReadFromTheUsage();
 }
 
 void run();

@@ -28,6 +28,16 @@ const c = getTrialContent(locale).start;
 
       <form class="mk-trial-form" data-trial-form>
         <div class="mk-tf__field">
+          <label for="tf-first-name">{c.form.firstNameLabel}</label>
+          <input id="tf-first-name" name="first_name" type="text" required maxlength="100" pattern=" *[\p{L}\p{M}][\p{L}\p{M}'’\-]*\.?( [\p{L}\p{M}'’\-]+\.?)* *" autocomplete="given-name" />
+        </div>
+
+        <div class="mk-tf__field">
+          <label for="tf-last-name">{c.form.lastNameLabel}</label>
+          <input id="tf-last-name" name="last_name" type="text" required maxlength="100" pattern=" *[\p{L}\p{M}][\p{L}\p{M}'’\-]*\.?( [\p{L}\p{M}'’\-]+\.?)* *" autocomplete="family-name" />
+        </div>
+
+        <div class="mk-tf__field">
           <label for="tf-org">{c.form.orgLabel}</label>
           <input id="tf-org" name="org_name" type="text" required autocomplete="organization" />
           <p class="mk-tf__help">{c.form.orgHelp}</p>
@@ -155,6 +165,8 @@ const c = getTrialContent(locale).start;
       e.preventDefault();
       const fd = new FormData(form);
       const payload = {
+        first_name: String(fd.get('first_name') ?? '').trim(),
+        last_name: String(fd.get('last_name') ?? '').trim(),
         org: String(fd.get('org_name') ?? '').trim(),
         slug: String(fd.get('slug') ?? '').trim().toLowerCase(),
         email: String(fd.get('email') ?? '').trim(),
@@ -163,7 +175,7 @@ const c = getTrialContent(locale).start;
       };
 
       // Client-side checks (backend revalidates everything)
-      if (!payload.org || !payload.email || !payload.slug || !payload.country_iso) {
+      if (!payload.first_name || !payload.last_name || !payload.org || !payload.email || !payload.slug || !payload.country_iso) {
         setStatus(errorRequired, 'error');
         return;
       }

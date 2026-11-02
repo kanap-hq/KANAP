@@ -402,6 +402,15 @@
       "skillsMatrix": "Skills matrix",
       "workingDayCalendars": "Working-day calendars"
     },
+    "exportParams": {
+      "filters": "Filters",
+      "includeDisabled": "Include ended lines",
+      "q": "Search",
+      "scope": "Scope",
+      "sort": "Sort",
+      "table": "Table",
+      "tz": "Time zone"
+    },
     "fields": {
       "access_methods": "Access methods",
       "account_id": "Account",
@@ -706,6 +715,11 @@
       "authentication_mode": "Authentication",
       "monitoring_url": "Monitoring URL",
       "env_notes": "Environment notes",
+      "rule_key": "Rule key",
+      "operation_kind": "Operation",
+      "environment_scope": "Environments",
+      "implementation_status": "Implementation status",
+      "test_status": "Test status",
       "integration_tool_application_id": "Integration tool",
       "duration_months": "Duration (months)",
       "auto_renewal": "Tacit renewal",
@@ -805,6 +819,17 @@
         "contentChanged": "Content changed",
         "workingDaysChanged": "Working days changed",
         "notesChanged": "Notes changed",
+        "emailChanged": "Email changed",
+        "phoneChanged": "Phone changed",
+        "mobileChanged": "Mobile changed",
+        "conditionChanged": "Condition changed",
+        "businessRuleChanged": "Business rule changed",
+        "middlewareRuleChanged": "Middleware rule changed",
+        "remarksChanged": "Remarks changed",
+        "exampleInputChanged": "Example input changed",
+        "exampleOutputChanged": "Example output changed",
+        "sourceBindingsChanged": "Source fields changed",
+        "targetBindingsChanged": "Target fields changed",
         "renewalStopped": "Renewal stopped",
         "renewalResumed": "Renewal resumed",
         "descriptionChanged": "Description changed",
@@ -939,6 +964,14 @@
         "mapping_set": {
           "added": "Mapping set added: {{label}}",
           "removed": "Mapping set removed: {{label}}"
+        },
+        "mapping_group": {
+          "added": "Mapping group added: {{label}}",
+          "removed": "Mapping group removed: {{label}}"
+        },
+        "mapping_rule": {
+          "added": "Mapping rule added: {{label}}",
+          "removed": "Mapping rule removed: {{label}}"
         },
         "middleware": {
           "added": "Middleware added: {{label}}",
@@ -1316,6 +1349,7 @@
       "location_user_contacts": "Location internal contacts",
       "locations": "Locations",
       "notification_preferences": "Notification preferences",
+      "onboarding": "Getting started",
       "platform_ai_config": "Platform AI settings",
       "platform_ai_plan_limits": "Included AI messages",
       "portfolio_activities": "Portfolio activity",
@@ -2612,14 +2646,33 @@
       "priceOutput": "Cost output",
       "priceInputPlaceholder": "e.g., 3.00",
       "priceOutputPlaceholder": "e.g., 15.00",
+      "priceCacheRead": "Cache read cost",
+      "priceCacheReadPlaceholder": "e.g., 0.30",
+      "cacheReadHint": "Price per million tokens read from the provider’s cache (often “cached input” on its pricing page). Empty: the input cost applies, or a tenth of it for Anthropic.",
       "advanced": "Advanced settings",
       "timeout": "Timeout",
       "timeoutPlaceholder": "e.g., 120",
       "timeoutHint": "How long to wait for this model, in seconds, before giving up. Leave empty to use the standard limit. Local models often need more time.",
+      "reasoningEffort": "Reasoning effort",
+      "reasoningEffortDefault": "Provider default",
+      "reasoningEffortHint": "How much the model thinks before it answers. More effort gives more careful answers that are slower and cost more. The levels offered depend on the provider and the model. “Test connection” shows the effort sent.",
+      "reasoningEffortValues": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "xhigh": "Very high",
+        "max": "Maximum"
+      },
+      "reasoningEffortUnavailable": "This model takes no reasoning effort.",
+      "reasoningEffortMayBeIgnored": "This server may ignore the reasoning effort. “Test connection” shows whether the model reasoned.",
       "defaultLabel": "Use as default model",
       "test": "Test connection",
       "testing": "Testing…",
-      "testOk": "Connection successful ({{latency}} ms)."
+      "testOk": "Connection successful ({{latency}} ms).",
+      "testEffortSent": "Effort sent: {{effort}}.",
+      "testEffortNotSent": "No effort sent.",
+      "testReasoningTokens_one": "{{count}} reasoning token.",
+      "testReasoningTokens_other": "{{count}} reasoning tokens."
     }
   },
   "aiUsage": {
@@ -2630,7 +2683,7 @@
       "totalMonth": "Total this month",
       "agentsMonth": "Agents this month",
       "chatMonth": "Plaid this month",
-      "chatEstimatedNote": "Estimated at the currently assigned model’s rates",
+      "chatEstimatedNote": "Partly estimated at the currently assigned model’s rates",
       "chatFreeNote": "The assigned model has no cost",
       "byAgent": "Cost by agent",
       "byModel": "Cost by model",

@@ -47,22 +47,15 @@
       "history": "Historique"
     },
     "editor": {
-      "productNameRequired": "Le nom du produit est requis",
-      "currencyMust3": "La devise doit comporter 3 lettres",
-      "payingCompanyRequired": "La société payeuse est requise",
-      "accountRequired": "Le compte est requis",
-      "dimensionRequired": "{{name}} est obligatoire",
       "requiredLeaveTitle_one": "Valeur obligatoire manquante",
       "requiredLeaveTitle_other": "Valeurs obligatoires manquantes",
       "requiredLeaveMessage_one": "{{names}} est obligatoire. Choisissez une valeur avant de quitter.",
       "requiredLeaveMessage_other": "{{names}} sont obligatoires. Choisissez des valeurs avant de quitter.",
       "requiredLeaveStay": "Rester",
       "requiredLeaveConfirm": "Quitter quand même",
-      "effectiveStartRequired": "La date de début effectif est requise",
       "failedToCreate": "Impossible de créer la ligne",
       "failedToSave": "Impossible d'enregistrer",
-      "failedToLoad": "Impossible de charger la ligne",
-      "obsoleteAccount": "Compte obsolète détecté. Le compte sélectionné n'appartient pas au plan comptable de la société. Veuillez mettre à jour le compte."
+      "failedToLoad": "Impossible de charger la ligne"
     },
     "budget": {
       "title": "Budget",
@@ -370,6 +363,7 @@
       "deleted_other": "{{count}} contrats supprimés"
     },
     "title": "Contrats",
+    "empty": "Aucun contrat pour l'instant.",
     "newButton": "Nouveau",
     "importCsv": "Importer CSV",
     "exportTitle": "Exporter les contrats",
@@ -1903,6 +1897,7 @@
     "titleWithCurrency": "Lignes budgétaires ({{currency}})",
     "type": "Type",
     "newLine": "Nouvelle ligne",
+    "empty": "Aucune ligne budgétaire pour l'instant.",
     "opexLine": "Ligne OPEX",
     "capexLine": "Ligne CAPEX",
     "exportTitle": "Exporter le fichier budget",
@@ -1924,6 +1919,16 @@
       "deleted_other": "{{count}} lignes budgétaires supprimées",
       "failed": "La ligne budgétaire n'a pas pu être supprimée."
     },
-    "readOnlyInYourAccess": "Lecture seule dans votre accès"
+    "readOnlyInYourAccess": "Lecture seule dans votre accès",
+    "creation": {
+      "record": "La ligne budgétaire",
+      "missing": "Manquant : {{fields}}",
+      "placeFirst": "Choisissez d’abord la société payeuse ou le centre de coûts.",
+      "leaveTitle": "Cette ligne est incomplète",
+      "leaveComplete": "La compléter",
+      "leaveDelete": "La supprimer",
+      "leaveAnyway": "Quitter quand même",
+      "completeFailed": "La ligne n’a pas pu être vérifiée."
+    }
   }
 }

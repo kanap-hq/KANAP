@@ -7,7 +7,7 @@ import { useTenant } from '../tenant/TenantContext';
 import { useFeatures } from '../config/FeaturesContext';
 import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
-import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
+import { chatAwaitsIncludedModelConfirmation, chatTurnedOffByAdmin } from '../ai/includedModel';
 import PendingAccessPage from '../pages/PendingAccessPage';
 import { canUseAnyOperation, canUseOperation } from '../pages/operations/operationAccess';
 import { createRouteRequirement } from './createRouteRequirements';
@@ -163,19 +163,27 @@ export default function ProtectedRoute() {
           </Box>
         );
       }
-      // The missing right is the only obstacle: the refusal page names it.
+      // The missing right names itself on the refusal page. Chat turned off by an
+      // administrator does not hide that: the explanation is only for someone who may use the chat.
+      // Another obstacle (a provider that is not ready) keeps the generic refusal.
       const chatReasons = aiCapabilities.data?.surfaces.chat.reasons ?? [];
-      if (
-        !aiCapabilities.isError
-        && aiCapabilities.data?.surfaces.chat.permission_granted === false
-        && chatReasons.every((reason) => reason === 'permission_denied')
-      ) {
+      const missingChatRight = aiCapabilities.data?.surfaces.chat.permission_granted === false
+        && chatReasons.includes('permission_denied')
+        && chatReasons.every((reason) => (
+          reason === 'permission_denied' || reason === 'tenant_disabled' || reason === 'builtin_not_accepted'
+        ));
+      if (!aiCapabilities.isError && missingChatRight) {
         return aiChatRightRefusal;
       }
-      // A wait for the included model's confirmation opens the page, which says so.
+      // A wait for the included model's confirmation, or chat turned off by an administrator,
+      // opens the page, which says so.
       if (
         aiCapabilities.isError
-        || (aiCapabilities.data?.surfaces.chat.available !== true && !chatAwaitsIncludedModelConfirmation(aiCapabilities.data))
+        || (
+          aiCapabilities.data?.surfaces.chat.available !== true
+          && !chatAwaitsIncludedModelConfirmation(aiCapabilities.data)
+          && !chatTurnedOffByAdmin(aiCapabilities.data)
+        )
       ) {
         return refuse();
       }

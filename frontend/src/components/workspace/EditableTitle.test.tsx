@@ -108,6 +108,107 @@ describe('EditableTitle', () => {
     expect(getComputedStyle(title).fontWeight).toBe('500');
   });
 
+  it('opens in typing state with autoEdit, shows the fallback as placeholder and keeps an empty field open', () => {
+    const { onSave } = renderTitle({ value: '', autoEdit: true });
+    const input = screen.getByRole('textbox', { name: LABEL });
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('placeholder', 'New incident');
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.blur(input);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('sends a name once with autoEdit, keeps the field until the value arrives, then rests and takes the focus', () => {
+    const onSave = vi.fn();
+    const { rerender } = renderTitle({ value: '', autoEdit: true, onSave });
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: '  Billing ' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.blur(input);
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith('Billing');
+    expect(screen.getByRole('textbox')).toHaveValue('  Billing ');
+
+    rerender(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <EditableTitle value="Billing" fallback="New incident" canEdit onSave={onSave} />
+      </ThemeProvider>,
+    );
+    const title = screen.getByRole('button', { name: LABEL });
+    expect(title).toHaveTextContent('Billing');
+    expect(title).toHaveFocus();
+  });
+
+  it('keeps a refusal under a name still to give, until the person types again', () => {
+    const onSave = vi.fn();
+    const onDraftChange = vi.fn();
+    renderTitle({ value: '', autoEdit: true, onSave, onDraftChange, error: 'This name is already used' });
+    const input = screen.getByRole('textbox');
+    expect(screen.getByText('This name is already used')).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    expect(onDraftChange).toHaveBeenCalledWith('Billing');
+    // The same name sent again after a refusal and a change: a new attempt.
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSave).toHaveBeenCalledWith('Billing');
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+  });
+
+  it('fires onCancel on Escape in the empty autoEdit field; a typed name is cleared first', () => {
+    const onCancel = vi.fn();
+    renderTitle({ value: '', autoEdit: true, onCancel });
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'Bill' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox')).toHaveValue('');
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fire onCancel without autoEdit', () => {
+    const onCancel = vi.fn();
+    renderTitle({ value: '', onCancel });
+    fireEvent.click(screen.getByRole('button', { name: LABEL }));
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: LABEL })).toHaveFocus();
+  });
+
+  it('emphasizes the empty field while typing, and turns plain once a character is typed', () => {
+    renderTitle({ value: '', autoEdit: true, emphasizeEmpty: true });
+    const input = screen.getByRole('textbox');
+    // alpha(info.main, 0.08) of the light theme.
+    const emptyBackground = getComputedStyle(input).backgroundColor;
+    expect(emptyBackground).toMatch(/^rgba\(.*0\.08\)$/);
+    expect(getComputedStyle(input).borderRadius).toBe('6px');
+    // Its padding and border spill over the line, which keeps the height of the resting title.
+    expect(getComputedStyle(input).marginTop).toBe('-3px');
+    expect(getComputedStyle(input).marginBottom).toBe('-3px');
+    fireEvent.change(input, { target: { value: 'B' } });
+    expect(getComputedStyle(input).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  });
+
+  it('gives the empty field a stronger blue on the dark theme', () => {
+    render(
+      <ThemeProvider theme={createAppTheme('dark')}>
+        <EditableTitle value="" fallback="New incident" canEdit autoEdit emphasizeEmpty onSave={vi.fn()} />
+      </ThemeProvider>,
+    );
+    const style = getComputedStyle(screen.getByRole('textbox'));
+    // alpha(info.main, 0.16) and alpha(info.main, 0.4) of the dark theme.
+    expect(style.backgroundColor).toMatch(/^rgba\(.*0\.16\)$/);
+    expect(style.borderTopColor).toMatch(/^rgba\(.*0\.4\)$/);
+  });
+
+  it('does not emphasize the field without emphasizeEmpty', () => {
+    renderTitle({ value: '', autoEdit: true });
+    expect(getComputedStyle(screen.getByRole('textbox')).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    // Only the underline spills below the line.
+    expect(getComputedStyle(screen.getByRole('textbox')).marginBottom).toBe('-1px');
+  });
+
   it('draws no cue when the title cannot be edited', () => {
     const { container } = renderTitle({ canEdit: false, value: '' });
     expect(screen.queryByRole('button', { name: LABEL })).toBeNull();

@@ -540,12 +540,13 @@ export class TechnologiesController {
     res.send(await csvExportBody(res, file));
   }
 
-  /** Declare the technology on several applications at once (`{ application_ids }`). */
+  /** Declare the technology on several applications at once, at one version (`{ application_ids, technology_version_id? | version_label? }`). */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Post(':id/applications')
-  async addApplications(@Param('id') id: string, @Body() body: { application_ids?: string[] }, @Tenant() ctx: TenantRequest) {
-    return this.links.addApplications(id, body?.application_ids ?? [], this.opts(ctx), await this.requireApplications(ctx));
+  async addApplications(@Param('id') id: string, @Body() body: LinkInput & { application_ids?: string[] }, @Tenant() ctx: TenantRequest) {
+    const { technology_version_id, version_label } = body ?? {};
+    return this.links.addApplications(id, body?.application_ids ?? [], this.opts(ctx), await this.requireApplications(ctx), { technology_version_id, version_label });
   }
 
   @UseGuards(PermissionGuard)

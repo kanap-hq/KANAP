@@ -49,7 +49,7 @@ Chaque ligne ouvre le contrat. Votre recherche, vos filtres et votre tri sont co
 **Colonnes par défaut** :
 
 - **Contrat**, **Fournisseur**, **Société**
-- **Prochaine échéance** : la prochaine date limite de résiliation d'un contrat à reconduction tacite, ou la fin de tout autre contrat. La date est suivie de « dans n jours ». Un contrat échu affiche le jour de sa fin, en grisé
+- **Prochaine échéance** : « Résiliation possible jusqu'au {date} » lorsque cette date est la date limite de résiliation et qu'elle précède la fin du terme, ou « Fin le {date} » lorsque la date est la fin du contrat. La ligne se termine par « dans n j ». Un contrat échu affiche le jour de sa fin, en grisé
 - **État** : voir plus bas
 - **Montant annuel** : le montant à la signature, suivi de sa devise
 - **Engagé**, **Budget** et **Écart** pour l'année budgétaire choisie. Voir [Colonnes budgétaires](#colonnes-budgetaires)
@@ -321,11 +321,12 @@ L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous 
 
 Gardez votre liste de contrats synchronisée avec d'autres outils grâce aux fichiers CSV ou aux classeurs Excel (`contracts:admin`).
 
-**Export** : télécharge les contrats que la liste affiche (ou, sur demande dans la fenêtre, tous les contrats) avec ces colonnes : `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Les dates calculées (fin du terme, dates limites, état) ne sont pas exportées.
+**Export** : télécharge les contrats que la liste affiche (ou, sur demande dans la fenêtre, tous les contrats). Les colonnes sont titrées dans la langue de votre écran ; leurs noms techniques, que l'import lit aussi, sont `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Les dates calculées (fin du terme, dates limites, état) ne sont pas exportées.
 
 **Import** :
 
 - Utilisez le **Contrôle préalable** pour vérifier le fichier avant de l'appliquer
+- **Télécharger un exemple**, dans la fenêtre d'import, donne deux contrats d'exemple et ce que chaque colonne accepte. Voir [Fichiers d'exemple](csv-files.md#example-files)
 - Une ligne correspond à un contrat par son nom et son fournisseur
 - Création et mises à jour sont prises en charge
 - Le fichier n'a pas de colonne de fin de validité. Lors d'une mise à jour, un `status` vide, ou égal au statut actuel du contrat, conserve sa fin de validité. Un statut différent l'applique : `enabled` efface la fin de validité, et `disabled` termine le contrat aujourd'hui, sauf si sa fin de validité est déjà passée

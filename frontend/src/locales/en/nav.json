@@ -19,20 +19,29 @@
     "themeLabel": "Theme: {{mode}}",
     "account": "Account"
   },
+  "devBuild": {
+    "main": "main of {{date}}, {{time}}",
+    "branches_one": "{{count}} branch",
+    "branches_other": "{{count}} branches",
+    "builtAt": "Built on {{date}} at {{time}}",
+    "pr": "PR #{{number}}",
+    "prOpen": "PR #{{number}} open",
+    "prMerged": "PR #{{number}} merged",
+    "prClosed": "PR #{{number}} closed",
+    "conflict": "In conflict, left out of dev"
+  },
   "userMenu": {
     "myProfile": "My profile",
     "logout": "Logout"
   },
   "sidebar": {
     "ops": {
-      "overview": "Overview",
       "contracts": "Contracts",
       "reporting": "Reporting",
       "administration": "Administration",
       "budgetLines": "Budget lines"
     },
     "masterData": {
-      "home": "Master data home",
       "sections": {
         "organization": "Organization",
         "externalParties": "External parties",

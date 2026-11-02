@@ -26,6 +26,7 @@ export const TOKEN_SECRET_LABEL = {
   'entra-state': `${TOKEN_SECRET_LABEL_PREFIX}entra-state`,
   'mcp-oauth-code': `${TOKEN_SECRET_LABEL_PREFIX}mcp-oauth-code`,
   'mcp-access': `${TOKEN_SECRET_LABEL_PREFIX}mcp-access`,
+  creation: `${TOKEN_SECRET_LABEL_PREFIX}creation`,
 } as const;
 
 export type DerivedTokenFamily = keyof typeof TOKEN_SECRET_LABEL;
@@ -38,11 +39,12 @@ export const TOKEN_FAMILY_ENV: Record<TokenFamily, string> = {
   'entra-state': 'ENTRA_STATE_SECRET',
   'mcp-oauth-code': 'MCP_OAUTH_CODE_SECRET',
   'mcp-access': 'MCP_ACCESS_TOKEN_SECRET',
+  creation: 'CREATION_TOKEN_SECRET',
 };
 
 export type TokenSecretSource = 'dedicated-key' | 'derived-key' | 'jwt-secret';
 
-export const TOKEN_FAMILIES: TokenFamily[] = ['password-reset', 'provisioning', 'entra-state', 'mcp-oauth-code', 'mcp-access'];
+export const TOKEN_FAMILIES: TokenFamily[] = ['password-reset', 'provisioning', 'entra-state', 'mcp-oauth-code', 'mcp-access', 'creation'];
 
 /**
  * Derive a family key from `JWT_SECRET` with a distinct, stable HMAC label (RFC 2104 PRF).
@@ -101,6 +103,11 @@ export function getMcpOAuthCodeSecret(env: NodeJS.ProcessEnv = process.env): str
 /** MCP OAuth access token signing key (ai/oauth): verified only by the MCP guard. */
 export function getMcpAccessTokenSecret(env: NodeJS.ProcessEnv = process.env): string {
   return resolveFamilySecret('mcp-access', env).secret;
+}
+
+/** Signing key of the token that lets a record's creator cancel its creation (common/creation). */
+export function getCreationTokenSecret(env: NodeJS.ProcessEnv = process.env): string {
+  return resolveFamilySecret('creation', env).secret;
 }
 
 export type TokenSecretPolicyEntry = {

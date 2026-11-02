@@ -1,7 +1,7 @@
 import type { AuditParentRule } from '../../audit-parent-rules';
 import type { RecordHistoryRecord } from '../../record-history.inventory';
 import type { HistoryFields } from '../field-rules';
-import { hidden, shown } from '../field-rules';
+import { hidden, hiddenChanged, shown } from '../field-rules';
 
 /**
  * The interface (lot 2, family C): its page, the sets its writers replace as a whole, the rows
@@ -15,8 +15,9 @@ import { hidden, shown } from '../field-rules';
  *   declares `record`. The single-row link writes keep the link id in `record_id` and name the
  *   interface in their payload: the parent rule reads `interface_id`, and the label is also
  *   declared `record`.
- * - `interface_bindings`, `interface_mapping_sets` and `interface_attachments` keep their own id
- *   in `record_id` and name the interface in their payload; the parent rule reads `interface_id`.
+ * - `interface_bindings`, `interface_mapping_sets`, `interface_mapping_groups`,
+ *   `interface_mapping_rules` and `interface_attachments` keep their own id in `record_id` and
+ *   name the interface in their payload; the parent rule reads `interface_id`.
  *
  * The page is closed to a Business Contributor whose applications access is limited: the reference
  * family carries that rule (`closedToScope`), so the record check answers 404 as the page does.
@@ -37,6 +38,8 @@ export const interfacesRecord = {
     interface_links: 'set',
     interface_bindings: 'binding',
     interface_mapping_sets: 'set',
+    interface_mapping_groups: 'set',
+    interface_mapping_rules: 'set',
     interface_attachments: 'attachment',
   },
   childReads: {
@@ -214,6 +217,54 @@ const INTERFACE_MAPPING_SET_FIELDS: HistoryFields = {
   updated_at: hidden('timestamp'),
 };
 
+/**
+ * A mapping group of a set. Its title, description and position are the screen's columns; the
+ * set and the interface are links. A creation or a removal reads as the group itself.
+ */
+const INTERFACE_MAPPING_GROUP_FIELDS: HistoryFields = {
+  title: shown(),
+  description: shown(),
+  order_index: shown(),
+  mapping_set_id: hidden('mapping set link'),
+  interface_id: hidden('interface link'),
+  id: hidden('identity'),
+  tenant_id: hidden('tenancy'),
+  created_at: hidden('timestamp'),
+  updated_at: hidden('timestamp'),
+};
+
+/**
+ * A mapping rule. The short columns of the mapping screen come out as values. The long texts and
+ * the structured field lists say that they changed and never copy their content. The group, the
+ * leg, the set and the interface are links the screen names itself.
+ */
+const INTERFACE_MAPPING_RULE_FIELDS: HistoryFields = {
+  title: shown(),
+  rule_key: shown(),
+  order_index: shown(),
+  operation_kind: shown(),
+  lifecycle: shown(),
+  environment_scope: shown(),
+  implementation_status: shown(),
+  test_status: shown(),
+  condition_text: hiddenChanged('mapping rule condition: long text', 'conditionChanged'),
+  business_rule_text: hiddenChanged('mapping rule business text: long text', 'businessRuleChanged'),
+  middleware_rule_text: hiddenChanged('mapping rule middleware text: long text', 'middlewareRuleChanged'),
+  remarks: hiddenChanged('mapping rule remarks: long text', 'remarksChanged'),
+  example_input: hiddenChanged('mapping rule example: long text', 'exampleInputChanged'),
+  example_output: hiddenChanged('mapping rule example: long text', 'exampleOutputChanged'),
+  source_bindings: hiddenChanged('structured source fields, read on the mapping screen', 'sourceBindingsChanged'),
+  target_bindings: hiddenChanged('structured target fields, read on the mapping screen', 'targetBindingsChanged'),
+  group_id: hidden('group link, named by the mapping screen'),
+  applies_to_leg_id: hidden('leg link, named by the mapping screen'),
+  mapping_set_id: hidden('mapping set link'),
+  interface_id: hidden('interface link'),
+  id: hidden('identity'),
+  tenant_id: hidden('tenancy'),
+  created_at: hidden('timestamp'),
+  updated_at: hidden('timestamp'),
+};
+
 /** An attachment: its name, type and size; its storage keys never come out. */
 const INTERFACE_ATTACHMENT_FIELDS: HistoryFields = {
   kind: shown(),
@@ -240,6 +291,8 @@ export const interfacesFields: Readonly<Record<string, HistoryFields>> = {
   interface_links: INTERFACE_LINK_FIELDS,
   interface_bindings: INTERFACE_BINDING_FIELDS,
   interface_mapping_sets: INTERFACE_MAPPING_SET_FIELDS,
+  interface_mapping_groups: INTERFACE_MAPPING_GROUP_FIELDS,
+  interface_mapping_rules: INTERFACE_MAPPING_RULE_FIELDS,
   interface_attachments: INTERFACE_ATTACHMENT_FIELDS,
 };
 
@@ -251,10 +304,20 @@ export const interfacesFields: Readonly<Record<string, HistoryFields>> = {
  * The set labels have no rule: they name the interface in `record_id`. `interface_links` carries
  * the link in `record_id` for a whole-set replacement and the interface in its payload for a
  * single-row write, so the rule only fills the latter.
+ *
+ * Mapping groups and rules joined the history later. They stay out of `interfacesParentRules`:
+ * that object is the frozen copy of `1855720000000`. `interfaceMappingDetailParentRules` is the
+ * copy of `1855960000000-audit-log-parent-interface-mappings.ts`.
  */
 export const interfacesParentRules: Readonly<Record<string, AuditParentRule>> = {
   interface_links: { parentTable: 'interfaces', from: 'payload', keys: ['interface_id'] },
   interface_bindings: { parentTable: 'interfaces', from: 'payload', keys: ['interface_id'] },
   interface_mapping_sets: { parentTable: 'interfaces', from: 'payload', keys: ['interface_id'] },
   interface_attachments: { parentTable: 'interfaces', from: 'payload', keys: ['interface_id'] },
+};
+
+/** Mapping groups and rules: the payload names the interface in `interface_id`. */
+export const interfaceMappingDetailParentRules: Readonly<Record<string, AuditParentRule>> = {
+  interface_mapping_groups: { parentTable: 'interfaces', from: 'payload', keys: ['interface_id'] },
+  interface_mapping_rules: { parentTable: 'interfaces', from: 'payload', keys: ['interface_id'] },
 };

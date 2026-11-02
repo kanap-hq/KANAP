@@ -29,6 +29,7 @@ import {
 } from './ai-mutation-operation.types';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
 import { ACCOUNT_NUMBER_RULE, parseAccountNumber } from '../../accounts/account-number';
+import { nameWithoutLeadingReference } from './name-without-leading-reference';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
 import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 
@@ -377,21 +378,6 @@ function textOrNull(value: unknown): string | null {
   if (value == null) return null;
   const normalized = String(value).trim();
   return normalized || null;
-}
-
-/**
- * A record's name without a reference it repeats at its start ("CON-1 - DB link" for CON-1):
- * the label prepends the reference for the screens, and prepending it to a name that already
- * carries it would show it twice ("CON-1 - CON-1 - DB link").
- */
-function nameWithoutLeadingReference(reference: string | null, name: string | null): string | null {
-  if (!name) return null;
-  if (!reference) return name;
-  const escaped = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const rest = name.replace(new RegExp(`^${escaped}(?:\\s*[-–—·:|]\\s*|\\s+)`, 'i'), '').trim();
-  if (rest && rest !== name) return rest;
-  // A name that is only the reference leaves the title to the reference the card already shows.
-  return name.toLowerCase() === reference.toLowerCase() ? null : name;
 }
 
 function formatPlainValue(value: unknown, field?: FieldConfig): string | null {

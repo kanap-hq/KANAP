@@ -3,7 +3,6 @@ import { AppBar, Box, CircularProgress, Divider, Drawer, IconButton, LinearProgr
 import { useQuery } from '@tanstack/react-query';
 import { keyframes } from '@emotion/react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import DashboardIcon from '@mui/icons-material/Dashboard';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
@@ -30,7 +29,6 @@ import InsightsIcon from '@mui/icons-material/Insights';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import StorageIcon from '@mui/icons-material/Storage';
-import HomeIcon from '@mui/icons-material/Home';
 import LocationCityIcon from '@mui/icons-material/LocationCity';
 import InboxIcon from '@mui/icons-material/Inbox';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
@@ -59,11 +57,15 @@ import { getDocUrl } from '../utils/docUrls';
 import AboutDialog from './about/AboutDialog';
 import { formatUserName } from '../utils/userDisplay';
 import SubscriptionBanner from './SubscriptionBanner';
-import TrialChip from './TrialChip';
+import TrialChip, { TrialMenuLine } from './TrialChip';
+import DevBuildIndicator from './DevBuildIndicator';
 import NamePromptDialog from './NamePromptDialog';
+import FirstOpenDialog from './onboarding/FirstOpenDialog';
+import NavigationTracker from './navigation/NavigationTracker';
+import StepHint from './onboarding/StepHint';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
-import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
+import { chatAwaitsIncludedModelConfirmation, chatTurnedOffByAdmin } from '../ai/includedModel';
 import { aiAgentControlApi } from '../ai/aiApi';
 import { useTranslation } from 'react-i18next';
 import { PagePendingContext } from '../lib/deferredPage';
@@ -71,6 +73,7 @@ import { useLocale } from '../i18n/useLocale';
 import { useBusinessContributorApplicationVisibility } from '../hooks/useBusinessContributorApplicationVisibility';
 import { useGuardedLeave, useInAppLinkGuard } from '../hooks/leaveGuard';
 import { canUseAnyOperation } from '../pages/operations/operationAccess';
+import { NotifyProvider } from './notify/NotifyProvider';
 
 /** The pending page bar appears only once a move to another page has lasted a moment. */
 const appearLater = keyframes({ to: { opacity: 1 } });
@@ -181,7 +184,6 @@ export default function Layout() {
   } = applicationVisibility;
 
   const operations: NavEntry[] = [
-    { to: '/ops', label: t('nav:sidebar.ops.overview'), icon: <DashboardIcon /> },
     { to: '/ops/budget', label: t('nav:sidebar.ops.budgetLines'), icon: <AccountBalanceWalletIcon />, resource: 'budget' },
     { to: '/ops/contracts', label: t('nav:sidebar.ops.contracts'), icon: <DescriptionIcon />, resource: 'contracts' },
     { to: '/ops/reports', label: t('nav:sidebar.ops.reporting'), icon: <BarChartIcon />, resource: 'reporting' },
@@ -189,7 +191,6 @@ export default function Layout() {
   ];
 
   const masterData: NavEntry[] = [
-    { to: '/master-data', label: t('nav:sidebar.masterData.home'), icon: <HomeIcon /> },
     { divider: t('nav:sidebar.masterData.sections.organization') },
     { to: '/master-data/companies', label: t('nav:sidebar.masterData.companies'), icon: <BusinessIcon />, resource: 'companies' },
     { to: '/master-data/departments', label: t('nav:sidebar.masterData.departments'), icon: <AccountTreeIcon />, resource: 'departments' },
@@ -306,9 +307,11 @@ export default function Layout() {
   const hasWorkspaceAccess = React.useCallback((ws: string): boolean => {
     if (ws === 'ai') {
       if (!config.features.aiChat) return false;
-      // Still listed while it waits for the included model's confirmation: the page says why.
+      // Still listed while the page can say why: the included model waits for a confirmation,
+      // or an administrator turned chat off.
       return aiCapabilities.data?.surfaces.chat.available === true
-        || chatAwaitsIncludedModelConfirmation(aiCapabilities.data);
+        || chatAwaitsIncludedModelConfirmation(aiCapabilities.data)
+        || chatTurnedOffByAdmin(aiCapabilities.data);
     }
     if (ws === 'agents') {
       return canShowAgents;
@@ -423,6 +426,7 @@ export default function Layout() {
   // workspace is derived from route; no sync to localStorage required
 
   return (
+    <NotifyProvider>
     <Box sx={{ display: 'flex' }}>
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
         <Toolbar>
@@ -481,6 +485,9 @@ export default function Layout() {
                 '& .MuiTabs-flexContainer > :last-of-type': { mr: 'auto' },
                 '& .MuiTabs-scrollButtons': { width: 28, flexShrink: 0, color: 'text.secondary' },
                 '& .MuiTab-root': {
+                  // Narrower tabs below xl: at 1280 px every section, Plaid included, fits without scrolling.
+                  px: { xs: 1.25, xl: 2 },
+                  minWidth: { xs: 0, xl: 90 },
                   color: 'text.secondary',
                   minHeight: 48,
                   whiteSpace: 'nowrap',
@@ -511,6 +518,7 @@ export default function Layout() {
             </Tabs>
           )}
           {isPlatformHost && <Box sx={{ flex: 1 }} />}
+          <DevBuildIndicator />
           {token && (
             <>
               <TrialChip />
@@ -548,6 +556,7 @@ export default function Layout() {
                       {accountEmail}
                     </Typography>
                   ) : null}
+                  <TrialMenuLine onNavigate={closeMenu} />
                 </Box>
                 <Divider sx={{ my: 0.5 }} />
                 <MenuItem onClick={() => { closeMenu(); void guardedLeave(() => navigate('/settings')); }}>{t('nav:userMenu.myProfile')}</MenuItem>
@@ -776,7 +785,13 @@ export default function Layout() {
           </React.Suspense>
         </Box>
       </Box>
+      {/* The previous in-app address, where a cancelled creation returns. */}
+      <NavigationTracker />
+      {/* The name prompt is mounted last, so it comes first when both are open. */}
+      <FirstOpenDialog />
+      <StepHint />
       <NamePromptDialog />
     </Box>
+    </NotifyProvider>
   );
 }

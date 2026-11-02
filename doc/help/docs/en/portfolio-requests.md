@@ -64,7 +64,7 @@ The standard grid highlights the fields that matter during intake and review:
 
 ### List actions
 
-- **New Request** is available with `portfolio_requests:member`.
+- **New request** is available with `portfolio_requests:member`.
 - **Import** and **Export** are available to request administrators.
 
 ## The Request workspace
@@ -80,16 +80,32 @@ This matters because not everything is saved the same way:
 - Changes in **Summary**, **Analysis**, and **Scoring** are workspace edits and use **Save** / **Reset**.
 - The managed documents **Purpose** and **Risks & Mitigations** also use the workspace save flow.
 
-If you create a new request, KANAP starts on **Summary**. The other tabs become useful after the request exists as a real record rather than a very sincere idea.
-
 The workspace header gives you operational context without leaving the page:
 
 - a copyable request reference such as `REQ-42`
 - a metadata strip with **Status**, **Score**, **Requestor**, **IT owner**, **Target Delivery Date**, and (when applicable) the **Source Task** the request was created from
 - **Share** to send a link to the request
 - **Convert to Project** when the request is **Approved** or **Converted**
+- **Create** and **Cancel**, while the request is being created. See [Creating or cancelling](#cancelling-a-creation)
 - **Delete**, a trash icon, for administrators (when the request is not yet converted). A converted request stays as the origin of its project and cannot be deleted
 - previous/next navigation based on the exact list context you came from
+
+### Creating a request { #creating-a-request }
+
+1. Click **New request**. The request page opens on **Summary** with an empty title in the header. The rest of the page is dimmed.
+2. Type the name of the request.
+3. Press Enter, or click outside the title. KANAP creates the request at once, with status **Pending Review** and you as the requestor. Its reference (`REQ-42`) shows and all tabs open.
+
+Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Press Escape on the empty title to leave without creating anything.
+
+### Creating or cancelling { #cancelling-a-creation }
+
+While the request is being created, its header shows **Create** and **Cancel**. They stay until you leave the request.
+
+- **Create** keeps the request and closes it. You go back to where you started: the list or the previous screen. With an empty title, nothing closes and the title asks for one
+- **Cancel** closes without keeping anything. On a request already created, it deletes it. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete requests
+
+Leaving the request any other way keeps it. An administrator can then delete it with **Delete**. The reference of a cancelled request is not used again.
 
 ### Properties drawer
 
@@ -97,7 +113,6 @@ Treat the drawer as the request's structural backbone. It contains three groups.
 
 #### Core properties
 
-- Request Name
 - Status
 - Source, Category, Stream
 - Requestor

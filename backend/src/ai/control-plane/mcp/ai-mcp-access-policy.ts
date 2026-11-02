@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
+import { codedForbidden } from '../../../auth/module-right-required';
 
 export const MCP_SCOPE_TOOLS_LIST = 'mcp:tools:list';
 export const MCP_SCOPE_TOOLS_EXECUTE = 'mcp:tools:execute';
@@ -41,6 +42,8 @@ const MCP_CORE_READ_CAPABILITIES = [
   'get_record_history',
   'search_knowledge',
   'get_document',
+  'list_help_topics',
+  'read_help_section',
   'web_search',
 ] as const;
 
@@ -219,10 +222,10 @@ export function parseMcpApiKeyPolicy(record: AiMcpApiKeyPolicyRecord): AiMcpApiK
 
 export function assertMcpScope(policy: AiMcpApiKeyPolicy, scope: AiMcpScope): void {
   if (!policy.valid) {
-    throw new ForbiddenException('MCP API key policy is invalid.');
+    throw codedForbidden('AI_MCP_KEY_POLICY_INVALID', 'MCP API key policy is invalid.');
   }
   if (!policy.scopes.has(scope)) {
-    throw new ForbiddenException(`MCP API key is missing required scope ${scope}.`);
+    throw codedForbidden('MCP_KEY_NOT_ALLOWED', `MCP API key is missing required scope ${scope}.`);
   }
 }
 

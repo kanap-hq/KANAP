@@ -53,6 +53,7 @@ export default function GlobalStatusChangesTile({ config }: GlobalStatusChangesT
     <DashboardTile
       title={t('dashboard.tiles.statusChanges', { days })}
       icon="SwapHoriz"
+      isEmpty={items.length === 0}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => { void refetch(); }}

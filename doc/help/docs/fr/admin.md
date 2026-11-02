@@ -588,7 +588,7 @@ KANAP limite les demandes de connexion répétées :
 
 Les limites par adresse sont hautes parce que les collaborateurs d'une même organisation accèdent souvent à KANAP depuis la même adresse sortante. Une fois une limite par adresse atteinte, la personne patiente une minute et réessaie. Derrière un reverse proxy, KANAP compte l'adresse IP de chaque personne, tant que le proxy la transmet.
 
-Les connexions et les échecs de connexion apparaissent dans le [Journal d'audit](#journal-daudit). Quand 5 échecs bloquent un compte depuis une adresse, un échec de connexion avec le motif **Trop de tentatives de connexion** est enregistré. Les tentatives refusées pendant les 15 minutes qui suivent ne sont pas enregistrées, pas plus que les demandes bloquées par une limite par adresse.
+Les connexions et les échecs de connexion apparaissent dans le [Journal d'audit](#journal-daudit). Quand 5 échecs bloquent un compte depuis une adresse, un échec de connexion avec le motif **Trop de tentatives de connexion** est enregistré. Réinitialiser le mot de passe avec **Mot de passe oublié** lève le blocage aussitôt. Les tentatives refusées pendant les 15 minutes qui suivent ne sont pas enregistrées, pas plus que les demandes bloquées par une limite par adresse.
 
 ---
 
@@ -678,6 +678,7 @@ Ouvrez **À propos de KANAP** depuis le menu utilisateur, sous **Déconnexion**.
 
 - La version et le déploiement (cloud ou sur site)
 - Sur le cloud, pendant un essai, les jours restants, avec un lien **Choisir une offre** pour les administrateurs de la facturation
+- Pendant un essai, le parcours choisi à la première ouverture, avec **Changer**, et **Afficher les premiers pas** quand la tuile des premiers pas est masquée. Voir [Mon tableau de bord](my-dashboard.md#trial-first-steps)
 - Des liens vers les notes de version de cette version, la documentation, kanap.net et le code source (licence AGPL-3.0)
 - Sur site, un lien vers le guide de mise à jour
 

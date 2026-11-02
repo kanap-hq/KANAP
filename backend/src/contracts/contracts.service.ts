@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { moduleRightRequired } from '../auth/module-right-required';
 import { BUDGET_LINE_TABLE, BUDGET_NATURES, linkedLineOf, naturesAnd } from '../spend/budget-nature';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, DeepPartial, EntityManager, In, Repository, Raw, SelectQueryBuilder } from 'typeorm';
@@ -108,6 +109,7 @@ import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-w
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { amountCell, dayCell, ListExportCell, ListExportFile, numberCell, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
+import { CONTRACT_CSV_COLUMNS, CONTRACT_CSV_HEADERS } from './contract-csv-headers';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -1300,9 +1302,7 @@ export class ContractsService {
 
   // CSV
   private csvHeaders(): string[] {
-    return [
-      'name','company_name','supplier_name','cost_center','start_date','duration_months','auto_renewal','notice_period_months','yearly_amount_at_signature','currency','billing_frequency','status','owner_email','notes'
-    ];
+    return [...CONTRACT_CSV_COLUMNS];
   }
   /**
    * The contracts file in the screen's language (`common/csv-sheet`): its separator, the start
@@ -1315,7 +1315,7 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
     const language = opts?.language ?? 'en';
-    const headers = this.csvHeaders();
+    const headers = CONTRACT_CSV_COLUMNS.map((column) => CONTRACT_CSV_HEADERS[column][language]);
     const rows: ListExportCell[][] = [];
     const isoDate = (value: unknown): string => {
       if (value == null || value === '') return '';
@@ -1406,6 +1406,7 @@ export class ContractsService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: this.csvHeaders(),
+      fieldLabels: CONTRACT_CSV_HEADERS,
       dateFields: ['start_date'],
       // Older files have no place column: a row without it keeps the stored place.
       optional: ['cost_center'],
@@ -1771,7 +1772,7 @@ export class ContractsService {
    */
   async budgetCoverage(contractId: string, query: any, opts?: ListReadOptions) {
     const mg = opts?.manager ?? this.repo.manager;
-    if (!opts?.budgetAccess) throw new ForbiddenException('Reading the budget figures of a contract needs access to the budget.');
+    if (!opts?.budgetAccess) throw moduleRightRequired('budget', 'reader', 'Reading the budget figures of a contract needs access to the budget.');
     const contract = await this.findContract(contractId, mg);
     const currentYear = contractBudgetCurrentYear();
     const selection = parseContractBudgetSelection(query, currentYear, { year: 'year', column: 'column' });

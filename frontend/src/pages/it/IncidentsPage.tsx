@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
-import { Button, Link, Stack, useTheme } from '@mui/material';
+import { Button, Link, Stack, Typography, useTheme } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ICellRendererParams, ValueGetterParams } from 'ag-grid-community';
@@ -392,6 +392,11 @@ export default function IncidentsPage() {
 
   // Deleting incidents is for incident administrators only (the server refuses everyone else).
   const canDelete = hasLevel('incidents', 'admin');
+  const canCreate = hasLevel('incidents', 'contributor');
+  const openNewIncident = () => {
+    const sp = buildWorkspaceSearch();
+    navigate(`/it/incidents/new?${sp.toString()}`);
+  };
   // The export holds what the list shows: its filters, quick search and sort (not its columns).
   const openExport = useCallback(() => {
     const request = listRequestRef.current;
@@ -408,11 +413,8 @@ export default function IncidentsPage() {
 
   const actions = (
     <Stack direction="row" spacing={1}>
-      {hasLevel('incidents', 'contributor') && (
-        <Button variant="action-primary" onClick={() => {
-          const sp = buildWorkspaceSearch();
-          navigate(`/it/incidents/new?${sp.toString()}`);
-        }}>
+      {canCreate && (
+        <Button variant="action-primary" onClick={openNewIncident}>
           {t('pages.incidents.newIncident')}
         </Button>
       )}
@@ -462,6 +464,16 @@ export default function IncidentsPage() {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
         }}
         onListRequestChange={(request) => { listRequestRef.current = request; }}
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="incidents-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.incidents.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={openNewIncident}>
+                {t('pages.incidents.newIncident')}
+              </Button>
+            )}
+          </Stack>
+        )}
       />
       <CsvExportDialogV2
         open={exportOpen}

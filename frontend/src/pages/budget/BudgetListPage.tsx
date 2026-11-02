@@ -542,6 +542,8 @@ function BudgetListPageView() {
     {
       colId: 'contract_name',
       headerName: t('opex.columns.contract'),
+      // Off the default view: the amounts stay in sight on a first visit (the column chooser brings it back).
+      defaultHidden: true,
       valueGetter: (p) => (p.data?.contract_hidden ? t('contracts.outsideYourAccess') : p.data?.latest_contract_name || ''),
       width: 200,
       cellRenderer: (params: any) => (
@@ -612,6 +614,7 @@ function BudgetListPageView() {
     {
       colId: 'allocation_label',
       headerName: t('opex.columns.allocation'),
+      defaultHidden: true,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
@@ -645,6 +648,7 @@ function BudgetListPageView() {
     ...buildAmountColumnDefs<SummaryRow>({
       t,
       currentYear: Y,
+      locale,
       columns: budgetColumns,
       cellRenderer: (colId) => (params: any) => {
         // No exchange rate that year: the amount in the line currency, marked, left out of the totals.
@@ -714,6 +718,7 @@ function BudgetListPageView() {
     {
       colId: 'latest_task_text',
       headerName: t('opex.columns.task'),
+      defaultHidden: true,
       valueGetter: (p) => p.data?.latest_task?.title ?? '',
       tooltipValueGetter: (p) => (p.value ? String(p.value) : ''),
       flex: 1,
@@ -1062,6 +1067,16 @@ function BudgetListPageView() {
         }}
         enableRowSelection={canDelete}
         onSelectionChanged={setSelectedRows}
+        emptyState={(
+          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="budget-empty">
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('budget.empty')}</Typography>
+            {canCreate && (
+              <Button variant="contained" size="small" onClick={() => openNew(natureScope === 'all' ? 'opex' : natureScope)}>
+                {t('budget.newLine')}
+              </Button>
+            )}
+          </Stack>
+        )}
         footer={fxMissing?.length ? <FxMissingNotice items={fxMissing} /> : undefined}
       />}
       <BudgetFileExportDialog

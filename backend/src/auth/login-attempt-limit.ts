@@ -20,8 +20,14 @@ import { DatabaseHitCounter, HitCounter, HitRule, MemoryHitCounter } from '../co
  * is still being checked). The fifth refusal starts the 15 minutes. Nothing here reads the
  * account, so a known and an unknown account get the same answers.
  *
- * The key is a SHA-256 of the tenant, the client address and the identifier typed (the e-mail,
- * lower case, without spaces): neither the client address nor the identifier is kept in clear.
+ * A completed password reset clears the counts of its account from every client address
+ * (`passwordReset`): the new password works at once. The reset proves the account, so this says
+ * nothing a sign-in did not.
+ *
+ * The key is two SHA-256 joined by a dot: one of the tenant and the identifier typed (the e-mail,
+ * lower case, without spaces), then one of that and the client address. Neither the client
+ * address nor the identifier is kept in clear, and the first part finds every count of an
+ * account (`HitCounter.clearPrefix`).
  * One API process counts in its memory; several (API_WORKERS > 1) count in `rate_limit_hits`, as
  * the address limits do. `RATE_LIMIT_ENABLED=false` turns it off with the other limits.
  */
@@ -37,10 +43,16 @@ export function normalizeLoginIdentifier(value: unknown): string {
   return typeof value === 'string' ? value.replace(/\s+/g, '').toLowerCase() : '';
 }
 
+const sha256 = (parts: string[]) => createHash('sha256').update(parts.join('\n')).digest('hex');
+
+/** The first part of the keys of an account in a tenant, whatever the client address. */
+function loginAccountKey(tenantId: string | null | undefined, identifier: unknown): string {
+  return sha256(['login-attempts', tenantId ?? '-', normalizeLoginIdentifier(identifier)]);
+}
+
 export function loginAttemptKey(tenantId: string | null | undefined, address: string | null, identifier: unknown): string {
-  return createHash('sha256')
-    .update(['login-attempts', tenantId ?? '-', address ?? 'unknown', normalizeLoginIdentifier(identifier)].join('\n'))
-    .digest('hex');
+  const account = loginAccountKey(tenantId, identifier);
+  return `${account}.${sha256([account, address ?? 'unknown'])}`;
 }
 
 export type LoginAttempt = {
@@ -101,6 +113,12 @@ export class LoginAttemptLimit {
   async succeeded(attempt: LoginAttempt): Promise<void> {
     if (!isRateLimitEnabled()) return;
     await this.counter.clear(attempt.key);
+  }
+
+  /** The password of the account was reset: every client address starts again from zero for it. */
+  async passwordReset(tenantId: string | null | undefined, identifier: unknown): Promise<void> {
+    if (!isRateLimitEnabled()) return;
+    await this.counter.clearPrefix(`${loginAccountKey(tenantId, identifier)}.`);
   }
 }
 

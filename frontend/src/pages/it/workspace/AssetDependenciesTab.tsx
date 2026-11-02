@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Snackbar, Stack, Tooltip } from '@mui/material';
+import { Alert, Stack, Tooltip } from '@mui/material';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import { useTheme } from '@mui/material/styles';
 import { useQueryClient } from '@tanstack/react-query';
@@ -15,6 +15,7 @@ import { joinNames } from '../../working-day-calendars/workingDayCalendarFields'
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { getDotColor } from '../../../utils/statusColors';
 import AssetImpactSection from '../editors/AssetImpactSection';
+import { useNotify } from '../../../components/notify/NotifyProvider';
 import { useApplicationFeedback } from '../applicationFeedback';
 import usePlacementQuestion from '../components/usePlacementQuestion';
 import { ASSET_DIRECTIONS, assetRelationsKey, type AssetDirection, type AssetRelationsData } from './assetRelationsData';
@@ -56,13 +57,13 @@ export default function AssetDependenciesTab({
 }) {
   const { t } = useTranslation(['it', 'common']);
   const feedback = useApplicationFeedback();
+  const notify = useNotify();
   const { hasLevel } = useAuth();
   const queryClient = useQueryClient();
   const labels = useRelationLabels();
   const locale = useLocale();
   const theme = useTheme();
   const placement = usePlacementQuestion();
-  const [placementNotice, setPlacementNotice] = React.useState<string | null>(null);
   const canEdit = hasLevel('infrastructure', 'member');
   const relationsKey = assetRelationsKey(assetId);
   const groupOf = React.useCallback((kind: string) => (DIRECTION_SET.has(kind) ? 'assets' : undefined), []);
@@ -105,16 +106,20 @@ export default function AssetDependenciesTab({
       );
       const replaced = res.data?.replaced_host_links ?? [];
       if (replaced.length > 0) {
-        setPlacementNotice(t('workspace.asset.relations.placementReplaced', {
-          cluster: replaced[0].cluster_name,
-          hosts: joinNames(Array.from(new Set(replaced.map((row) => row.host_name))), locale),
-          asset: replaced[0].asset_name,
-        }));
+        notify({
+          message: t('workspace.asset.relations.placementReplaced', {
+            cluster: replaced[0].cluster_name,
+            hosts: joinNames(Array.from(new Set(replaced.map((row) => row.host_name))), locale),
+            asset: replaced[0].asset_name,
+          }),
+        });
       } else if (answer.clusterId) {
         // The cluster carries the link: say where it went, the host's own list does not change.
-        setPlacementNotice(t('workspace.asset.relations.placementLinked', {
-          cluster: answer.clusterName ?? '',
-        }));
+        notify({
+          message: t('workspace.asset.relations.placementLinked', {
+            cluster: answer.clusterName ?? '',
+          }),
+        });
       }
     } catch (e) {
       setError(getApiErrorMessage(e, t, t('messages.saveRelationsFailed')));
@@ -230,15 +235,6 @@ export default function AssetDependenciesTab({
       />
 
       {placement.placementDialog}
-
-      <Snackbar
-        open={!!placementNotice}
-        autoHideDuration={5000}
-        onClose={() => setPlacementNotice(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      >
-        <Alert severity="success" variant="filled">{placementNotice}</Alert>
-      </Snackbar>
     </Stack>
   );
 }

@@ -221,22 +221,11 @@ describe('Layout budget management sidebar', () => {
     expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.administration' })).not.toBeInTheDocument();
   });
 
-  it('selects OPEX, not Overview, on an OPEX item', () => {
-    renderSidebar('/ops/opex/OPX-1');
-    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.budgetLines' })).toHaveClass('Mui-selected');
-    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.overview' })).not.toHaveClass('Mui-selected');
-  });
-
-  it('selects Overview on the overview page itself', () => {
-    renderSidebar('/ops');
-    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.overview' })).toHaveClass('Mui-selected');
-    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.budgetLines' })).not.toHaveClass('Mui-selected');
-  });
-
-  it('does not select Overview on the OPEX list', () => {
-    renderSidebar('/ops/opex');
-    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.budgetLines' })).toHaveClass('Mui-selected');
-    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.overview' })).not.toHaveClass('Mui-selected');
+  it('has no home entry in Budget management nor in Master data: the home page holds the budget tiles', () => {
+    renderSidebar('/ops/budget');
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.overview' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.masterData.home' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'nav:sidebar.ops.budgetLines' })[0]).toHaveAttribute('href', '/ops/budget');
   });
   it.each(['/ops/budget', '/ops/capex/BL-30', '/ops/opex/BL-1'])('selects the single budget entry on %s', (path) => {
     renderSidebar(path);
@@ -313,7 +302,7 @@ describe('Layout on the refusal page', () => {
     try {
       renderRefusal('/ops/budget');
       expect(screen.getAllByRole('tab').filter((tab) => tab.getAttribute('aria-selected') === 'true')).toEqual([]);
-      expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.overview' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.budgetLines' })).not.toBeInTheDocument();
     } finally {
       access.grants = null;
     }
@@ -715,5 +704,53 @@ describe('Layout IT menu', () => {
     } finally {
       open.mockRestore();
     }
+  });
+});
+
+describe('Layout Plaid tab when chat is turned off', () => {
+  afterEach(() => {
+    access.aiChat = false;
+    access.aiData = undefined;
+  });
+
+  function plaidTab() {
+    const nav = screen.getByRole('tablist', { name: 'nav:topBar.sectionNav' });
+    return within(nav).queryByRole('tab', { name: 'nav:workspaces.ai' });
+  }
+
+  it('keeps the Plaid tab for someone who may use the chat', () => {
+    access.aiChat = true;
+    access.aiData = {
+      surfaces: {
+        chat: {
+          available: false,
+          permission_granted: true,
+          tenant_enabled: false,
+          reasons: ['tenant_disabled'],
+        },
+        settings: { available: true },
+      },
+      instance_features: { ai_settings: true },
+    };
+    renderShell();
+    expect(plaidTab()).toBeInTheDocument();
+  });
+
+  it('hides the Plaid tab when the chat right is missing', () => {
+    access.aiChat = true;
+    access.aiData = {
+      surfaces: {
+        chat: {
+          available: false,
+          permission_granted: false,
+          tenant_enabled: false,
+          reasons: ['tenant_disabled', 'permission_denied'],
+        },
+        settings: { available: false },
+      },
+      instance_features: { ai_settings: false },
+    };
+    renderShell();
+    expect(plaidTab()).not.toBeInTheDocument();
   });
 });

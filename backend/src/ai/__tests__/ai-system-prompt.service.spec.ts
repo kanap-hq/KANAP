@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { AiSystemPromptService } from '../ai-system-prompt.service';
+import type { AiToolListItemDto } from '../ai.types';
 import { selectAiContextProfile } from '../ai-context-profile';
 import { AiChatOrchestratorService } from '../ai-chat-orchestrator.service';
 import { analyticsDimensionsAiContext } from '../ai-analytics-dimensions-context';
@@ -98,6 +99,9 @@ async function testStructuredReadGuidancePrefersQueryLayerTools() {
   assert.match(prompt, /last_dr_test is the last recovery test date/);
   assert.match(prompt, /count \[null\] plus before the day after that date; they never overlap/);
   assert.match(prompt, /top business rank with recovery_wave \[null\]; top data class rank with the lowest cyber rank/);
+  assert.match(prompt, /An application's environments are the environments of its deployments/);
+  assert.match(prompt, /An application with no deployment has none/);
+  assert.match(prompt, /The legacy column environment defaults to prod and is absent from application reads/);
 }
 
 const baseParams = {
@@ -172,7 +176,7 @@ async function testPromptIncludesTodaysDate() {
   const today = new Date().toISOString().slice(0, 10);
   assert.match(prompt, new RegExp(today));
   assert.match(prompt, /"time_zone": "UTC"/);
-  assert.match(prompt, /"local_time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?\+00:00"/);
+  assert.match(prompt, /"local_time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\+00:00"/, 'the clock is given to the minute');
   assert.doesNotMatch(prompt, /Tool result categories and the `complete` field/i);
 }
 
@@ -198,7 +202,7 @@ async function testPromptCarriesTheUserTimeZoneAndLocalTime() {
   );
   assert.match(prompt, new RegExp(`"today": "${parts.year}-${parts.month}-${parts.day}"`));
   assert.match(prompt, /"time_zone": "Europe\/Paris"/);
-  assert.match(prompt, /"local_time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?\+0[12]:00"/);
+  assert.match(prompt, /"local_time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\+0[12]:00"/);
   assert.match(prompt, /Date-time values in tool results are written in `time_zone` with an explicit UTC offset/);
   assert.match(prompt, /quote them as given/);
   assert.match(prompt, /If a value carries another offset \(including `Z`\), convert it to `time_zone` before quoting/);
@@ -686,6 +690,49 @@ async function testPromptSaysWhatItDoesWithAccessAndHistory() {
   assert.doesNotMatch(web, /for a person with the (Cost centers|Working-day calendars|Analytics|Budget) right only/);
 }
 
+// The prompt caches (Anthropic's breakpoint, the automatic prefix cache of the OpenAI-compatible
+// providers) reuse the fixed sections only when nothing that moves comes before them: the person
+// and the clock close the prompt, after the cacheable prefix.
+async function testPersonAndClockCloseThePromptAfterTheCacheablePrefix() {
+  const service = new AiSystemPromptService();
+  const tools: AiToolListItemDto[] = [
+    {
+      name: 'query_entities',
+      category: 'authoritative',
+      description: 'Query structured entity data.',
+      input_summary: {},
+      read_only: true,
+      surfaces: ['chat'],
+    },
+  ];
+
+  for (const contextProfile of [selectAiContextProfile('liste les projets'), selectAiContextProfile('bonjour')]) {
+    const built = service.buildWithMetadata({ ...baseParams, availableTools: tools, contextProfile, timeZone: 'Europe/Paris' });
+    assert.ok(built.text.startsWith(`${built.cacheablePrefix}\n\n`), `${contextProfile.name}: the prefix starts the prompt`);
+    const context = built.text.slice(built.cacheablePrefix.length + 2);
+    assert.match(context, /^Tenant and current user context/);
+    assert.match(context, /"local_time"/);
+    assert.match(context, /Alex Operator/);
+    assert.equal(built.sections.at(-1)!.key, 'current_user', `${contextProfile.name}: the context is the last section`);
+    assert.doesNotMatch(built.cacheablePrefix, /local_time|"today"|Alex Operator|alex@example\.com|Test Tenant/);
+    assert.equal(built.sections.filter((section) => section.key === 'current_user').length, 1);
+  }
+
+  // Another person with the same rights, at another time: the same prefix.
+  const profile = selectAiContextProfile('liste les projets');
+  const first = service.buildWithMetadata({ ...baseParams, availableTools: tools, contextProfile: profile, timeZone: 'Europe/Paris' });
+  const second = service.buildWithMetadata({
+    ...baseParams,
+    tenantName: 'Other Tenant',
+    currentUser: { displayName: 'Sam Reader', email: 'sam@example.com', roleNames: ['Administrator'], teamName: null },
+    availableTools: tools,
+    contextProfile: profile,
+    timeZone: 'America/New_York',
+  });
+  assert.equal(second.cacheablePrefix, first.cacheablePrefix);
+  assert.notEqual(second.text, first.text);
+}
+
 async function run() {
   await testPromptSaysWhatItDoesWithAccessAndHistory();
   await testPromptKeepsTheUserLanguageBetweenToolCalls();
@@ -698,6 +745,7 @@ async function run() {
   await testToolResultContentIsDataNotInstructions();
   await testPromptIncludesTodaysDate();
   await testPromptCarriesTheUserTimeZoneAndLocalTime();
+  await testPersonAndClockCloseThePromptAfterTheCacheablePrefix();
   await testPromptRendersUserControlledFieldsAsJson();
   await testMinimalProfileSkipsToolsAndLongGuidance();
   await testPromptBuildsWriteGuidanceFromToolMetadata();

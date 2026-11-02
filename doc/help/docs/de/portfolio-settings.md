@@ -134,28 +134,26 @@ Phasenvorlagen bieten:
 
 ## Klassifizierung
 
-Konfigurieren Sie Typen, Kategorien und Streams zur Organisation von Anfragen und Projekten.
+Konfigurieren Sie Quellen, Kategorien und Streams zur Klassifizierung von Anfragen und Projekten.
 
-### Typen
+Ein neuer Arbeitsbereich beginnt mit drei Quellen (IT, Fachbereich, Compliance) und fünf Kategorien mit je einer kurzen Beschreibung (Geschäftsanwendungen, Arbeitsplatz und Anwenderservices, Infrastruktur und Betrieb, Innovation und digitale Transformation, Cybersicherheit), ohne Stream. Ihre Namen folgen der Sprache des Arbeitsbereichs. Sie können sie wie jeden anderen Wert umbenennen, deaktivieren oder löschen.
 
-Typen beschreiben die Art der Arbeit:
-- **Erweiterung**: Verbesserungen bestehender Fähigkeiten
-- **Neuentwicklung**: Aufbau neuer Fähigkeiten
-- **Wartung**: Systeme betriebsbereit halten
-- **Infrastruktur**: Plattform und technische Grundlage
+### Quellen
 
-**Um einen Typ hinzuzufügen**:
-1. Klicken Sie auf **Typ hinzufügen**
-2. Geben Sie Name und optionale Beschreibung ein
+Eine Quelle gibt an, woher eine Anfrage kommt. Der Arbeitsbereich beginnt mit IT, Fachbereich und Compliance.
+
+**Um eine Quelle hinzuzufügen**:
+1. Klicken Sie auf **Quelle hinzufügen**
+2. Geben Sie einen Namen und eine optionale Beschreibung ein
 3. Klicken Sie auf **Speichern**
 
-**Um einen Typ umzuschalten**:
-- Verwenden Sie den Schalter zum Aktivieren/Deaktivieren
-- Deaktivierte Typen erscheinen nicht in Auswahl-Dropdowns
+**Um eine Quelle ein- oder auszuschalten**:
+- Verwenden Sie den Schalter
+- Eine ausgeschaltete Quelle erscheint nicht in den Auswahl-Dropdowns
 
 ### Kategorien & Streams
 
-Kategorien bieten eine übergeordnete Gruppierung, und Streams bieten eine Unterkategorisierung innerhalb jeder Kategorie.
+Eine Kategorie fasst die Arbeit auf oberer Ebene zusammen. Ein Stream ist eine feinere Gruppierung innerhalb einer Kategorie.
 
 **Struktur**:
 ```
@@ -167,31 +165,46 @@ Kategorie (z. B. „Digitale Transformation")
 
 **Um eine Kategorie hinzuzufügen**:
 1. Klicken Sie auf **Kategorie hinzufügen**
-2. Geben Sie Name und optionale Beschreibung ein
+2. Geben Sie einen Namen und eine optionale Beschreibung ein
 3. Klicken Sie auf **Speichern**
 
 **Um einen Stream hinzuzufügen**:
 1. Erweitern Sie die Kategorie
 2. Klicken Sie auf **Stream hinzufügen**
-3. Geben Sie Name und optionale Beschreibung ein
+3. Geben Sie einen Namen und eine optionale Beschreibung ein
 4. Klicken Sie auf **Speichern**
 
-**Um Elemente umzuschalten**:
-- Verwenden Sie Schalter zum Aktivieren/Deaktivieren von Kategorien oder Streams
-- Deaktivierte Elemente erscheinen nicht in Auswahl-Dropdowns
-- Das Deaktivieren einer Kategorie blendet alle ihre Streams aus
+**Um Elemente ein- oder auszuschalten**:
+- Verwenden Sie den Schalter einer Kategorie oder eines Streams
+- Ein ausgeschaltetes Element erscheint nicht in den Auswahl-Dropdowns
+
+Das Löschen einer Kategorie löscht ihre Streams. KANAP sagt es, bevor Sie bestätigen.
+
+### Aufgabentypen
+
+Aufgabentypen sind die Liste, die für Portfolio-Aufgaben verwendet wird. Siehe [Aufgaben](tasks.md). Ein neuer Arbeitsbereich beginnt mit Aufgabe, Bug, Problem und Vorfall. Jede Person sieht diese Namen in ihrer Sprache, solange der Name unverändert bleibt.
+
+**Um einen Aufgabentyp hinzuzufügen**:
+1. Klicken Sie auf **Aufgabentyp hinzufügen**
+2. Geben Sie einen Namen und eine optionale Beschreibung ein
+3. Klicken Sie auf **Speichern**
+
+**Um einen Aufgabentyp ein- oder auszuschalten**:
+- Verwenden Sie den Schalter
+- Ein ausgeschalteter Aufgabentyp erscheint nicht in den Auswahl-Dropdowns
+
+Ein Aufgabentyp, den Aufgaben noch verwenden, kann nicht gelöscht werden. KANAP sagt es, bevor Sie bestätigen, und zählt die Aufgaben, die ihn verwenden. Schalten Sie ihn aus.
 
 **Systemelemente**:
-- Vordefinierte Kategorien und Typen mit „System"-Chip gekennzeichnet
-- Können bearbeitet oder deaktiviert, aber nicht gelöscht werden
-- Ein Element, das Anfragen oder Projekte noch verwenden, oder ein Aufgabentyp, den Aufgaben verwenden, kann nicht gelöscht werden. KANAP sagt es, bevor Sie bestätigen, und zählt, was es verwendet. Deaktivieren Sie es stattdessen
+- Eine Quelle, eine Kategorie oder ein Aufgabentyp mit der Markierung **System** kann bearbeitet oder ausgeschaltet werden. Löschen wird abgelehnt.
+- Quellen, Kategorien und Streams, die noch von Anfragen oder Projekten verwendet werden, können nicht gelöscht werden. Dasselbe gilt für einen Aufgabentyp, den Aufgaben noch verwenden. KANAP sagt es, bevor Sie bestätigen, und zählt die Verwendungen. Schalten Sie das Element aus.
 
 ### Best Practices
 
-- Halten Sie die Typenliste kurz (3-6 Einträge)
+- Halten Sie die Listen der Quellen, Kategorien, Streams und Aufgabentypen kurz
 - Verwenden Sie Kategorien für wichtige Geschäftsbereiche oder strategische Themen
-- Verwenden Sie Streams für spezifischere Gruppierungen innerhalb von Kategorien
-- Überprüfen und bereinigen Sie ungenutzte Klassifizierungselemente regelmäßig
+- Verwenden Sie Streams für spezifischere Gruppierungen innerhalb einer Kategorie
+- Prüfen Sie ungenutzte Quellen, Kategorien, Streams und Aufgabentypen von Zeit zu Zeit und schalten Sie diejenigen aus, die Sie nicht mehr anbieten
 
 ---
 

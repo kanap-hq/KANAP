@@ -6,15 +6,37 @@ export function formatNumber(
   return new Intl.NumberFormat(locale, options).format(value);
 }
 
+// `useGrouping: 'always'` (ES2023) groups four-digit numbers too, so Spanish writes 7.486 like the
+// AG Grid pagination next to it, where Intl's default would write 7486.
+const WHOLE_NUMBER_OPTIONS = { maximumFractionDigits: 0, useGrouping: 'always' } as unknown as Intl.NumberFormatOptions;
+
+// One formatter per locale: building one is far slower than formatting a cell.
+const wholeAmountFormatters = new Map<string, Intl.NumberFormat>();
+
+function wholeAmountFormatter(locale: string): Intl.NumberFormat {
+  let formatter = wholeAmountFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, WHOLE_NUMBER_OPTIONS);
+    wholeAmountFormatters.set(locale, formatter);
+  }
+  return formatter;
+}
+
 /**
- * App-wide amount format: European style with space thousands separators and no
- * currency symbol (e.g. 18 750). The currency is shown contextually (properties
- * panel / column header), not per value. Matches the OPEX list grid convention.
+ * A whole amount with no currency symbol. The currency is shown beside the value
+ * (a column header, a properties panel).
+ *
+ * Without a language, thousands stay separated by a space (18 750). The rest of
+ * the app still uses that form.
+ * With a language, the separators follow it: 650,000 in English, 650.000 in
+ * German and Spanish, 650 000 in French. Grouping applies under 10 000 too.
  */
-export function formatAmount(value: number | null | undefined): string {
+export function formatAmount(value: number | null | undefined, locale?: string): string {
   const n = Number(value ?? 0);
   if (!Number.isFinite(n)) return '';
-  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const rounded = Math.round(n);
+  if (!locale) return rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return wholeAmountFormatter(locale).format(rounded);
 }
 
 export function formatCurrency(
@@ -45,13 +67,9 @@ export function formatEuro(value: number, locale: string, fractionDigits = 2): s
   } as unknown as Intl.NumberFormatOptions);
 }
 
-// `useGrouping: 'always'` (ES2023) groups four-digit numbers too, so Spanish writes 7.486 like the
-// AG Grid pagination next to it, where Intl's default would write 7486.
-const COUNT_OPTIONS = { maximumFractionDigits: 0, useGrouping: 'always' } as unknown as Intl.NumberFormatOptions;
-
 /** A count (rows, results, people) with the thousand separator of the language: 7,486, 7 486, 7.486. */
 export function formatCount(value: number, locale: string): string {
-  return new Intl.NumberFormat(locale, COUNT_OPTIONS).format(value);
+  return new Intl.NumberFormat(locale, WHOLE_NUMBER_OPTIONS).format(value);
 }
 
 /** A decimal (turnover, a total that keeps a fraction) with the separators of the language. */

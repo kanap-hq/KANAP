@@ -745,11 +745,15 @@ async function testAgentsWaitWithoutConsumingTheQuota() {
   const quota = new AiAgentBuiltinQuotaService(stack.resolver, service as any);
   await assert.rejects(
     () => quota.assertQuotaAvailable(context as any),
-    (error: unknown) => error instanceof ForbiddenException && error.message === AGENT_RUNS_AWAIT_BUILTIN_CONFIRMATION,
+    (error: unknown) => error instanceof ForbiddenException
+      && error.message === AGENT_RUNS_AWAIT_BUILTIN_CONFIRMATION
+      && (error.getResponse() as { code?: string }).code === 'AI_INCLUDED_MODEL_NOT_ACCEPTED',
   );
   await assert.rejects(
     () => quota.reserveRun(context as any),
-    (error: unknown) => error instanceof ForbiddenException && error.message === AGENT_RUNS_AWAIT_BUILTIN_CONFIRMATION,
+    (error: unknown) => error instanceof ForbiddenException
+      && error.message === AGENT_RUNS_AWAIT_BUILTIN_CONFIRMATION
+      && (error.getResponse() as { code?: string }).code === 'AI_INCLUDED_MODEL_NOT_ACCEPTED',
   );
   assert.equal(usage.reserved, 0, 'the included quota is not consumed');
 

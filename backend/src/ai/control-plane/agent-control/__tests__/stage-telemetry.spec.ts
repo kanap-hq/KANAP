@@ -145,6 +145,25 @@ async function testUsageMirrorWritesEveryStageKey() {
   }
 }
 
+async function testUsageMirrorKeepsTheCacheTokensTheProviderReported() {
+  const { context, saves } = createUsageContext();
+  const method = (AiAgentControlService.prototype as any).recordStageUsage;
+
+  await method.call(null, context, 'synthesis', 'run-1', {
+    usage: { input_tokens: 100, output_tokens: 10, cache_read_input_tokens: 80, cache_write_input_tokens: 15 },
+    estimated_tokens: 110,
+    estimated_cost_eur: 0.01,
+    model: 'anthropic:claude-sonnet-5-5',
+  });
+  assert.deepEqual(saves[0].usage_json.synthesis, {
+    input_tokens: 100,
+    output_tokens: 10,
+    cache_read_input_tokens: 80,
+    cache_write_input_tokens: 15,
+    estimated_tokens: 110,
+  });
+}
+
 async function testUsageMirrorMergesRatherThanReplaces() {
   const { context, run, saves } = createUsageContext();
   run.usage_json = { synthesis: { input_tokens: 1, output_tokens: 1, estimated_tokens: 1 } };
@@ -198,6 +217,7 @@ async function run() {
   await testRunStepWritesTheStageIdentity();
   await testRunStepCarriesAnExplicitVersionAndError();
   await testUsageMirrorWritesEveryStageKey();
+  await testUsageMirrorKeepsTheCacheTokensTheProviderReported();
   await testUsageMirrorMergesRatherThanReplaces();
   await testUsageMirrorToleratesAMissingResult();
   await testUsageMirrorStopsWhenTheRunIsGone();

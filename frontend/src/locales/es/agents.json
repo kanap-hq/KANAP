@@ -467,6 +467,7 @@
     "loadFailed": "No se pudieron cargar los perfiles de contexto compartido.",
     "saveFailed": "No se pudo guardar el perfil.",
     "archiveFailed": "No se pudo archivar el perfil.",
+    "restoreFailed": "No se pudo restaurar el perfil.",
     "editTitle": "Editar perfil de contexto compartido",
     "save": "Guardar cambios",
     "description": "Descripción",
@@ -476,6 +477,7 @@
     "archived": "Archivado",
     "edit": "Editar",
     "archive": "Archivar",
+    "restore": "Restaurar",
     "archiveTitle": "¿Archivar este perfil?",
     "archiveBody": "«{{name}}» dejará de estar disponible para los agentes. Cualquier agente que lo esté usando funcionará sin contexto compartido hasta que lo apunte a otro perfil."
   },

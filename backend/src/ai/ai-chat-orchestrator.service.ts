@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { codedForbidden } from '../auth/module-right-required';
 import { EntityManager } from 'typeorm';
 import { resolveBudgetLine } from '../common/resolve-item-id';
 import { timeZoneOf } from '../common/csv-sheet';
@@ -13,6 +14,8 @@ import {
 import { assertPublicHttpTarget } from '../common/ssrf-guard';
 import { getEnvMode, isDevelopmentEnv } from '../common/env';
 import { AiAttachmentService } from './ai-attachment.service';
+import { AiMessageAttachment } from './ai-message-attachment.entity';
+import { TABLE_ATTACHMENT_KIND } from './attachments/table-attachment';
 import { AiConversationService } from './ai-conversation.service';
 import { AiModelResolutionError, AiModelResolverService, ResolvedModel } from './ai-model-resolver.service';
 import { AiMutationPreviewService } from './ai-mutation-preview.service';
@@ -41,7 +44,9 @@ import {
   AiProviderToolCall,
   AiStreamEvent,
 } from './providers/ai-provider.types';
-import { addUsage, cloneUsage, isAbortError, tryParseToolCallArguments } from './providers/streaming.util';
+import { addUsage, cloneUsage, isAbortError, StreamUsage, tryParseToolCallArguments } from './providers/streaming.util';
+import { AiMessageUsageModel, buildMessageUsageJson, USAGE_ONLY_MESSAGE_ROLE } from './ai-message-usage.util';
+import { NO_CACHE_DISCOUNT } from './ai-llm-cost.util';
 import { isOpenAiReasoningModel } from './providers/openai-stream.util';
 import {
   AI_QUERY_ENTITY_TYPES,
@@ -58,12 +63,12 @@ import {
 } from './ai.types';
 import { buildStructuredToolResultValidation } from './ai-tool-result-validation.util';
 import { formatToolResultDateTimes } from './ai-tool-result-date-times.util';
-import { BUILTIN_REASONING_EFFORT } from './platform/platform-ai-config.service';
 import { AiBuiltinUsageService } from './platform/ai-builtin-usage.service';
 import { AiApprovalService } from './control-plane/approval/ai-approval.service';
 import { AiCapabilityRegistry, EXECUTE_APPROVED_PREVIEW_CAPABILITY } from './control-plane/capability/ai-capability.registry';
 import { AiCapabilityDispatcherService } from './control-plane/dispatcher/ai-capability-dispatcher.service';
-import { budgetColumnsAiContext, readBudgetColumns } from '../budget-columns/budget-columns.util';
+import { readBudgetColumns } from '../budget-columns/budget-columns.util';
+import { localizedBudgetColumnsAiContext, type LocalizedBudgetColumnAiContext } from '../budget-columns/budget-column-labels';
 import { loadAnalyticsAxes } from '../analytics/analytics-axes.util';
 import { analyticsDimensionsAiContext, AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
 import { findMarkdownPathLinks, replaceDataImageTags, replaceMarkdownDataImages } from '../common/text-scan';
@@ -274,10 +279,18 @@ type CurrentUserPromptContext = {
   screenLanguage: AiScreenLanguage | null;
 };
 
-type StreamUsage = {
-  input_tokens: number;
-  output_tokens: number;
-};
+function messageUsageModel(resolved: ResolvedModel, adapter: AiProviderAdapter): AiMessageUsageModel {
+  return {
+    provider: resolved.provider,
+    model: resolved.model,
+    source: resolved.source,
+    reasoningEffort: resolved.reasoningEffort,
+    priceInputEurPerMtok: resolved.priceInputEurPerMtok,
+    priceOutputEurPerMtok: resolved.priceOutputEurPerMtok,
+    priceCacheReadEurPerMtok: resolved.priceCacheReadEurPerMtok,
+    cacheCostFactors: adapter.cacheCostFactors ?? NO_CACHE_DISCOUNT,
+  };
+}
 
 type ApprovalAction =
   | { action: 'approve'; previewIds: string[] }
@@ -293,6 +306,8 @@ type PreparedChatRequest = {
   providerSource: 'builtin' | 'custom';
   provider: AiProviderAdapter;
   model: string;
+  /** The model resolved for this turn, recorded with its prices on each assistant message. */
+  usageModel: AiMessageUsageModel;
   apiKey: string | null;
   endpointUrl: string | null;
   // Per-model timeout from the registry; null falls back to AI_CHAT_PROVIDER_TIMEOUT_MS.
@@ -312,6 +327,7 @@ type StreamPreparationResult = {
   providerMessages: AiProviderMessage[];
   tools: AiProviderToolDef[];
   systemPromptText: string;
+  systemPromptCacheablePrefix: string;
   systemPromptSections: AiContextBudgetSectionBreakdown[];
   preStreamEvents: ChatStreamEvent[];
   approvalAssistantText: string | null;
@@ -551,6 +567,12 @@ export async function extractMentionContextItems(text: string, manager: EntityMa
     });
   }
   return items.slice(0, 12);
+}
+
+/** A user message with the summaries of its attached spreadsheets after it. */
+function withTableSummaries(content: string, summaries: string[] | undefined): string {
+  if (!summaries || summaries.length === 0) return content;
+  return [content, ...summaries].filter((part) => part.trim().length > 0).join('\n\n');
 }
 
 function formatAttachmentDetail(attachment: {
@@ -1148,10 +1170,10 @@ function toolActivityPhase(toolName: string): AiChatActivityPhase {
   if (['get_entity_detail', 'get_entity_context', 'get_entity_comments', 'get_record_history'].includes(toolName)) {
     return 'reading_context';
   }
-  if (toolName === 'search_knowledge') {
+  if (toolName === 'search_knowledge' || toolName === 'list_help_topics') {
     return 'searching_knowledge';
   }
-  if (toolName === 'get_document') {
+  if (toolName === 'get_document' || toolName === 'read_help_section') {
     return 'reading_document';
   }
   if (toolName === 'web_search') {
@@ -1320,6 +1342,27 @@ export class AiChatOrchestratorService {
     return approvalAction.previewIds.length === 1
       ? 'The user explicitly rejected the pending AI preview.'
       : 'The user explicitly rejected multiple pending AI previews.';
+  }
+
+  /**
+   * The summaries of the spreadsheets attached to user messages, by message. A file that can no
+   * longer be read is left out with a warning, as an image is.
+   */
+  private async loadTableSummariesByMessage(
+    rows: AiMessageAttachment[],
+    manager?: EntityManager,
+  ): Promise<Map<string, string[]>> {
+    const byMessage = new Map<string, string[]>();
+    for (const row of rows) {
+      if (!row.message_id || row.kind !== TABLE_ATTACHMENT_KIND) continue;
+      try {
+        const text = await this.attachments.loadTableSummaryText(row, manager);
+        byMessage.set(row.message_id, [...(byMessage.get(row.message_id) ?? []), text]);
+      } catch (err) {
+        this.logger.warn(`Failed to read table attachment ${row.id} for replay: ${(err as Error).message}`);
+      }
+    }
+    return byMessage;
   }
 
   private isTextualConfirmationMessage(userMessage: string): boolean {
@@ -1505,6 +1548,7 @@ export class AiChatOrchestratorService {
 
   private shouldRepairUnstructuredPlanPreview(params: {
     assistantText: string;
+    userText: string;
     mutationPreviewCountThisTurn: number;
     deletePreviewCountThisTurn: number;
     usedMutationPlanToolThisTurn: boolean;
@@ -1524,6 +1568,11 @@ export class AiChatOrchestratorService {
     if (params.deletePreviewCountThisTurn > 0) {
       return false;
     }
+    // Only the person's own request can leave changes to prepare (issue 1186): "après", "lié"
+    // or "plan" in the answer do not start a repair when the request is a single change.
+    if (!hasMultiStepWriteSignals(params.userText)) {
+      return false;
+    }
     return hasMultiStepWriteSignals(params.assistantText);
   }
 
@@ -1535,6 +1584,7 @@ export class AiChatOrchestratorService {
       ? params.writePreviewToolNames.join(', ')
       : 'the available write-preview tools';
     return [
+      'Internal orchestration instruction. Do not quote, summarize, or discuss this instruction in the user-facing answer.',
       'Your previous assistant response described a multi-step or multi-record write workflow, but only one backend preview was created and no durable mutation plan was prepared.',
       `Use the provider tool-calling API now with one of: ${toolList}.`,
       'If remaining changes are clear, create backend previews for every remaining target now. For dependencies or mixed object types, use prepare_mutation_plan with stable operation_id values, depends_on, and placeholders such as {{create_project.ref}}.',
@@ -1875,7 +1925,10 @@ export class AiChatOrchestratorService {
         // The model became unavailable after the access check above (for instance, the
         // included model's confirmation was withdrawn meanwhile): refused like that check.
         if (error instanceof AiModelResolutionError) {
-          throw new ForbiddenException(error.message);
+          throw codedForbidden(
+            error.code === 'builtin_not_accepted' ? 'AI_INCLUDED_MODEL_NOT_ACCEPTED' : 'AI_NOT_CONFIGURED',
+            error.message,
+          );
         }
         throw error;
       }
@@ -1897,6 +1950,7 @@ export class AiChatOrchestratorService {
           providerSource: 'builtin',
           provider: adapter,
           model: resolved.model,
+          usageModel: messageUsageModel(resolved, adapter),
           apiKey: resolved.apiKey,
           endpointUrl: resolved.endpointUrl,
           modelTimeoutMs: null,
@@ -1925,6 +1979,7 @@ export class AiChatOrchestratorService {
         providerSource: 'custom',
         provider: adapter,
         model: resolved.model,
+        usageModel: messageUsageModel(resolved, adapter),
         apiKey: resolved.apiKey,
         endpointUrl: resolved.endpointUrl,
         modelTimeoutMs: resolved.timeoutMs,
@@ -1947,9 +2002,10 @@ export class AiChatOrchestratorService {
   private async loadBudgetColumnsPromptContext(
     ctx: AiExecutionContext & { manager: any },
     readableTypes: readonly string[],
-  ): Promise<ReturnType<typeof budgetColumnsAiContext> | undefined> {
+    screenLanguage: AiScreenLanguage | null,
+  ): Promise<LocalizedBudgetColumnAiContext[] | undefined> {
     if (!readableTypes.includes('budget_lines')) return undefined;
-    return budgetColumnsAiContext(await readBudgetColumns(ctx.manager, ctx.tenantId));
+    return localizedBudgetColumnsAiContext(await readBudgetColumns(ctx.manager, ctx.tenantId), screenLanguage);
   }
 
   /** The analytics dimensions budget lines may hold, for users who can read those lines; none otherwise. */
@@ -2076,6 +2132,7 @@ export class AiChatOrchestratorService {
       providerMessages,
       tools,
       systemPromptText,
+      systemPromptCacheablePrefix,
       systemPromptSections,
       preStreamEvents,
       approvalAssistantText,
@@ -2263,11 +2320,22 @@ export class AiChatOrchestratorService {
           })) {
             const msgs: AiProviderMessage[] = [];
             let replayableToolCallIds = new Set<string>();
+            const tableSummariesAfterApproval = await this.loadTableSummariesByMessage(
+              await this.attachments.listAttachmentsForMessages(
+                historyAfterApproval.filter((msg) => msg.role === 'user').map((msg) => msg.id),
+                ctx.tenantId,
+                ctx.manager,
+              ),
+              ctx.manager,
+            );
             for (const msg of historyAfterApproval) {
               if (msg.role === 'user') {
                 msgs.push({
                   role: 'user',
-                  content: this.toProviderUserContent(msg.content),
+                  content: withTableSummaries(
+                    this.toProviderUserContent(msg.content),
+                    tableSummariesAfterApproval.get(msg.id),
+                  ),
                 });
                 replayableToolCallIds = new Set<string>();
               } else if (msg.role === 'assistant') {
@@ -2346,7 +2414,7 @@ export class AiChatOrchestratorService {
               )
               : [];
             const currentUser = await this.loadCurrentUserPromptContext(ctx);
-            const budgetColumns = await this.loadBudgetColumnsPromptContext(ctx, readableTypes);
+            const budgetColumns = await this.loadBudgetColumnsPromptContext(ctx, readableTypes, currentUser.screenLanguage);
             const analyticsDimensions = await this.loadAnalyticsDimensionsPromptContext(ctx, readableTypes);
             const builtSystemPrompt = this.systemPrompt.buildWithMetadata({
               tenantName,
@@ -2370,6 +2438,7 @@ export class AiChatOrchestratorService {
               providerMessages: msgs,
               tools: toolSchemas,
               systemPromptText: builtSystemPrompt.text,
+              systemPromptCacheablePrefix: builtSystemPrompt.cacheablePrefix,
               systemPromptSections: builtSystemPrompt.sections,
               preStreamEvents: streamEvents,
               approvalAssistantText: null,
@@ -2406,6 +2475,7 @@ export class AiChatOrchestratorService {
             providerMessages: [],
             tools: [],
             systemPromptText: '',
+            systemPromptCacheablePrefix: '',
             systemPromptSections: [],
             preStreamEvents: streamEvents,
             approvalAssistantText: await this.buildPreviewResultsAssistantText(
@@ -2448,18 +2518,23 @@ export class AiChatOrchestratorService {
         // Pre-load image attachments for user messages so we can inject them into multimodal
         // content blocks. Only Anthropic currently honors images; other providers ignore them.
         // Performance: at most ~20MB per image x typically <10 attachments per conversation.
+        // Spreadsheets go in as their summary, appended to the message they came with.
         const userMessageIds = history
           .filter((msg) => msg.role === 'user')
           .map((msg) => msg.id);
         const attachmentImagesByMessage = new Map<string, AiProviderImageAttachment[]>();
+        let historyAttachmentRows: AiMessageAttachment[] = [];
+        let tableSummariesByMessage = new Map<string, string[]>();
         if (userMessageIds.length > 0) {
           const attachmentRows = await this.attachments.listAttachmentsForMessages(
             userMessageIds,
             ctx.tenantId,
             ctx.manager,
           );
+          historyAttachmentRows = attachmentRows;
+          tableSummariesByMessage = await this.loadTableSummariesByMessage(attachmentRows, ctx.manager);
           await Promise.all(attachmentRows.map(async (row) => {
-            if (!row.message_id) return;
+            if (!row.message_id || row.kind === TABLE_ATTACHMENT_KIND) return;
             try {
               const { buffer } = await this.attachments.loadAttachmentBuffer(
                 row.id,
@@ -2489,7 +2564,7 @@ export class AiChatOrchestratorService {
               : this.toProviderUserContent(msg.content);
             msgs.push({
               role: 'user',
-              content,
+              content: withTableSummaries(content, tableSummariesByMessage.get(msg.id)),
               ...(images && images.length > 0 ? { images } : {}),
             });
             replayableToolCallIds = new Set<string>();
@@ -2562,7 +2637,7 @@ export class AiChatOrchestratorService {
           )
           : [];
         const currentUser = await this.loadCurrentUserPromptContext(ctx);
-        const budgetColumns = await this.loadBudgetColumnsPromptContext(ctx, readableTypes);
+        const budgetColumns = await this.loadBudgetColumnsPromptContext(ctx, readableTypes, currentUser.screenLanguage);
         const analyticsDimensions = await this.loadAnalyticsDimensionsPromptContext(ctx, readableTypes);
 
         const builtSystemPrompt = this.systemPrompt.buildWithMetadata({
@@ -2585,6 +2660,7 @@ export class AiChatOrchestratorService {
           providerMessages: msgs,
           tools: toolSchemas,
           systemPromptText: sysPrompt,
+          systemPromptCacheablePrefix: builtSystemPrompt.cacheablePrefix,
           systemPromptSections: builtSystemPrompt.sections,
           preStreamEvents: streamEvents,
           approvalAssistantText: null,
@@ -2592,19 +2668,12 @@ export class AiChatOrchestratorService {
             mentions: await extractMentionContextItems(latestUserMessage, ctx.manager),
             attachments: attachmentContextItems(requestedAttachments.length > 0
               ? requestedAttachments
-              : Array.from(attachmentImagesByMessage.values()).flatMap((images) =>
-                images.map((image) => ({
-                  original_filename: 'Image',
-                  kind: 'image',
-                  mime_type: image.mime_type,
-                  size: null,
-                })),
-              )),
+              : historyAttachmentRows),
             previews: previewContextItems(existingPreviews),
             artifacts: previewContextItems(existingPreviews.filter((preview) => preview.status === 'pending')),
             history: {
               message_count: history.length,
-              attachment_count: Array.from(attachmentImagesByMessage.values()).reduce((count, images) => count + images.length, 0),
+              attachment_count: historyAttachmentRows.length,
               tool_result_count: history.filter((msg) => msg.role === 'tool').length,
             },
             tools: {
@@ -2680,6 +2749,10 @@ export class AiChatOrchestratorService {
     let previousToolCallSignature: string | null = null;
     let unsafeWriteResponseRetries = 0;
     let unstructuredPlanRepairRetries = 0;
+    // The answer held back for the plan repair, and how many previews existed then. If the
+    // repair creates none, that answer is what the person sees (issue 1186).
+    let unstructuredPlanHeldBackText: string | null = null;
+    let mutationPreviewCountAtPlanRepair = 0;
     let emptyWriteResponseRetries = 0;
     let emptyWriteAfterToolRepairRetries = 0;
     let bulkCompletenessRepairRetries = 0;
@@ -2721,9 +2794,43 @@ export class AiChatOrchestratorService {
         });
       });
     };
+    // Tokens of provider calls no message has recorded yet. A call the turn retries (an answer held
+    // back, a repair) is billed too: its tokens go with the next assistant message recorded.
+    let unrecordedUsage: StreamUsage | undefined;
+    const takeUnrecordedUsageJson = (): Record<string, unknown> | null => {
+      const usageJson = buildMessageUsageJson(unrecordedUsage, prepared.usageModel);
+      unrecordedUsage = undefined;
+      return usageJson;
+    };
+    // A turn that stops before its next assistant message (error, stop) records them on a usage-only row.
+    const recordUnrecordedUsage = async (): Promise<void> => {
+      const usage = takeUnrecordedUsageJson();
+      if (!usage) {
+        return;
+      }
+      try {
+        await this.tenantExecutor.runWithContext(context, async (ctx) => {
+          await this.conversations.appendMessage(
+            {
+              conversationId,
+              tenantId: ctx.tenantId,
+              conversationUserId: ctx.userId,
+              userId: null,
+              role: USAGE_ONLY_MESSAGE_ROLE,
+              content: '',
+              usage,
+            },
+            { manager: ctx.manager },
+          );
+        });
+      } catch (error) {
+        this.logger.warn(`Could not record the usage of an interrupted turn: ${(error as Error)?.message ?? error}`);
+      }
+    };
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
       if (abortSignal?.aborted) {
+        await recordUnrecordedUsage();
         return;
       }
       completedIterations = iteration + 1;
@@ -2783,13 +2890,14 @@ export class AiChatOrchestratorService {
         endpointUrl,
         endpointSource: providerSource === 'builtin' ? 'platform' : 'tenant',
         systemPrompt: systemPromptText,
+        systemPromptCacheablePrefix,
         messages,
         tools,
         maxTokens: requestMaxTokens,
         signal: abortSignal,
         timeoutMs: modelTimeoutMs ?? resolveChatProviderTimeoutMs(),
         debugTrace: AI_CHAT_DEBUG_TRACE_ENABLED,
-        reasoningEffort: providerSource === 'builtin' ? BUILTIN_REASONING_EFFORT : null,
+        reasoningEffort: prepared.usageModel.reasoningEffort,
       });
 
       try {
@@ -2844,10 +2952,12 @@ export class AiChatOrchestratorService {
               iterationUsage = cloneUsage(event.usage);
               totalUsage = addUsage(totalUsage, iterationUsage);
               lastUsage = iterationUsage;
+              unrecordedUsage = addUsage(unrecordedUsage, iterationUsage);
               break;
 
             case 'error': {
               providerStreamMs += Math.max(0, Date.now() - providerCallStartedAt);
+              await recordUnrecordedUsage();
               const conversationUsage = await loadConversationUsage();
               yield { type: 'activity', phase: 'finalizing', status: 'failed' };
               yield { type: 'context', context: { timings: buildTimings(true) } };
@@ -2865,6 +2975,7 @@ export class AiChatOrchestratorService {
         providerStreamMs += Math.max(0, Date.now() - providerCallStartedAt);
       } catch (error) {
         providerStreamMs += Math.max(0, Date.now() - providerCallStartedAt);
+        await recordUnrecordedUsage();
         if (abortSignal?.aborted || isAbortError(error)) {
           return;
         }
@@ -2882,6 +2993,7 @@ export class AiChatOrchestratorService {
       }
 
       if (abortSignal?.aborted) {
+        await recordUnrecordedUsage();
         return;
       }
 
@@ -2915,6 +3027,7 @@ export class AiChatOrchestratorService {
             });
             continue;
           }
+          await recordUnrecordedUsage();
           const conversationUsage = await loadConversationUsage();
           yield { type: 'activity', phase: 'finalizing', status: 'failed' };
           yield { type: 'context', context: { timings: buildTimings(true) } };
@@ -2939,6 +3052,8 @@ export class AiChatOrchestratorService {
         }
 
         let searchAllNoProgressIntervention: SearchAllNoProgressIntervention | null = null;
+        // Recorded on the first tool call's message, with the tokens of the calls retried before it.
+        const toolTurnUsage = takeUnrecordedUsageJson();
 
         // Execute each tool call
         for (let toolCallIndex = 0; toolCallIndex < assistantToolCalls.length; toolCallIndex++) {
@@ -2947,7 +3062,7 @@ export class AiChatOrchestratorService {
           const assistantReasoningContent = replayDeepSeekReasoning
             ? accumulatedReasoningContent
             : '';
-          const assistantUsage = toolCallIndex === 0 ? (iterationUsage ?? null) : null;
+          const assistantUsage = toolCallIndex === 0 ? toolTurnUsage : null;
           const parsedArgsResult = tryParseToolCallArguments(tc.arguments || '{}');
           const parseErrorMessage = 'message' in parsedArgsResult ? parsedArgsResult.message : null;
           const parsedArgs = 'value' in parsedArgsResult ? parsedArgsResult.value : {};
@@ -3328,6 +3443,7 @@ export class AiChatOrchestratorService {
       }
 
       // No tool calls - this is the final assistant response
+      const modelClosingText = accumulatedText;
       const bulkCoverageIssue = requiresWritePreviewGuard
         ? findBulkCoverageIssue({
           targetSets: bulkTargetSetsThisTurn,
@@ -3405,6 +3521,7 @@ export class AiChatOrchestratorService {
         requiresWritePreviewGuard
         && this.shouldRepairUnstructuredPlanPreview({
           assistantText: accumulatedText,
+          userText: latestPersonText,
           mutationPreviewCountThisTurn,
           deletePreviewCountThisTurn,
           usedMutationPlanToolThisTurn,
@@ -3412,6 +3529,8 @@ export class AiChatOrchestratorService {
         })
       ) {
         unstructuredPlanRepairRetries++;
+        unstructuredPlanHeldBackText = accumulatedText;
+        mutationPreviewCountAtPlanRepair = mutationPreviewCountThisTurn;
         messages.push(holdBack(accumulatedText));
         messages.push({
           role: 'user',
@@ -3445,6 +3564,16 @@ export class AiChatOrchestratorService {
         accumulatedText = writePreviewMissingText(replyLanguage);
       }
 
+      // The repair created no preview. A stop message this iteration already chose stays;
+      // otherwise the person sees the held-back answer, not the reply to the instruction.
+      if (
+        unstructuredPlanHeldBackText != null
+        && mutationPreviewCountThisTurn === mutationPreviewCountAtPlanRepair
+        && accumulatedText === modelClosingText
+      ) {
+        accumulatedText = unstructuredPlanHeldBackText;
+      }
+
       if (requiresWritePreviewGuard && accumulatedText.length > 0) {
         yield { type: 'text_delta', text: accumulatedText };
       }
@@ -3458,7 +3587,7 @@ export class AiChatOrchestratorService {
             userId: null,
             role: 'assistant',
             content: accumulatedText,
-            usage: iterationUsage ?? null,
+            usage: takeUnrecordedUsageJson(),
           },
           { manager: ctx.manager },
         );
@@ -3484,6 +3613,7 @@ export class AiChatOrchestratorService {
     }
 
     // Max iterations reached
+    await recordUnrecordedUsage();
     const conversationUsage = await loadConversationUsage();
     yield { type: 'activity', phase: 'finalizing', status: 'failed' };
     yield { type: 'context', context: { timings: buildTimings(true) } };

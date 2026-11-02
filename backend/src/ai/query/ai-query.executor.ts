@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { codedForbidden } from '../../auth/module-right-required';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
 import { AnalyticsCategoriesService } from '../../analytics/analytics-categories.service';
@@ -950,7 +951,7 @@ export class AiQueryExecutor {
         last_dr_test: scalar(row.last_dr_test),
         category: scalar(row.category),
         editor: scalar(row.editor),
-        environment: scalar(row.environment),
+        // Deployments only. The legacy applications.environment column defaults to prod and is not a deployment.
         environments: scalar(Array.isArray(row.instances)
           ? row.instances.map((item: any) => item.environment).filter(Boolean).join(', ')
           : null),
@@ -1807,7 +1808,7 @@ export class AiQueryExecutor {
    * and the screen, or the reserved message). Closed without the policy.
    */
   private async assertRolesRead(context: AiExecutionContextWithManager, entityType: 'roles' | 'role_permissions'): Promise<void> {
-    if (!this.policy) throw new ForbiddenException('The roles are not available.');
+    if (!this.policy) throw codedForbidden('AI_ROLES_UNAVAILABLE', 'The roles are not available.');
     await this.policy.assertEntityTypeReadRight(context, entityType, context.manager);
   }
 
@@ -3706,6 +3707,8 @@ export class AiQueryExecutor {
       Object.assign(row, vulnerabilityCountsOf((await applicationVulnerabilityCounts(context.manager, context.tenantId, [row.id])).get(row.id)));
       // The labels and ranks of the classification, as the list gives them.
       Object.assign(row, classificationLabels(row, await readClassificationCatalog(context)));
+      // The deprecated column defaults to prod on every application. The deployments keep their own environment.
+      delete row.environment;
       return this.toDetailResult(this.mapApplication(row), row);
     }
 
@@ -3737,8 +3740,8 @@ export class AiQueryExecutor {
     }
 
     if (entityType === 'budget_lines') {
-      // The unified read engine resolves BL-n, a legacy OPX-n or CPX-n, a bare number or a UUID,
-      // and answers the line of either nature (`resolveBudgetLine`).
+      // The unified read engine resolves BL-n, a bare number, a UUID, or OPX-n / CPX-n (the line
+      // number first, then the legacy number) and answers the line of either nature (`resolveBudgetLine`).
       const row: any = await this.budgetLines.get(entityId, { manager: context.manager });
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Budget line not found.');
       // The workspace's own read adds its picker references, its change-of-type lineage and, for a

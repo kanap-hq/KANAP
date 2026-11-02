@@ -20,24 +20,33 @@ No registre el trabajo rutinario: restablecimientos de contraseña, problemas de
 
 ---
 
-## Primeros pasos
+## Primeros pasos { #getting-started }
 
-Vaya a **Panorama IT > Incidentes** para ver el registro. Haga clic en **Nuevo incidente** para registrar uno.
+Vaya a **Panorama IT > Incidentes** para ver el registro. Para registrar un incidente:
 
-**Campos obligatorios**:
+1. Haga clic en **Nuevo incidente**. La página del incidente se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
+2. Escriba un resumen breve y objetivo, p. ej.: «Servicio de correo no disponible en la oficina de Lyon».
+3. Pulse Intro o haga clic fuera del título. KANAP registra el incidente de inmediato. Su referencia (`INC-14`) aparece y se abren todas las pestañas.
 
-- **Título**: un resumen breve y objetivo, p. ej.: «Servicio de correo no disponible en la oficina de Lyon»
+El nuevo incidente queda **Abierto**, con gravedad **Media**, detectado ahora y con usted como notificante. Complete después el resto como en cualquier incidente:
+
 - **Gravedad**: Crítica, Alta, Media o Baja
-- **Detectado**: cuándo se advirtió el incidente (por defecto, ahora)
-
-**Recomendados en la misma pantalla**:
-
+- **Detectado**: cuándo se advirtió el incidente
+- **Inicio**: cuándo empezó realmente el incidente, si difiere del momento en que lo advirtió
 - **Descripción**: qué ocurrió, tal como se observó
 - **Categoría**: infraestructura, seguridad, aplicación, datos, proveedor, otros (configurable, véase [Categorías](#categorias))
-- **Inicio**: cuándo empezó realmente el incidente, si difiere del momento en que lo advirtió
 - **Responsable**: quién se encarga de gestionarlo
 
-El **Notificante** es usted por defecto. Ambas fechas admiten valores pasados: un incidente descubierto el lunes por la mañana puede registrarse como iniciado el sábado por la noche.
+Ambas fechas admiten valores pasados: un incidente descubierto el lunes por la mañana puede registrarse como iniciado el sábado por la noche. Pulse Escape en el título vacío para salir sin registrar nada.
+
+### Crear o cancelar { #cancelling-a-creation }
+
+Mientras el incidente se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga del incidente.
+
+- **Crear** conserva el incidente y lo cierra. Vuelve al punto de partida: la lista o la pantalla anterior. Con el título vacío, no se cierra nada y el título pide uno
+- **Cancelar** cierra sin conservar nada. En un incidente ya creado, lo elimina. Si introdujo algo más que el título, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar incidentes
+
+**Cancelar incidente** permanece oculto mientras el incidente se está creando. La cancelación de la creación se rechaza en cuanto el incidente está cerrado o cancelado, o contiene datos de notificación reglamentaria (consulte [Eliminar un incidente](#eliminar-un-incidente)). Si sale del incidente de otra forma, este permanece en el registro. La referencia de una creación cancelada no se reutiliza.
 
 **Permisos**:
 
@@ -76,7 +85,7 @@ La lista es el registro en sí: todos los incidentes, con la detección más rec
 
 **Columnas adicionales** (ocultas por defecto, disponibles en el selector de columnas): **Cerrado**, **Aplicaciones**, **Creado**, **Datos personales**, **Requiere notificación** y **Notificado el**. **Datos personales** y **Requiere notificación** ofrecen un filtro sí/no.
 
-**Filtrado**: Categoría, Gravedad, Estado y Responsable ofrecen filtros de casillas cuyas opciones se calculan a partir de los incidentes visibles, por lo que solo verá valores presentes en el conjunto de resultados. Las columnas de fecha ofrecen filtros de fecha, incluido un rango: filtre **Detectado** entre dos fechas para obtener un extracto trimestral o anual. La búsqueda cubre el título, la descripción, la referencia (`INC-14`) y los nombres y referencias de los activos y aplicaciones vinculados, de modo que una búsqueda por un nombre de host como `PAR-ESX-01` lista los incidentes de ese activo. Las palabras que solo aparecen en la revisión del incidente se encuentran mediante la búsqueda global y el asistente, no mediante este cuadro. La búsqueda global, el selector `@` de Plaid y el servidor MCP también encuentran un incidente por el nombre, la referencia `AST-N`, el nombre de host o el FQDN de sus activos vinculados.
+**Filtrado**: Categoría, Gravedad, Estado y Responsable ofrecen filtros de casillas cuyas opciones se calculan a partir de los incidentes visibles, por lo que solo verá valores presentes en el conjunto de resultados. Las columnas de fecha ofrecen filtros de fecha, incluido un rango: filtre **Detectado** entre dos fechas para obtener un extracto trimestral o anual. La búsqueda cubre el título, la descripción, la referencia (`INC-14`) y los nombres y referencias de los activos, aplicaciones y tecnologías vinculados, de modo que una búsqueda por un nombre de host como `PAR-ESX-01` lista los incidentes de ese activo. Las palabras que solo aparecen en la revisión del incidente se encuentran mediante la búsqueda global y el asistente, no mediante este cuadro. La búsqueda global, el selector `@` de Plaid y el servidor MCP también encuentran un incidente por el nombre y la referencia de un activo vinculado (`AST-N`, nombre de host o FQDN), de una aplicación vinculada (`APP-N`) o de una tecnología vinculada (`TEC-N`). Un resultado es el incidente, con su título y su referencia (`INC-N`).
 
 **Consejo**: combine Gravedad = Crítica, Alta con un rango de **Detectado** para construir la lista corta que piden la mayoría de los comités de dirección y las auditorías.
 

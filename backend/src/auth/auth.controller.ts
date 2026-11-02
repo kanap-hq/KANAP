@@ -407,8 +407,10 @@ export class AuthController {
   @UseGuards(RateLimitGuard)
   @Throttle({ default: RATE_LIMITS.authPasswordResetComplete })
   async completePasswordReset(@Body() body: CompletePasswordResetDto, @Req() req: any) {
-    const userId = await this.runInRequestTenant(req, (manager) => this.auth.resetPasswordWithToken(body.token, body.password, { manager }));
-    this.recordAuthEvent(req, { action: 'password_reset_completed', userId });
+    const user = await this.runInRequestTenant(req, (manager) => this.auth.resetPasswordWithToken(body.token, body.password, { manager }));
+    // The sign-in block of the account goes with its old password (login-attempt-limit.ts).
+    await this.loginAttempts.passwordReset(req?.tenant?.id, user.email);
+    this.recordAuthEvent(req, { action: 'password_reset_completed', userId: user.id });
     return { ok: true };
   }
 

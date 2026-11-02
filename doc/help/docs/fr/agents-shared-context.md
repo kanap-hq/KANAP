@@ -14,10 +14,10 @@ Un point à clarifier dès le départ, car il conditionne tout bon usage de cett
 - Route : `/agents/shared-context`
 - Autorisations :
   - `ai_agents:reader` vous permet d'ouvrir la page et de consulter la liste des profils
-  - `ai_agents:admin` (ou `ai_settings:admin`) est requis pour créer, modifier et archiver des profils
+  - `ai_agents:admin` (ou `ai_settings:admin`) est requis pour créer, modifier, archiver et restaurer des profils
 - Disponibilité : toute la section Agents IA n'apparaît que lorsque l'IA est activée sur l'instance et que vous disposez de `ai_agents:reader`
 
-Sans niveau administrateur, vous voyez toujours la liste complète des profils, mais le bouton **Nouveau profil** ainsi que les contrôles Modifier et Archiver de chaque ligne sont masqués. La page est en lecture seule pour vous.
+Sans niveau administrateur, vous voyez toujours la liste complète des profils, mais le bouton **Nouveau profil** ainsi que les contrôles Modifier, Archiver et Restaurer de chaque ligne sont masqués. La page est en lecture seule pour vous.
 
 ---
 
@@ -41,7 +41,7 @@ La section **Profils** répertorie tous les profils de l'instance. Chaque ligne 
 - La **Description**, lorsqu'elle a été renseignée.
 - Une ligne de synthèse : **{n} lignes** et, lorsque disponible, **Mis à jour le {time}**, pour voir combien de lignes de guidance le profil comporte et quand il a changé pour la dernière fois.
 
-Les administrateurs disposent d'un bouton **Nouveau profil** dans l'en-tête de la page, ainsi que des contrôles Modifier et Archiver sur chaque ligne active. Les profils archivés sont en lecture seule : ils ne comportent aucun contrôle Modifier ou Archiver, car il n'y a plus rien à changer sur un profil que les agents ne peuvent plus utiliser.
+Les administrateurs disposent d'un bouton **Nouveau profil** dans l'en-tête de la page, des contrôles Modifier et Archiver sur chaque ligne active, et d'un contrôle Restaurer sur chaque ligne archivée. Un profil archivé reste en lecture seule tant que vous ne le restaurez pas : il ne comporte aucun contrôle Modifier.
 
 ---
 
@@ -67,7 +67,13 @@ L'archivage sert à retirer un profil que vous ne voulez plus voir utilisé par 
 
 C'est la conséquence importante à retenir : l'archivage ne déplace pas automatiquement les agents concernés vers un remplaçant. Tout agent qui était pointé vers le profil archivé continue de fonctionner, mais **sans aucun** contexte partagé, jusqu'à ce que vous entriez dans les paramètres de cet agent et sélectionniez un autre profil. Si plusieurs agents partagent le profil que vous archivez, planifiez d'abord le remplacement.
 
-Les profils archivés restent dans la liste, estompés et étiquetés **Archivé**, à titre d'enregistrement, mais ils ne peuvent plus être modifiés ni attachés à un agent.
+Les profils archivés restent dans la liste, estompés et étiquetés **Archivé**. Ils ne peuvent plus être modifiés ni attachés à un agent tant que vous ne les restaurez pas.
+
+---
+
+## Restaurer un profil
+
+**Restaurer** se trouve sur chaque ligne archivée, à la même place qu'Archiver sur une ligne active. Il remet le profil en activité et enregistre le changement. Les agents qui pointent encore vers ce profil retrouvent ses lignes, et vous pouvez de nouveau le modifier ou l'attacher. Le profil conserve sa clé pendant tout le temps où il est archivé, donc un nouveau profil avec la même clé est refusé. Restaurez le profil existant pour réutiliser cette clé.
 
 ---
 
@@ -97,4 +103,5 @@ La règle pratique : si vous voulez que l'agent énonce un fait et l'assume (une
 - Préférez un petit nombre de profils largement utiles (par exemple, une base commune à toute l'entreprise) plutôt que de nombreux quasi-doublons. Moins de profils sont plus faciles à tenir à jour, et les modifications atteignent d'un coup chaque agent attaché.
 - N'introduisez pas ici en douce des faits citables. Tout ce que vous voudriez qu'un demandeur voie cité avec une source a sa place dans une [bibliothèque de connaissances](knowledge.md).
 - Avant d'archiver un profil partagé, notez quels agents l'utilisent et repointez-les d'abord. L'archivage les laisse fonctionner sans contexte partagé tant que vous ne l'avez pas fait.
+- **Restaurer** remet un profil archivé en activité. Les agents qui pointent encore vers lui retrouvent ses lignes.
 - La **Description** n'est que pour vous et n'atteint jamais l'agent ; utilisez-la pour consigner qui est responsable du profil ou à quoi il sert, afin qu'un collègue n'ait pas à deviner plus tard.

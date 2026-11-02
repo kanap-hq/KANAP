@@ -69,6 +69,32 @@ export function useLinePlacementFilter(payingCompanyId: string | null | undefine
   );
 }
 
+/**
+ * The place a new budget line of a limited person starts from, before its title (lot 1c): when the
+ * access lets them place lines on exactly one company (with or without its cost centers), that
+ * company, filled in; when they must choose (several companies, or cost centers only), `needsChoice`
+ * and the new page asks for the place before the title creates the line. `ready` is false while the
+ * answer loads. An unscoped person, or Edit on everything, needs nothing.
+ */
+export function useLinePlacementDefault(): { ready: boolean; companyId: string | null; needsChoice: boolean } {
+  const limited = useDataAccessLimited();
+  const { data, isError } = useQuery({
+    queryKey: ['data-access', 'placement-options'],
+    queryFn: async () => (await api.get<PlacementOptionsAnswer>('/data-access/placement-options')).data,
+    enabled: limited,
+    staleTime: 60_000,
+  });
+  return React.useMemo(() => {
+    if (!limited) return { ready: true, companyId: null, needsChoice: false };
+    // Unknown access: the person chooses, and the server refuses a place outside it.
+    if (!data) return isError ? { ready: true, companyId: null, needsChoice: true } : { ready: false, companyId: null, needsChoice: false };
+    if (!data.limited || data.all) return { ready: true, companyId: null, needsChoice: false };
+    const [only, ...others] = data.companies;
+    const single = !!only && others.length === 0 && data.costCenters.every((row) => row.companyId === only);
+    return single ? { ready: true, companyId: only, needsChoice: false } : { ready: true, companyId: null, needsChoice: true };
+  }, [data, isError, limited]);
+}
+
 export type ContractPlacementFilter = {
   /** The contracting companies offered. */
   companyIds: ReadonlySet<string>;

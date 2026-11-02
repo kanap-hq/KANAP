@@ -59,8 +59,11 @@ its own: load the current dataset on a new tenant instead.
 1. **Tenant bootstrap** (if login fails): `POST /public/start-trial` →
    `POST /public/activate-trial` → sets the admin password. See
    "Tenant creation and CAPTCHA" below.
-2. **Settings**: currencies (EUR/USD), IT Ops server kinds, operating systems,
-   DNS domains, connection entities.
+2. **Settings**: currencies (EUR reporting, USD allowed) and a USD rate for
+   years N-1 through N+2 (fetched, or the documented manual rate of 0.9 EUR
+   per USD when the sources cannot be reached; N+2 covers the renewing USD
+   contract), IT Ops server kinds, operating systems, DNS domains, connection
+   entities.
 3. **Portfolio classification** (sources, categories, streams) and the
    **analytics dimensions**: the recommended ones the tenant lacks, then the
    data set's own two (see "Analytics dimensions" below).
@@ -246,6 +249,13 @@ of `01-companies.csv` and the companies import year, the project phases, and
 the year the relative `y_*` budget columns are read against. A 29 February
 moved to a common year becomes the 28th. Years written inside a text (a note
 saying "2026 actuals") do not move. The files on disk never change.
+
+Past events stay in the past whatever the day of the load. The incidents
+(`31-incidents.csv`, `32-incident-journal.csv`, `19b-incident-tasks.csv`) move
+one year less while their last day, 19 October, moved, is not yet past. The
+time booked on the Cave Climate Digital Twin project keeps its days once
+22 October, moved, is past; before, its five entries move back together so
+the last one falls on the day before the load.
 
 Without `--shift-years`, the runner behaves as before: the dates as written,
 and the `y_*` budget columns read against the current year.

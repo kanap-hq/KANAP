@@ -244,7 +244,7 @@ An application appears in two ways:
 - **Hosted**: one of its deployments runs on a server that carries the technology. KANAP deduces the row from the servers; change the server or the deployment to change it.
 - **Declared**: the application depends on the technology without running next to it, for example an application that signs users in through Entra ID. Change the version in place, or remove the declaration. Removing it withdraws every declared version of that application.
 
-**Add** (`infrastructure:member`) opens a search where you can tick several applications, then add them in one go. They are declared with an unknown version: set it afterwards on each row. Disabled applications and deployments do not count.
+**Add** (`infrastructure:member`) opens a search where you can tick several applications, then asks for their version: pick one, type a new one, or choose **Version unknown**. They are all declared at that version. Click the version of a declared row to change it. Disabled applications and deployments do not count.
 
 **Export** downloads the rows as a CSV or Excel file, in the language of your screen.
 

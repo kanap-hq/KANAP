@@ -16,8 +16,19 @@ Plaid ne remplace pas le reste de l'application. C'est un moyen plus rapide de s
 
 L'espace de travail est également accessible aux administrateurs disposant de `ai_chat:admin`, qui peuvent voir et modérer tout ce que font les utilisateurs standard.
 
-!!! note "En attente d'un administrateur"
-    Sur le service hébergé, Plaid peut s'exécuter sur le modèle inclus KANAP. Avant cela, un administrateur confirme le fournisseur et le lieu où il traite les données. Jusque-là, l'espace de travail affiche *Un administrateur doit confirmer le fournisseur d'IA dans Administration > Plaid.* à la place du chat. Un administrateur le fait sur la page [Paramètres Plaid](ai-settings.md#confirmer-le-modele-inclus-kanap). Les organisations qui utilisent un modèle propre ne voient jamais cet avis.
+### Avant l'acceptation du modèle inclus { #included-model-acceptance }
+
+Sur le service hébergé, Plaid peut fonctionner avec le modèle inclus de KANAP. Avant cela, un administrateur accepte le fournisseur et le lieu où il traite les données. Les nouveaux espaces de travail en essai commencent dans cet état, avec Plaid désactivé.
+
+D'ici là, la page de Plaid s'ouvre normalement avec ses suggestions. Une case prend la place du champ de message : *J'accepte que {fournisseur} ({lieu}) traite mes questions et les données qu'elles concernent pour les réponses de Plaid. Elles ne servent pas à entraîner ses modèles.*, suivie de *Autre modèle ou désactivation : Administration › Plaid*.
+
+- Un administrateur des paramètres de Plaid coche la case. Cela active Plaid et enregistre l'acceptation, avec son auteur et sa date. Le champ de message apparaît alors.
+- Les autres personnes lisent *Plaid attend qu'un administrateur l'active.*
+
+Les administrateurs peuvent aussi accepter depuis la page [Paramètres Plaid](ai-settings.md#confirmer-le-modele-inclus-kanap). Les organisations qui utilisent leur propre modèle ne voient jamais cette case.
+
+!!! note "Chat désactivé"
+    Lorsqu'un administrateur désactive le chat dans **Administration › Plaid**, une personne autorisée à utiliser le chat ouvre toujours cette page, et l'entrée Plaid reste dans la navigation supérieure. La page indique *Plaid est désactivé pour cet espace de travail.* Un administrateur de l'assistant voit aussi *Activez-le dans Administration › Plaid*, qui ouvre les paramètres de Plaid. Les autres personnes voient *Demandez à un administrateur de l'activer.* Une personne sans le droit de chat voit la page d'accès refusé. Tant que le modèle inclus attend son acceptation, la page affiche à la place la case d'acceptation, même avec le chat désactivé : voir [Avant l'acceptation du modèle inclus](#included-model-acceptance).
 
 ## Démarrer une conversation
 
@@ -28,6 +39,14 @@ Lorsque vous ouvrez Plaid pour la première fois, vous arrivez sur un écran d'a
 - Le composeur en bas, prêt à recevoir votre premier message
 
 Cliquez sur une suggestion pour l'envoyer directement ou, pour les requêtes contenant un espace réservé `@`, l'insérer dans le composeur afin de la compléter.
+
+Quand un parcours a été choisi pour l'espace de travail à sa première ouverture, pendant l'essai, les suggestions commencent par ses deux questions, parmi celles que vous pouvez lire, puis viennent les suggestions habituelles, cinq au plus :
+
+| Parcours | Questions |
+|---|---|
+| Budget IT | *Quelles sont les principales opportunités d'économies dans les OPEX IT ?*, *Quelles lignes n'ont pas de responsable ?* |
+| Cartographie du SI | *Quelles technologies arrivent en fin de support dans les six mois ?*, *Quelles applications critiques n'ont pas de plan de reprise ?* |
+| Projets et demandes | *Quels projets dépassent leur budget ?*, *Quelles demandes attendent un arbitrage ?* |
 
 Saisissez un message et appuyez sur **Entrée** pour l'envoyer. **Maj+Entrée** insère un retour à la ligne. Le bouton d'envoi est désactivé lorsqu'il n'y a rien à envoyer et se transforme en bouton rouge **Arrêter** pendant que Plaid répond.
 
@@ -53,21 +72,28 @@ La recherche filtre la liste par titre au fur et à mesure de votre saisie. Le r
 Le composeur est le point de contrôle principal de l'espace de travail. Il prend en charge :
 
 - Le texte multiligne jusqu'à 10 lignes visibles avant défilement
-- Les pièces jointes image inline (PNG, JPG, GIF, WEBP)
+- Les pièces jointes : images (PNG, JPG, GIF, WEBP) et tableurs (.xlsx, CSV)
 - Les mentions `@` d'enregistrements KANAP
 - Un rappel de raccourci clavier (« Entrée pour envoyer · Maj+Entrée retour à la ligne »)
 
-### Joindre des images
+### Joindre des images et des tableurs
 
-Vous pouvez ajouter des images de trois manières :
+Vous pouvez joindre des images (PNG, JPG, GIF, WEBP) et des tableurs : classeurs Excel (.xlsx) et fichiers CSV. Il y a trois manières de les ajouter :
 
-- Cliquez sur l'icône trombone et sélectionnez des fichiers sur votre ordinateur
-- Glissez-déposez des fichiers image sur le composeur (une superposition indicative confirme la zone de dépôt)
-- Collez une image directement depuis le presse-papiers
+- Cliquez sur l'icône trombone (**Joindre un fichier**) et sélectionnez des fichiers sur votre ordinateur
+- Glissez-déposez des fichiers sur le composeur (une superposition indicative confirme la zone de dépôt)
+- Collez un fichier directement depuis le presse-papiers
 
-Chaque image en attente apparaît sous forme de miniature au-dessus du texte. Cliquez sur le petit **X** d'une miniature pour la retirer. Le nombre de pièces jointes par message est limité ; une fois cette limite atteinte, le trombone est désactivé jusqu'à ce que vous retiriez ou envoyiez les pièces jointes en cours.
+Chaque image en attente apparaît sous forme de miniature au-dessus du texte. Chaque tableur en attente apparaît sous forme de petite vignette avec son nom et sa taille. Cliquez sur le petit **X** pour en retirer un. Un message contient au plus 8 pièces jointes, images et tableurs confondus. Une fois cette limite atteinte, le trombone est désactivé jusqu'à ce que vous retiriez ou envoyiez les pièces jointes en cours.
 
 Les images sont importées avec votre message afin que Plaid puisse les décrire, les comparer ou en extraire des détails.
+
+KANAP lit un tableur au moment où vous envoyez le message :
+
+- Un fichier peut contenir jusqu'à 5 Mo et 20 000 lignes. Seule la première feuille d'un classeur est lue.
+- Un fichier illisible (endommagé, vide, ancien format .xls, trop volumineux) est refusé immédiatement, avec la raison. Le message n'est pas envoyé.
+- Plaid reçoit un résumé du fichier : les en-têtes de colonnes, le type de chaque colonne (texte, nombre ou date), les dix premières lignes et le nombre de lignes. Il peut décrire le fichier, dire ce que contient chaque colonne et repérer des problèmes dans les premières lignes. Il ne peut pas répondre sur les lignes au-delà des dix premières.
+- Le résumé reste attaché au message pendant toute la suite de la conversation.
 
 ### Mentionner des enregistrements avec `@`
 
@@ -112,6 +138,8 @@ Les images stockées dans KANAP, comme les pièces jointes, s'affichent normalem
 
 Plaid utilise un petit ensemble d'outils internes pour répondre aux questions : `Search all`, `Search knowledge`, `Get document`, `Get entity context` et quelques autres. Chaque appel d'outil apparaît sous forme de ligne compacte sous le message (« a utilisé Search all · 8 résultats »). Vous n'avez généralement pas besoin de lire les détails de l'outil, mais ils sont là si vous voulez voir exactement sur quels enregistrements la réponse s'est appuyée.
 
+Lorsque vous demandez comment faire quelque chose dans KANAP, par exemple où se trouve un paramètre ou les étapes d'une tâche, Plaid lit le manuel utilisateur de votre version de KANAP, dans votre langue (`Parcourir le manuel utilisateur`, `Lire le manuel utilisateur`). Il décrit les écrans comme le fait le manuel et donne le lien de la section lue sur doc.kanap.net.
+
 `Search all` trouve les lignes budgétaires par le nom de leurs valeurs analytiques, et indique à Plaid les valeurs de chaque ligne. Plaid désigne une ligne budgétaire par sa référence `BL-12`, et ses liens ouvrent la ligne. Un nombre seul, comme 21, désigne `BL-21`. Les anciens numéros fonctionnent toujours : `OPX-12` ou `CPX-3` trouve sa ligne.
 
 Plaid lit les lignes OPEX et CAPEX ensemble. Une question qui ne nomme aucun des deux types porte sur les deux, et Plaid peut filtrer ou regrouper les lignes par type.
@@ -130,7 +158,7 @@ Plaid ne nomme une fiche liée à celle que vous interrogez que si vous pouvez l
 
 Un administrateur des utilisateurs qui a accès à toutes les données lit avec Plaid ce que montrent **Administration › Rôles** et **Administration › Accès aux données**. Plaid liste les rôles, le nombre de personnes de chacun et les droits que donne chaque rôle, avec les mots de l'écran Rôles. Il dit qui est limité à quelles sociétés, quels centres de coûts ou quels groupes, en Lecture ou en Saisie, qui est limité sans aucun nœud, et qui voit une société. La liste des utilisateurs porte aussi tous les rôles d'une personne et son accès. Demandez par exemple : « Qui est limité à Alpha Spain, et avec quel accès ? » ou « Quels rôles donnent le niveau Administrateur sur le budget ? » Une personne dont l'accès est limité ne les lit pas, même administratrice des utilisateurs, et Plaid le dit. Plaid ne modifie rien de tout cela : l'accès aux données d'une personne, ses rôles, les droits d'un rôle, la création ou la désactivation d'une personne restent sur les écrans **Administration**. Les assistants connectés via MCP obtiennent les mêmes réponses.
 
-Plaid lit l'[historique](record-history.md) d'une fiche, tel que le montre son onglet **Historique**, pour toute personne qui peut ouvrir la fiche. Demandez par exemple : « Qui a modifié les montants de BL-12 ? » Une fiche sans onglet Historique, comme une application, un contrat, un projet, une tâche ou un incident, n'a pas d'historique dans KANAP : Plaid le dit et n'en reconstitue aucun à partir d'autres données. Les assistants connectés via MCP obtiennent les mêmes réponses.
+Plaid lit l'[historique](record-history.md) d'une fiche, tel que le montre son onglet **Historique**, pour toute personne qui peut ouvrir la fiche. Demandez par exemple : « Qui a modifié les montants de BL-12 ? » Une fiche sans onglet Historique, comme un utilisateur ou un rôle, n'a pas d'historique dans KANAP : Plaid le dit et n'en reconstitue aucun à partir d'autres données. Les assistants connectés via MCP obtiennent les mêmes réponses.
 
 Quand Plaid additionne des montants budgétaires, une ligne dont la devise n'a pas de taux de change pour l'année est exclue de la somme. Plaid indique alors quelles devises et quelles années il a exclues. Les assistants connectés par MCP reçoivent la même réponse.
 
@@ -241,12 +269,11 @@ Rien de ce qui modifie les données de KANAP n'est appliqué en silence. L'aper�
 
 ## Indicateurs d'utilisation
 
-Au-dessus du composeur, deux petits indicateurs vous aident à garder à l'esprit les coûts et les limites :
+Au-dessus du composeur, un petit indicateur montre ce qu'il reste du volume mensuel inclus :
 
 - **Utilisation intégrée** : lorsque Plaid s'exécute sur le modèle inclus KANAP plutôt que sur l'un des modèles propres à votre organisation, cet indicateur montre combien de messages restent pour le mois en cours ainsi que la date de réinitialisation du quota. Un administrateur a confirmé ce modèle au préalable (voir [Paramètres Plaid](ai-settings.md#confirmer-le-modele-inclus-kanap)). Lorsque la limite est atteinte, le composeur est désactivé et un texte d'aide invite les administrateurs à basculer vers un modèle qui leur est propre ; voir [Modèles IA](ai-models.md).
-- **Utilisation des tokens** : une fine barre avec des compteurs de tokens en entrée/sortie pour la conversation en cours, ainsi que la taille de la dernière requête. Les longues conversations deviennent plus coûteuses avec le temps ; la barre rend ce coût visible afin que vous puissiez décider quand démarrer un nouveau fil.
 
-La barre d'utilisation des tokens n'apparaît qu'une fois que la conversation compte au moins un échange.
+Les personnes qui peuvent ouvrir **Administration > Plaid** voient aussi une fine barre sous le composeur, dès que la conversation compte au moins un échange. **Volume traité** additionne les tokens en entrée et en sortie de chaque message de cette conversation. Chaque question renvoie les messages précédents, si bien que le volume croît plus vite que le nombre de tours. **Contexte de la dernière requête** est l'entrée de la dernière question. La barre montre aussi les tokens en entrée et les tokens en sortie de la conversation.
 
 ## Conseils
 

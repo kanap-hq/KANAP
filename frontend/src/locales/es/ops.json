@@ -47,22 +47,15 @@
       "history": "Historial"
     },
     "editor": {
-      "productNameRequired": "El nombre del producto es obligatorio",
-      "currencyMust3": "La moneda debe tener 3 letras",
-      "payingCompanyRequired": "La empresa pagadora es obligatoria",
-      "accountRequired": "La cuenta es obligatoria",
-      "dimensionRequired": "El campo {{name}} es obligatorio",
       "requiredLeaveTitle_one": "Falta un valor obligatorio",
       "requiredLeaveTitle_other": "Faltan valores obligatorios",
       "requiredLeaveMessage_one": "El campo {{names}} es obligatorio. Elija un valor antes de salir.",
       "requiredLeaveMessage_other": "Los campos {{names}} son obligatorios. Elija valores antes de salir.",
       "requiredLeaveStay": "Quedarse",
       "requiredLeaveConfirm": "Salir de todos modos",
-      "effectiveStartRequired": "La fecha de inicio efectivo es obligatoria",
       "failedToCreate": "No se pudo crear la línea",
       "failedToSave": "No se pudo guardar",
-      "failedToLoad": "No se pudo cargar la línea",
-      "obsoleteAccount": "Cuenta obsoleta detectada. La cuenta seleccionada no pertenece al plan de cuentas de la empresa. Actualice la cuenta."
+      "failedToLoad": "No se pudo cargar la línea"
     },
     "budget": {
       "title": "Presupuesto",
@@ -370,6 +363,7 @@
       "deleted_other": "{{count}} contratos eliminados"
     },
     "title": "Contratos",
+    "empty": "Todavía no hay contratos.",
     "newButton": "Nuevo",
     "importCsv": "Importar CSV",
     "exportTitle": "Exportar contratos",
@@ -1902,6 +1896,7 @@
     "titleWithCurrency": "Líneas presupuestarias ({{currency}})",
     "type": "Tipo",
     "newLine": "Nueva línea",
+    "empty": "Todavía no hay líneas presupuestarias.",
     "opexLine": "Línea OPEX",
     "capexLine": "Línea CAPEX",
     "exportTitle": "Exportar archivo presupuestario",
@@ -1923,6 +1918,16 @@
       "deleted_other": "{{count}} líneas presupuestarias eliminadas",
       "failed": "No se pudo eliminar la línea presupuestaria."
     },
-    "readOnlyInYourAccess": "Solo lectura en su acceso"
+    "readOnlyInYourAccess": "Solo lectura en su acceso",
+    "creation": {
+      "record": "La línea presupuestaria",
+      "missing": "Falta: {{fields}}",
+      "placeFirst": "Elija primero la empresa pagadora o el centro de coste.",
+      "leaveTitle": "Esta línea está incompleta",
+      "leaveComplete": "Completarla",
+      "leaveDelete": "Eliminarla",
+      "leaveAnyway": "Salir de todos modos",
+      "completeFailed": "No se pudo comprobar la línea."
+    }
   }
 }

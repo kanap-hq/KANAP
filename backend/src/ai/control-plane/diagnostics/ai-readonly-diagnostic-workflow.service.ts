@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AiExecutionContextWithManager } from '../../ai.types';
@@ -9,6 +9,7 @@ import { AiEvaluation } from '../entities/ai-evaluation.entity';
 import { AiEvidence } from '../entities/ai-evidence.entity';
 import { AiObservation } from '../entities/ai-observation.entity';
 import { AiRecommendation } from '../entities/ai-recommendation.entity';
+import { requestContextMissing } from '../../../auth/module-right-required';
 
 type AdapterResultLike<T> =
   | { ok: true; data: T; evidence?: unknown[]; warnings?: string[] }
@@ -190,7 +191,7 @@ export class AiReadonlyDiagnosticWorkflowService {
     executionOptions: DiagnosticExecutionOptions = {},
   ): Promise<DiagnosticWorkflowResult> {
     if (!context.tenantId) {
-      throw new ForbiddenException('Tenant context is required for diagnostic workflow execution.');
+      throw requestContextMissing('Tenant context is required for diagnostic workflow execution.');
     }
 
     const providerKey = input.provider_key ?? 'mock';
@@ -372,7 +373,7 @@ export class AiReadonlyDiagnosticWorkflowService {
     input: InternalNoteTriageInput,
   ): Promise<InternalNoteTriageProposalResult> {
     if (!context.tenantId) {
-      throw new ForbiddenException('Tenant context is required for diagnostic triage proposal.');
+      throw requestContextMissing('Tenant context is required for diagnostic triage proposal.');
     }
     const recommendationRepo = this.recommendationRepository(context);
     const recommendation = await recommendationRepo.findOne({

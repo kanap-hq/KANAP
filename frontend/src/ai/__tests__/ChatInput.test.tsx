@@ -1,9 +1,16 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { describe, expect, it, vi } from 'vitest';
-import ChatInput from '../components/ChatInput';
+import ChatInput, { ChatInputHandle } from '../components/ChatInput';
+import { aiSearchApi } from '../aiApi';
 import { createAppTheme } from '../../config/ThemeContext';
+// MentionPopover reaches i18n through aiApi. This file mocks aiApi, so load i18n itself.
+import '../../i18n';
+
+vi.mock('../aiApi', () => ({
+  aiSearchApi: { searchEntities: vi.fn() },
+}));
 
 describe('ChatInput', () => {
   const theme = createAppTheme('light');
@@ -40,5 +47,21 @@ describe('ChatInput', () => {
     fireEvent.click(sendButton);
 
     expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it('opens the application picker when a suggestion ends on @APP-', async () => {
+    HTMLElement.prototype.scrollTo = vi.fn();
+    vi.mocked(aiSearchApi.searchEntities).mockResolvedValue([]);
+    const ref = React.createRef<ChatInputHandle>();
+    renderWithTheme(<ChatInput ref={ref} onSend={vi.fn()} />);
+
+    await act(async () => {
+      ref.current?.setText('Résume une application @APP-');
+    });
+
+    await waitFor(() => expect(aiSearchApi.searchEntities).toHaveBeenCalledWith('', expect.objectContaining({
+      entityTypes: ['applications'],
+    })));
+    expect(screen.getByPlaceholderText(/Ask Plaid/)).toHaveValue('Résume une application @APP-');
   });
 });

@@ -39,25 +39,24 @@ This pipeline ensures every initiative is evaluated fairly, prioritized transpar
 
 ## Step 1: Submit a Request
 
-Go to **Portfolio > Requests** and click **+ New Request**.
+Go to **Portfolio > Requests** and click **New request**.
 
-New requests open on **Summary** with the request property sidebar already visible. Start with the structural fields in the sidebar, then capture the narrative in **Purpose**.
+Type a clear, concise title for the initiative in the header, and press Enter. Your request enters the pipeline with status **Pending Review**, and all its tabs open.
 
 <!-- screenshot: New Request workspace with Summary and property sidebar -->
 
-Fill in the minimum details to get started:
+Then fill in the minimum details in the property sidebar:
 
 | Field | What to enter |
 |-------|--------------|
-| **Name** | A clear, concise title for the initiative |
 | **Source** | Where did this come from? (Business unit, regulation, IT strategy...) |
 | **Category** | The type of initiative (e.g., New Application, Infrastructure, Process Improvement) |
-| **Requestor** | Who is asking for this? |
+| **Requestor** | Who is asking for this? You, by default |
 | **Target Delivery Date** | When is this ideally needed by? |
 
 Then use the **Purpose** document on **Summary** to explain the business need and expected outcome in plain language. If you already have a brief in Word, use the **Import** button on the Purpose editor to pull the `.docx` file in directly, with no copy-paste needed.
 
-Click **Create**. Your request enters the pipeline with status **Pending Review**.
+While you are on its page, **Create** in the header keeps the new request and closes it, and **Cancel** deletes it.
 
 !!! tip "Keep it lean"
     You can add deeper analysis, linked knowledge, and supporting evidence later. The goal right now is to get the request into the governed intake flow.
@@ -168,7 +167,7 @@ See [Requests reference](../portfolio-requests.md) for all status transitions.
 
 Your new project inherits the request context, but it still needs execution setup.
 
-Go to **Portfolio > Projects** and open your newly created project. The project workspace has seven tabs (**Summary**, **Activity**, **Timeline**, **Progress**, **Tasks**, **Scoring**, and **Knowledge**) with a persistent **Project Properties** sidebar for core fields, team, and relations.
+Go to **Portfolio > Projects** and open your newly created project. The project workspace has seven tabs (**Summary**, **Activity**, **Timeline**, **Effort**, **Tasks**, **Scoring**, and **Knowledge**) with a persistent **Project Properties** sidebar for core fields, team, and relations.
 
 ### Sidebar: Assign Your People and Core Structure
 
@@ -200,11 +199,11 @@ The same sidebar also keeps **Core Properties** and **Relations** visible while 
 
 **Summary** is the project cockpit. It shows the current status, delivery window, effort consumption, team coverage, and latest activity in one pass. The **Purpose** editor is here too. If your project brief already exists as a Word document, use the **Import** button to pull the `.docx` in directly.
 
-### Progress Tab: Validate Effort and Allocations
+### Effort Tab: Validate Effort and Allocations
 
-<!-- screenshot: Progress tab showing IT Effort and Business Effort fields -->
+<!-- screenshot: Effort tab showing IT Effort and Business Effort fields -->
 
-Use **Progress** to confirm the effort that will drive delivery planning:
+Use **Effort** to confirm the effort that will drive delivery planning:
 
 - **IT Effort (MD)**: Total man-days expected from IT contributors
 - **Business Effort (MD)**: Total man-days expected from business contributors
@@ -230,9 +229,9 @@ Now the real work begins. As the project progresses, keep KANAP updated.
 
 ### Update Progress
 
-<!-- screenshot: Execution Progress slider -->
+<!-- screenshot: Progress slider -->
 
-Use the **Execution Progress** slider on the Progress tab to reflect how far along the project is. This is a simple percentage (0-100%) that feeds dashboards and reports.
+Use the **Progress** slider on the Effort tab to reflect how far along the project is. This is a simple percentage (0-100%) that feeds dashboards and reports.
 
 Move the project through statuses as work advances. In practice, most projects move from **Waiting List** or **Planned** into active execution:
 
@@ -245,7 +244,7 @@ Move the project through statuses as work advances. In practice, most projects m
 
 There are two places to log time:
 
-1. **Progress tab**: Log project-level overhead time (meetings, coordination, management)
+1. **Effort tab**: Log project-level overhead time (meetings, coordination, management)
 2. **Tasks**: Log task-specific time against individual work items
 
 <!-- screenshot: Time logging dialog -->
@@ -357,14 +356,14 @@ See [Reporting reference](../portfolio-reporting.md).
 
 | I want to... | Go to... |
 |------------|--------|
-| Submit a new idea | Portfolio > Requests > + New |
+| Submit a new idea | Portfolio > Requests > New request |
 | Score a request | Open request > Scoring tab |
 | Assess feasibility | Open request > Analysis tab |
 | Set the project team | Open project > Project Properties sidebar > Team |
 | Import a Word document | Open request/project/task > Import button on Purpose or Description |
 | See the project pipeline | Portfolio > Planning |
 | Check team capacity | Portfolio > Planning > Capacity view, or Portfolio > Reporting > Capacity Heatmap |
-| Log time on a project | Open project > Progress tab or Tasks |
+| Log time on a project | Open project > Effort tab or Tasks |
 | Generate a roadmap | Portfolio > Planning > Roadmap Generator |
 | View reports | Portfolio > Reporting |
 | Configure scoring weights | Portfolio > Settings > Scoring Criteria |

@@ -596,6 +596,14 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       if (!name) throw new BadRequestException('name cannot be empty');
       existing.name = name;
     }
+    if (has('origin')) {
+      // A direct project may switch between fast-track and legacy; a converted one stays standard.
+      const origin = this.normalizeOrigin(body.origin);
+      if (existing.origin === 'standard' || origin === 'standard') {
+        throw new BadRequestException('Only a fast-track or legacy project can change its origin, to fast-track or legacy.');
+      }
+      existing.origin = origin;
+    }
     if (has('source_id')) existing.source_id = body.source_id || null;
     if (has('category_id')) {
       existing.category_id = body.category_id || null;

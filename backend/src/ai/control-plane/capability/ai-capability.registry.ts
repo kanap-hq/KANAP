@@ -1,5 +1,5 @@
 import { classificationDriftSnapshot } from '../providers/ticket-classification';
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { In } from 'typeorm';
 import { z } from 'zod';
 import { legacyFlattenError } from '../../../common/zod-error';
@@ -86,6 +86,7 @@ import {
   TicketingProvider,
 } from '../providers/provider.types';
 import { isRecord } from '../../../common/object-guards';
+import { codedForbidden } from '../../../auth/module-right-required';
 
 const COMPATIBILITY_CAPABILITY_VERSION = '1.0.0';
 const PROVIDER_CAPABILITY_VERSION = '1.0.0';
@@ -4203,7 +4204,7 @@ export class AiCapabilityRegistry {
       || job.environment !== action.action_payload_json.environment
       || job.externalJobTemplateRef !== action.action_payload_json.externalJobTemplateRef
     ) {
-      throw new ForbiddenException('Automation catalog entry changed since launch preparation.');
+      throw codedForbidden('AGENT_ACTION_CHANGED', 'Automation catalog entry changed since launch preparation.');
     }
     const variables = this.automationCatalog.validateVariables(job, action.action_payload_json.variables);
     const target = this.automationCatalog.validateTarget(job, action.action_payload_json.target);
@@ -4211,7 +4212,7 @@ export class AiCapabilityRegistry {
       ? await this.automationCatalog.findMatchingDryRunEvidence(context, job, { type: target.type, values: target.values }, variables)
       : null;
     if (job.dryRunRequired && dryRunMatch?.dryRunResultHash !== action.action_payload_json.dryRunResultHash) {
-      throw new ForbiddenException('Automation dry-run evidence no longer matches the approved launch payload.');
+      throw codedForbidden('AGENT_ACTION_CHANGED', 'Automation dry-run evidence no longer matches the approved launch payload.');
     }
     await this.automationCatalog.assertCooldownAllowsExecution(context, {
       job,
@@ -4273,16 +4274,16 @@ export class AiCapabilityRegistry {
       || action.effect !== 'remediate'
       || action.provider_kind !== 'automation'
     ) {
-      throw new ForbiddenException('Automation job run reads must reference an approved automation launch action.');
+      throw codedForbidden('AGENT_ACTION_INCOMPLETE', 'Automation job run reads must reference an approved automation launch action.');
     }
     if (action.status !== 'executed') {
-      throw new ForbiddenException('Automation job run reads require an executed launch action.');
+      throw codedForbidden('AGENT_ACTION_INCOMPLETE', 'Automation job run reads require an executed launch action.');
     }
     if (!isAutomationLaunchPayload(action.action_payload_json)) {
       throw new BadRequestException('Action request does not contain a valid automation launch payload.');
     }
     if (action.provider_key !== action.action_payload_json.providerKey) {
-      throw new ForbiddenException('Automation launch action provider scope does not match its payload.');
+      throw codedForbidden('AGENT_ACTION_CHANGED', 'Automation launch action provider scope does not match its payload.');
     }
     await this.automationCatalog.getCatalogJob(context, action.action_payload_json.providerKey, action.action_payload_json.jobKey);
     const providerResult = isRecord(action.metadata_json?.provider_result)
@@ -4290,10 +4291,10 @@ export class AiCapabilityRegistry {
       : null;
     const jobRunId = stringMetadataField(providerResult, 'job_run_id');
     if (!jobRunId) {
-      throw new ForbiddenException('Automation launch action has no recorded provider job run id.');
+      throw codedForbidden('AGENT_ACTION_INCOMPLETE', 'Automation launch action has no recorded provider job run id.');
     }
     if (parsed.data.job_run_id && parsed.data.job_run_id !== jobRunId) {
-      throw new ForbiddenException('Requested automation job run id does not match the executed action.');
+      throw codedForbidden('AGENT_ACTION_CHANGED', 'Requested automation job run id does not match the executed action.');
     }
     return {
       action,

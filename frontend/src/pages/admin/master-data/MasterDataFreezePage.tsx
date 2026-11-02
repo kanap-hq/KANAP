@@ -22,6 +22,7 @@ import { useFreezeState } from '../../../hooks/useFreezeState';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
 const YEAR_RANGE = 6;
 const MASTER_SCOPES: FreezeScope[] = ['companies', 'departments'];
@@ -52,7 +53,7 @@ export default function MasterDataFreezePage() {
       setFeedback({ type: 'success', message: t('admin.freeze.frozenSuccessfully') });
     },
     onError: (err: any) => {
-      setFeedback({ type: 'error', message: err?.response?.data?.message || err?.message || t('admin.freeze.unableToFreeze') });
+      setFeedback({ type: 'error', message: getApiErrorMessage(err, t, t('admin.freeze.unableToFreeze')) });
     },
   });
 
@@ -63,7 +64,7 @@ export default function MasterDataFreezePage() {
       setFeedback({ type: 'success', message: t('admin.freeze.unfrozenSuccessfully') });
     },
     onError: (err: any) => {
-      setFeedback({ type: 'error', message: err?.response?.data?.message || err?.message || t('admin.freeze.unableToUnfreeze') });
+      setFeedback({ type: 'error', message: getApiErrorMessage(err, t, t('admin.freeze.unableToUnfreeze')) });
     },
   });
 

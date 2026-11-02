@@ -1,11 +1,12 @@
 import useApplicationClassificationCatalog from '../../hooks/useApplicationClassificationCatalog';
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Alert, Autocomplete, Box, Button, Chip, MenuItem, Snackbar, Stack, Switch, TextField, Typography } from '@mui/material';
+import { Alert, Autocomplete, Box, Button, Chip, MenuItem, Stack, Switch, TextField, Typography } from '@mui/material';
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import api from '../../api';
+import { useNotify } from '../../components/notify/NotifyProvider';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell, {
   type PortfolioDetailWorkspaceTab,
@@ -191,7 +192,18 @@ export default function ConnectionWorkspacePage() {
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
   const [createTitleError, setCreateTitleError] = React.useState<string | null>(null);
-  const [absorbed, setAbsorbed] = React.useState<AbsorbedAsset[] | null>(null);
+  const notify = useNotify();
+  const notifyAbsorbed = React.useCallback((items: AbsorbedAsset[] | undefined) => {
+    if (!items?.length) return;
+    notify({
+      tone: 'info',
+      message: t('workspace.connection.absorbed', {
+        count: items.length,
+        names: Array.from(new Set(items.map((item) => item.name))).join(', '),
+        clusters: Array.from(new Set(items.map((item) => item.cluster_name))).join(', '),
+      }),
+    });
+  }, [notify, t]);
   const { choose, questionDialog } = useClusterConnectionQuestion();
 
   const lifecycleOptions = byField.lifecycleStatus || [];
@@ -327,7 +339,7 @@ export default function ConnectionWorkspacePage() {
         const res = await api.patch<ConnectionDetail & { absorbed?: AbsorbedAsset[] }>(`/connections/${connectionId}`, patch);
         const { absorbed: absorbedItems, ...saved } = res.data;
         setData((prev) => (prev ? { ...prev, ...saved } : saved as ConnectionDetail));
-        if (absorbedItems && absorbedItems.length > 0) setAbsorbed(absorbedItems);
+        notifyAbsorbed(absorbedItems);
         setError(null);
       } catch (e: any) {
         const message = getApiErrorMessage(e, t, t('messages.saveConnectionFailed'));
@@ -338,7 +350,7 @@ export default function ConnectionWorkspacePage() {
         setSaving(false);
       }
     },
-    [connectionId, load, t],
+    [connectionId, load, notifyAbsorbed, t],
   );
 
   const listContextParams = React.useMemo(() => {
@@ -589,7 +601,7 @@ export default function ConnectionWorkspacePage() {
             }),
       });
       const { absorbed: absorbedItems, ...saved } = res.data;
-      if (absorbedItems && absorbedItems.length > 0) setAbsorbed(absorbedItems);
+      notifyAbsorbed(absorbedItems);
       const targetTab = validTab === 'path' ? 'path' : 'overview';
       navigate(`/it/connections/${saved.connection_reference || saved.id}/${targetTab}`, { replace: true });
     } catch (e: any) {
@@ -1078,21 +1090,6 @@ export default function ConnectionWorkspacePage() {
       </PortfolioDetailWorkspaceShell>
 
       {questionDialog}
-
-      <Snackbar
-        open={!!absorbed && absorbed.length > 0}
-        autoHideDuration={6000}
-        onClose={() => setAbsorbed(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setAbsorbed(null)} severity="info" variant="filled">
-          {t('workspace.connection.absorbed', {
-            count: absorbed?.length ?? 0,
-            names: Array.from(new Set((absorbed ?? []).map((item) => item.name))).join(', '),
-            clusters: Array.from(new Set((absorbed ?? []).map((item) => item.cluster_name))).join(', '),
-          })}
-        </Alert>
-      </Snackbar>
 
       <KanapDialog
         open={deleteDialogOpen}

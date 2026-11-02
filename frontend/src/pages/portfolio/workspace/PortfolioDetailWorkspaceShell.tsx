@@ -63,6 +63,15 @@ type PortfolioDetailWorkspaceShellProps = {
   onTitleDraftChange?: (draft: string) => void;
   /** The longest title the record accepts (the input stops there). */
   titleMaxLength?: number;
+  /**
+   * A new record: the title opens for typing, light blue while empty (`EditableTitle` `autoEdit`
+   * and `emphasizeEmpty`), and a committed name goes to `onTitleSave`, which creates the record.
+   */
+  titleAutoEdit?: boolean;
+  /** Escape in the empty title of `titleAutoEdit`: leave without creating anything. */
+  titleOnCancel?: () => void;
+  /** Each new value moves the focus to the title (Create on an empty title). */
+  titleFocusRequest?: number;
   /** Omitted (e.g. on a create page), the shell draws no Properties tab and no drawer. */
   properties?: React.ReactNode;
   tabs: PortfolioDetailWorkspaceTab[];
@@ -78,6 +87,16 @@ type PortfolioDetailWorkspaceShellProps = {
 
 /** The width the title keeps beside the actions; below it, the actions wrap under the title. */
 const TITLE_MIN_WIDTH = 280;
+
+/** The height of one title line (the field of a title being typed keeps it too). */
+const TITLE_LINE_HEIGHT = `calc(${taskDetailTypography.title.fontSize} * ${taskDetailTypography.title.lineHeight})`;
+/** One line of actions: the small close button, the tallest control of the bar (a pill is 31px). */
+const ACTION_LINE_HEIGHT = 34;
+/** Where the actions box used to end below the row top (7px + one line), so the tabs keep their place. */
+const ACTIONS_BOTTOM = 41;
+
+/** The width of the "Properties" handle on the drawer's left edge. */
+const DRAWER_HANDLE_WIDTH = 26;
 
 function getStoredDrawerState(storageKey: string) {
   if (typeof window === 'undefined') return true;
@@ -192,7 +211,10 @@ export default function PortfolioDetailWorkspaceShell({
   onTabChange,
   onTitleSave,
   onTitleDraftChange,
+  titleAutoEdit = false,
   titleMaxLength,
+  titleOnCancel,
+  titleFocusRequest,
   titleRequiredMessage,
   properties,
   tabs,
@@ -219,6 +241,11 @@ export default function PortfolioDetailWorkspaceShell({
   const hasTabRow = tabs.length > 1;
   const drawerLift = hasTabRow ? Math.abs(taskDetailTokens.drawer.panelTop) : 0;
   const tabLift = hasTabRow ? Math.abs(taskDetailTokens.drawer.tabTop) : 0;
+  // The open drawer and its handle rise beside the tab row: the row keeps their width free
+  // (less the title block's own padding, plus a small gap) and scrolls when it still does not fit.
+  const tabRowDrawerReserve = hasProperties && effectiveDrawerOpen && !isMobile
+    ? taskDetailTokens.drawer.panelWidth + DRAWER_HANDLE_WIDTH - parseInt(taskDetailTokens.titleBlock.px, 10) + 8
+    : 0;
 
   React.useEffect(() => {
     if (drawerOpenRequest > 0) setDrawerOpen(true);
@@ -413,6 +440,10 @@ export default function PortfolioDetailWorkspaceShell({
                         onDraftChange={onTitleDraftChange}
                         requiredMessage={titleRequiredMessage}
                         error={titleError}
+                        autoEdit={titleAutoEdit}
+                        emphasizeEmpty={titleAutoEdit}
+                        onCancel={titleOnCancel}
+                        focusRequest={titleFocusRequest}
                       />
                     </>
                   )}
@@ -443,8 +474,15 @@ export default function PortfolioDetailWorkspaceShell({
                   gap: taskDetailTokens.actionPills.gap,
                   flexShrink: 0,
                   maxWidth: '100%',
-                  mt: isCompact ? 0 : '7px',
                   flexWrap: 'wrap',
+                  // The first line of actions is centred on the title line, whatever the title's
+                  // state. Its box keeps the bottom it always had, so a row without metadata keeps
+                  // its tabs in place; more lines of actions grow downward, never over the title.
+                  ...(isCompact ? {} : {
+                    minHeight: ACTION_LINE_HEIGHT,
+                    mt: `calc((${TITLE_LINE_HEIGHT} - ${ACTION_LINE_HEIGHT}px) / 2)`,
+                    mb: `calc(${ACTIONS_BOTTOM - ACTION_LINE_HEIGHT}px - (${TITLE_LINE_HEIGHT} - ${ACTION_LINE_HEIGHT}px) / 2)`,
+                  }),
                 }}
               >
                 {/* The history sits left of the page's own actions (the delete pill comes last). */}
@@ -477,7 +515,9 @@ export default function PortfolioDetailWorkspaceShell({
           ) : null}
 
           {hasTabRow && (
-            <WorkspaceTabs tabs={tabs} activeTab={activeTab} onTabChange={onTabChange} />
+            <Box data-testid="workspace-tab-row" sx={{ minWidth: 0, mr: `${tabRowDrawerReserve}px` }}>
+              <WorkspaceTabs tabs={tabs} activeTab={activeTab} onTabChange={onTabChange} />
+            </Box>
           )}
         </Box>
       </Box>
@@ -530,7 +570,7 @@ export default function PortfolioDetailWorkspaceShell({
                 position: 'absolute',
                 top: -tabLift,
                 right: 0,
-                width: 26,
+                width: DRAWER_HANDLE_WIDTH,
                 height: 120,
                 bgcolor: effectiveDrawerOpen ? theme.palette.kanap.tab.bgActive : theme.palette.kanap.tab.bg,
                 border: `1px solid ${effectiveDrawerOpen ? theme.palette.kanap.tab.borderActive : theme.palette.kanap.tab.border}`,

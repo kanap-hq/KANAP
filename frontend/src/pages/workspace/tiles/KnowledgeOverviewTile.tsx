@@ -54,6 +54,7 @@ export default function KnowledgeOverviewTile({ config: _config }: KnowledgeOver
     <DashboardTile
       title={t('dashboard.tiles.knowledge')}
       icon="Description"
+      isEmpty={reviewItems.length === 0}
       isLoading={isLoading}
       isError={isError}
       onRetry={() => { void refetch(); }}

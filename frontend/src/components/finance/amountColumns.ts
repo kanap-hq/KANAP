@@ -316,17 +316,20 @@ export const AMOUNT_FILTER_PARAMS = {
 /**
  * Every shown column of every list year, year by year in the fixed column order, named with the
  * tenant's names. Hidden columns are not built, so they are not in the chooser, sort or filters.
- * Visible by default: the display defaults of Y. Cells show the reporting amount, the server
- * filters them with number models and sorts them by the same key.
+ * Visible by default: the display defaults of Y. Cells and the totals row show the reporting
+ * amount with the separators of the interface language. The server filters them with number
+ * models and sorts them by the same key.
  */
 export function buildAmountColumnDefs<T>({
   t,
   currentYear,
+  locale,
   cellRenderer,
   columns,
 }: {
   t: TFunction;
   currentYear: number;
+  locale: string;
   cellRenderer: (colId: string) => ColDef<T>['cellRenderer'];
   columns: ListAmountColumns;
 }): AmountColDef<T>[] {
@@ -342,8 +345,8 @@ export function buildAmountColumnDefs<T>({
         if (p.node?.rowPinned && isPendingAmount(p.data, colId)) return PENDING_TOTAL;
         // A year without an exchange rate: the amount in the line currency, named, never as a reporting amount.
         const missing = cellFxMissing(p.data, colId, currentYear);
-        if (missing) return t('ops:shared.fxMissing.localAmount', { amount: formatAmount(missing.amount), currency: missing.currency });
-        return p.value == null ? '' : formatAmount(p.value);
+        if (missing) return t('ops:shared.fxMissing.localAmount', { amount: formatAmount(missing.amount, locale), currency: missing.currency });
+        return p.value == null ? '' : formatAmount(p.value, locale);
       },
       type: 'rightAligned',
       width: 180,

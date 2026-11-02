@@ -1,3 +1,5 @@
+import type { LlmCacheCostFactors } from '../ai-llm-cost.util';
+import type { StreamUsage } from './streaming.util';
 export type AiProviderId = 'anthropic' | 'openai' | 'ollama' | 'custom';
 export type AiSystemPromptRole = 'system' | 'developer';
 export type AiMaxTokensParam = 'max_completion_tokens' | 'max_tokens';
@@ -31,6 +33,10 @@ export type AiProviderTestResult = {
   latency_ms: number | null;
   message: string;
   validation_errors: string[];
+  // The effort the test call sent; null when none was (not set, or not accepted by the model).
+  reasoning_effort_sent?: AiReasoningEffort | null;
+  // Reasoning tokens the response reported (OpenAI-compatible providers); null when not reported.
+  reasoning_tokens?: number | null;
 };
 
 export type AiProviderImageAttachment = {
@@ -68,7 +74,9 @@ export type AiProviderToolDef = {
   parameters: Record<string, unknown>;
 };
 
-export type AiReasoningEffort = 'low' | 'medium' | 'high';
+export const AI_REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+
+export type AiReasoningEffort = (typeof AI_REASONING_EFFORTS)[number];
 
 export type AiStreamParams = {
   providerId?: AiProviderId;
@@ -80,6 +88,10 @@ export type AiStreamParams = {
   // built-in provider, used as configured).
   endpointSource?: 'tenant' | 'platform';
   systemPrompt: string;
+  // The start of `systemPrompt` that stays the same across turns (`BuiltSystemPrompt.cacheablePrefix`).
+  // Providers with explicit prompt-cache breakpoints (Anthropic) end one there; the others send
+  // `systemPrompt` as it is and cache its prefix by themselves.
+  systemPromptCacheablePrefix?: string;
   systemPromptRole?: AiSystemPromptRole;
   messages: AiProviderMessage[];
   tools: AiProviderToolDef[];
@@ -90,9 +102,10 @@ export type AiStreamParams = {
   maxRetries?: number;
   parallelToolCalls?: boolean;
   debugTrace?: boolean;
-  // Caps how much a reasoning model may think before answering. Only ever set for the
-  // platform built-in provider (a config KANAP controls); tenant-provided configurations
-  // must never send it, because arbitrary OpenAI-compatible servers may reject the field.
+  // How much a reasoning model may think before answering: the included model's fixed cap, or
+  // the effort an administrator set on a registry model, as reasoningEffortToSend() gives it.
+  // Null sends nothing (the provider's default). A server that refuses the value answers with an
+  // error, which the connection test shows.
   reasoningEffort?: AiReasoningEffort | null;
 };
 
@@ -110,11 +123,13 @@ export type AiStreamEvent =
   | { type: 'tool_call_delta'; id: string; arguments: string }
   | { type: 'tool_call_end'; id: string }
   | { type: 'debug_trace'; name: AiProviderDebugTraceName; tool_name?: string | null }
-  | { type: 'done'; usage?: { input_tokens: number; output_tokens: number }; finish_reason?: string }
+  | { type: 'done'; usage?: StreamUsage; finish_reason?: string }
   | { type: 'error'; message: string };
 
 export interface AiProviderAdapter {
   readonly descriptor: AiProviderDescriptor;
   validateConfiguration(settings: AiProviderSettingsSnapshot): string[];
   createStream(params: AiStreamParams): AsyncGenerator<AiStreamEvent>;
+  /** What a cached prompt token costs on this provider; absent: no known discount (`NO_CACHE_DISCOUNT`). */
+  readonly cacheCostFactors?: LlmCacheCostFactors;
 }

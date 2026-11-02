@@ -37,7 +37,7 @@ Eine Bestätigung deckt ab, was diese Funktionen an den Anbieter senden: die Fra
 
 - **Bestätigen** speichert Ihre Bestätigung. Plaid wird dadurch nicht eingeschaltet.
 - **Chat aktivieren** verlangt die Bestätigung, solange sie fehlt. Schalten Sie ihn ein und speichern Sie: Ein Fenster zeigt den Anbieter und den Verarbeitungsort. **Bestätigen und aktivieren** speichert Ihre Änderungen und die Bestätigung gemeinsam. Schließen Sie das Fenster, wird nichts gespeichert. Das Fenster verweist außerdem auf die Seite [KI-Modelle](ai-models.md), falls Sie lieber ein eigenes Modell verwenden.
-- Während einer Cloud-Testphase bietet auch die Startseite an, Plaid einzuschalten, mit demselben Bestätigungsfenster. Siehe [Mein Dashboard](my-dashboard.md).
+- Solange die Bestätigung fehlt, zeigt die Seite von Plaid ein Kästchen anstelle des Nachrichtenfelds. Setzt ein Administrator der Plaid-Einstellungen das Häkchen, wird die Bestätigung gespeichert und Plaid eingeschaltet. Siehe [Plaid](ai-assistant.md#included-model-acceptance).
 - **Zurückziehen** entfernt die Bestätigung nach einer zweiten Rückfrage. KI-Funktionen, die das inklusive Modell verwenden, stoppen, bis ein Administrator erneut bestätigt. Plaid bleibt eingeschaltet und zeigt seinen Benutzern einen Hinweis.
 - Eine erneute Bestätigung wird verlangt, wenn sich der Anbieter, seine Verbindungsadresse, der angezeigte Name oder der Verarbeitungsort ändert. Ein neues Modell desselben Anbieters verlangt sie nicht. Ändert sich der Anbieter, während Ihr Fenster offen ist, zeigt das Fenster den neuen und bittet Sie, ihn zu prüfen.
 - Plaid und Agenten, die auf einem von Ihnen angelegten Modell laufen, brauchen keine Bestätigung. Auch über MCP verbundene externe Assistenten hängen nicht davon ab, weil MCP nichts an das inklusive Modell sendet.
@@ -225,7 +225,7 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header
 
 ### Verfügbare Werkzeuge
 
-Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und lesen, aber nichts ändern. Ein Schlüssel oder eine Verbindung erhält die zwölf Werkzeuge unten, und dreizehn, wenn die Websuche für Ihre Organisation eingeschaltet ist. Eine Person sieht nur die Werkzeuge für die Daten, die ihre Rolle sie lesen lässt.
+Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und lesen, aber nichts ändern. Ein Schlüssel oder eine Verbindung erhält die vierzehn Werkzeuge unten, und fünfzehn, wenn die Websuche für Ihre Organisation eingeschaltet ist. Eine Person sieht nur die Werkzeuge für die Daten, die ihre Rolle sie lesen lässt.
 
 | Werkzeug | Funktion |
 |---|---|
@@ -241,9 +241,11 @@ Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und
 | `get_record_history` | Liest den Verlauf eines Datensatzes, wie ihn sein Tab Verlauf zeigt |
 | `search_knowledge` | Durchsucht die Wissensdatenbank |
 | `get_document` | Liest ein Dokument der Wissensdatenbank |
+| `list_help_topics` | Listet die Seiten und Abschnitte des Benutzerhandbuchs auf |
+| `read_help_section` | Liest eine Seite oder einen Abschnitt des Benutzerhandbuchs, mit seinem Link |
 | `web_search` | Sucht im Web, wenn die Websuche für Ihre Organisation eingeschaltet ist |
 
-Wenn sich ein Client verbindet, teilt der Server ihm mit, welchen Arbeitsbereich er liest, dass er nur liest, dass er mit den Rechten der Person hinter dem Schlüssel oder der Verbindung liest, wie er sucht (Kostenstellen, Kalender und Dimensionen eingeschlossen), wo er die Wechselkurse liest und welche Daten er nicht liest (das Audit-Protokoll und KI-Agenten). Rollen und Einstellungen des Datenzugriffs liest er nur für eine Person, die Benutzer verwaltet und Zugriff auf alle Daten hat.
+Wenn sich ein Client verbindet, teilt der Server ihm mit, welchen Arbeitsbereich er liest, dass er nur liest, dass er mit den Rechten der Person hinter dem Schlüssel oder der Verbindung liest, wie er sucht (Kostenstellen, Kalender und Dimensionen eingeschlossen), wo er die Wechselkurse liest und welche Daten er nicht liest (das Audit-Protokoll und KI-Agenten). Rollen und Einstellungen des Datenzugriffs liest er nur für eine Person, die Benutzer verwaltet und Zugriff auf alle Daten hat. Außerdem weist er den Client an, Fragen zur Bedienung von KANAP anhand des Benutzerhandbuchs zu beantworten.
 
 Ein Aufruf, den der Server ablehnt, kommt mit seiner Ursache zurück, damit der Assistent sie erklären kann: ein unbekanntes Werkzeug, ein Werkzeug, das Daten ändern würde, ein Werkzeug, das der Schlüssel nicht erlaubt, oder Daten, die die Person nicht lesen darf.
 
@@ -269,7 +271,7 @@ Das Protokoll erfasst auch Aufrufe mit einem widerrufenen oder abgelaufenen Schl
 ## Tipps
 
 - **Lassen Sie Plaid auf dem Standardmodell, solange Sie keinen Grund für etwas anderes haben.** Den Chat an ein bestimmtes Modell zu heften bedeutet, dass er dem Organisationsstandard nicht mehr folgt: nützlich, wenn Chat und Agenten wirklich verschiedene Modelle brauchen, sonst eher lästig.
-- **Chat-Volumen wird leicht unterschätzt.** Die Seite [Nutzung & Kosten](ai-usage.md) bewertet den Chat zu den Tarifen des zugewiesenen Modells; ein ausgelasteter Assistent auf einem teuren Modell fällt dort lange auf, bevor er auf einer Rechnung auffällt.
+- **Chat-Volumen wird leicht unterschätzt.** Die Seite [Nutzung & Kosten](ai-usage.md) bewertet jede Chat-Nachricht zu den mit ihr gespeicherten Tarifen; ein ausgelasteter Assistent auf einem teuren Modell fällt dort lange auf, bevor er auf einer Rechnung auffällt.
 - **Ein bildfähiges Modell ist eine Anforderung der Agenten, nicht des Chats.** Wenn Ihre Triage-Agenten Ticket-Screenshots lesen sollen, gehört das an *deren* Modell: siehe **Versteht Bilder** auf der Seite [KI-Modelle](ai-models.md).
 - **Bevorzugen Sie Verbindungen für Claude.** Jede Person meldet sich mit ihrem eigenen Konto an und liest mit ihren eigenen Zugriffsrechten, sodass niemand einen Schlüssel teilt. Behalten Sie Schlüssel für Clients, die einen brauchen, rotieren Sie sie und verwenden Sie **Max. Lebensdauer des Schlüssels (Tage)**, um eine Obergrenze durchzusetzen, die keine Anfrage überschreiten kann.
 - **Legen Sie ein Aufbewahrungsfenster fest.** Gespräche für immer aufzubewahren ist bequem, bis die Datenbank groß wird oder eine Compliance-Prüfung fragt, wie lange Chat-Inhalte aufbewahrt werden: 90 oder 180 Tage sind ein üblicher Ausgangspunkt.

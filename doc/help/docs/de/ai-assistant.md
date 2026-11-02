@@ -16,8 +16,19 @@ Plaid ersetzt nicht den Rest der Anwendung. Es ist ein schnellerer Weg, um Konte
 
 Der Arbeitsbereich steht auch Administratoren mit `ai_chat:admin` zur Verfügung, die alles sehen und moderieren können, was normale Benutzer tun.
 
-!!! note "Wartet auf einen Administrator"
-    Im gehosteten Dienst kann Plaid auf dem inklusiven KANAP-Modell laufen. Zuvor bestätigt ein Administrator den Anbieter und den Ort, an dem er Daten verarbeitet. Bis dahin zeigt der Arbeitsbereich *Ein Administrator muss den KI-Anbieter unter Administration > Plaid bestätigen.* statt des Chats. Ein Administrator erledigt das auf der Seite [Plaid-Einstellungen](ai-settings.md#das-inklusive-kanap-modell-bestatigen). Organisationen, die ein eigenes Modell nutzen, sehen diesen Hinweis nie.
+### Bevor das inklusive Modell akzeptiert ist { #included-model-acceptance }
+
+Im gehosteten Dienst kann Plaid mit dem inklusiven KANAP-Modell arbeiten. Vorher akzeptiert ein Administrator den Anbieter und den Ort, an dem er die Daten verarbeitet. Neue Arbeitsbereiche in der Testphase beginnen in diesem Zustand, mit ausgeschaltetem Plaid.
+
+Bis dahin öffnet sich die Seite von Plaid wie gewohnt mit ihren Vorschlägen. Ein Kästchen nimmt den Platz des Nachrichtenfelds ein: *Ich bin einverstanden, dass {Anbieter} ({Ort}) meine Fragen und die Daten, die sie betreffen, für die Antworten von Plaid verarbeitet. Sie werden nicht zum Training seiner Modelle verwendet.*, gefolgt von *Anderes Modell oder Deaktivierung: Administration › Plaid*.
+
+- Ein Administrator der Plaid-Einstellungen setzt das Häkchen. Damit wird Plaid eingeschaltet und die Zustimmung gespeichert, mit Person und Zeitpunkt. Danach erscheint das Nachrichtenfeld.
+- Alle anderen lesen *Plaid wartet darauf, dass eine Administratorin oder ein Administrator es aktiviert.*
+
+Administratoren können auch auf der Seite [Plaid-Einstellungen](ai-settings.md#das-inklusive-kanap-modell-bestatigen) zustimmen. Organisationen mit einem eigenen Modell sehen dieses Kästchen nie.
+
+!!! note "Chat ausgeschaltet"
+    Wenn ein Administrator den Chat unter **Administration › Plaid** ausschaltet, öffnet eine Person mit dem Chat-Recht weiterhin diese Seite, und der Eintrag Plaid bleibt in der oberen Navigation. Die Seite zeigt *Plaid ist für diesen Arbeitsbereich ausgeschaltet.* Ein Administrator des Assistenten sieht außerdem *Schalten Sie ihn unter Administration › Plaid ein*, einen Link zu den Plaid-Einstellungen. Alle anderen sehen *Bitten Sie einen Administrator, ihn einzuschalten.* Eine Person ohne das Chat-Recht sieht die Seite Zugriff verweigert. Solange das inklusive Modell auf seine Zustimmung wartet, zeigt die Seite stattdessen das Kästchen zur Zustimmung, auch bei ausgeschaltetem Chat: siehe [Bevor das inklusive Modell akzeptiert ist](#included-model-acceptance).
 
 ## Eine Konversation beginnen
 
@@ -28,6 +39,14 @@ Wenn Sie Plaid zum ersten Mal öffnen, gelangen Sie auf einen Begrüßungsbildsc
 - Dem Eingabefeld am unteren Rand, bereit für Ihre erste Nachricht
 
 Klicken Sie auf einen beliebigen Vorschlag, um ihn entweder direkt zu senden oder (bei Prompts, die einen `@`-Platzhalter enthalten) den Vorschlag in das Eingabefeld einzufügen, damit Sie ihn vervollständigen können.
+
+Wurde beim ersten Öffnen des Arbeitsbereichs, während der Testphase, ein Pfad gewählt, beginnen die Vorschläge mit dessen zwei Fragen, soweit Sie sie lesen dürfen, dann folgen die üblichen, höchstens fünf:
+
+| Pfad | Fragen |
+|---|---|
+| IT-Budget | *Wo liegen die größten Einsparpotenziale bei den IT-OPEX?*, *Welche Budgetzeilen haben keine verantwortliche Person?* |
+| IT-Landkarte | *Welche Technologien erreichen in den nächsten sechs Monaten ihr Supportende?*, *Welche kritischen Anwendungen haben keinen Wiederanlaufplan?* |
+| Projekte und Anfragen | *Welche Projekte überschreiten ihr Budget?*, *Welche Anfragen warten auf eine Entscheidung?* |
 
 Geben Sie eine Nachricht ein und drücken Sie **Eingabe** zum Senden. **Umschalt+Eingabe** fügt eine neue Zeile ein. Die Sende-Schaltfläche ist deaktiviert, solange nichts zu senden ist, und verwandelt sich in eine rote **Stopp**-Schaltfläche, während Plaid antwortet.
 
@@ -53,21 +72,28 @@ Die Suche filtert die Liste während der Eingabe nach Titel. Umbenennen und Arch
 Das Eingabefeld ist das zentrale Bedienelement des Arbeitsbereichs. Es unterstützt:
 
 - Mehrzeiligen Text mit bis zu 10 sichtbaren Zeilen, bevor gescrollt wird
-- Inline-Bildanhänge (PNG, JPG, GIF, WEBP)
+- Anhänge: Bilder (PNG, JPG, GIF, WEBP) und Tabellen (.xlsx, CSV)
 - `@`-Erwähnungen von KANAP-Datensätzen
 - Einen Tastatur-Hinweis („Eingabe zum Senden · Umschalt+Eingabe für neue Zeile“)
 
-### Bilder anhängen
+### Bilder und Tabellen anhängen
 
-Sie können Bilder auf drei Arten hinzufügen:
+Sie können Bilder (PNG, JPG, GIF, WEBP) und Tabellen anhängen: Excel-Arbeitsmappen (.xlsx) und CSV-Dateien. Es gibt drei Arten, sie hinzuzufügen:
 
-- Klicken Sie auf das Büroklammer-Symbol und wählen Sie Dateien von Ihrem Computer aus
-- Ziehen Sie Bilddateien per Drag-and-drop auf das Eingabefeld (eine eingeblendete Hilfe bestätigt das Ablageziel)
-- Fügen Sie ein Bild direkt aus der Zwischenablage ein
+- Klicken Sie auf das Büroklammer-Symbol (**Datei anhängen**) und wählen Sie Dateien von Ihrem Computer aus
+- Ziehen Sie Dateien per Drag-and-drop auf das Eingabefeld (eine eingeblendete Hilfe bestätigt das Ablageziel)
+- Fügen Sie eine Datei direkt aus der Zwischenablage ein
 
-Jedes noch nicht gesendete Bild erscheint als Miniaturansicht über dem Text. Klicken Sie auf das kleine **X** einer Miniaturansicht, um sie zu entfernen. Es gibt ein Anhang-Limit pro Nachricht; sobald es erreicht ist, ist die Büroklammer deaktiviert, bis Sie die aktuellen Anhänge entfernen oder senden.
+Jedes noch nicht gesendete Bild erscheint als Miniaturansicht über dem Text. Jede noch nicht gesendete Tabelle erscheint als kleine Kachel mit ihrem Namen und ihrer Größe. Klicken Sie auf das kleine **X**, um einen Anhang zu entfernen. Eine Nachricht enthält höchstens 8 Anhänge, Bilder und Tabellen zusammen. Sobald das Limit erreicht ist, ist die Büroklammer deaktiviert, bis Sie die aktuellen Anhänge entfernen oder senden.
 
 Bilder werden zusammen mit Ihrer Nachricht hochgeladen, damit Plaid sie beschreiben, vergleichen oder Details daraus extrahieren kann.
+
+KANAP liest eine Tabelle, wenn Sie die Nachricht senden:
+
+- Eine Datei darf bis zu 5 MB und 20.000 Zeilen umfassen. Von einer Arbeitsmappe wird nur das erste Blatt gelesen.
+- Eine Datei, die nicht gelesen werden kann (beschädigt, leer, altes .xls-Format, zu groß), wird sofort mit Angabe des Grundes abgelehnt. Die Nachricht wird nicht gesendet.
+- Plaid erhält eine Zusammenfassung der Datei: die Spaltenüberschriften, den Typ jeder Spalte (Text, Zahl oder Datum), die ersten zehn Zeilen und die Anzahl der Zeilen. Plaid kann die Datei beschreiben, sagen, was jede Spalte enthält, und Probleme in den ersten Zeilen erkennen. Zu Zeilen nach den ersten zehn kann Plaid nichts sagen.
+- Die Zusammenfassung bleibt für den Rest der Unterhaltung an die Nachricht angehängt.
 
 ### Datensätze mit `@` erwähnen
 
@@ -112,6 +138,8 @@ In KANAP gespeicherte Bilder, etwa Anhänge, werden wie gewohnt angezeigt. Ein B
 
 Plaid verwendet eine kleine Auswahl interner Tools, um Fragen zu beantworten: `Search all`, `Search knowledge`, `Get document`, `Get entity context` und einige weitere. Jeder Tool-Aufruf erscheint als kompakte Zeile unter der Nachricht („Alles durchsuchen verwendet · 8 Ergebnisse“). In der Regel müssen Sie die Tool-Details nicht lesen, aber sie sind vorhanden, falls Sie genau sehen möchten, auf welchen Datensätzen die Antwort beruht.
 
+Wenn Sie fragen, wie etwas in KANAP geht, etwa wo sich eine Einstellung befindet oder welche Schritte eine Aufgabe hat, liest Plaid das Benutzerhandbuch Ihrer KANAP-Version in Ihrer Sprache (`Benutzerhandbuch durchsuchen`, `Benutzerhandbuch lesen`). Es beschreibt die Bildschirme so, wie das Handbuch es tut, und verlinkt den gelesenen Abschnitt auf doc.kanap.net.
+
 `Search all` findet Budgetzeilen über die Namen ihrer Analysewerte und teilt Plaid mit, welche Werte jede Zeile hat. Plaid nennt eine Budgetzeile mit ihrer Referenz `BL-12`, und seine Links öffnen die Zeile. Eine Zahl allein, etwa 21, bedeutet `BL-21`. Die früheren Nummern funktionieren weiterhin: `OPX-12` oder `CPX-3` findet seine Zeile.
 
 Plaid liest OPEX- und CAPEX-Zeilen zusammen. Eine Frage, die keinen der beiden Typen nennt, gilt für beide, und Plaid kann die Zeilen nach Typ filtern oder gruppieren.
@@ -130,7 +158,7 @@ Plaid nennt einen Datensatz, der mit dem erfragten verknüpft ist, nur dann, wen
 
 Ein Benutzeradministrator mit Zugriff auf alle Daten liest mit Plaid, was **Administration › Rollen** und **Administration › Datenzugriff** zeigen. Plaid listet die Rollen, die Zahl ihrer Personen und die Rechte, die jede Rolle gibt, mit den Begriffen der Seite Rollen. Es sagt, wer auf welche Unternehmen, Kostenstellen oder Gruppen begrenzt ist, mit Lesen oder Bearbeiten, wer ohne Knoten begrenzt ist und wer ein Unternehmen sieht. Die Benutzerliste enthält außerdem alle Rollen einer Person und ihren Zugriff. Fragen Sie zum Beispiel: „Wer ist auf Alpha Spain begrenzt, und mit welchem Zugriff?“ oder „Welche Rollen geben die Stufe Administrator auf Budget?“ Eine Person, deren eigener Zugriff begrenzt ist, liest diese Angaben nicht, auch als Benutzeradministrator, und Plaid sagt es. Plaid ändert nichts davon: Der Datenzugriff einer Person, ihre Rollen, die Rechte einer Rolle sowie das Anlegen oder Deaktivieren einer Person bleiben auf den Seiten unter **Administration**. Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
-Plaid liest den [Verlauf](record-history.md) eines Datensatzes, wie ihn sein Tab **Verlauf** zeigt, für alle, die den Datensatz öffnen können. Fragen Sie zum Beispiel: „Wer hat die Beträge von BL-12 geändert?“ Ein Datensatz ohne Tab Verlauf, etwa eine Anwendung, ein Vertrag, ein Projekt, eine Aufgabe oder ein Incident, hat in KANAP keinen Verlauf: Plaid sagt es und rekonstruiert keinen aus anderen Daten. Über MCP verbundene Assistenten erhalten dieselben Antworten.
+Plaid liest den [Verlauf](record-history.md) eines Datensatzes, wie ihn sein Tab **Verlauf** zeigt, für alle, die den Datensatz öffnen können. Fragen Sie zum Beispiel: „Wer hat die Beträge von BL-12 geändert?“ Ein Datensatz ohne Tab Verlauf, etwa ein Benutzer oder eine Rolle, hat in KANAP keinen Verlauf: Plaid sagt es und rekonstruiert keinen aus anderen Daten. Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
 Wenn Plaid Budgetbeträge addiert, bleibt eine Zeile, deren Währung für das Jahr keinen Wechselkurs hat, außerhalb der Summe. Plaid nennt dann die ausgelassenen Währungen und Jahre. Über MCP verbundene Assistenten erhalten dieselbe Antwort.
 
@@ -241,12 +269,11 @@ Nichts, was KANAP-Daten verändert, wird stillschweigend angewendet. Die Vorscha
 
 ## Nutzungsanzeigen
 
-Über dem Eingabefeld helfen Ihnen zwei kleine Anzeigen, Kosten und Grenzen im Blick zu behalten:
+Über dem Eingabefeld zeigt eine kleine Anzeige, wie viel vom inkludierten Monatsvolumen noch bleibt:
 
 - **Integrierte Nutzung**: Wenn Plaid mit dem inklusiven KANAP-Modell arbeitet und nicht mit einem der eigenen Modelle Ihrer Organisation, zeigt dies, wie viele Nachrichten im aktuellen Monat verbleiben und an welchem Datum das Kontingent zurückgesetzt wird. Ein Administrator hat dieses Modell zuvor bestätigt (siehe [Plaid-Einstellungen](ai-settings.md#das-inklusive-kanap-modell-bestatigen)). Ist das Limit erreicht, wird das Eingabefeld deaktiviert und ein Hinweistext fordert Administratoren auf, auf ein eigenes Modell zu wechseln; siehe [KI-Modelle](ai-models.md).
-- **Token-Nutzung**: ein schmaler Balken mit Zählern für Eingabe-/Ausgabe-Tokens der aktuellen Konversation sowie der Größe der letzten Anfrage. Lange Konversationen werden mit der Zeit teurer; der Balken macht diese Kosten sichtbar, sodass Sie entscheiden können, wann Sie einen neuen Verlauf beginnen.
 
-Der Token-Nutzungsbalken erscheint erst, wenn die Konversation mindestens einen Austausch enthält.
+Personen, die **Administration > Plaid** öffnen können, sehen außerdem einen schmalen Balken unter dem Eingabefeld, sobald die Konversation mindestens einen Austausch enthält. **Verarbeitetes Volumen** zählt die Eingabe- und Ausgabe-Tokens aller Nachrichten dieser Konversation zusammen. Jede Frage sendet die früheren Nachrichten erneut, daher wächst das Volumen schneller als die Zahl der Durchgänge. **Kontext der letzten Anfrage** ist die Eingabe der letzten Frage. Der Balken zeigt außerdem die Eingabe-Tokens und die Ausgabe-Tokens der Konversation.
 
 ## Tipps
 

@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { AiApprovalService } from '../approval/ai-approval.service';
 import {
@@ -14,6 +14,7 @@ import {
   LiveTestAllowedEffect,
   normalizeLiveTargetSelector,
 } from './ai-live-test-target.service';
+import { codedForbidden } from '../../../auth/module-right-required';
 
 export type LiveContractScenarioKey =
   | 'ticketing_read'
@@ -156,10 +157,10 @@ async function assertLiveTenantSlugMatchesContext(
 ): Promise<string> {
   const tenantSlug = envValue(env, 'KANAP_LIVE_TENANT_SLUG');
   if (!tenantSlug) {
-    throw new ForbiddenException('KANAP_LIVE_TENANT_SLUG is required when live contracts are enabled.');
+    throw codedForbidden('LIVE_TEST_NOT_READY', 'KANAP_LIVE_TENANT_SLUG is required when live contracts are enabled.');
   }
   if (typeof context.manager?.query !== 'function') {
-    throw new ForbiddenException('Live contract tenant slug cannot be verified without a database-backed tenant context.');
+    throw codedForbidden('LIVE_TEST_NOT_READY', 'Live contract tenant slug cannot be verified without a database-backed tenant context.');
   }
   const rows = await context.manager.query(
     `SELECT id::text AS id, slug::text AS slug
@@ -171,7 +172,7 @@ async function assertLiveTenantSlugMatchesContext(
   );
   const resolvedSlug = typeof rows?.[0]?.slug === 'string' ? rows[0].slug.trim().toLowerCase() : '';
   if (!resolvedSlug || resolvedSlug !== tenantSlug.toLowerCase()) {
-    throw new ForbiddenException('KANAP_LIVE_TENANT_SLUG does not match the execution tenant context.');
+    throw codedForbidden('LIVE_TEST_NOT_READY', 'KANAP_LIVE_TENANT_SLUG does not match the execution tenant context.');
   }
   return tenantSlug;
 }
@@ -223,7 +224,7 @@ export class AiLiveContractHarnessService {
   ): Promise<{ scenario: LiveContractScenario; target: AiLiveTestTarget }> {
     const status = await this.readiness(context, scenarioKey, env);
     if (status.status === 'skipped') {
-      throw new ForbiddenException(status.reason);
+      throw codedForbidden('LIVE_TEST_NOT_READY', status.reason);
     }
     if (status.status === 'failed') {
       throw new BadRequestException(status.reason);
@@ -241,11 +242,11 @@ export class AiLiveContractHarnessService {
   ): Promise<unknown> {
     const { scenario, target } = await this.assertReady(context, scenarioKey, env);
     if (target.provider_key === 'mock') {
-      throw new ForbiddenException('Mock providers cannot satisfy an explicitly enabled live contract.');
+      throw codedForbidden('LIVE_TEST_NOT_READY', 'Mock providers cannot satisfy an explicitly enabled live contract.');
     }
     const applicability = await this.providers.getApplicability(context, scenario.providerKind, target.provider_key);
     if (!applicability.available) {
-      throw new ForbiddenException(`Live adapter unavailable for ${scenario.key}: ${applicability.message ?? applicability.reasonCode}`);
+      throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `Live adapter unavailable for ${scenario.key}: ${applicability.message ?? applicability.reasonCode}`, { detail: applicability.message ?? applicability.reasonCode });
     }
 
     if (scenario.allowedEffect === 'sandbox_write' && scenario.providerKind === 'ticketing') {
@@ -264,7 +265,7 @@ export class AiLiveContractHarnessService {
     });
     const output = result.output as any;
     if (!output?.ok) {
-      throw new ForbiddenException(`Live contract returned provider error: ${output?.message ?? output?.errorCode ?? 'unknown'}`);
+      throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `Live contract returned provider error: ${output?.message ?? output?.errorCode ?? 'unknown'}`, { detail: output?.message ?? output?.errorCode ?? 'unknown' });
     }
     return result;
   }
@@ -305,15 +306,15 @@ export class AiLiveContractHarnessService {
     const provider = await this.providers.monitoring(context, target.provider_key);
     const alert = await provider.getAlert(context, { alertId: target.external_ref }) as any;
     if (!alert?.ok) {
-      throw new ForbiddenException(`Live monitoring alert read failed: ${alert?.message ?? alert?.errorCode ?? 'unknown'}`);
+      throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `Live monitoring alert read failed: ${alert?.message ?? alert?.errorCode ?? 'unknown'}`, { detail: alert?.message ?? alert?.errorCode ?? 'unknown' });
     }
     const history = await provider.getSensorHistory(context, { sensorId: target.external_ref, windowMinutes: 60 }) as any;
     if (!history?.ok) {
-      throw new ForbiddenException(`Live monitoring sensor history read failed: ${history?.message ?? history?.errorCode ?? 'unknown'}`);
+      throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `Live monitoring sensor history read failed: ${history?.message ?? history?.errorCode ?? 'unknown'}`, { detail: history?.message ?? history?.errorCode ?? 'unknown' });
     }
     const scoped = await provider.listAlertsForScope(context, { scope: { maxResults: 5 } }) as any;
     if (!scoped?.ok) {
-      throw new ForbiddenException(`Live monitoring scope list failed: ${scoped?.message ?? scoped?.errorCode ?? 'unknown'}`);
+      throw codedForbidden('AGENT_PROVIDER_UNAVAILABLE', `Live monitoring scope list failed: ${scoped?.message ?? scoped?.errorCode ?? 'unknown'}`, { detail: scoped?.message ?? scoped?.errorCode ?? 'unknown' });
     }
     return {
       scenario: 'monitoring_read',
@@ -347,7 +348,7 @@ export class AiLiveContractHarnessService {
     });
     const actionRequestId = (prepared.output as any)?.data?.action_request_id;
     if (typeof actionRequestId !== 'string') {
-      throw new ForbiddenException('Ticketing sandbox note preparation did not create an action request.');
+      throw codedForbidden('AGENT_ACTION_INCOMPLETE', 'Ticketing sandbox note preparation did not create an action request.');
     }
     await this.approvals.approveActionRequest(context, actionRequestId, {
       source: 'human_ui',

@@ -40,6 +40,8 @@ export interface DeleteConfirmDialogProps {
   onDeleteRelatedChange?: (checked: boolean) => void;
   /** No main action while nothing would be deleted (every item kept until the option is checked). */
   confirmDisabled?: boolean;
+  /** A refusal from the delete itself, shown in the dialog. The list behind may already have changed. */
+  error?: string | null;
 }
 
 export default function DeleteConfirmDialog({
@@ -60,6 +62,7 @@ export default function DeleteConfirmDialog({
   deleteRelated: ownedDeleteRelated,
   onDeleteRelatedChange,
   confirmDisabled = false,
+  error = null,
 }: DeleteConfirmDialogProps) {
   const { t } = useTranslation('common');
   const [localDeleteRelated, setLocalDeleteRelated] = React.useState(false);
@@ -88,6 +91,9 @@ export default function DeleteConfirmDialog({
       saveDisabled={confirmDisabled}
       cancelLabel={t('buttons.cancel')}
     >
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+      )}
       <Alert severity="warning" sx={{ mb: 2 }}>
         {warning ?? t('delete.warningMessage', { count: itemCount })}
       </Alert>

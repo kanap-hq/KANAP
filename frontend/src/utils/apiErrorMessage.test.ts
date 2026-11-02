@@ -181,6 +181,161 @@ describe('getApiErrorMessage', () => {
     );
   });
 
+  it('translates every coded 403 of the core modules in the four languages', () => {
+    const refusal = (code: string, params?: Record<string, unknown>) => ({
+      response: { status: 403, data: { statusCode: 403, error: 'Forbidden', code, message: 'English sentence of the server.', ...(params ? { params } : {}) } },
+    });
+    const cases: Array<[string, Record<string, unknown> | undefined, Record<string, string>]> = [
+      ['BRANDING_NOT_ON_PLATFORM_HOST', undefined, { en: 'Branding is set inside a workspace. Open a workspace to change it.', fr: "L'identité visuelle se règle dans un espace de travail. Ouvrez un espace pour la modifier." }],
+      ['BUSINESS_CONTRIBUTOR_NO_ACCESS', { family: 'interface_bindings' }, { en: 'Your role does not give access to interface bindings.', fr: "Votre rôle ne donne pas accès aux liaisons d'interface.", de: 'Ihre Rolle gibt keinen Zugriff auf Schnittstellen-Bindungen.', es: 'Su rol no da acceso a enlaces de interfaz.' }],
+      ['BUSINESS_CONTRIBUTOR_SCOPE', { family: 'applications' }, { en: 'Your role gives access only to the applications you are assigned to.', fr: 'Pour les applications, votre rôle donne accès uniquement aux éléments qui vous sont affectés.' }],
+      ['OUTSIDE_PARTICIPATION', { family: 'projects' }, { en: 'You can only link projects you take part in.', fr: 'Pour les projets, vous ne pouvez lier que les éléments auxquels vous participez.', de: 'Bei Projekte können Sie nur Einträge verknüpfen, an denen Sie beteiligt sind.', es: 'En proyectos, solo puede vincular los elementos en los que participa.' }],
+      ['LINKED_MODULE_NOT_READABLE', { resources: ['applications', 'infrastructure'] }, { en: 'You cannot change the links to Applications and Infrastructure: your role does not give you access to them.', fr: 'Vous ne pouvez pas modifier les liens vers Applications et Infrastructure\u00a0: votre rôle ne vous y donne pas accès.' }],
+      ['LINKED_MODULE_NOT_READABLE', { resources: ['incidents'] }, { en: 'You cannot change the links to Incidents: your role does not give you access to them.' }],
+      ['LIBRARY_NOT_MANAGEABLE', undefined, { en: 'You are not allowed to manage this library.', fr: "Vous n'avez pas le droit de gérer cette bibliothèque." }],
+      ['OWN_COMMENTS_ONLY', undefined, { en: 'You can only edit your own comments.', fr: 'Vous ne pouvez modifier que vos propres commentaires.' }],
+      ['TIME_ENTRY_CREATE_SELF_ONLY', undefined, { en: 'You can only create time entries for yourself.' }],
+      ['TIME_ENTRY_EDIT_OWN_ONLY', undefined, { en: 'You can only edit your own time entries.' }],
+      ['TIME_ENTRY_DELETE_OWN_ONLY', undefined, { en: 'You can only delete your own time entries.' }],
+      ['TIME_ENTRY_EDIT_OWN_OR_ASSIGNED', undefined, { en: 'You can only edit time entries you logged or that are assigned to you.' }],
+      ['TIME_ENTRY_DELETE_OWN_OR_ASSIGNED', undefined, { en: 'You can only delete time entries you logged or that are assigned to you.' }],
+      ['REQUEST_CONTEXT_MISSING', undefined, { en: 'Your session could not be identified. Reload the page or sign in again.', fr: "Votre session n'a pas pu être identifiée. Rechargez la page ou reconnectez-vous." }],
+      ['INCIDENT_LOCKED', undefined, { en: 'This incident is closed. Reopen it to make changes.', fr: 'Cet incident est clos. Rouvrez-le pour le modifier.' }],
+      ['INCIDENT_CONFIDENTIAL_LIFT', undefined, { en: 'Only a register administrator can lift this restriction.' }],
+      ['INCIDENT_REVIEW_LOCKED', undefined, { en: 'This incident is closed. Reopen it to change its review.' }],
+      ['TASK_OUTSIDE_SCOPE', undefined, { en: 'This task is outside the tasks you take part in.' }],
+      ['WORKFLOW_CANCEL_NOT_ALLOWED', undefined, { en: 'Only the owner, the requester or a participant can cancel this review.' }],
+      ['WORKFLOW_STAGE_NOT_ASSIGNED', undefined, { en: 'You are not assigned to the current stage of this review.' }],
+      ['DOCUMENT_SHARE_EXTERNAL_REFUSED', undefined, { en: 'This document belongs to an incident review and cannot be shared outside KANAP.' }],
+      ['DOCUMENT_RECIPIENT_NOT_ALLOWED', undefined, { en: 'One of the recipients cannot open this document, so nothing was shared.' }],
+      ['FEATURE_DISABLED', undefined, { en: 'This feature is turned off in this deployment.' }],
+      ['lookup_search_forbidden', undefined, { en: 'Your role can show the chosen values but cannot search this list.' }],
+      ['PROFILE_FIELD_FROM_ENTRA', undefined, { en: 'The job title comes from Microsoft Entra and cannot be changed here.' }],
+    ];
+    for (const [code, params, expected] of cases) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const text = getApiErrorMessage(refusal(code, params), i18n.getFixedT(language), 'fallback');
+        // Every language has its own sentence, never the English one of the server or the generic refusal.
+        expect(text, `${code} ${language}`).not.toBe('English sentence of the server.');
+        expect(text, `${code} ${language}`).not.toBe('fallback');
+        expect(text, `${code} ${language}`).not.toBe(i18n.getFixedT(language)('errors:forbidden'));
+        expect(text, `${code} ${language}`).not.toContain('{{');
+        expect(text, `${code} ${language}`).not.toContain('errors:');
+        if (expected[language]) expect(text, `${code} ${language}`).toBe(expected[language]);
+      }
+    }
+    // The list of modules follows the language of the screen.
+    expect(getApiErrorMessage(refusal('LINKED_MODULE_NOT_READABLE', { resources: ['applications', 'infrastructure', 'incidents'] }), t, 'fallback'))
+      .toBe('You cannot change the links to Applications, Infrastructure, and Incidents: your role does not give you access to them.');
+  });
+
+  it('translates every coded 403 of the AI module in the four languages', () => {
+    const refusal = (code: string, params?: Record<string, unknown>) => ({
+      response: { status: 403, data: { statusCode: 403, error: 'Forbidden', code, message: 'English sentence of the server.', ...(params ? { params } : {}) } },
+    });
+    const cases: Array<[string, Record<string, unknown> | undefined, Record<string, string>]> = [
+      ['AI_USER_NOT_ALLOWED', undefined, { en: 'Your account cannot use Plaid. Ask an administrator of your workspace.' }],
+      ['AI_PLATFORM_HOST', undefined, { en: 'Plaid is available inside a workspace only. Open a workspace to use it.' }],
+      ['AI_TENANT_INACTIVE', undefined, { en: 'Plaid is not available while this workspace is inactive.' }],
+      ['AI_CHAT_DISABLED', undefined, { en: 'Plaid is turned off for this workspace. An administrator can turn it on in Admin > Plaid.', fr: "Plaid est désactivé pour cet espace de travail. Un administrateur peut l'activer dans Administration › Plaid." }],
+      ['AI_NOT_CONFIGURED', undefined, { en: 'Plaid is not fully set up for this workspace. An administrator can finish the setup in Admin > Plaid.' }],
+      ['AI_MCP_DISABLED', undefined, { en: 'MCP access is turned off for this workspace. An administrator can turn it on in Admin > Plaid.' }],
+      ['AI_MCP_NOT_CONFIGURED', undefined, { en: 'MCP access is not fully set up for this workspace. An administrator can finish the setup in Admin > Plaid.' }],
+      ['AI_MCP_WRITE_UNAVAILABLE', undefined, { en: 'MCP access is read only. Make changes in KANAP or with Plaid.' }],
+      ['AI_INCLUDED_MODEL_NOT_ACCEPTED', undefined, { en: "The included model needs an administrator's confirmation in Admin > Plaid before it can be used." }],
+      ['AI_INCLUDED_QUOTA_USED', undefined, { en: 'The included messages of this month are used up. They are available again next month.' }],
+      ['AI_API_KEY_NOT_FOUND', undefined, { en: 'This key does not exist, or you cannot manage it.' }],
+      ['AI_CONVERSATION_NOT_YOURS', undefined, { en: 'This conversation belongs to someone else.' }],
+      ['AI_ATTACHMENT_NOT_YOURS', undefined, { en: 'This attachment belongs to someone else.' }],
+      ['AI_PREVIEW_NOT_IN_CONVERSATION', undefined, { en: 'This preview belongs to another conversation.' }],
+      ['AI_MCP_KEY_POLICY_INVALID', undefined, { en: 'The settings of this MCP key are not valid. Create a new key.' }],
+      ['AI_FIELD_WITHHELD', undefined, { en: 'This field is not available with your current rights.' }],
+      ['AI_ROLES_UNAVAILABLE', undefined, { en: 'The roles cannot be read here.' }],
+      ['MODULE_RIGHT_REQUIRED', { resource: 'ai_chat', level: 'member' }, {}],
+    ];
+    for (const [code, params, expected] of cases) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const text = getApiErrorMessage(refusal(code, params), i18n.getFixedT(language), 'fallback');
+        expect(text, `${code} ${language}`).not.toBe('English sentence of the server.');
+        expect(text, `${code} ${language}`).not.toBe('fallback');
+        expect(text, `${code} ${language}`).not.toBe(i18n.getFixedT(language)('errors:forbidden'));
+        expect(text, `${code} ${language}`).not.toContain('{{');
+        expect(text, `${code} ${language}`).not.toContain('errors:');
+        if (expected[language]) expect(text, `${code} ${language}`).toBe(expected[language]);
+      }
+    }
+  });
+
+  it('translates every coded 403 of the agent control plane in the four languages', () => {
+    const refusal = (code: string, params?: Record<string, unknown>) => ({
+      response: { status: 403, data: { statusCode: 403, error: 'Forbidden', code, message: 'English sentence of the server.', ...(params ? { params } : {}) } },
+    });
+    const cases: Array<[string, Record<string, unknown> | undefined, Record<string, string>]> = [
+      ['AGENT_ACTION_APPROVAL_REQUIRED', undefined, {}],
+      ['AGENT_ACTION_POLICY_DENIED', undefined, {}],
+      ['AGENT_ACTION_ALREADY_EXECUTED', undefined, {}],
+      ['AGENT_ACTION_EXPIRED', undefined, { en: 'This proposal has expired. Run the analysis again to get a new one.', fr: "Cette proposition a expiré. Relancez l'analyse pour en obtenir une nouvelle." }],
+      ['AGENT_ACTION_REJECTED', undefined, {}],
+      ['AGENT_ACTION_DISMISSED', undefined, {}],
+      ['AGENT_ACTION_FAILED', undefined, {}],
+      ['AGENT_ACTION_NOT_PENDING', undefined, {}],
+      ['AGENT_ACTION_NOT_FOUND', undefined, {}],
+      ['AGENT_ACTION_CHANGED', undefined, {}],
+      ['AGENT_ACTION_INCOMPLETE', undefined, {}],
+      ['AGENT_ACTION_NOT_AUTOMATABLE', undefined, {}],
+      ['AGENT_AUTOMATIC_NOT_ELIGIBLE', undefined, {}],
+      ['AGENT_AUTOMATIC_CONFIRMATION_REQUIRED', undefined, {}],
+      ['AGENT_AUTOMATIC_WRITES_NOT_ALLOWED', undefined, {}],
+      ['AGENT_CAPABILITY_NOT_ALLOWED', undefined, {}],
+      ['AGENT_CAPABILITY_LIMIT', { max: 'A2' }, { en: 'This action cannot go above autonomy level A2 for this kind of agent.' }],
+      ['AGENT_FORBIDDEN_CAPABILITIES_LOCKED', undefined, {}],
+      ['AGENT_COOLDOWN_ACTIVE', undefined, {}],
+      ['AGENT_CREDENTIAL_UNAVAILABLE', undefined, {}],
+      ['CREDENTIAL_STORAGE_NOT_CONFIGURED', undefined, {}],
+      ['AGENT_RUN_COST_CAP', undefined, {}],
+      ['AGENT_DAILY_CAP_REACHED', undefined, {}],
+      ['AGENT_GUARDRAILS_MISSING', undefined, {}],
+      ['AGENT_NOT_AVAILABLE_YET', undefined, {}],
+      ['AGENT_NOT_FOUND', undefined, {}],
+      ['AGENT_PAUSE_NOT_ALLOWED', undefined, {}],
+      ['AGENT_PAUSE_NOT_FOUND', undefined, {}],
+      ['AGENT_PAUSE_REASON_REQUIRED', undefined, {}],
+      ['AI_EMERGENCY_PAUSE_ACTIVE', { reason: 'Ticket replies under review' }, { en: 'Emergency pause active: Ticket replies under review', fr: "Pause d'urgence active\u00a0: Ticket replies under review" }],
+      ['AGENT_PROVIDER_REQUIRED', undefined, {}],
+      ['AGENT_PROVIDER_UNAVAILABLE', { detail: 'timeout' }, { en: 'The connected tool cannot be used right now (timeout).', de: 'Das verbundene Tool ist im Moment nicht verfügbar (timeout).' }],
+      ['AGENT_RUNS_UNAVAILABLE', undefined, {}],
+      ['AGENT_SETTINGS_INVALID', undefined, {}],
+      ['AGENT_SHARED_CONTEXT_UNAVAILABLE', undefined, {}],
+      ['AGENT_TURNED_OFF', undefined, { es: 'Este agente está desactivado. Cambie primero su modo de funcionamiento a Solo manual o Vigilancia.' }],
+      ['AGENT_WATCHING_OFF', undefined, {}],
+      ['AGENT_WORK_ITEM_BUSY', undefined, {}],
+      ['AGENT_WORK_ITEM_NOT_RUNNABLE', undefined, {}],
+      ['AUTOMATION_DRY_RUN_REQUIRED', undefined, {}],
+      ['AUTOMATION_JOB_DISABLED', undefined, {}],
+      ['AUTOMATION_LAUNCH_NOT_ALLOWED', undefined, {}],
+      ['AUTOMATION_LAUNCH_PENDING', undefined, {}],
+      ['AUTOMATION_TARGET_NOT_ALLOWED', undefined, {}],
+      ['AUTONOMY_ROUTINE_DISABLED', undefined, {}],
+      ['EXTERNAL_MCP_NOT_ALLOWED', undefined, {}],
+      ['LIVE_TEST_NOT_READY', undefined, {}],
+      ['LIVE_TEST_TARGET_AMBIGUOUS', undefined, {}],
+      ['LIVE_TEST_TARGET_NOT_ALLOWED', undefined, {}],
+      ['MCP_KEY_NOT_ALLOWED', undefined, {}],
+      ['ORIGIN_NOT_ALLOWED', undefined, {}],
+      ['REQUEST_CONTEXT_MISSING', undefined, {}],
+    ];
+    for (const [code, params, expected] of cases) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const text = getApiErrorMessage(refusal(code, params), i18n.getFixedT(language), 'fallback');
+        expect(text, `${code} ${language}`).not.toBe('English sentence of the server.');
+        expect(text, `${code} ${language}`).not.toBe(i18n.getFixedT(language)('errors:forbidden'));
+        expect(text, `${code} ${language}`).not.toContain('{{');
+        expect(text, `${code} ${language}`).not.toContain('errors:');
+        if (expected[language]) expect(text, `${code} ${language}`).toBe(expected[language]);
+      }
+    }
+  });
+
   it('says why a refusal coded in its error field happened', () => {
     const trial = { response: { status: 403, data: { error: 'TRIAL_EXPIRED', message: 'Trial expired' } } };
     expect(getApiErrorMessage(trial, t, 'fallback')).toBe('Your trial has expired. Please choose a plan to continue.');
@@ -212,9 +367,16 @@ describe('getApiErrorMessage', () => {
       .toBe('The recovery point objective (RPO) must be a whole number of minutes.');
     const owner = { response: { status: 400, data: { code: 'owner_email_unknown', message: 'No user', params: { email: 'x@example.com' } } } };
     expect(getApiErrorMessage(owner, fr, 'fallback')).toBe('Aucun utilisateur avec le courriel x@example.com.');
+    const allowed = 'line_of_business (Line-of-business), productivity (Productivity)';
+    const category = { response: { status: 400, data: { code: 'category_invalid', message: 'server words', params: { value: 'business', allowed } } } };
+    expect(getApiErrorMessage(category, t, 'fallback')).toBe(`Unknown category: business. Use a category from the list, by its name or its code. Use one of: ${allowed}.`);
+    expect(getApiErrorMessage(category, fr, 'fallback')).toBe(`Catégorie inconnue\u00a0: business. Utilisez une catégorie de la liste, par son nom ou son code. Valeurs possibles\u00a0: ${allowed}.`);
+    const lifecycle = { response: { status: 400, data: { code: 'lifecycle_invalid', message: 'server words', params: { value: 'Bogus', allowed: 'active (Active), retired (Retired)' } } } };
+    expect(getApiErrorMessage(lifecycle, i18n.getFixedT('de'), 'fallback')).toBe('Unbekannter Lebenszyklus: Bogus. Verwenden Sie einen Lebenszyklus aus der Liste, mit Namen oder Code. Mögliche Werte: active (Active), retired (Retired).');
+    expect(getApiErrorMessage(lifecycle, i18n.getFixedT('es'), 'fallback')).toBe('Ciclo de vida desconocido: Bogus. Use un ciclo de vida de la lista, por su nombre o su código. Valores posibles: active (Active), retired (Retired).');
     for (const code of ['name_required', 'name_ambiguous', 'name_too_long', 'lifecycle_invalid', 'category_invalid', 'classification_unknown', 'duration_invalid', 'dates_inconsistent', 'suite_has_children', 'suite_cycle']) {
       for (const language of ['en', 'fr', 'de', 'es']) {
-        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', name: 'n', count: 2, max: 200, field: 'rto_minutes' } } } }, i18n.getFixedT(language), 'fallback');
+        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', name: 'n', count: 2, max: 200, field: 'rto_minutes', allowed: 'active (Active)' } } } }, i18n.getFixedT(language), 'fallback');
         expect(text, `${code} in ${language}`).not.toBe('server words');
         expect(text).not.toMatch(/{{|rto_minutes/);
       }
@@ -234,7 +396,7 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(inUse, t, 'fallback')).toMatch(/^This deployment still has 2 .+\. Remove them first\.$/);
     const inherited = { response: { status: 409, data: { code: 'assignment_inherited', message: 'Already inherited', params: { cluster: 'ESX Paris' } } } };
     expect(getApiErrorMessage(inherited, fr, 'fallback')).toBe('Déjà hébergée par ce serveur via ESX Paris.');
-    for (const code of ['assignment_duplicate', 'assignment_inherited', 'assignment_role_invalid', 'deployment_environment_taken', 'deployment_lifecycle_invalid', 'date_invalid']) {
+    for (const code of ['assignment_duplicate', 'assignment_inherited', 'assignment_role_invalid', 'deployment_environment_taken', 'deployment_lifecycle_invalid', 'date_invalid', 'asset_location_required']) {
       for (const language of ['en', 'fr', 'de', 'es']) {
         const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', environment: 'prod', field: 'since_date', cluster: 'ESX Paris' } } } }, i18n.getFixedT(language), 'fallback');
         expect(text, `${code} in ${language}`).not.toBe('server words');

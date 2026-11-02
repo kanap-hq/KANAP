@@ -263,7 +263,7 @@ Se aplican dos salvaguardas. No se señala nada como ausente cuando la llamada a
 
 ## El widget del panel de control
 
-Hay un widget **Sincronización con Netbox** disponible en su panel de control personal. Está desactivado de forma predeterminada. Actívelo desde la configuración del panel, el icono de engranaje en **Panel de control**, y marque **Sincronización con Netbox**. El widget necesita `infrastructure:admin`, como el resto de la integración.
+Hay un widget **Sincronización con Netbox** disponible en su panel de control personal. Está desactivado de forma predeterminada. Para activarlo, haga clic en **Personalizar la página de inicio**, luego en **Añadir un mosaico** en la sección **Panorama IT**, y elija **Sincronización con Netbox**. Consulte [Personalizar su panel](my-dashboard.md#customizing-the-budget-section). El widget necesita `infrastructure:admin`, como el resto de la integración.
 
 El widget no molesta cuando no hay nada que hacer: una línea que dice que la sincronización está al día, con la hora de la última ejecución. Cuando algo necesita atención, enumera solo lo que la necesita: objetos por decidir, activos ausentes de Netbox, errores, o una ejecución fallida. Cada línea abre la lista filtrada correspondiente.
 

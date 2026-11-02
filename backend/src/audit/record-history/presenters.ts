@@ -1187,10 +1187,14 @@ function setChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
     // A single-row write: the link presenter reads its address and description.
     return linkChanges(row);
   }
-  if (label === 'interface_mapping_sets') {
-    const name = labelOf(row, ['name']);
-    if (row.action === 'create') return [{ field: 'mapping_set', event: 'added', after: name }];
-    if (row.action === 'delete') return [{ field: 'mapping_set', event: 'removed', before: name }];
+  if (label === 'interface_mapping_sets' || label === 'interface_mapping_groups' || label === 'interface_mapping_rules') {
+    // A set is named by `name`; a group and a rule by `title`. Creation and removal are the event;
+    // a modification reads the allow-listed fields.
+    const field = label === 'interface_mapping_sets' ? 'mapping_set'
+      : label === 'interface_mapping_groups' ? 'mapping_group' : 'mapping_rule';
+    const name = labelOf(row, label === 'interface_mapping_sets' ? ['name'] : ['title']);
+    if (row.action === 'create') return [{ field, event: 'added', after: name }];
+    if (row.action === 'delete') return [{ field, event: 'removed', before: name }];
     return genericChanges(row, ctx, { label });
   }
   if (label === 'interface_legs') {

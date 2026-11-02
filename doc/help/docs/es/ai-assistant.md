@@ -16,8 +16,19 @@ Plaid no reemplaza al resto de la aplicación. Es una forma más rápida de resu
 
 El espacio de trabajo también está disponible para los administradores con `ai_chat:admin`, que pueden ver y moderar todo lo que hacen los usuarios habituales.
 
-!!! note "A la espera de un administrador"
-    En el servicio alojado, Plaid puede funcionar con el modelo incluido de KANAP. Antes, un administrador confirma el proveedor y el lugar donde trata los datos. Hasta entonces, el espacio de trabajo muestra *Un administrador debe confirmar el proveedor de IA en Administración > Plaid.* en lugar del chat. Un administrador lo hace en la página [Configuración de Plaid](ai-settings.md#confirmar-el-modelo-incluido-de-kanap). Las organizaciones que usan un modelo propio nunca ven este aviso.
+### Antes de aceptar el modelo incluido { #included-model-acceptance }
+
+En el servicio alojado, Plaid puede funcionar con el modelo incluido de KANAP. Antes, un administrador acepta el proveedor y el lugar donde trata los datos. Los nuevos espacios de trabajo en prueba empiezan en este estado, con Plaid desactivado.
+
+Hasta entonces, la página de Plaid se abre con normalidad, con sus sugerencias. Una casilla ocupa el lugar del campo de mensaje: *Acepto que {proveedor} ({lugar}) trate mis preguntas y los datos a los que se refieren para las respuestas de Plaid. No se usan para entrenar sus modelos.*, seguida de *Otro modelo o desactivación: Administración › Plaid*.
+
+- Un administrador de la configuración de Plaid marca la casilla. Esto activa Plaid y registra la aceptación, con quién y cuándo. A continuación aparece el campo de mensaje.
+- Las demás personas leen *Plaid espera a que un administrador lo active.*
+
+Los administradores también pueden aceptar en la página [Configuración de Plaid](ai-settings.md#confirmar-el-modelo-incluido-de-kanap). Las organizaciones que usan un modelo propio nunca ven esta casilla.
+
+!!! note "Chat desactivado"
+    Cuando un administrador desactiva el chat en **Administración › Plaid**, una persona que puede usar el chat sigue abriendo esta página, y la entrada Plaid permanece en la navegación superior. La página dice *Plaid está desactivado para este espacio de trabajo.* Un administrador del asistente también ve *Actívelo en Administración › Plaid*, que abre la configuración de Plaid. Las demás personas ven *Pida a un administrador que lo active.* Una persona sin el permiso de chat ve la página de acceso denegado. Mientras el modelo incluido espera su aceptación, la página muestra en su lugar la casilla de aceptación, incluso con el chat desactivado: véase [Antes de aceptar el modelo incluido](#included-model-acceptance).
 
 ## Iniciar una conversación
 
@@ -28,6 +39,14 @@ Cuando abre Plaid por primera vez, llega a una pantalla de bienvenida con:
 - El cuadro de redacción en la parte inferior, listo para aceptar su primer mensaje
 
 Haga clic en cualquier sugerencia para enviarla directamente o, en el caso de las preguntas que contienen un marcador `@`, colocar la sugerencia en el cuadro de redacción para que pueda terminarla.
+
+Cuando se eligió un recorrido para el espacio de trabajo en su primera apertura, durante la prueba, las sugerencias empiezan por sus dos preguntas, entre las que usted puede leer, y luego las habituales, cinco como máximo:
+
+| Recorrido | Preguntas |
+|---|---|
+| Presupuesto de TI | *¿Cuáles son las principales oportunidades de ahorro en el OPEX de TI?*, *¿Qué líneas presupuestarias no tienen responsable?* |
+| Mapa del SI | *¿Qué tecnologías llegan al fin de soporte en los próximos seis meses?*, *¿Qué aplicaciones críticas no tienen plan de recuperación?* |
+| Proyectos y solicitudes | *¿Qué proyectos superan su presupuesto?*, *¿Qué solicitudes esperan una decisión?* |
 
 Escriba un mensaje y pulse **Intro** para enviarlo. **Mayús+Intro** inserta un salto de línea. El botón de enviar se desactiva cuando no hay nada que enviar y se transforma en un botón rojo **Detener** mientras Plaid responde.
 
@@ -53,21 +72,28 @@ La búsqueda filtra la lista por título a medida que escribe. El cambio de nomb
 El cuadro de redacción es el principal punto de control del espacio de trabajo. Admite:
 
 - Texto de varias líneas, hasta 10 filas visibles antes de que se desplace
-- Adjuntos de imágenes en línea (PNG, JPG, GIF, WEBP)
+- Adjuntos: imágenes (PNG, JPG, GIF, WEBP) y hojas de cálculo (.xlsx, CSV)
 - Menciones con `@` de registros de KANAP
 - Un recordatorio de atajos de teclado ("Intro para enviar · Mayús+Intro para nueva línea")
 
-### Adjuntar imágenes
+### Adjuntar imágenes y hojas de cálculo
 
-Puede añadir imágenes de tres maneras:
+Puede adjuntar imágenes (PNG, JPG, GIF, WEBP) y hojas de cálculo: libros de Excel (.xlsx) y archivos CSV. Hay tres maneras de añadirlos:
 
-- Haga clic en el icono de clip y seleccione archivos de su ordenador
-- Arrastre y suelte archivos de imagen sobre el cuadro de redacción (una superposición de ayuda confirma la zona de destino)
-- Pegue una imagen directamente desde el portapapeles
+- Haga clic en el icono de clip (**Adjuntar un archivo**) y seleccione archivos de su ordenador
+- Arrastre y suelte archivos sobre el cuadro de redacción (una superposición de ayuda confirma la zona de destino)
+- Pegue un archivo directamente desde el portapapeles
 
-Cada imagen pendiente aparece como una miniatura encima del texto. Haga clic en la pequeña **X** de una miniatura para quitarla. Existe un límite de adjuntos por mensaje; una vez alcanzado, el clip se desactiva hasta que quite o envíe los adjuntos actuales.
+Cada imagen pendiente aparece como una miniatura encima del texto. Cada hoja de cálculo pendiente aparece como un pequeño mosaico con su nombre y su tamaño. Haga clic en la pequeña **X** para quitar uno. Un mensaje admite hasta 8 adjuntos, entre imágenes y hojas de cálculo. Una vez alcanzado el límite, el clip se desactiva hasta que quite o envíe los adjuntos actuales.
 
 Las imágenes se cargan junto con su mensaje para que Plaid pueda describirlas, compararlas o extraer detalles.
+
+KANAP lee una hoja de cálculo cuando usted envía el mensaje:
+
+- Un archivo puede tener hasta 5 MB y 20 000 filas. Solo se lee la primera hoja de un libro.
+- Un archivo que no se puede leer (dañado, vacío, formato .xls antiguo, demasiado grande) se rechaza de inmediato, con el motivo. El mensaje no se envía.
+- Plaid recibe un resumen del archivo: los encabezados de columna, el tipo de cada columna (texto, número o fecha), las diez primeras filas y el número de filas. Puede describir el archivo, decir qué contiene cada columna y detectar problemas en las primeras filas. No puede responder sobre las filas posteriores a las diez primeras.
+- El resumen queda adjunto al mensaje durante el resto de la conversación.
 
 ### Mencionar registros con `@`
 
@@ -112,6 +138,8 @@ Las imágenes almacenadas en KANAP, como los archivos adjuntos, se muestran con 
 
 Plaid usa un pequeño conjunto de herramientas internas para responder preguntas: `Search all`, `Search knowledge`, `Get document`, `Get entity context` y algunas otras. Cada llamada a herramienta aparece como una línea compacta debajo del mensaje ("ha usado Buscar todo · 8 resultados"). Normalmente no necesita leer los detalles de las herramientas, pero están ahí si quiere ver exactamente en qué registros se basó la respuesta.
 
+Cuando pregunta cómo hacer algo en KANAP, por ejemplo dónde está un ajuste o los pasos de una tarea, Plaid lee el manual de usuario de su versión de KANAP, en su idioma (`Explorar el manual de usuario`, `Leer el manual de usuario`). Describe las pantallas como lo hace el manual y enlaza la sección que ha leído en doc.kanap.net.
+
 `Search all` encuentra las líneas presupuestarias por el nombre de sus valores analíticos e indica a Plaid qué valores tiene cada línea. Plaid nombra una línea presupuestaria por su referencia `BL-12`, y sus enlaces abren la línea. Un número solo, como 21, designa `BL-21`. Los antiguos números siguen funcionando: `OPX-12` o `CPX-3` encuentra su línea.
 
 Plaid lee las líneas OPEX y CAPEX juntas. Una pregunta que no nombra ninguno de los dos tipos abarca ambos, y Plaid puede filtrar o agrupar las líneas por tipo.
@@ -130,7 +158,7 @@ Plaid nombra un registro vinculado al que usted consulta solo si puede leer su m
 
 Un administrador de usuarios con acceso a todos los datos lee con Plaid lo que muestran **Administración › Roles** y **Administración › Acceso a los datos**. Plaid lista los roles, el número de personas de cada uno y los derechos que da cada rol, con las palabras de la pantalla Roles. Indica quién está limitado a qué empresas, centros de coste o grupos, en Lectura o en Edición, quién está limitado sin ningún nodo y quién ve una empresa. La lista de usuarios incluye también todos los roles de una persona y su acceso. Pregunte, por ejemplo: «¿Quién está limitado a Alpha Spain, y con qué acceso?» o «¿Qué roles dan el nivel Administrador en presupuesto?» Una persona cuyo propio acceso está limitado no lee estos datos, aunque sea administradora de usuarios, y Plaid lo indica. Plaid no cambia nada de esto: el acceso a los datos de una persona, sus roles, los derechos de un rol y la creación o desactivación de una persona se quedan en las pantallas de **Administración**. Los asistentes conectados por MCP obtienen las mismas respuestas.
 
-Plaid lee el [historial](record-history.md) de un registro, tal como lo muestra su pestaña **Historial**, para cualquier persona que pueda abrir el registro. Pregunte, por ejemplo: «¿Quién cambió los importes de BL-12?» Un registro sin pestaña Historial, como una aplicación, un contrato, un proyecto, una tarea o un incidente, no tiene historial en KANAP: Plaid lo indica y no reconstruye ninguno a partir de otros datos. Los asistentes conectados por MCP obtienen las mismas respuestas.
+Plaid lee el [historial](record-history.md) de un registro, tal como lo muestra su pestaña **Historial**, para cualquier persona que pueda abrir el registro. Pregunte, por ejemplo: «¿Quién cambió los importes de BL-12?» Un registro sin pestaña Historial, como un usuario o un rol, no tiene historial en KANAP: Plaid lo indica y no reconstruye ninguno a partir de otros datos. Los asistentes conectados por MCP obtienen las mismas respuestas.
 
 Cuando Plaid suma importes presupuestarios, una línea cuya moneda no tiene tipo de cambio para el año queda excluida de la suma. Plaid indica entonces qué monedas y años ha excluido. Los asistentes conectados por MCP reciben la misma respuesta.
 
@@ -241,12 +269,11 @@ Nada que modifique los datos de KANAP se aplica de forma silenciosa. La vista pr
 
 ## Indicadores de uso
 
-Encima del cuadro de redacción, dos pequeños indicadores le ayudan a estar al tanto del coste y los límites:
+Encima del cuadro de redacción, un pequeño indicador muestra cuánto queda del volumen mensual incluido:
 
 - **Uso integrado**: cuando Plaid funciona con el modelo incluido de KANAP en lugar de con uno de los modelos propios de su organización, esto muestra cuántos mensajes quedan en el mes actual y la fecha en la que se restablece la cuota. Un administrador ha confirmado ese modelo antes (consulte [Configuración de Plaid](ai-settings.md#confirmar-el-modelo-incluido-de-kanap)). Cuando se alcanza el límite, el cuadro de redacción se desactiva y un texto de ayuda invita a los administradores a cambiar a un modelo propio; consulte [Modelos IA](ai-models.md).
-- **Uso de tokens**: una barra fina con contadores de tokens de entrada/salida para la conversación actual, además del tamaño de la última solicitud. Las conversaciones largas se vuelven más caras con el tiempo; la barra hace visible ese coste para que pueda decidir cuándo iniciar un nuevo hilo.
 
-La barra de uso de tokens solo aparece una vez que la conversación tiene al menos un intercambio.
+Las personas que pueden abrir **Administración > Plaid** ven también una barra fina bajo el cuadro de redacción, cuando la conversación tiene al menos un intercambio. **Volumen procesado** suma los tokens de entrada y de salida de cada mensaje de esta conversación. Cada pregunta reenvía los mensajes anteriores, de modo que el volumen crece más rápido que el número de turnos. **Contexto de la última solicitud** es la entrada de la última pregunta. La barra muestra también los tokens de entrada y los tokens de salida de la conversación.
 
 ## Consejos
 

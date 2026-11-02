@@ -10,6 +10,7 @@ import { accountFormSchema, AccountFormValues } from '../../forms/AccountForm';
 import { z } from 'zod';
 import { ACCOUNT_NATURES, accountNatureLabel, parseAccountNature } from '../../../constants/accountNature';
 import { STATUS_DISABLED, STATUS_ENABLED, deriveStatusFromDisabledAt, lifecyclePayload, normalizeDisabledAtInput, sameLifecycle } from '../../../constants/status';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
 export type AccountOverviewEditorHandle = {
   isDirty: () => boolean;
@@ -130,13 +131,13 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
           setCoas(items.map((c) => ({ id: c.id, label: `${c.code} · ${c.name}` })));
         } catch (e: any) {
           if (!active) return;
-          setLoadCoasError(e?.response?.data?.message || e?.message || t('accounts.fields.loadCoAsError'));
+          setLoadCoasError(getApiErrorMessage(e, t, t('accounts.fields.loadCoAsError')));
         } finally {
           if (active) setLoadingCoas(false);
         }
       } catch (e: any) {
         if (!active) return;
-        const msg = e?.response?.data?.message || e?.message || t('shared.messages.failedToLoad', { entity: t('accounts.entity') });
+        const msg = getApiErrorMessage(e, t, t('shared.messages.failedToLoad', { entity: t('accounts.entity') }));
         setServerError(msg);
       } finally {
         if (active) setLoading(false);
@@ -166,7 +167,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['accounts', id] });
     } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || t('shared.messages.failedToSave', { entity: t('accounts.entity') });
+      const msg = getApiErrorMessage(e, t, t('shared.messages.failedToSave', { entity: t('accounts.entity') }));
       setServerError(msg);
       throw e;
     } finally {

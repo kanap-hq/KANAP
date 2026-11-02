@@ -31,6 +31,12 @@ export class TrialSignup {
   @Column({ type: 'timestamptz', nullable: true })
   last_email_sent_at!: Date | null;
 
+  @Column({ type: 'text', nullable: true })
+  first_name!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  last_name!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 

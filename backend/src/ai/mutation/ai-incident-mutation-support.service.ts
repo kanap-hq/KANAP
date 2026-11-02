@@ -1,9 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import type { ParticipationAccessScope } from '../../auth/business-contributor-scope';
 import {
-  INCIDENT_LOCKED_MESSAGE,
+  incidentLocked,
   IncidentViewer,
   incidentVisibilitySql,
   isFrozenIncidentStatus,
@@ -98,7 +98,7 @@ export class AiIncidentMutationSupportService {
   /** A closed or cancelled incident refuses every write until an administrator reopens it. */
   assertEditable(incident: AiIncidentSnapshot): void {
     if (isFrozenIncidentStatus(incident.status)) {
-      throw new ForbiddenException(INCIDENT_LOCKED_MESSAGE);
+      throw incidentLocked();
     }
   }
 

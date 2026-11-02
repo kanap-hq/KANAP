@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
+import { NotifyProvider } from '../../../components/notify/NotifyProvider';
 import { KanapDialogProvider } from '../../../components/design';
 import api from '../../../api';
 import type {
@@ -174,12 +175,14 @@ function renderTab(nature: LineType, data: Relations, onRelationsChange = vi.fn(
   render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
+        <NotifyProvider>
         <KanapDialogProvider>
           <MemoryRouter>
             <BudgetLineRelationsTab lineId="line-1" nature={nature} onRelationsChange={onRelationsChange} lineEditable={lineEditable} />
             <Location />
           </MemoryRouter>
         </KanapDialogProvider>
+        </NotifyProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -377,7 +380,7 @@ describe.each(['opex', 'capex'] as const)('BudgetLineRelationsTab %s', (nature) 
     renderTab(nature, relations());
     fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.relations.remove(name=SAP S/4HANA)' }));
     expect(await screen.findByText('workspace.application.relations.feedback.unlinked(name=SAP S/4HANA)')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.undo' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/budget-lines/line-1/relations/applications', { id: 'app-1' }));
   });
 
@@ -532,7 +535,7 @@ describe.each(['opex', 'capex'] as const)('BudgetLineRelationsTab %s', (nature) 
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith(`${itemsApi}/line-1/links/l-1`));
     expect(await screen.findByText('common:linksAndFiles.removed(name=Vendor portal)')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.undo' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(`${itemsApi}/line-1/links`, {
       description: 'Vendor portal',
       url: 'https://me.example.com',

@@ -53,7 +53,7 @@ En un contrato, un proyecto o una solicitud, una persona con acceso a los datos 
 
 ## Valores que el historial no muestra
 
-- La dirección de correo electrónico, los números de teléfono y las notas de un contacto no aparecen nunca.
+- Un cambio del correo, del teléfono, del móvil o de las notas de un contacto se lee **Correo modificado**, **Teléfono modificado**, **Móvil modificado** o **Notas modificadas**. El valor queda fuera del historial.
 - Para un contenido largo, la entrada indica solo que ha cambiado: **Contenido modificado** para el cuerpo de un documento de la base de conocimiento, **Días laborables modificados** para los días de un calendario laboral, **Descripción modificada**, **Objetivo modificado** o **Situación actual modificada** para los textos largos de los demás registros.
 
 ## Preguntar al asistente

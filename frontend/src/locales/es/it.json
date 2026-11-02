@@ -3,6 +3,7 @@
     "incidents": {
       "title": "Registro de incidentes",
       "newIncident": "Nuevo incidente",
+      "empty": "Todavía no hay incidentes.",
       "importCsv": "Importar CSV",
       "importTitle": "Importar incidentes",
       "exportTitle": "Exportar incidentes",
@@ -67,7 +68,7 @@
     },
     "applications": {
       "title": "Aplicaciones",
-      "newAppService": "Nueva aplicación / servicio",
+      "newAppService": "Nueva aplicación",
       "empty": "Todavía no hay aplicaciones.",
       "appService": "Aplicación / Servicio",
       "importCsv": "Importar CSV",
@@ -1571,6 +1572,9 @@
     "incident": {
       "title": "Incidente",
       "newTitle": "Nuevo incidente",
+      "creation": {
+        "record": "El incidente"
+      },
       "fields": {
         "title": "Título"
       },
@@ -1623,10 +1627,7 @@
         "minutes": "{{count}} min"
       },
       "create": {
-        "description": "Descripción",
-        "titleRequired": "El título es obligatorio.",
-        "severityRequired": "La gravedad es obligatoria.",
-        "detectedRequired": "La fecha de detección es obligatoria."
+        "description": "Descripción"
       },
       "overview": {
         "description": "Descripción",
@@ -1704,7 +1705,10 @@
     },
     "application": {
       "title": "Aplicación / Servicio",
-      "newTitle": "Nueva aplicación / servicio",
+      "newTitle": "Nueva aplicación",
+      "creation": {
+        "record": "La aplicación"
+      },
       "indexOfTotal": "({{index}} de {{total}})",
       "tabs": {
         "overview": "Vista general",
@@ -2206,7 +2210,7 @@
         "assignmentAdded": "Asignación añadida",
         "removed": "{{name}} eliminado.",
         "application": "Aplicación",
-        "environment": "Entorno",
+        "environment": "Despliegue",
         "role": "Rol",
         "since": "Desde",
         "notes": "Notas",
@@ -2215,13 +2219,13 @@
         "removeAssignment": "Eliminar asignación",
         "addAssignmentDialog": "Añadir asignación",
         "applicationRequired": "La aplicación es obligatoria",
-        "environmentRequired": "El entorno (instancia) es obligatorio",
+        "environmentRequired": "Elija un despliegue.",
         "roleRequired": "El rol es obligatorio",
-        "selectAppForEnv": "Seleccione una aplicación para elegir un entorno.",
-        "chooseEnvironment": "Elija un entorno.",
-        "noInstances": "No hay instancias para esta aplicación",
+        "selectAppForEnv": "Seleccione una aplicación para elegir un despliegue.",
+        "chooseEnvironment": "Elija un despliegue.",
         "noServerRoles": "No hay roles de servidor configurados; actualice la configuración del panorama IT.",
-        "assign": "Asignar"
+        "assign": "Asignar",
+        "createDeployment": "+ Crear el despliegue {{environment}}"
       },
       "connections": {
         "loadingConnections": "Cargando conexiones…",
@@ -3104,12 +3108,12 @@
         "history": "Historial"
       },
       "deleteTitle": "¿Eliminar ubicación?",
-      "deleteMessage": "Esto eliminará permanentemente esta ubicación y desasignará automáticamente todos los activos vinculados.",
       "deleteUnsavedWarning": "También tiene cambios no guardados en este espacio. Esos cambios se perderán.",
       "subLocationsAfterCreate": "Las sub-ubicaciones están disponibles después de crear la ubicación.",
       "contactsAfterCreate": "Los contactos están disponibles después de crear la ubicación.",
       "relationsAfterCreate": "Las relaciones están disponibles después de crear la ubicación.",
       "untitled": "Ubicación sin nombre",
+      "notFound": "Ubicación no encontrada.",
       "previous": "Ubicación anterior",
       "next": "Ubicación siguiente",
       "namePlaceholder": "p. ej., Centro de operaciones París",
@@ -3181,7 +3185,9 @@
         "deleteUsage_other": "<strong>{{count}} activos están</strong> asignados actualmente a <strong>{{name}}</strong>. Al eliminar esta sub-ubicación, quedarán sin sub-ubicación asignada.",
         "deleteKeepsAssets": "Los registros de los activos se conservan; solo se borra su vínculo con la sub-ubicación.",
         "deleteAnyway": "Eliminar de todos modos"
-      }
+      },
+      "createOption": "+ Crear la ubicación «{{name}}»",
+      "createNew": "+ Nueva ubicación"
     }
   },
   "components": {

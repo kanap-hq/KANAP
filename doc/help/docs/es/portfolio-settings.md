@@ -134,64 +134,77 @@ Las plantillas de fases proporcionan:
 
 ## Clasificación
 
-Configure tipos, categorías y flujos para organizar solicitudes y proyectos.
+Configure los orígenes, categorías y líneas para clasificar las solicitudes y los proyectos.
 
-### Tipos
+Un nuevo espacio de trabajo empieza con tres orígenes (TI, Negocio, Cumplimiento) y cinco categorías, cada una con una breve descripción (Aplicaciones de negocio, Puesto de trabajo y servicios al usuario, Infraestructura y operaciones, Innovación y transformación digital, Ciberseguridad), sin línea. Sus nombres siguen el idioma del espacio de trabajo. Puede cambiarles el nombre, desactivarlos o eliminarlos como cualquier otro valor.
 
-Los tipos describen la naturaleza del trabajo:
-- **Mejora**: Mejoras a capacidades existentes
-- **Nuevo desarrollo**: Construcción de nuevas capacidades
-- **Mantenimiento**: Mantener los sistemas operativos
-- **Infraestructura**: Plataforma y base técnica
+### Orígenes
 
-**Para añadir un tipo**:
-1. Haga clic en **Añadir tipo**
-2. Introduzca nombre y descripción opcional
+Un origen indica de dónde viene la solicitud. El espacio de trabajo empieza con TI, Negocio y Cumplimiento.
+
+**Para añadir un origen**:
+1. Haga clic en **Añadir origen**
+2. Escriba un nombre y una descripción opcional
 3. Haga clic en **Guardar**
 
-**Para activar/desactivar un tipo**:
-- Use el interruptor para habilitar/deshabilitar
-- Los tipos deshabilitados no aparecerán en los desplegables de selección
+**Para activar o desactivar un origen**:
+- Use el interruptor
+- Un origen desactivado no aparece en los desplegables de selección
 
-### Categorías y flujos
+### Categorías y líneas
 
-Las categorías proporcionan agrupación de alto nivel, y los flujos ofrecen sub-categorización dentro de cada categoría.
+Una categoría agrupa el trabajo a alto nivel. Una línea es una agrupación más fina dentro de una categoría.
 
 **Estructura**:
 ```
-Categoría (p. ej., "Transformación digital")
-  ├── Flujo (p. ej., "Experiencia del cliente")
-  ├── Flujo (p. ej., "Eficiencia operativa")
-  └── Flujo (p. ej., "Analítica de datos")
+Categoría (por ejemplo, «Transformación digital»)
+  ├── Línea (por ejemplo, «Experiencia del cliente»)
+  ├── Línea (por ejemplo, «Eficiencia operativa»)
+  └── Línea (por ejemplo, «Analítica de datos»)
 ```
 
 **Para añadir una categoría**:
 1. Haga clic en **Añadir categoría**
-2. Introduzca nombre y descripción opcional
+2. Escriba un nombre y una descripción opcional
 3. Haga clic en **Guardar**
 
-**Para añadir un flujo**:
+**Para añadir una línea**:
 1. Expanda la categoría
-2. Haga clic en **Añadir flujo**
-3. Introduzca nombre y descripción opcional
+2. Haga clic en **Añadir línea**
+3. Escriba un nombre y una descripción opcional
 4. Haga clic en **Guardar**
 
-**Para activar/desactivar elementos**:
-- Use los interruptores para habilitar/deshabilitar categorías o flujos
-- Los elementos deshabilitados no aparecerán en los desplegables de selección
-- Deshabilitar una categoría oculta todos sus flujos
+**Para activar o desactivar elementos**:
+- Use el interruptor de una categoría o de una línea
+- Un elemento desactivado no aparece en los desplegables de selección
+
+Eliminar una categoría elimina sus líneas. KANAP lo indica antes de la confirmación.
+
+### Tipos de tarea
+
+Los tipos de tarea son la lista que se usa en las tareas del portafolio. Consulte [Tareas](tasks.md). Un nuevo espacio de trabajo empieza con Tarea, Bug, Problema e Incidente. Cada persona ve estos nombres en su idioma mientras el nombre se conserve.
+
+**Para añadir un tipo de tarea**:
+1. Haga clic en **Añadir tipo de tarea**
+2. Escriba un nombre y una descripción opcional
+3. Haga clic en **Guardar**
+
+**Para activar o desactivar un tipo de tarea**:
+- Use el interruptor
+- Un tipo de tarea desactivado no aparece en los desplegables de selección
+
+Un tipo de tarea que las tareas todavía usan no se puede eliminar. KANAP lo indica antes de la confirmación y cuenta las tareas que lo usan. Desactívelo.
 
 **Elementos del sistema**:
-- Categorías y tipos predefinidos marcados con etiqueta "Sistema"
-- Se pueden editar o deshabilitar pero no eliminar
-- Un elemento que todavía usan solicitudes o proyectos, o un tipo de tarea que usan tareas, no se puede eliminar. KANAP lo indica antes de pedirle confirmación y cuenta lo que lo usa. Desactívelo en su lugar
+- Los orígenes, las categorías y los tipos de tarea marcados como **Sistema** se pueden editar o desactivar. No se pueden eliminar.
+- Un origen, una categoría o una línea que todavía usan solicitudes o proyectos no se puede eliminar. Lo mismo vale para un tipo de tarea que las tareas todavía usan. KANAP lo indica antes de la confirmación y cuenta lo que lo usa. Desactívelo.
 
 ### Buenas prácticas
 
-- Mantenga la lista de tipos corta (3-6 elementos)
-- Use categorías para áreas de negocio principales o temas estratégicos
-- Use flujos para agrupaciones más específicas dentro de las categorías
-- Revise y limpie los elementos de clasificación no utilizados periódicamente
+- Mantenga cortas las listas de orígenes, categorías, líneas y tipos de tarea
+- Use categorías para las principales áreas de negocio o los temas estratégicos
+- Use líneas para agrupaciones más concretas dentro de una categoría
+- Revise de vez en cuando los orígenes, categorías, líneas y tipos de tarea que no se usan, y desactive los que ya no ofrece
 
 ---
 

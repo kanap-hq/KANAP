@@ -1,0 +1,94 @@
+{
+  "essential": ["nature", "name", "company_name", "supplier_name", "account_number", "cost_center_code", "currency", "budget_{Y}"],
+  "advanced": [
+    "description", "run_build", "owner_it_email", "owner_business_email", "project", "effective_start", "end_of_validity", "notes",
+    "revision_{Y}", "budget_{Y+1}"
+  ],
+  "rows": [
+    {
+      "nature": "opex",
+      "name": {
+        "en": "Datadog monitoring",
+        "fr": "Supervision Datadog",
+        "de": "Datadog-Monitoring",
+        "es": "Monitorización Datadog"
+      },
+      "company_name": "Fromage & Co SA",
+      "supplier_name": "Datadog",
+      "account_number": "612100",
+      "cost_center_code": "FR-TRV-400",
+      "currency": "EUR",
+      "budget_{Y}": 48000,
+      "description": {
+        "en": "Monitoring of the servers and applications of the group.",
+        "fr": "Supervision des serveurs et des applications du groupe.",
+        "de": "Überwachung der Server und Anwendungen der Gruppe.",
+        "es": "Monitorización de los servidores y las aplicaciones del grupo."
+      },
+      "run_build": "run",
+      "owner_it_email": "thomas.berger@fromage-co.example",
+      "owner_business_email": "",
+      "project": "",
+      "effective_start": "",
+      "end_of_validity": "",
+      "notes": "",
+      "revision_{Y}": 49500,
+      "budget_{Y+1}": 52000
+    },
+    {
+      "nature": "opex",
+      "name": {
+        "en": "AffinOps licences",
+        "fr": "Licences AffinOps",
+        "de": "AffinOps-Lizenzen",
+        "es": "Licencias de AffinOps"
+      },
+      "company_name": "Fromage & Co SA",
+      "supplier_name": "Cavelogic Systems",
+      "account_number": "612100",
+      "cost_center_code": "FR-TRV-500",
+      "currency": "EUR",
+      "budget_{Y}": 18500,
+      "description": "",
+      "run_build": "run",
+      "owner_it_email": "sophie.laurent@fromage-co.example",
+      "owner_business_email": "jacques.dubois@fromage-co.example",
+      "project": "",
+      "effective_start": "",
+      "end_of_validity": "",
+      "notes": {
+        "en": "Site licence for the Paris caves.",
+        "fr": "Licence de site pour les caves de Paris.",
+        "de": "Standortlizenz für die Pariser Keller.",
+        "es": "Licencia de sitio para las cavas de París."
+      },
+      "revision_{Y}": "",
+      "budget_{Y+1}": 19000
+    },
+    {
+      "nature": "capex",
+      "name": {
+        "en": "Storage for the Gouda plant",
+        "fr": "Stockage de l'usine de Gouda",
+        "de": "Speicher für das Werk in Gouda",
+        "es": "Almacenamiento de la planta de Gouda"
+      },
+      "company_name": "Fromage & Co SA",
+      "supplier_name": "Dell Technologies",
+      "account_number": "218300",
+      "cost_center_code": "FR-TRV-400",
+      "currency": "EUR",
+      "budget_{Y}": 32000,
+      "description": "",
+      "run_build": "build",
+      "owner_it_email": "marc.petit@fromage-co.example",
+      "owner_business_email": "",
+      "project": "",
+      "effective_start": "{Y}-03-01",
+      "end_of_validity": "{Y}-12-31",
+      "notes": "",
+      "revision_{Y}": "",
+      "budget_{Y+1}": ""
+    }
+  ]
+}

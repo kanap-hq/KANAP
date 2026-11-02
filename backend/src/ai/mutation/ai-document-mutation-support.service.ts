@@ -1,6 +1,7 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { codedForbidden } from '../../auth/module-right-required';
 import { parseItemNumber } from '../../common/parse-item-number';
-import { loadLinkedReads } from '../../common/relations/linked-reads';
+import { LINKED_MODULE_RESOURCES, loadLinkedReads } from '../../common/relations/linked-reads';
 import { validate as isUuid } from 'uuid';
 import { incidentVisibilitySql, resolveIncidentViewer } from '../../incidents/incident-visibility';
 import { DOCUMENT_RELATION_MODULES, KnowledgeService, RelationEntityType, unreadableRelationFamilies } from '../../knowledge/knowledge.service';
@@ -868,7 +869,11 @@ export class AiDocumentMutationSupportService {
     if (families.length === 0) return;
     const refused = unreadableRelationFamilies(families, await loadLinkedReads(context.manager, context.userId, context.tenantId));
     if (refused.length > 0) {
-      throw new ForbiddenException(`You cannot link ${refused.join(', ')} to a document: you do not read that module.`);
+      throw codedForbidden(
+        'LINKED_MODULE_NOT_READABLE',
+        `You cannot link ${refused.join(', ')} to a document: you do not read that module.`,
+        { resources: [...new Set(refused.map((family) => LINKED_MODULE_RESOURCES[DOCUMENT_RELATION_MODULES[family]]))] },
+      );
     }
   }
 

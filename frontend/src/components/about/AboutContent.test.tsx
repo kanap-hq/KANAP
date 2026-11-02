@@ -1,9 +1,16 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AboutContent from './AboutContent';
 
+// The path line reads the onboarding API: covered by its own test.
+vi.mock('../onboarding/AboutOnboardingLine', () => ({ default: () => null }));
+// The discovery call link: covered by its own test; here only where it goes.
+vi.mock('../BookDiscoveryCallButton', () => ({
+  default: ({ placement }: { placement: string }) => <a href="https://cal.example/discovery">{`book:${placement}`}</a>,
+  useDiscoveryCall: () => (state.discoveryCall ? 'https://cal.example/discovery' : null),
+}));
 vi.mock('react-i18next', async () => {
   const { default: settings } = await import('../../locales/en/settings.json');
   // One stable `t` that renders the English text of settings keys, with interpolation and plurals.
@@ -26,6 +33,7 @@ const state = vi.hoisted(() => ({
   isBillingAdmin: false,
   tenantName: 'Acme' as string | null,
   tenantSlug: 'acme' as string | null,
+  discoveryCall: false,
 }));
 
 vi.mock('../../config/FeaturesContext', () => ({
@@ -61,6 +69,7 @@ afterEach(() => {
   state.isBillingAdmin = false;
   state.tenantName = 'Acme';
   state.tenantSlug = 'acme';
+  state.discoveryCall = false;
   writeText.mockReset();
 });
 
@@ -117,6 +126,17 @@ describe('AboutContent', () => {
     expect(screen.queryByRole('link', { name: 'the support offer' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'GitHub Discussions' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'GitHub Issues' })).not.toBeInTheDocument();
+  });
+
+  it('adds the discovery call to the trial line when it is offered', () => {
+    state.subscription = { status: 'trialing', trial_days_remaining: 9 };
+    renderContent();
+    expect(screen.queryByText('book:about')).not.toBeInTheDocument();
+    cleanup();
+
+    state.discoveryCall = true;
+    renderContent();
+    expect(screen.getByText(/9 days left in your trial/)).toContainElement(screen.getByText('book:about'));
   });
 
   it('shows the trial days only during a running trial, with a plan link for billing admins', () => {

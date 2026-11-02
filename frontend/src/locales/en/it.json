@@ -3,6 +3,7 @@
     "incidents": {
       "title": "Incident register",
       "newIncident": "New incident",
+      "empty": "No incidents yet.",
       "importCsv": "Import CSV",
       "importTitle": "Import incidents",
       "exportTitle": "Export incidents",
@@ -67,7 +68,7 @@
     },
     "applications": {
       "title": "Applications",
-      "newAppService": "New app / service",
+      "newAppService": "New application",
       "empty": "No applications yet.",
       "appService": "App / service",
       "importCsv": "Import CSV",
@@ -1571,6 +1572,9 @@
     "incident": {
       "title": "Incident",
       "newTitle": "New incident",
+      "creation": {
+        "record": "The incident"
+      },
       "fields": {
         "title": "Title"
       },
@@ -1623,10 +1627,7 @@
         "minutes": "{{count}}m"
       },
       "create": {
-        "description": "Description",
-        "titleRequired": "Title is required.",
-        "severityRequired": "Severity is required.",
-        "detectedRequired": "Detected date is required."
+        "description": "Description"
       },
       "overview": {
         "description": "Description",
@@ -1704,7 +1705,10 @@
     },
     "application": {
       "title": "App / service",
-      "newTitle": "New app / service",
+      "newTitle": "New application",
+      "creation": {
+        "record": "The application"
+      },
       "indexOfTotal": "({{index}} of {{total}})",
       "tabs": {
         "overview": "Overview",
@@ -2206,7 +2210,7 @@
         "assignmentAdded": "Assignment added",
         "removed": "{{name}} removed.",
         "application": "Application",
-        "environment": "Environment",
+        "environment": "Deployment",
         "role": "Role",
         "since": "Since",
         "notes": "Notes",
@@ -2215,13 +2219,13 @@
         "removeAssignment": "Remove assignment",
         "addAssignmentDialog": "Add assignment",
         "applicationRequired": "Application is required",
-        "environmentRequired": "Environment (instance) is required",
+        "environmentRequired": "Choose a deployment.",
         "roleRequired": "Role is required",
-        "selectAppForEnv": "Select an application to choose an environment.",
-        "chooseEnvironment": "Choose an environment.",
-        "noInstances": "No instances for this application",
+        "selectAppForEnv": "Select an application to choose a deployment.",
+        "chooseEnvironment": "Choose a deployment.",
         "noServerRoles": "No server roles configured; update IT ops settings.",
-        "assign": "Assign"
+        "assign": "Assign",
+        "createDeployment": "+ Create the {{environment}} deployment"
       },
       "connections": {
         "loadingConnections": "Loading connections…",
@@ -3104,12 +3108,12 @@
         "history": "History"
       },
       "deleteTitle": "Delete location?",
-      "deleteMessage": "This will permanently delete this location and automatically unassign all linked assets.",
       "deleteUnsavedWarning": "You also have unsaved changes in this workspace. Those changes will be lost.",
       "subLocationsAfterCreate": "Sub-locations are available after you create the location.",
       "contactsAfterCreate": "Contacts are available after you create the location.",
       "relationsAfterCreate": "Relations are available after you create the location.",
       "untitled": "Untitled location",
+      "notFound": "Location not found.",
       "previous": "Previous location",
       "next": "Next location",
       "namePlaceholder": "e.g., Operations Center Paris",
@@ -3181,7 +3185,9 @@
         "deleteUsage_other": "<strong>{{count}} assets are</strong> currently assigned to <strong>{{name}}</strong>. Deleting this sub-location will leave them without a sub-location assignment.",
         "deleteKeepsAssets": "The asset records themselves are kept; only their sub-location link is cleared.",
         "deleteAnyway": "Delete anyway"
-      }
+      },
+      "createOption": "+ Create location \"{{name}}\"",
+      "createNew": "+ New location"
     }
   },
   "components": {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Badge, Box, Button, Snackbar, Tooltip } from '@mui/material';
+import { Alert, Badge, Box, Button, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import DeleteConfirmDialog, { DeleteConfirmKept } from './DeleteConfirmDialog';
@@ -8,6 +8,7 @@ import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import { deleteFailureReason, refusalUsages, usageTotal, type DeleteFailure } from '../utils/deleteRefusal';
 import { joinNames } from '../pages/working-day-calendars/workingDayCalendarFields';
 import { KanapDialog } from './design';
+import { useNotify } from './notify/NotifyProvider';
 
 /**
  * What a delete of the selection would do, asked before any dialog: the rows it would refuse
@@ -130,18 +131,15 @@ export default function DeleteSelectedButton<T>({
   itemLabels,
 }: DeleteSelectedButtonProps<T>) {
   const { t, i18n } = useTranslation('common');
+  const notify = useNotify();
   const language = i18n?.resolvedLanguage || i18n?.language || 'en';
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [opened, setOpened] = useState<Opened>({ items: [], check: null });
   const [deleteRelated, setDeleteRelated] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const check = opened.check;
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'warning';
-  }>({ open: false, message: '', severity: 'success' });
 
   const handleOpenConfirm = async () => {
     if (selectedRows.length === 0) return;
@@ -159,6 +157,7 @@ export default function DeleteSelectedButton<T>({
     }
     setOpened({ items: selection, check: answered });
     setDeleteRelated(false);
+    setActionError(null);
     setConfirmOpen(true);
   };
 
@@ -188,27 +187,19 @@ export default function DeleteSelectedButton<T>({
         : deletedMessage(deletedIds);
 
       if (failed.length === 0) {
-        // All deleted successfully
-        setSnackbar({
-          open: true,
-          message: done,
-          severity: 'success',
-        });
+        // The dialog has closed and the rows are gone: the names are the part the list no longer shows.
+        setConfirmOpen(false);
+        notify({ message: done });
       } else {
         // Each failed item with its reason (for example a frozen budget column, or what still uses it), all failed or not.
+        // The refusal stays in the dialog. It is not a confirmation.
         const reasons = failed
           .map((f: any) => `${f.productName || f.name || f.description || 'Item'}: ${deleteFailureReason(f, t, language)}`)
           .join('; ');
-        setSnackbar(deletedIds.length === 0
-          ? { open: true, message: t('delete.failedAll', { reasons }), severity: 'error' }
-          : {
-            open: true,
-            message: t('delete.partialResult', { deleted: done, failed: t('delete.partialFailed', { count: failed.length, reasons }) }),
-            severity: 'warning',
-          });
+        setActionError(deletedIds.length === 0
+          ? t('delete.failedAll', { reasons })
+          : t('delete.partialResult', { deleted: done, failed: t('delete.partialFailed', { count: failed.length, reasons }) }));
       }
-
-      setConfirmOpen(false);
 
       // Clear grid selection
       if (gridApi) {
@@ -222,18 +213,10 @@ export default function DeleteSelectedButton<T>({
       onDeleteSuccess();
     } catch (error: any) {
       console.error('Delete error:', error);
-      setSnackbar({
-        open: true,
-        message: getApiErrorMessage(error, t, t('delete.failedGeneric')),
-        severity: 'error',
-      });
+      setActionError(getApiErrorMessage(error, t, t('delete.failedGeneric')));
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
   };
 
   const items = opened.items;
@@ -349,19 +332,9 @@ export default function DeleteSelectedButton<T>({
           deleteRelated={deleteRelated}
           onDeleteRelatedChange={setDeleteRelated}
           confirmDisabled={toDelete.length === 0}
+          error={actionError}
         />
       )}
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant="filled">
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </>
   );
 }

@@ -194,7 +194,7 @@ export default function ReportLayout({
       <Stack spacing={1.5} sx={{ width: '100%', alignSelf: 'stretch' }} className="report-print-frame">
         <Box>
           <Stack direction="row" alignItems="baseline" justifyContent="space-between" spacing={2}>
-            <Typography sx={{ fontSize: 22, fontWeight: 500, lineHeight: 1.3, color: 'kanap.text.primary' }}>
+            <Typography data-page-title sx={{ fontSize: 22, fontWeight: 500, lineHeight: 1.3, color: 'kanap.text.primary' }}>
               {title}
             </Typography>
             {printedOn && (

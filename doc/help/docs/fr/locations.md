@@ -126,7 +126,7 @@ L'onglet Relations affiche les actifs de ce site et les applications qui tournen
 Depuis l'en-tête de l'espace de travail, cliquez sur **Supprimer** (icône corbeille) pour retirer un site.
 
 - Nécessite l'autorisation `locations:member`.
-- Les actifs liés ne sont pas supprimés : ils sont automatiquement désassignés (leur référence de site est effacée).
+- Un site qui porte encore des actifs ne peut pas être supprimé : le message indique leur nombre. Rattachez d'abord ces actifs à un autre site.
 - Si vous avez des modifications non enregistrées dans l'espace de travail, ces modifications sont perdues lors de la suppression.
 
 ---

@@ -244,7 +244,7 @@ Une application apparaît de deux façons :
 - **Hébergée** : un de ses déploiements tourne sur un serveur qui porte la technologie. KANAP déduit la ligne des serveurs ; changez le serveur ou le déploiement pour la modifier.
 - **Déclarée** : l'application dépend de la technologie sans tourner à côté d'elle, par exemple une application qui connecte ses utilisateurs par Entra ID. Changez la version sur place, ou retirez la déclaration. La retirer enlève toutes les versions déclarées de cette application.
 
-**Ajouter** (`infrastructure:member`) ouvre une recherche où vous pouvez cocher plusieurs applications, puis les ajouter d'un coup. Elles sont déclarées avec une version inconnue : renseignez-la ensuite sur chaque ligne. Les applications et déploiements désactivés ne comptent pas.
+**Ajouter** (`infrastructure:member`) ouvre une recherche où vous pouvez cocher plusieurs applications, puis demande leur version : choisissez-en une, tapez-en une nouvelle, ou choisissez **Version inconnue**. Elles sont toutes déclarées avec cette version. Cliquez sur la version d'une ligne déclarée pour la changer. Les applications et déploiements désactivés ne comptent pas.
 
 **Exporter** télécharge les lignes dans un fichier CSV ou Excel, dans la langue de votre écran.
 

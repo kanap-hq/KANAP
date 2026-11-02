@@ -33,6 +33,7 @@ import { EmailService } from '../../email/email.service';
 import { Features } from '../../config/features';
 import { applyHttpMiddleware, applyTenancyAndPipeline } from '../../http-app';
 import { DemoDataService, DemoDataState } from '../demo-data.service';
+import { localTodayYmd } from '../../portfolio/services/portfolio-timesheet.service';
 
 // The sample data load end to end: the whole application (AppModule with the HTTP wiring of
 // main.ts, http-app.ts) listening on a local port, a trial tenant as activation leaves it, and
@@ -40,11 +41,17 @@ import { DemoDataService, DemoDataState } from '../demo-data.service';
 // with the administrator's token and the tenant's Host. Then:
 // - the load ends `loaded`, with the landscape (instances, interfaces, bindings, connections)
 //   and the `.example` users of the data set, and no e-mail sent;
+// - USD has a rate for years N-1 through N+2 and no currency in use is missing one.
+//   The rate sources are pointed at a closed port, so that rate is the loader's
+//   documented manual fallback, not a fetch;
 // - the tenant is French (activated from a French browser): its budget lines carry the
 //   recommended dimensions in French ("Matériel" for the files' "Hardware"), no English value is
 //   added next to them, and every line has a cost pool, an IT tower and a business domain;
 //   business domain and budget reference are named in French too ("IT partagée" for "Shared IT");
 // - every contact has the supplier and contact type of 09b-contact-suppliers.csv;
+// - every portfolio request has a priority score, the scores differ, Cave Climate
+//   Digital Twin is converted into its project, and the capacity report has a
+//   contributor profile on every line;
 // - the loader's token is refused (401) on another tenant's host, accepted on its own;
 // - the reset brings the tenant back to the state of activation, table by table;
 // - a loader that fails half-way (an injected server error on the contracts import) ends
@@ -60,6 +67,12 @@ process.env.STRIPE_SECRET_KEY = '';
 process.env.S3_ENDPOINT ||= 'http://127.0.0.1:9';
 process.env.S3_BUCKET ||= 'demo-data-spec';
 delete process.env.EMAIL_OVERRIDE;
+// No rate source answers. An empty cache directory, so a CSV left by another
+// run cannot supply a rate. The loader then stores its manual USD rate.
+process.env.WB_BASE_URL = 'http://127.0.0.1:9';
+process.env.WB_CSV_URL = 'http://127.0.0.1:9/wb.csv';
+process.env.FX_SPOT_BASE_URL = 'http://127.0.0.1:9/latest';
+process.env.WB_CACHE_DIR = path.join(os.tmpdir(), 'kanap-1190-wb-empty');
 
 const FIXTURES = backendPath('fixtures', 'fromage-co');
 
@@ -420,6 +433,27 @@ const OLD_SAN_NOTES = 'NetApp FAS2750 — 50TB usable, primary SAN for all VMs';
 const NEW_CLUSTER_NOTES = 'Paris vSphere cluster (HA and DRS), managed by PAR-VCENTER-01 — its VMs move between the hosts';
 const NEW_SAN_NOTES = 'NetApp FAS2750 — 50TB usable, shared storage of the Paris vSphere cluster hosts';
 
+/**
+ * After a load, every currency in use has a rate, and USD of years N-1 through
+ * N+2 carries the documented manual rate (the sources are closed in this spec).
+ * N+2 is the last year contract amounts are read for.
+ */
+async function checkExchangeRates(port: number, host: string, token: string) {
+  const year = new Date().getFullYear();
+  const missing = await request(port, { method: 'GET', path: '/currency/rates/missing', host, token });
+  assert.equal(missing.status, 200, JSON.stringify(missing.body));
+  assert.deepEqual(missing.body?.items, [], 'no amount is left out for lack of an exchange rate');
+
+  const matrix = await request(port, { method: 'GET', path: '/currency/rates', host, token });
+  assert.equal(matrix.status, 200, JSON.stringify(matrix.body));
+  for (const fiscalYear of [year - 1, year, year + 1, year + 2]) {
+    const row = (matrix.body?.rates ?? []).find((item: { fiscalYear?: number }) => item.fiscalYear === fiscalYear);
+    assert.ok(row, `a rate set for ${fiscalYear}`);
+    assert.equal(row.rates?.USD, 0.9, `USD ${fiscalYear} uses the documented manual rate`);
+    assert.equal(row.rateSources?.USD, 'manual', `USD ${fiscalYear} was stored by hand`);
+  }
+}
+
 /** The two notes the fixture replaces: only the old value is overwritten. */
 async function checkVmwareNotes(tenantId: string) {
   const rows: Array<{ name: string; notes: string | null }> = await inTenant(tenantId, (m) => m.query(
@@ -552,12 +586,28 @@ async function vmwareSnapshot(tenantId: string) {
  * headings of the model, the journal of the B2B portal, the SAP close and the LIMS signed by
  * their people and backdated, the three corrective tasks, and no incident on a cluster.
  */
+/**
+ * The year the loader gives the incidents: the current one once their last day (19 October) is
+ * past, the previous one before, so that they never lie in the future.
+ */
+function incidentYear(): number {
+  const year = new Date().getFullYear();
+  return localTodayYmd() > `${year}-10-19` ? year : year - 1;
+}
+
 async function checkIncidents(tenantId: string) {
   const incidents: Array<{ item_number: number; title: string; status: string }> = await inTenant(tenantId, (m) => m.query(
     `SELECT item_number, title, status FROM incidents WHERE tenant_id = $1 ORDER BY item_number`,
     [tenantId],
   ));
   assert.equal(incidents.length, 10, 'ten incidents, no row added or removed');
+  const [last] = await inTenant(tenantId, (m) => m.query(
+    `SELECT GREATEST(
+              (SELECT max(GREATEST(started_at, detected_at, resolved_at, closed_at, authority_notified_at)) FROM incidents WHERE tenant_id = $1),
+              (SELECT max(occurred_at) FROM incident_entries WHERE tenant_id = $1)) AS at`,
+    [tenantId],
+  ));
+  assert.ok(new Date(last.at).getTime() < Date.now(), `the incidents lie in the past (last event ${new Date(last.at).toISOString()})`);
   assert.equal(incidents[3]?.title, B2B_INCIDENT, 'INC-4 is the B2B portal');
   assert.equal(incidents[3]?.status, 'closed');
   assert.equal(incidents[8]?.title, 'Lab results cannot be saved in QualityLab LIMS', 'INC-9 is the LIMS');
@@ -588,12 +638,12 @@ async function checkIncidents(tenantId: string) {
     title: string;
     kind: string;
     content: string | null;
-    occurred_at: Date;
-    created_at: Date;
+    occurred_paris: string;
     author_email: string | null;
     changed_fields: any;
   }> = await inTenant(tenantId, (m) => m.query(
-    `SELECT i.item_number, i.title, e.kind, e.content, e.occurred_at, e.created_at,
+    `SELECT i.item_number, i.title, e.kind, e.content,
+            to_char(e.occurred_at AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD HH24:MI') AS occurred_paris,
             lower(u.email) AS author_email, e.changed_fields
        FROM incident_entries e
        JOIN incidents i ON i.id = e.incident_id AND i.tenant_id = e.tenant_id
@@ -604,11 +654,18 @@ async function checkIncidents(tenantId: string) {
       ORDER BY i.item_number, e.occurred_at, e.created_at`,
     [tenantId, ['B2B portal down: database disk full', 'SAP month-end close slowed down by host memory contention', 'Lab results cannot be saved in QualityLab LIMS']],
   ));
-  assert.equal(entries.length, fixtureRows('32-incident-journal.csv').length, 'every journal row imported');
+  const journal = fixtureRows('32-incident-journal.csv');
+  assert.equal(entries.length, journal.length, 'every journal row imported');
+  // The entries are backdated: each keeps its journal time, moved with the incidents, not the load time.
+  const yearShift = incidentYear() - 2026;
+  const journalTimes = journal.map((line) => {
+    const at = line.split(';')[2].trim();
+    return `${Number(at.slice(0, 4)) + yearShift}${at.slice(4)}`;
+  });
+  assert.deepEqual(entries.map((entry) => entry.occurred_paris).sort(), journalTimes.sort(), 'the entries keep the journal times');
   const knownAuthors = new Set(fixtureRows('10-users.csv').map((line) => line.split(';')[0].trim().toLowerCase()));
   for (const entry of entries) {
     assert.ok(knownAuthors.has(String(entry.author_email)), `${entry.title}: ${entry.author_email} is one of the incident people`);
-    assert.ok(new Date(entry.created_at).getTime() > new Date(entry.occurred_at).getTime(), `${entry.title}: the entry is backdated, its creation time is the load`);
   }
   const b2b = entries.filter((entry) => entry.item_number === 4);
   assert.ok(b2b.some((entry) => entry.kind === 'note' && entry.author_email === 'isabelle.moreau@fromage-co.example'), 'the reporter wrote a note');
@@ -645,7 +702,8 @@ async function checkIncidents(tenantId: string) {
     'pierre.martin@fromage-co.example',
     'marc.petit@fromage-co.example',
   ]);
-  assert.deepEqual(tasks.map((task) => task.due_date), ['2026-04-30', '2026-11-30', '2026-12-31']);
+  const year = incidentYear();
+  assert.deepEqual(tasks.map((task) => task.due_date), [`${year}-04-30`, `${year}-11-30`, `${year}-12-31`]);
   assert.deepEqual(tasks.map((task) => task.status), ['done', 'in_progress', 'open']);
 
   const clusters = await tenantCount(
@@ -656,6 +714,109 @@ async function checkIncidents(tenantId: string) {
       WHERE ia.tenant_id = $1 AND a.is_cluster`,
   );
   assert.equal(clusters, 0, 'no incident linked to a cluster');
+}
+
+/** Counts that a second load of the portfolio story must leave unchanged. */
+async function portfolioFingerprint(tenantId: string): Promise<Record<string, number>> {
+  const [row] = await inTenant(tenantId, (m) => m.query(
+    `SELECT
+       (SELECT count(*)::int FROM portfolio_requests WHERE tenant_id = $1) AS requests,
+       (SELECT count(*)::int FROM portfolio_request_projects WHERE tenant_id = $1) AS links,
+       (SELECT count(*)::int FROM portfolio_projects WHERE tenant_id = $1 AND name = 'Cave Climate Digital Twin') AS cave_projects,
+       (SELECT count(*)::int FROM tasks t
+          JOIN portfolio_projects p ON p.id = t.related_object_id AND p.tenant_id = t.tenant_id
+         WHERE t.tenant_id = $1 AND t.related_object_type = 'project' AND p.name = 'Cave Climate Digital Twin') AS cave_tasks,
+       (SELECT count(*)::int FROM portfolio_project_phases ph
+          JOIN portfolio_projects p ON p.id = ph.project_id AND p.tenant_id = ph.tenant_id
+         WHERE ph.tenant_id = $1 AND p.name = 'Cave Climate Digital Twin') AS cave_phases,
+       (SELECT count(*)::int FROM portfolio_project_time_entries e
+          JOIN portfolio_projects p ON p.id = e.project_id AND p.tenant_id = e.tenant_id
+         WHERE e.tenant_id = $1 AND p.name = 'Cave Climate Digital Twin') AS project_time,
+       (SELECT count(*)::int FROM task_time_entries e
+          JOIN tasks t ON t.id = e.task_id AND t.tenant_id = e.tenant_id
+          JOIN portfolio_projects p ON p.id = t.related_object_id AND p.tenant_id = t.tenant_id
+         WHERE t.tenant_id = $1 AND t.related_object_type = 'project' AND p.name = 'Cave Climate Digital Twin') AS task_time,
+       (SELECT count(*)::int FROM portfolio_team_member_configs WHERE tenant_id = $1) AS contributors`,
+    [tenantId],
+  ));
+  return row;
+}
+
+/**
+ * The portfolio first steps: every request scored and contrasted, the best one
+ * converted into a full project, and a contributor profile behind every capacity line.
+ */
+async function checkPortfolioStory(port: number, host: string, token: string, tenantId: string): Promise<Record<string, number>> {
+  const requests: Array<{ name: string; status: string; priority_score: string | null; criteria: number }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT name, status, priority_score::text AS priority_score,
+            (SELECT count(*)::int FROM jsonb_object_keys(COALESCE(criteria_values, '{}'::jsonb))) AS criteria
+       FROM portfolio_requests
+      WHERE tenant_id = $1
+      ORDER BY name`,
+    [tenantId],
+  ));
+  assert.deepEqual(requests.map((row) => row.name), [
+    'AI Cheese Grading',
+    'Automated Warehouse Inventory',
+    'Cave Climate Digital Twin',
+    'Smart Packaging Automation',
+  ]);
+  const scores = requests.map((row) => Number(row.priority_score));
+  assert.ok(scores.every((score) => Number.isFinite(score)), `a request has no priority score (${JSON.stringify(requests)})`);
+  assert.equal(new Set(scores).size, scores.length, `the scores are not contrasted (${scores.join(', ')})`);
+  for (const row of requests) assert.equal(row.criteria, 8, `${row.name} has ${row.criteria} criteria`);
+  const cave = requests.find((row) => row.name === 'Cave Climate Digital Twin')!;
+  assert.equal(cave.status, 'converted');
+  assert.ok(scores.every((score) => Number(cave.priority_score) >= score), 'the converted request is the best scored');
+
+  // The day the project route checks time entries against, not the database clock.
+  const today = localTodayYmd();
+  const [project] = await inTenant(tenantId, (m) => m.query(
+    `SELECT p.id, p.status,
+            p.estimated_effort_it::float AS estimated_it,
+            p.estimated_effort_business::float AS estimated_business,
+            p.actual_effort_it::float AS actual_it,
+            p.actual_effort_business::float AS actual_business,
+            (SELECT count(*)::int FROM portfolio_request_projects rp WHERE rp.project_id = p.id AND rp.tenant_id = p.tenant_id) AS links,
+            (SELECT count(*)::int FROM tasks t WHERE t.tenant_id = p.tenant_id AND t.related_object_type = 'project' AND t.related_object_id = p.id) AS tasks,
+            (SELECT count(*)::int FROM tasks t WHERE t.tenant_id = p.tenant_id AND t.related_object_type = 'project' AND t.related_object_id = p.id
+               AND t.status NOT IN ('done', 'cancelled') AND t.due_date < $2::date) AS overdue,
+            (SELECT count(*)::int FROM portfolio_project_phases ph WHERE ph.project_id = p.id AND ph.tenant_id = p.tenant_id) AS phases,
+            (SELECT count(*)::int FROM portfolio_project_team tm WHERE tm.project_id = p.id AND tm.tenant_id = p.tenant_id AND tm.role = 'it_team') AS it_team,
+            (SELECT count(*)::int FROM portfolio_project_team tm WHERE tm.project_id = p.id AND tm.tenant_id = p.tenant_id AND tm.role = 'business_team') AS business_team,
+            (SELECT count(*)::int FROM application_projects ap WHERE ap.project_id = p.id AND ap.tenant_id = p.tenant_id) AS applications,
+            (SELECT count(*)::int FROM portfolio_project_opex o WHERE o.project_id = p.id AND o.tenant_id = p.tenant_id) AS budget_lines,
+            (SELECT count(*)::int FROM portfolio_project_time_entries e WHERE e.project_id = p.id AND e.tenant_id = p.tenant_id) AS project_time,
+            (SELECT count(*)::int FROM task_time_entries e
+               JOIN tasks t ON t.id = e.task_id AND t.tenant_id = e.tenant_id
+              WHERE t.related_object_id = p.id AND t.related_object_type = 'project' AND t.tenant_id = p.tenant_id) AS task_time
+       FROM portfolio_projects p
+      WHERE p.tenant_id = $1 AND p.name = 'Cave Climate Digital Twin'`,
+    [tenantId, today],
+  ));
+  assert.ok(project, 'the converted request has its project');
+  assert.equal(project.links, 1);
+  assert.equal(project.status, 'in_progress');
+  assert.ok(project.estimated_it > 0 && project.estimated_business > 0, 'planned effort');
+  assert.ok(project.actual_it > 0 && project.actual_business > 0, 'consumed effort');
+  assert.ok(project.tasks >= 6, `${project.tasks} tasks`);
+  // The earliest open task, 'Collect CaveGuard sensor history', is due on 31 March of the load's year.
+  if (today > `${new Date().getFullYear()}-03-31`) assert.ok(project.overdue >= 1, 'one task is overdue');
+  else assert.equal(project.overdue, 0, 'no task is due yet');
+  assert.ok(project.phases >= 4, `${project.phases} phases`);
+  assert.ok(project.it_team >= 1 && project.business_team >= 1, 'both teams');
+  assert.ok(project.applications >= 1, 'an application');
+  assert.ok(project.budget_lines >= 1, 'a budget line');
+  assert.ok(project.project_time >= 1 && project.task_time >= 1, 'time on the project and on its tasks');
+
+  const heatmap = await request(port, { method: 'GET', path: '/portfolio/reports/capacity-heatmap', host, token });
+  assert.equal(heatmap.status, 200, `capacity report (${JSON.stringify(heatmap.body)})`);
+  const contributors = heatmap.body?.contributors ?? [];
+  assert.ok(contributors.length > 0, 'the capacity report has lines');
+  const withoutProfile = contributors.filter((row: { hasContributorProfile?: boolean; contributorName?: string }) => row.hasContributorProfile === false);
+  assert.deepEqual(withoutProfile.map((row: { contributorName?: string }) => row.contributorName), [], 'every capacity line has a contributor profile');
+
+  return portfolioFingerprint(tenantId);
 }
 
 async function serve(): Promise<Served> {
@@ -824,8 +985,11 @@ async function testLoadResetAndFailure() {
     await checkDimensions(a.tenantId);
     await checkContactSuppliers(a.tenantId);
     await checkIncidents(a.tenantId);
+    const portfolio = await checkPortfolioStory(served.port, hostA, served.loaderEnvs[0].KANAP_DEMO_TOKEN, a.tenantId);
+    lap('portfolio story checked');
 
     const token = served.loaderEnvs[0].KANAP_DEMO_TOKEN;
+    await checkExchangeRates(served.port, hostA, token);
     await checkVmwareLandscape(served.port, a.tenantId, hostA, token);
     await checkVmwareNotes(a.tenantId);
     lap('VMware landscape checked');
@@ -843,6 +1007,9 @@ async function testLoadResetAndFailure() {
     await runLoader(served.loaderEnvs[0]);
     lap('idempotence load ended');
     assert.deepEqual(await vmwareSnapshot(a.tenantId), snapshot, 'a second load changes nothing');
+    assert.deepEqual(await portfolioFingerprint(a.tenantId), portfolio, 'a second load changes nothing in the portfolio story');
+    await checkPortfolioStory(served.port, hostA, token, a.tenantId);
+    await checkExchangeRates(served.port, hostA, token);
 
     // ── The loader's token: refused on another tenant's host, accepted on its own ──
     assert.equal(served.loaderEnvs.length, 1);

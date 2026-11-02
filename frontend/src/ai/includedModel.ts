@@ -49,8 +49,28 @@ export function includedModelError(error: unknown): { code: string; identity: In
   return { code, identity };
 }
 
-/** The assistant is held back only by the included model waiting for an administrator's confirmation. */
+/** What the acceptance of the included model settles: it also turns the assistant on. */
+const SETTLED_BY_ACCEPTANCE = new Set(['builtin_not_accepted', 'tenant_disabled']);
+
+/**
+ * The assistant is held back only by the included model waiting for an administrator's
+ * acceptance, the assistant being off or not (a new trial workspace has both): its page opens
+ * with the acceptance box in place of the composer.
+ */
 export function chatAwaitsIncludedModelConfirmation(capabilities: AiCapabilities | null | undefined): boolean {
   const reasons = capabilities?.surfaces.chat.reasons ?? [];
-  return reasons.length > 0 && reasons.every((reason) => reason === 'builtin_not_accepted');
+  return reasons.includes('builtin_not_accepted') && reasons.every((reason) => SETTLED_BY_ACCEPTANCE.has(reason));
+}
+
+/**
+ * Chat is off because an administrator turned it off. The person still has the chat right,
+ * so the page says so. A missing model confirmation may sit beside that switch. Any other
+ * reason (a provider that is not ready, a missing right) keeps the usual refusal.
+ */
+export function chatTurnedOffByAdmin(capabilities: AiCapabilities | null | undefined): boolean {
+  const chat = capabilities?.surfaces.chat;
+  if (!chat || chat.permission_granted !== true || chat.tenant_enabled !== false) return false;
+  const reasons = chat.reasons ?? [];
+  return reasons.length > 0
+    && reasons.every((reason) => reason === 'tenant_disabled' || reason === 'builtin_not_accepted');
 }

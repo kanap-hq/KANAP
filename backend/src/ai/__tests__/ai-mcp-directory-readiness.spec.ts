@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { UnauthorizedException } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
 import { AiToolRegistry } from '../ai-tool.registry';
+import { AiHelpManualService } from '../ai-help-manual.service';
 import { AiApiKeysService, McpKeyRefusedException } from '../ai-api-keys.service';
 import { McpApiKeyAuthGuard } from '../auth/mcp-api-key-auth.guard';
 import { McpApiKeyHashService } from '../auth/mcp-api-key-hash.service';
@@ -32,6 +33,8 @@ const CORE_TOOLS = [
   'get_record_history',
   'search_knowledge',
   'get_document',
+  'list_help_topics',
+  'read_help_section',
 ];
 
 function standardKey(overrides: Record<string, unknown> = {}) {
@@ -65,6 +68,7 @@ function realExposure(settings: { webSearch: boolean; knowledge?: boolean }) {
     { listOperations: () => [], getOperationOrNull: () => null } as any,
     undefined,
     { getRecordHistory: async () => ({ items: [] }) } as any,
+    new AiHelpManualService(),
   );
   const registry = new AiCapabilityRegistry(tools, {} as any, {} as any, {} as any, {} as any, {} as any);
   return new AiMcpExposureService(registry, policy as any);
@@ -91,19 +95,19 @@ async function withWebSearchReady<T>(ready: boolean, fn: () => Promise<T>): Prom
   }
 }
 
-// P3-1: a standard key (the group kanap.read.core, as every key stores it) lists twelve tools, the
-// classification catalog and the record history (Plaid L7) included, and thirteen with web search.
-// No key holds the list itself.
-async function testStandardKeyListsTwelveToolsThirteenWithWebSearch() {
+// P3-1: a standard key (the group kanap.read.core, as every key stores it) lists fourteen tools, the
+// classification catalog, the record history (Plaid L7) and the user manual included, and fifteen
+// with web search. No key holds the list itself.
+async function testStandardKeyListsFourteenToolsFifteenWithWebSearch() {
   const withoutWeb = await withWebSearchReady(true, () =>
     realExposure({ webSearch: false }).listToolJsonSchemas(mcpContext, standardKey(), MCP_SCOPE_TOOLS_LIST));
   assert.deepEqual(withoutWeb.map((tool) => tool.name).sort(), [...CORE_TOOLS].sort());
-  assert.equal(withoutWeb.length, 12);
+  assert.equal(withoutWeb.length, 14);
 
   const withWeb = await withWebSearchReady(true, () =>
     realExposure({ webSearch: true }).listToolJsonSchemas(mcpContext, standardKey(), MCP_SCOPE_TOOLS_LIST));
   assert.deepEqual(withWeb.map((tool) => tool.name).sort(), [...CORE_TOOLS, 'web_search'].sort());
-  assert.equal(withWeb.length, 13);
+  assert.equal(withWeb.length, 15);
 }
 
 // P3-8: the cause of a refusal, from what KANAP declares.
@@ -330,7 +334,7 @@ function testRedactionKeepsTheVulnerabilityReads() {
 
 async function run() {
   testRedactionKeepsTheVulnerabilityReads();
-  await testStandardKeyListsTwelveToolsThirteenWithWebSearch();
+  await testStandardKeyListsFourteenToolsFifteenWithWebSearch();
   await testRefusalExplanationsFromTheRealRegistry();
   await testRateLimitCarriesRetryAfter();
   await testDoubleRevocationKeepsDateAndReason();

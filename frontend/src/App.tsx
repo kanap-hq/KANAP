@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, createRoutesFromChildren, useParams, useSearch
 import { DeferredPageLocation } from './lib/deferredPage';
 import { Box, CircularProgress } from '@mui/material';
 import { useAuth } from './auth/AuthContext';
-const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
+import ModuleLanding, { MASTER_DATA_LANDINGS, OPS_LANDINGS } from './components/navigation/ModuleLanding';
 const ForbiddenPage = React.lazy(() => import('./pages/ForbiddenPage'));
 const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const ForgotPasswordPage = React.lazy(() => import('./pages/ForgotPasswordPage'));
@@ -66,7 +66,6 @@ const AdminStandardAccountsPage = React.lazy(() => import('./pages/admin/AdminSt
 const AdminStandardAccountWorkspacePage = React.lazy(() => import('./pages/admin/AdminStandardAccountWorkspacePage'));
 const MasterDataFreezePage = React.lazy(() => import('./pages/admin/master-data/MasterDataFreezePage'));
 const MasterDataCopyPage = React.lazy(() => import('./pages/admin/master-data/MasterDataCopyPage'));
-const MasterDataHomePage = React.lazy(() => import('./pages/admin/MasterDataHomePage'));
 import { useTenant } from './tenant/TenantContext';
 import { FeaturesProvider, useFeatures } from './config/FeaturesContext';
 const CoaPage = React.lazy(() => import('./pages/coa/CoaPage'));
@@ -241,7 +240,7 @@ function AppRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
           <Route path="/" element={<HomeRoute />} />
-          <Route path="/ops" element={<DashboardPage />} />
+          <Route path="/ops" element={<ModuleLanding landings={OPS_LANDINGS} />} />
           <Route path="/ops/budget" element={<BudgetListPage />} />
           <Route path="/ops/budget/new" element={<BudgetLineRoute />} />
           <Route path="/ops/budget/:ref" element={<BudgetLineRoute />} />
@@ -293,7 +292,7 @@ function AppRoutes() {
           <Route path="/ops/operations/currency" element={<CurrencySettingsPage />} />
           <Route path="/ops/operations/master-data-freeze" element={<MasterDataFreezePage />} />
           <Route path="/ops/operations/metrics-copy" element={<MasterDataCopyPage />} />
-          <Route path="/master-data" element={<MasterDataHomePage />} />
+          <Route path="/master-data" element={<ModuleLanding landings={MASTER_DATA_LANDINGS} />} />
           <Route path="/master-data/coa" element={<CoaPage />} />
           <Route path="/master-data/companies" element={<CompaniesPage />} />
           <Route path="/master-data/companies/:id" element={<CompanyWorkspacePage />} />

@@ -126,7 +126,7 @@ La pestaña Relaciones muestra los activos de esta ubicación y las aplicaciones
 Desde el encabezado del espacio de trabajo, haga clic en **Eliminar** (icono de papelera) para eliminar una ubicación.
 
 - Requiere permiso `locations:member`.
-- Los activos vinculados no se eliminan: se desasignan automáticamente (se borra su referencia de ubicación).
+- No se puede eliminar una ubicación que todavía tiene activos: el mensaje indica cuántos. Asigne primero esos activos a otra ubicación.
 - Si tiene cambios sin guardar en el espacio de trabajo, esos cambios se pierden al eliminar.
 
 ---

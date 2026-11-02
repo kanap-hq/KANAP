@@ -71,6 +71,15 @@ KANAP uses MUI, but only through constrained patterns:
 - Use shared `sx` constants for repeated drawer/select/date/menu styling; do not paste large repeated inline `sx` objects.
 - Required asterisks are orange, not red.
 
+## Help Text And Empty States
+
+Read [references/help-text.md](references/help-text.md) before adding or reviewing any interface text. In short:
+
+- The screen says what the person needs to act exactly once. Take the first option that works: nothing, a precise label or a data-shape placeholder, an `InfoHint` tooltip, collapsible help, and a visible sentence only when it must be read before acting (an irreversible consequence or a hidden blocking condition).
+- No help line under a field that repeats its label, no page subtitle, no dialog paragraph that explains the fields, no permanent tip alert.
+- An empty list, tab or section says in one line what goes there and offers the add action to people who may take it.
+- The record title is typed in the workspace header, in creation as in editing; no body "Name" field repeats it.
+
 ## List Pages
 
 - Plain list: `PageHeader` (title, action bar) → grid toolbar (quick filter, "Show" scope, filters) → column chooser → grid. Reference: `frontend/src/pages/CompaniesPage.tsx`.
@@ -93,6 +102,7 @@ Expected structure:
 - Rich text description editor hides toolbar until focus.
 - Autosave is the default for every in-place edit on existing workspace entities, including child tab panels, drawer fields, metadata controls, relations, links, and supporting detail sections. Use save-on-change for selects/dates/autocompletes/toggles and short relation changes, blur-to-save or short debounced autosave for one-line text, and debounced autosave for long-form text.
 - Title IDs show proper business references (`T-4`, `PRJ-3`, `AST-5`), not raw or truncated technical UUIDs; add/backfill reference fields when needed.
+- Record creation: a new record opens with its title open for typing in the header (light blue while empty) and nothing else to fill: below it, the page the record will have (its first tab and properties panel, built from an empty draft) is drawn dimmed and out of reach (`CreationPreview`), with no sentence. Committing the title creates the record at once and every tab becomes active. On the new page and while the person stays on the created record, the header shows Create (`action-primary`) and Cancel (`action`) in place of the close button (`CreationActions`): Create saves what is still typed, keeps the record and returns to where the creation started (on an empty title it shows the title's error and focuses it; a record with required fields checks them first and names the missing ones); Cancel leaves the new page, or deletes the created record, after a confirmation only when more than the title was given. Escape on the empty title is Cancel; any other way out keeps the record. A minimal dialog is kept only for records with several required fields that have no default. Shared frame: `components/workspace/creation/` (applications are the reference).
 - Metadata bars expose the primary scanning fields as inline editable controls where practical: lifecycle/status, environment, type/classification, assignee/owner, location, and important dates. Keep their menus compact and anchored to the clicked item.
 - Clicking a metadata date opens the date picker immediately near the click target/cursor, not an intermediate full-width date field.
 - Long-form text areas such as Description, Notes, Purpose, Risks, and Support notes use a defined editor/composer surface (`kanap.bg.composer`, `kanap.border.default`, 8px radius) so text is visually separated from the page background in light and dark mode.
@@ -143,6 +153,19 @@ For plain HTML tables in workspace sections, use the same dense typography and h
 - If the same document appears as both direct and related, display it only in direct documents.
 - If the same related document is found through multiple paths, display it once and merge or summarize provenance instead of duplicating rows.
 
+## Confirmation messages
+
+One notice for the whole app, from `useNotify` (`frontend/src/components/notify/NotifyProvider.tsx`). The provider is mounted once in `Layout`. A screen does not render its own `Snackbar`.
+
+```tsx
+const notify = useNotify();
+notify({ message, undo });
+```
+
+Show a notice only when the person would otherwise miss the effect: a dialog that has closed, an action on another record, or a background job. Also show one when the action can be undone (`undo` puts it back). A save the person sees in place stays quiet. An error stays on the page, in the notices slot of the record shell or in the dialog's own error. It is not a notice.
+
+The notice sits at the bottom centre, on the surface colour with the default border (`kanap.bg.primary`, `kanap.border.default`), a small icon (teal for a completed action, neutral for information) and the message. Undo is a text button. It stays 4 seconds, or 8 when Undo is offered. One notice at a time: a new one replaces the previous. Dialogs cover it.
+
 ## Anti-Patterns To Block
 
 Block or refactor these during UI work:
@@ -159,6 +182,7 @@ Block or refactor these during UI work:
 - Auto-focus at page load.
 - Border radius above 12px except true pill chips.
 - Animations above 200ms.
+- A local MUI `Snackbar` for a confirmation. Use `useNotify`.
 
 ## Reference Loading
 
@@ -171,3 +195,5 @@ Read [references/kanap-design-charter.md](references/kanap-design-charter.md) fo
 - Drawer tab and property group rules.
 - AG Grid CSS enforcement details.
 - Full implementation checklist.
+
+Read [references/help-text.md](references/help-text.md) for the help text rule, the three levers (collapsible help, the label carries the example, the empty state says the gesture) and the review checklist.

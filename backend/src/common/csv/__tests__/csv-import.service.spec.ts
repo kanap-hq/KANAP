@@ -96,6 +96,24 @@ const defaultParams: CsvImportParams = {
 
 // ===== Tests =====
 
+/** A translated title is read as its column, a title ending in parentheses included ("Priorité (1-5)"). */
+async function testTranslatedTitlesAreRead() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const config: CsvEntityConfig = {
+    ...createTestConfig(),
+    headerLabels: { title: { fr: 'Titre' }, priority: { fr: 'Priorité (1-5)', en: 'Priority (1-5)' } },
+  };
+  const csv = `Titre;Priorité (1-5);status
+Tâche;3;open`;
+  const result = await service.import(config, createMockFile(csv), { ...defaultParams, dryRun: true }, {
+    manager: createMockManager({ tasks: [] }),
+    tenantId: 't1',
+  });
+  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  assert.equal(result.inserted, 1);
+  assert.deepEqual(result.warnings.filter((warning: any) => warning.row === 0), []);
+}
+
 async function testDryRunDoesNotCommit() {
   const resolver = new CsvResolverService();
   const validators = new CsvJsonValidators();
@@ -910,6 +928,7 @@ Task;16/10/2026 14:30;;;16/10/2026 15:00`;
   await testAccentedWindows1252FileStillImports();
   await testFilesOfEveryLanguageLoad();
   await testReplaceWithoutStoredColumnsIsRefused();
+  await testTranslatedTitlesAreRead();
 
   console.log('CSV import service tests passed.');
 })().catch((err) => {

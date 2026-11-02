@@ -2820,7 +2820,7 @@ async function testPreviewActionsStayScopedToConversation() {
     });
     await assert.rejects(
       () => service.executePreview(context, 'preview-1'),
-      (error: any) => error instanceof ForbiddenException,
+      (error: any) => error instanceof ForbiddenException && (error.getResponse() as { code?: string }).code === 'AI_PREVIEW_NOT_IN_CONVERSATION',
     );
   }
 
@@ -2830,7 +2830,7 @@ async function testPreviewActionsStayScopedToConversation() {
     });
     await assert.rejects(
       () => service.rejectPreview(context, 'preview-1'),
-      (error: any) => error instanceof ForbiddenException,
+      (error: any) => error instanceof ForbiddenException && (error.getResponse() as { code?: string }).code === 'AI_PREVIEW_NOT_IN_CONVERSATION',
     );
   }
 
@@ -2840,7 +2840,7 @@ async function testPreviewActionsStayScopedToConversation() {
     });
     await assert.rejects(
       () => service.createReversePreview(context, 'preview-1'),
-      (error: any) => error instanceof ForbiddenException,
+      (error: any) => error instanceof ForbiddenException && (error.getResponse() as { code?: string }).code === 'AI_PREVIEW_NOT_IN_CONVERSATION',
     );
   }
 }

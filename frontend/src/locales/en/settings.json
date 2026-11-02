@@ -20,6 +20,10 @@
       "mobilePhone": "Mobile phone",
       "language": "Language"
     },
+    "placeholders": {
+      "businessPhone": "e.g., +33 1 23 45 67 89",
+      "mobilePhone": "e.g., +33 6 12 34 56 78"
+    },
     "locale": {
       "autoDetect": "Auto-detect (browser)"
     },

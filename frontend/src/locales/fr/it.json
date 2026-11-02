@@ -3,6 +3,7 @@
     "incidents": {
       "title": "Registre des incidents",
       "newIncident": "Nouvel incident",
+      "empty": "Aucun incident pour l'instant.",
       "importCsv": "Importer CSV",
       "importTitle": "Importer les incidents",
       "exportTitle": "Exporter les incidents",
@@ -67,7 +68,7 @@
     },
     "applications": {
       "title": "Applications",
-      "newAppService": "Nouvelle application / service",
+      "newAppService": "Nouvelle application",
       "empty": "Aucune application pour l'instant.",
       "appService": "Application / Service",
       "importCsv": "Importer CSV",
@@ -1571,6 +1572,9 @@
     "incident": {
       "title": "Incident",
       "newTitle": "Nouvel incident",
+      "creation": {
+        "record": "L’incident"
+      },
       "fields": {
         "title": "Titre"
       },
@@ -1623,10 +1627,7 @@
         "minutes": "{{count}} min"
       },
       "create": {
-        "description": "Description",
-        "titleRequired": "Le titre est obligatoire.",
-        "severityRequired": "La gravité est obligatoire.",
-        "detectedRequired": "La date de détection est obligatoire."
+        "description": "Description"
       },
       "overview": {
         "description": "Description",
@@ -1704,7 +1705,10 @@
     },
     "application": {
       "title": "Application / Service",
-      "newTitle": "Nouvelle application / service",
+      "newTitle": "Nouvelle application",
+      "creation": {
+        "record": "L’application"
+      },
       "indexOfTotal": "({{index}} sur {{total}})",
       "tabs": {
         "overview": "Vue d'ensemble",
@@ -2206,7 +2210,7 @@
         "assignmentAdded": "Affectation ajoutée",
         "removed": "{{name}} retiré.",
         "application": "Application",
-        "environment": "Environnement",
+        "environment": "Déploiement",
         "role": "Rôle",
         "since": "Depuis",
         "notes": "Notes",
@@ -2215,13 +2219,13 @@
         "removeAssignment": "Retirer l'affectation",
         "addAssignmentDialog": "Ajouter une affectation",
         "applicationRequired": "L'application est requise",
-        "environmentRequired": "L'environnement (instance) est requis",
+        "environmentRequired": "Choisissez un déploiement.",
         "roleRequired": "Le rôle est requis",
-        "selectAppForEnv": "Sélectionnez une application pour choisir un environnement.",
-        "chooseEnvironment": "Choisissez un environnement.",
-        "noInstances": "Aucune instance pour cette application",
+        "selectAppForEnv": "Sélectionnez une application pour choisir un déploiement.",
+        "chooseEnvironment": "Choisissez un déploiement.",
         "noServerRoles": "Aucun rôle serveur configuré ; mettez à jour les paramètres de la cartographie SI.",
-        "assign": "Affecter"
+        "assign": "Affecter",
+        "createDeployment": "+ Créer le déploiement {{environment}}"
       },
       "connections": {
         "loadingConnections": "Chargement des connexions…",
@@ -3104,12 +3108,12 @@
         "history": "Historique"
       },
       "deleteTitle": "Supprimer le site ?",
-      "deleteMessage": "Cette action supprimera définitivement ce site et désaffectera automatiquement tous les actifs liés.",
       "deleteUnsavedWarning": "Vous avez également des modifications non enregistrées dans cet espace. Ces modifications seront perdues.",
       "subLocationsAfterCreate": "Les sous-sites sont disponibles après la création du site.",
       "contactsAfterCreate": "Les contacts sont disponibles après la création du site.",
       "relationsAfterCreate": "Les relations sont disponibles après la création du site.",
       "untitled": "Site sans nom",
+      "notFound": "Site introuvable.",
       "previous": "Site précédent",
       "next": "Site suivant",
       "namePlaceholder": "ex. : Centre d'exploitation Paris",
@@ -3181,7 +3185,9 @@
         "deleteUsage_other": "<strong>{{count}} actifs sont</strong> actuellement affectés à <strong>{{name}}</strong>. Supprimer ce sous-site les laissera sans sous-site.",
         "deleteKeepsAssets": "Les fiches des actifs sont conservées ; seul leur lien au sous-site est effacé.",
         "deleteAnyway": "Supprimer quand même"
-      }
+      },
+      "createOption": "+ Créer le site « {{name}} »",
+      "createNew": "+ Nouveau site"
     }
   },
   "components": {

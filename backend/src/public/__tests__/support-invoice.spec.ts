@@ -76,6 +76,7 @@ function buildController() {
     turnstile as any,
     { getClient: () => stripe } as any,
     {} as any,
+    {} as any,
   );
   return { controller, calls, state };
 }

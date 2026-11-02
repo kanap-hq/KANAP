@@ -13,6 +13,7 @@ import {
   countDifferences,
   countTenantRows,
   createActivatedTenant,
+  inTenant,
   runSpecs,
 } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
 
@@ -48,6 +49,7 @@ async function testActivationMatchesHelper() {
     {} as any,
     {} as any,
     {} as any,
+    { provisionTrialSampleData: async () => undefined } as any,
   );
   const token = randomBytes(32).toString('hex');
   const slug = `rs-act-${randomUUID().slice(0, 8)}`;
@@ -72,6 +74,28 @@ async function testActivationMatchesHelper() {
     const helped = await countTenantRows(helper.tenantId);
     assert.deepEqual(countDifferences(activated, helped), [], 'row counts per table, activation vs helper');
     assert.ok(activated.chart_of_accounts === 1 && activated.accounts > 0, 'activation provisioned the chart of accounts');
+    const technologies = await inTenant(activatedId!, (manager) => manager.query(
+      `SELECT catalog_key, family, vulnerability_alerts, cpe_products FROM technologies WHERE tenant_id = $1 ORDER BY catalog_key`,
+      [activatedId],
+    ));
+    assert.deepEqual(technologies.map((t: any) => [t.catalog_key, t.family, t.vulnerability_alerts]), [
+      ['ubuntu', 'operating_system', false],
+      ['windows-server', 'operating_system', false],
+    ], 'activation adopts the starting technologies, alerts off');
+    assert.ok(technologies.every((t: any) => t.cpe_products.length > 0), 'with their CPE identifiers');
+    const classification = await inTenant(activatedId!, (manager) => manager.query(
+      `SELECT 'source' AS kind, name, is_system FROM portfolio_sources WHERE tenant_id = $1
+       UNION ALL SELECT 'category', name, is_system FROM portfolio_categories WHERE tenant_id = $1
+       UNION ALL SELECT 'stream', name, false FROM portfolio_streams WHERE tenant_id = $1
+       ORDER BY 1, 2`,
+      [activatedId],
+    ));
+    assert.deepEqual(classification.map((r: any) => [r.kind, r.name]), [
+      ['category', 'Business Applications'], ['category', 'Cybersecurity'], ['category', 'End-user Computing & Services'],
+      ['category', 'Infrastructure & Operations'], ['category', 'Innovation & Digital Transformation'],
+      ['source', 'Business'], ['source', 'Compliance'], ['source', 'IT'],
+    ], 'activation seeds the starting sources and categories, no stream');
+    assert.ok(classification.every((r: any) => r.is_system === false), 'ordinary values: renamed or deleted like any other');
     assert.deepEqual(await baselineSnapshot(helper.tenantId), await baselineSnapshot(activatedId!));
   } finally {
     const created = await dataSource.query(`SELECT id FROM tenants WHERE slug = $1`, [slug]);
@@ -87,6 +111,7 @@ async function testActivationInBrowserLanguage() {
     svc.tenants, svc.users, svc.baseline, dataSource,
     { send: async () => undefined } as any,
     svc.auth, dataSource.getRepository(TrialSignup), {} as any, {} as any, {} as any,
+    { provisionTrialSampleData: async () => undefined } as any,
   );
   const token = randomBytes(32).toString('hex');
   const slug = `rs-actfr-${randomUUID().slice(0, 8)}`;
@@ -104,9 +129,16 @@ async function testActivationInBrowserLanguage() {
     const names = await dataSource.transaction(async (manager) => {
       await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
       const rows = await manager.query(`SELECT name FROM analytics_axes WHERE tenant_id = $1 ORDER BY sort_order`, [tenant.id]);
-      return rows.map((row: { name: string }) => row.name);
+      const sources = await manager.query(`SELECT name FROM portfolio_sources WHERE tenant_id = $1 ORDER BY display_order`, [tenant.id]);
+      const categories = await manager.query(`SELECT name FROM portfolio_categories WHERE tenant_id = $1 ORDER BY display_order`, [tenant.id]);
+      return [rows, sources, categories].map((list) => list.map((row: { name: string }) => row.name));
     });
-    assert.deepEqual(names, ['Nature de coût', 'Domaine IT', 'Motif', 'Priorité']);
+    assert.deepEqual(names, [
+      ['Nature de coût', 'Domaine IT', 'Motif', 'Priorité'],
+      ['Informatique', 'Métier', 'Conformité'],
+      ['Applications métier', 'Poste de travail et services aux utilisateurs', 'Infrastructure et exploitation',
+        'Innovation et transformation numérique', 'Cybersécurité'],
+    ]);
   } finally {
     const created = await dataSource.query(`SELECT id FROM tenants WHERE slug = $1`, [slug]);
     await cleanupTenants(created.map((row: { id: string }) => row.id));

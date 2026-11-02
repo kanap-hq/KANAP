@@ -31,10 +31,3 @@ export class PortfolioSource {
   @Column('timestamptz', { default: () => 'now()' })
   updated_at!: Date;
 }
-
-// Default sources to seed
-export const DEFAULT_SOURCES = [
-  { name: 'IT', description: 'Internal IT initiative', display_order: 0, is_system: true },
-  { name: 'Business', description: 'Business-driven request', display_order: 1, is_system: true },
-  { name: 'Compliance', description: 'Regulatory or compliance requirement', display_order: 2, is_system: true },
-];

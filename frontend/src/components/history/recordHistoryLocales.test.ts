@@ -39,7 +39,7 @@ const LANGUAGE_NAMES = ['en', 'fr', 'de', 'es'] as const;
 const ID = '11111111-2222-4333-8444-555555555555';
 const EVENT_KINDS = ['link', 'attachment', 'contact', 'application', 'technology', 'asset', 'contract', 'project', 'request', 'task', 'line', 'value', 'supplier',
   'budget_line', 'relation_contains', 'relation_depends_on', 'member', 'owner_it', 'owner_business', 'operating_system',
-  'sub_item', 'person', 'owner', 'company', 'dependency', 'country', 'key_identifier', 'interface_leg', 'mapping_set',
+  'sub_item', 'person', 'owner', 'company', 'dependency', 'country', 'key_identifier', 'interface_leg', 'mapping_set', 'mapping_group', 'mapping_rule',
   'middleware', 'renewal_task', 'instance', 'assignment', 'department', 'suite', 'business_process', 'task_owner', 'task_viewer',
   'phase', 'milestone', 'time_entry', 'it_team', 'business_team'];
 const ACTORS = ['assistant', 'assistantFor', 'unknown'];

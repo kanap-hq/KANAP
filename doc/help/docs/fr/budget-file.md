@@ -40,6 +40,8 @@ Le fichier Excel a les mêmes colonnes sur une feuille nommée `budget`. Les mon
 
 Exporter une liste sans ligne budgétaire donne la seule ligne d'en-tête. C'est votre modèle.
 
+La fenêtre d'import propose aussi **Télécharger un exemple** : trois lignes d'exemple avec les colonnes principales sur la première feuille, les autres colonnes sur la feuille **Avancé**, et ce que chaque colonne accepte sur la feuille **Notes**. Voir [Fichiers d'exemple](csv-files.md#example-files).
+
 Chaque export est enregistré dans le [journal d'audit](admin.md#journal-daudit), avec ses réglages, son format et son nombre de lignes.
 
 ## Les colonnes

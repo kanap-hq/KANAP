@@ -20,24 +20,33 @@ Erfassen Sie keine Routinearbeit: Passwortzurücksetzungen, Probleme einzelner B
 
 ---
 
-## Erste Schritte
+## Erste Schritte { #getting-started }
 
-Gehen Sie zu **IT-Landschaft > Vorfälle**, um das Register zu sehen. Klicken Sie auf **Neuer Vorfall**, um einen zu erfassen.
+Gehen Sie zu **IT-Landschaft > Vorfälle**, um das Register zu sehen. So erfassen Sie einen Vorfall:
 
-**Pflichtfelder**:
+1. Klicken Sie auf **Neuer Vorfall**. Die Seite des Vorfalls öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
+2. Geben Sie eine kurze, sachliche Zusammenfassung ein, z. B. „Mail-Dienst am Standort Lyon nicht verfügbar".
+3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. KANAP erfasst den Vorfall sofort. Seine Referenz (`INC-14`) erscheint und alle Reiter öffnen sich.
 
-- **Titel**: eine kurze, sachliche Zusammenfassung, z. B. „Mail-Dienst am Standort Lyon nicht verfügbar"
+Der neue Vorfall ist **Offen**, mit dem Schweregrad **Mittel**, jetzt erkannt, und Sie sind der Melder. Füllen Sie dann den Rest aus wie bei jedem Vorfall:
+
 - **Schweregrad**: Kritisch, Hoch, Mittel oder Niedrig
-- **Erkannt**: wann der Vorfall bemerkt wurde (standardmäßig jetzt)
-
-**Auf demselben Bildschirm empfohlen**:
-
+- **Erkannt**: wann der Vorfall bemerkt wurde
+- **Begonnen**: wann der Vorfall tatsächlich begann, falls das vom Zeitpunkt der Entdeckung abweicht
 - **Beschreibung**: was passiert ist, wie beobachtet
 - **Kategorie**: Infrastruktur, Sicherheit, Anwendung, Daten, Lieferant, Sonstiges (konfigurierbar, siehe [Kategorien](#kategorien))
-- **Begonnen**: wann der Vorfall tatsächlich begann, falls das vom Zeitpunkt der Entdeckung abweicht
 - **Verantwortlicher**: wer die Bearbeitung übernimmt
 
-Der **Melder** sind standardmäßig Sie. Beide Daten akzeptieren Werte in der Vergangenheit: Ein am Montagmorgen entdeckter Vorfall kann als am Samstagabend begonnen erfasst werden.
+Beide Daten akzeptieren Werte in der Vergangenheit: Ein am Montagmorgen entdeckter Vorfall kann als am Samstagabend begonnen erfasst werden. Drücken Sie Escape im leeren Titel, um die Seite zu verlassen, ohne etwas zu erfassen.
+
+### Erstellen oder abbrechen { #cancelling-a-creation }
+
+Solange der Vorfall erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen**. Beide bleiben, bis Sie den Vorfall verlassen.
+
+- **Erstellen** behält den Vorfall und schließt ihn. Sie kehren dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm. Bei leerem Titel schließt sich nichts, und der Titel verlangt einen
+- **Abbrechen** schließt, ohne etwas zu behalten. Ein bereits erstellter Vorfall wird gelöscht. Wenn Sie mehr als den Titel eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Vorfällen abbrechen
+
+**Vorfall abbrechen** ist ausgeblendet, solange der Vorfall erstellt wird. Das Abbrechen der Erstellung wird abgelehnt, sobald der Vorfall geschlossen oder abgebrochen ist oder Daten zur behördlichen Meldung enthält (siehe [Einen Vorfall löschen](#einen-vorfall-loschen)). Verlassen Sie den Vorfall auf andere Weise, bleibt er im Register. Die Referenz einer abgebrochenen Erstellung wird nicht wiederverwendet.
 
 **Berechtigungen**:
 
@@ -76,7 +85,7 @@ Die Liste ist das Register selbst: alle Vorfälle, die zuletzt erkannten zuerst.
 
 **Zusätzliche Spalten** (standardmäßig ausgeblendet, über die Spaltenauswahl verfügbar): **Geschlossen**, **Anwendungen**, **Erstellt**, **Personenbezogene Daten**, **Meldung erforderlich** und **Gemeldet am**. **Personenbezogene Daten** und **Meldung erforderlich** bieten einen Ja/Nein-Filter.
 
-**Filtern**: Kategorie, Schweregrad, Status und Verantwortlicher bieten Kontrollkästchenfilter, deren Optionen aus den aktuell angezeigten Vorfällen berechnet werden, Sie sehen also nur Werte, die in der Ergebnismenge vorkommen. Datumsspalten bieten Datumsfilter, auch als Bereich: Filtern Sie **Erkannt** zwischen zwei Daten, um einen Quartals- oder Jahresauszug zu erzeugen. Die Suche erfasst Titel, Beschreibung, Referenz (`INC-14`) sowie Namen und Referenzen verknüpfter Assets und Anwendungen: Eine Suche nach einem Hostnamen wie `PAR-ESX-01` listet die Vorfälle zu diesem Asset. Wörter, die nur in der Vorfallanalyse vorkommen, findet die globale Suche oder der Assistent, nicht dieses Feld. Die globale Suche, die `@`-Auswahl in Plaid und der MCP-Server finden einen Vorfall auch über den Namen, die Referenz `AST-N`, den Hostnamen oder den FQDN seiner verknüpften Assets.
+**Filtern**: Kategorie, Schweregrad, Status und Verantwortlicher bieten Kontrollkästchenfilter, deren Optionen aus den aktuell angezeigten Vorfällen berechnet werden, Sie sehen also nur Werte, die in der Ergebnismenge vorkommen. Datumsspalten bieten Datumsfilter, auch als Bereich: Filtern Sie **Erkannt** zwischen zwei Daten, um einen Quartals- oder Jahresauszug zu erzeugen. Die Suche erfasst Titel, Beschreibung, Referenz (`INC-14`) sowie Namen und Referenzen verknüpfter Assets, Anwendungen und Technologien: Eine Suche nach einem Hostnamen wie `PAR-ESX-01` listet die Vorfälle zu diesem Asset. Wörter, die nur in der Vorfallanalyse vorkommen, findet die globale Suche oder der Assistent, nicht dieses Feld. Die globale Suche, die `@`-Auswahl in Plaid und der MCP-Server finden einen Vorfall auch über den Namen und die Referenz eines verknüpften Assets (`AST-N`, Hostname oder FQDN), einer verknüpften Anwendung (`APP-N`) oder einer verknüpften Technologie (`TEC-N`). Ein Treffer ist der Vorfall, mit seinem Titel und seiner Referenz (`INC-N`).
 
 **Tipp**: Kombinieren Sie Schweregrad = Kritisch, Hoch mit einem Bereich für **Erkannt**, um die Auswahlliste zu erstellen, die die meisten Steuerungsgremien und Prüfungen verlangen.
 

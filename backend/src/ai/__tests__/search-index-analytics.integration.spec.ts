@@ -16,6 +16,7 @@ import { BudgetLineNature1853950000000 as LaterMigration } from '../../migration
 import { undoLotZ1 } from '../../spend/__tests__/undo-lot-z1.fixtures';
 import { writeItemAnalyticsValues } from '../../spend/item-analytics.util';
 import { linkValue, runSpecs, seedLine, seedTenant, setCurrentTenant, withRollback } from '../../analytics/__tests__/analytics-test-helpers';
+import { lockOwnTables } from '../../data-access/__tests__/data-access-test-helpers';
 
 // Migration 1853940000000 (lot S), against a real database, each test in a transaction rolled back
 // at the end: an OPEX or CAPEX line's search entry carries the names of the values it holds on the
@@ -41,10 +42,12 @@ const INDEX_TYPE: Record<Kind, 'spend_items' | 'capex_items'> = { opex: 'spend_i
 const LINES: Record<Kind, string> = { opex: 'spend_items', capex: 'spend_items' };
 const LINKS: Record<Kind, string> = { opex: 'spend_item_analytics_values', capex: 'spend_item_analytics_values' };
 
-// Current native-reference functions. Keep the historical down() oracle below unchanged.
+// Current refresh bodies on a migrated database. spend_items is 1854020000000.
+// capex_items is that body after 1855960000000 (description, account, contracts at weight C).
+// Keep the historical down() oracle below unchanged.
 const NATIVE_BODIES = {
   spend_items: 'ba4c55c53c6bf8c1e30ef1bd8402c308',
-  capex_items: '6c6de8f464d72fe85b84098567a60834',
+  capex_items: '71f483f96bc14dc813e388809869bd71',
 };
 /** md5 of the refresh bodies of 1853000000000 (OPEX, generated) and 1853220000000 (CAPEX). */
 const PREVIOUS_BODIES = {
@@ -502,6 +505,7 @@ async function testMigration() {
     for (const kind of KINDS) await linkValue(runner, kind, d.tenantId, lines[kind], d.nature, d.materiel);
     // Lot Z1 undone, newest first (other specs' residue repaired first): the CAPEX line and its value back in capex_*, with their ids.
     // 1854500000000 made these trigger functions SECURITY DEFINER (data-scoped access): undone first.
+    await lockOwnTables((sql) => runner.query(sql));
     await asMigration(runner, () => new DataAccessLinePolicies1854500000000().down(runner));
     await asMigration(runner, () => new NativeMigration().down(runner));
     await asMigration(runner, () => undoLotZ1(runner));

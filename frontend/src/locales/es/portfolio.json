@@ -302,6 +302,9 @@
         "fallback": "Proyecto sin título",
         "new": "Nuevo proyecto"
       },
+      "creation": {
+        "record": "El proyecto"
+      },
       "summary": {
         "cards": {
           "deliverySnapshot": "Resumen de entrega",
@@ -372,7 +375,6 @@
         "phase": "Fase",
         "plannedEnd": "Fin planificado",
         "plannedStart": "Inicio planificado",
-        "projectName": "Nombre del proyecto",
         "source": "Origen",
         "status": "Estado",
         "stream": "Línea"
@@ -632,6 +634,9 @@
         "fallback": "Solicitud sin título",
         "new": "Nueva solicitud"
       },
+      "creation": {
+        "record": "La solicitud"
+      },
       "summary": {
         "cards": {
           "analysisSnapshot": "Resumen del análisis",
@@ -677,7 +682,6 @@
         "itContributors": "Colaboradores IT",
         "itLead": "Responsable IT",
         "itSponsor": "Patrocinador IT",
-        "requestName": "Nombre de la solicitud",
         "requestor": "Solicitante",
         "source": "Origen",
         "status": "Estado",

@@ -186,10 +186,8 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
     const row = (section?.rows as Array<{ id: string }> | null | undefined)?.find((item) => item.id === targetId);
     return section && row ? section.label(row) : '';
   };
-  const handleLink = async (kind: string, targetId: string, name?: string) => {
-    if (await link(kind, targetId)) {
-      feedback.info(t('workspace.application.relations.feedback.linked', { name: name || nameOf(kind, targetId) }));
-    }
+  const handleLink = async (kind: string, targetId: string) => {
+    await link(kind, targetId);
   };
   // Unlinking stays immediate; the message offers to put the link back.
   const handleUnlink = async (kind: string, targetId: string) => {
@@ -236,7 +234,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
         loaded
         canEdit={canEdit}
         searchKeyPrefix="application"
-        onLink={(kind, targetId, name) => { void handleLink(kind, targetId, name); }}
+        onLink={(kind, targetId) => { void handleLink(kind, targetId); }}
         onUnlink={(kind, targetId) => { void handleUnlink(kind, targetId); }}
       />
       )}
@@ -246,7 +244,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
         canEdit={canEdit}
         referenceOf={(row) => (row.type === 'budget_line' ? refOf('budget', row.item_number) : row.type === 'project' ? refOf('project', row.item_number) : null)}
         href={(row) => (row.type === 'contract' ? `/ops/contracts/${row.id}/overview` : pathOf(row.type === 'budget_line' ? 'budget' : 'project', row))}
-        onLink={(row) => { void handleLink(SUGGESTION_KIND[row.type], row.id, row.name); }}
+        onLink={(row) => { void handleLink(SUGGESTION_KIND[row.type], row.id); }}
       />
 
       {alsoParts.length > 0 && (

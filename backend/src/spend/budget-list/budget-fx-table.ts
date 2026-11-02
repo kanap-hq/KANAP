@@ -127,13 +127,14 @@ export async function buildFxTable(
   tenantId: string,
   years: number[],
 ): Promise<FxTable> {
-  // One connection in the request's transaction: the two reads run one after the other.
+  // One connection in the request's transaction: the two reads run one after the other. Ordered:
+  // the table is bound into the request's statement, which stays the same from one call to the next.
   const currencyRows: Array<{ raw: string; cur: string }> = await manager.query(
-    `SELECT DISTINCT ${fxKeyCurrency('i')} AS raw, ${lineCurrencySql('i')} AS cur FROM ${config.itemTable} i WHERE i.tenant_id = $1${natureAnd('i', config.nature)}`,
+    `SELECT DISTINCT ${fxKeyCurrency('i')} AS raw, ${lineCurrencySql('i')} AS cur FROM ${config.itemTable} i WHERE i.tenant_id = $1${natureAnd('i', config.nature)} ORDER BY 1, 2`,
     [tenantId],
   );
   const setRows: Array<{ id: string }> = await manager.query(
-    `SELECT s.id FROM currency_rate_sets s WHERE s.tenant_id = $1`,
+    `SELECT s.id FROM currency_rate_sets s WHERE s.tenant_id = $1 ORDER BY s.id`,
     [tenantId],
   );
   const currencies = currencyRows;

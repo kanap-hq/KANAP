@@ -3,7 +3,8 @@ import { linkedLineOf } from '../../spend/budget-nature';
 import { hiddenLineCount } from '../../data-access/hidden-links';
 import { copyClassification } from './application-classification';
 import { classificationPatch, classificationReadState } from './application-classification';
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { requestContextMissing, businessContributorScope } from '../../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { assertMarkdownSize } from '../../common/markdown-limits';
@@ -16,7 +17,7 @@ import { ApplicationLink } from '../application-link.entity';
 import { ApplicationAttachment } from '../application-attachment.entity';
 import { ApplicationDataResidency } from '../application-data-residency.entity';
 import { AuditService } from '../../audit/audit.service';
-import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { formatApplicationCategoryOptions, ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { StorageService } from '../../common/storage/storage.service';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
@@ -140,7 +141,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
 
     const mg = this.getManager(opts);
     if (opts?.accessScope) {
-      throw new ForbiddenException('Business Contributor can only read assigned applications');
+      throw businessContributorScope('applications', 'Business Contributor can only read assigned applications');
     }
     const appId = await this.resolveApplicationIdentifier(applicationId, mg);
     const app = await mg.getRepository(Application).findOne({ where: { id: appId } });
@@ -191,7 +192,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
   }
 
   async reviewClassification(id: string, expectedRevision: number, userId: string | null, opts?: ServiceOpts) {
-    if (!userId) throw new ForbiddenException('A signed-in reviewer is required');
+    if (!userId) throw requestContextMissing('A signed-in reviewer is required');
     return this.getManager(opts).transaction(async (manager) => {
       const tenantId = await this.getCurrentTenantId(manager);
       const appId = await this.resolveApplicationIdentifier(id, manager);
@@ -203,7 +204,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       if (!Number.isInteger(expectedRevision) || app.classification_revision !== expectedRevision) throw new ConflictException('Classification changed; reload before marking as reviewed');
       if (classificationReadState(app).classification_review_state === 'incomplete') throw new BadRequestException('Set business criticality, cyber criticality, data confidentiality, recovery wave and a brief justification before review');
       const actor = await manager.query('SELECT id FROM users WHERE id = $1 AND tenant_id = $2', [userId, tenantId]);
-      if (!actor.length) throw new ForbiddenException('Reviewer must belong to this tenant');
+      if (!actor.length) throw requestContextMissing('Reviewer must belong to this tenant');
       const before = { ...app };
       app.classification_review = { user_id: userId, reviewed_at: new Date().toISOString(), revision: app.classification_revision };
       await repo.save(app);
@@ -273,6 +274,10 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       disabled_at: null,
     });
     const saved = (await repo.save(entity as any)) as Application;
+    // The reference (`APP-n`) is given by the database on insert: the page opens the new
+    // application under it, with the reference in its header.
+    const [{ sequential_id }] = await mg.query(`SELECT sequential_id FROM applications WHERE id = $1 AND tenant_id = $2`, [saved.id, tenantId]);
+    saved.sequential_id = sequential_id;
     await this.audit.log({ table: 'applications', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
     return Object.assign(saved, classificationReadState(saved));
   }
@@ -557,14 +562,15 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     fallback?: string,
   ): Promise<string> {
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
-    const allowed = (settings.lifecycleStates || []).map((item: any) => item.code);
-    const fallbackCode = this.pickLifecycleFallback(fallback ?? 'active', allowed);
+    const codes = (settings.lifecycleStates || []).map((item: any) => item.code);
+    const fallbackCode = this.pickLifecycleFallback(fallback ?? 'active', codes);
     if (value === undefined || value === null || String(value).trim() === '') {
       return fallbackCode;
     }
     const normalized = String(value).trim().toLowerCase();
-    if (!allowed.includes(normalized)) {
-      throw applicationBadRequest('lifecycle_invalid', `Invalid lifecycle "${value}"`, { value: String(value) });
+    if (!codes.includes(normalized)) {
+      const allowed = formatApplicationCategoryOptions(settings.lifecycleStates || []);
+      throw applicationBadRequest('lifecycle_invalid', `Invalid lifecycle "${value}". Use one of: ${allowed}.`, { value: String(value), allowed });
     }
     return normalized;
   }
@@ -592,7 +598,11 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
         useDefaultForEmpty: opts?.useDefaultForEmpty,
       });
     } catch (error) {
-      if (error instanceof BadRequestException) throw applicationBadRequest('category_invalid', error.message, { value: String(value ?? '') });
+      if (error instanceof BadRequestException) {
+        const options = await this.itOpsSettings.getApplicationCategoryOptions(tenantId, { manager });
+        const allowed = formatApplicationCategoryOptions(options);
+        throw applicationBadRequest('category_invalid', error.message, { value: String(value ?? ''), allowed });
+      }
       throw error;
     }
   }

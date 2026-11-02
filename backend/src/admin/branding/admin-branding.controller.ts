@@ -3,7 +3,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   NotFoundException,
   Patch,
@@ -13,6 +12,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { codedForbidden } from '../../auth/module-right-required';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { EntityManager } from 'typeorm';
 import * as path from 'path';
@@ -245,7 +245,7 @@ export class AdminBrandingController {
 
   private async getTenantFromRequest(req: any, manager?: EntityManager): Promise<Tenant> {
     if (req?.isPlatformHost) {
-      throw new ForbiddenException('Branding is not available on the platform admin host');
+      throw codedForbidden('BRANDING_NOT_ON_PLATFORM_HOST', 'Branding is not available on the platform admin host');
     }
     const tenantMeta = req?.tenant;
     if (!tenantMeta?.id) {

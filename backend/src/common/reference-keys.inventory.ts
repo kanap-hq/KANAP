@@ -106,6 +106,7 @@ export const UNKEYED_REFERENCE_COLUMNS: Readonly<Record<string, string>> = {
   'tenants.billing_tax_id': EXTERNAL,
   'tenants.entra_tenant_id': EXTERNAL,
   'tenants.stripe_customer_id': EXTERNAL,
+  'trial_discovery_calls.external_id': EXTERNAL,
 
   // Not references.
   'ai_api_keys.oauth_code_jti': NOT_A_REFERENCE,

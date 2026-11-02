@@ -415,10 +415,18 @@ export class TechnologyLinksService {
   }
 
   /**
-   * Declare the technology on several applications at once (no version, manual). Idempotent. Every
-   * id must name an application the caller reads (400 otherwise).
+   * Declare the technology on several applications at once (manual), all at one version: `version`
+   * names it as the other link writes do (an existing version, a label resolved or created, or none
+   * for "version unknown"). Idempotent. Every id must name an application the caller reads (400
+   * otherwise), checked before a label creates a version.
    */
-  async addApplications(idOrRef: string, applicationIds: unknown, opts: LinkOpts, applications: { scope?: ParticipationAccessScope }) {
+  async addApplications(
+    idOrRef: string,
+    applicationIds: unknown,
+    opts: LinkOpts,
+    applications: { scope?: ParticipationAccessScope },
+    version: LinkInput = {},
+  ) {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef, true);
     const ids = Array.from(new Set((Array.isArray(applicationIds) ? applicationIds : []).map((id) => uuidOrThrow(id, 'One or more applications not found.'))));
@@ -426,15 +434,16 @@ export class TechnologyLinksService {
     if (ids.length > 500) throw new BadRequestException('At most 500 applications at once.');
     const visible = await this.visibleApplicationIds(mg, tenantId, ids, applications.scope);
     if (visible.size !== ids.length) throw new BadRequestException('One or more applications not found.');
+    const versionId = await versionOfInput(mg, tenantId, tech.id, version ?? {}, this.versionAudit(opts));
     const [{ added }]: Array<{ added: string[] }> = await mg.query(
       `WITH ins AS (
-         INSERT INTO application_technologies (tenant_id, application_id, technology_id)
-         SELECT $1, a, $2 FROM unnest($3::uuid[]) AS a
+         INSERT INTO application_technologies (tenant_id, application_id, technology_id, technology_version_id)
+         SELECT $1, a, $2, $4 FROM unnest($3::uuid[]) AS a
          ON CONFLICT ON CONSTRAINT application_technologies_key DO NOTHING
          RETURNING application_id
        )
        SELECT COALESCE(array_agg(application_id::text ORDER BY application_id), '{}') AS added FROM ins`,
-      [tenantId, tech.id, ids],
+      [tenantId, tech.id, ids, versionId],
     );
     if (added.length) {
       // One audit row per application, the application in the payload: the technology's history
@@ -442,7 +451,7 @@ export class TechnologyLinksService {
       for (const applicationId of added) {
         await this.audit.log(this.auditEntry({
           table: 'application_technologies', recordId: tech.id, action: 'update',
-          before: null, after: { application_id: applicationId }, userId: opts.userId ?? null,
+          before: null, after: { application_id: applicationId, ...(versionId ? { technology_version_id: versionId } : {}) }, userId: opts.userId ?? null,
         }, opts), { manager: mg });
       }
       await this.linksChanged(mg, tenantId, tech.id);

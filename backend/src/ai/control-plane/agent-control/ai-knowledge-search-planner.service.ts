@@ -1,14 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
 import { AiExecutionContextWithManager } from '../../ai.types';
-import { llmCostEur } from '../../ai-llm-cost.util';
 import {
   compileSystemPrompt,
   CompiledGuidance,
   RUNTIME_SAFETY_FLOOR_INTERPRETER,
   RUNTIME_SAFETY_FLOOR_PLANNER,
 } from './ai-agent-prompt-compiler.service';
-import { AiAgentLlmClient } from './ai-agent-llm-client';
+import { AiAgentLlmClient, agentCallCostEur } from './ai-agent-llm-client';
 import { TicketNeedRepresentation } from './ai-ticket-need-representation.types';
 import { estimateJsonTokens } from './json-token-estimate';
 import { HTML_TAGS } from '../../../common/text-scan';
@@ -531,7 +530,7 @@ export class AiKnowledgeSearchPlannerService {
         model: result.runtime ? `${result.runtime.providerId}:${result.runtime.model}` : null,
         usage: result.usage,
         estimated_tokens: actualInputTokens + actualOutputTokens,
-        estimated_cost_eur: llmCostEur(actualInputTokens, actualOutputTokens, result.runtime),
+        estimated_cost_eur: agentCallCostEur(actualInputTokens, actualOutputTokens, result.runtime, result.usage),
         latency_ms: result.latencyMs,
       };
       if (!result.ok) {
