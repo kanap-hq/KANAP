@@ -321,11 +321,12 @@ The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Form
 
 Keep your contract list in sync with other tools using CSV files or Excel workbooks (`contracts:admin`).
 
-**Export**: downloads the contracts the list shows (or, on request in the dialog, every contract) with these columns: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. The computed dates (term end, deadlines, state) are not exported.
+**Export**: downloads the contracts the list shows (or, on request in the dialog, every contract). The columns are titled in the language of your screen; their technical names, which the import also reads, are `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. The computed dates (term end, deadlines, state) are not exported.
 
 **Import**:
 
 - Use **Preflight** to check the file before applying it
+- **Download an example** in the import dialog gives two sample contracts and what each column takes. See [Example files](csv-files.md#example-files)
 - A row is matched to a contract by contract name and supplier
 - Supports creation and updates
 - The file has no end of validity column. On an update, a blank `status`, or one equal to the contract's current status, keeps its end of validity. A different status applies it: `enabled` clears the end of validity, and `disabled` ends the contract today unless its end of validity has already passed

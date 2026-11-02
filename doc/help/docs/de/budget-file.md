@@ -40,6 +40,8 @@ Die Excel-Datei hat dieselben Spalten auf einem Blatt namens `budget`. Beträge 
 
 Der Export einer Liste ohne Budgetzeilen ergibt die Kopfzeile allein. Das ist Ihre Vorlage.
 
+Der Importdialog bietet außerdem **Beispiel herunterladen** an: drei Beispielzeilen mit den wichtigsten Spalten auf dem ersten Blatt, die übrigen Spalten auf dem Blatt **Erweitert** und was jede Spalte aufnimmt auf dem Blatt **Hinweise**. Siehe [Beispieldateien](csv-files.md#example-files).
+
 Jeder Export wird im [Audit-Protokoll](admin.md#audit-protokoll) aufgezeichnet, mit seinen Einstellungen, seinem Format und seiner Zeilenzahl.
 
 ## Die Spalten

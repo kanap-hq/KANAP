@@ -533,6 +533,7 @@ Desde la lista de Aplicaciones:
 - **Exportar**: Descargar aplicaciones a un archivo CSV o un libro de Excel
 - **Importar**: Subir un archivo CSV o un libro de Excel para crear o actualizar aplicaciones
 - **Descargar plantilla** (desde dentro del diálogo de importación): Obtener un CSV en blanco con los encabezados correctos
+- **Descargar un ejemplo** (desde dentro del diálogo de importación): un libro de Excel con aplicaciones de ejemplo y lo que admite cada columna. Consulte [Archivos de ejemplo](csv-files.md#example-files)
 
 **Permisos requeridos**: `applications:admin` para operaciones de importación/exportación.
 
@@ -542,7 +543,7 @@ Desde la lista de Aplicaciones:
 
 **Formato**: **CSV** o **Excel (.xlsx)**, elegido en el diálogo y recordado por su navegador. El libro contiene las mismas columnas que el CSV en una hoja, con los números y las fechas como valores que Excel puede ordenar y filtrar. La importación lee los dos; en un libro, lee la primera hoja. Consulte [Archivos CSV y Excel](csv-files.md).
 
-**Columnas**: el archivo empieza por `id` y `reference` (`APP-12`), y después las columnas siguen el espacio de trabajo, pestaña por pestaña. La importación ignora `reference`.
+**Columnas**: el archivo empieza por `id` y la referencia (`APP-12`), y después las columnas siguen el espacio de trabajo, pestaña por pestaña. Sus títulos están en el idioma de su pantalla, y la importación los lee en cualquier idioma. La importación ignora la referencia.
 
 **Idioma de los valores**: los valores de catálogo (categoría, ciclo de vida, criticidad, criticidad cibernética, ola de recuperación, clase de datos, métodos de acceso) y el estado se escriben como los muestra la pantalla, en el idioma de su pantalla: `Active` en inglés, `Activo` en español. Un nombre que su organización dio a un valor en **Panorama IT > Configuración** se mantiene tal cual.
 

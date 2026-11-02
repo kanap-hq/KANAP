@@ -40,6 +40,8 @@ The Excel file has the same columns on one sheet named `budget`. Amounts are num
 
 Exporting a list with no line gives the header row alone. That is your template.
 
+The import dialog also offers **Download an example**: three sample lines with the main columns on the first sheet, the other columns on the **Advanced** sheet, and what each column takes on the **Notes** sheet. See [Example files](csv-files.md#example-files).
+
 Every export is recorded in the [audit log](admin.md#audit-log), with its settings, its format and its number of lines.
 
 ## The columns

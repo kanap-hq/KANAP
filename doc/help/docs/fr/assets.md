@@ -408,6 +408,10 @@ Les colonnes du type d'actif, du cycle de vie, du domaine, de la zone d'administ
 
 **Téléchargement du modèle** (depuis la boîte de dialogue d'import) : Télécharge un CSV vierge avec tous les en-têtes de champs importables. Utilisez-le pour préparer des fichiers d'import avec la bonne structure.
 
+**Télécharger un exemple** (depuis la boîte de dialogue d'import) : un classeur Excel de serveurs d'exemple, avec ce que chaque colonne accepte. Voir [Fichiers d'exemple](csv-files.md#example-files).
+
+L'export et le modèle titrent les colonnes dans la langue de votre écran. L'import lit les titres de toutes les langues.
+
 ### Processus d'import
 
 1. **Préparez votre fichier** : un fichier CSV ou un classeur Excel (`.xlsx`). Enregistrez un fichier CSV en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV et Excel](csv-files.md).

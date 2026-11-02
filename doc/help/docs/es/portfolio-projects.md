@@ -395,7 +395,7 @@ Use **Enriquecimiento de datos** cuando desee exportar, ajustar campos seleccion
 
 Las importaciones están diseñadas para cambios masivos controlados:
 
-- descargue primero una plantilla cuando necesite la estructura correcta
+- descargue primero una plantilla cuando necesite la estructura correcta, o un ejemplo para ver proyectos de ejemplo y los valores que admite cada columna ([Archivos de ejemplo](csv-files.md#example-files))
 - valide antes de importar
 - use opciones avanzadas para elegir el comportamiento de enriquecimiento vs reemplazo y las reglas de inserción/actualización
 
