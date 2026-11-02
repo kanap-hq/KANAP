@@ -37,19 +37,20 @@ type Entrypoint = { runMigrationsIfNeeded(options?: RunOptions): Promise<void>; 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const entrypoint: Entrypoint = require(backendPath('scripts', 'migrate-and-start.js'));
 
-type RoleState = { name: string; superuser: boolean; bypassRls: boolean };
+type RoleState = { name: string; superuser: boolean; bypassRls: boolean; bootstrap?: boolean };
 
 /**
  * A data source whose connection fails `connectFailures` times, then whose migrations answer
  * `migrate` (given the run's number). `query` plays PostgreSQL for the role check: it answers
  * `current_user`, `rolsuper` and `rolbypassrls` from `role`, and `ALTER ROLE` clears both flags
- * (or fails with `alterError`). `statements` records every statement, in order with the migrations.
+ * (or fails with `alterError`, after `onAlterError`). `statements` records every statement, in order with the migrations.
  */
 function fakeDataSource(
   connectFailures: number,
   migrate: (run: number) => Promise<Array<{ name: string }>>,
   role: RoleState = { name: 'kanap', superuser: false, bypassRls: false },
   alterError?: Error,
+  onAlterError: () => void = () => undefined,
 ) {
   const calls = { initialize: 0, runMigrations: 0, destroy: 0 };
   const statements: string[] = [];
@@ -60,14 +61,22 @@ function fakeDataSource(
       if (/ALTER ROLE %I NO(SUPERUSER|BYPASSRLS)/.test(sql)) {
         statements.push('alter role');
         alters.push(sql.match(/ALTER ROLE %I ([A-Z ]+)'/)![1]);
-        if (alterError) throw alterError;
+        if (alterError) {
+          onAlterError();
+          throw alterError;
+        }
         role.superuser = false;
         role.bypassRls = false;
         return [];
       }
       if (/FROM pg_roles r\s+WHERE r\.rolname = current_user/.test(sql)) {
         statements.push('read role');
-        return [{ current_user: role.name, is_superuser: role.superuser ? 't' : 'f', can_bypass_rls: role.bypassRls }];
+        return [{
+          current_user: role.name,
+          is_superuser: role.superuser ? 't' : 'f',
+          can_bypass_rls: role.bypassRls,
+          is_bootstrap_role: role.bootstrap === true,
+        }];
       }
       throw new Error(`unexpected statement: ${sql}`);
     },
@@ -253,7 +262,7 @@ async function main(): Promise<void> {
     });
     const { ds, calls, statements } = fakeDataSource(0, async () => [], { name: 'kanap', superuser: false, bypassRls: true }, refused);
     const { lines, exits, sleeps } = await run(ds);
-    assert.deepEqual(statements, ['read role', 'alter role']);
+    assert.deepEqual(statements, ['read role', 'alter role', 'read role'], 'read again after the refusal: still unsafe');
     assert.equal(calls.runMigrations, 0);
     assert.deepEqual(exits, [1]);
     assert.deepEqual(sleeps, []);
@@ -276,6 +285,48 @@ async function main(): Promise<void> {
     assert.deepEqual(exits, []);
     assert.deepEqual(sleeps, [7]);
     assert.match(lines.warn[0], /^\[entrypoint\] DB not ready \(attempt 1\): read ECONNRESET/);
+  }
+
+  // 14. The bootstrap role (the one that created the cluster, POSTGRES_USER of the Docker image) is
+  //     protected whatever its name: PostgreSQL never lets it drop SUPERUSER.
+  {
+    const { ds, calls, statements } = fakeDataSource(0, async () => [], { name: 'kanap', superuser: true, bypassRls: true, bootstrap: true });
+    const { lines, exits } = await run(ds);
+    assert.deepEqual(statements, ['read role'], 'no ALTER ROLE on the bootstrap role');
+    assert.equal(calls.runMigrations, 0);
+    assert.deepEqual(exits, [1]);
+    assert.match(lines.error[0], /protected PostgreSQL role "kanap" with SUPERUSER, BYPASSRLS\. .*Create a dedicated application role/);
+  }
+
+  // 15. Two starts at once: the other one hardened the role first, so this ALTER ROLE is refused
+  //     (the role is no longer superuser). The role is safe: the migrations run.
+  {
+    const role = { name: 'kanap', superuser: true, bypassRls: false };
+    const refused = Object.assign(new Error('permission denied to alter role'), { code: '42501' });
+    const { ds, statements } = fakeDataSource(0, async () => [{ name: 'A' }], role, refused, () => { role.superuser = false; });
+    const { lines, exits } = await run(ds);
+    assert.deepEqual(statements, ['read role', 'alter role', 'read role', 'migrate']);
+    assert.deepEqual(exits, []);
+    assert.ok(lines.log.includes('[entrypoint] PostgreSQL role "kanap" is ready for native RLS enforcement'));
+  }
+
+  // 16. The connection drops during ALTER ROLE: retried like any lost connection, then hardened.
+  {
+    const role = { name: 'kanap', superuser: true, bypassRls: false };
+    const reset = Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' });
+    let alters = 0;
+    const { ds, calls } = fakeDataSource(0, async () => [{ name: 'A' }], role);
+    const query = ds.query.bind(ds);
+    ds.query = async (sql: string): Promise<any> => {
+      if (/ALTER ROLE/.test(sql) && ++alters === 1) throw reset;
+      return query(sql);
+    };
+    const { lines, exits, sleeps } = await run(ds);
+    assert.deepEqual(calls, { initialize: 2, runMigrations: 1, destroy: 2 }, 'reconnected, hardened, migrated');
+    assert.deepEqual(exits, []);
+    assert.deepEqual(sleeps, [7]);
+    assert.ok(lines.warn.some((line) => line.startsWith('[entrypoint] DB not ready (attempt 1)')));
+    assert.deepEqual(role, { name: 'kanap', superuser: false, bypassRls: false });
   }
 
   // 7. SKIP_MIGRATIONS=true: the data source is not even loaded.

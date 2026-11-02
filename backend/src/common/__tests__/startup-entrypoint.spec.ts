@@ -126,6 +126,13 @@ async function main(): Promise<void> {
     assert.match(source, /export async function hardenDatabaseRoleBeforeMigrations\(/);
   }
 
+  // 4b. The API's data source factory migrates through runStartupMigrations, and only there.
+  {
+    const appModule = fs.readFileSync(backendPath('src', 'app.module.ts'), 'utf8');
+    assert.ok(/await runStartupMigrations\(dataSource\);/.test(appModule), 'app.module.ts migrates through runStartupMigrations');
+    assert.ok(!/\.runMigrations\(/.test(appModule), 'app.module.ts runs no migration directly');
+  }
+
   // 5. The API's own migration run (app.module.ts): role check, data-access guard, migrations.
   {
     type Role = { name: string; superuser: boolean; bypassRls: boolean };

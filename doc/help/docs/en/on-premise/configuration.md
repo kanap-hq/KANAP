@@ -219,7 +219,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 GRANT ALL ON SCHEMA public TO kanap;
 ```
 
-At every start, before the migrations, KANAP changes the application role to `NOSUPERUSER NOBYPASSRLS` when it has, or gets back, either attribute. If `DATABASE_URL` points to a protected cluster-admin role (`postgres` or a name starting with `pg_`) with either attribute, start-up stops before the migrations and you must switch to a dedicated app role. If PostgreSQL refuses the change, for example for a `BYPASSRLS` role that is not a superuser or for the role that created the cluster, start-up also stops before the migrations. The log then gives the `ALTER ROLE "<role>" NOSUPERUSER NOBYPASSRLS` command to run as a PostgreSQL superuser.
+At every start, before the migrations, KANAP changes the application role to `NOSUPERUSER NOBYPASSRLS` when it has, or gets back, either attribute. If `DATABASE_URL` points to a protected cluster-admin role (`postgres`, a name starting with `pg_`, or the role that created the cluster) with either attribute, start-up stops before the migrations and you must switch to a dedicated app role. If PostgreSQL refuses the change, for example for a `BYPASSRLS` role that is not a superuser, start-up also stops before the migrations. The log then gives the `ALTER ROLE "<role>" NOSUPERUSER NOBYPASSRLS` command to run as a PostgreSQL superuser.
 
 **The password in the URL.** The password is part of the URL. A password that contains `@ : / # ?` or `%` breaks the URL unless you percent-encode those characters. Generate the password with `openssl rand -hex 24` instead: letters and digits need no encoding. The same applies to every secret you place in a URL.
 
