@@ -17,15 +17,17 @@
     "untitled": "Untitled"
   },
   "errors": {
+    "attachmentRefused": "{{name}}: {{reason}}",
     "generic": "An error occurred.",
     "noResponseBody": "No response body.",
     "sendFailed": "Failed to send message.",
     "streamBufferExceeded": "Stream buffer exceeded the maximum allowed size.",
-    "streamRequestFailed": "Stream request failed."
+    "streamRequestFailed": "Stream request failed.",
+    "uploadFailed": "The file could not be sent."
   },
   "input": {
-    "attach": "Attach image",
-    "dropHint": "Drop image to attach",
+    "attach": "Attach a file",
+    "dropHint": "Drop a file to attach",
     "hintEnter": "Enter to send",
     "hintShiftEnter": "Shift+Enter for new line",
     "placeholder": "Ask Plaid about your KANAP data…",

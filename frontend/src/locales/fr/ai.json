@@ -17,15 +17,17 @@
     "untitled": "Sans titre"
   },
   "errors": {
+    "attachmentRefused": "{{name}} : {{reason}}",
     "generic": "Une erreur s'est produite.",
     "noResponseBody": "Aucun corps de réponse.",
     "sendFailed": "Échec de l'envoi du message.",
     "streamBufferExceeded": "Le tampon de flux a dépassé la taille maximale autorisée.",
-    "streamRequestFailed": "La requête de flux a échoué."
+    "streamRequestFailed": "La requête de flux a échoué.",
+    "uploadFailed": "Le fichier n'a pas pu être envoyé."
   },
   "input": {
-    "attach": "Joindre une image",
-    "dropHint": "Déposer l'image pour la joindre",
+    "attach": "Joindre un fichier",
+    "dropHint": "Déposez un fichier pour le joindre",
     "hintEnter": "Entrée pour envoyer",
     "hintShiftEnter": "Maj+Entrée retour à la ligne",
     "placeholder": "Posez votre question à Plaid sur vos données KANAP…",

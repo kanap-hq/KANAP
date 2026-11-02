@@ -14,6 +14,8 @@ import {
 import { assertPublicHttpTarget } from '../common/ssrf-guard';
 import { getEnvMode, isDevelopmentEnv } from '../common/env';
 import { AiAttachmentService } from './ai-attachment.service';
+import { AiMessageAttachment } from './ai-message-attachment.entity';
+import { TABLE_ATTACHMENT_KIND } from './attachments/table-attachment';
 import { AiConversationService } from './ai-conversation.service';
 import { AiModelResolutionError, AiModelResolverService, ResolvedModel } from './ai-model-resolver.service';
 import { AiMutationPreviewService } from './ai-mutation-preview.service';
@@ -565,6 +567,12 @@ export async function extractMentionContextItems(text: string, manager: EntityMa
     });
   }
   return items.slice(0, 12);
+}
+
+/** A user message with the summaries of its attached spreadsheets after it. */
+function withTableSummaries(content: string, summaries: string[] | undefined): string {
+  if (!summaries || summaries.length === 0) return content;
+  return [content, ...summaries].filter((part) => part.trim().length > 0).join('\n\n');
 }
 
 function formatAttachmentDetail(attachment: {
@@ -1334,6 +1342,27 @@ export class AiChatOrchestratorService {
     return approvalAction.previewIds.length === 1
       ? 'The user explicitly rejected the pending AI preview.'
       : 'The user explicitly rejected multiple pending AI previews.';
+  }
+
+  /**
+   * The summaries of the spreadsheets attached to user messages, by message. A file that can no
+   * longer be read is left out with a warning, as an image is.
+   */
+  private async loadTableSummariesByMessage(
+    rows: AiMessageAttachment[],
+    manager?: EntityManager,
+  ): Promise<Map<string, string[]>> {
+    const byMessage = new Map<string, string[]>();
+    for (const row of rows) {
+      if (!row.message_id || row.kind !== TABLE_ATTACHMENT_KIND) continue;
+      try {
+        const text = await this.attachments.loadTableSummaryText(row, manager);
+        byMessage.set(row.message_id, [...(byMessage.get(row.message_id) ?? []), text]);
+      } catch (err) {
+        this.logger.warn(`Failed to read table attachment ${row.id} for replay: ${(err as Error).message}`);
+      }
+    }
+    return byMessage;
   }
 
   private isTextualConfirmationMessage(userMessage: string): boolean {
@@ -2291,11 +2320,22 @@ export class AiChatOrchestratorService {
           })) {
             const msgs: AiProviderMessage[] = [];
             let replayableToolCallIds = new Set<string>();
+            const tableSummariesAfterApproval = await this.loadTableSummariesByMessage(
+              await this.attachments.listAttachmentsForMessages(
+                historyAfterApproval.filter((msg) => msg.role === 'user').map((msg) => msg.id),
+                ctx.tenantId,
+                ctx.manager,
+              ),
+              ctx.manager,
+            );
             for (const msg of historyAfterApproval) {
               if (msg.role === 'user') {
                 msgs.push({
                   role: 'user',
-                  content: this.toProviderUserContent(msg.content),
+                  content: withTableSummaries(
+                    this.toProviderUserContent(msg.content),
+                    tableSummariesAfterApproval.get(msg.id),
+                  ),
                 });
                 replayableToolCallIds = new Set<string>();
               } else if (msg.role === 'assistant') {
@@ -2478,18 +2518,23 @@ export class AiChatOrchestratorService {
         // Pre-load image attachments for user messages so we can inject them into multimodal
         // content blocks. Only Anthropic currently honors images; other providers ignore them.
         // Performance: at most ~20MB per image x typically <10 attachments per conversation.
+        // Spreadsheets go in as their summary, appended to the message they came with.
         const userMessageIds = history
           .filter((msg) => msg.role === 'user')
           .map((msg) => msg.id);
         const attachmentImagesByMessage = new Map<string, AiProviderImageAttachment[]>();
+        let historyAttachmentRows: AiMessageAttachment[] = [];
+        let tableSummariesByMessage = new Map<string, string[]>();
         if (userMessageIds.length > 0) {
           const attachmentRows = await this.attachments.listAttachmentsForMessages(
             userMessageIds,
             ctx.tenantId,
             ctx.manager,
           );
+          historyAttachmentRows = attachmentRows;
+          tableSummariesByMessage = await this.loadTableSummariesByMessage(attachmentRows, ctx.manager);
           await Promise.all(attachmentRows.map(async (row) => {
-            if (!row.message_id) return;
+            if (!row.message_id || row.kind === TABLE_ATTACHMENT_KIND) return;
             try {
               const { buffer } = await this.attachments.loadAttachmentBuffer(
                 row.id,
@@ -2519,7 +2564,7 @@ export class AiChatOrchestratorService {
               : this.toProviderUserContent(msg.content);
             msgs.push({
               role: 'user',
-              content,
+              content: withTableSummaries(content, tableSummariesByMessage.get(msg.id)),
               ...(images && images.length > 0 ? { images } : {}),
             });
             replayableToolCallIds = new Set<string>();
@@ -2623,19 +2668,12 @@ export class AiChatOrchestratorService {
             mentions: await extractMentionContextItems(latestUserMessage, ctx.manager),
             attachments: attachmentContextItems(requestedAttachments.length > 0
               ? requestedAttachments
-              : Array.from(attachmentImagesByMessage.values()).flatMap((images) =>
-                images.map((image) => ({
-                  original_filename: 'Image',
-                  kind: 'image',
-                  mime_type: image.mime_type,
-                  size: null,
-                })),
-              )),
+              : historyAttachmentRows),
             previews: previewContextItems(existingPreviews),
             artifacts: previewContextItems(existingPreviews.filter((preview) => preview.status === 'pending')),
             history: {
               message_count: history.length,
-              attachment_count: Array.from(attachmentImagesByMessage.values()).reduce((count, images) => count + images.length, 0),
+              attachment_count: historyAttachmentRows.length,
               tool_result_count: history.filter((msg) => msg.role === 'tool').length,
             },
             tools: {

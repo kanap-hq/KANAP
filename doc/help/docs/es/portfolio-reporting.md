@@ -164,7 +164,7 @@ Haga clic en **Trabajo sin asignar** para expandir los detalles.
 ### Desglose detallado
 Haga clic en una fila de colaborador para abrir un desglose por proyecto:
 - Cada fila muestra esfuerzo restante, % de asignación y sus días.
-- Los nombres de proyecto son clicables y abren la pestaña **Progreso** del proyecto.
+- Los nombres de proyecto son clicables y abren la pestaña **Esfuerzo** del proyecto.
 
 ### Exportaciones
 - **Exportar la tabla**: CSV o Excel. El archivo contiene la tabla de la agrupación en pantalla, colaboradores o equipos, con el modo de capacidad, los equipos y los estados en pantalla. Los días conservan sus decimales. El archivo Excel añade una hoja **Parámetros**. Consulte [Informes](reports.md#export-options)

@@ -60,7 +60,7 @@ Le générateur de roadmap calcule les dates proposées des projets à partir du
 
 Après la génération, l'onglet Calendrier affiche les dates proposées des projets.
 
-- Les titres de projet sont cliquables et ouvrent l'onglet **Avancement** du projet.
+- Les titres de projet sont cliquables et ouvrent l'onglet **Charge** du projet.
 - Les cases à cocher définissent le périmètre du scénario.
 - Un filtre **Catégorie (Aperçu)** vous permet de filtrer l'affichage du Gantt de la roadmap sans modifier le calendrier généré lui-même.
 - Désélectionner un projet régénère immédiatement le scénario :

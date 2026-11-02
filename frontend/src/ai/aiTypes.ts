@@ -252,7 +252,9 @@ export type ChatAttachment = {
   id: string;
   mime_type: string;
   size: number;
-  kind: 'image' | string;
+  kind: 'image' | 'table' | string;
+  /** The uploaded file's name, shown for a spreadsheet. */
+  original_filename?: string | null;
   /** Only present right after upload — used to render thumbnails before sending. */
   preview_url?: string | null;
 };

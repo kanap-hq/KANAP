@@ -454,7 +454,7 @@ Le score apparaît dans la barre de métadonnées en haut de l'espace de travail
 **Contribution au temps** : Le temps enregistré sur les tâches de projet contribue aux calculs de charge réelle du projet :
 - Le temps de catégorie IT s'ajoute à **Charge réelle (IT)**
 - Le temps de catégorie Métier s'ajoute à **Charge réelle (Métier)**
-- L'onglet Avancement du projet affiche une répartition entre Gestion de projet et Temps des tâches
+- L'onglet Charge du projet affiche une répartition entre Gestion de projet et Temps des tâches
 - Le Journal de temps unifié affiche toutes les entrées de temps de la gestion de projet et du travail sur les tâches
 
 **Validation du statut** : Les tâches de projet ne peuvent pas être marquées comme **Terminées** sans enregistrer du temps d'abord. Cela garantit un suivi précis de la charge du projet.

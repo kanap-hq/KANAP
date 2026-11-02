@@ -164,7 +164,7 @@ Cliquez sur **Travail non assigné** pour développer les détails.
 ### Exploration détaillée
 Cliquez sur une ligne de contributeur pour ouvrir un détail par projet :
 - Chaque ligne affiche la charge restante, le % d'allocation et vos jours.
-- Les noms de projets sont cliquables et ouvrent l'onglet **Avancement** du projet.
+- Les noms de projets sont cliquables et ouvrent l'onglet **Charge** du projet.
 
 ### Exports
 - **Exporter le tableau** : CSV ou Excel. Le fichier contient le tableau du regroupement à l'écran, contributeurs ou équipes, avec le mode de capacité, les équipes et les statuts à l'écran. Les jours gardent leurs décimales. Le fichier Excel ajoute une feuille **Paramètres**. Voir [Rapports](reports.md#export-options)

@@ -454,7 +454,7 @@ Der Wert erscheint in der Metadatenleiste oben im Arbeitsbereich und als Spalte 
 **Zeit-Beitrag**: Zeit, die für Projektaufgaben protokolliert wird, trägt zu den tatsächlichen Aufwandsberechnungen des Projekts bei:
 - IT-Kategorie-Zeit fügt zum **Tatsächlichen Aufwand (IT)** hinzu
 - Business-Kategorie-Zeit fügt zum **Tatsächlichen Aufwand (Business)** hinzu
-- Der Reiter Fortschritt des Projekts zeigt eine Aufschlüsselung von Projekt-Overhead vs. Aufgabenzeit
+- Der Reiter Aufwand des Projekts zeigt eine Aufschlüsselung von Projekt-Overhead vs. Aufgabenzeit
 - Das einheitliche Zeitprotokoll zeigt alle Zeiteinträge sowohl aus dem Projekt-Overhead als auch aus der Aufgabenarbeit
 
 **Status-Validierung**: Projektaufgaben können nicht als **Erledigt** markiert werden, ohne zuerst Zeit zu protokollieren. Dies stellt eine genaue Verfolgung des Projektaufwands sicher.
