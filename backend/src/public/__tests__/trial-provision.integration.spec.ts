@@ -15,7 +15,7 @@ import {
   Services,
 } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
 import { accessTokenVerifyKey } from '../../auth/jwt-key';
-import { waitForBackgroundWork } from '../../common/background-work';
+import { backgroundWorkCount, waitForBackgroundWork } from '../../common/background-work';
 import { allocateItemNumbers } from '../../common/item-number.service';
 import { Features } from '../../config/features';
 import { DEMO_DATA_LANGUAGES, DemoDataService, readDemoState, resolveDemoDataLanguage } from '../../demo-data/demo-data.service';
@@ -179,6 +179,11 @@ async function sequencesOf(tenantId: string): Promise<Record<string, number>> {
 }
 
 const tenantUrlOf = (slug: string) => `http://${slug}.lvh.me:8080`;
+
+/** Loaders this harness started for the tenant (other recent trials in the database stay out of the count). */
+function loadersFor(h: Harness, slug: string) {
+  return h.children.filter((child) => child.env.KANAP_DEMO_HOST === `${slug}.lvh.me`);
+}
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -512,6 +517,151 @@ async function testRefusals() {
   }
 }
 
+// A trial left `idle` at activation: the start-up pass resumes its load, on the tenant's host.
+// A second pass in the same process starts no second loader.
+async function testStartupResumesIdleTrial() {
+  await withActivationConfig(async () => {
+    const svc = buildServices();
+    const h = harness(svc);
+    h.service.config.maxConcurrent = 20;
+    let t: ActivatedTenant | undefined;
+    try {
+      t = await createActivatedTenant(svc, { tag: 'tp-resume', orgName: 'Resume Org', signup: true, language: 'fr' });
+      await h.service.reconcileOnStartup();
+      await h.service.reconcileOnStartup();
+      await waitFor('loader started', () => loadersFor(h, t!.slug).length, (n) => n === 1);
+      assert.equal((await demoOf(t.tenantId)).status, 'loading');
+      assert.equal(loadersFor(h, t.slug)[0].env.KANAP_DEMO_HOST, `${t.slug}.lvh.me`);
+      const resumed = h.logs.filter((line) => line.startsWith('log') && line.includes(`resumed for trial tenant ${t!.tenantId}`));
+      assert.equal(resumed.length, 1, JSON.stringify(h.logs));
+      h.children.find((child) => child.env.KANAP_DEMO_HOST === `${t!.slug}.lvh.me`)!.child.finish(0);
+      await settle();
+      assert.equal((await demoOf(t.tenantId)).status, 'loaded');
+    } finally {
+      await h.finishAll();
+      await cleanupTenants([t?.tenantId]);
+    }
+  });
+}
+
+// A person who already chose: hidden banner, an old trial, records of their own, a load that
+// ran or failed. The start-up pass starts no loader for them. A paid workspace is not a trial.
+async function testStartupLeavesChosenWorkspaces() {
+  await withActivationConfig(async () => {
+    const svc = buildServices();
+    const h = harness(svc);
+    h.service.config.maxConcurrent = 20;
+    const tenants: ActivatedTenant[] = [];
+    try {
+      const dismissed = await createActivatedTenant(svc, { tag: 'tp-hide', orgName: 'Hidden Org', signup: true });
+      const old = await createActivatedTenant(svc, { tag: 'tp-old', orgName: 'Old Org', signup: true });
+      const filled = await createActivatedTenant(svc, { tag: 'tp-own', orgName: 'Own Org', signup: true });
+      const loaded = await createActivatedTenant(svc, { tag: 'tp-done', orgName: 'Loaded Org', signup: true });
+      const failed = await createActivatedTenant(svc, { tag: 'tp-fail', orgName: 'Failed Org', signup: true });
+      const paid = await createActivatedTenant(svc, { tag: 'tp-paid', orgName: 'Paid Org', signup: true });
+      tenants.push(dismissed, old, filled, loaded, failed, paid);
+
+      await setDemo(dismissed.tenantId, { dismissed_at: new Date().toISOString() });
+      await dataSource.query(`UPDATE tenants SET created_at = now() - interval '3 hours' WHERE id = $1`, [old.tenantId]);
+      assert.equal(await createTask(filled.tenantId, filled.ownerId), 1);
+      await setDemo(loaded.tenantId, { status: 'loaded', ever_loaded_at: new Date().toISOString(), run_id: randomUUID() });
+      await setDemo(failed.tenantId, { status: 'failed', failed_at: new Date().toISOString(), error_code: 'load_failed', run_id: randomUUID() });
+      await inTenant(paid.tenantId, (m) => m.query(`UPDATE subscriptions SET status = 'active' WHERE tenant_id = $1`, [paid.tenantId]));
+
+      await h.service.reconcileOnStartup();
+      await waitFor(
+        'the filled workspace was decided',
+        () => h.logs.some((line) => line.includes(filled.tenantId)) && backgroundWorkCount() === 0,
+        (done) => done,
+      );
+      for (const tenant of [dismissed, old, loaded, failed, paid]) {
+        assert.equal(loadersFor(h, tenant.slug).length, 0, tenant.slug);
+        assert.ok(!h.logs.some((line) => line.includes(tenant.tenantId)), `${tenant.slug} stays quiet: ${JSON.stringify(h.logs)}`);
+      }
+      assert.equal(loadersFor(h, filled.slug).length, 0, 'a workspace with a record is not loaded');
+      assert.equal((await demoOf(filled.tenantId)).status, 'idle');
+      const warnings = h.logs.filter((line) => line.startsWith('warn') && line.includes(filled.tenantId));
+      assert.equal(warnings.length, 1, JSON.stringify(warnings));
+      assert.match(warnings[0], /tenant_not_empty/);
+    } finally {
+      await h.finishAll();
+      await cleanupTenants(tenants.map((tenant) => tenant.tenantId));
+    }
+  });
+}
+
+// The activation is still waiting for a free slot in this process: the start-up pass does not
+// start a second wait or a second loader. One loader starts once the slot frees.
+async function testStartupDoesNotDoubleAWaitingProvision() {
+  await withActivationConfig(async () => {
+    const svc = buildServices();
+    const h = harness(svc);
+    h.service.config.maxConcurrent = 1;
+    h.service.config.provisionRetryMs = 80;
+    h.service.config.provisionRetryMaxMs = 10_000;
+    const ids: string[] = [];
+    try {
+      const busy = await createActivatedTenant(svc, { tag: 'tp-slot', orgName: 'Slot Org' });
+      ids.push(busy.tenantId);
+      await setDemo(busy.tenantId, {
+        status: 'loading', run_id: randomUUID(), heartbeat_at: new Date().toISOString(), started_at: new Date().toISOString(),
+      });
+      const waiting = await createActivatedTenant(svc, { tag: 'tp-wait', orgName: 'Wait Org', signup: true });
+      ids.push(waiting.tenantId);
+      const run = h.service.provisionTrialSampleData({
+        tenantId: waiting.tenantId, actorId: waiting.ownerId, tenantUrl: tenantUrlOf(waiting.slug), language: 'en',
+      });
+      await pause(40);
+      assert.equal(loadersFor(h, waiting.slug).length, 0, 'waiting for a slot');
+      await h.service.reconcileOnStartup();
+      await waitFor(
+        'resume reached the waiting trial',
+        () => h.logs.some((line) => line.includes(`resumed for trial tenant ${waiting.tenantId}`)),
+        (done) => done,
+      );
+      await pause(50);
+      assert.equal(loadersFor(h, waiting.slug).length, 0, 'the resume starts no loader of its own');
+      await setDemo(busy.tenantId, { status: 'loaded', run_id: null, heartbeat_at: null, ever_loaded_at: new Date().toISOString() });
+      await waitFor('the waiting provision starts', () => loadersFor(h, waiting.slug).length, (n) => n === 1);
+      await run;
+      await pause(200);
+      assert.equal(loadersFor(h, waiting.slug).length, 1, 'no second loader');
+      const warnings = h.logs.filter((line) => line.startsWith('warn') && line.includes(waiting.tenantId));
+      assert.equal(warnings.length, 0, JSON.stringify(warnings));
+    } finally {
+      await h.finishAll();
+      await cleanupTenants(ids);
+    }
+  });
+}
+
+// Single-tenant mode: the start-up pass reads nothing and starts nothing.
+async function testStartupResumeSkippedWhenSingleTenant() {
+  const svc = buildServices();
+  const h = harness(svc);
+  let t: ActivatedTenant | undefined;
+  const saved = Features.SINGLE_TENANT;
+  const original = dataSource.query.bind(dataSource);
+  const queries: string[] = [];
+  try {
+    t = await createActivatedTenant(svc, { tag: 'tp-onprem', orgName: 'On Prem Org', signup: true });
+    (Features as any).SINGLE_TENANT = true;
+    dataSource.query = (async (sql: string, params?: unknown[]) => {
+      queries.push(String(sql));
+      return original(sql, params);
+    }) as typeof dataSource.query;
+    await h.service.reconcileOnStartup();
+    assert.equal(queries.length, 0, `queries ran: ${queries.join('\n')}`);
+    assert.equal(h.children.length, 0, 'no loader');
+    assert.equal(h.logs.length, 0, `log: ${h.logs.join('\n')}`);
+  } finally {
+    dataSource.query = original;
+    (Features as any).SINGLE_TENANT = saved;
+    await h.finishAll();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
 runSpecs('trial-provision.integration.spec', [
   testActivationLoadsSampleData,
   testLanguageIsRecorded,
@@ -522,6 +672,10 @@ runSpecs('trial-provision.integration.spec', [
   testStopDuringWait,
   testManualLoadDuringWait,
   testRefusals,
+  testStartupResumesIdleTrial,
+  testStartupLeavesChosenWorkspaces,
+  testStartupDoesNotDoubleAWaitingProvision,
+  testStartupResumeSkippedWhenSingleTenant,
 ]).catch((err) => {
   console.error(err);
   process.exit(1);
