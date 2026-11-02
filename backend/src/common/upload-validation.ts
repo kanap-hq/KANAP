@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import * as path from 'path';
 import { ArchiveLimitError, BoundedArchive, openBoundedArchive } from './archive-limits';
 
-export type UploadValidationScope = 'attachment' | 'inline-image' | 'document-import' | 'csv-import';
+export type UploadValidationScope = 'attachment' | 'inline-image' | 'ai-attachment' | 'document-import' | 'csv-import';
 
 export type ValidateUploadOptions = {
   scope?: UploadValidationScope;
@@ -77,6 +77,15 @@ const DOCUMENT_IMPORT_ALLOWED_MIME_TYPES = new Set([
 ]);
 const CSV_IMPORT_ALLOWED_EXTENSIONS = new Set(['.csv']);
 const CSV_IMPORT_ALLOWED_MIME_TYPES = new Set(['text/csv']);
+/** A Plaid chat attachment: an image, or a spreadsheet the assistant reads (`ai/attachments`). */
+const AI_ATTACHMENT_ALLOWED_EXTENSIONS = new Set([...INLINE_IMAGE_ALLOWED_EXTENSIONS, '.csv', '.xlsx']);
+const AI_ATTACHMENT_ALLOWED_MIME_TYPES = new Set([
+  ...INLINE_IMAGE_ALLOWED_MIME_TYPES,
+  'text/csv',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+]);
+
+export const AI_ATTACHMENT_TYPE_MESSAGE = 'Unsupported file type. Allowed: PNG, JPG, JPEG, GIF, WEBP, XLSX, CSV';
 
 const ZIP_BASED_EXTENSION_MIME: Record<string, string> = {
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -132,6 +141,12 @@ function getScopeAllowedSets(scope: UploadValidationScope): {
     return {
       allowedExtensions: INLINE_IMAGE_ALLOWED_EXTENSIONS,
       allowedMimeTypes: INLINE_IMAGE_ALLOWED_MIME_TYPES,
+    };
+  }
+  if (scope === 'ai-attachment') {
+    return {
+      allowedExtensions: AI_ATTACHMENT_ALLOWED_EXTENSIONS,
+      allowedMimeTypes: AI_ATTACHMENT_ALLOWED_MIME_TYPES,
     };
   }
   if (scope === 'csv-import') {
@@ -295,6 +310,9 @@ function unsupportedTypeMessage(scope: UploadValidationScope): string {
   }
   if (scope === 'csv-import') {
     return 'Unsupported file type. Allowed: CSV';
+  }
+  if (scope === 'ai-attachment') {
+    return AI_ATTACHMENT_TYPE_MESSAGE;
   }
   return 'Unsupported file type';
 }

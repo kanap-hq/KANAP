@@ -13,6 +13,7 @@ import {
   TokenUsage,
 } from './aiTypes';
 import i18n from '../i18n';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
 
 let msgCounter = 0;
 const CONTROL_MARKER_RE = /^\[(APPROVE|REJECT):[0-9a-f-]{36}\]$|^\[(APPROVE_SELECTED|REJECT_SELECTED):[0-9a-f,\s-]+\]$/i;
@@ -42,8 +43,34 @@ export type PendingAttachment = {
   /** Local-only id, used to remove the attachment before send. */
   localId: string;
   file: File;
+  /** An image, or a spreadsheet (.xlsx, .csv) of which Plaid reads a summary. */
+  kind: 'image' | 'table';
+  /** Object URL of an image; empty for a spreadsheet. */
   previewUrl: string;
 };
+
+const TABLE_FILE_EXT_RE = /\.(xlsx|csv)$/i;
+const TABLE_FILE_MIME_TYPES = new Set([
+  'text/csv',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+]);
+
+/** A spreadsheet the chat accepts: an .xlsx workbook or a CSV file. */
+export function isTableFile(file: File): boolean {
+  if (TABLE_FILE_EXT_RE.test(file.name || '')) return true;
+  return TABLE_FILE_MIME_TYPES.has((file.type || '').toLowerCase());
+}
+
+function pendingToChatAttachment(attachment: PendingAttachment): ChatAttachment {
+  return {
+    id: attachment.localId,
+    mime_type: attachment.file.type || (attachment.kind === 'image' ? 'image/png' : ''),
+    size: attachment.file.size,
+    kind: attachment.kind,
+    original_filename: attachment.file.name,
+    preview_url: attachment.previewUrl || null,
+  };
+}
 
 function nextId() {
   return `local-${++msgCounter}-${Date.now()}`;
@@ -182,7 +209,9 @@ function formatBytes(size: number): string {
 function attachmentContextItems(attachments: ChatAttachment[]): ChatContextItem[] {
   return attachments.map((attachment, index) => ({
     kind: 'attachment',
-    label: attachment.kind === 'image' ? `Image ${index + 1}` : attachment.kind || `Attachment ${index + 1}`,
+    label: attachment.kind === 'image'
+      ? `Image ${index + 1}`
+      : attachment.original_filename || attachment.kind || `Attachment ${index + 1}`,
     detail: formatBytes(attachment.size) || attachment.mime_type,
   }));
 }
@@ -334,6 +363,7 @@ function rebuildMessagesFromStored(rawMessages: StoredChatMessage[], conversatio
       mime_type: a.mime_type,
       size: a.size,
       kind: a.kind,
+      original_filename: a.original_filename,
       preview_url: aiConversationsApi.buildAttachmentUrl(conversationId, a.id),
     }));
   };
@@ -495,11 +525,15 @@ export function useChat() {
       }
       const accepted = files.slice(0, remaining);
       rejected = files.length - accepted.length;
-      const next = accepted.map((file) => ({
-        localId: nextId(),
-        file,
-        previewUrl: URL.createObjectURL(file),
-      }));
+      const next = accepted.map((file): PendingAttachment => {
+        const kind = isTableFile(file) ? 'table' : 'image';
+        return {
+          localId: nextId(),
+          file,
+          kind,
+          previewUrl: kind === 'image' ? URL.createObjectURL(file) : '',
+        };
+      });
       added = next.length;
       return [...prev, ...next];
     });
@@ -563,13 +597,7 @@ export function useChat() {
     let userMsgId: string | null = null;
     if (!opts.isRegenerate) {
       userMsgId = nextId();
-      const optimisticUserAttachments: ChatAttachment[] = attachmentsToSend.map((a) => ({
-        id: a.localId,
-        mime_type: a.file.type || 'image/png',
-        size: a.file.size,
-        kind: 'image',
-        preview_url: a.previewUrl,
-      }));
+      const optimisticUserAttachments: ChatAttachment[] = attachmentsToSend.map(pendingToChatAttachment);
       const userMsg: ChatMessage = {
         id: userMsgId,
         role: 'user',
@@ -589,16 +617,7 @@ export function useChat() {
       toolResults: [],
       isStreaming: true,
       activity: [{ phase: 'analyzing', status: 'running', created_at: new Date().toISOString() }],
-      context: buildInitialContext(
-        text,
-        attachmentsToSend.map((a) => ({
-          id: a.localId,
-          mime_type: a.file.type || 'image/png',
-          size: a.file.size,
-          kind: 'image',
-          preview_url: a.previewUrl,
-        })),
-      ),
+      context: buildInitialContext(text, attachmentsToSend.map(pendingToChatAttachment)),
     };
     setMessages((prev) => [...prev, assistantMsg]);
 
@@ -615,13 +634,21 @@ export function useChat() {
         }
         const uploaded = await Promise.all(
           attachmentsToSend.map(async (att) => {
-            const result = await aiConversationsApi.uploadInlineAttachment(activeConversationId!, att.file);
+            let result: Awaited<ReturnType<typeof aiConversationsApi.uploadInlineAttachment>>;
+            try {
+              result = await aiConversationsApi.uploadInlineAttachment(activeConversationId!, att.file);
+            } catch (uploadError) {
+              // A refused file (unreadable, too large) says why, in the screen language, with its name.
+              const reason = getApiErrorMessage(uploadError, i18n.t, i18n.t('ai:errors.uploadFailed'));
+              throw new Error(i18n.t('ai:errors.attachmentRefused', { name: att.file.name, reason }));
+            }
             return {
               localId: att.localId,
               serverId: result.id,
               mime_type: result.mime_type,
               size: result.size,
               kind: result.kind,
+              original_filename: result.original_filename,
             };
           }),
         );
@@ -633,6 +660,7 @@ export function useChat() {
           mime_type: u.mime_type,
           size: u.size,
           kind: u.kind,
+          original_filename: u.original_filename,
           preview_url: aiConversationsApi.buildAttachmentUrl(activeConversationId!, u.serverId),
         }));
         setMessages((prev) =>
