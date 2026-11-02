@@ -1,4 +1,4 @@
-﻿name,company_name,supplier_name,cost_center,start_date,duration_months,auto_renewal,notice_period_months,yearly_amount_at_signature,currency,billing_frequency,status,owner_email,notes
+﻿Name,Company,Supplier,Cost center,Start date,Duration in months,Auto renewal,Notice period in months,Yearly amount at signature,Currency,Billing frequency,Status,Owner email,Notes
 "Line; ""quoted""
 second, line","Line; ""quoted""
 second, line","Zeta; ""Z""",,2024-12-31,12,no,1,-0.5,USD,monthly,disabled,,

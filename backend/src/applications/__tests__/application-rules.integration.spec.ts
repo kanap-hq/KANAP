@@ -14,7 +14,7 @@ import { Tenant } from '../../tenants/tenant.entity';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { Application } from '../application.entity';
 import { ApplicationsCsvService } from '../applications-csv.service';
-import { csvOwnerKeys } from '../application-csv.config';
+import { applicationCsvConfig, csvOwnerKeys } from '../application-csv.config';
 import { APPLICATION_NAME_MAX, applicationNameKey, lockApplicationSuites } from '../application-rules';
 import dataSource from '../../data-source';
 import { ApplicationsStructureService } from '../services/applications-structure.service';
@@ -270,10 +270,11 @@ async function testFrenchExportImportsBack() {
     assert.match(exported.content, /;Actif;/, 'the lifecycle is written as the screen shows it in French');
     assert.doesNotMatch(exported.content, /;Active;|;enabled;/, 'no English label nor status code');
     const [header, atlasLine] = exported.content.replace(/^\uFEFF/, '').split(/\r?\n/);
-    const statusColumn = header.split(';').indexOf('status');
+    const statusColumn = header.split(';').indexOf('Statut');
     assert.ok(statusColumn >= 0, 'the export has the status');
     assert.equal(atlasLine.split(';')[statusColumn], 'Activé', 'named as the screen names it in French');
-    const cellOf = (column: string) => atlasLine.split(';')[header.split(';').indexOf(column)];
+    // The export titles its columns in French.
+    const cellOf = (column: string) => atlasLine.split(';')[header.split(';').indexOf(applicationCsvConfig.headerLabels?.[column]?.fr ?? column)];
     assert.equal(cellOf('users_mode'), 'Dérivé', 'the users mode is named as the screen names it in French');
     assert.equal(cellOf('classification_review_state'), 'À compléter', 'the review state is named as the screen names it in French');
     const result = await ctx.csv.import(
@@ -284,7 +285,7 @@ async function testFrenchExportImportsBack() {
     assert.deepEqual(result.errors, [], 'the French export imports back without an error');
     assert.equal(result.inserted, 0);
     const ignored = result.warnings.find((warning) => warning.code === 'CSV_HEADER_IGNORED_COLUMNS');
-    assert.ok(String(ignored?.params?.extra ?? '').split(', ').includes('status'), 'the status column is left out of the import, with a warning');
+    assert.ok(String(ignored?.params?.extra ?? '').split(', ').includes('Statut'), 'the status column is left out of the import, with a warning');
     assert.deepEqual(await ownersOf(ctx, atlas), [`it:${ctx.users.ana.id}`]);
     const [stored] = await ctx.runner.query(`SELECT lifecycle, criticality, data_class FROM applications WHERE id = $1`, [atlas]);
     assert.deepEqual(stored, { lifecycle: 'active', criticality: catalog.businessCriticalityLevels[0].code, data_class: catalog.dataClasses[0].code });
@@ -374,7 +375,7 @@ async function testEmptyResidencyCell() {
     // Replace mode reads a complete file: start from the export of the application (French: `;`).
     const exported = await ctx.csv.export({ manager: ctx.runner.manager, tenantId: ctx.tenantId, language: 'fr', scope: 'data' });
     const [header, line] = exported.content.replace(/^\uFEFF/, '').split(/\r?\n/).map((text) => text.split(';'));
-    const column = header.indexOf('data_residency');
+    const column = header.indexOf('Résidence des données (codes pays)');
     assert.ok(column >= 0, 'the export has the residency');
     const without = (cells: string[]) => cells.filter((_, index) => index !== column).join(';');
     result = await importCsv(ctx, [without(header), without(line)], { mode: 'replace' });

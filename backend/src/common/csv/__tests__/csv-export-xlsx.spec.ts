@@ -86,14 +86,14 @@ async function testSixLists() {
       const cell = cells.get(`${columnName(index)}1`);
       assert.deepEqual(cell, { type: 'text', text: header }, `${golden.name}: header ${index + 1} as in the CSV`);
     });
-    // The type of each column, by its French header (without the zone a date-time header names).
+    // The type of each column, by its French header (a title with parentheses as it is, else without the zone a date-time header names).
     const typeOf = new Map(golden.config.fields.filter((field) => !field.exportFn)
       .map((field) => [golden.config.headerLabels?.[field.csvColumn]?.fr ?? field.csvColumn, field.type]));
     rows.forEach((row, rowIndex) => {
       row.forEach((text, index) => {
         const ref = `${columnName(index)}${rowIndex + 2}`;
         const cell = cells.get(ref);
-        const type = typeOf.get(headers[index].replace(/ \(.*\)$/, ''));
+        const type = typeOf.get(headers[index]) ?? typeOf.get(headers[index].replace(/ \(.*\)$/, ''));
         if (text === '') {
           assert.equal(cell, undefined, `${golden.name} ${ref}: empty`);
           return;
@@ -161,10 +161,10 @@ async function testTypedCells() {
 async function testReferences() {
   const service = new CsvExportService(new CsvResolverService());
   const expected: Record<string, { headers: string[]; first: string }> = {
-    applications: { headers: ['id', 'reference', 'name'], first: 'APP-1' },
-    assets: { headers: ['id', 'reference', 'name'], first: 'AST-1' },
+    applications: { headers: ['id', 'Référence', 'Nom'], first: 'APP-1' },
+    assets: { headers: ['id', 'Référence', 'Nom'], first: 'AST-1' },
     incidents: { headers: ['Réf.', 'Titre'], first: 'INC-1' },
-    projects: { headers: ['id', 'reference', 'name'], first: 'PRJ-1' },
+    projects: { headers: ['id', 'Référence', 'Nom'], first: 'PRJ-1' },
     requests: { headers: ['id', 'reference', 'name'], first: 'REQ-1' },
     tasks: { headers: ['id', 'reference', 'title'], first: 'T-1' },
   };
@@ -183,7 +183,8 @@ async function testReferences() {
     const reference = golden.config.fields.find((field) => field.csvColumn === 'reference');
     assert.equal(reference?.importable, false, `${golden.name}: the reference is export only`);
     const template = await service.export(golden.config, [], { ...options, scope: 'template' });
-    assert.ok(!(await csvTable(template.content))[0].includes('reference'), `${golden.name}: the template leaves the reference out`);
+    const templateHeaders = (await csvTable(template.content))[0];
+    assert.ok(!templateHeaders.includes('reference') && !templateHeaders.includes('Référence'), `${golden.name}: the template leaves the reference out`);
   }
   console.log('  references: after id, text cells, left out of the import template: OK');
 }

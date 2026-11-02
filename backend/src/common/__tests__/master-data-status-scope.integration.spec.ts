@@ -185,7 +185,7 @@ async function testContractsReadTheEndOfValidity() {
     // A French file (`;`), as the contracts file was before it followed the screen language.
     const exported = await svc.exportCsv('data', { ...opts, language: 'fr' });
     const lines = exported.content.replace(/^\uFEFF/, '').trim().split('\n');
-    const statusIndex = lines[0].split(';').indexOf('status');
+    const statusIndex = lines[0].split(';').indexOf('Statut');
     const exportedStatus = (name: string) => lines.find((line) => line.startsWith(`${name};`))!.split(';')[statusIndex];
     assert.deepEqual(
       ['Active contract', 'Expired contract', 'Closed contract', 'Future contract'].map(exportedStatus),

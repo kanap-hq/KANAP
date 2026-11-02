@@ -141,7 +141,8 @@ async function testTemplateHeadersRoundTripThroughImportValidation() {
     // translated name); the import reads it by the canonical column.
     const zoned = new Set(config.fields.filter((f) => f.zonedDateTime).map((f) => f.csvColumn));
     const headers = headerLine.split(';').map((h) => {
-      const named = readTimeZoneHeader(h);
+      // A whole title first: some translated titles hold parentheses (`Sous-réseau IP 1 (CIDR)`).
+      const named = canonicalHeader.has(h) ? null : readTimeZoneHeader(h);
       if (!named) {
         const column = canonicalHeader.get(h);
         assert.ok(column, `${config.entityName}: template header '${h}' is not an importable column`);

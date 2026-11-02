@@ -491,7 +491,7 @@ async function testCostCentre(app: INestApplication): Promise<void> {
   const exported = await call(app, 'GET', 'contracts/export?scope=data', p.ulla);
   assert.equal(exported.status, 200, exported.text);
   const [header, ...lines] = exported.text.split('\n');
-  assert.ok(header.includes('cost_center'), `the CSV has the cost_center column: ${header}`);
+  assert.ok(header.includes('Cost center'), `the CSV has the cost_center column: ${header}`);
   const cfLine = lines.find((line) => line.startsWith(`DA contract CF`));
   assert.ok(cfLine, 'the CSV has the CF contract');
   assert.ok(cfLine!.includes('INF-FR'), `the CSV writes the node name: ${cfLine}`);

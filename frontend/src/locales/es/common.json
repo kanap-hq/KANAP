@@ -554,6 +554,7 @@
     "customSelection": "Selección personalizada",
     "fieldsSelected": "{{selected}} de {{total}} campos seleccionados",
     "downloadTemplate": "Descargar plantilla",
+    "downloadExample": "Descargar un ejemplo",
     "uploadDescription": "Cargue un CSV con separadores de punto y coma y títulos de columna exactos de la plantilla.",
     "uploadDescriptionFlexible": "Cargue un archivo CSV con los títulos de columna de la plantilla. Sirven tanto las comas como los puntos y coma, y también un archivo guardado por Excel.",
     "uploadDescriptionWorkbook": "Cargue un CSV con separadores de punto y coma, o un libro de Excel (.xlsx), con los títulos de columna exactos de la plantilla.",

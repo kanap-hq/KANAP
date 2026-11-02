@@ -90,7 +90,8 @@ export function classifyHeaders(headers: readonly string[], schema: CsvReadSchem
       return;
     }
 
-    const field = schema.fields.find((name) => looseKey(name) === looseKey(header));
+    const key = looseKey(header);
+    const field = schema.fields.find((name) => looseKey(name) === key || (schema.fieldLabels?.[name] ?? []).some((label) => looseKey(label) === key));
     if (field) {
       if (seenFields.has(field)) {
         slots.push(null);
@@ -127,6 +128,14 @@ export function validateSchema(schema: CsvReadSchema): void {
     const previous = fields.get(key);
     if (previous) throw new Error(`Schema fields '${previous}' and '${field}' normalize to the same header.`);
     fields.set(key, field);
+  }
+  for (const [field, labels] of Object.entries(schema.fieldLabels ?? {})) {
+    for (const label of labels) {
+      const key = looseKey(label);
+      const previous = fields.get(key);
+      if (previous && previous !== field) throw new Error(`Title '${label}' of '${field}' also names '${previous}'.`);
+      fields.set(key, field);
+    }
   }
   if (schema.amounts) {
     const names = new Set<string>();

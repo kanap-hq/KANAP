@@ -29,6 +29,7 @@ import { duplicateNameException } from '../common/duplicate-name';
 import { uploadedBytes } from '../common/upload';
 import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
+import { SUPPLIER_CSV_COLUMNS, SUPPLIER_CSV_HEADERS } from './supplier-csv-headers';
 
 /** The contact columns of the file: one e-mail per contact type. */
 const CONTACT_COLUMNS = ['commercial_contact', 'technical_contact', 'support_contact'] as const;
@@ -267,7 +268,7 @@ export class SuppliersService {
   }
 
   private csvHeaders(): string[] {
-    return ['name', 'erp_supplier_id', 'commercial_contact', 'technical_contact', 'support_contact', 'notes', 'status', 'disabled_at'];
+    return [...SUPPLIER_CSV_COLUMNS];
   }
 
   async exportCsv<F extends ExportFileFormat = 'csv'>(
@@ -275,7 +276,7 @@ export class SuppliersService {
     opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown>; format?: F },
   ): Promise<ListExportFile<F>> {
     const language = opts?.language ?? 'en';
-    const headers = this.csvHeaders();
+    const headers = SUPPLIER_CSV_COLUMNS.map((column) => SUPPLIER_CSV_HEADERS[column][language]);
     const rows: ListExportCell[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
@@ -341,6 +342,7 @@ export class SuppliersService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
+      fieldLabels: SUPPLIER_CSV_HEADERS,
       dateFields: ['disabled_at'],
       optional: OPTIONAL_CSV_HEADERS,
       language: readLanguage,

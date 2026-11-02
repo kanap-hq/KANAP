@@ -25,6 +25,7 @@ import {
 } from './budgetFile';
 import { failureText, serverSentence } from './budgetFileText';
 import { useImportFiles } from '../csv/importFiles';
+import ImportExampleButton from '../csv/ImportExampleButton';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -252,6 +253,14 @@ export default function BudgetFileImportDialog({
           >
             <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t(`${K}dropFile`)}</Typography>
             <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mt: 0.25 }}>{t(`${K}dropFileHint`)}</Typography>
+          </Box>
+        )}
+        {!file && (
+          <Box>
+            <ImportExampleButton
+              example="budget-lines"
+              onError={(text) => setFailure(text ? { text, action: 'check', kind: 'final' } : null)}
+            />
           </Box>
         )}
 

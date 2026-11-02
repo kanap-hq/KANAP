@@ -1,0 +1,93 @@
+{
+  "essential": ["name", "kind", "environment", "location_reference", "status", "go_live_date", "hostname", "operating_system"],
+  "advanced": [
+    "is_cluster", "cluster", "admin_zone", "domain", "end_of_life_date", "aliases",
+    "ip_1_type", "ip_1_address", "ip_1_subnet_cidr", "ip_2_type", "ip_2_address", "ip_2_subnet_cidr", "notes"
+  ],
+  "rows": [
+    {
+      "name": "PAR-APP-07",
+      "kind": "virtual_machine",
+      "environment": "prod",
+      "location_reference": "LOC-1",
+      "status": "active",
+      "go_live_date": "{Y-1}-02-01",
+      "hostname": "par-app-07",
+      "operating_system": "Windows Server 2022",
+      "is_cluster": false,
+      "cluster": "",
+      "admin_zone": "tier_1",
+      "domain": "",
+      "end_of_life_date": "",
+      "aliases": "affinops-app",
+      "ip_1_type": "host",
+      "ip_1_address": "10.10.20.17",
+      "ip_1_subnet_cidr": "10.10.20.0/24",
+      "ip_2_type": "management",
+      "ip_2_address": "10.10.99.17",
+      "ip_2_subnet_cidr": "10.10.99.0/24",
+      "notes": {
+        "en": "Application server of AffinOps.",
+        "fr": "Serveur d'applications d'AffinOps.",
+        "de": "Anwendungsserver von AffinOps.",
+        "es": "Servidor de aplicaciones de AffinOps."
+      }
+    },
+    {
+      "name": "GOU-NAS-01",
+      "kind": "nas",
+      "environment": "prod",
+      "location_reference": "LOC-2",
+      "status": "active",
+      "go_live_date": "{Y-3}-05-12",
+      "hostname": "gou-nas-01",
+      "operating_system": "",
+      "is_cluster": false,
+      "cluster": "",
+      "admin_zone": "tier_1",
+      "domain": "",
+      "end_of_life_date": "{Y+2}-05-31",
+      "aliases": "",
+      "ip_1_type": "host",
+      "ip_1_address": "10.20.10.5",
+      "ip_1_subnet_cidr": "10.20.10.0/24",
+      "ip_2_type": "",
+      "ip_2_address": "",
+      "ip_2_subnet_cidr": "",
+      "notes": {
+        "en": "File shares and local backups of the Gouda plant.",
+        "fr": "Partages de fichiers et sauvegardes locales de l'usine de Gouda.",
+        "de": "Dateifreigaben und lokale Sicherungen des Werks in Gouda.",
+        "es": "Carpetas compartidas y copias de seguridad locales de la planta de Gouda."
+      }
+    },
+    {
+      "name": "PAR-TST-03",
+      "kind": "virtual_machine",
+      "environment": "test",
+      "location_reference": "LOC-1",
+      "status": "proposed",
+      "go_live_date": "",
+      "hostname": "par-tst-03",
+      "operating_system": "",
+      "is_cluster": false,
+      "cluster": "",
+      "admin_zone": "",
+      "domain": "",
+      "end_of_life_date": "",
+      "aliases": "",
+      "ip_1_type": "",
+      "ip_1_address": "",
+      "ip_1_subnet_cidr": "",
+      "ip_2_type": "",
+      "ip_2_address": "",
+      "ip_2_subnet_cidr": "",
+      "notes": {
+        "en": "Test server for the next AffinOps version.",
+        "fr": "Serveur de test de la prochaine version d'AffinOps.",
+        "de": "Testserver für die nächste AffinOps-Version.",
+        "es": "Servidor de pruebas de la próxima versión de AffinOps."
+      }
+    }
+  ]
+}

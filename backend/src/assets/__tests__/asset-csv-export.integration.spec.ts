@@ -7,6 +7,7 @@ import { CsvImportService } from '../../common/csv/csv-import.service';
 import { CsvJsonValidators } from '../../common/csv/csv-json-validators';
 import { CsvResolverService } from '../../common/csv/csv-resolver.service';
 import { inRolledBackTransaction, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
+import { assetCsvConfig } from '../asset-csv.config';
 import { Asset } from '../asset.entity';
 import { AssetsCsvService } from '../assets-csv.service';
 import { AssetsListService } from '../services/assets-list.service';
@@ -56,7 +57,9 @@ function tableOf(content: string): Array<Record<string, string>> {
     cells.push(current);
     return cells;
   };
-  const header = split(lines[0]);
+  // Each title of the file's language read as its technical column.
+  const labels = assetCsvConfig.headerLabels ?? {};
+  const header = split(lines[0]).map((title) => Object.keys(labels).find((column) => Object.values(labels[column]).includes(title)) ?? title);
   return lines.slice(1).map((line) => Object.fromEntries(split(line).map((cell, index) => [header[index], cell])));
 }
 

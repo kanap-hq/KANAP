@@ -10,6 +10,7 @@ import { DepartmentsModule } from './departments/departments.module';
 import { CostCentersModule } from './cost-centers/cost-centers.module';
 import { WorkingDayProfilesModule } from './working-day-profiles/working-day-profiles.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
+import { ImportExamplesModule } from './import-examples/import-examples.module';
 import { AccountsModule } from './accounts/accounts.module';
 import { AuditModule } from './audit/audit.module';
 import { RecordHistoryModule } from './audit/record-history.module';
@@ -140,6 +141,7 @@ import { readPoolMax } from './common/db-pool-budget';
     CostCentersModule,
     WorkingDayProfilesModule,
     SuppliersModule,
+    ImportExamplesModule,
     AccountsModule,
     SpendModule,
     AnalyticsModule,
